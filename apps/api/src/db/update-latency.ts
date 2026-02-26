@@ -102,6 +102,38 @@ const updates: [string, number][] = [
   ["cron-explain", 30],
   ["diff-json", 20],
   ["api-health-check", 200],
+  // ─── Competitive intelligence ───────────────────────────────────────────────
+  ["landing-page-roast", 8000],
+  ["seo-audit", 5000],
+  ["competitor-compare", 15000],
+  ["pricing-page-extract", 5000],
+  ["company-tech-stack", 5000],
+  // ─── Content & writing ──────────────────────────────────────────────────────
+  ["blog-post-outline", 2000],
+  ["email-draft", 2000],
+  ["social-post-generate", 2000],
+  // ─── Agent tooling ──────────────────────────────────────────────────────────
+  ["llm-output-validate", 20],
+  ["prompt-optimize", 2000],
+  ["code-review", 2000],
+  // ─── Document extraction ────────────────────────────────────────────────────
+  ["resume-parse", 5000],
+  ["contract-extract", 5000],
+  ["receipt-categorize", 3000],
+  ["meeting-notes-extract", 3000],
+  // ─── Utilities ──────────────────────────────────────────────────────────────
+  ["timezone-meeting-find", 20],
+  ["startup-domain-check", 5000],
+  ["youtube-summarize", 8000],
+  // ─── Show-off ───────────────────────────────────────────────────────────────
+  ["github-repo-analyze", 8000],
+  ["job-posting-analyze", 3000],
+  // ─── Replacements ───────────────────────────────────────────────────────────
+  ["brand-mention-search", 8000],
+  ["accessibility-audit", 5000],
+  ["changelog-generate", 2000],
+  ["api-docs-generate", 3000],
+  ["dependency-audit", 8000],
 ];
 
 const db = getDb();
