@@ -1,8 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
-// PRH (Finnish Patent and Registration Office) open data API
-const PRH_API = "https://avoindata.prh.fi/bis/v1";
+// PRH (Finnish Patent and Registration Office) open data API — new v3 endpoint
+const PRH_API = "https://avoindata.prh.fi/opendata-ytj-api/v3/companies";
 
 // Finnish Business ID: 7 digits + hyphen + check digit (e.g. 0112038-9)
 const BIS_RE = /^(\d{7})-?(\d)$/;
@@ -45,68 +45,89 @@ async function extractCompanyName(naturalLanguage: string): Promise<string> {
 }
 
 async function searchPrh(name: string): Promise<string> {
-  const url = `${PRH_API}?totalResults=false&maxResults=1&resultsFrom=0&name=${encodeURIComponent(name)}`;
+  const url = `${PRH_API}?name=${encodeURIComponent(name)}&totalResults=false&maxResults=1`;
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(10000),
   });
   if (!response.ok) throw new Error(`PRH API search returned HTTP ${response.status}`);
-  const data = await response.json() as any;
-  const results = data?.results;
-  if (!results || results.length === 0) {
+  const data = (await response.json()) as any;
+  const companies = data?.companies;
+  if (!companies || companies.length === 0) {
     throw new Error(`No Finnish company found matching "${name}".`);
   }
-  return results[0].businessId;
+  return companies[0].businessId?.value || companies[0].businessId;
 }
 
 async function fetchCompany(businessId: string): Promise<Record<string, unknown>> {
-  const url = `${PRH_API}/${businessId}`;
+  const url = `${PRH_API}?businessId=${encodeURIComponent(businessId)}&totalResults=false&maxResults=1`;
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(10000),
   });
-  if (response.status === 404) {
+  if (!response.ok) throw new Error(`PRH API returned HTTP ${response.status}`);
+  const data = (await response.json()) as any;
+  const companies = data?.companies;
+  if (!companies || companies.length === 0) {
     throw new Error(`Finnish company with business ID ${businessId} not found.`);
   }
-  if (!response.ok) throw new Error(`PRH API returned HTTP ${response.status}`);
-  const data = await response.json() as any;
-  const company = data?.results?.[0];
-  if (!company) throw new Error(`No data returned for business ID ${businessId}.`);
+  const company = companies[0];
 
-  // Get the latest name
+  // Get the latest name (type "1" = trade name, no endDate = current)
   const names = company.names || [];
-  const currentName = names.find((n: any) => !n.endDate) || names[0];
+  const currentName =
+    names.find((n: any) => n.type === "1" && !n.endDate) ||
+    names.find((n: any) => !n.endDate) ||
+    names[0];
 
-  // Get address
+  // Get address (type 1 = visiting address)
   const addresses = company.addresses || [];
-  const currentAddr = addresses.find((a: any) => !a.endDate && a.type === 1) || addresses[0];
-  const address = currentAddr
-    ? [currentAddr.street, [currentAddr.postCode, currentAddr.city].filter(Boolean).join(" ")]
-        .filter(Boolean)
-        .join(", ")
-    : null;
+  const currentAddr =
+    addresses.find((a: any) => a.type === 1 && !a.endDate) || addresses[0];
+  let address: string | null = null;
+  if (currentAddr) {
+    const parts = [
+      currentAddr.street,
+      currentAddr.buildingNumber,
+    ].filter(Boolean);
+    const postPart = currentAddr.postOffices?.[0];
+    if (currentAddr.postCode || postPart?.city) {
+      parts.push([currentAddr.postCode, postPart?.city].filter(Boolean).join(" "));
+    }
+    address = parts.join(", ") || null;
+  }
 
-  // Get company form
+  // Company form
   const forms = company.companyForms || [];
   const currentForm = forms.find((f: any) => !f.endDate) || forms[0];
+  const formDesc =
+    currentForm?.descriptions?.find((d: any) => d.languageCode === "3")?.description ||
+    currentForm?.descriptions?.[0]?.description ||
+    "";
 
-  // Get industry code
-  const industries = company.businessLines || [];
-  const currentIndustry = industries.find((i: any) => !i.endDate) || industries[0];
+  // Main business line
+  const mainLine = company.mainBusinessLine;
+  const industryCode = mainLine?.type || null;
+  const industryDesc =
+    mainLine?.descriptions?.find((d: any) => d.languageCode === "3")?.description ||
+    mainLine?.descriptions?.[0]?.description ||
+    null;
 
-  // Determine status from liquidations
-  const liquidations = company.liquidations || [];
-  const hasActiveLiquidation = liquidations.some((l: any) => !l.endDate);
+  // Status from companySituations and tradeRegisterStatus
+  const situations = company.companySituations || [];
+  const hasLiquidation = situations.some((s: any) => !s.endDate);
+  const trStatus = company.tradeRegisterStatus;
 
   return {
     company_name: currentName?.name || "",
-    business_id: company.businessId || businessId,
-    business_type: currentForm?.name || "",
-    industry_code: currentIndustry?.code || null,
-    industry_description: currentIndustry?.name || null,
+    business_id: company.businessId?.value || businessId,
+    business_type: formDesc,
+    industry_code: industryCode,
+    industry_description: industryDesc,
     address,
-    registration_date: company.registrationDate || null,
-    status: hasActiveLiquidation ? "liquidation" : "active",
+    registration_date: company.registrationDate || company.businessId?.registrationDate || null,
+    website: company.website?.url || null,
+    status: hasLiquidation ? "liquidation" : trStatus === "1" ? "active" : "inactive",
   };
 }
 
