@@ -11,7 +11,7 @@ import type {
 } from "./types.js";
 import { createError, StraleError } from "./errors.js";
 
-const DEFAULT_BASE_URL = "https://api.strale.io";
+const DEFAULT_BASE_URL = "https://strale-production.up.railway.app";
 const DEFAULT_TIMEOUT = 60_000;
 const DEFAULT_POLL_INTERVAL = 2_000;
 const DEFAULT_MAX_POLL_WAIT = 120_000;

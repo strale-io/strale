@@ -1,5 +1,5 @@
 {
-  "name": "strale",
+  "name": "straleio",
   "version": "0.1.0",
   "description": "TypeScript SDK for the Strale API — let AI agents buy capabilities at runtime",
   "type": "module",
