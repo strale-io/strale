@@ -138,6 +138,35 @@ import "./capabilities/accessibility-audit.js";
 import "./capabilities/changelog-generate.js";
 import "./capabilities/api-docs-generate.js";
 import "./capabilities/dependency-audit.js";
+// ─── Agent debugging ─────────────────────────────────────────────────────────
+import "./capabilities/agent-trace-analyze.js";
+import "./capabilities/token-count.js";
+import "./capabilities/tool-call-validate.js";
+// ─── Cost optimization ───────────────────────────────────────────────────────
+import "./capabilities/llm-cost-calculate.js";
+import "./capabilities/prompt-compress.js";
+import "./capabilities/context-window-optimize.js";
+// ─── Data pipeline ───────────────────────────────────────────────────────────
+import "./capabilities/schema-infer.js";
+import "./capabilities/data-quality-check.js";
+import "./capabilities/csv-to-json.js";
+import "./capabilities/xml-to-json.js";
+import "./capabilities/flatten-json.js";
+// ─── Test data & mocking ────────────────────────────────────────────────────
+import "./capabilities/fake-data-generate.js";
+import "./capabilities/api-mock-response.js";
+import "./capabilities/test-case-generate.js";
+// ─── Security ────────────────────────────────────────────────────────────────
+import "./capabilities/secret-scan.js";
+import "./capabilities/header-security-check.js";
+import "./capabilities/password-strength.js";
+import "./capabilities/cve-lookup.js";
+// ─── DevOps config generation ────────────────────────────────────────────────
+import "./capabilities/dockerfile-generate.js";
+import "./capabilities/gitignore-generate.js";
+import "./capabilities/env-template-generate.js";
+import "./capabilities/nginx-config-generate.js";
+import "./capabilities/github-actions-generate.js";
 
 export const app = new Hono();
 

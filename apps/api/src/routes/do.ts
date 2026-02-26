@@ -629,6 +629,19 @@ const ALGORITHMIC_CAPABILITIES = new Set([
   "startup-domain-check",
   "dependency-audit",
   "accessibility-audit",
+  // Batch 4 algorithmic capabilities
+  "token-count",
+  "tool-call-validate",
+  "llm-cost-calculate",
+  "schema-infer",
+  "data-quality-check",
+  "csv-to-json",
+  "xml-to-json",
+  "flatten-json",
+  "secret-scan",
+  "header-security-check",
+  "password-strength",
+  "gitignore-generate",
 ]);
 
 function getTransparencyMarker(slug: string): string {

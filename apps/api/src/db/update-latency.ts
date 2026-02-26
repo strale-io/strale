@@ -134,6 +134,35 @@ const updates: [string, number][] = [
   ["changelog-generate", 2000],
   ["api-docs-generate", 3000],
   ["dependency-audit", 8000],
+  // ─── Agent debugging ──────────────────────────────────────────────────────────
+  ["agent-trace-analyze", 3000],
+  ["token-count", 20],
+  ["tool-call-validate", 20],
+  // ─── Cost optimization ────────────────────────────────────────────────────────
+  ["llm-cost-calculate", 20],
+  ["prompt-compress", 3000],
+  ["context-window-optimize", 3000],
+  // ─── Data pipeline ────────────────────────────────────────────────────────────
+  ["schema-infer", 30],
+  ["data-quality-check", 30],
+  ["csv-to-json", 20],
+  ["xml-to-json", 20],
+  ["flatten-json", 10],
+  // ─── Test data & mocking ──────────────────────────────────────────────────────
+  ["fake-data-generate", 3000],
+  ["api-mock-response", 2000],
+  ["test-case-generate", 3000],
+  // ─── Security ─────────────────────────────────────────────────────────────────
+  ["secret-scan", 20],
+  ["header-security-check", 500],
+  ["password-strength", 10],
+  ["cve-lookup", 2000],
+  // ─── DevOps config generation ─────────────────────────────────────────────────
+  ["dockerfile-generate", 3000],
+  ["gitignore-generate", 20],
+  ["env-template-generate", 3000],
+  ["nginx-config-generate", 3000],
+  ["github-actions-generate", 3000],
 ];
 
 const db = getDb();
