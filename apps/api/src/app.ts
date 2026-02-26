@@ -167,6 +167,68 @@ import "./capabilities/gitignore-generate.js";
 import "./capabilities/env-template-generate.js";
 import "./capabilities/nginx-config-generate.js";
 import "./capabilities/github-actions-generate.js";
+// ─── Database & SQL ─────────────────────────────────────────────────────────
+import "./capabilities/sql-generate.js";
+import "./capabilities/sql-explain.js";
+import "./capabilities/sql-optimize.js";
+import "./capabilities/schema-migration-generate.js";
+// ─── API development workflow ───────────────────────────────────────────────
+import "./capabilities/openapi-validate.js";
+import "./capabilities/openapi-generate.js";
+import "./capabilities/http-to-curl.js";
+import "./capabilities/curl-to-code.js";
+import "./capabilities/jwt-decode.js";
+import "./capabilities/webhook-test-payload.js";
+// ─── Code transformation ────────────────────────────────────────────────────
+import "./capabilities/json-to-typescript.js";
+import "./capabilities/json-to-zod.js";
+import "./capabilities/json-to-pydantic.js";
+import "./capabilities/regex-explain.js";
+import "./capabilities/code-convert.js";
+// ─── Git & version control ──────────────────────────────────────────────────
+import "./capabilities/commit-message-generate.js";
+import "./capabilities/pr-description-generate.js";
+import "./capabilities/release-notes-generate.js";
+// ─── Documentation ──────────────────────────────────────────────────────────
+import "./capabilities/readme-generate.js";
+import "./capabilities/jsdoc-generate.js";
+import "./capabilities/docstring-generate.js";
+// ─── Monitoring & observability ─────────────────────────────────────────────
+import "./capabilities/log-parse.js";
+import "./capabilities/error-explain.js";
+import "./capabilities/uptime-check.js";
+import "./capabilities/crontab-generate.js";
+// ─── Government & public records ────────────────────────────────────────────
+import "./capabilities/uk-companies-house-officers.js";
+import "./capabilities/eu-trademark-search.js";
+import "./capabilities/patent-search.js";
+import "./capabilities/charity-lookup-uk.js";
+import "./capabilities/food-safety-rating-uk.js";
+// ─── Real-time data feeds ───────────────────────────────────────────────────
+import "./capabilities/weather-lookup.js";
+import "./capabilities/ip-geolocation.js";
+import "./capabilities/shipping-track.js";
+import "./capabilities/flight-status.js";
+import "./capabilities/crypto-price.js";
+// ─── Network & infrastructure ───────────────────────────────────────────────
+import "./capabilities/port-check.js";
+import "./capabilities/mx-lookup.js";
+import "./capabilities/redirect-trace.js";
+import "./capabilities/robots-txt-parse.js";
+import "./capabilities/sitemap-parse.js";
+// ─── Social & professional data ─────────────────────────────────────────────
+import "./capabilities/github-user-profile.js";
+import "./capabilities/npm-package-info.js";
+import "./capabilities/pypi-package-info.js";
+import "./capabilities/docker-hub-info.js";
+import "./capabilities/github-repo-compare.js";
+// ─── Compliance & business verification ─────────────────────────────────────
+import "./capabilities/gdpr-website-check.js";
+import "./capabilities/ssl-certificate-chain.js";
+import "./capabilities/domain-reputation.js";
+// ─── E-commerce & product data ──────────────────────────────────────────────
+import "./capabilities/barcode-lookup.js";
+import "./capabilities/amazon-price.js";
 
 export const app = new Hono();
 
