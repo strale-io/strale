@@ -600,6 +600,11 @@ const ALGORITHMIC_CAPABILITIES = new Set([
   "isbn-validate",
   "company-id-detect",
   "email-validate",
+  "exchange-rate",
+  "dns-lookup",
+  "ssl-check",
+  "json-to-csv",
+  "currency-convert",
 ]);
 
 function getTransparencyMarker(slug: string): string {

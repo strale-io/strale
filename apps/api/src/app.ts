@@ -46,6 +46,37 @@ import "./capabilities/email-validate.js";
 import "./capabilities/vat-format-validate.js";
 import "./capabilities/isbn-validate.js";
 import "./capabilities/company-id-detect.js";
+// ─── Global company registries ──────────────────────────────────────────────
+import "./capabilities/us-company-data.js";
+import "./capabilities/canadian-company-data.js";
+import "./capabilities/australian-company-data.js";
+import "./capabilities/indian-company-data.js";
+import "./capabilities/singapore-company-data.js";
+import "./capabilities/hong-kong-company-data.js";
+import "./capabilities/brazilian-company-data.js";
+import "./capabilities/japanese-company-data.js";
+// ─── Financial & credit ─────────────────────────────────────────────────────
+import "./capabilities/exchange-rate.js";
+import "./capabilities/stock-quote.js";
+import "./capabilities/credit-report-summary.js";
+// ─── Domain & web intelligence ──────────────────────────────────────────────
+import "./capabilities/dns-lookup.js";
+import "./capabilities/whois-lookup.js";
+import "./capabilities/ssl-check.js";
+import "./capabilities/tech-stack-detect.js";
+// ─── Regulatory & trade ─────────────────────────────────────────────────────
+import "./capabilities/sanctions-check.js";
+import "./capabilities/hs-code-lookup.js";
+import "./capabilities/eu-regulation-search.js";
+// ─── Text & language ────────────────────────────────────────────────────────
+import "./capabilities/translate.js";
+import "./capabilities/summarize.js";
+import "./capabilities/sentiment-analyze.js";
+import "./capabilities/classify-text.js";
+// ─── Data format utilities ──────────────────────────────────────────────────
+import "./capabilities/json-to-csv.js";
+import "./capabilities/currency-convert.js";
+import "./capabilities/address-parse.js";
 
 export const app = new Hono();
 
