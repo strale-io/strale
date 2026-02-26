@@ -1,0 +1,2210 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# DISPATCH — Task-Aware Routing & Triggers
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# PURPOSE: Tell Claude Code exactly which files to read and which actions
+#          to execute for each task type.
+#
+# PROBLEM THIS SOLVES: The starter kit has 40+ feature files, but nothing
+#          tells Claude Code which ones matter for a given task. Without
+#          dispatch, agents load files they already know about and ignore
+#          ones they don't — causing quality features to sit dormant.
+#
+# HOW TO USE:
+#   1. Identify your task type from the list below
+#   2. Read key_signals FIRST — these are the critical rules for this task
+#   3. Check build_classification — maps to a BUILD.md tier:
+#      - typical: most common tier for this task type
+#      - range: possible tiers if complexity varies
+#      - pre_build: what BUILD.md Section 3 requires (none/minimal/standard/full)
+#   4. Check session_workflow — maps to a PROTOCOL.md session mode:
+#      - session_mode: Quick, Full, or quick_unless_escalated
+#      - notion_read/write: which databases to load and update
+#      - handoff_weight: one_liner, summary, or detailed
+#   5. Read must_read files using the depth hints:
+#      - depth: full  → Read the entire file
+#      - depth: scan  → Read only the sections noted in look_for
+#      - depth: verify → Open to confirm a specific thing, then close
+#   6. Check should_read conditions — load if applicable
+#   7. Execute before triggers (blocking ones MUST complete before building)
+#   8. Follow build path in BUILD.md Section 2 for your classified tier
+#   9. Execute after triggers + cross_cutting triggers (end of this file)
+#  10. Verify applicable gates pass
+#
+# IF CONTEXT IS TIGHT:
+#   - key_signals give you the critical rules without opening any files
+#   - Use priority_if_constrained to know what you can't skip
+#   - Defer should_read files until you actually need them
+#   - file_digests (bottom of file) give baseline awareness of common files
+#
+# RELATIONSHIP TO OTHER FILES:
+#   - RUNBOOK.md = entry point (references DISPATCH for loading)
+#   - DISPATCH.yaml = "what to read and do for THIS task" (routing + triggers)
+#   - BUILD.md = "build sequencing by tier" (what happens in what order, uses build_classification)
+#   - PROTOCOL.md = session protocol (decisions, logging, handoffs, uses session_workflow)
+#   - WORKFLOW.md = build execution (plan mode, subagents, verification)
+#   - CONSTRAINTS_INDEX.yaml = "what rules exist" (flat lookup)
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NEW SCREEN — Building a new UI surface from scratch
+# ─────────────────────────────────────────────────────────────────────────────
+
+new_screen:
+  description: "Building a new screen, page, modal, or panel from scratch"
+  plan_mode: required
+
+  session_workflow:
+    session_mode: full
+    notion_read:
+      - Decisions       # Past decisions constraining this surface
+      - Feature Registry # Which feature this screen belongs to
+      - Product Specs   # Screen requirements
+      - Design Library  # Visual references
+    notion_write:
+      - Journal         # Full entry
+      - Decisions       # If design decisions were made
+      - Feature Registry # Register new screen
+    linear_actions:
+      - "Create issue if none exists: [FEATURE] screen-name"
+      - "Update issue status to In Progress"
+      - "Create follow-up issues for discovered work"
+      - "Append Log row at session end"
+    handoff_weight: detailed
+
+  build_classification:
+    typical: Complex
+    range: [Complex]
+    pre_build: full
+
+  key_signals:
+    - "LAW-001: User must know where they are, what they can do, why they see this, and how to escape"
+    - "LAW-002: Every screen has exactly ONE archetype — pick before building"
+    - "LAW-004: Every screen must handle loading, empty, and error states"
+    - "LAW-007: Every interactive element must be functional — no dead buttons, phantom actions, or decorative chevrons"
+    - "LAW-011: Model intent before building — entities and actions must exist in truth model first"
+    - "Closed World: All components from _ui/components.yaml, all tokens from _ui/tokens.yaml — no exceptions"
+    - "Archetype budget: Check max decision points, components, and actions BEFORE building"
+
+  context_budget:
+    must_read_tokens: ~4500
+    should_read_tokens: ~3200
+    total_with_triggers: ~8200
+  priority_if_constrained:
+    - _expectations/PRE-BUILD.md
+    - _quality/archetypes/{type}.yaml
+    - _rules/laws.yaml
+    - _ui/components.yaml
+    - _model/truth/entities.yaml
+
+  must_read:
+    - file: _rules/laws.yaml
+      depth: scan
+      look_for: "LAW-001 (orientation), LAW-002 (archetype), LAW-004 (states), LAW-007 (affordances), LAW-011 (model first)"
+      reason: "Check all 13 laws — especially the five that apply to every new screen"
+
+    - file: config/manifest.yaml
+      depth: scan
+      look_for: "voice section (tone, density posture, philosophy) and design_system selection"
+      reason: "Screen must reflect product voice and use the correct design system"
+
+    - file: _expectations/PRE-BUILD.md
+      depth: full
+      reason: "Run Pre-Build Exploration Flow BEFORE designing. Declare Screen Intent, Outcome, Emotional Intent"
+
+    - file: _quality/archetypes/{type}.yaml
+      depth: full
+      reason: "Identify archetype and load its complexity budget (max decision points, components, actions)"
+      note: "If you don't know the archetype, read all files in _quality/archetypes/ and select one. You MUST select one — LAW-002."
+
+    - file: _surfaces/REGISTRY.yaml
+      depth: verify
+      look_for: "Check if this surface already has a SURF-NNN entry. If not, you'll create one in the before trigger."
+      reason: "Every surface must be tracked"
+
+    - file: _ui/components.yaml
+      depth: verify
+      look_for: "Confirm every component you plan to use exists here"
+      reason: "Closed World Assumption — unlisted components are forbidden"
+
+    - file: _ui/tokens.yaml
+      depth: verify
+      look_for: "Confirm all visual values (colors, spacing, typography) resolve to defined tokens"
+      reason: "Closed World Assumption — hardcoded values are forbidden"
+
+    - file: _design-systems/{active}/_contract.yaml
+      depth: scan
+      look_for: "Visual language rules, token scope, component constraints for the active design system"
+      reason: "Screen must match active design system"
+      note: "Active design system is set in config/manifest.yaml under design_system."
+
+    - file: _interaction/PHYSICS.md
+      depth: scan
+      look_for: "Timing constraints, easing rules, motion principles for transitions"
+      reason: "New screen likely has transitions"
+
+    - file: _interaction/FOCUS.md
+      depth: scan
+      look_for: "Tab order rules, focus ring requirements, focus management on mount/unmount"
+      reason: "New screen needs keyboard navigation"
+
+    - file: _interaction/PROGRESSION.md
+      depth: scan
+      look_for: "Progressive disclosure rules — what shows immediately vs. on demand"
+      reason: "Determine information density strategy"
+
+    - file: _model/truth/entities.yaml
+      depth: verify
+      look_for: "Confirm all entities this screen displays or modifies are defined here"
+      reason: "LAW-011 — entities must exist in truth model before UI references them"
+
+    - file: _model/truth/actions.yaml
+      depth: verify
+      look_for: "Confirm all actions this screen offers (buttons, forms, navigation) are defined here"
+      reason: "LAW-007 — every affordance must have a backing action"
+
+    - file: _model/truth/states.yaml
+      depth: verify
+      look_for: "Confirm entity state transitions this screen renders are defined here"
+      reason: "State transitions must match truth model"
+
+  should_read:
+    - file: _model/patterns/{relevant}.md
+      reason: "If this screen involves navigation, data display, or forms — load the matching pattern"
+
+    - file: _nfr/PERFORMANCE.yaml
+      reason: "If this screen loads data — check response time targets"
+
+    - file: _resilience/FAILURE_MODES.md
+      reason: "If this screen has external dependencies — check failure scenarios"
+
+    - file: _artifacts/SYNTHESIS.md
+      reason: "If this screen contributes to a deliverable artifact — check section mapping"
+
+    - file: _strategy/MOATS.md
+      reason: "If moat-conscious preset is active — check stickiness contribution"
+      condition: "Only if moat-conscious preset is in the preset chain"
+
+    - file: _quality/TRACE.yaml
+      reason: "If this screen implements a requirement — register the traceability link"
+
+    # --- Quality loop inputs (critique + pre-build dependencies) ---
+
+    - file: _content/SYSTEM.md
+      reason: "Content Quality critique dimension (min score 4) — error messages, labels, empty state copy rules"
+      condition: "Always for new screens — critique scores Content Quality"
+
+    - file: _content/PATTERNS.md
+      reason: "Empty state and error copy patterns used by Content Quality scoring"
+      condition: "If surface includes empty states, errors, or onboarding copy"
+
+    - file: _quality/HEURISTICS.md
+      reason: "Priority Ladder for tradeoff resolution — required by PRE-BUILD Tradeoff Anticipation and critique"
+      condition: "If pre-build identifies competing design principles"
+
+    - file: _quality/VISUAL_VERIFICATION.md
+      reason: "Visual check protocol — CRITICAL: skipping caps Visual Craft, Interaction, and Completeness scores at 3"
+      condition: "Before critique — required by LOOP.md step 6"
+
+    - file: _model/patterns/SURFACING.md
+      reason: "Information Surfacing critique dimension (High, min 4) — tier model for what to show prominently vs. on demand"
+      condition: "If surface displays data (table, detail, dashboard, overview)"
+
+    - file: _model/truth/permissions.yaml
+      reason: "Model Coherence critique dimension (Critical, min 4) — UI must respect permission boundaries"
+      condition: "If surface displays or modifies permission-sensitive entities"
+
+    - file: _ui/states.md
+      reason: "State definitions for loading/empty/error — already in after-trigger but needed during build, not just verification"
+      condition: "Always for new screens — LAW-004 requires all three states"
+
+    # --- Pre-build dependencies ---
+
+    - file: _surfaces/EXPECTATIONS.md
+      reason: "Mental Model Audit — required when building alongside existing surfaces (PRE-BUILD.md)"
+      condition: "If other surfaces already exist in _surfaces/REGISTRY.yaml"
+
+    - file: _quality/DIRECTIONAL_COHERENCE.md
+      reason: "Orphan feature justification — features with serves_thesis: no must carry justification"
+      condition: "If screen doesn't directly serve product thesis in manifest.yaml"
+
+    - file: _model/truth/vocabulary.yaml
+      reason: "Vocabulary Continuity Gate — check terminology registry before inventing user-facing terms"
+      condition: "If introducing new user-facing terms or labels"
+
+    - file: _decisions/eil/
+      depth: scan
+      reason: "EIL artifact check — new capabilities require EIL-001 through EIL-005 (P0 if missing)"
+      condition: "If screen introduces capabilities users haven't seen before"
+
+    # --- Flow and job context (conditional on registry population) ---
+
+    - file: _flows/REGISTRY.yaml
+      reason: "Flow journey context — if screen participates in a registered flow, reference FLOW-NNN for transitions and emotional arc"
+      condition: "If file is populated and screen participates in a registered flow"
+
+    - file: _jobs/REGISTRY.yaml
+      reason: "Gate 0 job traceability — new surface must trace to a JOB-NNN if registry is populated"
+      condition: "If file is populated"
+
+    - file: CONSTRAINTS_INDEX.yaml
+      depth: scan
+      look_for: "Constraint categories relevant to this screen — token, extension, NFR, localization"
+      reason: "RUNBOOK.md § Constraint locator: load first to identify which deeper constraint files apply"
+      condition: "When building a screen with non-obvious constraint categories"
+
+    # --- Surface-specific routing ---
+
+    - file: DESIGN_ROUTER.yaml
+      depth: scan
+      look_for: "Find your surface type → load the additional design files it specifies"
+      reason: "Routes to surface-specific layout and pattern files. DISPATCH covers system files; DESIGN_ROUTER covers surface-specific files."
+
+    - file: _critique/LOOP.md
+      reason: "After-trigger requires running critique loop — file must be loaded before trigger fires"
+      condition: "When task produces visible UI output (always for this task type)"
+
+  before:
+    - action: "Run Pre-Build Exploration Flow from _expectations/PRE-BUILD.md"
+      output: "Screen Intent Declaration, Outcome Declaration, Emotional Intent"
+      blocking: true
+      reason: "LAW-011 requires modeling intent before building"
+
+    - action: "Register surface in _surfaces/REGISTRY.yaml if new"
+      output: "SURF-NNN entry with archetype, entry points, and status"
+      blocking: true
+      reason: "Every surface must be tracked"
+
+    - action: "Verify archetype budget from _quality/archetypes/{type}.yaml"
+      output: "Confirmed max decision points, components, and actions"
+      blocking: true
+      reason: "LAW-003 applies — verify budget before building"
+
+    - action: "Check _model/truth/ for all entities and actions this screen touches"
+      output: "List of referenced entities and actions — all must exist in truth model"
+      blocking: true
+      reason: "LAW-007, LAW-011 apply — verify truth model coverage"
+
+  after:
+    - action: "Run critique loop from _critique/LOOP.md"
+      blocking: true
+      reason: "RULE-030 applies"
+
+    - action: "Verify all 3 states exist: loading, empty, error — per _ui/states.md"
+      blocking: true
+      reason: "LAW-004 applies"
+
+    - action: "Run User Expectation Audit per RUNBOOK.md § Expectation Audit"
+      blocking: false
+      reason: "Validates action contract, information contract, explanation coverage"
+
+    - action: "Update _quality/TRACE.yaml if this screen implements a tracked requirement"
+      blocking: false
+      reason: "Maintains traceability graph"
+
+  gates: [0, 1, 2, 3, 4, 5, 6, 8]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MODIFY SCREEN — Changing an existing UI surface
+# ─────────────────────────────────────────────────────────────────────────────
+
+modify_screen:
+  description: "Changing layout, adding/removing elements, or restructuring an existing surface"
+  plan_mode: if_3_plus_files
+
+  session_workflow:
+    session_mode: quick_unless_escalated
+    notion_read:
+      - Decisions       # Check constraints on this surface
+    notion_write:
+      - Journal         # One-liner or short summary
+    linear_actions:
+      - "Update existing issue status"
+      - "Append Log row"
+    handoff_weight: summary
+
+  build_classification:
+    typical: Targeted
+    range: [Targeted, Standard]
+    pre_build: none
+
+  key_signals:
+    - "LAW-009: Before adding, check if an existing element should be replaced or merged"
+    - "LAW-003: Re-verify archetype budget AFTER changes — did you push past limits?"
+    - "Closed World: Any new components or tokens must exist in registries"
+    - "Check past decisions constraining this surface before making changes"
+    - "If part of a multi-screen flow, changes must maintain cross-surface coherence"
+
+  context_budget:
+    must_read_tokens: ~3200
+    should_read_tokens: ~1900
+    total_with_triggers: ~5500
+  priority_if_constrained:
+    - _surfaces/REGISTRY.yaml
+    - _quality/archetypes/{type}.yaml
+    - _rules/laws.yaml
+    - _ui/components.yaml
+
+  must_read:
+    - file: _rules/laws.yaml
+      depth: scan
+      look_for: "LAW-009 (replacement before addition), LAW-003 (budgets), LAW-007 (affordance integrity)"
+      reason: "Verify changes don't violate constraints"
+
+    - file: config/manifest.yaml
+      depth: scan
+      look_for: "voice section — confirm voice and density haven't changed since original build"
+      reason: "Consistency with original design intent"
+
+    - file: _surfaces/REGISTRY.yaml
+      depth: scan
+      look_for: "Find this surface's SURF-NNN entry — check archetype, entry points, related decisions"
+      reason: "Understand the surface's constraints and context"
+
+    - file: _quality/archetypes/{type}.yaml
+      depth: full
+      reason: "Re-verify complexity budget after changes — did modifications push past limits?"
+
+    - file: _ui/components.yaml
+      depth: verify
+      look_for: "Confirm any newly added components exist"
+      reason: "Closed World Assumption"
+
+    - file: _ui/tokens.yaml
+      depth: verify
+      look_for: "Confirm any new visual values resolve to tokens"
+      reason: "Closed World Assumption"
+
+    - file: _design-systems/{active}/tokens.yaml
+      depth: verify
+      look_for: "Active design system tokens for visual consistency"
+      reason: "Token consistency"
+
+    - file: _model/truth/actions.yaml
+      depth: verify
+      look_for: "If adding interactive elements — confirm actions exist in truth model"
+      reason: "LAW-007 — no phantom actions"
+
+  should_read:
+    - file: _quality/COHERENCE.md
+      reason: "If this screen is part of a multi-screen flow — check cross-surface coherence"
+
+    - file: _interaction/PHYSICS.md
+      reason: "If adding animations or transitions"
+
+    - file: _nfr/PERFORMANCE.yaml
+      reason: "If adding data fetching or heavy computation"
+
+    # --- Quality loop inputs ---
+
+    - file: _quality/VISUAL_VERIFICATION.md
+      reason: "Visual check — modifications can regress visual scores; cap warning applies"
+      condition: "When running critique after modification"
+
+    - file: DESIGN_ROUTER.yaml
+      depth: scan
+      look_for: "The surface type being modified"
+      reason: "Load surface-specific design files for the modified surface type"
+      condition: "If modifying layout, states, or visual structure"
+
+    - file: _flows/REGISTRY.yaml
+      reason: "Flow continuity risk — modifying a screen in a registered flow can break transitions or emotional arc"
+      condition: "If file is populated and modified surface appears in a FLOW-NNN"
+
+    - file: _decisions/REGISTRY.md
+      depth: scan
+      look_for: "Decisions constraining the surface being modified"
+      reason: "Before-trigger requires checking this file — must be loaded before trigger fires"
+
+    - file: _ui/states.md
+      reason: "Modifications commonly regress loading/empty/error states — LAW-004 requires all three"
+      condition: "When modification touches loading, empty, or error states"
+
+    - file: _critique/LOOP.md
+      reason: "After-trigger requires running critique loop — file must be loaded before trigger fires"
+      condition: "When task produces visible UI output (always for this task type)"
+
+  before:
+    - action: "Screenshot or describe current state before making changes"
+      blocking: false
+      reason: "Enables before/after comparison during critique"
+
+    - action: "Check _decisions/REGISTRY.md for any decisions that constrain this surface"
+      blocking: true
+      reason: "Prevent contradicting past decisions without supersession protocol"
+
+  after:
+    - action: "Run critique loop from _critique/LOOP.md"
+      blocking: true
+      reason: "RULE-030 applies to modifications"
+
+    - action: "Run drift detection: compare modified surface against archetype budget"
+      blocking: false
+      reason: "Modifications can cause budget creep"
+
+    - action: "If multiple screens exist in this flow — run coherence check per _quality/COHERENCE.md"
+      blocking: false
+      reason: "Local changes can break cross-surface consistency"
+
+  gates: [1, 2, 3, 4]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BUG FIX — Fixing a defect in existing functionality
+# ─────────────────────────────────────────────────────────────────────────────
+
+bug_fix:
+  description: "Fixing broken behavior, visual defects, or logic errors"
+  plan_mode: only_if_complex
+
+  session_workflow:
+    session_mode: quick_unless_escalated
+    notion_read:
+      - Decisions       # Check if a past decision caused this bug
+    notion_write:
+      - Journal         # One-liner minimum
+    linear_actions:
+      - "Update issue status to Done (or In Progress if multi-session)"
+      - "Append Log row with fix summary"
+    handoff_weight: one_liner
+
+  build_classification:
+    typical: Targeted
+    range: [Micro, Targeted]
+    pre_build: none
+
+  key_signals:
+    - "Common law violations causing bugs: LAW-004 (missing states), LAW-007 (dead affordances)"
+    - "Invariant violation = P0 = highest priority — check _invariants/REGISTRY.md"
+    - "Fix root cause, not symptoms — reproduce before fixing"
+    - "Verify no regressions after fix"
+    - "RULE-020: UI displays server values — if data bug, check if client is calculating"
+
+  context_budget:
+    must_read_tokens: ~800
+    should_read_tokens: ~1000
+    total_with_triggers: ~2000
+  priority_if_constrained:
+    - _rules/laws.yaml
+    - _invariants/REGISTRY.md
+
+  must_read:
+    - file: _rules/laws.yaml
+      depth: scan
+      look_for: "LAW-004 (missing states), LAW-007 (dead affordances) — is the bug itself a law violation?"
+      reason: "Quick scan — common bugs are law violations"
+
+    - file: config/manifest.yaml
+      depth: scan
+      look_for: "product_class and design_system — minimal context confirmation"
+      reason: "Confirm product context"
+
+    - file: _invariants/REGISTRY.md
+      depth: scan
+      look_for: "The invariant category relevant to this bug (VQ, UI, ST, DD, A11Y, etc.)"
+      reason: "If the bug violates an invariant, it's P0"
+
+  should_read:
+    - file: _ui/tokens.yaml
+      reason: "If visual bug — verify tokens are being used correctly"
+
+    - file: _interaction/FOCUS.md
+      reason: "If keyboard/focus bug"
+
+    - file: _model/truth/states.yaml
+      reason: "If state machine bug — verify transitions"
+
+    - file: _ui/states.md
+      reason: "State bugs (LAW-004) are the most common category — loading/empty/error state definitions needed for fix verification"
+      condition: "If bug involves missing, incorrect, or broken loading/empty/error states"
+
+    - file: _content/PATTERNS.md
+      reason: "Error message and empty state copy patterns — verify fix uses correct copy template"
+      condition: "If bug involves wrong, missing, or malformed error or empty state text"
+
+  before:
+    - action: "Reproduce and document the bug before fixing"
+      blocking: true
+      reason: "Understand root cause, don't patch symptoms"
+
+    - action: "Classify severity: check against _invariants/REGISTRY.md"
+      blocking: false
+      reason: "Invariant violation = P0 = highest priority"
+
+  after:
+    - action: "Verify fix doesn't introduce regressions"
+      blocking: true
+      reason: "Standard engineering practice"
+
+    - action: "If fix changes UI appearance — run visual comparison"
+      blocking: false
+      reason: "Visual regressions are common side effects"
+
+  gates: [1]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TOKEN WORK — Design token changes (colors, spacing, typography, etc.)
+# ─────────────────────────────────────────────────────────────────────────────
+
+token_work:
+  description: "Adding, changing, or reorganizing design tokens"
+  plan_mode: required
+
+  session_workflow:
+    session_mode: full
+    notion_read:
+      - Decisions       # Past token decisions
+      - Constitution    # Product laws affecting visual identity
+    notion_write:
+      - Journal         # Full entry
+      - Decisions       # Token changes are always decisions
+    linear_actions:
+      - "Create or update token work issue"
+      - "Append Log row"
+    handoff_weight: detailed
+
+  build_classification:
+    typical: Standard
+    range: [Standard, Complex]
+    pre_build: standard
+
+  key_signals:
+    - "Token changes cascade globally — list all consuming components BEFORE changing"
+    - "RULE-002: ALL visual values must come from tokens — no hardcoded values"
+    - "Check forbidden combinations in CONSTRAINTS_INDEX.yaml before applying"
+    - "VQ-001 through VQ-008 visual quality invariants apply"
+    - "Resolution order: _base → preset → _project (later overrides earlier)"
+    - "RULE-001: No component has more than 4 variants"
+
+  context_budget:
+    must_read_tokens: ~4400
+    should_read_tokens: ~1600
+    total_with_triggers: ~6300
+  priority_if_constrained:
+    - _ui/tokens.yaml
+    - _design-systems/{active}/_contract.yaml
+    - _invariants/REGISTRY.md
+    - CONSTRAINTS_INDEX.yaml
+
+  must_read:
+    - file: _ui/tokens.yaml
+      depth: full
+      reason: "This is the token authority. All changes happen here."
+
+    - file: _design-systems/{active}/_contract.yaml
+      depth: scan
+      look_for: "Token scope, conflicts, visual language constraints"
+      reason: "Design system defines token boundaries"
+
+    - file: _design-systems/{active}/tokens.yaml
+      depth: scan
+      look_for: "Preset-level token definitions that may be overridden"
+      reason: "Understand the override chain"
+
+    - file: CONSTRAINTS_INDEX.yaml
+      depth: scan
+      look_for: "Token constraints section — forbidden combinations, capability matrix"
+      reason: "Invalid token states are system violations"
+
+    - file: _invariants/REGISTRY.md
+      depth: scan
+      look_for: "VQ-001 through VQ-008 — visual quality invariants"
+      reason: "Visual quality invariants constrain token values"
+
+    - file: config/manifest.yaml
+      depth: scan
+      look_for: "design_system selection and voice settings"
+      reason: "Tokens must match active design system and voice"
+
+    - file: _presets/_base.yaml
+      depth: scan
+      look_for: "Base token defaults — understand what you're overriding"
+      reason: "Know the baseline"
+
+    - file: _presets/{active}.yaml
+      depth: scan
+      look_for: "Active preset token values"
+      reason: "Know the current override layer"
+
+    - file: _rules/laws.yaml
+      depth: scan
+      look_for: "RULE-001 (max 4 variants), RULE-002 (no hardcoded values), VQ-001 through VQ-008"
+      reason: "Token changes directly implicate RULE-002 and visual quality rules — both cited in key_signals"
+
+  should_read:
+    - file: _ui/components.yaml
+      reason: "Which components consume these tokens? Changes cascade."
+
+    - file: _ui/RESPONSIVE.md
+      reason: "If token values differ by breakpoint"
+
+    - file: _quality/VISUAL_VERIFICATION.md
+      reason: "Visual check protocol — token changes affect visual output globally; cap warning applies to all affected surfaces"
+      condition: "Before running critique on affected surfaces after token change"
+
+    - file: _critique/CALIBRATION.md
+      reason: "Score calibration — companion to RUBRIC.md; defines what each score level looks like for boundary-case scoring after token changes"
+      condition: "When running critique after token changes"
+
+    - file: _critique/LOOP.md
+      reason: "After-trigger requires running critique loop — file must be loaded before trigger fires"
+      condition: "When task produces visible UI output (always for this task type)"
+
+  before:
+    - action: "List all components that consume the affected tokens"
+      blocking: true
+      reason: "Token changes cascade — know the blast radius"
+
+    - action: "Verify change doesn't create forbidden combinations per CONSTRAINTS_INDEX.yaml"
+      blocking: true
+      reason: "Invalid token states are system violations"
+
+  after:
+    - action: "Visual regression check on all affected surfaces"
+      blocking: true
+      reason: "Token changes are global — must verify everywhere"
+
+    - action: "Run token bypass scan if audit protocol installed"
+      blocking: false
+      reason: "Verify no components bypass the token system"
+
+    - action: "Run critique loop on a representative affected surface per _critique/LOOP.md"
+      blocking: false
+      reason: "Token changes affect visual quality scores — critique verifies changes produced intended visual improvements"
+
+  gates: [1, 4]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MODEL CHANGE — Modifying truth model (entities, actions, states)
+# ─────────────────────────────────────────────────────────────────────────────
+
+model_change:
+  description: "Adding or modifying entities, actions, or state transitions"
+  plan_mode: required
+
+  session_workflow:
+    session_mode: full
+    notion_read:
+      - Decisions       # Past model decisions
+      - Feature Registry # Which features use these entities
+      - Product Specs   # Requirements for entity changes
+    notion_write:
+      - Journal         # Full entry
+      - Decisions       # Model changes always produce decisions
+      - Feature Registry # Update if model change affects features
+    linear_actions:
+      - "Create issue if none exists"
+      - "Update issue status"
+      - "Create follow-up issues for UI surfaces needing updates"
+      - "Append Log row"
+    handoff_weight: detailed
+
+  build_classification:
+    typical: Standard
+    range: [Standard, Complex]
+    pre_build: standard
+
+  key_signals:
+    - "LAW-011: Model before build — update truth model BEFORE any UI references it"
+    - "LAW-005: Displayed data must match system data — verify after model change"
+    - "Map blast radius FIRST: list all surfaces and flows referencing changed entities"
+    - "Identity (ID-*), hierarchy (HIE-*), and state machine (ST-*) invariants apply"
+    - "Requires proposal authority — this is not autonomous"
+
+  context_budget:
+    must_read_tokens: ~2800
+    should_read_tokens: ~1200
+    total_with_triggers: ~4400
+  priority_if_constrained:
+    - _model/truth/entities.yaml
+    - _model/truth/actions.yaml
+    - _model/truth/states.yaml
+    - _surfaces/REGISTRY.yaml
+
+  must_read:
+    - file: _model/truth/entities.yaml
+      depth: full
+      reason: "Current entity definitions — this is the file being changed"
+
+    - file: _model/truth/actions.yaml
+      depth: full
+      reason: "Current action definitions — may need updates"
+
+    - file: _model/truth/states.yaml
+      depth: full
+      reason: "Current state machine definitions — transitions must stay consistent"
+
+    - file: _rules/laws.yaml
+      depth: scan
+      look_for: "LAW-011 (model before build), LAW-005 (data integrity)"
+      reason: "Two laws directly constrain model changes"
+
+    - file: _invariants/REGISTRY.md
+      depth: scan
+      look_for: "ID-* (identity), HIE-* (hierarchy), ST-* (state machine) invariant categories"
+      reason: "Model changes must not break invariants"
+
+    - file: _surfaces/REGISTRY.yaml
+      depth: scan
+      look_for: "Which surfaces reference the entities/actions being changed?"
+      reason: "Map the blast radius"
+
+    - file: _quality/TRACE.yaml
+      depth: scan
+      look_for: "Which requirements trace to these model elements?"
+      reason: "Traceability links may need updating"
+
+  should_read:
+    - file: _model/patterns/{relevant}.md
+      reason: "If change affects a standard pattern (navigation, data display, forms)"
+
+    - file: _extensions/{active}/CONTRACT.md
+      reason: "If active product class extension has model constraints"
+
+    - file: _flows/REGISTRY.yaml
+      reason: "Blast radius — model changes to entities, actions, or states drive flow logic; identify FLOW-NNN entries referencing changed elements"
+      condition: "If file is populated and changed entities or actions appear in registered flows"
+
+    - file: _jobs/REGISTRY.yaml
+      reason: "Blast radius — model changes may invalidate job-to-surface traceability; verify changed entities still serve declared JOB-NNN"
+      condition: "If file is populated"
+
+  before:
+    - action: "Map blast radius: list all surfaces and flows that reference affected model elements"
+      blocking: true
+      reason: "Model changes cascade to UI, validation, and state management"
+
+    - action: "Verify change is in truth model BEFORE building any UI that depends on it"
+      blocking: true
+      reason: "LAW-011 — model intent before building"
+
+  after:
+    - action: "Update _quality/TRACE.yaml if traceability links changed"
+      blocking: false
+      reason: "Keep traceability graph current"
+
+    - action: "Verify all surfaces referencing changed entities still render correctly"
+      blocking: true
+      reason: "Model changes can silently break views"
+
+  gates: [0, 1]
+  authority: requires_proposal
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NEW COMPONENT — Creating a component not in the registry
+# ─────────────────────────────────────────────────────────────────────────────
+
+new_component:
+  description: "Proposing and building a component that doesn't exist in _ui/components.yaml"
+  plan_mode: required
+
+  session_workflow:
+    session_mode: full
+    notion_read:
+      - Decisions       # Existing component decisions (DEC entries)
+    notion_write:
+      - Journal         # Full entry
+      - Decisions       # New component is always a decision
+    linear_actions:
+      - "Create issue: [DESIGN] component-name"
+      - "Append Log row"
+    handoff_weight: detailed
+
+  build_classification:
+    typical: Standard
+    range: [Standard, Complex]
+    pre_build: standard
+
+  key_signals:
+    - "LAW-009: Must justify why existing components are insufficient — compose before inventing"
+    - "Closed World: Component doesn't exist until added to _ui/components.yaml"
+    - "RULE-001: No component has more than 4 variants"
+    - "New component family requires DEC entry in _decisions/REGISTRY.md"
+    - "Use existing tokens — new components cannot introduce new visual values"
+
+  context_budget:
+    must_read_tokens: ~3000
+    should_read_tokens: ~1400
+    total_with_triggers: ~4900
+  priority_if_constrained:
+    - _ui/components.yaml
+    - _rules/laws.yaml
+    - _ui/tokens.yaml
+    - GOVERNANCE.md
+
+  must_read:
+    - file: _ui/components.yaml
+      depth: full
+      reason: "Confirm the component genuinely doesn't exist. Check if an existing component can be composed instead."
+
+    - file: _rules/laws.yaml
+      depth: scan
+      look_for: "LAW-009 (replacement before addition), RULE-001 (max 4 variants)"
+      reason: "Must justify why existing components are insufficient"
+
+    - file: _ui/tokens.yaml
+      depth: verify
+      look_for: "Confirm new component uses existing tokens — per Closed World Assumption"
+      reason: "No new visual values allowed without token registration"
+
+    - file: _design-systems/{active}/components.yaml
+      depth: scan
+      look_for: "Design system component specs for visual language alignment"
+      reason: "New component must match visual language"
+      note: "Extension varies by design system: professional uses components.yaml, publishing uses components.md. If .yaml not found, load .md instead."
+
+    - file: _interaction/PHYSICS.md
+      depth: scan
+      look_for: "Motion and timing rules applicable to this component type"
+      reason: "Motion constraints"
+
+    - file: _interaction/FOCUS.md
+      depth: scan
+      look_for: "Keyboard and focus rules applicable to this component type"
+      reason: "Focus management constraints"
+
+    - file: _primitives/
+      depth: scan
+      look_for: "Check if a primitive already covers this behavior pattern"
+      reason: "Primitives are preferred over new components"
+
+    - file: GOVERNANCE.md
+      depth: scan
+      look_for: "Decision entry requirements for new component families"
+      reason: "GOVERNANCE.md requires DEC entry"
+
+  should_read:
+    - file: _content/SYSTEM.md
+      reason: "Content Quality — components produce error states, labels, and copy that must comply with writing rules"
+      condition: "If component has visible text, labels, or user-facing copy"
+
+    - file: CONSTRAINTS_INDEX.yaml
+      depth: scan
+      look_for: "Component-related constraints — variant limits, token constraints, design system rules"
+      reason: "RUNBOOK.md § Constraint locator: identify applicable constraints for component design"
+      condition: "When the new component type is non-standard or spans multiple constraint categories"
+
+    - file: _decisions/REGISTRY.md
+      depth: scan
+      look_for: "Existing decisions constraining component patterns"
+      reason: "Before-trigger requires creating a DEC entry — must understand existing decisions first"
+
+    - file: _ui/states.md
+      reason: "New components must define loading, empty, and error variants per LAW-004"
+
+    - file: _critique/LOOP.md
+      reason: "After-trigger requires running critique loop — file must be loaded before trigger fires"
+      condition: "When task produces visible UI output (always for this task type)"
+
+  before:
+    - action: "Justify why no existing component or composition of components works"
+      blocking: true
+      reason: "LAW-009 and Closed World Assumption require composing before inventing"
+
+    - action: "Create decision entry in _decisions/REGISTRY.md"
+      blocking: true
+      reason: "GOVERNANCE.md requires it for new component families"
+
+  after:
+    - action: "Add component to _ui/components.yaml"
+      blocking: true
+      reason: "Registry is the authority — component doesn't exist until registered"
+
+    - action: "Run critique loop on first usage of the component"
+      blocking: true
+      reason: "Quality verification for new elements"
+
+  gates: [0, 1, 2, 3]
+  authority: requires_proposal
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FULL FEATURE — End-to-end feature implementation (multi-screen, multi-file)
+# ─────────────────────────────────────────────────────────────────────────────
+
+full_feature:
+  description: "Implementing a complete feature spanning model, UI, and interactions"
+  plan_mode: required
+
+  session_workflow:
+    session_mode: full
+    notion_read:
+      - Decisions       # All active decisions
+      - Feature Registry # Related features
+      - Product Specs   # Full spec for this feature
+      - Design Library  # Visual references
+      - Deferred        # Was this previously deferred?
+      - Glossary        # Domain terms for this feature
+      - Current State Summary # Strategic alignment
+    notion_write:
+      - Journal         # Full entry
+      - Decisions       # Multiple decisions likely
+      - Feature Registry # Register feature and screens
+      - Deferred        # Items discovered but not built
+      - Glossary        # New domain terms
+    linear_actions:
+      - "Create parent issue: [FEATURE] feature-name"
+      - "Create child issues for individual screens/components"
+      - "Update statuses progressively"
+      - "Create follow-up issues for discovered work"
+      - "Append Log rows at each status change"
+    handoff_weight: detailed
+
+  build_classification:
+    typical: Complex
+    range: [Complex]
+    pre_build: full
+
+  key_signals:
+    - "ALL 13 laws apply — scan all supreme + locked tiers"
+    - "LAW-011: Model ALL entities and actions BEFORE building any UI"
+    - "LAW-012: Run full Pre-Build Exploration Flow — explore before building"
+    - "LAW-013: Design backward from artifact — what deliverable does this feature serve?"
+    - "Each screen gets its own archetype assignment and critique pass"
+    - "Cross-surface coherence required across all feature screens"
+    - "Ship conditions: P0=0, P1≤2, all critique scores ≥4 (correctness=5)"
+
+  context_budget:
+    must_read_tokens: ~8500
+    should_read_tokens: ~3500
+    total_with_triggers: ~13000
+  priority_if_constrained:
+    - _expectations/PRE-BUILD.md
+    - _rules/laws.yaml
+    - _model/truth/entities.yaml
+    - _model/truth/actions.yaml
+    - _quality/archetypes/{type}.yaml
+    - _ui/components.yaml
+
+  must_read:
+    - file: _rules/laws.yaml
+      depth: full
+      reason: "Full law review — all 13 laws apply to end-to-end features"
+
+    - file: config/manifest.yaml
+      depth: scan
+      look_for: "Product identity, voice (tone, density, philosophy), preset chain, product_class"
+      reason: "Feature must align with product identity"
+
+    - file: config/tech-foundation.yaml
+      depth: scan
+      look_for: "Architectural decisions relevant to this feature — persistence, auth, sync, export, API"
+      reason: "Tech constraints shape implementation"
+
+    - file: _expectations/PRE-BUILD.md
+      depth: full
+      reason: "Run FULL Pre-Build Exploration Flow for the feature"
+
+    - file: _model/truth/entities.yaml
+      depth: full
+      reason: "Define or verify all entities before building"
+
+    - file: _model/truth/actions.yaml
+      depth: full
+      reason: "Define or verify all actions before building"
+
+    - file: _model/truth/states.yaml
+      depth: scan
+      look_for: "State transitions for entities this feature touches"
+      reason: "Verify state machines are complete"
+
+    - file: _quality/archetypes/{type}.yaml
+      depth: full
+      reason: "Each screen in the feature needs an archetype assignment"
+
+    - file: _surfaces/REGISTRY.yaml
+      depth: scan
+      look_for: "Existing surfaces in this area + register new ones"
+      reason: "Register all new surfaces"
+
+    - file: _ui/components.yaml
+      depth: verify
+      look_for: "Confirm all components used across the feature exist"
+      reason: "Component palette for the feature"
+
+    - file: _ui/tokens.yaml
+      depth: verify
+      look_for: "Confirm all visual values resolve to tokens"
+      reason: "Token palette"
+
+    - file: _design-systems/{active}/_contract.yaml
+      depth: scan
+      look_for: "Visual language constraints and component specs"
+      reason: "Design system constraints"
+
+    - file: _interaction/PHYSICS.md
+      depth: scan
+      look_for: "Motion rules for transitions between feature screens"
+      reason: "Motion rules"
+
+    - file: _interaction/FOCUS.md
+      depth: scan
+      look_for: "Focus management for cross-screen navigation"
+      reason: "Keyboard rules"
+
+    - file: _interaction/PROGRESSION.md
+      depth: scan
+      look_for: "Progressive disclosure strategy for the feature"
+      reason: "Disclosure rules"
+
+    - file: _interaction/CHOREOGRAPHY.md
+      depth: scan
+      look_for: "Multi-step interaction orchestration relevant to this feature"
+      reason: "Multi-step interaction orchestration"
+
+    - file: _invariants/REGISTRY.md
+      depth: scan
+      look_for: "Invariant categories relevant to this feature (likely multiple categories)"
+      reason: "Full invariant check — features touch many categories"
+
+    - file: _artifacts/SYNTHESIS.md
+      depth: scan
+      look_for: "Which artifact section(s) does this feature serve? What maturity state?"
+      reason: "LAW-013 — artifact-first design"
+
+  should_read:
+    - file: _nfr/PERFORMANCE.yaml
+      reason: "Performance targets for the feature"
+
+    - file: _nfr/SECURITY.yaml
+      reason: "If feature handles sensitive data"
+
+    - file: _nfr/PRIVACY.yaml
+      reason: "If feature handles personal data"
+
+    - file: _resilience/FAILURE_MODES.md
+      reason: "Cross-cutting failure scenarios"
+
+    - file: _quality/TRACE.yaml
+      reason: "Map feature requirements to implementation"
+
+    - file: _strategy/MOATS.md
+      reason: "If moat-conscious — how does this feature contribute to stickiness?"
+      condition: "Only if moat-conscious preset is in chain"
+
+    - file: _research/
+      reason: "If user research exists for this feature"
+
+    # --- Quality loop inputs (critique + pre-build dependencies) ---
+
+    - file: _content/SYSTEM.md
+      reason: "Content Quality critique dimension (min score 4) — applies to all screens in the feature"
+      condition: "Always for full features — critique scores Content Quality per screen"
+
+    - file: _content/PATTERNS.md
+      reason: "Empty state and error copy patterns — LAW-004 requires all three states on every screen"
+      condition: "If any screen includes empty states, errors, or onboarding copy"
+
+    - file: _quality/HEURISTICS.md
+      reason: "Priority Ladder — full features encounter tradeoffs across multiple screens"
+      condition: "If pre-build identifies competing design principles"
+
+    - file: _quality/VISUAL_VERIFICATION.md
+      reason: "Visual check protocol — CRITICAL: skipping caps Visual Craft, Interaction, and Completeness scores at 3 per screen"
+      condition: "Before critique on each screen — required by LOOP.md step 6"
+
+    - file: _model/patterns/SURFACING.md
+      reason: "Information Surfacing critique dimension (High, min 4) — applies to every screen in the feature"
+      condition: "If any screen displays data (table, detail, dashboard, overview)"
+
+    - file: _model/truth/permissions.yaml
+      reason: "Model Coherence critique dimension (Critical, min 4) — full features commonly touch permission-sensitive entities"
+      condition: "If feature displays or modifies permission-sensitive entities"
+
+    - file: _ui/states.md
+      reason: "State definitions for loading/empty/error — needed during build for every screen"
+      condition: "Always for full features — LAW-004 requires all three states"
+
+    # --- Pre-build dependencies ---
+
+    - file: _surfaces/EXPECTATIONS.md
+      reason: "Mental Model Audit — required for multi-surface builds (PRE-BUILD.md)"
+      condition: "If other surfaces already exist in _surfaces/REGISTRY.yaml"
+
+    - file: _quality/DIRECTIONAL_COHERENCE.md
+      reason: "Orphan feature justification — features with serves_thesis: no must carry justification"
+      condition: "If feature doesn't directly serve product thesis in manifest.yaml"
+
+    - file: _model/truth/vocabulary.yaml
+      reason: "Vocabulary Continuity Gate — check terminology registry before inventing user-facing terms"
+      condition: "If introducing new user-facing terms or labels"
+
+    - file: _decisions/eil/
+      depth: scan
+      reason: "EIL artifact check — new capabilities require EIL-001 through EIL-005 (P0 if missing)"
+      condition: "If feature introduces capabilities users haven't seen before"
+
+    - file: _flows/REGISTRY.yaml
+      reason: "Journey Context — for multi-surface features, reference FLOW-NNN (PRE-BUILD.md)"
+      condition: "If file is populated and feature spans multiple surfaces"
+
+    - file: _jobs/REGISTRY.yaml
+      reason: "Output Type Alignment — verify feature serves a registered JOB-NNN"
+      condition: "If file is populated"
+
+    - file: _jobs/VALUE_LOOPS.md
+      reason: "Value loop design — understand how this feature creates compounding value through usage loops"
+      condition: "If moat-conscious preset is active, or if feature is designed to create retention"
+
+    - file: CONSTRAINTS_INDEX.yaml
+      depth: scan
+      look_for: "Constraint categories relevant to this feature — token, extension, NFR, localization"
+      reason: "RUNBOOK.md § Constraint locator: load first to identify constraint files across feature scope"
+      condition: "When feature spans multiple constraint categories"
+
+    - file: _decisions/REGISTRY.md
+      depth: scan
+      look_for: "Past decisions constraining this feature or its surfaces"
+      reason: "Before-trigger requires Contradiction Protocol check — file must be loaded"
+
+    - file: _quality/COHERENCE.md
+      reason: "Blocking after-trigger requires cross-surface coherence check — file must be loaded"
+      condition: "When feature includes multiple screens"
+
+    - file: _critique/LOOP.md
+      reason: "After-trigger requires running critique loop — file must be loaded before trigger fires"
+      condition: "When task produces visible UI output (always for this task type)"
+
+    # --- Surface-specific routing ---
+
+    - file: DESIGN_ROUTER.yaml
+      depth: scan
+      look_for: "Find each surface type in the feature → load the design files it specifies"
+      reason: "Routes to surface-specific layout and pattern files for each screen in the feature"
+
+  before:
+    - action: "Run Pre-Build Exploration Flow for the feature (all screens)"
+      blocking: true
+      reason: "LAW-011, LAW-012 — explore before building"
+
+    - action: "Register all new surfaces in _surfaces/REGISTRY.yaml"
+      blocking: true
+      reason: "Track every surface"
+
+    - action: "Verify truth model covers all feature entities and actions"
+      blocking: true
+      reason: "LAW-007, LAW-011 apply — verify truth model coverage"
+
+    - action: "Check _decisions/REGISTRY.md for relevant past decisions"
+      blocking: true
+      reason: "Contradiction Protocol per PROTOCOL.md"
+
+  after:
+    - action: "Run critique loop on EACH screen in the feature"
+      blocking: true
+      reason: "RULE-030 applies per-screen"
+
+    - action: "Run cross-surface coherence check per _quality/COHERENCE.md"
+      blocking: true
+      reason: "Feature-level coherence across its screens"
+
+    - action: "Update _quality/TRACE.yaml with requirement-to-implementation mappings"
+      blocking: false
+      reason: "Traceability"
+
+    - action: "Run completeness gate — verify all states, error paths, edge cases"
+      blocking: true
+      reason: "Gate 5 — completeness"
+
+    - action: "Check artifact readiness per _artifacts/SYNTHESIS.md"
+      blocking: false
+      reason: "Gate 6 — can the artifact section be rendered?"
+
+  gates: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REVIEW / AUDIT — Evaluating existing work
+# ─────────────────────────────────────────────────────────────────────────────
+
+review_audit:
+  description: "Running quality audits, drift detection, or comprehensive reviews"
+  plan_mode: not_required
+
+  session_workflow:
+    session_mode: full
+    notion_read:
+      - Decisions       # What was decided (audit checks compliance)
+      - Journal         # Session history (audit checks completeness)
+      - Feature Registry # Feature status (audit checks accuracy)
+    notion_write:
+      - Journal         # Audit results entry
+    linear_actions:
+      - "Create issues for P0/P1 findings: [AUDIT] description"
+      - "Append Log row to existing issues if findings affect them"
+    handoff_weight: detailed
+
+  build_classification:
+    typical: Standard
+    range: [Standard]
+    pre_build: none
+
+  key_signals:
+    - "14 critique dimensions, all scored 1-5. Minimums: correctness=5, all others≥4"
+    - "Max 3 critique cycles, then escalate (RULE-031)"
+    - "P0 = law/invariant violation, P1 = significant quality gap, P2 = polish"
+    - "Ship conditions: P0=0, P1≤2 (RULE-032, ship_conditions in laws.yaml)"
+    - "Screenshot the surface BEFORE scoring — no visual scoring without rendered output"
+    - "Save scorecard to audit-output/ — never overwrite previous audits"
+
+  context_budget:
+    must_read_tokens: ~7500
+    should_read_tokens: ~2300
+    total_with_triggers: ~10300
+  priority_if_constrained:
+    - _critique/LOOP.md
+    - _critique/PROMPT.md
+    - _quality/archetypes/{type}.yaml
+    - _rules/laws.yaml
+
+  must_read:
+    - file: _critique/LOOP.md
+      depth: full
+      reason: "Critique orchestration — phases, inputs, stop conditions"
+
+    - file: _critique/PROMPT.md
+      depth: full
+      reason: "What to check in each critique pass — all dimensions and checks"
+
+    - file: _critique/RUBRIC.md
+      depth: scan
+      look_for: "Scoring definitions for the dimensions relevant to this review"
+      reason: "How to score — what separates a 3 from a 5"
+
+    - file: _quality/QUALITY_PROTOCOL.md
+      depth: scan
+      look_for: "Gate definitions and pass criteria for the relevant gates"
+      reason: "Which gates to evaluate"
+
+    - file: _quality/archetypes/{type}.yaml
+      depth: full
+      reason: "Budget verification for the screen being reviewed"
+
+    - file: _invariants/REGISTRY.md
+      depth: scan
+      look_for: "Invariant categories relevant to the surface being reviewed"
+      reason: "Check relevant invariants"
+
+    - file: _rules/laws.yaml
+      depth: scan
+      look_for: "Supreme and locked tiers — verify no violations"
+      reason: "Law compliance"
+
+    - file: _surfaces/REGISTRY.yaml
+      depth: verify
+      look_for: "Verify surface is registered and metadata is current"
+      reason: "Surface metadata"
+
+  should_read:
+    - file: _quality/COHERENCE.md
+      reason: "If reviewing a flow with multiple screens"
+
+    - file: _quality/TRACE.yaml
+      reason: "If checking requirement coverage"
+
+    - file: _quality/LEARNING.md
+      reason: "Check for applicable learning patterns from past builds"
+
+    - file: _expectations/PRE-BUILD.md
+      reason: "If the screen has intent declarations — critique against declared intent"
+
+    - file: _nfr/PERFORMANCE.yaml
+      reason: "If reviewing performance aspects"
+
+    # --- Critique inputs (review_audit runs full critique) ---
+
+    - file: _critique/CALIBRATION.md
+      reason: "Score calibration — RUBRIC.md defines what to check; CALIBRATION.md defines what good looks like at each score level. Required for accurate boundary-case scoring."
+
+    - file: _content/SYSTEM.md
+      reason: "Content Quality dimension — audit must check copy quality against system rules"
+
+    - file: _content/PATTERNS.md
+      reason: "Empty state and error patterns — audit checks copy compliance"
+
+    - file: _quality/HEURISTICS.md
+      reason: "Tradeoff Evaluation — audit assesses whether design tradeoffs were resolved correctly"
+
+    - file: _quality/VISUAL_VERIFICATION.md
+      reason: "Visual check protocol — REQUIRED: skipping caps 3 dimensions at score 3"
+
+    - file: _model/patterns/SURFACING.md
+      reason: "Information Surfacing dimension — audit evaluates tier model compliance"
+
+    - file: _model/truth/permissions.yaml
+      reason: "Model Coherence — audit checks permission boundary compliance"
+
+    - file: _ui/states.md
+      reason: "State completeness — verify loading/empty/error states present"
+
+    # --- Flow and job context (conditional on registry population) ---
+
+    - file: _flows/REGISTRY.yaml
+      reason: "Flow Gate (conditional) — audit must check flow continuity and completeness for surfaces in registered flows"
+      condition: "If file is populated and reviewed surface participates in a flow"
+
+    - file: _jobs/REGISTRY.yaml
+      reason: "Gate 5 job completeness (conditional) — audit must verify surface maps to a JOB-NNN"
+      condition: "If file is populated"
+
+  before:
+    - action: "Screenshot the surface being reviewed"
+      blocking: true
+      reason: "Visual evidence for critique scoring"
+
+    - action: "Identify the archetype and load its budget"
+      blocking: true
+      reason: "Can't evaluate without knowing constraints"
+
+  after:
+    - action: "Save critique scorecard to audit-output/ folder"
+      blocking: true
+      reason: "Audit trail — never overwrite previous audits"
+
+    - action: "Update _quality/LEARNING.md if new patterns discovered"
+      blocking: false
+      reason: "Capture build intelligence for future work"
+
+    - action: "Log findings in Notion Journal if significant"
+      blocking: false
+      reason: "Session logging per PROTOCOL.md"
+
+  gates: [2, 3, 4, 5, 6, 8]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ACCESSIBILITY WORK — A11y improvements or WCAG compliance
+# ─────────────────────────────────────────────────────────────────────────────
+
+accessibility:
+  description: "Improving keyboard navigation, screen reader support, contrast, or WCAG compliance"
+  plan_mode: if_3_plus_files
+
+  session_workflow:
+    session_mode: quick_unless_escalated
+    notion_read: []    # A11y work rarely needs Notion context
+    notion_write:
+      - Journal         # One-liner or summary
+    linear_actions:
+      - "Create or update issue: [FIX] a11y-description"
+      - "Append Log row"
+    handoff_weight: summary
+
+  build_classification:
+    typical: Targeted
+    range: [Micro, Targeted]
+    pre_build: none
+
+  key_signals:
+    - "LAW-006: Keyboard complete, contrast AA, screen reader navigable"
+    - "RULE-003: Focus indicator always visible"
+    - "RULE-004: Escape closes any transient UI"
+    - "RULE-005: Closing transient UI returns focus to trigger"
+    - "A11Y-001 through A11Y-005 invariants, plus UI-001 through UI-008"
+
+  context_budget:
+    must_read_tokens: ~2200
+    should_read_tokens: ~1400
+    total_with_triggers: ~3800
+  priority_if_constrained:
+    - _interaction/FOCUS.md
+    - _invariants/REGISTRY.md
+    - _rules/laws.yaml
+
+  must_read:
+    - file: _rules/laws.yaml
+      depth: scan
+      look_for: "LAW-006 (accessibility), RULE-003 (focus visible), RULE-004 (escape), RULE-005 (return focus)"
+      reason: "Core a11y laws and rules"
+
+    - file: _interaction/FOCUS.md
+      depth: full
+      reason: "Tab order, focus ring, focus management rules — the primary a11y reference"
+
+    - file: _invariants/REGISTRY.md
+      depth: scan
+      look_for: "A11Y-001 through A11Y-005, UI-001 through UI-008"
+      reason: "Accessibility and UI invariants"
+
+    - file: _ui/tokens.yaml
+      depth: scan
+      look_for: "Color token values relevant to contrast ratios"
+      reason: "Contrast verification against token values"
+
+    - file: _design-systems/{active}/tokens.yaml
+      depth: scan
+      look_for: "Color values for contrast verification"
+      reason: "Design system color values"
+
+    - file: _nfr/SECURITY.yaml
+      depth: verify
+      look_for: "Any security-a11y intersection (e.g., CAPTCHA alternatives)"
+      reason: "Rare, but check if relevant"
+      note: "Rare — verify quickly and move on"
+
+  should_read:
+    - file: _ui/I18N.md
+      reason: "If a11y work intersects with internationalization"
+
+    - file: _ui/RESPONSIVE.md
+      reason: "If a11y differs by viewport"
+
+    - file: _ui/layouts/RTL.md
+      reason: "If supporting right-to-left languages"
+
+    - file: _quality/QUALITY_PROTOCOL.md
+      depth: scan
+      look_for: "Gate 3 (Accessibility) — pass criteria and checklist"
+      reason: "Blocking after-trigger requires running Gate 3 from this file"
+
+    - file: _content/SYSTEM.md
+      reason: "ARIA labels, button copy, and error announcements must comply with writing rules"
+      condition: "If a11y work involves ARIA labels, button copy, or screen reader announcements"
+
+  before:
+    - action: "Identify current a11y baseline for affected surfaces"
+      blocking: true
+      reason: "Need before-state to measure improvement"
+
+  after:
+    - action: "Run Gate 3 (Accessibility) from _quality/QUALITY_PROTOCOL.md"
+      blocking: true
+      reason: "Formal accessibility gate"
+
+  gates: [3]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CONFIG / PRESET — Changing project configuration or presets
+# ─────────────────────────────────────────────────────────────────────────────
+
+config_change:
+  description: "Modifying manifest.yaml, tech-foundation.yaml, or preset files"
+  plan_mode: required
+
+  session_workflow:
+    session_mode: full
+    notion_read:
+      - Decisions       # Past config decisions
+      - Constitution    # Product laws affecting config
+    notion_write:
+      - Journal         # Full entry
+      - Decisions       # Config changes are always decisions
+    linear_actions:
+      - "Create issue: [CHORE] config-description"
+      - "Append Log row"
+    handoff_weight: detailed
+
+  build_classification:
+    typical: Standard
+    range: [Targeted, Standard]
+    pre_build: minimal
+
+  key_signals:
+    - "Resolution order: Notion Constitution → laws → _base → preset → _project (higher wins)"
+    - "Preset changes cascade to ALL surfaces — know the blast radius"
+    - "New preset requires DEC entry in _decisions/REGISTRY.md"
+    - "Requires proposal authority — this is not autonomous"
+    - "Document current state BEFORE any changes — for reversibility"
+
+  context_budget:
+    must_read_tokens: ~3500
+    should_read_tokens: ~1100
+    total_with_triggers: ~5300
+  priority_if_constrained:
+    - config/manifest.yaml
+    - SYSTEM_CONTRACT.md
+    - GOVERNANCE.md
+
+  must_read:
+    - file: config/manifest.yaml
+      depth: full
+      reason: "Current product identity and preset chain — this may be the file being changed"
+
+    - file: config/tech-foundation.yaml
+      depth: full
+      reason: "Current architectural decisions — may be the file being changed"
+
+    - file: _presets/_base.yaml
+      depth: scan
+      look_for: "Base defaults that apply to all presets — understand the foundation"
+      reason: "Know what you're building on"
+
+    - file: _presets/{active}.yaml
+      depth: full
+      reason: "Current active preset — may be the file being changed"
+
+    - file: _presets/_project.yaml
+      depth: full
+      reason: "Project-level overrides — last in chain, highest preset authority"
+
+    - file: SYSTEM_CONTRACT.md
+      depth: scan
+      look_for: "Resolution order section and meta-rules on configuration"
+      reason: "Understand what overrides what"
+
+    - file: GOVERNANCE.md
+      depth: scan
+      look_for: "Decision entry requirements for config changes"
+      reason: "New preset requires decision entry"
+
+  should_read:
+    - file: _flows/REGISTRY.yaml
+      reason: "Config changes can alter flow preconditions — identify FLOW-NNN entries affected by persistence, auth, or sync changes"
+      condition: "If file is populated and config change affects data persistence, auth mode, or sync mode"
+
+    - file: _jobs/REGISTRY.yaml
+      reason: "Config changes can affect job feasibility — verify no declared JOB-NNN is broken"
+      condition: "If file is populated"
+
+    - file: _content/SYSTEM.md
+      reason: "If config change affects product voice or density — writing rules must be re-evaluated"
+      condition: "If config change modifies voice settings in manifest.yaml"
+
+    - file: _decisions/REGISTRY.md
+      depth: scan
+      look_for: "Decisions constraining configuration — preset selections, design system choices"
+      reason: "Before-trigger requires creating DEC entry — must understand existing decisions first"
+
+    - file: _rules/laws.yaml
+      depth: scan
+      look_for: "Laws affected by the config being changed — extension-specific rules, product_class rules"
+      reason: "Config changes can cascade to all surfaces — verify no law violations enabled or suppressed"
+      condition: "If config change modifies product_class, preset_chain, or design_system selection"
+
+  before:
+    - action: "Document current configuration state before changes"
+      blocking: true
+      reason: "Reversibility — know what changed"
+
+    - action: "If adding a new preset — create _decisions/REGISTRY.md entry"
+      blocking: true
+      reason: "GOVERNANCE.md requires it"
+
+  after:
+    - action: "Verify resolution order still produces expected results"
+      blocking: true
+      reason: "Preset chain changes can cascade unpredictably"
+
+    - action: "Check if any existing surfaces need updating due to config changes"
+      blocking: false
+      reason: "Config changes can affect all surfaces"
+
+  gates: [1]
+  authority: requires_proposal
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXPLORATION — Research, prototyping, investigating approaches
+# ─────────────────────────────────────────────────────────────────────────────
+
+exploration:
+  description: "Exploring approaches, prototyping, investigating before committing to a path"
+  plan_mode: not_required
+
+  session_workflow:
+    session_mode: quick_unless_escalated
+    notion_read:
+      - Decisions       # Was this explored before?
+      - Deferred        # Was this previously deferred?
+      - Journal         # Past exploration sessions
+    notion_write:
+      - Journal         # Exploration findings
+    linear_actions: [] # No Linear actions unless escalated to build
+    handoff_weight: summary
+
+  build_classification:
+    typical: Targeted
+    range: [Micro, Targeted]
+    pre_build: none
+
+  key_signals:
+    - "LAW-012: Explore more than build — this mode validates that principle"
+    - "Constraints are RELAXED — but don't accidentally ship exploratory work"
+    - "Must produce a recommendation: build, defer, or abandon"
+    - "Feature Classification: Expected / Helpful / Speculative / Dangerous / Prevented"
+    - "New capabilities trigger Expectation Invention Loop (EIL)"
+
+  context_budget:
+    must_read_tokens: ~1200
+    should_read_tokens: ~1100
+    total_with_triggers: ~2500
+  priority_if_constrained:
+    - _modes/explore.md
+    - _rules/laws.yaml
+
+  must_read:
+    - file: _modes/explore.md
+      depth: full
+      reason: "Exploration mode rules — divergent thinking, no commitment yet"
+
+    - file: _rules/laws.yaml
+      depth: scan
+      look_for: "LAW-012 (bounded curiosity) — the law that validates exploration mode"
+      reason: "Understand the explore-before-build principle"
+
+    - file: _expectations/PRE-BUILD.md
+      depth: scan
+      look_for: "Feature Classification Framework and EIL trigger conditions"
+      reason: "Know when exploration results require an EIL"
+
+  should_read:
+    - file: _quality/REFERENCE_ANALYSIS.md
+      reason: "Step 0 of explore.md — full Reference Analysis protocol for selecting reference products and extracting transferable principles"
+      condition: "When exploration involves a new screen, new surface, or redesign (Standard or Complex classification)"
+
+    - file: _research/
+      reason: "If research templates exist — use them for structured exploration"
+
+    - file: _quality/LEARNING.md
+      reason: "Past build intelligence — what approaches worked before?"
+
+    - file: _artifacts/SYNTHESIS.md
+      reason: "What artifact sections might this exploration feed?"
+
+    # --- Flow and job context ---
+
+    - file: _jobs/REGISTRY.yaml
+      reason: "EIL anchor — new capability should check whether it serves a documented job"
+      condition: "If file is populated and exploration involves a new user-facing capability"
+
+    - file: _flows/REGISTRY.yaml
+      reason: "Flow context — explored capability may belong in a registered or planned flow"
+      condition: "If file is populated"
+
+    - file: _jobs/TEMPLATES.md
+      reason: "Job discovery tools — interview prompts and job mapping templates"
+      condition: "If exploration investigates a new capability or user need"
+
+    - file: _flows/TEMPLATES.md
+      reason: "Flow mapping tools — flow review and abandonment analysis templates"
+      condition: "If exploration involves multi-step user journeys"
+
+  before:
+    - action: "Explicitly enter explore mode — state that constraints are relaxed"
+      blocking: false
+      reason: "Prevents accidental shipping of exploratory work"
+
+  after:
+    - action: "Summarize findings and recommend next step (build, defer, or abandon)"
+      blocking: true
+      reason: "Exploration must produce a recommendation"
+
+    - action: "If recommending build — switch to govern mode and use appropriate task type"
+      blocking: true
+      reason: "Exploration outputs feed into governed builds"
+
+  gates: []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REFACTOR — Restructuring code without changing behavior
+# ─────────────────────────────────────────────────────────────────────────────
+
+refactor:
+  description: "Restructuring code, reorganizing files, improving architecture without behavior change"
+  plan_mode: required
+
+  session_workflow:
+    session_mode: quick_unless_escalated
+    notion_read: []    # Refactors rarely need Notion context
+    notion_write:
+      - Journal         # One-liner or summary
+    linear_actions:
+      - "Create or update issue: [REFACTOR] description"
+      - "Append Log row"
+    handoff_weight: one_liner
+
+  build_classification:
+    typical: Targeted
+    range: [Targeted, Standard]
+    pre_build: none
+
+  key_signals:
+    - "Behavior must be PRESERVED — verify before and after"
+    - "Invariants are the primary constraint check — must not break any"
+    - "Architectural decisions in tech-foundation.yaml constrain restructuring"
+    - "Update _surfaces/REGISTRY.yaml if renaming or moving surfaces"
+
+  context_budget:
+    must_read_tokens: ~1800
+    should_read_tokens: ~300
+    total_with_triggers: ~2700
+  priority_if_constrained:
+    - _invariants/REGISTRY.md
+    - config/tech-foundation.yaml
+
+  must_read:
+    - file: _rules/laws.yaml
+      depth: scan
+      look_for: "Any laws relevant to the restructuring — quick check"
+      reason: "Refactor must not violate laws"
+
+    - file: _invariants/REGISTRY.md
+      depth: scan
+      look_for: "Invariant categories relevant to the code being restructured"
+      reason: "Primary constraint check — must not break invariants"
+
+    - file: config/tech-foundation.yaml
+      depth: scan
+      look_for: "Architectural decisions that constrain how code should be structured"
+      reason: "Restructuring must respect architectural decisions"
+
+    - file: _surfaces/REGISTRY.yaml
+      depth: verify
+      look_for: "If renaming or moving — check if surface references need updating"
+      reason: "Keep surface references current"
+
+  should_read:
+    - file: _quality/TRACE.yaml
+      reason: "Traceability verification — refactors that rename, move, or reorganize files break requirement-to-implementation links"
+      condition: "If refactor touches files referenced in traceability entries"
+
+  before:
+    - action: "Document current behavior to verify after refactor"
+      blocking: true
+      reason: "Refactoring by definition must preserve behavior"
+
+    - action: "Run existing tests if available"
+      blocking: false
+      reason: "Establish baseline"
+
+  after:
+    - action: "Verify behavior is unchanged"
+      blocking: true
+      reason: "Definition of refactoring"
+
+    - action: "Run drift detection if UI surfaces were touched"
+      blocking: false
+      reason: "Visual regressions are common in refactors"
+
+  gates: [1, 4]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DATA DISPLAY — Building tables, lists, dashboards, charts
+# ─────────────────────────────────────────────────────────────────────────────
+
+data_display:
+  description: "Building views that primarily display structured data"
+  plan_mode: if_3_plus_files
+
+  session_workflow:
+    session_mode: full
+    notion_read:
+      - Decisions       # Past data display decisions
+      - Feature Registry # Which feature this display belongs to
+      - Product Specs   # Data requirements
+    notion_write:
+      - Journal         # Full entry
+      - Decisions       # If display design decisions made
+      - Feature Registry # Register screen
+    linear_actions:
+      - "Create or update issue"
+      - "Append Log row"
+    handoff_weight: detailed
+
+  build_classification:
+    typical: Standard
+    range: [Standard, Complex]
+    pre_build: standard
+
+  key_signals:
+    - "LAW-001: User must know where they are and what they're looking at"
+    - "LAW-005: Displayed data must match system data — no stale or derived values"
+    - "RULE-020: UI displays server values — no client-side calculated aggregates"
+    - "LAW-004: All three states required: loading, empty, error"
+    - "Data display invariants: DD-001 through DD-005"
+    - "Define what QUESTIONS the display answers for the user (see _model/patterns/SURFACING.md) — data without purpose is noise"
+
+  context_budget:
+    must_read_tokens: ~3500
+    should_read_tokens: ~1600
+    total_with_triggers: ~5600
+  priority_if_constrained:
+    - _model/patterns/data-display.md
+    - _model/truth/entities.yaml
+    - _quality/archetypes/{type}.yaml
+    - _rules/laws.yaml
+
+  must_read:
+    - file: _model/patterns/data-display.md
+      depth: full
+      reason: "Standard data display patterns — tables, lists, cards, charts"
+
+    - file: _model/truth/entities.yaml
+      depth: scan
+      look_for: "Entities this display shows — all must be defined in truth model"
+      reason: "Data must match truth model"
+
+    - file: _rules/laws.yaml
+      depth: scan
+      look_for: "LAW-001 (orientation), LAW-005 (data accuracy), RULE-020 (no client math)"
+      reason: "Data display laws"
+
+    - file: _invariants/REGISTRY.md
+      depth: scan
+      look_for: "DD-001 through DD-005 (data display invariants)"
+      reason: "Data display specific invariants"
+
+    - file: _quality/archetypes/{type}.yaml
+      depth: full
+      reason: "Workspace/overview archetype budgets for data density"
+
+    - file: _ui/components.yaml
+      depth: verify
+      look_for: "Data display components (tables, lists, etc.) — confirm they exist"
+      reason: "Closed World Assumption"
+
+    - file: _design-systems/{active}/patterns.md
+      depth: scan
+      look_for: "Design system layout patterns for data views"
+      reason: "Visual consistency for data layouts"
+
+    - file: _nfr/PERFORMANCE.yaml
+      depth: scan
+      look_for: "Response time and throughput targets for data loading"
+      reason: "Data views are performance-sensitive"
+
+  should_read:
+    - file: _ui/RESPONSIVE.md
+      reason: "How data tables behave at different viewport sizes"
+
+    - file: _interaction/PROGRESSION.md
+      reason: "If using progressive disclosure for large datasets"
+
+    # --- Quality loop inputs ---
+
+    - file: _content/SYSTEM.md
+      reason: "Content Quality — column labels, empty states, error messages must comply"
+
+    - file: _content/PATTERNS.md
+      reason: "Empty state patterns for zero-data views"
+
+    - file: _quality/VISUAL_VERIFICATION.md
+      reason: "Visual check — data displays commonly fail Density dimension without visual verification"
+
+    - file: _model/patterns/SURFACING.md
+      reason: "Information Surfacing — core framework for deciding which columns/fields to show"
+
+    - file: DESIGN_ROUTER.yaml
+      depth: scan
+      look_for: "table or detail surface type"
+      reason: "Data displays use table/detail surface types — DESIGN_ROUTER provides layout files"
+
+    - file: _ui/states.md
+      reason: "Blocking after-trigger verifies loading/empty/error states per LAW-004 — file must be loaded"
+
+    - file: _model/truth/actions.yaml
+      depth: verify
+      look_for: "Actions backing row-level affordances (edit, delete, export, sort, filter)"
+      reason: "LAW-007 — interactive elements in data views require backing actions"
+      condition: "If display has interactive affordances beyond read-only viewing"
+
+    - file: _design-systems/{active}/_contract.yaml
+      depth: scan
+      look_for: "Visual language rules and token scope for the active design system"
+      reason: "Data density decisions must stay within design system constraints"
+      condition: "If build complexity is Standard or higher"
+
+    - file: _ui/tokens.yaml
+      depth: verify
+      look_for: "Density-related tokens — spacing, typography, status colors"
+      reason: "Closed World — verify all visual values come from token registry, especially in dense table layouts"
+      condition: "If display uses custom density, status indicators, or non-standard column styling"
+
+    - file: _critique/LOOP.md
+      reason: "After-trigger requires running critique loop — file must be loaded before trigger fires"
+      condition: "When task produces visible UI output (always for this task type)"
+
+  before:
+    - action: "Define what questions the data display answers for the user"
+      blocking: true
+      reason: "Data display without clear purpose is noise"
+
+  after:
+    - action: "Verify loading, empty, and error states per _ui/states.md"
+      blocking: true
+      reason: "LAW-004 applies — data views especially need all three states"
+
+    - action: "Run critique loop with emphasis on Density and Hierarchy dimensions"
+      blocking: true
+      reason: "Data displays commonly fail on these dimensions"
+
+  gates: [1, 2, 3, 4, 5]
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CROSS-CUTTING TRIGGERS
+# ═══════════════════════════════════════════════════════════════════════════════
+# These apply regardless of task type.
+
+cross_cutting:
+
+  key_signals:
+    - "Closed World applies to ALL tasks: components from _ui/components.yaml, tokens from _ui/tokens.yaml"
+    - "RULE-030: Every screen passes critique before ship — no exceptions"
+    - "Decision trail is mandatory for every session that makes decisions"
+
+  always:
+    - trigger: "Before ANY UI work"
+      action: "Read config/manifest.yaml voice section"
+      reason: "UI must reflect product voice"
+
+    - trigger: "Before ANY component usage"
+      action: "Verify component exists in _ui/components.yaml"
+      reason: "Closed World Assumption applies"
+
+    - trigger: "Before ANY visual value"
+      action: "Verify value exists in _ui/tokens.yaml or design system tokens"
+      reason: "Closed World Assumption applies"
+
+    - trigger: "After ANY screen is built or modified"
+      action: "Run critique loop (_critique/LOOP.md)"
+      reason: "RULE-030 applies"
+
+    - trigger: "After ANY session where a design choice was made between alternatives"
+      action: "Create Notion Decision entry (DEC-YYYYMMDD-A-XXXX). Include Rationale with authority note + detection signal. Set Reviewed: unchecked. Link Related Feature."
+      reason: "PROTOCOL.md § Decisions — triggers: commitment language, explicit choice between alternatives, resolution of risk"
+      blocking: true
+
+    - trigger: "At end of EVERY session (Quick or Full)"
+      action: "1. Write handoff to handoff/<feature>/from-code/ (weight per session_workflow.handoff_weight). 2. Create Journal entry (one-liner for Quick, full for Full). 3. If Notion unavailable: [BACKFILL] prefix."
+      reason: "PROTOCOL.md § Compliance Tiers — Mandatory tier, non-negotiable"
+      blocking: true
+
+    - trigger: "At end of every FULL session"
+      action: "1. Update Linear statuses + append Log rows. 2. Create follow-up Linear issues. 3. Update Feature Registry if changed. 4. Contradiction check if decisions made. 5. Post-Session Self-Audit."
+      reason: "PROTOCOL.md § Full Session On End — Extended compliance tier"
+      blocking: true
+
+    - trigger: "When Quick session exceeds 90 min OR touches a second feature"
+      action: "Escalate to Full. Complete remaining Full On Start steps. Note escalation in Journal."
+      reason: "PROTOCOL.md § Session Checkpoints"
+      blocking: true
+
+  periodic:
+    - trigger: "Every 3rd screen built"
+      action: "Run Intent Drift Detection per WORKFLOW.md"
+      reason: "Long builds drift from original spec"
+
+    - trigger: "When 3+ surfaces exist in the same flow"
+      action: "Run coherence check per _quality/COHERENCE.md"
+      reason: "Cross-surface consistency degrades with volume"
+
+    - trigger: "At session end"
+      action: "Run Session Exit Learning Check per _quality/LEARNING.md"
+      reason: "Capture build intelligence while context is fresh"
+
+    - trigger: "At start of every Full session"
+      action: "Check Current State Summary staleness flag. If stale: regenerate before other work."
+      reason: "PROTOCOL.md § Product Strategy staleness rules"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE DIGESTS — Minimum Viable Knowledge
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# These are NOT replacements for reading the files. They provide baseline
+# awareness so Claude Code has critical context even when it can't open
+# every file. If a file is in must_read, still open it — digests are for
+# background awareness, not for skipping reads.
+
+file_digests:
+
+  _rules/laws.yaml:
+    appears_in: "11 of 13 task types"
+    digest: |
+      13 laws in 4 tiers: supreme (LAW-001 to LAW-008, LAW-011, LAW-012, LAW-013)
+      > locked (LAW-009, LAW-010, RULE-001 to RULE-032) > default > bans.
+      Most common violations: LAW-001 (orientation), LAW-004 (missing states),
+      LAW-007 (dead affordances). Ship conditions: P0=0, P1≤2, all scores ≥4.
+
+  config/manifest.yaml:
+    appears_in: "10 of 13 task types"
+    digest: |
+      Product identity: name, voice (tone, density posture, philosophy),
+      design_system preset, preset chain, audience, product_class, thesis.
+      The voice section controls ALL copy and UI density decisions.
+
+  _ui/components.yaml:
+    appears_in: "8 of 13 task types"
+    digest: |
+      Closed-world component registry (~25KB). Every UI component must exist here.
+      Structure: component families → variants → props → states.
+      RULE-001: max 4 variants per component.
+      If you need something not listed: DEC entry + new_component task type.
+
+  _invariants/REGISTRY.md:
+    appears_in: "7 of 13 task types"
+    digest: |
+      ~35KB of cross-cutting invariants by category: VQ (visual quality),
+      ID (identity), HIE (hierarchy), ST (state machine), DD (data display),
+      A11Y (accessibility), UI (general UI). For quick tasks: scan only the
+      category relevant to your change, don't read all 35KB.
+
+  _quality/archetypes/{type}.yaml:
+    appears_in: "6 of 13 task types"
+    digest: |
+      5 archetypes: workspace (primary work, extended sessions), detail (focused,
+      single-entity), overview (summary, dashboard), configuration (settings,
+      preferences), transient (modals, overlays, brief tasks). Each has hard
+      budgets: max decision points, max components, max actions. LAW-002 requires
+      exactly one archetype per screen. Check budget BEFORE building.
+      NOTE: configuration.yaml and transient.yaml are provisional stubs.
+
+  _surfaces/REGISTRY.yaml:
+    appears_in: "6 of 13 task types"
+    digest: |
+      Every UI surface gets a SURF-NNN entry with archetype, entry points,
+      status. Check if surface exists before building. Register new surfaces
+      BEFORE building (not after).
+
+  _model/truth/actions.yaml:
+    appears_in: "5 of 13 task types"
+    digest: |
+      Every user-facing action must be defined here. Structure: action name →
+      description, preconditions, postconditions, entity scope. LAW-007:
+      if a button exists on screen, its action MUST exist in this file.
+
+  _expectations/PRE-BUILD.md:
+    appears_in: "5 of 13 task types"
+    digest: |
+      14-step Pre-Build Exploration Flow (steps 0-13). For Standard tasks:
+      steps 0-4 minimum (Intent, Peer Context, Candidates, Thesis,
+      Multiplication). For Complex: run all 14. Key outputs: Screen Intent
+      Declaration, Outcome Declaration, Emotional Intent.
+
+  .claude/PROTOCOL.md:
+    appears_in: "all 13 task types (via session_workflow)"
+    digest: |
+      Session lifecycle for every Claude Code session. Two modes:
+      Quick (5 start + 3 end steps) and Full (9 start + 8 end steps).
+      Quick: intent → connectivity → handoff → Linear → [work] → handoff → Linear → Journal.
+      Full: adds Project Home, Current State Summary, Journal history, active Decisions,
+      Linear priorities, DESIGN_ROUTER on start; adds follow-up issues, decision logging,
+      Feature Registry, contradiction check, self-audit on end.
+      Escalation triggers: second feature, design decision, >2hr, contradiction, human request.
+      Decision authority: feature-scope high/medium = auto-create; low/global = requires human.
+      Critical invariant: never edit Journal entries, Decisions, or Deferred content.
+
+  .claude/NOTION.md:
+    appears_in: "all task types reading/writing Notion databases"
+    digest: |
+      Database field specifications for Bootstrap and integrity checks.
+      Nine databases: Journal (11 fields), Decisions (12 fields), Feature Registry (8 fields),
+      Deferred (9 fields), Glossary (5 fields), Product Strategy (page), Current State Summary
+      (page), Project Home (page), Learning Queue (10 fields).
+      Key convention: Pages use full URLs, databases use 32-char hex IDs.
+      15 integrity checks map to specific fields across databases.
+
+  .claude/BUILD.md:
+    appears_in: "all 13 task types (via build_classification)"
+    digest: |
+      Build sequencing by task complexity. Four tiers: Micro (1-2 files, no decisions,
+      <30min) → Targeted (2-5 files, 0-1 decisions) → Standard (3-10 files, 1-3
+      decisions, requires pre-build) → Complex (5+ files, 3+ decisions, new surfaces,
+      full pre-build). Each tier has a build path with specific steps. Classify one tier
+      higher when unsure. Reclassification protocol: upgrading always allowed,
+      downgrading only before build starts.
+
+  EVOLUTION.md:
+    appears_in: "BUILD.md ship steps (Learning Signals check)"
+    digest: |
+      How the starter kit itself evolves: candidate signals, promotion protocol,
+      Decision Registry patterns, change categories, divergence log. Reference
+      when discovering gaps in critique scorecards or proposing new system rules.
+      Not a task-routing file — for protocol evolution only.
+
+  _examples/:
+    appears_in: "README.md (reference only — not used during task routing)"
+    digest: |
+      Worked examples using fictional B2B SaaS "Beacon". Demonstrates completed
+      artifacts: REGISTRY.example.yaml (5 surfaces), DECISIONS.example.md (5
+      decisions), GATE-0.example.md (completed Gate 0), CRITIQUE.example.md
+      (failing Cycle 1 scorecard), JOBS.example.yaml, FLOWS.example.yaml.
+      Read when learning how to fill registries, decisions, or critique scorecards.
+      Reference only — not loaded during normal task routing.
+
+  CONSTRAINTS_INDEX.yaml:
+    appears_in: "4 of 13 task types (token_work must_read, new_screen/full_feature/new_component should_read)"
+    digest: |
+      Reference-only constraint locator (~5KB). Categories: token constraints
+      (forbidden combinations, capability matrix), design system constraints,
+      interaction constraints, accessibility constraints, extension constraints.
+      Points to source files — never restates rules. Load first to identify
+      which deeper constraint files to consult. DEC-003.
+
+  _content/SYSTEM.md:
+    appears_in: "7+ task types as should_read"
+    digest: |
+      Writing rules for all user-facing copy. Defines: voice application rules,
+      error message templates (what happened + why + what to do), empty state
+      patterns, confirmation dialog copy, button label rules, tooltip guidelines.
+      Content Quality critique dimension scores against this file (min score 4).
+
+  _ui/states.md:
+    appears_in: "5+ task types (should_read or after-trigger reference)"
+    digest: |
+      Defines the three required states per LAW-004: loading (skeleton preferred),
+      empty (with guidance — never just "No items"), error (with recovery path).
+      Each state has a template structure. Missing states are a P0 violation.
+      The most common quality failure across all builds.
+
+  _quality/QUALITY_PROTOCOL.md:
+    appears_in: "review_audit must_read, accessibility after-trigger, gates referenced by all task types"
+    digest: |
+      Defines Gates 0-8 with pass criteria, checklists, and enforcement rules.
+      Gate 0 (Pre-Creation), Gate 1 (Self-Review), Gate 2 (Critique Loop),
+      Gate 3 (Accessibility), Gate 4 (Drift Detection), Gate 5 (Completeness),
+      Gate 6 (Artifact Readiness), Gate 7 (Stickiness), Gate 8 (Coherence).
+      Conditional enforcement: gates activate based on task type's gates: [] field.
+
+  _critique/LOOP.md:
+    appears_in: "7 of 13 task types (review_audit must_read, 6 task types should_read)"
+    digest: |
+      Critique orchestration — 5 phases: BUILD → CRITIQUE → PATCH → VERIFY → SHIP.
+      Surprise Test pre-check before scoring. Stop conditions: P0=0, P1≤2,
+      all dimension scores ≥4 (correctness=5). Max 3 cycles then escalate
+      (RULE-031). Inputs: rendered screenshot, archetype budget, rubric +
+      calibration. Output: scorecard saved to audit-output/.
+
+  _quality/VISUAL_VERIFICATION.md:
+    appears_in: "6+ task types as should_read"
+    digest: |
+      Visual check protocol with score-capping rule: skipping visual verification
+      caps Visual Craft, Interaction, and Completeness scores at 3. Breakpoints:
+      1440/1024/768/375px. State capture: default, empty, loading, error, hover,
+      focus. Quick mode (2 breakpoints, default+empty) vs Full mode (all).
+      Required by LOOP.md step 6 before scoring.
+
+  _flows/REGISTRY.yaml:
+    appears_in: "7 of 13 task types (conditional on file population)"
+    digest: |
+      FLOW-NNN entries with type (linear/branching/cyclical/exploratory/recovery),
+      emotional arc, surface sequence, abandonment points, and handoff rules.
+      Conditional: only active when file is populated. Check when modified surface
+      appears in a registered flow. Flow Gate checklist in _flows/QUALITY.md.
+
+  _jobs/REGISTRY.yaml:
+    appears_in: "6 of 13 task types (conditional on file population)"
+    digest: |
+      JOB-NNN entries with core/sub hierarchy, served status, surface mappings,
+      and flow connections. Conditional: only active when file is populated.
+      Gate 0 traceability check and Gate 5 completeness check reference this file.
+      Discovery tools in _jobs/TEMPLATES.md.
+
+  _ui/tokens.yaml:
+    appears_in: "6+ task types (must_read or should_read)"
+    digest: |
+      Closed-world token registry. Categories: color, spacing, typography,
+      elevation, radius, animation. Override chain: _base → preset → _project
+      (same as presets). RULE-002: no hardcoded values — every visual value
+      must resolve to a token here or in design system tokens. Verify with
+      depth: verify for Closed World compliance.

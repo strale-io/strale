@@ -1,0 +1,159 @@
+import { eq, and, lte } from "drizzle-orm";
+import { getDb } from "../db/index.js";
+import { capabilities } from "../db/schema.js";
+
+type CapabilityRow = typeof capabilities.$inferSelect;
+
+export interface MatchResult {
+  capability: CapabilityRow;
+}
+
+export interface MatchRequest {
+  task?: string;
+  capabilitySlug?: string;
+  category?: string;
+  maxPriceCents: number;
+}
+
+/**
+ * Match a request to a capability.
+ *
+ * Matching logic (per spec — intentionally simple for 5 capabilities):
+ * 1. If capability_slug provided → direct lookup, verify active + within budget
+ * 2. Filter active capabilities within budget
+ * 3. If category provided → filter by category
+ * 4. Multiple matches → pick highest success_rate
+ * 5. No match from above → keyword match on task vs capability descriptions
+ * 6. Still no match → return null
+ */
+export async function matchCapability(
+  req: MatchRequest,
+): Promise<MatchResult | null> {
+  const db = getDb();
+
+  // Path 1: Direct slug lookup
+  if (req.capabilitySlug) {
+    const [cap] = await db
+      .select()
+      .from(capabilities)
+      .where(
+        and(
+          eq(capabilities.slug, req.capabilitySlug),
+          eq(capabilities.isActive, true),
+        ),
+      )
+      .limit(1);
+
+    if (!cap) return null;
+    if (cap.priceCents > req.maxPriceCents) return null;
+    return { capability: cap };
+  }
+
+  // Path 2: Filter active capabilities within budget
+  const candidates = await db
+    .select()
+    .from(capabilities)
+    .where(
+      and(
+        eq(capabilities.isActive, true),
+        lte(capabilities.priceCents, req.maxPriceCents),
+      ),
+    );
+
+  if (candidates.length === 0) return null;
+
+  let filtered = candidates;
+
+  // Step 3: Filter by category if provided
+  if (req.category) {
+    const byCategory = filtered.filter((c) => c.category === req.category);
+    if (byCategory.length > 0) {
+      filtered = byCategory;
+    }
+    // If no category match, fall through to keyword matching with all candidates
+  }
+
+  // Step 4: If we have matches and task keywords, score them
+  if (req.task && filtered.length > 1) {
+    const scored = scoreByKeywords(req.task, filtered);
+    if (scored) return { capability: scored };
+  }
+
+  // Step 5: Pick the best from remaining by success rate
+  if (filtered.length > 0) {
+    const best = pickBySuccessRate(filtered);
+    // Only return if we have some signal it's relevant
+    // With a task string, require at least one keyword hit
+    if (req.task) {
+      const scored = scoreByKeywords(req.task, filtered);
+      if (scored) return { capability: scored };
+      return null; // No keyword overlap at all — don't guess
+    }
+    return { capability: best };
+  }
+
+  return null;
+}
+
+/**
+ * Simple keyword matching: tokenize task and capability descriptions,
+ * count overlapping words, pick the highest overlap. Ties broken by success rate.
+ */
+function scoreByKeywords(
+  task: string,
+  candidates: CapabilityRow[],
+): CapabilityRow | null {
+  const taskWords = tokenize(task);
+  if (taskWords.size === 0) return null;
+
+  let bestCap: CapabilityRow | null = null;
+  let bestScore = 0;
+
+  for (const cap of candidates) {
+    const descWords = tokenize(`${cap.name} ${cap.description} ${cap.slug}`);
+    let score = 0;
+    for (const word of taskWords) {
+      if (descWords.has(word)) score++;
+    }
+    if (
+      score > bestScore ||
+      (score === bestScore && score > 0 && betterRate(cap, bestCap))
+    ) {
+      bestScore = score;
+      bestCap = cap;
+    }
+  }
+
+  return bestScore > 0 ? bestCap : null;
+}
+
+function pickBySuccessRate(candidates: CapabilityRow[]): CapabilityRow {
+  return candidates.reduce((best, c) => (betterRate(c, best) ? c : best));
+}
+
+function betterRate(
+  a: CapabilityRow,
+  b: CapabilityRow | null,
+): boolean {
+  if (!b) return true;
+  const rateA = a.successRate ? parseFloat(a.successRate) : 0;
+  const rateB = b.successRate ? parseFloat(b.successRate) : 0;
+  return rateA > rateB;
+}
+
+/** Tokenize a string into a set of lowercase alphanumeric words, dropping noise. */
+function tokenize(text: string): Set<string> {
+  const stopWords = new Set([
+    "a", "an", "the", "is", "are", "was", "were", "be", "been",
+    "for", "of", "to", "in", "on", "at", "by", "with", "from",
+    "and", "or", "not", "this", "that", "it", "its",
+  ]);
+
+  const words = text
+    .toLowerCase()
+    .replace(/[^a-z0-9åäöéü\s-]/g, " ")
+    .split(/[\s-]+/)
+    .filter((w) => w.length > 1 && !stopWords.has(w));
+
+  return new Set(words);
+}

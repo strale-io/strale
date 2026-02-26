@@ -1,0 +1,12 @@
+# Railway build configuration for Strale API (monorepo)
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npm run build --workspace=apps/api"]
+
+[start]
+cmd = "node apps/api/dist/index.js"

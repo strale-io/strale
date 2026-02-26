@@ -1,0 +1,92 @@
+import { Hono } from "hono";
+import { eq } from "drizzle-orm";
+import { getDb } from "../db/index.js";
+import { wallets, walletTransactions } from "../db/schema.js";
+import { getStripe } from "../lib/stripe.js";
+
+export const webhookRoute = new Hono();
+
+// POST /webhooks/stripe — Stripe webhook for payment confirmation
+webhookRoute.post("/stripe", async (c) => {
+  const stripe = getStripe();
+  const sig = c.req.header("stripe-signature");
+
+  if (!sig) {
+    return c.json({ error: "Missing stripe-signature header" }, 400);
+  }
+
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error("STRIPE_WEBHOOK_SECRET not configured");
+    return c.json({ error: "Webhook not configured" }, 500);
+  }
+
+  // Stripe needs the raw body for signature verification
+  const rawBody = await c.req.text();
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(`Webhook signature verification failed: ${message}`);
+    return c.json({ error: "Invalid signature" }, 400);
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+
+    const userId = session.metadata?.user_id;
+    const amountCents = parseInt(session.metadata?.amount_cents ?? "0", 10);
+    const sessionId = session.id;
+
+    if (!userId || !amountCents) {
+      console.error("Webhook missing metadata:", { userId, amountCents });
+      return c.json({ received: true });
+    }
+
+    const db = getDb();
+
+    // Idempotency: check if this session was already processed (DEC-8 on Stripe webhooks)
+    const [existingTxn] = await db
+      .select({ id: walletTransactions.id })
+      .from(walletTransactions)
+      .where(eq(walletTransactions.stripeSessionId, sessionId))
+      .limit(1);
+
+    if (existingTxn) {
+      // Already processed — Stripe retried the webhook
+      return c.json({ received: true });
+    }
+
+    // Credit the wallet
+    const [wallet] = await db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.userId, userId))
+      .limit(1);
+
+    if (!wallet) {
+      console.error(`Wallet not found for user ${userId}`);
+      return c.json({ received: true });
+    }
+
+    await db
+      .update(wallets)
+      .set({
+        balanceCents: wallet.balanceCents + amountCents,
+        updatedAt: new Date(),
+      })
+      .where(eq(wallets.id, wallet.id));
+
+    await db.insert(walletTransactions).values({
+      walletId: wallet.id,
+      amountCents,
+      type: "top_up",
+      stripeSessionId: sessionId,
+      description: `Stripe top-up: €${(amountCents / 100).toFixed(2)}`,
+    });
+  }
+
+  return c.json({ received: true });
+});
