@@ -1,7 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
 
+// Uses Serper.dev API for search (avoids CAPTCHA issues from direct Google scraping)
 registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   const brandName = ((input.brand_name as string) ?? (input.brand as string) ?? (input.task as string) ?? "").trim();
   if (!brandName) throw new Error("'brand_name' is required.");
@@ -9,28 +9,50 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   const excludeOwnDomain = (input.exclude_own_domain as string)?.trim();
   const maxResults = Math.min((input.max_results as number) ?? 10, 20);
 
+  const serperKey = process.env.SERPER_API_KEY;
+  if (!serperKey) {
+    throw new Error("SERPER_API_KEY is required. Sign up at https://serper.dev (free tier: 2,500 queries/month).");
+  }
+
   // Build search query
   let query = `"${brandName}"`;
   if (excludeOwnDomain) query += ` -site:${excludeOwnDomain}`;
 
-  // Use Google search via Browserless
-  const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=${maxResults}&hl=en`;
-  const html = await fetchRenderedHtml(searchUrl);
-  const pageText = htmlToText(html).slice(0, 12000);
+  const res = await fetch("https://google.serper.dev/search", {
+    method: "POST",
+    headers: {
+      "X-API-KEY": serperKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ q: query, num: maxResults }),
+    signal: AbortSignal.timeout(15000),
+  });
 
-  // Check for CAPTCHA
-  if (html.includes("captcha") || html.includes("unusual traffic")) {
-    // Fallback: return what we can
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Serper API error: HTTP ${res.status} ${errText.slice(0, 200)}`);
+  }
+
+  const data = await res.json() as Record<string, unknown>;
+  const organic = (data.organic as Array<Record<string, unknown>>) ?? [];
+
+  if (organic.length === 0) {
     return {
       output: {
         brand_name: brandName,
-        mentions: [],
-        error: "Search blocked by CAPTCHA. Try again later or reduce request frequency.",
         query,
+        mentions: [],
+        total_results_found: 0,
+        summary: "No mentions found for this brand.",
       },
-      provenance: { source: "google.com", fetched_at: new Date().toISOString() },
+      provenance: { source: "google-serper", fetched_at: new Date().toISOString() },
     };
   }
+
+  // Build context from search results for Claude analysis
+  const resultsText = organic.map((r, i) =>
+    `${i + 1}. ${r.title}\n   URL: ${r.link}\n   ${r.snippet ?? ""}`
+  ).join("\n\n");
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
@@ -42,13 +64,13 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
     messages: [
       {
         role: "user",
-        content: `Extract brand mentions from these Google search results. Return ONLY valid JSON.
+        content: `Analyze these search results for brand mentions. Return ONLY valid JSON.
 
 Brand name: "${brandName}"
 Search query: ${query}
 
-Search results page text:
-${pageText}
+Search results:
+${resultsText}
 
 Return JSON:
 {
@@ -78,6 +100,6 @@ Return JSON:
 
   return {
     output,
-    provenance: { source: "google.com", fetched_at: new Date().toISOString() },
+    provenance: { source: "google-serper", fetched_at: new Date().toISOString() },
   };
 });
