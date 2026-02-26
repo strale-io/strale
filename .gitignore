@@ -7,3 +7,6 @@ dist/
 .DS_Store
 .turbo
 coverage/
+__pycache__/
+*.pyc
+*.egg-info/
