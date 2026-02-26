@@ -241,6 +241,9 @@ async function executeSync(
       };
     }
 
+    // Determine transparency marker based on capability type
+    const marker = getTransparencyMarker(capability.slug);
+
     // Create transaction record as "executing"
     const [txnRecord] = await tx
       .insert(transactions)
@@ -251,6 +254,8 @@ async function executeSync(
         status: "executing",
         input: executionInput,
         priceCents: capability.priceCents,
+        transparencyMarker: marker,
+        dataJurisdiction: "EU",
       })
       .returning({ id: transactions.id });
 
@@ -275,13 +280,20 @@ async function executeSync(
         description: `Capability: ${capability.slug}`,
       });
 
-      // Mark transaction completed
+      // Mark transaction completed with audit trail
       await tx
         .update(transactions)
         .set({
           status: "completed",
           output: capResult.output,
           provenance: capResult.provenance,
+          auditTrail: {
+            executor: capability.slug,
+            execution_mode: "sync",
+            started_at: new Date(startTime).toISOString(),
+            completed_at: new Date().toISOString(),
+            latency_ms: latencyMs,
+          },
           latencyMs,
           completedAt: new Date(),
         })
@@ -419,6 +431,7 @@ async function executeAsync(
       .where(eq(wallets.id, wallet.id));
 
     // Create transaction record
+    const marker = getTransparencyMarker(capability.slug);
     const [txnRecord] = await tx
       .insert(transactions)
       .values({
@@ -428,6 +441,8 @@ async function executeAsync(
         status: "executing",
         input: executionInput,
         priceCents: capability.priceCents,
+        transparencyMarker: marker,
+        dataJurisdiction: "EU",
       })
       .returning({ id: transactions.id });
 
@@ -509,13 +524,20 @@ async function executeInBackground(
     const capResult = await executor(executionInput);
     const latencyMs = Date.now() - startTime;
 
-    // Success: update transaction record
+    // Success: update transaction record with audit trail
     await db
       .update(transactions)
       .set({
         status: "completed",
         output: capResult.output,
         provenance: capResult.provenance,
+        auditTrail: {
+          executor: capability.slug,
+          execution_mode: "async",
+          started_at: new Date(startTime).toISOString(),
+          completed_at: new Date().toISOString(),
+          latency_ms: latencyMs,
+        },
         latencyMs,
         completedAt: new Date(),
       })
@@ -566,4 +588,16 @@ async function executeInBackground(
         .where(eq(transactions.id, transactionId));
     });
   }
+}
+
+// ─── EU AI Act transparency markers (DEC-20260226-P-s3t4) ─────────────────────
+// 'ai_generated' = uses LLM, 'algorithmic' = pure logic, 'hybrid' = both
+const ALGORITHMIC_CAPABILITIES = new Set([
+  "vat-validate",
+  "iban-validate",
+]);
+
+function getTransparencyMarker(slug: string): string {
+  if (ALGORITHMIC_CAPABILITIES.has(slug)) return "algorithmic";
+  return "ai_generated";
 }

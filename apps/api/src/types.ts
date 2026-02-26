@@ -7,5 +7,6 @@ export type User = typeof users.$inferSelect;
 export type AppEnv = {
   Variables: {
     user: User;
+    apiVersion: string;
   };
 };

@@ -112,6 +112,14 @@ export const transactions = pgTable(
     priceCents: integer("price_cents").notNull(),
     latencyMs: integer("latency_ms"),
     provenance: jsonb("provenance"),
+    // EU AI Act compliance (DEC-20260226-P-s3t4)
+    auditTrail: jsonb("audit_trail"), // full execution trace for regulatory compliance
+    transparencyMarker: varchar("transparency_marker", { length: 20 })
+      .notNull()
+      .default("ai_generated"), // 'ai_generated' | 'algorithmic' | 'hybrid'
+    dataJurisdiction: varchar("data_jurisdiction", { length: 10 })
+      .notNull()
+      .default("EU"), // ISO 3166-1 region code where data was processed
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

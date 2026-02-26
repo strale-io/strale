@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
+import { versionMiddleware } from "./lib/versioning.js";
 import { doRoute } from "./routes/do.js";
 import { capabilitiesRoute } from "./routes/capabilities.js";
 import { walletRoute } from "./routes/wallet.js";
@@ -13,10 +14,19 @@ import "./capabilities/swedish-company-data.js";
 import "./capabilities/invoice-extract.js";
 import "./capabilities/web-extract.js";
 import "./capabilities/annual-report-extract.js";
+import "./capabilities/norwegian-company-data.js";
+import "./capabilities/danish-company-data.js";
+import "./capabilities/finnish-company-data.js";
+import "./capabilities/iban-validate.js";
+import "./capabilities/pii-redact.js";
+import "./capabilities/pdf-extract.js";
+import "./capabilities/company-enrich.js";
+import "./capabilities/ted-procurement.js";
 
 export const app = new Hono();
 
 app.use("*", logger());
+app.use("*", versionMiddleware());
 
 // Health check
 app.get("/health", (c) => c.json({ status: "ok" }));

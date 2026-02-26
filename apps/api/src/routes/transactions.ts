@@ -54,6 +54,9 @@ transactionsRoute.get("/:id", async (c) => {
       price_cents: transactions.priceCents,
       latency_ms: transactions.latencyMs,
       provenance: transactions.provenance,
+      audit_trail: transactions.auditTrail,
+      transparency_marker: transactions.transparencyMarker,
+      data_jurisdiction: transactions.dataJurisdiction,
       created_at: transactions.createdAt,
       completed_at: transactions.completedAt,
     })
