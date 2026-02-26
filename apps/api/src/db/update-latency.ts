@@ -42,6 +42,37 @@ const updates: [string, number][] = [
   ["vat-format-validate", 10],
   ["isbn-validate", 10],
   ["company-id-detect", 10],
+  // ─── Global company registries ──────────────────────────────────────────────
+  ["us-company-data", 2000],
+  ["canadian-company-data", 8000],
+  ["australian-company-data", 8000],
+  ["indian-company-data", 8000],
+  ["singapore-company-data", 8000],
+  ["hong-kong-company-data", 8000],
+  ["brazilian-company-data", 2000],
+  ["japanese-company-data", 8000],
+  // ─── Financial & credit ─────────────────────────────────────────────────────
+  ["exchange-rate", 500],
+  ["stock-quote", 500],
+  ["credit-report-summary", 12000],
+  // ─── Domain & web intelligence ──────────────────────────────────────────────
+  ["dns-lookup", 100],
+  ["whois-lookup", 500],
+  ["ssl-check", 200],
+  ["tech-stack-detect", 10000],
+  // ─── Regulatory & trade ─────────────────────────────────────────────────────
+  ["sanctions-check", 3000],
+  ["hs-code-lookup", 3000],
+  ["eu-regulation-search", 10000],
+  // ─── Text & language ────────────────────────────────────────────────────────
+  ["translate", 2000],
+  ["summarize", 2000],
+  ["sentiment-analyze", 2000],
+  ["classify-text", 2000],
+  // ─── Data format utilities ──────────────────────────────────────────────────
+  ["json-to-csv", 20],
+  ["currency-convert", 500],
+  ["address-parse", 2000],
 ];
 
 const db = getDb();
