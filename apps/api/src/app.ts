@@ -106,6 +106,38 @@ import "./capabilities/regex-generate.js";
 import "./capabilities/cron-explain.js";
 import "./capabilities/diff-json.js";
 import "./capabilities/api-health-check.js";
+// ─── Competitive intelligence ─────────────────────────────────────────────────
+import "./capabilities/landing-page-roast.js";
+import "./capabilities/seo-audit.js";
+import "./capabilities/competitor-compare.js";
+import "./capabilities/pricing-page-extract.js";
+import "./capabilities/company-tech-stack.js";
+// ─── Content & writing ────────────────────────────────────────────────────────
+import "./capabilities/blog-post-outline.js";
+import "./capabilities/email-draft.js";
+import "./capabilities/social-post-generate.js";
+// ─── Agent tooling ────────────────────────────────────────────────────────────
+import "./capabilities/llm-output-validate.js";
+import "./capabilities/prompt-optimize.js";
+import "./capabilities/code-review.js";
+// ─── Document extraction ──────────────────────────────────────────────────────
+import "./capabilities/resume-parse.js";
+import "./capabilities/contract-extract.js";
+import "./capabilities/receipt-categorize.js";
+import "./capabilities/meeting-notes-extract.js";
+// ─── Utilities ────────────────────────────────────────────────────────────────
+import "./capabilities/timezone-meeting-find.js";
+import "./capabilities/startup-domain-check.js";
+import "./capabilities/youtube-summarize.js";
+// ─── Show-off ─────────────────────────────────────────────────────────────────
+import "./capabilities/github-repo-analyze.js";
+import "./capabilities/job-posting-analyze.js";
+// ─── Replacements ─────────────────────────────────────────────────────────────
+import "./capabilities/brand-mention-search.js";
+import "./capabilities/accessibility-audit.js";
+import "./capabilities/changelog-generate.js";
+import "./capabilities/api-docs-generate.js";
+import "./capabilities/dependency-audit.js";
 
 export const app = new Hono();
 

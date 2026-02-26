@@ -623,6 +623,12 @@ const ALGORITHMIC_CAPABILITIES = new Set([
   "cron-explain",
   "diff-json",
   "api-health-check",
+  // Batch 3 algorithmic capabilities
+  "llm-output-validate",
+  "timezone-meeting-find",
+  "startup-domain-check",
+  "dependency-audit",
+  "accessibility-audit",
 ]);
 
 function getTransparencyMarker(slug: string): string {

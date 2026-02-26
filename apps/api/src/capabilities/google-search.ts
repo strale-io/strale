@@ -1,7 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
-import Anthropic from "@anthropic-ai/sdk";
 
+// Uses Serper.dev API (free tier: 2,500 queries/month, no CAPTCHA issues)
+// Requires SERPER_API_KEY env var
 registerCapability("google-search", async (input: CapabilityInput) => {
   const query = ((input.query as string) ?? (input.q as string) ?? (input.task as string) ?? "").trim();
   if (!query) throw new Error("'query' is required.");
@@ -10,57 +10,66 @@ registerCapability("google-search", async (input: CapabilityInput) => {
   const language = ((input.language as string) ?? "").trim();
   const country = ((input.country as string) ?? "").trim();
 
-  let searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=${numResults}`;
-  if (language) searchUrl += `&hl=${encodeURIComponent(language)}`;
-  if (country) searchUrl += `&gl=${encodeURIComponent(country)}`;
+  const serperKey = process.env.SERPER_API_KEY;
+  if (!serperKey) {
+    throw new Error("SERPER_API_KEY is required. Sign up at https://serper.dev (free tier: 2,500 queries/month).");
+  }
 
-  const html = await fetchRenderedHtml(searchUrl);
-  const text = htmlToText(html);
+  const body: Record<string, unknown> = { q: query, num: numResults };
+  if (language) body.hl = language;
+  if (country) body.gl = country;
 
-  if (text.length < 100) throw new Error("Google search returned too little content.");
-
-  // Use Claude to parse search results from the page text
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
-
-  const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Parse Google search results from this page text. Return ONLY valid JSON.
-
-{
-  "results": [
-    {
-      "position": 1,
-      "title": "Result title",
-      "url": "https://...",
-      "snippet": "Description text"
-    }
-  ],
-  "total_results_estimate": "string or null (e.g. 'About 1,230,000 results')"
-}
-
-Extract up to ${numResults} results.
-
-Page text:
-${text.slice(0, 12000)}`,
-      },
-    ],
+  const res = await fetch("https://google.serper.dev/search", {
+    method: "POST",
+    headers: {
+      "X-API-KEY": serperKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to parse Google search results.");
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Serper API error: HTTP ${res.status} ${errText.slice(0, 200)}`);
+  }
 
-  const output = JSON.parse(jsonMatch[0]);
-  output.query = query;
+  const data = await res.json() as Record<string, unknown>;
+
+  // Map Serper response to our format
+  const organic = (data.organic as Array<Record<string, unknown>>) ?? [];
+  const results = organic.map((r, i) => ({
+    position: i + 1,
+    title: r.title as string,
+    url: r.link as string,
+    snippet: r.snippet as string,
+    date: (r.date as string) ?? null,
+    sitelinks: r.sitelinks ?? null,
+  }));
+
+  const knowledgeGraph = data.knowledgeGraph ?? null;
+  const answerBox = data.answerBox ?? null;
+  const peopleAlsoAsk = (data.peopleAlsoAsk as Array<Record<string, unknown>>) ?? [];
+
+  const searchInfo = data.searchParameters as Record<string, unknown> | undefined;
 
   return {
-    output,
-    provenance: { source: "google.com", fetched_at: new Date().toISOString() },
+    output: {
+      query,
+      results,
+      result_count: results.length,
+      knowledge_graph: knowledgeGraph,
+      answer_box: answerBox,
+      people_also_ask: peopleAlsoAsk.map((q) => ({
+        question: q.question,
+        snippet: q.snippet,
+        link: q.link,
+      })),
+      search_parameters: {
+        language: language || (searchInfo?.hl as string) || null,
+        country: country || (searchInfo?.gl as string) || null,
+      },
+    },
+    provenance: { source: "google-serper", fetched_at: new Date().toISOString() },
   };
 });
