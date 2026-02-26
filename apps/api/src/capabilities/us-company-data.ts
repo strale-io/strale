@@ -89,7 +89,7 @@ async function fetchCompany(cik: string): Promise<Record<string, unknown>> {
 }
 
 registerCapability("us-company-data", async (input: CapabilityInput) => {
-  const raw = (input.cik as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
+  const raw = (input.cik as string) ?? (input.company as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
     throw new Error("'cik' or 'company_name' is required. Provide a CIK number or US company name.");
   }
