@@ -1,0 +1,43 @@
+{
+  "name": "@straleio/langchain",
+  "version": "0.1.0",
+  "description": "LangChain tool integration for Strale — let AI agents buy capabilities at runtime",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "strale",
+    "langchain",
+    "ai",
+    "agent",
+    "tool",
+    "capabilities"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "straleio": "^0.1.0"
+  },
+  "peerDependencies": {
+    "@langchain/core": ">=0.2.0"
+  },
+  "devDependencies": {
+    "@langchain/core": "^0.3.0"
+  }
+}

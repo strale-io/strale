@@ -3,13 +3,15 @@ import { eq, and, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { transactions, capabilities } from "../db/schema.js";
 import { authMiddleware } from "../lib/middleware.js";
+import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
 export const transactionsRoute = new Hono<AppEnv>();
 
-// All transaction routes require auth
+// All transaction routes require auth + DEC-21: 5 req/sec per key
 transactionsRoute.use("*", authMiddleware);
+transactionsRoute.use("*", rateLimitByKey(5, 1000));
 
 // GET /v1/transactions — List capability transactions
 transactionsRoute.get("/", async (c) => {

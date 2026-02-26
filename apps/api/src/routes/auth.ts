@@ -5,6 +5,7 @@ import { users, wallets, walletTransactions } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { apiError } from "../lib/errors.js";
 import { authMiddleware } from "../lib/middleware.js";
+import { rateLimitByIp } from "../lib/rate-limit.js";
 import type { AppEnv } from "../types.js";
 
 const TRIAL_CREDITS_CENTS = 200; // €2.00 per DEC-10
@@ -12,8 +13,8 @@ const TRIAL_CREDITS_CENTS = 200; // €2.00 per DEC-10
 export const authRoute = new Hono<AppEnv>();
 
 // POST /v1/auth/register — Register new account
-// No auth required (public endpoint)
-authRoute.post("/register", async (c) => {
+// No auth required. DEC-21: 3 req/min per IP (prevent account spam)
+authRoute.post("/register", rateLimitByIp(3, 60_000), async (c) => {
   const body = await c.req.json().catch(() => null);
   if (!body || typeof body.email !== "string" || !body.email.includes("@")) {
     return c.json(

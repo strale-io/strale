@@ -8,6 +8,7 @@ import {
   failedRequests,
 } from "../db/schema.js";
 import { authMiddleware } from "../lib/middleware.js";
+import { rateLimitByKey } from "../lib/rate-limit.js";
 import { matchCapability } from "../lib/matching.js";
 import { getExecutor } from "../capabilities/index.js";
 import { apiError } from "../lib/errors.js";
@@ -23,7 +24,8 @@ const ASYNC_THRESHOLD_MS = 10_000;
 export const doRoute = new Hono<AppEnv>();
 
 // POST /v1/do — Core endpoint: execute a capability
-doRoute.post("/do", authMiddleware, async (c) => {
+// DEC-21: 10 req/sec per API key
+doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
   const user = c.get("user");
   const db = getDb();
 
