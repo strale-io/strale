@@ -1,5 +1,5 @@
 {
-  "name": "@straleio/langchain",
+  "name": "straleio-langchain",
   "version": "0.1.0",
   "description": "LangChain tool integration for Strale — let AI agents buy capabilities at runtime",
   "type": "module",
