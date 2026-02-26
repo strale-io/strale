@@ -595,6 +595,11 @@ async function executeInBackground(
 const ALGORITHMIC_CAPABILITIES = new Set([
   "vat-validate",
   "iban-validate",
+  "swift-validate",
+  "vat-format-validate",
+  "isbn-validate",
+  "company-id-detect",
+  "email-validate",
 ]);
 
 function getTransparencyMarker(slug: string): string {

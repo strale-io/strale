@@ -22,6 +22,30 @@ import "./capabilities/pii-redact.js";
 import "./capabilities/pdf-extract.js";
 import "./capabilities/company-enrich.js";
 import "./capabilities/ted-procurement.js";
+// ─── EU company registries ──────────────────────────────────────────────────
+import "./capabilities/uk-company-data.js";
+import "./capabilities/dutch-company-data.js";
+import "./capabilities/german-company-data.js";
+import "./capabilities/french-company-data.js";
+import "./capabilities/belgian-company-data.js";
+import "./capabilities/austrian-company-data.js";
+import "./capabilities/irish-company-data.js";
+import "./capabilities/polish-company-data.js";
+import "./capabilities/estonian-company-data.js";
+import "./capabilities/latvian-company-data.js";
+import "./capabilities/lithuanian-company-data.js";
+import "./capabilities/swiss-company-data.js";
+import "./capabilities/spanish-company-data.js";
+import "./capabilities/italian-company-data.js";
+import "./capabilities/portuguese-company-data.js";
+// ─── Validation / compliance utilities ──────────────────────────────────────
+import "./capabilities/swift-validate.js";
+import "./capabilities/lei-lookup.js";
+import "./capabilities/eori-validate.js";
+import "./capabilities/email-validate.js";
+import "./capabilities/vat-format-validate.js";
+import "./capabilities/isbn-validate.js";
+import "./capabilities/company-id-detect.js";
 
 export const app = new Hono();
 
