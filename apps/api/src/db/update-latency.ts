@@ -73,6 +73,35 @@ const updates: [string, number][] = [
   ["json-to-csv", 20],
   ["currency-convert", 500],
   ["address-parse", 2000],
+  // ─── Web/scraping capabilities ──────────────────────────────────────────────
+  ["screenshot-url", 3000],
+  ["url-to-markdown", 3000],
+  ["url-to-text", 200],
+  ["link-extract", 200],
+  ["structured-scrape", 8000],
+  ["google-search", 8000],
+  ["meta-extract", 200],
+  // ─── Data cleanup/normalization ─────────────────────────────────────────────
+  ["name-parse", 20],
+  ["phone-normalize", 20],
+  ["date-parse", 20],
+  ["unit-convert", 20],
+  ["csv-clean", 50],
+  ["deduplicate", 50],
+  ["json-repair", 20],
+  // ─── File format conversion ─────────────────────────────────────────────────
+  ["html-to-pdf", 2000],
+  ["markdown-to-html", 20],
+  ["image-to-text", 3000],
+  ["image-resize", 500],
+  ["base64-encode-url", 1000],
+  // ─── Validation/testing ─────────────────────────────────────────────────────
+  ["json-schema-validate", 20],
+  ["url-health-check", 200],
+  ["regex-generate", 2000],
+  ["cron-explain", 30],
+  ["diff-json", 20],
+  ["api-health-check", 200],
 ];
 
 const db = getDb();
