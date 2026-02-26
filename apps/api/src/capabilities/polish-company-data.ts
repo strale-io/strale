@@ -61,21 +61,44 @@ function parseKrsResponse(data: any, krsNumber: string): Record<string, unknown>
   const dzial1 = dane?.dzial1 || {};
   const dzial3 = dane?.dzial3 || {};
 
-  // Company name
-  const nazwa = dzial1?.danePodmiotu?.nazwa || "";
+  // Company name — KRS returns an array of historical names; pick current (last entry without nrWpisuWykr)
+  const nazwy = dzial1?.danePodmiotu?.nazwa;
+  let nazwa = "";
+  if (typeof nazwy === "string") {
+    nazwa = nazwy;
+  } else if (Array.isArray(nazwy)) {
+    const current = nazwy.find((n: any) => !n.nrWpisuWykr) || nazwy[nazwy.length - 1];
+    nazwa = current?.nazwa || current || "";
+  }
 
-  // Address
-  const siedziba = dzial1?.siedzibaIAdres?.siedziba || {};
-  const adres = dzial1?.siedzibaIAdres?.adres || {};
+  // Address — KRS nests address inside siedzibaIAdres
+  const siedzibaIAdres = dzial1?.siedzibaIAdres || {};
+  const siedziba = siedzibaIAdres?.siedziba || {};
+  const adres = siedzibaIAdres?.adres || {};
+  // Address fields may also be arrays
+  const getStr = (v: any): string => {
+    if (typeof v === "string") return v;
+    if (Array.isArray(v)) {
+      const curr = v.find((x: any) => !x.nrWpisuWykr) || v[v.length - 1];
+      return curr?.wartosc || curr?.ulica || curr?.miejscowosc || curr || "";
+    }
+    return "";
+  };
   const address = [
-    adres?.ulica,
-    adres?.nrDomu,
-    [adres?.kodPocztowy, adres?.miejscowosc || siedziba?.miejscowosc].filter(Boolean).join(" "),
-    siedziba?.kraj,
+    getStr(adres?.ulica),
+    getStr(adres?.nrDomu),
+    [getStr(adres?.kodPocztowy), getStr(adres?.miejscowosc) || getStr(siedziba?.miejscowosc)].filter(Boolean).join(" "),
+    getStr(siedziba?.kraj),
   ].filter(Boolean).join(", ");
 
   // Legal form
-  const forma = dzial1?.danePodmiotu?.formaPrawna || "";
+  const formaRaw = dzial1?.danePodmiotu?.formaPrawna;
+  let forma = "";
+  if (typeof formaRaw === "string") {
+    forma = formaRaw;
+  } else if (Array.isArray(formaRaw)) {
+    forma = formaRaw[formaRaw.length - 1]?.formaPrawna || "";
+  }
 
   // Registration date
   const rejestracja = dzial1?.danePodmiotu?.dataRejestracji || null;
@@ -84,8 +107,17 @@ function parseKrsResponse(data: any, krsNumber: string): Record<string, unknown>
   const czyWykreslony = dane?.czyWykreslony || false;
 
   // Capital
-  const kapital = dzial1?.kapital?.wysokoscKapitaluZakladowego?.wartosc || null;
-  const waluta = dzial1?.kapital?.wysokoscKapitaluZakladowego?.waluta || "PLN";
+  const kapitalRaw = dzial1?.kapital?.wysokoscKapitaluZakladowego;
+  let kapital = null;
+  let waluta = "PLN";
+  if (typeof kapitalRaw?.wartosc === "number" || typeof kapitalRaw?.wartosc === "string") {
+    kapital = kapitalRaw.wartosc;
+    waluta = kapitalRaw.waluta || "PLN";
+  } else if (Array.isArray(kapitalRaw)) {
+    const last = kapitalRaw[kapitalRaw.length - 1];
+    kapital = last?.wartosc || null;
+    waluta = last?.waluta || "PLN";
+  }
 
   return {
     company_name: nazwa,
