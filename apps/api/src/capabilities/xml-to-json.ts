@@ -78,7 +78,7 @@ registerCapability("xml-to-json", async (input: CapabilityInput) => {
           pos += 2; // skip />
           const result: Record<string, unknown> = {};
           for (const [k, v] of Object.entries(attrs)) result[`@${k}`] = v;
-          return result;
+          return { [tagName]: Object.keys(result).length > 0 ? result : null };
         }
 
         pos++; // skip >
@@ -105,14 +105,14 @@ registerCapability("xml-to-json", async (input: CapabilityInput) => {
 
         textContent = textContent.trim();
 
-        // Text-only element
+        // Text-only element (no children, no attributes)
         if (children.length === 0 && Object.keys(attrs).length === 0) {
-          // Auto-type
-          if (/^-?\d+$/.test(textContent)) return parseInt(textContent, 10);
-          if (/^-?\d+\.\d+$/.test(textContent)) return parseFloat(textContent);
-          if (textContent === "true") return true;
-          if (textContent === "false") return false;
-          return textContent;
+          let val: unknown = textContent;
+          if (/^-?\d+$/.test(textContent)) val = parseInt(textContent, 10);
+          else if (/^-?\d+\.\d+$/.test(textContent)) val = parseFloat(textContent);
+          else if (textContent === "true") val = true;
+          else if (textContent === "false") val = false;
+          return { [tagName]: val };
         }
 
         const result: Record<string, unknown> = {};
