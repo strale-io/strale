@@ -77,6 +77,35 @@ import "./capabilities/classify-text.js";
 import "./capabilities/json-to-csv.js";
 import "./capabilities/currency-convert.js";
 import "./capabilities/address-parse.js";
+// ─── Web / scraping ─────────────────────────────────────────────────────────
+import "./capabilities/screenshot-url.js";
+import "./capabilities/url-to-markdown.js";
+import "./capabilities/url-to-text.js";
+import "./capabilities/link-extract.js";
+import "./capabilities/structured-scrape.js";
+import "./capabilities/google-search.js";
+import "./capabilities/meta-extract.js";
+// ─── Data cleanup / normalization ───────────────────────────────────────────
+import "./capabilities/name-parse.js";
+import "./capabilities/phone-normalize.js";
+import "./capabilities/date-parse.js";
+import "./capabilities/unit-convert.js";
+import "./capabilities/csv-clean.js";
+import "./capabilities/deduplicate.js";
+import "./capabilities/json-repair.js";
+// ─── File format conversion ─────────────────────────────────────────────────
+import "./capabilities/html-to-pdf.js";
+import "./capabilities/markdown-to-html.js";
+import "./capabilities/image-to-text.js";
+import "./capabilities/image-resize.js";
+import "./capabilities/base64-encode-url.js";
+// ─── Validation / testing ───────────────────────────────────────────────────
+import "./capabilities/json-schema-validate.js";
+import "./capabilities/url-health-check.js";
+import "./capabilities/regex-generate.js";
+import "./capabilities/cron-explain.js";
+import "./capabilities/diff-json.js";
+import "./capabilities/api-health-check.js";
 
 export const app = new Hono();
 

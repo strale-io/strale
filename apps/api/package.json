@@ -17,7 +17,9 @@
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.38.4",
     "hono": "^4.7.4",
+    "libphonenumber-js": "^1.12.38",
     "postgres": "^3.4.5",
+    "sharp": "^0.34.5",
     "stripe": "^17.5.0"
   },
   "devDependencies": {
