@@ -9,6 +9,7 @@ import { authRoute } from "./routes/auth.js";
 import { webhookRoute } from "./routes/webhook.js";
 import { demandSignalsRoute } from "./routes/demand-signals.js";
 import { mcpRoute } from "./routes/mcp.js";
+import { agentCardRoute, a2aRoute } from "./routes/a2a.js";
 
 // Register capability executors (side-effect imports)
 import "./capabilities/vat-validate.js";
@@ -293,6 +294,15 @@ export const app = new Hono();
 app.use("*", logger());
 app.use("*", versionMiddleware());
 
+// A2A: Link header pointing to Agent Card on all API responses
+app.use("*", async (c, next) => {
+  await next();
+  c.header(
+    "Link",
+    '</.well-known/agent-card.json>; rel="agent-card"',
+  );
+});
+
 // Health check
 app.get("/health", (c) => c.json({ status: "ok" }));
 
@@ -310,3 +320,10 @@ app.route("/v1/demand-signals", demandSignalsRoute);
 
 // MCP Streamable HTTP transport (remote MCP access)
 app.route("/mcp", mcpRoute);
+
+// A2A protocol — Agent Card discovery + JSON-RPC task endpoint
+app.route("/.well-known/agent-card.json", agentCardRoute);
+app.route("/.well-known/agent.json", agentCardRoute); // alias
+app.route("/agent.json", agentCardRoute); // convenience alias
+app.route("/a2a", a2aRoute);
+
