@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   wallets,
@@ -7,6 +7,7 @@ import {
   transactions,
   failedRequests,
 } from "../db/schema.js";
+import { checkMilestone } from "../lib/milestones.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { matchCapability } from "../lib/matching.js";
@@ -361,6 +362,15 @@ async function executeSync(
   // ── Record circuit breaker result (fire-and-forget) ──────────────────
   if (result.ok) {
     recordSuccess(capability.slug).catch(() => {});
+    // Check transaction milestones (fire-and-forget)
+    db.execute(
+      sql`SELECT COUNT(*)::text AS count FROM transactions WHERE status = 'completed' AND created_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC')`,
+    )
+      .then((res: any) => {
+        const rows = Array.isArray(res) ? res : res?.rows ?? [];
+        checkMilestone(Number(rows[0]?.count ?? 0));
+      })
+      .catch(() => {});
   } else if (result.errorCode === "execution_failed") {
     recordFailure(capability.slug).catch(() => {});
   }
@@ -573,6 +583,16 @@ async function executeInBackground(
 
     // Record success for circuit breaker
     await recordSuccess(capability.slug).catch(() => {});
+
+    // Check transaction milestones (fire-and-forget)
+    db.execute(
+      sql`SELECT COUNT(*)::text AS count FROM transactions WHERE status = 'completed' AND created_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC')`,
+    )
+      .then((res: any) => {
+        const rows = Array.isArray(res) ? res : res?.rows ?? [];
+        checkMilestone(Number(rows[0]?.count ?? 0));
+      })
+      .catch(() => {});
   } catch (err) {
     const latencyMs = Date.now() - startTime;
     const errorMessage =

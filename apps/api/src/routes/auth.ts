@@ -1,11 +1,12 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { users, wallets, walletTransactions } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { apiError } from "../lib/errors.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
+import { sendWebhook } from "../lib/webhook.js";
 import type { AppEnv } from "../types.js";
 
 const TRIAL_CREDITS_CENTS = 200; // €2.00 per DEC-10
@@ -67,6 +68,21 @@ authRoute.post("/register", rateLimitByIp(3, 60_000), async (c) => {
     type: "trial_credit",
     description: "Welcome trial credits",
   });
+
+  // Fire-and-forget signup webhook
+  const totalUsers = await db
+    .select({ count: sql<string>`COUNT(*)` })
+    .from(users);
+  sendWebhook({
+    event: "user.signup",
+    user: {
+      email: user.email,
+      created_at: new Date().toISOString(),
+    },
+    stats: {
+      total_users: Number(totalUsers[0]?.count ?? 0),
+    },
+  }).catch(() => {});
 
   return c.json(
     {
