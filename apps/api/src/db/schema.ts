@@ -152,3 +152,25 @@ export const failedRequests = pgTable(
   },
   (table) => [index("failed_requests_user_id_idx").on(table.userId)],
 );
+
+// ─── capability_health (circuit breaker) ────────────────────────────────────
+// Tracks health state per capability for circuit breaker pattern
+export const capabilityHealth = pgTable("capability_health", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  capabilitySlug: varchar("capability_slug", { length: 255 })
+    .notNull()
+    .unique(),
+  state: varchar("state", { length: 20 }).notNull().default("closed"),
+  // 'closed' = healthy, 'open' = suspended, 'half_open' = testing
+  consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+  totalFailures: integer("total_failures").notNull().default(0),
+  totalSuccesses: integer("total_successes").notNull().default(0),
+  lastFailureAt: timestamp("last_failure_at", { withTimezone: true }),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  openedAt: timestamp("opened_at", { withTimezone: true }),
+  nextRetryAt: timestamp("next_retry_at", { withTimezone: true }),
+  backoffMinutes: integer("backoff_minutes").notNull().default(5),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

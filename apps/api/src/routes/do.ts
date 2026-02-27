@@ -12,6 +12,11 @@ import { rateLimitByKey } from "../lib/rate-limit.js";
 import { matchCapability } from "../lib/matching.js";
 import { getExecutor } from "../capabilities/index.js";
 import { apiError } from "../lib/errors.js";
+import {
+  checkCircuitBreaker,
+  recordSuccess,
+  recordFailure,
+} from "../lib/circuit-breaker.js";
 import type { AppEnv } from "../types.js";
 
 const MAX_TIMEOUT_SECONDS = 60;
@@ -177,6 +182,22 @@ doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
     );
   }
 
+  // ── 5b. Circuit breaker check ──────────────────────────────────────────
+  const circuitCheck = await checkCircuitBreaker(capability.slug);
+  if (!circuitCheck.allowed) {
+    return c.json(
+      apiError(
+        "capability_unavailable",
+        circuitCheck.reason ?? `Capability '${capability.slug}' is temporarily suspended.`,
+        {
+          circuit_state: circuitCheck.state,
+          next_retry_at: circuitCheck.next_retry_at ?? null,
+        },
+      ),
+      503,
+    );
+  }
+
   // ── 6. Decide sync vs async (DEC-22) ──────────────────────────────────
   const isAsync = (capability.avgLatencyMs ?? 0) > ASYNC_THRESHOLD_MS;
   const executionInput = inputs ?? { task };
@@ -336,6 +357,13 @@ async function executeSync(
       };
     }
   });
+
+  // ── Record circuit breaker result (fire-and-forget) ──────────────────
+  if (result.ok) {
+    recordSuccess(capability.slug).catch(() => {});
+  } else if (result.errorCode === "execution_failed") {
+    recordFailure(capability.slug).catch(() => {});
+  }
 
   // ── Return response ───────────────────────────────────────────────────
   if (!result.ok && result.errorCode === "insufficient_balance") {
@@ -542,6 +570,9 @@ async function executeInBackground(
         completedAt: new Date(),
       })
       .where(eq(transactions.id, transactionId));
+
+    // Record success for circuit breaker
+    await recordSuccess(capability.slug).catch(() => {});
   } catch (err) {
     const latencyMs = Date.now() - startTime;
     const errorMessage =
@@ -587,6 +618,9 @@ async function executeInBackground(
         })
         .where(eq(transactions.id, transactionId));
     });
+
+    // Record failure for circuit breaker
+    await recordFailure(capability.slug).catch(() => {});
   }
 }
 

@@ -3,9 +3,12 @@ import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
+import { authMiddleware } from "../lib/middleware.js";
+import { getAllHealth } from "../lib/circuit-breaker.js";
+import type { AppEnv } from "../types.js";
 
 // Capabilities are public — no auth required (lets developers browse before signing up)
-export const capabilitiesRoute = new Hono();
+export const capabilitiesRoute = new Hono<AppEnv>();
 
 // GET /v1/capabilities — List available capabilities
 capabilitiesRoute.get("/", async (c) => {
@@ -26,6 +29,22 @@ capabilitiesRoute.get("/", async (c) => {
     .where(eq(capabilities.isActive, true));
 
   return c.json({ capabilities: rows });
+});
+
+// GET /v1/capabilities/health — Circuit breaker health status (auth required)
+capabilitiesRoute.get("/health", authMiddleware, async (c) => {
+  const healthData = await getAllHealth();
+
+  const openCount = healthData.filter((h) => h.state === "open").length;
+  const halfOpenCount = healthData.filter((h) => h.state === "half_open").length;
+
+  return c.json({
+    total_tracked: healthData.length,
+    open: openCount,
+    half_open: halfOpenCount,
+    closed: healthData.length - openCount - halfOpenCount,
+    capabilities: healthData,
+  });
 });
 
 // GET /v1/capabilities/:slug — Get capability details

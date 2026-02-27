@@ -7,6 +7,7 @@ import { walletRoute } from "./routes/wallet.js";
 import { transactionsRoute } from "./routes/transactions.js";
 import { authRoute } from "./routes/auth.js";
 import { webhookRoute } from "./routes/webhook.js";
+import { demandSignalsRoute } from "./routes/demand-signals.js";
 
 // Register capability executors (side-effect imports)
 import "./capabilities/vat-validate.js";
@@ -304,3 +305,4 @@ app.route("/v1/capabilities", capabilitiesRoute);
 app.route("/v1/wallet", walletRoute);
 app.route("/v1/transactions", transactionsRoute);
 app.route("/v1/auth", authRoute);
+app.route("/v1/demand-signals", demandSignalsRoute);
