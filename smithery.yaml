@@ -1,0 +1,16 @@
+# smithery.yaml
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      STRALE_API_KEY:
+        type: string
+        description: "Your Strale API key (free signup at strale.dev)"
+    required:
+      - STRALE_API_KEY
+  commandFunction:
+    - node
+    - packages/mcp-server/dist/server.js
+  env:
+    STRALE_API_KEY: "{{config.STRALE_API_KEY}}"
