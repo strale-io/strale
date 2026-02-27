@@ -16,9 +16,58 @@ Sign up at the Strale API and get your API key (starts with `sk_`).
 
 ### 2. Configure your MCP client
 
-#### Claude Desktop / Claude Code
+There are two ways to connect: **Remote** (no installation needed) or **Local** (stdio transport).
 
-Add to your MCP configuration (`claude_desktop_config.json` or `.claude/settings.json`):
+#### Option A: Remote (Streamable HTTP) — Recommended
+
+No installation required. Connect directly to the hosted MCP server.
+
+**Claude Desktop / Claude Code:**
+
+```json
+{
+  "mcpServers": {
+    "strale": {
+      "type": "streamableHttp",
+      "url": "https://strale-production.up.railway.app/mcp",
+      "headers": {
+        "Authorization": "Bearer sk_live_your_key_here"
+      }
+    }
+  }
+}
+```
+
+**Cursor** (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "strale": {
+      "type": "streamableHttp",
+      "url": "https://strale-production.up.railway.app/mcp",
+      "headers": {
+        "Authorization": "Bearer sk_live_your_key_here"
+      }
+    }
+  }
+}
+```
+
+**Any MCP client supporting Streamable HTTP:**
+
+```
+URL:    https://strale-production.up.railway.app/mcp
+Auth:   Authorization: Bearer sk_live_your_key_here
+```
+
+> **Note:** `strale_search` works without an API key for browsing the capability catalog. All other tools require authentication.
+
+#### Option B: Local (stdio transport)
+
+Run the MCP server locally on your machine:
+
+**Claude Desktop / Claude Code:**
 
 ```json
 {
@@ -34,27 +83,7 @@ Add to your MCP configuration (`claude_desktop_config.json` or `.claude/settings
 }
 ```
 
-#### Cursor
-
-Add to `.cursor/mcp.json` in your project:
-
-```json
-{
-  "mcpServers": {
-    "strale": {
-      "command": "node",
-      "args": ["/path/to/strale/packages/mcp-server/dist/server.js"],
-      "env": {
-        "STRALE_API_KEY": "sk_live_your_key_here"
-      }
-    }
-  }
-}
-```
-
-#### Windsurf
-
-Add to your Windsurf MCP configuration:
+**Cursor** (`.cursor/mcp.json`):
 
 ```json
 {

@@ -4,6 +4,10 @@
   "description": "MCP server for Strale — exposes 233+ capabilities as tools for Claude, Cursor, Windsurf, and any MCP client",
   "type": "module",
   "main": "./dist/server.js",
+  "exports": {
+    ".": "./dist/server.js",
+    "./tools": "./dist/tools.js"
+  },
   "bin": {
     "strale-mcp": "./dist/server.js"
   },

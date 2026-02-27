@@ -8,6 +8,7 @@ import { transactionsRoute } from "./routes/transactions.js";
 import { authRoute } from "./routes/auth.js";
 import { webhookRoute } from "./routes/webhook.js";
 import { demandSignalsRoute } from "./routes/demand-signals.js";
+import { mcpRoute } from "./routes/mcp.js";
 
 // Register capability executors (side-effect imports)
 import "./capabilities/vat-validate.js";
@@ -306,3 +307,6 @@ app.route("/v1/wallet", walletRoute);
 app.route("/v1/transactions", transactionsRoute);
 app.route("/v1/auth", authRoute);
 app.route("/v1/demand-signals", demandSignalsRoute);
+
+// MCP Streamable HTTP transport (remote MCP access)
+app.route("/mcp", mcpRoute);

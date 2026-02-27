@@ -17,9 +17,9 @@ COPY apps/api/ apps/api/
 COPY packages/sdk-typescript/ packages/sdk-typescript/
 COPY packages/mcp-server/ packages/mcp-server/
 
-# Build the API and MCP server
-RUN npm run build --workspace=apps/api
+# Build MCP server first (apps/api imports from it)
 RUN npm run build --workspace=packages/mcp-server
+RUN npm run build --workspace=apps/api
 
 # Expose port
 EXPOSE 3000
