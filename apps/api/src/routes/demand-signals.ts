@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { failedRequests } from "../db/schema.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 
 export const demandSignalsRoute = new Hono();
@@ -25,28 +24,29 @@ demandSignalsRoute.get(
     const db = getDb();
     const cutoff = new Date(Date.now() - days * 86_400_000);
 
-    // Normalize tasks: lowercase, trim, collapse whitespace for grouping
-    // Then aggregate by normalized task with count, unique users, avg max_price
-    const categoryFilter = category
-      ? sql`AND ${failedRequests.category} = ${category}`
+    // Build query with optional category filter
+    const categoryClause = category
+      ? sql`AND category = ${category}`
       : sql``;
 
-    const rows = await db.execute(sql`
+    const result = await db.execute(sql`
       SELECT
-        lower(trim(regexp_replace(${failedRequests.task}, '\\s+', ' ', 'g'))) AS task_normalized,
+        lower(trim(regexp_replace(task, '\s+', ' ', 'g'))) AS task_normalized,
         count(*)::int AS request_count,
-        count(DISTINCT ${failedRequests.userId})::int AS unique_users,
-        round(avg(${failedRequests.maxPriceCents}))::int AS avg_max_price_cents,
-        max(${failedRequests.maxPriceCents})::int AS max_price_cents_highest,
-        min(${failedRequests.createdAt})::text AS first_requested_at,
-        max(${failedRequests.createdAt})::text AS last_requested_at
-      FROM ${failedRequests}
-      WHERE ${failedRequests.createdAt} >= ${cutoff}
-        ${categoryFilter}
+        count(DISTINCT user_id)::int AS unique_users,
+        round(avg(max_price_cents))::int AS avg_max_price_cents,
+        max(max_price_cents)::int AS max_price_cents_highest,
+        min(created_at)::text AS first_requested_at,
+        max(created_at)::text AS last_requested_at
+      FROM failed_requests
+      WHERE created_at >= ${cutoff}
+        ${categoryClause}
       GROUP BY task_normalized
       ORDER BY request_count DESC, unique_users DESC
       LIMIT ${limit}
     `);
+
+    const rows = Array.isArray(result) ? result : (result as any).rows ?? [];
 
     c.header("Cache-Control", "public, max-age=3600");
 
@@ -71,18 +71,20 @@ demandSignalsRoute.get(
     const db = getDb();
     const cutoff = new Date(Date.now() - days * 86_400_000);
 
-    const rows = await db.execute(sql`
+    const result = await db.execute(sql`
       SELECT
-        coalesce(${failedRequests.category}, 'uncategorized') AS category,
+        coalesce(category, 'uncategorized') AS category,
         count(*)::int AS request_count,
-        count(DISTINCT ${failedRequests.userId})::int AS unique_users,
-        round(avg(${failedRequests.maxPriceCents}))::int AS avg_max_price_cents,
-        count(DISTINCT lower(trim(regexp_replace(${failedRequests.task}, '\\s+', ' ', 'g'))))::int AS unique_tasks
-      FROM ${failedRequests}
-      WHERE ${failedRequests.createdAt} >= ${cutoff}
-      GROUP BY coalesce(${failedRequests.category}, 'uncategorized')
+        count(DISTINCT user_id)::int AS unique_users,
+        round(avg(max_price_cents))::int AS avg_max_price_cents,
+        count(DISTINCT lower(trim(regexp_replace(task, '\s+', ' ', 'g'))))::int AS unique_tasks
+      FROM failed_requests
+      WHERE created_at >= ${cutoff}
+      GROUP BY coalesce(category, 'uncategorized')
       ORDER BY request_count DESC
     `);
+
+    const rows = Array.isArray(result) ? result : (result as any).rows ?? [];
 
     c.header("Cache-Control", "public, max-age=3600");
 
