@@ -674,7 +674,6 @@ const ALGORITHMIC_CAPABILITIES = new Set([
   "ssl-certificate-chain",
   "domain-reputation",
   "barcode-lookup",
-  "patent-search",
 ]);
 
 function getTransparencyMarker(slug: string): string {
