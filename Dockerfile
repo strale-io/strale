@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY packages/sdk-typescript/package.json packages/sdk-typescript/
+COPY packages/mcp-server/package.json packages/mcp-server/
 
 # Install all dependencies
 RUN npm ci
@@ -14,9 +15,11 @@ RUN npm ci
 COPY tsconfig.json ./
 COPY apps/api/ apps/api/
 COPY packages/sdk-typescript/ packages/sdk-typescript/
+COPY packages/mcp-server/ packages/mcp-server/
 
-# Build the API
+# Build the API and MCP server
 RUN npm run build --workspace=apps/api
+RUN npm run build --workspace=packages/mcp-server
 
 # Expose port
 EXPOSE 3000

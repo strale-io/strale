@@ -7,7 +7,9 @@
     "build": "npm run build --workspace=apps/api",
     "db:generate": "npm run db:generate --workspace=apps/api",
     "db:migrate": "npm run db:migrate --workspace=apps/api",
-    "db:push": "npm run db:push --workspace=apps/api"
+    "db:push": "npm run db:push --workspace=apps/api",
+    "mcp:build": "npm run build --workspace=packages/mcp-server",
+    "mcp:dev": "npm run dev --workspace=packages/mcp-server"
   },
   "engines": {
     "node": ">=20.0.0"
