@@ -10,3 +10,7 @@ coverage/
 __pycache__/
 *.pyc
 *.egg-info/
+.venv/
+build/
+*.whl
+*.tar.gz

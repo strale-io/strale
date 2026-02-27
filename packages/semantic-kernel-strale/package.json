@@ -1,0 +1,44 @@
+{
+  "name": "strale-semantic-kernel",
+  "version": "0.1.0",
+  "description": "Semantic Kernel plugin for Strale — 233 business capabilities as kernel functions",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "tsx --test tests/plugin.test.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "semantic-kernel": ">=0.3.0"
+  },
+  "devDependencies": {
+    "semantic-kernel": "^0.3.0",
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0"
+  },
+  "keywords": [
+    "semantic-kernel",
+    "strale",
+    "ai",
+    "agent",
+    "tools",
+    "capabilities",
+    "microsoft"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crewai-strale"
+version = "0.1.0"
+description = "CrewAI integration for Strale — 233 business capabilities as agent tools"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Strale", email = "hello@strale.dev" }]
+keywords = ["crewai", "strale", "ai", "agent", "tools", "capabilities"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "crewai>=0.80.0",
+    "requests>=2.28.0",
+    "pydantic>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://strale.dev"
+Repository = "https://github.com/straledev/strale"
+Documentation = "https://strale.dev/docs"
+
+[tool.setuptools.packages.find]
+include = ["crewai_strale*"]
