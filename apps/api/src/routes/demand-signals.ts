@@ -22,7 +22,7 @@ demandSignalsRoute.get(
     const category = c.req.query("category") || null;
 
     const db = getDb();
-    const cutoff = new Date(Date.now() - days * 86_400_000);
+    const cutoffStr = new Date(Date.now() - days * 86_400_000).toISOString();
 
     // Build query with optional category filter
     const categoryClause = category
@@ -39,7 +39,7 @@ demandSignalsRoute.get(
         min(created_at)::text AS first_requested_at,
         max(created_at)::text AS last_requested_at
       FROM failed_requests
-      WHERE created_at >= ${cutoff}
+      WHERE created_at >= ${cutoffStr}::timestamptz
         ${categoryClause}
       GROUP BY task_normalized
       ORDER BY request_count DESC, unique_users DESC
@@ -69,7 +69,7 @@ demandSignalsRoute.get(
     );
 
     const db = getDb();
-    const cutoff = new Date(Date.now() - days * 86_400_000);
+    const cutoffStr = new Date(Date.now() - days * 86_400_000).toISOString();
 
     const result = await db.execute(sql`
       SELECT
@@ -79,7 +79,7 @@ demandSignalsRoute.get(
         round(avg(max_price_cents))::int AS avg_max_price_cents,
         count(DISTINCT lower(trim(regexp_replace(task, '\s+', ' ', 'g'))))::int AS unique_tasks
       FROM failed_requests
-      WHERE created_at >= ${cutoff}
+      WHERE created_at >= ${cutoffStr}::timestamptz
       GROUP BY coalesce(category, 'uncategorized')
       ORDER BY request_count DESC
     `);
