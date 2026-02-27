@@ -11,7 +11,7 @@ export default function SemanticKernelDocsPage() {
     <div>
       <h1>Semantic Kernel Plugin</h1>
       <p>
-        The <code>strale-semantic-kernel</code> package exposes all 233 Strale capabilities
+        The <code>strale-semantic-kernel</code> package exposes all Strale capabilities
         as Semantic Kernel functions. Compatible with the community TypeScript port of
         Semantic Kernel.
       </p>
@@ -28,7 +28,7 @@ const plugin = await createStralePlugin({
 });
 
 console.log(\`\${plugin.functions.length} functions available\`);
-// → 233+ functions available`}
+// → 200+ functions available`}
         language="typescript"
       />
 

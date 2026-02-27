@@ -88,7 +88,7 @@ export default function GettingStartedPage() {
 
       <h2>Next steps</h2>
       <ul>
-        <li><a href="/capabilities">Browse all 233 capabilities</a></li>
+        <li><a href="/capabilities">Browse all capabilities</a></li>
         <li><a href="/docs/integrations/mcp">Set up the MCP server</a> for Claude, Cursor, or Windsurf</li>
         <li><a href="/docs/integrations/langchain">Install the LangChain plugin</a></li>
         <li><a href="/docs/api-reference">Full API reference</a></li>

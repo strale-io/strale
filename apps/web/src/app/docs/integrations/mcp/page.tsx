@@ -11,7 +11,7 @@ export default function McpDocsPage() {
     <div>
       <h1>MCP Server</h1>
       <p>
-        Strale exposes all 233 capabilities as an MCP (Model Context Protocol) server.
+        Strale exposes all capabilities as an MCP (Model Context Protocol) server.
         Any MCP-compatible client &mdash; Claude Desktop, Cursor, Windsurf, and 300+ others &mdash;
         can discover and call Strale capabilities natively.
       </p>
@@ -46,7 +46,7 @@ export default function McpDocsPage() {
         language="json"
         filename="claude_desktop_config.json"
       />
-      <p>Restart Claude Desktop. You&rsquo;ll see 233 tools available in the tool picker.</p>
+      <p>Restart Claude Desktop. You&rsquo;ll see all Strale tools available in the tool picker.</p>
 
       <h2>Cursor</h2>
       <p>

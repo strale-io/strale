@@ -11,7 +11,7 @@ export default function LangChainDocsPage() {
     <div>
       <h1>LangChain Plugin</h1>
       <p>
-        The <code>langchain-strale</code> package wraps all 233 Strale capabilities as native
+        The <code>langchain-strale</code> package wraps all Strale capabilities as native
         LangChain tools. Install it with pip and your agents can discover and call them
         through the standard LangChain tool interface.
       </p>
@@ -27,7 +27,7 @@ toolkit = StraleToolkit(api_key="sk_live_YOUR_KEY")
 tools = toolkit.get_tools()
 
 print(f"{len(tools)} tools available")
-# → 233+ tools available`}
+# → 200+ tools available`}
         language="python"
       />
 

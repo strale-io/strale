@@ -29,7 +29,7 @@ export default function DocsPage() {
         </Link>
         <Link href="/docs/integrations/langchain" className="rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-bright hover:bg-surface-bright">
           <h3 className="font-semibold text-foreground">LangChain Plugin</h3>
-          <p className="mt-1 text-sm text-muted">All 233 capabilities as LangChain tools with pip install langchain-strale.</p>
+          <p className="mt-1 text-sm text-muted">All capabilities as LangChain tools with pip install langchain-strale.</p>
         </Link>
         <Link href="/docs/api-reference" className="rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-bright hover:bg-surface-bright">
           <h3 className="font-semibold text-foreground">API Reference</h3>

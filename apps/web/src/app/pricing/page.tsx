@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Check, X } from "lucide-react";
 import { getCapabilities, formatPrice } from "@/lib/api";
 
 export const metadata: Metadata = {
@@ -130,31 +131,59 @@ export default async function PricingPage() {
           How Strale compares
         </h2>
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-border bg-surface p-6">
-            <h3 className="font-semibold">
-              vs. Enterprise data providers
-            </h3>
-            <p className="mt-1 text-xs text-muted">Bureau van Dijk, D&amp;B</p>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              Same company data across 27 countries. Pay &euro;0.02&ndash;&euro;1.00 per call
-              instead of &euro;10K+/year subscriptions. No sales calls, no contracts.
-            </p>
+          {/* Strale — highlighted */}
+          <div className="rounded-xl border-2 border-accent/40 bg-surface p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <h3 className="font-semibold text-foreground">Strale Marketplace</h3>
+              <Check size={16} className="text-accent" />
+            </div>
+            <ul className="space-y-3">
+              {[
+                "Instant access via unified API",
+                "Pay per call \u2014 \u20AC0.02\u2013\u20AC1.00",
+                "Zero maintenance overhead",
+                "No contracts or minimums",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2 text-sm">
+                  <Check size={14} className="mt-0.5 shrink-0 text-accent" />
+                  <span className="text-muted">{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="rounded-xl border border-border bg-surface p-6">
-            <h3 className="font-semibold">vs. Building it yourself</h3>
-            <p className="mt-1 text-xs text-muted">Custom integrations</p>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              Country-specific integrations across 27 markets, maintained and
-              monitored for you. Skip months of API research and edge-case handling.
-            </p>
+
+          {/* Enterprise providers — dimmed */}
+          <div className="rounded-xl border border-border bg-surface/50 p-6 opacity-80">
+            <h3 className="mb-4 font-semibold text-muted">Enterprise Providers</h3>
+            <ul className="space-y-3">
+              {[
+                "\u20AC10K+/year minimum commitments",
+                "Lengthy sales cycles & contracts",
+                "Vendor lock-in per data source",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2 text-sm">
+                  <X size={14} className="mt-0.5 shrink-0 text-red-400/60" />
+                  <span className="text-muted">{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="rounded-xl border border-border bg-surface p-6">
-            <h3 className="font-semibold">vs. Consultants</h3>
-            <p className="mt-1 text-xs text-muted">Manual research</p>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              Instant, structured, repeatable. &euro;0.80 for Swedish company data
-              vs. &euro;500/hour for a consultant to look it up manually.
-            </p>
+
+          {/* Building yourself — dimmed */}
+          <div className="rounded-xl border border-border bg-surface/50 p-6 opacity-80">
+            <h3 className="mb-4 font-semibold text-muted">Building Yourself</h3>
+            <ul className="space-y-3">
+              {[
+                "Months of integration development",
+                "Ongoing maintenance burden",
+                "27 country APIs to manage yourself",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2 text-sm">
+                  <X size={14} className="mt-0.5 shrink-0 text-red-400/60" />
+                  <span className="text-muted">{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>

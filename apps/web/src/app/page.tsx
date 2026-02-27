@@ -1,13 +1,28 @@
 import Link from "next/link";
-import { ArrowRight, Globe, Cpu, Zap, Shield } from "lucide-react";
+import {
+  ArrowRight,
+  Globe,
+  Cpu,
+  Zap,
+  Shield,
+  Building2,
+  Landmark,
+  Scale,
+  Truck,
+  BarChart3,
+  Code,
+  FileText,
+  CheckCircle,
+} from "lucide-react";
 import { getCapabilities, getHomepageCategories } from "@/lib/api";
 import { CodeBlock } from "@/components/code-block";
+import type { LucideIcon } from "lucide-react";
 
 const HERO_CODE = `const result = await strale.do("swedish-company-data", {
   org_number: "5560125790"  // Ericsson
 });
 
-// → Returns in 1.2s, costs €0.80
+// \u2192 Returns in 1.2s, costs \u20AC0.80
 {
   "name": "Telefonaktiebolaget LM Ericsson",
   "status": "Active",
@@ -18,21 +33,39 @@ const HERO_CODE = `const result = await strale.do("swedish-company-data", {
   "revenue_sek": 263_400_000_000
 }`;
 
-const STEPS = [
+const STEP_SNIPPETS = [
   {
     num: "01",
     title: "Discover",
-    desc: "Your agent discovers Strale via MCP, A2A, or SDK.",
+    desc: "Your agent finds Strale via MCP, A2A, or SDK",
+    code: `// claude_desktop_config.json
+{
+  "mcpServers": {
+    "strale": {
+      "url": "https://strale-production.up.railway.app/mcp"
+    }
+  }
+}`,
   },
   {
     num: "02",
     title: "Call",
-    desc: 'Agent calls strale.do("vat-validate", { ... }) with your API key.',
+    desc: "Agent calls strale.do() with your API key",
+    code: `const result = await strale.do(
+  "vat-validate",
+  { vat_number: "SE556012579001" }
+);`,
   },
   {
     num: "03",
     title: "Get results",
-    desc: "Structured JSON returned in milliseconds. \u20AC0.02\u2013\u20AC1.00 per call.",
+    desc: "Structured JSON back in milliseconds",
+    code: `{
+  "valid": true,
+  "country_code": "SE",
+  "name": "Telefonaktiebolaget LM Ericsson",
+  "address": "TORSHAMNSGATAN 21, STOCKHOLM"
+}`,
   },
 ];
 
@@ -54,7 +87,7 @@ const INTEGRATIONS = [
     desc: "Discoverable by Google A2A protocol agents",
     code: `// Agent Card at /.well-known/agent-card.json
 GET https://strale-production.up.railway.app/.well-known/agent-card.json
-// → 233 capabilities as A2A skills`,
+// \u2192 All capabilities as A2A skills`,
   },
   {
     name: "LangChain / CrewAI",
@@ -62,7 +95,7 @@ GET https://strale-production.up.railway.app/.well-known/agent-card.json
     code: `from langchain_strale import StraleToolkit
 
 toolkit = StraleToolkit(api_key="sk_live_...")
-tools = toolkit.get_tools()  # 233 tools`,
+tools = toolkit.get_tools()`,
   },
   {
     name: "Direct API",
@@ -80,15 +113,15 @@ const TRUST_SIGNALS = [
   { icon: Cpu, text: "Transparent per-call pricing" },
 ];
 
-const CATEGORY_ICONS: Record<string, string> = {
-  "data-extraction": "\uD83C\uDFE2",
-  "financial": "\uD83C\uDFE6",
-  "compliance": "\u2696\uFE0F",
-  "trade": "\uD83D\uDEA2",
-  "competitive-intelligence": "\uD83D\uDCC8",
-  "developer-tools": "\uD83D\uDEE0\uFE0F",
-  "document-extraction": "\uD83D\uDCC4",
-  "validation": "\u2713",
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  "data-extraction": Building2,
+  "financial": Landmark,
+  "compliance": Scale,
+  "trade": Truck,
+  "competitive-intelligence": BarChart3,
+  "developer-tools": Code,
+  "document-extraction": FileText,
+  "validation": CheckCircle,
 };
 
 export const revalidate = 3600;
@@ -131,20 +164,28 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* How it works */}
+      {/* How it works — visual code snippet cards */}
       <section className="border-y border-border bg-surface/30">
         <div className="mx-auto max-w-6xl px-6 py-20">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
             How it works
           </h2>
-          <div className="mt-12 grid gap-8 sm:grid-cols-3">
-            {STEPS.map((step) => (
-              <div key={step.num}>
-                <span className="font-mono text-sm text-accent">{step.num}</span>
-                <h3 className="mt-2 text-lg font-semibold">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted">
-                  {step.desc}
-                </p>
+          <div className="mt-10 grid gap-6 sm:grid-cols-3">
+            {STEP_SNIPPETS.map((step) => (
+              <div
+                key={step.num}
+                className="rounded-xl border border-border bg-surface p-5"
+              >
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="font-mono text-sm font-medium text-accent">
+                    {step.num}
+                  </span>
+                  <h3 className="font-semibold">{step.title}</h3>
+                </div>
+                <p className="mb-3 text-sm text-muted">{step.desc}</p>
+                <pre className="overflow-x-auto rounded-lg border border-border bg-background p-3 text-xs leading-relaxed">
+                  <code className="font-mono">{step.code}</code>
+                </pre>
               </div>
             ))}
           </div>
@@ -170,22 +211,29 @@ export default async function HomePage() {
           </Link>
         </div>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {categories.map((cat) => (
-            <Link
-              key={cat.slug}
-              href={`/capabilities?category=${cat.slug}`}
-              className="group rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-bright hover:bg-surface-bright"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-2xl">{CATEGORY_ICONS[cat.slug] ?? "\uD83D\uDCE6"}</span>
-                <span className="rounded-full bg-background px-2.5 py-0.5 font-mono text-xs text-accent">
-                  {cat.count}
-                </span>
-              </div>
-              <h3 className="mt-3 font-semibold">{cat.label}</h3>
-              <p className="mt-1 text-sm text-muted">{cat.description}</p>
-            </Link>
-          ))}
+          {categories.map((cat) => {
+            const Icon = CATEGORY_ICONS[cat.slug];
+            return (
+              <Link
+                key={cat.slug}
+                href={`/capabilities?category=${cat.slug}`}
+                className="group rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-bright hover:bg-surface-bright"
+              >
+                <div className="flex items-center justify-between">
+                  {Icon ? (
+                    <Icon size={20} className="text-muted group-hover:text-accent" />
+                  ) : (
+                    <span />
+                  )}
+                  <span className="rounded-full bg-background px-2.5 py-0.5 font-mono text-xs text-accent">
+                    {cat.count}
+                  </span>
+                </div>
+                <h3 className="mt-3 font-semibold">{cat.label}</h3>
+                <p className="mt-1 text-sm text-muted">{cat.description}</p>
+              </Link>
+            );
+          })}
         </div>
         <Link
           href="/capabilities"
