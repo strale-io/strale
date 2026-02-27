@@ -673,6 +673,47 @@ const ALGORITHMIC_CAPABILITIES = new Set([
   "gdpr-website-check",
   "ssl-certificate-chain",
   "domain-reputation",
+  // Batch 6 — Finance/fintech (algorithmic/API)
+  "invoice-validate",
+  "payment-reference-generate",
+  "swift-message-parse",
+  "financial-year-dates",
+  "sepa-xml-validate",
+  "bank-bic-lookup",
+  "ecb-interest-rates",
+  "ticker-lookup",
+  "forex-history",
+  "country-tax-rates",
+  // Batch 6 — Legal/compliance (algorithmic)
+  "eu-ai-act-classify",
+  "data-protection-authority-lookup",
+  // Batch 6 — Logistics/supply chain (algorithmic)
+  "incoterms-explain",
+  "port-lookup",
+  "country-trade-data",
+  "iso-country-lookup",
+  "dangerous-goods-classify",
+  // Batch 6 — Recruiting/HR (algorithmic/API)
+  "job-board-search",
+  "skill-extract",
+  "skill-gap-analyze",
+  "linkedin-url-validate",
+  "work-permit-requirements",
+  "public-holiday-lookup",
+  "employment-cost-estimate",
+  // Batch 6 — E-commerce/retail (algorithmic)
+  "vat-rate-lookup",
+  "shipping-cost-estimate",
+  "marketplace-fee-calculate",
+  // Batch 6 — Marketing/SEO (algorithmic/API)
+  "keyword-suggest",
+  "serp-analyze",
+  "backlink-check",
+  "page-speed-test",
+  "social-profile-check",
+  "og-image-check",
+  "email-deliverability-check",
+  "website-carbon-estimate",
   "barcode-lookup",
 ]);
 

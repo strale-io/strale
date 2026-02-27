@@ -46,6 +46,11 @@ import "./capabilities/email-validate.js";
 import "./capabilities/vat-format-validate.js";
 import "./capabilities/isbn-validate.js";
 import "./capabilities/company-id-detect.js";
+import "./capabilities/invoice-validate.js";
+import "./capabilities/payment-reference-generate.js";
+import "./capabilities/swift-message-parse.js";
+import "./capabilities/financial-year-dates.js";
+import "./capabilities/sepa-xml-validate.js";
 // ─── Global company registries ──────────────────────────────────────────────
 import "./capabilities/us-company-data.js";
 import "./capabilities/canadian-company-data.js";
@@ -229,6 +234,57 @@ import "./capabilities/domain-reputation.js";
 // ─── E-commerce & product data ──────────────────────────────────────────────
 import "./capabilities/barcode-lookup.js";
 import "./capabilities/amazon-price.js";
+// ─── Finance / fintech ───────────────────────────────────────────────────────
+import "./capabilities/bank-bic-lookup.js";
+import "./capabilities/ecb-interest-rates.js";
+import "./capabilities/country-tax-rates.js";
+import "./capabilities/ticker-lookup.js";
+import "./capabilities/forex-history.js";
+// ─── Legal / compliance ──────────────────────────────────────────────────────
+import "./capabilities/eu-court-case-search.js";
+import "./capabilities/gdpr-fine-lookup.js";
+import "./capabilities/eu-ai-act-classify.js";
+import "./capabilities/data-protection-authority-lookup.js";
+import "./capabilities/cookie-scan.js";
+import "./capabilities/terms-of-service-extract.js";
+import "./capabilities/privacy-policy-analyze.js";
+import "./capabilities/business-license-check-se.js";
+// ─── Logistics / supply chain ────────────────────────────────────────────────
+import "./capabilities/customs-duty-lookup.js";
+import "./capabilities/incoterms-explain.js";
+import "./capabilities/container-track.js";
+import "./capabilities/port-lookup.js";
+import "./capabilities/country-trade-data.js";
+import "./capabilities/iso-country-lookup.js";
+import "./capabilities/dangerous-goods-classify.js";
+// ─── Recruiting / HR ─────────────────────────────────────────────────────────
+import "./capabilities/salary-benchmark.js";
+import "./capabilities/job-board-search.js";
+import "./capabilities/skill-extract.js";
+import "./capabilities/skill-gap-analyze.js";
+import "./capabilities/linkedin-url-validate.js";
+import "./capabilities/work-permit-requirements.js";
+import "./capabilities/employer-review-summary.js";
+import "./capabilities/public-holiday-lookup.js";
+import "./capabilities/employment-cost-estimate.js";
+// ─── E-commerce / retail ─────────────────────────────────────────────────────
+import "./capabilities/product-search.js";
+import "./capabilities/price-compare.js";
+import "./capabilities/product-reviews-extract.js";
+import "./capabilities/trustpilot-score.js";
+import "./capabilities/vat-rate-lookup.js";
+import "./capabilities/shipping-cost-estimate.js";
+import "./capabilities/marketplace-fee-calculate.js";
+import "./capabilities/return-policy-extract.js";
+// ─── Marketing / SEO ─────────────────────────────────────────────────────────
+import "./capabilities/keyword-suggest.js";
+import "./capabilities/serp-analyze.js";
+import "./capabilities/backlink-check.js";
+import "./capabilities/page-speed-test.js";
+import "./capabilities/social-profile-check.js";
+import "./capabilities/og-image-check.js";
+import "./capabilities/email-deliverability-check.js";
+import "./capabilities/website-carbon-estimate.js";
 
 export const app = new Hono();
 
