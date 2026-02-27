@@ -1,8 +1,8 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
+import Anthropic from "@anthropic-ai/sdk";
 
-// PatentsView API (USPTO) — free, no key required
-const API = "https://api.patentsview.org/patents/query";
-
+// Google Patents search via Browserless + Claude extraction
 registerCapability("patent-search", async (input: CapabilityInput) => {
   const query = ((input.query as string) ?? (input.keyword as string) ?? (input.task as string) ?? "").trim();
   if (!query) throw new Error("'query' (patent search term, keyword, or patent number) is required.");
@@ -12,60 +12,66 @@ registerCapability("patent-search", async (input: CapabilityInput) => {
   // Check if input looks like a patent number
   const isPatentNumber = /^(US|EP|WO|GB|DE|FR|JP|CN|KR)?\d{5,12}[A-Z]?\d?$/i.test(query.replace(/[\s,/-]/g, ""));
 
-  let queryObj: any;
+  let searchUrl: string;
   if (isPatentNumber) {
-    const cleaned = query.replace(/[\s,/-]/g, "");
-    queryObj = { patent_number: cleaned };
+    const cleaned = query.replace(/[\s,/-]/g, "").toUpperCase();
+    searchUrl = `https://patents.google.com/patent/${cleaned}`;
   } else {
-    queryObj = { _text_any: { patent_title: query } };
+    searchUrl = `https://patents.google.com/?q=${encodeURIComponent(query)}&num=${maxResults}`;
   }
 
-  const body = {
-    q: queryObj,
-    f: [
-      "patent_number", "patent_title", "patent_date", "patent_abstract",
-      "patent_type", "patent_num_claims",
-      "inventor_first_name", "inventor_last_name",
-      "assignee_organization",
-    ],
-    o: { per_page: maxResults },
-    s: [{ patent_date: "desc" }],
-  };
+  const html = await fetchRenderedHtml(searchUrl);
+  const text = htmlToText(html);
 
-  const response = await fetch(API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15000),
+  if (text.length < 200) {
+    throw new Error("Could not load Google Patents search results.");
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
+
+  const client = new Anthropic({ apiKey });
+  const r = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 2000,
+    messages: [
+      {
+        role: "user",
+        content: `Extract patent search results from this Google Patents page. The search was for: "${query}".
+
+Return ONLY valid JSON:
+{
+  "total_found": <number or null>,
+  "patents": [
+    {
+      "patent_number": "e.g. US10123456B2",
+      "title": "patent title",
+      "date": "filing or publication date",
+      "abstract": "short abstract (first 200 chars)",
+      "inventors": ["inventor names"],
+      "assignees": ["assignee organizations"],
+      "url": "https://patents.google.com/patent/..."
+    }
+  ]
+}
+
+Page text:
+${text.slice(0, 12000)}`,
+      },
+    ],
   });
 
-  if (!response.ok) {
-    const errText = await response.text().catch(() => "");
-    throw new Error(`PatentsView API returned HTTP ${response.status}: ${errText.slice(0, 200)}`);
-  }
+  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("Failed to extract patent results.");
 
-  const data = (await response.json()) as any;
-  const patents = data.patents ?? [];
-
-  const results = patents.map((p: any) => ({
-    patent_number: p.patent_number,
-    title: p.patent_title,
-    date: p.patent_date,
-    abstract: p.patent_abstract?.slice(0, 500) ?? null,
-    type: p.patent_type,
-    num_claims: p.patent_num_claims,
-    inventors: p.inventors?.map((i: any) => `${i.inventor_first_name} ${i.inventor_last_name}`.trim()) ?? [],
-    assignees: p.assignees?.map((a: any) => a.assignee_organization).filter(Boolean) ?? [],
-    url: `https://patents.google.com/patent/US${p.patent_number}`,
-  }));
+  const output = JSON.parse(jsonMatch[0]);
+  output.query = query;
+  output.returned_count = output.patents?.length ?? 0;
+  output.source_url = searchUrl;
 
   return {
-    output: {
-      query,
-      total_found: data.total_patent_count ?? results.length,
-      returned_count: results.length,
-      patents: results,
-    },
-    provenance: { source: "api.patentsview.org", fetched_at: new Date().toISOString() },
+    output,
+    provenance: { source: "patents.google.com", fetched_at: new Date().toISOString() },
   };
 });
