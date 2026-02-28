@@ -14,7 +14,7 @@ import { fetchCapabilities, registerStraleTools } from "./tools.js";
 
 const STRALE_BASE_URL =
   process.env.STRALE_BASE_URL ??
-  "https://strale-production.up.railway.app";
+  "https://api.strale.io";
 const STRALE_API_KEY = process.env.STRALE_API_KEY ?? "";
 const DEFAULT_MAX_PRICE_CENTS = parseInt(
   process.env.STRALE_MAX_PRICE_CENTS ?? "200",

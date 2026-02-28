@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CodeBlock } from "@/components/code-block";
 
 export const metadata: Metadata = {
@@ -20,7 +21,7 @@ export default function GettingStartedPage() {
         No credit card required.
       </p>
       <CodeBlock
-        code={`curl -X POST https://strale-production.up.railway.app/v1/auth/register \\
+        code={`curl -X POST https://api.strale.io/v1/auth/register \\
   -H "Content-Type: application/json" \\
   -d '{"email": "you@example.com"}'`}
         language="bash"
@@ -43,7 +44,7 @@ export default function GettingStartedPage() {
         Call any capability using <code>POST /v1/do</code>. Here&rsquo;s a simple VAT validation:
       </p>
       <CodeBlock
-        code={`curl -X POST https://strale-production.up.railway.app/v1/do \\
+        code={`curl -X POST https://api.strale.io/v1/do \\
   -H "Authorization: Bearer sk_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -74,7 +75,7 @@ export default function GettingStartedPage() {
 
       <h2>3. Check your balance</h2>
       <CodeBlock
-        code={`curl https://strale-production.up.railway.app/v1/wallet/balance \\
+        code={`curl https://api.strale.io/v1/wallet/balance \\
   -H "Authorization: Bearer sk_live_YOUR_KEY"`}
         language="bash"
       />
@@ -88,10 +89,10 @@ export default function GettingStartedPage() {
 
       <h2>Next steps</h2>
       <ul>
-        <li><a href="/capabilities">Browse all capabilities</a></li>
-        <li><a href="/docs/integrations/mcp">Set up the MCP server</a> for Claude, Cursor, or Windsurf</li>
-        <li><a href="/docs/integrations/langchain">Install the LangChain plugin</a></li>
-        <li><a href="/docs/api-reference">Full API reference</a></li>
+        <li><Link href="/capabilities">Browse all capabilities</Link></li>
+        <li><Link href="/docs/integrations/mcp">Set up the MCP server</Link>{" "}<span className="text-muted">for Claude, Cursor, or Windsurf</span></li>
+        <li><Link href="/docs/integrations/langchain">Install the LangChain plugin</Link></li>
+        <li><Link href="/docs/api-reference">Full API reference</Link></li>
       </ul>
     </div>
   );

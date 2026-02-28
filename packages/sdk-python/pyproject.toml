@@ -25,7 +25,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://strale.io"
-Repository = "https://github.com/petter_lindstrom/strale"
+Repository = "https://github.com/petterlindstrom79/strale"
 
 [tool.setuptools.packages.find]
 include = ["straleio*"]

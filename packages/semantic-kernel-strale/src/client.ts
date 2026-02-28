@@ -2,7 +2,7 @@
  * Lightweight HTTP client for the Strale API.
  */
 
-const DEFAULT_BASE_URL = "https://strale-production.up.railway.app";
+const DEFAULT_BASE_URL = "https://api.strale.io";
 
 export interface Capability {
   slug: string;

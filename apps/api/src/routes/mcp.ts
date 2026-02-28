@@ -26,7 +26,7 @@ import {
 
 const STRALE_BASE_URL =
   process.env.STRALE_BASE_URL ??
-  "https://strale-production.up.railway.app";
+  "https://api.strale.io";
 const DEFAULT_MAX_PRICE_CENTS = parseInt(
   process.env.STRALE_MAX_PRICE_CENTS ?? "200",
   10,

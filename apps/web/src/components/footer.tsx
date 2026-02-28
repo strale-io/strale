@@ -5,7 +5,7 @@ const LINKS = [
   { href: "/pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },
   { href: "https://github.com/petterlindstrom79/strale", label: "GitHub", external: true },
-  { href: "https://strale-production.up.railway.app/health", label: "API Status", external: true },
+  { href: "https://api.strale.io/health", label: "API Status", external: true },
 ];
 
 export function Footer() {

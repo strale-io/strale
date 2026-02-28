@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CodeBlock } from "@/components/code-block";
 
 export const metadata: Metadata = {
@@ -16,7 +17,7 @@ export default function HttpApiDocsPage() {
       </p>
 
       <h2>Base URL</h2>
-      <CodeBlock code="https://strale-production.up.railway.app" language="text" />
+      <CodeBlock code="https://api.strale.io" language="text" />
 
       <h2>Authentication</h2>
       <p>
@@ -26,7 +27,7 @@ export default function HttpApiDocsPage() {
 
       <h2>Execute a capability</h2>
       <CodeBlock
-        code={`curl -X POST https://strale-production.up.railway.app/v1/do \\
+        code={`curl -X POST https://api.strale.io/v1/do \\
   -H "Authorization: Bearer sk_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -40,7 +41,7 @@ export default function HttpApiDocsPage() {
 
       <h2>TypeScript / JavaScript</h2>
       <CodeBlock
-        code={`const response = await fetch("https://strale-production.up.railway.app/v1/do", {
+        code={`const response = await fetch("https://api.strale.io/v1/do", {
   method: "POST",
   headers: {
     "Authorization": "Bearer sk_live_YOUR_KEY",
@@ -62,7 +63,7 @@ console.log(result.data);`}
         code={`import requests
 
 response = requests.post(
-    "https://strale-production.up.railway.app/v1/do",
+    "https://api.strale.io/v1/do",
     headers={"Authorization": "Bearer sk_live_YOUR_KEY"},
     json={
         "task": "validate this IBAN",
@@ -94,7 +95,7 @@ console.log(result.data);`}
       />
 
       <p>
-        See the <a href="/docs/api-reference">full API reference</a> for all endpoints,
+        See the <Link href="/docs/api-reference">full API reference</Link> for all endpoints,
         parameters, and error codes.
       </p>
     </div>

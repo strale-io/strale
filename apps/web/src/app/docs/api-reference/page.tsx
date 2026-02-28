@@ -11,7 +11,7 @@ export default function ApiReferencePage() {
     <div>
       <h1>API Reference</h1>
       <p>
-        Base URL: <code>https://strale-production.up.railway.app</code>
+        Base URL: <code>https://api.strale.io</code>
       </p>
 
       <hr />
@@ -104,7 +104,7 @@ export default function ApiReferencePage() {
       </table>
       <h3>Example</h3>
       <CodeBlock
-        code={`curl -X POST https://strale-production.up.railway.app/v1/do \\
+        code={`curl -X POST https://api.strale.io/v1/do \\
   -H "Authorization: Bearer sk_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -H "Idempotency-Key: unique-request-id-123" \\
@@ -139,7 +139,7 @@ export default function ApiReferencePage() {
         List all available capabilities. This endpoint is public &mdash; no authentication required.
       </p>
       <CodeBlock
-        code={`curl https://strale-production.up.railway.app/v1/capabilities`}
+        code={`curl https://api.strale.io/v1/capabilities`}
         language="bash"
       />
       <h3>Response</h3>
@@ -193,7 +193,7 @@ export default function ApiReferencePage() {
       <h2>GET /v1/wallet/balance</h2>
       <p>Check your current wallet balance. Requires authentication.</p>
       <CodeBlock
-        code={`curl https://strale-production.up.railway.app/v1/wallet/balance \\
+        code={`curl https://api.strale.io/v1/wallet/balance \\
   -H "Authorization: Bearer sk_live_YOUR_KEY"`}
         language="bash"
       />

@@ -114,7 +114,7 @@ export function CapabilityCatalog({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h3 className="font-semibold leading-snug text-foreground">
+                <h3 className="font-semibold leading-snug text-foreground transition-colors group-hover:text-accent">
                   {cap.name}
                 </h3>
                 <p className="mt-0.5 font-mono text-xs text-muted">

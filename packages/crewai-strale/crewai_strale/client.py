@@ -6,7 +6,7 @@ from typing import Any
 
 import requests
 
-DEFAULT_BASE_URL = "https://strale-production.up.railway.app"
+DEFAULT_BASE_URL = "https://api.strale.io"
 
 
 class StraleClient:

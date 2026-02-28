@@ -29,7 +29,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://strale.dev"
-Repository = "https://github.com/straledev/strale"
+Repository = "https://github.com/petterlindstrom79/strale"
 Documentation = "https://strale.dev/docs"
 
 [tool.setuptools.packages.find]

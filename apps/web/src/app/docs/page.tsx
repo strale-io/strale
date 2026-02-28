@@ -19,20 +19,20 @@ export default function DocsPage() {
 
       <h2>Quick links</h2>
       <div className="not-prose mt-4 grid gap-3 sm:grid-cols-2">
-        <Link href="/docs/getting-started" className="rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-bright hover:bg-surface-bright">
-          <h3 className="font-semibold text-foreground">Quickstart</h3>
+        <Link href="/docs/getting-started" className="group rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-bright hover:bg-surface-bright">
+          <h3 className="font-semibold text-foreground transition-colors group-hover:text-accent">Quickstart</h3>
           <p className="mt-1 text-sm text-muted">Create an account, get an API key, and make your first call in under 2 minutes.</p>
         </Link>
-        <Link href="/docs/integrations/mcp" className="rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-bright hover:bg-surface-bright">
-          <h3 className="font-semibold text-foreground">MCP Server</h3>
+        <Link href="/docs/integrations/mcp" className="group rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-bright hover:bg-surface-bright">
+          <h3 className="font-semibold text-foreground transition-colors group-hover:text-accent">MCP Server</h3>
           <p className="mt-1 text-sm text-muted">Connect Strale to Claude, Cursor, Windsurf, and 300+ MCP clients.</p>
         </Link>
-        <Link href="/docs/integrations/langchain" className="rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-bright hover:bg-surface-bright">
-          <h3 className="font-semibold text-foreground">LangChain Plugin</h3>
+        <Link href="/docs/integrations/langchain" className="group rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-bright hover:bg-surface-bright">
+          <h3 className="font-semibold text-foreground transition-colors group-hover:text-accent">LangChain Plugin</h3>
           <p className="mt-1 text-sm text-muted">All capabilities as LangChain tools with pip install langchain-strale.</p>
         </Link>
-        <Link href="/docs/api-reference" className="rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-bright hover:bg-surface-bright">
-          <h3 className="font-semibold text-foreground">API Reference</h3>
+        <Link href="/docs/api-reference" className="group rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-bright hover:bg-surface-bright">
+          <h3 className="font-semibold text-foreground transition-colors group-hover:text-accent">API Reference</h3>
           <p className="mt-1 text-sm text-muted">POST /v1/do, GET /v1/capabilities, authentication, error codes.</p>
         </Link>
       </div>

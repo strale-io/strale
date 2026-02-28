@@ -118,7 +118,7 @@ export default async function CapabilityDetailPage({
     inputExample[key] = val.type === "number" ? "123" : `your_${key}`;
   }
 
-  const curlExample = `curl -X POST https://strale-production.up.railway.app/v1/do \\
+  const curlExample = `curl -X POST https://api.strale.io/v1/do \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -137,7 +137,7 @@ console.log(result.data);`;
   const pyExample = `import requests
 
 response = requests.post(
-    "https://strale-production.up.railway.app/v1/do",
+    "https://api.strale.io/v1/do",
     headers={"Authorization": "Bearer YOUR_API_KEY"},
     json={
         "task": "${cap.name.toLowerCase()}",

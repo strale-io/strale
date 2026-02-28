@@ -9,7 +9,7 @@ from crewai_strale import StraleToolkit, StraleTool, StraleSearchTool, StraleBal
 
 API_KEY = os.environ.get("STRALE_API_KEY", "")
 BASE_URL = os.environ.get(
-    "STRALE_BASE_URL", "https://strale-production.up.railway.app"
+    "STRALE_BASE_URL", "https://api.strale.io"
 )
 
 needs_api_key = pytest.mark.skipif(not API_KEY, reason="STRALE_API_KEY not set")

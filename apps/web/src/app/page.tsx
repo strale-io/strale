@@ -42,7 +42,7 @@ const STEP_SNIPPETS = [
 {
   "mcpServers": {
     "strale": {
-      "url": "https://strale-production.up.railway.app/mcp"
+      "url": "https://api.strale.io/mcp"
     }
   }
 }`,
@@ -77,7 +77,7 @@ const INTEGRATIONS = [
 {
   "mcpServers": {
     "strale": {
-      "url": "https://strale-production.up.railway.app/mcp"
+      "url": "https://api.strale.io/mcp"
     }
   }
 }`,
@@ -86,7 +86,7 @@ const INTEGRATIONS = [
     name: "A2A",
     desc: "Discoverable by Google A2A protocol agents",
     code: `// Agent Card at /.well-known/agent-card.json
-GET https://strale-production.up.railway.app/.well-known/agent-card.json
+GET https://api.strale.io/.well-known/agent-card.json
 // \u2192 All capabilities as A2A skills`,
   },
   {
@@ -100,7 +100,7 @@ tools = toolkit.get_tools()`,
   {
     name: "Direct API",
     desc: "POST /v1/do",
-    code: `curl -X POST https://strale-production.up.railway.app/v1/do \\
+    code: `curl -X POST https://api.strale.io/v1/do \\
   -H "Authorization: Bearer sk_live_..." \\
   -d '{"task":"validate IBAN","inputs":{"iban":"SE..."}}'`,
   },
@@ -229,7 +229,7 @@ export default async function HomePage() {
                     {cat.count}
                   </span>
                 </div>
-                <h3 className="mt-3 font-semibold">{cat.label}</h3>
+                <h3 className="mt-3 font-semibold transition-colors group-hover:text-accent">{cat.label}</h3>
                 <p className="mt-1 text-sm text-muted">{cat.description}</p>
               </Link>
             );

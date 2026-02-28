@@ -24,7 +24,7 @@ export default function SignupPage() {
         </p>
         <pre className="mt-4 overflow-x-auto rounded-lg border border-border bg-background p-3 text-left font-mono text-xs text-foreground">
 {`curl -X POST \\
-  https://strale-production.up.railway.app/v1/auth/register \\
+  https://api.strale.io/v1/auth/register \\
   -H "Content-Type: application/json" \\
   -d '{"email": "you@example.com"}'`}
         </pre>

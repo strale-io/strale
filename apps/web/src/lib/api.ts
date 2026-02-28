@@ -1,4 +1,4 @@
-const API_BASE = "https://strale-production.up.railway.app";
+const API_BASE = "https://api.strale.io";
 
 export interface Capability {
   slug: string;

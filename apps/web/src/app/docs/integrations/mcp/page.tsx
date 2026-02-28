@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CodeBlock } from "@/components/code-block";
 
 export const metadata: Metadata = {
@@ -22,7 +23,7 @@ export default function McpDocsPage() {
         Just point your MCP client at the URL:
       </p>
       <CodeBlock
-        code="https://strale-production.up.railway.app/mcp"
+        code="https://api.strale.io/mcp"
         language="text"
       />
 
@@ -36,7 +37,7 @@ export default function McpDocsPage() {
 {
   "mcpServers": {
     "strale": {
-      "url": "https://strale-production.up.railway.app/mcp",
+      "url": "https://api.strale.io/mcp",
       "headers": {
         "Authorization": "Bearer sk_live_YOUR_KEY"
       }
@@ -56,7 +57,7 @@ export default function McpDocsPage() {
         code={`{
   "mcpServers": {
     "strale": {
-      "url": "https://strale-production.up.railway.app/mcp",
+      "url": "https://api.strale.io/mcp",
       "headers": {
         "Authorization": "Bearer sk_live_YOUR_KEY"
       }
@@ -82,7 +83,7 @@ export default function McpDocsPage() {
       <p>
         Every Strale capability is exposed as an MCP tool with its full input schema.
         Your AI agent can discover them via the standard MCP tool listing and call them
-        with structured parameters. See the <a href="/capabilities">full capability catalog</a> for details.
+        with structured parameters. See the <Link href="/capabilities">full capability catalog</Link> for details.
       </p>
     </div>
   );

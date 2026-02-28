@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, create_model
 
 from .client import StraleClient
 
-DEFAULT_BASE_URL = "https://strale-production.up.railway.app"
+DEFAULT_BASE_URL = "https://api.strale.io"
 
 
 # ---------------------------------------------------------------------------

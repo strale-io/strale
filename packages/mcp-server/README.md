@@ -29,7 +29,7 @@ No installation required. Connect directly to the hosted MCP server.
   "mcpServers": {
     "strale": {
       "type": "streamableHttp",
-      "url": "https://strale-production.up.railway.app/mcp",
+      "url": "https://api.strale.io/mcp",
       "headers": {
         "Authorization": "Bearer sk_live_your_key_here"
       }
@@ -45,7 +45,7 @@ No installation required. Connect directly to the hosted MCP server.
   "mcpServers": {
     "strale": {
       "type": "streamableHttp",
-      "url": "https://strale-production.up.railway.app/mcp",
+      "url": "https://api.strale.io/mcp",
       "headers": {
         "Authorization": "Bearer sk_live_your_key_here"
       }
@@ -57,7 +57,7 @@ No installation required. Connect directly to the hosted MCP server.
 **Any MCP client supporting Streamable HTTP:**
 
 ```
-URL:    https://strale-production.up.railway.app/mcp
+URL:    https://api.strale.io/mcp
 Auth:   Authorization: Bearer sk_live_your_key_here
 ```
 
@@ -104,7 +104,7 @@ Run the MCP server locally on your machine:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `STRALE_API_KEY` | Yes (for execution) | — | Your Strale API key |
-| `STRALE_BASE_URL` | No | `https://strale-production.up.railway.app` | API base URL |
+| `STRALE_BASE_URL` | No | `https://api.strale.io` | API base URL |
 | `STRALE_MAX_PRICE_CENTS` | No | `200` | Default max price per execution (€2.00) |
 
 ## Available Tools
@@ -126,7 +126,7 @@ Every active Strale capability is registered as an MCP tool using its slug as th
 | `invoice-extract` | Extract data from invoice images | €0.50 |
 | `web-extract` | Extract structured data from web pages | €0.15 |
 | `translate` | Translate text between languages | €0.10 |
-| ... | [233 total capabilities](https://strale-production.up.railway.app/v1/capabilities) | |
+| ... | [233 total capabilities](https://api.strale.io/v1/capabilities) | |
 
 Use `strale_search` to discover capabilities by keyword.
 

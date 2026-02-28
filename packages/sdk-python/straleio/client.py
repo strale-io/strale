@@ -20,7 +20,7 @@ from .types import (
     TransactionDetail,
 )
 
-DEFAULT_BASE_URL = "https://strale-production.up.railway.app"
+DEFAULT_BASE_URL = "https://api.strale.io"
 DEFAULT_TIMEOUT = 60.0
 DEFAULT_POLL_INTERVAL = 2.0
 DEFAULT_MAX_POLL_WAIT = 120.0

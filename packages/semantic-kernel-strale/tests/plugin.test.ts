@@ -11,7 +11,7 @@ import { createStralePlugin, StraleClient } from "../src/index.js";
 const API_KEY = process.env.STRALE_API_KEY ?? "";
 const BASE_URL =
   process.env.STRALE_BASE_URL ??
-  "https://strale-production.up.railway.app";
+  "https://api.strale.io";
 
 const skip = !API_KEY;
 

@@ -70,6 +70,6 @@ Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in tria
 ## Links
 
 - [Strale API docs](https://strale.dev/docs)
-- [Full capability catalog](https://strale-production.up.railway.app/v1/capabilities)
+- [Full capability catalog](https://api.strale.io/v1/capabilities)
 - [LangChain plugin](https://pypi.org/project/langchain-strale/)
 - [MCP server](https://www.npmjs.com/package/strale-mcp)
