@@ -82,6 +82,7 @@ strale/
 - DEC-20260225-P-m5n6: swedish-company-data accepts fuzzy natural-language input; cheap LLM call resolves to org number before registry lookup
 
 ### Revised Seed Capabilities
+<!-- Reminder: changes to capabilities, SDKs, or integrations require updating public/llms.txt in strale-frontend -->
 | # | Capability | Slug | Price |
 |---|---|---|---|
 | 1 | Swedish company data | swedish-company-data | €0.80 |
@@ -123,3 +124,9 @@ strale/
 ### Degraded Mode
 If Notion unavailable: work continues, log to handoff files with [BACKFILL] prefix.
 If Git unavailable: STOP. Fix before proceeding.
+
+## Cross-Repo Updates
+
+When making changes to the backend repo, check if these files in the frontend repo (strale-frontend) need updating:
+
+- **public/llms.txt** — Update when: adding/removing/renaming capability categories, adding new SDKs or integrations, changing API endpoints or auth flow, changing pricing model. This file is what LLMs read when someone shares strale.dev — it must stay accurate.
