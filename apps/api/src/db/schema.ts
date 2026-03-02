@@ -153,6 +153,68 @@ export const failedRequests = pgTable(
   (table) => [index("failed_requests_user_id_idx").on(table.userId)],
 );
 
+// ─── solutions ──────────────────────────────────────────────────────────────
+// Bundled multi-capability workflows with outcome-level pricing
+export const solutions = pgTable("solutions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  category: varchar("category", { length: 50 }).notNull(),
+  // Categories: "compliance-verification", "finance-banking", "legal-regulatory",
+  //             "sales-outreach", "security-risk", "data-research"
+  priceCents: integer("price_cents").notNull(),
+  componentSumCents: integer("component_sum_cents").notNull(),
+  valueTier: varchar("value_tier", { length: 20 }).notNull(),
+  // "data-lookup" (1.2-1.3x), "verification" (1.3-1.5x), "compliance" (1.5-2.0x)
+  maintenanceLevel: varchar("maintenance_level", { length: 20 }).notNull(),
+  // "near-zero", "very-low", "low", "low-medium"
+  geography: varchar("geography", { length: 50 }).notNull(),
+  // "nordic", "eu", "us", "us-global", "global", "eu-global"
+  inputSchema: jsonb("input_schema").notNull(),
+  exampleInput: jsonb("example_input"),
+  exampleOutput: jsonb("example_output"),
+  targetAudience: text("target_audience"),
+  marketingName: varchar("marketing_name", { length: 255 }),
+  transparencyTag: varchar("transparency_tag", { length: 30 }),
+  // null = all algorithmic, "ai_generated", "mixed"
+  isActive: boolean("is_active").notNull().default(true),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// ─── solution_steps ─────────────────────────────────────────────────────────
+// Individual capability steps within a solution, with data flow mapping
+export const solutionSteps = pgTable(
+  "solution_steps",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    solutionId: uuid("solution_id")
+      .notNull()
+      .references(() => solutions.id, { onDelete: "cascade" }),
+    capabilitySlug: varchar("capability_slug", { length: 255 }).notNull(),
+    stepOrder: integer("step_order").notNull(),
+    canParallel: boolean("can_parallel").notNull().default(false),
+    parallelGroup: integer("parallel_group"),
+    inputMap: jsonb("input_map").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("solution_steps_solution_id_idx").on(table.solutionId),
+    uniqueIndex("solution_steps_solution_order_unique").on(
+      table.solutionId,
+      table.stepOrder,
+    ),
+  ],
+);
+
 // ─── capability_health (circuit breaker) ────────────────────────────────────
 // Tracks health state per capability for circuit breaker pattern
 export const capabilityHealth = pgTable("capability_health", {

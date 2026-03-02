@@ -15,6 +15,13 @@
       "when": 1772153783183,
       "tag": "0001_nervous_human_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772442799420,
+      "tag": "0002_overrated_silver_surfer",
+      "breakpoints": true
     }
   ]
 }
