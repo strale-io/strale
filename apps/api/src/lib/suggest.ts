@@ -67,9 +67,78 @@ interface SuggestResponse {
   query_understood_as: string;
 }
 
+// ─── Query normalization ────────────────────────────────────────────────────
+
+const FILLER_PREFIXES = [
+  "i want to ",
+  "i need to ",
+  "i'd like to ",
+  "i would like to ",
+  "can you help me ",
+  "help me ",
+  "how do i ",
+  "how can i ",
+  "please ",
+  "i'm looking for ",
+  "i am looking for ",
+  "find me ",
+  "show me ",
+  "search for ",
+  "looking for ",
+  "we need to ",
+  "my agent needs to ",
+];
+
+function normalizeQuery(raw: string): string {
+  let q = raw.toLowerCase().trim();
+
+  for (const prefix of FILLER_PREFIXES) {
+    if (q.startsWith(prefix)) {
+      q = q.slice(prefix.length);
+      break;
+    }
+  }
+
+  q = q.replace(/[?.!]+$/, "").trim();
+  return q;
+}
+
+// ─── Query result cache ─────────────────────────────────────────────────────
+
+interface QueryCacheEntry {
+  response: SuggestResponse;
+  expiresAt: number;
+}
+
+const queryCache = new Map<string, QueryCacheEntry>();
+const QUERY_CACHE_TTL_MS = 10 * 60 * 1000;
+
+function getQueryCached(key: string): SuggestResponse | null {
+  const entry = queryCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    queryCache.delete(key);
+    return null;
+  }
+  return entry.response;
+}
+
+function setQueryCache(key: string, response: SuggestResponse): void {
+  if (queryCache.size > 500) {
+    const now = Date.now();
+    for (const [k, v] of queryCache) {
+      if (now > v.expiresAt) queryCache.delete(k);
+    }
+  }
+  queryCache.set(key, {
+    response,
+    expiresAt: Date.now() + QUERY_CACHE_TTL_MS,
+  });
+}
+
 // ─── Catalog cache ──────────────────────────────────────────────────────────
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 let catalog: CatalogItem[] | null = null;
 let catalogCachedAt = 0;
 let catalogLoading: Promise<CatalogItem[]> | null = null;
@@ -77,7 +146,7 @@ let useEmbeddings = true;
 
 async function loadCatalog(): Promise<CatalogItem[]> {
   const now = Date.now();
-  if (catalog && now - catalogCachedAt < CACHE_TTL_MS) return catalog;
+  if (catalog && now - catalogCachedAt < CATALOG_CACHE_TTL_MS) return catalog;
 
   // Thundering herd guard
   if (catalogLoading) return catalogLoading;
@@ -212,6 +281,9 @@ async function loadCatalog(): Promise<CatalogItem[]> {
         );
       }
 
+      // Clear query cache when catalog refreshes (embeddings changed)
+      queryCache.clear();
+
       catalog = allItems;
       catalogCachedAt = Date.now();
       return allItems;
@@ -234,23 +306,35 @@ export async function suggest(req: {
   query: string;
   limit?: number;
 }): Promise<SuggestResponse> {
+  const normalized = normalizeQuery(req.query);
   const limit = req.limit ?? 3;
+
+  // Check query cache first
+  const cached = getQueryCached(normalized);
+  if (cached) return cached;
+
   const items = await loadCatalog();
 
+  let result: SuggestResponse;
   if (useEmbeddings && items[0]?.embedding.length > 0) {
-    return suggestSemantic(req.query, items, limit);
+    result = await suggestSemantic(normalized, req.query, items, limit);
+  } else {
+    result = suggestKeyword(normalized, items, limit);
   }
-  return suggestKeyword(req.query, items, limit);
+
+  setQueryCache(normalized, result);
+  return result;
 }
 
 // ─── Semantic path (Voyage + Claude) ────────────────────────────────────────
 
 async function suggestSemantic(
-  query: string,
+  normalized: string,
+  originalQuery: string,
   items: CatalogItem[],
   limit: number,
 ): Promise<SuggestResponse> {
-  const queryEmbedding = await embedQuery(query);
+  const queryEmbedding = await embedQuery(normalized);
 
   const scored = items.map((item) => ({
     item,
@@ -268,12 +352,12 @@ async function suggestSemantic(
       recommendation: null,
       alternatives: [],
       total_matches: 0,
-      query_understood_as: query.trim(),
+      query_understood_as: originalQuery.trim(),
     };
   }
 
-  // Phase 2: Claude re-ranking
-  return rerankWithClaude(query, candidates, limit);
+  // Phase 2: Claude re-ranking (pass original query for natural phrasing)
+  return rerankWithClaude(originalQuery, candidates, limit);
 }
 
 async function rerankWithClaude(
@@ -328,6 +412,28 @@ Your job:
    - Never include capabilities that are steps within the recommended solution.
 3. For each pick, write a one-sentence match_reason explaining why it fits the developer's query.
 4. Rephrase the developer's query into a clean, concise label (query_understood_as).
+5. CRITICAL: Set total_relevant to 0 if NONE of the candidates actually match the developer's intent. Semantic similarity alone is not enough — the candidate must functionally do what the developer is asking for.
+
+Here are examples of good output:
+
+Example 1 — Clear solution match:
+Query: "check if a swedish company exists"
+Candidates: [0: Nordic KYC — Sweden (solution), 1: Swedish Company Data (capability), 2: VAT Validate (capability)]
+Good output:
+{"best_index": 0, "best_match_reason": "Combines company lookup, VAT validation, and sanctions screening into one compliance check for Swedish companies", "alternatives": [{"index": 1, "match_reason": "Individual company data lookup if you only need basic company info without full verification"}], "query_understood_as": "Swedish company verification", "total_relevant": 2}
+
+Example 2 — No relevant match (veto):
+Query: "translate my website to french"
+Candidates: [0: Website Carbon Estimate (capability, similarity 0.31), 1: OG Image Check (capability, similarity 0.30)]
+Good output:
+{"best_index": 0, "best_match_reason": "", "alternatives": [], "query_understood_as": "Website translation to French", "total_relevant": 0}
+Note: total_relevant is 0 because none of the candidates actually do translation. The system will return null.
+
+Example 3 — Capability that's part of a solution (upsell):
+Query: "dns records for a domain"
+Candidates: [0: DNS Lookup (capability), 1: Domain Intelligence (solution containing DNS Lookup), 2: SSL Certificate Check (capability)]
+Good output:
+{"best_index": 0, "best_match_reason": "Queries A, AAAA, MX, TXT, CNAME, and NS records for any domain", "alternatives": [{"index": 1, "match_reason": "Full domain analysis including DNS, SSL, WHOIS, and reputation — use if you need more than just DNS records"}], "query_understood_as": "DNS record lookup", "total_relevant": 2}
 
 Return ONLY valid JSON:
 {
@@ -515,7 +621,6 @@ function suggestKeyword(
     );
   }
 
-  // If best is a capability in a solution, add solution as alternative
   if (best.type === "capability" && best.partOfSolutions?.length) {
     const parentSlug = best.partOfSolutions[0].slug;
     if (!alternatives.some((a) => a.slug === parentSlug)) {
