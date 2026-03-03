@@ -1,6 +1,7 @@
 import { eq, and, lte } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
+import { tokenize } from "./tokenize.js";
 
 type CapabilityRow = typeof capabilities.$inferSelect;
 
@@ -139,21 +140,4 @@ function betterRate(
   const rateA = a.successRate ? parseFloat(a.successRate) : 0;
   const rateB = b.successRate ? parseFloat(b.successRate) : 0;
   return rateA > rateB;
-}
-
-/** Tokenize a string into a set of lowercase alphanumeric words, dropping noise. */
-function tokenize(text: string): Set<string> {
-  const stopWords = new Set([
-    "a", "an", "the", "is", "are", "was", "were", "be", "been",
-    "for", "of", "to", "in", "on", "at", "by", "with", "from",
-    "and", "or", "not", "this", "that", "it", "its",
-  ]);
-
-  const words = text
-    .toLowerCase()
-    .replace(/[^a-z0-9åäöéü\s-]/g, " ")
-    .split(/[\s-]+/)
-    .filter((w) => w.length > 1 && !stopWords.has(w));
-
-  return new Set(words);
 }
