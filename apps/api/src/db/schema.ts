@@ -306,6 +306,37 @@ export const testRunLog = pgTable("test_run_log", {
   estimatedCostCents: integer("estimated_cost_cents").notNull().default(0),
 });
 
+// ─── capability_limitations ─────────────────────────────────────────────────
+// Known limitations per capability for trust transparency
+export const capabilityLimitations = pgTable(
+  "capability_limitations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    capabilitySlug: text("capability_slug").notNull(),
+    limitationText: text("limitation_text").notNull(),
+    category: text("category").notNull(),
+    // 'coverage', 'freshness', 'accuracy', 'performance', 'availability'
+    severity: text("severity").notNull().default("info"),
+    // 'info', 'warning', 'critical'
+    affectedPercentage: decimal("affected_percentage", {
+      precision: 5,
+      scale: 1,
+    }),
+    workaround: text("workaround"),
+    active: boolean("active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("capability_limitations_slug_idx").on(table.capabilitySlug),
+  ],
+);
+
 // ─── capability_health (circuit breaker) ────────────────────────────────────
 // Tracks health state per capability for circuit breaker pattern
 export const capabilityHealth = pgTable("capability_health", {

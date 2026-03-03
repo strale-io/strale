@@ -15,6 +15,8 @@ import { adminRoute } from "./routes/admin.js";
 import { solutionsRoute } from "./routes/solutions.js";
 import { internalQualityRoute } from "./routes/internal-quality.js";
 import { internalTestsRoute } from "./routes/internal-tests.js";
+import { internalLimitationsRoute } from "./routes/internal-limitations.js";
+import { internalTrustRoute } from "./routes/internal-trust.js";
 import { startScheduledTests } from "./lib/test-runner.js";
 
 // Register capability executors (side-effect imports)
@@ -332,6 +334,8 @@ app.route("/v1/admin", adminRoute);
 app.route("/v1/solutions", solutionsRoute);
 app.route("/v1/internal/quality", internalQualityRoute);
 app.route("/v1/internal/tests", internalTestsRoute);
+app.route("/v1/internal/limitations", internalLimitationsRoute);
+app.route("/v1/internal/trust", internalTrustRoute);
 
 // Start scheduled test runner (every 6 hours)
 startScheduledTests();

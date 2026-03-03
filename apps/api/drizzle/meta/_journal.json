@@ -43,6 +43,13 @@
       "when": 1772554252443,
       "tag": "0005_tiny_robin_chapel",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772554865549,
+      "tag": "0006_curly_owl",
+      "breakpoints": true
     }
   ]
 }
