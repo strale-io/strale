@@ -258,7 +258,7 @@ async function suggestSemantic(
   }));
   scored.sort((a, b) => b.similarity - a.similarity);
 
-  const RETRIEVAL_THRESHOLD = 0.2;
+  const RETRIEVAL_THRESHOLD = 0.3;
   const candidates = scored
     .filter((s) => s.similarity >= RETRIEVAL_THRESHOLD)
     .slice(0, 10);
@@ -356,6 +356,17 @@ Return ONLY valid JSON:
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
+
+    // Claude veto: if it says no candidates are relevant, return null
+    if (parsed.total_relevant === 0) {
+      return {
+        recommendation: null,
+        alternatives: [],
+        total_matches: 0,
+        query_understood_as: parsed.query_understood_as ?? query.trim(),
+      };
+    }
+
     const bestIdx: number = parsed.best_index;
     const best = candidates[bestIdx]?.item;
 
