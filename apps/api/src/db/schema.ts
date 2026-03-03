@@ -134,6 +134,32 @@ export const transactions = pgTable(
   ],
 );
 
+// ─── transaction_quality ────────────────────────────────────────────────────
+// Quality signals captured per transaction for SQI scoring
+export const transactionQuality = pgTable("transaction_quality", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  transactionId: uuid("transaction_id")
+    .notNull()
+    .unique()
+    .references(() => transactions.id, { onDelete: "cascade" }),
+  responseTimeMs: integer("response_time_ms").notNull(),
+  upstreamLatencyMs: integer("upstream_latency_ms"),
+  schemaConformant: boolean("schema_conformant").notNull(),
+  fieldsReturned: integer("fields_returned").notNull(),
+  fieldsExpected: integer("fields_expected").notNull(),
+  fieldCompletenessPct: decimal("field_completeness_pct", {
+    precision: 5,
+    scale: 2,
+  }).notNull(),
+  errorType: text("error_type"),
+  // null = success, otherwise: 'upstream_timeout', 'upstream_error',
+  // 'schema_mismatch', 'internal_error', 'rate_limited'
+  qualityFlags: jsonb("quality_flags").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // ─── failed_requests (DEC-20260225-P-c5d6) ─────────────────────────────────
 // Logs every no_matching_capability response — demand signal for future capabilities
 export const failedRequests = pgTable(

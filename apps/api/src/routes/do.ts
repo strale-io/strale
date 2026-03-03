@@ -18,6 +18,7 @@ import {
   recordSuccess,
   recordFailure,
 } from "../lib/circuit-breaker.js";
+import { recordQuality } from "../lib/quality-capture.js";
 import type { AppEnv } from "../types.js";
 
 const MAX_TIMEOUT_SECONDS = 60;
@@ -203,10 +204,12 @@ doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
   const isAsync = (capability.avgLatencyMs ?? 0) > ASYNC_THRESHOLD_MS;
   const executionInput = inputs ?? { task };
 
+  const outputSchema = (match.capability.outputSchema ?? {}) as Record<string, unknown>;
+
   if (isAsync) {
-    return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey);
+    return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema);
   } else {
-    return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey);
+    return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema);
   }
 });
 
@@ -220,6 +223,7 @@ async function executeSync(
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
+  outputSchema: Record<string, unknown>,
 ) {
   const startTime = Date.now();
 
@@ -359,9 +363,15 @@ async function executeSync(
     }
   });
 
-  // ── Record circuit breaker result (fire-and-forget) ──────────────────
+  // ── Record circuit breaker + quality (fire-and-forget) ────────────────
   if (result.ok) {
     recordSuccess(capability.slug).catch(() => {});
+    recordQuality({
+      transactionId: result.transactionId,
+      responseTimeMs: result.latencyMs,
+      output: result.output,
+      outputSchema,
+    });
     // Check transaction milestones (fire-and-forget)
     db.execute(
       sql`SELECT COUNT(*)::text AS count FROM transactions WHERE status = 'completed' AND created_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC')`,
@@ -373,6 +383,13 @@ async function executeSync(
       .catch(() => {});
   } else if (result.errorCode === "execution_failed") {
     recordFailure(capability.slug).catch(() => {});
+    recordQuality({
+      transactionId: result.transactionId,
+      responseTimeMs: Date.now() - startTime,
+      output: null,
+      outputSchema,
+      error: result.error,
+    });
   }
 
   // ── Return response ───────────────────────────────────────────────────
@@ -429,6 +446,7 @@ async function executeAsync(
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
+  outputSchema: Record<string, unknown>,
 ) {
   // Short DB tx: lock wallet → check balance → debit → create record → commit
   type SetupResult =
@@ -528,6 +546,7 @@ async function executeAsync(
     walletId,
     capability,
     startTime,
+    outputSchema,
   ).catch((err) => {
     // Last-resort error logging — should not normally reach here
     console.error(
@@ -557,6 +576,7 @@ async function executeInBackground(
   walletId: string,
   capability: { id: string; slug: string; priceCents: number },
   startTime: number,
+  outputSchema: Record<string, unknown>,
 ) {
   try {
     const capResult = await executor(executionInput);
@@ -581,8 +601,14 @@ async function executeInBackground(
       })
       .where(eq(transactions.id, transactionId));
 
-    // Record success for circuit breaker
+    // Record success for circuit breaker + quality
     await recordSuccess(capability.slug).catch(() => {});
+    recordQuality({
+      transactionId,
+      responseTimeMs: latencyMs,
+      output: capResult.output,
+      outputSchema,
+    });
 
     // Check transaction milestones (fire-and-forget)
     db.execute(
@@ -639,8 +665,15 @@ async function executeInBackground(
         .where(eq(transactions.id, transactionId));
     });
 
-    // Record failure for circuit breaker
+    // Record failure for circuit breaker + quality
     await recordFailure(capability.slug).catch(() => {});
+    recordQuality({
+      transactionId,
+      responseTimeMs: latencyMs,
+      output: null,
+      outputSchema,
+      error: errorMessage,
+    });
   }
 }
 
