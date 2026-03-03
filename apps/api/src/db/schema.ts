@@ -241,6 +241,55 @@ export const solutionSteps = pgTable(
   ],
 );
 
+// ─── test_suites ────────────────────────────────────────────────────────────
+// Automated test definitions for capability quality verification
+export const testSuites = pgTable(
+  "test_suites",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    capabilitySlug: text("capability_slug").notNull(),
+    testName: text("test_name").notNull(),
+    testType: text("test_type").notNull(),
+    // 'known_answer', 'schema_check', 'edge_case', 'negative'
+    input: jsonb("input").notNull(),
+    expectedOutput: jsonb("expected_output"),
+    validationRules: jsonb("validation_rules").notNull(),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("test_suites_capability_slug_idx").on(table.capabilitySlug)],
+);
+
+// ─── test_results ───────────────────────────────────────────────────────────
+// Results from automated test suite runs
+export const testResults = pgTable(
+  "test_results",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    testSuiteId: uuid("test_suite_id")
+      .notNull()
+      .references(() => testSuites.id, { onDelete: "cascade" }),
+    capabilitySlug: text("capability_slug").notNull(),
+    passed: boolean("passed").notNull(),
+    actualOutput: jsonb("actual_output"),
+    failureReason: text("failure_reason"),
+    responseTimeMs: integer("response_time_ms").notNull(),
+    executedAt: timestamp("executed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("test_results_capability_slug_idx").on(table.capabilitySlug),
+    index("test_results_executed_at_idx").on(table.executedAt),
+    index("test_results_test_suite_id_idx").on(table.testSuiteId),
+  ],
+);
+
 // ─── capability_health (circuit breaker) ────────────────────────────────────
 // Tracks health state per capability for circuit breaker pattern
 export const capabilityHealth = pgTable("capability_health", {

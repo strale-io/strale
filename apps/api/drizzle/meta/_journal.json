@@ -29,6 +29,13 @@
       "when": 1772552360398,
       "tag": "0003_nice_toad",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1772553676700,
+      "tag": "0004_hot_mongoose",
+      "breakpoints": true
     }
   ]
 }
