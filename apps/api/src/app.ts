@@ -342,6 +342,9 @@ app.route("/v1/internal/trust", internalTrustRoute);
 // Start scheduled test runner (every 6 hours)
 startScheduledTests();
 
+// Pre-warm the suggest catalog (called after env is loaded, see index.ts)
+export { warmCatalog } from "./lib/suggest.js";
+
 // MCP Streamable HTTP transport (remote MCP access)
 app.route("/mcp", mcpRoute);
 

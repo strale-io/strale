@@ -36,9 +36,29 @@ suggestRoute.post("/suggest", async (c) => {
 
   const limit = Math.min(Math.max(body.limit ?? 3, 1), 10);
 
-  const result = await suggest({ query, limit });
+  try {
+    const result = await suggest({ query, limit });
 
-  return c.json(result, 200, {
-    "Cache-Control": "public, max-age=60",
-  });
+    return c.json(result, 200, {
+      "Cache-Control": "public, max-age=60",
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    if (
+      message.includes("VOYAGE_API_KEY") ||
+      message.includes("ANTHROPIC_API_KEY") ||
+      message.includes("voyageai") ||
+      message.includes("anthropic")
+    ) {
+      console.error("[suggest] Service error:", message);
+      return c.json(
+        apiError(
+          "capability_unavailable",
+          "Recommendation engine is temporarily unavailable.",
+        ),
+        503,
+      );
+    }
+    throw err;
+  }
 });
