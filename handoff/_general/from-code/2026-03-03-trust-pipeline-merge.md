@@ -1,0 +1,1 @@
+Intent: Merged feat/trust-pipeline to main. POST /v1/suggest live in production. 9 commits: quality capture, quality aggregation, test suite runner (98 tests, tiered scheduling), capability limitations (55 entries), unified trust summary endpoints, and semantic suggest (Voyage embeddings + Claude Haiku re-ranking).
