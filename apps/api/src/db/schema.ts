@@ -255,6 +255,9 @@ export const testSuites = pgTable(
     expectedOutput: jsonb("expected_output"),
     validationRules: jsonb("validation_rules").notNull(),
     active: boolean("active").notNull().default(true),
+    scheduleTier: text("schedule_tier").notNull().default("B"),
+    // 'A' = every 6h (cheap), 'B' = every 24h (moderate), 'C' = every 72h (expensive)
+    estimatedCostCents: integer("estimated_cost_cents").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -289,6 +292,19 @@ export const testResults = pgTable(
     index("test_results_test_suite_id_idx").on(table.testSuiteId),
   ],
 );
+
+// ─── test_run_log ───────────────────────────────────────────────────────────
+// Summary log per scheduled test run for cost tracking
+export const testRunLog = pgTable("test_run_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tier: text("tier").notNull(), // 'A', 'B', 'C', or 'all'
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }).notNull(),
+  totalTests: integer("total_tests").notNull(),
+  passed: integer("passed").notNull(),
+  failed: integer("failed").notNull(),
+  estimatedCostCents: integer("estimated_cost_cents").notNull().default(0),
+});
 
 // ─── capability_health (circuit breaker) ────────────────────────────────────
 // Tracks health state per capability for circuit breaker pattern

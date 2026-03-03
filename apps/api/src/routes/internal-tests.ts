@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, desc, gte, sql, asc } from "drizzle-orm";
+import { eq, and, desc, sql, asc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   testSuites,
@@ -8,16 +8,39 @@ import {
   solutionSteps,
 } from "../db/schema.js";
 import { runTests } from "../lib/test-runner.js";
+import type { ScheduleTier } from "../lib/test-runner.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
+
+// ─── Schedule intervals for next_scheduled_run computation ──────────────────
+const TIER_INTERVAL_MS: Record<string, number> = {
+  A: 6 * 60 * 60 * 1000,
+  B: 24 * 60 * 60 * 1000,
+  C: 72 * 60 * 60 * 1000,
+};
+
+function computeNextRun(
+  tier: string,
+  lastRun: string | null,
+): string | null {
+  if (!lastRun) return null;
+  const interval = TIER_INTERVAL_MS[tier];
+  if (!interval) return null;
+  return new Date(new Date(lastRun).getTime() + interval).toISOString();
+}
 
 // Internal test endpoints — no auth required, called by strale.dev frontend
 export const internalTestsRoute = new Hono<AppEnv>();
 
-// POST /v1/internal/tests/run — trigger a test run (optional ?slug= filter)
+// POST /v1/internal/tests/run — trigger a test run
+// Query params: ?slug= (capability), ?tier=A|B|C
 internalTestsRoute.post("/run", async (c) => {
   const slug = c.req.query("slug");
-  const summary = await runTests(slug || undefined);
+  const tier = c.req.query("tier") as ScheduleTier | undefined;
+  const summary = await runTests({
+    capabilitySlug: slug || undefined,
+    tier: tier || undefined,
+  });
   return c.json(summary);
 });
 
@@ -26,7 +49,6 @@ internalTestsRoute.get("/capabilities/:slug", async (c) => {
   const slug = c.req.param("slug");
   const db = getDb();
 
-  // Get all test suites for this capability
   const suites = await db
     .select()
     .from(testSuites)
@@ -41,7 +63,9 @@ internalTestsRoute.get("/capabilities/:slug", async (c) => {
     );
   }
 
-  // Get latest result for each test suite
+  // All suites for a capability share the same tier
+  const scheduleTier = suites[0].scheduleTier;
+
   const tests = await Promise.all(
     suites.map(async (suite) => {
       const [latest] = await db
@@ -69,10 +93,18 @@ internalTestsRoute.get("/capabilities/:slug", async (c) => {
     (sum, t) => sum + (t.response_time_ms ?? 0),
     0,
   );
+  const lastRun =
+    withResults
+      .map((t) => t.executed_at)
+      .filter(Boolean)
+      .sort()
+      .pop() ?? null;
 
   return c.json({
     capability_slug: slug,
-    last_run: withResults[0]?.executed_at ?? null,
+    schedule_tier: scheduleTier,
+    last_run: lastRun,
+    next_scheduled_run: computeNextRun(scheduleTier, lastRun),
     total_tests: suites.length,
     passed,
     failed,
@@ -141,7 +173,6 @@ internalTestsRoute.get("/solutions/:slug", async (c) => {
   const slug = c.req.param("slug");
   const db = getDb();
 
-  // Look up solution steps
   const steps = await db
     .select({ capabilitySlug: solutionSteps.capabilitySlug })
     .from(solutionSteps)
@@ -156,7 +187,6 @@ internalTestsRoute.get("/solutions/:slug", async (c) => {
     );
   }
 
-  // Get test results for each capability step
   const stepResults = await Promise.all(
     steps.map(async (step) => {
       const suites = await db
@@ -169,6 +199,7 @@ internalTestsRoute.get("/solutions/:slug", async (c) => {
           ),
         );
 
+      const scheduleTier = suites[0]?.scheduleTier ?? "B";
       let passed = 0;
       let failed = 0;
       let totalResponseTime = 0;
@@ -196,6 +227,7 @@ internalTestsRoute.get("/solutions/:slug", async (c) => {
 
       return {
         capability_slug: step.capabilitySlug,
+        schedule_tier: scheduleTier,
         total_tests: suites.length,
         passed,
         failed,
@@ -221,15 +253,20 @@ internalTestsRoute.get("/solutions/:slug", async (c) => {
     (s, r) => s + (r.avg_response_time_ms ?? 0) * (r.passed + r.failed),
     0,
   );
-  const lastRun = stepResults
+
+  // Freshness: find newest and oldest test timestamps
+  const allRunTimes = stepResults
     .map((r) => r.last_run)
-    .filter(Boolean)
-    .sort()
-    .pop() ?? null;
+    .filter((t): t is string => t !== null);
+  const sortedTimes = allRunTimes.sort();
+  const freshestTest = sortedTimes[sortedTimes.length - 1] ?? null;
+  const stalestTest = sortedTimes[0] ?? null;
 
   return c.json({
     solution_slug: slug,
-    last_run: lastRun,
+    last_run: freshestTest,
+    freshest_test: freshestTest,
+    stalest_test: stalestTest,
     total_tests: allTotal,
     passed: allPassed,
     failed: allFailed,

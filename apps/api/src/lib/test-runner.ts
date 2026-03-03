@@ -1,8 +1,9 @@
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   testSuites,
   testResults,
+  testRunLog,
   transactionQuality,
   transactions,
   capabilities,
@@ -23,24 +24,40 @@ interface ValidationRules {
   checks: ValidationCheck[];
 }
 
+export type ScheduleTier = "A" | "B" | "C";
+
+export interface TestRunOptions {
+  capabilitySlug?: string;
+  tier?: ScheduleTier;
+}
+
 export interface TestRunSummary {
+  tier: string;
   total: number;
   passed: number;
   failed: number;
   avgResponseTimeMs: number;
+  estimatedCostCents: number;
   results: SingleTestResult[];
 }
 
 interface SingleTestResult {
   testName: string;
   testType: string;
+  capabilitySlug: string;
   passed: boolean;
   failureReason: string | null;
   responseTimeMs: number;
 }
 
-// ─── Inter-test delay to avoid hammering upstream APIs ──────────────────────
-const INTER_TEST_DELAY_MS = 200;
+// ─── Tier-specific delays ───────────────────────────────────────────────────
+
+const TIER_DELAY_MS: Record<ScheduleTier, number> = {
+  A: 200,
+  B: 500,
+  C: 1000,
+};
+const DEFAULT_DELAY_MS = 200;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -49,16 +66,27 @@ function delay(ms: number): Promise<void> {
 // ─── Run tests ──────────────────────────────────────────────────────────────
 
 /**
- * Run all active tests for a capability slug. If no slug given, runs all active tests.
+ * Run tests with optional filters.
+ * - No args: runs all active tests (all tiers)
+ * - { tier: 'A' }: runs only Tier A tests
+ * - { capabilitySlug: 'iban-validate' }: runs tests for a specific capability
  */
 export async function runTests(
-  capabilitySlug?: string,
+  options?: TestRunOptions | string,
 ): Promise<TestRunSummary> {
+  // Backward compat: accept bare string as capabilitySlug
+  const opts: TestRunOptions =
+    typeof options === "string" ? { capabilitySlug: options } : options ?? {};
+
   const db = getDb();
+  const startedAt = new Date();
 
   const conditions = [eq(testSuites.active, true)];
-  if (capabilitySlug) {
-    conditions.push(eq(testSuites.capabilitySlug, capabilitySlug));
+  if (opts.capabilitySlug) {
+    conditions.push(eq(testSuites.capabilitySlug, opts.capabilitySlug));
+  }
+  if (opts.tier) {
+    conditions.push(eq(testSuites.scheduleTier, opts.tier));
   }
 
   const suites = await db
@@ -66,29 +94,50 @@ export async function runTests(
     .from(testSuites)
     .where(and(...conditions));
 
+  const tierLabel = opts.tier ?? "all";
+  const delayMs = opts.tier ? TIER_DELAY_MS[opts.tier] : DEFAULT_DELAY_MS;
   const results: SingleTestResult[] = [];
   let totalResponseTime = 0;
+  let totalEstimatedCost = 0;
 
-  for (const suite of suites) {
+  for (let i = 0; i < suites.length; i++) {
+    const suite = suites[i];
     const result = await runSingleTest(suite);
     results.push(result);
     totalResponseTime += result.responseTimeMs;
+    totalEstimatedCost += suite.estimatedCostCents;
 
-    // Rate limit between tests
-    if (suites.indexOf(suite) < suites.length - 1) {
-      await delay(INTER_TEST_DELAY_MS);
+    // Staggered delay between tests
+    if (i < suites.length - 1) {
+      await delay(delayMs);
     }
   }
 
   const passed = results.filter((r) => r.passed).length;
+  const failed = results.length - passed;
+  const completedAt = new Date();
+
+  // Log the run
+  await db.insert(testRunLog).values({
+    tier: tierLabel,
+    startedAt,
+    completedAt,
+    totalTests: results.length,
+    passed,
+    failed,
+    estimatedCostCents: totalEstimatedCost,
+  });
+
   return {
+    tier: tierLabel,
     total: results.length,
     passed,
-    failed: results.length - passed,
+    failed,
     avgResponseTimeMs:
       results.length > 0
         ? Math.round(totalResponseTime / results.length)
         : 0,
+    estimatedCostCents: totalEstimatedCost,
     results,
   };
 }
@@ -104,6 +153,7 @@ async function runSingleTest(
     const result: SingleTestResult = {
       testName: suite.testName,
       testType: suite.testType,
+      capabilitySlug: suite.capabilitySlug,
       passed: false,
       failureReason: `No executor registered for '${suite.capabilitySlug}'`,
       responseTimeMs: 0,
@@ -161,6 +211,7 @@ async function runSingleTest(
   return {
     testName: suite.testName,
     testType: suite.testType,
+    capabilitySlug: suite.capabilitySlug,
     passed,
     failureReason,
     responseTimeMs,
@@ -176,31 +227,14 @@ function validateResult(
 ): { passed: boolean; failureReason: string | null } {
   const rules = suite.validationRules as ValidationRules;
 
-  // For negative/edge_case tests, an error might be the expected outcome
   if (suite.testType === "negative") {
-    if (executionError) {
-      // Negative test got an error — check if validation rules have specific checks
-      if (!rules.checks || rules.checks.length === 0) {
-        return { passed: true, failureReason: null }; // error was expected
-      }
-      // Check if any rule expects "error" field
-      const errorChecks = rules.checks.filter((c) => c.field === "error");
-      if (errorChecks.length > 0) {
-        return { passed: true, failureReason: null };
-      }
-      return { passed: true, failureReason: null };
-    }
-    // Negative test but no error — check output validation rules
-    if (!capResult) {
+    if (executionError || !capResult) {
       return { passed: true, failureReason: null };
     }
   }
 
   if (suite.testType === "edge_case") {
-    // Edge case: should not crash. If it returned a result, check rules.
-    // If it threw a controlled error, that's OK too.
     if (executionError) {
-      // Edge case threw — that's acceptable, test passes
       return { passed: true, failureReason: null };
     }
     if (!capResult) {
@@ -211,7 +245,6 @@ function validateResult(
     }
   }
 
-  // For known_answer and schema_check: an execution error means failure
   if (executionError) {
     return { passed: false, failureReason: `Execution error: ${executionError}` };
   }
@@ -220,7 +253,6 @@ function validateResult(
     return { passed: false, failureReason: "No result returned" };
   }
 
-  // Run validation checks
   const output = capResult.output;
   for (const check of rules.checks) {
     const checkResult = runCheck(check, output);
@@ -293,8 +325,7 @@ function runCheck(
       }
       return { passed: true, reason: "" };
 
-    case "type":
-      // eslint-disable-next-line no-case-declarations
+    case "type": {
       const actualType = Array.isArray(value) ? "array" : typeof value;
       if (actualType !== check.value) {
         return {
@@ -303,6 +334,7 @@ function runCheck(
         };
       }
       return { passed: true, reason: "" };
+    }
 
     case "gt": {
       if (typeof value !== "number" || value <= Number(check.value)) {
@@ -365,7 +397,6 @@ async function recordTestQuality(
 ): Promise<void> {
   const db = getDb();
 
-  // Look up capability for outputSchema
   const [cap] = await db
     .select({ outputSchema: capabilities.outputSchema, id: capabilities.id })
     .from(capabilities)
@@ -374,7 +405,6 @@ async function recordTestQuality(
 
   if (!cap) return;
 
-  // Create a transaction record for quality capture
   const [txn] = await db
     .insert(transactions)
     .values({
@@ -444,7 +474,6 @@ async function getSystemUserId(): Promise<string> {
   const db = getDb();
   const { users } = await import("../db/schema.js");
 
-  // Look for existing system account
   const [existing] = await db
     .select({ id: users.id })
     .from(users)
@@ -456,7 +485,6 @@ async function getSystemUserId(): Promise<string> {
     return existing.id;
   }
 
-  // Create system account
   const crypto = await import("node:crypto");
   const hash = crypto.createHash("sha256").update("system-internal-key").digest("hex");
 
@@ -474,41 +502,55 @@ async function getSystemUserId(): Promise<string> {
   return created.id;
 }
 
-// ─── Scheduled execution ────────────────────────────────────────────────────
+// ─── Tiered scheduled execution ─────────────────────────────────────────────
+
+const TIER_SCHEDULES: { tier: ScheduleTier; intervalMs: number; label: string }[] = [
+  { tier: "A", intervalMs: 6 * 60 * 60 * 1000, label: "every 6h" },
+  { tier: "B", intervalMs: 24 * 60 * 60 * 1000, label: "every 24h" },
+  { tier: "C", intervalMs: 72 * 60 * 60 * 1000, label: "every 72h" },
+];
 
 let _schedulerRunning = false;
 
 /**
- * Start the scheduled test runner. Runs every 6 hours.
+ * Start the tiered scheduled test runner.
+ * - Tier A: every 6 hours
+ * - Tier B: every 24 hours
+ * - Tier C: every 72 hours
  * Safe to call multiple times — only starts once.
  */
 export function startScheduledTests(): void {
   if (_schedulerRunning) return;
   _schedulerRunning = true;
 
-  const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+  console.log("[test-runner] Tiered scheduler started: A=6h, B=24h, C=72h");
 
-  console.log("[test-runner] Scheduled test runner started (every 6h)");
-
-  setInterval(async () => {
-    console.log("[test-runner] Starting scheduled full test suite run...");
-    try {
-      const summary = await runTests();
+  for (const schedule of TIER_SCHEDULES) {
+    setInterval(async () => {
       console.log(
-        `[test-runner] Completed: ${summary.passed}/${summary.total} passed, ` +
-          `${summary.failed} failed, avg ${summary.avgResponseTimeMs}ms`,
+        `[test-runner] Starting Tier ${schedule.tier} run (${schedule.label})...`,
       );
+      try {
+        const summary = await runTests({ tier: schedule.tier });
+        console.log(
+          `[test-runner] Tier ${schedule.tier}: ${summary.passed}/${summary.total} passed, ` +
+            `${summary.failed} failed, est. cost ${summary.estimatedCostCents}¢, ` +
+            `avg ${summary.avgResponseTimeMs}ms`,
+        );
 
-      // Log warnings for failures
-      for (const r of summary.results) {
-        if (!r.passed) {
-          console.warn(
-            `[test-runner] FAIL: ${r.testName} — ${r.failureReason}`,
-          );
+        for (const r of summary.results) {
+          if (!r.passed) {
+            console.warn(
+              `[test-runner] FAIL [${r.capabilitySlug}] ${r.testName} — ${r.failureReason}`,
+            );
+          }
         }
+      } catch (err) {
+        console.error(
+          `[test-runner] Tier ${schedule.tier} run failed:`,
+          err,
+        );
       }
-    } catch (err) {
-      console.error("[test-runner] Scheduled run failed:", err);
-    }
-  }, SIX_HOURS_MS);
+    }, schedule.intervalMs);
+  }
 }
