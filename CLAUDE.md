@@ -22,6 +22,8 @@ See .claude/PROTOCOL.md for full criteria and protocol definitions.
 - `strale-review-synthesis.md` — External review decisions and revised contracts
 - `strale-build-spec.md` — 4-week build plan with schema and endpoints
 
+> These files reflect the original 4-week MVP scope. For current build plan and priorities, see Notion Project Home (31167c87-082c-81fb-96da-d3188d34aa72).
+
 ### Tech Stack
 - Runtime: Node.js + TypeScript
 - Framework: Hono
@@ -36,25 +38,29 @@ See .claude/PROTOCOL.md for full criteria and protocol definitions.
 ```
 strale/
 ├── apps/
-│   ├── api/                    # Hono API server
-│   │   ├── src/
-│   │   │   ├── routes/         # API route handlers
-│   │   │   ├── capabilities/   # Capability executor functions
-│   │   │   ├── db/             # Drizzle schema + queries
-│   │   │   ├── lib/            # Stripe, matching, auth helpers
-│   │   │   └── index.ts        # Entry point
-│   │   └── package.json
-│   └── dashboard/              # Minimal React frontend (week 3-4)
+│   └── api/                    # Hono API server
 │       ├── src/
+│       │   ├── routes/         # API route handlers
+│       │   ├── capabilities/   # Capability executor functions
+│       │   ├── db/             # Drizzle schema + queries + seed
+│       │   ├── lib/            # Stripe, matching, auth, quality helpers
+│       │   └── index.ts        # Entry point
+│       ├── drizzle/            # Migration files (0001–0006+)
 │       └── package.json
 ├── packages/
-│   └── sdk-python/             # Python SDK
+│   ├── mcp-server/             # strale-mcp (npm published)
+│   ├── sdk-typescript/         # @strale/sdk (npm published)
+│   ├── sdk-python/             # straleio (PyPI published)
+│   ├── semantic-kernel-strale/ # strale-semantic-kernel (npm)
+│   ├── langchain-strale/       # langchain-strale (PyPI pending)
+│   └── crewai-strale/          # crewai-strale (PyPI pending)
 ├── package.json                # Monorepo root
 └── CLAUDE.md
 ```
 
 ### Active Decisions
 
+#### MVP Decisions (Feb 2026)
 - DEC-1: Scope reduced to 4-week MVP proving developers will let agents buy capabilities
 - DEC-2: Prepaid wallet via Stripe Checkout — internal ledger for micropayments, zero per-transaction cost
 - DEC-3: No bidding/auction — fixed pricing, instant routing, keyword matching for 5 capabilities
@@ -81,15 +87,18 @@ strale/
 - DEC-20260225-P-c5d6: 6th table — failed_requests (id, user_id, task, category, max_price_cents, created_at) logs every no_matching_capability response
 - DEC-20260225-P-m5n6: swedish-company-data accepts fuzzy natural-language input; cheap LLM call resolves to org number before registry lookup
 
-### Revised Seed Capabilities
+---
+
+#### Current Decisions (March 2026)
+- DEC-20260302-A: Capability Pricing Framework (€0.02–€1.00 per call)
+- DEC-20260302-B: Capability QA Framework (tiered scheduling: smoke/daily/weekly)
+- DEC-20260302-C: Homepage leads with solutions and trust positioning
+- DEC-20260303-D: Search input uses query completions, not result dropdown
+- DEC-20260303-E: POST /v1/suggest uses Voyage AI embeddings + Claude Haiku re-ranking
+
+### Capabilities
 <!-- Reminder: changes to capabilities, SDKs, or integrations require updating public/llms.txt in strale-frontend -->
-| # | Capability | Slug | Price |
-|---|---|---|---|
-| 1 | Swedish company data | swedish-company-data | €0.80 |
-| 2 | Invoice/receipt → structured JSON | invoice-extract | €0.50 |
-| 3 | Web page → structured data (JS rendering) | web-extract | €0.15 |
-| 4 | EU VAT validation + VIES enrichment | vat-validate | €0.10 |
-| 5 | Swedish annual report extraction | annual-report-extract | €1.00 |
+233+ capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 15 bundled solutions across 6 categories. Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions.
 
 ### Quick Session Checklist
 1. Declare session intent
@@ -130,3 +139,4 @@ If Git unavailable: STOP. Fix before proceeding.
 When making changes to the backend repo, check if these files in the frontend repo (strale-frontend) need updating:
 
 - **public/llms.txt** — Update when: adding/removing/renaming capability categories, adding new SDKs or integrations, changing API endpoints or auth flow, changing pricing model. This file is what LLMs read when someone shares strale.dev — it must stay accurate.
+- **public/sitemap.xml** — Regenerate when: adding new pages or routes. Run: `npx tsx scripts/generate-sitemap.ts` in strale-frontend.
