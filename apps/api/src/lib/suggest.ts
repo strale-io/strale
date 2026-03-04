@@ -601,7 +601,10 @@ Your job:
    - If the best match is a solution, alternatives can be other matching solutions OR individual capabilities that are NOT components of the best match.
    - If the best match is a capability that is part of a solution, include that solution as an alternative (upsell).
    - Never include capabilities that are steps within the recommended solution.
-3. For each pick, write a one-sentence match_reason explaining why it fits the developer's query.
+3. For each pick, write a one-sentence match_reason explaining WHY it fits the developer's query — do NOT repeat the item's description.
+   Bad: "Verifies a Swedish company's identity and registration details" (that's just the description).
+   Good: "Best match for Swedish company verification — bundles company data, VAT, and sanctions in one call".
+   The match_reason must reference the user's query and explain the fit, not describe what the item does.
 4. Rephrase the developer's query into a clean, concise label (query_understood_as).
 5. CRITICAL: Set total_relevant to 0 if NONE of the candidates actually match the developer's intent. Semantic similarity alone is not enough — the candidate must functionally do what the developer is asking for.
 
