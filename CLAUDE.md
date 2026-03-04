@@ -52,8 +52,8 @@ strale/
 │   ├── sdk-typescript/         # @strale/sdk (npm published)
 │   ├── sdk-python/             # straleio (PyPI published)
 │   ├── semantic-kernel-strale/ # strale-semantic-kernel (npm)
-│   ├── langchain-strale/       # langchain-strale (PyPI pending)
-│   └── crewai-strale/          # crewai-strale (PyPI pending)
+│   ├── langchain-strale/       # langchain-strale (PyPI published)
+│   └── crewai-strale/          # crewai-strale (PyPI published)
 ├── package.json                # Monorepo root
 └── CLAUDE.md
 ```
