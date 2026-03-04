@@ -10,7 +10,10 @@ import {
 import { runTests } from "../lib/test-runner.js";
 import type { ScheduleTier } from "../lib/test-runner.js";
 import { apiError } from "../lib/errors.js";
+import { rateLimitByIp } from "../lib/rate-limit.js";
 import type { AppEnv } from "../types.js";
+
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 // ─── Schedule intervals for next_scheduled_run computation ──────────────────
 const TIER_INTERVAL_MS: Record<string, number> = {
@@ -32,9 +35,18 @@ function computeNextRun(
 // Internal test endpoints — no auth required, called by strale.dev frontend
 export const internalTestsRoute = new Hono<AppEnv>();
 
-// POST /v1/internal/tests/run — trigger a test run
+// POST /v1/internal/tests/run — trigger a test run (admin-only)
 // Query params: ?slug= (capability), ?tier=A|B|C
-internalTestsRoute.post("/run", async (c) => {
+internalTestsRoute.post("/run", rateLimitByIp(1, 60_000), async (c) => {
+  // Require ADMIN_SECRET — test runs call external APIs costing real money
+  if (!ADMIN_SECRET) {
+    return c.json(apiError("unauthorized", "Admin endpoint is not configured."), 503);
+  }
+  const auth = c.req.header("Authorization");
+  if (!auth || auth !== `Bearer ${ADMIN_SECRET}`) {
+    return c.json(apiError("unauthorized", "Invalid admin secret."), 401);
+  }
+
   const slug = c.req.query("slug");
   const tier = c.req.query("tier") as ScheduleTier | undefined;
   const summary = await runTests({

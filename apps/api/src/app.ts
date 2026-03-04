@@ -300,6 +300,29 @@ import "./capabilities/website-carbon-estimate.js";
 
 export const app = new Hono();
 
+// Global error handler — never leak internals to client
+app.onError((err, c) => {
+  console.error("[unhandled]", err.message, err.stack);
+  return c.json(
+    {
+      error_code: "internal_error" as const,
+      message: "An unexpected error occurred. Please try again.",
+    },
+    500,
+  );
+});
+
+// 404 handler for unmatched routes
+app.notFound((c) => {
+  return c.json(
+    {
+      error_code: "not_found" as const,
+      message: `No route matches ${c.req.method} ${c.req.path}`,
+    },
+    404,
+  );
+});
+
 app.use("*", logger());
 app.use("/v1/*", cors({
   origin: "*",

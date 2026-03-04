@@ -220,7 +220,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       ROUND(SUM(CASE WHEN tr.passed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text AS pass_rate,
       ROUND(AVG(tr.response_time_ms))::text AS avg_response_time_ms
     FROM test_results tr
-    WHERE tr.capability_slug = ANY(${sql.raw(`ARRAY[${capSlugs.map((s) => `'${s}'`).join(",")}]`)})
+    WHERE tr.capability_slug IN (${sql.join(capSlugs.map((s) => sql`${s}`), sql`, `)})
       AND tr.executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
     GROUP BY DATE(tr.executed_at AT TIME ZONE 'UTC')
     ORDER BY date

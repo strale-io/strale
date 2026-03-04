@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { wallets, walletTransactions } from "../db/schema.js";
 import { getStripe } from "../lib/stripe.js";
@@ -47,44 +47,49 @@ webhookRoute.post("/stripe", async (c) => {
 
     const db = getDb();
 
-    // Idempotency: check if this session was already processed (DEC-8 on Stripe webhooks)
-    const [existingTxn] = await db
-      .select({ id: walletTransactions.id })
-      .from(walletTransactions)
-      .where(eq(walletTransactions.stripeSessionId, sessionId))
-      .limit(1);
+    // All wallet operations in a single transaction for atomicity
+    await db.transaction(async (tx) => {
+      // Idempotency: check if this session was already processed
+      const [existingTxn] = await tx
+        .select({ id: walletTransactions.id })
+        .from(walletTransactions)
+        .where(eq(walletTransactions.stripeSessionId, sessionId))
+        .limit(1);
 
-    if (existingTxn) {
-      // Already processed — Stripe retried the webhook
-      return c.json({ received: true });
-    }
+      if (existingTxn) {
+        // Already processed — Stripe retried the webhook
+        return;
+      }
 
-    // Credit the wallet
-    const [wallet] = await db
-      .select()
-      .from(wallets)
-      .where(eq(wallets.userId, userId))
-      .limit(1);
+      // Look up the wallet
+      const [wallet] = await tx
+        .select({ id: wallets.id })
+        .from(wallets)
+        .where(eq(wallets.userId, userId))
+        .limit(1);
 
-    if (!wallet) {
-      console.error(`Wallet not found for user ${userId}`);
-      return c.json({ received: true });
-    }
+      if (!wallet) {
+        console.error(`Wallet not found for user ${userId}`);
+        return;
+      }
 
-    await db
-      .update(wallets)
-      .set({
-        balanceCents: wallet.balanceCents + amountCents,
-        updatedAt: new Date(),
-      })
-      .where(eq(wallets.id, wallet.id));
+      // Credit the wallet atomically
+      await tx
+        .update(wallets)
+        .set({
+          balanceCents: sql`${wallets.balanceCents} + ${amountCents}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(wallets.id, wallet.id));
 
-    await db.insert(walletTransactions).values({
-      walletId: wallet.id,
-      amountCents,
-      type: "top_up",
-      stripeSessionId: sessionId,
-      description: `Stripe top-up: €${(amountCents / 100).toFixed(2)}`,
+      // Record the wallet transaction
+      await tx.insert(walletTransactions).values({
+        walletId: wallet.id,
+        amountCents,
+        type: "top_up",
+        stripeSessionId: sessionId,
+        description: `Stripe top-up: €${(amountCents / 100).toFixed(2)}`,
+      });
     });
   }
 
