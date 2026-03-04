@@ -35,9 +35,12 @@ async function captureQuality(data: QualityData): Promise<void> {
   const schemaConformant = validateSchema(data.output, data.outputSchema);
   const errorType = categorizeError(data.error);
 
+  // Cap at timeout threshold to prevent outliers from skewing quality aggregation (DEC-20260304-C)
+  const cappedResponseTimeMs = Math.min(data.responseTimeMs, 30_000);
+
   await db.insert(transactionQuality).values({
     transactionId: data.transactionId,
-    responseTimeMs: data.responseTimeMs,
+    responseTimeMs: cappedResponseTimeMs,
     upstreamLatencyMs: data.upstreamLatencyMs ?? null,
     schemaConformant,
     fieldsReturned,

@@ -69,8 +69,8 @@ registerCapability("sanctions-check", async (input: CapabilityInput) => {
         provenance: { source: "opensanctions.org", fetched_at: new Date().toISOString() },
       };
     }
-  } catch {
-    // Fall through to LLM-based analysis
+  } catch (err) {
+    console.error("[sanctions-check] API error:", err instanceof Error ? err.message : err);
   }
 
   // Fallback: use Claude to do a knowledge-based check
