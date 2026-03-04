@@ -1,16 +1,34 @@
 import { Hono } from "hono";
-import { suggest } from "../lib/suggest.js";
+import { suggest, typeahead } from "../lib/suggest.js";
 import { apiError } from "../lib/errors.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import type { AppEnv } from "../types.js";
 
 export const suggestRoute = new Hono<AppEnv>();
 
-// 20 requests per second per IP
-suggestRoute.use("*", rateLimitByIp(20, 1000));
+// GET /v1/suggest/typeahead — Public, no auth, fast in-memory matching
+suggestRoute.get("/suggest/typeahead", rateLimitByIp(30, 1000), async (c) => {
+  const q = c.req.query("q")?.trim();
+  if (!q || q.length < 2) {
+    return c.json(
+      apiError("invalid_request", "'q' parameter is required and must be at least 2 characters."),
+      400,
+    );
+  }
+
+  const limitParam = c.req.query("limit");
+  const limit = Math.min(Math.max(limitParam ? parseInt(limitParam, 10) || 6 : 6, 1), 10);
+  const geo = c.req.query("geo") || undefined;
+
+  const result = await typeahead(q, limit, geo);
+
+  return c.json(result, 200, {
+    "Cache-Control": "public, max-age=30",
+  });
+});
 
 // POST /v1/suggest — Public, no auth required
-suggestRoute.post("/suggest", async (c) => {
+suggestRoute.post("/suggest", rateLimitByIp(20, 1000), async (c) => {
   const body = await c.req.json().catch(() => null);
   if (!body || !body.query || typeof body.query !== "string") {
     return c.json(

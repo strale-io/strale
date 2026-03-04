@@ -8,8 +8,21 @@ import {
 } from "../db/schema.js";
 import { embedQuery, embedDocuments, cosineSimilarity } from "./embeddings.js";
 import { tokenize } from "./tokenize.js";
+import { getCapabilityQuality, getSolutionQuality } from "./quality-aggregation.js";
+import { determineBadge, getTestResultsForSlug } from "./trust-helpers.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
+
+interface TrustSummary {
+  badge: string;
+  badge_label: string;
+  success_rate: number | null;
+  avg_response_time_ms: number | null;
+  tests_passing: number;
+  tests_total: number;
+  last_tested_at: string | null;
+  data_source: "internal_testing" | "blended" | "customer_transactions";
+}
 
 interface CatalogItem {
   type: "solution" | "capability";
@@ -34,6 +47,7 @@ interface CatalogItem {
   embedding: number[];
   embeddingText: string;
   tokens: Set<string>;
+  trustSummary?: TrustSummary;
 }
 
 interface SuggestRecommendation {
@@ -58,6 +72,7 @@ interface SuggestRecommendation {
     price_cents: number;
     extra_description: string;
   } | null;
+  trust?: TrustSummary;
 }
 
 interface SuggestResponse {
@@ -263,6 +278,73 @@ async function loadCatalog(): Promise<CatalogItem[]> {
         }
       }
 
+      // Precompute trust summaries for all items
+      // TODO: batch trust data queries — currently individual calls, OK since catalog refresh is every 5 min
+      await Promise.all(
+        allItems.map(async (item) => {
+          try {
+            if (item.type === "solution") {
+              // Aggregate trust across solution steps
+              const solQuality = await getSolutionQuality(item.slug);
+              const stepSlugs = (item.steps ?? []).map((s) => s.capabilitySlug);
+              const stepTestResults = await Promise.all(
+                stepSlugs.map((s) => getTestResultsForSlug(s)),
+              );
+              const totalPassed = stepTestResults.reduce((s, r) => s + r.passed, 0);
+              const totalFailed = stepTestResults.reduce((s, r) => s + r.failed, 0);
+              const totalTests = stepTestResults.reduce((s, r) => s + r.total_tests, 0);
+              const lastRuns = stepTestResults
+                .map((r) => r.last_run)
+                .filter((t): t is string => t !== null)
+                .sort();
+              const lastTestedAt = lastRuns[lastRuns.length - 1] ?? null;
+
+              const totalTxns = solQuality?.totalTransactionsAll ?? 0;
+              const { badge, badge_label } = determineBadge(
+                totalTxns,
+                0,
+                solQuality?.successRate ?? null,
+              );
+
+              item.trustSummary = {
+                badge,
+                badge_label,
+                success_rate: solQuality?.successRate ?? null,
+                avg_response_time_ms: solQuality?.avgResponseTimeMs ?? null,
+                tests_passing: totalPassed,
+                tests_total: totalTests,
+                last_tested_at: lastTestedAt,
+                data_source: totalTxns > 0 ? "internal_testing" : "internal_testing",
+              };
+            } else {
+              // Individual capability trust
+              const quality = await getCapabilityQuality(item.slug);
+              const testData = await getTestResultsForSlug(item.slug);
+
+              const testTxns = quality.totalTransactionsAll;
+              const { badge, badge_label } = determineBadge(
+                testTxns,
+                0,
+                quality.successRate,
+              );
+
+              item.trustSummary = {
+                badge,
+                badge_label,
+                success_rate: quality.successRate,
+                avg_response_time_ms: quality.avgResponseTimeMs,
+                tests_passing: testData.passed,
+                tests_total: testData.total_tests,
+                last_tested_at: testData.last_run,
+                data_source: testTxns > 0 ? "internal_testing" : "internal_testing",
+              };
+            }
+          } catch (err) {
+            console.warn(`[suggest] Failed to load trust data for ${item.slug}:`, err);
+          }
+        }),
+      );
+
       // Embed if Voyage API key is available
       if (process.env.VOYAGE_API_KEY) {
         useEmbeddings = true;
@@ -298,6 +380,115 @@ async function loadCatalog(): Promise<CatalogItem[]> {
 /** Pre-warm the catalog on startup. */
 export async function warmCatalog(): Promise<void> {
   await loadCatalog();
+}
+
+// ─── Typeahead (in-memory, no LLM) ──────────────────────────────────────────
+
+export interface TypeaheadResult {
+  type: "solution" | "capability";
+  slug: string;
+  name: string;
+  category: string;
+  price_cents: number | null;
+  geography: string | null;
+  step_count?: number;
+  match_snippet?: string;
+}
+
+export interface TypeaheadResponse {
+  results: TypeaheadResult[];
+  total: number;
+}
+
+export async function typeahead(
+  query: string,
+  limit: number,
+  geo?: string,
+): Promise<TypeaheadResponse> {
+  const items = await loadCatalog();
+  const qLower = query.toLowerCase().trim();
+  const qWords = qLower.split(/\s+/).filter((w) => w.length > 0);
+
+  if (qWords.length === 0) {
+    return { results: [], total: 0 };
+  }
+
+  const scored: Array<{ item: CatalogItem; score: number; snippet?: string }> = [];
+
+  for (const item of items) {
+    let score = 0;
+    let snippet: string | undefined;
+
+    // Token matching: +1 for each query word found in item tokens
+    for (const word of qWords) {
+      if (item.tokens.has(word)) score++;
+    }
+
+    // Exact slug match: +2
+    if (qWords.some((w) => w === item.slug)) score += 2;
+
+    // Prefix matching on name/description words for partial matches
+    const nameLower = item.name.toLowerCase();
+    const descLower = item.description.toLowerCase();
+    const nameWords = nameLower.split(/[\s\-—]+/);
+    const descWords = descLower.split(/[\s\-—]+/);
+
+    for (const qw of qWords) {
+      if (nameWords.some((nw) => nw.startsWith(qw) && !item.tokens.has(qw))) {
+        score++;
+        // Build snippet from name if prefix matched
+        if (!snippet) snippet = item.name;
+      }
+      if (descWords.some((dw) => dw.startsWith(qw) && !item.tokens.has(qw))) {
+        score++;
+      }
+    }
+
+    // Solutions-first: +3 bonus
+    if (item.type === "solution" && score > 0) score += 3;
+
+    // Geography boost: +1 if geo param matches
+    if (geo && score > 0 && item.geography) {
+      const geoUpper = geo.toUpperCase();
+      const geoLower = geo.toLowerCase();
+      if (
+        item.geography.toUpperCase().includes(geoUpper) ||
+        item.geography.toLowerCase().includes(geoLower)
+      ) {
+        score++;
+      }
+    }
+
+    if (score > 0) {
+      scored.push({ item, score, snippet });
+    }
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+
+  const total = scored.length;
+  const topItems = scored.slice(0, limit);
+
+  const results: TypeaheadResult[] = topItems.map(({ item, snippet }) => {
+    const result: TypeaheadResult = {
+      type: item.type,
+      slug: item.slug,
+      name: item.name,
+      category: item.category,
+      // DEC-20260304-A: price_cents MUST be null for capabilities
+      price_cents: item.type === "solution" ? item.priceCents : null,
+      geography: item.geography,
+    };
+    if (item.type === "solution" && item.stepCount) {
+      result.step_count = item.stepCount;
+    }
+    if (snippet) {
+      result.match_snippet = snippet;
+    }
+    return result;
+  });
+
+  return { results, total };
 }
 
 // ─── Main suggest function ──────────────────────────────────────────────────
@@ -685,6 +876,10 @@ function buildRecommendation(
           : "",
       };
     }
+  }
+
+  if (item.trustSummary) {
+    rec.trust = item.trustSummary;
   }
 
   return rec;
