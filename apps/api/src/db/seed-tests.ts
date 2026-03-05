@@ -276,14 +276,14 @@ const TESTS: TestDef[] = [
 
   // ── sanctions-check ──
   { capabilitySlug: "sanctions-check", testName: "Spotify AB — smoke test", testType: "schema_check",
-    input: { company_name: "Spotify AB" },
-    validationRules: checks(notNull("result")) },
+    input: { name: "Spotify AB" },
+    validationRules: checks(notNull("is_sanctioned")) },
   { capabilitySlug: "sanctions-check", testName: "Random clean company", testType: "schema_check",
-    input: { company_name: "Random Clean Company AB" },
-    validationRules: checks(notNull("result")) },
+    input: { name: "Random Clean Company AB" },
+    validationRules: checks(notNull("is_sanctioned")) },
   { capabilitySlug: "sanctions-check", testName: "Schema validation", testType: "schema_check",
-    input: { company_name: "Test Corp" },
-    validationRules: checks(notNull("result")) },
+    input: { name: "Test Corp" },
+    validationRules: checks(notNull("is_sanctioned")) },
 
   // ── domain-reputation ──
   { capabilitySlug: "domain-reputation", testName: "google.com — reputation data", testType: "schema_check",
