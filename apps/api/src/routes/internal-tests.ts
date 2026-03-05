@@ -9,6 +9,7 @@ import {
 } from "../db/schema.js";
 import { runTests } from "../lib/test-runner.js";
 import type { ScheduleTier } from "../lib/test-runner.js";
+import { categorizeFailureReason } from "../lib/trust-helpers.js";
 import { apiError } from "../lib/errors.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import type { AppEnv } from "../types.js";
@@ -112,6 +113,26 @@ internalTestsRoute.get("/capabilities/:slug", async (c) => {
       .sort()
       .pop() ?? null;
 
+  // Group by test_type
+  const byType: Record<string, { total: number; passed: number; failed: number }> = {};
+  for (const t of tests) {
+    const type = t.test_type ?? "unknown";
+    if (!byType[type]) byType[type] = { total: 0, passed: 0, failed: 0 };
+    byType[type].total++;
+    if (t.passed === true) byType[type].passed++;
+    if (t.passed === false) byType[type].failed++;
+  }
+
+  // Collect failures with categorization
+  const failures = tests
+    .filter((t) => t.passed === false && t.failure_reason)
+    .map((t) => ({
+      test_name: t.test_name,
+      test_type: t.test_type,
+      failure_reason: t.failure_reason!,
+      failure_category: categorizeFailureReason(t.failure_reason),
+    }));
+
   return c.json({
     capability_slug: slug,
     schedule_tier: scheduleTier,
@@ -128,6 +149,8 @@ internalTestsRoute.get("/capabilities/:slug", async (c) => {
       withResults.length > 0
         ? Math.round(totalResponseTime / withResults.length)
         : null,
+    by_type: byType,
+    ...(failures.length > 0 ? { failures } : {}),
     tests,
   });
 });

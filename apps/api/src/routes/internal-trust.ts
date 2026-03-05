@@ -64,6 +64,37 @@ async function getLimitationsForSlug(slug: string) {
   }));
 }
 
+// ─── Aggregation helpers for solution-level by_type and failures ────────────
+
+function aggregateByType(
+  stepData: Array<{ test_results: { by_type: Record<string, { total: number; passed: number; failed: number }> } }>,
+): Record<string, { total: number; passed: number; failed: number }> {
+  const merged: Record<string, { total: number; passed: number; failed: number }> = {};
+  for (const step of stepData) {
+    for (const [type, counts] of Object.entries(step.test_results.by_type)) {
+      if (!merged[type]) merged[type] = { total: 0, passed: 0, failed: 0 };
+      merged[type].total += counts.total;
+      merged[type].passed += counts.passed;
+      merged[type].failed += counts.failed;
+    }
+  }
+  return merged;
+}
+
+function aggregateFailures(
+  stepData: Array<{ capability_slug: string; test_results: { failures?: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: string }> } }>,
+): { failures?: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: string; capability_slug: string }> } {
+  const all: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: string; capability_slug: string }> = [];
+  for (const step of stepData) {
+    if (step.test_results.failures) {
+      for (const f of step.test_results.failures) {
+        all.push({ ...f, capability_slug: step.capability_slug });
+      }
+    }
+  }
+  return all.length > 0 ? { failures: all } : {};
+}
+
 // ─── GET /v1/internal/trust/capabilities/:slug ──────────────────────────────
 
 internalTrustRoute.get("/capabilities/:slug", async (c) => {
@@ -188,6 +219,8 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
           failed: testResultsData.failed,
           pass_rate: testResultsData.pass_rate,
           avg_response_time_ms: testResultsData.avg_response_time_ms,
+          by_type: testResultsData.by_type,
+          ...(testResultsData.failures ? { failures: testResultsData.failures } : {}),
         },
         limitations,
       };
@@ -273,6 +306,8 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
           allTestWithResults > 0
             ? Math.round(allTestResponseTime / allTestWithResults)
             : null,
+        by_type: aggregateByType(stepData),
+        ...aggregateFailures(stepData),
         history_30d: history,
       },
       limitations: allLimitations,

@@ -37,6 +37,19 @@ export function determineBadge(
   };
 }
 
+// ─── Failure categorization ─────────────────────────────────────────────────
+
+export function categorizeFailureReason(reason: string | null): "upstream" | "internal" | "unknown" {
+  if (!reason) return "unknown";
+  const lower = reason.toLowerCase();
+  if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("etimedout")) return "upstream";
+  if (lower.includes("rate limit") || lower.includes("429") || lower.includes("too many")) return "upstream";
+  if (lower.includes("econnrefused") || lower.includes("enotfound") || lower.includes("502") ||
+      lower.includes("503") || lower.includes("504") || lower.includes("fetch failed")) return "upstream";
+  if (lower.includes("ms_max_concurrent")) return "upstream";
+  return "internal";
+}
+
 // ─── Test results helper ────────────────────────────────────────────────────
 
 export async function getTestResultsForSlug(slug: string) {
@@ -54,8 +67,19 @@ export async function getTestResultsForSlug(slug: string) {
   let totalResponseTime = 0;
   let withResults = 0;
   let lastRun: string | null = null;
+  const byType: Record<string, { total: number; passed: number; failed: number }> = {};
+  const failures: Array<{
+    test_name: string;
+    test_type: string;
+    failure_reason: string;
+    failure_category: "upstream" | "internal" | "unknown";
+  }> = [];
 
   for (const suite of suites) {
+    const testType = suite.testType ?? "unknown";
+    if (!byType[testType]) byType[testType] = { total: 0, passed: 0, failed: 0 };
+    byType[testType].total++;
+
     const [latest] = await db
       .select()
       .from(testResults)
@@ -65,8 +89,21 @@ export async function getTestResultsForSlug(slug: string) {
 
     if (latest) {
       withResults++;
-      if (latest.passed) passed++;
-      else failed++;
+      if (latest.passed) {
+        passed++;
+        byType[testType].passed++;
+      } else {
+        failed++;
+        byType[testType].failed++;
+        if (latest.failureReason) {
+          failures.push({
+            test_name: suite.testName,
+            test_type: testType,
+            failure_reason: latest.failureReason,
+            failure_category: categorizeFailureReason(latest.failureReason),
+          });
+        }
+      }
       totalResponseTime += latest.responseTimeMs;
       const ts = latest.executedAt.toISOString();
       if (!lastRun || ts > lastRun) lastRun = ts;
@@ -106,6 +143,8 @@ export async function getTestResultsForSlug(slug: string) {
         : null,
     avg_response_time_ms:
       withResults > 0 ? Math.round(totalResponseTime / withResults) : null,
+    by_type: byType,
+    ...(failures.length > 0 ? { failures } : {}),
     history_30d: history,
   };
 }
