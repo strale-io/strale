@@ -171,6 +171,69 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
   return c.json(result);
 });
 
+// ─── Quality narrative ──────────────────────────────────────────────────────
+
+function generateQualityNarrative(stepData: Array<{
+  capability_name: string;
+  test_results: {
+    total_tests: number;
+    passed: number;
+    failed: number;
+    pass_rate: number | null;
+    avg_response_time_ms: number | null;
+    failures?: Array<{ failure_category: string }>;
+  };
+}>): string {
+  const totalTests = stepData.reduce((s, d) => s + d.test_results.total_tests, 0);
+  const totalPassed = stepData.reduce((s, d) => s + d.test_results.passed, 0);
+  const totalFailed = stepData.reduce((s, d) => s + d.test_results.failed, 0);
+
+  if (totalTests === 0) {
+    return "No test data available yet for this solution.";
+  }
+
+  const withResults = totalPassed + totalFailed;
+  const passRate = withResults > 0
+    ? parseFloat(((totalPassed / withResults) * 100).toFixed(1))
+    : null;
+
+  // Categorize failures
+  const allFailures = stepData.flatMap(
+    (d) => d.test_results.failures ?? [],
+  );
+  const upstreamCount = allFailures.filter((f) => f.failure_category === "upstream").length;
+  const internalCount = allFailures.filter((f) => f.failure_category === "internal").length;
+
+  // Find degraded steps
+  const degradedSteps = stepData.filter(
+    (d) => d.test_results.pass_rate !== null && d.test_results.pass_rate < 90,
+  );
+
+  // Build narrative
+  const parts: string[] = [];
+
+  if (passRate !== null && passRate >= 95) {
+    parts.push(`All ${totalTests} tests healthy — ${passRate}% pass rate across ${stepData.length} capabilities.`);
+  } else if (passRate !== null && passRate >= 80) {
+    parts.push(`${totalPassed} of ${withResults} tests passing (${passRate}%).`);
+  } else if (passRate !== null) {
+    parts.push(`${totalFailed} of ${withResults} tests failing (${passRate}% pass rate).`);
+  }
+
+  if (degradedSteps.length > 0) {
+    const names = degradedSteps.map((d) => d.capability_name).join(", ");
+    parts.push(`Degraded: ${names}.`);
+  }
+
+  if (upstreamCount > 0 && internalCount === 0) {
+    parts.push(`All ${upstreamCount} failure(s) are upstream (provider timeouts or rate limits).`);
+  } else if (internalCount > 0) {
+    parts.push(`${internalCount} internal failure(s) detected — investigating.`);
+  }
+
+  return parts.join(" ");
+}
+
 // ─── GET /v1/internal/trust/solutions/:slug ─────────────────────────────────
 
 internalTrustRoute.get("/solutions/:slug", async (c) => {
@@ -349,6 +412,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
         ...aggregateFailures(stepData),
         history_30d: history,
       },
+      quality_narrative: generateQualityNarrative(stepData),
       limitations: allLimitations,
       steps: stepData,
     },

@@ -19,6 +19,7 @@ import {
   recordFailure,
 } from "../lib/circuit-breaker.js";
 import { recordQuality } from "../lib/quality-capture.js";
+import { getTestResultsForSlug } from "../lib/trust-helpers.js";
 import type { AppEnv } from "../types.js";
 
 const MAX_TIMEOUT_SECONDS = 60;
@@ -423,6 +424,25 @@ async function executeSync(
     );
   }
 
+  // Look up quality data for the capability (non-blocking, best-effort)
+  let qualityStatus: "healthy" | "degraded" | "unhealthy" | "unknown" = "unknown";
+  let qualityPassRate: number | null = null;
+  try {
+    const testData = await getTestResultsForSlug(capability.slug);
+    qualityPassRate = testData.pass_rate;
+    if (qualityPassRate === null || testData.total_tests === 0) {
+      qualityStatus = "unknown";
+    } else if (qualityPassRate >= 95) {
+      qualityStatus = "healthy";
+    } else if (qualityPassRate >= 80) {
+      qualityStatus = "degraded";
+    } else {
+      qualityStatus = "unhealthy";
+    }
+  } catch {
+    // Quality lookup failure should never block the response
+  }
+
   // Success
   return c.json({
     transaction_id: result.transactionId,
@@ -433,8 +453,20 @@ async function executeSync(
     wallet_balance_cents: result.balanceAfter,
     output: result.output,
     provenance: result.provenance,
+    quality_status: qualityStatus,
+    quality_pass_rate: qualityPassRate,
   });
 }
+
+// TODO: Partial results for multi-step solution execution
+// When solutions execute as a pipeline (e.g., company-due-diligence = 5 capability calls),
+// each step should record its output independently so that:
+// 1. GET /v1/transactions/:id can return partial_output with completed steps
+// 2. If step 3/5 fails, steps 1-2 results are still available to the caller
+// 3. The caller is charged only for steps that succeeded (pro-rata pricing)
+// 4. The response includes a `steps` array with per-step status, output, and latency
+// This requires: solution-aware execution in /v1/do (currently solutions are
+// client-orchestrated as separate /v1/do calls per step).
 
 // ─── Async execution: debit upfront → 202 → background → refund on failure ──
 
