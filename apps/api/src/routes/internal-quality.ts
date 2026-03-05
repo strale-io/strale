@@ -1,3 +1,10 @@
+/**
+ * PUBLIC ENDPOINTS — intentional, no auth required.
+ *
+ * Quality metrics are public by design to support Strale's
+ * transparency positioning. If this changes, add authMiddleware.
+ */
+
 import { Hono } from "hono";
 import {
   getCapabilityQuality,
@@ -6,7 +13,6 @@ import {
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
-// Internal quality endpoints — no auth required, called by strale.dev frontend
 export const internalQualityRoute = new Hono<AppEnv>();
 
 // GET /v1/internal/quality/capabilities/:slug

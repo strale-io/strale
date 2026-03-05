@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { bodyLimit } from "hono/body-limit";
 import { versionMiddleware } from "./lib/versioning.js";
 import { doRoute } from "./routes/do.js";
 import { capabilitiesRoute } from "./routes/capabilities.js";
@@ -324,12 +325,33 @@ app.notFound((c) => {
 });
 
 app.use("*", logger());
+
+// CORS — allow known frontends and server-to-server (no Origin header)
+const ALLOWED_ORIGINS = [
+  "https://strale.dev",
+  "https://www.strale.dev",
+  "https://preview--call-it-strale.lovable.app",
+  process.env.FRONTEND_URL,
+].filter(Boolean) as string[];
+
 app.use("/v1/*", cors({
-  origin: "*",
+  origin: (origin) => {
+    // Allow server-to-server requests (SDKs, MCP clients, curl) — no Origin header
+    if (!origin) return "*";
+    // Allow known frontends
+    if (ALLOWED_ORIGINS.includes(origin)) return origin;
+    // Block unknown browser origins
+    return "";
+  },
   allowMethods: ["GET", "POST", "OPTIONS"],
-  allowHeaders: ["Authorization", "Content-Type"],
+  allowHeaders: ["Authorization", "Content-Type", "Idempotency-Key", "Strale-Version"],
 }));
 app.use("*", versionMiddleware());
+
+// Body size limits — prevent memory exhaustion from oversized payloads
+app.use("/v1/*", bodyLimit({ maxSize: 1024 * 1024 }));   // 1 MB for API routes
+app.use("/a2a", bodyLimit({ maxSize: 256 * 1024 }));      // 256 KB for A2A
+app.use("/mcp", bodyLimit({ maxSize: 512 * 1024 }));      // 512 KB for MCP
 
 // A2A: Link header pointing to Agent Card on all API responses
 app.use("*", async (c, next) => {

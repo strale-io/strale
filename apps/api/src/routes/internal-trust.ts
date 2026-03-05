@@ -1,3 +1,11 @@
+/**
+ * PUBLIC ENDPOINTS — intentional, no auth required.
+ *
+ * Trust, quality, and test data is public by design to support
+ * Strale's transparency positioning. Anyone can verify capability
+ * health without authentication. If this changes, add authMiddleware.
+ */
+
 import { Hono } from "hono";
 import { eq, and, asc, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, sql } from "drizzle-orm";
+import { eq, and, gte, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   wallets,
@@ -154,6 +154,37 @@ doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
   }
 
   const capability = match.capability;
+
+  // ── 3b. Hourly spend cap check (DEC-21) ─────────────────────────────────
+  if (user.maxSpendPerHourCents) {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const [spendRow] = await db
+      .select({ total: sql<string>`COALESCE(SUM(price_cents), 0)::text` })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, user.id),
+          eq(transactions.status, "completed"),
+          gte(transactions.createdAt, oneHourAgo),
+        ),
+      );
+
+    const spent = Number(spendRow?.total ?? 0);
+    if (spent + capability.priceCents > user.maxSpendPerHourCents) {
+      return c.json(
+        apiError(
+          "spend_cap_exceeded",
+          `Hourly spend limit (€${(user.maxSpendPerHourCents / 100).toFixed(2)}) would be exceeded. Spent: €${(spent / 100).toFixed(2)}, requested: €${(capability.priceCents / 100).toFixed(2)}.`,
+          {
+            spent_cents: spent,
+            requested_cents: capability.priceCents,
+            limit_cents: user.maxSpendPerHourCents,
+          },
+        ),
+        429,
+      );
+    }
+  }
 
   // ── 4. Dry run — return what would execute without charging ────────────
   if (dryRun) {

@@ -7,6 +7,7 @@ export type ErrorCode =
   | "timeout_exceeded"
   | "invalid_request"
   | "rate_limited"
+  | "spend_cap_exceeded"
   | "unauthorized"
   | "not_found";
 

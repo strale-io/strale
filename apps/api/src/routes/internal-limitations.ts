@@ -1,3 +1,10 @@
+/**
+ * PUBLIC ENDPOINTS — intentional, no auth required.
+ *
+ * Known limitations are public by design to support Strale's
+ * transparency positioning. If this changes, add authMiddleware.
+ */
+
 import { Hono } from "hono";
 import { eq, and, asc } from "drizzle-orm";
 import { getDb } from "../db/index.js";

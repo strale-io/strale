@@ -1,12 +1,17 @@
+/**
+ * PUBLIC ENDPOINTS — intentional, no auth required.
+ *
+ * Demand signals are public by design — shows what capabilities
+ * users are requesting but don't exist yet. Rate limited by IP.
+ * If this changes, add authMiddleware.
+ */
+
 import { Hono } from "hono";
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 
 export const demandSignalsRoute = new Hono();
-
-// GET /v1/demand-signals — Aggregated demand signals from failed requests
-// Public endpoint, no auth required. Rate limited by IP (10 req/min).
 demandSignalsRoute.get(
   "/",
   rateLimitByIp(10, 60_000),
