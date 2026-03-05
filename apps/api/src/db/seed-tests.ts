@@ -61,7 +61,7 @@ const TESTS: TestDef[] = [
 
   // ── swedish-company-data ──
   { capabilitySlug: "swedish-company-data", testName: "Spotify AB — known company", testType: "known_answer",
-    input: { org_number: "559106-8089" },
+    input: { org_number: "556703-7485" },
     validationRules: checks(notNull("company_name"), notNull("org_number")) },
   { capabilitySlug: "swedish-company-data", testName: "Klarna Bank AB — known company", testType: "known_answer",
     input: { org_number: "556737-0431" },
@@ -73,7 +73,7 @@ const TESTS: TestDef[] = [
     input: { org_number: "556042-7220" },
     validationRules: checks(notNull("company_name")) },
   { capabilitySlug: "swedish-company-data", testName: "IKEA of Sweden AB — known company", testType: "known_answer",
-    input: { org_number: "556074-7500" },
+    input: { org_number: "556074-7551" },
     validationRules: checks(notNull("company_name")) },
   { capabilitySlug: "swedish-company-data", testName: "Invalid org number format", testType: "edge_case",
     input: { org_number: "123" },
