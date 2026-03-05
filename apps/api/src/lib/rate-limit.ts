@@ -4,6 +4,14 @@ import { apiError } from "./errors.js";
 // ─── Sliding window counter ────────────────────────────────────────────────────
 // In-memory store keyed by identifier. Each entry tracks request timestamps
 // within the window. Stale entries are cleaned up periodically.
+//
+// LIMITATIONS:
+// - In-memory: state is NOT shared across multiple Railway replicas. If the
+//   service is scaled horizontally, each instance has its own counter, so
+//   effective limits are multiplied by the number of instances.
+// - Non-durable: all state is lost on restart, allowing a brief burst window.
+// - For production multi-instance deployments, consider Redis-based rate
+//   limiting (e.g., @hono-rate-limiter/redis or a sliding-window-log in Redis).
 
 interface WindowEntry {
   timestamps: number[];
@@ -81,6 +89,14 @@ export function rateLimitByKey(maxRequests: number, windowMs: number) {
   };
 }
 
+// Simple validation: an IP must be a plausible IPv4 or IPv6 string.
+// This prevents header injection from producing pathological cache keys.
+const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;
+const IPV6_RE = /^[0-9a-fA-F:]{2,45}$/;
+function isPlausibleIp(value: string): boolean {
+  return IPV4_RE.test(value) || IPV6_RE.test(value);
+}
+
 /**
  * Rate limit by IP address. For unauthenticated endpoints.
  * @param maxRequests - max requests per window
@@ -88,11 +104,20 @@ export function rateLimitByKey(maxRequests: number, windowMs: number) {
  */
 export function rateLimitByIp(maxRequests: number, windowMs: number) {
   return async (c: Context, next: Next) => {
-    // Try various headers for the real IP behind proxies
-    const ip =
-      c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
-      c.req.header("x-real-ip") ??
-      "unknown";
+    // Extract IP from proxy headers, validating format to prevent
+    // header spoofing from creating arbitrary rate-limit buckets.
+    const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
+    const realIp = c.req.header("x-real-ip")?.trim();
+
+    let ip = "unknown";
+    if (forwarded && isPlausibleIp(forwarded)) {
+      ip = forwarded;
+    } else if (realIp && isPlausibleIp(realIp)) {
+      ip = realIp;
+    }
+    // NOTE: When running behind Railway's proxy, x-forwarded-for is set by
+    // the load balancer and cannot be spoofed by clients. If deployed
+    // behind a different proxy, configure trusted proxy headers accordingly.
 
     const key = `ip:${ip}`;
     const result = checkRate(key, maxRequests, windowMs);

@@ -136,8 +136,9 @@ function extractApiKey(req: Request): string {
   if (authHeader?.startsWith("Bearer ")) {
     return authHeader.slice(7);
   }
-  const url = new URL(req.url);
-  return url.searchParams.get("api_key") ?? "";
+  // Query-param auth removed — API keys in URLs leak via logs, referers,
+  // and browser history. Use Authorization header instead.
+  return "";
 }
 
 // ─── CORS headers ───────────────────────────────────────────────────────────

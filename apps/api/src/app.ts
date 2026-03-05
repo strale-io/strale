@@ -326,6 +326,17 @@ app.notFound((c) => {
 
 app.use("*", logger());
 
+// Security headers — defence-in-depth for all responses
+app.use("*", async (c, next) => {
+  await next();
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("X-Frame-Options", "DENY");
+  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  c.header("X-XSS-Protection", "0"); // modern browsers use CSP instead
+  c.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
+  c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+});
+
 // CORS — allow known frontends and server-to-server (no Origin header)
 const ALLOWED_ORIGINS = [
   "https://strale.dev",

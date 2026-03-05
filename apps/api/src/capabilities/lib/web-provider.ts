@@ -115,7 +115,9 @@ export async function fetchPage(
   }
 
   const { url, key } = getBrowserlessConfig();
-  const contentUrl = `${url}/content?token=${key}`;
+  // Use Authorization header instead of query-param token to avoid key
+  // leaking into access logs and referer headers.
+  const contentUrl = `${url}/content`;
 
   let lastError: Error | null = null;
 
@@ -128,7 +130,10 @@ export async function fetchPage(
     try {
       const response = await fetch(contentUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${key}`,
+        },
         body: JSON.stringify({
           url: targetUrl,
           gotoOptions: { waitUntil, timeout: pageTimeout },
