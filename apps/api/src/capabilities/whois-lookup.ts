@@ -55,7 +55,17 @@ registerCapability("whois-lookup", async (input: CapabilityInput) => {
   const tld = cleaned.split(".").pop() ?? "";
   const server = TLD_SERVERS[tld] ?? IANA_WHOIS;
 
-  const rawText = await queryWhois(server, cleaned);
+  let rawText: string;
+  try {
+    rawText = await queryWhois(server, cleaned);
+  } catch (err) {
+    // If the TLD-specific server fails, fall back to IANA root
+    if (server !== IANA_WHOIS) {
+      rawText = await queryWhois(IANA_WHOIS, cleaned);
+    } else {
+      throw err;
+    }
+  }
 
   // Parse common WHOIS fields
   const output: Record<string, unknown> = {

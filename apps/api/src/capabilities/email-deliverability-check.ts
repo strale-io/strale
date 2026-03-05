@@ -33,12 +33,19 @@ registerCapability("email-deliverability-check", async (input: CapabilityInput) 
   const issues: string[] = [];
   const recommendations: string[] = [];
 
-  // 1. Check if domain resolves
+  // 1. Check if domain resolves (non-fatal — some hosting environments block resolve4)
   let ipAddresses: string[] = [];
   try {
     ipAddresses = await dns.resolve4(domain);
   } catch {
-    throw new Error(`Domain "${domain}" does not resolve. Cannot check email deliverability.`);
+    // Try resolve6 as fallback
+    try {
+      const ipv6 = await dns.resolve6(domain);
+      ipAddresses = ipv6;
+    } catch {
+      // Domain may still have MX/TXT records even without A/AAAA — continue
+      issues.push("Domain has no A/AAAA records (may still receive email via MX)");
+    }
   }
 
   // 2. MX records

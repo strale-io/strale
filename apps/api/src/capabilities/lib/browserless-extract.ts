@@ -3,42 +3,20 @@ import Anthropic from "@anthropic-ai/sdk";
 /**
  * Shared Browserless scraping + Claude extraction utility for company registries.
  * Used by country-specific executors that don't have free JSON APIs.
+ *
+ * fetchRenderedHtml and getBrowserlessConfig are re-exported from web-provider.ts
+ * which adds retry, caching, and resilience. All 47+ consumers get the upgrade
+ * without changing their imports.
  */
 
-export function getBrowserlessConfig() {
-  const url = process.env.BROWSERLESS_URL;
-  const key = process.env.BROWSERLESS_API_KEY;
-  if (!url || !key) {
-    throw new Error("BROWSERLESS_URL and BROWSERLESS_API_KEY are required.");
-  }
-  return { url, key };
-}
-
-export async function fetchRenderedHtml(targetUrl: string): Promise<string> {
-  const { url, key } = getBrowserlessConfig();
-  const contentUrl = `${url}/content?token=${key}`;
-
-  const response = await fetch(contentUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url: targetUrl,
-      gotoOptions: { waitUntil: "networkidle0", timeout: 25000 },
-    }),
-    signal: AbortSignal.timeout(35000),
-  });
-
-  if (!response.ok) {
-    const err = await response.text().catch(() => "");
-    throw new Error(`Browserless returned HTTP ${response.status}: ${err.slice(0, 200)}`);
-  }
-
-  const html = await response.text();
-  if (!html || html.length < 100) {
-    throw new Error("Browserless returned empty or too-short HTML response.");
-  }
-  return html;
-}
+export {
+  fetchRenderedHtml,
+  fetchRenderedHtmlFresh,
+  fetchCompanyPage,
+  fetchPage,
+  getBrowserlessConfig,
+} from "./web-provider.js";
+export type { WebProviderOptions, WebProviderResult } from "./web-provider.js";
 
 /** Strip HTML to plain text for LLM extraction. */
 export function htmlToText(html: string): string {

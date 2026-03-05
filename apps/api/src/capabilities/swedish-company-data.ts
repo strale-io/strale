@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { fetchCompanyPage } from "./lib/web-provider.js";
+import { htmlToText } from "./lib/browserless-extract.js";
 
 // ─── Org number detection ──────────────────────────────────────────────────────
 // Swedish org numbers: 10 digits, optionally with hyphen after 6th digit
@@ -63,33 +65,9 @@ Request: "${naturalLanguage}"`,
 async function searchAllabolag(
   companyName: string,
 ): Promise<{ orgNumber: string; companyName: string }> {
-  const browserlessUrl = process.env.BROWSERLESS_URL;
-  const browserlessKey = process.env.BROWSERLESS_API_KEY;
-
-  if (!browserlessUrl || !browserlessKey) {
-    throw new Error(
-      "BROWSERLESS_URL and BROWSERLESS_API_KEY are required.",
-    );
-  }
-
   const searchUrl = `https://www.allabolag.se/what/${encodeURIComponent(companyName)}`;
-  const contentUrl = `${browserlessUrl}/content?token=${browserlessKey}`;
 
-  const response = await fetch(contentUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url: searchUrl,
-      gotoOptions: { waitUntil: "networkidle0", timeout: 25000 },
-    }),
-    signal: AbortSignal.timeout(35000),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Browserless search returned HTTP ${response.status}`);
-  }
-
-  const html = await response.text();
+  const html = await fetchCompanyPage(searchUrl);
 
   // Extract first org number from search results
   // Search results contain "Org.nr" followed by the number
@@ -254,51 +232,83 @@ function parseHtml(html: string, orgNumber: string): CompanyData {
   return result;
 }
 
-async function scrapeAllabolag(orgNumber: string): Promise<CompanyData> {
-  const browserlessUrl = process.env.BROWSERLESS_URL;
-  const browserlessKey = process.env.BROWSERLESS_API_KEY;
+// ─── LLM fallback parser ────────────────────────────────────────────────────
+// When regex-based parseHtml() fails to extract financials, fall back to Claude
+// Haiku to extract structured data from the page text.
 
-  if (!browserlessUrl || !browserlessKey) {
-    throw new Error(
-      "BROWSERLESS_URL and BROWSERLESS_API_KEY are required for swedish-company-data.",
-    );
+async function parseWithFallback(
+  html: string,
+  orgNumber: string,
+): Promise<CompanyData> {
+  // Try regex parser first
+  const data = parseHtml(html, orgNumber);
+
+  // If we got at least a company name and one financial field, regex was enough
+  if (
+    data.company_name &&
+    !data.company_name.toLowerCase().includes("allabolag") &&
+    (data.revenue_sek !== null || data.profit_sek !== null || data.employees !== null)
+  ) {
+    return data;
   }
 
-  // Allabolag URL: https://www.allabolag.se/5567037485 (main page has financials)
+  // Fall back to LLM extraction
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return data; // No API key — return partial regex result
+
+  const text = htmlToText(html);
+  if (text.length < 50) return data;
+
+  try {
+    const client = new Anthropic({ apiKey });
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 400,
+      messages: [
+        {
+          role: "user",
+          content: `Extract Swedish company data from this Allabolag.se page for org number ${orgNumber}.
+
+Return ONLY valid JSON:
+{"company_name":"string","revenue_sek":number|null,"employees":number|null,"profit_sek":number|null,"fiscal_year":"YYYY-MM"|null}
+
+Revenue and profit are in SEK (full amounts, not thousands). Page text:
+${text.slice(0, 8000)}`,
+        },
+      ],
+    });
+
+    const content =
+      response.content[0].type === "text" ? response.content[0].text : "";
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      // Merge: LLM fills gaps, regex wins where it succeeded
+      return {
+        company_name: data.company_name || parsed.company_name || "",
+        org_number: orgNumber,
+        revenue_sek: data.revenue_sek ?? parsed.revenue_sek ?? null,
+        employees: data.employees ?? parsed.employees ?? null,
+        profit_sek: data.profit_sek ?? parsed.profit_sek ?? null,
+        fiscal_year: data.fiscal_year ?? parsed.fiscal_year ?? null,
+      };
+    }
+  } catch {
+    // LLM fallback failed — return whatever regex got
+  }
+
+  return data;
+}
+
+async function scrapeAllabolag(orgNumber: string): Promise<CompanyData> {
   const cleanOrg = orgNumber.replace("-", "");
   const targetUrl = `https://www.allabolag.se/${cleanOrg}`;
 
-  // Use Browserless REST /content endpoint — returns rendered HTML
-  const contentUrl = `${browserlessUrl}/content?token=${browserlessKey}`;
+  const html = await fetchCompanyPage(targetUrl);
 
-  const response = await fetch(contentUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url: targetUrl,
-      gotoOptions: { waitUntil: "networkidle0", timeout: 25000 },
-    }),
-    signal: AbortSignal.timeout(35000),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text().catch(() => "");
-    throw new Error(
-      `Browserless /content returned HTTP ${response.status}: ${errText.slice(0, 200)}`,
-    );
-  }
-
-  const html = await response.text();
-
-  if (!html || html.length < 100) {
-    throw new Error("Browserless returned empty or too-short HTML response.");
-  }
-
-  const data = parseHtml(html, orgNumber);
+  const data = await parseWithFallback(html, orgNumber);
 
   // Detect 404 / failed load: generic Allabolag title with no financial data
-  // Note: "Vi verkar inte hitta sidan" appears in embedded i18n JSON on all pages,
-  // so we can't use it for 404 detection. Instead, check the parsed results.
   if (
     (!data.company_name || data.company_name.toLowerCase().includes("allabolag")) &&
     data.revenue_sek === null

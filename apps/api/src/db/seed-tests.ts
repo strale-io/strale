@@ -262,13 +262,13 @@ const TESTS: TestDef[] = [
   // ── ssl-certificate-chain ──
   { capabilitySlug: "ssl-certificate-chain", testName: "google.com — chain present", testType: "known_answer",
     input: { domain: "google.com" },
-    validationRules: checks(notNull("chain")) },
+    validationRules: checks(notNull("certificate_chain")) },
   { capabilitySlug: "ssl-certificate-chain", testName: "strale.dev — valid chain", testType: "schema_check",
     input: { domain: "strale.dev" },
-    validationRules: checks(notNull("chain")) },
+    validationRules: checks(notNull("certificate_chain")) },
   { capabilitySlug: "ssl-certificate-chain", testName: "Chain includes issuer and expiry", testType: "schema_check",
     input: { domain: "google.com" },
-    validationRules: checks(notNull("chain")) },
+    validationRules: checks(notNull("certificate_chain")) },
 
   // ─────────────────────────────────────────────────────────────────────────
   // TIER 2: Schema + smoke tests
@@ -330,13 +330,13 @@ const TESTS: TestDef[] = [
 
   // ── eu-ai-act-classify ──
   { capabilitySlug: "eu-ai-act-classify", testName: "Facial recognition — high risk", testType: "schema_check",
-    input: { ai_system_description: "Real-time facial recognition system used for law enforcement surveillance in public spaces" },
+    input: { description: "Real-time facial recognition system used for law enforcement surveillance in public spaces" },
     validationRules: checks(notNull("risk_level")) },
   { capabilitySlug: "eu-ai-act-classify", testName: "Simple chatbot — lower risk", testType: "schema_check",
-    input: { ai_system_description: "A simple FAQ chatbot that answers questions about product features based on a knowledge base" },
+    input: { description: "A simple FAQ chatbot that answers questions about product features based on a knowledge base" },
     validationRules: checks(notNull("risk_level")) },
   { capabilitySlug: "eu-ai-act-classify", testName: "Schema: risk_level present", testType: "schema_check",
-    input: { ai_system_description: "AI system for automated resume screening in recruitment" },
+    input: { description: "AI system for automated resume screening in recruitment" },
     validationRules: checks(notNull("risk_level")) },
 
   // ── data-protection-authority-lookup ──
@@ -352,19 +352,19 @@ const TESTS: TestDef[] = [
 
   // ── gdpr-fine-lookup ──
   { capabilitySlug: "gdpr-fine-lookup", testName: "Recent GDPR fines — results", testType: "schema_check",
-    input: { company_name: "Meta" },
+    input: { company: "Meta" },
     validationRules: checks(notNull("fines")) },
   { capabilitySlug: "gdpr-fine-lookup", testName: "Schema: has fine data", testType: "schema_check",
-    input: { company_name: "Google" },
+    input: { company: "Google" },
     validationRules: checks(notNull("fines")) },
 
   // ── gdpr-website-check ──
   { capabilitySlug: "gdpr-website-check", testName: "google.com — GDPR compliance", testType: "schema_check",
     input: { url: "https://google.com" },
-    validationRules: checks(notNull("score")) },
+    validationRules: checks(notNull("gdpr_score")) },
   { capabilitySlug: "gdpr-website-check", testName: "Schema structure", testType: "schema_check",
     input: { url: "https://example.com" },
-    validationRules: checks(notNull("score")) },
+    validationRules: checks(notNull("gdpr_score")) },
 
   // ── cookie-scan ──
   { capabilitySlug: "cookie-scan", testName: "google.com — cookies found", testType: "schema_check",
@@ -377,44 +377,44 @@ const TESTS: TestDef[] = [
   // ── privacy-policy-analyze ──
   { capabilitySlug: "privacy-policy-analyze", testName: "google.com — analysis", testType: "schema_check",
     input: { url: "https://google.com" },
-    validationRules: checks(notNull("analysis")) },
+    validationRules: checks(notNull("data_collected")) },
   { capabilitySlug: "privacy-policy-analyze", testName: "Schema structure", testType: "schema_check",
     input: { url: "https://example.com" },
-    validationRules: checks(notNull("analysis")) },
+    validationRules: checks(notNull("data_collected")) },
 
   // ── tech-stack-detect ──
   { capabilitySlug: "tech-stack-detect", testName: "google.com — technologies", testType: "schema_check",
     input: { url: "https://google.com" },
-    validationRules: checks(notNull("technologies")) },
+    validationRules: checks(notNull("frontend_framework")) },
   { capabilitySlug: "tech-stack-detect", testName: "strale.dev — technologies", testType: "schema_check",
     input: { url: "https://strale.dev" },
-    validationRules: checks(notNull("technologies")) },
+    validationRules: checks(notNull("url")) },
   { capabilitySlug: "tech-stack-detect", testName: "Schema: array of techs", testType: "schema_check",
     input: { url: "https://example.com" },
-    validationRules: checks(notNull("technologies")) },
+    validationRules: checks(notNull("url")) },
 
   // ── seo-audit ──
   { capabilitySlug: "seo-audit", testName: "strale.dev — SEO metrics", testType: "schema_check",
     input: { url: "https://strale.dev" },
-    validationRules: checks(notNull("score")) },
+    validationRules: checks(notNull("overall_score")) },
   { capabilitySlug: "seo-audit", testName: "Schema: has score/issues", testType: "schema_check",
     input: { url: "https://example.com" },
-    validationRules: checks(notNull("score")) },
+    validationRules: checks(notNull("overall_score")) },
 
   // ── landing-page-roast ──
   { capabilitySlug: "landing-page-roast", testName: "strale.dev — critique", testType: "schema_check",
     input: { url: "https://strale.dev" },
-    validationRules: checks(notNull("analysis")) },
+    validationRules: checks(notNull("overall_score")) },
   { capabilitySlug: "landing-page-roast", testName: "Schema: text analysis present", testType: "schema_check",
     input: { url: "https://example.com" },
-    validationRules: checks(notNull("analysis")) },
+    validationRules: checks(notNull("overall_score")) },
 
   // ── social-profile-check ──
   { capabilitySlug: "social-profile-check", testName: "Spotify — profiles found", testType: "schema_check",
-    input: { handle: "Spotify" },
+    input: { username: "Spotify" },
     validationRules: checks(notNull("profiles")) },
   { capabilitySlug: "social-profile-check", testName: "Schema structure", testType: "schema_check",
-    input: { handle: "Google" },
+    input: { username: "Google" },
     validationRules: checks(notNull("profiles")) },
 ];
 
