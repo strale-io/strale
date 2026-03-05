@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { sql } from "drizzle-orm";
+import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
@@ -9,6 +10,15 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 let cachedStats: Record<string, unknown> | null = null;
 let cachedAt = 0;
+
+/** Constant-time comparison for admin auth to prevent timing attacks. */
+function isValidAdminAuth(auth: string | undefined): boolean {
+  if (!auth || !ADMIN_SECRET) return false;
+  const expected = Buffer.from(`Bearer ${ADMIN_SECRET}`, "utf-8");
+  const provided = Buffer.from(auth, "utf-8");
+  if (expected.length !== provided.length) return false;
+  return timingSafeEqual(expected, provided);
+}
 
 export const adminRoute = new Hono<AppEnv>();
 
@@ -21,7 +31,7 @@ adminRoute.use("*", async (c, next) => {
     );
   }
   const auth = c.req.header("Authorization");
-  if (!auth || auth !== `Bearer ${ADMIN_SECRET}`) {
+  if (!isValidAdminAuth(auth)) {
     return c.json(apiError("unauthorized", "Invalid admin secret."), 401);
   }
   await next();

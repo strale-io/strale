@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("uptime-check", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -7,6 +8,7 @@ registerCapability("uptime-check", async (input: CapabilityInput) => {
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     throw new Error("URL must start with http:// or https://");
   }
+  await validateUrl(url);
 
   const timeout = Math.min(Number(input.timeout_ms ?? 10000), 30000);
   const start = Date.now();

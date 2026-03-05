@@ -1,10 +1,12 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("gdpr-website-check", async (input: CapabilityInput) => {
   let url = ((input.url as string) ?? (input.domain as string) ?? (input.task as string) ?? "").trim();
   if (!url) throw new Error("'url' (website URL) is required.");
 
   if (!url.startsWith("http://") && !url.startsWith("https://")) url = "https://" + url;
+  await validateUrl(url);
 
   const response = await fetch(url, {
     signal: AbortSignal.timeout(15000),

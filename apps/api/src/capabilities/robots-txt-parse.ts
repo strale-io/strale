@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   let url = ((input.url as string) ?? (input.domain as string) ?? (input.task as string) ?? "").trim();
@@ -8,6 +9,7 @@ registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   if (!url.startsWith("http://") && !url.startsWith("https://")) url = "https://" + url;
   const base = new URL(url);
   const robotsUrl = `${base.protocol}//${base.hostname}/robots.txt`;
+  await validateUrl(robotsUrl);
 
   const response = await fetch(robotsUrl, {
     signal: AbortSignal.timeout(10000),

@@ -1,11 +1,13 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { promises as dns } from "dns";
+import { validateHost } from "../lib/url-validator.js";
 
 registerCapability("domain-reputation", async (input: CapabilityInput) => {
   let domain = ((input.domain as string) ?? (input.url as string) ?? (input.task as string) ?? "").trim().toLowerCase();
   if (!domain) throw new Error("'domain' (domain name) is required.");
 
   domain = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "");
+  await validateHost(domain);
 
   const checks: Record<string, unknown> = {};
   const issues: string[] = [];

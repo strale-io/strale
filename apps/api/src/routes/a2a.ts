@@ -10,10 +10,12 @@
  */
 
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, transactions } from "../db/schema.js";
+import { capabilities, transactions, users } from "../db/schema.js";
 import { authMiddleware } from "../lib/middleware.js";
+import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
+import { timingSafeEqual } from "node:crypto";
 import type { AppEnv } from "../types.js";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -376,15 +378,38 @@ async function handleMessageSend(
       id,
     });
   } catch (err) {
+    console.error("[a2a] message/send error:", err instanceof Error ? err.message : err);
     return c.json({
       jsonrpc: "2.0",
       error: {
         code: -32603,
-        message: `Internal error: ${err instanceof Error ? err.message : String(err)}`,
+        message: "Internal error processing request.",
       },
       id,
     });
   }
+}
+
+// ─── Resolve API key to user ─────────────────────────────────────────────────
+
+async function resolveApiKeyToUser(apiKey: string) {
+  const db = getDb();
+  const prefix = getKeyPrefix(apiKey);
+  const hash = hashApiKey(apiKey);
+  const hashBuffer = Buffer.from(hash, "utf-8");
+
+  const candidates = await db
+    .select()
+    .from(users)
+    .where(eq(users.keyPrefix, prefix));
+
+  return candidates.find((u) => {
+    const stored = Buffer.from(u.apiKeyHash, "utf-8");
+    return (
+      stored.length === hashBuffer.length &&
+      timingSafeEqual(stored, hashBuffer)
+    );
+  }) ?? null;
 }
 
 // ─── tasks/get handler ──────────────────────────────────────────────────────
@@ -417,13 +442,24 @@ async function handleTasksGet(
     });
   }
 
-  // Look up transaction in DB
+  // Resolve API key to user for ownership check
+  const apiKey = authHeader.slice(7);
+  const user = await resolveApiKeyToUser(apiKey);
+  if (!user) {
+    return c.json({
+      jsonrpc: "2.0",
+      error: { code: -32000, message: "Invalid API key." },
+      id,
+    });
+  }
+
+  // Look up transaction in DB — scoped to authenticated user
   try {
     const db = getDb();
     const [txn] = await db
       .select()
       .from(transactions)
-      .where(eq(transactions.id, taskId))
+      .where(and(eq(transactions.id, taskId), eq(transactions.userId, user.id)))
       .limit(1);
 
     if (!txn) {
@@ -492,11 +528,12 @@ async function handleTasksGet(
 
     return c.json({ jsonrpc: "2.0", result, id });
   } catch (err) {
+    console.error("[a2a] tasks/get error:", err instanceof Error ? err.message : err);
     return c.json({
       jsonrpc: "2.0",
       error: {
         code: -32603,
-        message: `Internal error: ${err instanceof Error ? err.message : String(err)}`,
+        message: "Internal error processing request.",
       },
       id,
     });

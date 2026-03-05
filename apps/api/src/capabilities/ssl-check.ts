@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { connect, type TLSSocket } from "node:tls";
+import { validateHost } from "../lib/url-validator.js";
 
 registerCapability("ssl-check", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.task as string) ?? "").trim().toLowerCase();
@@ -8,6 +9,7 @@ registerCapability("ssl-check", async (input: CapabilityInput) => {
   }
 
   const cleaned = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "");
+  await validateHost(cleaned);
   const port = (input.port as number) ?? 443;
 
   const certInfo = await getCertInfo(cleaned, port);

@@ -1,10 +1,12 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("base64-encode-url", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
   if (!url) throw new Error("'url' is required.");
 
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
+  await validateUrl(fullUrl);
 
   const response = await fetch(fullUrl, {
     headers: { "User-Agent": "Strale/1.0 (encoder; admin@strale.io)" },

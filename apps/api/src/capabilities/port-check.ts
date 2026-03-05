@@ -1,9 +1,11 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import * as net from "net";
+import { validateHost } from "../lib/url-validator.js";
 
 registerCapability("port-check", async (input: CapabilityInput) => {
   const host = ((input.host as string) ?? (input.hostname as string) ?? (input.task as string) ?? "").trim();
   if (!host) throw new Error("'host' (hostname or IP address) is required.");
+  await validateHost(host);
 
   const portsInput = input.ports ?? input.port;
   let ports: number[];

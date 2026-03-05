@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("api-health-check", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? "").trim();
@@ -12,6 +13,7 @@ registerCapability("api-health-check", async (input: CapabilityInput) => {
   const timeout = Math.min((input.timeout as number) ?? 10000, 30000);
 
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
+  await validateUrl(fullUrl);
 
   const fetchOptions: RequestInit = {
     method,

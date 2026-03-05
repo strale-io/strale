@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 const SECURITY_HEADERS: Array<{
   header: string;
@@ -20,6 +21,7 @@ registerCapability("header-security-check", async (input: CapabilityInput) => {
   if (!url) throw new Error("'url' is required.");
 
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
+  await validateUrl(fullUrl);
 
   const res = await fetch(fullUrl, {
     method: "GET",

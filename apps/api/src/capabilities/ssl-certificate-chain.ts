@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import * as tls from "tls";
+import { validateHost } from "../lib/url-validator.js";
 
 registerCapability("ssl-certificate-chain", async (input: CapabilityInput) => {
   let host = ((input.host as string) ?? (input.domain as string) ?? (input.url as string) ?? (input.task as string) ?? "").trim();
@@ -7,6 +8,7 @@ registerCapability("ssl-certificate-chain", async (input: CapabilityInput) => {
 
   // Strip protocol/path
   host = host.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/:\d+$/, "");
+  await validateHost(host);
   const port = Number(input.port ?? 443);
 
   return new Promise((resolve, reject) => {

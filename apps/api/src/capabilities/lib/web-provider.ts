@@ -102,6 +102,10 @@ export async function fetchPage(
     skipCache = false,
   } = options ?? {};
 
+  // SSRF protection — validate URL before fetching
+  const { validateUrl } = await import("../../lib/url-validator.js");
+  await validateUrl(targetUrl);
+
   // Check cache first
   if (!skipCache) {
     const cached = getCached(targetUrl);

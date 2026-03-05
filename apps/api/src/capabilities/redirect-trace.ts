@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("redirect-trace", async (input: CapabilityInput) => {
   let url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -7,12 +8,15 @@ registerCapability("redirect-trace", async (input: CapabilityInput) => {
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     url = "https://" + url;
   }
+  await validateUrl(url);
 
   const maxRedirects = Math.min(Number(input.max_redirects ?? 20), 30);
   const chain: { step: number; url: string; status_code: number; status_text: string; location: string | null; server: string | null; latency_ms: number }[] = [];
 
   let currentUrl = url;
   for (let step = 1; step <= maxRedirects; step++) {
+    // Validate each redirect target to prevent SSRF via redirect chain
+    await validateUrl(currentUrl);
     const start = Date.now();
     const response = await fetch(currentUrl, {
       method: "GET",

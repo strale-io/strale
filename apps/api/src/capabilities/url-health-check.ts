@@ -1,10 +1,12 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("url-health-check", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
   if (!url) throw new Error("'url' is required.");
 
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
+  await validateUrl(fullUrl);
   const followRedirects = input.follow_redirects !== false;
   const timeout = Math.min((input.timeout as number) ?? 10000, 30000);
 

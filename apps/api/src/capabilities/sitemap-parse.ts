@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("sitemap-parse", async (input: CapabilityInput) => {
   let url = ((input.url as string) ?? (input.domain as string) ?? (input.task as string) ?? "").trim();
@@ -10,6 +11,7 @@ registerCapability("sitemap-parse", async (input: CapabilityInput) => {
     const base = new URL(url);
     url = `${base.protocol}//${base.hostname}/sitemap.xml`;
   }
+  await validateUrl(url);
 
   const response = await fetch(url, {
     signal: AbortSignal.timeout(15000),
