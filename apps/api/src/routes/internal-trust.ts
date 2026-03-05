@@ -6,6 +6,7 @@ import {
   solutionSteps,
   capabilities,
   capabilityLimitations,
+  testSuites,
 } from "../db/schema.js";
 import {
   getCapabilityQuality,
@@ -93,6 +94,21 @@ function aggregateFailures(
     }
   }
   return all.length > 0 ? { failures: all } : {};
+}
+
+// ─── Schedule helpers ────────────────────────────────────────────────────────
+
+const TIER_INTERVAL_MS: Record<string, number> = {
+  A: 6 * 60 * 60 * 1000,
+  B: 24 * 60 * 60 * 1000,
+  C: 72 * 60 * 60 * 1000,
+};
+
+function computeNextRun(tier: string, lastRun: string | null): string | null {
+  if (!lastRun) return null;
+  const interval = TIER_INTERVAL_MS[tier];
+  if (!interval) return null;
+  return new Date(new Date(lastRun).getTime() + interval).toISOString();
 }
 
 // ─── GET /v1/internal/trust/capabilities/:slug ──────────────────────────────
@@ -192,11 +208,18 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
   // Build per-step data in parallel
   const stepData = await Promise.all(
     steps.map(async (step) => {
-      const [quality, testResultsData, limitations] = await Promise.all([
+      const [quality, testResultsData, limitations, suiteRows] = await Promise.all([
         getCapabilityQuality(step.capabilitySlug),
         getTestResultsForSlug(step.capabilitySlug),
         getLimitationsForSlug(step.capabilitySlug),
+        db.select({ scheduleTier: testSuites.scheduleTier })
+          .from(testSuites)
+          .where(and(eq(testSuites.capabilitySlug, step.capabilitySlug), eq(testSuites.active, true)))
+          .limit(1),
       ]);
+
+      const scheduleTier = suiteRows[0]?.scheduleTier ?? "B";
+      const nextScheduledRun = computeNextRun(scheduleTier, testResultsData.last_run);
 
       return {
         capability_slug: step.capabilitySlug,
@@ -214,6 +237,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
         },
         test_results: {
           last_run: testResultsData.last_run,
+          next_scheduled_run: nextScheduledRun,
           total_tests: testResultsData.total_tests,
           passed: testResultsData.passed,
           failed: testResultsData.failed,
@@ -242,6 +266,13 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
     .filter((t): t is string => t !== null)
     .sort();
   const lastTestRun = testLastRuns[testLastRuns.length - 1] ?? null;
+
+  // Solution next_scheduled_run = earliest across all steps
+  const nextRuns = stepData
+    .map((d) => d.test_results.next_scheduled_run)
+    .filter((t): t is string => t !== null)
+    .sort();
+  const nextScheduledRun = nextRuns[0] ?? null;
 
   // Aggregate 30-day history across all step capabilities
   const thirtyDaysAgo = new Date();
@@ -295,6 +326,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       },
       test_results: {
         last_run: lastTestRun,
+        next_scheduled_run: nextScheduledRun,
         total_tests: allTestTotal,
         passed: allTestPassed,
         failed: allTestFailed,
