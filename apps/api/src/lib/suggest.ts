@@ -388,6 +388,7 @@ export interface TypeaheadResult {
   type: "solution" | "capability";
   slug: string;
   name: string;
+  description: string;
   category: string;
   price_cents: number | null;
   geography: string | null;
@@ -474,6 +475,7 @@ export async function typeahead(
       type: item.type,
       slug: item.slug,
       name: item.name,
+      description: item.description,
       category: item.category,
       // DEC-20260304-A: price_cents MUST be null for capabilities
       price_cents: item.type === "solution" ? item.priceCents : null,
