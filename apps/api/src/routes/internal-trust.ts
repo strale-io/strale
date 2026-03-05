@@ -197,41 +197,43 @@ function generateQualityNarrative(stepData: Array<{
     ? parseFloat(((totalPassed / withResults) * 100).toFixed(1))
     : null;
 
+  if (passRate === null) {
+    return "No test data available yet for this solution.";
+  }
+
   // Categorize failures
   const allFailures = stepData.flatMap(
     (d) => d.test_results.failures ?? [],
   );
   const upstreamCount = allFailures.filter((f) => f.failure_category === "upstream").length;
   const internalCount = allFailures.filter((f) => f.failure_category === "internal").length;
+  const allUpstream = totalFailed > 0 && internalCount === 0 && upstreamCount > 0;
 
-  // Find degraded steps
-  const degradedSteps = stepData.filter(
-    (d) => d.test_results.pass_rate !== null && d.test_results.pass_rate < 90,
+  // Find capabilities with failures
+  const failingSteps = stepData.filter(
+    (d) => (d.test_results.failures?.length ?? 0) > 0,
   );
 
-  // Build narrative
-  const parts: string[] = [];
-
-  if (passRate !== null && passRate >= 95) {
-    parts.push(`All ${totalTests} tests healthy — ${passRate}% pass rate across ${stepData.length} capabilities.`);
-  } else if (passRate !== null && passRate >= 80) {
-    parts.push(`${totalPassed} of ${withResults} tests passing (${passRate}%).`);
-  } else if (passRate !== null) {
-    parts.push(`${totalFailed} of ${withResults} tests failing (${passRate}% pass rate).`);
+  if (passRate === 100) {
+    return `All ${totalTests} test scenarios passing.`;
   }
 
-  if (degradedSteps.length > 0) {
-    const names = degradedSteps.map((d) => d.capability_name).join(", ");
-    parts.push(`Degraded: ${names}.`);
+  const plural = totalFailed > 1 ? "s" : "";
+
+  if (passRate >= 90 && allUpstream) {
+    const names = failingSteps.map((d) => d.capability_name).join(", ");
+    return `${totalPassed} of ${withResults} tests passing. ${totalFailed} upstream issue${plural} in ${names} — provider timeout or rate limit, not Strale code.`;
   }
 
-  if (upstreamCount > 0 && internalCount === 0) {
-    parts.push(`All ${upstreamCount} failure(s) are upstream (provider timeouts or rate limits).`);
-  } else if (internalCount > 0) {
-    parts.push(`${internalCount} internal failure(s) detected — investigating.`);
+  if (passRate >= 90) {
+    return `${totalPassed} of ${withResults} tests passing. ${totalFailed} test${plural} failing — review details.`;
   }
 
-  return parts.join(" ");
+  if (passRate >= 70) {
+    return `${totalPassed} of ${withResults} tests passing. Some capabilities experiencing issues — review details before production use.`;
+  }
+
+  return `${totalPassed} of ${withResults} tests passing. Significant failures detected — check the detail page for known issues.`;
 }
 
 // ─── GET /v1/internal/trust/solutions/:slug ─────────────────────────────────
