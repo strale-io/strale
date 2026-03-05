@@ -62,13 +62,14 @@ const SOLUTIONS: SolutionDef[] = [
       },
       required: ["org_number"],
     },
-    exampleInput: { org_number: "559106-8089" },
+    exampleInput: { org_number: "556703-7485" },
     exampleOutput: {
-      company_name: "Strale AB",
+      company_name: "Spotify AB",
+      org_number: "556703-7485",
       vat_valid: true,
-      vat_number: "SE5591068089",
+      vat_number: "SE556703748501",
       sanctions_clear: true,
-      sanctions_checked_at: "2026-03-02T12:00:00Z",
+      sanctions_checked_at: "2026-03-05T12:00:00Z",
     },
     steps: [
       {
@@ -90,7 +91,7 @@ const SOLUTIONS: SolutionDef[] = [
         stepOrder: 3,
         canParallel: true,
         parallelGroup: 1,
-        inputMap: { company_name: "$steps[0].company_name" },
+        inputMap: { name: "$steps[0].company_name" },
       },
     ],
   },
@@ -121,6 +122,13 @@ const SOLUTIONS: SolutionDef[] = [
       required: ["org_number"],
     },
     exampleInput: { org_number: "923609016" },
+    exampleOutput: {
+      company_name: "EQUINOR ASA",
+      org_number: "923609016",
+      vat_valid: true,
+      vat_number: "NO923609016MVA",
+      sanctions_clear: true,
+    },
     steps: [
       {
         capabilitySlug: "norwegian-company-data",
@@ -141,7 +149,7 @@ const SOLUTIONS: SolutionDef[] = [
         stepOrder: 3,
         canParallel: true,
         parallelGroup: 1,
-        inputMap: { company_name: "$steps[0].company_name" },
+        inputMap: { name: "$steps[0].company_name" },
       },
     ],
   },
@@ -168,7 +176,14 @@ const SOLUTIONS: SolutionDef[] = [
       },
       required: ["cvr_number"],
     },
-    exampleInput: { cvr_number: "37582070" },
+    exampleInput: { cvr_number: "47458714" },
+    exampleOutput: {
+      company_name: "LEGO System A/S",
+      cvr_number: "47458714",
+      vat_valid: true,
+      vat_number: "DK47458714",
+      sanctions_clear: true,
+    },
     steps: [
       {
         capabilitySlug: "danish-company-data",
@@ -189,7 +204,7 @@ const SOLUTIONS: SolutionDef[] = [
         stepOrder: 3,
         canParallel: true,
         parallelGroup: 1,
-        inputMap: { company_name: "$steps[0].company_name" },
+        inputMap: { name: "$steps[0].company_name" },
       },
     ],
   },
@@ -219,7 +234,14 @@ const SOLUTIONS: SolutionDef[] = [
       },
       required: ["business_id"],
     },
-    exampleInput: { business_id: "2878743-7" },
+    exampleInput: { business_id: "0112038-9" },
+    exampleOutput: {
+      company_name: "Nokia Oyj",
+      business_id: "0112038-9",
+      vat_valid: true,
+      vat_number: "FI01120389",
+      sanctions_clear: true,
+    },
     steps: [
       {
         capabilitySlug: "finnish-company-data",
@@ -240,7 +262,7 @@ const SOLUTIONS: SolutionDef[] = [
         stepOrder: 3,
         canParallel: true,
         parallelGroup: 1,
-        inputMap: { company_name: "$steps[0].company_name" },
+        inputMap: { name: "$steps[0].company_name" },
       },
     ],
   },
@@ -388,13 +410,13 @@ const SOLUTIONS: SolutionDef[] = [
       properties: { email: { type: "string", format: "email" } },
       required: ["email"],
     },
-    exampleInput: { email: "jane@acmecorp.com" },
+    exampleInput: { email: "test@google.com" },
     exampleOutput: {
       valid: true,
-      domain: "acmecorp.com",
+      domain: "google.com",
       has_mx: true,
       is_disposable: false,
-      reputation_score: 87,
+      reputation_score: 92,
     },
     steps: [
       {
@@ -467,7 +489,7 @@ const SOLUTIONS: SolutionDef[] = [
         stepOrder: 2,
         canParallel: false,
         parallelGroup: null,
-        inputMap: { company_name: "$steps[0].company_name" },
+        inputMap: { name: "$steps[0].company_name" },
       },
     ],
   },
@@ -493,7 +515,13 @@ const SOLUTIONS: SolutionDef[] = [
       properties: { domain: { type: "string" } },
       required: ["domain"],
     },
-    exampleInput: { domain: "acmecorp.com" },
+    exampleInput: { domain: "google.com" },
+    exampleOutput: {
+      registrar: "MarkMonitor Inc.",
+      ssl_valid: true,
+      dns_records: true,
+      reputation_score: 95,
+    },
     steps: [
       {
         capabilitySlug: "whois-lookup",
@@ -547,11 +575,11 @@ const SOLUTIONS: SolutionDef[] = [
       properties: { url: { type: "string", format: "uri" } },
       required: ["url"],
     },
-    exampleInput: { url: "https://example.com/about" },
+    exampleInput: { url: "https://example.com" },
     exampleOutput: {
-      markdown: "# About Us\n...",
-      pii_redacted: 3,
-      word_count: 847,
+      markdown: "# Example Domain\n\nThis domain is for use in illustrative examples...",
+      pii_redacted: 0,
+      word_count: 58,
     },
     steps: [
       {
@@ -591,7 +619,14 @@ const SOLUTIONS: SolutionDef[] = [
       properties: { domain: { type: "string" } },
       required: ["domain"],
     },
-    exampleInput: { domain: "acmecorp.com" },
+    exampleInput: { domain: "google.com" },
+    exampleOutput: {
+      score: 95,
+      grade: "A",
+      spf: "pass",
+      dmarc: "pass",
+      ssl_valid: true,
+    },
     steps: [
       {
         capabilitySlug: "email-deliverability-check",
@@ -637,7 +672,12 @@ const SOLUTIONS: SolutionDef[] = [
       properties: { domain: { type: "string" } },
       required: ["domain"],
     },
-    exampleInput: { domain: "acmecorp.com" },
+    exampleInput: { domain: "google.com" },
+    exampleOutput: {
+      certificate_chain: [{ subject: "*.google.com", issuer: "GTS CA 1C3" }],
+      email_score: 95,
+      performance_score: 92,
+    },
     steps: [
       {
         capabilitySlug: "ssl-certificate-chain",
@@ -682,7 +722,7 @@ const SOLUTIONS: SolutionDef[] = [
     inputSchema: {
       type: "object",
       properties: {
-        ai_system_description: {
+        description: {
           type: "string",
           description: "Describe what your AI system does",
         },
@@ -690,15 +730,15 @@ const SOLUTIONS: SolutionDef[] = [
           type: "string",
           description: "ISO 3166-1 alpha-2 country code",
         },
-        company_name: { type: "string" },
+        company: { type: "string" },
       },
-      required: ["ai_system_description", "deployment_country"],
+      required: ["description", "deployment_country"],
     },
     exampleInput: {
-      ai_system_description:
+      description:
         "AI system that triages patient symptoms and recommends urgency level for GP appointments",
       deployment_country: "SE",
-      company_name: "Kry",
+      company: "Kry",
     },
     exampleOutput: {
       risk_level: "high",
@@ -718,7 +758,7 @@ const SOLUTIONS: SolutionDef[] = [
         canParallel: false,
         parallelGroup: null,
         inputMap: {
-          ai_system_description: "$input.ai_system_description",
+          description: "$input.description",
         },
       },
       {
@@ -733,7 +773,7 @@ const SOLUTIONS: SolutionDef[] = [
         stepOrder: 3,
         canParallel: true,
         parallelGroup: 1,
-        inputMap: { company_name: "$input.company_name" },
+        inputMap: { company: "$input.company" },
       },
     ],
   },
@@ -765,7 +805,7 @@ const SOLUTIONS: SolutionDef[] = [
       },
       required: ["url"],
     },
-    exampleInput: { url: "https://example.com", country_code: "SE" },
+    exampleInput: { url: "https://google.com", country_code: "SE" },
     exampleOutput: {
       gdpr_score: 72,
       grade: "B",
@@ -834,21 +874,21 @@ const SOLUTIONS: SolutionDef[] = [
       type: "object",
       properties: {
         competitor_url: { type: "string", format: "uri" },
-        brand_handle: {
+        brand_username: {
           type: "string",
-          description: "Social media handle (optional)",
+          description: "Social media username (optional)",
         },
       },
       required: ["competitor_url"],
     },
     exampleInput: {
-      competitor_url: "https://competitor.com",
-      brand_handle: "competitor",
+      competitor_url: "https://stripe.com",
+      brand_username: "stripe",
     },
     exampleOutput: {
-      tech_stack: { frontend: "Next.js", hosting: "Vercel" },
-      seo: { score: 78, issues: [] },
-      landing_page: { score: 65, strengths: [], weaknesses: [] },
+      tech_stack: { frontend: "React", hosting: "AWS" },
+      seo: { overall_score: 82, issues: [] },
+      landing_page: { overall_score: 78, strengths: [], weaknesses: [] },
       social: { github: true, twitter: true, linkedin: true },
     },
     steps: [
@@ -878,7 +918,7 @@ const SOLUTIONS: SolutionDef[] = [
         stepOrder: 4,
         canParallel: true,
         parallelGroup: 2,
-        inputMap: { handle: "$input.brand_handle" },
+        inputMap: { username: "$input.brand_username" },
       },
     ],
   },
