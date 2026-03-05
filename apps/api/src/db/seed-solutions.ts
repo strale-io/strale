@@ -294,6 +294,14 @@ const SOLUTIONS: SolutionDef[] = [
       iban: "DE89370400440532013000",
       vat_number: "DE136695976",
     },
+    exampleOutput: {
+      iban_valid: true,
+      country_code: "DE",
+      bank_name: "Commerzbank Frankfurt",
+      bic: "COBADEFFXXX",
+      vat_valid: true,
+      vat_company_name: "SAP SE",
+    },
     steps: [
       {
         capabilitySlug: "iban-validate",
@@ -307,10 +315,7 @@ const SOLUTIONS: SolutionDef[] = [
         stepOrder: 2,
         canParallel: false,
         parallelGroup: null,
-        inputMap: {
-          bank_code: "$steps[0].bank_code",
-          country_code: "$steps[0].country_code",
-        },
+        inputMap: { bic: "$steps[0].bank_code" },
       },
       {
         capabilitySlug: "vat-validate",
@@ -354,6 +359,16 @@ const SOLUTIONS: SolutionDef[] = [
       vat_number: "DE136695976",
       source_currency: "SEK",
     },
+    exampleOutput: {
+      iban_valid: true,
+      country_code: "DE",
+      bank_name: "Commerzbank Frankfurt",
+      bic: "COBADEFFXXX",
+      vat_valid: true,
+      vat_company_name: "SAP SE",
+      exchange_rate: 0.0936,
+      exchange_rate_date: "2026-03-05",
+    },
     steps: [
       {
         capabilitySlug: "iban-validate",
@@ -367,10 +382,7 @@ const SOLUTIONS: SolutionDef[] = [
         stepOrder: 2,
         canParallel: false,
         parallelGroup: null,
-        inputMap: {
-          bank_code: "$steps[0].bank_code",
-          country_code: "$steps[0].country_code",
-        },
+        inputMap: { bic: "$steps[0].bank_code" },
       },
       {
         capabilitySlug: "vat-validate",
