@@ -63,32 +63,40 @@ registerCapability("vat-validate", async (input: CapabilityInput) => {
 
   const soapBody = buildSoapRequest(parsed.countryCode, parsed.number);
 
-  const response = await fetch(VIES_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/xml; charset=utf-8",
-      SOAPAction: "",
-    },
-    body: soapBody,
-    signal: AbortSignal.timeout(15000),
-  });
+  // VIES is unreliable — retry once on transient errors (MS_MAX_CONCURRENT_REQ, timeouts)
+  let xml = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await fetch(VIES_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/xml; charset=utf-8",
+        SOAPAction: "",
+      },
+      body: soapBody,
+      signal: AbortSignal.timeout(15000),
+    });
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    // VIES returns SOAP faults for invalid country codes etc.
-    const faultString = extractTag(text, "faultstring");
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      const faultString = extractTag(text, "faultstring");
+      if (faultString) {
+        if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
+        throw new Error(`VIES error: ${faultString}`);
+      }
+      if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
+      throw new Error(`VIES API returned HTTP ${response.status}`);
+    }
+
+    xml = await response.text();
+
+    // Check for SOAP fault in 200 response (e.g. MS_MAX_CONCURRENT_REQ)
+    const faultString = extractTag(xml, "faultstring");
     if (faultString) {
+      if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
       throw new Error(`VIES error: ${faultString}`);
     }
-    throw new Error(`VIES API returned HTTP ${response.status}`);
-  }
 
-  const xml = await response.text();
-
-  // Check for SOAP fault in 200 response
-  const faultString = extractTag(xml, "faultstring");
-  if (faultString) {
-    throw new Error(`VIES error: ${faultString}`);
+    break; // success
   }
 
   const valid = extractTag(xml, "valid") === "true";
