@@ -68,8 +68,8 @@ const SOLUTIONS: SolutionDef[] = [
       org_number: "556703-7485",
       vat_valid: true,
       vat_number: "SE556703748501",
-      sanctions_clear: true,
-      sanctions_checked_at: "2026-03-05T12:00:00Z",
+      is_sanctioned: false,
+      match_count: 0,
     },
     steps: [
       {
@@ -127,7 +127,8 @@ const SOLUTIONS: SolutionDef[] = [
       org_number: "923609016",
       vat_valid: true,
       vat_number: "NO923609016MVA",
-      sanctions_clear: true,
+      is_sanctioned: false,
+      match_count: 0,
     },
     steps: [
       {
@@ -182,7 +183,8 @@ const SOLUTIONS: SolutionDef[] = [
       cvr_number: "47458714",
       vat_valid: true,
       vat_number: "DK47458714",
-      sanctions_clear: true,
+      is_sanctioned: false,
+      match_count: 0,
     },
     steps: [
       {
@@ -240,7 +242,8 @@ const SOLUTIONS: SolutionDef[] = [
       business_id: "0112038-9",
       vat_valid: true,
       vat_number: "FI01120389",
-      sanctions_clear: true,
+      is_sanctioned: false,
+      match_count: 0,
     },
     steps: [
       {
@@ -273,10 +276,10 @@ const SOLUTIONS: SolutionDef[] = [
     name: "B2B Payment Validation",
     marketingName: "B2B Payment Validation",
     description:
-      "Validates both sides of a B2B payment: IBAN structure, receiving bank identification, counterparty VAT.",
+      "Validates both sides of a B2B payment: IBAN structure and counterparty VAT.",
     category: "finance-banking",
-    priceCents: 30,
-    componentSumCents: 20,
+    priceCents: 25,
+    componentSumCents: 15,
     valueTier: "verification",
     maintenanceLevel: "near-zero",
     geography: "eu",
@@ -297,8 +300,7 @@ const SOLUTIONS: SolutionDef[] = [
     exampleOutput: {
       iban_valid: true,
       country_code: "DE",
-      bank_name: "Commerzbank Frankfurt",
-      bic: "COBADEFFXXX",
+      bank_code: "37040044",
       vat_valid: true,
       vat_company_name: "SAP SE",
     },
@@ -311,15 +313,8 @@ const SOLUTIONS: SolutionDef[] = [
         inputMap: { iban: "$input.iban" },
       },
       {
-        capabilitySlug: "bank-bic-lookup",
-        stepOrder: 2,
-        canParallel: false,
-        parallelGroup: null,
-        inputMap: { bic: "$steps[0].bank_code" },
-      },
-      {
         capabilitySlug: "vat-validate",
-        stepOrder: 3,
+        stepOrder: 2,
         canParallel: false,
         parallelGroup: null,
         inputMap: { vat_number: "$input.vat_number" },
@@ -333,10 +328,10 @@ const SOLUTIONS: SolutionDef[] = [
     name: "SEPA Payment Readiness",
     marketingName: "SEPA Payment Readiness Check",
     description:
-      "Everything needed before a SEPA transfer: IBAN, bank ID, counterparty VAT, and exchange rate if source isn't EUR.",
+      "Everything needed before a SEPA transfer: IBAN, counterparty VAT, and exchange rate if source isn't EUR.",
     category: "finance-banking",
-    priceCents: 35,
-    componentSumCents: 22,
+    priceCents: 30,
+    componentSumCents: 17,
     valueTier: "data-lookup",
     maintenanceLevel: "near-zero",
     geography: "eu",
@@ -362,8 +357,7 @@ const SOLUTIONS: SolutionDef[] = [
     exampleOutput: {
       iban_valid: true,
       country_code: "DE",
-      bank_name: "Commerzbank Frankfurt",
-      bic: "COBADEFFXXX",
+      bank_code: "37040044",
       vat_valid: true,
       vat_company_name: "SAP SE",
       exchange_rate: 0.0936,
@@ -378,22 +372,15 @@ const SOLUTIONS: SolutionDef[] = [
         inputMap: { iban: "$input.iban" },
       },
       {
-        capabilitySlug: "bank-bic-lookup",
-        stepOrder: 2,
-        canParallel: false,
-        parallelGroup: null,
-        inputMap: { bic: "$steps[0].bank_code" },
-      },
-      {
         capabilitySlug: "vat-validate",
-        stepOrder: 3,
+        stepOrder: 2,
         canParallel: false,
         parallelGroup: null,
         inputMap: { vat_number: "$input.vat_number" },
       },
       {
         capabilitySlug: "exchange-rate",
-        stepOrder: 4,
+        stepOrder: 3,
         canParallel: false,
         parallelGroup: null,
         inputMap: { from: "$input.source_currency", to: "EUR" },
@@ -486,7 +473,8 @@ const SOLUTIONS: SolutionDef[] = [
       company_name: "Apple Inc.",
       cik: "0000320193",
       state: "CA",
-      sanctions_clear: true,
+      is_sanctioned: false,
+      match_count: 0,
     },
     steps: [
       {
