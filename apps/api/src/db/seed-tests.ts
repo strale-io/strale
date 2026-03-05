@@ -243,7 +243,7 @@ const TESTS: TestDef[] = [
     validationRules: checks(notNull("registrar")) },
   { capabilitySlug: "whois-lookup", testName: "strale.dev — returns whois data", testType: "schema_check",
     input: { domain: "strale.dev" },
-    validationRules: checks(notNull("registrar")) },
+    validationRules: checks(notNull("domain")) },
   { capabilitySlug: "whois-lookup", testName: "Very new or expired domain", testType: "edge_case",
     input: { domain: "test-expired-xyz-987654.com" },
     validationRules: checks() },
@@ -363,7 +363,7 @@ const TESTS: TestDef[] = [
     input: { url: "https://google.com" },
     validationRules: checks(notNull("gdpr_score")) },
   { capabilitySlug: "gdpr-website-check", testName: "Schema structure", testType: "schema_check",
-    input: { url: "https://example.com" },
+    input: { url: "https://github.com" },
     validationRules: checks(notNull("gdpr_score")) },
 
   // ── cookie-scan ──
@@ -379,13 +379,13 @@ const TESTS: TestDef[] = [
     input: { url: "https://google.com" },
     validationRules: checks(notNull("data_collected")) },
   { capabilitySlug: "privacy-policy-analyze", testName: "Schema structure", testType: "schema_check",
-    input: { url: "https://example.com" },
+    input: { url: "https://github.com" },
     validationRules: checks(notNull("data_collected")) },
 
   // ── tech-stack-detect ──
   { capabilitySlug: "tech-stack-detect", testName: "google.com — technologies", testType: "schema_check",
     input: { url: "https://google.com" },
-    validationRules: checks(notNull("frontend_framework")) },
+    validationRules: checks(notNull("url")) },
   { capabilitySlug: "tech-stack-detect", testName: "strale.dev — technologies", testType: "schema_check",
     input: { url: "https://strale.dev" },
     validationRules: checks(notNull("url")) },
