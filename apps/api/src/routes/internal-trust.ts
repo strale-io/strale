@@ -226,6 +226,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
         capability_name: step.capabilityName ?? step.capabilitySlug,
         step_order: step.stepOrder,
         parallel_group: step.parallelGroup,
+        schedule_tier: scheduleTier,
         quality: {
           success_rate: quality.successRate,
           avg_response_time_ms: quality.avgResponseTimeMs,
@@ -273,6 +274,11 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
     .filter((t): t is string => t !== null)
     .sort();
   const nextScheduledRun = nextRuns[0] ?? null;
+
+  // Effective schedule frequency = most frequent tier across steps
+  const TIER_HOURS: Record<string, number> = { A: 6, B: 24, C: 72 };
+  const tierHours = stepData.map((d) => TIER_HOURS[d.schedule_tier] ?? 24);
+  const scheduleFrequencyHours = tierHours.length > 0 ? Math.min(...tierHours) : null;
 
   // Aggregate 30-day history across all step capabilities
   const thirtyDaysAgo = new Date();
@@ -327,6 +333,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       test_results: {
         last_run: lastTestRun,
         next_scheduled_run: nextScheduledRun,
+        schedule_frequency_hours: scheduleFrequencyHours,
         total_tests: allTestTotal,
         passed: allTestPassed,
         failed: allTestFailed,

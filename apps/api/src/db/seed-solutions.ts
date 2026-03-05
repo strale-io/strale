@@ -51,7 +51,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "very-low",
     geography: "nordic",
     targetAudience: "Klarna, Trustly, Tink, Pleo, Anyfin, Bits",
-    transparencyTag: null,
+    transparencyTag: "mixed",
     inputSchema: {
       type: "object",
       properties: {
@@ -110,7 +110,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "very-low",
     geography: "nordic",
     targetAudience: "DNB, Vipps, Cognite",
-    transparencyTag: null,
+    transparencyTag: "mixed",
     inputSchema: {
       type: "object",
       properties: {
@@ -168,7 +168,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "very-low",
     geography: "nordic",
     targetAudience: "Pleo, Lunar, Trustpilot",
-    transparencyTag: null,
+    transparencyTag: "mixed",
     inputSchema: {
       type: "object",
       properties: {
@@ -223,7 +223,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "very-low",
     geography: "nordic",
     targetAudience: "Wolt, Supercell, Smartly.io",
-    transparencyTag: null,
+    transparencyTag: "mixed",
     inputSchema: {
       type: "object",
       properties: {
@@ -281,7 +281,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "near-zero",
     geography: "eu",
     targetAudience: "Trustly, Klarna, Tink, Pleo",
-    transparencyTag: null,
+    transparencyTag: "algorithmic",
     inputSchema: {
       type: "object",
       properties: {
@@ -336,7 +336,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "near-zero",
     geography: "eu",
     targetAudience: "Trustly, Klarna, Tink",
-    transparencyTag: null,
+    transparencyTag: "algorithmic",
     inputSchema: {
       type: "object",
       properties: {
@@ -404,7 +404,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "us-global",
     targetAudience:
       "US developers building SDR agents, outbound sales bots, lead gen pipelines",
-    transparencyTag: null,
+    transparencyTag: "algorithmic",
     inputSchema: {
       type: "object",
       properties: { email: { type: "string", format: "email" } },
@@ -458,7 +458,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "us",
     targetAudience:
       "US developers doing vendor/partner onboarding, compliance teams",
-    transparencyTag: null,
+    transparencyTag: "ai_generated",
     inputSchema: {
       type: "object",
       properties: {
@@ -509,7 +509,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "global",
     targetAudience:
       "Any developer — vendor assessment, lead qualification, security monitoring",
-    transparencyTag: null,
+    transparencyTag: "algorithmic",
     inputSchema: {
       type: "object",
       properties: { domain: { type: "string" } },
@@ -569,7 +569,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "global",
     targetAudience:
       "Any developer building research agents, RAG pipelines, content ingestion",
-    transparencyTag: "ai_generated",
+    transparencyTag: "mixed",
     inputSchema: {
       type: "object",
       properties: { url: { type: "string", format: "uri" } },
@@ -613,7 +613,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "near-zero",
     geography: "global",
     targetAudience: "Any company sending email",
-    transparencyTag: null,
+    transparencyTag: "algorithmic",
     inputSchema: {
       type: "object",
       properties: { domain: { type: "string" } },
@@ -666,7 +666,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "low",
     geography: "global",
     targetAudience: "Ops teams, B2B SaaS, security monitoring",
-    transparencyTag: null,
+    transparencyTag: "algorithmic",
     inputSchema: {
       type: "object",
       properties: { domain: { type: "string" } },
@@ -718,7 +718,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "eu",
     targetAudience:
       "Kry/Livi, Spotify, any Stockholm AI startup. August 2026 enforcement deadline.",
-    transparencyTag: "ai_generated",
+    transparencyTag: "mixed",
     inputSchema: {
       type: "object",
       properties: {
