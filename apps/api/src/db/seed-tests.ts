@@ -183,10 +183,10 @@ const TESTS: TestDef[] = [
 
   // ── vat-validate ──
   { capabilitySlug: "vat-validate", testName: "Spotify SE VAT — valid", testType: "known_answer",
-    input: { vat_number: "SE559106808901" },
+    input: { vat_number: "SE556703748501" },
     validationRules: checks(isTrue("valid")) },
-  { capabilitySlug: "vat-validate", testName: "Novo Nordisk DK VAT — valid", testType: "known_answer",
-    input: { vat_number: "DK24256790" },
+  { capabilitySlug: "vat-validate", testName: "LEGO DK VAT — valid", testType: "known_answer",
+    input: { vat_number: "DK54562519" },
     validationRules: checks(isTrue("valid")) },
   { capabilitySlug: "vat-validate", testName: "Google Germany VAT — valid", testType: "known_answer",
     input: { vat_number: "DE811128135" },
@@ -195,7 +195,7 @@ const TESTS: TestDef[] = [
     input: { vat_number: "SE000000000000" },
     validationRules: checks(isFalse("valid")) },
   { capabilitySlug: "vat-validate", testName: "VAT with spaces", testType: "edge_case",
-    input: { vat_number: "SE 5591 0680 8901" },
+    input: { vat_number: "SE 5567 0374 8501" },
     validationRules: checks() },
 
   // ── exchange-rate ──
