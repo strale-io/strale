@@ -30,6 +30,7 @@ interface SolutionDef {
   geography: string;
   targetAudience: string;
   transparencyTag: string | null;
+  extendsWith: string[];
   inputSchema: Record<string, unknown>;
   exampleInput?: Record<string, unknown>;
   exampleOutput?: Record<string, unknown>;
@@ -52,6 +53,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "nordic",
     targetAudience: "Klarna, Trustly, Tink, Pleo, Anyfin, Bits",
     transparencyTag: "mixed",
+    extendsWith: ["credit-report-summary", "annual-report-extract", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -111,6 +113,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "nordic",
     targetAudience: "DNB, Vipps, Cognite",
     transparencyTag: "mixed",
+    extendsWith: ["credit-report-summary", "annual-report-extract", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -170,6 +173,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "nordic",
     targetAudience: "Pleo, Lunar, Trustpilot",
     transparencyTag: "mixed",
+    extendsWith: ["credit-report-summary", "annual-report-extract", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -226,6 +230,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "nordic",
     targetAudience: "Wolt, Supercell, Smartly.io",
     transparencyTag: "mixed",
+    extendsWith: ["credit-report-summary", "annual-report-extract", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -285,6 +290,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "eu",
     targetAudience: "Trustly, Klarna, Tink, Pleo",
     transparencyTag: "algorithmic",
+    extendsWith: ["exchange-rate", "sanctions-check", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -337,6 +343,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "eu",
     targetAudience: "Trustly, Klarna, Tink",
     transparencyTag: "algorithmic",
+    extendsWith: ["sanctions-check", "bank-bic-lookup", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -404,6 +411,7 @@ const SOLUTIONS: SolutionDef[] = [
     targetAudience:
       "US developers building SDR agents, outbound sales bots, lead gen pipelines",
     transparencyTag: "algorithmic",
+    extendsWith: ["company-enrich", "social-profile-check", "whois-lookup"],
     inputSchema: {
       type: "object",
       properties: { email: { type: "string", format: "email" } },
@@ -458,6 +466,7 @@ const SOLUTIONS: SolutionDef[] = [
     targetAudience:
       "US developers doing vendor/partner onboarding, compliance teams",
     transparencyTag: "ai_generated",
+    extendsWith: ["domain-reputation", "social-profile-check", "credit-report-summary"],
     inputSchema: {
       type: "object",
       properties: {
@@ -510,6 +519,7 @@ const SOLUTIONS: SolutionDef[] = [
     targetAudience:
       "Any developer — vendor assessment, lead qualification, security monitoring",
     transparencyTag: "algorithmic",
+    extendsWith: ["tech-stack-detect", "page-speed-test", "backlink-check"],
     inputSchema: {
       type: "object",
       properties: { domain: { type: "string" } },
@@ -570,6 +580,7 @@ const SOLUTIONS: SolutionDef[] = [
     targetAudience:
       "Any developer building research agents, RAG pipelines, content ingestion",
     transparencyTag: "mixed",
+    extendsWith: ["structured-scrape", "translate", "summarize"],
     inputSchema: {
       type: "object",
       properties: { url: { type: "string", format: "uri" } },
@@ -614,6 +625,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "global",
     targetAudience: "Any company sending email",
     transparencyTag: "algorithmic",
+    extendsWith: ["domain-reputation", "whois-lookup", "tech-stack-detect"],
     inputSchema: {
       type: "object",
       properties: { domain: { type: "string" } },
@@ -667,6 +679,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "global",
     targetAudience: "Ops teams, B2B SaaS, security monitoring",
     transparencyTag: "algorithmic",
+    extendsWith: ["dns-lookup", "whois-lookup", "domain-reputation"],
     inputSchema: {
       type: "object",
       properties: { domain: { type: "string" } },
@@ -719,6 +732,7 @@ const SOLUTIONS: SolutionDef[] = [
     targetAudience:
       "Kry/Livi, Spotify, any Stockholm AI startup. August 2026 enforcement deadline.",
     transparencyTag: "mixed",
+    extendsWith: ["gdpr-website-check", "privacy-policy-analyze", "cookie-scan"],
     inputSchema: {
       type: "object",
       properties: {
@@ -794,6 +808,7 @@ const SOLUTIONS: SolutionDef[] = [
     targetAudience:
       "Sinch, Spotify, Kry, any EU SaaS assessing vendor/partner compliance",
     transparencyTag: "mixed",
+    extendsWith: ["tech-stack-detect", "domain-reputation", "dns-lookup"],
     inputSchema: {
       type: "object",
       properties: {
@@ -870,6 +885,7 @@ const SOLUTIONS: SolutionDef[] = [
     targetAudience:
       "Any growth-stage startup — fundraising prep, GTM positioning, market research",
     transparencyTag: "mixed",
+    extendsWith: ["page-speed-test", "backlink-check", "domain-reputation"],
     inputSchema: {
       type: "object",
       properties: {
@@ -929,9 +945,12 @@ const SOLUTIONS: SolutionDef[] = [
 async function seed() {
   const db = getDb();
 
-  // Collect all capability slugs referenced by solutions
+  // Collect all capability slugs referenced by solutions (steps + extendsWith)
   const allSlugs = [
-    ...new Set(SOLUTIONS.flatMap((s) => s.steps.map((st) => st.capabilitySlug))),
+    ...new Set([
+      ...SOLUTIONS.flatMap((s) => s.steps.map((st) => st.capabilitySlug)),
+      ...SOLUTIONS.flatMap((s) => s.extendsWith),
+    ]),
   ];
 
   // Verify they exist in the database
@@ -990,6 +1009,7 @@ async function seed() {
             targetAudience: sol.targetAudience,
             marketingName: sol.marketingName,
             transparencyTag: sol.transparencyTag,
+            extendsWith: sol.extendsWith,
             displayOrder: seeded,
             updatedAt: new Date(),
           })
@@ -1020,6 +1040,7 @@ async function seed() {
             targetAudience: sol.targetAudience,
             marketingName: sol.marketingName,
             transparencyTag: sol.transparencyTag,
+            extendsWith: sol.extendsWith,
             displayOrder: seeded,
           })
           .returning({ id: solutions.id });

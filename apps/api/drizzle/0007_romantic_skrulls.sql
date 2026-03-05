@@ -1,0 +1,1 @@
+ALTER TABLE "solutions" ADD COLUMN "extends_with" jsonb DEFAULT '[]'::jsonb;

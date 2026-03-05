@@ -204,6 +204,7 @@ export const solutions = pgTable("solutions", {
   marketingName: varchar("marketing_name", { length: 255 }),
   transparencyTag: varchar("transparency_tag", { length: 30 }),
   // null = all algorithmic, "ai_generated", "mixed"
+  extendsWith: jsonb("extends_with").$type<string[]>().default([]),
   isActive: boolean("is_active").notNull().default(true),
   displayOrder: integer("display_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })

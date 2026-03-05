@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, ne, asc } from "drizzle-orm";
+import { eq, and, ne, asc, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { solutions, solutionSteps, capabilities } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
@@ -96,6 +96,21 @@ solutionsRoute.get("/:slug", async (c) => {
     .where(eq(solutionSteps.solutionId, sol.id))
     .orderBy(asc(solutionSteps.stepOrder));
 
+  // Fetch extends_with capabilities
+  const extendsSlugs = (sol.extendsWith as string[] | null) ?? [];
+  const extendsCaps = extendsSlugs.length > 0
+    ? await db
+        .select({
+          slug: capabilities.slug,
+          name: capabilities.name,
+          description: capabilities.description,
+          priceCents: capabilities.priceCents,
+          category: capabilities.category,
+        })
+        .from(capabilities)
+        .where(inArray(capabilities.slug, extendsSlugs))
+    : [];
+
   // Related solutions: same category, max 4, excluding current
   const related = await db
     .select({
@@ -137,6 +152,13 @@ solutionsRoute.get("/:slug", async (c) => {
       canParallel: s.canParallel,
       parallelGroup: s.parallelGroup,
       inputMap: s.inputMap,
+    })),
+    extendsWith: extendsCaps.map((cap) => ({
+      slug: cap.slug,
+      name: cap.name,
+      description: cap.description,
+      price_cents: cap.priceCents,
+      category: cap.category,
     })),
     relatedSolutions: related,
   });
