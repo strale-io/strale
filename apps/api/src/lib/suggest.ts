@@ -416,6 +416,7 @@ export async function typeahead(
   query: string,
   limit: number,
   geo?: string,
+  typeFilter?: "solution" | "capability",
 ): Promise<TypeaheadResponse> {
   const items = await loadCatalog();
   const qLower = query.toLowerCase().trim();
@@ -428,6 +429,8 @@ export async function typeahead(
   const scored: Array<{ item: CatalogItem; score: number; snippet?: string }> = [];
 
   for (const item of items) {
+    // Type filter: skip items that don't match the requested type
+    if (typeFilter && item.type !== typeFilter) continue;
     let score = 0;
     let snippet: string | undefined;
 
@@ -502,6 +505,11 @@ export async function typeahead(
     }
     return result;
   });
+
+  // Fallback: if type filter produced zero results, retry without filter
+  if (results.length === 0 && typeFilter) {
+    return typeahead(query, limit, geo);
+  }
 
   return { results, total };
 }

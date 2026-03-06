@@ -1,8 +1,9 @@
 import { Hono } from "hono";
-import { eq, and, ne, asc, inArray } from "drizzle-orm";
+import { eq, and, asc, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { solutions, solutionSteps, capabilities } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
+import { getRelatedSolutions } from "../lib/related-items.js";
 import type { AppEnv } from "../types.js";
 
 // Solutions are public — no auth required (catalog data, same as capabilities)
@@ -111,23 +112,8 @@ solutionsRoute.get("/:slug", async (c) => {
         .where(inArray(capabilities.slug, extendsSlugs))
     : [];
 
-  // Related solutions: same category, max 4, excluding current
-  const related = await db
-    .select({
-      slug: solutions.slug,
-      name: solutions.name,
-      priceCents: solutions.priceCents,
-    })
-    .from(solutions)
-    .where(
-      and(
-        eq(solutions.category, sol.category),
-        eq(solutions.isActive, true),
-        ne(solutions.slug, sol.slug),
-      ),
-    )
-    .orderBy(asc(solutions.displayOrder))
-    .limit(4);
+  // Related solutions: smart matching (shared capabilities > same geo > same category)
+  const related = await getRelatedSolutions(sol.slug, 4);
 
   return c.json({
     slug: sol.slug,
@@ -160,6 +146,13 @@ solutionsRoute.get("/:slug", async (c) => {
       price_cents: cap.priceCents,
       category: cap.category,
     })),
-    relatedSolutions: related,
+    relatedSolutions: related.map((r) => ({
+      slug: r.slug,
+      name: r.name,
+      priceCents: r.price_cents,
+      category: r.category,
+      geography: r.geography,
+      reason: r.reason,
+    })),
   });
 });

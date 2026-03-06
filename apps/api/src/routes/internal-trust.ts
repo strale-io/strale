@@ -9,6 +9,7 @@
 import { Hono } from "hono";
 import { eq, and, asc, sql, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { getRelatedCapabilities, getRelatedSolutions } from "../lib/related-items.js";
 import {
   solutions,
   solutionSteps,
@@ -570,4 +571,30 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
 
   setCache(cacheKey, result);
   return c.json(result);
+});
+
+// ─── Related items endpoints ─────────────────────────────────────────────────
+
+// GET /v1/internal/trust/capabilities/:slug/related
+internalTrustRoute.get("/capabilities/:slug/related", async (c) => {
+  const slug = c.req.param("slug");
+  const limitParam = c.req.query("limit");
+  const limit = Math.min(Math.max(limitParam ? parseInt(limitParam, 10) || 4 : 4, 1), 10);
+
+  const related = await getRelatedCapabilities(slug, limit);
+  return c.json(related, 200, {
+    "Cache-Control": "public, max-age=300",
+  });
+});
+
+// GET /v1/internal/trust/solutions/:slug/related
+internalTrustRoute.get("/solutions/:slug/related", async (c) => {
+  const slug = c.req.param("slug");
+  const limitParam = c.req.query("limit");
+  const limit = Math.min(Math.max(limitParam ? parseInt(limitParam, 10) || 4 : 4, 1), 10);
+
+  const related = await getRelatedSolutions(slug, limit);
+  return c.json(related, 200, {
+    "Cache-Control": "public, max-age=300",
+  });
 });

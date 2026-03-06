@@ -19,8 +19,10 @@ suggestRoute.get("/suggest/typeahead", rateLimitByIp(30, 1000), async (c) => {
   const limitParam = c.req.query("limit");
   const limit = Math.min(Math.max(limitParam ? parseInt(limitParam, 10) || 6 : 6, 1), 10);
   const geo = c.req.query("geo") || undefined;
+  const typeParam = c.req.query("type");
+  const typeFilter = typeParam === "solution" || typeParam === "capability" ? typeParam : undefined;
 
-  const result = await typeahead(q, limit, geo);
+  const result = await typeahead(q, limit, geo, typeFilter);
 
   return c.json(result, 200, {
     "Cache-Control": "public, max-age=30",
