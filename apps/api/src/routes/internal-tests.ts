@@ -250,12 +250,16 @@ internalTestsRoute.get("/capabilities/:slug/runs", async (c) => {
   if (cached) return c.json(cached);
 
   const db = getDb();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const cutoff = thirtyDaysAgo.toISOString();
 
-  // Get total number of distinct runs
+  // Get total number of distinct runs (last 30 days)
   const countRows = await db.execute(sql`
     SELECT COUNT(DISTINCT DATE_TRUNC('minute', tr.executed_at))::text AS total_runs
     FROM test_results tr
     WHERE tr.capability_slug = ${slug}
+      AND tr.executed_at >= ${cutoff}::timestamptz
   `);
   const countData = (Array.isArray(countRows) ? countRows : (countRows as any)?.rows ?? []) as any[];
   const totalRuns = parseInt(countData[0]?.total_runs ?? "0", 10);
@@ -270,6 +274,7 @@ internalTestsRoute.get("/capabilities/:slug/runs", async (c) => {
       ROUND(AVG(tr.response_time_ms))::text AS avg_response_time_ms
     FROM test_results tr
     WHERE tr.capability_slug = ${slug}
+      AND tr.executed_at >= ${cutoff}::timestamptz
     GROUP BY DATE_TRUNC('minute', tr.executed_at)
     ORDER BY executed_at DESC
     LIMIT ${limit}
@@ -480,12 +485,17 @@ internalTestsRoute.get("/solutions/:slug/runs", async (c) => {
   }
 
   const capSlugs = steps.map((s) => s.capabilitySlug);
+  const slugList = sql.join(capSlugs.map((s) => sql`${s}`), sql`, `);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const cutoff = thirtyDaysAgo.toISOString();
 
-  // Get total number of distinct runs across all solution capabilities
+  // Get total number of distinct runs across all solution capabilities (last 30 days)
   const countRows = await db.execute(sql`
     SELECT COUNT(DISTINCT DATE_TRUNC('minute', tr.executed_at))::text AS total_runs
     FROM test_results tr
-    WHERE tr.capability_slug = ANY(${capSlugs})
+    WHERE tr.capability_slug IN (${slugList})
+      AND tr.executed_at >= ${cutoff}::timestamptz
   `);
   const countData = (Array.isArray(countRows) ? countRows : (countRows as any)?.rows ?? []) as any[];
   const totalRuns = parseInt(countData[0]?.total_runs ?? "0", 10);
@@ -499,7 +509,8 @@ internalTestsRoute.get("/solutions/:slug/runs", async (c) => {
       SUM(CASE WHEN NOT tr.passed THEN 1 ELSE 0 END)::text AS failed,
       ROUND(AVG(tr.response_time_ms))::text AS avg_response_time_ms
     FROM test_results tr
-    WHERE tr.capability_slug = ANY(${capSlugs})
+    WHERE tr.capability_slug IN (${slugList})
+      AND tr.executed_at >= ${cutoff}::timestamptz
     GROUP BY DATE_TRUNC('minute', tr.executed_at)
     ORDER BY executed_at DESC
     LIMIT ${limit}
@@ -538,7 +549,7 @@ internalTestsRoute.get("/solutions/:slug/runs", async (c) => {
           FROM test_results tr
           INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
           LEFT JOIN capabilities c ON c.slug = tr.capability_slug
-          WHERE tr.capability_slug = ANY(${capSlugs})
+          WHERE tr.capability_slug IN (${slugList})
             AND DATE_TRUNC('minute', tr.executed_at) = ${run.executed_at}::timestamptz
             AND tr.passed = false
         `);
