@@ -601,6 +601,40 @@ internalTestsRoute.get("/solutions/:slug/runs", async (c) => {
   return c.json(result);
 });
 
+// GET /v1/internal/capabilities/:slug/example-output — latest successful test output
+internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
+  const slug = c.req.param("slug");
+
+  const cacheKey = `example-output:${slug}`;
+  const cached = getCached<any>(cacheKey);
+  if (cached) return c.json(cached);
+
+  const db = getDb();
+  const rows = await db.execute(sql`
+    SELECT actual_output, executed_at
+    FROM test_results
+    WHERE capability_slug = ${slug}
+      AND passed = true
+      AND actual_output IS NOT NULL
+    ORDER BY executed_at DESC
+    LIMIT 1
+  `);
+
+  const data = (Array.isArray(rows) ? rows : (rows as any)?.rows ?? []) as any[];
+  if (data.length === 0) {
+    return c.json(apiError("not_found", `No successful test output found for '${slug}'.`), 404);
+  }
+
+  const row = data[0];
+  const result = {
+    capability_slug: slug,
+    example_output: row.actual_output,
+    captured_at: row.executed_at instanceof Date ? row.executed_at.toISOString() : String(row.executed_at),
+  };
+  setCache(cacheKey, result);
+  return c.json(result);
+});
+
 // GET /v1/internal/tests/health — dependency health checks (free HTTP pings)
 internalTestsRoute.get("/health", async (c) => {
   const results = await runDependencyHealthChecks();
