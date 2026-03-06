@@ -21,7 +21,7 @@ import {
   getCapabilityQuality,
   getSolutionQuality,
 } from "../lib/quality-aggregation.js";
-import { determineBadge, getTestResultsForSlug } from "../lib/trust-helpers.js";
+import { determineBadge, getTestResultsForSlug, getLatestCompleteRunForSolution } from "../lib/trust-helpers.js";
 import { computeHealthState } from "../lib/health-state.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
@@ -434,21 +434,15 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
     }),
   );
 
-  // Aggregate test results across steps
-  const allTestPassed = stepData.reduce((s, d) => s + d.test_results.passed, 0);
-  const allTestFailed = stepData.reduce((s, d) => s + d.test_results.failed, 0);
-  const allTestTotal = stepData.reduce((s, d) => s + d.test_results.total_tests, 0);
-  const allTestWithResults = allTestPassed + allTestFailed;
-  const allTestResponseTime = stepData.reduce(
-    (s, d) =>
-      s + (d.test_results.avg_response_time_ms ?? 0) * (d.test_results.passed + d.test_results.failed),
-    0,
-  );
-  const testLastRuns = stepData
-    .map((d) => d.test_results.last_run)
-    .filter((t): t is string => t !== null)
-    .sort();
-  const lastTestRun = testLastRuns[testLastRuns.length - 1] ?? null;
+  // Get the most recent COMPLETE run (all steps tested) for solution-level metrics
+  const capSlugs = steps.map((s) => s.capabilitySlug);
+  const completeRun = await getLatestCompleteRunForSolution(capSlugs, steps.length);
+
+  // Use complete-run data for solution-level test_results (matches /runs endpoint)
+  const allTestPassed = completeRun?.passed ?? 0;
+  const allTestFailed = completeRun?.failed ?? 0;
+  const allTestTotal = completeRun?.total_tests ?? 0;
+  const lastTestRun = completeRun?.last_run ?? null;
 
   // Solution next_scheduled_run = earliest across all steps
   const nextRuns = stepData
@@ -465,9 +459,6 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
   // Aggregate 30-day history across all step capabilities
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const capSlugs = steps.map((s) => s.capabilitySlug);
-  // Use the latest result per test suite per day (not daily average)
-  // so the chart matches the hero metric which shows latest state
   const historyRows = await db.execute(sql`
     WITH latest_per_suite_per_day AS (
       SELECT DISTINCT ON (tr.test_suite_id, DATE(tr.executed_at AT TIME ZONE 'UTC'))
@@ -506,6 +497,10 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
     solutionQuality?.successRate ?? null,
   );
 
+  // Use complete-run by_type and failures (from actual execution counts, not suite counts)
+  const completeByType = completeRun?.by_type ?? aggregateByType(stepData);
+  const completeFailures = completeRun?.failures ?? [];
+
   const result = {
     solution_slug: slug,
     trust_summary: {
@@ -529,16 +524,10 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
         total_tests: allTestTotal,
         passed: allTestPassed,
         failed: allTestFailed,
-        pass_rate:
-          allTestWithResults > 0
-            ? parseFloat(((allTestPassed / allTestWithResults) * 100).toFixed(1))
-            : null,
-        avg_response_time_ms:
-          allTestWithResults > 0
-            ? Math.round(allTestResponseTime / allTestWithResults)
-            : null,
-        by_type: aggregateByType(stepData),
-        ...aggregateFailures(stepData),
+        pass_rate: completeRun?.pass_rate ?? null,
+        avg_response_time_ms: completeRun?.avg_response_time_ms ?? null,
+        by_type: completeByType,
+        ...(completeFailures.length > 0 ? { failures: completeFailures } : {}),
         history_30d: history,
       },
       quality_narrative: generateQualityNarrative(stepData),

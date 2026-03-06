@@ -2,6 +2,122 @@ import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { testSuites, testResults } from "../db/schema.js";
 
+// ─── Solution complete-run helpers ───────────────────────────────────────────
+
+/**
+ * Get the most recent complete solution run (where all steps were tested).
+ * Uses 30-minute time windows to group cross-step capability tests.
+ * Returns timestamp, passed, failed, total, avg_response_time_ms, by_type, failures.
+ */
+export async function getLatestCompleteRunForSolution(
+  capabilitySlugs: string[],
+  stepCount: number,
+): Promise<{
+  last_run: string | null;
+  total_tests: number;
+  passed: number;
+  failed: number;
+  pass_rate: number | null;
+  avg_response_time_ms: number | null;
+  by_type: Record<string, { total: number; passed: number; failed: number }>;
+  failures: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: "upstream" | "internal" | "unknown"; capability_slug: string }>;
+} | null> {
+  const db = getDb();
+  const slugList = sql.join(capabilitySlugs.map((s) => sql`${s}`), sql`, `);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const cutoff = thirtyDaysAgo.toISOString();
+  const bucket = sql`TO_TIMESTAMP(FLOOR(EXTRACT(EPOCH FROM tr.executed_at) / 1800) * 1800)`;
+
+  // Find the most recent 30-min window where all steps were tested
+  const windowRows = await db.execute(sql`
+    SELECT
+      ${bucket} AS run_window,
+      MAX(tr.executed_at) AS window_end,
+      COUNT(*)::text AS total,
+      SUM(CASE WHEN tr.passed THEN 1 ELSE 0 END)::text AS passed,
+      SUM(CASE WHEN NOT tr.passed THEN 1 ELSE 0 END)::text AS failed,
+      ROUND(AVG(tr.response_time_ms))::text AS avg_response_time_ms
+    FROM test_results tr
+    WHERE tr.capability_slug IN (${slugList})
+      AND tr.executed_at >= ${cutoff}::timestamptz
+    GROUP BY ${bucket}
+    HAVING COUNT(DISTINCT tr.capability_slug) >= ${stepCount}
+    ORDER BY run_window DESC
+    LIMIT 1
+  `);
+
+  const rows = (Array.isArray(windowRows) ? windowRows : (windowRows as any)?.rows ?? []) as any[];
+  if (rows.length === 0) return null;
+
+  const row = rows[0];
+  const total = parseInt(row.total, 10);
+  const passed = parseInt(row.passed, 10);
+  const failed = parseInt(row.failed, 10);
+  const withResults = passed + failed;
+
+  // Get by_type breakdown for this window
+  const typeRows = await db.execute(sql`
+    SELECT
+      ts.test_type,
+      COUNT(*)::text AS total,
+      SUM(CASE WHEN tr.passed THEN 1 ELSE 0 END)::text AS passed,
+      SUM(CASE WHEN NOT tr.passed THEN 1 ELSE 0 END)::text AS failed
+    FROM test_results tr
+    INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
+    WHERE tr.capability_slug IN (${slugList})
+      AND ${bucket} = ${row.run_window}::timestamptz
+    GROUP BY ts.test_type
+  `);
+  const typeData = (Array.isArray(typeRows) ? typeRows : (typeRows as any)?.rows ?? []) as any[];
+  const by_type: Record<string, { total: number; passed: number; failed: number }> = {};
+  for (const t of typeData) {
+    by_type[t.test_type ?? "unknown"] = {
+      total: parseInt(t.total, 10),
+      passed: parseInt(t.passed, 10),
+      failed: parseInt(t.failed, 10),
+    };
+  }
+
+  // Get failures for this window
+  const failures: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: "upstream" | "internal" | "unknown"; capability_slug: string }> = [];
+  if (failed > 0) {
+    const failRows = await db.execute(sql`
+      SELECT
+        ts.test_name,
+        ts.test_type,
+        tr.capability_slug,
+        tr.failure_reason
+      FROM test_results tr
+      INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
+      WHERE tr.capability_slug IN (${slugList})
+        AND ${bucket} = ${row.run_window}::timestamptz
+        AND tr.passed = false
+    `);
+    const failData = (Array.isArray(failRows) ? failRows : (failRows as any)?.rows ?? []) as any[];
+    for (const f of failData) {
+      failures.push({
+        test_name: f.test_name,
+        test_type: f.test_type ?? "unknown",
+        failure_reason: f.failure_reason ?? "Unknown",
+        failure_category: categorizeFailureReason(f.failure_reason),
+        capability_slug: f.capability_slug,
+      });
+    }
+  }
+
+  return {
+    last_run: row.window_end instanceof Date ? row.window_end.toISOString() : String(row.window_end),
+    total_tests: total,
+    passed,
+    failed,
+    pass_rate: withResults > 0 ? parseFloat(((passed / withResults) * 100).toFixed(1)) : null,
+    avg_response_time_ms: withResults > 0 ? parseInt(row.avg_response_time_ms, 10) : null,
+    by_type,
+    failures,
+  };
+}
+
 // ─── Badge logic ────────────────────────────────────────────────────────────
 
 export function determineBadge(
