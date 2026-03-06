@@ -401,6 +401,8 @@ export interface TypeaheadResult {
   category: string;
   price_cents: number | null;
   geography: string | null;
+  sqs_score: number | null;
+  sqs_label: string | null;
   step_count?: number;
   match_snippet?: string;
 }
@@ -489,6 +491,8 @@ export async function typeahead(
       // DEC-20260304-A: price_cents MUST be null for capabilities
       price_cents: item.type === "solution" ? item.priceCents : null,
       geography: item.geography,
+      sqs_score: item.trustSummary?.sqs_score ?? null,
+      sqs_label: item.trustSummary?.sqs_label ?? null,
     };
     if (item.type === "solution" && item.stepCount) {
       result.step_count = item.stepCount;
