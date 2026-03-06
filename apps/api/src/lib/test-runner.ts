@@ -11,6 +11,7 @@ import {
 import { getExecutor } from "../capabilities/index.js";
 import type { CapabilityResult } from "../capabilities/index.js";
 import { computeHealthState } from "./health-state.js";
+import { sanitizeErrorMessage } from "./trust-helpers.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -435,7 +436,7 @@ async function runRegressionTest(
 
   if (executionError || !currentOutput) {
     const failureReason = executionError
-      ? `Execution error: ${executionError}`
+      ? `Execution error: ${sanitizeErrorMessage(executionError) ?? executionError}`
       : "No output returned";
     await db.insert(testResults).values({
       testSuiteId: suite.id,
@@ -542,7 +543,7 @@ function validateResult(
   }
 
   if (executionError) {
-    return { passed: false, failureReason: `Execution error: ${executionError}` };
+    return { passed: false, failureReason: `Execution error: ${sanitizeErrorMessage(executionError) ?? executionError}` };
   }
 
   if (!capResult) {

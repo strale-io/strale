@@ -99,7 +99,7 @@ export async function getLatestCompleteRunForSolution(
       failures.push({
         test_name: f.test_name,
         test_type: f.test_type ?? "unknown",
-        failure_reason: f.failure_reason ?? "Unknown",
+        failure_reason: sanitizeErrorMessage(f.failure_reason) ?? "Unknown",
         failure_category: categorizeFailureReason(f.failure_reason),
         capability_slug: f.capability_slug,
       });
@@ -151,6 +151,17 @@ export function determineBadge(
     badge: "strale_tested",
     badge_label: "Tested by Strale's automated quality suite",
   };
+}
+
+// ─── Failure sanitization ────────────────────────────────────────────────────
+
+/** Strip HTML tags and collapse whitespace from error messages */
+export function sanitizeErrorMessage(msg: string | null): string | null {
+  if (!msg) return msg;
+  let clean = msg.replace(/<[^>]*>/g, "");
+  clean = clean.replace(/\s+/g, " ").trim();
+  if (clean.length > 500) clean = clean.slice(0, 497) + "...";
+  return clean;
 }
 
 // ─── Failure categorization ─────────────────────────────────────────────────
@@ -215,7 +226,7 @@ export async function getTestResultsForSlug(slug: string) {
           failures.push({
             test_name: suite.testName,
             test_type: testType,
-            failure_reason: latest.failureReason,
+            failure_reason: sanitizeErrorMessage(latest.failureReason) ?? latest.failureReason,
             failure_category: categorizeFailureReason(latest.failureReason),
           });
         }
