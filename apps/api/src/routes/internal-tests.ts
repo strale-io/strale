@@ -11,6 +11,7 @@ import {
 import { runTests } from "../lib/test-runner.js";
 import type { ScheduleTier } from "../lib/test-runner.js";
 import { categorizeFailureReason } from "../lib/trust-helpers.js";
+import { runDependencyHealthChecks } from "../lib/dependency-health.js";
 import { apiError } from "../lib/errors.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import type { AppEnv } from "../types.js";
@@ -416,5 +417,15 @@ internalTestsRoute.get("/solutions/:slug", async (c) => {
         ? Math.round(allResponseTime / allWithResults)
         : null,
     steps: stepResults,
+  });
+});
+
+// GET /v1/internal/tests/health — dependency health checks (free HTTP pings)
+internalTestsRoute.get("/health", async (c) => {
+  const results = await runDependencyHealthChecks();
+  const allHealthy = Object.values(results).every((r) => r.healthy);
+  return c.json({
+    status: allHealthy ? "healthy" : "degraded",
+    dependencies: results,
   });
 });

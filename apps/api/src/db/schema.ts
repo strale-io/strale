@@ -261,6 +261,8 @@ export const testSuites = pgTable(
     scheduleTier: text("schedule_tier").notNull().default("B"),
     // 'A' = every 6h (cheap), 'B' = every 24h (moderate), 'C' = every 72h (expensive)
     estimatedCostCents: integer("estimated_cost_cents").notNull().default(0),
+    baselineOutput: jsonb("baseline_output"),
+    baselineCapturedAt: timestamp("baseline_captured_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

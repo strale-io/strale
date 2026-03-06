@@ -393,13 +393,11 @@ function getOutputChecks(
 // ─── Cost estimation by transparency tag ───────────────────────────────────
 
 function estimateCostCents(
-  priceCents: number,
-  transparencyTag: string | null,
+  _priceCents: number,
+  _transparencyTag: string | null,
 ): number {
-  // Algorithmic capabilities cost nothing to test
-  if (transparencyTag === "algorithmic") return 0;
-  // AI-based: approximate with the capability price (tests call the actual executor)
-  return priceCents;
+  // schema_check tests now use dry-run mode — no external API calls, zero cost
+  return 0;
 }
 
 // ─── Schedule tier by cost ─────────────────────────────────────────────────

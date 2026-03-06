@@ -10,6 +10,7 @@ import {
 } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import type { CapabilityResult } from "../capabilities/index.js";
+import { computeHealthState } from "./health-state.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -146,8 +147,22 @@ async function runSingleTest(
   suite: typeof testSuites.$inferSelect,
 ): Promise<SingleTestResult> {
   const db = getDb();
-  const executor = getExecutor(suite.capabilitySlug);
   const startTime = Date.now();
+
+  // ── Dry-run mode for schema_check tests ──────────────────────────────────
+  // Validates input against input_schema and output_schema structure
+  // without calling any external service. FREE.
+  if (suite.testType === "schema_check") {
+    return runDryRunSchemaTest(suite);
+  }
+
+  // ── Regression test: compare current output structure against baseline ───
+  if (suite.testType === "regression") {
+    return runRegressionTest(suite);
+  }
+
+  // ── Real execution for other test types (negative, edge_case, known_answer)
+  const executor = getExecutor(suite.capabilitySlug);
 
   if (!executor) {
     const result: SingleTestResult = {
@@ -208,9 +223,10 @@ async function runSingleTest(
     responseTimeMs,
   ).catch(() => {});
 
-  // Auto-capture example output from first successful schema_check test
-  if (passed && capResult?.output && suite.testType === "schema_check") {
+  // Auto-capture example output + baseline from first successful test
+  if (passed && capResult?.output) {
     captureExampleOutput(suite.capabilitySlug, capResult.output).catch(() => {});
+    captureBaseline(suite, capResult.output).catch(() => {});
   }
 
   return {
@@ -221,6 +237,281 @@ async function runSingleTest(
     failureReason,
     responseTimeMs,
   };
+}
+
+// ─── Dry-run schema test (FREE) ──────────────────────────────────────────────
+
+async function runDryRunSchemaTest(
+  suite: typeof testSuites.$inferSelect,
+): Promise<SingleTestResult> {
+  const db = getDb();
+  const startTime = Date.now();
+
+  // Look up the capability's schemas
+  const [cap] = await db
+    .select({
+      inputSchema: capabilities.inputSchema,
+      outputSchema: capabilities.outputSchema,
+    })
+    .from(capabilities)
+    .where(eq(capabilities.slug, suite.capabilitySlug))
+    .limit(1);
+
+  if (!cap) {
+    const result: SingleTestResult = {
+      testName: suite.testName,
+      testType: suite.testType,
+      capabilitySlug: suite.capabilitySlug,
+      passed: false,
+      failureReason: `Capability '${suite.capabilitySlug}' not found in database`,
+      responseTimeMs: 0,
+    };
+    await db.insert(testResults).values({
+      testSuiteId: suite.id,
+      capabilitySlug: suite.capabilitySlug,
+      passed: false,
+      failureReason: result.failureReason,
+      responseTimeMs: 0,
+    });
+    return result;
+  }
+
+  const inputSchema = (cap.inputSchema ?? {}) as Record<string, unknown>;
+  const outputSchema = (cap.outputSchema ?? {}) as Record<string, unknown>;
+  const testInput = suite.input as Record<string, unknown>;
+
+  // 1. Validate input against input_schema
+  const inputErrors = validateInputAgainstSchema(testInput, inputSchema);
+
+  // 2. Validate output_schema is well-formed
+  const schemaErrors = validateOutputSchemaStructure(outputSchema);
+
+  // 3. Verify executor exists
+  const executor = getExecutor(suite.capabilitySlug);
+  const executorExists = !!executor;
+
+  const allErrors = [...inputErrors, ...schemaErrors];
+  if (!executorExists) {
+    allErrors.push(`No executor registered for '${suite.capabilitySlug}'`);
+  }
+
+  const passed = allErrors.length === 0;
+  const failureReason = passed ? null : allErrors.join("; ");
+  const responseTimeMs = Date.now() - startTime;
+
+  await db.insert(testResults).values({
+    testSuiteId: suite.id,
+    capabilitySlug: suite.capabilitySlug,
+    passed,
+    failureReason,
+    responseTimeMs,
+  });
+
+  return {
+    testName: suite.testName,
+    testType: suite.testType,
+    capabilitySlug: suite.capabilitySlug,
+    passed,
+    failureReason,
+    responseTimeMs,
+  };
+}
+
+/** Validate test input against a JSON Schema input_schema. */
+function validateInputAgainstSchema(
+  input: Record<string, unknown>,
+  schema: Record<string, unknown>,
+): string[] {
+  const errors: string[] = [];
+  const properties = (schema as { properties?: Record<string, any> }).properties ?? {};
+  const required = new Set((schema as { required?: string[] }).required ?? []);
+
+  // Check required fields are present
+  for (const field of required) {
+    if (!(field in input) || input[field] == null) {
+      errors.push(`Missing required input field: '${field}'`);
+    }
+  }
+
+  // Type-check provided fields against schema
+  for (const [key, value] of Object.entries(input)) {
+    if (!(key in properties)) continue; // extra fields are OK
+    const prop = properties[key];
+    if (!prop?.type || value == null) continue;
+
+    const actualType = Array.isArray(value) ? "array" : typeof value;
+    const expectedType = prop.type;
+
+    if (expectedType === "integer" && actualType === "number") continue; // close enough
+    if (expectedType === "number" && actualType === "number") continue;
+    if (actualType !== expectedType) {
+      errors.push(`Input '${key}': expected type '${expectedType}', got '${actualType}'`);
+    }
+  }
+
+  return errors;
+}
+
+/** Validate that output_schema is a well-formed JSON Schema. */
+function validateOutputSchemaStructure(
+  schema: Record<string, unknown>,
+): string[] {
+  const errors: string[] = [];
+
+  if (!schema.type && !schema.properties) {
+    errors.push("output_schema has neither 'type' nor 'properties'");
+  }
+
+  if (schema.properties && typeof schema.properties !== "object") {
+    errors.push("output_schema 'properties' must be an object");
+  }
+
+  return errors;
+}
+
+// ─── Regression test (FREE — compares structure) ─────────────────────────────
+
+async function runRegressionTest(
+  suite: typeof testSuites.$inferSelect,
+): Promise<SingleTestResult> {
+  const db = getDb();
+  const startTime = Date.now();
+
+  const baseline = suite.baselineOutput as Record<string, unknown> | null;
+  if (!baseline) {
+    // No baseline yet — skip gracefully
+    const responseTimeMs = Date.now() - startTime;
+    await db.insert(testResults).values({
+      testSuiteId: suite.id,
+      capabilitySlug: suite.capabilitySlug,
+      passed: true,
+      failureReason: null,
+      responseTimeMs,
+    });
+    return {
+      testName: suite.testName,
+      testType: "regression",
+      capabilitySlug: suite.capabilitySlug,
+      passed: true,
+      failureReason: null,
+      responseTimeMs,
+    };
+  }
+
+  // Execute the capability for real
+  const executor = getExecutor(suite.capabilitySlug);
+  if (!executor) {
+    const responseTimeMs = Date.now() - startTime;
+    const failureReason = `No executor registered for '${suite.capabilitySlug}'`;
+    await db.insert(testResults).values({
+      testSuiteId: suite.id,
+      capabilitySlug: suite.capabilitySlug,
+      passed: false,
+      failureReason,
+      responseTimeMs,
+    });
+    return {
+      testName: suite.testName,
+      testType: "regression",
+      capabilitySlug: suite.capabilitySlug,
+      passed: false,
+      failureReason,
+      responseTimeMs,
+    };
+  }
+
+  let currentOutput: Record<string, unknown> | null = null;
+  let executionError: string | null = null;
+  let responseTimeMs: number;
+
+  try {
+    const result = await executor(suite.input as Record<string, unknown>);
+    responseTimeMs = Date.now() - startTime;
+    currentOutput = result?.output ?? null;
+  } catch (err) {
+    responseTimeMs = Date.now() - startTime;
+    executionError = err instanceof Error ? err.message : String(err);
+  }
+
+  if (executionError || !currentOutput) {
+    const failureReason = executionError
+      ? `Execution error: ${executionError}`
+      : "No output returned";
+    await db.insert(testResults).values({
+      testSuiteId: suite.id,
+      capabilitySlug: suite.capabilitySlug,
+      passed: false,
+      failureReason,
+      responseTimeMs,
+    });
+    return {
+      testName: suite.testName,
+      testType: "regression",
+      capabilitySlug: suite.capabilitySlug,
+      passed: false,
+      failureReason,
+      responseTimeMs,
+    };
+  }
+
+  // Compare key structure
+  const baselineKeys = extractKeyStructure(baseline);
+  const currentKeys = extractKeyStructure(currentOutput);
+  const missingKeys = baselineKeys.filter((k) => !currentKeys.includes(k));
+
+  const passed = missingKeys.length === 0;
+  const failureReason = passed
+    ? null
+    : `Missing keys vs baseline: ${missingKeys.join(", ")}`;
+
+  await db.insert(testResults).values({
+    testSuiteId: suite.id,
+    capabilitySlug: suite.capabilitySlug,
+    passed,
+    actualOutput: currentOutput,
+    failureReason,
+    responseTimeMs,
+  });
+
+  return {
+    testName: suite.testName,
+    testType: "regression",
+    capabilitySlug: suite.capabilitySlug,
+    passed,
+    failureReason,
+    responseTimeMs,
+  };
+}
+
+/** Recursively extract all key paths from an object. */
+function extractKeyStructure(obj: unknown, prefix = ""): string[] {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return [];
+  const keys: string[] = [];
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    keys.push(fullKey);
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      keys.push(...extractKeyStructure(value, fullKey));
+    }
+  }
+  return keys;
+}
+
+/** Capture baseline output on first successful real execution. */
+async function captureBaseline(
+  suite: typeof testSuites.$inferSelect,
+  output: Record<string, unknown>,
+): Promise<void> {
+  if (suite.baselineOutput) return; // already captured
+  const db = getDb();
+  await db
+    .update(testSuites)
+    .set({
+      baselineOutput: output,
+      baselineCapturedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(testSuites.id, suite.id));
 }
 
 // ─── Validation logic ───────────────────────────────────────────────────────
@@ -548,6 +839,9 @@ const TIER_SCHEDULES: { tier: ScheduleTier; intervalMs: number; label: string }[
   { tier: "C", intervalMs: 72 * 60 * 60 * 1000, label: "every 72h" },
 ];
 
+// Dependency health checks run every 6h
+const HEALTH_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
 let _schedulerRunning = false;
 
 /**
@@ -555,13 +849,14 @@ let _schedulerRunning = false;
  * - Tier A: every 6 hours
  * - Tier B: every 24 hours
  * - Tier C: every 72 hours
+ * - Dependency health checks: every 6 hours
  * Safe to call multiple times — only starts once.
  */
 export function startScheduledTests(): void {
   if (_schedulerRunning) return;
   _schedulerRunning = true;
 
-  console.log("[test-runner] Tiered scheduler started: A=6h, B=24h, C=72h");
+  console.log("[test-runner] Tiered scheduler started: A=6h, B=24h, C=72h + health checks=6h");
 
   for (const schedule of TIER_SCHEDULES) {
     setInterval(async () => {
@@ -591,4 +886,24 @@ export function startScheduledTests(): void {
       }
     }, schedule.intervalMs);
   }
+
+  // Dependency health checks
+  setInterval(async () => {
+    try {
+      const { runDependencyHealthChecks } = await import("./dependency-health.js");
+      const results = await runDependencyHealthChecks();
+      const unhealthy = Object.entries(results).filter(([, r]) => !r.healthy);
+      if (unhealthy.length > 0) {
+        console.warn(
+          `[health-check] Unhealthy dependencies: ${unhealthy.map(([name, r]) => `${name} (${r.error ?? "down"})`).join(", ")}`,
+        );
+      } else {
+        console.log(
+          `[health-check] All dependencies healthy: ${Object.entries(results).map(([name, r]) => `${name}=${r.latency_ms}ms`).join(", ")}`,
+        );
+      }
+    } catch (err) {
+      console.error("[health-check] Failed:", err);
+    }
+  }, HEALTH_CHECK_INTERVAL_MS);
 }

@@ -20,6 +20,7 @@ import {
 } from "../lib/circuit-breaker.js";
 import { recordQuality } from "../lib/quality-capture.js";
 import { getTestResultsForSlug } from "../lib/trust-helpers.js";
+import { recordPiggybackResult } from "../lib/piggyback-monitor.js";
 import type { AppEnv } from "../types.js";
 
 const MAX_TIMEOUT_SECONDS = 60;
@@ -395,7 +396,7 @@ async function executeSync(
     }
   });
 
-  // ── Record circuit breaker + quality (fire-and-forget) ────────────────
+  // ── Record circuit breaker + quality + piggyback (fire-and-forget) ───
   if (result.ok) {
     recordSuccess(capability.slug).catch(() => {});
     recordQuality({
@@ -404,6 +405,15 @@ async function executeSync(
       output: result.output,
       outputSchema,
     });
+    // Piggyback monitoring: validate output and record as test data point
+    if (result.output) {
+      recordPiggybackResult(
+        capability.slug,
+        result.output,
+        outputSchema,
+        result.latencyMs,
+      ).catch(() => {});
+    }
     // Check transaction milestones (fire-and-forget)
     db.execute(
       sql`SELECT COUNT(*)::text AS count FROM transactions WHERE status = 'completed' AND created_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC')`,
@@ -664,7 +674,7 @@ async function executeInBackground(
       })
       .where(eq(transactions.id, transactionId));
 
-    // Record success for circuit breaker + quality
+    // Record success for circuit breaker + quality + piggyback
     await recordSuccess(capability.slug).catch(() => {});
     recordQuality({
       transactionId,
@@ -672,6 +682,15 @@ async function executeInBackground(
       output: capResult.output,
       outputSchema,
     });
+    // Piggyback monitoring
+    if (capResult.output) {
+      recordPiggybackResult(
+        capability.slug,
+        capResult.output,
+        outputSchema,
+        latencyMs,
+      ).catch(() => {});
+    }
 
     // Check transaction milestones (fire-and-forget)
     db.execute(

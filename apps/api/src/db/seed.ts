@@ -5,6 +5,7 @@ config({ path: resolve(import.meta.dirname, "../../../../.env") });
 
 import { getDb } from "./index.js";
 import { capabilities } from "./schema.js";
+import { onCapabilityCreated } from "../lib/capability-onboarding.js";
 
 const seedCapabilities = [
   {
@@ -2414,6 +2415,10 @@ async function seed() {
           updatedAt: new Date(),
         },
       });
+    // Auto-generate test suites for new capabilities (fire-and-forget)
+    await onCapabilityCreated(cap.slug).catch((err) => {
+      console.warn(`  [onboarding] Failed for ${cap.slug}: ${err.message}`);
+    });
     console.log(`  ✓ ${cap.slug} (€${(cap.priceCents / 100).toFixed(2)})`);
   }
 
