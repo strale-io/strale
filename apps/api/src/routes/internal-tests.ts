@@ -7,6 +7,7 @@ import {
   testResults,
   solutions,
   solutionSteps,
+  capabilities,
 } from "../db/schema.js";
 import { runTests } from "../lib/test-runner.js";
 import type { ScheduleTier } from "../lib/test-runner.js";
@@ -17,6 +18,20 @@ import { rateLimitByIp } from "../lib/rate-limit.js";
 import type { AppEnv } from "../types.js";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
+
+// ─── In-memory cache (5-min TTL) ────────────────────────────────────────────
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const cache = new Map<string, { data: unknown; expiresAt: number }>();
+
+function getCached<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (!entry || Date.now() > entry.expiresAt) return null;
+  return entry.data as T;
+}
+
+function setCache<T>(key: string, data: T): void {
+  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+}
 
 /** Constant-time comparison for admin auth to prevent timing attacks. */
 function isValidAdminAuth(auth: string | undefined): boolean {
@@ -227,14 +242,28 @@ internalTestsRoute.get("/capabilities/:slug/history", async (c) => {
 // GET /v1/internal/tests/capabilities/:slug/runs — individual test runs, newest first
 internalTestsRoute.get("/capabilities/:slug/runs", async (c) => {
   const slug = c.req.param("slug");
-  const limit = Math.min(parseInt(c.req.query("limit") ?? "20", 10), 100);
+  const limit = Math.min(parseInt(c.req.query("limit") ?? "10", 10), 50);
   const offset = parseInt(c.req.query("offset") ?? "0", 10);
+
+  const cacheKey = `test-runs:cap:${slug}:${limit}:${offset}`;
+  const cached = getCached<any>(cacheKey);
+  if (cached) return c.json(cached);
+
   const db = getDb();
+
+  // Get total number of distinct runs
+  const countRows = await db.execute(sql`
+    SELECT COUNT(DISTINCT DATE_TRUNC('minute', tr.executed_at))::text AS total_runs
+    FROM test_results tr
+    WHERE tr.capability_slug = ${slug}
+  `);
+  const countData = (Array.isArray(countRows) ? countRows : (countRows as any)?.rows ?? []) as any[];
+  const totalRuns = parseInt(countData[0]?.total_runs ?? "0", 10);
 
   // Get distinct run timestamps (grouped by executed_at rounded to the minute)
   const runRows = await db.execute(sql`
     SELECT
-      DATE_TRUNC('minute', tr.executed_at) AS run_at,
+      DATE_TRUNC('minute', tr.executed_at) AS executed_at,
       COUNT(*)::text AS total,
       SUM(CASE WHEN tr.passed THEN 1 ELSE 0 END)::text AS passed,
       SUM(CASE WHEN NOT tr.passed THEN 1 ELSE 0 END)::text AS failed,
@@ -242,7 +271,7 @@ internalTestsRoute.get("/capabilities/:slug/runs", async (c) => {
     FROM test_results tr
     WHERE tr.capability_slug = ${slug}
     GROUP BY DATE_TRUNC('minute', tr.executed_at)
-    ORDER BY run_at DESC
+    ORDER BY executed_at DESC
     LIMIT ${limit}
     OFFSET ${offset}
   `);
@@ -275,7 +304,7 @@ internalTestsRoute.get("/capabilities/:slug/runs", async (c) => {
           FROM test_results tr
           INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
           WHERE tr.capability_slug = ${slug}
-            AND DATE_TRUNC('minute', tr.executed_at) = ${run.run_at}::timestamptz
+            AND DATE_TRUNC('minute', tr.executed_at) = ${run.executed_at}::timestamptz
             AND tr.passed = false
         `);
         const failData = (Array.isArray(failRows) ? failRows : (failRows as any)?.rows ?? []) as any[];
@@ -288,22 +317,25 @@ internalTestsRoute.get("/capabilities/:slug/runs", async (c) => {
       }
 
       return {
-        run_at: run.run_at,
+        executed_at: run.executed_at,
         total,
         passed: passedCount,
         failed: failedCount,
         pass_rate: passRate,
         avg_response_time_ms: parseInt(run.avg_response_time_ms, 10),
-        ...(failures.length > 0 ? { failures } : {}),
+        failures,
       };
     }),
   );
 
-  return c.json({
+  const result = {
     capability_slug: slug,
+    total_runs: totalRuns,
     runs: runsWithDetails,
-    has_more: runs.length === limit,
-  });
+    has_more: offset + runs.length < totalRuns,
+  };
+  setCache(cacheKey, result);
+  return c.json(result);
 });
 
 // GET /v1/internal/tests/solutions/:slug — aggregated across solution steps
@@ -418,6 +450,129 @@ internalTestsRoute.get("/solutions/:slug", async (c) => {
         : null,
     steps: stepResults,
   });
+});
+
+// GET /v1/internal/tests/solutions/:slug/runs — test runs aggregated across solution steps
+internalTestsRoute.get("/solutions/:slug/runs", async (c) => {
+  const slug = c.req.param("slug");
+  const limit = Math.min(parseInt(c.req.query("limit") ?? "10", 10), 50);
+  const offset = parseInt(c.req.query("offset") ?? "0", 10);
+
+  const cacheKey = `test-runs:sol:${slug}:${limit}:${offset}`;
+  const cached = getCached<any>(cacheKey);
+  if (cached) return c.json(cached);
+
+  const db = getDb();
+
+  // Get capability slugs for this solution
+  const steps = await db
+    .select({ capabilitySlug: solutionSteps.capabilitySlug })
+    .from(solutionSteps)
+    .innerJoin(solutions, eq(solutionSteps.solutionId, solutions.id))
+    .where(eq(solutions.slug, slug))
+    .orderBy(asc(solutionSteps.stepOrder));
+
+  if (steps.length === 0) {
+    return c.json(
+      apiError("not_found", `Solution '${slug}' not found.`),
+      404,
+    );
+  }
+
+  const capSlugs = steps.map((s) => s.capabilitySlug);
+
+  // Get total number of distinct runs across all solution capabilities
+  const countRows = await db.execute(sql`
+    SELECT COUNT(DISTINCT DATE_TRUNC('minute', tr.executed_at))::text AS total_runs
+    FROM test_results tr
+    WHERE tr.capability_slug = ANY(${capSlugs})
+  `);
+  const countData = (Array.isArray(countRows) ? countRows : (countRows as any)?.rows ?? []) as any[];
+  const totalRuns = parseInt(countData[0]?.total_runs ?? "0", 10);
+
+  // Get distinct run timestamps across all solution capabilities
+  const runRows = await db.execute(sql`
+    SELECT
+      DATE_TRUNC('minute', tr.executed_at) AS executed_at,
+      COUNT(*)::text AS total,
+      SUM(CASE WHEN tr.passed THEN 1 ELSE 0 END)::text AS passed,
+      SUM(CASE WHEN NOT tr.passed THEN 1 ELSE 0 END)::text AS failed,
+      ROUND(AVG(tr.response_time_ms))::text AS avg_response_time_ms
+    FROM test_results tr
+    WHERE tr.capability_slug = ANY(${capSlugs})
+    GROUP BY DATE_TRUNC('minute', tr.executed_at)
+    ORDER BY executed_at DESC
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `);
+
+  const runs = (Array.isArray(runRows) ? runRows : (runRows as any)?.rows ?? []) as any[];
+
+  // For each run, get failure details with capability info
+  const runsWithDetails = await Promise.all(
+    runs.map(async (run: any) => {
+      const total = parseInt(run.total, 10);
+      const passedCount = parseInt(run.passed, 10);
+      const failedCount = parseInt(run.failed, 10);
+      const passRate = total > 0
+        ? parseFloat(((passedCount / total) * 100).toFixed(1))
+        : null;
+
+      let failures: Array<{
+        test_name: string;
+        test_type: string;
+        capability_slug: string;
+        capability_name: string;
+        failure_reason: string;
+        failure_category: string;
+      }> = [];
+
+      if (failedCount > 0) {
+        const failRows = await db.execute(sql`
+          SELECT
+            ts.test_name,
+            ts.test_type,
+            tr.capability_slug,
+            c.name AS capability_name,
+            tr.failure_reason
+          FROM test_results tr
+          INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
+          LEFT JOIN capabilities c ON c.slug = tr.capability_slug
+          WHERE tr.capability_slug = ANY(${capSlugs})
+            AND DATE_TRUNC('minute', tr.executed_at) = ${run.executed_at}::timestamptz
+            AND tr.passed = false
+        `);
+        const failData = (Array.isArray(failRows) ? failRows : (failRows as any)?.rows ?? []) as any[];
+        failures = failData.map((f: any) => ({
+          test_name: f.test_name,
+          test_type: f.test_type,
+          capability_slug: f.capability_slug,
+          capability_name: f.capability_name ?? f.capability_slug,
+          failure_reason: f.failure_reason ?? "Unknown",
+          failure_category: categorizeFailureReason(f.failure_reason),
+        }));
+      }
+
+      return {
+        executed_at: run.executed_at,
+        total,
+        passed: passedCount,
+        failed: failedCount,
+        pass_rate: passRate,
+        avg_response_time_ms: parseInt(run.avg_response_time_ms, 10),
+        failures,
+      };
+    }),
+  );
+
+  const result = {
+    solution_slug: slug,
+    total_runs: totalRuns,
+    runs: runsWithDetails,
+    has_more: offset + runs.length < totalRuns,
+  };
+  setCache(cacheKey, result);
+  return c.json(result);
 });
 
 // GET /v1/internal/tests/health — dependency health checks (free HTTP pings)
