@@ -337,30 +337,43 @@ app.use("*", async (c, next) => {
   c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
 });
 
-// CORS — allow known frontends and server-to-server (no Origin header)
+// CORS — split policy: public read-only endpoints allow all origins,
+// authenticated endpoints restricted to known frontends
 const ALLOWED_ORIGINS = [
   "https://strale.dev",
   "https://www.strale.dev",
-  "https://preview--call-it-strale.lovable.app",
   process.env.FRONTEND_URL,
 ].filter(Boolean) as string[];
 
-app.use("/v1/*", cors({
+const restrictedCors = cors({
   origin: (origin) => {
-    // Allow server-to-server requests (SDKs, MCP clients, curl) — no Origin header
-    if (!origin) return "*";
-    // Allow known frontends
+    if (!origin) return "*";                 // Server-to-server (SDKs, MCP, curl)
+    if (origin === "null") return "null";    // Sandboxed iframes
     if (ALLOWED_ORIGINS.includes(origin)) return origin;
-    // Allow all Lovable preview subdomains
     if (origin.endsWith(".lovable.app") || origin.endsWith(".lovable.dev")) return origin;
-    // Sandboxed iframes (Lovable preview) send Origin: null as a string
-    if (origin === "null") return "null";
-    // Block unknown browser origins
     return "";
   },
   allowMethods: ["GET", "POST", "OPTIONS"],
   allowHeaders: ["Authorization", "Content-Type", "Idempotency-Key", "Strale-Version"],
-}));
+});
+
+const publicCors = cors({
+  origin: "*",
+  allowMethods: ["GET", "OPTIONS"],
+  allowHeaders: ["Content-Type"],
+});
+
+// Public read-only endpoints — open CORS (data is intentionally public)
+app.use("/v1/capabilities/*", publicCors);
+app.use("/v1/capabilities", publicCors);
+app.use("/v1/solutions/*", publicCors);
+app.use("/v1/solutions", publicCors);
+app.use("/v1/internal/*", publicCors);
+app.use("/.well-known/*", publicCors);
+
+// Authenticated / mutating endpoints — restricted CORS
+app.use("/v1/*", restrictedCors);
+app.use("/a2a", restrictedCors);
 app.use("*", versionMiddleware());
 
 // Body size limits — prevent memory exhaustion from oversized payloads
