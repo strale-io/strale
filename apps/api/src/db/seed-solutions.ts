@@ -938,6 +938,386 @@ const SOLUTIONS: SolutionDef[] = [
       },
     ],
   },
+  // ── 16. Vendor Risk Assessment ──
+  {
+    slug: "vendor-risk-assess",
+    name: "Vendor Risk Assessment",
+    marketingName: "Vendor Risk Assessment",
+    description:
+      "SEC EDGAR data, sanctions screening, and comprehensive domain security posture. Given a company name/CIK and domain, answers \"should we do business with this company?\"",
+    category: "security-risk",
+    priceCents: 180,
+    componentSumCents: 129,
+    valueTier: "verification",
+    maintenanceLevel: "very-low",
+    geography: "us-global",
+    targetAudience:
+      "US developers building procurement agents, vendor management, partnership due diligence",
+    transparencyTag: "mixed",
+    extendsWith: ["credit-report-summary", "company-enrich", "tech-stack-detect"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        company: {
+          type: "string",
+          description: "Company name, CIK, or ticker",
+        },
+        domain: {
+          type: "string",
+          description: "Company domain to assess",
+        },
+      },
+      required: ["company", "domain"],
+    },
+    exampleInput: { company: "Apple Inc", domain: "apple.com" },
+    exampleOutput: {
+      company_name: "Apple Inc.",
+      cik: "0000320193",
+      is_sanctioned: false,
+      domain_reputation_score: 95,
+      ssl_valid: true,
+      header_security_grade: "A",
+    },
+    steps: [
+      {
+        capabilitySlug: "us-company-data",
+        stepOrder: 1,
+        canParallel: false,
+        parallelGroup: null,
+        inputMap: { company: "$input.company" },
+      },
+      {
+        capabilitySlug: "sanctions-check",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 2,
+        inputMap: { name: "$steps[0].company_name" },
+      },
+      {
+        capabilitySlug: "whois-lookup",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 2,
+        inputMap: { domain: "$input.domain" },
+      },
+      {
+        capabilitySlug: "dns-lookup",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 2,
+        inputMap: { domain: "$input.domain" },
+      },
+      {
+        capabilitySlug: "ssl-check",
+        stepOrder: 5,
+        canParallel: true,
+        parallelGroup: 2,
+        inputMap: { domain: "$input.domain" },
+      },
+      {
+        capabilitySlug: "domain-reputation",
+        stepOrder: 6,
+        canParallel: true,
+        parallelGroup: 2,
+        inputMap: { domain: "$input.domain" },
+      },
+      {
+        capabilitySlug: "header-security-check",
+        stepOrder: 7,
+        canParallel: true,
+        parallelGroup: 2,
+        inputMap: { url: "$input.domain" },
+      },
+    ],
+  },
+
+  // ── 17. Lead Enrichment & Qualification ──
+  {
+    slug: "lead-enrich",
+    name: "Lead Enrichment & Qualification",
+    marketingName: "Lead Enrichment & Qualification",
+    description:
+      "Given a prospect's email, return everything an SDR agent needs: email validation, DNS, domain reputation, WHOIS, and technology stack detection.",
+    category: "sales-outreach",
+    priceCents: 65,
+    componentSumCents: 46,
+    valueTier: "verification",
+    maintenanceLevel: "low",
+    geography: "us-global",
+    targetAudience:
+      "US developers building outbound sales agents, CRM enrichment, account research",
+    transparencyTag: "mixed",
+    extendsWith: ["company-enrich", "social-profile-check", "landing-page-roast"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        email: {
+          type: "string",
+          format: "email",
+          description: "Prospect email address",
+        },
+      },
+      required: ["email"],
+    },
+    exampleInput: { email: "jane@acme.com" },
+    exampleOutput: {
+      valid: true,
+      domain: "acme.com",
+      has_mx: true,
+      reputation_score: 78,
+      registrar: "GoDaddy",
+      tech_stack: { frontend: "React", cms: "WordPress" },
+    },
+    steps: [
+      {
+        capabilitySlug: "email-validate",
+        stepOrder: 1,
+        canParallel: false,
+        parallelGroup: null,
+        inputMap: { email: "$input.email" },
+      },
+      {
+        capabilitySlug: "dns-lookup",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$steps[0].domain" },
+      },
+      {
+        capabilitySlug: "domain-reputation",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$steps[0].domain" },
+      },
+      {
+        capabilitySlug: "whois-lookup",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$steps[0].domain" },
+      },
+      {
+        capabilitySlug: "tech-stack-detect",
+        stepOrder: 5,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$steps[0].domain" },
+      },
+    ],
+  },
+
+  // ── 18. Website Security Audit ──
+  {
+    slug: "website-security-audit",
+    name: "Website Security Audit",
+    marketingName: "Website Security Audit",
+    description:
+      "Comprehensive security posture for any URL: SSL certificate health, HTTP header configuration, DNS security, and technology surface area.",
+    category: "security-risk",
+    priceCents: 45,
+    componentSumCents: 29,
+    valueTier: "verification",
+    maintenanceLevel: "low",
+    geography: "global",
+    targetAudience:
+      "Security teams, developers filling security questionnaires, compliance monitoring agents",
+    transparencyTag: "mixed",
+    extendsWith: ["ssl-certificate-chain", "page-speed-test", "whois-lookup"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "URL to audit",
+        },
+      },
+      required: ["url"],
+    },
+    exampleInput: { url: "https://example.com" },
+    exampleOutput: {
+      ssl_valid: true,
+      header_security_grade: "B",
+      dns_records: true,
+      tech_stack: { frontend: "Vanilla", hosting: "AWS" },
+    },
+    steps: [
+      {
+        capabilitySlug: "ssl-check",
+        stepOrder: 1,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$input.url" },
+      },
+      {
+        capabilitySlug: "header-security-check",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$input.url" },
+      },
+      {
+        capabilitySlug: "dns-lookup",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$input.url" },
+      },
+      {
+        capabilitySlug: "tech-stack-detect",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$input.url" },
+      },
+    ],
+  },
+
+  // ── 19. Prospect Company Profile ──
+  {
+    slug: "prospect-profile",
+    name: "Prospect Company Profile",
+    marketingName: "Prospect Company Profile",
+    description:
+      "Given a company name and URL, return SEC filing data, technology choices, web presence strength, and domain credibility. What an AE researches before a call, delivered in seconds.",
+    category: "sales-outreach",
+    priceCents: 180,
+    componentSumCents: 140,
+    valueTier: "data-lookup",
+    maintenanceLevel: "low",
+    geography: "us-global",
+    targetAudience:
+      "Account executives, CRM enrichment agents, investor research",
+    transparencyTag: "mixed",
+    extendsWith: ["sanctions-check", "social-profile-check", "landing-page-roast"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        company: {
+          type: "string",
+          description: "Company name, CIK, or ticker",
+        },
+        url: {
+          type: "string",
+          description: "Company website URL",
+        },
+      },
+      required: ["company", "url"],
+    },
+    exampleInput: { company: "Stripe", url: "https://stripe.com" },
+    exampleOutput: {
+      company_name: "Stripe, Inc.",
+      cik: "0001779474",
+      tech_stack: { frontend: "React", hosting: "AWS" },
+      seo_score: 88,
+      reputation_score: 95,
+    },
+    steps: [
+      {
+        capabilitySlug: "us-company-data",
+        stepOrder: 1,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { company: "$input.company" },
+      },
+      {
+        capabilitySlug: "tech-stack-detect",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$input.url" },
+      },
+      {
+        capabilitySlug: "seo-audit",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$input.url" },
+      },
+      {
+        capabilitySlug: "domain-reputation",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$input.url" },
+      },
+    ],
+  },
+
+  // ── 20. Domain Trust Check ──
+  {
+    slug: "domain-trust",
+    name: "Domain Trust Check",
+    marketingName: "Domain Trust Check",
+    description:
+      "Given a domain, answer \"is this domain trustworthy?\" — registration age, DNS configuration, SSL certificate, reputation score, and HTTP security headers.",
+    category: "security-risk",
+    priceCents: 40,
+    componentSumCents: 29,
+    valueTier: "data-lookup",
+    maintenanceLevel: "near-zero",
+    geography: "global",
+    targetAudience:
+      "Anti-fraud teams, brand protection, phishing detection, cybersecurity agents",
+    transparencyTag: "algorithmic",
+    extendsWith: ["tech-stack-detect", "backlink-check", "page-speed-test"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        domain: {
+          type: "string",
+          description: "Domain to check",
+        },
+      },
+      required: ["domain"],
+    },
+    exampleInput: { domain: "example.com" },
+    exampleOutput: {
+      registrar: "IANA",
+      registration_age_days: 10950,
+      dns_records: true,
+      ssl_valid: true,
+      reputation_score: 85,
+      header_security_grade: "C",
+    },
+    steps: [
+      {
+        capabilitySlug: "whois-lookup",
+        stepOrder: 1,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$input.domain" },
+      },
+      {
+        capabilitySlug: "dns-lookup",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$input.domain" },
+      },
+      {
+        capabilitySlug: "ssl-check",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$input.domain" },
+      },
+      {
+        capabilitySlug: "domain-reputation",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$input.domain" },
+      },
+      {
+        capabilitySlug: "header-security-check",
+        stepOrder: 5,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$input.domain" },
+      },
+    ],
+  },
 ];
 
 // ─── Seed logic ─────────────────────────────────────────────────────────────
