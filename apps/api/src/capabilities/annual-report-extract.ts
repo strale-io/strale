@@ -179,7 +179,7 @@ registerCapability(
 
     if (typeof rawInput !== "string" || !rawInput.trim()) {
       throw new Error(
-        "'org_number' is required. Provide a Swedish organization number (e.g. 559106-8089).",
+        "'org_number' is required. Provide a Swedish organization number (e.g. 556703-7485).",
       );
     }
 

@@ -18,7 +18,7 @@ const seedCapabilities = [
       properties: {
         org_number: {
           type: "string",
-          description: "Swedish org number (e.g. 559106-8089) or company name",
+          description: "Swedish org number (e.g. 556703-7485) or company name",
         },
       },
       required: ["org_number"],
@@ -127,7 +127,7 @@ const seedCapabilities = [
       properties: {
         org_number: {
           type: "string",
-          description: "Swedish org number (e.g. 559106-8089)",
+          description: "Swedish org number (e.g. 556703-7485)",
         },
         year: {
           type: "integer",

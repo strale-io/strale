@@ -84,6 +84,8 @@ export const capabilities = pgTable("capabilities", {
   isActive: boolean("is_active").notNull().default(true),
   avgLatencyMs: integer("avg_latency_ms"),
   successRate: decimal("success_rate", { precision: 5, scale: 4 }),
+  transparencyTag: varchar("transparency_tag", { length: 30 }),
+  // 'ai_generated' | 'algorithmic' | 'mixed'
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities } from "../db/schema.js";
+import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { getAllHealth } from "../lib/circuit-breaker.js";
@@ -24,6 +24,7 @@ capabilitiesRoute.get("/", async (c) => {
       output_schema: capabilities.outputSchema,
       avg_latency_ms: capabilities.avgLatencyMs,
       success_rate: capabilities.successRate,
+      transparency_tag: capabilities.transparencyTag,
     })
     .from(capabilities)
     .where(eq(capabilities.isActive, true));
@@ -63,6 +64,7 @@ capabilitiesRoute.get("/:slug", async (c) => {
       output_schema: capabilities.outputSchema,
       avg_latency_ms: capabilities.avgLatencyMs,
       success_rate: capabilities.successRate,
+      transparency_tag: capabilities.transparencyTag,
     })
     .from(capabilities)
     .where(
@@ -77,5 +79,21 @@ capabilitiesRoute.get("/:slug", async (c) => {
     );
   }
 
-  return c.json(cap);
+  // Reverse lookup: which solutions use this capability?
+  const usedInSolutions = await db
+    .selectDistinct({
+      slug: solutions.slug,
+      name: solutions.name,
+      price_cents: solutions.priceCents,
+    })
+    .from(solutions)
+    .innerJoin(solutionSteps, eq(solutionSteps.solutionId, solutions.id))
+    .where(
+      and(
+        eq(solutionSteps.capabilitySlug, slug),
+        eq(solutions.isActive, true),
+      ),
+    );
+
+  return c.json({ ...cap, used_in_solutions: usedInSolutions });
 });

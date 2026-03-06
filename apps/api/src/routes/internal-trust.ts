@@ -127,11 +127,22 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
   const cached = getCached(cacheKey);
   if (cached) return c.json(cached);
 
-  const [quality, testResultsData, limitations] = await Promise.all([
+  const db = getDb();
+
+  const [quality, testResultsData, limitations, suiteRows] = await Promise.all([
     getCapabilityQuality(slug),
     getTestResultsForSlug(slug),
     getLimitationsForSlug(slug),
+    db.select({ scheduleTier: testSuites.scheduleTier })
+      .from(testSuites)
+      .where(and(eq(testSuites.capabilitySlug, slug), eq(testSuites.active, true)))
+      .limit(1),
   ]);
+
+  const scheduleTier = suiteRows[0]?.scheduleTier ?? "B";
+  const TIER_HOURS: Record<string, number> = { A: 6, B: 24, C: 72 };
+  const scheduleFrequencyHours = TIER_HOURS[scheduleTier] ?? 24;
+  const nextScheduledRun = computeNextRun(scheduleTier, testResultsData.last_run);
 
   const customerTxns = Math.max(
     0,
@@ -153,6 +164,25 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
         ? "internal_testing"
         : "none";
 
+  // Look up capability name for narrative
+  const [capRow] = await db.select({ name: capabilities.name })
+    .from(capabilities)
+    .where(eq(capabilities.slug, slug))
+    .limit(1);
+  const capName = capRow?.name ?? slug;
+
+  const narrative = generateQualityNarrative([{
+    capability_name: capName,
+    test_results: {
+      total_tests: testResultsData.total_tests,
+      passed: testResultsData.passed,
+      failed: testResultsData.failed,
+      pass_rate: testResultsData.pass_rate,
+      avg_response_time_ms: testResultsData.avg_response_time_ms,
+      failures: testResultsData.failures,
+    },
+  }]);
+
   const result = {
     capability_slug: slug,
     trust_summary: {
@@ -169,7 +199,12 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
         test_transactions: testTxns,
         data_source: dataSource,
       },
-      test_results: testResultsData,
+      test_results: {
+        ...testResultsData,
+        next_scheduled_run: nextScheduledRun,
+        schedule_frequency_hours: scheduleFrequencyHours,
+      },
+      quality_narrative: narrative,
       limitations,
     },
     methodology_url: "https://strale.dev/trust/methodology",
@@ -196,8 +231,10 @@ function generateQualityNarrative(stepData: Array<{
   const totalPassed = stepData.reduce((s, d) => s + d.test_results.passed, 0);
   const totalFailed = stepData.reduce((s, d) => s + d.test_results.failed, 0);
 
+  const entity = stepData.length === 1 ? "capability" : "solution";
+
   if (totalTests === 0) {
-    return "No test data available yet for this solution.";
+    return `No test data available yet for this ${entity}.`;
   }
 
   const withResults = totalPassed + totalFailed;
@@ -206,7 +243,7 @@ function generateQualityNarrative(stepData: Array<{
     : null;
 
   if (passRate === null) {
-    return "No test data available yet for this solution.";
+    return `No test data available yet for this ${entity}.`;
   }
 
   // Categorize failures

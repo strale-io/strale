@@ -5,7 +5,7 @@ import { htmlToText } from "./lib/browserless-extract.js";
 
 // ─── Org number detection ──────────────────────────────────────────────────────
 // Swedish org numbers: 10 digits, optionally with hyphen after 6th digit
-// e.g. "559106-8089", "5591068089", "556703-7485"
+// e.g. "556703-7485", "5591068089", "556703-7485"
 const ORG_NUMBER_RE = /^(\d{6})-?(\d{4})$/;
 
 function isOrgNumber(input: string): string | null {
@@ -329,7 +329,7 @@ registerCapability(
       (input.org_number as string) ?? (input.task as string) ?? "";
     if (typeof rawInput !== "string" || !rawInput.trim()) {
       throw new Error(
-        "'org_number' is required. Provide a Swedish org number (e.g. 559106-8089) or company name.",
+        "'org_number' is required. Provide a Swedish org number (e.g. 556703-7485) or company name.",
       );
     }
 
