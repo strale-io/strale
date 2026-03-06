@@ -7,7 +7,7 @@
  */
 
 import { Hono } from "hono";
-import { eq, and, asc, sql } from "drizzle-orm";
+import { eq, and, asc, sql, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   solutions,
@@ -15,6 +15,7 @@ import {
   capabilities,
   capabilityLimitations,
   testSuites,
+  testResults,
 } from "../db/schema.js";
 import {
   getCapabilityQuality,
@@ -118,6 +119,71 @@ function computeNextRun(tier: string, lastRun: string | null): string | null {
   if (!interval) return null;
   return new Date(new Date(lastRun).getTime() + interval).toISOString();
 }
+
+// ─── GET /v1/internal/trust/capabilities/batch ───────────────────────────────
+// Returns pass rates for multiple capabilities in a single query.
+// Usage: GET /v1/internal/trust/capabilities/batch?slugs=slug1,slug2,slug3
+
+internalTrustRoute.get("/capabilities/batch", async (c) => {
+  const slugsParam = c.req.query("slugs") ?? "";
+  const slugs = slugsParam.split(",").map((s) => s.trim()).filter(Boolean);
+
+  if (slugs.length === 0) {
+    return c.json(apiError("invalid_request", "slugs query parameter is required"), 400);
+  }
+
+  const cacheKey = `trust:batch:${slugs.sort().join(",")}`;
+  const cached = getCached(cacheKey);
+  if (cached) return c.json(cached);
+
+  // Cap at 100 slugs per request
+  const limitedSlugs = slugs.slice(0, 100);
+
+  const db = getDb();
+
+  // Get the latest test result per test suite, grouped by capability
+  // This mirrors how getTestResultsForSlug works but for multiple slugs at once
+  const rows = await db.execute(sql`
+    WITH latest_results AS (
+      SELECT DISTINCT ON (tr.test_suite_id)
+        tr.capability_slug,
+        tr.passed
+      FROM test_results tr
+      INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
+      WHERE tr.capability_slug IN (${sql.join(limitedSlugs.map((s) => sql`${s}`), sql`, `)})
+        AND ts.active = true
+      ORDER BY tr.test_suite_id, tr.executed_at DESC
+    )
+    SELECT
+      capability_slug,
+      COUNT(*) FILTER (WHERE passed = true)::text AS passed,
+      COUNT(*) FILTER (WHERE passed = false)::text AS failed,
+      COUNT(*)::text AS total
+    FROM latest_results
+    GROUP BY capability_slug
+  `);
+
+  const resultRows = Array.isArray(rows) ? rows : (rows as any)?.rows ?? [];
+
+  const trustMap: Record<string, { passed: number; failed: number; total: number; pass_rate: number | null }> = {};
+  for (const r of resultRows as any[]) {
+    const passed = Number(r.passed);
+    const failed = Number(r.failed);
+    const total = Number(r.total);
+    const withResults = passed + failed;
+    trustMap[r.capability_slug] = {
+      passed,
+      failed,
+      total,
+      pass_rate: withResults > 0
+        ? parseFloat(((passed / withResults) * 100).toFixed(1))
+        : null,
+    };
+  }
+
+  setCache(cacheKey, trustMap);
+  return c.json(trustMap);
+});
 
 // ─── GET /v1/internal/trust/capabilities/:slug ──────────────────────────────
 
