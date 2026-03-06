@@ -460,15 +460,25 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const capSlugs = steps.map((s) => s.capabilitySlug);
+  // Use the latest result per test suite per day (not daily average)
+  // so the chart matches the hero metric which shows latest state
   const historyRows = await db.execute(sql`
+    WITH latest_per_suite_per_day AS (
+      SELECT DISTINCT ON (tr.test_suite_id, DATE(tr.executed_at AT TIME ZONE 'UTC'))
+        DATE(tr.executed_at AT TIME ZONE 'UTC') AS date,
+        tr.passed,
+        tr.response_time_ms
+      FROM test_results tr
+      WHERE tr.capability_slug IN (${sql.join(capSlugs.map((s) => sql`${s}`), sql`, `)})
+        AND tr.executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
+      ORDER BY tr.test_suite_id, DATE(tr.executed_at AT TIME ZONE 'UTC'), tr.executed_at DESC
+    )
     SELECT
-      DATE(tr.executed_at AT TIME ZONE 'UTC') AS date,
-      ROUND(SUM(CASE WHEN tr.passed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text AS pass_rate,
-      ROUND(AVG(tr.response_time_ms))::text AS avg_response_time_ms
-    FROM test_results tr
-    WHERE tr.capability_slug IN (${sql.join(capSlugs.map((s) => sql`${s}`), sql`, `)})
-      AND tr.executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
-    GROUP BY DATE(tr.executed_at AT TIME ZONE 'UTC')
+      date,
+      ROUND(SUM(CASE WHEN passed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text AS pass_rate,
+      ROUND(AVG(response_time_ms))::text AS avg_response_time_ms
+    FROM latest_per_suite_per_day
+    GROUP BY date
     ORDER BY date
   `);
   const history = (Array.isArray(historyRows) ? historyRows : (historyRows as any)?.rows ?? [])

@@ -173,6 +173,8 @@ internalTestsRoute.get("/capabilities/:slug/history", async (c) => {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+  // Use the latest result per test suite per day (not daily average)
+  // so the chart matches the hero metric which shows latest state
   const rows = await db.execute<{
     date: string;
     total: string;
@@ -180,16 +182,24 @@ internalTestsRoute.get("/capabilities/:slug/history", async (c) => {
     failed: string;
     avg_response_time_ms: string;
   }>(sql`
+    WITH latest_per_suite_per_day AS (
+      SELECT DISTINCT ON (tr.test_suite_id, DATE(tr.executed_at AT TIME ZONE 'UTC'))
+        DATE(tr.executed_at AT TIME ZONE 'UTC') AS date,
+        tr.passed,
+        tr.response_time_ms
+      FROM test_results tr
+      WHERE tr.capability_slug = ${slug}
+        AND tr.executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
+      ORDER BY tr.test_suite_id, DATE(tr.executed_at AT TIME ZONE 'UTC'), tr.executed_at DESC
+    )
     SELECT
-      DATE(tr.executed_at AT TIME ZONE 'UTC') AS date,
+      date,
       COUNT(*)::text AS total,
-      SUM(CASE WHEN tr.passed THEN 1 ELSE 0 END)::text AS passed,
-      SUM(CASE WHEN NOT tr.passed THEN 1 ELSE 0 END)::text AS failed,
-      ROUND(AVG(tr.response_time_ms))::text AS avg_response_time_ms
-    FROM test_results tr
-    WHERE tr.capability_slug = ${slug}
-      AND tr.executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
-    GROUP BY DATE(tr.executed_at AT TIME ZONE 'UTC')
+      SUM(CASE WHEN passed THEN 1 ELSE 0 END)::text AS passed,
+      SUM(CASE WHEN NOT passed THEN 1 ELSE 0 END)::text AS failed,
+      ROUND(AVG(response_time_ms))::text AS avg_response_time_ms
+    FROM latest_per_suite_per_day
+    GROUP BY date
     ORDER BY date
   `);
 
