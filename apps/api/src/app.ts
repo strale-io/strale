@@ -351,6 +351,8 @@ app.use("/v1/*", cors({
     if (!origin) return "*";
     // Allow known frontends
     if (ALLOWED_ORIGINS.includes(origin)) return origin;
+    // Allow all Lovable preview subdomains
+    if (origin.endsWith(".lovable.app") || origin.endsWith(".lovable.dev")) return origin;
     // Block unknown browser origins
     return "";
   },
