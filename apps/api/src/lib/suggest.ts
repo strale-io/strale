@@ -10,6 +10,7 @@ import { embedQuery, embedDocuments, cosineSimilarity } from "./embeddings.js";
 import { tokenize } from "./tokenize.js";
 import { getCapabilityQuality, getSolutionQuality } from "./quality-aggregation.js";
 import { determineBadge, getTestResultsForSlug } from "./trust-helpers.js";
+import { computeCapabilitySQS, computeSolutionSQS } from "./sqs.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -22,6 +23,8 @@ interface TrustSummary {
   tests_total: number;
   last_tested_at: string | null;
   data_source: "internal_testing" | "blended" | "customer_transactions";
+  sqs_score: number;
+  sqs_label: string;
 }
 
 interface CatalogItem {
@@ -306,6 +309,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
                 solQuality?.successRate ?? null,
               );
 
+              const sqs = await computeSolutionSQS(stepSlugs);
               item.trustSummary = {
                 badge,
                 badge_label,
@@ -315,6 +319,8 @@ async function loadCatalog(): Promise<CatalogItem[]> {
                 tests_total: totalTests,
                 last_tested_at: lastTestedAt,
                 data_source: totalTxns > 0 ? "internal_testing" : "internal_testing",
+                sqs_score: sqs.score,
+                sqs_label: sqs.label,
               };
             } else {
               // Individual capability trust
@@ -328,6 +334,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
                 quality.successRate,
               );
 
+              const sqs = await computeCapabilitySQS(item.slug);
               item.trustSummary = {
                 badge,
                 badge_label,
@@ -337,6 +344,8 @@ async function loadCatalog(): Promise<CatalogItem[]> {
                 tests_total: testData.total_tests,
                 last_tested_at: testData.last_run,
                 data_source: testTxns > 0 ? "internal_testing" : "internal_testing",
+                sqs_score: sqs.score,
+                sqs_label: sqs.label,
               };
             }
           } catch (err) {

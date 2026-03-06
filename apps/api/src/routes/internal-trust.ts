@@ -23,6 +23,7 @@ import {
 } from "../lib/quality-aggregation.js";
 import { determineBadge, getTestResultsForSlug, getLatestCompleteRunForSolution } from "../lib/trust-helpers.js";
 import { computeHealthState } from "../lib/health-state.js";
+import { computeCapabilitySQS, computeSolutionSQS } from "../lib/sqs.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
@@ -168,12 +169,20 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
 
   const resultRows = Array.isArray(rows) ? rows : (rows as any)?.rows ?? [];
 
-  const trustMap: Record<string, { passed: number; failed: number; total: number; pass_rate: number | null }> = {};
+  const trustMap: Record<string, { passed: number; failed: number; total: number; pass_rate: number | null; sqs_score: number; sqs_label: string }> = {};
+
+  // Compute SQS per capability in parallel (cached with 10-min TTL)
+  const sqsResults = await Promise.all(
+    limitedSlugs.map((s) => computeCapabilitySQS(s)),
+  );
+  const sqsMap = new Map(limitedSlugs.map((s, i) => [s, sqsResults[i]]));
+
   for (const r of resultRows as any[]) {
     const passed = Number(r.passed);
     const failed = Number(r.failed);
     const total = Number(r.total);
     const withResults = passed + failed;
+    const sqs = sqsMap.get(r.capability_slug);
     trustMap[r.capability_slug] = {
       passed,
       failed,
@@ -181,7 +190,24 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
       pass_rate: withResults > 0
         ? parseFloat(((passed / withResults) * 100).toFixed(1))
         : null,
+      sqs_score: sqs?.score ?? 0,
+      sqs_label: sqs?.label ?? "Pending",
     };
+  }
+
+  // Add entries for slugs that have no test results but do have SQS
+  for (const s of limitedSlugs) {
+    if (!trustMap[s]) {
+      const sqs = sqsMap.get(s);
+      trustMap[s] = {
+        passed: 0,
+        failed: 0,
+        total: 0,
+        pass_rate: null,
+        sqs_score: sqs?.score ?? 0,
+        sqs_label: sqs?.label ?? "Pending",
+      };
+    }
   }
 
   setCache(cacheKey, trustMap);
@@ -253,6 +279,7 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
   }]);
 
   const healthState = computeHealthState(testResultsData.history_30d);
+  const sqs = await computeCapabilitySQS(slug);
 
   const result = {
     capability_slug: slug,
@@ -279,6 +306,7 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
       quality_narrative: narrative,
       limitations,
     },
+    sqs,
     methodology_url: "https://strale.dev/trust/methodology",
   };
 
@@ -501,6 +529,8 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
   const completeByType = completeRun?.by_type ?? aggregateByType(stepData);
   const completeFailures = completeRun?.failures ?? [];
 
+  const sqs = await computeSolutionSQS(capSlugs);
+
   const result = {
     solution_slug: slug,
     trust_summary: {
@@ -534,6 +564,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       limitations: allLimitations,
       steps: stepData,
     },
+    sqs,
     methodology_url: "https://strale.dev/trust/methodology",
   };
 
