@@ -353,6 +353,8 @@ app.use("/v1/*", cors({
     if (ALLOWED_ORIGINS.includes(origin)) return origin;
     // Allow all Lovable preview subdomains
     if (origin.endsWith(".lovable.app") || origin.endsWith(".lovable.dev")) return origin;
+    // Sandboxed iframes (Lovable preview) send Origin: null as a string
+    if (origin === "null") return "null";
     // Block unknown browser origins
     return "";
   },
