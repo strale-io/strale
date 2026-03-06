@@ -223,6 +223,88 @@ internalTestsRoute.get("/capabilities/:slug/history", async (c) => {
   });
 });
 
+// GET /v1/internal/tests/capabilities/:slug/runs — individual test runs, newest first
+internalTestsRoute.get("/capabilities/:slug/runs", async (c) => {
+  const slug = c.req.param("slug");
+  const limit = Math.min(parseInt(c.req.query("limit") ?? "20", 10), 100);
+  const offset = parseInt(c.req.query("offset") ?? "0", 10);
+  const db = getDb();
+
+  // Get distinct run timestamps (grouped by executed_at rounded to the minute)
+  const runRows = await db.execute(sql`
+    SELECT
+      DATE_TRUNC('minute', tr.executed_at) AS run_at,
+      COUNT(*)::text AS total,
+      SUM(CASE WHEN tr.passed THEN 1 ELSE 0 END)::text AS passed,
+      SUM(CASE WHEN NOT tr.passed THEN 1 ELSE 0 END)::text AS failed,
+      ROUND(AVG(tr.response_time_ms))::text AS avg_response_time_ms
+    FROM test_results tr
+    WHERE tr.capability_slug = ${slug}
+    GROUP BY DATE_TRUNC('minute', tr.executed_at)
+    ORDER BY run_at DESC
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `);
+
+  const runs = (Array.isArray(runRows) ? runRows : (runRows as any)?.rows ?? []) as any[];
+
+  // For each run, get failure details
+  const runsWithDetails = await Promise.all(
+    runs.map(async (run: any) => {
+      const total = parseInt(run.total, 10);
+      const passedCount = parseInt(run.passed, 10);
+      const failedCount = parseInt(run.failed, 10);
+      const passRate = total > 0
+        ? parseFloat(((passedCount / total) * 100).toFixed(1))
+        : null;
+
+      let failures: Array<{
+        test_name: string;
+        test_type: string;
+        failure_reason: string;
+        failure_category: string;
+      }> = [];
+
+      if (failedCount > 0) {
+        const failRows = await db.execute(sql`
+          SELECT
+            ts.test_name,
+            ts.test_type,
+            tr.failure_reason
+          FROM test_results tr
+          INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
+          WHERE tr.capability_slug = ${slug}
+            AND DATE_TRUNC('minute', tr.executed_at) = ${run.run_at}::timestamptz
+            AND tr.passed = false
+        `);
+        const failData = (Array.isArray(failRows) ? failRows : (failRows as any)?.rows ?? []) as any[];
+        failures = failData.map((f: any) => ({
+          test_name: f.test_name,
+          test_type: f.test_type,
+          failure_reason: f.failure_reason ?? "Unknown",
+          failure_category: categorizeFailureReason(f.failure_reason),
+        }));
+      }
+
+      return {
+        run_at: run.run_at,
+        total,
+        passed: passedCount,
+        failed: failedCount,
+        pass_rate: passRate,
+        avg_response_time_ms: parseInt(run.avg_response_time_ms, 10),
+        ...(failures.length > 0 ? { failures } : {}),
+      };
+    }),
+  );
+
+  return c.json({
+    capability_slug: slug,
+    runs: runsWithDetails,
+    has_more: runs.length === limit,
+  });
+});
+
 // GET /v1/internal/tests/solutions/:slug — aggregated across solution steps
 internalTestsRoute.get("/solutions/:slug", async (c) => {
   const slug = c.req.param("slug");

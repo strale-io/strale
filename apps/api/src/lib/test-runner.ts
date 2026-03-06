@@ -208,6 +208,11 @@ async function runSingleTest(
     responseTimeMs,
   ).catch(() => {});
 
+  // Auto-capture example output from first successful schema_check test
+  if (passed && capResult?.output && suite.testType === "schema_check") {
+    captureExampleOutput(suite.capabilitySlug, capResult.output).catch(() => {});
+  }
+
   return {
     testName: suite.testName,
     testType: suite.testType,
@@ -447,6 +452,39 @@ async function recordTestQuality(
     errorType: executionError ? categorizeError(executionError) : null,
     qualityFlags: { source: "internal_test" },
   });
+}
+
+// ─── Auto-capture example outputs ────────────────────────────────────────
+
+async function captureExampleOutput(
+  capabilitySlug: string,
+  output: Record<string, unknown>,
+): Promise<void> {
+  const db = getDb();
+
+  const [cap] = await db
+    .select({
+      id: capabilities.id,
+      outputSchema: capabilities.outputSchema,
+    })
+    .from(capabilities)
+    .where(eq(capabilities.slug, capabilitySlug))
+    .limit(1);
+
+  if (!cap) return;
+
+  const schema = (cap.outputSchema ?? {}) as Record<string, unknown>;
+  // Skip if example already exists
+  if ((schema as any).example) return;
+
+  // Merge example into existing output_schema
+  await db
+    .update(capabilities)
+    .set({
+      outputSchema: { ...schema, example: output },
+      updatedAt: new Date(),
+    })
+    .where(eq(capabilities.id, cap.id));
 }
 
 function categorizeError(msg: string): string {
