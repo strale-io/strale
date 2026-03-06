@@ -486,6 +486,7 @@ internalTestsRoute.get("/solutions/:slug/runs", async (c) => {
   }
 
   const capSlugs = steps.map((s) => s.capabilitySlug);
+  const stepCount = capSlugs.length;
   const slugList = sql.join(capSlugs.map((s) => sql`${s}`), sql`, `);
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -495,17 +496,21 @@ internalTestsRoute.get("/solutions/:slug/runs", async (c) => {
   // floor(epoch / 1800) * 1800 gives the start of each 30-min window
   const bucket = sql`TO_TIMESTAMP(FLOOR(EXTRACT(EPOCH FROM tr.executed_at) / 1800) * 1800)`;
 
-  // Get total number of distinct 30-min run windows (last 30 days)
+  // Count only complete runs (all solution steps tested in the window)
   const countRows = await db.execute(sql`
-    SELECT COUNT(DISTINCT ${bucket})::text AS total_runs
-    FROM test_results tr
-    WHERE tr.capability_slug IN (${slugList})
-      AND tr.executed_at >= ${cutoff}::timestamptz
+    SELECT COUNT(*)::text AS total_runs FROM (
+      SELECT ${bucket} AS run_window
+      FROM test_results tr
+      WHERE tr.capability_slug IN (${slugList})
+        AND tr.executed_at >= ${cutoff}::timestamptz
+      GROUP BY ${bucket}
+      HAVING COUNT(DISTINCT tr.capability_slug) >= ${stepCount}
+    ) complete_runs
   `);
   const countData = (Array.isArray(countRows) ? countRows : (countRows as any)?.rows ?? []) as any[];
   const totalRuns = parseInt(countData[0]?.total_runs ?? "0", 10);
 
-  // Get aggregated solution runs using 30-min windows
+  // Get aggregated solution runs — only complete runs where all steps were tested
   const runRows = await db.execute(sql`
     SELECT
       ${bucket} AS run_window,
@@ -520,6 +525,7 @@ internalTestsRoute.get("/solutions/:slug/runs", async (c) => {
     WHERE tr.capability_slug IN (${slugList})
       AND tr.executed_at >= ${cutoff}::timestamptz
     GROUP BY ${bucket}
+    HAVING COUNT(DISTINCT tr.capability_slug) >= ${stepCount}
     ORDER BY run_window DESC
     LIMIT ${limit}
     OFFSET ${offset}
