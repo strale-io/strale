@@ -25,6 +25,7 @@ capabilitiesRoute.get("/", async (c) => {
       avg_latency_ms: capabilities.avgLatencyMs,
       success_rate: capabilities.successRate,
       transparency_tag: capabilities.transparencyTag,
+      data_source: capabilities.dataSource,
     })
     .from(capabilities)
     .where(eq(capabilities.isActive, true));
@@ -65,6 +66,7 @@ capabilitiesRoute.get("/:slug", async (c) => {
       avg_latency_ms: capabilities.avgLatencyMs,
       success_rate: capabilities.successRate,
       transparency_tag: capabilities.transparencyTag,
+      data_source: capabilities.dataSource,
     })
     .from(capabilities)
     .where(

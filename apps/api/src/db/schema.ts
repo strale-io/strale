@@ -86,6 +86,7 @@ export const capabilities = pgTable("capabilities", {
   successRate: decimal("success_rate", { precision: 5, scale: 4 }),
   transparencyTag: varchar("transparency_tag", { length: 30 }),
   // 'ai_generated' | 'algorithmic' | 'mixed'
+  dataSource: text("data_source"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

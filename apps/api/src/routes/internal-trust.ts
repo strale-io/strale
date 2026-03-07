@@ -260,8 +260,8 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
         ? "internal_testing"
         : "none";
 
-  // Look up capability name for narrative
-  const [capRow] = await db.select({ name: capabilities.name })
+  // Look up capability name and data source for narrative
+  const [capRow] = await db.select({ name: capabilities.name, dataSource: capabilities.dataSource })
     .from(capabilities)
     .where(eq(capabilities.slug, slug))
     .limit(1);
@@ -284,6 +284,7 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
 
   const result = {
     capability_slug: slug,
+    capability_data_source: capRow?.dataSource ?? null,
     trust_summary: {
       badge,
       badge_label,
@@ -399,6 +400,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       stepOrder: solutionSteps.stepOrder,
       parallelGroup: solutionSteps.parallelGroup,
       capabilityName: capabilities.name,
+      dataSource: capabilities.dataSource,
     })
     .from(solutionSteps)
     .innerJoin(solutions, eq(solutionSteps.solutionId, solutions.id))
@@ -435,6 +437,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       return {
         capability_slug: step.capabilitySlug,
         capability_name: step.capabilityName ?? step.capabilitySlug,
+        data_source: step.dataSource ?? null,
         step_order: step.stepOrder,
         parallel_group: step.parallelGroup,
         schedule_tier: scheduleTier,

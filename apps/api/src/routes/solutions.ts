@@ -88,6 +88,7 @@ solutionsRoute.get("/:slug", async (c) => {
       inputMap: solutionSteps.inputMap,
       capabilityName: capabilities.name,
       capabilityPriceCents: capabilities.priceCents,
+      dataSource: capabilities.dataSource,
     })
     .from(solutionSteps)
     .leftJoin(
@@ -138,6 +139,7 @@ solutionsRoute.get("/:slug", async (c) => {
       canParallel: s.canParallel,
       parallelGroup: s.parallelGroup,
       inputMap: s.inputMap,
+      dataSource: s.dataSource,
     })),
     extendsWith: extendsCaps.map((cap) => ({
       slug: cap.slug,
