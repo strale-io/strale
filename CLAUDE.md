@@ -10,19 +10,32 @@ See .claude/PROTOCOL.md for full criteria and protocol definitions.
 
 ### Notion Access (REQUIRED)
 - Project Home: https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
+- Roadmap (SINGLE task list): https://www.notion.so/31c67c87-082c-819c-a238-c0ae01957a69
 - Decisions DB: 5e1a81ee-7b9f-4d3c-b58d-c8d97ae6386c
+- Notion Governance Protocol: https://www.notion.so/31c67c87-082c-8173-9ca7-dcbe054f940e
+
+### Notion Governance Rules (enforced)
+- ONE canonical page per topic — never create v2, update existing
+- Research pages go directly to Research Archive, not Project Home
+- Roadmap is THE ONLY task list — no priorities in other pages
+- Handoffs archived after absorbed into Roadmap
+- Superseded pages archived same session
+- Search existing pages before creating new ones
 
 ### GitHub Access (REQUIRED)
 - Repo: strale (local)
 - Main branch: main
 - Feature branch pattern: type/kebab-description
 
-### Project Spec Files (Source of Truth)
-- `strale-project-spec.md` — Full project specification
-- `strale-review-synthesis.md` — External review decisions and revised contracts
-- `strale-build-spec.md` — 4-week build plan with schema and endpoints
+### Project Spec Files
+- `strale-project-spec.md` — Original 4-week MVP specification (Feb 2026, historical)
+- `strale-review-synthesis.md` — External review decisions (Feb 2026, historical)
+- `strale-build-spec.md` — Original build plan (Feb 2026, historical)
 
-> These files reflect the original 4-week MVP scope. For current build plan and priorities, see Notion Project Home (31167c87-082c-81fb-96da-d3188d34aa72).
+> These files reflect the original MVP scope. For current state and priorities, see:
+> - **Notion Project Home** for what exists: https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
+> - **Notion Roadmap** for what to build next: https://www.notion.so/31c67c87-082c-819c-a238-c0ae01957a69
+> - **SQS Constitution** for quality system spec: https://www.notion.so/31c67c87-082c-8106-a444-de3df622a10f
 
 ### Tech Stack
 - Runtime: Node.js + TypeScript
@@ -95,10 +108,18 @@ strale/
 - DEC-20260302-C: Homepage leads with solutions and trust positioning
 - DEC-20260303-D: Search input uses query completions, not result dropdown
 - DEC-20260303-E: POST /v1/suggest uses Voyage AI embeddings + Claude Haiku re-ranking
+- DEC-20260303-G: Homepage restructure: 11-section order
+- DEC-20260305-A through G: Trust display centralization, test infrastructure, security hardening
+- DEC-20260306-A through F: Test run audit log, metric consistency, capability detail audit
+- DEC-20260307: SQS Constitution adopted as authoritative scoring spec; Notion Governance Protocol established
 
-### Capabilities
+### Capabilities & Quality
 <!-- Reminder: changes to capabilities, SDKs, or integrations require updating public/llms.txt in strale-frontend -->
-233+ capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 15 bundled solutions across 6 categories. Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions.
+233+ capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 20 bundled solutions across 6 categories (including 5 US-first solutions shipped 2026-03-07). Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions.
+
+SQS engine live: 5-factor scoring (correctness 40%, schema 25%, availability 20%, error handling 10%, edge cases 5%), upstream failure classification, rolling 3-run window, health states (new→unstable→recovering→stable→established), circuit breaker. 506 auto-generated test suites with tiered scheduling (A: 6h, B: 24h, C: 72h).
+
+Stripe is in SANDBOX mode — live key activation pending.
 
 ### Quick Session Checklist
 1. Declare session intent
