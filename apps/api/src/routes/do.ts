@@ -6,6 +6,7 @@ import {
   walletTransactions,
   transactions,
   failedRequests,
+  capabilities,
 } from "../db/schema.js";
 import { checkMilestone } from "../lib/milestones.js";
 import { optionalAuthMiddleware } from "../lib/middleware.js";
@@ -138,7 +139,30 @@ doRoute.post(
     }
   }
 
-  // ── 3. Match capability ────────────────────────────────────────────────
+  // ── 3. Early auth gate for unauthenticated requests ───────────────────
+  // Check BEFORE matching so non-free capabilities return a clear 401
+  // instead of the generic "no_matching_capability" error.
+  const FREE_TIER_SLUGS = ["email-validate", "dns-lookup", "json-repair", "url-to-markdown", "iban-validate"];
+
+  if (!user && capabilitySlug) {
+    // Direct slug request without auth: check if the capability is free-tier
+    const [lookedUp] = await db
+      .select({ isFreeTier: capabilities.isFreeTier, isActive: capabilities.isActive })
+      .from(capabilities)
+      .where(eq(capabilities.slug, capabilitySlug))
+      .limit(1);
+
+    if (lookedUp && lookedUp.isActive && !lookedUp.isFreeTier) {
+      return c.json({
+        error_code: "unauthorized",
+        message: "This capability requires an API key. Sign up at strale.dev/signup for full access with €2 free credits.",
+        free_capabilities: FREE_TIER_SLUGS,
+        hint: "These 5 capabilities are free with no signup — try them without an API key.",
+      }, 401);
+    }
+  }
+
+  // ── 3a. Match capability ─────────────────────────────────────────────
   const match = await matchCapability({
     task,
     capabilitySlug,
@@ -157,6 +181,16 @@ doRoute.post(
       });
     }
 
+    // Unauthenticated task-based requests that found no free-tier match
+    if (!user) {
+      return c.json({
+        error_code: "unauthorized",
+        message: "No free capability matched your request. Sign up at strale.dev/signup for full access with €2 free credits.",
+        free_capabilities: FREE_TIER_SLUGS,
+        hint: "These 5 capabilities are free with no signup — try them without an API key.",
+      }, 401);
+    }
+
     return c.json(
       apiError(
         "no_matching_capability",
@@ -173,17 +207,6 @@ doRoute.post(
 
   const capability = match.capability;
   const isFreeTier = capability.isFreeTier;
-
-  // ── 3a. Auth gate: unauthenticated users can only use free-tier ──────
-  if (!user && !isFreeTier) {
-    return c.json(
-      apiError(
-        "unauthorized",
-        "Authentication required. Free-tier capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) are available without signup.",
-      ),
-      401,
-    );
-  }
 
   // ── 3b. Hourly spend cap check (DEC-21) — authenticated only ────────────
   if (user && user.maxSpendPerHourCents) {
