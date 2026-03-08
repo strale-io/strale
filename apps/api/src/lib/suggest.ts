@@ -47,6 +47,7 @@ interface CatalogItem {
     priceCents: number;
     otherCapabilityNames: string[];
   }>;
+  isFreeTier: boolean;
   embedding: number[];
   embeddingText: string;
   tokens: Set<string>;
@@ -217,6 +218,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
             description: sol.description,
             category: sol.category,
             priceCents: sol.priceCents,
+            isFreeTier: false,
             geography: sol.geography,
             steps: steps.map((s) => ({
               name: s.capabilityName ?? s.capabilitySlug,
@@ -239,6 +241,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           description: capabilities.description,
           category: capabilities.category,
           priceCents: capabilities.priceCents,
+          isFreeTier: capabilities.isFreeTier,
         })
         .from(capabilities)
         .where(eq(capabilities.isActive, true));
@@ -255,6 +258,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           description: cap.description,
           category: cap.category,
           priceCents: cap.priceCents,
+          isFreeTier: cap.isFreeTier,
           geography: null,
           embedding: [],
           embeddingText,
@@ -403,6 +407,7 @@ export interface TypeaheadResult {
   geography: string | null;
   sqs_score: number | null;
   sqs_label: string | null;
+  is_free_tier?: boolean;
   step_count?: number;
   match_snippet?: string;
 }
@@ -496,6 +501,7 @@ export async function typeahead(
       geography: item.geography,
       sqs_score: item.trustSummary?.sqs_score ?? null,
       sqs_label: item.trustSummary?.sqs_label ?? null,
+      is_free_tier: item.isFreeTier || undefined,
     };
     if (item.type === "solution" && item.stepCount) {
       result.step_count = item.stepCount;
