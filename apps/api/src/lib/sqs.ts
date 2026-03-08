@@ -1,11 +1,12 @@
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { capabilityHealth } from "../db/schema.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface SQSResult {
-  score: number;
-  label: string;
+  score: number;          // integer 0-100
+  label: string;          // "Excellent" | "Good" | "Fair" | "Poor" | "Degraded" | "Pending"
   factors: {
     correctness: FactorResult;
     schema: FactorResult;
@@ -13,6 +14,8 @@ export interface SQSResult {
     error_handling: FactorResult;
     edge_cases: FactorResult;
   };
+  trend: "stable" | "improving" | "declining";
+  circuit_breaker: boolean;
   upstream_issues: number;
   runs_analyzed: number;
   pending: boolean;
@@ -37,9 +40,13 @@ const WEIGHTS = {
   edge_cases: 0.05,
 } as const;
 
-const NEUTRAL_DEFAULT = 70;
-const MIN_RUNS = 2;
-const ROLLING_RUNS = 3;
+const FACTOR_KEYS = Object.keys(WEIGHTS) as (keyof typeof WEIGHTS)[];
+
+const MIN_RUNS = 5;
+const ROLLING_RUNS = 10;
+
+// Linear decay: run 1 (most recent) = 1.00, run 10 (oldest) = 0.30
+const RECENCY_WEIGHTS = [1.00, 0.95, 0.90, 0.85, 0.80, 0.70, 0.60, 0.50, 0.40, 0.30];
 
 // test_type → SQS factor mapping
 const TYPE_TO_FACTOR: Record<string, keyof typeof WEIGHTS> = {
@@ -53,19 +60,11 @@ const TYPE_TO_FACTOR: Record<string, keyof typeof WEIGHTS> = {
 };
 
 const UPSTREAM_PATTERNS = [
-  /HTTP 429/i,
-  /HTTP 503/i,
-  /HTTP 502/i,
-  /Too Many Requests/i,
-  /rate limit/i,
-  /ECONNRESET/i,
-  /ECONNREFUSED/i,
-  /ETIMEDOUT/i,
-  /timeout/i,
-  /upstream/i,
-  /Browserless/i,
-  /VIES error/i,
-  /Navigation timeout/i,
+  /HTTP 429/i, /HTTP 503/i, /HTTP 502/i,
+  /Too Many Requests/i, /rate limit/i,
+  /ECONNRESET/i, /ECONNREFUSED/i, /ETIMEDOUT/i,
+  /timeout/i, /upstream/i, /Browserless/i,
+  /VIES error/i, /Navigation timeout/i,
 ];
 
 function isUpstreamFailure(reason: string | null): boolean {
@@ -77,8 +76,9 @@ function scoreToLabel(score: number, pending: boolean): string {
   if (pending) return "Pending";
   if (score >= 90) return "Excellent";
   if (score >= 75) return "Good";
-  if (score >= 60) return "Fair";
-  return "Poor";
+  if (score >= 50) return "Fair";
+  if (score >= 25) return "Poor";
+  return "Degraded";
 }
 
 // ─── Cache ──────────────────────────────────────────────────────────────────
@@ -100,7 +100,8 @@ function setCachedSQS(key: string, data: SQSResult): void {
 
 /**
  * Compute SQS for a single capability.
- * Uses rolling 3-run window grouped by DATE_TRUNC('minute').
+ * Uses rolling 10-run window with recency-weighted scoring.
+ * Returns pending until all 5 factors have data and >= 5 runs exist.
  */
 export async function computeCapabilitySQS(slug: string): Promise<SQSResult> {
   const cacheKey = `sqs:cap:${slug}`;
@@ -125,19 +126,26 @@ export async function computeCapabilitySQS(slug: string): Promise<SQSResult> {
   const windows = (Array.isArray(runWindows) ? runWindows : (runWindows as any)?.rows ?? []) as any[];
 
   if (windows.length < MIN_RUNS) {
-    const result = makePendingResult();
+    const result = makePendingResult(windows.length);
     setCachedSQS(cacheKey, result);
     return result;
   }
 
+  // Map window timestamps to run indices (0 = most recent)
+  const windowIndexMap = new Map<number, number>();
+  for (let i = 0; i < windows.length; i++) {
+    windowIndexMap.set(new Date(windows[i].run_window).getTime(), i);
+  }
+
   const oldestWindow = windows[windows.length - 1].run_window;
 
-  // Get all test results from these run windows with test_type info
+  // Get all test results with run_window
   const rows = await db.execute(sql`
     SELECT
       ts.test_type,
       tr.passed,
-      tr.failure_reason
+      tr.failure_reason,
+      DATE_TRUNC('minute', tr.executed_at) AS run_window
     FROM test_results tr
     INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
     WHERE tr.capability_slug = ${slug}
@@ -147,14 +155,26 @@ export async function computeCapabilitySQS(slug: string): Promise<SQSResult> {
 
   const testRows = (Array.isArray(rows) ? rows : (rows as any)?.rows ?? []) as any[];
 
-  const result = computeFromRows(testRows, windows.length);
+  // Get circuit breaker consecutive failures
+  const [health] = await db
+    .select({ consecutiveFailures: capabilityHealth.consecutiveFailures })
+    .from(capabilityHealth)
+    .where(eq(capabilityHealth.capabilitySlug, slug))
+    .limit(1);
+
+  const result = computeFromRows(
+    testRows,
+    windows.length,
+    windowIndexMap,
+    health?.consecutiveFailures ?? 0,
+  );
   setCachedSQS(cacheKey, result);
   return result;
 }
 
 /**
- * Compute SQS for a solution — weighted average of step SQS scores.
- * If any step has SQS < 60, solution SQS is capped at 74.
+ * Compute SQS for a solution — floor-aware weighted average of step scores.
+ * Score cannot exceed lowest step SQS + 20.
  */
 export async function computeSolutionSQS(
   stepSlugs: string[],
@@ -169,7 +189,7 @@ export async function computeSolutionSQS(
 
   // If any step is pending, the solution is pending
   if (stepScores.some((s) => s.pending)) {
-    const result = makePendingResult();
+    const result = makePendingResult(0);
     setCachedSQS(cacheKey, result);
     return result;
   }
@@ -192,17 +212,35 @@ export async function computeSolutionSQS(
   let score = Object.values(factors).reduce((s, f) => s + f.weighted_contribution, 0);
   score = Math.round(score * 10) / 10;
 
-  // Step floor cap: if any step < 60, solution capped at 74
-  const hasWeakStep = stepScores.some((s) => s.score < 60);
-  if (hasWeakStep && score > 74) score = 74;
+  // Floor-aware cap: score cannot exceed lowest step SQS + 20
+  const lowestStepScore = Math.min(...stepScores.map((s) => s.score));
+  const floorCap = lowestStepScore + 20;
+  if (score > floorCap) score = floorCap;
+
+  score = Math.max(0, Math.min(100, score));
 
   const upstreamIssues = stepScores.reduce((s, r) => s + r.upstream_issues, 0);
   const runsAnalyzed = Math.min(...stepScores.map((s) => s.runs_analyzed));
+
+  // Solution trend: majority of step trends
+  const trendCounts = { improving: 0, declining: 0, stable: 0 };
+  for (const s of stepScores) trendCounts[s.trend]++;
+  const trend: SQSResult["trend"] =
+    trendCounts.improving > trendCounts.declining && trendCounts.improving > trendCounts.stable
+      ? "improving"
+      : trendCounts.declining > trendCounts.improving && trendCounts.declining > trendCounts.stable
+        ? "declining"
+        : "stable";
+
+  // Solution circuit_breaker: true if any step has active penalty
+  const circuitBreaker = stepScores.some((s) => s.circuit_breaker);
 
   const result: SQSResult = {
     score,
     label: scoreToLabel(score, false),
     factors,
+    trend,
+    circuit_breaker: circuitBreaker,
     upstream_issues: upstreamIssues,
     runs_analyzed: runsAnalyzed,
     pending: false,
@@ -214,83 +252,187 @@ export async function computeSolutionSQS(
 
 // ─── Internal helpers ───────────────────────────────────────────────────────
 
+interface TestRow {
+  test_type: string;
+  passed: boolean;
+  failure_reason: string | null;
+  run_window: any;
+}
+
+interface FactorAccum {
+  weightedPassed: number;
+  weightedTotal: number;
+  passed: number;
+  total: number;
+}
+
 function computeFromRows(
-  testRows: Array<{ test_type: string; passed: boolean; failure_reason: string | null }>,
+  testRows: TestRow[],
   runsAnalyzed: number,
+  windowIndexMap: Map<number, number>,
+  cbConsecutiveFailures: number,
 ): SQSResult {
-  // Accumulate per-factor counts
-  const accum: Record<keyof typeof WEIGHTS, { passed: number; total: number }> = {
-    correctness: { passed: 0, total: 0 },
-    schema: { passed: 0, total: 0 },
-    availability: { passed: 0, total: 0 },
-    error_handling: { passed: 0, total: 0 },
-    edge_cases: { passed: 0, total: 0 },
+  const accum: Record<keyof typeof WEIGHTS, FactorAccum> = {
+    correctness: { weightedPassed: 0, weightedTotal: 0, passed: 0, total: 0 },
+    schema: { weightedPassed: 0, weightedTotal: 0, passed: 0, total: 0 },
+    availability: { weightedPassed: 0, weightedTotal: 0, passed: 0, total: 0 },
+    error_handling: { weightedPassed: 0, weightedTotal: 0, passed: 0, total: 0 },
+    edge_cases: { weightedPassed: 0, weightedTotal: 0, passed: 0, total: 0 },
   };
 
   let upstreamIssues = 0;
 
+  // Per-window pass tracking for trend computation
+  const windowPassed = new Map<number, number>();
+  const windowTotal = new Map<number, number>();
+
   for (const row of testRows) {
     const factor = TYPE_TO_FACTOR[row.test_type];
-    if (!factor) continue; // unknown test type — skip
+    if (!factor) continue;
+
+    const runIndex = windowIndexMap.get(new Date(row.run_window).getTime()) ?? -1;
+    if (runIndex < 0) continue;
+
+    const recencyWeight = RECENCY_WEIGHTS[runIndex] ?? 0.30;
 
     if (row.passed) {
-      accum[factor].total++;
+      accum[factor].weightedPassed += recencyWeight;
+      accum[factor].weightedTotal += recencyWeight;
       accum[factor].passed++;
+      accum[factor].total++;
+      windowPassed.set(runIndex, (windowPassed.get(runIndex) ?? 0) + 1);
+      windowTotal.set(runIndex, (windowTotal.get(runIndex) ?? 0) + 1);
     } else if (isUpstreamFailure(row.failure_reason)) {
-      // Upstream failures excluded from score
       upstreamIssues++;
     } else {
-      // Internal failure — counts against the factor
+      accum[factor].weightedTotal += recencyWeight;
       accum[factor].total++;
-      // passed stays 0
+      windowTotal.set(runIndex, (windowTotal.get(runIndex) ?? 0) + 1);
     }
   }
 
-  const factors: SQSResult["factors"] = {
-    correctness: buildFactor(accum.correctness, WEIGHTS.correctness),
-    schema: buildFactor(accum.schema, WEIGHTS.schema),
-    availability: buildFactor(accum.availability, WEIGHTS.availability),
-    error_handling: buildFactor(accum.error_handling, WEIGHTS.error_handling),
-    edge_cases: buildFactor(accum.edge_cases, WEIGHTS.edge_cases),
-  };
+  // Pending if not all 5 factors have test data
+  const allFactorsHaveData = FACTOR_KEYS.every((k) => accum[k].total > 0);
+  if (!allFactorsHaveData) {
+    return makePendingResult(runsAnalyzed);
+  }
 
-  const score = Math.round(
+  // Build factors — exclude missing factors, re-weight proportionally
+  let activeWeightSum = 0;
+  for (const key of FACTOR_KEYS) {
+    if (accum[key].weightedTotal > 0) activeWeightSum += WEIGHTS[key];
+  }
+
+  const factors: SQSResult["factors"] = {} as any;
+  for (const key of FACTOR_KEYS) {
+    const a = accum[key];
+    if (a.weightedTotal > 0) {
+      const rate = Math.round((a.weightedPassed / a.weightedTotal) * 1000) / 10;
+      const normalizedWeight = WEIGHTS[key] / activeWeightSum;
+      factors[key] = {
+        rate,
+        passed: a.passed,
+        total: a.total,
+        weight: Math.round(normalizedWeight * 1000) / 1000,
+        weighted_contribution: Math.round(rate * normalizedWeight * 10) / 10,
+        has_data: true,
+      };
+    } else {
+      factors[key] = {
+        rate: 0, passed: 0, total: 0,
+        weight: 0, weighted_contribution: 0, has_data: false,
+      };
+    }
+  }
+
+  let score = Math.round(
     Object.values(factors).reduce((s, f) => s + f.weighted_contribution, 0) * 10,
   ) / 10;
+
+  // ── Circuit breaker penalties ──────────────────────────────────────────
+  let circuitBreakerActive = false;
+
+  // Sort non-upstream test results by recency for pattern detection
+  const nonUpstreamRows = testRows
+    .filter((r) => TYPE_TO_FACTOR[r.test_type] && !isUpstreamFailure(r.failure_reason))
+    .sort((a, b) => new Date(b.run_window).getTime() - new Date(a.run_window).getTime());
+
+  // Trigger 1: 3 consecutive total execution failures → score = max(computed − 30, 20)
+  if (cbConsecutiveFailures >= 3) {
+    score = Math.max(score - 30, 20);
+    circuitBreakerActive = true;
+  }
+
+  // Trigger 2: 5 consecutive correctness test failures → score = max(computed − 20, 30)
+  const correctnessRows = nonUpstreamRows.filter(
+    (r) => TYPE_TO_FACTOR[r.test_type] === "correctness",
+  );
+  if (correctnessRows.length >= 5 && correctnessRows.slice(0, 5).every((r) => !r.passed)) {
+    score = Math.max(score - 20, 30);
+    circuitBreakerActive = true;
+  }
+
+  // Trigger 3: Schema break (latest schema_check failed) → score = max(computed − 15, 40)
+  const schemaRows = nonUpstreamRows.filter(
+    (r) => TYPE_TO_FACTOR[r.test_type] === "schema",
+  );
+  if (schemaRows.length > 0 && !schemaRows[0].passed) {
+    score = Math.max(score - 15, 40);
+    circuitBreakerActive = true;
+  }
+
+  // Recovery: 3 consecutive passes clear the penalty
+  if (circuitBreakerActive && nonUpstreamRows.length >= 3) {
+    if (nonUpstreamRows.slice(0, 3).every((r) => r.passed)) {
+      circuitBreakerActive = false;
+      // Re-compute base score without penalties
+      score = Math.round(
+        Object.values(factors).reduce((s, f) => s + f.weighted_contribution, 0) * 10,
+      ) / 10;
+    }
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score * 10) / 10));
+
+  // ── Trend: compare last 5 vs previous 5 windows ───────────────────────
+  const trend = computeTrend(windowPassed, windowTotal, runsAnalyzed);
 
   return {
     score,
     label: scoreToLabel(score, false),
     factors,
+    trend,
+    circuit_breaker: circuitBreakerActive,
     upstream_issues: upstreamIssues,
     runs_analyzed: runsAnalyzed,
     pending: false,
   };
 }
 
-function buildFactor(
-  counts: { passed: number; total: number },
-  weight: number,
-): FactorResult {
-  if (counts.total === 0) {
-    return {
-      rate: NEUTRAL_DEFAULT,
-      passed: 0,
-      total: 0,
-      weight,
-      weighted_contribution: NEUTRAL_DEFAULT * weight,
-      has_data: false,
-    };
+function computeTrend(
+  windowPassed: Map<number, number>,
+  windowTotal: Map<number, number>,
+  runsAnalyzed: number,
+): "stable" | "improving" | "declining" {
+  if (runsAnalyzed < 6) return "stable";
+
+  let recentSum = 0, recentCount = 0;
+  let olderSum = 0, olderCount = 0;
+
+  for (let i = 0; i < Math.min(runsAnalyzed, 10); i++) {
+    const total = windowTotal.get(i) ?? 0;
+    if (total === 0) continue;
+    const rate = ((windowPassed.get(i) ?? 0) / total) * 100;
+    if (i < 5) { recentSum += rate; recentCount++; }
+    else { olderSum += rate; olderCount++; }
   }
-  const rate = Math.round((counts.passed / counts.total) * 1000) / 10;
-  return {
-    rate,
-    passed: counts.passed,
-    total: counts.total,
-    weight,
-    weighted_contribution: Math.round(rate * weight * 10) / 10,
-    has_data: true,
-  };
+
+  if (recentCount === 0 || olderCount === 0) return "stable";
+
+  const diff = (recentSum / recentCount) - (olderSum / olderCount);
+  if (diff > 5) return "improving";
+  if (diff < -5) return "declining";
+  return "stable";
 }
 
 function aggregateFactor(
@@ -325,14 +467,64 @@ function aggregateFactor(
   };
 }
 
-function makePendingResult(): SQSResult {
+/**
+ * Estimate how long until a capability qualifies for a real SQS score.
+ * Returns null if already qualified, otherwise an estimate string like "~18h".
+ */
+export async function estimateQualificationTime(slug: string): Promise<string | null> {
+  const db = getDb();
+
+  // Count distinct test types that have at least one test suite
+  const factorCoverage = await db.execute(sql`
+    SELECT DISTINCT ts.test_type
+    FROM test_suites ts
+    WHERE ts.capability_slug = ${slug} AND ts.active = true
+  `);
+  const testTypes = (Array.isArray(factorCoverage) ? factorCoverage : (factorCoverage as any)?.rows ?? []) as any[];
+  const coveredFactors = new Set<string>();
+  for (const row of testTypes) {
+    const factor = TYPE_TO_FACTOR[row.test_type];
+    if (factor) coveredFactors.add(factor);
+  }
+
+  // Count existing test runs
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const cutoff = thirtyDaysAgo.toISOString();
+
+  const runCountResult = await db.execute(sql`
+    SELECT COUNT(DISTINCT DATE_TRUNC('minute', executed_at)) AS run_count
+    FROM test_results
+    WHERE capability_slug = ${slug}
+      AND executed_at >= ${cutoff}::timestamptz
+  `);
+  const runRows = (Array.isArray(runCountResult) ? runCountResult : (runCountResult as any)?.rows ?? []) as any[];
+  const existingRuns = Number(runRows[0]?.run_count ?? 0);
+
+  const allFactorsCovered = FACTOR_KEYS.every((k) => coveredFactors.has(k));
+
+  // Already qualified
+  if (allFactorsCovered && existingRuns >= MIN_RUNS) return null;
+
+  // Estimate: scheduler runs tier A every 6h, tier B every 24h, tier C every 72h.
+  // Most capabilities have a mix. Conservative estimate: one run per 6h cycle.
+  const runsNeeded = Math.max(MIN_RUNS - existingRuns, 0);
+  const hoursForRuns = runsNeeded * 6;
+
+  // If missing factor coverage, add time for next scheduled test generation
+  const missingFactors = FACTOR_KEYS.filter((k) => !coveredFactors.has(k));
+  const hoursForFactors = missingFactors.length > 0 ? 6 : 0; // assume next cycle picks them up
+
+  const totalHours = Math.max(hoursForRuns, hoursForFactors);
+
+  if (totalHours === 0) return "< 6h";
+  return `~${totalHours}h`;
+}
+
+function makePendingResult(runsAnalyzed = 0): SQSResult {
   const makePendingFactor = (weight: number): FactorResult => ({
-    rate: 0,
-    passed: 0,
-    total: 0,
-    weight,
-    weighted_contribution: 0,
-    has_data: false,
+    rate: 0, passed: 0, total: 0,
+    weight, weighted_contribution: 0, has_data: false,
   });
 
   return {
@@ -345,8 +537,10 @@ function makePendingResult(): SQSResult {
       error_handling: makePendingFactor(WEIGHTS.error_handling),
       edge_cases: makePendingFactor(WEIGHTS.edge_cases),
     },
+    trend: "stable",
+    circuit_breaker: false,
     upstream_issues: 0,
-    runs_analyzed: 0,
+    runs_analyzed: runsAnalyzed,
     pending: true,
   };
 }

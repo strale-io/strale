@@ -416,6 +416,184 @@ const TESTS: TestDef[] = [
   { capabilitySlug: "social-profile-check", testName: "Schema structure", testType: "schema_check",
     input: { username: "Google" },
     validationRules: checks(notNull("profiles")) },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SPRINT 1B: Solution-constituent capability coverage
+  // known_answer + edge_case tests for all capabilities used in solutions
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ── cookie-scan — known_answer + edge_case ──
+  { capabilitySlug: "cookie-scan", testName: "google.com — cookies detected", testType: "known_answer",
+    input: { url: "https://google.com" },
+    validationRules: checks(notNull("cookies")) },
+  { capabilitySlug: "cookie-scan", testName: "Minimal static site", testType: "edge_case",
+    input: { url: "https://example.com" },
+    validationRules: checks(notNull("cookies")) },
+
+  // ── domain-reputation — known_answer + edge_case ──
+  { capabilitySlug: "domain-reputation", testName: "google.com — high reputation", testType: "known_answer",
+    input: { domain: "google.com" },
+    validationRules: checks(notNull("reputation_score"), gt("reputation_score", 50)) },
+  { capabilitySlug: "domain-reputation", testName: "Non-existent domain", testType: "edge_case",
+    input: { domain: "this-domain-does-not-exist-abc123xyz.com" },
+    validationRules: checks() },
+
+  // ── email-deliverability-check — known_answer + edge_case ──
+  { capabilitySlug: "email-deliverability-check", testName: "google.com — has SPF record", testType: "known_answer",
+    input: { domain: "google.com" },
+    validationRules: checks(notNull("spf")) },
+  { capabilitySlug: "email-deliverability-check", testName: "Domain with no mail setup", testType: "edge_case",
+    input: { domain: "example.com" },
+    validationRules: checks() },
+
+  // ── eu-ai-act-classify — known_answer + edge_case ──
+  { capabilitySlug: "eu-ai-act-classify", testName: "Biometric surveillance — expect high risk", testType: "known_answer",
+    input: { description: "Real-time facial recognition system used for law enforcement surveillance in public spaces" },
+    validationRules: checks(notNull("risk_level"), eql("risk_level", "high")) },
+  { capabilitySlug: "eu-ai-act-classify", testName: "Very short vague description", testType: "edge_case",
+    input: { description: "AI" },
+    validationRules: checks(notNull("risk_level")) },
+
+  // ── gdpr-fine-lookup — known_answer + edge_case ──
+  { capabilitySlug: "gdpr-fine-lookup", testName: "Meta — known GDPR fines", testType: "known_answer",
+    input: { company: "Meta" },
+    validationRules: checks(notNull("fines")) },
+  { capabilitySlug: "gdpr-fine-lookup", testName: "Company with no GDPR fines", testType: "edge_case",
+    input: { company: "Strale" },
+    validationRules: checks(notNull("fines")) },
+
+  // ── gdpr-website-check — known_answer + edge_case ──
+  { capabilitySlug: "gdpr-website-check", testName: "google.com — GDPR check", testType: "known_answer",
+    input: { url: "https://google.com" },
+    validationRules: checks(notNull("gdpr_score")) },
+  { capabilitySlug: "gdpr-website-check", testName: "Plain HTTP site", testType: "edge_case",
+    input: { url: "http://example.com" },
+    validationRules: checks() },
+
+  // ── header-security-check — known_answer + edge_case ──
+  { capabilitySlug: "header-security-check", testName: "google.com — security headers", testType: "known_answer",
+    input: { url: "https://google.com" },
+    validationRules: checks(notNull("score"), notNull("grade")) },
+  { capabilitySlug: "header-security-check", testName: "IP address instead of domain", testType: "edge_case",
+    input: { url: "http://1.1.1.1" },
+    validationRules: checks() },
+
+  // ── landing-page-roast — known_answer + edge_case ──
+  { capabilitySlug: "landing-page-roast", testName: "google.com — landing page critique", testType: "known_answer",
+    input: { url: "https://google.com" },
+    validationRules: checks(notNull("overall_score")) },
+  { capabilitySlug: "landing-page-roast", testName: "Minimal page with no content", testType: "edge_case",
+    input: { url: "https://example.com" },
+    validationRules: checks(notNull("overall_score")) },
+
+  // ── page-speed-test — known_answer + edge_case ──
+  { capabilitySlug: "page-speed-test", testName: "google.com — fast performance", testType: "known_answer",
+    input: { url: "https://google.com" },
+    validationRules: checks(notNull("performance_score"), gt("performance_score", 50)) },
+  { capabilitySlug: "page-speed-test", testName: "URL without protocol", testType: "edge_case",
+    input: { url: "example.com" },
+    validationRules: checks() },
+
+  // ── pii-redact — known_answer + edge_case ──
+  { capabilitySlug: "pii-redact", testName: "Email and SSN redacted", testType: "known_answer",
+    input: { text: "Contact John at john.smith@example.com, SSN 123-45-6789" },
+    validationRules: checks(notNull("redacted_text")) },
+  { capabilitySlug: "pii-redact", testName: "Text with no PII", testType: "edge_case",
+    input: { text: "The weather is sunny today with a high of 25 degrees." },
+    validationRules: checks(notNull("redacted_text")) },
+
+  // ── privacy-policy-analyze — known_answer + edge_case ──
+  { capabilitySlug: "privacy-policy-analyze", testName: "google.com — privacy analysis", testType: "known_answer",
+    input: { url: "https://policies.google.com/privacy" },
+    validationRules: checks(notNull("data_collected")) },
+  { capabilitySlug: "privacy-policy-analyze", testName: "Page with no privacy policy", testType: "edge_case",
+    input: { url: "https://example.com" },
+    validationRules: checks() },
+
+  // ── sanctions-check — known_answer + edge_case ──
+  { capabilitySlug: "sanctions-check", testName: "Spotify AB — not sanctioned", testType: "known_answer",
+    input: { name: "Spotify AB" },
+    validationRules: checks(notNull("is_sanctioned"), isFalse("is_sanctioned")) },
+  { capabilitySlug: "sanctions-check", testName: "Single character name", testType: "edge_case",
+    input: { name: "X" },
+    validationRules: checks(notNull("is_sanctioned")) },
+
+  // ── seo-audit — known_answer + edge_case ──
+  { capabilitySlug: "seo-audit", testName: "google.com — SEO score", testType: "known_answer",
+    input: { url: "https://google.com" },
+    validationRules: checks(notNull("overall_score")) },
+  { capabilitySlug: "seo-audit", testName: "Non-existent domain", testType: "edge_case",
+    input: { url: "https://this-domain-does-not-exist-xyz987.com" },
+    validationRules: checks() },
+
+  // ── social-profile-check — known_answer + edge_case ──
+  { capabilitySlug: "social-profile-check", testName: "Google — known profiles", testType: "known_answer",
+    input: { username: "Google" },
+    validationRules: checks(notNull("profiles")) },
+  { capabilitySlug: "social-profile-check", testName: "Random gibberish username", testType: "edge_case",
+    input: { username: "xz9q8w7e6r5t4y3u2i1" },
+    validationRules: checks(notNull("profiles")) },
+
+  // ── tech-stack-detect — known_answer + edge_case ──
+  { capabilitySlug: "tech-stack-detect", testName: "google.com — technologies detected", testType: "known_answer",
+    input: { url: "https://google.com" },
+    validationRules: checks(notNull("url")) },
+  { capabilitySlug: "tech-stack-detect", testName: "IP address URL", testType: "edge_case",
+    input: { url: "http://1.1.1.1" },
+    validationRules: checks() },
+
+  // ── url-to-markdown — known_answer + edge_case ──
+  { capabilitySlug: "url-to-markdown", testName: "example.com — markdown content", testType: "known_answer",
+    input: { url: "https://example.com" },
+    validationRules: checks(notNull("markdown"), contains("markdown", "Example")) },
+  { capabilitySlug: "url-to-markdown", testName: "URL with query parameters", testType: "edge_case",
+    input: { url: "https://example.com?foo=bar&baz=qux" },
+    validationRules: checks() },
+
+  // ── danish-company-data — edge_case ──
+  { capabilitySlug: "danish-company-data", testName: "CVR with leading zeros", testType: "edge_case",
+    input: { cvr_number: "00000001" },
+    validationRules: checks() },
+
+  // ── data-protection-authority-lookup — edge_case ──
+  { capabilitySlug: "data-protection-authority-lookup", testName: "Non-EU country (US)", testType: "edge_case",
+    input: { country_code: "US" },
+    validationRules: checks() },
+
+  // ── dns-lookup — edge_case ──
+  { capabilitySlug: "dns-lookup", testName: "Deep subdomain", testType: "edge_case",
+    input: { domain: "a.b.c.d.google.com" },
+    validationRules: checks() },
+
+  // ── exchange-rate — edge_case ──
+  { capabilitySlug: "exchange-rate", testName: "Same currency (USD to USD)", testType: "edge_case",
+    input: { from: "USD", to: "USD" },
+    validationRules: checks(notNull("rate")) },
+
+  // ── finnish-company-data — edge_case ──
+  { capabilitySlug: "finnish-company-data", testName: "Y-tunnus with wrong check digit", testType: "edge_case",
+    input: { business_id: "0112038-0" },
+    validationRules: checks() },
+
+  // ── norwegian-company-data — edge_case ──
+  { capabilitySlug: "norwegian-company-data", testName: "Very short org number", testType: "edge_case",
+    input: { org_number: "123" },
+    validationRules: checks() },
+
+  // ── ssl-certificate-chain — edge_case ──
+  { capabilitySlug: "ssl-certificate-chain", testName: "Self-signed certificate domain", testType: "edge_case",
+    input: { domain: "self-signed.badssl.com" },
+    validationRules: checks() },
+
+  // ── ssl-check — edge_case ──
+  { capabilitySlug: "ssl-check", testName: "Domain with no SSL", testType: "edge_case",
+    input: { domain: "http.badssl.com" },
+    validationRules: checks() },
+
+  // ── us-company-data — edge_case ──
+  { capabilitySlug: "us-company-data", testName: "Company with special characters", testType: "edge_case",
+    input: { company: "AT&T" },
+    validationRules: checks() },
 ];
 
 // ─── Seed logic ─────────────────────────────────────────────────────────────
