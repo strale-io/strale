@@ -26,6 +26,7 @@ capabilitiesRoute.get("/", async (c) => {
       success_rate: capabilities.successRate,
       transparency_tag: capabilities.transparencyTag,
       data_source: capabilities.dataSource,
+      is_free_tier: capabilities.isFreeTier,
     })
     .from(capabilities)
     .where(eq(capabilities.isActive, true));
@@ -67,6 +68,7 @@ capabilitiesRoute.get("/:slug", async (c) => {
       success_rate: capabilities.successRate,
       transparency_tag: capabilities.transparencyTag,
       data_source: capabilities.dataSource,
+      is_free_tier: capabilities.isFreeTier,
     })
     .from(capabilities)
     .where(

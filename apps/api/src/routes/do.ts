@@ -8,8 +8,8 @@ import {
   failedRequests,
 } from "../db/schema.js";
 import { checkMilestone } from "../lib/milestones.js";
-import { authMiddleware } from "../lib/middleware.js";
-import { rateLimitByKey } from "../lib/rate-limit.js";
+import { optionalAuthMiddleware } from "../lib/middleware.js";
+import { rateLimitByKey, rateLimitFreeTierByIp } from "../lib/rate-limit.js";
 import { matchCapability } from "../lib/matching.js";
 import { getExecutor } from "../capabilities/index.js";
 import { apiError } from "../lib/errors.js";
@@ -21,6 +21,7 @@ import {
 import { recordQuality } from "../lib/quality-capture.js";
 import { getTestResultsForSlug } from "../lib/trust-helpers.js";
 import { recordPiggybackResult } from "../lib/piggyback-monitor.js";
+import { computeCapabilitySQS } from "../lib/sqs.js";
 import type { AppEnv } from "../types.js";
 
 const MAX_TIMEOUT_SECONDS = 60;
@@ -33,9 +34,14 @@ const ASYNC_THRESHOLD_MS = 10_000;
 export const doRoute = new Hono<AppEnv>();
 
 // POST /v1/do — Core endpoint: execute a capability
-// DEC-21: 10 req/sec per API key
-doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
-  const user = c.get("user");
+// DEC-21: 10 req/sec per API key (authenticated), 10/day per IP (free-tier)
+doRoute.post(
+  "/do",
+  optionalAuthMiddleware,
+  rateLimitByKey(10, 1000),         // applies only if user is set
+  rateLimitFreeTierByIp(10),        // applies only if user is NOT set
+  async (c) => {
+  const user = c.get("user") as any | undefined;
   const db = getDb();
 
   // ── 1. Parse and validate request ──────────────────────────────────────
@@ -56,6 +62,10 @@ doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
     MAX_TIMEOUT_SECONDS,
   );
   const dryRun: boolean = body.dry_run === true;
+  const minSqs: number | undefined =
+    typeof body.min_sqs === "number" && body.min_sqs >= 0 && body.min_sqs <= 100
+      ? Math.round(body.min_sqs)
+      : undefined;
 
   if (!task && !capabilitySlug) {
     return c.json(
@@ -67,35 +77,41 @@ doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
     );
   }
 
-  if (
-    maxPriceCents == null ||
-    typeof maxPriceCents !== "number" ||
-    maxPriceCents <= 0
-  ) {
-    return c.json(
-      apiError(
-        "invalid_request",
-        "'max_price_cents' is required and must be a positive integer.",
-      ),
-      400,
-    );
+  // max_price_cents: required for authenticated users, optional for free-tier
+  if (user) {
+    if (
+      maxPriceCents == null ||
+      typeof maxPriceCents !== "number" ||
+      maxPriceCents <= 0
+    ) {
+      return c.json(
+        apiError(
+          "invalid_request",
+          "'max_price_cents' is required and must be a positive integer.",
+        ),
+        400,
+      );
+    }
+
+    if (maxPriceCents > MAX_PRICE_CAP_CENTS) {
+      return c.json(
+        apiError(
+          "invalid_request",
+          `'max_price_cents' cannot exceed ${MAX_PRICE_CAP_CENTS} (€${MAX_PRICE_CAP_CENTS / 100}).`,
+          { max_allowed: MAX_PRICE_CAP_CENTS },
+        ),
+        400,
+      );
+    }
   }
 
-  if (maxPriceCents > MAX_PRICE_CAP_CENTS) {
-    return c.json(
-      apiError(
-        "invalid_request",
-        `'max_price_cents' cannot exceed ${MAX_PRICE_CAP_CENTS} (€${MAX_PRICE_CAP_CENTS / 100}).`,
-        { max_allowed: MAX_PRICE_CAP_CENTS },
-      ),
-      400,
-    );
-  }
+  // For unauthenticated requests, default to 0 (free-tier only)
+  const effectiveMaxPrice = maxPriceCents ?? 0;
 
-  // ── 2. Idempotency check ───────────────────────────────────────────────
+  // ── 2. Idempotency check (authenticated only) ─────────────────────────
   const idempotencyKey = c.req.header("Idempotency-Key") || null;
 
-  if (idempotencyKey) {
+  if (idempotencyKey && user) {
     const [existing] = await db
       .select()
       .from(transactions)
@@ -103,7 +119,6 @@ doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
       .limit(1);
 
     if (existing) {
-      // Return the cached result without re-executing or re-charging
       const [wallet] = await db
         .select({ balanceCents: wallets.balanceCents })
         .from(wallets)
@@ -128,17 +143,19 @@ doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
     task,
     capabilitySlug,
     category: body.category,
-    maxPriceCents,
+    maxPriceCents: effectiveMaxPrice,
   });
 
   if (!match) {
     // Log the failed request for demand analysis (DEC-20260225-P-c5d6)
-    await db.insert(failedRequests).values({
-      userId: user.id,
-      task: task ?? capabilitySlug ?? "",
-      category: body.category ?? null,
-      maxPriceCents,
-    });
+    if (user) {
+      await db.insert(failedRequests).values({
+        userId: user.id,
+        task: task ?? capabilitySlug ?? "",
+        category: body.category ?? null,
+        maxPriceCents: effectiveMaxPrice,
+      });
+    }
 
     return c.json(
       apiError(
@@ -147,7 +164,7 @@ doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
         {
           task,
           capability_slug: capabilitySlug,
-          max_price_cents: maxPriceCents,
+          max_price_cents: effectiveMaxPrice,
         },
       ),
       404,
@@ -155,9 +172,21 @@ doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
   }
 
   const capability = match.capability;
+  const isFreeTier = capability.isFreeTier;
 
-  // ── 3b. Hourly spend cap check (DEC-21) ─────────────────────────────────
-  if (user.maxSpendPerHourCents) {
+  // ── 3a. Auth gate: unauthenticated users can only use free-tier ──────
+  if (!user && !isFreeTier) {
+    return c.json(
+      apiError(
+        "unauthorized",
+        "Authentication required. Free-tier capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) are available without signup.",
+      ),
+      401,
+    );
+  }
+
+  // ── 3b. Hourly spend cap check (DEC-21) — authenticated only ────────────
+  if (user && user.maxSpendPerHourCents) {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const [spendRow] = await db
       .select({ total: sql<string>`COALESCE(SUM(price_cents), 0)::text` })
@@ -189,19 +218,29 @@ doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
 
   // ── 4. Dry run — return what would execute without charging ────────────
   if (dryRun) {
-    const [wallet] = await db
-      .select({ balanceCents: wallets.balanceCents })
-      .from(wallets)
-      .where(eq(wallets.userId, user.id))
-      .limit(1);
+    if (user) {
+      const [wallet] = await db
+        .select({ balanceCents: wallets.balanceCents })
+        .from(wallets)
+        .where(eq(wallets.userId, user.id))
+        .limit(1);
 
-    const balance = wallet?.balanceCents ?? 0;
+      const balance = wallet?.balanceCents ?? 0;
+      return c.json({
+        dry_run: true,
+        would_execute: capability.slug,
+        price_cents: capability.priceCents,
+        wallet_balance_cents: balance,
+        wallet_sufficient: balance >= capability.priceCents,
+        ...(isFreeTier ? { free_tier: true } : {}),
+      });
+    }
+    // Unauthenticated dry run (free-tier only)
     return c.json({
       dry_run: true,
       would_execute: capability.slug,
-      price_cents: capability.priceCents,
-      wallet_balance_cents: balance,
-      wallet_sufficient: balance >= capability.priceCents,
+      price_cents: 0,
+      free_tier: true,
     });
   }
 
@@ -233,18 +272,258 @@ doRoute.post("/do", authMiddleware, rateLimitByKey(10, 1000), async (c) => {
     );
   }
 
-  // ── 6. Decide sync vs async (DEC-22) ──────────────────────────────────
-  const isAsync = (capability.avgLatencyMs ?? 0) > ASYNC_THRESHOLD_MS;
-  const executionInput = inputs ?? { task };
+  // ── 5c. SQS quality gate ──────────────────────────────────────────────
+  const PLATFORM_FLOOR_SQS = 25;
+  const sqs = await computeCapabilitySQS(capability.slug);
 
+  if (!sqs.pending && sqs.score < PLATFORM_FLOOR_SQS) {
+    return c.json(
+      apiError(
+        "capability_degraded",
+        `Capability '${capability.slug}' is currently degraded (SQS ${sqs.score}/100). Execution refused.`,
+        { sqs_score: sqs.score, sqs_label: sqs.label },
+      ),
+      503,
+    );
+  }
+
+  if (minSqs !== undefined && !sqs.pending && sqs.score < minSqs) {
+    return c.json(
+      apiError(
+        "below_quality_threshold",
+        `Capability '${capability.slug}' SQS (${sqs.score}) is below your threshold (${minSqs}).`,
+        { sqs_score: sqs.score, sqs_label: sqs.label, min_sqs: minSqs },
+      ),
+      422,
+    );
+  }
+
+  // ── 6. Decide execution path ─────────────────────────────────────────
+  const executionInput = inputs ?? { task };
   const outputSchema = (match.capability.outputSchema ?? {}) as Record<string, unknown>;
 
+  // Free-tier without auth: lightweight execution (no wallet, no transaction record)
+  if (!user && isFreeTier) {
+    return executeFreeTier(c, capability, executor, executionInput, outputSchema, sqs);
+  }
+
+  // Free-tier with auth: skip wallet operations but still record transaction
+  if (user && isFreeTier) {
+    return executeFreeTierAuthenticated(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs);
+  }
+
+  // Paid execution: sync or async (DEC-22)
+  const isAsync = (capability.avgLatencyMs ?? 0) > ASYNC_THRESHOLD_MS;
   if (isAsync) {
     return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema);
   } else {
     return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema);
   }
 });
+
+// ─── Free-tier execution: unauthenticated, no wallet, no transaction ────────
+
+async function executeFreeTier(
+  c: any,
+  capability: { id: string; slug: string; priceCents: number },
+  executor: (input: Record<string, unknown>) => Promise<any>,
+  executionInput: Record<string, unknown>,
+  outputSchema: Record<string, unknown>,
+  sqs: { score: number; label: string; trend: string; pending: boolean },
+) {
+  const startTime = Date.now();
+
+  try {
+    const capResult = await executor(executionInput);
+    const latencyMs = Date.now() - startTime;
+
+    // Record circuit breaker + quality (fire-and-forget)
+    recordSuccess(capability.slug).catch(() => {});
+    recordQuality({
+      transactionId: crypto.randomUUID(),
+      responseTimeMs: latencyMs,
+      output: capResult.output,
+      outputSchema,
+    });
+    if (capResult.output) {
+      recordPiggybackResult(
+        capability.slug, capResult.output, outputSchema, latencyMs,
+      ).catch(() => {});
+    }
+
+    return c.json({
+      status: "completed",
+      capability_used: capability.slug,
+      price_cents: 0,
+      latency_ms: latencyMs,
+      output: capResult.output,
+      provenance: capResult.provenance,
+      free_tier: true,
+      quality: {
+        sqs: sqs.score,
+        label: sqs.label,
+        trend: sqs.trend,
+      },
+      upgrade_hint: "This capability is free. Sign up for API key access to 233+ capabilities at strale.dev/signup",
+    });
+  } catch (err) {
+    const latencyMs = Date.now() - startTime;
+    const errorMessage = err instanceof Error ? err.message : String(err);
+
+    recordFailure(capability.slug).catch(() => {});
+    recordQuality({
+      transactionId: crypto.randomUUID(),
+      responseTimeMs: latencyMs,
+      output: null,
+      outputSchema,
+      error: errorMessage,
+    });
+
+    return c.json(
+      apiError(
+        "execution_failed",
+        "The capability failed to execute.",
+        { error: errorMessage },
+      ),
+      500,
+    );
+  }
+}
+
+// ─── Free-tier execution: authenticated, no wallet debit ────────────────────
+
+async function executeFreeTierAuthenticated(
+  c: any,
+  db: ReturnType<typeof getDb>,
+  user: { id: string },
+  capability: { id: string; slug: string; priceCents: number },
+  executor: (input: Record<string, unknown>) => Promise<any>,
+  executionInput: Record<string, unknown>,
+  idempotencyKey: string | null,
+  outputSchema: Record<string, unknown>,
+  sqs: { score: number; label: string; trend: string; pending: boolean },
+) {
+  const startTime = Date.now();
+  const marker = getTransparencyMarker(capability.slug);
+
+  // Create transaction record (for usage history), but no wallet lock/debit
+  const [txnRecord] = await db
+    .insert(transactions)
+    .values({
+      userId: user.id,
+      capabilityId: capability.id,
+      idempotencyKey,
+      status: "executing",
+      input: executionInput,
+      priceCents: 0,
+      transparencyMarker: marker,
+      dataJurisdiction: "EU",
+    })
+    .returning({ id: transactions.id });
+
+  try {
+    const capResult = await executor(executionInput);
+    const latencyMs = Date.now() - startTime;
+
+    await db
+      .update(transactions)
+      .set({
+        status: "completed",
+        output: capResult.output,
+        provenance: capResult.provenance,
+        auditTrail: {
+          executor: capability.slug,
+          execution_mode: "sync",
+          free_tier: true,
+          started_at: new Date(startTime).toISOString(),
+          completed_at: new Date().toISOString(),
+          latency_ms: latencyMs,
+        },
+        latencyMs,
+        completedAt: new Date(),
+      })
+      .where(eq(transactions.id, txnRecord.id));
+
+    // Record circuit breaker + quality (fire-and-forget)
+    recordSuccess(capability.slug).catch(() => {});
+    recordQuality({
+      transactionId: txnRecord.id,
+      responseTimeMs: latencyMs,
+      output: capResult.output,
+      outputSchema,
+    });
+    if (capResult.output) {
+      recordPiggybackResult(
+        capability.slug, capResult.output, outputSchema, latencyMs,
+      ).catch(() => {});
+    }
+
+    // Get wallet balance for response
+    const [wallet] = await db
+      .select({ balanceCents: wallets.balanceCents })
+      .from(wallets)
+      .where(eq(wallets.userId, user.id))
+      .limit(1);
+
+    return c.json({
+      transaction_id: txnRecord.id,
+      status: "completed",
+      capability_used: capability.slug,
+      price_cents: 0,
+      latency_ms: latencyMs,
+      wallet_balance_cents: wallet?.balanceCents ?? 0,
+      output: capResult.output,
+      provenance: capResult.provenance,
+      free_tier: true,
+      quality: {
+        sqs: sqs.score,
+        label: sqs.label,
+        trend: sqs.trend,
+      },
+    });
+  } catch (err) {
+    const latencyMs = Date.now() - startTime;
+    const errorMessage = err instanceof Error ? err.message : String(err);
+
+    await db
+      .update(transactions)
+      .set({
+        status: "failed",
+        error: errorMessage,
+        latencyMs,
+        completedAt: new Date(),
+      })
+      .where(eq(transactions.id, txnRecord.id));
+
+    recordFailure(capability.slug).catch(() => {});
+    recordQuality({
+      transactionId: txnRecord.id,
+      responseTimeMs: latencyMs,
+      output: null,
+      outputSchema,
+      error: errorMessage,
+    });
+
+    const [wallet] = await db
+      .select({ balanceCents: wallets.balanceCents })
+      .from(wallets)
+      .where(eq(wallets.userId, user.id))
+      .limit(1);
+
+    return c.json(
+      apiError(
+        "execution_failed",
+        "The capability failed to execute. You were not charged.",
+        {
+          transaction_id: txnRecord.id,
+          error: errorMessage,
+          wallet_balance_cents: wallet?.balanceCents ?? 0,
+        },
+      ),
+      500,
+    );
+  }
+}
 
 // ─── Sync execution: lock → execute → debit on success (DEC-14) ────────────
 

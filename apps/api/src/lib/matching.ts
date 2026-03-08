@@ -1,4 +1,4 @@
-import { eq, and, lte } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
 import { tokenize } from "./tokenize.js";
@@ -46,20 +46,20 @@ export async function matchCapability(
       .limit(1);
 
     if (!cap) return null;
-    if (cap.priceCents > req.maxPriceCents) return null;
+    // Free-tier capabilities bypass the price check
+    if (!cap.isFreeTier && cap.priceCents > req.maxPriceCents) return null;
     return { capability: cap };
   }
 
-  // Path 2: Filter active capabilities within budget
-  const candidates = await db
+  // Path 2: Filter active capabilities within budget (free-tier always included)
+  const allActive = await db
     .select()
     .from(capabilities)
-    .where(
-      and(
-        eq(capabilities.isActive, true),
-        lte(capabilities.priceCents, req.maxPriceCents),
-      ),
-    );
+    .where(eq(capabilities.isActive, true));
+
+  const candidates = allActive.filter(
+    (c) => c.isFreeTier || c.priceCents <= req.maxPriceCents,
+  );
 
   if (candidates.length === 0) return null;
 

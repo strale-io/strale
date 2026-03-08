@@ -117,7 +117,9 @@ strale/
 <!-- Reminder: changes to capabilities, SDKs, or integrations require updating public/llms.txt in strale-frontend -->
 233+ capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 20 bundled solutions across 6 categories (including 5 US-first solutions shipped 2026-03-07). Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions.
 
-SQS engine live: 5-factor scoring (correctness 40%, schema 25%, availability 20%, error handling 10%, edge cases 5%), upstream failure classification, rolling 3-run window, health states (new→unstable→recovering→stable→established), circuit breaker. 506 auto-generated test suites with tiered scheduling (A: 6h, B: 24h, C: 72h).
+SQS engine live (Constitution v1): 5-factor scoring (correctness 40%, schema 25%, availability 20%, error handling 10%, edge cases 5%), recency-weighted rolling 10-run window, missing-factor re-weighting, circuit breaker score penalties (3 consecutive failures → −30, 5 correctness failures → −20, schema break → −15), trend computation (improving/stable/declining), floor-aware solution SQS (lowest step + 20 cap), min_sqs quality gate on POST /v1/do, platform floor SQS 25. 1215 auto-generated test suites (all 233 capabilities × 5 test types) with tiered scheduling (A: 6h, B: 24h, C: 72h). Public quality endpoint: GET /v1/quality/:slug.
+
+Free-tier: 5 capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) require no auth/signup. IP-based daily rate limit (10/day). Authenticated users calling free-tier capabilities get normal rate limits and no wallet debit.
 
 Stripe is in SANDBOX mode — live key activation pending.
 

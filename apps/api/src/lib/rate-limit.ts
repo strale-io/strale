@@ -89,6 +89,86 @@ export function rateLimitByKey(maxRequests: number, windowMs: number) {
   };
 }
 
+// ─── Daily IP-based rate limiter (free-tier) ──────────────────────────────────
+// Resets at midnight UTC. Separate from the sliding-window limiter above because
+// the daily window is too large for the timestamp-array approach.
+
+const dailyStore = new Map<string, { count: number; resetAt: number }>();
+
+// Clean up stale daily entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of dailyStore) {
+    if (now > entry.resetAt) dailyStore.delete(key);
+  }
+}, 5 * 60_000).unref();
+
+function getNextMidnightUTC(): number {
+  const now = new Date();
+  const tomorrow = new Date(Date.UTC(
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1,
+  ));
+  return tomorrow.getTime();
+}
+
+function checkDailyRate(
+  identifier: string,
+  maxPerDay: number,
+): { allowed: boolean; remaining: number; resetAt: number } {
+  const now = Date.now();
+  let entry = dailyStore.get(identifier);
+
+  if (!entry || now >= entry.resetAt) {
+    entry = { count: 0, resetAt: getNextMidnightUTC() };
+    dailyStore.set(identifier, entry);
+  }
+
+  if (entry.count >= maxPerDay) {
+    return { allowed: false, remaining: 0, resetAt: entry.resetAt };
+  }
+
+  entry.count++;
+  return { allowed: true, remaining: maxPerDay - entry.count, resetAt: entry.resetAt };
+}
+
+/**
+ * Rate limit free-tier unauthenticated requests by IP: N calls per day.
+ * Only applied when no authenticated user is present.
+ */
+export function rateLimitFreeTierByIp(maxPerDay: number) {
+  return async (c: Context, next: Next) => {
+    // Skip if user is authenticated (they get normal rate limits)
+    const user = c.get("user") as { id: string } | undefined;
+    if (user) return next();
+
+    const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
+    const realIp = c.req.header("x-real-ip")?.trim();
+
+    let ip = "unknown";
+    if (forwarded && isPlausibleIp(forwarded)) {
+      ip = forwarded;
+    } else if (realIp && isPlausibleIp(realIp)) {
+      ip = realIp;
+    }
+
+    const key = `free:${ip}`;
+    const result = checkDailyRate(key, maxPerDay);
+
+    if (!result.allowed) {
+      const retryAfterSeconds = Math.ceil((result.resetAt - Date.now()) / 1000);
+      return c.json(
+        apiError("rate_limited",
+          `Free-tier daily limit reached (${maxPerDay} calls/day). Sign up at strale.dev/signup for unlimited access.`,
+          { retry_after_seconds: retryAfterSeconds, limit: maxPerDay },
+        ),
+        429,
+      );
+    }
+
+    return next();
+  };
+}
+
 // Simple validation: an IP must be a plausible IPv4 or IPv6 string.
 // This prevents header injection from producing pathological cache keys.
 const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;

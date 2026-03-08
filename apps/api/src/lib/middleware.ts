@@ -53,3 +53,49 @@ export async function authMiddleware(
   c.set("user", user);
   await next();
 }
+
+/**
+ * Optional auth: validates API key if present, but does NOT 401 if missing.
+ * Used for routes that accept both authenticated and unauthenticated requests
+ * (e.g., free-tier capabilities).
+ */
+export async function optionalAuthMiddleware(
+  c: Context<AppEnv>,
+  next: Next,
+): Promise<Response | void> {
+  const authHeader = c.req.header("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    // No auth header — proceed without user
+    return next();
+  }
+
+  const apiKey = authHeader.slice(7);
+  if (!apiKey.startsWith("sk_live_")) {
+    return c.json(apiError("unauthorized", "Invalid API key format."), 401);
+  }
+
+  const prefix = getKeyPrefix(apiKey);
+  const hash = hashApiKey(apiKey);
+
+  const db = getDb();
+  const candidates = await db
+    .select()
+    .from(users)
+    .where(eq(users.keyPrefix, prefix));
+
+  const hashBuffer = Buffer.from(hash, "utf-8");
+  const user = candidates.find((u) => {
+    const stored = Buffer.from(u.apiKeyHash, "utf-8");
+    return (
+      stored.length === hashBuffer.length &&
+      timingSafeEqual(stored, hashBuffer)
+    );
+  });
+
+  if (!user) {
+    return c.json(apiError("unauthorized", "Invalid API key."), 401);
+  }
+
+  c.set("user", user);
+  await next();
+}

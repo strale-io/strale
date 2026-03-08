@@ -9,7 +9,9 @@ export type ErrorCode =
   | "rate_limited"
   | "spend_cap_exceeded"
   | "unauthorized"
-  | "not_found";
+  | "not_found"
+  | "capability_degraded"
+  | "below_quality_threshold";
 
 export interface ApiError {
   error_code: ErrorCode;
