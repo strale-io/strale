@@ -75,6 +75,8 @@ async function computeCapabilityQuality(
 
   // Single query: weighted rolling metrics for last 30 days
   // Recent 7 days get weight 3, older 23 days get weight 1
+  // Latency metrics (avg, p95) use the most recent 50 transactions to avoid
+  // historical outliers from early test development inflating current scores
   const [metrics] = await db.execute<{
     success_rate: string | null;
     avg_response_time_ms: string | null;
@@ -115,10 +117,6 @@ async function computeCapabilityQuality(
           ELSE NULL
         END AS success_rate,
         CASE WHEN SUM(weight) > 0
-          THEN ROUND(SUM(response_time_ms * weight) / SUM(weight), 0)
-          ELSE NULL
-        END AS avg_response_time_ms,
-        CASE WHEN SUM(weight) > 0
           THEN ROUND(SUM(CASE WHEN schema_conformant THEN weight ELSE 0 END) / SUM(weight) * 100, 2)
           ELSE NULL
         END AS schema_conformance_rate,
@@ -129,24 +127,29 @@ async function computeCapabilityQuality(
         COUNT(*)::text AS total_30d
       FROM quality_rows
     ),
-    p95 AS (
-      SELECT response_time_ms AS p95_response_time_ms
+    recent_latency AS (
+      SELECT response_time_ms
       FROM quality_rows
-      ORDER BY response_time_ms
-      OFFSET GREATEST((SELECT COUNT(*) FROM quality_rows) * 95 / 100 - 1, 0)
-      LIMIT 1
+      ORDER BY created_at DESC
+      LIMIT 50
+    ),
+    latency_stats AS (
+      SELECT
+        ROUND(AVG(response_time_ms))::text AS avg_ms,
+        PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY response_time_ms)::text AS p95_ms
+      FROM recent_latency
     )
     SELECT
       a.success_rate::text,
-      a.avg_response_time_ms::text,
-      p.p95_response_time_ms::text AS p95_response_time_ms,
+      ls.avg_ms AS avg_response_time_ms,
+      ls.p95_ms AS p95_response_time_ms,
       a.schema_conformance_rate::text,
       a.avg_field_completeness_pct::text,
       a.total_30d,
       ac.total AS total_all
     FROM aggregated a
     CROSS JOIN all_count ac
-    LEFT JOIN p95 p ON true
+    CROSS JOIN latency_stats ls
   `);
 
   const rows = Array.isArray(metrics) ? metrics : (metrics as any)?.rows ?? [metrics];
