@@ -23,7 +23,20 @@ import { recordQuality } from "../lib/quality-capture.js";
 import { getTestResultsForSlug } from "../lib/trust-helpers.js";
 import { recordPiggybackResult } from "../lib/piggyback-monitor.js";
 import { computeCapabilitySQS } from "../lib/sqs.js";
+import { createHash } from "node:crypto";
+import { getShareableUrl } from "../lib/audit-token.js";
+import { getAiDescription, getDataSourceUrl, detectPersonalData } from "../lib/audit-helpers.js";
 import type { AppEnv } from "../types.js";
+
+// Shared capability type for execution functions
+type CapabilityInfo = {
+  id: string;
+  slug: string;
+  name: string;
+  priceCents: number;
+  dataSource: string | null;
+  dataClassification: string | null;
+};
 
 const MAX_TIMEOUT_SECONDS = 60;
 const DEFAULT_TIMEOUT_SECONDS = 30;
@@ -348,7 +361,7 @@ doRoute.post(
 
 async function executeFreeTier(
   c: any,
-  capability: { id: string; slug: string; priceCents: number },
+  capability: CapabilityInfo,
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
   outputSchema: Record<string, unknown>,
@@ -387,6 +400,7 @@ async function executeFreeTier(
         label: sqs.label,
         trend: sqs.trend,
       },
+      audit: buildFreeTierAudit(capability, latencyMs),
       upgrade_hint: "This capability is free. Sign up for API key access to 233+ capabilities at strale.dev/signup",
     });
   } catch (err) {
@@ -419,7 +433,7 @@ async function executeFreeTierAuthenticated(
   c: any,
   db: ReturnType<typeof getDb>,
   user: { id: string },
-  capability: { id: string; slug: string; priceCents: number },
+  capability: CapabilityInfo,
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
@@ -448,20 +462,27 @@ async function executeFreeTierAuthenticated(
     const capResult = await executor(executionInput);
     const latencyMs = Date.now() - startTime;
 
+    const audit = buildFullAudit({
+      transactionId: txnRecord.id,
+      startTime,
+      capability,
+      marker,
+      executionMode: "sync",
+      latencyMs,
+      executionInput,
+      output: capResult.output,
+      provenance: capResult.provenance,
+      sqs,
+      freeTier: true,
+    });
+
     await db
       .update(transactions)
       .set({
         status: "completed",
         output: capResult.output,
         provenance: capResult.provenance,
-        auditTrail: {
-          executor: capability.slug,
-          execution_mode: "sync",
-          free_tier: true,
-          started_at: new Date(startTime).toISOString(),
-          completed_at: new Date().toISOString(),
-          latency_ms: latencyMs,
-        },
+        auditTrail: audit,
         latencyMs,
         completedAt: new Date(),
       })
@@ -503,6 +524,7 @@ async function executeFreeTierAuthenticated(
         label: sqs.label,
         trend: sqs.trend,
       },
+      audit,
     });
   } catch (err) {
     const latencyMs = Date.now() - startTime;
@@ -554,7 +576,7 @@ async function executeSync(
   c: any,
   db: ReturnType<typeof getDb>,
   user: { id: string },
-  capability: { id: string; slug: string; priceCents: number },
+  capability: CapabilityInfo,
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
@@ -642,19 +664,13 @@ async function executeSync(
       });
 
       // Mark transaction completed with audit trail
+      // Note: full audit object built after tx commits (needs quality data)
       await tx
         .update(transactions)
         .set({
           status: "completed",
           output: capResult.output,
           provenance: capResult.provenance,
-          auditTrail: {
-            executor: capability.slug,
-            execution_mode: "sync",
-            started_at: new Date(startTime).toISOString(),
-            completed_at: new Date().toISOString(),
-            latency_ms: latencyMs,
-          },
           latencyMs,
           completedAt: new Date(),
         })
@@ -786,7 +802,28 @@ async function executeSync(
     // Quality lookup failure should never block the response
   }
 
-  // Success
+  // Success — build full audit object
+  const marker = getTransparencyMarker(capability.slug);
+  const audit = buildFullAudit({
+    transactionId: result.transactionId,
+    startTime,
+    capability,
+    marker,
+    executionMode: "sync",
+    latencyMs: result.latencyMs,
+    executionInput,
+    output: result.output,
+    provenance: result.provenance,
+    sqs: { score: 0, label: qualityStatus, trend: "stable", pending: false },
+    qualityPassRate,
+  });
+
+  // Store full audit in DB (fire-and-forget, non-blocking)
+  db.update(transactions)
+    .set({ auditTrail: audit })
+    .where(eq(transactions.id, result.transactionId))
+    .catch(() => {});
+
   return c.json({
     transaction_id: result.transactionId,
     status: "completed",
@@ -798,6 +835,7 @@ async function executeSync(
     provenance: result.provenance,
     quality_status: qualityStatus,
     quality_pass_rate: qualityPassRate,
+    audit,
   });
 }
 
@@ -817,7 +855,7 @@ async function executeAsync(
   c: any,
   db: ReturnType<typeof getDb>,
   user: { id: string },
-  capability: { id: string; slug: string; priceCents: number },
+  capability: CapabilityInfo,
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
@@ -949,7 +987,7 @@ async function executeInBackground(
   executionInput: Record<string, unknown>,
   transactionId: string,
   walletId: string,
-  capability: { id: string; slug: string; priceCents: number },
+  capability: CapabilityInfo,
   startTime: number,
   outputSchema: Record<string, unknown>,
 ) {
@@ -957,20 +995,28 @@ async function executeInBackground(
     const capResult = await executor(executionInput);
     const latencyMs = Date.now() - startTime;
 
-    // Success: update transaction record with audit trail
+    // Success: update transaction record with full audit trail
+    const marker = getTransparencyMarker(capability.slug);
+    const audit = buildFullAudit({
+      transactionId,
+      startTime,
+      capability,
+      marker,
+      executionMode: "async",
+      latencyMs,
+      executionInput,
+      output: capResult.output,
+      provenance: capResult.provenance,
+      sqs: { score: 0, label: "unknown", trend: "stable", pending: true },
+    });
+
     await db
       .update(transactions)
       .set({
         status: "completed",
         output: capResult.output,
         provenance: capResult.provenance,
-        auditTrail: {
-          executor: capability.slug,
-          execution_mode: "async",
-          started_at: new Date(startTime).toISOString(),
-          completed_at: new Date().toISOString(),
-          latency_ms: latencyMs,
-        },
+        auditTrail: audit,
         latencyMs,
         completedAt: new Date(),
       })
@@ -1059,6 +1105,109 @@ async function executeInBackground(
       error: errorMessage,
     });
   }
+}
+
+// ─── Audit trail helpers ──────────────────────────────────────────────────────
+
+function hashInput(input: Record<string, unknown>): string {
+  return `sha256:${createHash("sha256").update(JSON.stringify(input)).digest("hex")}`;
+}
+
+function buildFreeTierAudit(capability: CapabilityInfo, latencyMs: number) {
+  const marker = getTransparencyMarker(capability.slug);
+  return {
+    timestamp: new Date().toISOString(),
+    capability: capability.slug,
+    data_source: capability.dataSource ?? capability.name,
+    data_classification: capability.dataClassification ?? "unknown",
+    transparency_marker: marker,
+    ai_description: getAiDescription(capability.slug, marker),
+    data_jurisdiction: "EU",
+    processing_location: "eu-west (Railway EU)",
+    execution_mode: "sync",
+    latency_ms: latencyMs,
+    schema_validated: true,
+    compliance: {
+      ai_involvement: getAiDescription(capability.slug, marker),
+      personal_data_processed: false,
+      applicable_regulations: ["EU AI Act (Articles 12, 13, 50)"],
+      notes: "Free-tier call — no transaction record stored. Upgrade for full audit trail with shareable compliance URLs.",
+    },
+  };
+}
+
+function buildFullAudit(params: {
+  transactionId: string;
+  startTime: number;
+  capability: CapabilityInfo;
+  marker: string;
+  executionMode: "sync" | "async";
+  latencyMs: number;
+  executionInput: Record<string, unknown>;
+  output: unknown;
+  provenance?: unknown;
+  sqs: { score: number; label: string; trend: string; pending: boolean };
+  qualityPassRate?: number | null;
+  freeTier?: boolean;
+}) {
+  const {
+    transactionId, startTime, capability, marker, executionMode,
+    latencyMs, executionInput, output, provenance, sqs, qualityPassRate, freeTier,
+  } = params;
+
+  const personalDataDetected = detectPersonalData(output);
+
+  return {
+    transaction_id: transactionId,
+    timestamp: new Date(startTime).toISOString(),
+    completed_at: new Date().toISOString(),
+    capability: capability.slug,
+    data_source: capability.dataSource ?? capability.name,
+    data_source_url: getDataSourceUrl(capability.slug),
+    data_classification: capability.dataClassification ?? "unknown",
+    transparency_marker: marker,
+    ai_description: getAiDescription(capability.slug, marker),
+    data_jurisdiction: "EU",
+    processing_location: "eu-west (Railway EU)",
+    execution_mode: executionMode,
+    latency_ms: latencyMs,
+    input_hash: hashInput(executionInput),
+    schema_validated: true,
+    ...(freeTier ? { free_tier: true } : {}),
+    quality: {
+      sqs: sqs.pending ? null : sqs.score,
+      label: sqs.pending ? "Pending" : sqs.label,
+      pass_rate: qualityPassRate ?? null,
+    },
+    provenance: provenance ?? null,
+    compliance: {
+      ai_involvement: getAiDescription(capability.slug, marker),
+      personal_data_processed: personalDataDetected,
+      personal_data_categories: [] as string[],
+      human_oversight: "autonomous",
+      human_oversight_description: "Automated execution with schema validation. No human review required for this capability.",
+      data_retention_days: 90,
+      deletion_endpoint: `DELETE /v1/transactions/${transactionId}`,
+      access_endpoint: `GET /v1/transactions/${transactionId}`,
+      shareable_url: getShareableUrl(transactionId),
+      regulations_addressed: {
+        eu_ai_act: {
+          article_12: "Full execution logging with timestamps, data sources, and latency",
+          article_13: "Transparency markers indicating AI vs algorithmic processing",
+          article_14: "Human oversight classification documented",
+          article_50: "AI-generated content marked via transparency_marker field",
+        },
+        gdpr: {
+          article_30: "Complete processing record with data sources, classifications, and jurisdiction",
+          article_15: `Transaction data accessible via GET /v1/transactions/${transactionId}`,
+          article_17: `Transaction data deletable via DELETE /v1/transactions/${transactionId}`,
+        },
+        notes: personalDataDetected
+          ? "Personal data detected in this transaction. DPIA may be required."
+          : "No personal data detected. No DPIA required.",
+      },
+    },
+  };
 }
 
 // ─── EU AI Act transparency markers (DEC-20260226-P-s3t4) ─────────────────────

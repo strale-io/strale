@@ -20,6 +20,7 @@ import { internalQualityRoute } from "./routes/internal-quality.js";
 import { internalTestsRoute } from "./routes/internal-tests.js";
 import { internalLimitationsRoute } from "./routes/internal-limitations.js";
 import { internalTrustRoute } from "./routes/internal-trust.js";
+import { auditRoute } from "./routes/audit.js";
 import { startScheduledTests } from "./lib/test-runner.js";
 
 // Register capability executors (side-effect imports)
@@ -370,6 +371,7 @@ app.use("/v1/capabilities", publicCors);
 app.use("/v1/solutions/*", publicCors);
 app.use("/v1/solutions", publicCors);
 app.use("/v1/internal/*", publicCors);
+app.use("/v1/audit/*", publicCors);
 app.use("/.well-known/*", publicCors);
 
 // Authenticated / mutating endpoints — restricted CORS
@@ -413,6 +415,7 @@ app.route("/v1/internal/quality", internalQualityRoute);
 app.route("/v1/internal/tests", internalTestsRoute);
 app.route("/v1/internal/limitations", internalLimitationsRoute);
 app.route("/v1/internal/trust", internalTrustRoute);
+app.route("/v1/audit", auditRoute);
 
 // Start scheduled test runner (every 6 hours)
 startScheduledTests();
