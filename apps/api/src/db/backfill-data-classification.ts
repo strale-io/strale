@@ -188,7 +188,7 @@ const DATA_MAP: Record<string, { dataSource: string; dataClassification: string 
 
   // ── Domain & infrastructure ───────────────────────────────────────────────
   "dns-lookup": {
-    dataSource: "DNS protocol (authoritative nameservers via system resolver)",
+    dataSource: "DNS protocol (authoritative nameservers)",
     dataClassification: "public_infrastructure_data",
   },
   "ssl-check": {
@@ -204,7 +204,7 @@ const DATA_MAP: Record<string, { dataSource: string; dataClassification: string 
     dataClassification: "public_domain_data",
   },
   "domain-reputation": {
-    dataSource: "Aggregated threat intelligence feeds (multi-source scoring)",
+    dataSource: "Threat intelligence feeds (multi-source scoring)",
     dataClassification: "public_security_data",
   },
   "header-security-check": {
