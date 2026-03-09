@@ -859,37 +859,46 @@ export function startScheduledTests(): void {
 
   console.log("[test-runner] Tiered scheduler started: A=6h, B=24h, C=72h + health checks=6h");
 
-  for (const schedule of TIER_SCHEDULES) {
-    setInterval(async () => {
+  const runTier = async (tier: ScheduleTier, label: string) => {
+    console.log(`[test-runner] Starting Tier ${tier} run (${label})...`);
+    try {
+      const summary = await runTests({ tier });
       console.log(
-        `[test-runner] Starting Tier ${schedule.tier} run (${schedule.label})...`,
+        `[test-runner] Tier ${tier}: ${summary.passed}/${summary.total} passed, ` +
+          `${summary.failed} failed, est. cost ${summary.estimatedCostCents}¢, ` +
+          `avg ${summary.avgResponseTimeMs}ms`,
       );
-      try {
-        const summary = await runTests({ tier: schedule.tier });
-        console.log(
-          `[test-runner] Tier ${schedule.tier}: ${summary.passed}/${summary.total} passed, ` +
-            `${summary.failed} failed, est. cost ${summary.estimatedCostCents}¢, ` +
-            `avg ${summary.avgResponseTimeMs}ms`,
-        );
 
-        for (const r of summary.results) {
-          if (!r.passed) {
-            console.warn(
-              `[test-runner] FAIL [${r.capabilitySlug}] ${r.testName} — ${r.failureReason}`,
-            );
-          }
+      for (const r of summary.results) {
+        if (!r.passed) {
+          console.warn(
+            `[test-runner] FAIL [${r.capabilitySlug}] ${r.testName} — ${r.failureReason}`,
+          );
         }
-      } catch (err) {
-        console.error(
-          `[test-runner] Tier ${schedule.tier} run failed:`,
-          err,
-        );
       }
+    } catch (err) {
+      console.error(`[test-runner] Tier ${tier} run failed:`, err);
+    }
+  };
+
+  // Run all tiers once on startup (staggered to avoid overload)
+  // Tier A: 30s after startup, B: 5min, C: 10min
+  const STARTUP_DELAYS: Record<ScheduleTier, number> = { A: 30_000, B: 5 * 60_000, C: 10 * 60_000 };
+
+  for (const schedule of TIER_SCHEDULES) {
+    // Initial run after startup delay
+    setTimeout(() => {
+      runTier(schedule.tier, `startup + ${schedule.label}`);
+    }, STARTUP_DELAYS[schedule.tier]);
+
+    // Recurring runs
+    setInterval(() => {
+      runTier(schedule.tier, schedule.label);
     }, schedule.intervalMs);
   }
 
-  // Dependency health checks
-  setInterval(async () => {
+  // Dependency health checks — run once on startup + recurring
+  const runHealthChecks = async () => {
     try {
       const { runDependencyHealthChecks } = await import("./dependency-health.js");
       const results = await runDependencyHealthChecks();
@@ -906,5 +915,8 @@ export function startScheduledTests(): void {
     } catch (err) {
       console.error("[health-check] Failed:", err);
     }
-  }, HEALTH_CHECK_INTERVAL_MS);
+  };
+
+  setTimeout(runHealthChecks, 60_000); // 1min after startup
+  setInterval(runHealthChecks, HEALTH_CHECK_INTERVAL_MS);
 }
