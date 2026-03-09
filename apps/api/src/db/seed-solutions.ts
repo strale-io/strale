@@ -1008,7 +1008,7 @@ const SOLUTIONS: SolutionDef[] = [
     description:
       "SEC data, sanctions screening, domain security — answers 'should we do business with this company?' in one call.",
     longDescription:
-      "The most comprehensive due diligence workflow: queries SEC EDGAR for company data, screens against OFAC/EU/UN sanctions, checks domain WHOIS registration, validates DNS configuration, verifies SSL certificates, scores domain reputation, and audits HTTP security headers. 7 data sources checked in parallel, quality-verified before delivery. Use before onboarding a vendor, signing a partnership, or approving a procurement request.",
+      "Checks a company across 7 data sources in one call: SEC EDGAR, OFAC/EU/UN sanctions, WHOIS, DNS, SSL, domain reputation, and HTTP security headers. All steps run in parallel, quality-verified before delivery. Use before onboarding a vendor, signing a partnership, or approving a procurement request.",
     agentDescription:
       "assess vendor risk, should we do business with this company, vendor due diligence, vendor security check, is this vendor safe, company risk assessment, supplier evaluation, partnership due diligence",
     category: "security-risk",
