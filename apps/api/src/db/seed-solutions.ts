@@ -123,7 +123,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "nordic",
     targetAudience: "Developers building fintech tools or agents that verify Norwegian businesses",
     transparencyTag: "mixed",
-    extendsWith: ["credit-report-summary", "annual-report-extract", "company-enrich"],
+    extendsWith: ["domain-reputation", "annual-report-extract", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -187,7 +187,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "nordic",
     targetAudience: "Developers building fintech tools or agents that verify Danish businesses",
     transparencyTag: "mixed",
-    extendsWith: ["credit-report-summary", "annual-report-extract", "company-enrich"],
+    extendsWith: ["domain-reputation", "annual-report-extract", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -248,7 +248,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "nordic",
     targetAudience: "Developers building fintech tools or agents that verify Finnish businesses",
     transparencyTag: "mixed",
-    extendsWith: ["credit-report-summary", "annual-report-extract", "company-enrich"],
+    extendsWith: ["domain-reputation", "annual-report-extract", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -441,7 +441,7 @@ const SOLUTIONS: SolutionDef[] = [
     targetAudience:
       "Developers building outbound sales agents, email verification, or lead gen pipelines",
     transparencyTag: "algorithmic",
-    extendsWith: ["company-enrich", "social-profile-check", "whois-lookup"],
+    extendsWith: ["company-enrich", "tech-stack-detect", "whois-lookup"],
     inputSchema: {
       type: "object",
       properties: { email: { type: "string", format: "email" } },
@@ -500,7 +500,7 @@ const SOLUTIONS: SolutionDef[] = [
     targetAudience:
       "Developers doing vendor/partner onboarding or compliance checks on US companies",
     transparencyTag: "ai_generated",
-    extendsWith: ["domain-reputation", "social-profile-check", "credit-report-summary"],
+    extendsWith: ["domain-reputation", "tech-stack-detect", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -1020,7 +1020,7 @@ const SOLUTIONS: SolutionDef[] = [
     targetAudience:
       "Developers building procurement agents, vendor management, or partnership due diligence tools",
     transparencyTag: "mixed",
-    extendsWith: ["credit-report-summary", "company-enrich", "tech-stack-detect"],
+    extendsWith: ["seo-audit", "company-enrich", "tech-stack-detect"],
     inputSchema: {
       type: "object",
       properties: {
@@ -1117,7 +1117,7 @@ const SOLUTIONS: SolutionDef[] = [
     targetAudience:
       "Developers building outbound sales agents, CRM enrichment, or account research tools",
     transparencyTag: "mixed",
-    extendsWith: ["company-enrich", "social-profile-check", "landing-page-roast"],
+    extendsWith: ["company-enrich", "seo-audit", "landing-page-roast"],
     inputSchema: {
       type: "object",
       properties: {
@@ -1267,7 +1267,7 @@ const SOLUTIONS: SolutionDef[] = [
     targetAudience:
       "Developers building account research, CRM enrichment, or pre-call intelligence tools",
     transparencyTag: "mixed",
-    extendsWith: ["sanctions-check", "social-profile-check", "landing-page-roast"],
+    extendsWith: ["sanctions-check", "whois-lookup", "landing-page-roast"],
     inputSchema: {
       type: "object",
       properties: {
