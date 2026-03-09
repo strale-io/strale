@@ -191,16 +191,59 @@ export async function getSolutionQuality(
   return metrics;
 }
 
+/**
+ * Compute parallel-aware latency for a solution.
+ * Steps in the same parallelGroup run concurrently → take max of the group.
+ * Sequential steps (parallelGroup = null) → add their full latency.
+ * Solution latency = sum of group maximums + sequential step latencies.
+ */
+function computeParallelAwareLatency(
+  stepMetrics: CapabilityQualityMetrics[],
+  parallelGroups: (number | null)[],
+  getValue: (m: CapabilityQualityMetrics) => number | null,
+): number | null {
+  // Collect parallel group values and sequential values
+  const groupValues = new Map<number, number[]>();
+  let sequentialTotal = 0;
+  let hasData = false;
+
+  for (let i = 0; i < stepMetrics.length; i++) {
+    const val = getValue(stepMetrics[i]);
+    if (val == null) continue;
+    hasData = true;
+
+    const pg = parallelGroups[i];
+    if (pg != null) {
+      const existing = groupValues.get(pg) ?? [];
+      existing.push(val);
+      groupValues.set(pg, existing);
+    } else {
+      sequentialTotal += val;
+    }
+  }
+
+  if (!hasData) return null;
+
+  // Parallel groups contribute only their slowest member
+  let parallelTotal = 0;
+  for (const values of groupValues.values()) {
+    parallelTotal += Math.max(...values);
+  }
+
+  return sequentialTotal + parallelTotal;
+}
+
 async function computeSolutionQuality(
   solutionSlug: string,
 ): Promise<SolutionQualityMetrics | null> {
   const db = getDb();
 
-  // Look up solution steps to get capability slugs
+  // Look up solution steps to get capability slugs and parallel group info
   const stepRows = await db.execute<{
     capability_slug: string;
+    parallel_group: number | null;
   }>(sql`
-    SELECT ss.capability_slug
+    SELECT ss.capability_slug, ss.parallel_group
     FROM solution_steps ss
     JOIN solutions s ON s.id = ss.solution_id
     WHERE s.slug = ${solutionSlug}
@@ -215,6 +258,9 @@ async function computeSolutionQuality(
 
   const capabilitySlugs = rows.map(
     (r: { capability_slug: string }) => r.capability_slug,
+  );
+  const parallelGroups = rows.map(
+    (r: { parallel_group: number | null }) => r.parallel_group,
   );
 
   // Get quality metrics for each step capability
@@ -256,21 +302,15 @@ async function computeSolutionQuality(
         )
       : null;
 
-  // Solution response time = sum of step avg response times
-  const responseTimes = stepsWithData
-    .map((s) => s.avgResponseTimeMs)
-    .filter((t): t is number => t != null);
-  const solutionAvgResponseTimeMs =
-    responseTimes.length > 0
-      ? responseTimes.reduce((a, b) => a + b, 0)
-      : null;
-
-  // Solution p95 = sum of step p95s (conservative estimate)
-  const p95s = stepsWithData
-    .map((s) => s.p95ResponseTimeMs)
-    .filter((t): t is number => t != null);
-  const solutionP95 =
-    p95s.length > 0 ? p95s.reduce((a, b) => a + b, 0) : null;
+  // Solution response time — parallel-aware: steps in the same parallelGroup
+  // contribute only the max latency of that group (they run concurrently).
+  // Sequential steps (parallelGroup = null) contribute their full latency.
+  const solutionAvgResponseTimeMs = computeParallelAwareLatency(
+    stepMetrics, parallelGroups, (s) => s.avgResponseTimeMs,
+  );
+  const solutionP95 = computeParallelAwareLatency(
+    stepMetrics, parallelGroups, (s) => s.p95ResponseTimeMs,
+  );
 
   // Schema conformance = average across steps
   const schemaRates = stepsWithData
