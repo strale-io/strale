@@ -44,7 +44,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Nordic KYC — Sweden",
     marketingName: "Nordic KYC — Sweden",
     description:
-      "Verifies a Swedish company's identity, validates their EU VAT number, and screens against international sanctions lists.",
+      "Check if a Swedish company is real and safe to do business with. Official registry data, VAT validation, and sanctions screening in one call.",
     category: "compliance-verification",
     priceCents: 150,
     componentSumCents: 110,
@@ -104,7 +104,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Nordic KYC — Norway",
     marketingName: "Nordic KYC — Norway",
     description:
-      "Verifies a Norwegian company's identity, validates their EU VAT number, and screens against international sanctions lists.",
+      "Check if a Norwegian company is real and safe to do business with. Official registry data, VAT validation, and sanctions screening in one call.",
     category: "compliance-verification",
     priceCents: 150,
     componentSumCents: 110,
@@ -164,7 +164,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Nordic KYC — Denmark",
     marketingName: "Nordic KYC — Denmark",
     description:
-      "Verifies a Danish company's identity, validates their EU VAT number, and screens against international sanctions lists.",
+      "Check if a Danish company is real and safe to do business with. Official registry data, VAT validation, and sanctions screening in one call.",
     category: "compliance-verification",
     priceCents: 150,
     componentSumCents: 110,
@@ -221,7 +221,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Nordic KYC — Finland",
     marketingName: "Nordic KYC — Finland",
     description:
-      "Verifies a Finnish company's identity, validates their EU VAT number, and screens against international sanctions lists.",
+      "Check if a Finnish company is real and safe to do business with. Official registry data, VAT validation, and sanctions screening in one call.",
     category: "compliance-verification",
     priceCents: 150,
     componentSumCents: 110,
@@ -281,7 +281,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "B2B Payment Validation",
     marketingName: "B2B Payment Validation",
     description:
-      "Validates both sides of a B2B payment: IBAN structure and counterparty VAT.",
+      "Verify bank details and tax IDs before your agent processes a payment. Validates IBAN structure, identifies the receiving bank, and confirms counterparty VAT registration.",
     category: "finance-banking",
     priceCents: 25,
     componentSumCents: 15,
@@ -334,7 +334,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "SEPA Payment Readiness",
     marketingName: "SEPA Payment Readiness Check",
     description:
-      "Everything needed before a SEPA transfer: IBAN, counterparty VAT, and exchange rate if source isn't EUR.",
+      "Everything your agent needs before initiating a SEPA transfer: IBAN validation, bank identification, VAT verification, and current exchange rate. One call replaces four separate integrations.",
     category: "finance-banking",
     priceCents: 30,
     componentSumCents: 17,
@@ -401,7 +401,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Lead Email Verify",
     marketingName: "Lead Email Verification",
     description:
-      "The #1 thing outbound sales agents do at scale: verify an email is real before sending. Catches bad addresses before they tank your deliverability score.",
+      "Your agent found a prospect's email — is it real? Check deliverability, DNS configuration, and domain reputation in one call. Catches disposable addresses and suspicious domains before outreach.",
     category: "sales-outreach",
     priceCents: 20,
     componentSumCents: 11,
@@ -456,7 +456,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "US Company Verify",
     marketingName: "US Company Verification",
     description:
-      "SEC EDGAR data + sanctions screening for US companies. Same concept as Nordic KYC for the US market.",
+      "Look up any US company using SEC EDGAR data and screen against international sanctions lists. Official filing data, company status, and a clean sanctions check.",
     category: "compliance-verification",
     priceCents: 130,
     componentSumCents: 100,
@@ -509,7 +509,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Domain Intelligence",
     marketingName: "Domain Intelligence Report",
     description:
-      "Full profile of any domain: registration, infrastructure, SSL health, reputation score. All protocol-level, geography-agnostic.",
+      "Everything your agent needs to evaluate a domain: who registered it, when, DNS setup, SSL certificate health, and reputation score.",
     category: "security-risk",
     priceCents: 35,
     componentSumCents: 21,
@@ -570,7 +570,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Web Extract & Clean",
     marketingName: "Web Extract & Clean",
     description:
-      "Fetch a page, convert to clean markdown, strip out PII before storing. Every RAG pipeline needs this.",
+      "Fetch any web page — even JavaScript-heavy ones behind anti-bot walls — convert to clean markdown, and strip PII automatically. Ready for your RAG pipeline.",
     category: "data-research",
     priceCents: 30,
     componentSumCents: 20,
@@ -616,7 +616,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Email Deliverability Audit",
     marketingName: "Email Deliverability Audit",
     description:
-      "Checks everything that determines inbox placement: SPF, DKIM, DMARC, MX config, blacklists.",
+      "Will emails to this domain actually arrive? Checks SPF, DKIM, DMARC, MX records, SSL, and blacklist status — the complete deliverability audit.",
     category: "security-risk",
     priceCents: 25,
     componentSumCents: 16,
@@ -670,7 +670,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Website Health Check",
     marketingName: "Website Health Check",
     description:
-      "Technical health assessment: full SSL chain, email config, page performance.",
+      "Quick technical health check on any website: SSL certificate chain, email deliverability configuration, and page load performance.",
     category: "security-risk",
     priceCents: 40,
     componentSumCents: 25,
@@ -722,7 +722,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "EU AI Act Risk Assessment",
     marketingName: "EU AI Act Risk Assessment",
     description:
-      "Classifies an AI system's risk level under the EU AI Act, identifies the supervisory authority, and checks for prior enforcement history.",
+      "Classify your AI system's risk level under the EU AI Act before the August 2026 enforcement deadline. Returns risk classification, matched articles, obligations, and supervisory authority.",
     category: "legal-regulatory",
     priceCents: 80,
     componentSumCents: 45,
@@ -798,7 +798,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Website GDPR Audit",
     marketingName: "Website GDPR Compliance Audit",
     description:
-      "Comprehensive GDPR assessment: cookie consent, tracking scripts, privacy policy quality, SSL security, and the responsible data protection authority.",
+      "Is this website GDPR compliant? Scans cookies, consent mechanisms, privacy policy, SSL, and identifies the relevant data protection authority.",
     category: "legal-regulatory",
     priceCents: 100,
     componentSumCents: 63,
@@ -875,7 +875,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Competitive Intelligence Snapshot",
     marketingName: "Competitive Intelligence Snapshot",
     description:
-      "Quick multi-dimensional read on a competitor: technology stack, SEO health, landing page conversion analysis, and social media presence check.",
+      "Tech stack, SEO, landing page analysis, social presence — the competitive read your agent can run in seconds.",
     category: "data-research",
     priceCents: 140,
     componentSumCents: 110,
@@ -1037,7 +1037,7 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Lead Enrichment & Qualification",
     marketingName: "Lead Enrichment & Qualification",
     description:
-      "Given a prospect's email, return everything an SDR agent needs: email validation, DNS, domain reputation, WHOIS, and technology stack detection.",
+      "Given a prospect's email, return everything a sales agent needs: email validation, DNS, domain reputation, WHOIS, and technology stack detection.",
     category: "sales-outreach",
     priceCents: 65,
     componentSumCents: 46,
