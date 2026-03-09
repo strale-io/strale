@@ -155,8 +155,6 @@ doRoute.post(
   // ── 3. Early auth gate for unauthenticated requests ───────────────────
   // Check BEFORE matching so non-free capabilities return a clear 401
   // instead of the generic "no_matching_capability" error.
-  const FREE_TIER_SLUGS = ["email-validate", "dns-lookup", "json-repair", "url-to-markdown", "iban-validate"];
-
   if (!user && capabilitySlug) {
     // Direct slug request without auth: check if the capability is free-tier
     const [lookedUp] = await db
@@ -166,11 +164,12 @@ doRoute.post(
       .limit(1);
 
     if (lookedUp && lookedUp.isActive && !lookedUp.isFreeTier) {
+      const freeSlugs = await getFreeTierSlugs(db);
       return c.json({
         error_code: "unauthorized",
         message: "This capability requires an API key. Sign up at strale.dev/signup for full access with €2 free credits.",
-        free_capabilities: FREE_TIER_SLUGS,
-        hint: "These 5 capabilities are free with no signup — try them without an API key.",
+        free_capabilities: freeSlugs,
+        hint: `These ${freeSlugs.length} capabilities are free with no signup — try them without an API key.`,
       }, 401);
     }
   }
@@ -196,11 +195,12 @@ doRoute.post(
 
     // Unauthenticated task-based requests that found no free-tier match
     if (!user) {
+      const freeSlugs = await getFreeTierSlugs(db);
       return c.json({
         error_code: "unauthorized",
         message: "No free capability matched your request. Sign up at strale.dev/signup for full access with €2 free credits.",
-        free_capabilities: FREE_TIER_SLUGS,
-        hint: "These 5 capabilities are free with no signup — try them without an API key.",
+        free_capabilities: freeSlugs,
+        hint: `These ${freeSlugs.length} capabilities are free with no signup — try them without an API key.`,
       }, 401);
     }
 
@@ -1105,6 +1105,23 @@ async function executeInBackground(
       error: errorMessage,
     });
   }
+}
+
+// ─── Free-tier slug cache (refreshed every 5 minutes) ───────────────────────
+
+let _freeTierCache: { slugs: string[]; expiresAt: number } | null = null;
+
+async function getFreeTierSlugs(db: ReturnType<typeof getDb>): Promise<string[]> {
+  if (_freeTierCache && Date.now() < _freeTierCache.expiresAt) {
+    return _freeTierCache.slugs;
+  }
+  const rows = await db
+    .select({ slug: capabilities.slug })
+    .from(capabilities)
+    .where(and(eq(capabilities.isFreeTier, true), eq(capabilities.isActive, true)));
+  const slugs = rows.map((r) => r.slug);
+  _freeTierCache = { slugs, expiresAt: Date.now() + 5 * 60 * 1000 };
+  return slugs;
 }
 
 // ─── Audit trail helpers ──────────────────────────────────────────────────────
