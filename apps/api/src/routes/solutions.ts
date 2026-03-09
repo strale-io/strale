@@ -121,6 +121,8 @@ solutionsRoute.get("/:slug", async (c) => {
     name: sol.name,
     marketingName: sol.marketingName,
     description: sol.description,
+    long_description: sol.longDescription ?? null,
+    agent_description: sol.agentDescription ?? null,
     category: sol.category,
     priceCents: sol.priceCents,
     componentSumCents: sol.componentSumCents,

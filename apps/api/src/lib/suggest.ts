@@ -181,6 +181,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           slug: solutions.slug,
           name: solutions.name,
           description: solutions.description,
+          agentDescription: solutions.agentDescription,
           category: solutions.category,
           priceCents: solutions.priceCents,
           geography: solutions.geography,
@@ -208,8 +209,10 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           const stepNames = steps
             .map((s) => s.capabilityName ?? s.capabilitySlug)
             .join(", ");
-          const embeddingText = `${sol.name}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.`;
-          const tokenText = `${sol.name} ${sol.description} ${sol.category} ${sol.geography} ${sol.slug} ${steps.map((s) => s.capabilitySlug).join(" ")}`;
+          const embeddingText = sol.agentDescription
+            ? `${sol.name}. ${sol.agentDescription}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.`
+            : `${sol.name}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.`;
+          const tokenText = `${sol.name} ${sol.description} ${sol.agentDescription ?? ""} ${sol.category} ${sol.geography} ${sol.slug} ${steps.map((s) => s.capabilitySlug).join(" ")}`;
 
           return {
             type: "solution" as const,

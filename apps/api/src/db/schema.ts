@@ -190,6 +190,8 @@ export const solutions = pgTable("solutions", {
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description").notNull(),
+  longDescription: text("long_description"),
+  agentDescription: text("agent_description"),
   category: varchar("category", { length: 50 }).notNull(),
   // Categories: "compliance-verification", "finance-banking", "legal-regulatory",
   //             "sales-outreach", "security-risk", "data-research"

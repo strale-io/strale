@@ -22,6 +22,8 @@ interface SolutionDef {
   name: string;
   marketingName: string;
   description: string;
+  longDescription?: string;
+  agentDescription?: string;
   category: string;
   priceCents: number;
   componentSumCents: number;
@@ -45,13 +47,17 @@ const SOLUTIONS: SolutionDef[] = [
     marketingName: "Nordic KYC — Sweden",
     description:
       "Check if a Swedish company is real and safe to do business with. Official registry data, VAT validation, and sanctions screening in one call.",
+    longDescription:
+      "Looks up the company in Sweden's official business registry (Bolagsverket), validates their EU VAT number against VIES, and screens the company name against OFAC, EU, and UN sanctions lists. Use this before onboarding a customer, signing a contract, or generating a partnership agreement involving a Swedish entity.",
+    agentDescription:
+      "verify swedish company, is this swedish company legit, KYC check sweden, check swedish org number, onboard swedish business customer, validate swedish organization, bolagsverket lookup",
     category: "compliance-verification",
     priceCents: 150,
     componentSumCents: 110,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "nordic",
-    targetAudience: "Klarna, Trustly, Tink, Pleo, Anyfin, Bits",
+    targetAudience: "Developers building fintech tools, onboarding flows, or any agent that verifies Nordic businesses",
     transparencyTag: "mixed",
     extendsWith: ["credit-report-summary", "annual-report-extract", "company-enrich"],
     inputSchema: {
@@ -105,13 +111,17 @@ const SOLUTIONS: SolutionDef[] = [
     marketingName: "Nordic KYC — Norway",
     description:
       "Check if a Norwegian company is real and safe to do business with. Official registry data, VAT validation, and sanctions screening in one call.",
+    longDescription:
+      "Looks up the company in Norway's Brønnøysund Register Centre, validates their VAT number, and screens against international sanctions lists. Use this before doing business with a Norwegian entity.",
+    agentDescription:
+      "verify norwegian company, is this norwegian company legit, KYC check norway, check norwegian org number, brønnøysund lookup, validate norwegian organization",
     category: "compliance-verification",
     priceCents: 150,
     componentSumCents: 110,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "nordic",
-    targetAudience: "DNB, Vipps, Cognite",
+    targetAudience: "Developers building fintech tools or agents that verify Norwegian businesses",
     transparencyTag: "mixed",
     extendsWith: ["credit-report-summary", "annual-report-extract", "company-enrich"],
     inputSchema: {
@@ -165,13 +175,17 @@ const SOLUTIONS: SolutionDef[] = [
     marketingName: "Nordic KYC — Denmark",
     description:
       "Check if a Danish company is real and safe to do business with. Official registry data, VAT validation, and sanctions screening in one call.",
+    longDescription:
+      "Looks up the company in Denmark's CVR register, validates their EU VAT number, and screens against international sanctions lists. Use this before doing business with a Danish entity.",
+    agentDescription:
+      "verify danish company, is this danish company legit, KYC check denmark, check danish CVR number, validate danish organization",
     category: "compliance-verification",
     priceCents: 150,
     componentSumCents: 110,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "nordic",
-    targetAudience: "Pleo, Lunar, Trustpilot",
+    targetAudience: "Developers building fintech tools or agents that verify Danish businesses",
     transparencyTag: "mixed",
     extendsWith: ["credit-report-summary", "annual-report-extract", "company-enrich"],
     inputSchema: {
@@ -222,13 +236,17 @@ const SOLUTIONS: SolutionDef[] = [
     marketingName: "Nordic KYC — Finland",
     description:
       "Check if a Finnish company is real and safe to do business with. Official registry data, VAT validation, and sanctions screening in one call.",
+    longDescription:
+      "Looks up the company in Finland's PRH business register using their Y-tunnus (business ID), validates their EU VAT number, and screens against international sanctions lists. Use this before doing business with a Finnish entity.",
+    agentDescription:
+      "verify finnish company, is this finnish company legit, KYC check finland, check finnish business id, Y-tunnus lookup, validate finnish organization",
     category: "compliance-verification",
     priceCents: 150,
     componentSumCents: 110,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "nordic",
-    targetAudience: "Wolt, Supercell, Smartly.io",
+    targetAudience: "Developers building fintech tools or agents that verify Finnish businesses",
     transparencyTag: "mixed",
     extendsWith: ["credit-report-summary", "annual-report-extract", "company-enrich"],
     inputSchema: {
@@ -281,14 +299,18 @@ const SOLUTIONS: SolutionDef[] = [
     name: "B2B Payment Validation",
     marketingName: "B2B Payment Validation",
     description:
-      "Verify bank details and tax IDs before your agent processes a payment. Validates IBAN structure, identifies the receiving bank, and confirms counterparty VAT registration.",
+      "Verify bank details and tax IDs before your agent processes a payment. IBAN validation, bank identification, and counterparty VAT check.",
+    longDescription:
+      "Validates the IBAN structure and identifies the receiving bank, then confirms the counterparty's VAT registration is active. Catches invalid bank details and unregistered VAT numbers before money moves. Use this in any payment flow, invoice processing, or vendor onboarding.",
+    agentDescription:
+      "validate IBAN before payment, check bank details, verify payment recipient, is this IBAN real, validate counterparty before transfer, B2B payment check",
     category: "finance-banking",
     priceCents: 25,
     componentSumCents: 15,
     valueTier: "verification",
     maintenanceLevel: "near-zero",
     geography: "eu",
-    targetAudience: "Trustly, Klarna, Tink, Pleo",
+    targetAudience: "Developers building payment flows or B2B finance tools",
     transparencyTag: "algorithmic",
     extendsWith: ["exchange-rate", "sanctions-check", "company-enrich"],
     inputSchema: {
@@ -334,14 +356,18 @@ const SOLUTIONS: SolutionDef[] = [
     name: "SEPA Payment Readiness",
     marketingName: "SEPA Payment Readiness Check",
     description:
-      "Everything your agent needs before initiating a SEPA transfer: IBAN validation, bank identification, VAT verification, and current exchange rate. One call replaces four separate integrations.",
+      "Everything your agent needs before initiating a SEPA transfer: IBAN validation, bank identification, VAT verification, and current exchange rate.",
+    longDescription:
+      "Validates the receiving IBAN, identifies the bank, confirms the counterparty's VAT registration, and fetches the current exchange rate if the source currency isn't EUR. One call replaces four separate API integrations. Use before any European bank transfer.",
+    agentDescription:
+      "prepare SEPA payment, SEPA transfer readiness check, European bank transfer validation, verify before SEPA transfer, IBAN and VAT for SEPA",
     category: "finance-banking",
     priceCents: 30,
     componentSumCents: 17,
     valueTier: "data-lookup",
     maintenanceLevel: "near-zero",
     geography: "eu",
-    targetAudience: "Trustly, Klarna, Tink",
+    targetAudience: "Developers building European payment flows or SEPA integrations",
     transparencyTag: "algorithmic",
     extendsWith: ["sanctions-check", "bank-bic-lookup", "company-enrich"],
     inputSchema: {
@@ -401,7 +427,11 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Lead Email Verify",
     marketingName: "Lead Email Verification",
     description:
-      "Your agent found a prospect's email — is it real? Check deliverability, DNS configuration, and domain reputation in one call. Catches disposable addresses and suspicious domains before outreach.",
+      "Your agent found a prospect's email — is it real? Deliverability check, DNS, and domain reputation in one call.",
+    longDescription:
+      "Validates the email address for deliverability, checks the domain's DNS configuration and MX records, and scores the domain's reputation. Catches disposable addresses, invalid mailboxes, and suspicious domains before your agent sends outreach. Use in any sales, marketing, or CRM enrichment pipeline.",
+    agentDescription:
+      "is this email real, check email before sending, validate prospect email, email deliverability check, verify email address, is this a real mailbox",
     category: "sales-outreach",
     priceCents: 20,
     componentSumCents: 11,
@@ -409,7 +439,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "near-zero",
     geography: "us-global",
     targetAudience:
-      "US developers building SDR agents, outbound sales bots, lead gen pipelines",
+      "Developers building outbound sales agents, email verification, or lead gen pipelines",
     transparencyTag: "algorithmic",
     extendsWith: ["company-enrich", "social-profile-check", "whois-lookup"],
     inputSchema: {
@@ -456,7 +486,11 @@ const SOLUTIONS: SolutionDef[] = [
     name: "US Company Verify",
     marketingName: "US Company Verification",
     description:
-      "Look up any US company using SEC EDGAR data and screen against international sanctions lists. Official filing data, company status, and a clean sanctions check.",
+      "Look up any US company using SEC EDGAR data and screen against international sanctions lists. Filing data, company status, and sanctions check.",
+    longDescription:
+      "Queries SEC EDGAR for official filing data using a company name, ticker symbol, or CIK number, then screens the company against OFAC, EU, and UN sanctions lists. Returns company name, CIK, state of incorporation, and sanctions status. Use before doing business with a US entity.",
+    agentDescription:
+      "verify US company, check if american company exists, SEC company lookup, is this US company legit, US company sanctions check, EDGAR lookup",
     category: "compliance-verification",
     priceCents: 130,
     componentSumCents: 100,
@@ -464,7 +498,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "very-low",
     geography: "us",
     targetAudience:
-      "US developers doing vendor/partner onboarding, compliance teams",
+      "Developers doing vendor/partner onboarding or compliance checks on US companies",
     transparencyTag: "ai_generated",
     extendsWith: ["domain-reputation", "social-profile-check", "credit-report-summary"],
     inputSchema: {
@@ -509,7 +543,11 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Domain Intelligence",
     marketingName: "Domain Intelligence Report",
     description:
-      "Everything your agent needs to evaluate a domain: who registered it, when, DNS setup, SSL certificate health, and reputation score.",
+      "Everything your agent needs to evaluate a domain: registration details, DNS setup, SSL health, and reputation score.",
+    longDescription:
+      "Combines WHOIS registration data, DNS record analysis, SSL certificate validation, and domain reputation scoring into one report. Use when your agent is researching a company, vetting a vendor, qualifying a lead, or checking a link before following it.",
+    agentDescription:
+      "look up this domain, who owns this website, is this domain trustworthy, domain background check, domain registration info, check website reputation",
     category: "security-risk",
     priceCents: 35,
     componentSumCents: 21,
@@ -517,7 +555,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "near-zero",
     geography: "global",
     targetAudience:
-      "Any developer — vendor assessment, lead qualification, security monitoring",
+      "Any developer doing vendor assessment, lead qualification, or security monitoring",
     transparencyTag: "algorithmic",
     extendsWith: ["tech-stack-detect", "page-speed-test", "backlink-check"],
     inputSchema: {
@@ -570,7 +608,11 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Web Extract & Clean",
     marketingName: "Web Extract & Clean",
     description:
-      "Fetch any web page — even JavaScript-heavy ones behind anti-bot walls — convert to clean markdown, and strip PII automatically. Ready for your RAG pipeline.",
+      "Fetch any web page — even behind anti-bot walls — convert to clean markdown, and strip PII automatically. Ready for your RAG pipeline.",
+    longDescription:
+      "Uses a headless browser to fetch JavaScript-rendered pages that block direct requests, converts the content to clean markdown, then automatically detects and redacts PII (names, emails, phone numbers, addresses) before returning. Ready to drop into your RAG pipeline, knowledge base, or agent context window.",
+    agentDescription:
+      "scrape this page, get content from URL, extract web page for RAG, page blocked need content, convert URL to markdown, fetch website content, web scraping with anti-bot",
     category: "data-research",
     priceCents: 30,
     componentSumCents: 20,
@@ -578,7 +620,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "low",
     geography: "global",
     targetAudience:
-      "Any developer building research agents, RAG pipelines, content ingestion",
+      "Any developer building research agents, RAG pipelines, or content ingestion",
     transparencyTag: "mixed",
     extendsWith: ["structured-scrape", "translate", "summarize"],
     inputSchema: {
@@ -616,14 +658,18 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Email Deliverability Audit",
     marketingName: "Email Deliverability Audit",
     description:
-      "Will emails to this domain actually arrive? Checks SPF, DKIM, DMARC, MX records, SSL, and blacklist status — the complete deliverability audit.",
+      "Will emails to this domain actually arrive? SPF, DKIM, DMARC, MX records, SSL, and blacklist status — the complete deliverability audit.",
+    longDescription:
+      "Checks every factor that determines inbox placement: SPF record configuration, DKIM signing, DMARC policy, MX record health, SSL certificate status, and blacklist presence. Use when evaluating email infrastructure for lead qualification, vendor assessment, or monitoring your own domain's deliverability.",
+    agentDescription:
+      "check email config for domain, will emails arrive at this domain, email infrastructure audit, SPF DKIM DMARC check, email deliverability test, can this domain receive email",
     category: "security-risk",
     priceCents: 25,
     componentSumCents: 16,
     valueTier: "verification",
     maintenanceLevel: "near-zero",
     geography: "global",
-    targetAudience: "Any company sending email",
+    targetAudience: "Any developer or team sending email at scale",
     transparencyTag: "algorithmic",
     extendsWith: ["domain-reputation", "whois-lookup", "tech-stack-detect"],
     inputSchema: {
@@ -671,13 +717,17 @@ const SOLUTIONS: SolutionDef[] = [
     marketingName: "Website Health Check",
     description:
       "Quick technical health check on any website: SSL certificate chain, email deliverability configuration, and page load performance.",
+    longDescription:
+      "Validates the full SSL certificate chain, checks email deliverability configuration (SPF/DKIM/DMARC), and measures page load performance. Your DevOps agent's first check when monitoring a service, or a quick sanity check before your agent interacts with an external site.",
+    agentDescription:
+      "is this website healthy, check website performance, site health check, SSL and speed test, website technical audit, is this site working properly",
     category: "security-risk",
     priceCents: 40,
     componentSumCents: 25,
     valueTier: "data-lookup",
     maintenanceLevel: "low",
     geography: "global",
-    targetAudience: "Ops teams, B2B SaaS, security monitoring",
+    targetAudience: "DevOps teams, B2B SaaS, or agents monitoring external services",
     transparencyTag: "algorithmic",
     extendsWith: ["dns-lookup", "whois-lookup", "domain-reputation"],
     inputSchema: {
@@ -722,7 +772,11 @@ const SOLUTIONS: SolutionDef[] = [
     name: "EU AI Act Risk Assessment",
     marketingName: "EU AI Act Risk Assessment",
     description:
-      "Classify your AI system's risk level under the EU AI Act before the August 2026 enforcement deadline. Returns risk classification, matched articles, obligations, and supervisory authority.",
+      "Classify your AI system's risk level under the EU AI Act before the August 2026 deadline. Risk classification, obligations, and supervisory authority.",
+    longDescription:
+      "Analyzes your AI system description against EU AI Act risk categories, identifies matched articles and specific obligations, looks up the relevant national supervisory authority, and checks for prior enforcement actions in your sector. Use before deploying any AI system in the EU.",
+    agentDescription:
+      "EU AI Act classification, is my AI system high risk, AI compliance check, what are my AI Act obligations, EU AI regulation check, AI risk assessment Europe",
     category: "legal-regulatory",
     priceCents: 80,
     componentSumCents: 45,
@@ -730,7 +784,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "low",
     geography: "eu",
     targetAudience:
-      "Kry/Livi, Spotify, any Stockholm AI startup. August 2026 enforcement deadline.",
+      "Any developer deploying AI systems in the EU. August 2026 enforcement deadline.",
     transparencyTag: "mixed",
     extendsWith: ["gdpr-website-check", "privacy-policy-analyze", "cookie-scan"],
     inputSchema: {
@@ -799,6 +853,10 @@ const SOLUTIONS: SolutionDef[] = [
     marketingName: "Website GDPR Compliance Audit",
     description:
       "Is this website GDPR compliant? Scans cookies, consent mechanisms, privacy policy, SSL, and identifies the relevant data protection authority.",
+    longDescription:
+      "Comprehensive GDPR assessment: scans for cookie consent implementation, analyzes tracking scripts, evaluates privacy policy quality, checks SSL security, and identifies the responsible data protection authority for the website's jurisdiction. Use before your agent ships a feature, evaluates a vendor, or monitors compliance across a portfolio.",
+    agentDescription:
+      "GDPR check this website, is this site GDPR compliant, cookie and privacy audit, check website privacy compliance, European data protection check, does this website follow GDPR",
     category: "legal-regulatory",
     priceCents: 100,
     componentSumCents: 63,
@@ -806,7 +864,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "low-medium",
     geography: "eu-global",
     targetAudience:
-      "Sinch, Spotify, Kry, any EU SaaS assessing vendor/partner compliance",
+      "Any developer assessing vendor/partner compliance or monitoring GDPR across a portfolio",
     transparencyTag: "mixed",
     extendsWith: ["tech-stack-detect", "domain-reputation", "dns-lookup"],
     inputSchema: {
@@ -876,6 +934,10 @@ const SOLUTIONS: SolutionDef[] = [
     marketingName: "Competitive Intelligence Snapshot",
     description:
       "Tech stack, SEO, landing page analysis, social presence — the competitive read your agent can run in seconds.",
+    longDescription:
+      "Detects the competitor's technology stack (frameworks, hosting, analytics), audits their SEO health (meta tags, structure, performance), analyzes landing page conversion elements, and checks social media presence. Use for market research, fundraising prep, GTM positioning, or any agent building competitive intelligence.",
+    agentDescription:
+      "research this competitor, competitive analysis, what tech does this company use, analyze competitor website, competitor intelligence, market research on company",
     category: "data-research",
     priceCents: 140,
     componentSumCents: 110,
@@ -883,7 +945,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "low",
     geography: "global",
     targetAudience:
-      "Any growth-stage startup — fundraising prep, GTM positioning, market research",
+      "Any developer building competitive intelligence, market research, or fundraising prep tools",
     transparencyTag: "mixed",
     extendsWith: ["page-speed-test", "backlink-check", "domain-reputation"],
     inputSchema: {
@@ -944,7 +1006,11 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Vendor Risk Assessment",
     marketingName: "Vendor Risk Assessment",
     description:
-      "SEC EDGAR data, sanctions screening, and comprehensive domain security posture. Given a company name/CIK and domain, answers \"should we do business with this company?\"",
+      "SEC data, sanctions screening, domain security — answers 'should we do business with this company?' in one call.",
+    longDescription:
+      "The most comprehensive due diligence workflow: queries SEC EDGAR for company data, screens against OFAC/EU/UN sanctions, checks domain WHOIS registration, validates DNS configuration, verifies SSL certificates, scores domain reputation, and audits HTTP security headers. 7 data sources checked in parallel, quality-verified before delivery. Use before onboarding a vendor, signing a partnership, or approving a procurement request.",
+    agentDescription:
+      "assess vendor risk, should we do business with this company, vendor due diligence, vendor security check, is this vendor safe, company risk assessment, supplier evaluation, partnership due diligence",
     category: "security-risk",
     priceCents: 180,
     componentSumCents: 129,
@@ -952,7 +1018,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "very-low",
     geography: "us-global",
     targetAudience:
-      "US developers building procurement agents, vendor management, partnership due diligence",
+      "Developers building procurement agents, vendor management, or partnership due diligence tools",
     transparencyTag: "mixed",
     extendsWith: ["credit-report-summary", "company-enrich", "tech-stack-detect"],
     inputSchema: {
@@ -1037,7 +1103,11 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Lead Enrichment & Qualification",
     marketingName: "Lead Enrichment & Qualification",
     description:
-      "Given a prospect's email, return everything a sales agent needs: email validation, DNS, domain reputation, WHOIS, and technology stack detection.",
+      "Everything your sales agent needs from one email address — validation, domain intel, reputation, registrar, and tech stack detection.",
+    longDescription:
+      "Starting from just an email address: validates deliverability, checks DNS records, scores domain reputation, looks up WHOIS registration data, and detects the company's technology stack. Returns everything an outbound agent needs to qualify a prospect and personalize outreach. Use in CRM enrichment, SDR automation, or account research pipelines.",
+    agentDescription:
+      "enrich this lead, prospect research from email, lead qualification, what company is this email from, CRM enrichment, sales prospecting data, who is this prospect",
     category: "sales-outreach",
     priceCents: 65,
     componentSumCents: 46,
@@ -1045,7 +1115,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "low",
     geography: "us-global",
     targetAudience:
-      "US developers building outbound sales agents, CRM enrichment, account research",
+      "Developers building outbound sales agents, CRM enrichment, or account research tools",
     transparencyTag: "mixed",
     extendsWith: ["company-enrich", "social-profile-check", "landing-page-roast"],
     inputSchema: {
@@ -1113,7 +1183,11 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Website Security Audit",
     marketingName: "Website Security Audit",
     description:
-      "Comprehensive security posture for any URL: SSL certificate health, HTTP header configuration, DNS security, and technology surface area.",
+      "Is this website secure? SSL, HTTP headers, DNS, and tech stack — the security audit your agent runs before trusting any URL.",
+    longDescription:
+      "Comprehensive security posture assessment: validates SSL certificate health, audits HTTP security header configuration (CSP, HSTS, X-Frame-Options), checks DNS security, and maps the technology surface area. Use when your security agent evaluates a vendor, your procurement agent vets a SaaS tool, or your monitoring agent checks your own infrastructure.",
+    agentDescription:
+      "security audit this website, is this URL safe, check website security, SSL and header security check, website vulnerability assessment, is this site secure",
     category: "security-risk",
     priceCents: 45,
     componentSumCents: 29,
@@ -1121,7 +1195,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "low",
     geography: "global",
     targetAudience:
-      "Security teams, developers filling security questionnaires, compliance monitoring agents",
+      "Security teams, developers filling security questionnaires, or compliance monitoring agents",
     transparencyTag: "mixed",
     extendsWith: ["ssl-certificate-chain", "page-speed-test", "whois-lookup"],
     inputSchema: {
@@ -1179,7 +1253,11 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Prospect Company Profile",
     marketingName: "Prospect Company Profile",
     description:
-      "Given a company name and URL, return SEC filing data, technology choices, web presence strength, and domain credibility. What an AE researches before a call, delivered in seconds.",
+      "Everything your sales agent researches before a call: SEC data, tech stack, web presence, and domain credibility — delivered in seconds.",
+    longDescription:
+      "Given a company name and URL: pulls SEC EDGAR filing data, detects their technology stack, audits their SEO and web presence strength, and scores their domain credibility. The complete pre-call research package that would take a human 30 minutes, delivered to your agent in seconds.",
+    agentDescription:
+      "research this prospect, company profile for sales call, what does this company do, pre-call research, prospect intelligence, account research before meeting",
     category: "sales-outreach",
     priceCents: 180,
     componentSumCents: 140,
@@ -1187,7 +1265,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "low",
     geography: "us-global",
     targetAudience:
-      "Account executives, CRM enrichment agents, investor research",
+      "Developers building account research, CRM enrichment, or pre-call intelligence tools",
     transparencyTag: "mixed",
     extendsWith: ["sanctions-check", "social-profile-check", "landing-page-roast"],
     inputSchema: {
@@ -1250,7 +1328,11 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Domain Trust Check",
     marketingName: "Domain Trust Check",
     description:
-      "Given a domain, answer \"is this domain trustworthy?\" — registration age, DNS configuration, SSL certificate, reputation score, and HTTP security headers.",
+      "Given a domain, answer 'is this domain trustworthy?' — registration age, DNS, SSL, reputation score, and HTTP security headers.",
+    longDescription:
+      "Checks five trust signals for any domain: WHOIS registration age and registrar, DNS configuration health, SSL certificate validity, reputation score from threat intelligence feeds, and HTTP security header grade. Use for phishing detection, link safety checks, brand protection, or any time your agent needs to evaluate whether a domain is trustworthy before interacting with it.",
+    agentDescription:
+      "is this domain trustworthy, check domain trust, domain reputation check, is this website safe to visit, phishing check, link safety verification, should I trust this domain",
     category: "security-risk",
     priceCents: 40,
     componentSumCents: 29,
@@ -1258,7 +1340,7 @@ const SOLUTIONS: SolutionDef[] = [
     maintenanceLevel: "near-zero",
     geography: "global",
     targetAudience:
-      "Anti-fraud teams, brand protection, phishing detection, cybersecurity agents",
+      "Anti-fraud teams, brand protection, phishing detection, or cybersecurity agents",
     transparencyTag: "algorithmic",
     extendsWith: ["tech-stack-detect", "backlink-check", "page-speed-test"],
     inputSchema: {
@@ -1377,6 +1459,8 @@ async function seed() {
           .set({
             name: sol.name,
             description: sol.description,
+            longDescription: sol.longDescription ?? null,
+            agentDescription: sol.agentDescription ?? null,
             category: sol.category,
             priceCents: sol.priceCents,
             componentSumCents: sol.componentSumCents,
@@ -1408,6 +1492,8 @@ async function seed() {
             slug: sol.slug,
             name: sol.name,
             description: sol.description,
+            longDescription: sol.longDescription ?? null,
+            agentDescription: sol.agentDescription ?? null,
             category: sol.category,
             priceCents: sol.priceCents,
             componentSumCents: sol.componentSumCents,
