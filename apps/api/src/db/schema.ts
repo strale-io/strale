@@ -87,6 +87,7 @@ export const capabilities = pgTable("capabilities", {
   transparencyTag: varchar("transparency_tag", { length: 30 }),
   // 'ai_generated' | 'algorithmic' | 'mixed'
   dataSource: text("data_source"),
+  dataClassification: text("data_classification"),
   isFreeTier: boolean("is_free_tier").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
