@@ -88,6 +88,10 @@ export const capabilities = pgTable("capabilities", {
   // 'ai_generated' | 'algorithmic' | 'mixed'
   dataSource: text("data_source"),
   dataClassification: text("data_classification"),
+  freshnessCategory: text("freshness_category"),
+  // 'live-fetch' | 'reference-data' | 'computed'
+  dataUpdateCycleDays: integer("data_update_cycle_days"),
+  datasetLastUpdated: timestamp("dataset_last_updated", { withTimezone: true }),
   isFreeTier: boolean("is_free_tier").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -295,6 +299,7 @@ export const testResults = pgTable(
     executedAt: timestamp("executed_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    outputHash: text("output_hash"), // SHA-256 of JSON output for staleness detection
   },
   (table) => [
     index("test_results_capability_slug_idx").on(table.capabilitySlug),

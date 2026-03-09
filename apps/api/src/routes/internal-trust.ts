@@ -25,6 +25,11 @@ import {
 import { determineBadge, getTestResultsForSlug, getLatestCompleteRunForSolution } from "../lib/trust-helpers.js";
 import { computeHealthState } from "../lib/health-state.js";
 import { computeCapabilitySQS, computeSolutionSQS } from "../lib/sqs.js";
+import {
+  computeFreshnessGrade,
+  buildPerformanceInfo,
+  computeTrustGrade,
+} from "../lib/trust-grade.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
@@ -260,8 +265,14 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
         ? "internal_testing"
         : "none";
 
-  // Look up capability name and data source for narrative
-  const [capRow] = await db.select({ name: capabilities.name, dataSource: capabilities.dataSource })
+  // Look up capability name, data source, and freshness fields
+  const [capRow] = await db.select({
+    name: capabilities.name,
+    dataSource: capabilities.dataSource,
+    freshnessCategory: capabilities.freshnessCategory,
+    dataUpdateCycleDays: capabilities.dataUpdateCycleDays,
+    datasetLastUpdated: capabilities.datasetLastUpdated,
+  })
     .from(capabilities)
     .where(eq(capabilities.slug, slug))
     .limit(1);
@@ -281,6 +292,24 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
 
   const healthState = computeHealthState(testResultsData.history_30d);
   const sqs = await computeCapabilitySQS(slug);
+
+  const freshness = capRow ? computeFreshnessGrade({
+    freshnessCategory: capRow.freshnessCategory,
+    dataUpdateCycleDays: capRow.dataUpdateCycleDays,
+    datasetLastUpdated: capRow.datasetLastUpdated,
+  }) : null;
+
+  const performance = buildPerformanceInfo(
+    quality.p95ResponseTimeMs,
+    quality.avgResponseTimeMs,
+  );
+
+  const trustGrade = computeTrustGrade({
+    sqsScore: sqs.pending ? null : sqs.score,
+    sqsPending: sqs.pending,
+    freshnessGrade: freshness?.grade ?? null,
+    latencyGrade: performance.latency_grade,
+  });
 
   const result = {
     capability_slug: slug,
@@ -309,6 +338,9 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
       limitations,
     },
     sqs,
+    ...(freshness ? { freshness } : {}),
+    performance,
+    ...(trustGrade ? { trust_grade: trustGrade } : {}),
     methodology_url: "https://strale.dev/trust/methodology",
   };
 

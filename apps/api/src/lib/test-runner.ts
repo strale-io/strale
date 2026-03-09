@@ -12,6 +12,14 @@ import { getExecutor } from "../capabilities/index.js";
 import type { CapabilityResult } from "../capabilities/index.js";
 import { computeHealthState } from "./health-state.js";
 import { sanitizeErrorMessage } from "./trust-helpers.js";
+import { createHash } from "node:crypto";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function computeOutputHash(output: unknown): string | null {
+  if (output == null) return null;
+  return createHash("sha256").update(JSON.stringify(output)).digest("hex");
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -214,6 +222,7 @@ async function runSingleTest(
     actualOutput: capResult?.output ?? null,
     failureReason,
     responseTimeMs,
+    outputHash: computeOutputHash(capResult?.output),
   });
 
   // Record quality data for this test execution (fire-and-forget)
@@ -472,6 +481,7 @@ async function runRegressionTest(
     actualOutput: currentOutput,
     failureReason,
     responseTimeMs,
+    outputHash: computeOutputHash(currentOutput),
   });
 
   return {

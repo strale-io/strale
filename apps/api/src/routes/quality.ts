@@ -3,6 +3,12 @@ import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
 import { computeCapabilitySQS, estimateQualificationTime } from "../lib/sqs.js";
+import { getCapabilityQuality } from "../lib/quality-aggregation.js";
+import {
+  computeFreshnessGrade,
+  buildPerformanceInfo,
+  computeTrustGrade,
+} from "../lib/trust-grade.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
@@ -16,7 +22,12 @@ qualityRoute.get("/:slug", async (c) => {
 
   // Verify capability exists and is active
   const [cap] = await db
-    .select({ slug: capabilities.slug })
+    .select({
+      slug: capabilities.slug,
+      freshnessCategory: capabilities.freshnessCategory,
+      dataUpdateCycleDays: capabilities.dataUpdateCycleDays,
+      datasetLastUpdated: capabilities.datasetLastUpdated,
+    })
     .from(capabilities)
     .where(and(eq(capabilities.slug, slug), eq(capabilities.isActive, true)))
     .limit(1);
@@ -28,12 +39,34 @@ qualityRoute.get("/:slug", async (c) => {
     );
   }
 
-  const sqs = await computeCapabilitySQS(slug);
+  const [sqs, qualityMetrics] = await Promise.all([
+    computeCapabilitySQS(slug),
+    getCapabilityQuality(slug),
+  ]);
 
   // Only compute qualification estimate when pending
   const qualificationEstimate = sqs.pending
     ? await estimateQualificationTime(slug)
     : null;
+
+  // Compute freshness, performance, and trust grade
+  const freshness = computeFreshnessGrade({
+    freshnessCategory: cap.freshnessCategory,
+    dataUpdateCycleDays: cap.dataUpdateCycleDays,
+    datasetLastUpdated: cap.datasetLastUpdated,
+  });
+
+  const performance = buildPerformanceInfo(
+    qualityMetrics.p95ResponseTimeMs,
+    qualityMetrics.avgResponseTimeMs,
+  );
+
+  const trustGrade = computeTrustGrade({
+    sqsScore: sqs.pending ? null : sqs.score,
+    sqsPending: sqs.pending,
+    freshnessGrade: freshness?.grade ?? null,
+    latencyGrade: performance.latency_grade,
+  });
 
   c.header("Cache-Control", "public, max-age=300");
 
@@ -54,5 +87,8 @@ qualityRoute.get("/:slug", async (c) => {
     runs_analyzed: sqs.runs_analyzed,
     pending: sqs.pending,
     ...(sqs.pending && qualificationEstimate ? { qualification_estimate: qualificationEstimate } : {}),
+    ...(freshness ? { freshness } : {}),
+    performance,
+    ...(trustGrade ? { trust_grade: trustGrade } : {}),
   });
 });

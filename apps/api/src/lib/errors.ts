@@ -11,7 +11,9 @@ export type ErrorCode =
   | "unauthorized"
   | "not_found"
   | "capability_degraded"
-  | "below_quality_threshold";
+  | "below_quality_threshold"
+  | "freshness_check_failed"
+  | "latency_threshold_exceeded";
 
 export interface ApiError {
   error_code: ErrorCode;

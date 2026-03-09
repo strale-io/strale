@@ -26,6 +26,16 @@ import { computeCapabilitySQS } from "../lib/sqs.js";
 import { createHash } from "node:crypto";
 import { getShareableUrl } from "../lib/audit-token.js";
 import { getAiDescription, getDataSourceUrl, detectPersonalData } from "../lib/audit-helpers.js";
+import { getCapabilityQuality } from "../lib/quality-aggregation.js";
+import {
+  computeFreshnessGrade,
+  buildPerformanceInfo,
+  gradeLatency,
+  computeTrustGrade,
+  type FreshnessInfo,
+  type PerformanceInfo,
+  type TrustGradeInfo,
+} from "../lib/trust-grade.js";
 import type { AppEnv } from "../types.js";
 
 // Shared capability type for execution functions
@@ -36,6 +46,9 @@ type CapabilityInfo = {
   priceCents: number;
   dataSource: string | null;
   dataClassification: string | null;
+  freshnessCategory: string | null;
+  dataUpdateCycleDays: number | null;
+  datasetLastUpdated: Date | null;
 };
 
 const MAX_TIMEOUT_SECONDS = 60;
@@ -79,6 +92,11 @@ doRoute.post(
   const minSqs: number | undefined =
     typeof body.min_sqs === "number" && body.min_sqs >= 0 && body.min_sqs <= 100
       ? Math.round(body.min_sqs)
+      : undefined;
+  const requireFresh: boolean = body.require_fresh === true;
+  const maxLatencyMs: number | undefined =
+    typeof body.max_latency_ms === "number" && body.max_latency_ms > 0
+      ? Math.round(body.max_latency_ms)
       : undefined;
 
   if (!task && !capabilitySlug) {
@@ -334,26 +352,64 @@ doRoute.post(
     );
   }
 
+  // ── 5d. Freshness + latency pre-execution checks ──────────────────────
+  const freshness = computeFreshnessGrade({
+    freshnessCategory: capability.freshnessCategory,
+    dataUpdateCycleDays: capability.dataUpdateCycleDays,
+    datasetLastUpdated: capability.datasetLastUpdated,
+  });
+
+  // require_fresh: reject reference-data capabilities with stale data (grade C)
+  if (requireFresh && freshness && freshness.category === "reference-data" && freshness.grade === "C") {
+    return c.json(
+      apiError(
+        "freshness_check_failed",
+        `Capability '${capability.slug}' has stale reference data. ${freshness.label}`,
+        { freshness },
+      ),
+      422,
+    );
+  }
+
+  // max_latency_ms: check p95 latency against agent's threshold
+  let qualityMetrics: Awaited<ReturnType<typeof getCapabilityQuality>> | null = null;
+  if (maxLatencyMs !== undefined) {
+    qualityMetrics = await getCapabilityQuality(capability.slug);
+    if (qualityMetrics.p95ResponseTimeMs && qualityMetrics.p95ResponseTimeMs > maxLatencyMs) {
+      return c.json(
+        apiError(
+          "latency_threshold_exceeded",
+          `Capability '${capability.slug}' p95 latency (${qualityMetrics.p95ResponseTimeMs}ms) exceeds your threshold (${maxLatencyMs}ms).`,
+          {
+            p95_ms: qualityMetrics.p95ResponseTimeMs,
+            max_latency_ms: maxLatencyMs,
+          },
+        ),
+        422,
+      );
+    }
+  }
+
   // ── 6. Decide execution path ─────────────────────────────────────────
   const executionInput = inputs ?? { task };
   const outputSchema = (match.capability.outputSchema ?? {}) as Record<string, unknown>;
 
   // Free-tier without auth: lightweight execution (no wallet, no transaction record)
   if (!user && isFreeTier) {
-    return executeFreeTier(c, capability, executor, executionInput, outputSchema, sqs);
+    return executeFreeTier(c, capability, executor, executionInput, outputSchema, sqs, freshness);
   }
 
   // Free-tier with auth: skip wallet operations but still record transaction
   if (user && isFreeTier) {
-    return executeFreeTierAuthenticated(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs);
+    return executeFreeTierAuthenticated(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs, freshness);
   }
 
   // Paid execution: sync or async (DEC-22)
   const isAsync = (capability.avgLatencyMs ?? 0) > ASYNC_THRESHOLD_MS;
   if (isAsync) {
-    return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema);
+    return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs, freshness);
   } else {
-    return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema);
+    return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs, freshness);
   }
 });
 
@@ -366,6 +422,7 @@ async function executeFreeTier(
   executionInput: Record<string, unknown>,
   outputSchema: Record<string, unknown>,
   sqs: { score: number; label: string; trend: string; pending: boolean },
+  freshness: FreshnessInfo | null,
 ) {
   const startTime = Date.now();
 
@@ -399,6 +456,8 @@ async function executeFreeTier(
         sqs: sqs.score,
         label: sqs.label,
         trend: sqs.trend,
+        ...(freshness ? { freshness } : {}),
+        performance: buildPerformanceInfo(null, latencyMs),
       },
       audit: buildFreeTierAudit(capability, latencyMs),
       upgrade_hint: "This capability is free. Sign up for API key access to 233+ capabilities at strale.dev/signup",
@@ -439,6 +498,7 @@ async function executeFreeTierAuthenticated(
   idempotencyKey: string | null,
   outputSchema: Record<string, unknown>,
   sqs: { score: number; label: string; trend: string; pending: boolean },
+  freshness: FreshnessInfo | null,
 ) {
   const startTime = Date.now();
   const marker = getTransparencyMarker(capability.slug);
@@ -523,6 +583,8 @@ async function executeFreeTierAuthenticated(
         sqs: sqs.score,
         label: sqs.label,
         trend: sqs.trend,
+        ...(freshness ? { freshness } : {}),
+        performance: buildPerformanceInfo(null, latencyMs),
       },
       audit,
     });
@@ -581,6 +643,8 @@ async function executeSync(
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
   outputSchema: Record<string, unknown>,
+  sqs: { score: number; label: string; trend: string; pending: boolean },
+  freshness: FreshnessInfo | null,
 ) {
   const startTime = Date.now();
 
@@ -824,6 +888,23 @@ async function executeSync(
     .where(eq(transactions.id, result.transactionId))
     .catch(() => {});
 
+  // Build performance info from quality metrics (best-effort)
+  let perfInfo: PerformanceInfo;
+  try {
+    const qm = await getCapabilityQuality(capability.slug);
+    perfInfo = buildPerformanceInfo(qm.p95ResponseTimeMs, qm.avgResponseTimeMs);
+  } catch {
+    perfInfo = buildPerformanceInfo(null, result.latencyMs);
+  }
+
+  // Compute trust grade
+  const trustGrade = computeTrustGrade({
+    sqsScore: sqs.pending ? null : sqs.score,
+    sqsPending: sqs.pending,
+    freshnessGrade: freshness?.grade ?? null,
+    latencyGrade: perfInfo.latency_grade,
+  });
+
   return c.json({
     transaction_id: result.transactionId,
     status: "completed",
@@ -835,6 +916,14 @@ async function executeSync(
     provenance: result.provenance,
     quality_status: qualityStatus,
     quality_pass_rate: qualityPassRate,
+    quality: {
+      sqs: sqs.pending ? null : sqs.score,
+      label: sqs.pending ? "Pending" : sqs.label,
+      trend: sqs.trend,
+      ...(freshness ? { freshness } : {}),
+      performance: perfInfo,
+      ...(trustGrade ? { trust_grade: trustGrade } : {}),
+    },
     audit,
   });
 }
@@ -860,6 +949,8 @@ async function executeAsync(
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
   outputSchema: Record<string, unknown>,
+  sqs: { score: number; label: string; trend: string; pending: boolean },
+  freshness: FreshnessInfo | null,
 ) {
   // Short DB tx: lock wallet → check balance → debit → create record → commit
   type SetupResult =
