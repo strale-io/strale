@@ -75,8 +75,9 @@ async function computeCapabilityQuality(
 
   // Single query: weighted rolling metrics for last 30 days
   // Recent 7 days get weight 3, older 23 days get weight 1
-  // Latency metrics (avg, p95) use the most recent 50 transactions to avoid
-  // historical outliers from early test development inflating current scores
+  // Latency metrics (avg, p95) use the 20 most recent transactions from the
+  // last 3 days, excluding extreme outliers (>60s — beyond async threshold).
+  // Short window avoids historical contamination.  Requires ≥5 data points.
   const [metrics] = await db.execute<{
     success_rate: string | null;
     avg_response_time_ms: string | null;
@@ -129,14 +130,25 @@ async function computeCapabilityQuality(
     ),
     recent_latency AS (
       SELECT response_time_ms
-      FROM quality_rows
-      ORDER BY created_at DESC
-      LIMIT 50
+      FROM transaction_quality tq
+      JOIN transactions t ON t.id = tq.transaction_id
+      JOIN capabilities c ON c.id = t.capability_id
+      WHERE c.slug = ${capabilitySlug}
+        AND tq.created_at >= NOW() - INTERVAL '3 days'
+        AND tq.response_time_ms < 60000
+      ORDER BY tq.created_at DESC
+      LIMIT 20
     ),
     latency_stats AS (
       SELECT
-        ROUND(AVG(response_time_ms))::text AS avg_ms,
-        PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY response_time_ms)::text AS p95_ms
+        CASE WHEN COUNT(*) >= 5
+          THEN ROUND(AVG(response_time_ms))::text
+          ELSE NULL
+        END AS avg_ms,
+        CASE WHEN COUNT(*) >= 5
+          THEN PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY response_time_ms)::text
+          ELSE NULL
+        END AS p95_ms
       FROM recent_latency
     )
     SELECT
