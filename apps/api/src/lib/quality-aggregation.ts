@@ -75,9 +75,9 @@ async function computeCapabilityQuality(
 
   // Single query: weighted rolling metrics for last 30 days
   // Recent 7 days get weight 3, older 23 days get weight 1
-  // Latency metrics (avg, p95) use the 20 most recent transactions from the
-  // last 3 days, excluding extreme outliers (>60s — beyond async threshold).
-  // Short window avoids historical contamination.  Requires ≥5 data points.
+  // Latency metrics (avg, p95) use the 50 most recent transactions regardless
+  // of age — naturally ages out old data as new runs accumulate.
+  // No outlier cap: real latency should never be hidden.  Requires ≥5 samples.
   const [metrics] = await db.execute<{
     success_rate: string | null;
     avg_response_time_ms: string | null;
@@ -129,15 +129,13 @@ async function computeCapabilityQuality(
       FROM quality_rows
     ),
     recent_latency AS (
-      SELECT response_time_ms
+      SELECT tq.response_time_ms
       FROM transaction_quality tq
       JOIN transactions t ON t.id = tq.transaction_id
       JOIN capabilities c ON c.id = t.capability_id
       WHERE c.slug = ${capabilitySlug}
-        AND tq.created_at >= NOW() - INTERVAL '3 days'
-        AND tq.response_time_ms < 60000
       ORDER BY tq.created_at DESC
-      LIMIT 20
+      LIMIT 50
     ),
     latency_stats AS (
       SELECT
