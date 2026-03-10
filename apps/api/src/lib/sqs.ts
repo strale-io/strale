@@ -16,7 +16,7 @@ export interface SQSResult {
   };
   trend: "stable" | "improving" | "declining";
   circuit_breaker: boolean;
-  upstream_issues: number;
+  external_service_issues: number;
   runs_analyzed: number;
   pending: boolean;
 }
@@ -59,7 +59,7 @@ const TYPE_TO_FACTOR: Record<string, keyof typeof WEIGHTS> = {
   edge_case: "edge_cases",
 };
 
-const UPSTREAM_PATTERNS = [
+const EXTERNAL_SERVICE_PATTERNS = [
   /HTTP 429/i, /HTTP 503/i, /HTTP 502/i,
   /Too Many Requests/i, /rate limit/i,
   /ECONNRESET/i, /ECONNREFUSED/i, /ETIMEDOUT/i,
@@ -67,9 +67,9 @@ const UPSTREAM_PATTERNS = [
   /VIES error/i, /Navigation timeout/i,
 ];
 
-function isUpstreamFailure(reason: string | null): boolean {
+function isExternalServiceFailure(reason: string | null): boolean {
   if (!reason) return false;
-  return UPSTREAM_PATTERNS.some((p) => p.test(reason));
+  return EXTERNAL_SERVICE_PATTERNS.some((p) => p.test(reason));
 }
 
 function scoreToLabel(score: number, pending: boolean): string {
@@ -219,7 +219,7 @@ export async function computeSolutionSQS(
 
   score = Math.max(0, Math.min(100, score));
 
-  const upstreamIssues = stepScores.reduce((s, r) => s + r.upstream_issues, 0);
+  const externalServiceIssues = stepScores.reduce((s, r) => s + r.external_service_issues, 0);
   const runsAnalyzed = Math.min(...stepScores.map((s) => s.runs_analyzed));
 
   // Solution trend: majority of step trends
@@ -241,7 +241,7 @@ export async function computeSolutionSQS(
     factors,
     trend,
     circuit_breaker: circuitBreaker,
-    upstream_issues: upstreamIssues,
+    external_service_issues: externalServiceIssues,
     runs_analyzed: runsAnalyzed,
     pending: false,
   };
@@ -280,7 +280,7 @@ function computeFromRows(
     edge_cases: { weightedPassed: 0, weightedTotal: 0, passed: 0, total: 0 },
   };
 
-  let upstreamIssues = 0;
+  let externalServiceIssues = 0;
 
   // Per-window pass tracking for trend computation
   const windowPassed = new Map<number, number>();
@@ -302,8 +302,8 @@ function computeFromRows(
       accum[factor].total++;
       windowPassed.set(runIndex, (windowPassed.get(runIndex) ?? 0) + 1);
       windowTotal.set(runIndex, (windowTotal.get(runIndex) ?? 0) + 1);
-    } else if (isUpstreamFailure(row.failure_reason)) {
-      upstreamIssues++;
+    } else if (isExternalServiceFailure(row.failure_reason)) {
+      externalServiceIssues++;
     } else {
       accum[factor].weightedTotal += recencyWeight;
       accum[factor].total++;
@@ -354,7 +354,7 @@ function computeFromRows(
 
   // Sort non-upstream test results by recency for pattern detection
   const nonUpstreamRows = testRows
-    .filter((r) => TYPE_TO_FACTOR[r.test_type] && !isUpstreamFailure(r.failure_reason))
+    .filter((r) => TYPE_TO_FACTOR[r.test_type] && !isExternalServiceFailure(r.failure_reason))
     .sort((a, b) => new Date(b.run_window).getTime() - new Date(a.run_window).getTime());
 
   // Trigger 1: 3 consecutive total execution failures → score = max(computed − 30, 20)
@@ -403,7 +403,7 @@ function computeFromRows(
     factors,
     trend,
     circuit_breaker: circuitBreakerActive,
-    upstream_issues: upstreamIssues,
+    external_service_issues: externalServiceIssues,
     runs_analyzed: runsAnalyzed,
     pending: false,
   };
@@ -539,7 +539,7 @@ function makePendingResult(runsAnalyzed = 0): SQSResult {
     },
     trend: "stable",
     circuit_breaker: false,
-    upstream_issues: 0,
+    external_service_issues: 0,
     runs_analyzed: runsAnalyzed,
     pending: true,
   };

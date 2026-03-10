@@ -102,6 +102,7 @@ function aggregateByType(
 function aggregateFailures(
   stepData: Array<{ capability_slug: string; test_results: { failures?: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: string }> } }>,
 ): { failures?: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: string; capability_slug: string }> } {
+  // Note: failure_reason values are already sanitized by trust-helpers.ts
   const all: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: string; capability_slug: string }> = [];
   for (const step of stepData) {
     if (step.test_results.failures) {
@@ -348,7 +349,7 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
   return c.json(result);
 });
 
-// ─── Quality narrative ──────────────────────────────────────────────────────
+// ─── Quality narrative ─────────────────────────────────────────────────────
 
 function generateQualityNarrative(stepData: Array<{
   capability_name: string;
@@ -384,9 +385,9 @@ function generateQualityNarrative(stepData: Array<{
   const allFailures = stepData.flatMap(
     (d) => d.test_results.failures ?? [],
   );
-  const upstreamCount = allFailures.filter((f) => f.failure_category === "upstream").length;
+  const externalCount = allFailures.filter((f) => f.failure_category === "external_service").length;
   const internalCount = allFailures.filter((f) => f.failure_category === "internal").length;
-  const allUpstream = totalFailed > 0 && internalCount === 0 && upstreamCount > 0;
+  const allExternal = totalFailed > 0 && internalCount === 0 && externalCount > 0;
 
   // Find capabilities with failures
   const failingSteps = stepData.filter(
@@ -399,9 +400,9 @@ function generateQualityNarrative(stepData: Array<{
 
   const plural = totalFailed > 1 ? "s" : "";
 
-  if (passRate >= 90 && allUpstream) {
+  if (passRate >= 90 && allExternal) {
     const names = failingSteps.map((d) => d.capability_name).join(", ");
-    return `${totalPassed} of ${withResults} tests passing. ${totalFailed} upstream issue${plural} in ${names} — provider timeout or rate limit, not Strale code.`;
+    return `${totalPassed} of ${withResults} tests passing. ${totalFailed} external service issue${plural} in ${names} — third-party timeout or rate limit, not Strale code.`;
   }
 
   if (passRate >= 90) {
@@ -567,6 +568,19 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
 
   const sqs = await computeSolutionSQS(capSlugs);
 
+  const solutionPerformance = buildPerformanceInfo(
+    solutionQuality?.p95ResponseTimeMs ?? null,
+    solutionQuality?.avgResponseTimeMs ?? null,
+    steps.length,
+  );
+
+  const solutionTrustGrade = computeTrustGrade({
+    sqsScore: sqs.pending ? null : sqs.score,
+    sqsPending: sqs.pending,
+    freshnessGrade: null,
+    latencyGrade: solutionPerformance.latency_grade,
+  });
+
   const result = {
     solution_slug: slug,
     trust_summary: {
@@ -601,6 +615,8 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       steps: stepData,
     },
     sqs,
+    performance: solutionPerformance,
+    ...(solutionTrustGrade ? { trust_grade: solutionTrustGrade } : {}),
     methodology_url: "https://strale.dev/trust/methodology",
   };
 

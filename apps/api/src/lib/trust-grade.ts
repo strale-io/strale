@@ -115,13 +115,31 @@ export interface PerformanceInfo {
 /**
  * Grade latency based on p95 response time.
  *
- * - Fast: <1s
- * - Normal: 1-5s
- * - Moderate: 5-15s
- * - Slow: 15-30s+
+ * Uses tiered thresholds for solutions based on step count:
+ * - Capabilities (stepCount undefined or 1): Fast <1s, Normal 1-5s, Moderate 5-15s, Slow >15s
+ * - Solutions 2-4 steps: Fast <3s, Normal 3-15s, Moderate 15-30s, Slow >30s
+ * - Solutions 5+ steps: Fast <5s, Normal 5-30s, Moderate 30-60s, Slow >60s
  */
-export function gradeLatency(p95Ms: number | null): LatencyGrade | null {
+export function gradeLatency(p95Ms: number | null, stepCount?: number): LatencyGrade | null {
   if (p95Ms == null) return null;
+
+  const steps = stepCount ?? 1;
+
+  if (steps >= 5) {
+    if (p95Ms < 5000) return "fast";
+    if (p95Ms < 30000) return "normal";
+    if (p95Ms < 60000) return "moderate";
+    return "slow";
+  }
+
+  if (steps >= 2) {
+    if (p95Ms < 3000) return "fast";
+    if (p95Ms < 15000) return "normal";
+    if (p95Ms < 30000) return "moderate";
+    return "slow";
+  }
+
+  // Single capability
   if (p95Ms < 1000) return "fast";
   if (p95Ms < 5000) return "normal";
   if (p95Ms < 15000) return "moderate";
@@ -131,14 +149,16 @@ export function gradeLatency(p95Ms: number | null): LatencyGrade | null {
 export function buildPerformanceInfo(
   p95Ms: number | null,
   avgMs: number | null,
+  stepCount?: number,
 ): PerformanceInfo {
-  const grade = gradeLatency(p95Ms);
-  const labels: Record<LatencyGrade, string> = {
-    fast: "Fast (<1s p95)",
-    normal: "Normal (1-5s p95)",
-    moderate: "Moderate (5-15s p95)",
-    slow: "Slow (>15s p95)",
-  };
+  const grade = gradeLatency(p95Ms, stepCount);
+
+  const steps = stepCount ?? 1;
+  const labels: Record<LatencyGrade, string> = steps >= 5
+    ? { fast: "Fast (<5s p95)", normal: "Normal (5-30s p95)", moderate: "Moderate (30-60s p95)", slow: "Slow (>60s p95)" }
+    : steps >= 2
+      ? { fast: "Fast (<3s p95)", normal: "Normal (3-15s p95)", moderate: "Moderate (15-30s p95)", slow: "Slow (>30s p95)" }
+      : { fast: "Fast (<1s p95)", normal: "Normal (1-5s p95)", moderate: "Moderate (5-15s p95)", slow: "Slow (>15s p95)" };
 
   return {
     p95_ms: p95Ms,

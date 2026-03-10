@@ -1,6 +1,7 @@
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { testSuites, testResults } from "../db/schema.js";
+import { sanitizeFailureReason } from "./sanitize.js";
 
 // ─── Solution complete-run helpers ───────────────────────────────────────────
 
@@ -20,7 +21,7 @@ export async function getLatestCompleteRunForSolution(
   pass_rate: number | null;
   avg_response_time_ms: number | null;
   by_type: Record<string, { total: number; passed: number; failed: number }>;
-  failures: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: "upstream" | "internal" | "unknown"; capability_slug: string }>;
+  failures: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: "external_service" | "internal" | "unknown"; capability_slug: string }>;
 } | null> {
   const db = getDb();
   const slugList = sql.join(capabilitySlugs.map((s) => sql`${s}`), sql`, `);
@@ -80,7 +81,7 @@ export async function getLatestCompleteRunForSolution(
   }
 
   // Get failures for this window
-  const failures: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: "upstream" | "internal" | "unknown"; capability_slug: string }> = [];
+  const failures: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: "external_service" | "internal" | "unknown"; capability_slug: string }> = [];
   if (failed > 0) {
     const failRows = await db.execute(sql`
       SELECT
@@ -99,7 +100,7 @@ export async function getLatestCompleteRunForSolution(
       failures.push({
         test_name: f.test_name,
         test_type: f.test_type ?? "unknown",
-        failure_reason: sanitizeErrorMessage(f.failure_reason) ?? "Unknown",
+        failure_reason: sanitizeFailureReason(f.failure_reason),
         failure_category: categorizeFailureReason(f.failure_reason),
         capability_slug: f.capability_slug,
       });
@@ -166,14 +167,14 @@ export function sanitizeErrorMessage(msg: string | null): string | null {
 
 // ─── Failure categorization ─────────────────────────────────────────────────
 
-export function categorizeFailureReason(reason: string | null): "upstream" | "internal" | "unknown" {
+export function categorizeFailureReason(reason: string | null): "external_service" | "internal" | "unknown" {
   if (!reason) return "unknown";
   const lower = reason.toLowerCase();
-  if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("etimedout")) return "upstream";
-  if (lower.includes("rate limit") || lower.includes("429") || lower.includes("too many")) return "upstream";
+  if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("etimedout")) return "external_service";
+  if (lower.includes("rate limit") || lower.includes("429") || lower.includes("too many")) return "external_service";
   if (lower.includes("econnrefused") || lower.includes("enotfound") || lower.includes("502") ||
-      lower.includes("503") || lower.includes("504") || lower.includes("fetch failed")) return "upstream";
-  if (lower.includes("ms_max_concurrent")) return "upstream";
+      lower.includes("503") || lower.includes("504") || lower.includes("fetch failed")) return "external_service";
+  if (lower.includes("ms_max_concurrent")) return "external_service";
   return "internal";
 }
 
@@ -199,7 +200,7 @@ export async function getTestResultsForSlug(slug: string) {
     test_name: string;
     test_type: string;
     failure_reason: string;
-    failure_category: "upstream" | "internal" | "unknown";
+    failure_category: "external_service" | "internal" | "unknown";
   }> = [];
 
   for (const suite of suites) {
@@ -226,7 +227,7 @@ export async function getTestResultsForSlug(slug: string) {
           failures.push({
             test_name: suite.testName,
             test_type: testType,
-            failure_reason: sanitizeErrorMessage(latest.failureReason) ?? latest.failureReason,
+            failure_reason: sanitizeFailureReason(latest.failureReason),
             failure_category: categorizeFailureReason(latest.failureReason),
           });
         }

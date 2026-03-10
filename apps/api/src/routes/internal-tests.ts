@@ -12,6 +12,7 @@ import {
 import { runTests } from "../lib/test-runner.js";
 import type { ScheduleTier } from "../lib/test-runner.js";
 import { categorizeFailureReason, sanitizeErrorMessage } from "../lib/trust-helpers.js";
+import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { runDependencyHealthChecks } from "../lib/dependency-health.js";
 import { apiError } from "../lib/errors.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
@@ -118,7 +119,7 @@ internalTestsRoute.get("/capabilities/:slug", async (c) => {
         test_name: suite.testName,
         test_type: suite.testType,
         passed: latest?.passed ?? null,
-        failure_reason: sanitizeErrorMessage(latest?.failureReason ?? null),
+        failure_reason: latest?.failureReason ? sanitizeFailureReason(latest.failureReason) : null,
         response_time_ms: latest?.responseTimeMs ?? null,
         executed_at: latest?.executedAt?.toISOString() ?? null,
       };
@@ -155,7 +156,7 @@ internalTestsRoute.get("/capabilities/:slug", async (c) => {
     .map((t) => ({
       test_name: t.test_name,
       test_type: t.test_type,
-      failure_reason: sanitizeErrorMessage(t.failure_reason!) ?? t.failure_reason!,
+      failure_reason: sanitizeFailureReason(t.failure_reason),
       failure_category: categorizeFailureReason(t.failure_reason),
     }));
 
@@ -316,7 +317,7 @@ internalTestsRoute.get("/capabilities/:slug/runs", async (c) => {
         failures = failData.map((f: any) => ({
           test_name: f.test_name,
           test_type: f.test_type,
-          failure_reason: sanitizeErrorMessage(f.failure_reason) ?? "Unknown",
+          failure_reason: sanitizeFailureReason(f.failure_reason),
           failure_category: categorizeFailureReason(f.failure_reason),
         }));
       }
@@ -573,7 +574,7 @@ internalTestsRoute.get("/solutions/:slug/runs", async (c) => {
           test_type: f.test_type,
           capability_slug: f.capability_slug,
           capability_name: f.capability_name ?? f.capability_slug,
-          failure_reason: sanitizeErrorMessage(f.failure_reason) ?? "Unknown",
+          failure_reason: sanitizeFailureReason(f.failure_reason),
           failure_category: categorizeFailureReason(f.failure_reason),
         }));
       }

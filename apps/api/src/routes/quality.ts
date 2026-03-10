@@ -83,7 +83,7 @@ qualityRoute.get("/:slug", async (c) => {
       error_handling: { rate: sqs.factors.error_handling.rate, weight: sqs.factors.error_handling.weight },
       edge_cases: { rate: sqs.factors.edge_cases.rate, weight: sqs.factors.edge_cases.weight },
     },
-    upstream_issues: sqs.upstream_issues,
+    external_service_issues: sqs.external_service_issues,
     runs_analyzed: sqs.runs_analyzed,
     pending: sqs.pending,
     ...(sqs.pending && qualificationEstimate ? { qualification_estimate: qualificationEstimate } : {}),
