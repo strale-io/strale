@@ -28,6 +28,7 @@ solutionsRoute.get("/", async (c) => {
       priceCents: solutions.priceCents,
       geography: solutions.geography,
       transparencyTag: solutions.transparencyTag,
+      complianceCoverage: solutions.complianceCoverage,
       id: solutions.id,
     })
     .from(solutions)
@@ -52,6 +53,7 @@ solutionsRoute.get("/", async (c) => {
         stepCount: steps.length,
         geography: row.geography,
         transparencyTag: row.transparencyTag,
+        complianceCoverage: row.complianceCoverage ?? [],
         capabilities: steps.map((s) => s.capabilitySlug),
       };
     }),
@@ -133,6 +135,7 @@ solutionsRoute.get("/:slug", async (c) => {
     inputSchema: sol.inputSchema,
     exampleInput: sol.exampleInput,
     exampleOutput: sol.exampleOutput,
+    complianceCoverage: sol.complianceCoverage ?? [],
     steps: steps.map((s) => ({
       stepOrder: s.stepOrder,
       capabilitySlug: s.capabilitySlug,

@@ -426,6 +426,20 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
 
   const db = getDb();
 
+  // Look up solution row for complianceCoverage
+  const [solRow] = await db
+    .select({ id: solutions.id, complianceCoverage: solutions.complianceCoverage })
+    .from(solutions)
+    .where(eq(solutions.slug, slug))
+    .limit(1);
+
+  if (!solRow) {
+    return c.json(
+      apiError("not_found", `Solution '${slug}' not found.`),
+      404,
+    );
+  }
+
   // Look up solution steps with capability names
   const steps = await db
     .select({
@@ -436,14 +450,13 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       dataSource: capabilities.dataSource,
     })
     .from(solutionSteps)
-    .innerJoin(solutions, eq(solutionSteps.solutionId, solutions.id))
     .leftJoin(capabilities, eq(solutionSteps.capabilitySlug, capabilities.slug))
-    .where(eq(solutions.slug, slug))
+    .where(eq(solutionSteps.solutionId, solRow.id))
     .orderBy(asc(solutionSteps.stepOrder));
 
   if (steps.length === 0) {
     return c.json(
-      apiError("not_found", `Solution '${slug}' not found.`),
+      apiError("not_found", `Solution '${slug}' has no steps.`),
       404,
     );
   }
@@ -583,6 +596,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
 
   const result = {
     solution_slug: slug,
+    compliance_coverage: solRow.complianceCoverage ?? [],
     trust_summary: {
       badge,
       badge_label,

@@ -13,6 +13,17 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+export interface ComplianceCoverageItem {
+  framework: string;
+  reference: string;
+  requirement: string;
+  straleProvides: string;
+  scope: "eu" | "us" | "global";
+  geographyRelevance: "primary" | "supporting";
+}
+
 // ─── users ──────────────────────────────────────────────────────────────────
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -216,6 +227,7 @@ export const solutions = pgTable("solutions", {
   transparencyTag: varchar("transparency_tag", { length: 30 }),
   // null = all algorithmic, "ai_generated", "mixed"
   extendsWith: jsonb("extends_with").$type<string[]>().default([]),
+  complianceCoverage: jsonb("compliance_coverage").$type<ComplianceCoverageItem[]>().default([]),
   isActive: boolean("is_active").notNull().default(true),
   displayOrder: integer("display_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })

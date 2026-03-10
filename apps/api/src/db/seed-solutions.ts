@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../../.env") });
 
 import { getDb } from "./index.js";
-import { capabilities, solutions, solutionSteps } from "./schema.js";
+import { capabilities, solutions, solutionSteps, type ComplianceCoverageItem } from "./schema.js";
 import { eq, inArray } from "drizzle-orm";
 
 // ─── Solution definitions ───────────────────────────────────────────────────
@@ -37,6 +37,140 @@ interface SolutionDef {
   exampleInput?: Record<string, unknown>;
   exampleOutput?: Record<string, unknown>;
   steps: SolutionStep[];
+}
+
+// ─── Compliance coverage builder ────────────────────────────────────────────
+
+function buildComplianceCoverage(sol: SolutionDef): ComplianceCoverageItem[] {
+  const items: ComplianceCoverageItem[] = [];
+  const stepSlugs = sol.steps.map((s) => s.capabilitySlug);
+  const hasAI = sol.transparencyTag === "mixed" || sol.transparencyTag === "ai_generated";
+  const isEU = ["eu", "eu-global", "nordic"].includes(sol.geography);
+  const isCompliance = ["compliance-verification", "security-risk", "legal-regulatory"].includes(sol.category);
+
+  // Geography relevance: primary if scope matches solution geography, supporting otherwise
+  const geo = sol.geography; // e.g. "us", "us-global", "eu", "eu-global", "nordic", "global"
+  const geoHasUS = geo.includes("us");
+  const geoHasEU = geo === "eu" || geo === "eu-global" || geo === "nordic";
+  function relevance(scope: "eu" | "us" | "global"): "primary" | "supporting" {
+    if (scope === "global") return "primary";
+    if (scope === "us" && geoHasUS) return "primary";
+    if (scope === "eu" && geoHasEU) return "primary";
+    return "supporting";
+  }
+
+  // Platform-level (all solutions)
+  items.push({
+    framework: "Audit Trail",
+    reference: "Platform standard",
+    requirement: "Traceable execution records for every API call",
+    straleProvides: "Per-step timestamps, data sources, latency, schema validation, and input fingerprinting on every transaction",
+    scope: "global",
+    geographyRelevance: "primary",
+  });
+  items.push({
+    framework: "Audit Trail",
+    reference: "Trust Service Criteria CC7.2",
+    requirement: "System operations monitoring and anomaly detection",
+    straleProvides: "Continuous quality monitoring with automated health tracking — supports audit trail documentation for SOC 2 reviews",
+    scope: "global",
+    geographyRelevance: "primary",
+  });
+
+  // EU AI Act (if has AI involvement)
+  if (hasAI) {
+    const euRelevance = relevance("eu");
+    items.push({
+      framework: "EU AI Act",
+      reference: "Article 12",
+      requirement: "Record-keeping and automatic logging of AI system operations",
+      straleProvides: "Provides detailed execution logging with per-step timestamps, data sources, and latency metrics beyond typical API audit trails",
+      scope: "eu",
+      geographyRelevance: euRelevance,
+    });
+    items.push({
+      framework: "EU AI Act",
+      reference: "Article 13",
+      requirement: "Transparency — users must understand AI system output",
+      straleProvides: "Documents data source transparency and AI involvement level per step",
+      scope: "eu",
+      geographyRelevance: euRelevance,
+    });
+    items.push({
+      framework: "EU AI Act",
+      reference: "Article 14",
+      requirement: "Human oversight measures must be documented",
+      straleProvides: "Records human oversight level per step. AI steps explicitly marked; algorithmic steps operate without AI",
+      scope: "eu",
+      geographyRelevance: euRelevance,
+    });
+    items.push({
+      framework: "EU AI Act",
+      reference: "Article 50",
+      requirement: "AI-generated content must be marked",
+      straleProvides: "Logs AI involvement per step (LLM, algorithmic, or none)",
+      scope: "eu",
+      geographyRelevance: euRelevance,
+    });
+  }
+
+  // GDPR (if EU-relevant)
+  if (isEU) {
+    items.push({
+      framework: "GDPR",
+      reference: "Article 30",
+      requirement: "Record of processing activities with data classifications",
+      straleProvides: "Provides complete processing record with per-step data classifications and source documentation",
+      scope: "eu",
+      geographyRelevance: relevance("eu"),
+    });
+    items.push({
+      framework: "GDPR",
+      reference: "Articles 15/17",
+      requirement: "Data subject access and right to erasure",
+      straleProvides: "Transaction data accessible via API and deletable via DELETE endpoint",
+      scope: "eu",
+      geographyRelevance: relevance("eu"),
+    });
+  }
+
+  // Sanctions screening (if includes sanctions-check)
+  if (stepSlugs.includes("sanctions-check")) {
+    items.push({
+      framework: "Sanctions Screening",
+      reference: "31 CFR Part 501",
+      requirement: "Screening against OFAC SDN and consolidated sanctions lists",
+      straleProvides: "Automated screening against OFAC SDN, EU consolidated, and UN sanctions databases on every execution",
+      scope: "us",
+      geographyRelevance: relevance("us"),
+    });
+  }
+
+  // Regulatory data (if includes us-company-data)
+  if (stepSlugs.includes("us-company-data")) {
+    items.push({
+      framework: "Regulatory Data",
+      reference: "Securities Exchange Act",
+      requirement: "Use of authoritative regulatory data for due diligence",
+      straleProvides: "Company data sourced from SEC EDGAR — official regulatory filings, not scraped third-party data",
+      scope: "us",
+      geographyRelevance: relevance("us"),
+    });
+  }
+
+  // Vendor due diligence (if compliance/security category)
+  if (isCompliance) {
+    items.push({
+      framework: "Vendor Due Diligence",
+      reference: "Internal controls",
+      requirement: "Documented vendor assessment with traceable data sources",
+      straleProvides: "Every data point traced to its authoritative source with classification, timestamp, and AI involvement level",
+      scope: "global",
+      geographyRelevance: "primary",
+    });
+  }
+
+  return items;
 }
 
 const SOLUTIONS: SolutionDef[] = [
@@ -1442,6 +1576,8 @@ async function seed() {
       continue;
     }
 
+    const complianceCoverage = buildComplianceCoverage(sol);
+
     await db.transaction(async (tx) => {
       // Upsert solution
       const [existing] = await tx
@@ -1474,6 +1610,7 @@ async function seed() {
             marketingName: sol.marketingName,
             transparencyTag: sol.transparencyTag,
             extendsWith: sol.extendsWith,
+            complianceCoverage,
             displayOrder: seeded,
             updatedAt: new Date(),
           })
@@ -1507,6 +1644,7 @@ async function seed() {
             marketingName: sol.marketingName,
             transparencyTag: sol.transparencyTag,
             extendsWith: sol.extendsWith,
+            complianceCoverage,
             displayOrder: seeded,
           })
           .returning({ id: solutions.id });
