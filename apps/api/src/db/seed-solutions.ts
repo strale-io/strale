@@ -62,7 +62,7 @@ function buildComplianceCoverage(sol: SolutionDef): ComplianceCoverageItem[] {
   // Platform-level (all solutions)
   items.push({
     framework: "Audit Trail",
-    reference: "Platform standard",
+    reference: "Per-transaction record",
     requirement: "Traceable execution records for every API call",
     straleProvides: "Per-step timestamps, data sources, latency, schema validation, and input fingerprinting on every transaction",
     scope: "global",
@@ -70,7 +70,7 @@ function buildComplianceCoverage(sol: SolutionDef): ComplianceCoverageItem[] {
   });
   items.push({
     framework: "Audit Trail",
-    reference: "Trust Service Criteria CC7.2",
+    reference: "Trust Service Criteria CC7.2 (SOC 2)",
     requirement: "System operations monitoring and anomaly detection",
     straleProvides: "Continuous quality monitoring with automated health tracking — supports audit trail documentation for SOC 2 reviews",
     scope: "global",
@@ -100,7 +100,7 @@ function buildComplianceCoverage(sol: SolutionDef): ComplianceCoverageItem[] {
       framework: "EU AI Act",
       reference: "Article 14",
       requirement: "Human oversight measures must be documented",
-      straleProvides: "Records human oversight level per step. AI steps explicitly marked; algorithmic steps operate without AI",
+      straleProvides: "Human oversight classification documented per step — demonstrates to regulators which steps involve AI decision-making and which are fully deterministic",
       scope: "eu",
       geographyRelevance: euRelevance,
     });
@@ -114,15 +114,16 @@ function buildComplianceCoverage(sol: SolutionDef): ComplianceCoverageItem[] {
     });
   }
 
-  // GDPR (if EU-relevant)
-  if (isEU) {
+  // GDPR (EU-primary solutions get primary relevance; us-global/global get supporting)
+  if (isEU || geo === "us-global" || geo === "global") {
+    const gdprRelevance = isEU ? "primary" : "supporting" as const;
     items.push({
       framework: "GDPR",
       reference: "Article 30",
       requirement: "Record of processing activities with data classifications",
       straleProvides: "Provides complete processing record with per-step data classifications and source documentation",
       scope: "eu",
-      geographyRelevance: relevance("eu"),
+      geographyRelevance: gdprRelevance,
     });
     items.push({
       framework: "GDPR",
@@ -130,7 +131,7 @@ function buildComplianceCoverage(sol: SolutionDef): ComplianceCoverageItem[] {
       requirement: "Data subject access and right to erasure",
       straleProvides: "Transaction data accessible via API and deletable via DELETE endpoint",
       scope: "eu",
-      geographyRelevance: relevance("eu"),
+      geographyRelevance: gdprRelevance,
     });
   }
 
