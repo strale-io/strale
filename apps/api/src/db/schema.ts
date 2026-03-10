@@ -341,6 +341,7 @@ export const capabilityLimitations = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     capabilitySlug: text("capability_slug").notNull(),
+    title: text("title"),
     limitationText: text("limitation_text").notNull(),
     category: text("category").notNull(),
     // 'coverage', 'freshness', 'accuracy', 'performance', 'availability'

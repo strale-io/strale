@@ -25,6 +25,7 @@ internalLimitationsRoute.get("/capabilities/:slug", async (c) => {
 
   const rows = await db
     .select({
+      title: capabilityLimitations.title,
       text: capabilityLimitations.limitationText,
       category: capabilityLimitations.category,
       severity: capabilityLimitations.severity,
@@ -43,6 +44,7 @@ internalLimitationsRoute.get("/capabilities/:slug", async (c) => {
   return c.json({
     capability_slug: slug,
     limitations: rows.map((r) => ({
+      title: r.title,
       text: r.text,
       category: r.category,
       severity: r.severity,

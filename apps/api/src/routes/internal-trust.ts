@@ -56,6 +56,7 @@ async function getLimitationsForSlug(slug: string) {
   const db = getDb();
   const rows = await db
     .select({
+      title: capabilityLimitations.title,
       text: capabilityLimitations.limitationText,
       category: capabilityLimitations.category,
       severity: capabilityLimitations.severity,
@@ -72,6 +73,7 @@ async function getLimitationsForSlug(slug: string) {
     .orderBy(asc(capabilityLimitations.sortOrder));
 
   return rows.map((r) => ({
+    title: r.title,
     text: r.text,
     category: r.category,
     severity: r.severity,
