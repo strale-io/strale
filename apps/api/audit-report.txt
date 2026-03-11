@@ -1,0 +1,941 @@
+TEST AUDIT REPORT
+=================
+Generated: 2026-03-10T20:04:48.168Z
+
+TOTAL SUITES: 1216
+PASSING TESTS: 248
+FAILING TESTS: 277
+  - Field mismatch: 27 tests (95 individual checks)
+  - Capability error: 227 tests (bad test inputs or unavailable services)
+SKIPPED (no checks / negative / edge_case): 691
+TIMED OUT (>30s): 0
+NO EXECUTOR: 0
+TYPE MISMATCHES: 0
+CLASSIFICATION ISSUES: 35
+
+══════════════════════════════════════════════════════════════════════
+SECTION 1: FIELD MISMATCHES (validation rules reference wrong field names)
+══════════════════════════════════════════════════════════════════════
+
+  ✗ iban-validate
+    - "error" missing from output
+    Actual output keys: [valid, country_code, check_digits, bban, bank_code, branch_code, expected_length]
+    NO AUTO-FIX: "error" — manual review needed
+
+  ✗ us-company-data
+    - "sic_code" missing from output
+    Actual output keys: [company_name, cik, entity_type, sic, sic_description, state, address, ein, fiscal_year_end, ticker, exchange, status]
+    FIX: "sic_code" → "sic" ('sic_code' missing from output)
+
+  ✗ company-id-detect
+    - "best_match" missing from output
+    - "all_matches" missing from output
+    Actual output keys: [input, detected, matches, message]
+    FIX: "all_matches" → "matches" ('all_matches' missing from output)
+    NO AUTO-FIX: "best_match" — manual review needed
+
+  ✗ phone-normalize
+    - "e164" missing from output
+    - "type" missing from output
+    - "country_code" missing from output
+    Actual output keys: [input, valid, error]
+    NO AUTO-FIX: "e164" — manual review needed
+    NO AUTO-FIX: "type" — manual review needed
+    NO AUTO-FIX: "country_code" — manual review needed
+
+  ✗ llm-output-validate
+    - "auto_fixed_output" missing from output
+    Actual output keys: [valid, parsed_output, parse_error, auto_fixed, error_count, errors]
+    FIX: "auto_fixed_output" → "auto_fixed" ('auto_fixed_output' missing from output)
+
+  ✗ sql-explain
+    - "tables" missing from output
+    - "operations" missing from output
+    - "plain_english" missing from output
+    Actual output keys: [explanation, steps, tables_referenced, potential_issues, optimization_suggestions, dialect, sql_length]
+    FIX: "tables" → "tables_referenced" ('tables' missing from output)
+    NO AUTO-FIX: "operations" — manual review needed
+    NO AUTO-FIX: "plain_english" — manual review needed
+
+  ✗ uptime-check
+    - "redirected" missing from output
+    Actual output keys: [url, status, status_code, error, latency_ms, tls, checked_at]
+    NO AUTO-FIX: "redirected" — manual review needed
+
+  ✗ incoterms-explain
+    - "full_name" missing from output
+    - "buyer_obligations" missing from output
+    - "seller_obligations" missing from output
+    - "risk_transfer_point" missing from output
+    Actual output keys: [error, available_codes, available_terms]
+    NO AUTO-FIX: "full_name" — manual review needed
+    NO AUTO-FIX: "buyer_obligations" — manual review needed
+    NO AUTO-FIX: "seller_obligations" — manual review needed
+    NO AUTO-FIX: "risk_transfer_point" — manual review needed
+
+  ✗ dangerous-goods-classify
+    - "class" missing from output
+    - "un_number" missing from output
+    - "packing_group" missing from output
+    - "marine_pollutant" missing from output
+    Actual output keys: [query, matches, total_matches, error]
+    NO AUTO-FIX: "class" — manual review needed
+    NO AUTO-FIX: "un_number" — manual review needed
+    NO AUTO-FIX: "packing_group" — manual review needed
+    NO AUTO-FIX: "marine_pollutant" — manual review needed
+
+  ✗ sql-optimize
+    - "improvements" missing from output
+    Actual output keys: [optimized_sql, changes_made, estimated_improvement, index_recommendations, explanation, dialect, original_sql]
+    NO AUTO-FIX: "improvements" — manual review needed
+
+  ✗ container-track
+    - "events" missing from output
+    - "status" missing from output
+    Actual output keys: [container_number, valid_format, check_digit_valid, owner_code, category, serial_number, check_digit, expected_check_digit, error, carrier, tracking_urls, tracking_urls.searates, tracking_urls.track_trace, tracking_status]
+    FIX: "status" → "tracking_status" ('status' missing from output)
+    NO AUTO-FIX: "events" — manual review needed
+
+  ✗ date-parse
+    - "day" missing from output
+    - "year" missing from output
+    - "month" missing from output
+    - "iso_date" missing from output
+    Actual output keys: [input, parsed, error]
+    NO AUTO-FIX: "day" — manual review needed
+    NO AUTO-FIX: "year" — manual review needed
+    NO AUTO-FIX: "month" — manual review needed
+    NO AUTO-FIX: "iso_date" — manual review needed
+
+  ✗ api-health-check
+    - "status_code" missing from output
+    - "schema_valid" missing from output
+    - "response_body" missing from output
+    Actual output keys: [url, method, is_healthy, error, response_time_ms]
+    NO AUTO-FIX: "status_code" — manual review needed
+    NO AUTO-FIX: "schema_valid" — manual review needed
+    NO AUTO-FIX: "response_body" — manual review needed
+
+  ✗ openapi-validate
+    - "stats" missing from output
+    Actual output keys: [valid, version_detected, errors, warnings, endpoint_count, schema_count, error_count, warning_count]
+    NO AUTO-FIX: "stats" — manual review needed
+
+  ✗ iso-country-lookup
+    - "name" missing from output
+    - "region" missing from output
+    - "alpha_2" missing from output
+    - "alpha_3" missing from output
+    Actual output keys: [query, matches, total_matches, error]
+    NO AUTO-FIX: "name" — manual review needed
+    NO AUTO-FIX: "region" — manual review needed
+    NO AUTO-FIX: "alpha_2" — manual review needed
+    NO AUTO-FIX: "alpha_3" — manual review needed
+
+
+══════════════════════════════════════════════════════════════════════
+SECTION 2: CAPABILITY ERRORS (tests fail because the capability throws)
+══════════════════════════════════════════════════════════════════════
+
+  ✗ norwegian-company-data
+    - "Norwegian Company Data — schema conformance": Brønnøysundregistrene search returned HTTP 400
+
+  ✗ swedish-company-data
+    - "Klarna Bank AB — known company": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Volvo Car AB — known company": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "H&M — known company": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Spotify AB — known company": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "IKEA of Sweden AB — known company": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Swedish Company Data — schema conformance": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ finnish-company-data
+    - "Finnish Company Data — schema conformance": No Finnish company found matching 
+
+  ✗ dutch-company-data
+    - "Dutch Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Dutch Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ belgian-company-data
+    - "Belgian Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Belgian Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ vat-validate
+    - "Google Germany VAT — valid": The operation was aborted due to timeout
+
+  ✗ url-to-markdown
+    - "example.com — markdown returned": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Schema: non-empty content": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "example.com — markdown content": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ cookie-scan
+    - "google.com — cookies found": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Schema: cookie list": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "google.com — cookies detected": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ tech-stack-detect
+    - "strale.dev — technologies": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "google.com — technologies": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Schema: array of techs": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "google.com — technologies detected": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ seo-audit
+    - "strale.dev — SEO metrics": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Schema: has score/issues": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "google.com — SEO score": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ page-speed-test
+    - "google.com — performance metrics": Capability threw error: "PageSpeed Insights returned HTTP 429: {
+  "error": {
+    "code": 429,
+    "message": "Quota exc
+    - "Schema: has scores": Capability threw error: "PageSpeed Insights returned HTTP 429: {
+  "error": {
+    "code": 429,
+    "message": "Quota exc
+    - "google.com — fast performance": Capability threw error: "PageSpeed Insights returned HTTP 429: {
+  "error": {
+    "code": 429,
+    "message": "Quota exc
+
+  ✗ gdpr-fine-lookup
+    - "Recent GDPR fines — results": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Schema: has fine data": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Meta — known GDPR fines": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ privacy-policy-analyze
+    - "Schema structure": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "google.com — analysis": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "google.com — privacy analysis": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ landing-page-roast
+    - "Schema: text analysis present": Browserless screenshot failed: HTTP 401
+    - "strale.dev — critique": Browserless screenshot failed: HTTP 401
+    - "google.com — landing page critique": Browserless screenshot failed: HTTP 401
+
+  ✗ flatten-json
+    - "Flatten JSON — schema check": 'data' (nested JSON object) is required.
+    - "Flatten JSON — correctness check": 'data' (nested JSON object) is required.
+
+  ✗ invoice-extract
+    - "Invoice / Receipt Extraction — schema check": fetch failed
+    - "Invoice / Receipt Extraction — correctness check": fetch failed
+
+  ✗ web-extract
+    - "Web Page Data Extraction — schema check": Failed to render page: Browserless returned HTTP 401: You've reached the units usage limit allowed u
+    - "Web Page Data Extraction — correctness check": Failed to render page: Browserless returned HTTP 401: You've reached the units usage limit allowed u
+
+  ✗ annual-report-extract
+    - "Swedish Annual Report Extraction — schema check": Failed to load Allabolag annual report page: HTTP 401
+    - "Swedish Annual Report Extraction — correctness check": Failed to load Allabolag annual report page: HTTP 401
+
+  ✗ pdf-extract
+    - "PDF Data Extraction — schema check": fetch failed
+    - "PDF Data Extraction — correctness check": fetch failed
+
+  ✗ spanish-company-data
+    - "Spanish Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Spanish Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ indian-company-data
+    - "Indian Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Indian Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ canadian-company-data
+    - "Canadian Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Canadian Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ hong-kong-company-data
+    - "Hong Kong Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Hong Kong Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ eu-regulation-search
+    - "EU Regulation Search — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "EU Regulation Search — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ screenshot-url
+    - "Screenshot URL — schema check": Browserless screenshot returned HTTP 401: You've reached the units usage limit allowed under our fre
+    - "Screenshot URL — correctness check": Browserless screenshot returned HTTP 401: You've reached the units usage limit allowed under our fre
+
+  ✗ meta-extract
+    - "Meta Extract — schema check": fetch failed
+    - "Meta Extract — correctness check": fetch failed
+
+  ✗ singapore-company-data
+    - "Singapore Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Singapore Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ structured-scrape
+    - "Structured Scrape — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Structured Scrape — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ image-to-text
+    - "Image to Text (OCR) — schema check": 400 {
+    - "Image to Text (OCR) — correctness check": 400 {
+
+  ✗ competitor-compare
+    - "Competitor Compare — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Competitor Compare — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ pricing-page-extract
+    - "Pricing Page Extract — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Pricing Page Extract — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ company-tech-stack
+    - "Company Tech Stack — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Company Tech Stack — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ estonian-company-data
+    - "Estonian Company Data — schema check": No Estonian company found matching 
+    - "Estonian Company Data — correctness check": No Estonian company found matching 
+
+  ✗ timezone-meeting-find
+    - "Timezone Meeting Finder — schema check": 'timezones' must contain at least 2 timezone names.
+    - "Timezone Meeting Finder — correctness check": 'timezones' must contain at least 2 timezone names.
+
+  ✗ youtube-summarize
+    - "YouTube Summarize — schema check": Could not extract YouTube video ID from URL.
+    - "YouTube Summarize — correctness check": Could not extract YouTube video ID from URL.
+
+  ✗ changelog-generate
+    - "Changelog Generate — schema check": 'commits' (array) or 'raw_log' (git log text) is required.
+    - "Changelog Generate — correctness check": 'commits' (array) or 'raw_log' (git log text) is required.
+
+  ✗ accessibility-audit
+    - "Accessibility Audit — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Accessibility Audit — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ schema-infer
+    - "Schema Infer — schema check": 'data' (JSON array or CSV string) is required.
+    - "Schema Infer — correctness check": 'data' (JSON array or CSV string) is required.
+
+  ✗ gitignore-generate
+    - "Gitignore Generate — schema check": languages.map is not a function or its return value is not iterable
+    - "Gitignore Generate — correctness check": languages.map is not a function or its return value is not iterable
+
+  ✗ barcode-lookup
+    - "Barcode Lookup — schema check": Invalid barcode format. Expected 8-14 digit UPC/EAN.
+    - "Barcode Lookup — correctness check": Invalid barcode format. Expected 8-14 digit UPC/EAN.
+
+  ✗ schema-migration-generate
+    - "Schema Migration Generate — schema check": 'current_schema' and 'desired_schema' (CREATE TABLE statements) are required.
+    - "Schema Migration Generate — correctness check": 'current_schema' and 'desired_schema' (CREATE TABLE statements) are required.
+
+  ✗ eu-trademark-search
+    - "EU Trademark Search — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "EU Trademark Search — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ patent-search
+    - "Patent Search — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Patent Search — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ charity-lookup-uk
+    - "Charity Lookup UK — schema check": Charity Commission API returned HTTP 404. Search: 
+    - "Charity Lookup UK — correctness check": Charity Commission API returned HTTP 404. Search: 
+
+  ✗ github-repo-compare
+    - "GitHub Repo Compare — schema check": Repository 
+    - "GitHub Repo Compare — correctness check": Repository 
+
+  ✗ amazon-price
+    - "Amazon Price — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Amazon Price — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ eu-court-case-search
+    - "EU Court Case Search — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "EU Court Case Search — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ salary-benchmark
+    - "Salary Benchmark — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Salary Benchmark — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ marketplace-fee-calculate
+    - "Marketplace Fee Calculate — schema check": Unsupported marketplace 
+    - "Marketplace Fee Calculate — correctness check": Unsupported marketplace 
+
+  ✗ product-search
+    - "Product Search — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Product Search — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ company-enrich
+    - "Company Enrichment — schema check": Could not access website at https://google.com. Verify the domain is correct.
+    - "Company Enrichment — correctness check": Could not access website at https://google.com. Verify the domain is correct.
+
+  ✗ polish-company-data
+    - "Polish Company Data — schema check": No Polish company found matching 
+    - "Polish Company Data — correctness check": No Polish company found matching 
+
+  ✗ image-resize
+    - "Image Resize — schema check": 'target_width' or 'target_height' is required.
+    - "Image Resize — correctness check": 'target_width' or 'target_height' is required.
+
+  ✗ blog-post-outline
+    - "Blog Post Outline — schema check": keywords.join is not a function
+    - "Blog Post Outline — correctness check": keywords.join is not a function
+
+  ✗ github-repo-analyze
+    - "GitHub Repo Analyze — schema check": Invalid GitHub URL. Expected format: https://github.com/owner/repo
+    - "GitHub Repo Analyze — correctness check": Invalid GitHub URL. Expected format: https://github.com/owner/repo
+
+  ✗ brand-mention-search
+    - "Brand Mention Search — schema check": SERPER_API_KEY is required. Sign up at https://serper.dev (free tier: 2,500 queries/month).
+    - "Brand Mention Search — correctness check": SERPER_API_KEY is required. Sign up at https://serper.dev (free tier: 2,500 queries/month).
+
+  ✗ resume-parse
+    - "Resume Parse — schema check": fetch failed
+    - "Resume Parse — correctness check": fetch failed
+
+  ✗ contract-extract
+    - "Contract Extract — schema check": fetch failed
+    - "Contract Extract — correctness check": fetch failed
+
+  ✗ receipt-categorize
+    - "Receipt Categorize — schema check": fetch failed
+    - "Receipt Categorize — correctness check": fetch failed
+
+  ✗ prompt-compress
+    - "Prompt Compress — schema check": Expected ',' or ']' after array element in JSON at position 112 (line 3 column 40)
+    - "Prompt Compress — correctness check": Expected ',' or ']' after array element in JSON at position 112 (line 3 column 40)
+
+  ✗ test-case-generate
+    - "Test Case Generate — schema check": Expected ',' or '}' after property value in JSON at position 840 (line 31 column 75)
+    - "Test Case Generate — correctness check": Expected ',' or '}' after property value in JSON at position 840 (line 31 column 75)
+
+  ✗ austrian-company-data
+    - "Austrian Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Austrian Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ irish-company-data
+    - "Irish Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Irish Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ latvian-company-data
+    - "Latvian Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Latvian Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ uk-company-data
+    - "UK Company Data — schema check": COMPANIES_HOUSE_API_KEY is required. Register for free at https://developer.company-information.serv
+    - "UK Company Data — correctness check": COMPANIES_HOUSE_API_KEY is required. Register for free at https://developer.company-information.serv
+
+  ✗ german-company-data
+    - "German Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "German Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ italian-company-data
+    - "Italian Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Italian Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ portuguese-company-data
+    - "Portuguese Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Portuguese Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ swiss-company-data
+    - "Swiss Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Swiss Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ australian-company-data
+    - "Australian Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Australian Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ french-company-data
+    - "French Company Data — schema check": No French company found matching 
+    - "French Company Data — correctness check": No French company found matching 
+
+  ✗ lithuanian-company-data
+    - "Lithuanian Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Lithuanian Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ brazilian-company-data
+    - "Brazilian Company Data — schema check": A valid CNPJ number is required (14 digits, e.g. 11222333000181). Name search is not supported by Re
+    - "Brazilian Company Data — correctness check": A valid CNPJ number is required (14 digits, e.g. 11222333000181). Name search is not supported by Re
+
+  ✗ price-compare
+    - "Price Compare — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Price Compare — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ japanese-company-data
+    - "Japanese Company Data — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Japanese Company Data — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ credit-report-summary
+    - "Credit Report Summary — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Credit Report Summary — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ terms-of-service-extract
+    - "Terms of Service Extract — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Terms of Service Extract — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ business-license-check-se
+    - "Business License Check SE — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Business License Check SE — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ customs-duty-lookup
+    - "Customs Duty Lookup — schema check": Invalid HS code format: 
+    - "Customs Duty Lookup — correctness check": Invalid HS code format: 
+
+  ✗ employer-review-summary
+    - "Employer Review Summary — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Employer Review Summary — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ product-reviews-extract
+    - "Product Reviews Extract — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Product Reviews Extract — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ trustpilot-score
+    - "Trustpilot Score — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Trustpilot Score — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ return-policy-extract
+    - "Return Policy Extract — schema check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+    - "Return Policy Extract — correctness check": Capability threw error: "Browserless returned HTTP 500: <html>
+<head><title>500 Internal Server Error</title></head>
+<
+
+  ✗ og-image-check
+    - "OG Image Check — schema check": fetch failed
+    - "OG Image Check — correctness check": fetch failed
+
+  ✗ url-to-text
+    - "URL to Text — schema check": fetch failed
+    - "URL to Text — correctness check": fetch failed
+
+  ✗ link-extract
+    - "Link Extract — schema check": fetch failed
+    - "Link Extract — correctness check": fetch failed
+
+  ✗ google-search
+    - "Google Search — schema check": SERPER_API_KEY is required. Sign up at https://serper.dev (free tier: 2,500 queries/month).
+    - "Google Search — correctness check": SERPER_API_KEY is required. Sign up at https://serper.dev (free tier: 2,500 queries/month).
+
+  ✗ unit-convert
+    - "Unit Convert — schema check": Cannot convert from 'test_value' to 'test_value'. Supported categories: length, weight, volume, temp
+    - "Unit Convert — correctness check": Cannot convert from 'test_value' to 'test_value'. Supported categories: length, weight, volume, temp
+
+  ✗ html-to-pdf
+    - "HTML to PDF — schema check": Browserless PDF returned HTTP 401: You've reached the units usage limit allowed under our free plan,
+    - "HTML to PDF — correctness check": Browserless PDF returned HTTP 401: You've reached the units usage limit allowed under our free plan,
+
+  ✗ base64-encode-url
+    - "Base64 Encode URL — schema check": fetch failed
+    - "Base64 Encode URL — correctness check": fetch failed
+
+  ✗ json-schema-validate
+    - "JSON Schema Validate — schema check": 'data' is required.
+    - "JSON Schema Validate — correctness check": 'data' is required.
+
+  ✗ url-health-check
+    - "URL Health Check — schema check": fetch failed
+    - "URL Health Check — correctness check": fetch failed
+
+  ✗ diff-json
+    - "Diff JSON — schema check": 'before' is required.
+    - "Diff JSON — correctness check": 'before' is required.
+
+  ✗ uk-companies-house-officers
+    - "UK Companies House Officers — schema check": COMPANIES_HOUSE_API_KEY is required.
+    - "UK Companies House Officers — correctness check": COMPANIES_HOUSE_API_KEY is required.
+
+  ✗ dependency-audit
+    - "Dependency Audit — schema check": 'package_json' or 'requirements_txt' (string contents) is required.
+    - "Dependency Audit — correctness check": 'package_json' or 'requirements_txt' (string contents) is required.
+
+  ✗ llm-cost-calculate
+    - "LLM Cost Calculate — schema check": Unknown model 'test_value'. Supported: gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-4, gpt-3.5-turbo, claud
+    - "LLM Cost Calculate — correctness check": Unknown model 'test_value'. Supported: gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-4, gpt-3.5-turbo, claud
+
+  ✗ header-security-check
+    - "Header Security Check — schema check": fetch failed
+
+  ✗ flight-status
+    - "Flight Status — schema check": Invalid flight number format. Expected airline code + number (e.g. 'LH400').
+    - "Flight Status — correctness check": Invalid flight number format. Expected airline code + number (e.g. 'LH400').
+
+  ✗ crypto-price
+    - "Crypto Price — schema check": Cryptocurrency 
+    - "Crypto Price — correctness check": Cryptocurrency 
+
+  ✗ redirect-trace
+    - "Redirect Trace — schema check": fetch failed
+    - "Redirect Trace — correctness check": fetch failed
+
+  ✗ robots-txt-parse
+    - "Robots.txt Parse — schema check": fetch failed
+    - "Robots.txt Parse — correctness check": fetch failed
+
+  ✗ sitemap-parse
+    - "Sitemap Parse — schema check": fetch failed
+    - "Sitemap Parse — correctness check": fetch failed
+
+  ✗ pypi-package-info
+    - "PyPI Package Info — schema check": PyPI package 
+    - "PyPI Package Info — correctness check": PyPI package 
+
+  ✗ docker-hub-info
+    - "Docker Hub Info — schema check": Docker Hub image 
+    - "Docker Hub Info — correctness check": Docker Hub image 
+
+  ✗ npm-package-info
+    - "npm Package Info — schema check": npm package 
+    - "npm Package Info — correctness check": npm package 
+
+  ✗ ecb-interest-rates
+    - "ECB Interest Rates — schema check": Could not retrieve any ECB interest rates. The ECB API may be temporarily unavailable.
+    - "ECB Interest Rates — correctness check": Could not retrieve any ECB interest rates. The ECB API may be temporarily unavailable.
+
+  ✗ payment-reference-generate
+    - "Payment Reference Generate — schema check": Unsupported reference type: 'test_value'. Supported: ocr_se, ocr_no, ocr_fi, iso11649, rf.
+    - "Payment Reference Generate — correctness check": Unsupported reference type: 'test_value'. Supported: ocr_se, ocr_no, ocr_fi, iso11649, rf.
+
+  ✗ serp-analyze
+    - "SERP Analyze — schema check": SERPER_API_KEY is required.
+    - "SERP Analyze — correctness check": SERPER_API_KEY is required.
+
+  ✗ website-carbon-estimate
+    - "Website Carbon Estimate — schema check": fetch failed
+    - "Website Carbon Estimate — correctness check": fetch failed
+
+
+══════════════════════════════════════════════════════════════════════
+SECTION 3: TYPE MISMATCHES (operator doesn't match field type)
+══════════════════════════════════════════════════════════════════════
+
+  None found!
+
+══════════════════════════════════════════════════════════════════════
+SECTION 4: TEST TYPE CLASSIFICATION ISSUES
+══════════════════════════════════════════════════════════════════════
+
+  ⚠ bank-bic-lookup / "SEB Sweden (ESSESESS)"
+    Type: known_answer → Checks: [not_null("bank_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ bank-bic-lookup / "Nordea Sweden (NDEASESS)"
+    Type: known_answer → Checks: [not_null("bank_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ bank-bic-lookup / "Danske Bank DK (DABADKKK)"
+    Type: known_answer → Checks: [not_null("bank_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ norwegian-company-data / "Telenor ASA — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ norwegian-company-data / "Equinor ASA — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ norwegian-company-data / "DNB Bank ASA — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ swedish-company-data / "Klarna Bank AB — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ swedish-company-data / "Volvo Car AB — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ swedish-company-data / "H&M — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ swedish-company-data / "Spotify AB — known company"
+    Type: known_answer → Checks: [not_null("company_name"), not_null("org_number")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ swedish-company-data / "IKEA of Sweden AB — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ danish-company-data / "Mærsk — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ danish-company-data / "Novo Nordisk A/S — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ danish-company-data / "LEGO System A/S — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ finnish-company-data / "Nokia Oyj — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ finnish-company-data / "Kone Oyj — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ finnish-company-data / "Neste Oyj — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ us-company-data / "Apple Inc — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ us-company-data / "Alphabet Inc — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ us-company-data / "Microsoft Corporation — known company"
+    Type: known_answer → Checks: [not_null("company_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ ssl-certificate-chain / "google.com — chain present"
+    Type: known_answer → Checks: [not_null("certificate_chain")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ whois-lookup / "google.com — registrar present"
+    Type: known_answer → Checks: [not_null("registrar")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ dns-lookup / "google.com — expect records"
+    Type: known_answer → Checks: [not_null("a_records")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ email-deliverability-check / "google.com — has SPF record"
+    Type: known_answer → Checks: [not_null("spf")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ cookie-scan / "google.com — cookies detected"
+    Type: known_answer → Checks: [not_null("cookies")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ tech-stack-detect / "google.com — technologies detected"
+    Type: known_answer → Checks: [not_null("url")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ seo-audit / "google.com — SEO score"
+    Type: known_answer → Checks: [not_null("overall_score")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ pii-redact / "Email and SSN redacted"
+    Type: known_answer → Checks: [not_null("redacted_text")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ gdpr-fine-lookup / "Meta — known GDPR fines"
+    Type: known_answer → Checks: [not_null("fines")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ data-protection-authority-lookup / "Sweden (SE) — IMY"
+    Type: known_answer → Checks: [not_null("authority_name")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ social-profile-check / "Google — known profiles"
+    Type: known_answer → Checks: [not_null("profiles")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ privacy-policy-analyze / "google.com — privacy analysis"
+    Type: known_answer → Checks: [not_null("data_collected")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ gdpr-website-check / "google.com — GDPR check"
+    Type: known_answer → Checks: [not_null("gdpr_score")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ landing-page-roast / "google.com — landing page critique"
+    Type: known_answer → Checks: [not_null("overall_score")]
+    Issue: known_answer test should verify a specific known value, not just field presence
+
+  ⚠ header-security-check / "google.com — security headers"
+    Type: known_answer → Checks: [not_null("score"), not_null("grade")]
+    Issue: known_answer test should verify a specific known value, not just field presence

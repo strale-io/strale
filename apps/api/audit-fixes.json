@@ -1,0 +1,181 @@
+[
+  {
+    "capabilitySlug": "us-company-data",
+    "testName": "US Company Data — schema conformance",
+    "currentCheck": {
+      "field": "sic_code",
+      "operator": "not_null"
+    },
+    "proposedCheck": {
+      "field": "sic",
+      "operator": "not_null"
+    },
+    "reason": "'sic_code' missing from output; 'sic' present in all output paths"
+  },
+  {
+    "capabilitySlug": "us-company-data",
+    "testName": "US Company Data — schema conformance",
+    "currentCheck": {
+      "field": "sic_code",
+      "operator": "type",
+      "value": "string"
+    },
+    "proposedCheck": {
+      "field": "sic",
+      "operator": "type",
+      "value": "string"
+    },
+    "reason": "'sic_code' missing from output; 'sic' present in all output paths"
+  },
+  {
+    "capabilitySlug": "company-id-detect",
+    "testName": "Company ID Detection — schema check",
+    "currentCheck": {
+      "field": "all_matches",
+      "operator": "not_null"
+    },
+    "proposedCheck": {
+      "field": "matches",
+      "operator": "not_null"
+    },
+    "reason": "'all_matches' missing from output; 'matches' present in all output paths"
+  },
+  {
+    "capabilitySlug": "company-id-detect",
+    "testName": "Company ID Detection — correctness check",
+    "currentCheck": {
+      "field": "all_matches",
+      "operator": "not_null"
+    },
+    "proposedCheck": {
+      "field": "matches",
+      "operator": "not_null"
+    },
+    "reason": "'all_matches' missing from output; 'matches' present in all output paths"
+  },
+  {
+    "capabilitySlug": "company-id-detect",
+    "testName": "Company ID Detection — correctness check",
+    "currentCheck": {
+      "field": "all_matches",
+      "operator": "type",
+      "value": "array"
+    },
+    "proposedCheck": {
+      "field": "matches",
+      "operator": "type",
+      "value": "array"
+    },
+    "reason": "'all_matches' missing from output; 'matches' present in all output paths"
+  },
+  {
+    "capabilitySlug": "llm-output-validate",
+    "testName": "LLM Output Validate — correctness check",
+    "currentCheck": {
+      "field": "auto_fixed_output",
+      "operator": "not_null"
+    },
+    "proposedCheck": {
+      "field": "auto_fixed",
+      "operator": "not_null"
+    },
+    "reason": "'auto_fixed_output' missing from output; 'auto_fixed' present in all output paths"
+  },
+  {
+    "capabilitySlug": "llm-output-validate",
+    "testName": "LLM Output Validate — correctness check",
+    "currentCheck": {
+      "field": "auto_fixed_output",
+      "operator": "type",
+      "value": "string"
+    },
+    "proposedCheck": {
+      "field": "auto_fixed",
+      "operator": "type",
+      "value": "string"
+    },
+    "reason": "'auto_fixed_output' missing from output; 'auto_fixed' present in all output paths"
+  },
+  {
+    "capabilitySlug": "sql-explain",
+    "testName": "SQL Explain — schema check",
+    "currentCheck": {
+      "field": "tables",
+      "operator": "not_null"
+    },
+    "proposedCheck": {
+      "field": "tables_referenced",
+      "operator": "not_null"
+    },
+    "reason": "'tables' missing from output; 'tables_referenced' present in all output paths"
+  },
+  {
+    "capabilitySlug": "sql-explain",
+    "testName": "SQL Explain — correctness check",
+    "currentCheck": {
+      "field": "tables",
+      "operator": "not_null"
+    },
+    "proposedCheck": {
+      "field": "tables_referenced",
+      "operator": "not_null"
+    },
+    "reason": "'tables' missing from output; 'tables_referenced' present in all output paths"
+  },
+  {
+    "capabilitySlug": "sql-explain",
+    "testName": "SQL Explain — correctness check",
+    "currentCheck": {
+      "field": "tables",
+      "operator": "type",
+      "value": "array"
+    },
+    "proposedCheck": {
+      "field": "tables_referenced",
+      "operator": "type",
+      "value": "array"
+    },
+    "reason": "'tables' missing from output; 'tables_referenced' present in all output paths"
+  },
+  {
+    "capabilitySlug": "container-track",
+    "testName": "Container Track — schema check",
+    "currentCheck": {
+      "field": "status",
+      "operator": "not_null"
+    },
+    "proposedCheck": {
+      "field": "tracking_status",
+      "operator": "not_null"
+    },
+    "reason": "'status' missing from output; 'tracking_status' present in all output paths"
+  },
+  {
+    "capabilitySlug": "container-track",
+    "testName": "Container Track — correctness check",
+    "currentCheck": {
+      "field": "status",
+      "operator": "not_null"
+    },
+    "proposedCheck": {
+      "field": "tracking_status",
+      "operator": "not_null"
+    },
+    "reason": "'status' missing from output; 'tracking_status' present in all output paths"
+  },
+  {
+    "capabilitySlug": "container-track",
+    "testName": "Container Track — correctness check",
+    "currentCheck": {
+      "field": "status",
+      "operator": "type",
+      "value": "string"
+    },
+    "proposedCheck": {
+      "field": "tracking_status",
+      "operator": "type",
+      "value": "string"
+    },
+    "reason": "'status' missing from output; 'tracking_status' present in all output paths"
+  }
+]
