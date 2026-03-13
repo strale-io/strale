@@ -107,7 +107,7 @@ Run the MCP server locally on your machine:
 | `STRALE_BASE_URL` | No | `https://api.strale.io` | API base URL |
 | `STRALE_MAX_PRICE_CENTS` | No | `200` | Default max price per execution (€2.00) |
 
-## Available Tools (6)
+## Available Tools (7)
 
 | Tool | Auth Required | Description |
 |------|:---:|-------------|
@@ -117,15 +117,17 @@ Run the MCP server locally on your machine:
 | `strale_methodology` | No | Get Strale's quality and trust methodology — SQS scoring, trust grades, test infrastructure, badge system, and current limitations. |
 | `strale_trust_profile` | No | Get the full trust profile for any capability or solution — SQS breakdown, test results, pass rates, failure details, limitations, and badge status. |
 | `strale_balance` | Yes | Check your wallet balance in EUR. |
+| `strale_transaction` | Yes | Retrieve a past execution record by transaction ID. Returns the full audit trail: inputs, outputs, latency, price, provenance, and failure categorization. |
 
 ## Usage Workflow
 
 ```
-1. strale_ping     → Verify the connection is working
-2. strale_search   → Find capabilities matching your needs
+1. strale_ping        → Verify the connection is working
+2. strale_search      → Find capabilities matching your needs
 3. strale_trust_profile → (Optional) Check quality data for a specific capability
-4. strale_execute  → Run the capability with the required inputs
-5. strale_balance  → Check remaining balance
+4. strale_execute     → Run the capability with the required inputs
+5. strale_transaction → (Optional) Retrieve the full audit trail for any past execution
+6. strale_balance     → Check remaining balance
 ```
 
 ### Example

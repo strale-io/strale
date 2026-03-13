@@ -391,7 +391,7 @@ export function registerStraleTools(
               status: "ok",
               server: "strale-mcp",
               version: "0.1.0",
-              tools_registered: 6,
+              tools_registered: 7,
               capabilities_available: capabilities.length,
               solutions_available: solutions.length,
               timestamp: new Date().toISOString(),
@@ -672,6 +672,7 @@ Every execution records:
   Success or failure status
   Failure categorization: "upstream" (provider timeout, rate limit, HTTP 5xx) vs "internal" (Strale bug)
   Unique transaction ID for retrieval and dispute resolution
+  Retrieve any past transaction: call strale_transaction with the transaction ID returned from strale_execute.
 
 METRIC DEFINITIONS
   success_rate — Percentage of all historical executions (test + customer) that returned a valid result without error. Reflects real execution reliability over time. Multiplicative for solutions: if step A is 95% and step B is 90%, solution success_rate is ~85.5%.
@@ -780,6 +781,100 @@ ACCESSING TRUST DATA
             {
               type: "text" as const,
               text: `Failed to fetch trust profile: ${err instanceof Error ? err.message : err}`,
+            },
+          ],
+        };
+      }
+    },
+  );
+
+  // Meta-tool: strale_transaction (requires API key)
+  server.registerTool(
+    "strale_transaction",
+    {
+      description:
+        "Retrieve a past execution record by transaction ID. Returns the full audit trail: inputs, outputs, latency, price, provenance, success/failure status, and failure categorization. Use this to verify Strale's audit trail claims with concrete evidence.",
+      inputSchema: z.object({
+        transaction_id: z
+          .string()
+          .describe(
+            "Transaction ID returned from a strale_execute call",
+          ),
+      }),
+    },
+    async ({ transaction_id }) => {
+      if (!opts.apiKey) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "API key required to retrieve transactions.",
+            },
+          ],
+        };
+      }
+
+      try {
+        const resp = await fetch(
+          `${opts.baseUrl}/v1/transactions/${encodeURIComponent(transaction_id)}`,
+          {
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${opts.apiKey}`,
+            },
+            signal: AbortSignal.timeout(15000),
+          },
+        );
+
+        if (resp.status === 404) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Transaction not found. Transaction IDs are returned when you call strale_execute.",
+              },
+            ],
+          };
+        }
+
+        if (resp.status === 401) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "API key required to retrieve transactions.",
+              },
+            ],
+          };
+        }
+
+        if (!resp.ok) {
+          const text = await resp.text().catch(() => "");
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `Error fetching transaction: HTTP ${resp.status} — ${text.slice(0, 200)}`,
+              },
+            ],
+          };
+        }
+
+        const data = await resp.json();
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Failed to fetch transaction: ${err instanceof Error ? err.message : err}`,
             },
           ],
         };
