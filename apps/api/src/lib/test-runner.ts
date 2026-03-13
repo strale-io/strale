@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   testSuites,
@@ -10,8 +10,9 @@ import {
 } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import type { CapabilityResult } from "../capabilities/index.js";
-import { computeHealthState } from "./health-state.js";
-import { sanitizeErrorMessage } from "./trust-helpers.js";
+import { computeHealthState, HEALTH_STATE_FREQUENCY_HOURS } from "./health-state.js";
+import { sanitizeErrorMessage, getTestResultsForSlug } from "./trust-helpers.js";
+import { computeCapabilitySQS } from "./sqs.js";
 import { classifyFailure } from "./failure-classifier.js";
 import { createHash } from "node:crypto";
 
@@ -919,72 +920,164 @@ async function updateLastClassification(
   }).where(eq(testSuites.id, suiteId));
 }
 
-// ─── Tiered scheduled execution ─────────────────────────────────────────────
+// ─── Adaptive scheduled execution ────────────────────────────────────────────
 
-const TIER_SCHEDULES: { tier: ScheduleTier; intervalMs: number; label: string }[] = [
-  { tier: "A", intervalMs: 6 * 60 * 60 * 1000, label: "every 6h" },
-  { tier: "B", intervalMs: 24 * 60 * 60 * 1000, label: "every 24h" },
-  { tier: "C", intervalMs: 72 * 60 * 60 * 1000, label: "every 72h" },
-];
+const TIER_MINIMUM_MS: Record<string, number> = {
+  A: 6 * 60 * 60 * 1000,   // Tier A: max cost ceiling 6h
+  B: 24 * 60 * 60 * 1000,  // Tier B: max cost ceiling 24h
+  C: 72 * 60 * 60 * 1000,  // Tier C: max cost ceiling 72h
+};
 
-// Dependency health checks run every 6h
+const SCHEDULER_CHECK_INTERVAL_MS = 60 * 60 * 1000; // Check once per hour
 const HEALTH_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 let _schedulerRunning = false;
 
 /**
- * Start the tiered scheduled test runner.
- * - Tier A: every 6 hours
- * - Tier B: every 24 hours
- * - Tier C: every 72 hours
- * - Dependency health checks: every 6 hours
+ * Compute the adaptive test interval for a capability.
+ * Formula: max(health_state_interval, tier_minimum)
+ * Special cases:
+ *   - Probation (< 5 runs): min(6h, tier) — test as fast as tier allows
+ *   - SQS < 50: min(6h, tier) — intensify when quality is degraded
+ */
+async function computeAdaptiveInterval(slug: string, tier: string): Promise<number> {
+  const tierMs = TIER_MINIMUM_MS[tier] ?? TIER_MINIMUM_MS.B;
+  const sixHoursMs = 6 * 60 * 60 * 1000;
+
+  // Get SQS to check probation and quality degradation
+  const sqs = await computeCapabilitySQS(slug);
+
+  // Probation: fewer than 5 qualifying runs → test as fast as tier allows
+  if (sqs.pending && sqs.runs_analyzed < 5) {
+    return Math.min(sixHoursMs, tierMs);
+  }
+
+  // Score-triggered intensification: SQS < 50 → 6h but respect tier ceiling
+  if (!sqs.pending && sqs.score < 50) {
+    return Math.min(sixHoursMs, tierMs);
+  }
+
+  // Normal: health-state-driven frequency, bounded by tier minimum
+  const testData = await getTestResultsForSlug(slug);
+  const healthState = computeHealthState(testData.history_30d);
+  const healthMs = HEALTH_STATE_FREQUENCY_HOURS[healthState] * 60 * 60 * 1000;
+
+  return Math.max(healthMs, tierMs);
+}
+
+/** Get timestamp of the most recent test result for a capability. */
+async function getLastTestRun(slug: string): Promise<Date | null> {
+  const db = getDb();
+  const [latest] = await db
+    .select({ executedAt: testResults.executedAt })
+    .from(testResults)
+    .where(eq(testResults.capabilitySlug, slug))
+    .orderBy(desc(testResults.executedAt))
+    .limit(1);
+  return latest?.executedAt ?? null;
+}
+
+/** Single adaptive scheduler sweep: determine which capabilities are due and run them. */
+async function runAdaptiveScheduler(): Promise<void> {
+  const db = getDb();
+
+  // Get unique capabilities with their schedule tier, excluding quarantined/infra_limited
+  const suiteRows = await db
+    .select({
+      capabilitySlug: testSuites.capabilitySlug,
+      scheduleTier: testSuites.scheduleTier,
+    })
+    .from(testSuites)
+    .where(and(
+      eq(testSuites.active, true),
+      inArray(testSuites.testStatus, ["normal", "env_dependent", "upstream_broken"]),
+    ));
+
+  // Deduplicate — use the most permissive (lowest cost) tier per capability
+  const tierBySlug = new Map<string, string>();
+  for (const row of suiteRows) {
+    const existing = tierBySlug.get(row.capabilitySlug);
+    // If no existing tier, or current is "better" (A < B < C in cost), prefer A
+    if (!existing || row.scheduleTier < existing) {
+      tierBySlug.set(row.capabilitySlug, row.scheduleTier);
+    }
+  }
+
+  const dueSlugs: string[] = [];
+  const now = Date.now();
+
+  for (const [slug, tier] of tierBySlug) {
+    try {
+      const [interval, lastRun] = await Promise.all([
+        computeAdaptiveInterval(slug, tier),
+        getLastTestRun(slug),
+      ]);
+
+      const msSinceLastRun = lastRun ? now - lastRun.getTime() : Infinity;
+      if (msSinceLastRun >= interval) {
+        dueSlugs.push(slug);
+      }
+    } catch {
+      // Skip capabilities that error during interval computation
+    }
+  }
+
+  if (dueSlugs.length === 0) {
+    console.log("[scheduler] No capabilities due for testing");
+    return;
+  }
+
+  console.log(`[scheduler] ${dueSlugs.length} capabilities due — running tests`);
+
+  let passed = 0;
+  let failed = 0;
+
+  for (const slug of dueSlugs) {
+    try {
+      const summary = await runTests({ capabilitySlug: slug });
+      passed += summary.passed;
+      failed += summary.failed;
+
+      for (const r of summary.results) {
+        if (!r.passed) {
+          console.warn(`[scheduler] FAIL [${slug}] ${r.testName} — ${r.failureReason}`);
+        }
+      }
+    } catch (err) {
+      console.error(`[scheduler] ${slug} threw:`, err);
+    }
+    await delay(500);
+  }
+
+  console.log(`[scheduler] Sweep done: ${passed} passed, ${failed} failed across ${dueSlugs.length} capabilities`);
+}
+
+/**
+ * Start the adaptive scheduled test runner.
+ * Checks every hour which capabilities are due based on health state + tier.
  * Safe to call multiple times — only starts once.
  */
 export function startScheduledTests(): void {
   if (_schedulerRunning) return;
   _schedulerRunning = true;
 
-  console.log("[test-runner] Tiered scheduler started: A=6h, B=24h, C=72h + health checks=6h");
+  console.log("[scheduler] Adaptive scheduler started (hourly checks, health-state-driven frequency)");
 
-  const runTier = async (tier: ScheduleTier, label: string) => {
-    console.log(`[test-runner] Starting Tier ${tier} run (${label})...`);
-    try {
-      const summary = await runTests({ tier });
-      console.log(
-        `[test-runner] Tier ${tier}: ${summary.passed}/${summary.total} passed, ` +
-          `${summary.failed} failed, est. cost ${summary.estimatedCostCents}¢, ` +
-          `avg ${summary.avgResponseTimeMs}ms`,
-      );
+  // Initial sweep 30s after startup to avoid competing with server init
+  setTimeout(() => {
+    runAdaptiveScheduler().catch((err) =>
+      console.error("[scheduler] Initial sweep failed:", err),
+    );
+  }, 30_000);
 
-      for (const r of summary.results) {
-        if (!r.passed) {
-          console.warn(
-            `[test-runner] FAIL [${r.capabilitySlug}] ${r.testName} — ${r.failureReason}`,
-          );
-        }
-      }
-    } catch (err) {
-      console.error(`[test-runner] Tier ${tier} run failed:`, err);
-    }
-  };
+  // Recurring hourly check
+  setInterval(() => {
+    runAdaptiveScheduler().catch((err) =>
+      console.error("[scheduler] Sweep failed:", err),
+    );
+  }, SCHEDULER_CHECK_INTERVAL_MS);
 
-  // Run all tiers once on startup (staggered to avoid overload)
-  // Tier A: 30s after startup, B: 5min, C: 10min
-  const STARTUP_DELAYS: Record<ScheduleTier, number> = { A: 30_000, B: 5 * 60_000, C: 10 * 60_000 };
-
-  for (const schedule of TIER_SCHEDULES) {
-    // Initial run after startup delay
-    setTimeout(() => {
-      runTier(schedule.tier, `startup + ${schedule.label}`);
-    }, STARTUP_DELAYS[schedule.tier]);
-
-    // Recurring runs
-    setInterval(() => {
-      runTier(schedule.tier, schedule.label);
-    }, schedule.intervalMs);
-  }
-
-  // Dependency health checks — run once on startup + recurring
+  // Dependency health checks remain on independent 6h schedule
   const runHealthChecks = async () => {
     try {
       const { runDependencyHealthChecks } = await import("./dependency-health.js");
