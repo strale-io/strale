@@ -326,23 +326,23 @@ export function registerStraleTools(
     "strale_execute",
     {
       description:
-        "Execute any Strale capability by slug. Use strale_search first to find the right capability, then call this with the slug and inputs. Returns the execution result with output data, price charged, latency, and provenance.",
+        "Execute any Strale capability by slug. First use strale_search to find the right capability and its required inputs, then call this tool. Returns the full result including output data, execution cost, latency, and data provenance.",
       inputSchema: z.object({
         slug: z
           .string()
           .describe(
-            "Capability slug from strale_search results (e.g. 'swedish-company-data', 'vat-validate')",
+            "Capability slug from strale_search results, e.g. 'swedish-company-data', 'vat-validate', 'iban-validate'",
           ),
         inputs: z
           .record(z.unknown())
           .describe(
-            "Input parameters for the capability. Check the capability's input_schema_summary via strale_search for required fields.",
+            "Input parameters matching the capability's required fields. Check strale_search results for the expected input_fields.",
           ),
         max_price_cents: z
           .number()
           .optional()
           .describe(
-            "Maximum price in EUR cents you're willing to pay. Defaults to 200 (€2.00).",
+            "Maximum price in EUR cents. Default: 200 (€2.00). Execution fails if capability costs more.",
           ),
       }),
     },
@@ -359,7 +359,7 @@ export function registerStraleTools(
     "strale_search",
     {
       description:
-        "Search and filter Strale capabilities and solutions by keyword or category. Use this to find the right capability before calling strale_execute. Returns matching items with slug, description, price, input schema summary, and trust data. Supports pagination via offset (20 results per page).",
+        "Search Strale's catalog of 233+ capabilities and 20+ solutions across categories: validation, data-extraction, finance, legal, compliance, logistics, recruiting, e-commerce, marketing, developer-tools, competitive-intelligence, and more. Returns matches with name, description, price, category, SQS quality score, trust grade, and required input fields. Examples: search 'company' for company data lookups, 'vat' for tax validation, 'compliance' for regulatory workflows. Use this to discover capabilities, then call strale_execute to run one.",
       inputSchema: z.object({
         query: z
           .string()
@@ -428,8 +428,8 @@ export function registerStraleTools(
         }
         const badge = trust && trust.total > 0 ? "strale_tested" : null;
 
-        // Build input schema summary
-        let inputSchemaSummary = "Accepts: task (string, optional), inputs (object, optional)";
+        // Build input fields summary
+        let inputFields = "Accepts: task (string) — describe what you need in natural language";
         const schema = c.input_schema;
         if (schema?.properties && Object.keys(schema.properties).length > 0) {
           const required = new Set(schema.required ?? []);
@@ -442,7 +442,7 @@ export function registerStraleTools(
           const parts: string[] = [];
           if (reqFields.length > 0) parts.push(`Required: ${reqFields.join(", ")}`);
           if (optFields.length > 0) parts.push(`Optional: ${optFields.join(", ")}`);
-          inputSchemaSummary = parts.join(". ") || "No parameters";
+          inputFields = parts.join(". ") || "No parameters";
         }
 
         return {
@@ -453,7 +453,7 @@ export function registerStraleTools(
           category: c.category,
           price: `€${(c.price_cents / 100).toFixed(2)}`,
           avg_latency_ms: c.avg_latency_ms,
-          input_schema_summary: inputSchemaSummary,
+          input_fields: inputFields,
           sqs_score: sqsScore,
           sqs_label: trust?.sqs_label ?? c.sqs_label ?? null,
           trust_grade: trustGrade,
@@ -550,67 +550,72 @@ export function registerStraleTools(
     "strale_methodology",
     {
       description:
-        "Get Strale's complete quality and trust methodology. Explains SQS scoring, trust grades, test infrastructure, provenance tracking, audit trails, badge system, and current limitations. Call this to understand how Strale measures quality.",
+        "Get Strale's quality and trust methodology. Explains the SQS scoring system (5 factors with weights), trust grades, test infrastructure (1,215 test suites), provenance tracking, audit trails, badge system, and honest disclosure of current limitations. Call this to understand how Strale measures and reports quality.",
       inputSchema: z.object({}),
     },
     async () => {
       const methodologyText = `STRALE QUALITY & TRUST METHODOLOGY
+===================================
 
-1. WHAT STRALE IS
+WHAT STRALE IS
 Strale is trust and quality infrastructure for AI agents. Agents call capabilities (atomic data operations) and solutions (multi-step workflows) via a unified API. Every execution is independently tested, scored, and auditable.
 
-2. SQS (STRALE QUALITY SCORE)
-Five-factor weighted score per capability:
-- Correctness (40%): Does the output contain accurate, expected data?
-- Schema Conformance (25%): Does the output match the declared schema?
-- Availability (20%): Is the capability reliably reachable?
-- Error Handling (10%): Are errors caught and reported cleanly?
-- Edge Cases (5%): Does it handle unusual inputs gracefully?
-Score range: 0-100. Computed from automated test suite results.
+SQS SCORING (Strale Quality Score)
+Five-factor weighted score (0-100) per capability:
+  Correctness (40%) — Does the output contain accurate, expected data?
+  Schema Conformance (25%) — Does the output match the declared schema?
+  Availability (20%) — Is the capability reliably reachable?
+  Error Handling (10%) — Are errors caught and reported cleanly?
+  Edge Cases (5%) — Does it handle unusual inputs gracefully?
+Computed from automated test suite results across all active test scenarios.
 
-3. TRUST GRADES
-- Freshness Grade: How recently tested (A = <24h, B = <72h, C = <7d, D = older)
-- Latency Grade: Response time percentile (A = <500ms p95, B = <2s, C = <5s, D = >5s)
-- Combined Trust Grade: Weighted combination of SQS + freshness + latency
+TRUST GRADES
+  Freshness: A (<24h since last test), B (<72h), C (<7d), D (older)
+  Latency: A (<500ms p95), B (<2s), C (<5s), D (>5s)
+  Combined Trust Grade: Weighted combination of SQS score + freshness + latency
 
-4. PROVENANCE TRACKING
-Every execution returns:
-- source: which external service provided the data
-- fetched_at: ISO timestamp of when data was retrieved
-- External service failures attributed to upstream provider, not Strale
+PROVENANCE TRACKING (per execution)
+Every API response includes:
+  source — which external service provided the data (e.g. "vies", "allabolag-scrape", "opensanctions")
+  fetched_at — ISO 8601 timestamp of when the data was retrieved
+External service failures are attributed to the upstream provider, not Strale.
 
-5. AUDIT TRAIL (per transaction)
-Recorded for every execution:
-- Full input parameters and output data
-- Execution latency (ms) and price charged (cents)
-- Provenance metadata
-- Success/failure status
-- Failure categorization: "upstream" (provider timeout, rate limit, 5xx) vs "internal" (Strale bug)
-- Transaction ID for retrieval
+AUDIT TRAIL (per transaction)
+Every execution records:
+  Full input parameters and complete output data
+  Execution latency in milliseconds
+  Price charged in EUR cents
+  Provenance metadata (source + timestamp)
+  Success or failure status
+  Failure categorization: "upstream" (provider timeout, rate limit, HTTP 5xx) vs "internal" (Strale bug)
+  Unique transaction ID for retrieval and dispute resolution
 
-6. TEST INFRASTRUCTURE
-- 1,215 active test suites across all capabilities
-- Tiered scheduling: Tier A (critical) most frequent, Tier B moderate, Tier C weekly
-- Automated failure categorization distinguishes upstream issues from internal bugs
-- Weekly health sweep: classifies failures, proposes remediations, detects stale tests
-- Test types: schema_check, smoke_test, value_check, edge_case
+TEST INFRASTRUCTURE
+  1,215 active test suites across all capabilities
+  Tiered scheduling: Tier A (critical capabilities) tested most frequently, Tier B moderate, Tier C weekly
+  Test types: schema_check, smoke_test, value_check, edge_case
+  Automated failure categorization distinguishes external service issues from Strale bugs
+  Weekly health sweep: reclassifies failures, proposes remediations, detects stale test inputs, flags dead URLs
 
-7. BADGE SYSTEM
-- strale_tested: Automated test suite coverage, internal testing data only
-- strale_monitored: Real customer usage data + automated testing
-- strale_verified: 500+ customer transactions with sustained >80% success rate
+BADGE SYSTEM
+  strale_tested — Automated test suite coverage with internal testing data
+  strale_monitored — Real customer usage data combined with automated testing
+  strale_verified — 500+ customer transactions with sustained >80% success rate
 
-8. CURRENT LIMITATIONS (honest disclosure)
-- Zero external users — all transaction data from internal testing
-- No SOC 2, ISO 27001, or HIPAA certification
-- No contractual SLAs
-- All capabilities currently at "strale_tested" badge level
-- Quality scores reflect test conditions, not production load
+CURRENT LIMITATIONS (honest disclosure)
+  Zero external users to date — all transaction and quality data is from internal testing
+  No SOC 2, ISO 27001, or HIPAA certification
+  No contractual SLAs
+  All capabilities are currently at "strale_tested" badge level (no customer volume yet)
+  Quality scores reflect controlled test conditions, not production load patterns
+  EU AI Act compliance solution is under development for the August 2026 deadline
 
-9. ACCESSING TRUST DATA
-- Per-capability trust profile: call strale_trust_profile with type "capability"
-- Per-solution trust profile: call strale_trust_profile with type "solution"
-- Full methodology: https://strale.dev/trust/methodology`;
+ACCESSING TRUST DATA
+  Per-capability trust profile: call strale_trust_profile with type "capability" and the slug
+  Per-solution trust profile: call strale_trust_profile with type "solution" and the slug
+  Methodology page: https://strale.dev/trust/methodology
+  Trust API: GET https://api.strale.io/v1/internal/trust/capabilities/{slug}
+  Trust API: GET https://api.strale.io/v1/internal/trust/solutions/{slug}`;
 
       return { content: [{ type: "text" as const, text: methodologyText }] };
     },
@@ -621,17 +626,17 @@ Recorded for every execution:
     "strale_trust_profile",
     {
       description:
-        "Get the full trust and quality profile for any capability or solution. Returns SQS scores, test results, pass rates, failure categorization, limitations, badge status, and quality narrative.",
+        "Get the full trust and quality profile for any capability or solution. Returns SQS scores (5-factor breakdown), test results with pass rates, failure details and categorization, known limitations, badge status, quality narrative, and test schedule. Use this to verify trust data before relying on a capability.",
       inputSchema: z.object({
         slug: z
           .string()
           .describe(
-            "Capability or solution slug (e.g. 'swedish-company-data' or 'eu-company-due-diligence')",
+            "Capability or solution slug, e.g. 'swedish-company-data' or 'eu-company-due-diligence'",
           ),
         type: z
           .enum(["capability", "solution"])
           .default("capability")
-          .describe("Whether to look up a capability or a solution"),
+          .describe("Whether this is a capability or a bundled solution"),
       }),
     },
     async ({ slug, type }) => {
@@ -643,6 +648,7 @@ Recorded for every execution:
       try {
         const resp = await fetch(`${opts.baseUrl}${endpoint}`, {
           headers: { Accept: "application/json" },
+          signal: AbortSignal.timeout(15000),
         });
 
         if (resp.status === 404) {
@@ -662,7 +668,7 @@ Recorded for every execution:
             content: [
               {
                 type: "text" as const,
-                text: `Error fetching trust profile: HTTP ${resp.status} — ${text.slice(0, 200)}`,
+                text: `Failed to fetch trust profile: HTTP ${resp.status} — ${text.slice(0, 200)}`,
               },
             ],
           };
@@ -682,7 +688,7 @@ Recorded for every execution:
           content: [
             {
               type: "text" as const,
-              text: `Error fetching trust profile: ${err instanceof Error ? err.message : err}`,
+              text: `Failed to fetch trust profile: ${err instanceof Error ? err.message : err}`,
             },
           ],
         };

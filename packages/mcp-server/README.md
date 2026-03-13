@@ -1,12 +1,12 @@
 # strale-mcp
 
-MCP server for [Strale](https://strale.io) — exposes 233+ capabilities as tools for Claude, Cursor, Windsurf, and any MCP-compatible client.
+MCP server for [Strale](https://strale.io) — gives AI agents access to 233+ capabilities via 5 meta-tools. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
 
 ## Architecture
 
-**Thin Proxy (Option A)**: The MCP server calls the Strale HTTP API (`POST /v1/do`) for each tool invocation. This keeps it decoupled from the API internals and leverages all existing middleware (auth, rate limiting, circuit breaker, wallet locking, audit trail).
+**Meta-tools only**: Instead of registering 233 individual tools (which exceeds limits in ChatGPT, Cursor, and Copilot), the server exposes 5 meta-tools. Agents discover capabilities via `strale_search`, then execute via `strale_execute`.
 
-At startup, the server fetches all active capabilities from `GET /v1/capabilities` and registers each as an MCP tool with proper input schemas.
+At startup, the server fetches the capability catalog, solutions, and trust data from the Strale API and caches them for search.
 
 ## Setup
 
@@ -61,7 +61,7 @@ URL:    https://api.strale.io/mcp
 Auth:   Authorization: Bearer sk_live_your_key_here
 ```
 
-> **Note:** `strale_search` works without an API key for browsing the capability catalog. All other tools require authentication.
+> **Note:** `strale_search`, `strale_methodology`, and `strale_trust_profile` work without an API key. `strale_execute` and `strale_balance` require authentication.
 
 #### Option B: Local (stdio transport)
 
@@ -109,26 +109,31 @@ Run the MCP server locally on your machine:
 
 ## Available Tools
 
-### Meta-tools
+| Tool | Auth Required | Description |
+|------|:---:|-------------|
+| `strale_search` | No | Search 233+ capabilities and 20+ solutions by keyword or category. Returns matches with price, input fields, SQS quality score, and trust grade. |
+| `strale_execute` | Yes | Execute any capability by slug. Pass the slug and inputs from search results. Returns output data, cost, latency, and provenance. |
+| `strale_methodology` | No | Get Strale's quality and trust methodology — SQS scoring, trust grades, test infrastructure, badge system, and current limitations. |
+| `strale_trust_profile` | No | Get the full trust profile for any capability or solution — SQS breakdown, test results, pass rates, failure details, limitations, and badge status. |
+| `strale_balance` | Yes | Check your wallet balance in EUR. |
 
-- **`strale_search`** — Search and filter capabilities by keyword or category. Use this first to find the right tool.
-- **`strale_balance`** — Check your wallet balance.
+## Usage Workflow
 
-### Capability tools (233+)
+```
+1. strale_search   → Find capabilities matching your needs
+2. strale_trust_profile → (Optional) Check quality data for a specific capability
+3. strale_execute  → Run the capability with the required inputs
+```
 
-Every active Strale capability is registered as an MCP tool using its slug as the tool name. Examples:
+### Example
 
-| Tool | Description | Price |
-|------|-------------|-------|
-| `vat-validate` | Validate EU VAT number via VIES | €0.10 |
-| `swedish-company-data` | Extract Swedish company data | €0.80 |
-| `iban-validate` | Validate IBAN numbers | €0.05 |
-| `invoice-extract` | Extract data from invoice images | €0.50 |
-| `web-extract` | Extract structured data from web pages | €0.15 |
-| `translate` | Translate text between languages | €0.10 |
-| ... | [233 total capabilities](https://api.strale.io/v1/capabilities) | |
+```
+Agent: strale_search(query: "swedish company")
+→ Returns: swedish-company-data (€0.80, Required: company_name (string))
 
-Use `strale_search` to discover capabilities by keyword.
+Agent: strale_execute(slug: "swedish-company-data", inputs: { company_name: "Spotify AB" })
+→ Returns: { output: { org_number: "5568401925", ... }, price_cents: 80, latency_ms: 2340 }
+```
 
 ## Development
 
@@ -142,9 +147,10 @@ npm run dev --workspace=packages/mcp-server
 
 ## How it works
 
-1. Server starts and fetches all active capabilities from the Strale API
-2. Each capability is registered as an MCP tool with its JSON Schema as the input schema
-3. When a tool is called, the server sends `POST /v1/do` with `capability_slug` and `inputs`
-4. The response (output, price, latency, provenance) is returned as structured text
-5. Async capabilities (>10s) return a transaction ID for polling
-6. Errors (insufficient balance, suspended capability, etc.) are returned with helpful messages
+1. Server starts and fetches capabilities, solutions, and trust data from the Strale API
+2. Five meta-tools are registered: search, execute, methodology, trust_profile, balance
+3. Agents use `strale_search` to discover capabilities with input requirements and quality scores
+4. `strale_execute` sends `POST /v1/do` with `capability_slug` and `inputs`
+5. The response (output, price, latency, provenance) is returned as structured text
+6. Async capabilities (>10s) return a transaction ID for polling
+7. Errors (insufficient balance, suspended capability, etc.) are returned with helpful messages
