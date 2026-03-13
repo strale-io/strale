@@ -1,6 +1,6 @@
 {
   "name": "straleio",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript SDK for the Strale API — let AI agents buy capabilities at runtime",
   "type": "module",
   "main": "./dist/index.js",
@@ -25,8 +25,19 @@
     "agent",
     "capabilities",
     "api",
-    "sdk"
+    "sdk",
+    "typescript"
   ],
+  "author": "Strale <hello@strale.io> (https://strale.dev)",
+  "homepage": "https://strale.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/strale-io/strale.git",
+    "directory": "packages/sdk-typescript"
+  },
+  "bugs": {
+    "url": "https://github.com/strale-io/strale/issues"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
