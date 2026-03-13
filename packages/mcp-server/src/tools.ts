@@ -56,6 +56,7 @@ export interface TrustBatchEntry {
   pass_rate: number | null;
   sqs_score: number;
   sqs_label: string;
+  trust_grade: string | null;
 }
 
 export interface SolutionTrustEntry {
@@ -510,6 +511,7 @@ export function registerStraleTools(
       const capResults = matchedCaps.map((c) => {
         const trust = trustData?.get(c.slug);
         const sqsScore = trust?.sqs_score ?? c.sqs_score ?? null;
+        const trustGrade = trust?.trust_grade ?? null;
         const badge = trust && trust.total > 0 ? "strale_tested" : null;
 
         // Build input fields summary
@@ -540,6 +542,7 @@ export function registerStraleTools(
           input_fields: inputFields,
           sqs_score: sqsScore,
           sqs_label: trust?.sqs_label ?? c.sqs_label ?? null,
+          trust_grade: trustGrade,
           badge,
         };
       });

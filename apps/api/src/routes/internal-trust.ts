@@ -37,7 +37,7 @@ export const internalTrustRoute = new Hono<AppEnv>();
 
 // ─── Cache ──────────────────────────────────────────────────────────────────
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 2 * 60 * 1000;
 interface CacheEntry<T> { data: T; expiresAt: number }
 const cache = new Map<string, CacheEntry<unknown>>();
 
@@ -178,13 +178,47 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
 
   const resultRows = Array.isArray(rows) ? rows : (rows as any)?.rows ?? [];
 
-  const trustMap: Record<string, { passed: number; failed: number; total: number; pass_rate: number | null; sqs_score: number; sqs_label: string }> = {};
+  const trustMap: Record<string, { passed: number; failed: number; total: number; pass_rate: number | null; sqs_score: number; sqs_label: string; trust_grade: string | null }> = {};
 
-  // Compute SQS per capability in parallel (cached with 10-min TTL)
-  const sqsResults = await Promise.all(
-    limitedSlugs.map((s) => computeCapabilitySQS(s)),
-  );
+  // Compute SQS + quality per capability in parallel (all individually cached)
+  const [sqsResults, qualityResults, capRows] = await Promise.all([
+    Promise.all(limitedSlugs.map((s) => computeCapabilitySQS(s))),
+    Promise.all(limitedSlugs.map((s) => getCapabilityQuality(s))),
+    db.select({
+      slug: capabilities.slug,
+      freshnessCategory: capabilities.freshnessCategory,
+      dataUpdateCycleDays: capabilities.dataUpdateCycleDays,
+      datasetLastUpdated: capabilities.datasetLastUpdated,
+    })
+      .from(capabilities)
+      .where(inArray(capabilities.slug, limitedSlugs)),
+  ]);
   const sqsMap = new Map(limitedSlugs.map((s, i) => [s, sqsResults[i]]));
+  const qualityMap = new Map(limitedSlugs.map((s, i) => [s, qualityResults[i]]));
+  const freshnessMap = new Map(capRows.map((r) => [r.slug, r]));
+
+  function computeTrustGradeForSlug(slug: string): string | null {
+    const sqs = sqsMap.get(slug);
+    if (!sqs || sqs.pending) return null;
+    const quality = qualityMap.get(slug);
+    const capData = freshnessMap.get(slug);
+    const freshness = capData ? computeFreshnessGrade({
+      freshnessCategory: capData.freshnessCategory,
+      dataUpdateCycleDays: capData.dataUpdateCycleDays,
+      datasetLastUpdated: capData.datasetLastUpdated,
+    }) : null;
+    const performance = buildPerformanceInfo(
+      quality?.p95ResponseTimeMs ?? null,
+      quality?.avgResponseTimeMs ?? null,
+    );
+    const tg = computeTrustGrade({
+      sqsScore: sqs.score,
+      sqsPending: false,
+      freshnessGrade: freshness?.grade ?? null,
+      latencyGrade: performance.latency_grade,
+    });
+    return tg?.grade ?? null;
+  }
 
   for (const r of resultRows as any[]) {
     const passed = Number(r.passed);
@@ -201,6 +235,7 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
         : null,
       sqs_score: sqs?.score ?? 0,
       sqs_label: sqs?.label ?? "Pending",
+      trust_grade: computeTrustGradeForSlug(r.capability_slug),
     };
   }
 
@@ -215,6 +250,7 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
         pass_rate: null,
         sqs_score: sqs?.score ?? 0,
         sqs_label: sqs?.label ?? "Pending",
+        trust_grade: computeTrustGradeForSlug(s),
       };
     }
   }
