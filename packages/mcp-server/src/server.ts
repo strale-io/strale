@@ -10,7 +10,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { fetchCapabilities, fetchSolutions, registerStraleTools } from "./tools.js";
+import { fetchCapabilities, fetchSolutions, fetchTrustBatch, registerStraleTools, type TrustBatchEntry } from "./tools.js";
 
 const STRALE_BASE_URL =
   process.env.STRALE_BASE_URL ??
@@ -34,16 +34,22 @@ async function main() {
     },
   );
 
-  // Fetch capabilities and solutions catalog
+  // Fetch capabilities, solutions, and trust data
   let capabilities: Awaited<ReturnType<typeof fetchCapabilities>> = [];
   let solutions: Awaited<ReturnType<typeof fetchSolutions>> = [];
+  let trustData: Map<string, TrustBatchEntry> = new Map();
   try {
     [capabilities, solutions] = await Promise.all([
       fetchCapabilities(STRALE_BASE_URL),
       fetchSolutions(STRALE_BASE_URL),
     ]);
+    // Fetch trust batch after we know the slugs
+    trustData = await fetchTrustBatch(
+      STRALE_BASE_URL,
+      capabilities.map((c) => c.slug),
+    );
     console.error(
-      `[strale-mcp] Loaded ${capabilities.length} capabilities, ${solutions.length} solutions from ${STRALE_BASE_URL}`,
+      `[strale-mcp] Loaded ${capabilities.length} capabilities, ${solutions.length} solutions, ${trustData.size} trust entries from ${STRALE_BASE_URL}`,
     );
   } catch (err) {
     console.error(
@@ -59,14 +65,14 @@ async function main() {
     baseUrl: STRALE_BASE_URL,
     apiKey: STRALE_API_KEY,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
-  });
+  }, trustData);
 
   // Connect via stdio
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
   console.error(
-    `[strale-mcp] Server running on stdio (${capabilities.length} tools + ${solutions.length} solutions + 2 meta-tools)`,
+    `[strale-mcp] Server running on stdio (${capabilities.length} tools + ${solutions.length} solutions + 4 meta-tools)`,
   );
 }
 

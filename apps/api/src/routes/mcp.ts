@@ -19,9 +19,11 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import {
   fetchCapabilities,
   fetchSolutions,
+  fetchTrustBatch,
   registerStraleTools,
   type Capability,
   type Solution,
+  type TrustBatchEntry,
 } from "strale-mcp/tools";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -38,13 +40,18 @@ const DEFAULT_MAX_PRICE_CENTS = parseInt(
 
 let cachedCapabilities: Capability[] | null = null;
 let cachedSolutions: Solution[] | null = null;
+let cachedTrustData: Map<string, TrustBatchEntry> | null = null;
 let catalogLoadedAt = 0;
 const CAPABILITIES_TTL_MS = 10 * 60 * 1000; // refresh every 10 min
 
-async function getCatalog(): Promise<{ capabilities: Capability[]; solutions: Solution[] }> {
+async function getCatalog(): Promise<{
+  capabilities: Capability[];
+  solutions: Solution[];
+  trustData: Map<string, TrustBatchEntry>;
+}> {
   const now = Date.now();
-  if (cachedCapabilities && cachedSolutions && now - catalogLoadedAt < CAPABILITIES_TTL_MS) {
-    return { capabilities: cachedCapabilities, solutions: cachedSolutions };
+  if (cachedCapabilities && cachedSolutions && cachedTrustData && now - catalogLoadedAt < CAPABILITIES_TTL_MS) {
+    return { capabilities: cachedCapabilities, solutions: cachedSolutions, trustData: cachedTrustData };
   }
 
   try {
@@ -52,25 +59,32 @@ async function getCatalog(): Promise<{ capabilities: Capability[]; solutions: So
       fetchCapabilities(STRALE_BASE_URL),
       fetchSolutions(STRALE_BASE_URL),
     ]);
+    // Fetch trust batch after we know the slugs
+    const trust = await fetchTrustBatch(
+      STRALE_BASE_URL,
+      caps.map((c) => c.slug),
+    );
     cachedCapabilities = caps;
     cachedSolutions = sols;
+    cachedTrustData = trust;
     catalogLoadedAt = now;
     console.log(
-      `[mcp-http] Loaded ${caps.length} capabilities, ${sols.length} solutions`,
+      `[mcp-http] Loaded ${caps.length} capabilities, ${sols.length} solutions, ${trust.size} trust entries`,
     );
   } catch (err) {
     console.error(
       `[mcp-http] Failed to load catalog: ${err instanceof Error ? err.message : err}`,
     );
-    if (cachedCapabilities && cachedSolutions) {
-      return { capabilities: cachedCapabilities, solutions: cachedSolutions }; // stale is better than none
+    if (cachedCapabilities && cachedSolutions && cachedTrustData) {
+      return { capabilities: cachedCapabilities, solutions: cachedSolutions, trustData: cachedTrustData };
     }
     cachedCapabilities = cachedCapabilities ?? [];
     cachedSolutions = cachedSolutions ?? [];
+    cachedTrustData = cachedTrustData ?? new Map();
     catalogLoadedAt = now;
   }
 
-  return { capabilities: cachedCapabilities!, solutions: cachedSolutions! };
+  return { capabilities: cachedCapabilities!, solutions: cachedSolutions!, trustData: cachedTrustData! };
 }
 
 // ─── Create a stateless MCP handler ─────────────────────────────────────────
@@ -84,13 +98,13 @@ async function handleStatelessRequest(
     { capabilities: { tools: {} } },
   );
 
-  const { capabilities, solutions } = await getCatalog();
+  const { capabilities, solutions, trustData } = await getCatalog();
 
   registerStraleTools(server, capabilities, solutions, {
     baseUrl: STRALE_BASE_URL,
     apiKey,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
-  });
+  }, trustData);
 
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless — no session tracking
