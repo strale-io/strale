@@ -15,7 +15,7 @@ registerCapability("prompt-compress", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const r = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
+    max_tokens: 4000,
     messages: [
       {
         role: "user",
@@ -38,7 +38,12 @@ Return JSON:
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Failed to compress prompt.");
 
-  const output = JSON.parse(jsonMatch[0]);
+  let output: Record<string, unknown>;
+  try {
+    output = JSON.parse(jsonMatch[0]);
+  } catch {
+    throw new Error(`Claude response parse failed (response may have been truncated). Raw: ${jsonMatch[0].slice(0, 200)}`);
+  }
   const compressedTokens = Math.ceil((output.compressed_prompt as string).length / 4);
 
   output.original_tokens = originalTokens;

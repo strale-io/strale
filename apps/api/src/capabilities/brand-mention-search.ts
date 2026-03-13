@@ -60,7 +60,7 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const r = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
+    max_tokens: 3000,
     messages: [
       {
         role: "user",
@@ -70,7 +70,7 @@ Brand name: "${brandName}"
 Search query: ${query}
 
 Search results:
-${resultsText}
+${resultsText.slice(0, 6000)}
 
 Return JSON:
 {
@@ -94,7 +94,12 @@ Return JSON:
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Failed to extract brand mentions.");
 
-  const output = JSON.parse(jsonMatch[0]);
+  let output: Record<string, unknown>;
+  try {
+    output = JSON.parse(jsonMatch[0]);
+  } catch {
+    throw new Error(`Serper/Claude response parse failed (response may have been truncated). Raw: ${jsonMatch[0].slice(0, 200)}`);
+  }
   output.brand_name = brandName;
   output.query = query;
 
