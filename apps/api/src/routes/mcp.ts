@@ -119,13 +119,28 @@ async function handleStatelessRequest(
 
   await server.connect(transport);
 
-  try {
-    return await transport.handleRequest(req);
-  } finally {
-    // Clean up after response is sent
-    transport.close().catch(() => {});
-    server.close().catch(() => {});
+  const response = await transport.handleRequest(req);
+
+  // The response body is an SSE stream. We must not close the transport until
+  // the stream is fully consumed — closing it early kills the stream before
+  // any JSON-RPC events are sent (Content-Length: 0 symptom).
+  if (response.body) {
+    const { readable, writable } = new TransformStream();
+    response.body.pipeTo(writable).finally(() => {
+      transport.close().catch(() => {});
+      server.close().catch(() => {});
+    });
+    return new Response(readable, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
   }
+
+  // No body (e.g., notification-only responses) — clean up immediately.
+  transport.close().catch(() => {});
+  server.close().catch(() => {});
+  return response;
 }
 
 // ─── Extract API key from request ───────────────────────────────────────────
