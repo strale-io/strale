@@ -1,6 +1,6 @@
 {
   "name": "strale-semantic-kernel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Semantic Kernel plugin for Strale — 233 business capabilities as kernel functions",
   "type": "module",
   "main": "./dist/index.js",
@@ -38,6 +38,16 @@
     "microsoft"
   ],
   "license": "MIT",
+  "author": "Strale <hello@strale.io> (https://strale.dev)",
+  "homepage": "https://strale.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strale-io/strale.git",
+    "directory": "packages/semantic-kernel-strale"
+  },
+  "bugs": {
+    "url": "https://github.com/strale-io/strale/issues"
+  },
   "engines": {
     "node": ">=20.0.0"
   }
