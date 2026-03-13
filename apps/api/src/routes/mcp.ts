@@ -8,14 +8,14 @@
  * Uses WebStandardStreamableHTTPServerTransport which natively works
  * with web standard Request/Response (perfect for Hono).
  *
- * Architecture: one McpServer + transport per session. Sessions are
- * stored in memory and cleaned up after 30 minutes of inactivity.
+ * Architecture: STATELESS — each POST creates a fresh McpServer + transport.
+ * No in-memory session state, so Railway restarts / redeploys never break
+ * active clients. The MCP SDK supports this via sessionIdGenerator: undefined.
  */
 
 import { Hono } from "hono";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { randomUUID } from "node:crypto";
 import {
   fetchCapabilities,
   fetchSolutions,
@@ -33,31 +33,6 @@ const DEFAULT_MAX_PRICE_CENTS = parseInt(
   process.env.STRALE_MAX_PRICE_CENTS ?? "200",
   10,
 );
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-
-// ─── Session store ──────────────────────────────────────────────────────────
-
-interface McpSession {
-  transport: WebStandardStreamableHTTPServerTransport;
-  server: McpServer;
-  lastActivity: number;
-  apiKey: string;
-}
-
-const sessions = new Map<string, McpSession>();
-
-// Cleanup expired sessions every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [id, session] of sessions) {
-    if (now - session.lastActivity > SESSION_TIMEOUT_MS) {
-      session.transport.close().catch(() => {});
-      session.server.close().catch(() => {});
-      sessions.delete(id);
-      console.log(`[mcp-http] Session ${id.slice(0, 8)}... expired`);
-    }
-  }
-}, 5 * 60 * 1000).unref();
 
 // ─── Capabilities + solutions cache ─────────────────────────────────────────
 
@@ -98,9 +73,12 @@ async function getCatalog(): Promise<{ capabilities: Capability[]; solutions: So
   return { capabilities: cachedCapabilities!, solutions: cachedSolutions! };
 }
 
-// ─── Create a new MCP session ───────────────────────────────────────────────
+// ─── Create a stateless MCP handler ─────────────────────────────────────────
 
-async function createSession(apiKey: string): Promise<McpSession> {
+async function handleStatelessRequest(
+  req: Request,
+  apiKey: string,
+): Promise<Response> {
   const server = new McpServer(
     { name: "strale", version: "0.1.0" },
     { capabilities: { tools: {} } },
@@ -115,29 +93,18 @@ async function createSession(apiKey: string): Promise<McpSession> {
   });
 
   const transport = new WebStandardStreamableHTTPServerTransport({
-    sessionIdGenerator: () => randomUUID(),
-    onsessioninitialized: (sessionId: string) => {
-      sessions.set(sessionId, session);
-      console.log(
-        `[mcp-http] Session ${sessionId.slice(0, 8)}... initialized (auth: ${apiKey ? "yes" : "anonymous"})`,
-      );
-    },
-    onsessionclosed: (sessionId: string) => {
-      sessions.delete(sessionId);
-      console.log(`[mcp-http] Session ${sessionId.slice(0, 8)}... closed`);
-    },
+    sessionIdGenerator: undefined, // stateless — no session tracking
   });
 
   await server.connect(transport);
 
-  const session: McpSession = {
-    transport,
-    server,
-    lastActivity: Date.now(),
-    apiKey,
-  };
-
-  return session;
+  try {
+    return await transport.handleRequest(req);
+  } finally {
+    // Clean up after response is sent
+    transport.close().catch(() => {});
+    server.close().catch(() => {});
+  }
 }
 
 // ─── Extract API key from request ───────────────────────────────────────────
@@ -147,8 +114,6 @@ function extractApiKey(req: Request): string {
   if (authHeader?.startsWith("Bearer ")) {
     return authHeader.slice(7);
   }
-  // Query-param auth removed — API keys in URLs leak via logs, referers,
-  // and browser history. Use Authorization header instead.
   return "";
 }
 
@@ -183,30 +148,19 @@ mcpRoute.options("/", (c) => {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 });
 
-// All MCP methods (POST, GET, DELETE) on the root path
+// All MCP methods on the root path
 mcpRoute.all("/", async (c) => {
   const req = c.req.raw;
   const method = req.method;
 
-  // Look for existing session
-  const sessionId = req.headers.get("mcp-session-id");
-
-  if (sessionId && sessions.has(sessionId)) {
-    const session = sessions.get(sessionId)!;
-    session.lastActivity = Date.now();
-    const response = await session.transport.handleRequest(req);
-    return addCorsHeaders(response);
-  }
-
   if (method === "POST") {
-    // New session — initialization request
     const apiKey = extractApiKey(req);
-    const session = await createSession(apiKey);
-    const response = await session.transport.handleRequest(req);
+    const response = await handleStatelessRequest(req, apiKey);
     return addCorsHeaders(response);
   }
 
-  // GET or DELETE without valid session
+  // GET and DELETE are only meaningful for stateful sessions.
+  // In stateless mode, return a helpful error.
   if (method === "GET" || method === "DELETE") {
     return addCorsHeaders(
       new Response(
@@ -214,11 +168,12 @@ mcpRoute.all("/", async (c) => {
           jsonrpc: "2.0",
           error: {
             code: -32000,
-            message: "No active session. Send an initialization POST first.",
+            message:
+              "This MCP endpoint is stateless. Send each request as a new POST to /mcp.",
           },
         }),
         {
-          status: sessionId ? 404 : 400,
+          status: 400,
           headers: { "Content-Type": "application/json" },
         },
       ),
