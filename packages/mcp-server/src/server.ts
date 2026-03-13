@@ -10,7 +10,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { fetchCapabilities, registerStraleTools } from "./tools.js";
+import { fetchCapabilities, fetchSolutions, registerStraleTools } from "./tools.js";
 
 const STRALE_BASE_URL =
   process.env.STRALE_BASE_URL ??
@@ -34,16 +34,20 @@ async function main() {
     },
   );
 
-  // Fetch capabilities catalog
+  // Fetch capabilities and solutions catalog
   let capabilities: Awaited<ReturnType<typeof fetchCapabilities>> = [];
+  let solutions: Awaited<ReturnType<typeof fetchSolutions>> = [];
   try {
-    capabilities = await fetchCapabilities(STRALE_BASE_URL);
+    [capabilities, solutions] = await Promise.all([
+      fetchCapabilities(STRALE_BASE_URL),
+      fetchSolutions(STRALE_BASE_URL),
+    ]);
     console.error(
-      `[strale-mcp] Loaded ${capabilities.length} capabilities from ${STRALE_BASE_URL}`,
+      `[strale-mcp] Loaded ${capabilities.length} capabilities, ${solutions.length} solutions from ${STRALE_BASE_URL}`,
     );
   } catch (err) {
     console.error(
-      `[strale-mcp] Warning: Failed to load capabilities: ${err instanceof Error ? err.message : err}`,
+      `[strale-mcp] Warning: Failed to load catalog: ${err instanceof Error ? err.message : err}`,
     );
     console.error(
       "[strale-mcp] Server will start with meta-tools only. Capability tools unavailable.",
@@ -51,7 +55,7 @@ async function main() {
   }
 
   // Register all tools (shared logic)
-  registerStraleTools(server, capabilities, {
+  registerStraleTools(server, capabilities, solutions, {
     baseUrl: STRALE_BASE_URL,
     apiKey: STRALE_API_KEY,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
@@ -62,7 +66,7 @@ async function main() {
   await server.connect(transport);
 
   console.error(
-    `[strale-mcp] Server running on stdio (${capabilities.length} tools + 2 meta-tools)`,
+    `[strale-mcp] Server running on stdio (${capabilities.length} tools + ${solutions.length} solutions + 2 meta-tools)`,
   );
 }
 

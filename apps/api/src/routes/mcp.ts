@@ -18,8 +18,10 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { randomUUID } from "node:crypto";
 import {
   fetchCapabilities,
+  fetchSolutions,
   registerStraleTools,
   type Capability,
+  type Solution,
 } from "strale-mcp/tools";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -57,34 +59,43 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
-// ─── Capabilities cache ─────────────────────────────────────────────────────
+// ─── Capabilities + solutions cache ─────────────────────────────────────────
 
 let cachedCapabilities: Capability[] | null = null;
-let capabilitiesLoadedAt = 0;
+let cachedSolutions: Solution[] | null = null;
+let catalogLoadedAt = 0;
 const CAPABILITIES_TTL_MS = 10 * 60 * 1000; // refresh every 10 min
 
-async function getCapabilities(): Promise<Capability[]> {
+async function getCatalog(): Promise<{ capabilities: Capability[]; solutions: Solution[] }> {
   const now = Date.now();
-  if (cachedCapabilities && now - capabilitiesLoadedAt < CAPABILITIES_TTL_MS) {
-    return cachedCapabilities;
+  if (cachedCapabilities && cachedSolutions && now - catalogLoadedAt < CAPABILITIES_TTL_MS) {
+    return { capabilities: cachedCapabilities, solutions: cachedSolutions };
   }
 
   try {
-    cachedCapabilities = await fetchCapabilities(STRALE_BASE_URL);
-    capabilitiesLoadedAt = now;
+    const [caps, sols] = await Promise.all([
+      fetchCapabilities(STRALE_BASE_URL),
+      fetchSolutions(STRALE_BASE_URL),
+    ]);
+    cachedCapabilities = caps;
+    cachedSolutions = sols;
+    catalogLoadedAt = now;
     console.log(
-      `[mcp-http] Loaded ${cachedCapabilities.length} capabilities`,
+      `[mcp-http] Loaded ${caps.length} capabilities, ${sols.length} solutions`,
     );
   } catch (err) {
     console.error(
-      `[mcp-http] Failed to load capabilities: ${err instanceof Error ? err.message : err}`,
+      `[mcp-http] Failed to load catalog: ${err instanceof Error ? err.message : err}`,
     );
-    if (cachedCapabilities) return cachedCapabilities; // stale is better than none
-    cachedCapabilities = [];
-    capabilitiesLoadedAt = now;
+    if (cachedCapabilities && cachedSolutions) {
+      return { capabilities: cachedCapabilities, solutions: cachedSolutions }; // stale is better than none
+    }
+    cachedCapabilities = cachedCapabilities ?? [];
+    cachedSolutions = cachedSolutions ?? [];
+    catalogLoadedAt = now;
   }
 
-  return cachedCapabilities;
+  return { capabilities: cachedCapabilities!, solutions: cachedSolutions! };
 }
 
 // ─── Create a new MCP session ───────────────────────────────────────────────
@@ -95,9 +106,9 @@ async function createSession(apiKey: string): Promise<McpSession> {
     { capabilities: { tools: {} } },
   );
 
-  const capabilities = await getCapabilities();
+  const { capabilities, solutions } = await getCatalog();
 
-  registerStraleTools(server, capabilities, {
+  registerStraleTools(server, capabilities, solutions, {
     baseUrl: STRALE_BASE_URL,
     apiKey,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,

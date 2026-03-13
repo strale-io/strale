@@ -11,6 +11,18 @@ import { z } from "zod";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+export interface Solution {
+  slug: string;
+  name: string;
+  description: string;
+  category: string;
+  price_cents: number;
+  geography: string;
+  step_count: number;
+  capabilities: string[];
+  transparency_tag: string | null;
+}
+
 export interface Capability {
   slug: string;
   name: string;
@@ -247,11 +259,30 @@ export async function fetchCapabilities(
   return resp.capabilities;
 }
 
+export async function fetchSolutions(baseUrl: string): Promise<Solution[]> {
+  const resp = await straleGet<{ solutions: Record<string, unknown>[] }>(
+    "/v1/solutions",
+    { baseUrl, apiKey: "" },
+  );
+  return resp.solutions.map((s) => ({
+    slug: s.slug as string,
+    name: s.name as string,
+    description: s.description as string,
+    category: s.category as string,
+    price_cents: s.priceCents as number,
+    geography: s.geography as string,
+    step_count: s.stepCount as number,
+    capabilities: (s.capabilities as string[]) ?? [],
+    transparency_tag: (s.transparencyTag as string) ?? null,
+  }));
+}
+
 // ─── Register all tools on an McpServer ─────────────────────────────────────
 
 export function registerStraleTools(
   server: McpServer,
   capabilities: Capability[],
+  solutions: Solution[],
   opts: StraleClientOptions,
 ): void {
   // Register each capability as an MCP tool
@@ -307,20 +338,36 @@ export function registerStraleTools(
     async ({ query, category, offset }) => {
       const q = (query ?? "").toLowerCase();
       const skip = offset ?? 0;
-      let matches = capabilities.filter((c) => {
-        const text =
-          `${c.name} ${c.description} ${c.slug} ${c.category}`.toLowerCase();
+
+      const catFilter = category ? category.toLowerCase() : null;
+
+      // Match solutions
+      const matchedSolutions = solutions
+        .filter((s) => {
+          if (catFilter && !s.category.toLowerCase().includes(catFilter)) return false;
+          const text = `${s.name} ${s.description} ${s.slug} ${s.category}`.toLowerCase();
+          return text.includes(q);
+        })
+        .map((s) => ({
+          type: "solution" as const,
+          slug: s.slug,
+          name: s.name,
+          description: s.description,
+          category: s.category,
+          price: `€${(s.price_cents / 100).toFixed(2)}`,
+          geography: s.geography,
+          step_count: s.step_count,
+          capabilities: s.capabilities,
+        }));
+
+      // Match capabilities
+      let matchedCaps = capabilities.filter((c) => {
+        if (catFilter && !c.category.toLowerCase().includes(catFilter)) return false;
+        const text = `${c.name} ${c.description} ${c.slug} ${c.category}`.toLowerCase();
         return text.includes(q);
       });
 
-      if (category) {
-        const cat = category.toLowerCase();
-        matches = matches.filter((c) =>
-          c.category.toLowerCase().includes(cat),
-        );
-      }
-
-      matches.sort((a, b) => {
+      matchedCaps.sort((a, b) => {
         const aSlug = a.slug.toLowerCase().includes(q) ? 0 : 1;
         const bSlug = b.slug.toLowerCase().includes(q) ? 0 : 1;
         if (aSlug !== bSlug) return aSlug - bSlug;
@@ -329,7 +376,8 @@ export function registerStraleTools(
         return aName - bName;
       });
 
-      const results = matches.slice(skip, skip + 20).map((c) => ({
+      const capResults = matchedCaps.map((c) => ({
+        type: "capability" as const,
         slug: c.slug,
         name: c.name,
         description: c.description,
@@ -340,6 +388,10 @@ export function registerStraleTools(
         sqs_label: c.sqs_label ?? null,
       }));
 
+      // Solutions first, then capabilities
+      const combined = [...matchedSolutions, ...capResults];
+      const page = combined.slice(skip, skip + 20);
+
       return {
         content: [
           {
@@ -348,11 +400,12 @@ export function registerStraleTools(
               {
                 query,
                 category: category ?? null,
-                total_matches: matches.length,
+                total_solution_matches: matchedSolutions.length,
+                total_capability_matches: matchedCaps.length,
                 offset: skip,
-                showing: results.length,
-                has_more: skip + results.length < matches.length,
-                results,
+                showing: page.length,
+                has_more: skip + page.length < combined.length,
+                results: page,
               },
               null,
               2,
@@ -415,6 +468,85 @@ export function registerStraleTools(
           ],
         };
       }
+    },
+  );
+
+  // Meta-tool: strale_methodology (no API key required)
+  server.registerTool(
+    "strale_methodology",
+    {
+      description:
+        "Returns Strale's trust and quality methodology — how capabilities are tested, scored, and monitored. Includes SQS scoring methodology, test infrastructure, provenance model, and audit trail documentation. No API key required.",
+      inputSchema: z.object({}),
+    },
+    async () => {
+      const methodologyText = `# Strale Trust & Quality Methodology
+
+## Strale Quality Score (SQS)
+
+Every capability has a Strale Quality Score (SQS), computed from automated test data using 5 weighted factors:
+
+- Correctness (40% weight): Known-answer tests, piggyback tests, regression tests. Validates that the capability returns accurate, expected data.
+- Schema Conformance (25% weight): Schema validation tests. Confirms output matches the documented JSON schema.
+- Availability (20% weight): Dependency health tests. Checks that the capability and its external data sources are reachable.
+- Error Handling (10% weight): Negative tests. Verifies graceful handling of invalid, missing, or malformed input.
+- Edge Cases (5% weight): Boundary condition tests. Tests unusual but valid inputs.
+
+Scoring: 0-100 scale. Labels: Excellent (90+), Good (75-89), Fair (60-74), Poor (<60), Pending (insufficient data).
+
+External service failures (HTTP 429, 503, timeouts, rate limits) are excluded from SQS scoring. They are tracked separately as "upstream issues."
+
+Solution SQS: Weighted average of component capability scores. If any step scores below 60, solution SQS is capped at 74.
+
+## Test Infrastructure
+
+1,215+ automated test suites across all capabilities. Scheduled on tiered cadences:
+- Tier A (critical capabilities): every 6 hours
+- Tier B (standard): every 24 hours
+- Tier C (stable/reference data): every 72 hours
+
+Test types: known_answer, schema_check, dependency_health, negative, edge_case, piggyback, regression.
+
+Rolling 3-run window used for SQS computation. Results are publicly available per capability.
+
+## Source Provenance
+
+Every execution returns: { source: "<data provider>", fetched_at: "<ISO 8601>" }
+
+Each capability has a documented data_source identifying its primary external provider (e.g., "allabolag.se", "ec.europa.eu/taxation_customs/vies", "opensanctions.org", "companies-house.gov.uk").
+
+Transparency tags: null (fully algorithmic), "ai_generated" (LLM processing), "mixed" (algorithmic + AI).
+
+## Audit Trail
+
+Per-execution records include: transaction ID, user, capability, inputs, outputs, latency, price, provenance, timestamps, status.
+
+Quality signals per transaction: response time, schema conformance, field completeness percentage, error type classification.
+
+Financial audit trail: wallet transactions with Stripe references.
+
+## Limitations Transparency
+
+Every capability documents known limitations with: title, severity, affected percentage, workaround. Publicly accessible.
+
+## Quality-Aware Routing
+
+POST /v1/do supports: min_sqs (minimum score), require_fresh (recent test data), max_latency_ms (latency ceiling).
+
+## Current Compliance Status
+
+Strale does not currently hold SOC 2, ISO 27001, or equivalent certifications. No contractual SLAs. Enterprise inquiries: hello@strale.io.
+
+## Verify Trust Data
+
+All trust endpoints are public (no auth):
+- GET /v1/internal/trust/capabilities/{slug}
+- GET /v1/internal/trust/solutions/{slug}
+- GET /v1/capabilities (includes sqs_score, sqs_label)
+
+Full methodology: https://strale.dev/trust/methodology`;
+
+      return { content: [{ type: "text" as const, text: methodologyText }] };
     },
   );
 }
