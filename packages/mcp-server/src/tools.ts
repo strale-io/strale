@@ -21,6 +21,8 @@ export interface Capability {
   output_schema: unknown;
   avg_latency_ms: number | null;
   success_rate: string | null;
+  sqs_score?: number;
+  sqs_label?: string;
 }
 
 export interface JsonSchema {
@@ -283,7 +285,7 @@ export function registerStraleTools(
     "strale_search",
     {
       description:
-        "Search and filter Strale capabilities by keyword or category. Use this to find the right capability before calling it. Returns matching capabilities with slug, description, price, and category.",
+        "Search and filter Strale capabilities and solutions by keyword or category. Use this to find the right tool before calling it. Returns matching items with slug, description, price, and category. Supports pagination via the offset parameter (20 results per page).",
       inputSchema: z.object({
         query: z
           .string()
@@ -296,10 +298,15 @@ export function registerStraleTools(
           .describe(
             "Filter by category (e.g., data-extraction, validation, finance, legal, logistics, recruiting, e-commerce, marketing)",
           ),
+        offset: z
+          .number()
+          .optional()
+          .describe("Number of results to skip (for pagination). Default: 0"),
       }),
     },
-    async ({ query, category }) => {
+    async ({ query, category, offset }) => {
       const q = (query ?? "").toLowerCase();
+      const skip = offset ?? 0;
       let matches = capabilities.filter((c) => {
         const text =
           `${c.name} ${c.description} ${c.slug} ${c.category}`.toLowerCase();
@@ -322,13 +329,15 @@ export function registerStraleTools(
         return aName - bName;
       });
 
-      const results = matches.slice(0, 20).map((c) => ({
+      const results = matches.slice(skip, skip + 20).map((c) => ({
         slug: c.slug,
         name: c.name,
         description: c.description,
         category: c.category,
         price: `€${(c.price_cents / 100).toFixed(2)}`,
         avg_latency_ms: c.avg_latency_ms,
+        sqs_score: c.sqs_score ?? null,
+        sqs_label: c.sqs_label ?? null,
       }));
 
       return {
@@ -340,7 +349,9 @@ export function registerStraleTools(
                 query,
                 category: category ?? null,
                 total_matches: matches.length,
+                offset: skip,
                 showing: results.length,
+                has_more: skip + results.length < matches.length,
                 results,
               },
               null,

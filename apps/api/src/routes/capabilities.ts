@@ -5,6 +5,7 @@ import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { getAllHealth } from "../lib/circuit-breaker.js";
+import { computeCapabilitySQS } from "../lib/sqs.js";
 import type { AppEnv } from "../types.js";
 
 // Capabilities are public — no auth required (lets developers browse before signing up)
@@ -31,7 +32,22 @@ capabilitiesRoute.get("/", async (c) => {
     .from(capabilities)
     .where(eq(capabilities.isActive, true));
 
-  return c.json({ capabilities: rows });
+  const sqsResults = await Promise.all(
+    rows.map((r) =>
+      computeCapabilitySQS(r.slug).catch(() => null),
+    ),
+  );
+
+  const capabilitiesWithSqs = rows.map((r, i) => {
+    const sqs = sqsResults[i];
+    return {
+      ...r,
+      sqs_score: sqs ? sqs.score : 0,
+      sqs_label: sqs ? sqs.label : "Pending",
+    };
+  });
+
+  return c.json({ capabilities: capabilitiesWithSqs });
 });
 
 // GET /v1/capabilities/health — Circuit breaker health status (auth required)

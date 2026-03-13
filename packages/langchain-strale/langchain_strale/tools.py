@@ -33,6 +33,9 @@ class StraleSearchInput(BaseModel):
     category: Optional[str] = Field(
         default=None, description="Filter by category slug"
     )
+    offset: Optional[int] = Field(
+        default=0, description="Number of results to skip (for pagination). Default: 0"
+    )
 
 
 class _EmptyInput(BaseModel):
@@ -152,15 +155,15 @@ class StraleSearchTool(BaseTool):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def _run(self, query: str, category: str | None = None) -> str:
+    def _run(self, query: str, category: str | None = None, offset: int = 0) -> str:
         q = query.lower()
-        results = []
+        matches = []
         for cap in self.capabilities:
             if category and cap.get("category") != category:
                 continue
             text = f"{cap['slug']} {cap['name']} {cap['description']} {cap.get('category', '')}".lower()
             if q in text:
-                results.append(
+                matches.append(
                     {
                         "slug": cap["slug"],
                         "name": cap["name"],
@@ -169,7 +172,16 @@ class StraleSearchTool(BaseTool):
                         "price_cents": cap["price_cents"],
                     }
                 )
-        return json.dumps(results[:20], default=str)
+        page = matches[offset : offset + 20]
+        return json.dumps(
+            {
+                "total_matches": len(matches),
+                "offset": offset,
+                "has_more": offset + len(page) < len(matches),
+                "results": page,
+            },
+            default=str,
+        )
 
 
 class StraleBalanceTool(BaseTool):

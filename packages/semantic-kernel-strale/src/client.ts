@@ -14,6 +14,8 @@ export interface Capability {
   output_schema: Record<string, unknown> | null;
   avg_latency_ms: number | null;
   success_rate: string | null;
+  sqs_score?: number;
+  sqs_label?: string;
 }
 
 export interface ExecuteResult {

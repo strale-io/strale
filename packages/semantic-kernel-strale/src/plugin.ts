@@ -127,27 +127,31 @@ export async function createStralePlugin(
       async (args: Record<string, unknown>) => {
         const query = ((args.query as string) ?? "").toLowerCase();
         const category = args.category as string | undefined;
-        const results = capabilities
-          .filter((cap) => {
-            if (category && cap.category !== category) return false;
-            const text =
-              `${cap.slug} ${cap.name} ${cap.description} ${cap.category}`.toLowerCase();
-            return text.includes(query);
-          })
-          .slice(0, 20)
-          .map((cap) => ({
-            slug: cap.slug,
-            name: cap.name,
-            description: cap.description,
-            category: cap.category,
-            price_cents: cap.price_cents,
-          }));
-        return JSON.stringify(results);
+        const offset = (args.offset as number) ?? 0;
+        const matches = capabilities.filter((cap) => {
+          if (category && cap.category !== category) return false;
+          const text =
+            `${cap.slug} ${cap.name} ${cap.description} ${cap.category}`.toLowerCase();
+          return text.includes(query);
+        });
+        const results = matches.slice(offset, offset + 20).map((cap) => ({
+          slug: cap.slug,
+          name: cap.name,
+          description: cap.description,
+          category: cap.category,
+          price_cents: cap.price_cents,
+        }));
+        return JSON.stringify({
+          total_matches: matches.length,
+          offset,
+          has_more: offset + results.length < matches.length,
+          results,
+        });
       },
       {
         name: "strale_search",
         description:
-          "Search the Strale capability catalog to discover available tools.",
+          "Search the Strale capability catalog to discover available tools. Supports pagination via the offset parameter (20 results per page).",
         schema: {
           type: "object",
           properties: {
@@ -158,6 +162,10 @@ export async function createStralePlugin(
             category: {
               type: "string",
               description: "Filter by category slug",
+            },
+            offset: {
+              type: "number",
+              description: "Number of results to skip (for pagination). Default: 0",
             },
           },
           required: ["query"],
