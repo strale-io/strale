@@ -396,26 +396,30 @@ function generateQualityNarrative(stepData: Array<{
     (d) => (d.test_results.failures?.length ?? 0) > 0,
   );
 
+  const pendingSuffix = totalTests > withResults
+    ? ` (${totalTests - withResults} suites awaiting first results.)`
+    : "";
+
   if (passRate === 100) {
-    return `All ${totalTests} test scenarios passing.`;
+    return `All ${withResults} tests passing.${pendingSuffix}`;
   }
 
   const plural = totalFailed > 1 ? "s" : "";
 
   if (passRate >= 90 && allExternal) {
     const names = failingSteps.map((d) => d.capability_name).join(", ");
-    return `${totalPassed} of ${withResults} tests passing. ${totalFailed} external service issue${plural} in ${names} — third-party timeout or rate limit, not Strale code.`;
+    return `${totalPassed} of ${withResults} tests passing. ${totalFailed} external service issue${plural} in ${names} — third-party timeout or rate limit, not Strale code.${pendingSuffix}`;
   }
 
   if (passRate >= 90) {
-    return `${totalPassed} of ${withResults} tests passing. ${totalFailed} test${plural} failing — review details.`;
+    return `${totalPassed} of ${withResults} tests passing. ${totalFailed} test${plural} failing — review details.${pendingSuffix}`;
   }
 
   if (passRate >= 70) {
-    return `${totalPassed} of ${withResults} tests passing. Some capabilities experiencing issues — review details before production use.`;
+    return `${totalPassed} of ${withResults} tests passing. Some capabilities experiencing issues — review details before production use.${pendingSuffix}`;
   }
 
-  return `${totalPassed} of ${withResults} tests passing. Significant failures detected — check the detail page for known issues.`;
+  return `${totalPassed} of ${withResults} tests passing. Significant failures detected — check the detail page for known issues.${pendingSuffix}`;
 }
 
 // ─── GET /v1/internal/trust/solutions/:slug ─────────────────────────────────

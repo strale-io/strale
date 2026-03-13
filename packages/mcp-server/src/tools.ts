@@ -450,10 +450,6 @@ export function registerStraleTools(
       const capResults = matchedCaps.map((c) => {
         const trust = trustData?.get(c.slug);
         const sqsScore = trust?.sqs_score ?? c.sqs_score ?? null;
-        let trustGrade: string | null = null;
-        if (sqsScore !== null && sqsScore > 0) {
-          trustGrade = sqsScore >= 90 ? "A" : sqsScore >= 75 ? "B" : sqsScore >= 60 ? "C" : "D";
-        }
         const badge = trust && trust.total > 0 ? "strale_tested" : null;
 
         // Build input fields summary
@@ -484,7 +480,6 @@ export function registerStraleTools(
           input_fields: inputFields,
           sqs_score: sqsScore,
           sqs_label: trust?.sqs_label ?? c.sqs_label ?? null,
-          trust_grade: trustGrade,
           badge,
         };
       });
@@ -507,7 +502,7 @@ export function registerStraleTools(
                 showing: page.length,
                 has_more: skip + page.length < combined.length,
                 results: page,
-                tip: "Use strale_execute to run any capability. Use strale_trust_profile for detailed quality data.",
+                tip: "Use strale_execute to run any capability. Use strale_trust_profile for trust grades and detailed quality data.",
               },
               null,
               2,
