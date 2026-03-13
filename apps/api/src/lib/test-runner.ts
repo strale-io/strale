@@ -12,6 +12,7 @@ import { getExecutor } from "../capabilities/index.js";
 import type { CapabilityResult } from "../capabilities/index.js";
 import { computeHealthState } from "./health-state.js";
 import { sanitizeErrorMessage } from "./trust-helpers.js";
+import { classifyFailure } from "./failure-classifier.js";
 import { createHash } from "node:crypto";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -174,24 +175,31 @@ async function runSingleTest(
   const executor = getExecutor(suite.capabilitySlug);
 
   if (!executor) {
-    const result: SingleTestResult = {
-      testName: suite.testName,
-      testType: suite.testType,
-      capabilitySlug: suite.capabilitySlug,
-      passed: false,
-      failureReason: `No executor registered for '${suite.capabilitySlug}'`,
-      responseTimeMs: 0,
-    };
+    const failureReason = `No executor registered for '${suite.capabilitySlug}'`;
+    const classification = classifyFailure(
+      failureReason, false, false, suite.testType,
+      suite.input as Record<string, unknown>,
+    );
 
     await db.insert(testResults).values({
       testSuiteId: suite.id,
       capabilitySlug: suite.capabilitySlug,
       passed: false,
-      failureReason: result.failureReason,
+      failureReason,
       responseTimeMs: 0,
+      failureClassification: classification.verdict,
     });
 
-    return result;
+    await updateLastClassification(suite.id, classification);
+
+    return {
+      testName: suite.testName,
+      testType: suite.testType,
+      capabilitySlug: suite.capabilitySlug,
+      passed: false,
+      failureReason,
+      responseTimeMs: 0,
+    };
   }
 
   let capResult: CapabilityResult | null = null;
@@ -214,6 +222,18 @@ async function runSingleTest(
     executionError,
   );
 
+  // Classify failure if test didn't pass
+  const executionSucceeded = capResult !== null && executionError === null;
+  const validationFailed = capResult !== null && !passed;
+  const previouslyPassed = (suite.lastClassification as any)?.verdict !== "test_design";
+  const classification = !passed
+    ? classifyFailure(
+        failureReason, executionSucceeded, validationFailed,
+        suite.testType, suite.input as Record<string, unknown>,
+        previouslyPassed,
+      )
+    : null;
+
   // Write test result
   await db.insert(testResults).values({
     testSuiteId: suite.id,
@@ -223,7 +243,19 @@ async function runSingleTest(
     failureReason,
     responseTimeMs,
     outputHash: computeOutputHash(capResult?.output),
+    failureClassification: classification?.verdict ?? null,
   });
+
+  // Update last_classification on suite for trend detection
+  if (classification) {
+    await updateLastClassification(suite.id, classification);
+  } else if (suite.lastClassification) {
+    // Test passed — clear last_classification (indicates recovery)
+    await db.update(testSuites).set({
+      lastClassification: null,
+      updatedAt: new Date(),
+    }).where(eq(testSuites.id, suite.id));
+  }
 
   // Record quality data for this test execution (fire-and-forget)
   recordTestQuality(
@@ -309,13 +341,25 @@ async function runDryRunSchemaTest(
   const failureReason = passed ? null : allErrors.join("; ");
   const responseTimeMs = Date.now() - startTime;
 
+  const classification = !passed
+    ? classifyFailure(
+        failureReason, false, false, suite.testType,
+        suite.input as Record<string, unknown>,
+      )
+    : null;
+
   await db.insert(testResults).values({
     testSuiteId: suite.id,
     capabilitySlug: suite.capabilitySlug,
     passed,
     failureReason,
     responseTimeMs,
+    failureClassification: classification?.verdict ?? null,
   });
+
+  if (classification) {
+    await updateLastClassification(suite.id, classification);
+  }
 
   return {
     testName: suite.testName,
@@ -413,13 +457,16 @@ async function runRegressionTest(
   if (!executor) {
     const responseTimeMs = Date.now() - startTime;
     const failureReason = `No executor registered for '${suite.capabilitySlug}'`;
+    const cls = classifyFailure(failureReason, false, false, "regression", suite.input as Record<string, unknown>);
     await db.insert(testResults).values({
       testSuiteId: suite.id,
       capabilitySlug: suite.capabilitySlug,
       passed: false,
       failureReason,
       responseTimeMs,
+      failureClassification: cls.verdict,
     });
+    await updateLastClassification(suite.id, cls);
     return {
       testName: suite.testName,
       testType: "regression",
@@ -447,13 +494,16 @@ async function runRegressionTest(
     const failureReason = executionError
       ? `Execution error: ${sanitizeErrorMessage(executionError) ?? executionError}`
       : "No output returned";
+    const cls = classifyFailure(failureReason, !executionError, false, "regression", suite.input as Record<string, unknown>);
     await db.insert(testResults).values({
       testSuiteId: suite.id,
       capabilitySlug: suite.capabilitySlug,
       passed: false,
       failureReason,
       responseTimeMs,
+      failureClassification: cls.verdict,
     });
+    await updateLastClassification(suite.id, cls);
     return {
       testName: suite.testName,
       testType: "regression",
@@ -474,6 +524,10 @@ async function runRegressionTest(
     ? null
     : `Missing keys vs baseline: ${missingKeys.join(", ")}`;
 
+  const regressionCls = !passed
+    ? classifyFailure(failureReason, true, true, "regression", suite.input as Record<string, unknown>, true)
+    : null;
+
   await db.insert(testResults).values({
     testSuiteId: suite.id,
     capabilitySlug: suite.capabilitySlug,
@@ -482,7 +536,12 @@ async function runRegressionTest(
     failureReason,
     responseTimeMs,
     outputHash: computeOutputHash(currentOutput),
+    failureClassification: regressionCls?.verdict ?? null,
   });
+
+  if (regressionCls) {
+    await updateLastClassification(suite.id, regressionCls);
+  }
 
   return {
     testName: suite.testName,
@@ -840,6 +899,24 @@ async function getSystemUserId(): Promise<string> {
 
   _systemUserId = created.id;
   return created.id;
+}
+
+// ─── Classification helpers ─────────────────────────────────────────────────
+
+async function updateLastClassification(
+  suiteId: string,
+  classification: { verdict: string; confidence: string; reason: string },
+): Promise<void> {
+  const db = getDb();
+  await db.update(testSuites).set({
+    lastClassification: {
+      verdict: classification.verdict,
+      confidence: classification.confidence,
+      reason: classification.reason,
+      timestamp: new Date().toISOString(),
+    },
+    updatedAt: new Date(),
+  }).where(eq(testSuites.id, suiteId));
 }
 
 // ─── Tiered scheduled execution ─────────────────────────────────────────────

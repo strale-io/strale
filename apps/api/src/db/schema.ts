@@ -284,6 +284,12 @@ export const testSuites = pgTable(
     estimatedCostCents: integer("estimated_cost_cents").notNull().default(0),
     baselineOutput: jsonb("baseline_output"),
     baselineCapturedAt: timestamp("baseline_captured_at", { withTimezone: true }),
+    // Adaptive Test Intelligence columns
+    testStatus: text("test_status").notNull().default("normal"),
+    // 'normal' | 'infra_limited' | 'env_dependent' | 'upstream_broken' | 'quarantined'
+    quarantineReason: text("quarantine_reason"),
+    lastClassification: jsonb("last_classification"),
+    autoRemediationLog: jsonb("auto_remediation_log"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -312,6 +318,11 @@ export const testResults = pgTable(
       .notNull()
       .defaultNow(),
     outputHash: text("output_hash"), // SHA-256 of JSON output for staleness detection
+    // Adaptive Test Intelligence columns
+    failureClassification: text("failure_classification"),
+    // 'upstream_transient' | 'upstream_degraded' | 'upstream_changed' | 'test_infrastructure'
+    // | 'test_design' | 'capability_bug' | 'stale_input' | 'unknown'
+    autoFixed: boolean("auto_fixed").notNull().default(false),
   },
   (table) => [
     index("test_results_capability_slug_idx").on(table.capabilitySlug),

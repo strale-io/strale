@@ -918,7 +918,7 @@ async function executeSync(
     quality_pass_rate: qualityPassRate,
     quality: {
       sqs: sqs.pending ? null : sqs.score,
-      label: sqs.pending ? "Pending" : sqs.label,
+      label: sqs.label,
       trend: sqs.trend,
       ...(freshness ? { freshness } : {}),
       performance: perfInfo,
@@ -1284,7 +1284,7 @@ function buildFullAudit(params: {
     ...(freeTier ? { free_tier: true } : {}),
     quality: {
       sqs: sqs.pending ? null : sqs.score,
-      label: sqs.pending ? "Pending" : sqs.label,
+      label: sqs.label,
       pass_rate: qualityPassRate ?? null,
     },
     provenance: provenance ?? null,

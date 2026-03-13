@@ -1,6 +1,6 @@
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilityHealth } from "../db/schema.js";
+import { capabilityHealth, testSuites } from "../db/schema.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -72,7 +72,9 @@ function isExternalServiceFailure(reason: string | null): boolean {
   return EXTERNAL_SERVICE_PATTERNS.some((p) => p.test(reason));
 }
 
-function scoreToLabel(score: number, pending: boolean): string {
+function scoreToLabel(score: number, pending: boolean, qualifier?: "building" | "unverified"): string {
+  if (qualifier === "unverified") return "Unverified";
+  if (qualifier === "building") return "Building track record";
   if (pending) return "Pending";
   if (score >= 90) return "Excellent";
   if (score >= 75) return "Good";
@@ -109,16 +111,52 @@ export async function computeCapabilitySQS(slug: string): Promise<SQSResult> {
   if (cached) return cached;
 
   const db = getDb();
+
+  // ── Check for "Unverified" state ──────────────────────────────────────
+  // If ALL active test suites are infra_limited or quarantined, the capability
+  // is structurally untestable — return Unverified.
+  const activeSuites = await db
+    .select({ id: testSuites.id })
+    .from(testSuites)
+    .where(and(
+      eq(testSuites.capabilitySlug, slug),
+      eq(testSuites.active, true),
+      inArray(testSuites.testStatus, ["normal", "env_dependent", "upstream_broken"]),
+    ))
+    .limit(1);
+
+  if (activeSuites.length === 0) {
+    // Check if there are ANY active suites at all (to distinguish "no suites" from "all excluded")
+    const anySuites = await db
+      .select({ id: testSuites.id })
+      .from(testSuites)
+      .where(and(eq(testSuites.capabilitySlug, slug), eq(testSuites.active, true)))
+      .limit(1);
+
+    if (anySuites.length > 0) {
+      const result = makeUnverifiedResult();
+      setCachedSQS(cacheKey, result);
+      return result;
+    }
+    // No suites at all — standard pending
+    const result = makePendingResult(0);
+    setCachedSQS(cacheKey, result);
+    return result;
+  }
+
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const cutoff = thirtyDaysAgo.toISOString();
 
   // Get the last N distinct run windows for this capability
+  // Exclude test suites that are infra_limited or quarantined
   const runWindows = await db.execute(sql`
-    SELECT DISTINCT DATE_TRUNC('minute', executed_at) AS run_window
-    FROM test_results
-    WHERE capability_slug = ${slug}
-      AND executed_at >= ${cutoff}::timestamptz
+    SELECT DISTINCT DATE_TRUNC('minute', tr.executed_at) AS run_window
+    FROM test_results tr
+    INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
+    WHERE tr.capability_slug = ${slug}
+      AND tr.executed_at >= ${cutoff}::timestamptz
+      AND ts.test_status IN ('normal', 'env_dependent', 'upstream_broken')
     ORDER BY run_window DESC
     LIMIT ${ROLLING_RUNS}
   `);
@@ -126,6 +164,12 @@ export async function computeCapabilitySQS(slug: string): Promise<SQSResult> {
   const windows = (Array.isArray(runWindows) ? runWindows : (runWindows as any)?.rows ?? []) as any[];
 
   if (windows.length < MIN_RUNS) {
+    // "Building track record" if we have some data but not enough
+    if (windows.length > 0) {
+      const result = makeBuildingTrackRecordResult(windows.length);
+      setCachedSQS(cacheKey, result);
+      return result;
+    }
     const result = makePendingResult(windows.length);
     setCachedSQS(cacheKey, result);
     return result;
@@ -140,6 +184,7 @@ export async function computeCapabilitySQS(slug: string): Promise<SQSResult> {
   const oldestWindow = windows[windows.length - 1].run_window;
 
   // Get all test results with run_window
+  // Exclude: infra_limited/quarantined suites, and classified noise failures
   const rows = await db.execute(sql`
     SELECT
       ts.test_type,
@@ -151,6 +196,12 @@ export async function computeCapabilitySQS(slug: string): Promise<SQSResult> {
     WHERE tr.capability_slug = ${slug}
       AND DATE_TRUNC('minute', tr.executed_at) >= ${oldestWindow}::timestamptz
       AND tr.executed_at >= ${cutoff}::timestamptz
+      AND ts.test_status IN ('normal', 'env_dependent', 'upstream_broken')
+      AND (
+        tr.passed = true
+        OR tr.failure_classification IS NULL
+        OR tr.failure_classification IN ('upstream_degraded', 'upstream_changed', 'capability_bug')
+      )
   `);
 
   const testRows = (Array.isArray(rows) ? rows : (rows as any)?.rows ?? []) as any[];
@@ -186,6 +237,20 @@ export async function computeSolutionSQS(
   const stepScores = await Promise.all(
     stepSlugs.map((slug) => computeCapabilitySQS(slug)),
   );
+
+  // If any step is Unverified, the solution is Unverified
+  if (stepScores.some((s) => s.label === "Unverified")) {
+    const result = makeUnverifiedResult();
+    setCachedSQS(cacheKey, result);
+    return result;
+  }
+
+  // If any step is Building track record, the solution is Building track record
+  if (stepScores.some((s) => s.label === "Building track record")) {
+    const result = makeBuildingTrackRecordResult(0);
+    setCachedSQS(cacheKey, result);
+    return result;
+  }
 
   // If any step is pending, the solution is pending
   if (stepScores.some((s) => s.pending)) {
@@ -311,10 +376,10 @@ function computeFromRows(
     }
   }
 
-  // Pending if not all 5 factors have test data
+  // "Building track record" if not all 5 factors have test data yet
   const allFactorsHaveData = FACTOR_KEYS.every((k) => accum[k].total > 0);
   if (!allFactorsHaveData) {
-    return makePendingResult(runsAnalyzed);
+    return makeBuildingTrackRecordResult(runsAnalyzed);
   }
 
   // Build factors — exclude missing factors, re-weight proportionally
@@ -541,6 +606,54 @@ function makePendingResult(runsAnalyzed = 0): SQSResult {
     circuit_breaker: false,
     external_service_issues: 0,
     runs_analyzed: runsAnalyzed,
+    pending: true,
+  };
+}
+
+function makeBuildingTrackRecordResult(runsAnalyzed = 0): SQSResult {
+  const makeFactor = (weight: number): FactorResult => ({
+    rate: 0, passed: 0, total: 0,
+    weight, weighted_contribution: 0, has_data: false,
+  });
+
+  return {
+    score: 0,
+    label: "Building track record",
+    factors: {
+      correctness: makeFactor(WEIGHTS.correctness),
+      schema: makeFactor(WEIGHTS.schema),
+      availability: makeFactor(WEIGHTS.availability),
+      error_handling: makeFactor(WEIGHTS.error_handling),
+      edge_cases: makeFactor(WEIGHTS.edge_cases),
+    },
+    trend: "stable",
+    circuit_breaker: false,
+    external_service_issues: 0,
+    runs_analyzed: runsAnalyzed,
+    pending: true, // Frontend treats this like pending
+  };
+}
+
+function makeUnverifiedResult(): SQSResult {
+  const makeFactor = (weight: number): FactorResult => ({
+    rate: 0, passed: 0, total: 0,
+    weight, weighted_contribution: 0, has_data: false,
+  });
+
+  return {
+    score: 0,
+    label: "Unverified",
+    factors: {
+      correctness: makeFactor(WEIGHTS.correctness),
+      schema: makeFactor(WEIGHTS.schema),
+      availability: makeFactor(WEIGHTS.availability),
+      error_handling: makeFactor(WEIGHTS.error_handling),
+      edge_cases: makeFactor(WEIGHTS.edge_cases),
+    },
+    trend: "stable",
+    circuit_breaker: false,
+    external_service_issues: 0,
+    runs_analyzed: 0,
     pending: true,
   };
 }
