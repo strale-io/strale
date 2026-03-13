@@ -87,6 +87,13 @@ async function getCatalog(): Promise<{
   return { capabilities: cachedCapabilities!, solutions: cachedSolutions!, trustData: cachedTrustData! };
 }
 
+// Pre-warm cache on server start so first MCP session is instant
+getCatalog().then(() => {
+  console.log("[mcp-http] Cache pre-warmed");
+}).catch((err) => {
+  console.error(`[mcp-http] Pre-warm failed: ${err instanceof Error ? err.message : err}`);
+});
+
 // ─── Create a stateless MCP handler ─────────────────────────────────────────
 
 async function handleStatelessRequest(
