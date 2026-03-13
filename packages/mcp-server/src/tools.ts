@@ -321,38 +321,45 @@ export function registerStraleTools(
   opts: StraleClientOptions,
   trustData?: Map<string, TrustBatchEntry>,
 ): void {
-  // Register each capability as an MCP tool
-  for (const cap of capabilities) {
-    const price = `€${(cap.price_cents / 100).toFixed(2)}`;
-    const description = `${cap.description} (Cost: ${price})`;
-
-    try {
-      const inputSchema = buildInputSchema(cap);
-
-      server.registerTool(
-        cap.slug,
-        { description, inputSchema },
-        async (args) => {
-          return executeCapability(
-            cap.slug,
-            args as Record<string, unknown>,
-            opts,
-          );
-        },
-      );
-    } catch (err) {
-      console.error(
-        `[strale-mcp] Warning: Failed to register tool '${cap.slug}': ${err instanceof Error ? err.message : err}`,
-      );
-    }
-  }
+  // Meta-tool: strale_execute (requires API key)
+  server.registerTool(
+    "strale_execute",
+    {
+      description:
+        "Execute any Strale capability by slug. Use strale_search first to find the right capability, then call this with the slug and inputs. Returns the execution result with output data, price charged, latency, and provenance.",
+      inputSchema: z.object({
+        slug: z
+          .string()
+          .describe(
+            "Capability slug from strale_search results (e.g. 'swedish-company-data', 'vat-validate')",
+          ),
+        inputs: z
+          .record(z.unknown())
+          .describe(
+            "Input parameters for the capability. Check the capability's input_schema_summary via strale_search for required fields.",
+          ),
+        max_price_cents: z
+          .number()
+          .optional()
+          .describe(
+            "Maximum price in EUR cents you're willing to pay. Defaults to 200 (€2.00).",
+          ),
+      }),
+    },
+    async ({ slug, inputs, max_price_cents }) => {
+      return executeCapability(slug, inputs as Record<string, unknown>, {
+        ...opts,
+        maxPriceCents: max_price_cents ?? opts.maxPriceCents,
+      });
+    },
+  );
 
   // Meta-tool: strale_search (works without API key)
   server.registerTool(
     "strale_search",
     {
       description:
-        "Search and filter Strale capabilities and solutions by keyword or category. Use this to find the right tool before calling it. Returns matching items with slug, description, price, and category. Supports pagination via the offset parameter (20 results per page).",
+        "Search and filter Strale capabilities and solutions by keyword or category. Use this to find the right capability before calling strale_execute. Returns matching items with slug, description, price, input schema summary, and trust data. Supports pagination via offset (20 results per page).",
       inputSchema: z.object({
         query: z
           .string()
@@ -421,6 +428,23 @@ export function registerStraleTools(
         }
         const badge = trust && trust.total > 0 ? "strale_tested" : null;
 
+        // Build input schema summary
+        let inputSchemaSummary = "Accepts: task (string, optional), inputs (object, optional)";
+        const schema = c.input_schema;
+        if (schema?.properties && Object.keys(schema.properties).length > 0) {
+          const required = new Set(schema.required ?? []);
+          const reqFields = Object.entries(schema.properties)
+            .filter(([key]) => required.has(key))
+            .map(([key, prop]) => `${key} (${prop.type ?? "any"})`);
+          const optFields = Object.entries(schema.properties)
+            .filter(([key]) => !required.has(key))
+            .map(([key, prop]) => `${key} (${prop.type ?? "any"})`);
+          const parts: string[] = [];
+          if (reqFields.length > 0) parts.push(`Required: ${reqFields.join(", ")}`);
+          if (optFields.length > 0) parts.push(`Optional: ${optFields.join(", ")}`);
+          inputSchemaSummary = parts.join(". ") || "No parameters";
+        }
+
         return {
           type: "capability" as const,
           slug: c.slug,
@@ -429,6 +453,7 @@ export function registerStraleTools(
           category: c.category,
           price: `€${(c.price_cents / 100).toFixed(2)}`,
           avg_latency_ms: c.avg_latency_ms,
+          input_schema_summary: inputSchemaSummary,
           sqs_score: sqsScore,
           sqs_label: trust?.sqs_label ?? c.sqs_label ?? null,
           trust_grade: trustGrade,
@@ -454,7 +479,7 @@ export function registerStraleTools(
                 showing: page.length,
                 has_more: skip + page.length < combined.length,
                 results: page,
-                tip: "Call strale_trust_profile for full trust details on any result.",
+                tip: "Use strale_execute to run any capability. Use strale_trust_profile for detailed quality data.",
               },
               null,
               2,
@@ -525,7 +550,7 @@ export function registerStraleTools(
     "strale_methodology",
     {
       description:
-        "Get Strale's complete quality and trust methodology. Explains SQS scoring, trust grades, test infrastructure, provenance tracking, audit trails, badge system, and current limitations. Call this first to understand how Strale measures quality.",
+        "Get Strale's complete quality and trust methodology. Explains SQS scoring, trust grades, test infrastructure, provenance tracking, audit trails, badge system, and current limitations. Call this to understand how Strale measures quality.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -541,11 +566,10 @@ Five-factor weighted score per capability:
 - Availability (20%): Is the capability reliably reachable?
 - Error Handling (10%): Are errors caught and reported cleanly?
 - Edge Cases (5%): Does it handle unusual inputs gracefully?
-
-Score range: 0–100. Computed from automated test suite results.
+Score range: 0-100. Computed from automated test suite results.
 
 3. TRUST GRADES
-- Freshness Grade: How recently the capability was tested (A = <24h, B = <72h, C = <7d, D = older)
+- Freshness Grade: How recently tested (A = <24h, B = <72h, C = <7d, D = older)
 - Latency Grade: Response time percentile (A = <500ms p95, B = <2s, C = <5s, D = >5s)
 - Combined Trust Grade: Weighted combination of SQS + freshness + latency
 
@@ -553,23 +577,22 @@ Score range: 0–100. Computed from automated test suite results.
 Every execution returns:
 - source: which external service provided the data
 - fetched_at: ISO timestamp of when data was retrieved
-- External service failures are attributed to the upstream provider, not Strale
+- External service failures attributed to upstream provider, not Strale
 
 5. AUDIT TRAIL (per transaction)
 Recorded for every execution:
-- Full input parameters
-- Full output data
-- Execution latency (ms)
-- Price charged (cents)
+- Full input parameters and output data
+- Execution latency (ms) and price charged (cents)
 - Provenance metadata
 - Success/failure status
 - Failure categorization: "upstream" (provider timeout, rate limit, 5xx) vs "internal" (Strale bug)
+- Transaction ID for retrieval
 
 6. TEST INFRASTRUCTURE
 - 1,215 active test suites across all capabilities
-- Tiered scheduling: Tier A (critical) tested most frequently, Tier B moderate, Tier C weekly
+- Tiered scheduling: Tier A (critical) most frequent, Tier B moderate, Tier C weekly
 - Automated failure categorization distinguishes upstream issues from internal bugs
-- Health sweep runs weekly: classifies failures, proposes remediations, detects stale tests
+- Weekly health sweep: classifies failures, proposes remediations, detects stale tests
 - Test types: schema_check, smoke_test, value_check, edge_case
 
 7. BADGE SYSTEM
@@ -578,16 +601,16 @@ Recorded for every execution:
 - strale_verified: 500+ customer transactions with sustained >80% success rate
 
 8. CURRENT LIMITATIONS (honest disclosure)
-- Zero external users — all transaction data is from internal testing
+- Zero external users — all transaction data from internal testing
 - No SOC 2, ISO 27001, or HIPAA certification
 - No contractual SLAs
-- Badge status is "strale_tested" for all capabilities (no customer transaction volume yet)
+- All capabilities currently at "strale_tested" badge level
 - Quality scores reflect test conditions, not production load
 
-9. TRUST PROFILE ACCESS
-- Per capability: call strale_trust_profile with type "capability" and the slug
-- Per solution: call strale_trust_profile with type "solution" and the slug
-- Methodology page: https://strale.dev/trust/methodology`;
+9. ACCESSING TRUST DATA
+- Per-capability trust profile: call strale_trust_profile with type "capability"
+- Per-solution trust profile: call strale_trust_profile with type "solution"
+- Full methodology: https://strale.dev/trust/methodology`;
 
       return { content: [{ type: "text" as const, text: methodologyText }] };
     },
@@ -598,7 +621,7 @@ Recorded for every execution:
     "strale_trust_profile",
     {
       description:
-        "Get the full trust profile for any capability or solution. Returns SQS scores, test results, pass rates, failure details, limitations, badge status, and quality narrative. Use this to verify trust data for a specific capability or solution.",
+        "Get the full trust and quality profile for any capability or solution. Returns SQS scores, test results, pass rates, failure categorization, limitations, badge status, and quality narrative.",
       inputSchema: z.object({
         slug: z
           .string()
