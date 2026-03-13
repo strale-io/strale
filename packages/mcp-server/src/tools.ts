@@ -321,6 +321,34 @@ export function registerStraleTools(
   opts: StraleClientOptions,
   trustData?: Map<string, TrustBatchEntry>,
 ): void {
+  // Meta-tool: strale_ping (no auth, zero I/O)
+  server.registerTool(
+    "strale_ping",
+    {
+      description:
+        "Health check. Returns server status, tool count, and response time. Use this to verify the connection is working before making other calls.",
+      inputSchema: z.object({}),
+    },
+    async () => {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              status: "ok",
+              server: "strale-mcp",
+              version: "0.1.0",
+              tools_registered: 6,
+              capabilities_available: capabilities.length,
+              solutions_available: solutions.length,
+              timestamp: new Date().toISOString(),
+            }, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
   // Meta-tool: strale_execute (requires API key)
   server.registerTool(
     "strale_execute",
