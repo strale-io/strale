@@ -8,6 +8,10 @@ Trust and quality infrastructure for AI agents.
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![strale.dev](https://img.shields.io/badge/strale.dev-live-green)](https://strale.dev)
 
+<a href="https://glama.ai/mcp/servers/strale-io/strale">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/strale-io/strale/badge" alt="strale-mcp MCP server" />
+</a>
+
 ## What is Strale
 
 Strale is a capability marketplace for AI agents. Agents call `strale.do()` at runtime to access 200+ verified capabilities — company lookups, compliance checks, financial data, web extraction, and more — without hardcoding integrations or managing credentials.
