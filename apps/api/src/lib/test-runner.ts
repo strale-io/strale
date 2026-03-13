@@ -930,6 +930,7 @@ const TIER_MINIMUM_MS: Record<string, number> = {
 
 const SCHEDULER_CHECK_INTERVAL_MS = 60 * 60 * 1000; // Check once per hour
 const HEALTH_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const WEEKLY_SWEEP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // Weekly health sweep
 
 let _schedulerRunning = false;
 
@@ -1099,4 +1100,17 @@ export function startScheduledTests(): void {
 
   setTimeout(runHealthChecks, 60_000); // 1min after startup
   setInterval(runHealthChecks, HEALTH_CHECK_INTERVAL_MS);
+
+  // Weekly health sweep — auto-remediation + quarantine review + health report
+  const runSweep = async () => {
+    try {
+      const { runWeeklyHealthSweep } = await import("./health-sweep.js");
+      await runWeeklyHealthSweep();
+    } catch (err) {
+      console.error("[health-sweep] Weekly sweep failed:", err);
+    }
+  };
+
+  setTimeout(runSweep, 5 * 60_000); // 5min after startup
+  setInterval(runSweep, WEEKLY_SWEEP_INTERVAL_MS);
 }
