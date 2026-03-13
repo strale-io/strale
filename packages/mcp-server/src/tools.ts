@@ -58,6 +58,15 @@ export interface TrustBatchEntry {
   sqs_label: string;
 }
 
+export interface SolutionTrustEntry {
+  sqs_score: number;
+  sqs_label: string;
+  badge: string | null;
+  badge_label: string | null;
+  pass_rate: number | null;
+  trust_grade: string | null;
+}
+
 export interface StraleClientOptions {
   baseUrl: string;
   apiKey: string;
@@ -312,6 +321,49 @@ export async function fetchTrustBatch(
   return map;
 }
 
+export async function fetchSolutionTrust(
+  baseUrl: string,
+  solutionSlugs: string[],
+): Promise<Map<string, SolutionTrustEntry>> {
+  const map = new Map<string, SolutionTrustEntry>();
+  // Fetch all solution trust profiles in parallel (only ~20 solutions, each cached server-side)
+  const results = await Promise.allSettled(
+    solutionSlugs.map(async (slug) => {
+      const resp = await fetch(
+        `${baseUrl}/v1/internal/trust/solutions/${encodeURIComponent(slug)}`,
+        {
+          headers: { Accept: "application/json" },
+          signal: AbortSignal.timeout(10000),
+        },
+      );
+      if (!resp.ok) return null;
+      const data = await resp.json() as any;
+      return {
+        slug,
+        entry: {
+          sqs_score: data.sqs?.score ?? 0,
+          sqs_label: data.sqs?.label ?? "Pending",
+          badge: data.trust_summary?.badge ?? null,
+          badge_label: data.trust_summary?.badge_label ?? null,
+          pass_rate: data.trust_summary?.test_results?.pass_rate ?? null,
+          trust_grade: data.trust_grade?.grade ?? null,
+        } as SolutionTrustEntry,
+      };
+    }),
+  );
+  for (const r of results) {
+    if (r.status === "fulfilled" && r.value) {
+      map.set(r.value.slug, r.value.entry);
+    }
+  }
+  if (map.size < solutionSlugs.length) {
+    console.error(
+      `[strale-mcp] Solution trust: fetched ${map.size}/${solutionSlugs.length}`,
+    );
+  }
+  return map;
+}
+
 // ─── Register all tools on an McpServer ─────────────────────────────────────
 
 export function registerStraleTools(
@@ -320,6 +372,7 @@ export function registerStraleTools(
   solutions: Solution[],
   opts: StraleClientOptions,
   trustData?: Map<string, TrustBatchEntry>,
+  solutionTrustData?: Map<string, SolutionTrustEntry>,
 ): void {
   // Meta-tool: strale_ping (no auth, zero I/O)
   server.registerTool(
@@ -419,17 +472,24 @@ export function registerStraleTools(
           const text = `${s.name} ${s.description} ${s.slug} ${s.category}`.toLowerCase();
           return text.includes(q);
         })
-        .map((s) => ({
-          type: "solution" as const,
-          slug: s.slug,
-          name: s.name,
-          description: s.description,
-          category: s.category,
-          price: `€${(s.price_cents / 100).toFixed(2)}`,
-          geography: s.geography,
-          step_count: s.step_count,
-          capabilities: s.capabilities,
-        }));
+        .map((s) => {
+          const solTrust = solutionTrustData?.get(s.slug);
+          return {
+            type: "solution" as const,
+            slug: s.slug,
+            name: s.name,
+            description: s.description,
+            category: s.category,
+            price: `€${(s.price_cents / 100).toFixed(2)}`,
+            geography: s.geography,
+            step_count: s.step_count,
+            capabilities: s.capabilities,
+            sqs_score: solTrust?.sqs_score ?? null,
+            sqs_label: solTrust?.sqs_label ?? null,
+            trust_grade: solTrust?.trust_grade ?? null,
+            badge: solTrust?.badge ?? null,
+          };
+        });
 
       // Match capabilities
       let matchedCaps = capabilities.filter((c) => {
@@ -612,6 +672,14 @@ Every execution records:
   Success or failure status
   Failure categorization: "upstream" (provider timeout, rate limit, HTTP 5xx) vs "internal" (Strale bug)
   Unique transaction ID for retrieval and dispute resolution
+
+METRIC DEFINITIONS
+  success_rate — Percentage of all historical executions (test + customer) that returned a valid result without error. Reflects real execution reliability over time. Multiplicative for solutions: if step A is 95% and step B is 90%, solution success_rate is ~85.5%.
+  pass_rate — Percentage of the most recent test run's scenarios that passed. Reflects current test health. Based on latest result per active test suite.
+  sqs_score — Strale Quality Score (0-100). Weighted composite of 5 test-derived factors. See SQS SCORING above.
+  schema_conformance_rate — Percentage of executions where the output matched the declared JSON schema structure.
+  avg_field_completeness_pct — Average percentage of non-null fields in output across executions.
+  Note: success_rate and pass_rate measure different things. success_rate is historical execution reliability; pass_rate is current test snapshot. They can diverge significantly, especially for capabilities with intermittent upstream issues.
 
 TEST INFRASTRUCTURE
   1,215 active test suites across all capabilities

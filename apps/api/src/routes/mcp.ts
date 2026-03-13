@@ -20,10 +20,12 @@ import {
   fetchCapabilities,
   fetchSolutions,
   fetchTrustBatch,
+  fetchSolutionTrust,
   registerStraleTools,
   type Capability,
   type Solution,
   type TrustBatchEntry,
+  type SolutionTrustEntry,
 } from "strale-mcp/tools";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -41,6 +43,7 @@ const DEFAULT_MAX_PRICE_CENTS = parseInt(
 let cachedCapabilities: Capability[] | null = null;
 let cachedSolutions: Solution[] | null = null;
 let cachedTrustData: Map<string, TrustBatchEntry> | null = null;
+let cachedSolutionTrustData: Map<string, SolutionTrustEntry> | null = null;
 let catalogLoadedAt = 0;
 const CAPABILITIES_TTL_MS = 10 * 60 * 1000; // refresh every 10 min
 
@@ -48,10 +51,11 @@ async function getCatalog(): Promise<{
   capabilities: Capability[];
   solutions: Solution[];
   trustData: Map<string, TrustBatchEntry>;
+  solutionTrustData: Map<string, SolutionTrustEntry>;
 }> {
   const now = Date.now();
-  if (cachedCapabilities && cachedSolutions && cachedTrustData && now - catalogLoadedAt < CAPABILITIES_TTL_MS) {
-    return { capabilities: cachedCapabilities, solutions: cachedSolutions, trustData: cachedTrustData };
+  if (cachedCapabilities && cachedSolutions && cachedTrustData && cachedSolutionTrustData && now - catalogLoadedAt < CAPABILITIES_TTL_MS) {
+    return { capabilities: cachedCapabilities, solutions: cachedSolutions, trustData: cachedTrustData, solutionTrustData: cachedSolutionTrustData };
   }
 
   try {
@@ -59,32 +63,34 @@ async function getCatalog(): Promise<{
       fetchCapabilities(STRALE_BASE_URL),
       fetchSolutions(STRALE_BASE_URL),
     ]);
-    // Fetch trust batch after we know the slugs
-    const trust = await fetchTrustBatch(
-      STRALE_BASE_URL,
-      caps.map((c) => c.slug),
-    );
+    // Fetch trust data after we know the slugs
+    const [trust, solTrust] = await Promise.all([
+      fetchTrustBatch(STRALE_BASE_URL, caps.map((c) => c.slug)),
+      fetchSolutionTrust(STRALE_BASE_URL, sols.map((s) => s.slug)),
+    ]);
     cachedCapabilities = caps;
     cachedSolutions = sols;
     cachedTrustData = trust;
+    cachedSolutionTrustData = solTrust;
     catalogLoadedAt = now;
     console.log(
-      `[mcp-http] Loaded ${caps.length} capabilities, ${sols.length} solutions, ${trust.size} trust entries`,
+      `[mcp-http] Loaded ${caps.length} capabilities, ${sols.length} solutions, ${trust.size} cap trust, ${solTrust.size} sol trust`,
     );
   } catch (err) {
     console.error(
       `[mcp-http] Failed to load catalog: ${err instanceof Error ? err.message : err}`,
     );
-    if (cachedCapabilities && cachedSolutions && cachedTrustData) {
-      return { capabilities: cachedCapabilities, solutions: cachedSolutions, trustData: cachedTrustData };
+    if (cachedCapabilities && cachedSolutions && cachedTrustData && cachedSolutionTrustData) {
+      return { capabilities: cachedCapabilities, solutions: cachedSolutions, trustData: cachedTrustData, solutionTrustData: cachedSolutionTrustData };
     }
     cachedCapabilities = cachedCapabilities ?? [];
     cachedSolutions = cachedSolutions ?? [];
     cachedTrustData = cachedTrustData ?? new Map();
+    cachedSolutionTrustData = cachedSolutionTrustData ?? new Map();
     catalogLoadedAt = now;
   }
 
-  return { capabilities: cachedCapabilities!, solutions: cachedSolutions!, trustData: cachedTrustData! };
+  return { capabilities: cachedCapabilities!, solutions: cachedSolutions!, trustData: cachedTrustData!, solutionTrustData: cachedSolutionTrustData! };
 }
 
 // Pre-warm cache on server start so first MCP session is instant
@@ -105,13 +111,13 @@ async function handleStatelessRequest(
     { capabilities: { tools: {} } },
   );
 
-  const { capabilities, solutions, trustData } = await getCatalog();
+  const { capabilities, solutions, trustData, solutionTrustData } = await getCatalog();
 
   registerStraleTools(server, capabilities, solutions, {
     baseUrl: STRALE_BASE_URL,
     apiKey,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
-  }, trustData);
+  }, trustData, solutionTrustData);
 
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless — no session tracking

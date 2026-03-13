@@ -10,7 +10,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { fetchCapabilities, fetchSolutions, fetchTrustBatch, registerStraleTools, type TrustBatchEntry } from "./tools.js";
+import { fetchCapabilities, fetchSolutions, fetchTrustBatch, fetchSolutionTrust, registerStraleTools, type TrustBatchEntry, type SolutionTrustEntry } from "./tools.js";
 
 const STRALE_BASE_URL =
   process.env.STRALE_BASE_URL ??
@@ -38,18 +38,19 @@ async function main() {
   let capabilities: Awaited<ReturnType<typeof fetchCapabilities>> = [];
   let solutions: Awaited<ReturnType<typeof fetchSolutions>> = [];
   let trustData: Map<string, TrustBatchEntry> = new Map();
+  let solutionTrustData: Map<string, SolutionTrustEntry> = new Map();
   try {
     [capabilities, solutions] = await Promise.all([
       fetchCapabilities(STRALE_BASE_URL),
       fetchSolutions(STRALE_BASE_URL),
     ]);
-    // Fetch trust batch after we know the slugs
-    trustData = await fetchTrustBatch(
-      STRALE_BASE_URL,
-      capabilities.map((c) => c.slug),
-    );
+    // Fetch trust data after we know the slugs
+    [trustData, solutionTrustData] = await Promise.all([
+      fetchTrustBatch(STRALE_BASE_URL, capabilities.map((c) => c.slug)),
+      fetchSolutionTrust(STRALE_BASE_URL, solutions.map((s) => s.slug)),
+    ]);
     console.error(
-      `[strale-mcp] Loaded ${capabilities.length} capabilities, ${solutions.length} solutions, ${trustData.size} trust entries from ${STRALE_BASE_URL}`,
+      `[strale-mcp] Loaded ${capabilities.length} capabilities, ${solutions.length} solutions, ${trustData.size} cap trust, ${solutionTrustData.size} sol trust from ${STRALE_BASE_URL}`,
     );
   } catch (err) {
     console.error(
@@ -65,7 +66,7 @@ async function main() {
     baseUrl: STRALE_BASE_URL,
     apiKey: STRALE_API_KEY,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
-  }, trustData);
+  }, trustData, solutionTrustData);
 
   // Connect via stdio
   const transport = new StdioServerTransport();
