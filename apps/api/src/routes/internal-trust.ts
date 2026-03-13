@@ -666,7 +666,19 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
         ...(completeFailures.length > 0 ? { failures: completeFailures } : {}),
         history_30d: history,
       },
-      quality_narrative: generateQualityNarrative(stepData),
+      quality_narrative: completeRun
+        ? generateQualityNarrative([{
+            capability_name: "solution",
+            test_results: {
+              total_tests: allTestTotal,
+              passed: allTestPassed,
+              failed: allTestFailed,
+              pass_rate: completeRun.pass_rate,
+              avg_response_time_ms: completeRun.avg_response_time_ms ?? null,
+              failures: completeFailures.map((f) => ({ failure_category: f.failure_category })),
+            },
+          }])
+        : generateQualityNarrative(stepData),
       limitations: allLimitations,
       steps: stepData,
     },
