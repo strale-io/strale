@@ -105,6 +105,7 @@ getCatalog().then(() => {
 async function handleStatelessRequest(
   req: Request,
   apiKey: string,
+  clientIp: string,
 ): Promise<Response> {
   const server = new McpServer(
     { name: "strale", version: "0.1.0" },
@@ -116,6 +117,7 @@ async function handleStatelessRequest(
   registerStraleTools(server, capabilities, solutions, {
     baseUrl: STRALE_BASE_URL,
     apiKey,
+    clientIp,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
   }, trustData, solutionTrustData);
 
@@ -159,6 +161,14 @@ function extractApiKey(req: Request): string {
   return "";
 }
 
+// ─── Extract client IP for free-tier rate limiting ──────────────────────────
+
+function extractClientIp(req: Request): string {
+  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const realIp = req.headers.get("x-real-ip")?.trim();
+  return forwarded || realIp || "unknown";
+}
+
 // ─── CORS headers ───────────────────────────────────────────────────────────
 
 const CORS_HEADERS: Record<string, string> = {
@@ -197,7 +207,8 @@ mcpRoute.all("/", async (c) => {
 
   if (method === "POST") {
     const apiKey = extractApiKey(req);
-    const response = await handleStatelessRequest(req, apiKey);
+    const clientIp = extractClientIp(req);
+    const response = await handleStatelessRequest(req, apiKey, clientIp);
     return addCorsHeaders(response);
   }
 

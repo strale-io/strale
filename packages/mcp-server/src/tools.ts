@@ -35,6 +35,7 @@ export interface Capability {
   success_rate: string | null;
   sqs_score?: number;
   sqs_label?: string;
+  is_free_tier?: boolean;
 }
 
 export interface JsonSchema {
@@ -73,6 +74,7 @@ export interface StraleClientOptions {
   baseUrl: string;
   apiKey: string;
   maxPriceCents: number;
+  clientIp?: string;
 }
 
 // ─── HTTP helpers ───────────────────────────────────────────────────────────
@@ -99,7 +101,7 @@ export async function straleGet<T>(
 export async function stralePost<T>(
   path: string,
   body: Record<string, unknown>,
-  opts: { baseUrl: string; apiKey: string },
+  opts: { baseUrl: string; apiKey: string; clientIp?: string },
 ): Promise<{ data: T; status: number }> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -107,6 +109,9 @@ export async function stralePost<T>(
   };
   if (opts.apiKey) {
     headers.Authorization = `Bearer ${opts.apiKey}`;
+  }
+  if (opts.clientIp) {
+    headers["X-Forwarded-For"] = opts.clientIp;
   }
 
   const resp = await fetch(`${opts.baseUrl}${path}`, {
@@ -179,25 +184,46 @@ export function buildInputSchema(
   return z.object(shape);
 }
 
+// ─── Free-tier constants ────────────────────────────────────────────────────
+
+const FREE_TIER_SLUGS = [
+  "email-validate",
+  "dns-lookup",
+  "json-repair",
+  "url-to-markdown",
+  "iban-validate",
+];
+
 // ─── Capability execution ───────────────────────────────────────────────────
 
 export async function executeCapability(
   slug: string,
   inputs: Record<string, unknown>,
   opts: StraleClientOptions,
+  capabilities?: Capability[],
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+  // Determine if this is a free-tier capability
+  const cap = capabilities?.find((c) => c.slug === slug);
+  const isFreeTier = cap?.is_free_tier ?? FREE_TIER_SLUGS.includes(slug);
+
   if (!opts.apiKey) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            error:
-              "API key required. For stdio: set STRALE_API_KEY env var. For HTTP: pass Authorization: Bearer sk_live_... header.",
-          }),
-        },
-      ],
-    };
+    if (!isFreeTier) {
+      // Paid capability without API key — self-guiding error
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              error: "Authentication required for paid capabilities.",
+              fix: "Get a free API key at https://strale.dev/signup — includes €2 free credits, no card needed. Then reconnect with Authorization: Bearer sk_live_YOUR_KEY",
+              tip: "Try a free capability first: email-validate, dns-lookup, json-repair, url-to-markdown, or iban-validate — no API key needed.",
+            }),
+          },
+        ],
+      };
+    }
+    // Free-tier capability without API key — allow execution via REST API
+    // The REST API handles IP-based rate limiting (10/day)
   }
 
   const { data, status } = await stralePost<Record<string, unknown>>(
@@ -228,6 +254,23 @@ export async function executeCapability(
     };
   }
 
+  if (status === 429) {
+    // Rate limit — self-guiding error for free-tier
+    const retryAfter = (data as any).retry_after_seconds;
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            error: "Free tier rate limit reached (10 executions/day).",
+            fix: "Sign up at https://strale.dev/signup for unlimited access with €2 free credits.",
+            ...(retryAfter != null ? { retry_after_seconds: retryAfter } : {}),
+          }),
+        },
+      ],
+    };
+  }
+
   if (status >= 400) {
     const errorCode = (data as any).error_code ?? "unknown_error";
     const message = (data as any).message ?? "Unknown error";
@@ -247,6 +290,7 @@ export async function executeCapability(
     return { content: [{ type: "text", text: errorText }] };
   }
 
+  // ── Success ──
   const output = (data as any).output ?? data;
   const meta: Record<string, unknown> = {};
   if ((data as any).price_cents != null)
@@ -256,6 +300,20 @@ export async function executeCapability(
   if ((data as any).wallet_balance_cents != null)
     meta.wallet_balance_cents = (data as any).wallet_balance_cents;
   if ((data as any).provenance) meta.provenance = (data as any).provenance;
+
+  // Free-tier metadata nudge
+  if ((data as any).free_tier) {
+    meta.free_tier = true;
+    meta.upgrade_hint = (data as any).upgrade_hint ??
+      "Sign up at https://strale.dev/signup for 233+ capabilities with €2 free credits.";
+  }
+
+  // Next-steps guidance on every successful execution
+  meta.next_steps = [
+    `Call strale_trust_profile with slug "${slug}" to see its quality score and test results.`,
+    "Call strale_search to find related capabilities.",
+    "Call strale_methodology for how quality is measured.",
+  ];
 
   return {
     content: [
@@ -394,7 +452,7 @@ export function registerStraleTools(
               status: "ok",
               server: "strale-mcp",
               version: "0.1.0",
-              tools_registered: 7,
+              tools_registered: 8,
               capabilities_available: capabilities.length,
               solutions_available: solutions.length,
               timestamp: new Date().toISOString(),
@@ -405,12 +463,44 @@ export function registerStraleTools(
     },
   );
 
-  // Meta-tool: strale_execute (requires API key)
+  // Meta-tool: strale_getting_started (no auth)
+  server.registerTool(
+    "strale_getting_started",
+    {
+      description:
+        "Get started with Strale. Returns onboarding steps, free capabilities you can try immediately without an API key, and how to get full access.",
+      inputSchema: z.object({}),
+    },
+    async () => {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              welcome: "Strale is the trust layer for AI agents. 233+ verified data capabilities with quality scores.",
+              free_capabilities: [
+                { slug: "email-validate", description: "Validate any email address", example_input: { email: "test@example.com" } },
+                { slug: "dns-lookup", description: "DNS records for any domain", example_input: { domain: "example.com" } },
+                { slug: "json-repair", description: "Fix malformed JSON", example_input: { json: '{"name": "test"' } },
+                { slug: "url-to-markdown", description: "Convert any URL to markdown", example_input: { url: "https://example.com" } },
+                { slug: "iban-validate", description: "Validate IBAN numbers", example_input: { iban: "DE89370400440532013000" } },
+              ],
+              try_now: "Call strale_execute with any free capability above — no API key needed (10/day limit).",
+              full_access: "Sign up at https://strale.dev/signup for 233+ capabilities. Free €2 credits, no card needed.",
+              learn_more: "Call strale_methodology for quality scoring details, or strale_search to browse all capabilities.",
+            }, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  // Meta-tool: strale_execute (free-tier works without API key)
   server.registerTool(
     "strale_execute",
     {
       description:
-        "Execute any Strale capability by slug. First use strale_search to find the right capability and its required inputs, then call this tool. Returns the full result including output data, execution cost, latency, and data provenance.",
+        "Execute any Strale capability by slug. Free capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) work without an API key. For paid capabilities, provide an API key via Authorization header. Use strale_search to find capabilities and their required inputs.",
       inputSchema: z.object({
         slug: z
           .string()
@@ -431,10 +521,12 @@ export function registerStraleTools(
       }),
     },
     async ({ slug, inputs, max_price_cents }) => {
-      return executeCapability(slug, inputs as Record<string, unknown>, {
-        ...opts,
-        maxPriceCents: max_price_cents ?? opts.maxPriceCents,
-      });
+      return executeCapability(
+        slug,
+        inputs as Record<string, unknown>,
+        { ...opts, maxPriceCents: max_price_cents ?? opts.maxPriceCents },
+        capabilities,
+      );
     },
   );
 
@@ -550,6 +642,7 @@ export function registerStraleTools(
           description: c.description,
           category: c.category,
           price: `€${(c.price_cents / 100).toFixed(2)}`,
+          free_tier: c.is_free_tier ?? false,
           avg_latency_ms: c.avg_latency_ms,
           input_fields: inputFields,
           sqs_score: sqsScore,
