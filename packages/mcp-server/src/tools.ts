@@ -66,6 +66,7 @@ export interface SolutionTrustEntry {
   badge_label: string | null;
   pass_rate: number | null;
   trust_grade: string | null;
+  success_rate: number | null;
 }
 
 export interface StraleClientOptions {
@@ -348,6 +349,7 @@ export async function fetchSolutionTrust(
           badge_label: data.trust_summary?.badge_label ?? null,
           pass_rate: data.trust_summary?.test_results?.pass_rate ?? null,
           trust_grade: data.trust_grade?.grade ?? null,
+          success_rate: data.trust_summary?.overall?.success_rate ?? null,
         } as SolutionTrustEntry,
       };
     }),
@@ -475,6 +477,10 @@ export function registerStraleTools(
         })
         .map((s) => {
           const solTrust = solutionTrustData?.get(s.slug);
+          const solSqs = solTrust?.sqs_score ?? null;
+          const solSuccessRate = solTrust?.success_rate ?? null;
+          const lowReliability =
+            solSqs !== null && solSqs >= 80 && solSuccessRate !== null && solSuccessRate < 50;
           return {
             type: "solution" as const,
             slug: s.slug,
@@ -485,10 +491,11 @@ export function registerStraleTools(
             geography: s.geography,
             step_count: s.step_count,
             capabilities: s.capabilities,
-            sqs_score: solTrust?.sqs_score ?? null,
+            sqs_score: solSqs,
             sqs_label: solTrust?.sqs_label ?? null,
             trust_grade: solTrust?.trust_grade ?? null,
             badge: solTrust?.badge ?? null,
+            ...(lowReliability ? { reliability_warning: `⚠️ Low reliability: SQS ${solSqs} but success_rate ${solSuccessRate?.toFixed(1)}%` } : {}),
           };
         });
 
@@ -531,6 +538,11 @@ export function registerStraleTools(
           inputFields = parts.join(". ") || "No parameters";
         }
 
+        // Flag reliability divergence: high SQS but low execution success rate
+        const successRate = c.success_rate ? parseFloat(c.success_rate) : null;
+        const lowReliability =
+          sqsScore !== null && sqsScore >= 80 && successRate !== null && successRate < 50;
+
         return {
           type: "capability" as const,
           slug: c.slug,
@@ -544,6 +556,7 @@ export function registerStraleTools(
           sqs_label: trust?.sqs_label ?? c.sqs_label ?? null,
           trust_grade: trustGrade,
           badge,
+          ...(lowReliability ? { reliability_warning: `⚠️ Low reliability: SQS ${sqsScore} but success_rate ${successRate?.toFixed(1)}%` } : {}),
         };
       });
 
@@ -656,9 +669,33 @@ Five-factor weighted score (0-100) per capability:
 Computed from automated test suite results across all active test scenarios.
 
 TRUST GRADES
-  Freshness: A (<24h since last test), B (<72h), C (<7d), D (older)
-  Latency: A (<500ms p95), B (<2s), C (<5s), D (>5s)
-  Combined Trust Grade: Weighted combination of SQS score + freshness + latency
+  Three independent component grades are computed, then combined:
+
+  SQS Grade (from SQS score):
+    A: SQS >= 80 | B: SQS >= 60 | C: SQS >= 40 | D: SQS < 40
+
+  Freshness Grade (data currency):
+    Live-fetch capabilities: always A (data fetched fresh each call)
+    Reference-data capabilities: A (dataset age <= update cycle), B (<= 2x cycle), C (> 2x cycle)
+    Computed capabilities: no freshness grade (not applicable)
+
+  Latency Grade (p95 response time, tiered by complexity):
+    Single capabilities: Fast <1s, Normal 1-5s, Moderate 5-15s, Slow >15s
+    Solutions 2-4 steps: Fast <3s, Normal 3-15s, Moderate 15-30s, Slow >30s
+    Solutions 5+ steps: Fast <5s, Normal 5-30s, Moderate 30-60s, Slow >60s
+    Mapped to trust: Fast=A, Normal=B, Moderate=C, Slow=D
+
+  Combined Trust Grade = worst (lowest) of all available component grades.
+  Null components are ignored (e.g. computed capabilities have no freshness grade).
+  If SQS is still pending (< 5 test runs), no trust grade is assigned.
+
+SOLUTION SQS AGGREGATION
+  Solution SQS is computed from its component capability scores using floor-aware weighted averaging:
+    1. Each capability step's SQS factors (correctness, schema, availability, error handling, edge cases) are aggregated across all steps, weighted by test count per step.
+    2. The composite score is capped at the weakest step's SQS + 20 points. This ensures no solution appears stronger than its weakest link.
+    3. If any step is Unverified/Building/Pending, the entire solution inherits that status.
+    4. With fewer than 5 test runs per capability, the score shows "Building track record" instead of a numeric value.
+  Solution success_rate is multiplicative: if step A = 95% and step B = 90%, solution success_rate ≈ 85.5%.
 
 PROVENANCE TRACKING (per execution)
 Every API response includes:
@@ -684,11 +721,17 @@ METRIC DEFINITIONS
   schema_conformance_rate — Percentage of executions where the output matched the declared JSON schema structure.
   avg_field_completeness_pct — Average percentage of non-null fields in output across executions.
   Note: success_rate and pass_rate measure different things. success_rate is historical execution reliability; pass_rate is current test snapshot. They can diverge significantly, especially for capabilities with intermittent upstream issues.
+  IMPORTANT: A high SQS score with a low success_rate means the test methodology is sound (tests are well-designed and cover the right scenarios) but the external data source is currently unreliable. SQS measures HOW WELL we test; success_rate measures HOW OFTEN executions succeed. When these diverge, a reliability_warning is included in the trust profile. Always check success_rate alongside SQS before relying on a capability in production.
 
 TEST INFRASTRUCTURE
   1,215 active test suites across all capabilities
-  Tiered scheduling: Tier A (critical capabilities) tested most frequently, Tier B moderate, Tier C weekly
-  Test types: schema_check, smoke_test, value_check, edge_case
+  Tiered scheduling: Tier A (critical) every 6 hours, Tier B every 24 hours, Tier C every 72 hours
+  Test types: known_answer, schema_check, dependency_health, negative, edge_case
+    known_answer — Verifies output correctness against known expected values
+    schema_check — Validates output structure matches the declared JSON schema
+    dependency_health — Tests that upstream services and APIs are reachable and responding
+    negative — Confirms proper error handling for invalid, missing, or malformed inputs
+    edge_case — Exercises boundary conditions and unusual input combinations
   Automated failure categorization distinguishes external service issues from Strale bugs
   Weekly health sweep: reclassifies failures, proposes remediations, detects stale test inputs, flags dead URLs
 

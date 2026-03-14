@@ -350,9 +350,20 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
     latencyGrade: performance.latency_grade,
   });
 
+  // Reliability warning: high SQS but low execution success rate
+  const reliabilityWarning =
+    !sqs.pending && sqs.score >= 80 && quality.successRate !== null && quality.successRate < 50
+      ? {
+          message: `Quality score reflects test methodology strength, but historical execution success rate is low (${quality.successRate.toFixed(2)}%). This typically indicates external service instability. Check per-step data for details.`,
+          sqs_score: sqs.score,
+          success_rate: quality.successRate,
+        }
+      : null;
+
   const result = {
     capability_slug: slug,
     capability_data_source: capRow?.dataSource ?? null,
+    ...(reliabilityWarning ? { reliability_warning: reliabilityWarning } : {}),
     trust_summary: {
       badge,
       badge_label,
@@ -636,9 +647,21 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
     latencyGrade: solutionPerformance.latency_grade,
   });
 
+  // Reliability warning: high SQS but low execution success rate
+  const solSuccessRate = solutionQuality?.successRate ?? null;
+  const reliabilityWarning =
+    !sqs.pending && sqs.score >= 80 && solSuccessRate !== null && solSuccessRate < 50
+      ? {
+          message: `Quality score reflects test methodology strength, but historical execution success rate is low (${solSuccessRate.toFixed(2)}%). This typically indicates external service instability. Check per-step data for details.`,
+          sqs_score: sqs.score,
+          success_rate: solSuccessRate,
+        }
+      : null;
+
   const result = {
     solution_slug: slug,
     compliance_coverage: solRow.complianceCoverage ?? [],
+    ...(reliabilityWarning ? { reliability_warning: reliabilityWarning } : {}),
     trust_summary: {
       badge,
       badge_label,
