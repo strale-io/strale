@@ -65,7 +65,9 @@ export const internalTestsRoute = new Hono<AppEnv>();
 
 // POST /v1/internal/tests/run — trigger a test run (admin-only)
 // Query params: ?slug= (capability), ?tier=A|B|C
-internalTestsRoute.post("/run", rateLimitByIp(1, 60_000), async (c) => {
+// No IP rate limit here — ADMIN_SECRET is the sole access control. The secret
+// requirement already prevents abuse; a rate limit would block bulk test runs.
+internalTestsRoute.post("/run", async (c) => {
   // Require ADMIN_SECRET — test runs call external APIs costing real money
   if (!ADMIN_SECRET) {
     return c.json(apiError("unauthorized", "Admin endpoint is not configured."), 503);
