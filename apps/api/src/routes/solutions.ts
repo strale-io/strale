@@ -35,14 +35,62 @@ solutionsRoute.get("/", async (c) => {
     .where(and(...conditions))
     .orderBy(asc(solutions.displayOrder));
 
-  // For each solution, get step count and capability slugs
+  // For each solution, get step slugs + cached dual-profile data from step capabilities
   const result = await Promise.all(
     rows.map(async (row) => {
       const steps = await db
-        .select({ capabilitySlug: solutionSteps.capabilitySlug })
+        .select({
+          capabilitySlug: solutionSteps.capabilitySlug,
+          matrixSqs: capabilities.matrixSqs,
+          qpScore: capabilities.qpScore,
+          rpScore: capabilities.rpScore,
+          guidanceUsable: capabilities.guidanceUsable,
+          guidanceStrategy: capabilities.guidanceStrategy,
+        })
         .from(solutionSteps)
+        .leftJoin(capabilities, eq(solutionSteps.capabilitySlug, capabilities.slug))
         .where(eq(solutionSteps.solutionId, row.id))
         .orderBy(asc(solutionSteps.stepOrder));
+
+      // Solution-level SQS = avg capped at weakest + 20
+      const stepSqs = steps.map((s) => s.matrixSqs ? parseFloat(s.matrixSqs) : 0);
+      const avgSqs = stepSqs.length > 0 ? stepSqs.reduce((a, b) => a + b, 0) / stepSqs.length : 0;
+      const minSqs = stepSqs.length > 0 ? Math.min(...stepSqs) : 0;
+      const sqs = Math.round(Math.min(avgSqs, minSqs + 20) * 10) / 10;
+
+      const gradeOrder = ["A", "B", "C", "D", "F", "pending"];
+      function gradeFromScore(score: string | null): string {
+        const v = score ? parseFloat(score) : null;
+        if (v == null) return "pending";
+        if (v >= 90) return "A";
+        if (v >= 75) return "B";
+        if (v >= 50) return "C";
+        if (v >= 25) return "D";
+        return "F";
+      }
+      function sqsLabel(s: number): string {
+        if (s >= 90) return "Excellent";
+        if (s >= 75) return "Good";
+        if (s >= 50) return "Fair";
+        if (s >= 25) return "Poor";
+        return "Degraded";
+      }
+
+      const worstQuality = steps.reduce((w, s) => {
+        const g = gradeFromScore(s.qpScore);
+        return gradeOrder.indexOf(g) > gradeOrder.indexOf(w) ? g : w;
+      }, "A");
+      const worstReliability = steps.reduce((w, s) => {
+        const g = gradeFromScore(s.rpScore);
+        return gradeOrder.indexOf(g) > gradeOrder.indexOf(w) ? g : w;
+      }, "A");
+
+      const allUsable = steps.every((s) => s.guidanceUsable ?? true);
+      const strategyOrder = ["direct", "retry_with_backoff", "queue_for_later", "unavailable"];
+      const worstStrategy = steps.reduce((w, s) => {
+        const st = s.guidanceStrategy ?? "direct";
+        return strategyOrder.indexOf(st) > strategyOrder.indexOf(w) ? st : w;
+      }, "direct");
 
       return {
         slug: row.slug,
@@ -55,6 +103,13 @@ solutionsRoute.get("/", async (c) => {
         transparencyTag: row.transparencyTag,
         complianceCoverage: row.complianceCoverage ?? [],
         capabilities: steps.map((s) => s.capabilitySlug),
+        sqs,
+        sqs_label: sqsLabel(sqs),
+        quality: worstQuality,
+        reliability: worstReliability,
+        trend: "stable" as const,
+        usable: allUsable,
+        strategy: worstStrategy,
       };
     }),
   );

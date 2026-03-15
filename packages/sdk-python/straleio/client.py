@@ -309,6 +309,11 @@ class Strale:
             price_cents=data["price_cents"],
             input_schema=data.get("input_schema"),
             output_schema=data.get("output_schema"),
-            avg_latency_ms=data.get("avg_latency_ms", 0),
-            success_rate=data.get("success_rate", 0.0),
+            sqs=data.get("sqs", 0),
+            sqs_label=data.get("sqs_label", "Pending"),
+            quality=data.get("quality", "pending"),
+            reliability=data.get("reliability", "pending"),
+            trend=data.get("trend", "stable"),
+            usable=data.get("usable", True),
+            strategy=data.get("strategy", "direct"),
         )

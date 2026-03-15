@@ -5,7 +5,6 @@ import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { getAllHealth } from "../lib/circuit-breaker.js";
-import { computeCapabilitySQS } from "../lib/sqs.js";
 import type { AppEnv } from "../types.js";
 
 // Capabilities are public — no auth required (lets developers browse before signing up)
@@ -23,31 +22,63 @@ capabilitiesRoute.get("/", async (c) => {
       price_cents: capabilities.priceCents,
       input_schema: capabilities.inputSchema,
       output_schema: capabilities.outputSchema,
-      avg_latency_ms: capabilities.avgLatencyMs,
-      success_rate: capabilities.successRate,
       transparency_tag: capabilities.transparencyTag,
       data_source: capabilities.dataSource,
       is_free_tier: capabilities.isFreeTier,
+      // Dual-profile cached columns
+      matrix_sqs: capabilities.matrixSqs,
+      qp_score: capabilities.qpScore,
+      rp_score: capabilities.rpScore,
+      guidance_usable: capabilities.guidanceUsable,
+      guidance_strategy: capabilities.guidanceStrategy,
     })
     .from(capabilities)
     .where(eq(capabilities.isActive, true));
 
-  const sqsResults = await Promise.all(
-    rows.map((r) =>
-      computeCapabilitySQS(r.slug).catch(() => null),
-    ),
-  );
+  function gradeFromScore(score: number | null): string {
+    if (score == null) return "pending";
+    if (score >= 90) return "A";
+    if (score >= 75) return "B";
+    if (score >= 50) return "C";
+    if (score >= 25) return "D";
+    return "F";
+  }
 
-  const capabilitiesWithSqs = rows.map((r, i) => {
-    const sqs = sqsResults[i];
+  function sqsLabel(score: number): string {
+    if (score >= 90) return "Excellent";
+    if (score >= 75) return "Good";
+    if (score >= 50) return "Fair";
+    if (score >= 25) return "Poor";
+    return "Degraded";
+  }
+
+  const capabilitiesWithDualProfile = rows.map((r) => {
+    const sqs = r.matrix_sqs ? parseFloat(r.matrix_sqs) : 0;
+    const qpScore = r.qp_score ? parseFloat(r.qp_score) : null;
+    const rpScore = r.rp_score ? parseFloat(r.rp_score) : null;
+
     return {
-      ...r,
-      sqs_score: sqs ? sqs.score : 0,
-      sqs_label: sqs ? sqs.label : "Pending",
+      slug: r.slug,
+      name: r.name,
+      description: r.description,
+      category: r.category,
+      price_cents: r.price_cents,
+      input_schema: r.input_schema,
+      output_schema: r.output_schema,
+      transparency_tag: r.transparency_tag,
+      data_source: r.data_source,
+      is_free_tier: r.is_free_tier,
+      sqs: sqs,
+      sqs_label: sqsLabel(sqs),
+      quality: gradeFromScore(qpScore),
+      reliability: gradeFromScore(rpScore),
+      trend: "stable" as const, // Cached trend not stored; stable is safe default
+      usable: r.guidance_usable ?? true,
+      strategy: r.guidance_strategy ?? "direct",
     };
   });
 
-  return c.json({ capabilities: capabilitiesWithSqs });
+  return c.json({ capabilities: capabilitiesWithDualProfile });
 });
 
 // GET /v1/capabilities/health — Circuit breaker health status (auth required)
@@ -80,8 +111,6 @@ capabilitiesRoute.get("/:slug", async (c) => {
       price_cents: capabilities.priceCents,
       input_schema: capabilities.inputSchema,
       output_schema: capabilities.outputSchema,
-      avg_latency_ms: capabilities.avgLatencyMs,
-      success_rate: capabilities.successRate,
       transparency_tag: capabilities.transparencyTag,
       data_source: capabilities.dataSource,
       is_free_tier: capabilities.isFreeTier,

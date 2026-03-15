@@ -22,7 +22,7 @@ import {
 import { recordQuality } from "../lib/quality-capture.js";
 import { getTestResultsForSlug } from "../lib/trust-helpers.js";
 import { recordPiggybackResult } from "../lib/piggyback-monitor.js";
-import { computeCapabilitySQS } from "../lib/sqs.js";
+import { computeCapabilitySQS, computeDualProfileSQS } from "../lib/sqs.js";
 import { createHash } from "node:crypto";
 import { getShareableUrl } from "../lib/audit-token.js";
 import { getAiDescription, getDataSourceUrl, detectPersonalData } from "../lib/audit-helpers.js";
@@ -37,6 +37,50 @@ import {
   type TrustGradeInfo,
 } from "../lib/trust-grade.js";
 import type { AppEnv } from "../types.js";
+
+// Dual-profile quality block for /v1/do responses
+interface DualProfileQuality {
+  sqs: number;
+  label: string;
+  quality_profile: string;
+  reliability_profile: string;
+  trend: string;
+}
+
+interface DualProfileGuidance {
+  usable: boolean;
+  strategy: string;
+  confidence_after_strategy: number;
+}
+
+// Dual-profile response helpers
+type DualProfileSQSResult = Awaited<ReturnType<typeof computeDualProfileSQS>>;
+
+function buildDualProfileResponse(dual: DualProfileSQSResult | null, sqs: { score: number; label: string; trend: string; pending: boolean }) {
+  if (!dual) {
+    return {
+      quality: { sqs: sqs.score, label: sqs.label, quality_profile: "pending", reliability_profile: "pending", trend: sqs.trend },
+      execution_guidance: { usable: true, strategy: "direct" as const, confidence_after_strategy: 100 },
+    };
+  }
+  return {
+    quality: {
+      sqs: dual.matrix.score,
+      label: dual.matrix.label,
+      quality_profile: dual.qp.grade,
+      reliability_profile: dual.rp.grade,
+      trend: dual.rp.trend,
+    },
+    execution_guidance: {
+      usable: dual.matrix.score >= 25 && dual.qp.grade !== "F",
+      strategy: dual.rp.grade === "A" || dual.rp.grade === "B" ? "direct" as const
+        : dual.rp.grade === "C" ? "retry_with_backoff" as const
+          : dual.rp.grade === "D" && dual.rp.trend === "improving" ? "queue_for_later" as const
+            : dual.matrix.score < 25 ? "unavailable" as const : "direct" as const,
+      confidence_after_strategy: dual.rp.grade === "A" ? 100 : Math.min(99, Math.round(dual.rp.score)),
+    },
+  };
+}
 
 // Shared capability type for execution functions
 type CapabilityInfo = {
@@ -329,13 +373,15 @@ doRoute.post(
   // ── 5c. SQS quality gate ──────────────────────────────────────────────
   const PLATFORM_FLOOR_SQS = 25;
   const sqs = await computeCapabilitySQS(capability.slug);
+  // Dual-profile: compute for response quality block
+  const dual = await computeDualProfileSQS(capability.slug).catch(() => null);
 
   if (!sqs.pending && sqs.score < PLATFORM_FLOOR_SQS) {
     return c.json(
       apiError(
         "capability_degraded",
         `Capability '${capability.slug}' is currently degraded (SQS ${sqs.score}/100). Execution refused.`,
-        { sqs_score: sqs.score, sqs_label: sqs.label },
+        { sqs: sqs.score, sqs_label: sqs.label },
       ),
       503,
     );
@@ -346,7 +392,7 @@ doRoute.post(
       apiError(
         "below_quality_threshold",
         `Capability '${capability.slug}' SQS (${sqs.score}) is below your threshold (${minSqs}).`,
-        { sqs_score: sqs.score, sqs_label: sqs.label, min_sqs: minSqs },
+        { sqs: sqs.score, sqs_label: sqs.label, min_sqs: minSqs },
       ),
       422,
     );
@@ -396,20 +442,20 @@ doRoute.post(
 
   // Free-tier without auth: lightweight execution (no wallet, no transaction record)
   if (!user && isFreeTier) {
-    return executeFreeTier(c, capability, executor, executionInput, outputSchema, sqs, freshness);
+    return executeFreeTier(c, capability, executor, executionInput, outputSchema, sqs, freshness, dual);
   }
 
   // Free-tier with auth: skip wallet operations but still record transaction
   if (user && isFreeTier) {
-    return executeFreeTierAuthenticated(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs, freshness);
+    return executeFreeTierAuthenticated(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs, freshness, dual);
   }
 
   // Paid execution: sync or async (DEC-22)
   const isAsync = (capability.avgLatencyMs ?? 0) > ASYNC_THRESHOLD_MS;
   if (isAsync) {
-    return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs, freshness);
+    return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs, freshness, dual);
   } else {
-    return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs, freshness);
+    return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs, freshness, dual);
   }
 });
 
@@ -423,6 +469,7 @@ async function executeFreeTier(
   outputSchema: Record<string, unknown>,
   sqs: { score: number; label: string; trend: string; pending: boolean },
   freshness: FreshnessInfo | null,
+  dual: DualProfileSQSResult | null,
 ) {
   const startTime = Date.now();
 
@@ -444,6 +491,7 @@ async function executeFreeTier(
       ).catch(() => {});
     }
 
+    const dualProfile = buildDualProfileResponse(dual, sqs);
     return c.json({
       status: "completed",
       capability_used: capability.slug,
@@ -452,13 +500,7 @@ async function executeFreeTier(
       output: capResult.output,
       provenance: capResult.provenance,
       free_tier: true,
-      quality: {
-        sqs: sqs.score,
-        label: sqs.label,
-        trend: sqs.trend,
-        ...(freshness ? { freshness } : {}),
-        performance: buildPerformanceInfo(null, latencyMs),
-      },
+      ...dualProfile,
       audit: buildFreeTierAudit(capability, latencyMs),
       upgrade_hint: "This capability is free. Sign up for API key access to 233+ capabilities at strale.dev/signup",
     });
@@ -499,6 +541,7 @@ async function executeFreeTierAuthenticated(
   outputSchema: Record<string, unknown>,
   sqs: { score: number; label: string; trend: string; pending: boolean },
   freshness: FreshnessInfo | null,
+  dual: DualProfileSQSResult | null,
 ) {
   const startTime = Date.now();
   const marker = getTransparencyMarker(capability.slug);
@@ -569,6 +612,7 @@ async function executeFreeTierAuthenticated(
       .where(eq(wallets.userId, user.id))
       .limit(1);
 
+    const dualProfile = buildDualProfileResponse(dual, sqs);
     return c.json({
       transaction_id: txnRecord.id,
       status: "completed",
@@ -579,13 +623,7 @@ async function executeFreeTierAuthenticated(
       output: capResult.output,
       provenance: capResult.provenance,
       free_tier: true,
-      quality: {
-        sqs: sqs.score,
-        label: sqs.label,
-        trend: sqs.trend,
-        ...(freshness ? { freshness } : {}),
-        performance: buildPerformanceInfo(null, latencyMs),
-      },
+      ...dualProfile,
       audit,
     });
   } catch (err) {
@@ -645,6 +683,7 @@ async function executeSync(
   outputSchema: Record<string, unknown>,
   sqs: { score: number; label: string; trend: string; pending: boolean },
   freshness: FreshnessInfo | null,
+  dual: DualProfileSQSResult | null,
 ) {
   const startTime = Date.now();
 
@@ -888,22 +927,7 @@ async function executeSync(
     .where(eq(transactions.id, result.transactionId))
     .catch(() => {});
 
-  // Build performance info from quality metrics (best-effort)
-  let perfInfo: PerformanceInfo;
-  try {
-    const qm = await getCapabilityQuality(capability.slug);
-    perfInfo = buildPerformanceInfo(qm.p95ResponseTimeMs, qm.avgResponseTimeMs);
-  } catch {
-    perfInfo = buildPerformanceInfo(null, result.latencyMs);
-  }
-
-  // Compute trust grade
-  const trustGrade = computeTrustGrade({
-    sqsScore: sqs.pending ? null : sqs.score,
-    sqsPending: sqs.pending,
-    freshnessGrade: freshness?.grade ?? null,
-    latencyGrade: perfInfo.latency_grade,
-  });
+  const dualProfile = buildDualProfileResponse(dual, sqs);
 
   return c.json({
     transaction_id: result.transactionId,
@@ -914,16 +938,7 @@ async function executeSync(
     wallet_balance_cents: result.balanceAfter,
     output: result.output,
     provenance: result.provenance,
-    quality_status: qualityStatus,
-    quality_pass_rate: qualityPassRate,
-    quality: {
-      sqs: sqs.pending ? null : sqs.score,
-      label: sqs.label,
-      trend: sqs.trend,
-      ...(freshness ? { freshness } : {}),
-      performance: perfInfo,
-      ...(trustGrade ? { trust_grade: trustGrade } : {}),
-    },
+    ...dualProfile,
     audit,
   });
 }
@@ -951,6 +966,7 @@ async function executeAsync(
   outputSchema: Record<string, unknown>,
   sqs: { score: number; label: string; trend: string; pending: boolean },
   freshness: FreshnessInfo | null,
+  dual: DualProfileSQSResult | null,
 ) {
   // Short DB tx: lock wallet → check balance → debit → create record → commit
   type SetupResult =

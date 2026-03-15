@@ -4,6 +4,8 @@
  * This module is the single source of truth for MCP tool definitions.
  * It is used by both the stdio transport (server.ts) and the
  * Streamable HTTP transport (apps/api/src/routes/mcp.ts).
+ *
+ * Phase 3: Dual-profile model — QP + RP + matrix SQS + execution guidance.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -21,6 +23,14 @@ export interface Solution {
   step_count: number;
   capabilities: string[];
   transparency_tag: string | null;
+  // Dual-profile fields
+  sqs?: number;
+  sqs_label?: string;
+  quality?: string;
+  reliability?: string;
+  trend?: string;
+  usable?: boolean;
+  strategy?: string;
 }
 
 export interface Capability {
@@ -31,11 +41,15 @@ export interface Capability {
   price_cents: number;
   input_schema: JsonSchema | null;
   output_schema: unknown;
-  avg_latency_ms: number | null;
-  success_rate: string | null;
-  sqs_score?: number;
-  sqs_label?: string;
   is_free_tier?: boolean;
+  // Dual-profile fields
+  sqs?: number;
+  sqs_label?: string;
+  quality?: string;
+  reliability?: string;
+  trend?: string;
+  usable?: boolean;
+  strategy?: string;
 }
 
 export interface JsonSchema {
@@ -51,23 +65,26 @@ export interface JsonSchemaProperty {
 }
 
 export interface TrustBatchEntry {
-  passed: number;
-  failed: number;
-  total: number;
-  pass_rate: number | null;
-  sqs_score: number;
+  sqs: number;
   sqs_label: string;
-  trust_grade: string | null;
+  quality: string;
+  reliability: string;
+  trend: string;
+  usable: boolean;
+  strategy: string;
+  badge: string | null;
 }
 
 export interface SolutionTrustEntry {
-  sqs_score: number;
+  sqs: number;
   sqs_label: string;
+  quality: string;
+  reliability: string;
+  trend: string;
+  usable: boolean;
+  strategy: string;
   badge: string | null;
   badge_label: string | null;
-  pass_rate: number | null;
-  trust_grade: string | null;
-  success_rate: number | null;
 }
 
 export interface StraleClientOptions {
@@ -208,7 +225,6 @@ export async function executeCapability(
 
   if (!opts.apiKey) {
     if (!isFreeTier) {
-      // Paid capability without API key — self-guiding error
       return {
         content: [
           {
@@ -222,8 +238,6 @@ export async function executeCapability(
         ],
       };
     }
-    // Free-tier capability without API key — allow execution via REST API
-    // The REST API handles IP-based rate limiting (10/day)
   }
 
   const { data, status } = await stralePost<Record<string, unknown>>(
@@ -255,7 +269,6 @@ export async function executeCapability(
   }
 
   if (status === 429) {
-    // Rate limit — self-guiding error for free-tier
     const retryAfter = (data as any).retry_after_seconds;
     return {
       content: [
@@ -301,6 +314,10 @@ export async function executeCapability(
     meta.wallet_balance_cents = (data as any).wallet_balance_cents;
   if ((data as any).provenance) meta.provenance = (data as any).provenance;
 
+  // Dual-profile quality data
+  if ((data as any).quality) meta.quality = (data as any).quality;
+  if ((data as any).execution_guidance) meta.execution_guidance = (data as any).execution_guidance;
+
   // Free-tier metadata nudge
   if ((data as any).free_tier) {
     meta.free_tier = true;
@@ -310,7 +327,7 @@ export async function executeCapability(
 
   // Next-steps guidance on every successful execution
   meta.next_steps = [
-    `Call strale_trust_profile with slug "${slug}" to see its quality score and test results.`,
+    `Call strale_trust_profile with slug "${slug}" to see its dual-profile quality assessment.`,
     "Call strale_search to find related capabilities.",
     "Call strale_methodology for how quality is measured.",
   ];
@@ -352,6 +369,13 @@ export async function fetchSolutions(baseUrl: string): Promise<Solution[]> {
     step_count: s.stepCount as number,
     capabilities: (s.capabilities as string[]) ?? [],
     transparency_tag: (s.transparencyTag as string) ?? null,
+    sqs: s.sqs as number | undefined,
+    sqs_label: s.sqs_label as string | undefined,
+    quality: s.quality as string | undefined,
+    reliability: s.reliability as string | undefined,
+    trend: s.trend as string | undefined,
+    usable: s.usable as boolean | undefined,
+    strategy: s.strategy as string | undefined,
   }));
 }
 
@@ -386,7 +410,6 @@ export async function fetchSolutionTrust(
   solutionSlugs: string[],
 ): Promise<Map<string, SolutionTrustEntry>> {
   const map = new Map<string, SolutionTrustEntry>();
-  // Fetch all solution trust profiles in parallel (only ~20 solutions, each cached server-side)
   const results = await Promise.allSettled(
     solutionSlugs.map(async (slug) => {
       const resp = await fetch(
@@ -401,13 +424,15 @@ export async function fetchSolutionTrust(
       return {
         slug,
         entry: {
-          sqs_score: data.sqs?.score ?? 0,
+          sqs: data.sqs?.score ?? 0,
           sqs_label: data.sqs?.label ?? "Pending",
-          badge: data.trust_summary?.badge ?? null,
-          badge_label: data.trust_summary?.badge_label ?? null,
-          pass_rate: data.trust_summary?.test_results?.pass_rate ?? null,
-          trust_grade: data.trust_grade?.grade ?? null,
-          success_rate: data.trust_summary?.overall?.success_rate ?? null,
+          quality: data.quality_profile?.grade ?? "pending",
+          reliability: data.reliability_profile?.grade ?? "pending",
+          trend: data.sqs?.trend ?? "stable",
+          usable: data.execution_guidance?.usable ?? true,
+          strategy: data.execution_guidance?.strategy ?? "direct",
+          badge: data.badge ?? null,
+          badge_label: data.badge_label ?? null,
         } as SolutionTrustEntry,
       };
     }),
@@ -477,7 +502,7 @@ export function registerStraleTools(
           {
             type: "text" as const,
             text: JSON.stringify({
-              welcome: "Strale is the trust layer for AI agents. 233+ verified data capabilities with quality scores.",
+              welcome: "Strale is the trust layer for AI agents. 233+ verified data capabilities with dual-profile quality scores.",
               free_capabilities: [
                 { slug: "email-validate", description: "Validate any email address", example_input: { email: "test@example.com" } },
                 { slug: "dns-lookup", description: "DNS records for any domain", example_input: { domain: "example.com" } },
@@ -500,7 +525,7 @@ export function registerStraleTools(
     "strale_execute",
     {
       description:
-        "Execute any Strale capability by slug. Free capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) work without an API key. For paid capabilities, provide an API key via Authorization header. Use strale_search to find capabilities and their required inputs.",
+        "Execute any Strale capability by slug. Returns the full result including output data, execution cost, latency, data provenance, and dual-profile quality assessment (SQS score, Quality grade, Reliability grade, execution guidance with retry strategy). Free capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) work without an API key. For paid capabilities, provide an API key via Authorization header. Use strale_search to find capabilities and their required inputs.",
       inputSchema: z.object({
         slug: z
           .string()
@@ -535,7 +560,7 @@ export function registerStraleTools(
     "strale_search",
     {
       description:
-        "Search Strale's catalog of 233+ capabilities and 20+ solutions across categories: validation, data-extraction, finance, legal, compliance, logistics, recruiting, e-commerce, marketing, developer-tools, competitive-intelligence, and more. Returns matches with name, description, price, category, SQS quality score, trust grade, and required input fields. Examples: search 'company' for company data lookups, 'vat' for tax validation, 'compliance' for regulatory workflows. Use this to discover capabilities, then call strale_execute to run one.",
+        "Search Strale's catalog of 233+ capabilities and 20+ solutions. Returns matches with dual-profile quality scores: SQS (combined confidence score 0-100), Quality grade (code quality A-F), Reliability grade (operational dependability A-F), and execution guidance (usable flag, recommended strategy). Use strale_trust_profile for full quality breakdown and execution guidance details.",
       inputSchema: z.object({
         query: z
           .string()
@@ -569,10 +594,6 @@ export function registerStraleTools(
         })
         .map((s) => {
           const solTrust = solutionTrustData?.get(s.slug);
-          const solSqs = solTrust?.sqs_score ?? null;
-          const solSuccessRate = solTrust?.success_rate ?? null;
-          const lowReliability =
-            solSqs !== null && solSqs >= 80 && solSuccessRate !== null && solSuccessRate < 50;
           return {
             type: "solution" as const,
             slug: s.slug,
@@ -583,11 +604,14 @@ export function registerStraleTools(
             geography: s.geography,
             step_count: s.step_count,
             capabilities: s.capabilities,
-            sqs_score: solSqs,
-            sqs_label: solTrust?.sqs_label ?? null,
-            trust_grade: solTrust?.trust_grade ?? null,
+            sqs: solTrust?.sqs ?? s.sqs ?? 0,
+            sqs_label: solTrust?.sqs_label ?? s.sqs_label ?? "Pending",
+            quality: solTrust?.quality ?? s.quality ?? "pending",
+            reliability: solTrust?.reliability ?? s.reliability ?? "pending",
+            trend: solTrust?.trend ?? s.trend ?? "stable",
+            usable: solTrust?.usable ?? s.usable ?? true,
+            strategy: solTrust?.strategy ?? s.strategy ?? "direct",
             badge: solTrust?.badge ?? null,
-            ...(lowReliability ? { reliability_warning: `⚠️ Low reliability: SQS ${solSqs} but success_rate ${solSuccessRate?.toFixed(1)}%` } : {}),
           };
         });
 
@@ -609,9 +633,7 @@ export function registerStraleTools(
 
       const capResults = matchedCaps.map((c) => {
         const trust = trustData?.get(c.slug);
-        const sqsScore = trust?.sqs_score ?? c.sqs_score ?? null;
-        const trustGrade = trust?.trust_grade ?? null;
-        const badge = trust && trust.total > 0 ? "strale_tested" : null;
+        const badge = trust ? "strale_tested" : null;
 
         // Build input fields summary
         let inputFields = "Accepts: task (string) — describe what you need in natural language";
@@ -630,11 +652,6 @@ export function registerStraleTools(
           inputFields = parts.join(". ") || "No parameters";
         }
 
-        // Flag reliability divergence: high SQS but low execution success rate
-        const successRate = c.success_rate ? parseFloat(c.success_rate) : null;
-        const lowReliability =
-          sqsScore !== null && sqsScore >= 80 && successRate !== null && successRate < 50;
-
         return {
           type: "capability" as const,
           slug: c.slug,
@@ -642,14 +659,15 @@ export function registerStraleTools(
           description: c.description,
           category: c.category,
           price: `€${(c.price_cents / 100).toFixed(2)}`,
-          free_tier: c.is_free_tier ?? false,
-          avg_latency_ms: c.avg_latency_ms,
           input_fields: inputFields,
-          sqs_score: sqsScore,
-          sqs_label: trust?.sqs_label ?? c.sqs_label ?? null,
-          trust_grade: trustGrade,
+          sqs: trust?.sqs ?? c.sqs ?? 0,
+          sqs_label: trust?.sqs_label ?? c.sqs_label ?? "Pending",
+          quality: trust?.quality ?? c.quality ?? "pending",
+          reliability: trust?.reliability ?? c.reliability ?? "pending",
+          trend: trust?.trend ?? c.trend ?? "stable",
+          usable: trust?.usable ?? c.usable ?? true,
+          strategy: trust?.strategy ?? c.strategy ?? "direct",
           badge,
-          ...(lowReliability ? { reliability_warning: `⚠️ Low reliability: SQS ${sqsScore} but success_rate ${successRate?.toFixed(1)}%` } : {}),
         };
       });
 
@@ -671,7 +689,7 @@ export function registerStraleTools(
                 showing: page.length,
                 has_more: skip + page.length < combined.length,
                 results: page,
-                tip: "Use strale_execute to run any capability. Use strale_trust_profile for trust grades and detailed quality data.",
+                tip: "Use strale_execute to run any capability. Use strale_trust_profile for full quality breakdown and execution guidance.",
               },
               null,
               2,
@@ -742,7 +760,7 @@ export function registerStraleTools(
     "strale_methodology",
     {
       description:
-        "Get Strale's quality and trust methodology. Explains the SQS scoring system (5 factors with weights), trust grades, test infrastructure (1,215 test suites), provenance tracking, audit trails, badge system, and honest disclosure of current limitations. Call this to understand how Strale measures and reports quality.",
+        "Get Strale's quality and trust methodology. Explains the dual-profile scoring system: Quality Profile (code quality), Reliability Profile (operational dependability), SQS matrix combination, execution guidance (retry strategies, fallback capabilities, recovery timelines), and test infrastructure. Call this to understand how Strale measures and reports quality.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -752,43 +770,60 @@ export function registerStraleTools(
 WHAT STRALE IS
 Strale is trust and quality infrastructure for AI agents. Agents call capabilities (atomic data operations) and solutions (multi-step workflows) via a unified API. Every execution is independently tested, scored, and auditable.
 
-SQS SCORING (Strale Quality Score)
-Five-factor weighted score (0-100) per capability:
-  Correctness (40%) — Does the output contain accurate, expected data?
-  Schema Conformance (25%) — Does the output match the declared schema?
-  Availability (20%) — Is the capability reliably reachable?
-  Error Handling (10%) — Are errors caught and reported cleanly?
-  Edge Cases (5%) — Does it handle unusual inputs gracefully?
-Computed from automated test suite results across all active test scenarios.
+SQS — STRALE QUALITY SCORE
+The SQS is a combined confidence score (0-100) derived from two independent profiles:
+- Quality Profile (QP): How well-built is Strale's code? (code correctness, schema compliance, error handling, edge cases)
+- Reliability Profile (RP): How dependable is the service right now? (availability, success rate, upstream health, latency)
+The two profiles combine via a published matrix into the headline SQS score.
 
-TRUST GRADES
-  Three independent component grades are computed, then combined:
+QUALITY PROFILE (QP)
+Measures code and methodology quality. Stable over time — only changes when code changes.
+Four factors:
+  Correctness (50%) — Does it return accurate data for known inputs?
+  Schema Compliance (31%) — Does the response match the declared format?
+  Error Handling (13%) — Are errors caught and reported cleanly?
+  Edge Cases (6%) — Does it handle unusual inputs gracefully?
+Upstream service failures are EXCLUDED from the Quality Profile.
+Grade scale: A (>=90), B (>=75), C (>=50), D (>=25), F (<25)
+Label format: "Code quality: [Grade]" (DEC-20260315-J)
 
-  SQS Grade (from SQS score):
-    A: SQS >= 80 | B: SQS >= 60 | C: SQS >= 40 | D: SQS < 40
+RELIABILITY PROFILE (RP)
+Measures operational dependability. Volatile — changes with upstream conditions.
+Factors weighted by capability type:
+  Deterministic (no external deps): correctness 50%, schema 25%, availability 5%, error handling 15%, edge cases 5%
+  Stable API: correctness 35%, schema 20%, availability 25%, error handling 10%, edge cases 10%
+  Scraping: correctness 25%, schema 15%, availability 40%, error handling 10%, edge cases 10%
+  AI-assisted: correctness 40%, schema 20%, availability 15%, error handling 15%, edge cases 10%
+Upstream service failures ARE INCLUDED in the Reliability Profile.
+Grade scale: A (>=90), B (>=75), C (>=50), D (>=25), F (<25)
+Labels: A="Highly reliable", B="Reliable", C="Degraded reliability", D="Unreliable right now", F="Down"
 
-  Freshness Grade (data currency):
-    Live-fetch capabilities: always A (data fetched fresh each call)
-    Reference-data capabilities: A (dataset age <= update cycle), B (<= 2x cycle), C (> 2x cycle)
-    Computed capabilities: no freshness grade (not applicable)
+SQS MATRIX
+Quality Profile grade × Reliability Profile grade → SQS score via published matrix:
+       RP:A   RP:B   RP:C   RP:D   RP:F
+QP A    95     82     65     45     30
+QP B    85     75     58     40     25
+QP C    70     62     50     35     20
+QP D    55     48     38     28     15
+QP F    35     30     22     15     10
+Labels: Excellent (90-100), Good (75-89), Fair (50-74), Poor (25-49), Degraded (0-24)
 
-  Latency Grade (p95 response time, tiered by complexity):
-    Single capabilities: Fast <1s, Normal 1-5s, Moderate 5-15s, Slow >15s
-    Solutions 2-4 steps: Fast <3s, Normal 3-15s, Moderate 15-30s, Slow >30s
-    Solutions 5+ steps: Fast <5s, Normal 5-30s, Moderate 30-60s, Slow >60s
-    Mapped to trust: Fast=A, Normal=B, Moderate=C, Slow=D
+EXECUTION GUIDANCE
+Every capability includes machine-readable execution guidance:
+  usable — Can this be used right now? (true/false). Derived: SQS >= 25 AND strategy != 'unavailable' AND QP grade >= 'C'
+  strategy — How to call it: direct, retry_with_backoff, queue_for_later, or unavailable
+  confidence_after_strategy — Expected success rate if you follow the strategy (0-100)
+  error_handling — Which errors are retryable (upstream timeout, rate limit) vs permanent (invalid input, not found)
+  if_strategy_fails — Fallback capability (if available) with coverage description and verification level
+  recovery — Estimated hours to recovery, next test timestamp, historical outage pattern
+  cost_envelope — Cost of primary call, cost with retries, fallback cost
+Failed calls due to upstream service issues are NOT billed. Only successful executions are charged (DEC-20260315-I).
 
-  Combined Trust Grade = worst (lowest) of all available component grades.
-  Null components are ignored (e.g. computed capabilities have no freshness grade).
-  If SQS is still pending (< 5 test runs), no trust grade is assigned.
-
-SOLUTION SQS AGGREGATION
-  Solution SQS is computed from its component capability scores using floor-aware weighted averaging:
-    1. Each capability step's SQS factors (correctness, schema, availability, error handling, edge cases) are aggregated across all steps, weighted by test count per step.
-    2. The composite score is capped at the weakest step's SQS + 20 points. This ensures no solution appears stronger than its weakest link.
-    3. If any step is Unverified/Building/Pending, the entire solution inherits that status.
-    4. With fewer than 5 test runs per capability, the score shows "Building track record" instead of a numeric value.
-  Solution success_rate is multiplicative: if step A = 95% and step B = 90%, solution success_rate ≈ 85.5%.
+SOLUTION SQS
+Each step's QP and RP are computed independently.
+Solution-level SQS = weighted average of step SQS scores, capped at weakest step + 20 points.
+This ensures no solution appears stronger than its weakest link.
+Solution usable = all steps usable. Solution strategy = worst step strategy.
 
 PROVENANCE TRACKING (per execution)
 Every API response includes:
@@ -807,26 +842,11 @@ Every execution records:
   Unique transaction ID for retrieval and dispute resolution
   Retrieve any past transaction: call strale_transaction with the transaction ID returned from strale_execute.
 
-METRIC DEFINITIONS
-  success_rate — Percentage of all historical executions (test + customer) that returned a valid result without error. Reflects real execution reliability over time. Multiplicative for solutions: if step A is 95% and step B is 90%, solution success_rate is ~85.5%.
-  pass_rate — Percentage of the most recent test run's scenarios that passed. Reflects current test health. Based on latest result per active test suite.
-  sqs_score — Strale Quality Score (0-100). Weighted composite of 5 test-derived factors. See SQS SCORING above.
-  schema_conformance_rate — Percentage of executions where the output matched the declared JSON schema structure.
-  avg_field_completeness_pct — Average percentage of non-null fields in output across executions.
-  Note: success_rate and pass_rate measure different things. success_rate is historical execution reliability; pass_rate is current test snapshot. They can diverge significantly, especially for capabilities with intermittent upstream issues.
-  IMPORTANT: A high SQS score with a low success_rate means the test methodology is sound (tests are well-designed and cover the right scenarios) but the external data source is currently unreliable. SQS measures HOW WELL we test; success_rate measures HOW OFTEN executions succeed. When these diverge, a reliability_warning is included in the trust profile. Always check success_rate alongside SQS before relying on a capability in production.
-
 TEST INFRASTRUCTURE
-  1,215 active test suites across all capabilities
+  1,215 active test suites across all 233 capabilities
   Tiered scheduling: Tier A (critical) every 6 hours, Tier B every 24 hours, Tier C every 72 hours
   Test types: known_answer, schema_check, dependency_health, negative, edge_case
-    known_answer — Verifies output correctness against known expected values
-    schema_check — Validates output structure matches the declared JSON schema
-    dependency_health — Tests that upstream services and APIs are reachable and responding
-    negative — Confirms proper error handling for invalid, missing, or malformed inputs
-    edge_case — Exercises boundary conditions and unusual input combinations
   Automated failure categorization distinguishes external service issues from Strale bugs
-  Weekly health sweep: reclassifies failures, proposes remediations, detects stale test inputs, flags dead URLs
 
 BADGE SYSTEM
   strale_tested — Automated test suite coverage with internal testing data
@@ -838,15 +858,13 @@ CURRENT LIMITATIONS (honest disclosure)
   No SOC 2, ISO 27001, or HIPAA certification
   No contractual SLAs
   All capabilities are currently at "strale_tested" badge level (no customer volume yet)
-  Quality scores reflect controlled test conditions, not production load patterns
-  EU AI Act compliance solution is under development for the August 2026 deadline
+  Quality scoring uses the dual-profile model. Methodology published at https://strale.dev/trust/methodology
 
 ACCESSING TRUST DATA
   Per-capability trust profile: call strale_trust_profile with type "capability" and the slug
   Per-solution trust profile: call strale_trust_profile with type "solution" and the slug
-  Methodology page: https://strale.dev/trust/methodology
-  Trust API: GET https://api.strale.io/v1/internal/trust/capabilities/{slug}
-  Trust API: GET https://api.strale.io/v1/internal/trust/solutions/{slug}`;
+  Search capabilities: call strale_search — results include SQS, Quality grade, Reliability grade, usable flag, and strategy
+  Methodology page: https://strale.dev/trust/methodology`;
 
       return { content: [{ type: "text" as const, text: methodologyText }] };
     },
@@ -857,7 +875,7 @@ ACCESSING TRUST DATA
     "strale_trust_profile",
     {
       description:
-        "Get the full trust and quality profile for any capability or solution. Returns SQS scores (5-factor breakdown), test results with pass rates, failure details and categorization, known limitations, badge status, quality narrative, and test schedule. Use this to verify trust data before relying on a capability.",
+        "Get the full trust and quality profile for any capability or solution. Returns the dual-profile assessment: Quality Profile (code quality factors), Reliability Profile (operational dependability factors), combined SQS score, and execution guidance (retry strategy, fallback capability, recovery timeline, error handling). The Quality Profile measures how well Strale's code works. The Reliability Profile measures how dependable the service is right now. The SQS combines both via a published matrix.",
       inputSchema: z.object({
         slug: z
           .string()

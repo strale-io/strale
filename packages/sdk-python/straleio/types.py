@@ -76,8 +76,13 @@ class Capability:
     price_cents: int
     input_schema: Any
     output_schema: Any
-    avg_latency_ms: int
-    success_rate: float
+    sqs: int
+    sqs_label: str
+    quality: str
+    reliability: str
+    trend: str
+    usable: bool
+    strategy: str
 
 
 @dataclass

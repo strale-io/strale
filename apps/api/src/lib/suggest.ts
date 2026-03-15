@@ -17,13 +17,12 @@ import { computeCapabilitySQS, computeSolutionSQS } from "./sqs.js";
 interface TrustSummary {
   badge: string;
   badge_label: string;
-  success_rate: number | null;
   avg_response_time_ms: number | null;
   tests_passing: number;
   tests_total: number;
   last_tested_at: string | null;
   data_source: "internal_testing" | "blended" | "customer_transactions";
-  sqs_score: number;
+  sqs: number;
   sqs_label: string;
 }
 
@@ -320,13 +319,12 @@ async function loadCatalog(): Promise<CatalogItem[]> {
               item.trustSummary = {
                 badge,
                 badge_label,
-                success_rate: solQuality?.successRate ?? null,
                 avg_response_time_ms: solQuality?.avgResponseTimeMs ?? null,
                 tests_passing: totalPassed,
                 tests_total: totalTests,
                 last_tested_at: lastTestedAt,
                 data_source: totalTxns > 0 ? "internal_testing" : "internal_testing",
-                sqs_score: sqs.score,
+                sqs: sqs.score,
                 sqs_label: sqs.label,
               };
             } else {
@@ -345,13 +343,12 @@ async function loadCatalog(): Promise<CatalogItem[]> {
               item.trustSummary = {
                 badge,
                 badge_label,
-                success_rate: quality.successRate,
                 avg_response_time_ms: quality.avgResponseTimeMs,
                 tests_passing: testData.passed,
                 tests_total: testData.total_tests,
                 last_tested_at: testData.last_run,
                 data_source: testTxns > 0 ? "internal_testing" : "internal_testing",
-                sqs_score: sqs.score,
+                sqs: sqs.score,
                 sqs_label: sqs.label,
               };
             }
@@ -408,7 +405,7 @@ export interface TypeaheadResult {
   category: string;
   price_cents: number | null;
   geography: string | null;
-  sqs_score: number | null;
+  sqs: number | null;
   sqs_label: string | null;
   is_free_tier?: boolean;
   step_count?: number;
@@ -502,7 +499,7 @@ export async function typeahead(
       // DEC-20260304-A: price_cents MUST be null for capabilities
       price_cents: item.type === "solution" ? item.priceCents : null,
       geography: item.geography,
-      sqs_score: item.trustSummary?.sqs_score ?? null,
+      sqs: item.trustSummary?.sqs ?? null,
       sqs_label: item.trustSummary?.sqs_label ?? null,
       is_free_tier: item.isFreeTier || undefined,
     };

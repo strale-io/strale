@@ -4,6 +4,10 @@
  * Trust, quality, and test data is public by design to support
  * Strale's transparency positioning. Anyone can verify capability
  * health without authentication. If this changes, add authMiddleware.
+ *
+ * Phase 3: Dual-profile model — QP + RP + matrix SQS + execution guidance.
+ * Eliminated metrics: trust_grade, reliability_warning, schema_conformance_rate,
+ * avg_field_completeness_pct, standalone success_rate/pass_rate.
  */
 
 import { Hono } from "hono";
@@ -18,18 +22,11 @@ import {
   testSuites,
   testResults,
 } from "../db/schema.js";
-import {
-  getCapabilityQuality,
-  getSolutionQuality,
-} from "../lib/quality-aggregation.js";
-import { determineBadge, getTestResultsForSlug, getLatestCompleteRunForSolution } from "../lib/trust-helpers.js";
-import { computeHealthState } from "../lib/health-state.js";
-import { computeCapabilitySQS, computeSolutionSQS } from "../lib/sqs.js";
-import {
-  computeFreshnessGrade,
-  buildPerformanceInfo,
-  computeTrustGrade,
-} from "../lib/trust-grade.js";
+import { determineBadge, getTestResultsForSlug } from "../lib/trust-helpers.js";
+import { computeDualProfileSQS } from "../lib/sqs.js";
+import { computeExecutionGuidance, type ComputeGuidanceInput, type ExecutionGuidance } from "../lib/execution-guidance.js";
+import { computeFreshnessGrade } from "../lib/trust-grade.js";
+import type { CapabilityType } from "../lib/reliability-profile.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
@@ -60,7 +57,6 @@ async function getLimitationsForSlug(slug: string) {
       text: capabilityLimitations.limitationText,
       category: capabilityLimitations.category,
       severity: capabilityLimitations.severity,
-      affectedPercentage: capabilityLimitations.affectedPercentage,
       workaround: capabilityLimitations.workaround,
     })
     .from(capabilityLimitations)
@@ -77,43 +73,8 @@ async function getLimitationsForSlug(slug: string) {
     text: r.text,
     category: r.category,
     severity: r.severity,
-    affected_percentage: r.affectedPercentage
-      ? parseFloat(r.affectedPercentage)
-      : null,
     workaround: r.workaround,
   }));
-}
-
-// ─── Aggregation helpers for solution-level by_type and failures ────────────
-
-function aggregateByType(
-  stepData: Array<{ test_results: { by_type: Record<string, { total: number; passed: number; failed: number }> } }>,
-): Record<string, { total: number; passed: number; failed: number }> {
-  const merged: Record<string, { total: number; passed: number; failed: number }> = {};
-  for (const step of stepData) {
-    for (const [type, counts] of Object.entries(step.test_results.by_type)) {
-      if (!merged[type]) merged[type] = { total: 0, passed: 0, failed: 0 };
-      merged[type].total += counts.total;
-      merged[type].passed += counts.passed;
-      merged[type].failed += counts.failed;
-    }
-  }
-  return merged;
-}
-
-function aggregateFailures(
-  stepData: Array<{ capability_slug: string; test_results: { failures?: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: string }> } }>,
-): { failures?: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: string; capability_slug: string }> } {
-  // Note: failure_reason values are already sanitized by trust-helpers.ts
-  const all: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: string; capability_slug: string }> = [];
-  for (const step of stepData) {
-    if (step.test_results.failures) {
-      for (const f of step.test_results.failures) {
-        all.push({ ...f, capability_slug: step.capability_slug });
-      }
-    }
-  }
-  return all.length > 0 ? { failures: all } : {};
 }
 
 // ─── Schedule helpers ────────────────────────────────────────────────────────
@@ -124,6 +85,8 @@ const TIER_INTERVAL_MS: Record<string, number> = {
   C: 72 * 60 * 60 * 1000,
 };
 
+const TIER_HOURS: Record<string, number> = { A: 6, B: 24, C: 72 };
+
 function computeNextRun(tier: string, lastRun: string | null): string | null {
   if (!lastRun) return null;
   const interval = TIER_INTERVAL_MS[tier];
@@ -131,11 +94,107 @@ function computeNextRun(tier: string, lastRun: string | null): string | null {
   return new Date(new Date(lastRun).getTime() + interval).toISOString();
 }
 
-// ─── Health state computation ──────────────────────────────────────────────
+function formatPrice(cents: number): string {
+  return `€${(cents / 100).toFixed(2)}`;
+}
+
+// ─── RP label ────────────────────────────────────────────────────────────────
+
+function rpGradeToLabel(grade: string): string {
+  switch (grade) {
+    case "A": return "Highly reliable";
+    case "B": return "Reliable";
+    case "C": return "Degraded reliability";
+    case "D": return "Unreliable right now";
+    case "F": return "Down";
+    default: return "Pending";
+  }
+}
+
+// ─── Execution guidance helper ──────────────────────────────────────────────
+
+async function computeGuidanceForSlug(
+  slug: string,
+  dual: Awaited<ReturnType<typeof computeDualProfileSQS>>,
+  capRow: { capabilityType: string; priceCents: number; dataSource: string | null },
+  lastTestedAt: string | null,
+  testScheduleHours: number,
+): Promise<ExecutionGuidance> {
+  try {
+    const rpAvailRate = dual.rp.factors.availability.has_data
+      ? dual.rp.factors.availability.rate
+      : 100;
+    const hasExtFail = dual.rp.factors.availability.has_data
+      && dual.rp.factors.availability.rate < 90;
+
+    const input: ComputeGuidanceInput = {
+      slug,
+      qpGrade: dual.qp.grade === "pending" ? "F" : dual.qp.grade,
+      rpGrade: dual.rp.grade === "pending" ? "F" : dual.rp.grade,
+      rpScore: dual.rp.score,
+      rpTrend: dual.rp.trend,
+      rpAvailabilityRate: rpAvailRate,
+      matrixSqs: dual.matrix.score,
+      capabilityType: capRow.capabilityType as CapabilityType,
+      testScheduleHours,
+      lastTestedAt,
+      priceCents: capRow.priceCents,
+      dataSource: capRow.dataSource,
+      hasExternalFailures: hasExtFail,
+    };
+
+    return await computeExecutionGuidance(input);
+  } catch {
+    // Safe default — capability assumed healthy
+    return {
+      usable: true,
+      strategy: "direct",
+      confidence_after_strategy: 100,
+      config: {},
+      error_handling: { distinguishable_errors: false, retryable: [], permanent: [] },
+      if_strategy_fails: null,
+      recovery: { estimated_hours: null, next_test: new Date().toISOString(), trend_context: null },
+      cost_envelope: { primary_price_cents: capRow.priceCents, worst_case_with_retries_cents: capRow.priceCents, fallback_price_cents: null },
+      circuit_breaker: false,
+      context: "Guidance computation unavailable. Defaulting to direct execution.",
+    };
+  }
+}
+
+// ─── Format execution guidance for API response ────────────────────────────
+
+function formatGuidanceForResponse(g: ExecutionGuidance): Record<string, unknown> {
+  return {
+    usable: g.usable,
+    strategy: g.strategy,
+    confidence_after_strategy: g.confidence_after_strategy,
+    config: g.config,
+    error_handling: g.error_handling,
+    if_strategy_fails: g.if_strategy_fails ? {
+      fallback_capability: g.if_strategy_fails.fallback_capability,
+      fallback_coverage: g.if_strategy_fails.fallback_coverage,
+      fallback_sqs: g.if_strategy_fails.fallback_sqs,
+      fallback_price: g.if_strategy_fails.fallback_price_cents != null
+        ? formatPrice(g.if_strategy_fails.fallback_price_cents)
+        : null,
+      fallback_verification_level: g.if_strategy_fails.fallback_verification_level,
+      trigger: g.if_strategy_fails.trigger,
+    } : null,
+    recovery: g.recovery,
+    cost_envelope: {
+      primary_price: formatPrice(g.cost_envelope.primary_price_cents),
+      worst_case_with_retries: formatPrice(g.cost_envelope.worst_case_with_retries_cents),
+      fallback_price: g.cost_envelope.fallback_price_cents != null
+        ? formatPrice(g.cost_envelope.fallback_price_cents)
+        : null,
+    },
+    circuit_breaker: g.circuit_breaker,
+    context: g.context,
+  };
+}
 
 // ─── GET /v1/internal/trust/capabilities/batch ───────────────────────────────
-// Returns pass rates for multiple capabilities in a single query.
-// Usage: GET /v1/internal/trust/capabilities/batch?slugs=slug1,slug2,slug3
+// Returns dual-profile data for multiple capabilities in a single query.
 
 internalTrustRoute.get("/capabilities/batch", async (c) => {
   const slugsParam = c.req.query("slugs") ?? "";
@@ -145,114 +204,69 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
     return c.json(apiError("invalid_request", "slugs query parameter is required"), 400);
   }
 
-  const cacheKey = `trust:batch:${slugs.sort().join(",")}`;
+  const cacheKey = `trust:batch:v2:${slugs.sort().join(",")}`;
   const cached = getCached(cacheKey);
   if (cached) return c.json(cached);
 
-  // Cap at 100 slugs per request
   const limitedSlugs = slugs.slice(0, 100);
 
+  // Compute dual-profile SQS for all slugs
+  const dualResults = await Promise.all(
+    limitedSlugs.map((s) => computeDualProfileSQS(s).catch(() => null)),
+  );
+
+  const trustMap: Record<string, {
+    sqs: number;
+    sqs_label: string;
+    quality: string;
+    reliability: string;
+    trend: string;
+    usable: boolean;
+    strategy: string;
+    badge: string | null;
+  }> = {};
+
+  // Get cached guidance from DB for fast batch responses
   const db = getDb();
-
-  // Get the latest test result per test suite, grouped by capability
-  // This mirrors how getTestResultsForSlug works but for multiple slugs at once
-  const rows = await db.execute(sql`
-    WITH latest_results AS (
-      SELECT DISTINCT ON (tr.test_suite_id)
-        tr.capability_slug,
-        tr.passed
-      FROM test_results tr
-      INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
-      WHERE tr.capability_slug IN (${sql.join(limitedSlugs.map((s) => sql`${s}`), sql`, `)})
-        AND ts.active = true
-      ORDER BY tr.test_suite_id, tr.executed_at DESC
-    )
-    SELECT
-      capability_slug,
-      COUNT(*) FILTER (WHERE passed = true)::text AS passed,
-      COUNT(*) FILTER (WHERE passed = false)::text AS failed,
-      COUNT(*)::text AS total
-    FROM latest_results
-    GROUP BY capability_slug
-  `);
-
-  const resultRows = Array.isArray(rows) ? rows : (rows as any)?.rows ?? [];
-
-  const trustMap: Record<string, { passed: number; failed: number; total: number; pass_rate: number | null; sqs_score: number; sqs_label: string; trust_grade: string | null }> = {};
-
-  // Compute SQS + quality per capability in parallel (all individually cached)
-  const [sqsResults, qualityResults, capRows] = await Promise.all([
-    Promise.all(limitedSlugs.map((s) => computeCapabilitySQS(s))),
-    Promise.all(limitedSlugs.map((s) => getCapabilityQuality(s))),
-    db.select({
+  const capRows = await db
+    .select({
       slug: capabilities.slug,
-      freshnessCategory: capabilities.freshnessCategory,
-      dataUpdateCycleDays: capabilities.dataUpdateCycleDays,
-      datasetLastUpdated: capabilities.datasetLastUpdated,
+      guidanceUsable: capabilities.guidanceUsable,
+      guidanceStrategy: capabilities.guidanceStrategy,
     })
-      .from(capabilities)
-      .where(inArray(capabilities.slug, limitedSlugs)),
-  ]);
-  const sqsMap = new Map(limitedSlugs.map((s, i) => [s, sqsResults[i]]));
-  const qualityMap = new Map(limitedSlugs.map((s, i) => [s, qualityResults[i]]));
-  const freshnessMap = new Map(capRows.map((r) => [r.slug, r]));
+    .from(capabilities)
+    .where(inArray(capabilities.slug, limitedSlugs));
+  const guidanceMap = new Map(capRows.map((r) => [r.slug, r]));
 
-  function computeTrustGradeForSlug(slug: string): string | null {
-    const sqs = sqsMap.get(slug);
-    if (!sqs || sqs.pending) return null;
-    const quality = qualityMap.get(slug);
-    const capData = freshnessMap.get(slug);
-    const freshness = capData ? computeFreshnessGrade({
-      freshnessCategory: capData.freshnessCategory,
-      dataUpdateCycleDays: capData.dataUpdateCycleDays,
-      datasetLastUpdated: capData.datasetLastUpdated,
-    }) : null;
-    const performance = buildPerformanceInfo(
-      quality?.p95ResponseTimeMs ?? null,
-      quality?.avgResponseTimeMs ?? null,
-    );
-    const tg = computeTrustGrade({
-      sqsScore: sqs.score,
-      sqsPending: false,
-      freshnessGrade: freshness?.grade ?? null,
-      latencyGrade: performance.latency_grade,
-    });
-    return tg?.grade ?? null;
-  }
+  for (let i = 0; i < limitedSlugs.length; i++) {
+    const slug = limitedSlugs[i];
+    const dual = dualResults[i];
+    const cached = guidanceMap.get(slug);
 
-  for (const r of resultRows as any[]) {
-    const passed = Number(r.passed);
-    const failed = Number(r.failed);
-    const total = Number(r.total);
-    const withResults = passed + failed;
-    const sqs = sqsMap.get(r.capability_slug);
-    trustMap[r.capability_slug] = {
-      passed,
-      failed,
-      total,
-      pass_rate: withResults > 0
-        ? parseFloat(((passed / withResults) * 100).toFixed(1))
-        : null,
-      sqs_score: sqs?.score ?? 0,
-      sqs_label: sqs?.label ?? "Pending",
-      trust_grade: computeTrustGradeForSlug(r.capability_slug),
-    };
-  }
-
-  // Add entries for slugs that have no test results but do have SQS
-  for (const s of limitedSlugs) {
-    if (!trustMap[s]) {
-      const sqs = sqsMap.get(s);
-      trustMap[s] = {
-        passed: 0,
-        failed: 0,
-        total: 0,
-        pass_rate: null,
-        sqs_score: sqs?.score ?? 0,
-        sqs_label: sqs?.label ?? "Pending",
-        trust_grade: computeTrustGradeForSlug(s),
+    if (!dual) {
+      trustMap[slug] = {
+        sqs: 0,
+        sqs_label: "Pending",
+        quality: "pending",
+        reliability: "pending",
+        trend: "stable",
+        usable: cached?.guidanceUsable ?? true,
+        strategy: cached?.guidanceStrategy ?? "direct",
+        badge: null,
       };
+      continue;
     }
+
+    trustMap[slug] = {
+      sqs: dual.matrix.score,
+      sqs_label: dual.matrix.label,
+      quality: dual.qp.grade,
+      reliability: dual.rp.grade,
+      trend: dual.rp.trend,
+      usable: cached?.guidanceUsable ?? (dual.matrix.score >= 25),
+      strategy: cached?.guidanceStrategy ?? "direct",
+      badge: dual.matrix.pending ? null : "strale_tested",
+    };
   }
 
   setCache(cacheKey, trustMap);
@@ -263,14 +277,27 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
 
 internalTrustRoute.get("/capabilities/:slug", async (c) => {
   const slug = c.req.param("slug");
-  const cacheKey = `trust:cap:${slug}`;
+  const cacheKey = `trust:cap:v2:${slug}`;
   const cached = getCached(cacheKey);
   if (cached) return c.json(cached);
 
   const db = getDb();
 
-  const [quality, testResultsData, limitations, suiteRows] = await Promise.all([
-    getCapabilityQuality(slug),
+  // Parallel data fetch
+  const [capRow, testResultsData, limitations, suiteRows] = await Promise.all([
+    db.select({
+      name: capabilities.name,
+      dataSource: capabilities.dataSource,
+      priceCents: capabilities.priceCents,
+      capabilityType: capabilities.capabilityType,
+      freshnessCategory: capabilities.freshnessCategory,
+      dataUpdateCycleDays: capabilities.dataUpdateCycleDays,
+      datasetLastUpdated: capabilities.datasetLastUpdated,
+    })
+      .from(capabilities)
+      .where(eq(capabilities.slug, slug))
+      .limit(1)
+      .then((r) => r[0]),
     getTestResultsForSlug(slug),
     getLimitationsForSlug(slug),
     db.select({ scheduleTier: testSuites.scheduleTier })
@@ -279,118 +306,78 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
       .limit(1),
   ]);
 
+  if (!capRow) {
+    return c.json(apiError("not_found", `Capability '${slug}' not found.`), 404);
+  }
+
   const scheduleTier = suiteRows[0]?.scheduleTier ?? "B";
-  const TIER_HOURS: Record<string, number> = { A: 6, B: 24, C: 72 };
   const scheduleFrequencyHours = TIER_HOURS[scheduleTier] ?? 24;
-  const nextScheduledRun = computeNextRun(scheduleTier, testResultsData.last_run);
 
-  const customerTxns = Math.max(
-    0,
-    quality.totalTransactionsAll - (testResultsData.total_tests > 0 ? quality.totalTransactionsAll : 0),
-  );
-  // For now, all transactions are test transactions since no customer traffic yet
-  const testTxns = quality.totalTransactionsAll;
+  // Compute dual-profile SQS
+  const dual = await computeDualProfileSQS(slug);
 
-  const { badge, badge_label } = determineBadge(
-    testTxns,
-    0, // No customer transactions tracking yet
-    quality.successRate,
+  // Compute execution guidance
+  const guidance = await computeGuidanceForSlug(
+    slug, dual, capRow,
+    testResultsData.last_run,
+    scheduleFrequencyHours,
   );
 
-  const dataSource =
-    testTxns > 0 && customerTxns > 0
-      ? "blended"
-      : testTxns > 0
-        ? "internal_testing"
-        : "none";
+  // Badge
+  const testTxns = testResultsData.total_tests;
+  const { badge, badge_label } = determineBadge(testTxns, 0, null);
 
-  // Look up capability name, data source, and freshness fields
-  const [capRow] = await db.select({
-    name: capabilities.name,
-    dataSource: capabilities.dataSource,
-    freshnessCategory: capabilities.freshnessCategory,
-    dataUpdateCycleDays: capabilities.dataUpdateCycleDays,
-    datasetLastUpdated: capabilities.datasetLastUpdated,
-  })
-    .from(capabilities)
-    .where(eq(capabilities.slug, slug))
-    .limit(1);
-  const capName = capRow?.name ?? slug;
-
-  const narrative = generateQualityNarrative([{
-    capability_name: capName,
-    test_results: {
-      total_tests: testResultsData.total_tests,
-      passed: testResultsData.passed,
-      failed: testResultsData.failed,
-      pass_rate: testResultsData.pass_rate,
-      avg_response_time_ms: testResultsData.avg_response_time_ms,
-      failures: testResultsData.failures,
-    },
-  }]);
-
-  const healthState = computeHealthState(testResultsData.history_30d);
-  const sqs = await computeCapabilitySQS(slug);
-
-  const freshness = capRow ? computeFreshnessGrade({
+  // Freshness
+  const freshness = computeFreshnessGrade({
     freshnessCategory: capRow.freshnessCategory,
     dataUpdateCycleDays: capRow.dataUpdateCycleDays,
     datasetLastUpdated: capRow.datasetLastUpdated,
-  }) : null;
-
-  const performance = buildPerformanceInfo(
-    quality.p95ResponseTimeMs,
-    quality.avgResponseTimeMs,
-  );
-
-  const trustGrade = computeTrustGrade({
-    sqsScore: sqs.pending ? null : sqs.score,
-    sqsPending: sqs.pending,
-    freshnessGrade: freshness?.grade ?? null,
-    latencyGrade: performance.latency_grade,
   });
-
-  // Reliability warning: high SQS but low execution success rate
-  const reliabilityWarning =
-    !sqs.pending && sqs.score >= 80 && quality.successRate !== null && quality.successRate < 50
-      ? {
-          message: `Quality score reflects test methodology strength, but historical execution success rate is low (${quality.successRate.toFixed(2)}%). This typically indicates external service instability. Check per-step data for details.`,
-          sqs_score: sqs.score,
-          success_rate: quality.successRate,
-        }
-      : null;
 
   const result = {
     capability_slug: slug,
-    capability_data_source: capRow?.dataSource ?? null,
-    ...(reliabilityWarning ? { reliability_warning: reliabilityWarning } : {}),
-    trust_summary: {
-      badge,
-      badge_label,
-      health_state: healthState,
-      overall: {
-        success_rate: quality.successRate,
-        avg_response_time_ms: quality.avgResponseTimeMs,
-        p95_response_time_ms: quality.p95ResponseTimeMs,
-        schema_conformance_rate: quality.schemaConformanceRate,
-        avg_field_completeness_pct: quality.avgFieldCompletenessPct,
-        total_transactions: quality.totalTransactionsAll,
-        customer_transactions: 0,
-        test_transactions: testTxns,
-        data_source: dataSource,
-      },
-      test_results: {
-        ...testResultsData,
-        next_scheduled_run: nextScheduledRun,
-        schedule_frequency_hours: scheduleFrequencyHours,
-      },
-      quality_narrative: narrative,
-      limitations,
+    data_source: capRow.dataSource ?? null,
+
+    sqs: {
+      score: dual.matrix.score,
+      label: dual.matrix.label,
+      trend: dual.rp.trend,
     },
-    sqs,
-    ...(freshness ? { freshness } : {}),
-    performance,
-    ...(trustGrade ? { trust_grade: trustGrade } : {}),
+
+    quality_profile: {
+      grade: dual.qp.grade,
+      score: dual.qp.score,
+      label: dual.qp.label,
+      factors: {
+        correctness: { score: dual.qp.factors.correctness.rate, passed: dual.qp.factors.correctness.passed, total: dual.qp.factors.correctness.total, weight: dual.qp.factors.correctness.weight },
+        schema: { score: dual.qp.factors.schema.rate, passed: dual.qp.factors.schema.passed, total: dual.qp.factors.schema.total, weight: dual.qp.factors.schema.weight },
+        error_handling: { score: dual.qp.factors.error_handling.rate, passed: dual.qp.factors.error_handling.passed, total: dual.qp.factors.error_handling.total, weight: dual.qp.factors.error_handling.weight },
+        edge_cases: { score: dual.qp.factors.edge_cases.rate, passed: dual.qp.factors.edge_cases.passed, total: dual.qp.factors.edge_cases.total, weight: dual.qp.factors.edge_cases.weight },
+      },
+    },
+
+    reliability_profile: {
+      grade: dual.rp.grade,
+      score: dual.rp.score,
+      label: rpGradeToLabel(dual.rp.grade),
+      factors: {
+        current_availability: { score: dual.rp.factors.availability.rate, detail: `${dual.rp.factors.availability.passed}/${dual.rp.factors.availability.total} passed`, weight: dual.rp.factors.availability.weight },
+        rolling_success: { score: dual.rp.factors.correctness.rate, detail: `${dual.rp.factors.correctness.passed}/${dual.rp.factors.correctness.total} passed`, weight: dual.rp.factors.correctness.weight },
+        upstream_health: { score: dual.rp.factors.schema.rate, detail: `${dual.rp.factors.schema.passed}/${dual.rp.factors.schema.total} passed`, weight: dual.rp.factors.schema.weight },
+        latency: { score: dual.rp.factors.edge_cases.rate, detail: `${dual.rp.factors.edge_cases.passed}/${dual.rp.factors.edge_cases.total} passed`, weight: dual.rp.factors.edge_cases.weight },
+      },
+    },
+
+    execution_guidance: formatGuidanceForResponse(guidance),
+
+    freshness: freshness?.label ?? null,
+    last_tested: testResultsData.last_run,
+    test_schedule: `every ${scheduleFrequencyHours}h`,
+    badge,
+    badge_label,
+
+    limitations,
+
     methodology_url: "https://strale.dev/trust/methodology",
   };
 
@@ -398,88 +385,16 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
   return c.json(result);
 });
 
-// ─── Quality narrative ─────────────────────────────────────────────────────
-
-function generateQualityNarrative(stepData: Array<{
-  capability_name: string;
-  test_results: {
-    total_tests: number;
-    passed: number;
-    failed: number;
-    pass_rate: number | null;
-    avg_response_time_ms: number | null;
-    failures?: Array<{ failure_category: string }>;
-  };
-}>): string {
-  const totalTests = stepData.reduce((s, d) => s + d.test_results.total_tests, 0);
-  const totalPassed = stepData.reduce((s, d) => s + d.test_results.passed, 0);
-  const totalFailed = stepData.reduce((s, d) => s + d.test_results.failed, 0);
-
-  const entity = stepData.length === 1 ? "capability" : "solution";
-
-  if (totalTests === 0) {
-    return `No test data available yet for this ${entity}.`;
-  }
-
-  const withResults = totalPassed + totalFailed;
-  const passRate = withResults > 0
-    ? parseFloat(((totalPassed / withResults) * 100).toFixed(1))
-    : null;
-
-  if (passRate === null) {
-    return `No test data available yet for this ${entity}.`;
-  }
-
-  // Categorize failures
-  const allFailures = stepData.flatMap(
-    (d) => d.test_results.failures ?? [],
-  );
-  const externalCount = allFailures.filter((f) => f.failure_category === "external_service").length;
-  const internalCount = allFailures.filter((f) => f.failure_category === "internal").length;
-  const allExternal = totalFailed > 0 && internalCount === 0 && externalCount > 0;
-
-  // Find capabilities with failures
-  const failingSteps = stepData.filter(
-    (d) => (d.test_results.failures?.length ?? 0) > 0,
-  );
-
-  const pendingSuffix = totalTests > withResults
-    ? ` (${totalTests - withResults} suites awaiting first results.)`
-    : "";
-
-  if (passRate === 100) {
-    return `All ${withResults} tests passing.${pendingSuffix}`;
-  }
-
-  const plural = totalFailed > 1 ? "s" : "";
-
-  if (passRate >= 90 && allExternal) {
-    const names = failingSteps.map((d) => d.capability_name).join(", ");
-    return `${totalPassed} of ${withResults} tests passing. ${totalFailed} external service issue${plural} in ${names} — third-party timeout or rate limit, not Strale code.${pendingSuffix}`;
-  }
-
-  if (passRate >= 90) {
-    return `${totalPassed} of ${withResults} tests passing. ${totalFailed} test${plural} failing — review details.${pendingSuffix}`;
-  }
-
-  if (passRate >= 70) {
-    return `${totalPassed} of ${withResults} tests passing. Some capabilities experiencing issues — review details before production use.${pendingSuffix}`;
-  }
-
-  return `${totalPassed} of ${withResults} tests passing. Significant failures detected — check the detail page for known issues.${pendingSuffix}`;
-}
-
 // ─── GET /v1/internal/trust/solutions/:slug ─────────────────────────────────
 
 internalTrustRoute.get("/solutions/:slug", async (c) => {
   const slug = c.req.param("slug");
-  const cacheKey = `trust:sol:${slug}`;
+  const cacheKey = `trust:sol:v2:${slug}`;
   const cached = getCached(cacheKey);
   if (cached) return c.json(cached);
 
   const db = getDb();
 
-  // Look up solution row for complianceCoverage
   const [solRow] = await db
     .select({ id: solutions.id, complianceCoverage: solutions.complianceCoverage })
     .from(solutions)
@@ -487,20 +402,18 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
     .limit(1);
 
   if (!solRow) {
-    return c.json(
-      apiError("not_found", `Solution '${slug}' not found.`),
-      404,
-    );
+    return c.json(apiError("not_found", `Solution '${slug}' not found.`), 404);
   }
 
-  // Look up solution steps with capability names
+  // Look up steps
   const steps = await db
     .select({
       capabilitySlug: solutionSteps.capabilitySlug,
       stepOrder: solutionSteps.stepOrder,
-      parallelGroup: solutionSteps.parallelGroup,
       capabilityName: capabilities.name,
       dataSource: capabilities.dataSource,
+      priceCents: capabilities.priceCents,
+      capabilityType: capabilities.capabilityType,
     })
     .from(solutionSteps)
     .leftJoin(capabilities, eq(solutionSteps.capabilitySlug, capabilities.slug))
@@ -508,22 +421,15 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
     .orderBy(asc(solutionSteps.stepOrder));
 
   if (steps.length === 0) {
-    return c.json(
-      apiError("not_found", `Solution '${slug}' has no steps.`),
-      404,
-    );
+    return c.json(apiError("not_found", `Solution '${slug}' has no steps.`), 404);
   }
 
-  // Get solution-level quality
-  const solutionQuality = await getSolutionQuality(slug);
-
-  // Build per-step data in parallel
+  // Per-step dual-profile data
   const stepData = await Promise.all(
     steps.map(async (step) => {
-      const [quality, testResultsData, limitations, suiteRows] = await Promise.all([
-        getCapabilityQuality(step.capabilitySlug),
+      const [dual, testResultsData, suiteRows] = await Promise.all([
+        computeDualProfileSQS(step.capabilitySlug),
         getTestResultsForSlug(step.capabilitySlug),
-        getLimitationsForSlug(step.capabilitySlug),
         db.select({ scheduleTier: testSuites.scheduleTier })
           .from(testSuites)
           .where(and(eq(testSuites.capabilitySlug, step.capabilitySlug), eq(testSuites.active, true)))
@@ -531,183 +437,112 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       ]);
 
       const scheduleTier = suiteRows[0]?.scheduleTier ?? "B";
-      const nextScheduledRun = computeNextRun(scheduleTier, testResultsData.last_run);
+      const scheduleFrequencyHours = TIER_HOURS[scheduleTier] ?? 24;
+
+      const guidance = await computeGuidanceForSlug(
+        step.capabilitySlug, dual,
+        { capabilityType: step.capabilityType ?? "stable_api", priceCents: step.priceCents ?? 0, dataSource: step.dataSource },
+        testResultsData.last_run,
+        scheduleFrequencyHours,
+      );
 
       return {
-        capability_slug: step.capabilitySlug,
-        capability_name: step.capabilityName ?? step.capabilitySlug,
-        data_source: step.dataSource ?? null,
-        step_order: step.stepOrder,
-        parallel_group: step.parallelGroup,
-        schedule_tier: scheduleTier,
-        quality: {
-          success_rate: quality.successRate,
-          avg_response_time_ms: quality.avgResponseTimeMs,
-          p95_response_time_ms: quality.p95ResponseTimeMs,
-          schema_conformance_rate: quality.schemaConformanceRate,
-          avg_field_completeness_pct: quality.avgFieldCompletenessPct,
-          total_transactions_30d: quality.totalTransactions30d,
-          total_transactions_all: quality.totalTransactionsAll,
-        },
-        test_results: {
-          last_run: testResultsData.last_run,
-          next_scheduled_run: nextScheduledRun,
-          total_tests: testResultsData.total_tests,
-          passed: testResultsData.passed,
-          failed: testResultsData.failed,
-          pass_rate: testResultsData.pass_rate,
-          avg_response_time_ms: testResultsData.avg_response_time_ms,
-          by_type: testResultsData.by_type,
-          ...(testResultsData.failures ? { failures: testResultsData.failures } : {}),
-        },
-        limitations,
+        capability: step.capabilitySlug,
+        sqs: dual.matrix.score,
+        quality: dual.qp.grade,
+        reliability: dual.rp.grade,
+        trend: dual.rp.trend,
+        usable: guidance.usable,
+        strategy: guidance.strategy,
       };
     }),
   );
 
-  // Get the most recent COMPLETE run (all steps tested) for solution-level metrics
-  const capSlugs = steps.map((s) => s.capabilitySlug);
-  const completeRun = await getLatestCompleteRunForSolution(capSlugs, steps.length);
+  // Solution-level: use weakest step approach
+  const stepSqsValues = stepData.map((s) => s.sqs);
+  const worstQuality = stepData.reduce((w, s) => {
+    const order = ["A", "B", "C", "D", "F", "pending"];
+    return order.indexOf(s.quality) > order.indexOf(w) ? s.quality : w;
+  }, "A");
+  const worstReliability = stepData.reduce((w, s) => {
+    const order = ["A", "B", "C", "D", "F", "pending"];
+    return order.indexOf(s.reliability) > order.indexOf(w) ? s.reliability : w;
+  }, "A");
 
-  // Use complete-run data for solution-level test_results (matches /runs endpoint)
-  const allTestPassed = completeRun?.passed ?? 0;
-  const allTestFailed = completeRun?.failed ?? 0;
-  const allTestTotal = completeRun?.total_tests ?? 0;
-  const lastTestRun = completeRun?.last_run ?? null;
+  // Solution SQS = average, capped at weakest + 20
+  const avgSqs = stepSqsValues.reduce((a, b) => a + b, 0) / stepSqsValues.length;
+  const minSqs = Math.min(...stepSqsValues);
+  const solutionSqs = Math.round(Math.min(avgSqs, minSqs + 20) * 10) / 10;
 
-  // Solution next_scheduled_run = earliest across all steps
-  const nextRuns = stepData
-    .map((d) => d.test_results.next_scheduled_run)
-    .filter((t): t is string => t !== null)
-    .sort();
-  const nextScheduledRun = nextRuns[0] ?? null;
+  function sqsLabel(s: number): string {
+    if (s >= 90) return "Excellent";
+    if (s >= 75) return "Good";
+    if (s >= 50) return "Fair";
+    if (s >= 25) return "Poor";
+    return "Degraded";
+  }
 
-  // Effective schedule frequency = most frequent tier across steps
-  const TIER_HOURS: Record<string, number> = { A: 6, B: 24, C: 72 };
-  const tierHours = stepData.map((d) => TIER_HOURS[d.schedule_tier] ?? 24);
-  const scheduleFrequencyHours = tierHours.length > 0 ? Math.min(...tierHours) : null;
+  // Solution trend: majority of step trends
+  const trendCounts = { improving: 0, declining: 0, stable: 0 };
+  for (const s of stepData) trendCounts[s.trend]++;
+  const solutionTrend =
+    trendCounts.declining > trendCounts.improving ? "declining"
+      : trendCounts.improving > trendCounts.declining ? "improving"
+        : "stable";
 
-  // Aggregate 30-day history across all step capabilities
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const historyRows = await db.execute(sql`
-    WITH latest_per_suite_per_day AS (
-      SELECT DISTINCT ON (tr.test_suite_id, DATE(tr.executed_at AT TIME ZONE 'UTC'))
-        DATE(tr.executed_at AT TIME ZONE 'UTC') AS date,
-        tr.passed,
-        tr.response_time_ms
-      FROM test_results tr
-      WHERE tr.capability_slug IN (${sql.join(capSlugs.map((s) => sql`${s}`), sql`, `)})
-        AND tr.executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
-      ORDER BY tr.test_suite_id, DATE(tr.executed_at AT TIME ZONE 'UTC'), tr.executed_at DESC
-    )
-    SELECT
-      date,
-      ROUND(SUM(CASE WHEN passed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text AS pass_rate,
-      ROUND(AVG(response_time_ms))::text AS avg_response_time_ms
-    FROM latest_per_suite_per_day
-    GROUP BY date
-    ORDER BY date
-  `);
-  const history = (Array.isArray(historyRows) ? historyRows : (historyRows as any)?.rows ?? [])
-    .map((r: any) => ({
-      date: r.date,
-      pass_rate: parseFloat(r.pass_rate),
-      avg_response_time_ms: parseInt(r.avg_response_time_ms, 10),
-    }));
+  // Solution usable = all steps usable
+  const solutionUsable = stepData.every((s) => s.usable);
 
-  // Collect all limitations across all steps
-  const allLimitations = stepData.flatMap((d) => d.limitations);
+  // Solution strategy = worst step strategy
+  const strategyOrder = ["direct", "retry_with_backoff", "queue_for_later", "unavailable"];
+  const solutionStrategy = stepData.reduce((w, s) => {
+    return strategyOrder.indexOf(s.strategy) > strategyOrder.indexOf(w) ? s.strategy : w;
+  }, "direct");
 
-  // Total transactions
-  const totalTestTxns = solutionQuality?.totalTransactionsAll ?? 0;
+  const testTxns = stepData.length; // simplified
+  const { badge, badge_label } = determineBadge(testTxns, 0, null);
 
-  const { badge, badge_label } = determineBadge(
-    totalTestTxns,
-    0,
-    solutionQuality?.successRate ?? null,
-  );
-
-  // Use complete-run by_type and failures (from actual execution counts, not suite counts)
-  const completeByType = completeRun?.by_type ?? aggregateByType(stepData);
-  const completeFailures = completeRun?.failures ?? [];
-
-  const sqs = await computeSolutionSQS(capSlugs);
-
-  const solutionPerformance = buildPerformanceInfo(
-    solutionQuality?.p95ResponseTimeMs ?? null,
-    solutionQuality?.avgResponseTimeMs ?? null,
-    steps.length,
-  );
-
-  const solutionTrustGrade = computeTrustGrade({
-    sqsScore: sqs.pending ? null : sqs.score,
-    sqsPending: sqs.pending,
-    freshnessGrade: null,
-    latencyGrade: solutionPerformance.latency_grade,
-  });
-
-  // Reliability warning: high SQS but low execution success rate
-  const solSuccessRate = solutionQuality?.successRate ?? null;
-  const reliabilityWarning =
-    !sqs.pending && sqs.score >= 80 && solSuccessRate !== null && solSuccessRate < 50
-      ? {
-          message: `Quality score reflects test methodology strength, but historical execution success rate is low (${solSuccessRate.toFixed(2)}%). This typically indicates external service instability. Check per-step data for details.`,
-          sqs_score: sqs.score,
-          success_rate: solSuccessRate,
-        }
-      : null;
+  // Get limitations across all steps
+  const allLimitations = await Promise.all(
+    steps.map((s) => getLimitationsForSlug(s.capabilitySlug)),
+  ).then((arr) => arr.flat());
 
   const result = {
     solution_slug: slug,
-    compliance_coverage: solRow.complianceCoverage ?? [],
-    ...(reliabilityWarning ? { reliability_warning: reliabilityWarning } : {}),
-    trust_summary: {
-      badge,
-      badge_label,
-      overall: {
-        success_rate: solutionQuality?.successRate ?? null,
-        avg_response_time_ms: solutionQuality?.avgResponseTimeMs ?? null,
-        p95_response_time_ms: solutionQuality?.p95ResponseTimeMs ?? null,
-        schema_conformance_rate: solutionQuality?.schemaConformanceRate ?? null,
-        avg_field_completeness_pct: solutionQuality?.avgFieldCompletenessPct ?? null,
-        total_transactions: totalTestTxns,
-        customer_transactions: 0,
-        test_transactions: totalTestTxns,
-        data_source: totalTestTxns > 0 ? "internal_testing" : "none",
-      },
-      test_results: {
-        last_run: lastTestRun,
-        next_scheduled_run: nextScheduledRun,
-        schedule_frequency_hours: scheduleFrequencyHours,
-        total_tests: allTestTotal,
-        passed: allTestPassed,
-        failed: allTestFailed,
-        pass_rate: completeRun?.pass_rate ?? null,
-        avg_response_time_ms: completeRun?.avg_response_time_ms ?? null,
-        by_type: completeByType,
-        ...(completeFailures.length > 0 ? { failures: completeFailures } : {}),
-        history_30d: history,
-      },
-      quality_narrative: completeRun
-        ? generateQualityNarrative([{
-            capability_name: "solution",
-            test_results: {
-              total_tests: allTestTotal,
-              passed: allTestPassed,
-              failed: allTestFailed,
-              pass_rate: completeRun.pass_rate,
-              avg_response_time_ms: completeRun.avg_response_time_ms ?? null,
-              failures: completeFailures.map((f) => ({ failure_category: f.failure_category })),
-            },
-          }])
-        : generateQualityNarrative(stepData),
-      limitations: allLimitations,
-      steps: stepData,
+    data_source: steps.map((s) => s.dataSource).filter(Boolean).join(", ") || null,
+
+    sqs: {
+      score: solutionSqs,
+      label: sqsLabel(solutionSqs),
+      trend: solutionTrend,
     },
-    sqs,
-    performance: solutionPerformance,
-    ...(solutionTrustGrade ? { trust_grade: solutionTrustGrade } : {}),
+
+    quality_profile: {
+      grade: worstQuality,
+      label: `Code quality: ${worstQuality}`,
+    },
+
+    reliability_profile: {
+      grade: worstReliability,
+      label: rpGradeToLabel(worstReliability),
+    },
+
+    execution_guidance: {
+      usable: solutionUsable,
+      strategy: solutionStrategy,
+      confidence_after_strategy: solutionUsable ? Math.min(...stepData.map(() => 100)) : 0,
+      context: solutionUsable
+        ? "All steps operational."
+        : `Some steps unavailable. Check per-step breakdown.`,
+    },
+
+    badge,
+    badge_label,
+
+    steps: stepData,
+
+    limitations: allLimitations,
+
     methodology_url: "https://strale.dev/trust/methodology",
   };
 
@@ -717,7 +552,6 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
 
 // ─── Related items endpoints ─────────────────────────────────────────────────
 
-// GET /v1/internal/trust/capabilities/:slug/related
 internalTrustRoute.get("/capabilities/:slug/related", async (c) => {
   const slug = c.req.param("slug");
   const limitParam = c.req.query("limit");
@@ -729,7 +563,6 @@ internalTrustRoute.get("/capabilities/:slug/related", async (c) => {
   });
 });
 
-// GET /v1/internal/trust/solutions/:slug/related
 internalTrustRoute.get("/solutions/:slug/related", async (c) => {
   const slug = c.req.param("slug");
   const limitParam = c.req.query("limit");

@@ -1,6 +1,9 @@
 import { sql, eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilityHealth, testSuites } from "../db/schema.js";
+import { computeQualityProfile, type QPResult } from "./quality-profile.js";
+import { computeReliabilityProfile, type RPResult } from "./reliability-profile.js";
+import { computeMatrixSQS, type MatrixSQSResult } from "./sqs-matrix.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -633,6 +636,48 @@ function makeBuildingTrackRecordResult(runsAnalyzed = 0): SQSResult {
     pending: true, // Frontend treats this like pending
   };
 }
+
+/** @deprecated Use computeCapabilitySQS — alias kept for backward compat during transition. */
+export const computeLegacySQS = computeCapabilitySQS;
+
+// ─── Dual-profile SQS ──────────────────────────────────────────────────────
+
+export interface DualProfileSQSResult {
+  /** Matrix SQS score (0-100, the new canonical score) */
+  score: number;
+  label: string;
+  qp: QPResult;
+  rp: RPResult;
+  matrix: MatrixSQSResult;
+  /** Legacy SQS for comparison during transition */
+  legacy_score: number;
+}
+
+/**
+ * Compute dual-profile SQS for a single capability.
+ * Returns QP, RP, and the matrix-combined score.
+ */
+export async function computeDualProfileSQS(slug: string): Promise<DualProfileSQSResult> {
+  const [qp, rp, legacy] = await Promise.all([
+    computeQualityProfile(slug),
+    computeReliabilityProfile(slug),
+    computeCapabilitySQS(slug),
+  ]);
+
+  const matrix = computeMatrixSQS(qp, rp);
+
+  return {
+    score: matrix.score,
+    label: matrix.label,
+    qp,
+    rp,
+    matrix,
+    legacy_score: legacy.score,
+  };
+}
+
+// Re-export profile types for consumers
+export type { QPResult, RPResult, MatrixSQSResult };
 
 function makeUnverifiedResult(): SQSResult {
   const makeFactor = (weight: number): FactorResult => ({

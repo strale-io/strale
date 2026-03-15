@@ -12,8 +12,10 @@ import { getExecutor } from "../capabilities/index.js";
 import type { CapabilityResult } from "../capabilities/index.js";
 import { computeHealthState, HEALTH_STATE_FREQUENCY_HOURS } from "./health-state.js";
 import { sanitizeErrorMessage, getTestResultsForSlug } from "./trust-helpers.js";
-import { computeCapabilitySQS } from "./sqs.js";
+import { computeCapabilitySQS, computeDualProfileSQS } from "./sqs.js";
+import { computeExecutionGuidance, type ComputeGuidanceInput } from "./execution-guidance.js";
 import { classifyFailure } from "./failure-classifier.js";
+import type { CapabilityType } from "./reliability-profile.js";
 import { createHash } from "node:crypto";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -139,6 +141,10 @@ export async function runTests(
     failed,
     estimatedCostCents: totalEstimatedCost,
   });
+
+  // ── Persist dual-profile SQS scores for affected capabilities ──────────
+  const affectedSlugs = [...new Set(results.map((r) => r.capabilitySlug))];
+  await persistDualProfileScores(affectedSlugs);
 
   return {
     tier: tierLabel,
@@ -1113,4 +1119,80 @@ export function startScheduledTests(): void {
 
   setTimeout(runSweep, 5 * 60_000); // 5min after startup
   setInterval(runSweep, WEEKLY_SWEEP_INTERVAL_MS);
+}
+
+// ─── Dual-profile score persistence ──────────────────────────────────────────
+
+async function persistDualProfileScores(slugs: string[]): Promise<void> {
+  if (slugs.length === 0) return;
+
+  const db = getDb();
+
+  for (const slug of slugs) {
+    try {
+      const dual = await computeDualProfileSQS(slug);
+      if (dual.qp.pending && dual.rp.pending) continue;
+
+      // Look up capability metadata for guidance computation
+      const [cap] = await db
+        .select({
+          priceCents: capabilities.priceCents,
+          capabilityType: capabilities.capabilityType,
+          dataSource: capabilities.dataSource,
+        })
+        .from(capabilities)
+        .where(eq(capabilities.slug, slug))
+        .limit(1);
+
+      // Get last test time and schedule for this capability
+      const [lastTest] = await db
+        .select({ executedAt: testResults.executedAt })
+        .from(testResults)
+        .where(eq(testResults.capabilitySlug, slug))
+        .orderBy(desc(testResults.executedAt))
+        .limit(1);
+
+      const capType = (cap?.capabilityType as CapabilityType) ?? "stable_api";
+      const rpAvailRate = dual.rp.factors.availability.has_data
+        ? dual.rp.factors.availability.rate
+        : 100;
+
+      // Check for external service failures in recent results
+      const hasExtFailures = dual.rp.factors.availability.has_data
+        && dual.rp.factors.availability.rate < 90;
+
+      const guidanceInput: ComputeGuidanceInput = {
+        slug,
+        qpGrade: dual.qp.grade === "pending" ? "F" : dual.qp.grade,
+        rpGrade: dual.rp.grade === "pending" ? "F" : dual.rp.grade,
+        rpScore: dual.rp.score,
+        rpTrend: dual.rp.trend,
+        rpAvailabilityRate: rpAvailRate,
+        matrixSqs: dual.matrix.score,
+        capabilityType: capType,
+        testScheduleHours: 24, // Default B-tier
+        lastTestedAt: lastTest?.executedAt?.toISOString() ?? null,
+        priceCents: cap?.priceCents ?? 0,
+        dataSource: cap?.dataSource ?? null,
+        hasExternalFailures: hasExtFailures,
+      };
+
+      const guidance = await computeExecutionGuidance(guidanceInput);
+
+      await db
+        .update(capabilities)
+        .set({
+          qpScore: dual.qp.pending ? null : String(dual.qp.score),
+          rpScore: dual.rp.pending ? null : String(dual.rp.score),
+          matrixSqs: dual.matrix.pending ? null : String(dual.matrix.score),
+          guidanceUsable: guidance.usable,
+          guidanceStrategy: guidance.strategy,
+          guidanceConfidence: String(guidance.confidence_after_strategy),
+          updatedAt: new Date(),
+        })
+        .where(eq(capabilities.slug, slug));
+    } catch (err) {
+      console.error(`[dual-profile] Failed to persist scores for ${slug}:`, err);
+    }
+  }
 }

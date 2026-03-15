@@ -12,10 +12,13 @@ export interface Capability {
   price_cents: number;
   input_schema: Record<string, unknown> | null;
   output_schema: Record<string, unknown> | null;
-  avg_latency_ms: number | null;
-  success_rate: string | null;
-  sqs_score?: number;
+  sqs?: number;
   sqs_label?: string;
+  quality?: string;
+  reliability?: string;
+  trend?: string;
+  usable?: boolean;
+  strategy?: string;
 }
 
 export interface ExecuteResult {

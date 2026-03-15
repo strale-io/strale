@@ -1,19 +1,34 @@
+/**
+ * PUBLIC ENDPOINT — intentional, no auth required.
+ *
+ * GET /v1/quality/:slug — Public dual-profile SQS for a capability.
+ * Phase 3: Returns QP + RP + matrix SQS + execution guidance.
+ * Eliminated metrics: trust_grade, reliability_warning, schema_conformance_rate,
+ * avg_field_completeness_pct, standalone success_rate/pass_rate, performance.
+ */
+
 import { Hono } from "hono";
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
-import { computeCapabilitySQS, estimateQualificationTime } from "../lib/sqs.js";
-import { getCapabilityQuality } from "../lib/quality-aggregation.js";
-import {
-  computeFreshnessGrade,
-  buildPerformanceInfo,
-  computeTrustGrade,
-} from "../lib/trust-grade.js";
+import { computeDualProfileSQS, estimateQualificationTime } from "../lib/sqs.js";
+import { computeFreshnessGrade } from "../lib/trust-grade.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
 // Public — no auth required (lets agents check quality before paid calls)
 export const qualityRoute = new Hono<AppEnv>();
+
+function gradeLabel(grade: string): string {
+  switch (grade) {
+    case "A": return "Excellent";
+    case "B": return "Good";
+    case "C": return "Fair";
+    case "D": return "Poor";
+    case "F": return "Failing";
+    default: return "Pending";
+  }
+}
 
 // GET /v1/quality/:slug — Public SQS score for a capability
 qualityRoute.get("/:slug", async (c) => {
@@ -39,56 +54,55 @@ qualityRoute.get("/:slug", async (c) => {
     );
   }
 
-  const [sqs, qualityMetrics] = await Promise.all([
-    computeCapabilitySQS(slug),
-    getCapabilityQuality(slug),
-  ]);
+  const dual = await computeDualProfileSQS(slug);
 
   // Only compute qualification estimate when pending
-  const qualificationEstimate = sqs.pending
+  const qualificationEstimate = dual.qp.pending && dual.rp.pending
     ? await estimateQualificationTime(slug)
     : null;
 
-  // Compute freshness, performance, and trust grade
+  // Compute freshness
   const freshness = computeFreshnessGrade({
     freshnessCategory: cap.freshnessCategory,
     dataUpdateCycleDays: cap.dataUpdateCycleDays,
     datasetLastUpdated: cap.datasetLastUpdated,
   });
 
-  const performance = buildPerformanceInfo(
-    qualityMetrics.p95ResponseTimeMs,
-    qualityMetrics.avgResponseTimeMs,
-  );
-
-  const trustGrade = computeTrustGrade({
-    sqsScore: sqs.pending ? null : sqs.score,
-    sqsPending: sqs.pending,
-    freshnessGrade: freshness?.grade ?? null,
-    latencyGrade: performance.latency_grade,
-  });
-
   c.header("Cache-Control", "public, max-age=300");
 
   return c.json({
     capability: slug,
-    sqs: sqs.score,
-    label: sqs.label,
-    trend: sqs.trend,
-    circuit_breaker: sqs.circuit_breaker,
-    factors: {
-      correctness: { rate: sqs.factors.correctness.rate, weight: sqs.factors.correctness.weight },
-      schema: { rate: sqs.factors.schema.rate, weight: sqs.factors.schema.weight },
-      availability: { rate: sqs.factors.availability.rate, weight: sqs.factors.availability.weight },
-      error_handling: { rate: sqs.factors.error_handling.rate, weight: sqs.factors.error_handling.weight },
-      edge_cases: { rate: sqs.factors.edge_cases.rate, weight: sqs.factors.edge_cases.weight },
+    sqs: {
+      score: dual.score,
+      label: dual.label,
+      trend: dual.rp.trend,
     },
-    external_service_issues: sqs.external_service_issues,
-    runs_analyzed: sqs.runs_analyzed,
-    pending: sqs.pending,
-    ...(sqs.pending && qualificationEstimate ? { qualification_estimate: qualificationEstimate } : {}),
+    quality_profile: {
+      grade: dual.qp.grade,
+      score: dual.qp.score,
+      label: dual.qp.label,
+      factors: Object.entries(dual.qp.factors).map(([name, f]) => ({
+        name,
+        rate: f.rate,
+        weight: f.weight,
+        has_data: f.has_data,
+      })),
+    },
+    reliability_profile: {
+      grade: dual.rp.grade,
+      score: dual.rp.score,
+      label: gradeLabel(dual.rp.grade),
+      capability_type: dual.rp.capability_type,
+      factors: Object.entries(dual.rp.factors).map(([name, f]) => ({
+        name,
+        rate: f.rate,
+        weight: f.weight,
+        has_data: f.has_data,
+      })),
+    },
+    runs_analyzed: dual.qp.runs_analyzed,
+    pending: dual.qp.pending && dual.rp.pending,
+    ...(qualificationEstimate ? { qualification_estimate: qualificationEstimate } : {}),
     ...(freshness ? { freshness } : {}),
-    performance,
-    ...(trustGrade ? { trust_grade: trustGrade } : {}),
   });
 });

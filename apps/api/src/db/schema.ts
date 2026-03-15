@@ -104,6 +104,24 @@ export const capabilities = pgTable("capabilities", {
   dataUpdateCycleDays: integer("data_update_cycle_days"),
   datasetLastUpdated: timestamp("dataset_last_updated", { withTimezone: true }),
   isFreeTier: boolean("is_free_tier").notNull().default(false),
+  // Dual-profile SQS columns
+  capabilityType: text("capability_type").notNull().default("stable_api"),
+  // 'deterministic' | 'stable_api' | 'scraping' | 'ai_assisted'
+  fallbackCapabilitySlug: text("fallback_capability_slug"),
+  fallbackCoverage: text("fallback_coverage"),
+  // 'full' | 'partial' | 'degraded' | null
+  fallbackVerificationLevel: text("fallback_verification_level"),
+  // 'tested' | 'manual' | 'untested' | null
+  errorCodesJson: jsonb("error_codes_json"),
+  // Computed SQS scores (written after each test run)
+  qpScore: decimal("qp_score", { precision: 5, scale: 2 }),
+  rpScore: decimal("rp_score", { precision: 5, scale: 2 }),
+  matrixSqs: decimal("matrix_sqs", { precision: 5, scale: 2 }),
+  // Execution guidance cache (written after each test run)
+  guidanceUsable: boolean("guidance_usable"),
+  guidanceStrategy: text("guidance_strategy"),
+  // 'direct' | 'retry_with_backoff' | 'queue_for_later' | 'unavailable'
+  guidanceConfidence: decimal("guidance_confidence", { precision: 5, scale: 1 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
