@@ -92,6 +92,23 @@ Agents can set a `min_sqs` threshold on any `POST /v1/do` call — requests are 
 - [strale.dev/pricing](https://strale.dev/pricing) — Pricing
 - [strale.dev/quality](https://strale.dev/quality) — Quality methodology
 
+I can see the content is there but the markdown links aren't rendering — the [text](url) syntax got pasted as plain text instead of markdown links. Lines 95–107 show plain text where there should be clickable links.
+Here's what to fix. Select and replace lines 95–107 with this properly formatted version:
+## Agent Skills & Code Examples
+
+Teach your AI coding agent how to use Strale:
+
+- **[Agent Skills](https://github.com/strale-io/agent-skills)** — SKILL.md files for Claude Code, Cursor, Copilot, and Codex. Copy `skills/strale/` into your project's `.claude/skills/`, `.github/skills/`, or `.cursor/skills/` directory.
+
+Code examples:
+
+- [Verify a company with Strale](https://gist.github.com/petterlindstrom79/5e22945748c3ce42155bf6d41f46c4e0) (Python)
+- [Validate IBANs — free, no API key](https://gist.github.com/petterlindstrom79/7f83fdc892dcafbc280735af5d0e360d) (Python)
+- [Build an agent with Strale](https://gist.github.com/petterlindstrom79/2e4750eb919d314db7c697a504086e0b) (TypeScript)
+- [Connect Strale to Claude](https://gist.github.com/petterlindstrom79/c08ddc1cb3dfed3ca434c70305dc9e54) (setup guide)
+
+Strale is the trust layer for AI agents.
+
 ## License
 
 MIT
