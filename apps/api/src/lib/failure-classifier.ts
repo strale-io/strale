@@ -62,11 +62,13 @@ const INFRA_GEO_PATTERNS = [
   /ECB.*restrict/i,
 ];
 
+// Browserless billing/quota (our infrastructure) — NOT target site failures.
+// Browserless 500 and navigation timeouts go to upstream_transient below.
 const INFRA_BROWSERLESS_PATTERNS = [
-  /Browserless.*HTTP [45]\d\d/i,
-  /Browserless.*error/i,
-  /browserless\.io.*\d{3}/i,
-  /Navigation timeout/i,
+  /Browserless.*HTTP 401/i,        // quota exhausted ("units usage limit")
+  /Browserless.*HTTP 403/i,        // auth/billing issue
+  /units.*usage.*limit/i,          // "You've reached the units usage limit"
+  /upgrade to a paid plan/i,       // Browserless free-plan messaging
 ];
 
 const UPSTREAM_TRANSIENT_PATTERNS = [
@@ -88,6 +90,15 @@ const UPSTREAM_TRANSIENT_PATTERNS = [
   /network error/i,
   /aborted/i,
   /UNABLE_TO_GET_ISSUER_CERT/i,
+  /Connection error/i,             // generic connection failure to external service
+  /VIES error: MS_MAX_CONCURRENT/i, // EU VAT validation service rate limit
+  // Browserless forwarding target-site failures (not Browserless billing):
+  /Browserless.*HTTP 5\d\d/i,      // target site loading failure (Browserless wraps it)
+  /Browserless.*error/i,           // generic Browserless error (usually target site)
+  /Navigation timeout/i,           // target site too slow to respond
+  /ERR_CERT/i,                     // target site SSL certificate issue
+  /ERR_NAME_NOT_RESOLVED/i,        // target site DNS failure
+  /net::ERR_/i,                    // any Chromium network error from target site
 ];
 
 const CAPABILITY_BUG_PATTERNS = [
