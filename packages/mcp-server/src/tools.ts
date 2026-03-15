@@ -760,7 +760,7 @@ export function registerStraleTools(
     "strale_methodology",
     {
       description:
-        "Get Strale's quality and trust methodology. Explains the dual-profile scoring model: Quality Profile (code quality, 4 factors: correctness, schema compliance, error handling, edge cases) and Reliability Profile (operational dependability, 4 factors weighted by capability type), combined via a published 5×5 matrix into the SQS confidence score. Covers execution guidance (retry strategies, fallbacks, recovery), test infrastructure (1,215 test suites with tiered scheduling), provenance tracking, audit trails, badge system, and honest disclosure of current limitations.",
+        "Get Strale's quality and trust methodology. Explains the dual-profile scoring model: Quality Profile (code quality, 4 factors) and Reliability Profile (operational dependability, 5 factors weighted by capability type), combined via a published 5×5 matrix into the SQS confidence score. Covers execution guidance, test infrastructure (1,215 test suites with tiered scheduling), provenance tracking, audit trails, badge system, and honest disclosure of current limitations.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -883,7 +883,7 @@ ACCESSING TRUST DATA
     "strale_trust_profile",
     {
       description:
-        "Get the full trust and quality profile for any capability or solution. Returns dual-profile quality assessment: Quality Profile (code quality, 4 factors: correctness, schema compliance, error handling, edge cases) and Reliability Profile (operational dependability, 4 factors: current_availability, rolling_success, upstream_health, latency). Includes SQS confidence score derived from published QP×RP matrix, execution guidance (usable flag, retry strategy, confidence score, fallback capability, recovery timeline, cost envelope), test history (run counts, pass/fail, external service failures), known limitations, badge status, and test schedule.",
+        "Get the full trust and quality profile for any capability or solution. Returns dual-profile quality assessment: Quality Profile (code quality, 4 factors: correctness, schema, error handling, edge cases) and Reliability Profile (operational dependability, 5 factors: current_availability, rolling_success, upstream_health, error_resilience, latency). Includes SQS confidence score from published QP×RP matrix, execution guidance (usable flag, retry strategy, fallback, recovery timeline, cost envelope), 30-day test history, known limitations, and badge status.",
       inputSchema: z.object({
         slug: z
           .string()
