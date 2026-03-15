@@ -398,6 +398,7 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
         current_availability: { score: dual.rp.factors.availability.rate, detail: `${dual.rp.factors.availability.passed}/${dual.rp.factors.availability.total} passed`, weight: dual.rp.factors.availability.weight },
         rolling_success: { score: dual.rp.factors.correctness.rate, detail: `${dual.rp.factors.correctness.passed}/${dual.rp.factors.correctness.total} passed`, weight: dual.rp.factors.correctness.weight },
         upstream_health: { score: dual.rp.factors.schema.rate, detail: `${dual.rp.factors.schema.passed}/${dual.rp.factors.schema.total} passed`, weight: dual.rp.factors.schema.weight },
+        error_resilience: { score: dual.rp.factors.error_handling.rate, detail: `${dual.rp.factors.error_handling.passed}/${dual.rp.factors.error_handling.total} passed`, weight: dual.rp.factors.error_handling.weight },
         latency: { score: dual.rp.factors.edge_cases.rate, detail: `${dual.rp.factors.edge_cases.passed}/${dual.rp.factors.edge_cases.total} passed`, weight: dual.rp.factors.edge_cases.weight },
       },
     },

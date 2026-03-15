@@ -330,7 +330,6 @@ doRoute.post(
         price_cents: capability.priceCents,
         wallet_balance_cents: balance,
         wallet_sufficient: balance >= capability.priceCents,
-        ...(isFreeTier ? { free_tier: true } : {}),
       });
     }
     // Unauthenticated dry run (free-tier only)
@@ -338,7 +337,6 @@ doRoute.post(
       dry_run: true,
       would_execute: capability.slug,
       price_cents: 0,
-      free_tier: true,
     });
   }
 
@@ -477,10 +475,11 @@ async function executeFreeTier(
     const capResult = await executor(executionInput);
     const latencyMs = Date.now() - startTime;
 
+    const transactionId = crypto.randomUUID();
     // Record circuit breaker + quality (fire-and-forget)
     recordSuccess(capability.slug).catch(() => {});
     recordQuality({
-      transactionId: crypto.randomUUID(),
+      transactionId,
       responseTimeMs: latencyMs,
       output: capResult.output,
       outputSchema,
@@ -493,16 +492,15 @@ async function executeFreeTier(
 
     const dualProfile = buildDualProfileResponse(dual, sqs);
     return c.json({
+      transaction_id: transactionId,
       status: "completed",
       capability_used: capability.slug,
       price_cents: 0,
       latency_ms: latencyMs,
       output: capResult.output,
       provenance: capResult.provenance,
-      free_tier: true,
       ...dualProfile,
       audit: buildFreeTierAudit(capability, latencyMs),
-      upgrade_hint: "This capability is free. Sign up for API key access to 233+ capabilities at strale.dev/signup",
     });
   } catch (err) {
     const latencyMs = Date.now() - startTime;
@@ -576,7 +574,6 @@ async function executeFreeTierAuthenticated(
       output: capResult.output,
       provenance: capResult.provenance,
       sqs,
-      freeTier: true,
     });
 
     await db
@@ -622,7 +619,6 @@ async function executeFreeTierAuthenticated(
       wallet_balance_cents: wallet?.balanceCents ?? 0,
       output: capResult.output,
       provenance: capResult.provenance,
-      free_tier: true,
       ...dualProfile,
       audit,
     });
@@ -1272,11 +1268,10 @@ function buildFullAudit(params: {
   provenance?: unknown;
   sqs: { score: number; label: string; trend: string; pending: boolean };
   qualityPassRate?: number | null;
-  freeTier?: boolean;
 }) {
   const {
     transactionId, startTime, capability, marker, executionMode,
-    latencyMs, executionInput, output, provenance, sqs, qualityPassRate, freeTier,
+    latencyMs, executionInput, output, provenance, sqs, qualityPassRate,
   } = params;
 
   const personalDataDetected = detectPersonalData(output);
@@ -1297,7 +1292,6 @@ function buildFullAudit(params: {
     latency_ms: latencyMs,
     input_hash: hashInput(executionInput),
     schema_validated: true,
-    ...(freeTier ? { free_tier: true } : {}),
     quality: {
       sqs: sqs.pending ? null : sqs.score,
       label: sqs.label,

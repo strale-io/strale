@@ -615,9 +615,13 @@ export function registerStraleTools(
           };
         });
 
-      // Match capabilities
+      // Match capabilities (exclude pending/degraded: usable=false and sqs=0)
       let matchedCaps = capabilities.filter((c) => {
         if (catFilter && !c.category.toLowerCase().includes(catFilter)) return false;
+        const trust = trustData?.get(c.slug);
+        const effectiveUsable = trust?.usable ?? c.usable ?? true;
+        const effectiveSqs = trust?.sqs ?? c.sqs ?? 0;
+        if (!effectiveUsable && effectiveSqs === 0) return false;
         const text = `${c.name} ${c.description} ${c.slug} ${c.category}`.toLowerCase();
         return text.includes(q);
       });
@@ -790,18 +794,18 @@ Label format: "Code quality: [Grade]" (DEC-20260315-J)
 RELIABILITY PROFILE (RP)
 Measures operational dependability. Volatile — changes with upstream conditions.
 Upstream service failures ARE INCLUDED in the Reliability Profile (unlike QP where they are excluded).
-Four factors (as returned by the trust profile API):
+Five factors (as returned by the trust profile API):
   current_availability — Latest test run pass rate; all failures counted including upstream outages
-  rolling_success    — Success rate across recent test runs (recency-weighted rolling window)
-  upstream_health    — Output structure validity; degrades when upstream data changes format
-  latency            — Response time within acceptable bounds for the capability type
+  rolling_success      — Success rate across recent test runs (recency-weighted rolling window)
+  upstream_health      — Output structure validity; degrades when upstream data changes format
+  error_resilience     — Error handling under adverse conditions (graceful failure, error categorization)
+  latency              — Response time within acceptable bounds for the capability type
 
 Factor weights vary by capability type:
-  Deterministic (no external deps): rolling_success 50%, upstream_health 25%, current_availability 5%, latency 5%
-  Stable API:                       rolling_success 35%, upstream_health 20%, current_availability 25%, latency 10%
-  Scraping:                         rolling_success 25%, upstream_health 15%, current_availability 40%, latency 10%
-  AI-assisted:                      rolling_success 40%, upstream_health 20%, current_availability 15%, latency 10%
-(An additional resilience factor — error handling under adverse conditions — contributes 10-15% to the score internally.)
+  Deterministic (no external deps): rolling_success 50%, upstream_health 25%, error_resilience 15%, current_availability 5%, latency 5%
+  Stable API:                       rolling_success 35%, upstream_health 20%, current_availability 25%, error_resilience 10%, latency 10%
+  Scraping:                         rolling_success 25%, upstream_health 15%, current_availability 40%, error_resilience 10%, latency 10%
+  AI-assisted:                      rolling_success 40%, upstream_health 20%, current_availability 15%, error_resilience 15%, latency 10%
 Grade scale: A (>=90), B (>=75), C (>=50), D (>=25), F (<25)
 Labels: A="Highly reliable", B="Reliable", C="Degraded reliability", D="Unreliable right now", F="Down"
 
