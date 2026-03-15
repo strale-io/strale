@@ -77,6 +77,39 @@ async function getLimitationsForSlug(slug: string) {
   }));
 }
 
+// ─── Test history (30-day run counts) ────────────────────────────────────────
+
+async function getTestHistory30d(slug: string) {
+  const db = getDb();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const rows = await db
+    .select({
+      passed: testResults.passed,
+      failureClassification: testResults.failureClassification,
+    })
+    .from(testResults)
+    .where(
+      and(
+        sql`${testResults.capabilitySlug} = ${slug}`,
+        sql`${testResults.executedAt} >= ${thirtyDaysAgo.toISOString()}::timestamptz`,
+      ),
+    );
+
+  const runs_30d = rows.length;
+  const passed_30d = rows.filter((r) => r.passed).length;
+  const failed_30d = runs_30d - passed_30d;
+  const external_service_failures_30d = rows.filter(
+    (r) =>
+      !r.passed &&
+      r.failureClassification != null &&
+      (r.failureClassification.startsWith("upstream_")),
+  ).length;
+
+  return { runs_30d, passed_30d, failed_30d, external_service_failures_30d };
+}
+
 // ─── Schedule helpers ────────────────────────────────────────────────────────
 
 const TIER_INTERVAL_MS: Record<string, number> = {
@@ -284,7 +317,7 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
   const db = getDb();
 
   // Parallel data fetch
-  const [capRow, testResultsData, limitations, suiteRows] = await Promise.all([
+  const [capRow, testResultsData, limitations, suiteRows, testHistory] = await Promise.all([
     db.select({
       name: capabilities.name,
       dataSource: capabilities.dataSource,
@@ -304,6 +337,7 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
       .from(testSuites)
       .where(and(eq(testSuites.capabilitySlug, slug), eq(testSuites.active, true)))
       .limit(1),
+    getTestHistory30d(slug),
   ]);
 
   if (!capRow) {
@@ -373,6 +407,12 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
     freshness: freshness?.label ?? null,
     last_tested: testResultsData.last_run,
     test_schedule: `every ${scheduleFrequencyHours}h`,
+    test_history: {
+      runs_30d: testHistory.runs_30d,
+      passed_30d: testHistory.passed_30d,
+      failed_30d: testHistory.failed_30d,
+      external_service_failures_30d: testHistory.external_service_failures_30d,
+    },
     badge,
     badge_label,
 
@@ -502,6 +542,18 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
   const testTxns = stepData.length; // simplified
   const { badge, badge_label } = determineBadge(testTxns, 0, null);
 
+  // Aggregate test history across all steps
+  const stepHistories = await Promise.all(steps.map((s) => getTestHistory30d(s.capabilitySlug)));
+  const solutionTestHistory = stepHistories.reduce(
+    (acc, h) => ({
+      runs_30d: acc.runs_30d + h.runs_30d,
+      passed_30d: acc.passed_30d + h.passed_30d,
+      failed_30d: acc.failed_30d + h.failed_30d,
+      external_service_failures_30d: acc.external_service_failures_30d + h.external_service_failures_30d,
+    }),
+    { runs_30d: 0, passed_30d: 0, failed_30d: 0, external_service_failures_30d: 0 },
+  );
+
   // Get limitations across all steps
   const allLimitations = await Promise.all(
     steps.map((s) => getLimitationsForSlug(s.capabilitySlug)),
@@ -540,6 +592,8 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
     badge_label,
 
     steps: stepData,
+
+    test_history: solutionTestHistory,
 
     limitations: allLimitations,
 

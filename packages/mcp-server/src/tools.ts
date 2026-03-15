@@ -560,7 +560,7 @@ export function registerStraleTools(
     "strale_search",
     {
       description:
-        "Search Strale's catalog of 233+ capabilities and 20+ solutions. Returns matches with dual-profile quality scores: SQS (combined confidence score 0-100), Quality grade (code quality A-F), Reliability grade (operational dependability A-F), and execution guidance (usable flag, recommended strategy). Use strale_trust_profile for full quality breakdown and execution guidance details.",
+        "Search Strale's catalog of 233+ capabilities and 20+ solutions across categories: validation, data-extraction, finance, legal, compliance, logistics, recruiting, e-commerce, marketing, developer-tools, competitive-intelligence, and more. Returns matches with SQS confidence score (0-100), Quality grade (code quality, A-F), Reliability grade (operational dependability, A-F), usable flag, execution strategy, trend, price, and required input fields. Use strale_trust_profile for full quality breakdown and execution guidance.",
       inputSchema: z.object({
         query: z
           .string()
@@ -760,7 +760,7 @@ export function registerStraleTools(
     "strale_methodology",
     {
       description:
-        "Get Strale's quality and trust methodology. Explains the dual-profile scoring system: Quality Profile (code quality), Reliability Profile (operational dependability), SQS matrix combination, execution guidance (retry strategies, fallback capabilities, recovery timelines), and test infrastructure. Call this to understand how Strale measures and reports quality.",
+        "Get Strale's quality and trust methodology. Explains the dual-profile scoring model: Quality Profile (code quality, 4 factors: correctness, schema compliance, error handling, edge cases) and Reliability Profile (operational dependability, 4 factors weighted by capability type), combined via a published 5×5 matrix into the SQS confidence score. Covers execution guidance (retry strategies, fallbacks, recovery), test infrastructure (1,215 test suites with tiered scheduling), provenance tracking, audit trails, badge system, and honest disclosure of current limitations.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -789,12 +789,19 @@ Label format: "Code quality: [Grade]" (DEC-20260315-J)
 
 RELIABILITY PROFILE (RP)
 Measures operational dependability. Volatile — changes with upstream conditions.
-Factors weighted by capability type:
-  Deterministic (no external deps): correctness 50%, schema 25%, availability 5%, error handling 15%, edge cases 5%
-  Stable API: correctness 35%, schema 20%, availability 25%, error handling 10%, edge cases 10%
-  Scraping: correctness 25%, schema 15%, availability 40%, error handling 10%, edge cases 10%
-  AI-assisted: correctness 40%, schema 20%, availability 15%, error handling 15%, edge cases 10%
-Upstream service failures ARE INCLUDED in the Reliability Profile.
+Upstream service failures ARE INCLUDED in the Reliability Profile (unlike QP where they are excluded).
+Four factors (as returned by the trust profile API):
+  current_availability — Latest test run pass rate; all failures counted including upstream outages
+  rolling_success    — Success rate across recent test runs (recency-weighted rolling window)
+  upstream_health    — Output structure validity; degrades when upstream data changes format
+  latency            — Response time within acceptable bounds for the capability type
+
+Factor weights vary by capability type:
+  Deterministic (no external deps): rolling_success 50%, upstream_health 25%, current_availability 5%, latency 5%
+  Stable API:                       rolling_success 35%, upstream_health 20%, current_availability 25%, latency 10%
+  Scraping:                         rolling_success 25%, upstream_health 15%, current_availability 40%, latency 10%
+  AI-assisted:                      rolling_success 40%, upstream_health 20%, current_availability 15%, latency 10%
+(An additional resilience factor — error handling under adverse conditions — contributes 10-15% to the score internally.)
 Grade scale: A (>=90), B (>=75), C (>=50), D (>=25), F (<25)
 Labels: A="Highly reliable", B="Reliable", C="Degraded reliability", D="Unreliable right now", F="Down"
 
@@ -807,6 +814,7 @@ QP C    70     62     50     35     20
 QP D    55     48     38     28     15
 QP F    35     30     22     15     10
 Labels: Excellent (90-100), Good (75-89), Fair (50-74), Poor (25-49), Degraded (0-24)
+SQS values include ±3 point interpolation within each cell based on exact profile scores, so observed values may differ slightly from the grid anchors above. For example, QP:A + RP:B with strong sub-scores may produce SQS 84 rather than the anchor value of 82.
 
 EXECUTION GUIDANCE
 Every capability includes machine-readable execution guidance:
@@ -875,7 +883,7 @@ ACCESSING TRUST DATA
     "strale_trust_profile",
     {
       description:
-        "Get the full trust and quality profile for any capability or solution. Returns the dual-profile assessment: Quality Profile (code quality factors), Reliability Profile (operational dependability factors), combined SQS score, and execution guidance (retry strategy, fallback capability, recovery timeline, error handling). The Quality Profile measures how well Strale's code works. The Reliability Profile measures how dependable the service is right now. The SQS combines both via a published matrix.",
+        "Get the full trust and quality profile for any capability or solution. Returns dual-profile quality assessment: Quality Profile (code quality, 4 factors: correctness, schema compliance, error handling, edge cases) and Reliability Profile (operational dependability, 4 factors: current_availability, rolling_success, upstream_health, latency). Includes SQS confidence score derived from published QP×RP matrix, execution guidance (usable flag, retry strategy, confidence score, fallback capability, recovery timeline, cost envelope), test history (run counts, pass/fail, external service failures), known limitations, badge status, and test schedule.",
       inputSchema: z.object({
         slug: z
           .string()
