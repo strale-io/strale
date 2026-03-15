@@ -30,9 +30,14 @@ import {
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
+// The MCP HTTP endpoint lives on the API server itself. Use localhost so
+// internal catalog fetches and tool calls never need hairpin NAT through the
+// public domain (which fails inside Railway containers). Callers that need
+// the public-facing URL can set STRALE_BASE_URL explicitly.
+const PORT = process.env.PORT ?? "3000";
 const STRALE_BASE_URL =
   process.env.STRALE_BASE_URL ??
-  "https://api.strale.io";
+  `http://localhost:${PORT}`;
 const DEFAULT_MAX_PRICE_CENTS = parseInt(
   process.env.STRALE_MAX_PRICE_CENTS ?? "200",
   10,
@@ -54,7 +59,13 @@ async function getCatalog(): Promise<{
   solutionTrustData: Map<string, SolutionTrustEntry>;
 }> {
   const now = Date.now();
-  if (cachedCapabilities && cachedSolutions && cachedTrustData && cachedSolutionTrustData && now - catalogLoadedAt < CAPABILITIES_TTL_MS) {
+  // Require non-empty capabilities to count as a valid cache hit — empty arrays
+  // mean a prior fetch failed and should be retried immediately, not served for 10 min.
+  if (
+    cachedCapabilities && cachedCapabilities.length > 0 &&
+    cachedSolutions && cachedTrustData && cachedSolutionTrustData &&
+    now - catalogLoadedAt < CAPABILITIES_TTL_MS
+  ) {
     return { capabilities: cachedCapabilities, solutions: cachedSolutions, trustData: cachedTrustData, solutionTrustData: cachedSolutionTrustData };
   }
 
@@ -87,7 +98,9 @@ async function getCatalog(): Promise<{
     cachedSolutions = cachedSolutions ?? [];
     cachedTrustData = cachedTrustData ?? new Map();
     cachedSolutionTrustData = cachedSolutionTrustData ?? new Map();
-    catalogLoadedAt = now;
+    // Do NOT update catalogLoadedAt here — empty fallback arrays should not
+    // be cached for the full 10-min TTL. Leave it at 0 so the next request
+    // immediately retries (or at the previous successful load time).
   }
 
   return { capabilities: cachedCapabilities!, solutions: cachedSolutions!, trustData: cachedTrustData!, solutionTrustData: cachedSolutionTrustData! };
