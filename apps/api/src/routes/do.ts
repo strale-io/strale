@@ -438,9 +438,9 @@ doRoute.post(
   const executionInput = inputs ?? { task };
   const outputSchema = (match.capability.outputSchema ?? {}) as Record<string, unknown>;
 
-  // Free-tier without auth: lightweight execution (no wallet, no transaction record)
+  // Free-tier without auth: persisted execution (no wallet, no user — but transaction record stored for audit)
   if (!user && isFreeTier) {
-    return executeFreeTier(c, capability, executor, executionInput, outputSchema, sqs, freshness, dual);
+    return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, sqs, freshness, dual);
   }
 
   // Free-tier with auth: skip wallet operations but still record transaction
@@ -457,10 +457,11 @@ doRoute.post(
   }
 });
 
-// ─── Free-tier execution: unauthenticated, no wallet, no transaction ────────
+// ─── Free-tier execution: unauthenticated, no wallet, persisted for audit ───
 
 async function executeFreeTier(
   c: any,
+  db: ReturnType<typeof getDb>,
   capability: CapabilityInfo,
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
@@ -470,16 +471,56 @@ async function executeFreeTier(
   dual: DualProfileSQSResult | null,
 ) {
   const startTime = Date.now();
+  const marker = getTransparencyMarker(capability.slug);
+
+  // Create a persisted transaction record so the audit trail is verifiable
+  const [txnRecord] = await db
+    .insert(transactions)
+    .values({
+      userId: null,
+      capabilityId: capability.id,
+      status: "executing",
+      input: executionInput,
+      priceCents: 0,
+      transparencyMarker: marker,
+      dataJurisdiction: "EU",
+      isFreeTier: true,
+    })
+    .returning({ id: transactions.id });
 
   try {
     const capResult = await executor(executionInput);
     const latencyMs = Date.now() - startTime;
 
-    const transactionId = crypto.randomUUID();
+    const audit = buildFullAudit({
+      transactionId: txnRecord.id,
+      startTime,
+      capability,
+      marker,
+      executionMode: "sync",
+      latencyMs,
+      executionInput,
+      output: capResult.output,
+      provenance: capResult.provenance,
+      sqs,
+    });
+
+    await db
+      .update(transactions)
+      .set({
+        status: "completed",
+        output: capResult.output,
+        provenance: capResult.provenance,
+        auditTrail: audit,
+        latencyMs,
+        completedAt: new Date(),
+      })
+      .where(eq(transactions.id, txnRecord.id));
+
     // Record circuit breaker + quality (fire-and-forget)
     recordSuccess(capability.slug).catch(() => {});
     recordQuality({
-      transactionId,
+      transactionId: txnRecord.id,
       responseTimeMs: latencyMs,
       output: capResult.output,
       outputSchema,
@@ -492,7 +533,7 @@ async function executeFreeTier(
 
     const dualProfile = buildDualProfileResponse(dual, sqs);
     return c.json({
-      transaction_id: transactionId,
+      transaction_id: txnRecord.id,
       status: "completed",
       capability_used: capability.slug,
       price_cents: 0,
@@ -500,15 +541,20 @@ async function executeFreeTier(
       output: capResult.output,
       provenance: capResult.provenance,
       ...dualProfile,
-      audit: buildFreeTierAudit(capability, latencyMs),
+      audit,
     });
   } catch (err) {
     const latencyMs = Date.now() - startTime;
     const errorMessage = err instanceof Error ? err.message : String(err);
 
+    await db
+      .update(transactions)
+      .set({ status: "failed", error: errorMessage, latencyMs, completedAt: new Date() })
+      .where(eq(transactions.id, txnRecord.id));
+
     recordFailure(capability.slug).catch(() => {});
     recordQuality({
-      transactionId: crypto.randomUUID(),
+      transactionId: txnRecord.id,
       responseTimeMs: latencyMs,
       output: null,
       outputSchema,

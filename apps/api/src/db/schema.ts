@@ -136,8 +136,7 @@ export const transactions = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id),
+      .references(() => users.id), // nullable: free-tier unauthenticated calls have no user
     capabilityId: uuid("capability_id")
       .notNull()
       .references(() => capabilities.id),
@@ -158,6 +157,7 @@ export const transactions = pgTable(
     dataJurisdiction: varchar("data_jurisdiction", { length: 10 })
       .notNull()
       .default("EU"), // ISO 3166-1 region code where data was processed
+    isFreeTier: boolean("is_free_tier").notNull().default(false), // unauthenticated free-tier calls: public lookup allowed by transaction_id
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

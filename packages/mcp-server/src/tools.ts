@@ -318,18 +318,14 @@ export async function executeCapability(
   if ((data as any).quality) meta.quality = (data as any).quality;
   if ((data as any).execution_guidance) meta.execution_guidance = (data as any).execution_guidance;
 
-  // Free-tier metadata nudge
-  if ((data as any).free_tier) {
-    meta.free_tier = true;
-    meta.upgrade_hint = (data as any).upgrade_hint ??
-      "Sign up at https://strale.dev/signup for 233+ capabilities with €2 free credits.";
-  }
+  // Transaction ID — present for all executions including free-tier; enables audit trail verification
+  if ((data as any).transaction_id) meta.transaction_id = (data as any).transaction_id;
 
   // Next-steps guidance on every successful execution
   meta.next_steps = [
+    `Transaction ID recorded. Call strale_transaction with id "${(data as any).transaction_id ?? ""}" to retrieve the full audit record.`,
     `Call strale_trust_profile with slug "${slug}" to see its dual-profile quality assessment.`,
     "Call strale_search to find related capabilities.",
-    "Call strale_methodology for how quality is measured.",
   ];
 
   return {
@@ -962,7 +958,7 @@ ACCESSING TRUST DATA
     "strale_transaction",
     {
       description:
-        "Retrieve a past execution record by transaction ID. Returns the full audit trail: inputs, outputs, latency, price, provenance, success/failure status, and failure categorization. Use this to verify Strale's audit trail claims with concrete evidence.",
+        "Retrieve a past execution record by transaction ID. Returns the full audit trail: inputs, outputs, latency, price, provenance, success/failure status, and failure categorization. Use this to verify Strale's audit trail claims with concrete evidence. Free-tier transactions (from capabilities like iban-validate, email-validate) are publicly accessible by ID — no API key needed. Paid transactions require an API key.",
       inputSchema: z.object({
         transaction_id: z
           .string()
@@ -972,25 +968,16 @@ ACCESSING TRUST DATA
       }),
     },
     async ({ transaction_id }) => {
-      if (!opts.apiKey) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: "API key required to retrieve transactions.",
-            },
-          ],
-        };
-      }
+      // Build headers — include API key if available, but don't require it
+      // Free-tier transactions are publicly accessible by ID (UUID is unguessable)
+      const headers: Record<string, string> = { Accept: "application/json" };
+      if (opts.apiKey) headers.Authorization = `Bearer ${opts.apiKey}`;
 
       try {
         const resp = await fetch(
           `${opts.baseUrl}/v1/transactions/${encodeURIComponent(transaction_id)}`,
           {
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${opts.apiKey}`,
-            },
+            headers,
             signal: AbortSignal.timeout(15000),
           },
         );
@@ -1000,7 +987,9 @@ ACCESSING TRUST DATA
             content: [
               {
                 type: "text" as const,
-                text: "Transaction not found. Transaction IDs are returned when you call strale_execute.",
+                text: opts.apiKey
+                  ? "Transaction not found."
+                  : "Transaction not found. If this was a paid transaction, provide an API key to look it up.",
               },
             ],
           };
@@ -1011,7 +1000,7 @@ ACCESSING TRUST DATA
             content: [
               {
                 type: "text" as const,
-                text: "API key required to retrieve transactions.",
+                text: "API key required to look up paid transactions. Get a free key at https://strale.dev/signup",
               },
             ],
           };
