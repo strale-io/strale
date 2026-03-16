@@ -18,9 +18,12 @@ function findCif(input: string): string | null {
 
 // Primary: empresia.es (BORME data, no SSL issues)
 async function lookupViaEmpresia(query: string, isCif: boolean): Promise<Record<string, unknown>> {
+  // CIF lookup: /cif/A28601094/
+  // Name lookup: /empresa/{slug}/ (server-rendered, no JS needed)
+  const slug = query.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const searchUrl = isCif
     ? `https://www.empresia.es/cif/${query}/`
-    : `https://www.empresia.es/buscador/?nombre=${encodeURIComponent(query)}`;
+    : `https://www.empresia.es/empresa/${slug}/`;
 
   const html = await fetchRenderedHtml(searchUrl);
   const text = htmlToText(html);
