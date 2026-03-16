@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "langchain-strale"
-version = "0.1.0"
-description = "LangChain integration for Strale — 233 business capabilities as agent tools"
+version = "0.1.1"
+description = "LangChain integration for Strale — 225+ business capabilities as agent tools"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -29,7 +29,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://strale.dev"
-Repository = "https://github.com/petterlindstrom79/strale"
+Repository = "https://github.com/strale-io/strale"
 Documentation = "https://strale.dev/docs"
 
 [tool.setuptools.packages.find]

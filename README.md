@@ -80,7 +80,7 @@ Every capability has a Strale Quality Score (SQS) from 0 to 100. The score is a 
 Scores are public. Check any capability:
 
 ```
-GET https://strale-production.up.railway.app/v1/quality/eu-vat-validate
+GET https://api.strale.io/v1/quality/eu-vat-validate
 ```
 
 Agents can set a `min_sqs` threshold on any `POST /v1/do` call — requests are rejected if the capability's current score falls below the threshold.

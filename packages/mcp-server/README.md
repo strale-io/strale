@@ -1,10 +1,10 @@
 # strale-mcp
 
-MCP server for [Strale](https://strale.io) — gives AI agents access to 233+ capabilities via 6 meta-tools. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
+MCP server for [Strale](https://strale.io) — gives AI agents access to 225+ capabilities via 6 meta-tools. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
 
 ## Architecture
 
-**Meta-tools only**: Instead of registering 233 individual tools (which exceeds limits in ChatGPT, Cursor, and Copilot), the server exposes 6 meta-tools. Agents discover capabilities via `strale_search`, then execute via `strale_execute`.
+**Meta-tools only**: Instead of registering 225+ individual tools (which exceeds limits in ChatGPT, Cursor, and Copilot), the server exposes 6 meta-tools. Agents discover capabilities via `strale_search`, then execute via `strale_execute`.
 
 At startup, the server fetches the capability catalog, solutions, and trust data from the Strale API and caches them for search.
 
@@ -112,7 +112,7 @@ Run the MCP server locally on your machine:
 | Tool | Auth Required | Description |
 |------|:---:|-------------|
 | `strale_ping` | No | Health check. Verifies the connection is working. Returns server status, tool count, and capability count. |
-| `strale_search` | No | Search 233+ capabilities and 20+ solutions by keyword or category. Returns matches with price, input fields, SQS score, quality grade, reliability grade, and execution guidance. |
+| `strale_search` | No | Search 225+ capabilities and 20+ solutions by keyword or category. Returns matches with price, input fields, SQS score, quality grade, reliability grade, and execution guidance. |
 | `strale_execute` | Yes | Execute any capability by slug. Pass the slug and inputs from search results. Returns output data, cost, latency, provenance, and dual-profile quality assessment. |
 | `strale_methodology` | No | Get Strale's quality methodology — dual-profile scoring (QP + RP), SQS matrix, execution guidance, and test infrastructure. |
 | `strale_trust_profile` | No | Get the full trust profile for any capability or solution — Quality Profile, Reliability Profile, SQS score, execution guidance, limitations, and badge status. |
