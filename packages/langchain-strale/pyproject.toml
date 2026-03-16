@@ -9,7 +9,7 @@ description = "LangChain integration for Strale — 233 business capabilities as
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
-authors = [{ name = "Strale", email = "hello@strale.dev" }]
+authors = [{ name = "Strale", email = "hello@strale.io" }]
 keywords = ["langchain", "strale", "ai", "agent", "tools", "capabilities"]
 classifiers = [
     "Development Status :: 4 - Beta",
