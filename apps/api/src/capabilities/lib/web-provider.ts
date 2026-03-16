@@ -75,6 +75,26 @@ function backoffMs(attempt: number): number {
   return base + jitter;
 }
 
+// ─── Concurrency limiter (Railway 1GB → max 2 concurrent browser pages) ─────
+
+const MAX_CONCURRENT_BROWSER = 2;
+let activeBrowserRequests = 0;
+const browserQueue: Array<() => void> = [];
+
+async function withBrowserLimit<T>(fn: () => Promise<T>): Promise<T> {
+  if (activeBrowserRequests >= MAX_CONCURRENT_BROWSER) {
+    await new Promise<void>((resolve) => browserQueue.push(resolve));
+  }
+  activeBrowserRequests++;
+  try {
+    return await fn();
+  } finally {
+    activeBrowserRequests--;
+    const next = browserQueue.shift();
+    if (next) next();
+  }
+}
+
 // ─── Core fetch function ────────────────────────────────────────────────────
 
 export function getBrowserlessConfig() {
@@ -106,7 +126,7 @@ export async function fetchPage(
   const { validateUrl } = await import("../../lib/url-validator.js");
   await validateUrl(targetUrl);
 
-  // Check cache first
+  // Check cache first (before acquiring browser slot)
   if (!skipCache) {
     const cached = getCached(targetUrl);
     if (cached) {
@@ -114,83 +134,83 @@ export async function fetchPage(
     }
   }
 
-  const { url, key } = getBrowserlessConfig();
-  // Use Authorization header instead of query-param token to avoid key
-  // leaking into access logs and referer headers.
-  const contentUrl = `${url}/content`;
+  // Acquire a browser concurrency slot to prevent OOM on Railway (1GB limit)
+  return withBrowserLimit(async () => {
+    const { url, key } = getBrowserlessConfig();
+    const contentUrl = `${url}/content`;
 
-  let lastError: Error | null = null;
+    let lastError: Error | null = null;
 
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, backoffMs(attempt - 1)));
-    }
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, backoffMs(attempt - 1)));
+      }
 
-    const start = Date.now();
-    try {
-      const response = await fetch(contentUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${key}`,
-        },
-        body: JSON.stringify({
-          url: targetUrl,
-          gotoOptions: { waitUntil, timeout: pageTimeout },
-        }),
-        signal: AbortSignal.timeout(fetchTimeout),
-      });
+      const start = Date.now();
+      try {
+        const response = await fetch(contentUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${key}`,
+          },
+          body: JSON.stringify({
+            url: targetUrl,
+            gotoOptions: { waitUntil, timeout: pageTimeout },
+          }),
+          signal: AbortSignal.timeout(fetchTimeout),
+        });
 
-      if (!response.ok) {
-        const errText = await response.text().catch(() => "");
-        if (isTransient(response.status) && attempt < maxRetries - 1) {
-          lastError = new Error(
-            `Browserless HTTP ${response.status}: ${errText.slice(0, 200)}`,
+        if (!response.ok) {
+          const errText = await response.text().catch(() => "");
+          if (isTransient(response.status) && attempt < maxRetries - 1) {
+            lastError = new Error(
+              `Browserless HTTP ${response.status}: ${errText.slice(0, 200)}`,
+            );
+            continue;
+          }
+          throw new Error(
+            `Browserless returned HTTP ${response.status}: ${errText.slice(0, 200)}`,
           );
-          continue;
         }
-        throw new Error(
-          `Browserless returned HTTP ${response.status}: ${errText.slice(0, 200)}`,
-        );
-      }
 
-      const html = await response.text();
-      const fetchTimeMs = Date.now() - start;
+        const html = await response.text();
+        const fetchTimeMs = Date.now() - start;
 
-      if (!html || html.length < 100) {
+        if (!html || html.length < 100) {
+          if (attempt < maxRetries - 1) {
+            lastError = new Error("Browserless returned empty or too-short HTML.");
+            continue;
+          }
+          throw new Error("Browserless returned empty or too-short HTML response.");
+        }
+
+        // Cache the result
+        if (!skipCache) {
+          setCache(targetUrl, html);
+        }
+
+        return { html, cached: false, fetchTimeMs, attempt: attempt + 1 };
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
         if (attempt < maxRetries - 1) {
-          lastError = new Error("Browserless returned empty or too-short HTML.");
-          continue;
+          const msg = lastError.message.toLowerCase();
+          if (
+            msg.includes("timeout") ||
+            msg.includes("econnrefused") ||
+            msg.includes("enotfound") ||
+            msg.includes("fetch failed") ||
+            msg.includes("abort")
+          ) {
+            continue;
+          }
         }
-        throw new Error("Browserless returned empty or too-short HTML response.");
+        throw lastError;
       }
-
-      // Cache the result
-      if (!skipCache) {
-        setCache(targetUrl, html);
-      }
-
-      return { html, cached: false, fetchTimeMs, attempt: attempt + 1 };
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      // Retry on network errors (timeout, connection refused, etc.)
-      if (attempt < maxRetries - 1) {
-        const msg = lastError.message.toLowerCase();
-        if (
-          msg.includes("timeout") ||
-          msg.includes("econnrefused") ||
-          msg.includes("enotfound") ||
-          msg.includes("fetch failed") ||
-          msg.includes("abort")
-        ) {
-          continue;
-        }
-      }
-      throw lastError;
     }
-  }
 
-  throw lastError ?? new Error("fetchPage: all retries exhausted");
+    throw lastError ?? new Error("fetchPage: all retries exhausted");
+  });
 }
 
 // ─── Convenience wrappers (drop-in replacements for browserless-extract) ────
