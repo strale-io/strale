@@ -103,6 +103,13 @@ qualityRoute.get("/:slug", async (c) => {
     runs_analyzed: dual.qp.runs_analyzed,
     pending: dual.qp.pending && dual.rp.pending,
     ...(qualificationEstimate ? { qualification_estimate: qualificationEstimate } : {}),
-    ...(freshness ? { freshness } : {}),
+    ...(freshness ? {
+      freshness: {
+        category: freshness.category,
+        label: freshness.label,
+        data_update_cycle_days: freshness.data_update_cycle_days ?? null,
+        dataset_last_updated: freshness.dataset_last_updated ?? null,
+      },
+    } : {}),
   });
 });

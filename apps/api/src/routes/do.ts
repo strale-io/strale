@@ -29,12 +29,7 @@ import { getAiDescription, getDataSourceUrl, detectPersonalData } from "../lib/a
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import {
   computeFreshnessGrade,
-  buildPerformanceInfo,
-  gradeLatency,
-  computeTrustGrade,
   type FreshnessInfo,
-  type PerformanceInfo,
-  type TrustGradeInfo,
 } from "../lib/trust-grade.js";
 import type { AppEnv } from "../types.js";
 
@@ -409,7 +404,14 @@ doRoute.post(
       apiError(
         "freshness_check_failed",
         `Capability '${capability.slug}' has stale reference data. ${freshness.label}`,
-        { freshness },
+        {
+          freshness: {
+            category: freshness.category,
+            label: freshness.label,
+            data_update_cycle_days: freshness.data_update_cycle_days ?? null,
+            dataset_last_updated: freshness.dataset_last_updated ?? null,
+          },
+        },
       ),
       422,
     );
