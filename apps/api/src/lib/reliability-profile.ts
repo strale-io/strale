@@ -9,6 +9,10 @@
  *   ai_assisted:    correctness 0.40, schema 0.20, availability 0.15, error_handling 0.15, edge_cases 0.10
  *
  * Circuit breaker penalties apply to RP only.
+ *
+ * Uses per-factor rolling windows (hour granularity) — same approach as QP —
+ * to prevent high-frequency test types (piggyback) from excluding low-frequency
+ * ones (schema_check, dependency_health, negative, edge_case) from the window.
  */
 
 import { sql, eq, and, inArray } from "drizzle-orm";
@@ -124,29 +128,68 @@ export async function computeReliabilityProfile(slug: string): Promise<RPResult>
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const cutoff = thirtyDaysAgo.toISOString();
 
-  const runWindows = await db.execute(sql`
-    SELECT DISTINCT DATE_TRUNC('minute', tr.executed_at) AS run_window
+  // ── Per-type window detection (hour granularity) ─────────────────────────
+  // Each test type gets its own rolling window so that high-frequency types
+  // (piggyback) cannot push low-frequency types (schema_check, dependency_health)
+  // out of the recency window.
+  const rawTypeWindows = await db.execute(sql`
+    SELECT ts.test_type, DATE_TRUNC('hour', tr.executed_at) AS run_window
     FROM test_results tr
     INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
     WHERE tr.capability_slug = ${slug}
       AND tr.executed_at >= ${cutoff}::timestamptz
       AND ts.test_status IN ('normal', 'env_dependent', 'upstream_broken')
+    GROUP BY ts.test_type, DATE_TRUNC('hour', tr.executed_at)
     ORDER BY run_window DESC
-    LIMIT ${ROLLING_RUNS}
   `);
 
-  const windows = (Array.isArray(runWindows) ? runWindows : (runWindows as any)?.rows ?? []) as any[];
+  const typeWindowRows = (
+    Array.isArray(rawTypeWindows) ? rawTypeWindows : (rawTypeWindows as any)?.rows ?? []
+  ) as { test_type: string; run_window: any }[];
 
-  if (windows.length < MIN_RUNS) {
-    return makePendingRP(windows.length, capType);
+  // Group raw windows by test type (already DESC from query)
+  const windowsByType = new Map<string, Date[]>();
+  for (const row of typeWindowRows) {
+    const list = windowsByType.get(row.test_type) ?? [];
+    list.push(new Date(row.run_window));
+    windowsByType.set(row.test_type, list);
   }
 
-  const windowIndexMap = new Map<number, number>();
-  for (let i = 0; i < windows.length; i++) {
-    windowIndexMap.set(new Date(windows[i].run_window).getTime(), i);
+  // Build per-factor window index maps: timestamp → recency index (0 = most recent)
+  // Multiple test types can map to the same factor (e.g., known_answer + piggyback → correctness)
+  const factorWindowMaps = new Map<string, Map<number, number>>();
+  for (const [testType, factor] of Object.entries(TYPE_TO_FACTOR)) {
+    const typeWindows = windowsByType.get(testType) ?? [];
+    const existing = factorWindowMaps.get(factor) ?? new Map<number, number>();
+    for (const w of typeWindows) {
+      if (existing.size >= ROLLING_RUNS) break;
+      const ts = w.getTime();
+      if (!existing.has(ts)) existing.set(ts, existing.size);
+    }
+    if (existing.size > 0) factorWindowMaps.set(factor, existing);
   }
 
-  const oldestWindow = windows[windows.length - 1].run_window;
+  // MIN_RUNS check on correctness (most data-rich factor)
+  const correctnessMap = factorWindowMaps.get("correctness");
+  const corrRuns = correctnessMap?.size ?? 0;
+  if (corrRuns < MIN_RUNS) {
+    return makePendingRP(corrRuns, capType);
+  }
+
+  // Need at least 2 factors with data to compute RP
+  const factorsWithData = FACTOR_KEYS.filter((k) => factorWindowMaps.has(k));
+  if (factorsWithData.length < 2) {
+    return makePendingRP(corrRuns, capType);
+  }
+
+  // Oldest window across all factors — defines the fetch range
+  let globalOldest = Date.now();
+  for (const [, wmap] of factorWindowMaps) {
+    for (const [ts] of wmap) {
+      if (ts < globalOldest) globalOldest = ts;
+    }
+  }
+  const oldestWindow = new Date(globalOldest).toISOString();
 
   // Get ALL test results — RP counts upstream failures as failures
   // Only exclude noise (test_infrastructure, test_design, stale_input)
@@ -155,11 +198,11 @@ export async function computeReliabilityProfile(slug: string): Promise<RPResult>
       ts.test_type,
       tr.passed,
       tr.failure_reason,
-      DATE_TRUNC('minute', tr.executed_at) AS run_window
+      DATE_TRUNC('hour', tr.executed_at) AS run_window
     FROM test_results tr
     INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
     WHERE tr.capability_slug = ${slug}
-      AND DATE_TRUNC('minute', tr.executed_at) >= ${oldestWindow}::timestamptz
+      AND DATE_TRUNC('hour', tr.executed_at) >= ${oldestWindow}::timestamptz
       AND tr.executed_at >= ${cutoff}::timestamptz
       AND ts.test_status IN ('normal', 'env_dependent', 'upstream_broken')
       AND (
@@ -180,8 +223,8 @@ export async function computeReliabilityProfile(slug: string): Promise<RPResult>
 
   return computeRPFromRows(
     testRows,
-    windows.length,
-    windowIndexMap,
+    corrRuns,
+    factorWindowMaps,
     capType,
     health?.consecutiveFailures ?? 0,
   );
@@ -190,7 +233,7 @@ export async function computeReliabilityProfile(slug: string): Promise<RPResult>
 function computeRPFromRows(
   testRows: { test_type: string; passed: boolean; failure_reason: string | null; run_window: any }[],
   runsAnalyzed: number,
-  windowIndexMap: Map<number, number>,
+  factorWindowMaps: Map<string, Map<number, number>>,
   capType: CapabilityType,
   cbConsecutiveFailures: number,
 ): RPResult {
@@ -201,7 +244,7 @@ function computeRPFromRows(
     accum[key] = { weightedPassed: 0, weightedTotal: 0, passed: 0, total: 0 };
   }
 
-  // Per-window tracking for trend
+  // Per-window tracking for trend (use correctness window indices)
   const windowPassed = new Map<number, number>();
   const windowTotal = new Map<number, number>();
 
@@ -209,8 +252,12 @@ function computeRPFromRows(
     const factor = TYPE_TO_FACTOR[row.test_type];
     if (!factor) continue;
 
-    const runIndex = windowIndexMap.get(new Date(row.run_window).getTime()) ?? -1;
-    if (runIndex < 0) continue;
+    // Use the per-factor window map so each factor's recency is computed independently
+    const wmap = factorWindowMaps.get(factor);
+    if (!wmap) continue;
+
+    const runIndex = wmap.get(new Date(row.run_window).getTime()) ?? -1;
+    if (runIndex < 0) continue; // outside this factor's rolling window
 
     const recencyWeight = RECENCY_WEIGHTS[runIndex] ?? 0.30;
 
@@ -220,18 +267,23 @@ function computeRPFromRows(
       accum[factor].weightedTotal += recencyWeight;
       accum[factor].passed++;
       accum[factor].total++;
-      windowPassed.set(runIndex, (windowPassed.get(runIndex) ?? 0) + 1);
-      windowTotal.set(runIndex, (windowTotal.get(runIndex) ?? 0) + 1);
+      // Trend uses correctness window indices only
+      if (factor === "correctness") {
+        windowPassed.set(runIndex, (windowPassed.get(runIndex) ?? 0) + 1);
+        windowTotal.set(runIndex, (windowTotal.get(runIndex) ?? 0) + 1);
+      }
     } else {
       accum[factor].weightedTotal += recencyWeight;
       accum[factor].total++;
-      windowTotal.set(runIndex, (windowTotal.get(runIndex) ?? 0) + 1);
+      if (factor === "correctness") {
+        windowTotal.set(runIndex, (windowTotal.get(runIndex) ?? 0) + 1);
+      }
     }
   }
 
-  // Need at least availability + one other factor
+  // Need at least 2 factors with data
   const factorsWithData = FACTOR_KEYS.filter((k) => accum[k].total > 0);
-  if (factorsWithData.length < 2) {
+  if (factorsWithData.length < 2 || accum.correctness.total === 0) {
     return makePendingRP(runsAnalyzed, capType);
   }
 
@@ -276,12 +328,13 @@ function computeRPFromRows(
     circuitBreakerActive = true;
   }
 
-  // Correctness streak check (5 consecutive correctness failures → −20, floor 30)
-  const nonNoiseRows = testRows
+  // Sort all rows by run_window for streak detection
+  const allRows = testRows
     .filter((r) => TYPE_TO_FACTOR[r.test_type])
     .sort((a, b) => new Date(b.run_window).getTime() - new Date(a.run_window).getTime());
 
-  const correctnessRows = nonNoiseRows.filter(
+  // Correctness streak check (5 consecutive correctness failures → −20, floor 30)
+  const correctnessRows = allRows.filter(
     (r) => TYPE_TO_FACTOR[r.test_type] === "correctness",
   );
   if (correctnessRows.length >= 5 && correctnessRows.slice(0, 5).every((r) => !r.passed)) {
@@ -290,7 +343,7 @@ function computeRPFromRows(
   }
 
   // Schema break (latest schema_check failed → −15, floor 40)
-  const schemaRows = nonNoiseRows.filter(
+  const schemaRows = allRows.filter(
     (r) => TYPE_TO_FACTOR[r.test_type] === "schema",
   );
   if (schemaRows.length > 0 && !schemaRows[0].passed) {
@@ -299,8 +352,8 @@ function computeRPFromRows(
   }
 
   // Recovery: 3 consecutive passes clear penalty
-  if (circuitBreakerActive && nonNoiseRows.length >= 3) {
-    if (nonNoiseRows.slice(0, 3).every((r) => r.passed)) {
+  if (circuitBreakerActive && allRows.length >= 3) {
+    if (allRows.slice(0, 3).every((r) => r.passed)) {
       circuitBreakerActive = false;
       score = Math.round(
         Object.values(factors).reduce((s, f) => s + f.weighted_contribution, 0) * 10,
@@ -376,6 +429,6 @@ function makePendingRP(runsAnalyzed: number, capType: CapabilityType): RPResult 
     trend: "stable",
     circuit_breaker: false,
     runs_analyzed: runsAnalyzed,
-    pending: false,
+    pending: true, // FIXED: was false, causing crash in computeMatrixSQS
   };
 }
