@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 
 registerCapability("youtube-summarize", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.youtube_url as string) ?? (input.task as string) ?? "").trim();
@@ -92,13 +93,31 @@ function extractVideoId(url: string): string | null {
 }
 
 async function fetchTranscript(videoId: string): Promise<string | null> {
-  // Fetch YouTube page to get captions info
-  const pageRes = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-    headers: { "User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9" },
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!pageRes.ok) return null;
-  const pageHtml = await pageRes.text();
+  const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+  // Try direct fetch first (works from residential IPs), then Browserless
+  let pageHtml: string | null = null;
+
+  try {
+    const pageRes = await fetch(ytUrl, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Accept-Language": "en-US,en;q=0.9" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (pageRes.ok) {
+      const html = await pageRes.text();
+      if (html.includes('"captions"')) pageHtml = html;
+    }
+  } catch { /* fall through to Browserless */ }
+
+  // Fallback: use Browserless (EU West) which renders full JS and gets captions
+  if (!pageHtml) {
+    try {
+      const html = await fetchRenderedHtml(ytUrl);
+      if (html.includes('"captions"') || html.includes('captionTracks')) pageHtml = html;
+    } catch { /* both failed */ }
+  }
+
+  if (!pageHtml) return null;
 
   // Extract captions URL from ytInitialPlayerResponse
   const captionsMatch = pageHtml.match(/"captions":\s*(\{.*?"captionTracks":\s*\[.*?\].*?\})/s);
