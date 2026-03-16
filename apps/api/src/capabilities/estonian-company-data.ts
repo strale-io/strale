@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { getBrowserlessConfig, htmlToText } from "./lib/browserless-extract.js";
 
 // Estonian company data via ariregister.rik.ee — FREE, no auth
 const API = "https://ariregister.rik.ee/est/api";
@@ -28,14 +29,49 @@ async function extractCompanyName(text: string): Promise<string> {
   return name;
 }
 
-async function searchCompany(query: string): Promise<Record<string, unknown>> {
-  const url = `${API}/autocomplete?q=${encodeURIComponent(query)}`;
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10000),
+/** Fetch the Estonian API through Browserless EU West to bypass IP restrictions. */
+async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
+  const { url, key } = getBrowserlessConfig();
+  const resp = await fetch(`${url}/content`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      url: apiUrl,
+      gotoOptions: { waitUntil: "networkidle0", timeout: 10000 },
+    }),
+    signal: AbortSignal.timeout(15000),
   });
-  if (!response.ok) throw new Error(`Estonian registry API returned HTTP ${response.status}`);
-  const data = (await response.json()) as any;
+  if (!resp.ok) throw new Error(`Proxy fetch failed: HTTP ${resp.status}`);
+  const html = await resp.text();
+  // Chrome renders JSON APIs in a <pre> tag; extract and parse
+  const text = htmlToText(html);
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("Could not extract API response via proxy.");
+  return JSON.parse(jsonMatch[0]);
+}
+
+/** Try direct fetch first (works from EU IPs), fall back to Browserless proxy. */
+async function fetchApi(path: string): Promise<unknown> {
+  const url = `${API}${path}`;
+  try {
+    const resp = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (resp.ok) return resp.json();
+    if (resp.status === 403) throw new Error("IP blocked");
+    throw new Error(`HTTP ${resp.status}`);
+  } catch {
+    // Route through Browserless EU West (Amsterdam) to bypass geo-restriction
+    return fetchApiViaProxy(url);
+  }
+}
+
+async function searchCompany(query: string): Promise<Record<string, unknown>> {
+  const data = (await fetchApi(`/autocomplete?q=${encodeURIComponent(query)}`)) as any;
   const results = data?.data;
   if (!results || results.length === 0) {
     throw new Error(`No Estonian company found matching "${query}".`);

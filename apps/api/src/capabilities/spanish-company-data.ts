@@ -16,8 +16,24 @@ function findCif(input: string): string | null {
   return match ? match[0] : null;
 }
 
-async function lookupCompany(query: string, isCif: boolean): Promise<Record<string, unknown>> {
-  // Use infocif.es — a free Spanish company search portal
+// Primary: empresia.es (BORME data, no SSL issues)
+async function lookupViaEmpresia(query: string, isCif: boolean): Promise<Record<string, unknown>> {
+  const searchUrl = isCif
+    ? `https://www.empresia.es/cif/${query}/`
+    : `https://www.empresia.es/buscador/?nombre=${encodeURIComponent(query)}`;
+
+  const html = await fetchRenderedHtml(searchUrl);
+  const text = htmlToText(html);
+
+  if (text.includes("No se encontraron") || text.includes("no results") || text.includes("404") || text.length < 200) {
+    throw new Error(`No Spanish company found matching "${query}".`);
+  }
+
+  return extractCompanyFromText(text, "Spanish", query);
+}
+
+// Fallback: infocif.es (may have SSL cert issues)
+async function lookupViaInfocif(query: string, isCif: boolean): Promise<Record<string, unknown>> {
   const searchUrl = isCif
     ? `https://www.infocif.es/ficha-empresa/${query}`
     : `https://www.infocif.es/buscar-empresa?q=${encodeURIComponent(query)}`;
@@ -40,20 +56,26 @@ registerCapability("spanish-company-data", async (input: CapabilityInput) => {
 
   const trimmed = raw.trim();
   const cif = findCif(trimmed);
+  const query = cif ?? await extractCompanyName(trimmed, "Spanish");
+  const isCif = !!cif;
 
-  let output: Record<string, unknown>;
-  if (cif) {
-    output = await lookupCompany(cif, true);
-  } else {
-    const name = await extractCompanyName(trimmed, "Spanish");
-    output = await lookupCompany(name, false);
+  // Primary: empresia.es
+  try {
+    const output = await lookupViaEmpresia(query, isCif);
+    return {
+      output,
+      provenance: { source: "empresia.es", fetched_at: new Date().toISOString() },
+    };
+  } catch (primaryErr) {
+    // Fallback: infocif.es
+    try {
+      const output = await lookupViaInfocif(query, isCif);
+      return {
+        output,
+        provenance: { source: "infocif.es", fetched_at: new Date().toISOString() },
+      };
+    } catch {
+      throw primaryErr;
+    }
   }
-
-  return {
-    output,
-    provenance: {
-      source: "infocif.es",
-      fetched_at: new Date().toISOString(),
-    },
-  };
 });
