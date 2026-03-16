@@ -18,21 +18,33 @@ function findCif(input: string): string | null {
 
 // Primary: empresia.es (BORME data, no SSL issues)
 async function lookupViaEmpresia(query: string, isCif: boolean): Promise<Record<string, unknown>> {
-  // CIF lookup: /cif/A28601094/
-  // Name lookup: /empresa/{slug}/ (server-rendered, no JS needed)
+  if (isCif) {
+    const html = await fetchRenderedHtml(`https://www.empresia.es/cif/${query}/`);
+    const text = htmlToText(html);
+    if (text.length < 200 || text.includes("404")) {
+      throw new Error(`No Spanish company found for CIF "${query}".`);
+    }
+    return extractCompanyFromText(text, "Spanish", query);
+  }
+
+  // Name lookup: try direct /empresa/{slug}/ first, fall back to search
   const slug = query.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const searchUrl = isCif
-    ? `https://www.empresia.es/cif/${query}/`
-    : `https://www.empresia.es/empresa/${slug}/`;
+  const directHtml = await fetchRenderedHtml(`https://www.empresia.es/empresa/${slug}/`);
+  const directText = htmlToText(directHtml);
 
-  const html = await fetchRenderedHtml(searchUrl);
-  const text = htmlToText(html);
+  if (directText.length >= 300 && !directText.includes("404") && !directText.includes("No encontrado")) {
+    return extractCompanyFromText(directText, "Spanish", query);
+  }
 
-  if (text.includes("No se encontraron") || text.includes("no results") || text.includes("404") || text.length < 200) {
+  // Fallback: search page (requires JS rendering via Browserless)
+  const searchHtml = await fetchRenderedHtml(`https://www.empresia.es/buscador/?nombre=${encodeURIComponent(query)}`);
+  const searchText = htmlToText(searchHtml);
+
+  if (searchText.length < 200 || searchText.includes("No se encontraron")) {
     throw new Error(`No Spanish company found matching "${query}".`);
   }
 
-  return extractCompanyFromText(text, "Spanish", query);
+  return extractCompanyFromText(searchText, "Spanish", query);
 }
 
 // Fallback: infocif.es (may have SSL cert issues)
