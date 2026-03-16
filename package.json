@@ -11,6 +11,7 @@
     "mcp:build": "npm run build --workspace=packages/mcp-server",
     "mcp:dev": "npm run dev --workspace=packages/mcp-server"
   },
+  "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
   }
