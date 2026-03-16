@@ -13,22 +13,37 @@ function parseEcbCsv(csv: string): { date: string; value: number } | null {
 }
 
 registerCapability("ecb-interest-rates", async (input: CapabilityInput) => {
-  const base = "https://sdw-wsrest.ecb.europa.eu/service/data/FM";
+  // Primary: new ECB Data API (works globally, no geo-restrictions)
+  // Fallback: legacy SDW endpoint (geo-restricted to EU)
+  const primary = "https://data-api.ecb.europa.eu/service/data/FM";
+  const legacy = "https://sdw-wsrest.ecb.europa.eu/service/data/FM";
   const suffix = "?format=csvdata&lastNObservations=1";
 
-  const urls: Record<string, string> = {
-    main_refinancing_rate: `${base}/B.U2.EUR.4F.KR.MRR_FR.LEV${suffix}`,
-    deposit_facility_rate: `${base}/B.U2.EUR.4F.KR.DFR.LEV${suffix}`,
-    marginal_lending_rate: `${base}/B.U2.EUR.4F.KR.MLFR.LEV${suffix}`,
+  const rateKeys = {
+    main_refinancing_rate: "/B.U2.EUR.4F.KR.MRR_FR.LEV",
+    deposit_facility_rate: "/B.U2.EUR.4F.KR.DFR.LEV",
+    marginal_lending_rate: "/B.U2.EUR.4F.KR.MLFR.LEV",
   };
 
   const results: Record<string, number | null> = {};
   let effectiveDate = "";
 
-  const entries = Object.entries(urls);
+  const entries = Object.entries(rateKeys);
   const responses = await Promise.allSettled(
-    entries.map(async ([key, url]) => {
-      const resp = await fetch(url, { headers: { Accept: "text/csv" } });
+    entries.map(async ([key, path]) => {
+      // Try primary endpoint first, fall back to legacy
+      let resp: Response;
+      try {
+        resp = await fetch(`${primary}${path}${suffix}`, {
+          headers: { Accept: "text/csv" },
+          signal: AbortSignal.timeout(10000),
+        });
+      } catch {
+        resp = await fetch(`${legacy}${path}${suffix}`, {
+          headers: { Accept: "text/csv" },
+          signal: AbortSignal.timeout(10000),
+        });
+      }
       if (!resp.ok) throw new Error(`ECB API returned ${resp.status}`);
       const csv = await resp.text();
       const parsed = parseEcbCsv(csv);
