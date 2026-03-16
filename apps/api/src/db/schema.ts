@@ -97,6 +97,8 @@ export const capabilities = pgTable("capabilities", {
   successRate: decimal("success_rate", { precision: 5, scale: 4 }),
   transparencyTag: varchar("transparency_tag", { length: 30 }),
   // 'ai_generated' | 'algorithmic' | 'mixed'
+  geography: varchar("geography", { length: 50 }),
+  // 'global' | 'eu' | 'nordic' | 'us' | 'uk' | etc.
   dataSource: text("data_source"),
   dataClassification: text("data_classification"),
   freshnessCategory: text("freshness_category"),

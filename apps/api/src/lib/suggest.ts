@@ -244,6 +244,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           category: capabilities.category,
           priceCents: capabilities.priceCents,
           isFreeTier: capabilities.isFreeTier,
+          geography: capabilities.geography,
         })
         .from(capabilities)
         .where(eq(capabilities.isActive, true));
@@ -261,7 +262,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           category: cap.category,
           priceCents: cap.priceCents,
           isFreeTier: cap.isFreeTier,
-          geography: null,
+          geography: cap.geography ?? "global",
           embedding: [],
           embeddingText,
           tokens: tokenize(tokenText),

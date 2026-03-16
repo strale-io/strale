@@ -39,6 +39,7 @@ export interface Capability {
   description: string;
   category: string;
   price_cents: number;
+  geography?: string;
   input_schema: JsonSchema | null;
   output_schema: unknown;
   is_free_tier?: boolean;
@@ -659,6 +660,7 @@ export function registerStraleTools(
           name: c.name,
           description: c.description,
           category: c.category,
+          geography: c.geography ?? "global",
           price: `€${(c.price_cents / 100).toFixed(2)}`,
           input_fields: inputFields,
           sqs: trust?.sqs ?? c.sqs ?? 0,

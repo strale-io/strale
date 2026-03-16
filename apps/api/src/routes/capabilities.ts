@@ -23,6 +23,7 @@ capabilitiesRoute.get("/", async (c) => {
       input_schema: capabilities.inputSchema,
       output_schema: capabilities.outputSchema,
       transparency_tag: capabilities.transparencyTag,
+      geography: capabilities.geography,
       data_source: capabilities.dataSource,
       is_free_tier: capabilities.isFreeTier,
       // Dual-profile cached columns
@@ -66,6 +67,7 @@ capabilitiesRoute.get("/", async (c) => {
       input_schema: r.input_schema,
       output_schema: r.output_schema,
       transparency_tag: r.transparency_tag,
+      geography: r.geography ?? "global",
       data_source: r.data_source,
       is_free_tier: r.is_free_tier,
       sqs: sqs,
@@ -112,6 +114,7 @@ capabilitiesRoute.get("/:slug", async (c) => {
       input_schema: capabilities.inputSchema,
       output_schema: capabilities.outputSchema,
       transparency_tag: capabilities.transparencyTag,
+      geography: capabilities.geography,
       data_source: capabilities.dataSource,
       is_free_tier: capabilities.isFreeTier,
     })
