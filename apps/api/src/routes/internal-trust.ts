@@ -326,9 +326,10 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
       freshnessCategory: capabilities.freshnessCategory,
       dataUpdateCycleDays: capabilities.dataUpdateCycleDays,
       datasetLastUpdated: capabilities.datasetLastUpdated,
+      isActive: capabilities.isActive,
     })
       .from(capabilities)
-      .where(eq(capabilities.slug, slug))
+      .where(and(eq(capabilities.slug, slug), eq(capabilities.isActive, true)))
       .limit(1)
       .then((r) => r[0]),
     getTestResultsForSlug(slug),
@@ -395,11 +396,11 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
       score: dual.rp.score,
       label: rpGradeToLabel(dual.rp.grade),
       factors: {
-        current_availability: { score: dual.rp.factors.availability.rate, detail: `${dual.rp.factors.availability.passed}/${dual.rp.factors.availability.total} passed`, weight: dual.rp.factors.availability.weight },
-        rolling_success: { score: dual.rp.factors.correctness.rate, detail: `${dual.rp.factors.correctness.passed}/${dual.rp.factors.correctness.total} passed`, weight: dual.rp.factors.correctness.weight },
-        upstream_health: { score: dual.rp.factors.schema.rate, detail: `${dual.rp.factors.schema.passed}/${dual.rp.factors.schema.total} passed`, weight: dual.rp.factors.schema.weight },
-        error_resilience: { score: dual.rp.factors.error_handling.rate, detail: `${dual.rp.factors.error_handling.passed}/${dual.rp.factors.error_handling.total} passed`, weight: dual.rp.factors.error_handling.weight },
-        latency: { score: dual.rp.factors.edge_cases.rate, detail: `${dual.rp.factors.edge_cases.passed}/${dual.rp.factors.edge_cases.total} passed`, weight: dual.rp.factors.edge_cases.weight },
+        correctness: { score: dual.rp.factors.correctness.rate, detail: `${dual.rp.factors.correctness.passed}/${dual.rp.factors.correctness.total} passed`, weight: dual.rp.factors.correctness.weight },
+        schema: { score: dual.rp.factors.schema.rate, detail: `${dual.rp.factors.schema.passed}/${dual.rp.factors.schema.total} passed`, weight: dual.rp.factors.schema.weight },
+        availability: { score: dual.rp.factors.availability.rate, detail: `${dual.rp.factors.availability.passed}/${dual.rp.factors.availability.total} passed`, weight: dual.rp.factors.availability.weight },
+        error_handling: { score: dual.rp.factors.error_handling.rate, detail: `${dual.rp.factors.error_handling.passed}/${dual.rp.factors.error_handling.total} passed`, weight: dual.rp.factors.error_handling.weight },
+        edge_cases: { score: dual.rp.factors.edge_cases.rate, detail: `${dual.rp.factors.edge_cases.passed}/${dual.rp.factors.edge_cases.total} passed`, weight: dual.rp.factors.edge_cases.weight },
       },
     },
 
@@ -492,6 +493,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
         sqs: dual.matrix.score,
         quality: dual.qp.grade,
         reliability: dual.rp.grade,
+        rp_score: dual.rp.score,
         trend: dual.rp.trend,
         usable: guidance.usable,
         strategy: guidance.strategy,
@@ -583,7 +585,13 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
     execution_guidance: {
       usable: solutionUsable,
       strategy: solutionStrategy,
-      confidence_after_strategy: solutionUsable ? Math.min(...stepData.map(() => 100)) : 0,
+      confidence_after_strategy: solutionUsable
+        ? Math.min(...stepData.map((s) => {
+            if (s.reliability === "A") return 100;
+            if (s.reliability === "B") return 90;
+            return Math.min(99, Math.round(s.rp_score));
+          }))
+        : 0,
       context: solutionUsable
         ? "All steps operational."
         : `Some steps unavailable. Check per-step breakdown.`,

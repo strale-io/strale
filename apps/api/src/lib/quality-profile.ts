@@ -18,6 +18,7 @@
 import { sql, eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilityHealth, testSuites } from "../db/schema.js";
+import { MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS } from "./sqs-constants.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -55,9 +56,7 @@ const QP_WEIGHTS = {
 
 const QP_FACTOR_KEYS = Object.keys(QP_WEIGHTS) as (keyof typeof QP_WEIGHTS)[];
 
-const MIN_RUNS = 5;
-const ROLLING_RUNS = 10;
-const RECENCY_WEIGHTS = [1.00, 0.95, 0.90, 0.85, 0.80, 0.70, 0.60, 0.50, 0.40, 0.30];
+// MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS imported from sqs-constants.ts
 
 const TYPE_TO_QP_FACTOR: Record<string, keyof typeof QP_WEIGHTS> = {
   known_answer: "correctness",

@@ -103,10 +103,13 @@ export async function runTests(
     conditions.push(eq(testSuites.scheduleTier, opts.tier));
   }
 
-  const suites = await db
-    .select()
+  // T-1: Inner join with capabilities to skip test suites for deactivated capabilities
+  const suitesRaw = await db
+    .select({ suite: testSuites })
     .from(testSuites)
-    .where(and(...conditions));
+    .innerJoin(capabilities, eq(testSuites.capabilitySlug, capabilities.slug))
+    .where(and(...conditions, eq(capabilities.isActive, true)));
+  const suites = suitesRaw.map((r) => r.suite);
 
   const tierLabel = opts.tier ?? "all";
   const delayMs = opts.tier ? TIER_DELAY_MS[opts.tier] : DEFAULT_DELAY_MS;

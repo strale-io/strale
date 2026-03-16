@@ -187,7 +187,10 @@ adminRoute.get("/stats", async (c) => {
     })),
   };
 
-  cachedStats = stats;
+  // Cache only non-PII stats — recent_signups with emails is never cached.
+  // Each request re-fetches from DB to prevent stale PII leaks.
+  const { recent_signups: _, ...cacheable } = stats;
+  cachedStats = { ...cacheable, recent_signups: [] as typeof stats.recent_signups };
   cachedAt = now;
 
   c.header("Cache-Control", "private, max-age=300");

@@ -1,7 +1,7 @@
 /**
  * MCP Streamable HTTP transport endpoint.
  *
- * Mounts at /mcp on the Hono app. Exposes the same 233+ tools as the
+ * Mounts at /mcp on the Hono app. Exposes the same 229 tools as the
  * stdio MCP server, but over HTTP so remote clients can connect without
  * installing anything locally.
  *
@@ -14,6 +14,7 @@
  */
 
 import { Hono } from "hono";
+import { rateLimitByIp } from "../lib/rate-limit.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import {
@@ -207,6 +208,9 @@ function addCorsHeaders(response: Response): Response {
 // ─── Hono route ─────────────────────────────────────────────────────────────
 
 export const mcpRoute = new Hono();
+
+// IP rate limiting for MCP endpoint — 60 requests/minute per IP
+mcpRoute.use("*", rateLimitByIp(60, 60_000));
 
 // CORS preflight
 mcpRoute.options("/", (c) => {

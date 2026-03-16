@@ -24,6 +24,17 @@ export const internalQualityRoute = new Hono<AppEnv>();
 internalQualityRoute.get("/capabilities/:slug", async (c) => {
   const slug = c.req.param("slug");
 
+  // API-5: Filter deactivated capabilities
+  const db = getDb();
+  const [capCheck] = await db
+    .select({ isActive: capabilities.isActive })
+    .from(capabilities)
+    .where(eq(capabilities.slug, slug))
+    .limit(1);
+  if (!capCheck || !capCheck.isActive) {
+    return c.json(apiError("not_found", `Capability '${slug}' not found.`), 404);
+  }
+
   const [dual, metrics] = await Promise.all([
     computeDualProfileSQS(slug).catch(() => null),
     getCapabilityQuality(slug),

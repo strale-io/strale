@@ -10,7 +10,7 @@ import {
 } from "../db/schema.js";
 import { checkMilestone } from "../lib/milestones.js";
 import { optionalAuthMiddleware } from "../lib/middleware.js";
-import { rateLimitByKey, rateLimitFreeTierByIp } from "../lib/rate-limit.js";
+import { rateLimitByKey, rateLimitFreeTierByIp, rateLimitByIp } from "../lib/rate-limit.js";
 import { matchCapability } from "../lib/matching.js";
 import { getExecutor } from "../capabilities/index.js";
 import { apiError } from "../lib/errors.js";
@@ -37,11 +37,14 @@ import type { AppEnv } from "../types.js";
 interface DualProfileQuality {
   sqs: number;
   label: string;
-  quality_profile: string;
-  reliability_profile: string;
+  quality_profile: { grade: string; score: number; label: string };
+  reliability_profile: { grade: string; score: number; label: string };
   trend: string;
 }
 
+// Compact guidance for /v1/do consumers (agents need usable + strategy + confidence).
+// Internal trust detail returns full 10-field config; solution trust returns 4-field subset.
+// This variation is intentional: each endpoint serves different consumer needs.
 interface DualProfileGuidance {
   usable: boolean;
   strategy: string;
@@ -54,7 +57,12 @@ type DualProfileSQSResult = Awaited<ReturnType<typeof computeDualProfileSQS>>;
 function buildDualProfileResponse(dual: DualProfileSQSResult | null, sqs: { score: number; label: string; trend: string; pending: boolean }) {
   if (!dual) {
     return {
-      quality: { sqs: sqs.score, label: sqs.label, quality_profile: "pending", reliability_profile: "pending", trend: sqs.trend },
+      quality: {
+        sqs: sqs.score, label: sqs.label,
+        quality_profile: { grade: "pending", score: 0, label: "Pending" },
+        reliability_profile: { grade: "pending", score: 0, label: "Pending" },
+        trend: sqs.trend,
+      },
       execution_guidance: { usable: true, strategy: "direct" as const, confidence_after_strategy: 100 },
     };
   }
@@ -62,8 +70,8 @@ function buildDualProfileResponse(dual: DualProfileSQSResult | null, sqs: { scor
     quality: {
       sqs: dual.matrix.score,
       label: dual.matrix.label,
-      quality_profile: dual.qp.grade,
-      reliability_profile: dual.rp.grade,
+      quality_profile: { grade: dual.qp.grade, score: dual.qp.score, label: dual.qp.label },
+      reliability_profile: { grade: dual.rp.grade, score: dual.rp.score, label: dual.rp.label },
       trend: dual.rp.trend,
     },
     execution_guidance: {
@@ -103,6 +111,7 @@ export const doRoute = new Hono<AppEnv>();
 // DEC-21: 10 req/sec per API key (authenticated), 10/day per IP (free-tier)
 doRoute.post(
   "/do",
+  rateLimitByIp(60, 60_000),         // IP rate limit BEFORE auth — catches invalid Bearer token bypass (S-5)
   optionalAuthMiddleware,
   rateLimitByKey(10, 1000),         // applies only if user is set
   rateLimitFreeTierByIp(10),        // applies only if user is NOT set
@@ -186,7 +195,7 @@ doRoute.post(
     const [existing] = await db
       .select()
       .from(transactions)
-      .where(eq(transactions.idempotencyKey, idempotencyKey))
+      .where(and(eq(transactions.idempotencyKey, idempotencyKey), eq(transactions.userId, user.id)))
       .limit(1);
 
     if (existing) {
@@ -363,11 +372,13 @@ doRoute.post(
     );
   }
 
-  // ── 5c. SQS quality gate ──────────────────────────────────────────────
+  // ── 5c. SQS quality gate (uses dual-profile matrix score) ───────────
   const PLATFORM_FLOOR_SQS = 25;
-  const sqs = await computeCapabilitySQS(capability.slug);
-  // Dual-profile: compute for response quality block
   const dual = await computeDualProfileSQS(capability.slug).catch(() => null);
+  // Gate score: use matrix SQS (canonical). Fall back to legacy only if dual-profile fails.
+  const sqs = dual
+    ? { score: dual.score, label: dual.label, pending: dual.matrix.pending, trend: dual.rp.trend }
+    : await computeCapabilitySQS(capability.slug);
 
   if (!sqs.pending && sqs.score < PLATFORM_FLOOR_SQS) {
     return c.json(
@@ -439,6 +450,24 @@ doRoute.post(
   // ── 6. Decide execution path ─────────────────────────────────────────
   const executionInput = inputs ?? { task };
   const outputSchema = (match.capability.outputSchema ?? {}) as Record<string, unknown>;
+
+  // S-8: Validate inputs against capability's input_schema (required fields check)
+  const inputSchema = (match.capability as any).inputSchema as { required?: string[]; properties?: Record<string, unknown> } | null;
+  if (inputs && inputSchema?.required && inputSchema?.properties) {
+    const missingFields = inputSchema.required.filter(
+      (field) => !(field in executionInput) || executionInput[field] === undefined,
+    );
+    if (missingFields.length > 0) {
+      return c.json(
+        apiError(
+          "invalid_request",
+          `Missing required input fields: ${missingFields.join(", ")}`,
+          { missing_fields: missingFields, expected_fields: Object.keys(inputSchema.properties) },
+        ),
+        400,
+      );
+    }
+  }
 
   // Free-tier without auth: persisted execution (no wallet, no user — but transaction record stored for audit)
   if (!user && isFreeTier) {
@@ -961,7 +990,7 @@ async function executeSync(
     executionInput,
     output: result.output,
     provenance: result.provenance,
-    sqs: { score: 0, label: qualityStatus, trend: "stable", pending: false },
+    sqs: { score: sqs.score, label: sqs.label, trend: sqs.trend ?? "stable", pending: sqs.pending },
     qualityPassRate,
   });
 
@@ -1211,16 +1240,16 @@ async function executeInBackground(
 
     // Failure: refund wallet + update transaction in a single tx
     await db.transaction(async (tx) => {
-      // Refund the optimistic debit
+      // Refund the optimistic debit — SELECT FOR UPDATE to prevent race conditions (DEC-8)
+      const [walletRow] = await tx
+        .select({ b: wallets.balanceCents })
+        .from(wallets)
+        .where(eq(wallets.id, walletId))
+        .for("update");
       await tx
         .update(wallets)
         .set({
-          balanceCents: (
-            await tx
-              .select({ b: wallets.balanceCents })
-              .from(wallets)
-              .where(eq(wallets.id, walletId))
-          )[0].b + capability.priceCents,
+          balanceCents: walletRow.b + capability.priceCents,
           updatedAt: new Date(),
         })
         .where(eq(wallets.id, walletId));

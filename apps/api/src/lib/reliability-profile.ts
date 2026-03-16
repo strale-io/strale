@@ -10,6 +10,11 @@
  *
  * Circuit breaker penalties apply to RP only.
  *
+ * NOTE: RP circuit breaker includes upstream failures in streak detection
+ * (unlike legacy SQS which excludes them). This is intentional — RP measures
+ * operational reliability from the caller's perspective, where upstream
+ * failures ARE real failures regardless of fault attribution.
+ *
  * Uses per-factor rolling windows (hour granularity) — same approach as QP —
  * to prevent high-frequency test types (piggyback) from excluding low-frequency
  * ones (schema_check, dependency_health, negative, edge_case) from the window.
@@ -18,6 +23,7 @@
 import { sql, eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilityHealth, testSuites, capabilities } from "../db/schema.js";
+import { MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS } from "./sqs-constants.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -73,9 +79,7 @@ const RP_WEIGHTS: Record<CapabilityType, Record<string, number>> = {
 
 const FACTOR_KEYS = ["correctness", "schema", "availability", "error_handling", "edge_cases"] as const;
 
-const MIN_RUNS = 5;
-const ROLLING_RUNS = 10;
-const RECENCY_WEIGHTS = [1.00, 0.95, 0.90, 0.85, 0.80, 0.70, 0.60, 0.50, 0.40, 0.30];
+// MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS imported from sqs-constants.ts
 
 const TYPE_TO_FACTOR: Record<string, typeof FACTOR_KEYS[number]> = {
   known_answer: "correctness",

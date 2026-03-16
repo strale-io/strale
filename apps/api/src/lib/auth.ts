@@ -6,7 +6,11 @@ export function generateApiKey(): string {
   return `sk_live_${random}`;
 }
 
-// Hash an API key for storage (SHA-256)
+// Hash an API key for storage (SHA-256).
+// Unsalted SHA-256 is acceptable here because API keys are 256-bit random
+// values (sk_live_ + 32 hex bytes), giving sufficient entropy to prevent
+// rainbow table attacks. A salted KDF (scrypt/argon2) would be overkill
+// given the key space. Timing-safe comparison is used in middleware.
 export function hashApiKey(key: string): string {
   return createHash("sha256").update(key).digest("hex");
 }

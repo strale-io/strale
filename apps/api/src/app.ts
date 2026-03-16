@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { bodyLimit } from "hono/body-limit";
 import { versionMiddleware } from "./lib/versioning.js";
+import { rateLimitByIp } from "./lib/rate-limit.js";
 import { doRoute } from "./routes/do.js";
 import { capabilitiesRoute } from "./routes/capabilities.js";
 import { walletRoute } from "./routes/wallet.js";
@@ -70,9 +71,7 @@ import "./capabilities/sepa-xml-validate.js";
 import "./capabilities/us-company-data.js";
 import "./capabilities/canadian-company-data.js";
 import "./capabilities/australian-company-data.js";
-import "./capabilities/indian-company-data.js";
-import "./capabilities/singapore-company-data.js";
-import "./capabilities/hong-kong-company-data.js";
+// indian-company-data, singapore-company-data, hong-kong-company-data: deactivated (no viable data source)
 import "./capabilities/brazilian-company-data.js";
 import "./capabilities/japanese-company-data.js";
 // ─── Financial & credit ─────────────────────────────────────────────────────
@@ -248,7 +247,7 @@ import "./capabilities/ssl-certificate-chain.js";
 import "./capabilities/domain-reputation.js";
 // ─── E-commerce & product data ──────────────────────────────────────────────
 import "./capabilities/barcode-lookup.js";
-import "./capabilities/amazon-price.js";
+// amazon-price: deactivated (Amazon CAPTCHA blocks datacenter IPs)
 // ─── Finance / fintech ───────────────────────────────────────────────────────
 import "./capabilities/bank-bic-lookup.js";
 import "./capabilities/ecb-interest-rates.js";
@@ -350,7 +349,8 @@ const ALLOWED_ORIGINS = [
 const restrictedCors = cors({
   origin: (origin) => {
     if (!origin) return "*";                 // Server-to-server (SDKs, MCP, curl)
-    if (origin === "null") return "null";    // Sandboxed iframes
+    // origin === "null" intentionally rejected — sandboxed iframes should not
+    // be able to issue credentialed cross-origin requests to payment endpoints.
     if (ALLOWED_ORIGINS.includes(origin)) return origin;
     if (origin.endsWith(".lovable.app") || origin.endsWith(".lovable.dev")) return origin;
     return "";
@@ -371,6 +371,7 @@ app.use("/v1/capabilities", publicCors);
 app.use("/v1/solutions/*", publicCors);
 app.use("/v1/solutions", publicCors);
 app.use("/v1/internal/*", publicCors);
+app.use("/v1/internal/*", rateLimitByIp(120, 60_000));  // S-7: rate limit public internal endpoints
 app.use("/v1/audit/*", publicCors);
 app.use("/.well-known/*", publicCors);
 

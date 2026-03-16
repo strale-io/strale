@@ -69,7 +69,8 @@ export function rateLimitByKey(maxRequests: number, windowMs: number) {
   return async (c: Context, next: Next) => {
     const user = c.get("user") as { id: string } | undefined;
     if (!user) {
-      // No user set — auth middleware hasn't run or failed
+      // No user set — expected for unauthenticated free-tier requests.
+      // IP-based rate limiting handles this path (rateLimitFreeTierByIp or rateLimitByIp).
       return next();
     }
 

@@ -4,6 +4,7 @@ import { capabilityHealth, testSuites } from "../db/schema.js";
 import { computeQualityProfile, type QPResult } from "./quality-profile.js";
 import { computeReliabilityProfile, type RPResult } from "./reliability-profile.js";
 import { computeMatrixSQS, type MatrixSQSResult } from "./sqs-matrix.js";
+import { MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS } from "./sqs-constants.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -45,11 +46,7 @@ const WEIGHTS = {
 
 const FACTOR_KEYS = Object.keys(WEIGHTS) as (keyof typeof WEIGHTS)[];
 
-const MIN_RUNS = 5;
-const ROLLING_RUNS = 10;
-
-// Linear decay: run 1 (most recent) = 1.00, run 10 (oldest) = 0.30
-const RECENCY_WEIGHTS = [1.00, 0.95, 0.90, 0.85, 0.80, 0.70, 0.60, 0.50, 0.40, 0.30];
+// MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS imported from sqs-constants.ts
 
 // test_type → SQS factor mapping
 const TYPE_TO_FACTOR: Record<string, keyof typeof WEIGHTS> = {
@@ -637,8 +634,7 @@ function makeBuildingTrackRecordResult(runsAnalyzed = 0): SQSResult {
   };
 }
 
-/** @deprecated Use computeCapabilitySQS — alias kept for backward compat during transition. */
-export const computeLegacySQS = computeCapabilitySQS;
+// D-3: computeLegacySQS alias removed — no callers found. Use computeCapabilitySQS directly.
 
 // ─── Dual-profile SQS ──────────────────────────────────────────────────────
 
@@ -653,11 +649,18 @@ export interface DualProfileSQSResult {
   legacy_score: number;
 }
 
+// In-process cache for dual-profile SQS (same TTL as legacy SQS cache)
+const dualCache = new Map<string, { data: DualProfileSQSResult; expiresAt: number }>();
+
 /**
  * Compute dual-profile SQS for a single capability.
  * Returns QP, RP, and the matrix-combined score.
  */
 export async function computeDualProfileSQS(slug: string): Promise<DualProfileSQSResult> {
+  const cacheKey = `dual:${slug}`;
+  const cached = dualCache.get(cacheKey);
+  if (cached && Date.now() <= cached.expiresAt) return cached.data;
+
   const [qp, rp, legacy] = await Promise.all([
     computeQualityProfile(slug),
     computeReliabilityProfile(slug),
@@ -666,7 +669,7 @@ export async function computeDualProfileSQS(slug: string): Promise<DualProfileSQ
 
   const matrix = computeMatrixSQS(qp, rp);
 
-  return {
+  const result: DualProfileSQSResult = {
     score: matrix.score,
     label: matrix.label,
     qp,
@@ -674,6 +677,9 @@ export async function computeDualProfileSQS(slug: string): Promise<DualProfileSQ
     matrix,
     legacy_score: legacy.score,
   };
+
+  dualCache.set(cacheKey, { data: result, expiresAt: Date.now() + SQS_CACHE_TTL_MS });
+  return result;
 }
 
 // Re-export profile types for consumers
