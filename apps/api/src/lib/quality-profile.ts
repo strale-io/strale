@@ -10,7 +10,9 @@
  * Upstream / external-service failures are EXCLUDED entirely —
  * they do not count as either pass or fail.
  *
- * Uses the same rolling-10 recency-weighted window as legacy SQS.
+ * Uses per-factor rolling windows (hour granularity) to prevent high-frequency
+ * test types (piggyback) from excluding low-frequency ones (schema_check,
+ * negative, edge_case) from the recency window.
  */
 
 import { sql, eq, and, inArray } from "drizzle-orm";
@@ -114,42 +116,75 @@ export async function computeQualityProfile(slug: string): Promise<QPResult> {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const cutoff = thirtyDaysAgo.toISOString();
 
-  // Get rolling run windows
-  const runWindows = await db.execute(sql`
-    SELECT DISTINCT DATE_TRUNC('minute', tr.executed_at) AS run_window
+  // ── Per-type window detection (hour granularity) ────────────────────────
+  // Each test type gets its own rolling window so that high-frequency types
+  // (piggyback, which runs on every customer call) cannot push low-frequency
+  // types (schema_check every 6-24h, negative, edge_case) out of the window.
+  const rawTypeWindows = await db.execute(sql`
+    SELECT ts.test_type, DATE_TRUNC('hour', tr.executed_at) AS run_window
     FROM test_results tr
     INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
     WHERE tr.capability_slug = ${slug}
       AND tr.executed_at >= ${cutoff}::timestamptz
       AND ts.test_status IN ('normal', 'env_dependent', 'upstream_broken')
+      AND ts.test_type IN ('known_answer', 'piggyback', 'regression', 'schema_check', 'negative', 'edge_case')
+    GROUP BY ts.test_type, DATE_TRUNC('hour', tr.executed_at)
     ORDER BY run_window DESC
-    LIMIT ${ROLLING_RUNS}
   `);
 
-  const windows = (Array.isArray(runWindows) ? runWindows : (runWindows as any)?.rows ?? []) as any[];
+  const typeWindowRows = (
+    Array.isArray(rawTypeWindows) ? rawTypeWindows : (rawTypeWindows as any)?.rows ?? []
+  ) as { test_type: string; run_window: any }[];
 
-  if (windows.length < MIN_RUNS) {
-    return makePendingQP(windows.length);
+  // Group raw windows by test type (already DESC from query)
+  const windowsByType = new Map<string, Date[]>();
+  for (const row of typeWindowRows) {
+    const list = windowsByType.get(row.test_type) ?? [];
+    list.push(new Date(row.run_window));
+    windowsByType.set(row.test_type, list);
   }
 
-  const windowIndexMap = new Map<number, number>();
-  for (let i = 0; i < windows.length; i++) {
-    windowIndexMap.set(new Date(windows[i].run_window).getTime(), i);
+  // Build per-factor window index maps: timestamp → recency index (0 = most recent)
+  // Multiple test types can map to the same factor (e.g., known_answer + piggyback → correctness)
+  const factorWindowMaps = new Map<keyof typeof QP_WEIGHTS, Map<number, number>>();
+  for (const [testType, factor] of Object.entries(TYPE_TO_QP_FACTOR)) {
+    const typeWindows = windowsByType.get(testType) ?? [];
+    const existing = factorWindowMaps.get(factor) ?? new Map<number, number>();
+    for (const w of typeWindows) {
+      if (existing.size >= ROLLING_RUNS) break;
+      const ts = w.getTime();
+      if (!existing.has(ts)) existing.set(ts, existing.size);
+    }
+    if (existing.size > 0) factorWindowMaps.set(factor, existing);
   }
 
-  const oldestWindow = windows[windows.length - 1].run_window;
+  // MIN_RUNS check is based on correctness windows (the most data-rich factor)
+  const correctnessMap = factorWindowMaps.get("correctness");
+  const corrRuns = correctnessMap?.size ?? 0;
+  if (corrRuns < MIN_RUNS) {
+    return makePendingQP(corrRuns);
+  }
 
-  // Get test results — only QP-relevant test types
-  const rows = await db.execute(sql`
+  // Oldest window across all factors — defines the fetch range
+  let globalOldest = Date.now();
+  for (const [, wmap] of factorWindowMaps) {
+    for (const [ts] of wmap) {
+      if (ts < globalOldest) globalOldest = ts;
+    }
+  }
+  const oldestWindow = new Date(globalOldest).toISOString();
+
+  // Fetch all test results since the oldest factor window
+  const rawRows = await db.execute(sql`
     SELECT
       ts.test_type,
       tr.passed,
       tr.failure_reason,
-      DATE_TRUNC('minute', tr.executed_at) AS run_window
+      DATE_TRUNC('hour', tr.executed_at) AS run_window
     FROM test_results tr
     INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
     WHERE tr.capability_slug = ${slug}
-      AND DATE_TRUNC('minute', tr.executed_at) >= ${oldestWindow}::timestamptz
+      AND DATE_TRUNC('hour', tr.executed_at) >= ${oldestWindow}::timestamptz
       AND tr.executed_at >= ${cutoff}::timestamptz
       AND ts.test_status IN ('normal', 'env_dependent', 'upstream_broken')
       AND ts.test_type IN ('known_answer', 'piggyback', 'regression', 'schema_check', 'negative', 'edge_case')
@@ -160,15 +195,17 @@ export async function computeQualityProfile(slug: string): Promise<QPResult> {
       )
   `);
 
-  const testRows = (Array.isArray(rows) ? rows : (rows as any)?.rows ?? []) as any[];
+  const testRows = (
+    Array.isArray(rawRows) ? rawRows : (rawRows as any)?.rows ?? []
+  ) as any[];
 
-  return computeQPFromRows(testRows, windows.length, windowIndexMap);
+  return computeQPFromRows(testRows, corrRuns, factorWindowMaps);
 }
 
 function computeQPFromRows(
   testRows: { test_type: string; passed: boolean; failure_reason: string | null; run_window: any }[],
   runsAnalyzed: number,
-  windowIndexMap: Map<number, number>,
+  factorWindowMaps: Map<keyof typeof QP_WEIGHTS, Map<number, number>>,
 ): QPResult {
   const accum: Record<keyof typeof QP_WEIGHTS, { weightedPassed: number; weightedTotal: number; passed: number; total: number }> = {
     correctness: { weightedPassed: 0, weightedTotal: 0, passed: 0, total: 0 },
@@ -179,13 +216,17 @@ function computeQPFromRows(
 
   for (const row of testRows) {
     const factor = TYPE_TO_QP_FACTOR[row.test_type];
-    if (!factor) continue; // Skip dependency_health (availability)
+    if (!factor) continue; // dependency_health excluded from QP
 
     // Exclude upstream failures entirely from QP
     if (!row.passed && isExternalServiceFailure(row.failure_reason)) continue;
 
-    const runIndex = windowIndexMap.get(new Date(row.run_window).getTime()) ?? -1;
-    if (runIndex < 0) continue;
+    // Use the per-factor window map so each factor's recency is computed independently
+    const wmap = factorWindowMaps.get(factor);
+    if (!wmap) continue;
+
+    const runIndex = wmap.get(new Date(row.run_window).getTime()) ?? -1;
+    if (runIndex < 0) continue; // outside this factor's rolling window
 
     const recencyWeight = RECENCY_WEIGHTS[runIndex] ?? 0.30;
 
