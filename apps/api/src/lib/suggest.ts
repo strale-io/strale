@@ -1,4 +1,4 @@
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, inArray } from "drizzle-orm";
 import Anthropic from "@anthropic-ai/sdk";
 import { getDb } from "../db/index.js";
 import {
@@ -251,7 +251,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           and(
             eq(capabilities.isActive, true),
             eq(capabilities.visible, true),
-            eq(capabilities.lifecycleState, "active"),
+            inArray(capabilities.lifecycleState, ["active", "degraded"]),
           ),
         );
 

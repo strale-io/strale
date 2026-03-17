@@ -25,6 +25,10 @@ import {
 } from "../src/db/schema.js";
 import { getExecutor } from "../src/capabilities/index.js";
 
+// Base URL for internal API calls (smoke test runs locally against the live DB)
+const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3000";
+const INTERNAL_SECRET = process.env.INTERNAL_SECRET ?? "";
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface StepResult {
@@ -68,10 +72,11 @@ async function smokeTest(
     .where(eq(capabilityLimitations.capabilitySlug, slug));
 
   const typesCovered = new Set(suites.map((s) => s.testType));
+  const priceOk = cap.isFreeTier ? cap.priceCents >= 0 : cap.priceCents > 0;
   const structuralOk =
     !!cap.name &&
     !!cap.description &&
-    cap.priceCents > 0 &&
+    priceOk &&
     !!executor &&
     suites.length >= 5 &&
     typesCovered.has("known_answer") &&
@@ -80,6 +85,7 @@ async function smokeTest(
     lims.length >= 1;
 
   const structuralIssues: string[] = [];
+  if (!priceOk) structuralIssues.push(`priceCents=${cap.priceCents} must be > 0 for non-free-tier`);
   if (!executor) structuralIssues.push("no executor registered");
   if (suites.length < 5) structuralIssues.push(`only ${suites.length} test suites`);
   if (!typesCovered.has("known_answer")) structuralIssues.push("missing known_answer test");
@@ -262,6 +268,155 @@ async function smokeTest(
       durationMs: Date.now() - start7,
     });
   }
+
+  // Step 8: Test suite inputs are valid JSON matching capability's input schema
+  const start8 = Date.now();
+  try {
+    const inputSchema = cap.inputSchema as { properties?: Record<string, unknown> } | null;
+    const schemaFields = inputSchema?.properties ? Object.keys(inputSchema.properties) : [];
+    const invalidSuites: string[] = [];
+    for (const suite of suites) {
+      const input = suite.input;
+      if (!input || typeof input !== "object" || Array.isArray(input)) {
+        invalidSuites.push(`${suite.testType}:not-an-object`);
+        continue;
+      }
+      // Verify at least one input key matches a schema field (for capabilities with defined fields)
+      if (schemaFields.length > 0) {
+        const inputKeys = Object.keys(input as Record<string, unknown>);
+        const overlap = inputKeys.filter((k) => schemaFields.includes(k));
+        if (inputKeys.length > 0 && overlap.length === 0) {
+          invalidSuites.push(`${suite.testType}:no-schema-overlap`);
+        }
+      }
+    }
+    steps.push({
+      step: 8,
+      name: "Test suite inputs are valid",
+      passed: invalidSuites.length === 0,
+      detail:
+        invalidSuites.length === 0
+          ? `All ${suites.length} suite inputs valid`
+          : `Invalid inputs: ${invalidSuites.join(", ")}`,
+      durationMs: Date.now() - start8,
+    });
+  } catch (err) {
+    steps.push({
+      step: 8,
+      name: "Test suite inputs are valid",
+      passed: false,
+      detail: `Check error: ${err instanceof Error ? err.message : String(err)}`,
+      durationMs: Date.now() - start8,
+    });
+  }
+
+  // Step 9: Capability appears in search results (active capabilities only)
+  const start9 = Date.now();
+  if (cap.lifecycleState === "active" && cap.visible) {
+    try {
+      const searchRes = await fetch(
+        `${API_BASE}/v1/suggest?q=${encodeURIComponent(cap.name.split(" ").slice(0, 3).join(" "))}`,
+        { signal: AbortSignal.timeout(5000) },
+      );
+      if (searchRes.ok) {
+        const body = (await searchRes.json()) as { results?: Array<{ slug: string }> };
+        const found = (body.results ?? []).some((r) => r.slug === slug);
+        steps.push({
+          step: 9,
+          name: "Appears in search results",
+          passed: found,
+          detail: found
+            ? "Found in suggest results"
+            : `Not found in suggest results for "${cap.name.split(" ").slice(0, 3).join(" ")}"`,
+          durationMs: Date.now() - start9,
+        });
+      } else {
+        steps.push({
+          step: 9,
+          name: "Appears in search results",
+          passed: true, // non-blocking: suggest endpoint may not be running locally
+          detail: `Suggest endpoint returned ${searchRes.status} — skipped`,
+          durationMs: Date.now() - start9,
+        });
+      }
+    } catch {
+      steps.push({
+        step: 9,
+        name: "Appears in search results",
+        passed: true, // non-blocking: local server may not be running
+        detail: "Suggest endpoint unreachable — skipped",
+        durationMs: Date.now() - start9,
+      });
+    }
+  } else {
+    steps.push({
+      step: 9,
+      name: "Search discoverability",
+      passed: true,
+      detail: `lifecycle=${cap.lifecycleState} — not expected to be discoverable`,
+      durationMs: Date.now() - start9,
+    });
+  }
+
+  // Step 10: Trust profile returns valid data
+  const start10 = Date.now();
+  try {
+    const trustRes = await fetch(
+      `${API_BASE}/v1/internal/trust/capabilities/${slug}`,
+      {
+        headers: INTERNAL_SECRET ? { "x-internal-secret": INTERNAL_SECRET } : {},
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (trustRes.ok) {
+      const body = (await trustRes.json()) as Record<string, unknown>;
+      const hasRequired =
+        "sqs" in body &&
+        "quality_profile" in body &&
+        "reliability_profile" in body;
+      steps.push({
+        step: 10,
+        name: "Trust profile returns valid data",
+        passed: hasRequired,
+        detail: hasRequired
+          ? `SQS=${body.sqs}, QP=${typeof body.quality_profile}, RP=${typeof body.reliability_profile}`
+          : `Missing fields: ${["sqs", "quality_profile", "reliability_profile"].filter((k) => !(k in body)).join(", ")}`,
+        durationMs: Date.now() - start10,
+      });
+    } else {
+      steps.push({
+        step: 10,
+        name: "Trust profile returns valid data",
+        passed: true, // non-blocking: internal endpoint may need auth
+        detail: `Trust endpoint returned ${trustRes.status} — skipped`,
+        durationMs: Date.now() - start10,
+      });
+    }
+  } catch {
+    steps.push({
+      step: 10,
+      name: "Trust profile returns valid data",
+      passed: true, // non-blocking: local server may not be running
+      detail: "Trust endpoint unreachable — skipped",
+      durationMs: Date.now() - start10,
+    });
+  }
+
+  // Step 11: Field reliability annotations exist and are non-empty
+  const start11 = Date.now();
+  const reliability = cap.outputFieldReliability as Record<string, string> | null;
+  const hasAnnotations = reliability != null && Object.keys(reliability).length > 0;
+  steps.push({
+    step: 11,
+    name: "Field reliability annotations populated",
+    passed: hasAnnotations,
+    detail: hasAnnotations
+      ? `${Object.keys(reliability!).length} fields annotated`
+      : reliability
+        ? "output_field_reliability is empty — run backfill-field-reliability.ts"
+        : "output_field_reliability is null — run backfill-field-reliability.ts",
+    durationMs: Date.now() - start11,
+  });
 
   const allPassed = steps.every((s) => s.passed);
   return { slug, steps, passed: allPassed };

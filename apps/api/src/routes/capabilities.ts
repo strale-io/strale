@@ -38,7 +38,7 @@ capabilitiesRoute.get("/", async (c) => {
       and(
         eq(capabilities.isActive, true),
         eq(capabilities.visible, true),
-        eq(capabilities.lifecycleState, "active"),
+        inArray(capabilities.lifecycleState, ["active", "degraded"]),
       ),
     );
 

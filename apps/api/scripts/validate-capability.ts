@@ -13,7 +13,7 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 // Side-effect imports to register all executors
 import "../src/app.js";
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb } from "../src/db/index.js";
 import {
   capabilities,
@@ -95,6 +95,20 @@ async function validateCapability(slug: string, apply = false): Promise<{
     return { slug, checks, passed: false };
   }
 
+  // 1b. Slug is unique among active capabilities (catches duplicate active rows)
+  const duplicates = await db
+    .select({ slug: capabilities.slug })
+    .from(capabilities)
+    .where(and(eq(capabilities.slug, slug), eq(capabilities.isActive, true)));
+  checks.push({
+    name: "Slug is unique among active capabilities",
+    passed: duplicates.length <= 1,
+    detail:
+      duplicates.length <= 1
+        ? undefined
+        : `Found ${duplicates.length} active rows with slug '${slug}' — duplicate detected`,
+  });
+
   // 2. Executor is registered
   const executor = getExecutor(slug);
   checks.push({
@@ -140,11 +154,16 @@ async function validateCapability(slug: string, apply = false): Promise<{
       : `category '${cap.category}' not in valid list: ${VALID_CATEGORIES.join(", ")}`,
   });
 
-  // 7. Price > 0
+  // 7. Price is valid (> 0 for paid capabilities, 0 allowed for free-tier)
+  const priceOk = cap.isFreeTier ? cap.priceCents >= 0 : cap.priceCents > 0;
   checks.push({
-    name: "Price > 0",
-    passed: cap.priceCents > 0,
-    detail: cap.priceCents > 0 ? undefined : `priceCents is ${cap.priceCents}`,
+    name: "Price is valid",
+    passed: priceOk,
+    detail: priceOk
+      ? cap.isFreeTier
+        ? `free-tier (priceCents=${cap.priceCents})`
+        : undefined
+      : `priceCents is ${cap.priceCents} (must be > 0 for non-free-tier)`,
   });
 
   // 8. Input schema is valid JSON Schema
@@ -241,7 +260,7 @@ async function validateCapability(slug: string, apply = false): Promise<{
   if (apply && currentState === "validating") {
     try {
       if (allPassed) {
-        await transitionCapability(slug, "probation", "All 15 Gate 1 checks passed", "validation");
+        await transitionCapability(slug, "probation", "All Gate 1 checks passed", "validation");
         console.log(`  → Capability ${slug} moved to probation — all checks passed`);
       } else {
         const failedChecks = checks.filter((c) => !c.passed).map((c) => c.name).join("; ");
