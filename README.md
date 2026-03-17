@@ -10,7 +10,7 @@ Trust and quality infrastructure for AI agents.
 
 ## What is Strale
 
-Strale is a capability marketplace for AI agents. Agents call `strale.do()` at runtime to access 200+ verified capabilities — company lookups, compliance checks, financial data, web extraction, and more — without hardcoding integrations or managing credentials.
+Strale is a capability marketplace for AI agents. Agents call `strale.do()` at runtime to access 225+ verified capabilities — company lookups, compliance checks, financial data, web extraction, and more — without hardcoding integrations or managing credentials.
 
 Every capability is continuously tested and assigned a Strale Quality Score (SQS): a 0–100 composite built from correctness, schema stability, availability, error handling, and edge case coverage. Agents get reliable, scored tools. You get observability into what your agent is actually doing.
 
@@ -69,7 +69,7 @@ result = strale.do("eu-vat-validate", {"vat_number": "SE556000000001"})
 | [`strale-mcp`](https://www.npmjs.com/package/strale-mcp) | npm | MCP server — Claude Desktop, Cursor, any MCP host |
 | [`straleio`](https://www.npmjs.com/package/straleio) | npm | TypeScript/JavaScript SDK |
 | [`straleio`](https://pypi.org/project/straleio/) | PyPI | Python SDK |
-| [`langchain-strale`](https://pypi.org/project/langchain-strale/) | PyPI | LangChain toolkit — 200+ tools via `StraleToolkit` |
+| [`langchain-strale`](https://pypi.org/project/langchain-strale/) | PyPI | LangChain toolkit — 225+ tools via `StraleToolkit` |
 | [`crewai-strale`](https://pypi.org/project/crewai-strale/) | PyPI | CrewAI integration — drop-in BaseTools for agents |
 | [`strale-semantic-kernel`](https://www.npmjs.com/package/strale-semantic-kernel) | npm | Semantic Kernel plugin for .NET and TypeScript agents |
 
@@ -92,8 +92,6 @@ Agents can set a `min_sqs` threshold on any `POST /v1/do` call — requests are 
 - [strale.dev/pricing](https://strale.dev/pricing) — Pricing
 - [strale.dev/quality](https://strale.dev/quality) — Quality methodology
 
-I can see the content is there but the markdown links aren't rendering — the [text](url) syntax got pasted as plain text instead of markdown links. Lines 95–107 show plain text where there should be clickable links.
-Here's what to fix. Select and replace lines 95–107 with this properly formatted version:
 ## Agent Skills & Code Examples
 
 Teach your AI coding agent how to use Strale:
