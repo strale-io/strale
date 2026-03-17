@@ -124,6 +124,13 @@ export const capabilities = pgTable("capabilities", {
   guidanceStrategy: text("guidance_strategy"),
   // 'direct' | 'retry_with_backoff' | 'queue_for_later' | 'unavailable'
   guidanceConfidence: decimal("guidance_confidence", { precision: 5, scale: 1 }),
+  // Pipeline Phase I: Lifecycle management
+  lifecycleState: varchar("lifecycle_state", { length: 20 }).notNull().default("active"),
+  // 'draft' | 'validating' | 'probation' | 'active' | 'degraded' | 'suspended'
+  outputFieldReliability: jsonb("output_field_reliability"),
+  // { field_name: 'guaranteed' | 'common' | 'rare' }
+  visible: boolean("visible").notNull().default(true),
+  onboardingManifest: jsonb("onboarding_manifest"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -415,6 +422,22 @@ export const capabilityHealth = pgTable("capability_health", {
   nextRetryAt: timestamp("next_retry_at", { withTimezone: true }),
   backoffMinutes: integer("backoff_minutes").notNull().default(5),
   updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// ─── health_monitor_events (Platform Health Monitor audit trail) ─────────────
+export const healthMonitorEvents = pgTable("health_monitor_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  // 'auto_fix' | 'lifecycle_transition' | 'classification' | 'sqs_exclusion'
+  // | 'interrupt_sent' | 'proposal_created' | 'proposal_approved' | 'proposal_rejected'
+  capabilitySlug: text("capability_slug"), // nullable for platform-level events
+  tier: integer("tier").notNull(), // 1, 2, or 3
+  actionTaken: text("action_taken").notNull(),
+  details: jsonb("details").notNull().default({}),
+  humanOverride: boolean("human_override").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });

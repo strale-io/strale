@@ -1298,7 +1298,7 @@ async function getFreeTierSlugs(db: ReturnType<typeof getDb>): Promise<string[]>
   const rows = await db
     .select({ slug: capabilities.slug })
     .from(capabilities)
-    .where(and(eq(capabilities.isFreeTier, true), eq(capabilities.isActive, true)));
+    .where(and(eq(capabilities.isFreeTier, true), eq(capabilities.isActive, true), eq(capabilities.lifecycleState, "active")));
   const slugs = rows.map((r) => r.slug);
   _freeTierCache = { slugs, expiresAt: Date.now() + 5 * 60 * 1000 };
   return slugs;

@@ -1,4 +1,4 @@
-import { eq, asc } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import Anthropic from "@anthropic-ai/sdk";
 import { getDb } from "../db/index.js";
 import {
@@ -247,7 +247,13 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           geography: capabilities.geography,
         })
         .from(capabilities)
-        .where(eq(capabilities.isActive, true));
+        .where(
+          and(
+            eq(capabilities.isActive, true),
+            eq(capabilities.visible, true),
+            eq(capabilities.lifecycleState, "active"),
+          ),
+        );
 
       const capItems: CatalogItem[] = capRows.map((cap) => {
         const slugWords = cap.slug.replace(/-/g, " ");
