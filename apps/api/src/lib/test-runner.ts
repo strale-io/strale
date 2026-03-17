@@ -15,6 +15,7 @@ import { sanitizeErrorMessage, getTestResultsForSlug } from "./trust-helpers.js"
 import { computeCapabilitySQS, computeDualProfileSQS } from "./sqs.js";
 import { computeExecutionGuidance, type ComputeGuidanceInput } from "./execution-guidance.js";
 import { classifyFailure } from "./failure-classifier.js";
+import { checkUpstreamEscalation } from "./upstream-tracker.js";
 import type { CapabilityType } from "./reliability-profile.js";
 import { createHash } from "node:crypto";
 
@@ -159,6 +160,16 @@ export async function runTests(
   // ── Persist dual-profile SQS scores for affected capabilities ──────────
   const affectedSlugs = [...new Set(results.map((r) => r.capabilitySlug))];
   await persistDualProfileScores(affectedSlugs);
+
+  // ── Check upstream escalation for capabilities with failures ──────────
+  const failedSlugs = [...new Set(results.filter((r) => !r.passed).map((r) => r.capabilitySlug))];
+  for (const slug of failedSlugs) {
+    try {
+      await checkUpstreamEscalation(slug);
+    } catch (err) {
+      console.warn(`[test-runner] Upstream escalation check failed for ${slug}:`, err);
+    }
+  }
 
   return {
     tier: tierLabel,

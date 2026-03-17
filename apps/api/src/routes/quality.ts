@@ -8,7 +8,7 @@
  */
 
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
 import { computeDualProfileSQS, estimateQualificationTime } from "../lib/sqs.js";
@@ -61,6 +61,28 @@ qualityRoute.get("/:slug", async (c) => {
     ? await estimateQualificationTime(slug)
     : null;
 
+  // Classification breakdown from recent test results (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const classificationRows = await db.execute(sql`
+    SELECT
+      COALESCE(failure_classification, 'unclassified') AS verdict,
+      COUNT(*) AS count
+    FROM test_results
+    WHERE capability_slug = ${slug}
+      AND passed = false
+      AND executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
+    GROUP BY failure_classification
+    ORDER BY count DESC
+  `);
+  const classBreakdown = ((Array.isArray(classificationRows)
+    ? classificationRows
+    : (classificationRows as any)?.rows ?? []) as any[])
+    .reduce((acc: Record<string, number>, r: any) => {
+      acc[r.verdict] = Number(r.count);
+      return acc;
+    }, {});
+
   // Compute freshness
   const freshness = computeFreshnessGrade({
     freshnessCategory: cap.freshnessCategory,
@@ -110,6 +132,9 @@ qualityRoute.get("/:slug", async (c) => {
         data_update_cycle_days: freshness.data_update_cycle_days ?? null,
         dataset_last_updated: freshness.dataset_last_updated ?? null,
       },
+    } : {}),
+    ...(Object.keys(classBreakdown).length > 0 ? {
+      failure_classification: classBreakdown,
     } : {}),
   });
 });
