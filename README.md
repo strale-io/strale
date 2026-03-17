@@ -12,7 +12,7 @@ Trust and quality infrastructure for AI agents.
 
 Strale is a capability marketplace for AI agents. Agents call `strale.do()` at runtime to access 225+ verified capabilities — company lookups, compliance checks, financial data, web extraction, and more — without hardcoding integrations or managing credentials.
 
-Every capability is continuously tested and assigned a Strale Quality Score (SQS): a 0–100 composite built from correctness, schema stability, availability, error handling, and edge case coverage. Agents get reliable, scored tools. You get observability into what your agent is actually doing.
+Every capability is continuously tested and assigned a Strale Quality Score (SQS): a 0–100 confidence score derived from two independent profiles — a Quality Profile (code correctness, schema compliance, error handling, edge cases) and a Reliability Profile (current availability, rolling success, upstream health, latency) — combined via a published matrix. Agents get reliable, scored tools. You get observability into what your agent is actually doing.
 
 ## Quick Start: MCP Server
 
@@ -75,7 +75,7 @@ result = strale.do("eu-vat-validate", {"vat_number": "SE556000000001"})
 
 ## Quality Scoring (SQS)
 
-Every capability has a Strale Quality Score (SQS) from 0 to 100. The score is a weighted composite of five factors: correctness (40%), schema stability (25%), availability (20%), error handling (10%), and edge case coverage (5%), computed over a recency-weighted rolling 10-run window.
+Every capability has a Strale Quality Score (SQS) from 0 to 100. The score is derived from two independent profiles combined via a published 5×5 matrix: a **Quality Profile** (code correctness, schema compliance, error handling, edge cases) and a **Reliability Profile** (current availability, rolling success, upstream health, latency). Weights vary by capability type (deterministic, stable API, scraping, AI-assisted).
 
 Scores are public. Check any capability:
 

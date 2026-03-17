@@ -1,6 +1,6 @@
 {
   "name": "strale-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "MCP server for Strale — exposes 225+ capabilities as tools for Claude, Cursor, Windsurf, and any MCP client",
   "type": "module",
   "main": "./dist/server.js",

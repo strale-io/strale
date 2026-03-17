@@ -130,10 +130,10 @@ Strale uses a **dual-profile model** to score every capability:
 - Edge cases (6%) — boundary condition handling
 
 **Reliability Profile (RP)** — measures operational dependability (changes with live conditions):
-- Availability — uptime and dependency health
-- Success rate — recent execution success
-- Upstream health — third-party service stability
-- Latency — response time consistency
+- `current_availability` — latest test run pass rate (is it working right now?)
+- `rolling_success` — recency-weighted success rate across last 10 runs (trend)
+- `upstream_health` — external dependency health from 30-day assessment
+- `latency` — p95 response time vs type-specific thresholds
 
 **SQS** (0–100) is derived from the 5×5 QP × RP matrix. A capability must score well on both dimensions to reach Excellent. For full methodology: call `strale_methodology` or visit [strale.dev/trust/methodology](https://strale.dev/trust/methodology).
 
