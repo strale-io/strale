@@ -83,7 +83,7 @@ async function main() {
           eq(testResults.passed, true),
         ),
       )
-      .orderBy(desc(testResults.createdAt))
+      .orderBy(desc(testResults.executedAt))
       .limit(20); // Use up to 20 most recent successful results
 
     let reliability: ReliabilityMap;
