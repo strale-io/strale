@@ -317,7 +317,9 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
   const db = getDb();
 
   // Parallel data fetch
-  const [capRow, testResultsData, limitations, suiteRows, testHistory] = await Promise.all([
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const [capRow, testResultsData, limitations, suiteRows, testHistory, classificationRows] = await Promise.all([
     db.select({
       name: capabilities.name,
       dataSource: capabilities.dataSource,
@@ -339,6 +341,17 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
       .where(and(eq(testSuites.capabilitySlug, slug), eq(testSuites.active, true)))
       .limit(1),
     getTestHistory30d(slug),
+    db.execute(sql`
+      SELECT
+        COALESCE(failure_classification, 'unclassified') AS verdict,
+        COUNT(*) AS count
+      FROM test_results
+      WHERE capability_slug = ${slug}
+        AND passed = false
+        AND executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
+      GROUP BY failure_classification
+      ORDER BY count DESC
+    `),
   ]);
 
   if (!capRow) {
@@ -419,6 +432,14 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
     badge_label,
 
     limitations,
+
+    failure_classification: ((Array.isArray(classificationRows)
+      ? classificationRows
+      : (classificationRows as any)?.rows ?? []) as any[])
+      .reduce((acc: Record<string, number>, r: any) => {
+        acc[r.verdict] = Number(r.count);
+        return acc;
+      }, {}),
 
     methodology_url: "https://strale.dev/trust/methodology",
   };

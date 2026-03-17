@@ -16,6 +16,7 @@ import { eq, and, sql, desc, inArray, gte } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { testSuites, testResults } from "../db/schema.js";
 import { analyzeAndRemediate, applyRemediation } from "./auto-remediation.js";
+import { runUpstreamEscalationSweep } from "./upstream-tracker.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -136,7 +137,19 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
     }
   }
 
-  // ── 6. Log health report ──────────────────────────────────────────────
+  // ── 6. Upstream escalation sweep ─────────────────────────────────────
+  try {
+    const escalations = await runUpstreamEscalationSweep();
+    for (const esc of escalations) {
+      if (esc.suitesEscalated > 0) {
+        console.log(`[health-sweep] Upstream escalation: ${esc.slug} → ${esc.suitesEscalated} suite(s) broken`);
+      }
+    }
+  } catch (err) {
+    console.warn("[health-sweep] Upstream escalation sweep failed:", err);
+  }
+
+  // ── 7. Log health report ──────────────────────────────────────────────
   logSweepReport(report);
 
   return report;
