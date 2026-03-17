@@ -18,6 +18,7 @@ import { testSuites, testResults } from "../db/schema.js";
 import { analyzeAndRemediate, applyRemediation } from "./auto-remediation.js";
 import { runUpstreamEscalationSweep } from "./upstream-tracker.js";
 import { runLifecycleSweep } from "./lifecycle.js";
+import { runWeeklyChecks } from "./meta-monitoring.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -160,7 +161,26 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
     console.warn("[health-sweep] Lifecycle sweep failed:", err);
   }
 
-  // ── 8. Log health report ──────────────────────────────────────────────
+  // ── 8. Meta-monitoring weekly checks (8B + 8C) ────────────────────────
+  // META-MONITORING: Also run daily via Railway cron or manual trigger:
+  //   npx tsx scripts/meta-monitoring-run.ts --daily
+  //   Checks: validation queue stuck, probation timeout, degraded count
+  try {
+    const metaResults = await runWeeklyChecks();
+    const failures = metaResults.filter((r) => !r.passed);
+    if (failures.length > 0) {
+      console.warn(`[health-sweep] Meta-monitoring: ${failures.length} check(s) failed`);
+      for (const f of failures) {
+        console.warn(`[health-sweep]   [${f.severity.toUpperCase()}] ${f.check}: ${f.details}`);
+      }
+    } else {
+      console.log(`[health-sweep] Meta-monitoring: all ${metaResults.length} weekly checks passed`);
+    }
+  } catch (err) {
+    console.warn("[health-sweep] Meta-monitoring weekly checks failed:", err);
+  }
+
+  // ── 9. Log health report ──────────────────────────────────────────────
   logSweepReport(report);
 
   return report;

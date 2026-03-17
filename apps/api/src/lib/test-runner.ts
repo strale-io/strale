@@ -18,6 +18,7 @@ import { classifyFailure } from "./failure-classifier.js";
 import { checkUpstreamEscalation } from "./upstream-tracker.js";
 import { evaluateLifecycle } from "./lifecycle.js";
 import { logHealthEvent } from "./health-monitor.js";
+import { checkNewFailures, checkInfrastructureHealth } from "./meta-monitoring.js";
 import type { CapabilityType } from "./reliability-profile.js";
 import { createHash } from "node:crypto";
 
@@ -204,6 +205,33 @@ export async function runTests(
       })
     ).catch((err) => {
       console.error("[interrupt] Mass failure notification failed:", err instanceof Error ? err.message : err);
+    });
+  }
+
+  // ── Meta-monitoring: post-test-run checks (8A) ─────────────────────────
+  if (results.length > 0) {
+    const batchForMeta = results.map((r) => ({
+      capabilitySlug: r.capabilitySlug,
+      passed: r.passed,
+      failureClassification: (r as any).failureClassification as string | null | undefined,
+    }));
+
+    // Check 1: New failure alert (regressions)
+    checkNewFailures(batchForMeta).then((check) => {
+      if (!check.passed) {
+        console.warn(`[META] ${check.details}`);
+      }
+    }).catch((err) => {
+      console.error("[meta-monitoring] checkNewFailures failed:", err instanceof Error ? err.message : err);
+    });
+
+    // Check 2: Infrastructure health (systemic failures)
+    checkInfrastructureHealth(batchForMeta).then((check) => {
+      if (!check.passed) {
+        console.error(`[META] CRITICAL: ${check.details}`);
+      }
+    }).catch((err) => {
+      console.error("[meta-monitoring] checkInfrastructureHealth failed:", err instanceof Error ? err.message : err);
     });
   }
 
