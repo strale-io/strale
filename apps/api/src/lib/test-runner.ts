@@ -1386,13 +1386,10 @@ async function persistDualProfileScores(slugs: string[]): Promise<void> {
         .limit(1);
 
       const capType = (cap?.capabilityType as CapabilityType) ?? "stable_api";
-      const rpAvailRate = dual.rp.factors.availability.has_data
-        ? dual.rp.factors.availability.rate
-        : 100;
+      const rpAvailRate = dual.rp.factors.current_availability.score;
 
       // Check for external service failures in recent results
-      const hasExtFailures = dual.rp.factors.availability.has_data
-        && dual.rp.factors.availability.rate < 90;
+      const hasExtFailures = dual.rp.factors.current_availability.score < 90;
 
       const guidanceInput: ComputeGuidanceInput = {
         slug,

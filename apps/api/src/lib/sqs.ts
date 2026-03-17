@@ -2,9 +2,11 @@ import { sql, eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilityHealth, testSuites } from "../db/schema.js";
 import { computeQualityProfile, type QPResult } from "./quality-profile.js";
-import { computeReliabilityProfile, type RPResult } from "./reliability-profile.js";
+import { computeReliabilityProfile, type RPResult, type RPContext } from "./reliability-profile.js";
 import { computeMatrixSQS, type MatrixSQSResult } from "./sqs-matrix.js";
 import { MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS } from "./sqs-constants.js";
+import { getCapabilityQuality } from "./quality-aggregation.js";
+import { getTestResultsForSlug } from "./trust-helpers.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -661,11 +663,21 @@ export async function computeDualProfileSQS(slug: string): Promise<DualProfileSQ
   const cached = dualCache.get(cacheKey);
   if (cached && Date.now() <= cached.expiresAt) return cached.data;
 
-  const [qp, rp, legacy] = await Promise.all([
+  // Fetch RP context data in parallel with QP and legacy
+  const [qp, legacy, testResultsData, qualityMetrics] = await Promise.all([
     computeQualityProfile(slug),
-    computeReliabilityProfile(slug),
     computeCapabilitySQS(slug),
+    getTestResultsForSlug(slug),
+    getCapabilityQuality(slug),
   ]);
+
+  // Build RP context from fetched data
+  const rpContext: RPContext = {
+    history30d: testResultsData.history_30d ?? [],
+    p95ResponseTimeMs: qualityMetrics.p95ResponseTimeMs,
+  };
+
+  const rp = await computeReliabilityProfile(slug, rpContext);
 
   const matrix = computeMatrixSQS(qp, rp);
 

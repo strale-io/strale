@@ -26,7 +26,7 @@ async function verify() {
     computed: 0,
     pending: 0,
     byType: { deterministic: 0, stable_api: 0, scraping: 0, ai_assisted: 0 } as Record<string, number>,
-    diffs: [] as { slug: string; legacy: number; matrix: number; diff: number; qpGrade: string; rpGrade: string; type: string }[],
+    diffs: [] as { slug: string; legacy: number; matrix: number; diff: number; qpGrade: string; rpGrade: string; type: string; rpFactors?: { current_availability: number; rolling_success: number; upstream_health: number; latency: number } }[],
     bigDiffs: 0,
   };
 
@@ -51,6 +51,12 @@ async function verify() {
         qpGrade: dual.qp.grade,
         rpGrade: dual.rp.grade,
         type: cap.capabilityType,
+        rpFactors: dual.rp.pending ? undefined : {
+          current_availability: dual.rp.factors.current_availability.score,
+          rolling_success: dual.rp.factors.rolling_success.score,
+          upstream_health: dual.rp.factors.upstream_health.score,
+          latency: dual.rp.factors.latency.score,
+        },
       });
 
       if (Math.abs(diff) > 15) stats.bigDiffs++;
@@ -69,12 +75,15 @@ async function verify() {
   console.log(`Big diffs (>15 pts): ${stats.bigDiffs}\n`);
 
   console.log("=== TOP 20 LARGEST DIFFS ===");
-  console.log("Slug                                     Type           Legacy  Matrix  Diff   QP  RP");
-  console.log("-".repeat(95));
+  console.log("Slug                                     Type           Legacy  Matrix  Diff   QP  RP   RP Factors (avail/rolling/upstream/latency)");
+  console.log("-".repeat(130));
   for (const d of stats.diffs.slice(0, 20)) {
+    const rpFactors = d.rpFactors
+      ? `${d.rpFactors.current_availability}/${d.rpFactors.rolling_success}/${d.rpFactors.upstream_health}/${d.rpFactors.latency}`
+      : "n/a";
     console.log(
       `${d.slug.padEnd(40)} ${d.type.padEnd(14)} ${String(d.legacy).padStart(6)}  ${String(d.matrix).padStart(6)}  ${(d.diff > 0 ? "+" : "") + d.diff}`.padEnd(78) +
-      `  ${d.qpGrade}   ${d.rpGrade}`,
+      `  ${d.qpGrade}   ${d.rpGrade}   ${rpFactors}`,
     );
   }
 

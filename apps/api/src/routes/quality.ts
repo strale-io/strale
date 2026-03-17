@@ -117,9 +117,10 @@ qualityRoute.get("/:slug", async (c) => {
       capability_type: dual.rp.capability_type,
       factors: Object.entries(dual.rp.factors).map(([name, f]) => ({
         name,
-        rate: f.rate,
+        score: f.score,
         weight: f.weight,
-        has_data: f.has_data,
+        detail: f.detail,
+        source: f.source,
       })),
     },
     runs_analyzed: dual.qp.runs_analyzed,

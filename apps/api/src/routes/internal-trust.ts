@@ -154,11 +154,8 @@ async function computeGuidanceForSlug(
   testScheduleHours: number,
 ): Promise<ExecutionGuidance> {
   try {
-    const rpAvailRate = dual.rp.factors.availability.has_data
-      ? dual.rp.factors.availability.rate
-      : 100;
-    const hasExtFail = dual.rp.factors.availability.has_data
-      && dual.rp.factors.availability.rate < 90;
+    const rpAvailRate = dual.rp.factors.current_availability.score;
+    const hasExtFail = dual.rp.factors.current_availability.score < 90;
 
     const input: ComputeGuidanceInput = {
       slug,
@@ -409,11 +406,10 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
       score: dual.rp.score,
       label: rpGradeToLabel(dual.rp.grade),
       factors: {
-        correctness: { score: dual.rp.factors.correctness.rate, detail: `${dual.rp.factors.correctness.passed}/${dual.rp.factors.correctness.total} passed`, weight: dual.rp.factors.correctness.weight },
-        schema: { score: dual.rp.factors.schema.rate, detail: `${dual.rp.factors.schema.passed}/${dual.rp.factors.schema.total} passed`, weight: dual.rp.factors.schema.weight },
-        availability: { score: dual.rp.factors.availability.rate, detail: `${dual.rp.factors.availability.passed}/${dual.rp.factors.availability.total} passed`, weight: dual.rp.factors.availability.weight },
-        error_handling: { score: dual.rp.factors.error_handling.rate, detail: `${dual.rp.factors.error_handling.passed}/${dual.rp.factors.error_handling.total} passed`, weight: dual.rp.factors.error_handling.weight },
-        edge_cases: { score: dual.rp.factors.edge_cases.rate, detail: `${dual.rp.factors.edge_cases.passed}/${dual.rp.factors.edge_cases.total} passed`, weight: dual.rp.factors.edge_cases.weight },
+        current_availability: { score: dual.rp.factors.current_availability.score, weight: dual.rp.factors.current_availability.weight, detail: dual.rp.factors.current_availability.detail, source: dual.rp.factors.current_availability.source },
+        rolling_success: { score: dual.rp.factors.rolling_success.score, weight: dual.rp.factors.rolling_success.weight, detail: dual.rp.factors.rolling_success.detail, source: dual.rp.factors.rolling_success.source },
+        upstream_health: { score: dual.rp.factors.upstream_health.score, weight: dual.rp.factors.upstream_health.weight, detail: dual.rp.factors.upstream_health.detail, source: dual.rp.factors.upstream_health.source },
+        latency: { score: dual.rp.factors.latency.score, weight: dual.rp.factors.latency.weight, detail: dual.rp.factors.latency.detail, source: dual.rp.factors.latency.source },
       },
     },
 

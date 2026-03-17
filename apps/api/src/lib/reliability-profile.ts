@@ -1,45 +1,49 @@
 /**
- * Reliability Profile (RP) — Includes ALL failures (upstream counted).
+ * Reliability Profile (RP) — 4 operational factors measuring service dependability.
  *
- * All 5 factors are used, but weights vary by capability_type:
+ * Each factor answers a distinct sub-question about reliability:
+ *   current_availability — Is it working RIGHT NOW? (latest test run pass rate)
+ *   rolling_success      — What's the recent trend? (10-run recency-weighted average)
+ *   upstream_health      — Are external dependencies healthy? (30-day health state)
+ *   latency              — Is response time acceptable? (p95 vs type-specific thresholds)
  *
- *   deterministic:  correctness 0.50, schema 0.25, availability 0.05, error_handling 0.15, edge_cases 0.05
- *   stable_api:     correctness 0.35, schema 0.20, availability 0.25, error_handling 0.10, edge_cases 0.10
- *   scraping:       correctness 0.25, schema 0.15, availability 0.40, error_handling 0.10, edge_cases 0.10
- *   ai_assisted:    correctness 0.40, schema 0.20, availability 0.15, error_handling 0.15, edge_cases 0.10
+ * Factor weights vary by capability_type:
+ *   deterministic:  current_availability 0.10, rolling_success 0.30, upstream_health 0.10, latency 0.50
+ *   stable_api:     current_availability 0.30, rolling_success 0.30, upstream_health 0.25, latency 0.15
+ *   scraping:       current_availability 0.35, rolling_success 0.30, upstream_health 0.25, latency 0.10
+ *   ai_assisted:    current_availability 0.25, rolling_success 0.30, upstream_health 0.25, latency 0.20
  *
  * Circuit breaker penalties apply to RP only.
- *
- * NOTE: RP circuit breaker includes upstream failures in streak detection
- * (unlike legacy SQS which excludes them). This is intentional — RP measures
- * operational reliability from the caller's perspective, where upstream
- * failures ARE real failures regardless of fault attribution.
- *
- * Uses per-factor rolling windows (hour granularity) — same approach as QP —
- * to prevent high-frequency test types (piggyback) from excluding low-frequency
- * ones (schema_check, dependency_health, negative, edge_case) from the window.
+ * Upstream failures ARE counted as real failures (unlike QP which excludes them).
  */
 
 import { sql, eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilityHealth, testSuites, capabilities } from "../db/schema.js";
 import { MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS } from "./sqs-constants.js";
+import { computeHealthState, type HealthState } from "./health-state.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export type CapabilityType = "deterministic" | "stable_api" | "scraping" | "ai_assisted";
 
+export interface RPFactor {
+  score: number;    // 0-100
+  weight: number;   // factor weight (type-specific)
+  detail: string;   // human-readable explanation
+  source: string;   // where this data comes from
+}
+
 export interface RPResult {
-  score: number; // 0-100
+  score: number; // 0-100, weighted composite of the 4 factors
   grade: "A" | "B" | "C" | "D" | "F" | "pending";
   label: string;
   capability_type: CapabilityType;
   factors: {
-    correctness: RPFactor;
-    schema: RPFactor;
-    availability: RPFactor;
-    error_handling: RPFactor;
-    edge_cases: RPFactor;
+    current_availability: RPFactor;
+    rolling_success: RPFactor;
+    upstream_health: RPFactor;
+    latency: RPFactor;
   };
   trend: "stable" | "improving" | "declining";
   circuit_breaker: boolean;
@@ -47,48 +51,56 @@ export interface RPResult {
   pending: boolean;
 }
 
-interface RPFactor {
-  rate: number;
-  passed: number;
-  total: number;
-  weight: number;
-  weighted_contribution: number;
-  has_data: boolean;
-}
-
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const RP_WEIGHTS: Record<CapabilityType, Record<string, number>> = {
+type RPWeights = Record<"current_availability" | "rolling_success" | "upstream_health" | "latency", number>;
+
+const RP_WEIGHTS: Record<CapabilityType, RPWeights> = {
   deterministic: {
-    correctness: 0.50, schema: 0.25, availability: 0.05,
-    error_handling: 0.15, edge_cases: 0.05,
+    current_availability: 0.10,
+    rolling_success: 0.30,
+    upstream_health: 0.10,
+    latency: 0.50,
   },
   stable_api: {
-    correctness: 0.35, schema: 0.20, availability: 0.25,
-    error_handling: 0.10, edge_cases: 0.10,
+    current_availability: 0.30,
+    rolling_success: 0.30,
+    upstream_health: 0.25,
+    latency: 0.15,
   },
   scraping: {
-    correctness: 0.25, schema: 0.15, availability: 0.40,
-    error_handling: 0.10, edge_cases: 0.10,
+    current_availability: 0.35,
+    rolling_success: 0.30,
+    upstream_health: 0.25,
+    latency: 0.10,
   },
   ai_assisted: {
-    correctness: 0.40, schema: 0.20, availability: 0.15,
-    error_handling: 0.15, edge_cases: 0.10,
+    current_availability: 0.25,
+    rolling_success: 0.30,
+    upstream_health: 0.25,
+    latency: 0.20,
   },
 };
 
-const FACTOR_KEYS = ["correctness", "schema", "availability", "error_handling", "edge_cases"] as const;
+const FACTOR_KEYS = ["current_availability", "rolling_success", "upstream_health", "latency"] as const;
+type RPFactorKey = typeof FACTOR_KEYS[number];
 
-// MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS imported from sqs-constants.ts
+// Latency thresholds: p95 (ms) → score, per capability type
+const LATENCY_THRESHOLDS: Record<CapabilityType, [number, number, number]> = {
+  //                       excellent  good   acceptable
+  deterministic: [100, 500, 2000],
+  stable_api:    [1000, 3000, 10000],
+  scraping:      [5000, 15000, 30000],
+  ai_assisted:   [3000, 10000, 20000],
+};
 
-const TYPE_TO_FACTOR: Record<string, typeof FACTOR_KEYS[number]> = {
-  known_answer: "correctness",
-  piggyback: "correctness",
-  regression: "correctness",
-  schema_check: "schema",
-  dependency_health: "availability",
-  negative: "error_handling",
-  edge_case: "edge_cases",
+// Health state → score mapping
+const HEALTH_STATE_SCORES: Record<HealthState, number> = {
+  established: 100,
+  stable: 100,
+  recovering: 75,
+  unstable: 50,
+  new: 50,
 };
 
 function scoreToGrade(score: number): "A" | "B" | "C" | "D" | "F" {
@@ -99,9 +111,53 @@ function scoreToGrade(score: number): "A" | "B" | "C" | "D" | "F" {
   return "F";
 }
 
+function gradeToLabel(grade: string): string {
+  switch (grade) {
+    case "A": return "Highly reliable";
+    case "B": return "Reliable";
+    case "C": return "Degraded reliability";
+    case "D": return "Unreliable right now";
+    case "F": return "Down";
+    default: return "Reliability: pending";
+  }
+}
+
+// ─── Latency scoring ────────────────────────────────────────────────────────
+
+function scoreLatency(p95Ms: number | null, capType: CapabilityType): { score: number; detail: string } {
+  if (p95Ms == null) {
+    return { score: 80, detail: "No latency data" };
+  }
+
+  const [excellent, good, acceptable] = LATENCY_THRESHOLDS[capType];
+  let score: number;
+  let label: string;
+
+  if (p95Ms < excellent) { score = 100; label = "Excellent"; }
+  else if (p95Ms < good) { score = 85; label = "Normal"; }
+  else if (p95Ms < acceptable) { score = 60; label = "Slow"; }
+  else { score = 30; label = "Very slow"; }
+
+  return { score, detail: `p95: ${Math.round(p95Ms)}ms (${label})` };
+}
+
 // ─── Core computation ───────────────────────────────────────────────────────
 
-export async function computeReliabilityProfile(slug: string): Promise<RPResult> {
+/**
+ * Additional context needed by RP that isn't derivable from test results alone.
+ * Passed in by computeDualProfileSQS to avoid duplicate DB queries.
+ */
+export interface RPContext {
+  /** 30-day test history for health state computation */
+  history30d: Array<{ date: string; pass_rate: number }>;
+  /** p95 response time in ms from transaction_quality (null if no data) */
+  p95ResponseTimeMs: number | null;
+}
+
+export async function computeReliabilityProfile(
+  slug: string,
+  context?: RPContext,
+): Promise<RPResult> {
   const db = getDb();
 
   // Get capability_type
@@ -132,74 +188,38 @@ export async function computeReliabilityProfile(slug: string): Promise<RPResult>
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const cutoff = thirtyDaysAgo.toISOString();
 
-  // ── Per-type window detection (hour granularity) ─────────────────────────
-  // Each test type gets its own rolling window so that high-frequency types
-  // (piggyback) cannot push low-frequency types (schema_check, dependency_health)
-  // out of the recency window.
-  const rawTypeWindows = await db.execute(sql`
-    SELECT ts.test_type, DATE_TRUNC('hour', tr.executed_at) AS run_window
+  // ── Get test run windows (hour granularity) ────────────────────────────
+  const rawWindows = await db.execute(sql`
+    SELECT DATE_TRUNC('hour', tr.executed_at) AS run_window
     FROM test_results tr
     INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
     WHERE tr.capability_slug = ${slug}
       AND tr.executed_at >= ${cutoff}::timestamptz
       AND ts.test_status IN ('normal', 'env_dependent', 'upstream_broken')
-    GROUP BY ts.test_type, DATE_TRUNC('hour', tr.executed_at)
+    GROUP BY DATE_TRUNC('hour', tr.executed_at)
     ORDER BY run_window DESC
+    LIMIT ${ROLLING_RUNS}
   `);
 
-  const typeWindowRows = (
-    Array.isArray(rawTypeWindows) ? rawTypeWindows : (rawTypeWindows as any)?.rows ?? []
-  ) as { test_type: string; run_window: any }[];
+  const windowRows = (
+    Array.isArray(rawWindows) ? rawWindows : (rawWindows as any)?.rows ?? []
+  ) as { run_window: any }[];
 
-  // Group raw windows by test type (already DESC from query)
-  const windowsByType = new Map<string, Date[]>();
-  for (const row of typeWindowRows) {
-    const list = windowsByType.get(row.test_type) ?? [];
-    list.push(new Date(row.run_window));
-    windowsByType.set(row.test_type, list);
+  if (windowRows.length < MIN_RUNS) {
+    return makePendingRP(windowRows.length, capType);
   }
 
-  // Build per-factor window index maps: timestamp → recency index (0 = most recent)
-  // Multiple test types can map to the same factor (e.g., known_answer + piggyback → correctness)
-  const factorWindowMaps = new Map<string, Map<number, number>>();
-  for (const [testType, factor] of Object.entries(TYPE_TO_FACTOR)) {
-    const typeWindows = windowsByType.get(testType) ?? [];
-    const existing = factorWindowMaps.get(factor) ?? new Map<number, number>();
-    for (const w of typeWindows) {
-      if (existing.size >= ROLLING_RUNS) break;
-      const ts = w.getTime();
-      if (!existing.has(ts)) existing.set(ts, existing.size);
-    }
-    if (existing.size > 0) factorWindowMaps.set(factor, existing);
+  // Map window timestamps to run indices (0 = most recent)
+  const windowIndexMap = new Map<number, number>();
+  for (let i = 0; i < windowRows.length; i++) {
+    windowIndexMap.set(new Date(windowRows[i].run_window).getTime(), i);
   }
 
-  // MIN_RUNS check on correctness (most data-rich factor)
-  const correctnessMap = factorWindowMaps.get("correctness");
-  const corrRuns = correctnessMap?.size ?? 0;
-  if (corrRuns < MIN_RUNS) {
-    return makePendingRP(corrRuns, capType);
-  }
+  const oldestWindow = new Date(windowRows[windowRows.length - 1].run_window).toISOString();
 
-  // Need at least 2 factors with data to compute RP
-  const factorsWithData = FACTOR_KEYS.filter((k) => factorWindowMaps.has(k));
-  if (factorsWithData.length < 2) {
-    return makePendingRP(corrRuns, capType);
-  }
-
-  // Oldest window across all factors — defines the fetch range
-  let globalOldest = Date.now();
-  for (const [, wmap] of factorWindowMaps) {
-    for (const [ts] of wmap) {
-      if (ts < globalOldest) globalOldest = ts;
-    }
-  }
-  const oldestWindow = new Date(globalOldest).toISOString();
-
-  // Get ALL test results — RP counts upstream failures as failures
-  // Only exclude noise (test_infrastructure, test_design, stale_input)
+  // ── Get ALL test results (RP counts upstream failures) ─────────────────
   const rows = await db.execute(sql`
     SELECT
-      ts.test_type,
       tr.passed,
       tr.failure_reason,
       DATE_TRUNC('hour', tr.executed_at) AS run_window
@@ -216,7 +236,11 @@ export async function computeReliabilityProfile(slug: string): Promise<RPResult>
       )
   `);
 
-  const testRows = (Array.isArray(rows) ? rows : (rows as any)?.rows ?? []) as any[];
+  const testRows = (Array.isArray(rows) ? rows : (rows as any)?.rows ?? []) as {
+    passed: boolean;
+    failure_reason: string | null;
+    run_window: any;
+  }[];
 
   // Get circuit breaker state
   const [health] = await db
@@ -225,106 +249,118 @@ export async function computeReliabilityProfile(slug: string): Promise<RPResult>
     .where(eq(capabilityHealth.capabilitySlug, slug))
     .limit(1);
 
-  return computeRPFromRows(
-    testRows,
-    corrRuns,
-    factorWindowMaps,
-    capType,
-    health?.consecutiveFailures ?? 0,
+  // ── Compute the 4 operational factors ──────────────────────────────────
+
+  // Factor 1: current_availability — latest run pass rate
+  const latestWindowTs = windowRows[0].run_window;
+  const latestWindowTime = new Date(latestWindowTs).getTime();
+  const latestWindowRows = testRows.filter(
+    (r) => new Date(r.run_window).getTime() === latestWindowTime,
   );
-}
+  const latestPassed = latestWindowRows.filter((r) => r.passed).length;
+  const latestTotal = latestWindowRows.length;
+  const currentAvailScore = latestTotal > 0
+    ? Math.round((latestPassed / latestTotal) * 1000) / 10
+    : 0;
 
-function computeRPFromRows(
-  testRows: { test_type: string; passed: boolean; failure_reason: string | null; run_window: any }[],
-  runsAnalyzed: number,
-  factorWindowMaps: Map<string, Map<number, number>>,
-  capType: CapabilityType,
-  cbConsecutiveFailures: number,
-): RPResult {
-  const weights = RP_WEIGHTS[capType];
+  const currentAvailability: RPFactor = {
+    score: currentAvailScore,
+    weight: RP_WEIGHTS[capType].current_availability,
+    detail: `${latestPassed}/${latestTotal} tests passed in latest run`,
+    source: "latest_test_run",
+  };
 
-  const accum: Record<string, { weightedPassed: number; weightedTotal: number; passed: number; total: number }> = {};
-  for (const key of FACTOR_KEYS) {
-    accum[key] = { weightedPassed: 0, weightedTotal: 0, passed: 0, total: 0 };
-  }
-
-  // Per-window tracking for trend (use correctness window indices)
-  const windowPassed = new Map<number, number>();
-  const windowTotal = new Map<number, number>();
+  // Factor 2: rolling_success — recency-weighted success across all windows
+  let weightedPassSum = 0;
+  let weightedTotalSum = 0;
+  const windowPassedMap = new Map<number, number>();
+  const windowTotalMap = new Map<number, number>();
 
   for (const row of testRows) {
-    const factor = TYPE_TO_FACTOR[row.test_type];
-    if (!factor) continue;
-
-    // Use the per-factor window map so each factor's recency is computed independently
-    const wmap = factorWindowMaps.get(factor);
-    if (!wmap) continue;
-
-    const runIndex = wmap.get(new Date(row.run_window).getTime()) ?? -1;
-    if (runIndex < 0) continue; // outside this factor's rolling window
+    const runIndex = windowIndexMap.get(new Date(row.run_window).getTime()) ?? -1;
+    if (runIndex < 0) continue;
 
     const recencyWeight = RECENCY_WEIGHTS[runIndex] ?? 0.30;
+    weightedTotalSum += recencyWeight;
+    windowTotalMap.set(runIndex, (windowTotalMap.get(runIndex) ?? 0) + 1);
 
-    // RP counts ALL failures (including upstream) — no exclusion
     if (row.passed) {
-      accum[factor].weightedPassed += recencyWeight;
-      accum[factor].weightedTotal += recencyWeight;
-      accum[factor].passed++;
-      accum[factor].total++;
-      // Trend uses correctness window indices only
-      if (factor === "correctness") {
-        windowPassed.set(runIndex, (windowPassed.get(runIndex) ?? 0) + 1);
-        windowTotal.set(runIndex, (windowTotal.get(runIndex) ?? 0) + 1);
-      }
-    } else {
-      accum[factor].weightedTotal += recencyWeight;
-      accum[factor].total++;
-      if (factor === "correctness") {
-        windowTotal.set(runIndex, (windowTotal.get(runIndex) ?? 0) + 1);
-      }
+      weightedPassSum += recencyWeight;
+      windowPassedMap.set(runIndex, (windowPassedMap.get(runIndex) ?? 0) + 1);
     }
   }
 
-  // Need at least 2 factors with data
-  const factorsWithData = FACTOR_KEYS.filter((k) => accum[k].total > 0);
-  if (factorsWithData.length < 2 || accum.correctness.total === 0) {
-    return makePendingRP(runsAnalyzed, capType);
-  }
+  const rollingSuccessScore = weightedTotalSum > 0
+    ? Math.round((weightedPassSum / weightedTotalSum) * 1000) / 10
+    : 0;
 
-  // Build factors with type-specific weights, re-weighted for missing factors
-  let activeWeightSum = 0;
-  for (const key of FACTOR_KEYS) {
-    if (accum[key].weightedTotal > 0) activeWeightSum += weights[key];
-  }
+  const rollingSuccess: RPFactor = {
+    score: rollingSuccessScore,
+    weight: RP_WEIGHTS[capType].rolling_success,
+    detail: `${rollingSuccessScore}% success over last ${windowRows.length} runs`,
+    source: "10_run_weighted_average",
+  };
 
-  const factors: RPResult["factors"] = {} as any;
-  for (const key of FACTOR_KEYS) {
-    const a = accum[key];
-    if (a.weightedTotal > 0) {
-      const rate = Math.round((a.weightedPassed / a.weightedTotal) * 1000) / 10;
-      const normalizedWeight = weights[key] / activeWeightSum;
-      factors[key] = {
-        rate,
-        passed: a.passed,
-        total: a.total,
-        weight: Math.round(normalizedWeight * 1000) / 1000,
-        weighted_contribution: Math.round(rate * normalizedWeight * 10) / 10,
-        has_data: true,
-      };
-    } else {
-      factors[key] = {
-        rate: 0, passed: 0, total: 0,
-        weight: 0, weighted_contribution: 0, has_data: false,
-      };
+  // Factor 3: upstream_health — from 30-day health state
+  let healthState: HealthState;
+  if (context?.history30d) {
+    healthState = computeHealthState(context.history30d);
+  } else {
+    // Fallback: compute from test results in this function
+    // Build daily pass rates from the test rows we already have
+    const dailyMap = new Map<string, { passed: number; total: number }>();
+    for (const row of testRows) {
+      const date = new Date(row.run_window).toISOString().slice(0, 10);
+      const day = dailyMap.get(date) ?? { passed: 0, total: 0 };
+      day.total++;
+      if (row.passed) day.passed++;
+      dailyMap.set(date, day);
     }
+    const history = [...dailyMap.entries()]
+      .map(([date, d]) => ({ date, pass_rate: (d.passed / d.total) * 100 }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    healthState = computeHealthState(history);
   }
 
-  let score = Math.round(
-    Object.values(factors).reduce((s, f) => s + f.weighted_contribution, 0) * 10,
-  ) / 10;
+  const upstreamHealthScore = HEALTH_STATE_SCORES[healthState];
+  const upstreamHealth: RPFactor = {
+    score: upstreamHealthScore,
+    weight: RP_WEIGHTS[capType].upstream_health,
+    detail: `health_state: ${healthState}`,
+    source: "30d_health_assessment",
+  };
 
-  // ── Circuit breaker penalties (RP only) ──────────────────────────────────
+  // Factor 4: latency — p95 response time
+  const { score: latencyScore, detail: latencyDetail } = scoreLatency(
+    context?.p95ResponseTimeMs ?? null,
+    capType,
+  );
+  const latencyFactor: RPFactor = {
+    score: latencyScore,
+    weight: RP_WEIGHTS[capType].latency,
+    detail: latencyDetail,
+    source: "p95_response_time",
+  };
+
+  // ── Composite score ────────────────────────────────────────────────────
+
+  const factors: RPResult["factors"] = {
+    current_availability: currentAvailability,
+    rolling_success: rollingSuccess,
+    upstream_health: upstreamHealth,
+    latency: latencyFactor,
+  };
+
+  let score = 0;
+  for (const key of FACTOR_KEYS) {
+    score += factors[key].score * factors[key].weight;
+  }
+  score = Math.round(score * 10) / 10;
+
+  // ── Circuit breaker penalties (RP only) ────────────────────────────────
   let circuitBreakerActive = false;
+
+  const cbConsecutiveFailures = health?.consecutiveFailures ?? 0;
 
   // 3 consecutive failures → RP −30 (floor 20)
   if (cbConsecutiveFailures >= 3) {
@@ -333,25 +369,13 @@ function computeRPFromRows(
   }
 
   // Sort all rows by run_window for streak detection
-  const allRows = testRows
-    .filter((r) => TYPE_TO_FACTOR[r.test_type])
-    .sort((a, b) => new Date(b.run_window).getTime() - new Date(a.run_window).getTime());
-
-  // Correctness streak check (5 consecutive correctness failures → −20, floor 30)
-  const correctnessRows = allRows.filter(
-    (r) => TYPE_TO_FACTOR[r.test_type] === "correctness",
+  const allRows = [...testRows].sort(
+    (a, b) => new Date(b.run_window).getTime() - new Date(a.run_window).getTime(),
   );
-  if (correctnessRows.length >= 5 && correctnessRows.slice(0, 5).every((r) => !r.passed)) {
+
+  // 5 consecutive test failures → −20 (floor 30)
+  if (allRows.length >= 5 && allRows.slice(0, 5).every((r) => !r.passed)) {
     score = Math.max(score - 20, 30);
-    circuitBreakerActive = true;
-  }
-
-  // Schema break (latest schema_check failed → −15, floor 40)
-  const schemaRows = allRows.filter(
-    (r) => TYPE_TO_FACTOR[r.test_type] === "schema",
-  );
-  if (schemaRows.length > 0 && !schemaRows[0].passed) {
-    score = Math.max(score - 15, 40);
     circuitBreakerActive = true;
   }
 
@@ -359,28 +383,31 @@ function computeRPFromRows(
   if (circuitBreakerActive && allRows.length >= 3) {
     if (allRows.slice(0, 3).every((r) => r.passed)) {
       circuitBreakerActive = false;
-      score = Math.round(
-        Object.values(factors).reduce((s, f) => s + f.weighted_contribution, 0) * 10,
-      ) / 10;
+      // Re-compute base score without penalties
+      score = 0;
+      for (const key of FACTOR_KEYS) {
+        score += factors[key].score * factors[key].weight;
+      }
+      score = Math.round(score * 10) / 10;
     }
   }
 
   score = Math.max(0, Math.min(100, Math.round(score * 10) / 10));
 
   // ── Trend ──────────────────────────────────────────────────────────────
-  const trend = computeTrend(windowPassed, windowTotal, runsAnalyzed);
+  const trend = computeTrend(windowPassedMap, windowTotalMap, windowRows.length);
 
   const grade = scoreToGrade(score);
 
   return {
     score,
     grade,
-    label: `Reliability: ${grade}`,
+    label: gradeToLabel(grade),
     capability_type: capType,
     factors,
     trend,
     circuit_breaker: circuitBreakerActive,
-    runs_analyzed: runsAnalyzed,
+    runs_analyzed: windowRows.length,
     pending: false,
   };
 }
@@ -413,9 +440,8 @@ function computeTrend(
 
 function makePendingRP(runsAnalyzed: number, capType: CapabilityType): RPResult {
   const weights = RP_WEIGHTS[capType];
-  const makeFactor = (key: string): RPFactor => ({
-    rate: 0, passed: 0, total: 0,
-    weight: weights[key], weighted_contribution: 0, has_data: false,
+  const makeFactor = (key: RPFactorKey): RPFactor => ({
+    score: 0, weight: weights[key], detail: "Pending", source: "none",
   });
 
   return {
@@ -424,15 +450,14 @@ function makePendingRP(runsAnalyzed: number, capType: CapabilityType): RPResult 
     label: "Reliability: pending",
     capability_type: capType,
     factors: {
-      correctness: makeFactor("correctness"),
-      schema: makeFactor("schema"),
-      availability: makeFactor("availability"),
-      error_handling: makeFactor("error_handling"),
-      edge_cases: makeFactor("edge_cases"),
+      current_availability: makeFactor("current_availability"),
+      rolling_success: makeFactor("rolling_success"),
+      upstream_health: makeFactor("upstream_health"),
+      latency: makeFactor("latency"),
     },
     trend: "stable",
     circuit_breaker: false,
     runs_analyzed: runsAnalyzed,
-    pending: true, // FIXED: was false, causing crash in computeMatrixSQS
+    pending: true,
   };
 }

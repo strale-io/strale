@@ -763,7 +763,7 @@ export function registerStraleTools(
     "strale_methodology",
     {
       description:
-        "Get Strale's quality and trust methodology. Explains the dual-profile scoring model: Quality Profile (code quality, 4 factors) and Reliability Profile (operational dependability, 5 factors weighted by capability type), combined via a published 5×5 matrix into the SQS confidence score. Covers execution guidance, test infrastructure (1,215 test suites with tiered scheduling), provenance tracking, audit trails, badge system, and honest disclosure of current limitations.",
+        "Get Strale's quality and trust methodology. Explains the dual-profile scoring model: Quality Profile (code quality, 4 factors) and Reliability Profile (operational dependability, 4 factors weighted by capability type), combined via a published 5×5 matrix into the SQS confidence score. Covers execution guidance, test infrastructure (1,215 test suites with tiered scheduling), provenance tracking, audit trails, badge system, and honest disclosure of current limitations.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -793,18 +793,17 @@ Label format: "Code quality: [Grade]" (DEC-20260315-J)
 RELIABILITY PROFILE (RP)
 Measures operational dependability. Volatile — changes with upstream conditions.
 Upstream service failures ARE INCLUDED in the Reliability Profile (unlike QP where they are excluded).
-Five factors (as returned by the trust profile API):
-  current_availability — Latest test run pass rate; all failures counted including upstream outages
-  rolling_success      — Success rate across recent test runs (recency-weighted rolling window)
-  upstream_health      — Output structure validity; degrades when upstream data changes format
-  error_resilience     — Error handling under adverse conditions (graceful failure, error categorization)
-  latency              — Response time within acceptable bounds for the capability type
+Four factors, each answering a distinct operational question:
+  current_availability — Is it working RIGHT NOW? Latest test run pass rate (point-in-time snapshot)
+  rolling_success      — What's the recent trend? Recency-weighted success rate across last 10 runs
+  upstream_health      — Are external dependencies healthy? Derived from 30-day health state assessment
+  latency              — Is response time acceptable? p95 mapped to score by capability type thresholds
 
 Factor weights vary by capability type:
-  Deterministic (no external deps): rolling_success 50%, upstream_health 25%, error_resilience 15%, current_availability 5%, latency 5%
-  Stable API:                       rolling_success 35%, upstream_health 20%, current_availability 25%, error_resilience 10%, latency 10%
-  Scraping:                         rolling_success 25%, upstream_health 15%, current_availability 40%, error_resilience 10%, latency 10%
-  AI-assisted:                      rolling_success 40%, upstream_health 20%, current_availability 15%, error_resilience 15%, latency 10%
+  Deterministic (no external deps): current_availability 10%, rolling_success 30%, upstream_health 10%, latency 50%
+  Stable API:                       current_availability 30%, rolling_success 30%, upstream_health 25%, latency 15%
+  Scraping:                         current_availability 35%, rolling_success 30%, upstream_health 25%, latency 10%
+  AI-assisted:                      current_availability 25%, rolling_success 30%, upstream_health 25%, latency 20%
 Grade scale: A (>=90), B (>=75), C (>=50), D (>=25), F (<25)
 Labels: A="Highly reliable", B="Reliable", C="Degraded reliability", D="Unreliable right now", F="Down"
 
@@ -886,7 +885,7 @@ ACCESSING TRUST DATA
     "strale_trust_profile",
     {
       description:
-        "Get the full trust and quality profile for any capability or solution. Returns dual-profile quality assessment: Quality Profile (code quality, 4 factors: correctness, schema, error handling, edge cases) and Reliability Profile (operational dependability, 5 factors: current_availability, rolling_success, upstream_health, error_resilience, latency). Includes SQS confidence score from published QP×RP matrix, execution guidance (usable flag, retry strategy, fallback, recovery timeline, cost envelope), 30-day test history, known limitations, and badge status.",
+        "Get the full trust and quality profile for any capability or solution. Returns dual-profile quality assessment: Quality Profile (code quality, 4 factors: correctness, schema, error handling, edge cases) and Reliability Profile (operational dependability, 4 factors: current_availability, rolling_success, upstream_health, latency). Includes SQS confidence score from published QP×RP matrix, execution guidance (usable flag, retry strategy, fallback, recovery timeline, cost envelope), 30-day test history, known limitations, and badge status.",
       inputSchema: z.object({
         slug: z
           .string()
