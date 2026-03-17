@@ -20,7 +20,7 @@
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, healthMonitorEvents } from "../db/schema.js";
-import { computeCapabilitySQS } from "./sqs.js";
+import { computeDualProfileSQS } from "./sqs.js";
 import { logHealthEvent } from "./health-monitor.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -126,15 +126,15 @@ export async function evaluateLifecycle(
   // Only auto-evaluate states with auto-transitions
   if (!["probation", "active", "degraded"].includes(state)) return null;
 
-  const sqs = await computeCapabilitySQS(slug);
+  const dual = await computeDualProfileSQS(slug);
   const now = Date.now();
 
   // ── probation → active ────────────────────────────────────────────────────
-  // Requires: SQS ≥ 50 AND qualified (not pending = has ≥5 runs + all 5 factors)
+  // Requires: SQS ≥ 50 AND qualified (not pending = has ≥5 runs + all factors)
   if (state === "probation") {
-    if (!sqs.pending && sqs.score >= ACTIVE_SQS_MIN) {
-      const reason = `SQS ${sqs.score.toFixed(1)} ≥ ${ACTIVE_SQS_MIN}, ${sqs.runs_analyzed} runs, all factors qualified`;
-      await transitionCapability(slug, "active", reason, "auto", sqs.score);
+    if (!dual.matrix.pending && dual.score >= ACTIVE_SQS_MIN) {
+      const reason = `SQS ${dual.score.toFixed(1)} ≥ ${ACTIVE_SQS_MIN}, ${dual.qp.runs_analyzed} runs, all factors qualified`;
+      await transitionCapability(slug, "active", reason, "auto", dual.score);
       return { slug, from: "probation", to: "active", reason };
     }
     return null;
@@ -142,11 +142,11 @@ export async function evaluateLifecycle(
 
   // ── active → degraded ─────────────────────────────────────────────────────
   if (state === "active") {
-    if (sqs.score < DEGRADE_SQS_THRESHOLD || sqs.circuit_breaker) {
-      const reason = sqs.circuit_breaker
-        ? `Circuit breaker active (SQS ${sqs.score.toFixed(1)})`
-        : `SQS ${sqs.score.toFixed(1)} < ${DEGRADE_SQS_THRESHOLD}`;
-      await transitionCapability(slug, "degraded", reason, "auto", sqs.score);
+    if (dual.score < DEGRADE_SQS_THRESHOLD || dual.rp.circuit_breaker) {
+      const reason = dual.rp.circuit_breaker
+        ? `Circuit breaker active (SQS ${dual.score.toFixed(1)})`
+        : `SQS ${dual.score.toFixed(1)} < ${DEGRADE_SQS_THRESHOLD}`;
+      await transitionCapability(slug, "degraded", reason, "auto", dual.score);
       return { slug, from: "active", to: "degraded", reason };
     }
     return null;
@@ -159,9 +159,9 @@ export async function evaluateLifecycle(
     const degradedDays = degradedMs / (1000 * 60 * 60 * 24);
 
     // Recovery path: SQS ≥ 50 and circuit breaker not active
-    if (sqs.score >= ACTIVE_SQS_MIN && !sqs.circuit_breaker) {
-      const reason = `SQS recovered to ${sqs.score.toFixed(1)}, circuit breaker clear`;
-      await transitionCapability(slug, "active", reason, "auto", sqs.score);
+    if (dual.score >= ACTIVE_SQS_MIN && !dual.rp.circuit_breaker) {
+      const reason = `SQS recovered to ${dual.score.toFixed(1)}, circuit breaker clear`;
+      await transitionCapability(slug, "active", reason, "auto", dual.score);
       return { slug, from: "degraded", to: "active", reason };
     }
 
@@ -175,11 +175,11 @@ export async function evaluateLifecycle(
           type: "suspension_warning",
           capabilitySlug: slug,
           details: {
-            sqs_score: sqs.score.toFixed(1),
+            sqs_score: dual.score.toFixed(1),
             degraded_days: degradedDays.toFixed(1),
-            reason: sqs.circuit_breaker
-              ? `Circuit breaker active (SQS ${sqs.score.toFixed(1)})`
-              : `SQS ${sqs.score.toFixed(1)} below platform floor`,
+            reason: dual.rp.circuit_breaker
+              ? `Circuit breaker active (SQS ${dual.score.toFixed(1)})`
+              : `SQS ${dual.score.toFixed(1)} below platform floor`,
             auto_suspend_at: autoSuspendAt.toISOString(),
           },
         })
@@ -191,7 +191,7 @@ export async function evaluateLifecycle(
     // Suspend path: 7 consecutive days in degraded (regardless of SQS)
     if (degradedDays >= DEGRADED_SUSPEND_DAYS) {
       const reason = `${Math.floor(degradedDays)}d in degraded state — auto-suspended`;
-      await transitionCapability(slug, "suspended", reason, "auto", sqs.score);
+      await transitionCapability(slug, "suspended", reason, "auto", dual.score);
       return { slug, from: "degraded", to: "suspended", reason };
     }
 

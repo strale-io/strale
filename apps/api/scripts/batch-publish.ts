@@ -19,7 +19,7 @@ import "../src/app.js";
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../src/db/index.js";
 import { capabilities } from "../src/db/schema.js";
-import { computeCapabilitySQS } from "../src/lib/sqs.js";
+import { computeDualProfileSQS } from "../src/lib/sqs.js";
 import { logHealthEvent } from "../src/lib/health-monitor.js";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -115,17 +115,17 @@ async function main() {
     }
 
     // Check SQS
-    const sqs = await computeCapabilitySQS(slug);
+    const dual = await computeDualProfileSQS(slug);
 
-    if (sqs.pending) {
+    if (dual.matrix.pending) {
       skipped.push({ slug, reason: `SQS pending — not enough test runs yet` });
       continue;
     }
 
-    if (sqs.score < PUBLISH_SQS_THRESHOLD) {
+    if (dual.score < PUBLISH_SQS_THRESHOLD) {
       skipped.push({
         slug,
-        reason: `SQS ${sqs.score.toFixed(1)} below publication threshold of ${PUBLISH_SQS_THRESHOLD}`,
+        reason: `SQS ${dual.score.toFixed(1)} below publication threshold of ${PUBLISH_SQS_THRESHOLD}`,
       });
       continue;
     }
@@ -141,17 +141,17 @@ async function main() {
         eventType: "lifecycle_transition",
         capabilitySlug: slug,
         tier: 2,
-        actionTaken: `Published: now visible in catalog (SQS ${sqs.score.toFixed(1)})`,
+        actionTaken: `Published: now visible in catalog (SQS ${dual.score.toFixed(1)})`,
         details: {
           action: "publish",
-          sqs_score: sqs.score,
+          sqs_score: dual.score,
           triggered_by: "admin",
         },
         humanOverride: true,
       });
     }
 
-    published.push({ slug, sqs: Math.round(sqs.score) });
+    published.push({ slug, sqs: Math.round(dual.score) });
   }
 
   // ── Print summary ──────────────────────────────────────────────────────────

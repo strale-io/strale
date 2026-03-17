@@ -156,7 +156,7 @@ function setQueryCache(key: string, response: SuggestResponse): void {
 
 // ─── Catalog cache ──────────────────────────────────────────────────────────
 
-const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
+const CATALOG_CACHE_TTL_MS = 10 * 60 * 1000; // Match SQS cache TTL for consistent trust data
 let catalog: CatalogItem[] | null = null;
 let catalogCachedAt = 0;
 let catalogLoading: Promise<CatalogItem[]> | null = null;

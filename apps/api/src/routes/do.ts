@@ -22,7 +22,7 @@ import {
 import { recordQuality } from "../lib/quality-capture.js";
 import { getTestResultsForSlug } from "../lib/trust-helpers.js";
 import { recordPiggybackResult } from "../lib/piggyback-monitor.js";
-import { computeCapabilitySQS, computeDualProfileSQS } from "../lib/sqs.js";
+import { computeDualProfileSQS } from "../lib/sqs.js";
 import { createHash } from "node:crypto";
 import { getShareableUrl } from "../lib/audit-token.js";
 import { getAiDescription, getDataSourceUrl, detectPersonalData } from "../lib/audit-helpers.js";
@@ -381,10 +381,10 @@ doRoute.post(
   // ── 5c. SQS quality gate (uses dual-profile matrix score) ───────────
   const PLATFORM_FLOOR_SQS = 25;
   const dual = await computeDualProfileSQS(capability.slug).catch(() => null);
-  // Gate score: use matrix SQS (canonical). Fall back to legacy only if dual-profile fails.
+  // If dual-profile fails, treat as pending so the gate is skipped (fail open)
   const sqs = dual
     ? { score: dual.score, label: dual.label, pending: dual.matrix.pending, trend: dual.rp.trend }
-    : await computeCapabilitySQS(capability.slug);
+    : { score: 0, label: "Pending", pending: true, trend: "stable" as const };
 
   if (!sqs.pending && sqs.score < PLATFORM_FLOOR_SQS) {
     return c.json(

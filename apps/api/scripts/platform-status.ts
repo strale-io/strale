@@ -18,7 +18,6 @@ import "../src/app.js";
 import { eq, and, sql, gte } from "drizzle-orm";
 import { getDb } from "../src/db/index.js";
 import { capabilities, testSuites, healthMonitorEvents } from "../src/db/schema.js";
-import { computeCapabilitySQS } from "../src/lib/sqs.js";
 
 const PUBLISH_SQS_THRESHOLD = 60;
 

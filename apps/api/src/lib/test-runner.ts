@@ -12,7 +12,7 @@ import { getExecutor } from "../capabilities/index.js";
 import type { CapabilityResult } from "../capabilities/index.js";
 import { computeHealthState, HEALTH_STATE_FREQUENCY_HOURS } from "./health-state.js";
 import { sanitizeErrorMessage, getTestResultsForSlug } from "./trust-helpers.js";
-import { computeCapabilitySQS, computeDualProfileSQS } from "./sqs.js";
+import { computeDualProfileSQS } from "./sqs.js";
 import { computeExecutionGuidance, type ComputeGuidanceInput } from "./execution-guidance.js";
 import { classifyFailure } from "./failure-classifier.js";
 import { checkUpstreamEscalation } from "./upstream-tracker.js";
@@ -1046,15 +1046,15 @@ async function computeAdaptiveInterval(slug: string, tier: string): Promise<numb
   const sixHoursMs = 6 * 60 * 60 * 1000;
 
   // Get SQS to check probation and quality degradation
-  const sqs = await computeCapabilitySQS(slug);
+  const dual = await computeDualProfileSQS(slug);
 
   // Probation: fewer than 5 qualifying runs → test as fast as tier allows
-  if (sqs.pending && sqs.runs_analyzed < 5) {
+  if (dual.matrix.pending && dual.qp.runs_analyzed < 5) {
     return Math.min(sixHoursMs, tierMs);
   }
 
   // Score-triggered intensification: SQS < 50 → 6h but respect tier ceiling
-  if (!sqs.pending && sqs.score < 50) {
+  if (!dual.matrix.pending && dual.score < 50) {
     return Math.min(sixHoursMs, tierMs);
   }
 

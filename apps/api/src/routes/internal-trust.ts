@@ -510,6 +510,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
         sqs: dual.matrix.score,
         quality: dual.qp.grade,
         reliability: dual.rp.grade,
+        qp_score: dual.qp.score,
         rp_score: dual.rp.score,
         trend: dual.rp.trend,
         usable: guidance.usable,
@@ -528,6 +529,10 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
     const order = ["A", "B", "C", "D", "F", "pending"];
     return order.indexOf(s.reliability) > order.indexOf(w) ? s.reliability : w;
   }, "A");
+
+  // Solution QP/RP numeric scores = minimum across steps (weakest-link)
+  const solutionQpScore = Math.round(Math.min(...stepData.map((s) => s.qp_score)) * 10) / 10;
+  const solutionRpScore = Math.round(Math.min(...stepData.map((s) => s.rp_score)) * 10) / 10;
 
   // Solution SQS = average, capped at weakest + 20
   const avgSqs = stepSqsValues.reduce((a, b) => a + b, 0) / stepSqsValues.length;
@@ -591,11 +596,13 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
 
     quality_profile: {
       grade: worstQuality,
+      score: solutionQpScore,
       label: `Code quality: ${worstQuality}`,
     },
 
     reliability_profile: {
       grade: worstReliability,
+      score: solutionRpScore,
       label: rpGradeToLabel(worstReliability),
     },
 

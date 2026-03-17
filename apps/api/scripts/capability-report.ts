@@ -26,7 +26,7 @@ import {
   capabilityLimitations,
   healthMonitorEvents,
 } from "../src/db/schema.js";
-import { computeCapabilitySQS } from "../src/lib/sqs.js";
+import { computeDualProfileSQS } from "../src/lib/sqs.js";
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
@@ -56,7 +56,7 @@ async function main() {
   }
 
   // ── Live SQS ────────────────────────────────────────────────────────────
-  const sqs = await computeCapabilitySQS(slug);
+  const dual = await computeDualProfileSQS(slug);
 
   // ── Circuit breaker ─────────────────────────────────────────────────────
   const [health] = await db
@@ -162,14 +162,17 @@ async function main() {
           createdAt: cap.createdAt,
           updatedAt: cap.updatedAt,
           sqs: {
-            score: sqs.score,
-            label: sqs.label,
-            pending: sqs.pending,
-            trend: sqs.trend,
-            circuitBreaker: sqs.circuit_breaker,
-            runsAnalyzed: sqs.runs_analyzed,
-            externalServiceIssues: sqs.external_service_issues,
-            factors: sqs.factors,
+            score: dual.score,
+            label: dual.label,
+            pending: dual.matrix.pending,
+            trend: dual.rp.trend,
+            circuitBreaker: dual.rp.circuit_breaker,
+            qpRunsAnalyzed: dual.qp.runs_analyzed,
+            rpRunsAnalyzed: dual.rp.runs_analyzed,
+            qpGrade: dual.qp.grade,
+            rpGrade: dual.rp.grade,
+            qpFactors: dual.qp.factors,
+            rpFactors: dual.rp.factors,
             cached: cap.matrixSqs !== null ? Number(cap.matrixSqs) : null,
           },
           circuitBreaker: health
@@ -253,38 +256,48 @@ async function main() {
   console.log(`  ${pad("Is active:")}${cap.isActive ? "yes" : "no"}`);
 
   // SQS
-  console.log("\nSQS:");
-  if (sqs.pending) {
-    console.log(`  Score:              Pending (${sqs.runs_analyzed} runs so far)`);
+  console.log("\nSQS (dual-profile):");
+  if (dual.matrix.pending) {
+    console.log(`  Score:              Pending (QP: ${dual.qp.runs_analyzed} runs so far)`);
   } else {
-    console.log(`  ${pad("Score:")}${sqs.score} — ${sqs.label}`);
-    console.log(`  ${pad("Trend:")}${sqs.trend}`);
-    console.log(`  ${pad("Runs analyzed:")}${sqs.runs_analyzed}`);
-    console.log(`  ${pad("Circuit breaker:")}${sqs.circuit_breaker ? "⚡ ACTIVE (−30 penalty)" : "closed"}`);
-    if (sqs.external_service_issues > 0) {
-      console.log(`  ${pad("Ext. service issues:")}${sqs.external_service_issues}`);
-    }
+    console.log(`  ${pad("Score:")}${dual.score} — ${dual.label}`);
+    console.log(`  ${pad("QP grade:")}${dual.qp.grade}  (${dual.qp.score.toFixed(1)})`);
+    console.log(`  ${pad("RP grade:")}${dual.rp.grade}  (${dual.rp.score.toFixed(1)})`);
+    console.log(`  ${pad("Trend:")}${dual.rp.trend}`);
+    console.log(`  ${pad("Circuit breaker:")}${dual.rp.circuit_breaker ? "⚡ ACTIVE (−30 penalty)" : "closed"}`);
     if (cap.matrixSqs !== null) {
       console.log(`  ${pad("Cached score:")}${Number(cap.matrixSqs)} (use --json for diff)`);
     }
 
-    console.log("\n  Factors:");
-    const factors = sqs.factors;
-    const factorLabels: [string, keyof typeof factors][] = [
-      ["Correctness (40%)", "correctness"],
-      ["Schema (25%)", "schema"],
-      ["Availability (20%)", "availability"],
-      ["Error handling (10%)", "error_handling"],
-      ["Edge cases (5%)", "edge_cases"],
+    console.log("\n  Quality Profile factors:");
+    const qpFactors = dual.qp.factors;
+    const qpLabels: [string, keyof typeof qpFactors][] = [
+      ["Correctness (50%)", "correctness"],
+      ["Schema (31%)", "schema"],
+      ["Error handling (13%)", "error_handling"],
+      ["Edge cases (6%)", "edge_cases"],
     ];
-    for (const [label, key] of factorLabels) {
-      const f = factors[key];
+    for (const [label, key] of qpLabels) {
+      const f = qpFactors[key];
       if (!f.has_data) {
-        console.log(`    ${label.padEnd(22)} — no data`);
+        console.log(`    ${label.padEnd(24)} — no data`);
       } else {
         const pct = (f.rate * 100).toFixed(0);
-        console.log(`    ${label.padEnd(22)} ${pct}%  (${f.passed}/${f.total} passed, contrib ${f.weighted_contribution.toFixed(1)})`);
+        console.log(`    ${label.padEnd(24)} ${pct}%  (${f.passed}/${f.total} passed, contrib ${f.weighted_contribution.toFixed(1)})`);
       }
+    }
+
+    console.log("\n  Reliability Profile factors:");
+    const rpFactors = dual.rp.factors;
+    const rpLabels: [string, keyof typeof rpFactors][] = [
+      ["Current availability", "current_availability"],
+      ["Rolling success", "rolling_success"],
+      ["Upstream health", "upstream_health"],
+      ["Latency", "latency"],
+    ];
+    for (const [label, key] of rpLabels) {
+      const f = rpFactors[key];
+      console.log(`    ${label.padEnd(24)} ${f.score.toFixed(0)}  (${f.detail})`);
     }
   }
 

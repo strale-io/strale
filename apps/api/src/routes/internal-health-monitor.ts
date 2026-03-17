@@ -37,7 +37,7 @@ import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { capabilities, testSuites, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
-import { computeCapabilitySQS } from "../lib/sqs.js";
+import { computeDualProfileSQS } from "../lib/sqs.js";
 import { runWeeklyHealthSweep } from "../lib/health-sweep.js";
 import { compileWeeklyDigest } from "../lib/digest-compiler.js";
 import { formatDigestEmail } from "../lib/digest-formatter.js";
@@ -293,20 +293,20 @@ internalHealthMonitorRoute.post("/capabilities/:slug/publish", async (c) => {
     return c.json({ slug, already_visible: true, message: `Capability '${slug}' is already visible.` });
   }
 
-  const sqs = await computeCapabilitySQS(slug);
+  const dual = await computeDualProfileSQS(slug);
 
-  if (sqs.pending) {
+  if (dual.matrix.pending) {
     return c.json(
       apiError("invalid_request", `SQS pending — not enough test runs yet.`),
       422,
     );
   }
 
-  if (sqs.score < PUBLISH_SQS_THRESHOLD) {
+  if (dual.score < PUBLISH_SQS_THRESHOLD) {
     return c.json(
       apiError(
         "invalid_request",
-        `SQS ${sqs.score.toFixed(1)} is below publication threshold of ${PUBLISH_SQS_THRESHOLD}.`,
+        `SQS ${dual.score.toFixed(1)} is below publication threshold of ${PUBLISH_SQS_THRESHOLD}.`,
       ),
       422,
     );
@@ -321,15 +321,15 @@ internalHealthMonitorRoute.post("/capabilities/:slug/publish", async (c) => {
     eventType: "lifecycle_transition",
     capabilitySlug: slug,
     tier: 2,
-    actionTaken: `Published: now visible in catalog (SQS ${sqs.score.toFixed(1)})`,
-    details: { action: "publish", sqs_score: sqs.score, triggered_by: "admin" },
+    actionTaken: `Published: now visible in catalog (SQS ${dual.score.toFixed(1)})`,
+    details: { action: "publish", sqs_score: dual.score, triggered_by: "admin" },
     humanOverride: true,
   });
 
   return c.json({
     slug,
     published: true,
-    sqs: Math.round(sqs.score),
+    sqs: Math.round(dual.score),
     message: `Capability '${slug}' is now visible in the catalog.`,
   });
 });
