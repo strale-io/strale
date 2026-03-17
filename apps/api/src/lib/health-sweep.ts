@@ -17,6 +17,7 @@ import { getDb } from "../db/index.js";
 import { testSuites, testResults } from "../db/schema.js";
 import { analyzeAndRemediate, applyRemediation } from "./auto-remediation.js";
 import { runUpstreamEscalationSweep } from "./upstream-tracker.js";
+import { runLifecycleSweep } from "./lifecycle.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -149,7 +150,17 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
     console.warn("[health-sweep] Upstream escalation sweep failed:", err);
   }
 
-  // ── 7. Log health report ──────────────────────────────────────────────
+  // ── 7. Lifecycle sweep ────────────────────────────────────────────────
+  try {
+    const transitions = await runLifecycleSweep();
+    for (const t of transitions) {
+      console.log(`[health-sweep] Lifecycle: ${t.slug} ${t.from} → ${t.to} (${t.reason})`);
+    }
+  } catch (err) {
+    console.warn("[health-sweep] Lifecycle sweep failed:", err);
+  }
+
+  // ── 8. Log health report ──────────────────────────────────────────────
   logSweepReport(report);
 
   return report;

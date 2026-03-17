@@ -21,6 +21,7 @@ import {
   capabilityLimitations,
 } from "../src/db/schema.js";
 import { getExecutor } from "../src/capabilities/index.js";
+import { transitionCapability } from "../src/lib/lifecycle.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -81,6 +82,8 @@ async function validateCapability(slug: string): Promise<{
     .from(capabilities)
     .where(eq(capabilities.slug, slug))
     .limit(1);
+
+  const currentState = cap?.lifecycleState ?? null;
 
   checks.push({
     name: "Capability exists in database",
@@ -229,6 +232,21 @@ async function validateCapability(slug: string): Promise<{
   });
 
   const allPassed = checks.every((c) => c.passed);
+
+  // Apply lifecycle transition for capabilities in 'validating' state
+  if (currentState === "validating") {
+    try {
+      if (allPassed) {
+        await transitionCapability(slug, "probation", "All 15 Gate 1 checks passed", "validation");
+      } else {
+        const failedChecks = checks.filter((c) => !c.passed).map((c) => c.name).join("; ");
+        await transitionCapability(slug, "draft", `Gate 1 failed: ${failedChecks}`, "validation");
+      }
+    } catch (err) {
+      console.warn(`[validate] Lifecycle transition failed for ${slug}:`, err);
+    }
+  }
+
   return { slug, checks, passed: allPassed };
 }
 
