@@ -180,6 +180,33 @@ export async function runTests(
     });
   }
 
+  // ── Mass failure detection: >10% and >5 failures → interrupt email ─────
+  if (results.length > 0 && failed > 5 && failed / results.length > 0.10) {
+    const classificationCounts: Record<string, number> = {};
+    for (const r of results) {
+      if (!r.passed && (r as any).failureClassification) {
+        const c = String((r as any).failureClassification);
+        classificationCounts[c] = (classificationCounts[c] ?? 0) + 1;
+      }
+    }
+    const commonClassification = Object.entries(classificationCounts)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] ?? "unknown";
+
+    import("./interrupt-sender.js").then(({ sendInterruptEmail }) =>
+      sendInterruptEmail({
+        type: "mass_failure",
+        details: {
+          failed_count: failed,
+          total_count: results.length,
+          failed_slugs: failedSlugs,
+          common_classification: commonClassification,
+        },
+      })
+    ).catch((err) => {
+      console.error("[interrupt] Mass failure notification failed:", err instanceof Error ? err.message : err);
+    });
+  }
+
   return {
     tier: tierLabel,
     total: results.length,
@@ -1161,6 +1188,31 @@ export function startScheduledTests(): void {
         console.warn(
           `[health-check] Unhealthy dependencies: ${unhealthy.map(([name, r]) => `${name} (${r.error ?? "down"})`).join(", ")}`,
         );
+
+        // Send interrupt email for critical services (browserless = ~35 scraping capabilities)
+        const criticalDown = unhealthy.filter(([name]) =>
+          name === "browserless" || name === "anthropic",
+        );
+        if (criticalDown.length > 0) {
+          const downService = criticalDown[0][0];
+          import("./interrupt-sender.js").then(({ sendInterruptEmail }) =>
+            sendInterruptEmail({
+              type: "infrastructure_down",
+              details: {
+                service: downService,
+                services: Object.fromEntries(
+                  Object.entries(results).map(([name, r]) => [
+                    name,
+                    { healthy: r.healthy, ...(r.error ? { error: r.error } : {}) },
+                  ]),
+                ),
+                affected_capabilities: downService === "browserless" ? 35 : 0,
+              },
+            })
+          ).catch((err) => {
+            console.error("[interrupt] Infrastructure down notification failed:", err instanceof Error ? err.message : err);
+          });
+        }
       } else {
         console.log(
           `[health-check] All dependencies healthy: ${Object.entries(results).map(([name, r]) => `${name}=${r.latency_ms}ms`).join(", ")}`,

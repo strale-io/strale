@@ -165,6 +165,29 @@ export async function evaluateLifecycle(
       return { slug, from: "degraded", to: "active", reason };
     }
 
+    // 24h suspension warning at day 6 (one day before auto-suspend)
+    if (degradedDays >= DEGRADED_SUSPEND_DAYS - 1 && degradedDays < DEGRADED_SUSPEND_DAYS) {
+      const autoSuspendAt = new Date(
+        (degradedSince ?? now) + DEGRADED_SUSPEND_DAYS * 24 * 3600_000,
+      );
+      import("./interrupt-sender.js").then(({ sendInterruptEmail }) =>
+        sendInterruptEmail({
+          type: "suspension_warning",
+          capabilitySlug: slug,
+          details: {
+            sqs_score: sqs.score.toFixed(1),
+            degraded_days: degradedDays.toFixed(1),
+            reason: sqs.circuit_breaker
+              ? `Circuit breaker active (SQS ${sqs.score.toFixed(1)})`
+              : `SQS ${sqs.score.toFixed(1)} below platform floor`,
+            auto_suspend_at: autoSuspendAt.toISOString(),
+          },
+        })
+      ).catch((err) => {
+        console.error(`[interrupt] Suspension warning failed for ${slug}:`, err instanceof Error ? err.message : err);
+      });
+    }
+
     // Suspend path: 7 consecutive days in degraded (regardless of SQS)
     if (degradedDays >= DEGRADED_SUSPEND_DAYS) {
       const reason = `${Math.floor(degradedDays)}d in degraded state — auto-suspended`;
