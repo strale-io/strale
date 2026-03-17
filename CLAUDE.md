@@ -27,15 +27,10 @@ See .claude/PROTOCOL.md for full criteria and protocol definitions.
 - Main branch: main
 - Feature branch pattern: type/kebab-description
 
-### Project Spec Files
-- `strale-project-spec.md` — Original 4-week MVP specification (Feb 2026, historical)
-- `strale-review-synthesis.md` — External review decisions (Feb 2026, historical)
-- `strale-build-spec.md` — Original build plan (Feb 2026, historical)
-
-> These files reflect the original MVP scope. For current state and priorities, see:
-> - **Notion Project Home** for what exists: https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
-> - **Notion Roadmap** for what to build next: https://www.notion.so/31c67c87-082c-819c-a238-c0ae01957a69
-> - **SQS Constitution** for quality system spec: https://www.notion.so/31c67c87-082c-8106-a444-de3df622a10f
+### Project Spec
+The original MVP spec files have been removed from this repo (archived to Notion).
+For current build plan, priorities, and architecture, see Notion Project Home:
+https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
 
 ### Tech Stack
 - Runtime: Node.js + TypeScript
