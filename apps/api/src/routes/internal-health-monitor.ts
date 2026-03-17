@@ -5,6 +5,21 @@
  *   Set lifecycle_state → 'validating', visible=false, log with humanOverride=true.
  *   Admin-only (ADMIN_SECRET).
  *
+ * POST /v1/internal/capabilities/:slug/publish
+ *   Publish a capability (visible=true) if SQS ≥ 60 and lifecycle_state='active'.
+ *   Admin-only (ADMIN_SECRET).
+ *
+ * POST /v1/internal/capabilities/:slug/unpublish
+ *   Unpublish a capability (visible=false). Admin-only (ADMIN_SECRET).
+ *
+ * POST /v1/internal/capabilities/:slug/suspend
+ *   Suspend a capability (lifecycle_state='suspended', visible=false).
+ *   Admin-only (ADMIN_SECRET).
+ *
+ * GET /v1/internal/platform-status
+ *   JSON snapshot of the platform: capability counts, SQS distribution,
+ *   test health, recent events, and capabilities ready to publish.
+ *
  * GET /v1/internal/health-monitor/events
  *   Query recent health_monitor_events with optional filters.
  *   Query params: since, capability_slug, tier, event_type, limit (default 100, max 500)
@@ -17,11 +32,12 @@
  */
 
 import { Hono } from "hono";
-import { eq, and, gte, desc } from "drizzle-orm";
+import { eq, and, gte, desc, sql } from "drizzle-orm";
 import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
-import { capabilities, healthMonitorEvents } from "../db/schema.js";
+import { capabilities, testSuites, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
+import { computeCapabilitySQS } from "../lib/sqs.js";
 import { runWeeklyHealthSweep } from "../lib/health-sweep.js";
 import { compileWeeklyDigest } from "../lib/digest-compiler.js";
 import { formatDigestEmail } from "../lib/digest-formatter.js";
@@ -230,5 +246,312 @@ internalHealthMonitorRoute.post("/health-monitor/send-digest", async (c) => {
       demand_signals: data.demandSignals.length,
       qualification_entries: data.qualification.length,
     },
+  });
+});
+
+// ─── POST /v1/internal/capabilities/:slug/publish ──────────────────────────
+// Publish a capability (set visible=true) if SQS ≥ 60 and state='active'.
+
+const PUBLISH_SQS_THRESHOLD = 60;
+
+internalHealthMonitorRoute.post("/capabilities/:slug/publish", async (c) => {
+  const auth = c.req.header("Authorization");
+  if (!isValidAdminAuth(auth)) {
+    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+  }
+
+  const slug = c.req.param("slug");
+  const db = getDb();
+
+  const [cap] = await db
+    .select({
+      slug: capabilities.slug,
+      lifecycleState: capabilities.lifecycleState,
+      visible: capabilities.visible,
+      isActive: capabilities.isActive,
+    })
+    .from(capabilities)
+    .where(eq(capabilities.slug, slug))
+    .limit(1);
+
+  if (!cap) {
+    return c.json(apiError("not_found", `Capability '${slug}' not found.`), 404);
+  }
+
+  if (!cap.isActive) {
+    return c.json(apiError("invalid_request", `Capability '${slug}' is inactive.`), 422);
+  }
+
+  if (cap.lifecycleState !== "active") {
+    return c.json(
+      apiError("invalid_request", `Cannot publish: lifecycle_state is '${cap.lifecycleState}' (must be 'active').`),
+      422,
+    );
+  }
+
+  if (cap.visible) {
+    return c.json({ slug, already_visible: true, message: `Capability '${slug}' is already visible.` });
+  }
+
+  const sqs = await computeCapabilitySQS(slug);
+
+  if (sqs.pending) {
+    return c.json(
+      apiError("invalid_request", `SQS pending — not enough test runs yet.`),
+      422,
+    );
+  }
+
+  if (sqs.score < PUBLISH_SQS_THRESHOLD) {
+    return c.json(
+      apiError(
+        "invalid_request",
+        `SQS ${sqs.score.toFixed(1)} is below publication threshold of ${PUBLISH_SQS_THRESHOLD}.`,
+      ),
+      422,
+    );
+  }
+
+  await db
+    .update(capabilities)
+    .set({ visible: true, updatedAt: new Date() })
+    .where(eq(capabilities.slug, slug));
+
+  await logHealthEvent({
+    eventType: "lifecycle_transition",
+    capabilitySlug: slug,
+    tier: 2,
+    actionTaken: `Published: now visible in catalog (SQS ${sqs.score.toFixed(1)})`,
+    details: { action: "publish", sqs_score: sqs.score, triggered_by: "admin" },
+    humanOverride: true,
+  });
+
+  return c.json({
+    slug,
+    published: true,
+    sqs: Math.round(sqs.score),
+    message: `Capability '${slug}' is now visible in the catalog.`,
+  });
+});
+
+// ─── POST /v1/internal/capabilities/:slug/unpublish ────────────────────────
+// Unpublish a capability (set visible=false) without changing lifecycle state.
+
+internalHealthMonitorRoute.post("/capabilities/:slug/unpublish", async (c) => {
+  const auth = c.req.header("Authorization");
+  if (!isValidAdminAuth(auth)) {
+    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+  }
+
+  const slug = c.req.param("slug");
+  const db = getDb();
+
+  const [cap] = await db
+    .select({ slug: capabilities.slug, visible: capabilities.visible, lifecycleState: capabilities.lifecycleState })
+    .from(capabilities)
+    .where(eq(capabilities.slug, slug))
+    .limit(1);
+
+  if (!cap) {
+    return c.json(apiError("not_found", `Capability '${slug}' not found.`), 404);
+  }
+
+  if (!cap.visible) {
+    return c.json({ slug, already_hidden: true, message: `Capability '${slug}' is already hidden.` });
+  }
+
+  await db
+    .update(capabilities)
+    .set({ visible: false, updatedAt: new Date() })
+    .where(eq(capabilities.slug, slug));
+
+  await logHealthEvent({
+    eventType: "lifecycle_transition",
+    capabilitySlug: slug,
+    tier: 2,
+    actionTaken: `Unpublished: removed from catalog (lifecycle_state remains '${cap.lifecycleState}')`,
+    details: { action: "unpublish", triggered_by: "admin" },
+    humanOverride: true,
+  });
+
+  return c.json({
+    slug,
+    unpublished: true,
+    message: `Capability '${slug}' is now hidden from the catalog.`,
+  });
+});
+
+// ─── POST /v1/internal/capabilities/:slug/suspend ──────────────────────────
+// Suspend a capability: lifecycle_state='suspended', visible=false.
+
+internalHealthMonitorRoute.post("/capabilities/:slug/suspend", async (c) => {
+  const auth = c.req.header("Authorization");
+  if (!isValidAdminAuth(auth)) {
+    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+  }
+
+  const slug = c.req.param("slug");
+  const db = getDb();
+
+  const [cap] = await db
+    .select({ slug: capabilities.slug, lifecycleState: capabilities.lifecycleState })
+    .from(capabilities)
+    .where(eq(capabilities.slug, slug))
+    .limit(1);
+
+  if (!cap) {
+    return c.json(apiError("not_found", `Capability '${slug}' not found.`), 404);
+  }
+
+  if (cap.lifecycleState === "suspended") {
+    return c.json({ slug, already_suspended: true, message: `Capability '${slug}' is already suspended.` });
+  }
+
+  const fromState = cap.lifecycleState;
+
+  const body = await c.req.json().catch(() => ({}));
+  const reason: string = body?.reason ?? "manually suspended by admin";
+
+  await db
+    .update(capabilities)
+    .set({ lifecycleState: "suspended", visible: false, updatedAt: new Date() })
+    .where(eq(capabilities.slug, slug));
+
+  await logHealthEvent({
+    eventType: "lifecycle_transition",
+    capabilitySlug: slug,
+    tier: 2,
+    actionTaken: `${fromState} → suspended: ${reason}`,
+    details: { from: fromState, to: "suspended", reason, triggered_by: "admin" },
+    humanOverride: true,
+  });
+
+  return c.json({
+    slug,
+    suspended: true,
+    from: fromState,
+    reason,
+    message: `Capability '${slug}' is now suspended and hidden from the catalog.`,
+  });
+});
+
+// ─── GET /v1/internal/platform-status ──────────────────────────────────────
+// JSON snapshot: capability counts, SQS distribution, test health,
+// recent events (last 7d), and capabilities ready to publish.
+
+internalHealthMonitorRoute.get("/platform-status", async (c) => {
+  const auth = c.req.header("Authorization");
+  if (!isValidAdminAuth(auth)) {
+    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+  }
+
+  const db = getDb();
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 3600_000);
+
+  const [capRows, sqsRows, testRows, eventRows, hiddenActive] = await Promise.all([
+    // Capability counts by lifecycle_state + visibility
+    db
+      .select({
+        lifecycleState: capabilities.lifecycleState,
+        visible: capabilities.visible,
+        count: sql<string>`COUNT(*)`,
+      })
+      .from(capabilities)
+      .where(eq(capabilities.isActive, true))
+      .groupBy(capabilities.lifecycleState, capabilities.visible),
+
+    // SQS distribution (cached)
+    db
+      .select({ matrixSqs: capabilities.matrixSqs })
+      .from(capabilities)
+      .where(and(eq(capabilities.isActive, true), eq(capabilities.lifecycleState, "active"))),
+
+    // Test health counts
+    db
+      .select({
+        testStatus: testSuites.testStatus,
+        count: sql<string>`COUNT(*)`,
+      })
+      .from(testSuites)
+      .where(eq(testSuites.active, true))
+      .groupBy(testSuites.testStatus),
+
+    // Recent event counts
+    db
+      .select({
+        eventType: healthMonitorEvents.eventType,
+        count: sql<string>`COUNT(*)`,
+      })
+      .from(healthMonitorEvents)
+      .where(gte(healthMonitorEvents.createdAt, weekAgo))
+      .groupBy(healthMonitorEvents.eventType),
+
+    // Hidden active capabilities (ready to publish)
+    db
+      .select({ slug: capabilities.slug, name: capabilities.name, matrixSqs: capabilities.matrixSqs })
+      .from(capabilities)
+      .where(
+        and(
+          eq(capabilities.isActive, true),
+          eq(capabilities.lifecycleState, "active"),
+          eq(capabilities.visible, false),
+        ),
+      ),
+  ]);
+
+  // Capability counts
+  const capCounts: Record<string, { visible: number; hidden: number }> = {};
+  for (const row of capRows) {
+    const state = row.lifecycleState;
+    if (!capCounts[state]) capCounts[state] = { visible: 0, hidden: 0 };
+    if (row.visible) capCounts[state].visible += Number(row.count);
+    else capCounts[state].hidden += Number(row.count);
+  }
+  const totalCaps = capRows.reduce((s, r) => s + Number(r.count), 0);
+
+  // SQS distribution
+  const sqsDist = { excellent: 0, good: 0, fair: 0, poor: 0, building: 0 };
+  for (const row of sqsRows) {
+    if (row.matrixSqs === null) { sqsDist.building++; continue; }
+    const s = Number(row.matrixSqs);
+    if (s >= 90) sqsDist.excellent++;
+    else if (s >= 75) sqsDist.good++;
+    else if (s >= 60) sqsDist.fair++;
+    else sqsDist.poor++;
+  }
+
+  // Test health
+  const testCounts: Record<string, number> = {};
+  for (const row of testRows) testCounts[row.testStatus] = Number(row.count);
+
+  // Event counts
+  const eventCounts: Record<string, number> = {};
+  for (const row of eventRows) eventCounts[row.eventType] = Number(row.count);
+
+  // Ready to publish
+  const readyToPublish = hiddenActive
+    .map((cap) => {
+      const sqs = cap.matrixSqs !== null ? Number(cap.matrixSqs) : null;
+      return { slug: cap.slug, name: cap.name, sqs, below_threshold: sqs !== null && sqs < PUBLISH_SQS_THRESHOLD };
+    })
+    .sort((a, b) => (b.sqs ?? -1) - (a.sqs ?? -1));
+
+  return c.json({
+    generated_at: now.toISOString(),
+    capabilities: {
+      active_visible: capCounts["active"]?.visible ?? 0,
+      active_hidden: capCounts["active"]?.hidden ?? 0,
+      probation: (capCounts["probation"]?.visible ?? 0) + (capCounts["probation"]?.hidden ?? 0),
+      validating: (capCounts["validating"]?.visible ?? 0) + (capCounts["validating"]?.hidden ?? 0),
+      degraded: (capCounts["degraded"]?.visible ?? 0) + (capCounts["degraded"]?.hidden ?? 0),
+      suspended: (capCounts["suspended"]?.visible ?? 0) + (capCounts["suspended"]?.hidden ?? 0),
+      draft: (capCounts["draft"]?.visible ?? 0) + (capCounts["draft"]?.hidden ?? 0),
+      total: totalCaps,
+    },
+    sqs_distribution: sqsDist,
+    test_health: testCounts,
+    recent_events: eventCounts,
+    ready_to_publish: readyToPublish,
   });
 });
