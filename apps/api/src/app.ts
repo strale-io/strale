@@ -21,6 +21,7 @@ import { internalQualityRoute } from "./routes/internal-quality.js";
 import { internalTestsRoute } from "./routes/internal-tests.js";
 import { internalLimitationsRoute } from "./routes/internal-limitations.js";
 import { internalTrustRoute } from "./routes/internal-trust.js";
+import { internalHealthMonitorRoute } from "./routes/internal-health-monitor.js";
 import { auditRoute } from "./routes/audit.js";
 import { startScheduledTests } from "./lib/test-runner.js";
 
@@ -416,6 +417,7 @@ app.route("/v1/internal/quality", internalQualityRoute);
 app.route("/v1/internal/tests", internalTestsRoute);
 app.route("/v1/internal/limitations", internalLimitationsRoute);
 app.route("/v1/internal/trust", internalTrustRoute);
+app.route("/v1/internal", internalHealthMonitorRoute);
 app.route("/v1/audit", auditRoute);
 
 // Start scheduled test runner (every 6 hours)

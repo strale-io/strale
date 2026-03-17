@@ -13,7 +13,8 @@
 
 import { eq, and, sql, gte, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { testSuites, testResults, healthMonitorEvents } from "../db/schema.js";
+import { testSuites, testResults } from "../db/schema.js";
+import { logHealthEvent } from "./health-monitor.js";
 
 // ─── Thresholds ──────────────────────────────────────────────────────────────
 
@@ -76,10 +77,10 @@ export async function checkUpstreamEscalation(slug: string): Promise<EscalationR
   }
 
   if (result.suitesEscalated > 0) {
-    await db.insert(healthMonitorEvents).values({
+    await logHealthEvent({
       eventType: "upstream_escalation",
       capabilitySlug: slug,
-      tier: 0,
+      tier: 1,
       actionTaken: `Escalated ${result.suitesEscalated} suite(s) to upstream_broken`,
       details: {
         threshold: TRANSIENT_THRESHOLD,
@@ -116,10 +117,10 @@ export async function checkUpstreamEscalation(slug: string): Promise<EscalationR
     const flagRows = (Array.isArray(recentFlag) ? recentFlag : (recentFlag as any)?.rows ?? []) as any[];
 
     if (flagRows.length === 0) {
-      await db.insert(healthMonitorEvents).values({
+      await logHealthEvent({
         eventType: "upstream_changed_flag",
         capabilitySlug: slug,
-        tier: 0,
+        tier: 1,
         actionTaken: `Flagged for review: ${changedCount} upstream_changed failures in ${CHANGED_WINDOW_DAYS}d`,
         details: {
           threshold: CHANGED_THRESHOLD,

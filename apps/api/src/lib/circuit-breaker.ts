@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilityHealth } from "../db/schema.js";
+import { logHealthEvent } from "./health-monitor.js";
 
 // Circuit breaker states
 type CircuitState = "closed" | "open" | "half_open";
@@ -101,6 +102,17 @@ export async function recordSuccess(slug: string): Promise<void> {
     return;
   }
 
+  // Log recovery if previously open or half_open
+  if (health.state === "open" || health.state === "half_open") {
+    logHealthEvent({
+      eventType: "circuit_breaker",
+      capabilitySlug: slug,
+      tier: 1,
+      actionTaken: "Circuit breaker recovered",
+      details: { previous_state: health.state },
+    }).catch(() => {});
+  }
+
   // Reset to closed on any success
   await db
     .update(capabilityHealth)
@@ -175,6 +187,15 @@ export async function recordFailure(slug: string): Promise<void> {
         updatedAt: now,
       })
       .where(eq(capabilityHealth.id, health.id));
+
+    logHealthEvent({
+      eventType: "circuit_breaker",
+      capabilitySlug: slug,
+      tier: 1,
+      actionTaken: `Circuit breaker tripped: ${newConsecutive} consecutive failures`,
+      details: { state: "open", consecutive_failures: newConsecutive, backoff_minutes: backoff },
+    }).catch(() => {});
+
     return;
   }
 

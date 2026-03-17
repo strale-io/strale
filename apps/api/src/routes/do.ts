@@ -54,7 +54,10 @@ interface DualProfileGuidance {
 // Dual-profile response helpers
 type DualProfileSQSResult = Awaited<ReturnType<typeof computeDualProfileSQS>>;
 
-function buildDualProfileResponse(dual: DualProfileSQSResult | null, sqs: { score: number; label: string; trend: string; pending: boolean }) {
+function buildDualProfileResponse(dual: DualProfileSQSResult | null, sqs: { score: number; label: string; trend: string; pending: boolean }, lifecycleState?: string) {
+  const warning = lifecycleState === "degraded"
+    ? { quality_warning: "This capability is currently degraded. Results may be unreliable." }
+    : {};
   if (!dual) {
     return {
       quality: {
@@ -64,6 +67,7 @@ function buildDualProfileResponse(dual: DualProfileSQSResult | null, sqs: { scor
         trend: sqs.trend,
       },
       execution_guidance: { usable: true, strategy: "direct" as const, confidence_after_strategy: 100 },
+      ...warning,
     };
   }
   return {
@@ -82,6 +86,7 @@ function buildDualProfileResponse(dual: DualProfileSQSResult | null, sqs: { scor
             : dual.matrix.score < 25 ? "unavailable" as const : "direct" as const,
       confidence_after_strategy: dual.rp.grade === "A" ? 100 : Math.min(99, Math.round(dual.rp.score)),
     },
+    ...warning,
   };
 }
 
@@ -91,6 +96,7 @@ type CapabilityInfo = {
   slug: string;
   name: string;
   priceCents: number;
+  lifecycleState: string;
   dataSource: string | null;
   dataClassification: string | null;
   freshnessCategory: string | null;
@@ -562,7 +568,7 @@ async function executeFreeTier(
       ).catch(() => {});
     }
 
-    const dualProfile = buildDualProfileResponse(dual, sqs);
+    const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
     return c.json({
       transaction_id: txnRecord.id,
       status: "completed",
@@ -686,7 +692,7 @@ async function executeFreeTierAuthenticated(
       .where(eq(wallets.userId, user.id))
       .limit(1);
 
-    const dualProfile = buildDualProfileResponse(dual, sqs);
+    const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
     return c.json({
       transaction_id: txnRecord.id,
       status: "completed",
@@ -1000,7 +1006,7 @@ async function executeSync(
     .where(eq(transactions.id, result.transactionId))
     .catch(() => {});
 
-  const dualProfile = buildDualProfileResponse(dual, sqs);
+  const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
 
   return c.json({
     transaction_id: result.transactionId,

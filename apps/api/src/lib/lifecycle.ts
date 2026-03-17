@@ -4,10 +4,10 @@
  * States: draft → validating → probation → active ⇄ degraded → suspended
  *
  * Auto-evaluated transitions:
- *   probation → active:    30+ days on probation AND SQS ≥ 60
- *   active → degraded:     SQS < 40 OR circuit breaker active
- *   degraded → active:     SQS ≥ 60 AND has been degraded ≥ 48h
- *   degraded → suspended:  SQS < 20 for 7+ days (still degraded after 7d with low score)
+ *   probation → active:    SQS ≥ 50 AND qualified (≥5 runs, all 5 factors have data)
+ *   active → degraded:     SQS < 25 OR circuit breaker active
+ *   degraded → active:     SQS ≥ 50 AND circuit breaker not active
+ *   degraded → suspended:  7 consecutive days in degraded state (regardless of SQS)
  *
  * Manual-only transitions (via lifecycle-transition.ts --to):
  *   any → suspended, suspended → draft
@@ -21,6 +21,7 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, healthMonitorEvents } from "../db/schema.js";
 import { computeCapabilitySQS } from "./sqs.js";
+import { logHealthEvent } from "./health-monitor.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -43,12 +44,15 @@ export interface TransitionResult {
 
 // ─── Thresholds ──────────────────────────────────────────────────────────────
 
-const PROBATION_DAYS = 30;           // min days on probation before active
-const ACTIVE_SQS_MIN = 60;           // SQS required to promote to active
-const DEGRADE_SQS_THRESHOLD = 40;    // SQS below which active → degraded
-const SUSPEND_SQS_THRESHOLD = 20;    // SQS below which degraded → suspended
-const DEGRADED_RECOVERY_HOURS = 48;  // min hours degraded before active recovery
-const DEGRADED_SUSPEND_DAYS = 7;     // days degraded with low SQS → suspended
+const ACTIVE_SQS_MIN = 50;           // SQS required to promote probation → active OR recover degraded → active
+const DEGRADE_SQS_THRESHOLD = 25;    // SQS below which active → degraded (platform floor per SQS Constitution)
+const DEGRADED_SUSPEND_DAYS = 7;     // consecutive days in degraded → suspended (regardless of SQS)
+
+// Tier for health monitor events per transition
+function transitionTier(to: LifecycleState): 1 | 2 | 3 {
+  if (to === "degraded" || to === "suspended") return 2;
+  return 1;
+}
 
 // ─── Core: write a transition ─────────────────────────────────────────────────
 
@@ -61,6 +65,7 @@ export async function transitionCapability(
   toState: LifecycleState,
   reason: string,
   triggeredBy: TransitionTrigger = "auto",
+  sqsScore?: number,
 ): Promise<void> {
   const db = getDb();
 
@@ -80,16 +85,17 @@ export async function transitionCapability(
     .set({ lifecycleState: toState, updatedAt: new Date() })
     .where(eq(capabilities.slug, slug));
 
-  await db.insert(healthMonitorEvents).values({
+  await logHealthEvent({
     eventType: "lifecycle_transition",
     capabilitySlug: slug,
-    tier: 1,
+    tier: transitionTier(toState),
     actionTaken: `${fromState} → ${toState}: ${reason}`,
     details: {
       from: fromState,
       to: toState,
       reason,
       triggered_by: triggeredBy,
+      ...(sqsScore !== undefined ? { sqs_score: sqsScore } : {}),
     },
   });
 
@@ -124,17 +130,12 @@ export async function evaluateLifecycle(
   const now = Date.now();
 
   // ── probation → active ────────────────────────────────────────────────────
+  // Requires: SQS ≥ 50 AND qualified (not pending = has ≥5 runs + all 5 factors)
   if (state === "probation") {
-    if (sqs.score >= ACTIVE_SQS_MIN) {
-      const probationSince = await getStateEnteredAt(slug, "probation");
-      if (probationSince !== null) {
-        const daysOnProbation = (now - probationSince) / (1000 * 60 * 60 * 24);
-        if (daysOnProbation >= PROBATION_DAYS) {
-          const reason = `${Math.floor(daysOnProbation)}d on probation, SQS ${sqs.score.toFixed(1)} ≥ ${ACTIVE_SQS_MIN}`;
-          await transitionCapability(slug, "active", reason, "auto");
-          return { slug, from: "probation", to: "active", reason };
-        }
-      }
+    if (!sqs.pending && sqs.score >= ACTIVE_SQS_MIN) {
+      const reason = `SQS ${sqs.score.toFixed(1)} ≥ ${ACTIVE_SQS_MIN}, ${sqs.runs_analyzed} runs, all factors qualified`;
+      await transitionCapability(slug, "active", reason, "auto", sqs.score);
+      return { slug, from: "probation", to: "active", reason };
     }
     return null;
   }
@@ -145,7 +146,7 @@ export async function evaluateLifecycle(
       const reason = sqs.circuit_breaker
         ? `Circuit breaker active (SQS ${sqs.score.toFixed(1)})`
         : `SQS ${sqs.score.toFixed(1)} < ${DEGRADE_SQS_THRESHOLD}`;
-      await transitionCapability(slug, "degraded", reason, "auto");
+      await transitionCapability(slug, "degraded", reason, "auto", sqs.score);
       return { slug, from: "active", to: "degraded", reason };
     }
     return null;
@@ -155,20 +156,19 @@ export async function evaluateLifecycle(
   if (state === "degraded") {
     const degradedSince = await getStateEnteredAt(slug, "degraded");
     const degradedMs = degradedSince !== null ? now - degradedSince : 0;
-    const degradedHours = degradedMs / (1000 * 60 * 60);
     const degradedDays = degradedMs / (1000 * 60 * 60 * 24);
 
-    // Recovery path: SQS ≥ 60 AND has been degraded ≥ 48h
-    if (sqs.score >= ACTIVE_SQS_MIN && degradedHours >= DEGRADED_RECOVERY_HOURS) {
-      const reason = `SQS recovered to ${sqs.score.toFixed(1)} after ${Math.floor(degradedHours)}h degraded`;
-      await transitionCapability(slug, "active", reason, "auto");
+    // Recovery path: SQS ≥ 50 and circuit breaker not active
+    if (sqs.score >= ACTIVE_SQS_MIN && !sqs.circuit_breaker) {
+      const reason = `SQS recovered to ${sqs.score.toFixed(1)}, circuit breaker clear`;
+      await transitionCapability(slug, "active", reason, "auto", sqs.score);
       return { slug, from: "degraded", to: "active", reason };
     }
 
-    // Suspend path: SQS still below 20 after 7 days
-    if (sqs.score < SUSPEND_SQS_THRESHOLD && degradedDays >= DEGRADED_SUSPEND_DAYS) {
-      const reason = `SQS ${sqs.score.toFixed(1)} < ${SUSPEND_SQS_THRESHOLD} for ${Math.floor(degradedDays)}d`;
-      await transitionCapability(slug, "suspended", reason, "auto");
+    // Suspend path: 7 consecutive days in degraded (regardless of SQS)
+    if (degradedDays >= DEGRADED_SUSPEND_DAYS) {
+      const reason = `${Math.floor(degradedDays)}d in degraded state — auto-suspended`;
+      await transitionCapability(slug, "suspended", reason, "auto", sqs.score);
       return { slug, from: "degraded", to: "suspended", reason };
     }
 

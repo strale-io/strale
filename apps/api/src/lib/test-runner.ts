@@ -16,6 +16,8 @@ import { computeCapabilitySQS, computeDualProfileSQS } from "./sqs.js";
 import { computeExecutionGuidance, type ComputeGuidanceInput } from "./execution-guidance.js";
 import { classifyFailure } from "./failure-classifier.js";
 import { checkUpstreamEscalation } from "./upstream-tracker.js";
+import { evaluateLifecycle } from "./lifecycle.js";
+import { logHealthEvent } from "./health-monitor.js";
 import type { CapabilityType } from "./reliability-profile.js";
 import { createHash } from "node:crypto";
 
@@ -171,6 +173,13 @@ export async function runTests(
     }
   }
 
+  // ── Evaluate lifecycle transitions for all capabilities in this batch ──
+  for (const slug of affectedSlugs) {
+    evaluateLifecycle(slug).catch((err) => {
+      console.error(`[lifecycle] Failed to evaluate ${slug}:`, err instanceof Error ? err.message : err);
+    });
+  }
+
   return {
     tier: tierLabel,
     total: results.length,
@@ -284,6 +293,19 @@ async function runSingleTest(
   // Update last_classification on suite for trend detection
   if (classification) {
     await updateLastClassification(suite.id, classification);
+    // Log classification event to health monitor (fire-and-forget)
+    logHealthEvent({
+      eventType: "classification",
+      capabilitySlug: suite.capabilitySlug,
+      tier: classification.verdict === "capability_bug" ? 2 : 1,
+      actionTaken: `Test classified as ${classification.verdict}`,
+      details: {
+        verdict: classification.verdict,
+        test_name: suite.testName,
+        test_type: suite.testType,
+        error_snippet: (failureReason ?? "").substring(0, 200),
+      },
+    }).catch(() => {});
   } else if (suite.lastClassification) {
     // Test passed — clear last_classification (indicates recovery)
     await db.update(testSuites).set({
