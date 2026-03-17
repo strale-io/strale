@@ -222,6 +222,7 @@ export async function computeReliabilityProfile(
     SELECT
       tr.passed,
       tr.failure_reason,
+      tr.failure_classification,
       DATE_TRUNC('hour', tr.executed_at) AS run_window
     FROM test_results tr
     INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
@@ -239,6 +240,7 @@ export async function computeReliabilityProfile(
   const testRows = (Array.isArray(rows) ? rows : (rows as any)?.rows ?? []) as {
     passed: boolean;
     failure_reason: string | null;
+    failure_classification: string | null;
     run_window: any;
   }[];
 
@@ -301,34 +303,60 @@ export async function computeReliabilityProfile(
     source: "10_run_weighted_average",
   };
 
-  // Factor 3: upstream_health — from 30-day health state
-  let healthState: HealthState;
-  if (context?.history30d) {
-    healthState = computeHealthState(context.history30d);
+  // Factor 3: upstream_health — Are external dependencies healthy?
+  //
+  // Deterministic capabilities have no external dependencies by definition.
+  // computeHealthState() on their test history would incorrectly flag
+  // capability_bug failures as upstream issues. Always return 100.
+  //
+  // For all other types, build health state from upstream-only failures:
+  // exclude capability_bug failures (code issues, not upstream problems).
+  // Unknown/unclassified failures ARE included since for API/scraping
+  // capabilities they often indicate upstream issues.
+  let upstreamHealth: RPFactor;
+
+  if (capType === "deterministic") {
+    upstreamHealth = {
+      score: 100,
+      weight: RP_WEIGHTS[capType].upstream_health,
+      detail: "No external dependencies",
+      source: "deterministic_override",
+    };
   } else {
-    // Fallback: compute from test results in this function
-    // Build daily pass rates from the test rows we already have
+    // Build daily pass rates counting only upstream-relevant failures
+    // (exclude capability_bug which is a code quality issue, not an upstream signal)
     const dailyMap = new Map<string, { passed: number; total: number }>();
-    for (const row of testRows) {
+    const upstreamRows = testRows.filter(
+      (r) => r.passed || r.failure_classification !== "capability_bug",
+    );
+    for (const row of upstreamRows) {
       const date = new Date(row.run_window).toISOString().slice(0, 10);
       const day = dailyMap.get(date) ?? { passed: 0, total: 0 };
       day.total++;
       if (row.passed) day.passed++;
       dailyMap.set(date, day);
     }
-    const history = [...dailyMap.entries()]
-      .map(([date, d]) => ({ date, pass_rate: (d.passed / d.total) * 100 }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-    healthState = computeHealthState(history);
-  }
 
-  const upstreamHealthScore = HEALTH_STATE_SCORES[healthState];
-  const upstreamHealth: RPFactor = {
-    score: upstreamHealthScore,
-    weight: RP_WEIGHTS[capType].upstream_health,
-    detail: `health_state: ${healthState}`,
-    source: "30d_health_assessment",
-  };
+    let healthState: HealthState;
+    if (dailyMap.size > 0) {
+      const history = [...dailyMap.entries()]
+        .map(([date, d]) => ({ date, pass_rate: (d.passed / d.total) * 100 }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+      healthState = computeHealthState(history);
+    } else if (context?.history30d && context.history30d.length > 0) {
+      // Fallback to full history if no upstream-filtered data is available
+      healthState = computeHealthState(context.history30d);
+    } else {
+      healthState = "new";
+    }
+
+    upstreamHealth = {
+      score: HEALTH_STATE_SCORES[healthState],
+      weight: RP_WEIGHTS[capType].upstream_health,
+      detail: `health_state: ${healthState}`,
+      source: "30d_health_assessment",
+    };
+  }
 
   // Factor 4: latency — p95 response time
   const { score: latencyScore, detail: latencyDetail } = scoreLatency(
