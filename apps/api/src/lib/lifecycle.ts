@@ -47,12 +47,29 @@ export interface TransitionResult {
 const ACTIVE_SQS_MIN = 50;           // SQS required to promote probation → active OR recover degraded → active
 const DEGRADE_SQS_THRESHOLD = 25;    // SQS below which active → degraded (platform floor per SQS Constitution)
 const DEGRADED_SUSPEND_DAYS = 7;     // consecutive days in degraded → suspended (regardless of SQS)
+const DEGRADED_RECOVERY_RUNS = 3;    // consecutive qualifying SQS runs required before degraded → active (anti-flap)
 
 // Tier for health monitor events per transition
 function transitionTier(to: LifecycleState): 1 | 2 | 3 {
   if (to === "degraded" || to === "suspended") return 2;
   return 1;
 }
+
+// ─── State visibility map ─────────────────────────────────────────────────────
+
+/**
+ * Whether a capability in a given state is visible to external API consumers.
+ * active/degraded → visible (degraded serves with quality warnings);
+ * all other states → hidden (not discoverable via /v1/capabilities).
+ */
+const STATE_VISIBILITY: Record<LifecycleState, boolean> = {
+  draft: false,
+  validating: false,
+  probation: false,
+  active: true,
+  degraded: true,
+  suspended: false,
+};
 
 // ─── Core: write a transition ─────────────────────────────────────────────────
 
@@ -82,7 +99,12 @@ export async function transitionCapability(
 
   await db
     .update(capabilities)
-    .set({ lifecycleState: toState, updatedAt: new Date() })
+    .set({
+      lifecycleState: toState,
+      visible: STATE_VISIBILITY[toState],
+      degradedRecoveryCount: 0, // reset on any transition
+      updatedAt: new Date(),
+    })
     .where(eq(capabilities.slug, slug));
 
   await logHealthEvent({
@@ -114,7 +136,10 @@ export async function evaluateLifecycle(
   const db = getDb();
 
   const [cap] = await db
-    .select({ lifecycleState: capabilities.lifecycleState })
+    .select({
+      lifecycleState: capabilities.lifecycleState,
+      degradedRecoveryCount: capabilities.degradedRecoveryCount,
+    })
     .from(capabilities)
     .where(eq(capabilities.slug, slug))
     .limit(1);
@@ -158,11 +183,32 @@ export async function evaluateLifecycle(
     const degradedMs = degradedSince !== null ? now - degradedSince : 0;
     const degradedDays = degradedMs / (1000 * 60 * 60 * 24);
 
-    // Recovery path: SQS ≥ 50 and circuit breaker not active
+    // Recovery path: SQS ≥ 50 and circuit breaker not active.
+    // Requires DEGRADED_RECOVERY_RUNS consecutive qualifying evaluations to prevent flapping.
     if (dual.score >= ACTIVE_SQS_MIN && !dual.rp.circuit_breaker) {
-      const reason = `SQS recovered to ${dual.score.toFixed(1)}, circuit breaker clear`;
-      await transitionCapability(slug, "active", reason, "auto", dual.score);
-      return { slug, from: "degraded", to: "active", reason };
+      const newCount = (cap.degradedRecoveryCount ?? 0) + 1;
+
+      if (newCount >= DEGRADED_RECOVERY_RUNS) {
+        const reason = `SQS recovered to ${dual.score.toFixed(1)} for ${DEGRADED_RECOVERY_RUNS} consecutive runs, circuit breaker clear`;
+        await transitionCapability(slug, "active", reason, "auto", dual.score);
+        return { slug, from: "degraded", to: "active", reason };
+      }
+
+      // Not enough consecutive runs yet — increment counter and wait
+      await db
+        .update(capabilities)
+        .set({ degradedRecoveryCount: newCount, updatedAt: new Date() })
+        .where(eq(capabilities.slug, slug));
+      console.log(`[lifecycle] ${slug}: degraded recovery ${newCount}/${DEGRADED_RECOVERY_RUNS} (SQS ${dual.score.toFixed(1)})`);
+      return null;
+    }
+
+    // SQS below threshold or circuit breaker active — reset recovery counter
+    if ((cap.degradedRecoveryCount ?? 0) > 0) {
+      await db
+        .update(capabilities)
+        .set({ degradedRecoveryCount: 0, updatedAt: new Date() })
+        .where(eq(capabilities.slug, slug));
     }
 
     // 24h suspension warning at day 6 (one day before auto-suspend)

@@ -125,12 +125,13 @@ export const capabilities = pgTable("capabilities", {
   // 'direct' | 'retry_with_backoff' | 'queue_for_later' | 'unavailable'
   guidanceConfidence: decimal("guidance_confidence", { precision: 5, scale: 1 }),
   // Pipeline Phase I: Lifecycle management
-  lifecycleState: varchar("lifecycle_state", { length: 20 }).notNull().default("active"),
+  lifecycleState: varchar("lifecycle_state", { length: 20 }).notNull().default("draft"),
   // 'draft' | 'validating' | 'probation' | 'active' | 'degraded' | 'suspended'
   outputFieldReliability: jsonb("output_field_reliability"),
   // { field_name: 'guaranteed' | 'common' | 'rare' }
-  visible: boolean("visible").notNull().default(true),
+  visible: boolean("visible").notNull().default(false),
   onboardingManifest: jsonb("onboarding_manifest"),
+  degradedRecoveryCount: integer("degraded_recovery_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -216,19 +216,23 @@ async function validateCapability(slug: string, apply = false): Promise<{
         : `${suites.length} suites, missing types: ${missingTypes.join(", ") || "none"} (need ${5 - suites.length > 0 ? `${5 - suites.length} more suites` : "all types"})`,
   });
 
-  // 15. output_field_reliability is populated with at least one 'guaranteed' field
+  // 15. output_field_reliability is populated (non-empty annotation map)
+  // Note: we require annotations exist but do NOT mandate guaranteed fields —
+  // some capabilities (e.g. AI-extraction) legitimately have only common/rare fields.
   const reliability = cap.outputFieldReliability as Record<string, string> | null;
-  const hasGuaranteed =
-    reliability != null &&
-    Object.values(reliability).some((v) => v === "guaranteed");
+  const hasAnnotations =
+    reliability != null && Object.keys(reliability).length > 0;
+  const guaranteedCount = reliability
+    ? Object.values(reliability).filter((v) => v === "guaranteed").length
+    : 0;
   checks.push({
-    name: "Field reliability has at least one guaranteed field",
-    passed: hasGuaranteed,
-    detail: hasGuaranteed
-      ? `${Object.values(reliability!).filter((v) => v === "guaranteed").length} guaranteed fields`
+    name: "Field reliability annotations exist and are non-empty",
+    passed: hasAnnotations,
+    detail: hasAnnotations
+      ? `${Object.keys(reliability!).length} fields annotated (${guaranteedCount} guaranteed)`
       : reliability
-        ? "No fields marked as guaranteed"
-        : "output_field_reliability is null",
+        ? "output_field_reliability is empty object"
+        : "output_field_reliability is null — run backfill-field-reliability.ts",
   });
 
   const allPassed = checks.every((c) => c.passed);
