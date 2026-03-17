@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
@@ -131,12 +131,15 @@ capabilitiesRoute.get("/:slug", async (c) => {
     );
   }
 
-  // Reverse lookup: which solutions use this capability?
-  const usedInSolutions = await db
+  // Reverse lookup: which solutions include this capability?
+  const parentSolutions = await db
     .selectDistinct({
       slug: solutions.slug,
       name: solutions.name,
-      price_cents: solutions.priceCents,
+      description: solutions.description,
+      priceCents: solutions.priceCents,
+      category: solutions.category,
+      geography: solutions.geography,
     })
     .from(solutions)
     .innerJoin(solutionSteps, eq(solutionSteps.solutionId, solutions.id))
@@ -147,5 +150,25 @@ capabilitiesRoute.get("/:slug", async (c) => {
       ),
     );
 
-  return c.json({ ...cap, used_in_solutions: usedInSolutions });
+  const partOfSolutions = await Promise.all(
+    parentSolutions.map(async (sol) => {
+      const [countRow] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(solutionSteps)
+        .innerJoin(solutions, eq(solutionSteps.solutionId, solutions.id))
+        .where(eq(solutions.slug, sol.slug));
+
+      return {
+        slug: sol.slug,
+        name: sol.name,
+        description: sol.description,
+        price_cents: sol.priceCents,
+        category: sol.category,
+        geography: sol.geography,
+        step_count: Number(countRow?.count ?? 0),
+      };
+    }),
+  );
+
+  return c.json({ ...cap, partOfSolutions });
 });
