@@ -30,6 +30,7 @@ type ReliabilityMap = Record<string, ReliabilityLevel>;
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
+  const force = process.argv.includes("--force"); // Re-annotate even if already set
   const db = getDb();
 
   const allCaps = await db
@@ -50,8 +51,8 @@ async function main() {
   const uncertain: Array<{ slug: string; fields: string[] }> = [];
 
   for (const cap of allCaps) {
-    // Skip if already annotated
-    if (cap.outputFieldReliability != null) {
+    // Skip if already annotated (unless --force)
+    if (cap.outputFieldReliability != null && !force) {
       skipped++;
       continue;
     }
@@ -104,17 +105,21 @@ async function main() {
         }
         const rate = presentCount / results.length;
 
-        if (rate >= 0.9) {
+        if (rate >= 0.7) {
           reliability[field] = "guaranteed";
-        } else if (rate >= 0.5) {
+          // Flag near-threshold fields
+          if (rate < 0.8) {
+            uncertainFields.push(`${field}(${(rate * 100).toFixed(0)}%)`);
+          }
+        } else if (rate >= 0.3) {
           reliability[field] = "common";
           // Flag near-threshold fields
-          if (rate >= 0.85 || (rate >= 0.45 && rate < 0.55)) {
+          if (rate >= 0.65 || (rate >= 0.25 && rate < 0.35)) {
             uncertainFields.push(`${field}(${(rate * 100).toFixed(0)}%)`);
           }
         } else {
           reliability[field] = "rare";
-          if (rate >= 0.45) {
+          if (rate >= 0.25) {
             uncertainFields.push(`${field}(${(rate * 100).toFixed(0)}%)`);
           }
         }

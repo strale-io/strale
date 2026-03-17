@@ -42,6 +42,17 @@ const VALID_CATEGORIES = [
   "data-extraction",
   "legal-regulatory",
   "file-conversion",
+  // Additional categories in active use
+  "agent-tooling",
+  "competitive-intelligence",
+  "content-writing",
+  "document-extraction",
+  "financial",
+  "security",
+  "text-processing",
+  "trade",
+  "utility",
+  "web-intelligence",
 ];
 
 const VALID_TRANSPARENCY_TAGS = ["algorithmic", "ai_generated", "mixed", null];
