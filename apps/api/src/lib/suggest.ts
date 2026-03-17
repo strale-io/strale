@@ -10,7 +10,7 @@ import { embedQuery, embedDocuments, cosineSimilarity } from "./embeddings.js";
 import { tokenize } from "./tokenize.js";
 import { getCapabilityQuality, getSolutionQuality } from "./quality-aggregation.js";
 import { determineBadge, getTestResultsForSlug } from "./trust-helpers.js";
-import { computeCapabilitySQS, computeSolutionSQS } from "./sqs.js";
+import { computeDualProfileSQS, computeSolutionSQS } from "./sqs.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -346,7 +346,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
                 quality.successRate,
               );
 
-              const sqs = await computeCapabilitySQS(item.slug);
+              const dual = await computeDualProfileSQS(item.slug);
               item.trustSummary = {
                 badge,
                 badge_label,
@@ -355,8 +355,8 @@ async function loadCatalog(): Promise<CatalogItem[]> {
                 tests_total: testData.total_tests,
                 last_tested_at: testData.last_run,
                 data_source: testTxns > 0 ? "internal_testing" : "internal_testing",
-                sqs: sqs.score,
-                sqs_label: sqs.label,
+                sqs: dual.score,
+                sqs_label: dual.label,
               };
             }
           } catch (err) {
