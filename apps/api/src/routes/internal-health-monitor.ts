@@ -11,6 +11,9 @@
  *
  * POST /v1/internal/health-sweep
  *   Trigger the weekly health sweep on-demand (admin-only).
+ *
+ * POST /v1/internal/health-monitor/send-digest
+ *   Compile and send the weekly health digest immediately (admin-only).
  */
 
 import { Hono } from "hono";
@@ -20,6 +23,9 @@ import { getDb } from "../db/index.js";
 import { capabilities, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { runWeeklyHealthSweep } from "../lib/health-sweep.js";
+import { compileWeeklyDigest } from "../lib/digest-compiler.js";
+import { formatDigestEmail } from "../lib/digest-formatter.js";
+import { sendDigestEmail, isEmailConfigured } from "../lib/digest-sender.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
@@ -170,5 +176,59 @@ internalHealthMonitorRoute.post("/health-sweep", async (c) => {
     quarantine_released: report.quarantineReleased,
     upstream_recovered: report.upstreamRecovered,
     classification_summary: report.classificationSummary,
+  });
+});
+
+// ─── POST /v1/internal/health-monitor/send-digest (HM-2) ─────────────────
+// Compile and send the weekly health digest immediately.
+// Optional body: { "preview_only": true } — returns HTML without sending.
+
+internalHealthMonitorRoute.post("/health-monitor/send-digest", async (c) => {
+  const auth = c.req.header("Authorization");
+  if (!isValidAdminAuth(auth)) {
+    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const previewOnly = body?.preview_only === true;
+
+  if (!previewOnly && !isEmailConfigured()) {
+    return c.json(
+      { error_code: "configuration_error", message: "RESEND_API_KEY is not configured. Set it to enable email sending, or pass { preview_only: true } to get the HTML without sending." },
+      503,
+    );
+  }
+
+  const data = await compileWeeklyDigest();
+  const { html, subject } = formatDigestEmail(data);
+
+  if (previewOnly) {
+    return c.json({
+      preview_only: true,
+      subject,
+      html,
+      digest_summary: {
+        snapshot: data.snapshot,
+        tier3_proposals: data.tier3Proposals.length,
+        tier2_actions: data.tier2Actions.length,
+        demand_signals: data.demandSignals.length,
+        qualification_entries: data.qualification.length,
+      },
+    });
+  }
+
+  await sendDigestEmail(html, subject);
+
+  return c.json({
+    sent: true,
+    subject,
+    to: process.env.HEALTH_DIGEST_EMAIL ?? "admin@strale.io",
+    digest_summary: {
+      snapshot: data.snapshot,
+      tier3_proposals: data.tier3Proposals.length,
+      tier2_actions: data.tier2Actions.length,
+      demand_signals: data.demandSignals.length,
+      qualification_entries: data.qualification.length,
+    },
   });
 });

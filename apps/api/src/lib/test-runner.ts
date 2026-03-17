@@ -1186,6 +1186,120 @@ export function startScheduledTests(): void {
 
   setTimeout(runSweep, 5 * 60_000); // 5min after startup
   setInterval(runSweep, WEEKLY_SWEEP_INTERVAL_MS);
+
+  // Weekly digest — Monday 08:00 CET (07:00 UTC in winter, 06:00 UTC in summer)
+  scheduleWeeklyDigest();
+}
+
+/**
+ * Schedule the weekly health digest to send at Monday 08:00 Europe/Stockholm.
+ * Computes the next Monday 08:00 CET and uses setTimeout to fire it,
+ * then repeats weekly via setInterval.
+ */
+function scheduleWeeklyDigest(): void {
+  const msUntilNextMonday0800CET = computeMsUntilNextMonday0800CET();
+
+  console.log(
+    `[digest-scheduler] First digest in ${Math.round(msUntilNextMonday0800CET / 3600_000)}h`,
+  );
+
+  setTimeout(async () => {
+    await runWeeklyDigest();
+    // After first fire, repeat exactly every 7 days
+    setInterval(runWeeklyDigest, 7 * 24 * 3600_000);
+  }, msUntilNextMonday0800CET);
+}
+
+async function runWeeklyDigest(): Promise<void> {
+  try {
+    const { compileWeeklyDigest } = await import("./digest-compiler.js");
+    const { formatDigestEmail } = await import("./digest-formatter.js");
+    const { sendDigestEmail, isEmailConfigured } = await import("./digest-sender.js");
+
+    if (!isEmailConfigured()) {
+      console.warn("[digest-scheduler] RESEND_API_KEY not set — skipping digest send");
+      return;
+    }
+
+    const data = await compileWeeklyDigest();
+    const { html, subject } = formatDigestEmail(data);
+    await sendDigestEmail(html, subject);
+
+    console.log(`[digest-scheduler] Weekly digest sent: "${subject}"`);
+  } catch (err) {
+    console.error("[digest-scheduler] Digest send failed:", err);
+  }
+}
+
+/**
+ * Compute milliseconds until the next Monday 08:00 CET/CEST.
+ * Handles CET↔CEST transitions via Europe/Stockholm locale string parsing.
+ */
+function computeMsUntilNextMonday0800CET(): number {
+  const now = new Date();
+
+  // Get current local time components in Stockholm timezone
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Stockholm",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+    hour12: false,
+  });
+
+  const parts = fmt.formatToParts(now);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "0";
+
+  const year = parseInt(get("year"), 10);
+  const month = parseInt(get("month"), 10) - 1; // 0-indexed
+  const day = parseInt(get("day"), 10);
+  const hour = parseInt(get("hour"), 10);
+  const minute = parseInt(get("minute"), 10);
+
+  // Build a local "midnight today" in Stockholm by constructing the ISO string
+  // and parsing it as Stockholm-local time
+  const todayMidnightUtc = stockholmLocalToUtc(year, month, day, 0, 0);
+
+  // Day of week in Stockholm (0=Sun, 1=Mon...6=Sat)
+  const dow = new Date(todayMidnightUtc).getDay();
+
+  // Days until next Monday (0 = today if today is Monday)
+  const daysUntilMonday = dow === 1 ? 0 : (8 - dow) % 7;
+
+  let targetMs = stockholmLocalToUtc(year, month, day + daysUntilMonday, 8, 0);
+
+  // If we've already passed Monday 08:00 today (or it's already Monday and past 08:00)
+  const currentMinuteMs = stockholmLocalToUtc(year, month, day, hour, minute);
+  if (targetMs <= currentMinuteMs) {
+    targetMs += 7 * 24 * 3600_000;
+  }
+
+  return targetMs - now.getTime();
+}
+
+/**
+ * Convert Stockholm local time to UTC milliseconds.
+ * Works by finding the UTC offset at that approximate time.
+ */
+function stockholmLocalToUtc(year: number, month: number, day: number, hour: number, minute: number): number {
+  // Approximate: construct UTC candidate assuming CET (UTC+1) and refine
+  const approxUtcMs = Date.UTC(year, month, day, hour - 1, minute);
+
+  // Find actual Stockholm offset at that time
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Stockholm",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+    hour12: false,
+  });
+
+  const parts = fmt.formatToParts(new Date(approxUtcMs));
+  const get = (type: string) => parseInt(parts.find((p) => p.type === type)?.value ?? "0", 10);
+
+  const localH = get("hour");
+  const localM = get("minute");
+  const offsetMins = (hour * 60 + minute) - (localH * 60 + localM);
+
+  return approxUtcMs + offsetMins * 60_000;
 }
 
 // ─── Dual-profile score persistence ──────────────────────────────────────────
