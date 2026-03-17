@@ -28,8 +28,25 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { getDb } from "../src/db/index.js";
 import { capabilities, testResults, testSuites } from "../src/db/schema.js";
+import type { CapabilityType } from "../src/lib/reliability-profile.js";
 
 type ReliabilityLevel = "guaranteed" | "common" | "rare";
+
+// Threshold above which a field is classified as 'guaranteed', per capability type.
+//
+// PRINCIPLE: A field should only be 'guaranteed' if it is STRUCTURALLY present
+// in every successful execution, not conditionally (e.g., only when matches exist).
+// Never mark input-dependent or AI-uncertain fields as guaranteed regardless of rate.
+//
+// - deterministic/stable_api: stable code, consistent outputs → 80% threshold
+// - scraping: upstream HTML varies, fields can disappear → 90% threshold
+// - ai_assisted: extraction is inherently uncertain, format-dependent → 95% threshold
+const GUARANTEED_THRESHOLD_BY_TYPE: Record<CapabilityType, number> = {
+  deterministic: 0.80,
+  stable_api: 0.80,
+  scraping: 0.90,
+  ai_assisted: 0.95,
+};
 type ReliabilityMap = Record<string, ReliabilityLevel>;
 
 async function main() {
@@ -40,6 +57,7 @@ async function main() {
   const allCaps = await db
     .select({
       slug: capabilities.slug,
+      capabilityType: capabilities.capabilityType,
       outputSchema: capabilities.outputSchema,
       outputFieldReliability: capabilities.outputFieldReliability,
     })
@@ -104,6 +122,10 @@ async function main() {
       fromTestData++;
       reliability = {};
 
+      // Apply type-specific threshold for 'guaranteed' classification
+      const capType = (cap.capabilityType as CapabilityType) ?? "stable_api";
+      const guaranteedThreshold = GUARANTEED_THRESHOLD_BY_TYPE[capType] ?? 0.80;
+
       for (const field of fieldNames) {
         let presentCount = 0;
         for (const result of results) {
@@ -114,16 +136,16 @@ async function main() {
         }
         const rate = presentCount / results.length;
 
-        if (rate >= 0.7) {
+        if (rate >= guaranteedThreshold) {
           reliability[field] = "guaranteed";
-          // Flag near-threshold fields
-          if (rate < 0.8) {
+          // Flag fields just above the threshold as uncertain
+          if (rate < guaranteedThreshold + 0.10) {
             uncertainFields.push(`${field}(${(rate * 100).toFixed(0)}%)`);
           }
         } else if (rate >= 0.3) {
           reliability[field] = "common";
           // Flag near-threshold fields
-          if (rate >= 0.65 || (rate >= 0.25 && rate < 0.35)) {
+          if (rate >= guaranteedThreshold - 0.05 || (rate >= 0.25 && rate < 0.35)) {
             uncertainFields.push(`${field}(${(rate * 100).toFixed(0)}%)`);
           }
         } else {

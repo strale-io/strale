@@ -435,6 +435,61 @@ internalHealthMonitorRoute.post("/capabilities/:slug/suspend", async (c) => {
   });
 });
 
+// ─── POST /v1/internal/capabilities/:slug/revalidate ───────────────────────
+// Re-enter the onboarding pipeline after suspension: lifecycle_state='validating', visible=false.
+
+internalHealthMonitorRoute.post("/capabilities/:slug/revalidate", async (c) => {
+  const auth = c.req.header("Authorization");
+  if (!isValidAdminAuth(auth)) {
+    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+  }
+
+  const slug = c.req.param("slug");
+  const db = getDb();
+
+  const [cap] = await db
+    .select({ slug: capabilities.slug, lifecycleState: capabilities.lifecycleState })
+    .from(capabilities)
+    .where(eq(capabilities.slug, slug))
+    .limit(1);
+
+  if (!cap) {
+    return c.json(apiError("not_found", `Capability '${slug}' not found.`), 404);
+  }
+
+  if (cap.lifecycleState !== "suspended") {
+    return c.json(
+      apiError(
+        "invalid_request",
+        `Cannot revalidate: lifecycle_state is '${cap.lifecycleState}' (must be 'suspended').`,
+      ),
+      400,
+    );
+  }
+
+  await db
+    .update(capabilities)
+    .set({ lifecycleState: "validating", visible: false, updatedAt: new Date() })
+    .where(eq(capabilities.slug, slug));
+
+  await logHealthEvent({
+    eventType: "lifecycle_transition",
+    capabilitySlug: slug,
+    tier: 2,
+    actionTaken: `suspended → validating: re-entered onboarding pipeline`,
+    details: { from: "suspended", to: "validating", triggered_by: "admin" },
+    humanOverride: true,
+  });
+
+  return c.json({
+    slug,
+    success: true,
+    from: "suspended",
+    to: "validating",
+    message: `Capability '${slug}' re-entered validation pipeline. Run validate-capability.ts --slug ${slug} --apply to proceed.`,
+  });
+});
+
 // ─── GET /v1/internal/platform-status ──────────────────────────────────────
 // JSON snapshot: capability counts, SQS distribution, test health,
 // recent events (last 7d), and capabilities ready to publish.

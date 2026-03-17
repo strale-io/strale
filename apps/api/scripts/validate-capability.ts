@@ -68,7 +68,7 @@ const REQUIRED_TEST_TYPES = [
 
 // ─── Validation logic ───────────────────────────────────────────────────────
 
-async function validateCapability(slug: string): Promise<{
+async function validateCapability(slug: string, apply = false): Promise<{
   slug: string;
   checks: CheckResult[];
   passed: boolean;
@@ -233,14 +233,16 @@ async function validateCapability(slug: string): Promise<{
 
   const allPassed = checks.every((c) => c.passed);
 
-  // Apply lifecycle transition for capabilities in 'validating' state
-  if (currentState === "validating") {
+  // Apply lifecycle transition for capabilities in 'validating' state (requires --apply flag)
+  if (apply && currentState === "validating") {
     try {
       if (allPassed) {
         await transitionCapability(slug, "probation", "All 15 Gate 1 checks passed", "validation");
+        console.log(`  → Capability ${slug} moved to probation — all checks passed`);
       } else {
         const failedChecks = checks.filter((c) => !c.passed).map((c) => c.name).join("; ");
         await transitionCapability(slug, "draft", `Gate 1 failed: ${failedChecks}`, "validation");
+        console.log(`  → Capability ${slug} moved to draft — ${failedChecks}`);
       }
     } catch (err) {
       console.warn(`[validate] Lifecycle transition failed for ${slug}:`, err);
@@ -285,10 +287,15 @@ async function main() {
   const args = process.argv.slice(2);
   const slugIdx = args.indexOf("--slug");
   const allMode = args.includes("--all");
+  const apply = args.includes("--apply");
 
   if (!allMode && (slugIdx === -1 || !args[slugIdx + 1])) {
-    console.error("Usage: npx tsx scripts/validate-capability.ts --slug <slug>");
-    console.error("       npx tsx scripts/validate-capability.ts --all");
+    console.error("Usage: npx tsx scripts/validate-capability.ts --slug <slug> [--apply]");
+    console.error("       npx tsx scripts/validate-capability.ts --all [--apply]");
+    console.error("");
+    console.error("  --apply  Apply lifecycle transitions for capabilities in 'validating' state");
+    console.error("           Pass: validating → probation");
+    console.error("           Fail: validating → draft");
     process.exit(1);
   }
 
@@ -300,14 +307,14 @@ async function main() {
       .from(capabilities)
       .where(eq(capabilities.isActive, true));
 
-    console.log(`Validating ${rows.length} active capabilities...\n`);
+    console.log(`Validating ${rows.length} active capabilities${apply ? " (--apply: transitions enabled)" : ""}...\n`);
 
     let passCount = 0;
     let failCount = 0;
     const failures: string[] = [];
 
     for (const row of rows) {
-      const result = await validateCapability(row.slug);
+      const result = await validateCapability(row.slug, apply);
       if (result.passed) {
         passCount++;
       } else {
@@ -325,7 +332,7 @@ async function main() {
     process.exit(failCount > 0 ? 1 : 0);
   } else {
     const slug = args[slugIdx + 1];
-    const result = await validateCapability(slug);
+    const result = await validateCapability(slug, apply);
     printReport(result);
     process.exit(result.passed ? 0 : 1);
   }
