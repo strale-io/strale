@@ -217,6 +217,7 @@ solutionsRoute.get("/:slug", async (c) => {
       category: r.category,
       geography: r.geography,
       reason: r.reason,
+      step_count: r.step_count,
     })),
   });
 });

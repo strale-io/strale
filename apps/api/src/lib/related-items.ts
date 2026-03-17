@@ -24,6 +24,7 @@ export interface RelatedSolution {
   category: string;
   geography: string | null;
   reason: "shared-capabilities" | "same-geo-diff-category" | "same-category";
+  step_count: number;
 }
 
 // ─── Cache ──────────────────────────────────────────────────────────────────
@@ -246,7 +247,7 @@ export async function getRelatedSolutions(
       ),
     );
 
-  // For each other solution, count shared capabilities
+  // For each other solution, count shared capabilities and total steps
   const solsWithSteps = await Promise.all(
     allSols.map(async (sol) => {
       const steps = await db
@@ -254,9 +255,12 @@ export async function getRelatedSolutions(
         .from(solutionSteps)
         .where(eq(solutionSteps.solutionId, sol.id));
       const sharedCount = steps.filter((s) => thisCapSlugs.has(s.capabilitySlug)).length;
-      return { ...sol, sharedCount };
+      return { ...sol, sharedCount, stepCount: steps.length };
     }),
   );
+
+  // Build step count lookup for fallback sections
+  const stepCountMap = new Map(solsWithSteps.map((s) => [s.slug, s.stepCount]));
 
   // Sort by shared count descending
   const sharedSols = solsWithSteps
@@ -274,6 +278,7 @@ export async function getRelatedSolutions(
       category: sol.category,
       geography: sol.geography,
       reason: "shared-capabilities",
+      step_count: sol.stepCount,
     });
   }
 
@@ -294,6 +299,7 @@ export async function getRelatedSolutions(
           category: sol.category,
           geography: sol.geography,
           reason: "same-geo-diff-category",
+          step_count: stepCountMap.get(sol.slug) ?? 0,
         });
       }
     }
@@ -313,6 +319,7 @@ export async function getRelatedSolutions(
           category: sol.category,
           geography: sol.geography,
           reason: "same-category",
+          step_count: stepCountMap.get(sol.slug) ?? 0,
         });
       }
     }
