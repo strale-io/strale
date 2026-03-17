@@ -105,11 +105,22 @@ export async function runTests(
 
   // T-1: Inner join with capabilities to skip test suites for deactivated capabilities
   const suitesRaw = await db
-    .select({ suite: testSuites })
+    .select({ suite: testSuites, fieldReliability: capabilities.outputFieldReliability })
     .from(testSuites)
     .innerJoin(capabilities, eq(testSuites.capabilitySlug, capabilities.slug))
     .where(and(...conditions, eq(capabilities.isActive, true)));
   const suites = suitesRaw.map((r) => r.suite);
+
+  // Build field reliability map for validateResult
+  const fieldReliabilityMap = new Map<string, Record<string, string>>();
+  for (const row of suitesRaw) {
+    if (row.fieldReliability && !fieldReliabilityMap.has(row.suite.capabilitySlug)) {
+      fieldReliabilityMap.set(
+        row.suite.capabilitySlug,
+        row.fieldReliability as Record<string, string>,
+      );
+    }
+  }
 
   const tierLabel = opts.tier ?? "all";
   const delayMs = opts.tier ? TIER_DELAY_MS[opts.tier] : DEFAULT_DELAY_MS;
@@ -119,7 +130,7 @@ export async function runTests(
 
   for (let i = 0; i < suites.length; i++) {
     const suite = suites[i];
-    const result = await runSingleTest(suite);
+    const result = await runSingleTest(suite, fieldReliabilityMap);
     results.push(result);
     totalResponseTime += result.responseTimeMs;
     totalEstimatedCost += suite.estimatedCostCents;
@@ -165,6 +176,7 @@ export async function runTests(
 
 async function runSingleTest(
   suite: typeof testSuites.$inferSelect,
+  fieldReliabilityMap?: Map<string, Record<string, string>>,
 ): Promise<SingleTestResult> {
   const db = getDb();
   const startTime = Date.now();
@@ -226,10 +238,12 @@ async function runSingleTest(
   }
 
   // Validate the result
+  const reliability = fieldReliabilityMap?.get(suite.capabilitySlug) ?? null;
   const { passed, failureReason } = validateResult(
     suite,
     capResult,
     executionError,
+    reliability,
   );
 
   // Classify failure if test didn't pass
@@ -600,6 +614,7 @@ function validateResult(
   suite: typeof testSuites.$inferSelect,
   capResult: CapabilityResult | null,
   executionError: string | null,
+  fieldReliability?: Record<string, string> | null,
 ): { passed: boolean; failureReason: string | null } {
   const rules = suite.validationRules as ValidationRules;
 
@@ -633,6 +648,22 @@ function validateResult(
   for (const check of rules.checks) {
     const checkResult = runCheck(check, output);
     if (!checkResult.passed) {
+      // If field reliability is annotated, respect it:
+      // - guaranteed field missing → FAIL
+      // - common field missing → PASS (acceptable absence)
+      // - rare field missing → PASS (silently)
+      // If no reliability data, fall back to current behavior (all checks enforced)
+      if (fieldReliability && check.field) {
+        const topField = check.field.split(".")[0];
+        const level = fieldReliability[topField];
+        if (level === "rare") {
+          continue; // Silently skip
+        }
+        if (level === "common") {
+          continue; // Acceptable absence
+        }
+        // 'guaranteed' or unknown field → enforce the check (fall through to fail)
+      }
       return { passed: false, failureReason: checkResult.reason };
     }
   }

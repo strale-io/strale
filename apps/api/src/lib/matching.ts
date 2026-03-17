@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
 import { tokenize } from "./tokenize.js";
@@ -41,6 +41,8 @@ export async function matchCapability(
         and(
           eq(capabilities.slug, req.capabilitySlug),
           eq(capabilities.isActive, true),
+          // Probation allows internal testing by slug; draft/validating/suspended blocked
+          inArray(capabilities.lifecycleState, ["active", "degraded", "probation"]),
         ),
       )
       .limit(1);
@@ -51,11 +53,17 @@ export async function matchCapability(
     return { capability: cap };
   }
 
-  // Path 2: Filter active capabilities within budget (free-tier always included)
+  // Path 2: Filter active + visible capabilities within budget (free-tier always included)
   const allActive = await db
     .select()
     .from(capabilities)
-    .where(eq(capabilities.isActive, true));
+    .where(
+      and(
+        eq(capabilities.isActive, true),
+        eq(capabilities.visible, true),
+        eq(capabilities.lifecycleState, "active"),
+      ),
+    );
 
   const candidates = allActive.filter(
     (c) => c.isFreeTier || c.priceCents <= req.maxPriceCents,

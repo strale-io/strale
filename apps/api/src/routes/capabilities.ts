@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
@@ -34,7 +34,13 @@ capabilitiesRoute.get("/", async (c) => {
       guidance_strategy: capabilities.guidanceStrategy,
     })
     .from(capabilities)
-    .where(eq(capabilities.isActive, true));
+    .where(
+      and(
+        eq(capabilities.isActive, true),
+        eq(capabilities.visible, true),
+        eq(capabilities.lifecycleState, "active"),
+      ),
+    );
 
   function gradeFromScore(score: number | null): string {
     if (score == null) return "pending";
@@ -120,7 +126,11 @@ capabilitiesRoute.get("/:slug", async (c) => {
     })
     .from(capabilities)
     .where(
-      and(eq(capabilities.slug, slug), eq(capabilities.isActive, true)),
+      and(
+        eq(capabilities.slug, slug),
+        eq(capabilities.isActive, true),
+        inArray(capabilities.lifecycleState, ["active", "degraded"]),
+      ),
     )
     .limit(1);
 
