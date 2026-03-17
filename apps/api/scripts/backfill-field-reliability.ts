@@ -3,27 +3,31 @@
  *
  * Logic per capability:
  * 1. Read outputSchema to get declared output fields
- * 2. If test results exist, analyze actual outputs to determine field presence rates:
- *    - Present in >90% of successful outputs → guaranteed
- *    - Present in >50% → common
- *    - Present in <50% → rare
- * 3. If no test results, use heuristic from outputSchema:
+ * 2. If known_answer/schema_check test results exist (happy-path tests only),
+ *    analyze actual outputs to determine field presence rates:
+ *    - Present in ≥70% of successful outputs → guaranteed
+ *    - Present in 30–70% → common
+ *    - Present in <30% → rare
+ * 3. Schema fallback: if test data produced zero guaranteed fields,
+ *    promote schema 'required' fields to guaranteed.
+ * 4. If no qualifying test results at all, use heuristic from outputSchema:
  *    - Fields in the 'required' array → guaranteed
  *    - All other fields → common (conservative default)
- * 4. Write the annotation to output_field_reliability column
+ * 5. Write the annotation to output_field_reliability column
  *
  * Usage:
  *   npx tsx scripts/backfill-field-reliability.ts
  *   npx tsx scripts/backfill-field-reliability.ts --dry-run
+ *   npx tsx scripts/backfill-field-reliability.ts --force
  */
 
 import { config } from "dotenv";
 import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { getDb } from "../src/db/index.js";
-import { capabilities, testResults } from "../src/db/schema.js";
+import { capabilities, testResults, testSuites } from "../src/db/schema.js";
 
 type ReliabilityLevel = "guaranteed" | "common" | "rare";
 type ReliabilityMap = Record<string, ReliabilityLevel>;
@@ -47,6 +51,7 @@ async function main() {
   let annotated = 0;
   let skipped = 0;
   let fromTestData = 0;
+  let fromSchemaFallback = 0; // test data used but no guaranteed → schema promoted required fields
   let fromHeuristic = 0;
   const uncertain: Array<{ slug: string; fields: string[] }> = [];
 
@@ -74,18 +79,22 @@ async function main() {
       Array.isArray(schema.required) ? (schema.required as string[]) : [],
     );
 
-    // Try to get test result data
+    // Query happy-path test results only (known_answer + schema_check).
+    // Negative and edge_case tests produce sparse/empty outputs and would
+    // drag field presence rates down, masking genuinely stable fields.
     const results = await db
       .select({ actualOutput: testResults.actualOutput })
       .from(testResults)
+      .innerJoin(testSuites, eq(testResults.testSuiteId, testSuites.id))
       .where(
         and(
           eq(testResults.capabilitySlug, cap.slug),
           eq(testResults.passed, true),
+          inArray(testSuites.testType, ["known_answer", "schema_check"]),
         ),
       )
       .orderBy(desc(testResults.executedAt))
-      .limit(20); // Use up to 20 most recent successful results
+      .limit(20); // Use up to 20 most recent successful happy-path results
 
     let reliability: ReliabilityMap;
     const uncertainFields: string[] = [];
@@ -124,6 +133,22 @@ async function main() {
           }
         }
       }
+
+      // Schema fallback: if test data still yields zero guaranteed fields,
+      // promote fields to guaranteed using the schema. If a 'required' array
+      // exists, only those fields get promoted. If no required array (most
+      // schemas don't define one), treat ALL schema properties as guaranteed —
+      // they're part of the defined output interface by the capability author.
+      if (!Object.values(reliability).some((v) => v === "guaranteed")) {
+        const fieldsToPromote = requiredFields.size > 0
+          ? fieldNames.filter((f) => requiredFields.has(f))
+          : fieldNames; // no required array → promote all schema fields
+        for (const field of fieldsToPromote) {
+          reliability[field] = "guaranteed";
+        }
+        fromSchemaFallback++;
+        fromTestData--; // re-classify: counted as testData above, adjust
+      }
     } else {
       // Heuristic approach: use schema required array
       fromHeuristic++;
@@ -153,8 +178,9 @@ async function main() {
   console.log(`  Total active capabilities: ${allCaps.length}`);
   console.log(`  Annotated: ${annotated}`);
   console.log(`  Skipped (already annotated or no schema): ${skipped}`);
-  console.log(`  From test data (>= 3 results): ${fromTestData}`);
-  console.log(`  From heuristic (schema required array): ${fromHeuristic}`);
+  console.log(`  From test data (>= 3 results, guaranteed via rates): ${fromTestData}`);
+  console.log(`  From test data + schema fallback (no rate hit 70%): ${fromSchemaFallback}`);
+  console.log(`  From heuristic only (< 3 qualifying results): ${fromHeuristic}`);
 
   if (uncertain.length > 0) {
     console.log(`\n⚠ UNCERTAIN CASES (fields near thresholds — review manually):`);
