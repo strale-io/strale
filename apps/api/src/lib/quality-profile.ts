@@ -10,9 +10,10 @@
  * Upstream / external-service failures are EXCLUDED entirely —
  * they do not count as either pass or fail.
  *
- * Uses per-factor rolling windows (hour granularity) to prevent high-frequency
- * test types (piggyback) from excluding low-frequency ones (schema_check,
- * negative, edge_case) from the recency window.
+ * Uses per-factor rolling windows (minute granularity) to allow manual test
+ * cycles (2-3 min apart) to each count as distinct qualification windows.
+ * High-frequency piggyback tests are still handled correctly because the same
+ * minute window collapses multiple rapid calls into one entry.
  */
 
 import { sql, eq, and, inArray } from "drizzle-orm";
@@ -115,19 +116,21 @@ export async function computeQualityProfile(slug: string): Promise<QPResult> {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const cutoff = thirtyDaysAgo.toISOString();
 
-  // ── Per-type window detection (hour granularity) ────────────────────────
+  // ── Per-type window detection (minute granularity) ──────────────────────
   // Each test type gets its own rolling window so that high-frequency types
   // (piggyback, which runs on every customer call) cannot push low-frequency
   // types (schema_check every 6-24h, negative, edge_case) out of the window.
+  // Minute granularity allows manual qualification cycles (2-3 min apart) to
+  // each count as a distinct window, while still collapsing rapid bursts.
   const rawTypeWindows = await db.execute(sql`
-    SELECT ts.test_type, DATE_TRUNC('hour', tr.executed_at) AS run_window
+    SELECT ts.test_type, DATE_TRUNC('minute', tr.executed_at) AS run_window
     FROM test_results tr
     INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
     WHERE tr.capability_slug = ${slug}
       AND tr.executed_at >= ${cutoff}::timestamptz
       AND ts.test_status IN ('normal', 'env_dependent', 'upstream_broken')
       AND ts.test_type IN ('known_answer', 'piggyback', 'regression', 'schema_check', 'negative', 'edge_case')
-    GROUP BY ts.test_type, DATE_TRUNC('hour', tr.executed_at)
+    GROUP BY ts.test_type, DATE_TRUNC('minute', tr.executed_at)
     ORDER BY run_window DESC
   `);
 
@@ -179,11 +182,11 @@ export async function computeQualityProfile(slug: string): Promise<QPResult> {
       ts.test_type,
       tr.passed,
       tr.failure_reason,
-      DATE_TRUNC('hour', tr.executed_at) AS run_window
+      DATE_TRUNC('minute', tr.executed_at) AS run_window
     FROM test_results tr
     INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
     WHERE tr.capability_slug = ${slug}
-      AND DATE_TRUNC('hour', tr.executed_at) >= ${oldestWindow}::timestamptz
+      AND DATE_TRUNC('minute', tr.executed_at) >= ${oldestWindow}::timestamptz
       AND tr.executed_at >= ${cutoff}::timestamptz
       AND ts.test_status IN ('normal', 'env_dependent', 'upstream_broken')
       AND ts.test_type IN ('known_answer', 'piggyback', 'regression', 'schema_check', 'negative', 'edge_case')
