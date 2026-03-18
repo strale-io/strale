@@ -188,15 +188,15 @@ export async function computeReliabilityProfile(
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const cutoff = thirtyDaysAgo.toISOString();
 
-  // ── Get test run windows (hour granularity) ────────────────────────────
+  // ── Get test run windows (minute granularity) ──────────────────────────
   const rawWindows = await db.execute(sql`
-    SELECT DATE_TRUNC('hour', tr.executed_at) AS run_window
+    SELECT DATE_TRUNC('minute', tr.executed_at) AS run_window
     FROM test_results tr
     INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
     WHERE tr.capability_slug = ${slug}
       AND tr.executed_at >= ${cutoff}::timestamptz
       AND ts.test_status IN ('normal', 'env_dependent', 'upstream_broken')
-    GROUP BY DATE_TRUNC('hour', tr.executed_at)
+    GROUP BY DATE_TRUNC('minute', tr.executed_at)
     ORDER BY run_window DESC
     LIMIT ${ROLLING_RUNS}
   `);
@@ -223,11 +223,11 @@ export async function computeReliabilityProfile(
       tr.passed,
       tr.failure_reason,
       tr.failure_classification,
-      DATE_TRUNC('hour', tr.executed_at) AS run_window
+      DATE_TRUNC('minute', tr.executed_at) AS run_window
     FROM test_results tr
     INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
     WHERE tr.capability_slug = ${slug}
-      AND DATE_TRUNC('hour', tr.executed_at) >= ${oldestWindow}::timestamptz
+      AND DATE_TRUNC('minute', tr.executed_at) >= ${oldestWindow}::timestamptz
       AND tr.executed_at >= ${cutoff}::timestamptz
       AND ts.test_status IN ('normal', 'env_dependent', 'upstream_broken')
       AND (
