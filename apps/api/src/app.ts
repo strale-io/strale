@@ -316,6 +316,17 @@ import "./capabilities/timezone-lookup.js";
 import "./capabilities/insolvency-check.js";
 import "./capabilities/language-detect.js";
 import "./capabilities/age-verify.js";
+// Dark launch batch 2 — computation + intelligence
+import "./capabilities/id-number-validate.js";
+import "./capabilities/tax-id-validate.js";
+import "./capabilities/company-industry-classify.js";
+import "./capabilities/email-reputation-score.js";
+import "./capabilities/iban-to-bank.js";
+import "./capabilities/ip-risk-score.js";
+import "./capabilities/domain-age-check.js";
+import "./capabilities/company-name-match.js";
+import "./capabilities/postal-code-lookup.js";
+import "./capabilities/credit-score-band.js";
 
 export const app = new Hono();
 

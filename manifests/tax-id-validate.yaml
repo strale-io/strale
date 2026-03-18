@@ -1,0 +1,71 @@
+slug: tax-id-validate
+name: Tax ID Validate
+description: >-
+  Validate tax identification number (TIN) formats for 40+ countries. Checks format rules and
+  checksum algorithms where applicable. Does not verify with tax authorities.
+category: validation
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - tax_id
+  properties:
+    tax_id:
+      type: string
+      description: Tax identification number (with or without country prefix)
+    country_code:
+      type: string
+      description: ISO 2-letter country code (auto-detected from prefix if omitted)
+output_schema:
+  type: object
+  properties:
+    valid:
+      type: boolean
+    country_code:
+      type: string
+    format_name:
+      type: string
+    checksum_valid:
+      type: boolean
+    normalized:
+      type: string
+data_source: Strale tax ID validator (EU VAT format rules + national TIN standards)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      tax_id: "SE556703748501"
+      country_code: "SE"
+    expected_fields:
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: country_code
+        operator: equals
+        value: "SE"
+        reliability: guaranteed
+      - field: format_name
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    tax_id: "SE556703748501"
+    country_code: "SE"
+output_field_reliability:
+  valid: guaranteed
+  country_code: guaranteed
+  format_name: guaranteed
+  checksum_valid: common
+  normalized: guaranteed
+  suggestions: rare
+limitations:
+  - title: Format validation only
+    text: Validates format and checksum — does not verify the TIN with tax authorities
+    category: accuracy
+    severity: info
+  - title: Country prefix auto-detection
+    text: Country prefix is auto-detected for EU VAT numbers — non-EU TINs require explicit country_code
+    category: accuracy
+    severity: info

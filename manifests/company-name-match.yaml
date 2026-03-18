@@ -1,0 +1,75 @@
+slug: company-name-match
+name: Company Name Match
+description: >-
+  Fuzzy match and normalize company names. Compares two names accounting for Ltd/Limited,
+  AB/Aktiebolag, Inc/Incorporated, GmbH, etc. Returns match confidence using Levenshtein,
+  Jaro-Winkler, and token overlap algorithms.
+category: data-processing
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - name_a
+    - name_b
+  properties:
+    name_a:
+      type: string
+      description: First company name
+    name_b:
+      type: string
+      description: Second company name to compare
+output_schema:
+  type: object
+  properties:
+    match:
+      type: boolean
+    confidence:
+      type: number
+    normalized_a:
+      type: string
+    normalized_b:
+      type: string
+    similarity_scores:
+      type: object
+    suffixes_removed:
+      type: object
+data_source: Strale name matcher (algorithmic fuzzy matching)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      name_a: "Spotify AB"
+      name_b: "Spotify Aktiebolag"
+    expected_fields:
+      - field: match
+        operator: equals
+        value: true
+        reliability: guaranteed
+      - field: confidence
+        operator: gt
+        value: 0.8
+        reliability: guaranteed
+  health_check_input:
+    name_a: "Google Inc"
+    name_b: "Google Incorporated"
+output_field_reliability:
+  match: guaranteed
+  confidence: guaranteed
+  similarity_scores: guaranteed
+  normalized_a: guaranteed
+  normalized_b: guaranteed
+  suffixes_removed: guaranteed
+  name_a: guaranteed
+  name_b: guaranteed
+limitations:
+  - title: Name-based matching only
+    text: Matches based on name similarity — cannot distinguish between unrelated companies with similar names
+    category: accuracy
+    severity: info
+  - title: Suffix list coverage
+    text: Covers 20+ common company suffixes (Ltd, GmbH, AB, Inc, etc.) — rare suffixes may not be stripped
+    category: coverage
+    severity: info

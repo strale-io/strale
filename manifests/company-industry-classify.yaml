@@ -1,0 +1,65 @@
+slug: company-industry-classify
+name: Company Industry Classify
+description: >-
+  Classify a company's industry using standard codes. Given a company name, description, or
+  website URL, returns SIC, NAICS, and NACE codes with confidence levels.
+category: data-processing
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    company_name:
+      type: string
+      description: Company name
+    description:
+      type: string
+      description: Company description or business activity
+output_schema:
+  type: object
+  properties:
+    company_name:
+      type: string
+    primary_industry:
+      type: string
+    sector:
+      type: string
+    classifications:
+      type: array
+    confidence:
+      type: string
+data_source: Claude Haiku (AI classification against SIC/NAICS/NACE standards)
+data_source_type: computed
+transparency_tag: ai_generated
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      company_name: "Volvo"
+      description: "Swedish automobile manufacturer"
+    expected_fields:
+      - field: classifications
+        operator: not_null
+        reliability: guaranteed
+      - field: primary_industry
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    company_name: "Google"
+    description: "Search engine and technology company"
+output_field_reliability:
+  company_name: guaranteed
+  primary_industry: guaranteed
+  sector: common
+  classifications: guaranteed
+  confidence: guaranteed
+  description: common
+limitations:
+  - title: AI-based classification
+    text: Uses LLM for classification — may differ from official SIC/NAICS assignments by government agencies
+    category: accuracy
+    severity: info
+  - title: Requires company description for best results
+    text: Name-only classification is less accurate — provide a description for reliable results
+    category: accuracy
+    severity: info

@@ -1,0 +1,78 @@
+slug: ip-risk-score
+name: IP Risk Score
+description: >-
+  Assess fraud risk for an IP address. Detects VPNs, proxies, Tor exit nodes, hosting/datacenter
+  IPs. Returns risk score and risk factors.
+category: validation
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - ip
+  properties:
+    ip:
+      type: string
+      description: IP address (IPv4 or IPv6)
+output_schema:
+  type: object
+  properties:
+    ip:
+      type: string
+    risk_score:
+      type: integer
+    risk_level:
+      type: string
+    is_vpn:
+      type: boolean
+    is_proxy:
+      type: boolean
+    is_tor:
+      type: boolean
+    is_datacenter:
+      type: boolean
+    is_residential:
+      type: boolean
+data_source: ip-api.com + Strale risk engine (ASN lists, datacenter detection)
+data_source_type: computed
+transparency_tag: mixed
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      ip: "8.8.8.8"
+    expected_fields:
+      - field: risk_score
+        operator: not_null
+        reliability: guaranteed
+      - field: risk_level
+        operator: not_null
+        reliability: guaranteed
+      - field: is_datacenter
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    ip: "8.8.8.8"
+output_field_reliability:
+  ip: guaranteed
+  risk_score: guaranteed
+  risk_level: guaranteed
+  is_vpn: guaranteed
+  is_proxy: guaranteed
+  is_tor: guaranteed
+  is_datacenter: guaranteed
+  is_residential: guaranteed
+  is_mobile: common
+  asn: common
+  isp: common
+  country_code: common
+  threats: rare
+limitations:
+  - title: Static detection lists
+    text: VPN/Tor/datacenter detection uses periodically updated static lists — new providers may not be detected immediately
+    category: freshness
+    severity: info
+  - title: ip-api.com dependency
+    text: Geolocation and hosting detection depends on ip-api.com free tier (45 req/min)
+    category: dependency
+    severity: info

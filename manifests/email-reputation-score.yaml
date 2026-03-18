@@ -1,0 +1,67 @@
+slug: email-reputation-score
+name: Email Reputation Score
+description: >-
+  Calculate a trust score for an email address. Assesses domain age, MX configuration,
+  disposable domain detection, and email provider reputation. Returns a 0-100 risk score.
+category: validation
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - email
+  properties:
+    email:
+      type: string
+      description: Email address to score
+output_schema:
+  type: object
+  properties:
+    email:
+      type: string
+    email_valid:
+      type: boolean
+    reputation_score:
+      type: integer
+    risk_level:
+      type: string
+    factors:
+      type: array
+data_source: Strale email reputation engine (MX lookup + disposable domain list + provider scoring)
+data_source_type: computed
+transparency_tag: mixed
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      email: "test@google.com"
+    expected_fields:
+      - field: reputation_score
+        operator: not_null
+        reliability: guaranteed
+      - field: risk_level
+        operator: not_null
+        reliability: guaranteed
+      - field: email_valid
+        operator: equals
+        value: true
+        reliability: guaranteed
+  health_check_input:
+    email: "test@google.com"
+output_field_reliability:
+  email: guaranteed
+  email_valid: guaranteed
+  reputation_score: guaranteed
+  risk_level: guaranteed
+  domain: guaranteed
+  provider_type: guaranteed
+  factors: guaranteed
+limitations:
+  - title: Heuristic scoring
+    text: Score is based on domain signals — not a guarantee of email deliverability or sender trustworthiness
+    category: accuracy
+    severity: info
+  - title: MX lookup may fail
+    text: DNS MX lookup can fail due to network issues — score adjusts accordingly
+    category: dependency
+    severity: info

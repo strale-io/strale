@@ -1,0 +1,71 @@
+slug: postal-code-lookup
+name: Postal Code Lookup
+description: >-
+  Look up location information from a postal/ZIP code. Returns city, region/state, and
+  approximate coordinates. Covers 60+ countries via Zippopotam.us.
+category: data-extraction
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - postal_code
+  properties:
+    postal_code:
+      type: string
+      description: Postal/ZIP code to look up
+    country_code:
+      type: string
+      description: ISO 2-letter country code (default US)
+output_schema:
+  type: object
+  properties:
+    postal_code:
+      type: string
+    country_code:
+      type: string
+    country_name:
+      type: string
+    valid:
+      type: boolean
+    places:
+      type: array
+data_source: Zippopotam.us API (free postal code lookup)
+data_source_type: api
+transparency_tag: external_api
+freshness_category: reference-data
+test_fixtures:
+  known_answer:
+    input:
+      postal_code: "10001"
+      country_code: "US"
+    expected_fields:
+      - field: valid
+        operator: equals
+        value: true
+        reliability: guaranteed
+      - field: places
+        operator: not_null
+        reliability: guaranteed
+      - field: country_code
+        operator: equals
+        value: "US"
+        reliability: guaranteed
+  health_check_input:
+    postal_code: "10001"
+    country_code: "US"
+output_field_reliability:
+  postal_code: guaranteed
+  country_code: guaranteed
+  country_name: common
+  valid: guaranteed
+  places: guaranteed
+limitations:
+  - title: Country coverage
+    text: "Covers ~60 countries — some smaller nations may not have postal code data available"
+    category: coverage
+    severity: info
+  - title: Reference data freshness
+    text: Postal code data is periodically updated — newly created codes may not be available immediately
+    category: freshness
+    severity: info

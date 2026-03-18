@@ -1,0 +1,84 @@
+slug: credit-score-band
+name: Credit Score Band
+description: >-
+  Convert and interpret credit scores between different scoring systems. Maps FICO, VantageScore,
+  Experian, Equifax scores to universal risk bands with percentile estimates.
+category: data-processing
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - score
+  properties:
+    score:
+      type: number
+      description: Credit score value
+    system:
+      type: string
+      description: "Scoring system: fico, vantagescore, experian, equifax (default: fico)"
+output_schema:
+  type: object
+  properties:
+    score:
+      type: number
+    system:
+      type: string
+    system_name:
+      type: string
+    band:
+      type: string
+    universal_risk_level:
+      type: string
+    percentile_estimate:
+      type: string
+    next_band_threshold:
+      type: integer
+data_source: Strale credit reference (published scoring guidelines)
+data_source_type: reference
+transparency_tag: algorithmic
+freshness_category: reference-data
+test_fixtures:
+  known_answer:
+    input:
+      score: 750
+      system: "fico"
+    expected_fields:
+      - field: band
+        operator: not_null
+        reliability: guaranteed
+      - field: score
+        operator: equals
+        value: 750
+        reliability: guaranteed
+      - field: system
+        operator: equals
+        value: "fico"
+        reliability: guaranteed
+      - field: universal_risk_level
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    score: 700
+    system: "fico"
+output_field_reliability:
+  score: guaranteed
+  system: guaranteed
+  system_name: guaranteed
+  band: guaranteed
+  universal_risk_level: guaranteed
+  percentile_estimate: common
+  typical_characteristics: common
+  next_band_threshold: guaranteed
+  next_band_name: common
+  points_to_next: guaranteed
+  score_range: guaranteed
+limitations:
+  - title: Reference data
+    text: Score band ranges are based on published guidelines — actual lender thresholds may vary
+    category: accuracy
+    severity: info
+  - title: US and UK systems only
+    text: "Supports FICO, VantageScore (US), Experian, Equifax (UK) — other national credit systems not covered"
+    category: coverage
+    severity: info

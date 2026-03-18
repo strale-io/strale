@@ -1,0 +1,71 @@
+slug: iban-to-bank
+name: IBAN to Bank
+description: >-
+  Extract bank name and branch information from an IBAN. Returns bank name, BIC/SWIFT code,
+  branch, and country. Pure algorithmic — uses bank code lookup tables.
+category: data-extraction
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - iban
+  properties:
+    iban:
+      type: string
+      description: IBAN number to look up
+output_schema:
+  type: object
+  properties:
+    valid_iban:
+      type: boolean
+    country_code:
+      type: string
+    country_name:
+      type: string
+    bank_code:
+      type: string
+    bank_name:
+      type: string
+    bic:
+      type: string
+data_source: Strale IBAN bank registry (major EU banks)
+data_source_type: reference
+transparency_tag: algorithmic
+freshness_category: reference-data
+test_fixtures:
+  known_answer:
+    input:
+      iban: "DE89370400440532013000"
+    expected_fields:
+      - field: valid_iban
+        operator: equals
+        value: true
+        reliability: guaranteed
+      - field: country_code
+        operator: equals
+        value: "DE"
+        reliability: guaranteed
+      - field: bank_code
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    iban: "DE89370400440532013000"
+output_field_reliability:
+  valid_iban: guaranteed
+  iban: guaranteed
+  country_code: guaranteed
+  country_name: guaranteed
+  bank_code: guaranteed
+  bank_name: common
+  bic: common
+  branch: rare
+limitations:
+  - title: Bank name coverage
+    text: Bank name lookup covers major EU banks — smaller or regional banks may return bank code only without name
+    category: coverage
+    severity: info
+  - title: Reference data
+    text: Bank registry is periodically updated — newly created banks may not be listed
+    category: freshness
+    severity: info

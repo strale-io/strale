@@ -1,0 +1,82 @@
+slug: id-number-validate
+name: ID Number Validate
+description: >-
+  Validate national identification number formats. Supports Swedish personnummer, Finnish
+  henkilötunnus, Norwegian fødselsnummer, Danish CPR, UK National Insurance, US SSN format,
+  and German Steuer-ID. Checks format and checksum where applicable. Does NOT verify identity.
+category: validation
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - id_number
+    - country_code
+  properties:
+    id_number:
+      type: string
+      description: National identification number
+    country_code:
+      type: string
+      description: ISO 2-letter country code (SE, FI, NO, DK, GB, US, DE)
+output_schema:
+  type: object
+  properties:
+    valid:
+      type: boolean
+    format_correct:
+      type: boolean
+    checksum_valid:
+      type: boolean
+    id_type:
+      type: string
+    country_code:
+      type: string
+    normalized:
+      type: string
+    extracted_info:
+      type: object
+data_source: Strale ID validator (algorithmic checksum verification)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      id_number: "811228-9874"
+      country_code: "SE"
+    expected_fields:
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: format_correct
+        operator: equals
+        value: true
+        reliability: guaranteed
+      - field: country_code
+        operator: equals
+        value: "SE"
+        reliability: guaranteed
+      - field: id_type
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    id_number: "811228-9874"
+    country_code: "SE"
+output_field_reliability:
+  valid: guaranteed
+  country_code: guaranteed
+  id_type: guaranteed
+  format_correct: guaranteed
+  checksum_valid: guaranteed
+  extracted_info: common
+  normalized: guaranteed
+limitations:
+  - title: Format validation only
+    text: Validates format and checksum — does not verify the number is assigned to a real person
+    category: accuracy
+    severity: info
+  - title: Country coverage
+    text: "Supports SE, FI, NO, DK, GB, US, DE — other countries return unsupported error"
+    category: coverage
+    severity: info

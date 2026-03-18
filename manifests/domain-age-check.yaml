@@ -1,0 +1,76 @@
+slug: domain-age-check
+name: Domain Age Check
+description: >-
+  Quick domain registration age lookup. Returns creation date, age in days, registrar, and
+  expiry date. Useful for fraud detection — newly registered domains are higher risk.
+category: data-extraction
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+      description: Domain name to check (e.g., google.com)
+output_schema:
+  type: object
+  properties:
+    domain:
+      type: string
+    created_date:
+      type: string
+    age_days:
+      type: integer
+    age_years:
+      type: number
+    registrar:
+      type: string
+    expiry_date:
+      type: string
+    is_new:
+      type: boolean
+    risk_indicator:
+      type: string
+data_source: WHOIS protocol (direct queries to TLD registrars)
+data_source_type: api
+transparency_tag: external_api
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain: "google.com"
+    expected_fields:
+      - field: domain
+        operator: equals
+        value: "google.com"
+        reliability: guaranteed
+      - field: age_days
+        operator: gt
+        value: 5000
+        reliability: guaranteed
+      - field: is_new
+        operator: equals
+        value: false
+        reliability: guaranteed
+  health_check_input:
+    domain: "google.com"
+output_field_reliability:
+  domain: guaranteed
+  created_date: common
+  age_days: guaranteed
+  age_years: guaranteed
+  registrar: common
+  expiry_date: common
+  is_new: guaranteed
+  risk_indicator: guaranteed
+limitations:
+  - title: WHOIS availability
+    text: Some TLDs restrict WHOIS data — creation date may not be available for all domains
+    category: coverage
+    severity: info
+  - title: Rate limiting
+    text: Some WHOIS servers rate-limit queries — high-volume lookups may be throttled
+    category: dependency
+    severity: info
