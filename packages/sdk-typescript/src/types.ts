@@ -3,7 +3,7 @@
 export interface StraleOptions {
   /** API key (starts with sk_) */
   apiKey: string;
-  /** Base URL of the Strale API. Defaults to https://strale-production.up.railway.app */
+  /** Base URL of the Strale API. Defaults to https://api.strale.io */
   baseUrl?: string;
   /** Default max_price_cents for do() calls */
   defaultMaxPriceCents?: number;

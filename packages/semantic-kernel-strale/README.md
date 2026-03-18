@@ -15,7 +15,7 @@ import { createStralePlugin } from "strale-semantic-kernel";
 
 const plugin = await createStralePlugin({ apiKey: "sk_live_..." });
 
-// plugin.functions contains 233+ kernel functions
+// plugin.functions contains 250+ kernel functions
 console.log(`Loaded ${plugin.functions.length} Strale capabilities`);
 ```
 

@@ -1,6 +1,6 @@
 # crewai-strale
 
-All 225+ [Strale](https://strale.dev) capabilities as CrewAI tools. Company data, VAT validation, web scraping, compliance checks, and more — available to your CrewAI agents with a single import.
+All 250+ [Strale](https://strale.dev) capabilities as CrewAI tools. Company data, VAT validation, web scraping, compliance checks, and more — available to your CrewAI agents with a single import.
 
 ## Install
 
@@ -14,7 +14,7 @@ pip install crewai-strale
 from crewai_strale import StraleToolkit
 
 toolkit = StraleToolkit(api_key="sk_live_...")
-tools = toolkit.get_tools()  # 225+ capabilities + search & balance tools
+tools = toolkit.get_tools()  # 250+ capabilities + search & balance tools
 ```
 
 ## Filter by category

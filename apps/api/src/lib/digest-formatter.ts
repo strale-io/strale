@@ -320,5 +320,5 @@ function formatDateTime(iso: string): string {
 }
 
 function baseUrl(): string {
-  return process.env.API_BASE_URL ?? "https://strale-production.up.railway.app";
+  return process.env.API_BASE_URL ?? "https://api.strale.io";
 }

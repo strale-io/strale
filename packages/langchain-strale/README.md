@@ -1,6 +1,6 @@
 # langchain-strale
 
-All 225+ [Strale](https://strale.dev) capabilities as LangChain tools. Company data, VAT validation, web scraping, compliance checks, and more — available to your LangChain agents with a single import.
+All 250+ [Strale](https://strale.dev) capabilities as LangChain tools. Company data, VAT validation, web scraping, compliance checks, and more — available to your LangChain agents with a single import.
 
 ## Install
 
@@ -14,7 +14,7 @@ pip install langchain-strale
 from langchain_strale import StraleToolkit
 
 toolkit = StraleToolkit(api_key="sk_live_...")
-tools = toolkit.get_tools()  # 225+ capabilities + search & balance tools
+tools = toolkit.get_tools()  # 250+ capabilities + search & balance tools
 ```
 
 ## Filter by category

@@ -28,7 +28,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "../src/db/index.js";
 import { capabilities } from "../src/db/schema.js";
 
-const PROD_URL = "https://strale-production.up.railway.app";
+const PROD_URL = "https://api.strale.io";
 
 const BASE_URL = process.env.API_BASE_URL ?? PROD_URL;
 const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "";

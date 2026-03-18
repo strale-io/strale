@@ -130,7 +130,7 @@ function buildSuspensionWarning(payload: InterruptPayload): { subject: string; h
       }) + " CET"
     : "within 24h";
 
-  const baseUrl = process.env.API_BASE_URL ?? "https://strale-production.up.railway.app";
+  const baseUrl = process.env.API_BASE_URL ?? "https://api.strale.io";
 
   const html = interruptLayout(subject, `
     <table width="100%" cellpadding="0" cellspacing="0">
@@ -208,7 +208,7 @@ function buildMassFailure(payload: InterruptPayload): { subject: string; html: s
           Check Railway logs and dependency health. Run the health sweep when resolved:
         </p>
         <p style="margin:8px 0 0;font-size:12px;font-family:monospace;color:#374151;">
-          curl -X POST ${process.env.API_BASE_URL ?? "https://strale-production.up.railway.app"}/v1/internal/health-sweep \\<br>
+          curl -X POST ${process.env.API_BASE_URL ?? "https://api.strale.io"}/v1/internal/health-sweep \\<br>
           &nbsp;&nbsp;-H "Authorization: Bearer $ADMIN_SECRET"
         </p>
       </td></tr>

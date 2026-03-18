@@ -1,6 +1,6 @@
 # strale-mcp
 
-MCP server for [Strale](https://strale.io) — gives AI agents access to 229+ capabilities via 8 meta-tools. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
+MCP server for [Strale](https://strale.io) — gives AI agents access to 250+ capabilities via 8 meta-tools. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
 
 ## Installation
 
@@ -16,7 +16,7 @@ npm install -g strale-mcp
 
 ## Architecture
 
-**Meta-tools only**: Instead of registering 229+ individual tools (which exceeds limits in ChatGPT, Cursor, and Copilot), the server exposes 8 meta-tools. Agents discover capabilities via `strale_search`, then execute via `strale_execute`.
+**Meta-tools only**: Instead of registering 250+ individual tools (which exceeds limits in ChatGPT, Cursor, and Copilot), the server exposes 8 meta-tools. Agents discover capabilities via `strale_search`, then execute via `strale_execute`.
 
 At startup, the server fetches the capability catalog, solutions, and trust data from the Strale API and caches them for search.
 
@@ -125,7 +125,7 @@ Run the MCP server locally on your machine:
 |------|:---:|-------------|
 | `strale_ping` | No | Health check. Returns server status, tool count, and capability count. |
 | `strale_getting_started` | No | Onboarding guide. Returns free capabilities available without an API key, usage steps, and signup link. |
-| `strale_search` | No | Search 229+ capabilities and 20+ solutions by keyword or category. Returns matches with price, input fields, SQS score, quality grade, reliability grade, and execution guidance. |
+| `strale_search` | No | Search 250+ capabilities and 20+ solutions by keyword or category. Returns matches with price, input fields, SQS score, quality grade, reliability grade, and execution guidance. |
 | `strale_execute` | No* | Execute any capability by slug. Returns output data, cost, latency, provenance, and dual-profile quality assessment. *Free-tier capabilities work without an API key. |
 | `strale_methodology` | No | Returns Strale's quality methodology — dual-profile scoring (QP + RP), SQS matrix, execution guidance, and test infrastructure. |
 | `strale_trust_profile` | No | Returns the full trust profile for any capability or solution — Quality Profile, Reliability Profile, SQS score, execution guidance, limitations, and badge status. |
