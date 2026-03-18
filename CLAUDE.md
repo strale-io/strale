@@ -122,7 +122,7 @@ Stripe is in SANDBOX mode — live key activation pending.
 
 **NEVER add capabilities by directly editing seed.ts.** The old seed.ts + onboarding hook approach only generates 2 of 5 required test types. All new capabilities MUST go through the manifest-driven pipeline.
 
-#### Required steps for every new capability:
+#### Recommended workflow (--discover):
 
 1. **Write the executor** at `apps/api/src/capabilities/{slug}.ts`
    - Register via `registerCapability(slug, handler)`
@@ -132,28 +132,45 @@ Stripe is in SANDBOX mode — live key activation pending.
 
 2. **Add import** to `apps/api/src/app.ts` in the correct category section
 
-3. **Create onboarding manifest** at `manifests/{slug}.yaml`
+3. **Create minimal manifest** at `manifests/{slug}.yaml`
    Required fields:
    - `slug`, `name`, `description`, `category`, `price_cents`
    - `data_source`, `data_source_type`, `transparency_tag`, `freshness_category`
-   - `test_fixtures.known_answer` — one real input + expected guaranteed fields
    - `test_fixtures.health_check_input` — simple input that always works
-   - `output_field_reliability` — every output field marked guaranteed/common/rare
    - `limitations` — at least 1 (every capability has limitations)
+   **No need to write `expected_fields` or `output_field_reliability` — the pipeline generates them.**
 
-4. **Run the pipeline:** `cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/{slug}.yaml`
-   The pipeline auto-generates all 5 test types:
-   - known_answer (from manifest fixture)
-   - schema_check (from output schema)
-   - negative (empty input → expects structured error)
-   - edge_case (from input schema heuristics)
-   - dependency_health (from health_check_input)
+4. **Run the pipeline with --discover:**
+   `cd apps/api && npx tsx scripts/onboard.ts --discover --manifest ../../manifests/{slug}.yaml`
+   The pipeline:
+   - Executes the capability with health_check_input
+   - Auto-generates expected_fields from the actual output
+   - Auto-generates output_field_reliability (all fields marked guaranteed initially)
+   - Writes the updated manifest back to disk
+   - Generates all 5 test types (known_answer, schema_check, negative, edge_case, dependency_health)
+   - Verifies the known_answer test passes against live output
 
-5. **Verify:** `npx tsx scripts/smoke-test.ts --slug {slug}`
+5. **Review:** Check the auto-generated expected_fields in the manifest. Adjust reliability levels (guaranteed/common/rare) as needed.
+
+6. **Verify:** `npx tsx scripts/smoke-test.ts --slug {slug}`
+
+#### Pipeline flags:
+```
+--manifest <path>    Path to YAML manifest (required)
+--dry-run            Preview without inserting to DB
+--backfill           Update existing capability (add missing tests, update fixtures)
+--discover           Auto-generate expected_fields from live execution output
+--fix                Auto-correct high-confidence fixture mismatches (field name typos, case, type coercion)
+--strict             Abort if execute-and-verify fails
+```
+
+Combine flags for existing capabilities: `--backfill --discover --fix`
 
 #### For backfilling existing capabilities:
 `cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/{slug}.yaml --backfill`
 Skips capability creation, adds only missing test types, updates field reliability + limitations.
+
+Use `--backfill --discover --fix` to auto-correct fixture mismatches on existing capabilities.
 
 #### Field reliability rules:
 - `guaranteed` — always present in successful responses. Safe to assert on.

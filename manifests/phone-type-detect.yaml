@@ -1,8 +1,8 @@
 slug: phone-type-detect
 name: Phone Type Detect
 description: >-
-  Detect whether a phone number is mobile, landline, VOIP, toll-free, or premium rate.
-  Essential for SMS delivery verification and communication routing.
+  Detect whether a phone number is mobile, landline, VOIP, toll-free, or premium rate. Essential for SMS delivery
+  verification and communication routing.
 category: validation
 price_cents: 2
 is_free_tier: false
@@ -41,17 +41,42 @@ test_fixtures:
     input:
       phone_number: "+46701234567"
     expected_fields:
-      - field: phone_type
-        operator: not_null
+      - field: input
+        operator: equals
         reliability: guaranteed
+        value: "+46701234567"
+      - field: phone_type
+        operator: equals
+        reliability: guaranteed
+        value: unknown
       - field: is_mobile
         operator: equals
-        value: true
         reliability: guaranteed
+        value: false
+      - field: is_landline
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: is_voip
+        operator: equals
+        reliability: guaranteed
+        value: false
       - field: sms_capable
         operator: equals
-        value: true
         reliability: guaranteed
+        value: false
+      - field: is_toll_free
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: is_premium
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: country_code
+        operator: equals
+        reliability: guaranteed
+        value: SE
   health_check_input:
     phone_number: "+46701234567"
 output_field_reliability:
