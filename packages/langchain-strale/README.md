@@ -64,8 +64,24 @@ Plus two meta-tools:
 
 Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in trial credits, no card required.
 
-## Links
+---
 
-- [Strale API docs](https://strale.dev/docs)
-- [Full capability catalog](https://api.strale.io/v1/capabilities)
-- [MCP server](https://www.npmjs.com/package/strale-mcp)
+## Try for Free
+
+5 capabilities work without an API key or signup:
+
+- `email-validate` — verify email deliverability
+- `dns-lookup` — DNS record lookup
+- `json-repair` — fix malformed JSON
+- `url-to-markdown` — convert any URL to markdown
+- `iban-validate` — validate international bank account numbers
+
+For all 250+ capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
+
+## Resources
+
+- 📖 [Documentation](https://strale.dev/docs)
+- 💡 [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
+- 💰 [Pricing](https://strale.dev/pricing)
+- 🔍 [Quality methodology](https://strale.dev/methodology)
+- 🔒 [Security](https://strale.dev/security)

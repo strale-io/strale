@@ -254,6 +254,16 @@ else:
 }
 ```
 
+## Try It
+
+After connecting, ask your agent:
+
+- "Use Strale to validate the email hello@example.com"
+- "Use Strale to check the DNS records for github.com"
+- "Search Strale for company data capabilities"
+
+These use free capabilities — no API key needed.
+
 ## Usage Workflow
 
 ```
@@ -307,6 +317,28 @@ Quality methodology: [strale.dev/trust/methodology](https://strale.dev/trust/met
 Issues and pull requests are welcome. Please open an issue first to discuss significant changes.
 
 Report bugs or request capabilities at: [github.com/strale-io/strale/issues](https://github.com/strale-io/strale/issues)
+
+---
+
+## Try for Free
+
+5 capabilities work without an API key or signup:
+
+- `email-validate` — verify email deliverability
+- `dns-lookup` — DNS record lookup
+- `json-repair` — fix malformed JSON
+- `url-to-markdown` — convert any URL to markdown
+- `iban-validate` — validate international bank account numbers
+
+For all 250+ capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
+
+## Resources
+
+- 📖 [Documentation](https://strale.dev/docs)
+- 💡 [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
+- 💰 [Pricing](https://strale.dev/pricing)
+- 🔍 [Quality methodology](https://strale.dev/methodology)
+- 🔒 [Security](https://strale.dev/security)
 
 ## License
 
