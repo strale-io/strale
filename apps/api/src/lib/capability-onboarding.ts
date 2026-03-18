@@ -72,6 +72,82 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
       console.log(`[onboarding] Set transparency tag for ${capabilitySlug}: ${tag}`);
     }
   }
+
+  // 3. Validate metadata completeness (warnings only — does not block creation)
+  const metadataWarnings = validateMetadataCompleteness(cap);
+  if (metadataWarnings.length > 0) {
+    console.log(`[onboarding] Metadata warnings for ${capabilitySlug}:`);
+    for (const w of metadataWarnings) {
+      const icon = w.severity === "warning" ? "⚠️" : "ℹ️";
+      console.log(`  ${icon} ${w.field}: ${w.message}`);
+    }
+  }
+}
+
+// ─── Metadata completeness validation ────────────────────────────────────────
+
+export interface MetadataWarning {
+  field: string;
+  severity: "warning" | "info";
+  message: string;
+}
+
+export function validateMetadataCompleteness(
+  cap: typeof capabilities.$inferSelect,
+): MetadataWarning[] {
+  const warnings: MetadataWarning[] = [];
+
+  // 1. Name quality — becomes the <title> tag on strale.dev
+  if (!cap.name || cap.name.trim().length === 0) {
+    warnings.push({ field: "name", severity: "warning", message: "Missing name — required for SEO page title" });
+  } else if (cap.name.length < 5) {
+    warnings.push({ field: "name", severity: "warning", message: `Name too short (${cap.name.length} chars) — weak SEO signal` });
+  }
+
+  // 2. Description quality — becomes <meta description>
+  if (!cap.description || cap.description.trim().length === 0) {
+    warnings.push({ field: "description", severity: "warning", message: "Missing description — required for SEO meta description and agent tool selection" });
+  } else if (cap.description.length < 50) {
+    warnings.push({ field: "description", severity: "warning", message: `Description too short (${cap.description.length} chars) — aim for 50-160 chars for SEO` });
+  } else if (cap.description.length > 300) {
+    warnings.push({ field: "description", severity: "info", message: `Description long (${cap.description.length} chars) — will be truncated to 155 chars in meta description` });
+  }
+
+  // 3. Category — needed for filtering and search
+  if (!cap.category || cap.category.trim().length === 0) {
+    warnings.push({ field: "category", severity: "warning", message: "Missing category" });
+  }
+
+  // 4. Input schema parameter descriptions — affects MCP Scoreboard Schema Completeness score
+  const inputSchema = cap.inputSchema as Record<string, any> | null;
+  if (inputSchema?.properties) {
+    const props = inputSchema.properties as Record<string, any>;
+    const propsWithoutDesc = Object.entries(props)
+      .filter(([_, prop]) => !prop.description || prop.description.trim().length === 0)
+      .map(([key]) => key);
+    if (propsWithoutDesc.length > 0) {
+      warnings.push({
+        field: "inputSchema",
+        severity: "warning",
+        message: `${propsWithoutDesc.length} parameter(s) missing descriptions: ${propsWithoutDesc.join(", ")} — hurts MCP Scoreboard schema score and agent tool selection`,
+      });
+    }
+  } else {
+    warnings.push({ field: "inputSchema", severity: "warning", message: "Missing inputSchema — agents cannot discover parameters" });
+  }
+
+  // 5. Output schema — helps agents understand what they'll get back
+  const outputSchema = cap.outputSchema as Record<string, any> | null;
+  if (!outputSchema?.properties || Object.keys(outputSchema.properties).length === 0) {
+    warnings.push({ field: "outputSchema", severity: "info", message: "Missing or empty outputSchema — agents cannot validate responses" });
+  }
+
+  // 6. Price — needed for agent cost awareness
+  if (cap.priceCents === null || cap.priceCents === undefined) {
+    warnings.push({ field: "priceCents", severity: "warning", message: "Missing price" });
+  }
+
+  return warnings;
 }
 
 // ─── Input generation (shared with generate-tests.ts) ────────────────────────
