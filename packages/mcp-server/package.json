@@ -1,6 +1,6 @@
 {
   "name": "strale-mcp",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "MCP server for Strale — exposes 229+ capabilities as tools for Claude, Cursor, Windsurf, and any MCP client",
   "type": "module",
   "main": "./dist/server.js",
@@ -9,7 +9,7 @@
     "./tools": "./dist/tools.js"
   },
   "bin": {
-    "strale-mcp": "./dist/server.js"
+    "strale-mcp": "dist/server.js"
   },
   "files": [
     "dist",
@@ -40,7 +40,7 @@
   "homepage": "https://strale.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/strale-io/strale.git",
+    "url": "git+https://github.com/strale-io/strale.git",
     "directory": "packages/mcp-server"
   },
   "bugs": {
