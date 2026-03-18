@@ -110,13 +110,98 @@ strale/
 
 ### Capabilities & Quality
 <!-- Reminder: changes to capabilities, SDKs, or integrations require updating public/llms.txt in strale-frontend -->
-233+ capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 20 bundled solutions across 6 categories (including 5 US-first solutions shipped 2026-03-07). Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions.
+243+ capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 20 bundled solutions across 6 categories (including 5 US-first solutions shipped 2026-03-07). Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions.
 
 SQS engine live (Constitution v1): 5-factor scoring (correctness 40%, schema 25%, availability 20%, error handling 10%, edge cases 5%), recency-weighted rolling 10-run window, missing-factor re-weighting, circuit breaker score penalties (3 consecutive failures → −30, 5 correctness failures → −20, schema break → −15), trend computation (improving/stable/declining), floor-aware solution SQS (lowest step + 20 cap), min_sqs quality gate on POST /v1/do, platform floor SQS 25. 1215 auto-generated test suites (all 233 capabilities × 5 test types) with tiered scheduling (A: 6h, B: 24h, C: 72h). Public quality endpoint: GET /v1/quality/:slug.
 
 Free-tier: 5 capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) require no auth/signup. IP-based daily rate limit (10/day). Authenticated users calling free-tier capabilities get normal rate limits and no wallet debit.
 
 Stripe is in SANDBOX mode — live key activation pending.
+
+### Adding New Capabilities (MANDATORY PIPELINE)
+
+**NEVER add capabilities by directly editing seed.ts.** The old seed.ts + onboarding hook approach only generates 2 of 5 required test types. All new capabilities MUST go through the manifest-driven pipeline.
+
+#### Required steps for every new capability:
+
+1. **Write the executor** at `apps/api/src/capabilities/{slug}.ts`
+   - Register via `registerCapability(slug, handler)`
+   - Handler returns `{ output, provenance: { source, fetched_at } }`
+   - All external calls must have `AbortSignal.timeout()`
+   - Errors must be structured, never raw HTML or stack traces
+
+2. **Add import** to `apps/api/src/app.ts` in the correct category section
+
+3. **Create onboarding manifest** at `manifests/{slug}.yaml`
+   Required fields:
+   - `slug`, `name`, `description`, `category`, `price_cents`
+   - `data_source`, `data_source_type`, `transparency_tag`, `freshness_category`
+   - `test_fixtures.known_answer` — one real input + expected guaranteed fields
+   - `test_fixtures.health_check_input` — simple input that always works
+   - `output_field_reliability` — every output field marked guaranteed/common/rare
+   - `limitations` — at least 1 (every capability has limitations)
+
+4. **Run the pipeline:** `cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/{slug}.yaml`
+   The pipeline auto-generates all 5 test types:
+   - known_answer (from manifest fixture)
+   - schema_check (from output schema)
+   - negative (empty input → expects structured error)
+   - edge_case (from input schema heuristics)
+   - dependency_health (from health_check_input)
+
+5. **Verify:** `npx tsx scripts/smoke-test.ts --slug {slug}`
+
+#### For backfilling existing capabilities:
+`cd apps/api && npx tsx scripts/onboard.ts --manifest ../../manifests/{slug}.yaml --backfill`
+Skips capability creation, adds only missing test types, updates field reliability + limitations.
+
+#### Field reliability rules:
+- `guaranteed` — always present in successful responses. Safe to assert on.
+- `common` — usually present, may be absent for some inputs. Type-checked only.
+- `rare` — only present for specific inputs. Never asserted on.
+
+Only `guaranteed` fields are used in known_answer test assertions. This prevents the "expected non-null on optional field" problem that broke 8 EU registries.
+
+#### What the pipeline does NOT do (human must provide):
+- The known_answer test input (a real entity you've verified works)
+- Field reliability annotations (which fields are truly guaranteed)
+- Limitations (honest assessment of coverage gaps)
+- The executor code itself
+
+Everything else is auto-generated. This is how the platform scales to third-party providers.
+
+#### Quick reference — manifest template:
+```yaml
+slug: "example-capability"
+name: "Example Capability"
+description: "What it does (50-160 chars for SEO)"
+category: "validation"
+price_cents: 5
+data_source: "Example API"
+data_source_type: "api"  # api | scrape | computed | reference
+transparency_tag: "algorithmic"  # algorithmic | ai_generated | mixed
+freshness_category: "live-fetch"  # live-fetch | reference-data | computed
+
+test_fixtures:
+  known_answer:
+    input:
+      field_name: "real_value"
+    expected_fields:
+      - { field: "output_field", operator: "not_null", reliability: "guaranteed" }
+  health_check_input:
+    field_name: "real_value"
+
+output_field_reliability:
+  output_field: "guaranteed"
+  optional_field: "common"
+  rare_field: "rare"
+
+limitations:
+  - title: "Coverage limitation"
+    text: "Description of the limitation"
+    category: "coverage"
+    severity: "info"
+```
 
 ### Quick Session Checklist
 1. Declare session intent
