@@ -1,0 +1,69 @@
+slug: address-geocode
+name: Address Geocode
+description: >-
+  Convert an address to geographic coordinates (latitude/longitude). Also returns structured
+  address components and bounding box via OpenStreetMap Nominatim.
+category: data-extraction
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: Address or place name to geocode
+output_schema:
+  type: object
+  properties:
+    latitude:
+      type: number
+    longitude:
+      type: number
+    display_name:
+      type: string
+    bounding_box:
+      type: object
+    place_type:
+      type: string
+    importance_score:
+      type: number
+data_source: OpenStreetMap Nominatim
+data_source_type: api
+transparency_tag: external_api
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      address: "Eiffel Tower, Paris"
+    expected_fields:
+      - field: latitude
+        operator: not_null
+        reliability: guaranteed
+      - field: longitude
+        operator: not_null
+        reliability: guaranteed
+      - field: display_name
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    address: "Eiffel Tower, Paris"
+output_field_reliability:
+  latitude: guaranteed
+  longitude: guaranteed
+  display_name: guaranteed
+  bounding_box: common
+  place_type: common
+  importance_score: common
+  input_address: guaranteed
+  found: guaranteed
+limitations:
+  - title: Rate limited to 1 request per second
+    text: Shares Nominatim rate limit with address-validate — max 1 req/sec total
+    category: dependency
+    severity: info
+  - title: Geocoding is approximate for vague queries
+    text: Vague queries (e.g., just a city name) return approximate center coordinates
+    category: accuracy
+    severity: info

@@ -1,0 +1,67 @@
+slug: holiday-calendar
+name: Holiday Calendar
+description: >-
+  Get public holidays for any country and year. Returns holiday names, dates, types
+  (public/bank/optional), and whether they are fixed or variable. Covers 100+ countries.
+category: data-extraction
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - country_code
+  properties:
+    country_code:
+      type: string
+      description: ISO 2-letter country code
+    year:
+      type: integer
+      description: Year (default current year)
+output_schema:
+  type: object
+  properties:
+    country_code:
+      type: string
+    year:
+      type: integer
+    total_holidays:
+      type: integer
+    holidays:
+      type: array
+data_source: Nager.Date API (date.nager.at)
+data_source_type: api
+transparency_tag: external_api
+freshness_category: reference-data
+test_fixtures:
+  known_answer:
+    input:
+      country_code: "SE"
+      year: 2025
+    expected_fields:
+      - field: holidays
+        operator: not_null
+        reliability: guaranteed
+      - field: total_holidays
+        operator: gt
+        value: 5
+        reliability: guaranteed
+      - field: country_code
+        operator: equals
+        value: "SE"
+        reliability: guaranteed
+  health_check_input:
+    country_code: "SE"
+output_field_reliability:
+  holidays: guaranteed
+  total_holidays: guaranteed
+  country_code: guaranteed
+  year: guaranteed
+limitations:
+  - title: Coverage varies by country
+    text: Nager.Date covers 100+ countries but some smaller nations may not be supported
+    category: coverage
+    severity: info
+  - title: Regional/local holidays may not be included
+    text: Only national/federal holidays included — regional and local holidays may be missing
+    category: coverage
+    severity: info

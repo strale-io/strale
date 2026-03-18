@@ -345,13 +345,113 @@ function buildTestSuites(manifest: Manifest) {
 
 // ─── Main ───────────────────────────────────────────────────────────────────
 
+// ─── Backfill existing capability ────────────────────────────────────────────
+
+async function backfill(manifest: Manifest, dryRun: boolean): Promise<void> {
+  const db = getDb();
+
+  // Verify the capability exists
+  const [existing] = await db
+    .select({ slug: capabilities.slug, id: capabilities.id })
+    .from(capabilities)
+    .where(eq(capabilities.slug, manifest.slug))
+    .limit(1);
+
+  if (!existing) {
+    console.error(`Capability '${manifest.slug}' not found. Use onboard (without --backfill) to create it.`);
+    process.exit(1);
+  }
+
+  // Check which test types already exist
+  const existingTests = await db
+    .select({ testType: testSuites.testType })
+    .from(testSuites)
+    .where(eq(testSuites.capabilitySlug, manifest.slug));
+
+  const existingTypes = new Set(existingTests.map((t) => t.testType));
+  const allSuites = buildTestSuites(manifest);
+  const missing = allSuites.filter((s) => !existingTypes.has(s.testType));
+
+  console.log(`\n─── Backfill: ${manifest.slug} ────────────────────────────────`);
+  console.log(`  Existing test types: ${[...existingTypes].join(", ") || "(none)"}`);
+  console.log(`  Missing test types:  ${missing.map((s) => s.testType).join(", ") || "(none)"}`);
+
+  // Field reliability
+  const fields = Object.entries(manifest.output_field_reliability);
+  console.log(`  Field reliability:   ${fields.length} fields`);
+
+  // Limitations
+  const limCount = manifest.limitations?.length ?? 0;
+  console.log(`  Limitations:         ${limCount}`);
+
+  if (missing.length === 0 && fields.length === 0) {
+    console.log("  Nothing to backfill.");
+    return;
+  }
+
+  if (dryRun) {
+    if (missing.length > 0) {
+      console.log("\n  Would add test suites:");
+      for (const s of missing) console.log(`    + ${s.testType}: ${s.testName}`);
+    }
+    console.log("\n  [DRY RUN] No changes made.");
+    return;
+  }
+
+  // Insert missing test suites
+  for (const ts of missing) {
+    await db.insert(testSuites).values(ts);
+    console.log(`  + Added ${ts.testType}: ${ts.testName}`);
+  }
+
+  // Update field reliability on the capability record
+  if (fields.length > 0) {
+    await db
+      .update(capabilities)
+      .set({
+        outputFieldReliability: manifest.output_field_reliability,
+        updatedAt: new Date(),
+      })
+      .where(eq(capabilities.slug, manifest.slug));
+    console.log(`  ✓ Updated output_field_reliability (${fields.length} fields)`);
+  }
+
+  // Insert limitations if none exist
+  const existingLimitations = await db
+    .select({ id: capabilityLimitations.id })
+    .from(capabilityLimitations)
+    .where(eq(capabilityLimitations.capabilitySlug, manifest.slug))
+    .limit(1);
+
+  if (existingLimitations.length === 0 && manifest.limitations?.length > 0) {
+    for (let i = 0; i < manifest.limitations.length; i++) {
+      const lim = manifest.limitations[i];
+      await db.insert(capabilityLimitations).values({
+        capabilitySlug: manifest.slug,
+        title: lim.title ?? null,
+        limitationText: lim.text,
+        category: lim.category,
+        severity: lim.severity ?? "info",
+        workaround: lim.workaround ?? null,
+        sortOrder: i,
+      });
+    }
+    console.log(`  ✓ Added ${manifest.limitations.length} limitation(s)`);
+  }
+
+  console.log(`  ✅ Backfill complete for '${manifest.slug}'`);
+}
+
+// ─── Main ───────────────────────────────────────────────────────────────────
+
 async function main() {
   const args = process.argv.slice(2);
   const manifestIdx = args.indexOf("--manifest");
   const dryRun = args.includes("--dry-run");
+  const isBackfill = args.includes("--backfill");
 
   if (manifestIdx === -1 || !args[manifestIdx + 1]) {
-    console.error("Usage: npx tsx scripts/onboard.ts --manifest <path> [--dry-run]");
+    console.error("Usage: npx tsx scripts/onboard.ts --manifest <path> [--dry-run] [--backfill]");
     process.exit(1);
   }
 
@@ -385,7 +485,11 @@ async function main() {
   }
   console.log("Manifest validation: all checks passed");
 
-  await onboard(manifest, dryRun);
+  if (isBackfill) {
+    await backfill(manifest, dryRun);
+  } else {
+    await onboard(manifest, dryRun);
+  }
 }
 
 main()

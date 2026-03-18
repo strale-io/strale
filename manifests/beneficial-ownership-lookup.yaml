@@ -1,0 +1,86 @@
+slug: beneficial-ownership-lookup
+name: Beneficial Ownership Lookup
+description: >-
+  Look up beneficial ownership (UBO) information for a company. Returns individuals who
+  ultimately own or control the entity, their ownership percentage, and the ownership chain.
+  Uses OpenOwnership and Companies House for UK companies.
+category: compliance
+price_cents: 25
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - company_name
+  properties:
+    company_name:
+      type: string
+      description: Company name
+    jurisdiction:
+      type: string
+      description: Country code (ISO 2-letter) for narrowing results (optional)
+    company_number:
+      type: string
+      description: Company registration number if known (optional)
+output_schema:
+  type: object
+  properties:
+    query:
+      type: string
+    beneficial_owners:
+      type: array
+    total_owners:
+      type: integer
+    company_match:
+      type: object
+    data_source:
+      type: string
+    lookup_date:
+      type: string
+data_source: OpenOwnership Register + Companies House (UK)
+data_source_type: api
+transparency_tag: external_api
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      company_name: "Tesco PLC"
+      jurisdiction: "GB"
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: beneficial_owners
+        operator: not_null
+        reliability: guaranteed
+      - field: data_source
+        operator: not_null
+        reliability: guaranteed
+      - field: lookup_date
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    company_name: "Tesco PLC"
+    jurisdiction: "GB"
+output_field_reliability:
+  query: guaranteed
+  beneficial_owners: guaranteed
+  total_owners: guaranteed
+  company_match: common
+  data_source: guaranteed
+  lookup_date: guaranteed
+  jurisdiction: common
+  company_number: common
+  coverage_note: common
+limitations:
+  - title: Coverage varies significantly by jurisdiction
+    text: Coverage varies significantly by jurisdiction — UK and EU have the best data; many countries have no public UBO register
+    category: coverage
+    severity: warning
+  - title: Data may lag real ownership changes
+    text: Data may lag real ownership changes by months
+    category: freshness
+    severity: info
+  - title: Complex ownership chains may not be fully resolved
+    text: Complex ownership chains through multiple jurisdictions may not be fully resolved
+    category: accuracy
+    severity: info

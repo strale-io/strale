@@ -1,0 +1,73 @@
+slug: language-detect
+name: Language Detect
+description: >-
+  Detect the language of input text. Returns top language with confidence score, plus alternative
+  possibilities. Supports 170+ languages via trigram analysis.
+category: data-processing
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - text
+  properties:
+    text:
+      type: string
+      description: Text to detect language of
+    min_length:
+      type: integer
+      description: Minimum text length for reliable detection (default 10)
+output_schema:
+  type: object
+  properties:
+    language_code:
+      type: string
+    language_name:
+      type: string
+    confidence:
+      type: number
+    alternatives:
+      type: array
+    script_detected:
+      type: string
+    text_length:
+      type: integer
+data_source: franc (trigram language detection)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      text: "Dies ist ein deutscher Satz zum Testen der Spracherkennung."
+    expected_fields:
+      - field: language_code
+        operator: equals
+        value: "deu"
+        reliability: guaranteed
+      - field: language_name
+        operator: not_null
+        reliability: guaranteed
+      - field: confidence
+        operator: gt
+        value: 0.5
+        reliability: guaranteed
+  health_check_input:
+    text: "This is an English sentence for testing language detection."
+output_field_reliability:
+  language_code: guaranteed
+  language_name: guaranteed
+  confidence: guaranteed
+  alternatives: common
+  script_detected: guaranteed
+  text_length: guaranteed
+limitations:
+  - title: Short texts unreliable
+    text: Texts shorter than ~20 characters produce unreliable results — trigram analysis needs sufficient sample
+    category: accuracy
+    severity: info
+    workaround: Provide at least 30+ characters for reliable detection
+  - title: Similar languages may be confused
+    text: Closely related languages (e.g., Norwegian/Danish/Swedish, Serbian/Croatian) may be confused
+    category: accuracy
+    severity: info

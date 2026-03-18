@@ -1,0 +1,71 @@
+slug: timezone-lookup
+name: Timezone Lookup
+description: >-
+  Get timezone information for a country code, city name, or coordinates. Returns IANA timezone,
+  current UTC offset, DST status, and current local time.
+category: data-extraction
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Country code, city name, or coordinates
+output_schema:
+  type: object
+  properties:
+    timezone:
+      type: string
+    utc_offset:
+      type: string
+    utc_offset_hours:
+      type: number
+    is_dst:
+      type: boolean
+    current_local_time:
+      type: string
+    abbreviation:
+      type: string
+data_source: IANA timezone database + Intl API
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      query: "SE"
+    expected_fields:
+      - field: timezone
+        operator: equals
+        value: "Europe/Stockholm"
+        reliability: guaranteed
+      - field: utc_offset
+        operator: not_null
+        reliability: guaranteed
+      - field: current_local_time
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    query: "SE"
+output_field_reliability:
+  query: guaranteed
+  timezone: guaranteed
+  utc_offset: guaranteed
+  utc_offset_hours: guaranteed
+  is_dst: guaranteed
+  current_local_time: guaranteed
+  abbreviation: common
+  country_code: common
+limitations:
+  - title: City lookup limited to major cities
+    text: City name lookup covers ~100 major world cities — smaller cities may not be recognized
+    category: coverage
+    severity: info
+  - title: Countries with multiple timezones return primary only
+    text: Multi-timezone countries (US, Russia, Australia) return the primary/capital timezone only
+    category: coverage
+    severity: info
+    workaround: Use a specific city name for other timezones (e.g., "Los Angeles" instead of "US")

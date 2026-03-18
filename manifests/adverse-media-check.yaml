@@ -1,0 +1,83 @@
+slug: adverse-media-check
+name: Adverse Media Check
+description: >-
+  Screen a person or company for negative news coverage. Searches recent media for mentions of
+  fraud, money laundering, sanctions violations, lawsuits, regulatory actions, and other risk
+  indicators. Returns categorized findings with sources.
+category: compliance
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+      description: Person or company name to screen
+    context:
+      type: string
+      description: Additional context (e.g., country, industry) to improve accuracy (optional)
+output_schema:
+  type: object
+  properties:
+    query:
+      type: string
+    risk_level:
+      type: string
+    total_findings:
+      type: integer
+    findings:
+      type: array
+    categories_found:
+      type: array
+    screened_at:
+      type: string
+data_source: Google (Serper.dev) + Claude Haiku classification
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      name: "Wirecard AG"
+    expected_fields:
+      - field: risk_level
+        operator: not_null
+        reliability: guaranteed
+      - field: findings
+        operator: not_null
+        reliability: guaranteed
+      - field: total_findings
+        operator: not_null
+        reliability: guaranteed
+      - field: screened_at
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    name: "Wirecard AG"
+output_field_reliability:
+  query: guaranteed
+  risk_level: guaranteed
+  total_findings: guaranteed
+  findings: guaranteed
+  categories_found: common
+  screened_at: guaranteed
+  context: common
+limitations:
+  - title: AI-classified results may miss subtle risk signals
+    text: AI-classified results — may miss subtle risk signals or produce false positives
+    category: accuracy
+    severity: warning
+  - title: Limited to publicly indexed web content
+    text: Limited to publicly indexed web content — paywalled news sources not covered
+    category: coverage
+    severity: info
+  - title: English-language bias
+    text: English-language bias — non-English media coverage may be underrepresented
+    category: coverage
+    severity: info
+  - title: Recency depends on search index freshness
+    text: Recency depends on search index freshness (typically 24-48h delay)
+    category: freshness
+    severity: info

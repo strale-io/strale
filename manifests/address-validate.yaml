@@ -1,0 +1,77 @@
+slug: address-validate
+name: Address Validate
+description: >-
+  Validate and standardize a postal address. Returns structured components, validity confidence,
+  and suggested corrections. Works for 200+ countries via OpenStreetMap Nominatim.
+category: validation
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: Full address as free text
+    country_code:
+      type: string
+      description: ISO 2-letter country code hint (optional)
+output_schema:
+  type: object
+  properties:
+    valid:
+      type: boolean
+    confidence:
+      type: number
+    formatted_address:
+      type: string
+    components:
+      type: object
+    latitude:
+      type: number
+    longitude:
+      type: number
+    match_type:
+      type: string
+data_source: OpenStreetMap Nominatim
+data_source_type: api
+transparency_tag: external_api
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      address: "10 Downing Street, London, UK"
+    expected_fields:
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: formatted_address
+        operator: not_null
+        reliability: guaranteed
+      - field: latitude
+        operator: not_null
+        reliability: guaranteed
+      - field: longitude
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    address: "10 Downing Street, London, UK"
+output_field_reliability:
+  valid: guaranteed
+  confidence: guaranteed
+  formatted_address: guaranteed
+  components: common
+  latitude: guaranteed
+  longitude: guaranteed
+  match_type: common
+  input_address: guaranteed
+limitations:
+  - title: Rate limited to 1 request per second
+    text: Nominatim rate limit of 1 request per second — shared across address-validate and address-geocode
+    category: dependency
+    severity: info
+  - title: Address matching is approximate
+    text: Nominatim uses best-match geocoding — results may not always reflect the exact address
+    category: accuracy
+    severity: info

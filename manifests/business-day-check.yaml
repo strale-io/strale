@@ -1,0 +1,67 @@
+slug: business-day-check
+name: Business Day Check
+description: >-
+  Check if a specific date is a business day in a given country. Accounts for weekends and
+  public holidays. Also returns the next business day if the given date is not one.
+category: validation
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - date
+    - country_code
+  properties:
+    date:
+      type: string
+      description: Date to check (YYYY-MM-DD)
+    country_code:
+      type: string
+      description: ISO 2-letter country code
+output_schema:
+  type: object
+  properties:
+    is_business_day:
+      type: boolean
+    reason:
+      type: string
+    next_business_day:
+      type: string
+    previous_business_day:
+      type: string
+data_source: Strale calendar engine + Nager.Date API
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: reference-data
+test_fixtures:
+  known_answer:
+    input:
+      date: "2025-12-25"
+      country_code: "SE"
+    expected_fields:
+      - field: is_business_day
+        operator: equals
+        value: false
+        reliability: guaranteed
+      - field: next_business_day
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    date: "2025-12-25"
+    country_code: "SE"
+output_field_reliability:
+  date: guaranteed
+  country_code: guaranteed
+  is_business_day: guaranteed
+  reason: common
+  next_business_day: guaranteed
+  previous_business_day: guaranteed
+limitations:
+  - title: Weekend definition varies by country
+    text: Uses standard Sat-Sun weekends for most countries; Fri-Sat for Middle Eastern countries. Some countries with mixed weekends may not be fully accurate.
+    category: accuracy
+    severity: info
+  - title: Holiday data from Nager.Date
+    text: Depends on Nager.Date API for holiday data — if the API is unreachable, only weekends are checked
+    category: dependency
+    severity: info

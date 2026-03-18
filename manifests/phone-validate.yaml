@@ -1,0 +1,79 @@
+slug: phone-validate
+name: Phone Validate
+description: >-
+  Validate a phone number and classify its type. Returns E.164 format, country, carrier name,
+  and whether it is mobile, landline, or VOIP. Covers 200+ countries.
+category: validation
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - phone_number
+  properties:
+    phone_number:
+      type: string
+      description: Phone number in any format
+    country_code:
+      type: string
+      description: ISO 2-letter country code hint (optional)
+output_schema:
+  type: object
+  properties:
+    valid:
+      type: boolean
+    e164:
+      type: string
+    national_format:
+      type: string
+    international_format:
+      type: string
+    country_code:
+      type: string
+    phone_type:
+      type: string
+    is_possible:
+      type: boolean
+data_source: libphonenumber-js (Google libphonenumber port)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      phone_number: "+46701234567"
+    expected_fields:
+      - field: valid
+        operator: equals
+        value: true
+        reliability: guaranteed
+      - field: e164
+        operator: contains
+        value: "+467"
+        reliability: guaranteed
+      - field: country_code
+        operator: equals
+        value: "SE"
+        reliability: guaranteed
+  health_check_input:
+    phone_number: "+46701234567"
+output_field_reliability:
+  valid: guaranteed
+  e164: guaranteed
+  national_format: guaranteed
+  international_format: guaranteed
+  country_code: guaranteed
+  country_name: guaranteed
+  phone_type: guaranteed
+  carrier: common
+  is_possible: guaranteed
+  input: guaranteed
+limitations:
+  - title: Carrier detection not available
+    text: Carrier/operator name detection requires a paid service — returns null
+    category: coverage
+    severity: info
+  - title: Country code hint needed for local numbers
+    text: Numbers without international prefix need a country_code hint for accurate parsing
+    category: accuracy
+    severity: info

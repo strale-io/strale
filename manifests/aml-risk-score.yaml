@@ -1,0 +1,96 @@
+slug: aml-risk-score
+name: AML Risk Score
+description: >-
+  Calculate a composite Anti-Money Laundering (AML) risk score for a person or company.
+  Aggregates sanctions screening, PEP status, and jurisdiction risk into a single 0-100
+  risk score with risk level classification.
+category: compliance
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - entity_name
+    - country_code
+  properties:
+    entity_name:
+      type: string
+      description: Name of person or company
+    entity_type:
+      type: string
+      description: "Type of entity: person or company (default: person)"
+    country_code:
+      type: string
+      description: ISO 2-letter country code
+    sanctions_match:
+      type: boolean
+      description: Whether entity appears on sanctions lists
+    pep_match:
+      type: boolean
+      description: Whether entity is a Politically Exposed Person
+    adverse_media_match:
+      type: boolean
+      description: Whether adverse media was found
+output_schema:
+  type: object
+  properties:
+    entity_name:
+      type: string
+    risk_score:
+      type: integer
+    risk_level:
+      type: string
+    risk_factors:
+      type: array
+    jurisdiction_risk:
+      type: string
+    recommendation:
+      type: string
+data_source: Strale AML scoring engine (FATF grey/black lists, EU high-risk list)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: reference-data
+test_fixtures:
+  known_answer:
+    input:
+      entity_name: "Test Company"
+      country_code: "SE"
+      sanctions_match: false
+      pep_match: false
+    expected_fields:
+      - field: risk_score
+        operator: not_null
+        reliability: guaranteed
+      - field: risk_level
+        operator: equals
+        value: "low"
+        reliability: guaranteed
+      - field: risk_factors
+        operator: not_null
+        reliability: guaranteed
+      - field: recommendation
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    entity_name: "Test Company"
+    country_code: "SE"
+output_field_reliability:
+  entity_name: guaranteed
+  entity_type: guaranteed
+  country_code: guaranteed
+  risk_score: guaranteed
+  risk_level: guaranteed
+  risk_factors: guaranteed
+  jurisdiction_risk: guaranteed
+  recommendation: guaranteed
+  inputs_received: guaranteed
+  scored_at: guaranteed
+limitations:
+  - title: Scoring engine only — does not fetch data
+    text: This is a scoring engine, not a data fetcher. Feed it results from sanctions-check, pep-check, and adverse-media-check for a composite score.
+    category: coverage
+    severity: info
+  - title: FATF lists updated periodically
+    text: FATF grey/black lists and EU high-risk lists are updated periodically — may not reflect latest changes immediately
+    category: freshness
+    severity: info

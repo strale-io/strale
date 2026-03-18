@@ -1,0 +1,76 @@
+slug: insolvency-check
+name: Insolvency Check
+description: >-
+  Check if a company has any insolvency, bankruptcy, or winding-up proceedings. Currently
+  covers UK (via Companies House). Returns status and key dates.
+category: compliance
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - company_name
+    - country_code
+  properties:
+    company_name:
+      type: string
+      description: Company name
+    country_code:
+      type: string
+      description: Country code (ISO 2-letter)
+    company_number:
+      type: string
+      description: Company registration number if known (optional)
+output_schema:
+  type: object
+  properties:
+    has_insolvency_proceedings:
+      type: boolean
+    proceedings:
+      type: array
+    supported_country:
+      type: boolean
+    data_source:
+      type: string
+data_source: Companies House (UK)
+data_source_type: api
+transparency_tag: external_api
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      company_name: "Tesco PLC"
+      country_code: "GB"
+      company_number: "00445790"
+    expected_fields:
+      - field: has_insolvency_proceedings
+        operator: not_null
+        reliability: guaranteed
+      - field: supported_country
+        operator: equals
+        value: true
+        reliability: guaranteed
+      - field: data_source
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    company_name: "Tesco PLC"
+    country_code: "GB"
+    company_number: "00445790"
+output_field_reliability:
+  query: guaranteed
+  has_insolvency_proceedings: guaranteed
+  proceedings: guaranteed
+  supported_country: guaranteed
+  data_source: guaranteed
+  company_number: common
+limitations:
+  - title: Currently UK only
+    text: Insolvency checks currently only available for UK companies via Companies House
+    category: coverage
+    severity: warning
+    workaround: For other jurisdictions, use the relevant country's company registry data capability
+  - title: Requires Companies House API key
+    text: UK insolvency checks require COMPANIES_HOUSE_API_KEY environment variable
+    category: dependency
+    severity: info

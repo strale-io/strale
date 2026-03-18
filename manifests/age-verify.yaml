@@ -1,0 +1,78 @@
+slug: age-verify
+name: Age Verify
+description: >-
+  Verify if a person meets a minimum age requirement based on their date of birth. Returns exact
+  age, whether the threshold is met, and days until the threshold (if not met). Accounts for
+  leap years.
+category: validation
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - date_of_birth
+  properties:
+    date_of_birth:
+      type: string
+      description: Date of birth (YYYY-MM-DD)
+    minimum_age:
+      type: integer
+      description: Minimum age to verify (default 18)
+    reference_date:
+      type: string
+      description: Date to check against (default today)
+output_schema:
+  type: object
+  properties:
+    age_years:
+      type: integer
+    age_months:
+      type: integer
+    age_days:
+      type: integer
+    meets_minimum:
+      type: boolean
+    minimum_age_checked:
+      type: integer
+    days_until_minimum:
+      type: integer
+    date_of_birth_valid:
+      type: boolean
+data_source: Strale age calculator (pure date math)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      date_of_birth: "1990-01-15"
+      minimum_age: 18
+    expected_fields:
+      - field: meets_minimum
+        operator: equals
+        value: true
+        reliability: guaranteed
+      - field: age_years
+        operator: gt
+        value: 30
+        reliability: guaranteed
+      - field: date_of_birth_valid
+        operator: equals
+        value: true
+        reliability: guaranteed
+  health_check_input:
+    date_of_birth: "1990-01-15"
+output_field_reliability:
+  age_years: guaranteed
+  age_months: guaranteed
+  age_days: guaranteed
+  meets_minimum: guaranteed
+  minimum_age_checked: guaranteed
+  days_until_minimum: common
+  date_of_birth_valid: guaranteed
+  reference_date: guaranteed
+limitations:
+  - title: Does not verify identity
+    text: Verifies age from a provided date of birth — does not verify the person's identity or that the DOB is authentic
+    category: coverage
+    severity: info

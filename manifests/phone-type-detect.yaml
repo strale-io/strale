@@ -1,0 +1,71 @@
+slug: phone-type-detect
+name: Phone Type Detect
+description: >-
+  Detect whether a phone number is mobile, landline, VOIP, toll-free, or premium rate.
+  Essential for SMS delivery verification and communication routing.
+category: validation
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - phone_number
+  properties:
+    phone_number:
+      type: string
+      description: Phone number in any format
+    country_code:
+      type: string
+      description: ISO 2-letter country code hint (optional)
+output_schema:
+  type: object
+  properties:
+    phone_type:
+      type: string
+    is_mobile:
+      type: boolean
+    is_landline:
+      type: boolean
+    is_voip:
+      type: boolean
+    sms_capable:
+      type: boolean
+    country_code:
+      type: string
+data_source: libphonenumber-js (Google libphonenumber port)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      phone_number: "+46701234567"
+    expected_fields:
+      - field: phone_type
+        operator: not_null
+        reliability: guaranteed
+      - field: is_mobile
+        operator: equals
+        value: true
+        reliability: guaranteed
+      - field: sms_capable
+        operator: equals
+        value: true
+        reliability: guaranteed
+  health_check_input:
+    phone_number: "+46701234567"
+output_field_reliability:
+  phone_type: guaranteed
+  is_mobile: guaranteed
+  is_landline: guaranteed
+  is_voip: guaranteed
+  sms_capable: guaranteed
+  is_toll_free: guaranteed
+  is_premium: guaranteed
+  country_code: guaranteed
+  input: guaranteed
+limitations:
+  - title: Type detection depends on number range allocation
+    text: Phone type is determined by number range allocation data — ported numbers may show the original type
+    category: accuracy
+    severity: info
