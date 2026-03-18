@@ -193,7 +193,7 @@ export async function computeQualityProfile(slug: string): Promise<QPResult> {
       AND (
         tr.passed = true
         OR tr.failure_classification IS NULL
-        OR tr.failure_classification IN ('upstream_degraded', 'upstream_changed', 'capability_bug')
+        OR tr.failure_classification NOT IN ('test_infrastructure', 'stale_input')
       )
   `);
 
