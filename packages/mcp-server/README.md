@@ -1,10 +1,22 @@
 # strale-mcp
 
-MCP server for [Strale](https://strale.io) — gives AI agents access to 225+ capabilities via 6 meta-tools. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
+MCP server for [Strale](https://strale.io) — gives AI agents access to 229+ capabilities via 8 meta-tools. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
+
+## Installation
+
+```bash
+npx strale-mcp
+```
+
+Or install globally:
+
+```bash
+npm install -g strale-mcp
+```
 
 ## Architecture
 
-**Meta-tools only**: Instead of registering 225+ individual tools (which exceeds limits in ChatGPT, Cursor, and Copilot), the server exposes 6 meta-tools. Agents discover capabilities via `strale_search`, then execute via `strale_execute`.
+**Meta-tools only**: Instead of registering 229+ individual tools (which exceeds limits in ChatGPT, Cursor, and Copilot), the server exposes 8 meta-tools. Agents discover capabilities via `strale_search`, then execute via `strale_execute`.
 
 At startup, the server fetches the capability catalog, solutions, and trust data from the Strale API and caches them for search.
 
@@ -107,17 +119,18 @@ Run the MCP server locally on your machine:
 | `STRALE_BASE_URL` | No | `https://api.strale.io` | API base URL |
 | `STRALE_MAX_PRICE_CENTS` | No | `200` | Default max price per execution (€2.00) |
 
-## Available Tools (7)
+## Available Tools (8)
 
 | Tool | Auth Required | Description |
 |------|:---:|-------------|
-| `strale_ping` | No | Health check. Verifies the connection is working. Returns server status, tool count, and capability count. |
-| `strale_search` | No | Search 225+ capabilities and 20+ solutions by keyword or category. Returns matches with price, input fields, SQS score, quality grade, reliability grade, and execution guidance. |
-| `strale_execute` | Yes | Execute any capability by slug. Pass the slug and inputs from search results. Returns output data, cost, latency, provenance, and dual-profile quality assessment. |
-| `strale_methodology` | No | Get Strale's quality methodology — dual-profile scoring (QP + RP), SQS matrix, execution guidance, and test infrastructure. |
-| `strale_trust_profile` | No | Get the full trust profile for any capability or solution — Quality Profile, Reliability Profile, SQS score, execution guidance, limitations, and badge status. |
-| `strale_balance` | Yes | Check your wallet balance in EUR. |
-| `strale_transaction` | Yes | Retrieve a past execution record by transaction ID. Returns the full audit trail: inputs, outputs, latency, price, provenance, and failure categorization. |
+| `strale_ping` | No | Health check. Returns server status, tool count, and capability count. |
+| `strale_getting_started` | No | Onboarding guide. Returns free capabilities available without an API key, usage steps, and signup link. |
+| `strale_search` | No | Search 229+ capabilities and 20+ solutions by keyword or category. Returns matches with price, input fields, SQS score, quality grade, reliability grade, and execution guidance. |
+| `strale_execute` | No* | Execute any capability by slug. Returns output data, cost, latency, provenance, and dual-profile quality assessment. *Free-tier capabilities work without an API key. |
+| `strale_methodology` | No | Returns Strale's quality methodology — dual-profile scoring (QP + RP), SQS matrix, execution guidance, and test infrastructure. |
+| `strale_trust_profile` | No | Returns the full trust profile for any capability or solution — Quality Profile, Reliability Profile, SQS score, execution guidance, limitations, and badge status. |
+| `strale_balance` | Yes | Returns your wallet balance in EUR cents and EUR. |
+| `strale_transaction` | No* | Returns a past execution record by transaction ID: inputs, outputs, latency, price, provenance, and failure categorization. *Free-tier transactions accessible by ID only. |
 
 ## Quality Scoring
 
@@ -276,9 +289,25 @@ npm run dev --workspace=packages/mcp-server
 ## How it works
 
 1. Server starts and fetches capabilities, solutions, and trust data from the Strale API
-2. Six meta-tools are registered: ping, search, execute, methodology, trust_profile, balance
+2. Eight meta-tools are registered: ping, getting_started, search, execute, methodology, trust_profile, balance, transaction
 3. Agents use `strale_search` to discover capabilities with input requirements and quality scores
 4. `strale_execute` sends `POST /v1/do` with `capability_slug` and `inputs`
 5. The response (output, price, latency, provenance, quality) is returned as structured text
 6. Async capabilities (>10s) return a transaction ID for polling
 7. Errors (insufficient balance, degraded capability, etc.) are returned with helpful messages
+
+## API Reference
+
+Full API documentation: [strale.dev/docs](https://strale.dev/docs)
+
+Quality methodology: [strale.dev/trust/methodology](https://strale.dev/trust/methodology)
+
+## Contributing
+
+Issues and pull requests are welcome. Please open an issue first to discuss significant changes.
+
+Report bugs or request capabilities at: [github.com/strale-io/strale/issues](https://github.com/strale-io/strale/issues)
+
+## License
+
+MIT — see [LICENSE](../../LICENSE)

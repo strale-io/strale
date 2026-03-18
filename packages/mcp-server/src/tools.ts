@@ -462,7 +462,7 @@ export function registerStraleTools(
     "strale_ping",
     {
       description:
-        "Health check. Returns server status, tool count, and response time. Use this to verify the connection is working before making other calls.",
+        "Health check. Returns server status, tool count, capability count, and response time. Verifies the connection is working.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -473,7 +473,7 @@ export function registerStraleTools(
             text: JSON.stringify({
               status: "ok",
               server: "strale-mcp",
-              version: "0.1.0",
+              version: "0.1.4",
               tools_registered: 8, // UPDATE if tools are added/removed
               capabilities_available: capabilities.length,
               solutions_available: solutions.length,
@@ -522,7 +522,7 @@ export function registerStraleTools(
     "strale_execute",
     {
       description:
-        "Execute any Strale capability by slug. Returns the full result including output data, execution cost, latency, data provenance, and dual-profile quality assessment (SQS score, Quality grade, Reliability grade, execution guidance with retry strategy). Free capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) work without an API key. For paid capabilities, provide an API key via Authorization header. Use strale_search to find capabilities and their required inputs.",
+        "Executes any Strale capability by slug. Returns output data, execution cost, latency, data provenance, and dual-profile quality assessment (SQS score, Quality grade, Reliability grade, execution guidance with retry strategy). Free capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) work without an API key. Paid capabilities require an API key via Authorization header. Capability slugs and required inputs are returned by strale_search.",
       inputSchema: z.object({
         slug: z
           .string()
@@ -557,7 +557,7 @@ export function registerStraleTools(
     "strale_search",
     {
       description:
-        "Search Strale's catalog of 229 capabilities and 20 solutions across categories: validation, data-extraction, finance, legal, compliance, logistics, recruiting, e-commerce, marketing, developer-tools, competitive-intelligence, and more. Returns matches with SQS confidence score (0-100), Quality grade (code quality, A-F), Reliability grade (operational dependability, A-F), usable flag, execution strategy, trend, price, and required input fields. Use strale_trust_profile for full quality breakdown and execution guidance.",
+        "Searches Strale's catalog of 229 capabilities and 20 solutions across categories: validation, data-extraction, finance, legal, compliance, logistics, recruiting, e-commerce, marketing, developer-tools, competitive-intelligence, and more. Returns matches with SQS confidence score (0-100), Quality grade (code quality, A-F), Reliability grade (operational dependability, A-F), usable flag, execution strategy, trend, price, and required input fields. Full quality breakdown available via strale_trust_profile.",
       inputSchema: z.object({
         query: z
           .string()
@@ -708,7 +708,7 @@ export function registerStraleTools(
     "strale_balance",
     {
       description:
-        "Check your Strale wallet balance. Shows current balance in EUR cents and EUR. Requires API key.",
+        "Returns the current Strale wallet balance in EUR cents and EUR. Requires an API key.",
       inputSchema: z.object({}),
     },
     async () => {
