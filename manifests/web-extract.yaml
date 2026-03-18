@@ -1,0 +1,84 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: web-extract
+name: Web Page Data Extraction
+description: >-
+  Extract structured data from any web page with full JavaScript rendering. Handles SPAs, dynamic content, and pages
+  that require JS to load.
+category: data-extraction
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: URL to extract data from
+    extract:
+      type: string
+      description: What data to extract (natural language)
+output_schema:
+  type: object
+  example:
+    data:
+      url: https://example.com
+      title: Example Domain
+      metadata:
+        page_type: informational
+      main_content:
+        links:
+          - url: null
+            text: Learn more
+        headings:
+          - Example Domain
+          - Example Domain
+        body_text: This domain is for use in documentation examples without needing permission. Avoid use in operations.
+    page_title: Example Domain
+    source_url: https://example.com
+  properties:
+    data:
+      type: object
+    page_title:
+      type: string
+data_source: Headless browser rendering via Browserless.io (JavaScript-rendered content)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://example.com
+    expected_fields:
+      - field: data
+        operator: not_null
+        reliability: guaranteed
+      - field: data
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: page_title
+        operator: not_null
+        reliability: guaranteed
+      - field: page_title
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    url: https://example.com
+output_field_reliability:
+  data: guaranteed
+  page_title: guaranteed
+limitations:
+  - title: Pages requiring login, CAPTCHA, or multi-step navigation cannot be accessed via headless browser
+    text: Renders pages via headless browser — pages requiring login, CAPTCHA, or multi-step navigation cannot be accessed
+    category: coverage
+    severity: info
+    workaround: For authenticated content, pre-fetch the HTML and pass it directly as input instead of a URL
+  - title: AI extraction may lose structural context in complex data tables or deeply nested page layouts
+    text: AI extraction interprets page content — complex data tables or deeply nested layouts may lose structural context
+    category: accuracy
+    severity: info
+    workaround: Use structured-scrape with CSS selectors for precise extraction when you know the page structure

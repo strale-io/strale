@@ -1,0 +1,69 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: salary-benchmark
+name: Salary Benchmark
+description: Get salary benchmarks for a job title. Returns median, 25th/75th percentile, comparable titles.
+category: data-extraction
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - job_title
+  properties:
+    city:
+      type: string
+    job_title:
+      type: string
+    country_code:
+      type: string
+    experience_level:
+      type: string
+output_schema:
+  type: object
+  example:
+    p25: null
+    p75: null
+    source: Glassdoor
+    currency: null
+    location: null
+    job_title: null
+    sample_size: null
+    median_salary: null
+    comparable_titles: []
+  properties:
+    p25:
+      type: number
+    p75:
+      type: number
+    currency:
+      type: string
+    median_salary:
+      type: number
+data_source: Headless browser (salary comparison aggregators)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      city: San Francisco
+      job_title: Software Engineer
+    expected_fields: []
+  health_check_input:
+    city: San Francisco
+    job_title: Software Engineer
+output_field_reliability:
+  p25: guaranteed
+  p75: guaranteed
+  currency: guaranteed
+  median_salary: guaranteed
+limitations:
+  - title: Salary data from public sources tends to skew toward larger companies and tech-heavy markets
+    text: Salary data scraped from public sources — samples may skew toward larger companies and tech-heavy markets
+    category: accuracy
+    severity: info
+    workaround: >-
+      Use as a directional benchmark and adjust for company size, location, and industry using local compensation
+      surveys

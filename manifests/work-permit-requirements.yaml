@@ -1,0 +1,105 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: work-permit-requirements
+name: Work Permit Requirements
+description: Check work permit requirements by nationality and destination. Covers EU free movement, Schengen, Nordic rules.
+category: data-extraction
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - nationality
+    - destination
+  properties:
+    purpose:
+      type: string
+    destination:
+      type: string
+      description: Country code
+    nationality:
+      type: string
+      description: Country code
+output_schema:
+  type: object
+  example:
+    notes: []
+    purpose: work
+    eu_citizen: false
+    source_url: null
+    destination: TEST_VALUE
+    nationality: TEST_VALUE
+    permit_type: none
+    free_movement: true
+    max_stay_days: null
+    visa_required: false
+    destination_name: TEST_VALUE
+    nationality_name: TEST_VALUE
+    requirements_summary: TEST_VALUE citizens have the right to work in their own country.
+    eu_blue_card_eligible: false
+  properties:
+    permit_type:
+      type: string
+    free_movement:
+      type: boolean
+    visa_required:
+      type: boolean
+    eu_blue_card_eligible:
+      type: boolean
+data_source: Static database (work permit rules by country pair)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      destination: test_value
+      nationality: test_value
+    expected_fields:
+      - field: permit_type
+        operator: not_null
+        reliability: guaranteed
+      - field: permit_type
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: free_movement
+        operator: not_null
+        reliability: guaranteed
+      - field: free_movement
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: visa_required
+        operator: not_null
+        reliability: guaranteed
+      - field: visa_required
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: eu_blue_card_eligible
+        operator: not_null
+        reliability: guaranteed
+      - field: eu_blue_card_eligible
+        operator: type
+        reliability: guaranteed
+        value: boolean
+  health_check_input:
+    destination: test
+    nationality: test
+output_field_reliability:
+  permit_type: guaranteed
+  free_movement: guaranteed
+  visa_required: guaranteed
+  eu_blue_card_eligible: guaranteed
+limitations:
+  - title: >-
+      AI-generated immigration guidance changes frequently and varies by individual circumstances — verify with
+      authorities
+    text: AI-generated guidance on immigration rules — requirements change frequently and vary by individual circumstances
+    category: accuracy
+    severity: warning
+    workaround: >-
+      Verify requirements with the destination country's immigration authority or a qualified immigration lawyer before
+      filing

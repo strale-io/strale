@@ -1,0 +1,148 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: startup-domain-check
+name: Startup Domain Check
+description: >-
+  Check domain and handle availability for a startup name. Checks .com/.io/.ai/.co/.dev domains, Twitter, GitHub, npm,
+  PyPI.
+category: utility
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - company_name
+  properties:
+    company_name:
+      type: string
+      description: Company name or keyword
+output_schema:
+  type: object
+  example:
+    taken:
+      - name: google.com
+        type: domain
+        details: Redirects to https://www.google.com/
+      - name: google.io
+        type: domain
+        details: Redirects to https://io.google/2026/
+      - name: google.ai
+        type: domain
+        details: Redirects to https://www.google.com/search?udm=50&aep=11
+      - name: google.co
+        type: domain
+        details: Redirects to https://www.google.com/
+      - name: google.dev
+        type: domain
+        details: Redirects to https://developers.google.com/program
+      - name: "@google"
+        type: twitter/x
+        details: taken
+      - name: google
+        type: github
+        details: taken
+      - name: google
+        type: npm
+        details: taken
+      - name: google
+        type: pypi
+        details: taken
+    social:
+      - handle: "@google"
+        platform: Twitter/X
+        available: false
+      - handle: google
+        platform: GitHub
+        available: false
+      - package: google
+        platform: npm
+        available: false
+      - package: google
+        platform: PyPI
+        available: false
+    domains:
+      - domain: google.com
+        available: false
+        extension: .com
+        current_owner: Redirects to https://www.google.com/
+      - domain: google.io
+        available: false
+        extension: .io
+        current_owner: Redirects to https://io.google/2026/
+      - domain: google.ai
+        available: false
+        extension: .ai
+        current_owner: Redirects to https://www.google.com/search?udm=50&aep=11
+      - domain: google.co
+        available: false
+        extension: .co
+        current_owner: Redirects to https://www.google.com/
+      - domain: google.dev
+        available: false
+        extension: .dev
+        current_owner: Redirects to https://developers.google.com/program
+    keyword: google
+    available: []
+    taken_count: 9
+    available_count: 0
+    best_available_domain: null
+  properties:
+    taken:
+      type: array
+    social:
+      type: array
+    domains:
+      type: array
+    available:
+      type: array
+data_source: DNS protocol + WHOIS + HTTP fetch (domain availability analysis)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      company_name: Google
+    expected_fields:
+      - field: taken
+        operator: not_null
+        reliability: guaranteed
+      - field: taken
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: social
+        operator: not_null
+        reliability: guaranteed
+      - field: social
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: domains
+        operator: not_null
+        reliability: guaranteed
+      - field: domains
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: available
+        operator: not_null
+        reliability: guaranteed
+      - field: available
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    company_name: Google
+output_field_reliability:
+  taken: guaranteed
+  social: guaranteed
+  domains: guaranteed
+  available: guaranteed
+limitations:
+  - title: Checks .com availability and common social handles only — country TLDs and niche platforms are not checked
+    text: Checks .com availability and common social handles — country TLDs and niche platforms are not checked
+    category: coverage
+    severity: info
+    workaround: Supplement with whois-lookup for specific TLDs and social-profile-check for additional platform availability

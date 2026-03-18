@@ -1,0 +1,103 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: ticker-lookup
+name: Ticker Lookup
+description: Find stock ticker symbols by company name. Returns matches with symbol, exchange, and type.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Company name (e.g. 'Spotify', 'Tesla')
+output_schema:
+  type: object
+  example:
+    query: SELECT * FROM users WHERE active = true LIMIT 10
+    matches:
+      - name: Brown Advisory International Value Select ETF
+        type: equity
+        score: 100003
+        symbol: BAIV
+        exchange: NASDAQ
+      - name: ETF Opportunities Trust - Applied Finance IVS US SMID ETF
+        type: equity
+        score: 100001
+        symbol: IVSX
+        exchange: NASDAQ
+      - name: Tidal Trust II - Defiance Daily Target 2X Long RCAT ETF
+        type: equity
+        score: 100001
+        symbol: RCAX
+        exchange: NASDAQ
+      - name: Nasdaq 100 Mar 26
+        type: future
+        score: 30669
+        symbol: NQ=F
+        exchange: Chicago Mercantile Exchange
+      - name: Micro E-mini Nasdaq-100 Index F
+        type: future
+        score: 30010
+        symbol: MNQ=F
+        exchange: Chicago Mercantile Exchange
+      - name: 10-Year T-Note Futures,Jun-2026
+        type: future
+        score: 30006
+        symbol: ZN=F
+        exchange: Chicago Board of Trade
+      - name: "E-mini Financial Select Sector "
+        type: future
+        score: 30002
+        symbol: XAF=F
+        exchange: Chicago Mercantile Exchange
+    top_match:
+      name: Brown Advisory International Value Select ETF
+      symbol: BAIV
+      exchange: NASDAQ
+    total_results: 7
+  properties:
+    matches:
+      type: array
+    top_match:
+      type: object
+data_source: Yahoo Finance autocomplete API (ticker symbol search)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      query: SELECT * FROM users WHERE active = true LIMIT 10
+    expected_fields:
+      - field: matches
+        operator: not_null
+        reliability: guaranteed
+      - field: matches
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: top_match
+        operator: not_null
+        reliability: guaranteed
+      - field: top_match
+        operator: type
+        reliability: guaranteed
+        value: object
+  health_check_input:
+    query: test
+output_field_reliability:
+  matches: guaranteed
+  top_match: guaranteed
+limitations:
+  - title: Yahoo Finance autocomplete covers major global exchanges but may miss OTC or recently listed securities
+    text: >-
+      Uses Yahoo Finance autocomplete — covers major exchanges globally but may miss OTC or very recently listed
+      securities
+    category: coverage
+    severity: info
+    workaround: For OTC securities, try searching by ISIN or check the specific exchange's website directly

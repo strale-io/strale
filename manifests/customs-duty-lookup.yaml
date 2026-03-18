@@ -1,0 +1,81 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: customs-duty-lookup
+name: Customs Duty Lookup
+description: >-
+  Look up EU customs duty rates by HS code and origin country. Returns duty rate, preferential rates, anti-dumping
+  status.
+category: data-extraction
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - hs_code
+  properties:
+    hs_code:
+      type: string
+    origin_country:
+      type: string
+    destination_country:
+      type: string
+output_schema:
+  type: object
+  example:
+    notes: >-
+      The provided page content does not contain information for HS code 847130. The page displays TARIC measure
+      information for Chapter 1 (Live Animals) codes only, specifically codes in the 0101-0102 range. HS code 847130
+      falls under Chapter 84 (Machinery) and is not present in the displayed content.
+    hs_code: "847130"
+    vat_rate: null
+    duty_rate: null
+    duty_type: null
+    description: null
+    destination: null
+    anti_dumping: false
+    origin_country: not specified
+    additional_duties: []
+    preferential_rates: []
+  properties:
+    duty_rate:
+      type: string
+    duty_type:
+      type: string
+    anti_dumping:
+      type: boolean
+    preferential_rates:
+      type: array
+data_source: TARIC (EU Customs Tariff Database, European Commission)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      hs_code: "8471.30"
+      destination_country: US
+    expected_fields:
+      - field: hs_code
+        operator: not_null
+        reliability: common
+      - field: hs_code
+        operator: type
+        reliability: common
+        value: string
+  health_check_input:
+    hs_code: "8471.30"
+    destination_country: US
+output_field_reliability:
+  duty_rate: guaranteed
+  duty_type: guaranteed
+  anti_dumping: guaranteed
+  preferential_rates: guaranteed
+limitations:
+  - title: Duty rates from TARIC depend on correct HS code classification and declared country of origin
+    text: Duty rates extracted via TARIC web scraping — rates depend on correct HS code classification and country of origin
+    category: accuracy
+    severity: warning
+    workaround: >-
+      Verify extracted duty rates against the official TARIC database and consult a customs broker for complex
+      classifications

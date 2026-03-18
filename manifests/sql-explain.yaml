@@ -1,0 +1,82 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: sql-explain
+name: SQL Explain
+description: >-
+  Explain a SQL query in plain language. Identifies tables, joins, filters, aggregations, and potential performance
+  issues.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - sql
+  properties:
+    sql:
+      type: string
+output_schema:
+  type: object
+  example:
+    steps:
+      - Parser encounters the word 'test'
+      - No SQL keywords (SELECT, INSERT, UPDATE, DELETE, CREATE, etc.) are recognized
+      - Query fails to parse and returns a syntax error
+    dialect: postgres
+    sql_length: 4
+    explanation: The input 'test' is not a valid SQL query. It appears to be a plain text string with no SQL syntax or commands.
+    potential_issues:
+      - Invalid SQL syntax - not a valid SQL statement
+      - Query will fail execution with a PostgreSQL syntax error
+    tables_referenced: []
+    optimization_suggestions:
+      - Provide a valid SQL query to analyze
+      - Ensure the query contains proper SQL syntax with keywords like SELECT, INSERT, UPDATE, or DELETE
+  properties:
+    tables:
+      type: array
+    operations:
+      type: array
+    plain_english:
+      type: string
+    potential_issues:
+      type: array
+data_source: Claude API (SQL query explanation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      sql: SELECT * FROM users WHERE active = true LIMIT 10
+    expected_fields:
+      - field: tables_referenced
+        operator: not_null
+        reliability: common
+      - field: tables_referenced
+        operator: type
+        reliability: common
+        value: array
+      - field: potential_issues
+        operator: not_null
+        reliability: guaranteed
+      - field: potential_issues
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    sql: SELECT * FROM users WHERE active = true LIMIT 10
+output_field_reliability:
+  tables: guaranteed
+  operations: guaranteed
+  plain_english: guaranteed
+  potential_issues: guaranteed
+limitations:
+  - title: SQL performance explanations depend on your specific database engine, indexes, and data distribution
+    text: >-
+      AI explanation of SQL queries — performance implications depend on your specific database engine, indexes, and
+      data distribution
+    category: accuracy
+    severity: info
+    workaround: Run EXPLAIN ANALYZE on your actual database to see the real execution plan alongside the AI explanation

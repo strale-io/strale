@@ -1,0 +1,99 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: timezone-meeting-find
+name: Timezone Meeting Finder
+description: >-
+  Find optimal meeting times across time zones. Returns ranked slots by fairness, with local times for each participant.
+  Algorithmic.
+category: utility
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - timezones
+  properties:
+    timezones:
+      type: array
+      description: List of IANA timezone names
+    preferred_hours:
+      type: string
+      description: Preferred hours (e.g. 09:00-17:00)
+    duration_minutes:
+      type: integer
+output_schema:
+  type: object
+  example:
+    timezones:
+      - timezone: Europe/Stockholm
+        utc_offset: UTC+01:00
+      - timezone: America/New_York
+        utc_offset: UTC-04:00
+      - timezone: Asia/Tokyo
+        utc_offset: UTC+09:00
+    optimal_slots: []
+    preferred_hours: 09:00-17:00
+    duration_minutes: 60
+    total_viable_slots: 0
+  properties:
+    timezones:
+      type: array
+    optimal_slots:
+      type: array
+    total_viable_slots:
+      type: integer
+data_source: Algorithmic (timezone intersection calculation, IANA tz database)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      timezones:
+        - Europe/Stockholm
+        - America/New_York
+        - Asia/Tokyo
+    expected_fields:
+      - field: timezones
+        operator: not_null
+        reliability: guaranteed
+      - field: timezones
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: optimal_slots
+        operator: not_null
+        reliability: guaranteed
+      - field: optimal_slots
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_viable_slots
+        operator: not_null
+        reliability: guaranteed
+      - field: total_viable_slots
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_viable_slots
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    timezones:
+      - Europe/Stockholm
+      - America/New_York
+      - Asia/Tokyo
+output_field_reliability:
+  timezones: guaranteed
+  optimal_slots: guaranteed
+  total_viable_slots: guaranteed
+limitations:
+  - title: Suggests meeting times based on timezone offsets only — individual calendar availability is not considered
+    text: >-
+      Suggests meeting times based on timezone offsets — does not account for individual calendar availability or local
+      business hour customs
+    category: accuracy
+    severity: info
+    workaround: Use the suggested time window as a starting range and verify with participants' calendar availability

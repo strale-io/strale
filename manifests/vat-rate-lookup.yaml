@@ -1,0 +1,95 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: vat-rate-lookup
+name: VAT Rate Lookup
+description: >-
+  Look up VAT rates for EU/EEA countries. Returns standard, reduced, zero-rated categories. Supports category-specific
+  queries.
+category: data-extraction
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - country_code
+  properties:
+    category:
+      type: string
+      description: standard/food/books/medicine/transport/digital
+    country_code:
+      type: string
+output_schema:
+  type: object
+  example:
+    currency: SEK
+    country_code: SE
+    country_name: Sweden
+    parking_rate: null
+    reduced_rates:
+      - rate: 6
+        categories:
+          - books
+          - cultural_events
+          - transport
+      - rate: 12
+        categories:
+          - food
+          - restaurant_food
+          - accommodation
+    standard_rate: 25
+    super_reduced_rate: null
+    zero_rated_categories: []
+  properties:
+    reduced_rates:
+      type: array
+    standard_rate:
+      type: number
+    zero_rated_categories:
+      type: array
+data_source: Static database (VAT/GST rates by country, updated quarterly)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      country_code: SE
+    expected_fields:
+      - field: reduced_rates
+        operator: not_null
+        reliability: guaranteed
+      - field: reduced_rates
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: standard_rate
+        operator: not_null
+        reliability: guaranteed
+      - field: standard_rate
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: standard_rate
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: zero_rated_categories
+        operator: not_null
+        reliability: guaranteed
+      - field: zero_rated_categories
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    country_code: SE
+output_field_reliability:
+  reduced_rates: guaranteed
+  standard_rate: guaranteed
+  zero_rated_categories: guaranteed
+limitations:
+  - title: AI-generated VAT rates may not reflect the most recent fiscal policy changes or rate adjustments
+    text: AI-generated VAT rates — rates change with fiscal policy and may not reflect the most recent adjustments
+    category: freshness
+    severity: info
+    workaround: Verify rates against the EU VAT rate database at ec.europa.eu/taxation_customs before use in invoicing systems

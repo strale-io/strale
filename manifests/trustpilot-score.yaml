@@ -1,0 +1,121 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: trustpilot-score
+name: Trustpilot Score
+description: Get Trustpilot score and reviews for a domain. Returns trust score, rating distribution, recent reviews.
+category: data-extraction
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+      description: Domain name (e.g. stripe.com)
+output_schema:
+  type: object
+  example:
+    domain: google.com
+    claimed: false
+    category: Search Engine Company
+    trustscore: 2.3
+    star_rating: 2.3
+    company_name: Google
+    review_count: 9605
+    response_rate: null
+    recent_reviews:
+      - date: "2025-03-06"
+        text: >-
+          I DON'T want to download chrome for Google. I am perfectly satisfied with safari and I don't need google
+          chrome. I also pay google £11.99 per month for Google premium YouTube use
+        title: I DON'T want to download chrome for Google
+        rating: null
+      - date: "2026-02-20"
+        text: >-
+          Google does not let you submit negative reviews against certain businesses which is silly because the whole
+          point of a review is writing about your experience.
+        title: Google does not let you submit negative reviews
+        rating: null
+      - date: "2026-02-11"
+        text: >-
+          Stole money from my Google account. Now lying about my gaming streak. I play everyday. So how have I lost a
+          day. Didn't give me my 75 day streak prize. Encourages modern day slavery.
+        title: Stole money from my Google account
+        rating: null
+      - date: "2026-02-09"
+        text: >-
+          This review is for the Google Chrome Operating System. I have a Samsung tablet that runs this platform with
+          issues.
+        title: Chrome Operating System issues
+        rating: null
+      - date: "2026-02-04"
+        text: >-
+          Google creates exceptional products but backs them with remarkably poor support. I subscribed to Google One
+          with AI Pro for my family, yet most features don't work.
+        title: Poor support for Google One
+        rating: null
+    trustpilot_url: https://www.trustpilot.com/review/google.com
+    rating_distribution: null
+  properties:
+    trustscore:
+      type: number
+    star_rating:
+      type: number
+    review_count:
+      type: number
+    rating_distribution:
+      type: object
+data_source: Headless browser (Trustpilot public company pages)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain: google.com
+    expected_fields:
+      - field: trustscore
+        operator: not_null
+        reliability: guaranteed
+      - field: trustscore
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: trustscore
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: star_rating
+        operator: not_null
+        reliability: guaranteed
+      - field: star_rating
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: review_count
+        operator: not_null
+        reliability: guaranteed
+      - field: review_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: review_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    domain: example.com
+output_field_reliability:
+  trustscore: guaranteed
+  star_rating: guaranteed
+  review_count: guaranteed
+  rating_distribution: guaranteed
+limitations:
+  - title: Scrapes Trustpilot directly — companies not listed on Trustpilot will return no results
+    text: Scrapes Trustpilot — companies not listed on Trustpilot will return no results
+    category: coverage
+    severity: info
+    workaround: If no Trustpilot profile exists, check Google Business Profile or use google-search for alternative review sources

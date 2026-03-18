@@ -1,0 +1,164 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: openapi-generate
+name: OpenAPI Generate
+description: Generate a complete OpenAPI 3.1 specification from a natural language API description.
+category: developer-tools
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - description
+  properties:
+    description:
+      type: string
+output_schema:
+  type: object
+  example:
+    spec: |-
+      openapi: 3.1.0
+      info:
+        title: Test API
+        description: This is a test input for automated capability testing.
+        version: 1.0.0
+      servers:
+        - url: https://api.example.com
+          description: Production server
+      paths:
+        /test:
+          get:
+            summary: Test endpoint
+            description: A simple test endpoint for automated capability testing
+            operationId: getTest
+            responses:
+              '200':
+                description: Successful response
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/TestResponse'
+          post:
+            summary: Create test resource
+            description: Create a new test resource
+            operationId: postTest
+            requestBody:
+              required: true
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/TestRequest'
+            responses:
+              '201':
+                description: Resource created
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/TestResponse'
+      components:
+        schemas:
+          TestRequest:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Test resource name
+              value:
+                type: integer
+                description: Test resource value
+            required:
+              - name
+          TestResponse:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Unique identifier
+              name:
+                type: string
+                description: Test resource name
+              value:
+                type: integer
+                description: Test resource value
+              timestamp:
+                type: string
+                format: date-time
+                description: Creation timestamp
+            required:
+              - id
+              - name
+    schemas:
+      - TestRequest
+      - TestResponse
+    endpoints:
+      - path: /test
+        method: GET
+        summary: Test endpoint
+      - path: /test
+        method: POST
+        summary: Create test resource
+    total_paths: 1
+  properties:
+    spec:
+      type: string
+    schemas:
+      type: array
+    endpoints:
+      type: array
+    total_paths:
+      type: integer
+data_source: Claude API (OpenAPI specification generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: reference-data
+test_fixtures:
+  known_answer:
+    input:
+      description: This is a test input for automated capability testing.
+    expected_fields:
+      - field: spec
+        operator: not_null
+        reliability: guaranteed
+      - field: spec
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: schemas
+        operator: not_null
+        reliability: guaranteed
+      - field: schemas
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: endpoints
+        operator: not_null
+        reliability: guaranteed
+      - field: endpoints
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_paths
+        operator: not_null
+        reliability: guaranteed
+      - field: total_paths
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_paths
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    description: test
+output_field_reliability:
+  spec: guaranteed
+  schemas: guaranteed
+  endpoints: guaranteed
+  total_paths: guaranteed
+limitations:
+  - title: AI-generated OpenAPI specs may need manual refinement for complex request/response schemas
+    text: AI-generated OpenAPI spec from code or descriptions — complex request/response schemas may need manual refinement
+    category: accuracy
+    severity: info
+    workaround: Validate the generated spec with openapi-validate and test against actual API behavior

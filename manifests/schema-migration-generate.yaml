@@ -1,0 +1,95 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: schema-migration-generate
+name: Schema Migration Generate
+description: Generate database migration code from current→desired schema description. Supports Drizzle, Prisma, Knex, and raw SQL.
+category: developer-tools
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - desired_schema
+  properties:
+    orm:
+      type: string
+      description: drizzle/prisma/knex/raw
+    current_schema:
+      type: string
+    desired_schema:
+      type: string
+output_schema:
+  type: object
+  example:
+    orm: raw
+    up_sql: ALTER TABLE users ADD COLUMN email VARCHAR(255);
+    down_sql: ALTER TABLE users DROP COLUMN email;
+    warnings:
+      - New column 'email' is nullable by default. Existing rows will have NULL values for email.
+      - If email should be unique or NOT NULL, consider adding constraints after migration and populating existing rows.
+      - Application code expecting email field may receive NULL values from existing records.
+    migration: ALTER TABLE users ADD COLUMN email VARCHAR(255);
+    breaking_changes: []
+  properties:
+    orm:
+      type: string
+    migration_up:
+      type: string
+    migration_down:
+      type: string
+    breaking_changes:
+      type: array
+data_source: Claude API (database schema migration generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      current_schema: users(id INT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE, created_at TIMESTAMP DEFAULT NOW())
+      desired_schema: users(id INT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE, age INT, created_at TIMESTAMP DEFAULT NOW())
+    expected_fields:
+      - field: orm
+        operator: not_null
+        reliability: guaranteed
+      - field: orm
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: up_sql
+        operator: type
+        reliability: common
+        value: string
+      - field: down_sql
+        operator: not_null
+        reliability: common
+      - field: down_sql
+        operator: type
+        reliability: common
+        value: string
+      - field: breaking_changes
+        operator: not_null
+        reliability: guaranteed
+      - field: breaking_changes
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    current_schema: users(id INT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE, created_at TIMESTAMP DEFAULT NOW())
+    desired_schema: users(id INT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE, age INT, created_at TIMESTAMP DEFAULT NOW())
+output_field_reliability:
+  orm: guaranteed
+  migration_up: guaranteed
+  migration_down: guaranteed
+  breaking_changes: guaranteed
+limitations:
+  - title: AI-generated migrations with destructive operations like DROP COLUMN must be verified before running on production
+    text: >-
+      AI-generated migrations — destructive operations (DROP COLUMN, type changes) should be verified before running on
+      production data
+    category: accuracy
+    severity: warning
+    workaround: >-
+      Always review generated migrations in a staging environment and add explicit backfill steps for data
+      transformations

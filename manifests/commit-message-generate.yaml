@@ -1,0 +1,88 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: commit-message-generate
+name: Commit Message Generate
+description: Generate conventional commit messages from git diffs or change descriptions. Returns subject, body, type, scope.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - diff
+  properties:
+    diff:
+      type: string
+    style:
+      type: string
+      description: conventional/angular/simple
+output_schema:
+  type: object
+  example:
+    body: null
+    type: test
+    scope: null
+    subject: "test: add or update test cases"
+    conventional: "test: test: add or update test cases"
+    full_message: "test: test: add or update test cases"
+    files_summary: Test files modified or added
+    breaking_change: false
+  properties:
+    body:
+      type: string
+    type:
+      type: string
+    subject:
+      type: string
+    conventional:
+      type: string
+    full_message:
+      type: string
+data_source: Claude API (git commit message generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      diff: |-
+        - const x = 1;
+        + const x = 2;
+          return x;
+    expected_fields:
+      - field: type
+        operator: not_null
+        reliability: guaranteed
+      - field: type
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: subject
+        operator: not_null
+        reliability: guaranteed
+      - field: subject
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: conventional
+        operator: not_null
+        reliability: guaranteed
+      - field: conventional
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    diff: test
+output_field_reliability:
+  body: guaranteed
+  type: guaranteed
+  subject: guaranteed
+  conventional: guaranteed
+  full_message: guaranteed
+limitations:
+  - title: AI-generated commit messages from diff content may not capture the intent or reason behind changes
+    text: AI-generated messages based on diff content — may not capture the 'why' behind changes without additional context
+    category: accuracy
+    severity: info
+    workaround: Include a brief description of the intent in the input alongside the diff for more meaningful commit messages

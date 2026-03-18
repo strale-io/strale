@@ -1,0 +1,86 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: shipping-track
+name: Shipping Track
+description: >-
+  Detect shipping carrier from tracking number format and provide tracking URLs. Supports UPS, FedEx, USPS, DHL, Royal
+  Mail, PostNord, and more. Algorithmic.
+category: data-extraction
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - tracking_number
+  properties:
+    tracking_number:
+      type: string
+output_schema:
+  type: object
+  example:
+    format:
+      length: 4
+      is_alpha: true
+      is_numeric: false
+      is_alphanumeric: false
+    best_match: null
+    carrier_count: 0
+    original_input: test
+    tracking_number: TEST
+    detected_carriers: []
+    universal_tracking_urls:
+      - https://parcelsapp.com/en/tracking/TEST
+      - https://www.17track.net/en/track#nums=TEST
+  properties:
+    best_match:
+      type: object
+    tracking_number:
+      type: string
+    detected_carriers:
+      type: array
+    universal_tracking_urls:
+      type: array
+data_source: HTTP fetch (carrier tracking APIs and portals)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      tracking_number: test_value
+    expected_fields:
+      - field: tracking_number
+        operator: not_null
+        reliability: guaranteed
+      - field: tracking_number
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: detected_carriers
+        operator: not_null
+        reliability: guaranteed
+      - field: detected_carriers
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: universal_tracking_urls
+        operator: not_null
+        reliability: guaranteed
+      - field: universal_tracking_urls
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    tracking_number: test
+output_field_reliability:
+  best_match: guaranteed
+  tracking_number: guaranteed
+  detected_carriers: guaranteed
+  universal_tracking_urls: guaranteed
+limitations:
+  - title: Tracking is scraped from carrier websites and some regional carriers may not be supported
+    text: Tracking via carrier websites — supported carriers may vary and some regional carriers are not covered
+    category: coverage
+    severity: info
+    workaround: If tracking fails, use the tracking number format to identify the carrier and check their website directly

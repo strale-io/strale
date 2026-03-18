@@ -1,0 +1,93 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: swift-validate
+name: SWIFT/BIC Validation
+description: >-
+  Validate a SWIFT/BIC code. Checks format, length, and country code. Extracts bank code, location, and branch. Pure
+  algorithmic — instant and cheap.
+category: validation
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - swift
+  properties:
+    swift:
+      type: string
+      description: SWIFT/BIC code (e.g. DABASESX)
+output_schema:
+  type: object
+  example:
+    valid: true
+    bank_code: COBA
+    swift_code: COBADEFFXXX
+    branch_code: XXX
+    country_code: DE
+    location_code: FF
+    is_head_office: true
+  properties:
+    valid:
+      type: boolean
+    bank_code:
+      type: string
+    swift_code:
+      type: string
+    country_code:
+      type: string
+    is_head_office:
+      type: boolean
+data_source: Algorithmic validation (ISO 9362 SWIFT/BIC format rules)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      swift: COBADEFFXXX
+    expected_fields:
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: bank_code
+        operator: not_null
+        reliability: guaranteed
+      - field: bank_code
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: swift_code
+        operator: not_null
+        reliability: guaranteed
+      - field: swift_code
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: country_code
+        operator: not_null
+        reliability: guaranteed
+      - field: country_code
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    swift: COBADEFFXXX
+output_field_reliability:
+  valid: guaranteed
+  bank_code: guaranteed
+  swift_code: guaranteed
+  country_code: guaranteed
+  is_head_office: guaranteed
+limitations:
+  - title: Validates SWIFT/BIC code format only — does not verify the code is active or assigned to an operating institution
+    text: >-
+      Validates SWIFT/BIC code format — does not verify the code is currently active or assigned to an operating
+      institution
+    category: coverage
+    severity: info
+    workaround: Cross-reference validated codes against SWIFT's online directory at swift.com for active status confirmation

@@ -1,0 +1,214 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: ssl-check
+name: SSL Certificate Check
+description: >-
+  Check a domain's SSL/TLS certificate. Returns issuer, validity dates, days until expiry, protocol version, cipher, and
+  SAN entries.
+category: web-intelligence
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+      description: Domain name (e.g. example.com)
+output_schema:
+  type: object
+  example:
+    valid: true
+    domain: google.com
+    issuer: Google Trust Services
+    subject: "*.google.com"
+    protocol: TLSv1.3
+    valid_to: "2026-04-27T08:36:37.000Z"
+    is_expired: false
+    valid_from: "2026-02-02T08:36:38.000Z"
+    cipher_name: TLS_AES_256_GCM_SHA384
+    serial_number: B24FF93A9975FA670A45A4784F3ACC65
+    cipher_version: TLSv1.3
+    is_expiring_soon: false
+    days_until_expiry: 51
+    subject_alt_names:
+      - "*.google.com"
+      - "*.appengine.google.com"
+      - "*.bdn.dev"
+      - "*.origin-test.bdn.dev"
+      - "*.cloud.google.com"
+      - "*.crowdsource.google.com"
+      - "*.datacompute.google.com"
+      - "*.google.ca"
+      - "*.google.cl"
+      - "*.google.co.in"
+      - "*.google.co.jp"
+      - "*.google.co.uk"
+      - "*.google.com.ar"
+      - "*.google.com.au"
+      - "*.google.com.br"
+      - "*.google.com.co"
+      - "*.google.com.mx"
+      - "*.google.com.tr"
+      - "*.google.com.vn"
+      - "*.google.de"
+      - "*.google.es"
+      - "*.google.fr"
+      - "*.google.hu"
+      - "*.google.it"
+      - "*.google.nl"
+      - "*.google.pl"
+      - "*.google.pt"
+      - "*.googleapis.cn"
+      - "*.gstatic.cn"
+      - "*.gstatic-cn.com"
+      - googlecnapps.cn
+      - "*.googlecnapps.cn"
+      - googleapps-cn.com
+      - "*.googleapps-cn.com"
+      - gkecnapps.cn
+      - "*.gkecnapps.cn"
+      - googledownloads.cn
+      - "*.googledownloads.cn"
+      - recaptcha.net.cn
+      - "*.recaptcha.net.cn"
+      - recaptcha-cn.net
+      - "*.recaptcha-cn.net"
+      - widevine.cn
+      - "*.widevine.cn"
+      - ampproject.org.cn
+      - "*.ampproject.org.cn"
+      - ampproject.net.cn
+      - "*.ampproject.net.cn"
+      - google-analytics-cn.com
+      - "*.google-analytics-cn.com"
+      - googleadservices-cn.com
+      - "*.googleadservices-cn.com"
+      - googlevads-cn.com
+      - "*.googlevads-cn.com"
+      - googleapis-cn.com
+      - "*.googleapis-cn.com"
+      - googleoptimize-cn.com
+      - "*.googleoptimize-cn.com"
+      - doubleclick-cn.net
+      - "*.doubleclick-cn.net"
+      - "*.fls.doubleclick-cn.net"
+      - "*.g.doubleclick-cn.net"
+      - doubleclick.cn
+      - "*.doubleclick.cn"
+      - "*.fls.doubleclick.cn"
+      - "*.g.doubleclick.cn"
+      - dartsearch-cn.net
+      - "*.dartsearch-cn.net"
+      - googletraveladservices-cn.com
+      - "*.googletraveladservices-cn.com"
+      - googletagservices-cn.com
+      - "*.googletagservices-cn.com"
+      - googletagmanager-cn.com
+      - "*.googletagmanager-cn.com"
+      - googlesyndication-cn.com
+      - "*.googlesyndication-cn.com"
+      - "*.safeframe.googlesyndication-cn.com"
+      - app-measurement-cn.com
+      - "*.app-measurement-cn.com"
+      - gvt1-cn.com
+      - "*.gvt1-cn.com"
+      - gvt2-cn.com
+      - "*.gvt2-cn.com"
+      - 2mdn-cn.net
+      - "*.2mdn-cn.net"
+      - googleflights-cn.net
+      - "*.googleflights-cn.net"
+      - admob-cn.com
+      - "*.admob-cn.com"
+      - "*.gemini.cloud.google.com"
+      - googlesandbox-cn.com
+      - "*.googlesandbox-cn.com"
+      - "*.safenup.googlesandbox-cn.com"
+      - "*.gstatic.com"
+      - "*.metric.gstatic.com"
+      - "*.gvt1.com"
+      - "*.gcpcdn.gvt1.com"
+      - "*.gvt2.com"
+      - "*.gcp.gvt2.com"
+      - "*.url.google.com"
+      - "*.youtube-nocookie.com"
+      - "*.ytimg.com"
+      - ai.android
+      - android.com
+      - "*.android.com"
+      - "*.flash.android.com"
+      - g.cn
+      - "*.g.cn"
+      - g.co
+      - "*.g.co"
+      - goo.gl
+      - www.goo.gl
+      - google-analytics.com
+      - "*.google-analytics.com"
+      - google.com
+      - googlecommerce.com
+      - "*.googlecommerce.com"
+      - ggpht.cn
+      - "*.ggpht.cn"
+      - urchin.com
+      - "*.urchin.com"
+      - youtu.be
+      - youtube.com
+      - "*.youtube.com"
+      - music.youtube.com
+      - "*.music.youtube.com"
+      - youtubeeducation.com
+      - "*.youtubeeducation.com"
+      - youtubekids.com
+      - "*.youtubekids.com"
+      - yt.be
+      - "*.yt.be"
+      - android.clients.google.com
+      - "*.android.google.cn"
+      - "*.chrome.google.cn"
+      - "*.developers.google.cn"
+      - "*.aistudio.google.com"
+    fingerprint_sha256: B3:D4:27:15:99:07:11:68:02:2E:99:B1:A2:49:72:AA:3C:7A:B5:AA:E0:E1:F2:BF:0B:6D:81:F2:F6:81:3E:09
+  properties:
+    valid:
+      type: boolean
+    domain:
+      type: string
+    issuer:
+      type: string
+    valid_to:
+      type: string
+    is_expired:
+      type: boolean
+    days_until_expiry:
+      type: integer
+data_source: TLS handshake (X.509 certificate from target server)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain: strale.dev
+    expected_fields:
+      - field: valid
+        operator: is_true
+        reliability: guaranteed
+  health_check_input:
+    domain: example.com
+output_field_reliability:
+  valid: guaranteed
+  domain: guaranteed
+  issuer: guaranteed
+  valid_to: guaranteed
+  is_expired: guaranteed
+  days_until_expiry: guaranteed
+limitations:
+  - title: Only checks the certificate on port 443, not non-standard TLS ports or configurations
+    text: Checks the certificate presented on port 443 only — does not verify non-standard TLS configurations
+    category: coverage
+    severity: info
+    workaround: For services on non-standard ports, use ssl-certificate-chain with the specific hostname:port combination

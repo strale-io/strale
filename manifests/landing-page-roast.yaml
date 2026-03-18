@@ -1,0 +1,96 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: landing-page-roast
+name: Landing Page Roast
+description: >-
+  AI conversion expert analyzes any landing page. Returns overall score, headline effectiveness, CTA clarity, value
+  proposition, trust signals, issues, and suggestions.
+category: competitive-intelligence
+price_cents: 50
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: Landing page URL to analyze
+output_schema:
+  type: object
+  example:
+    url: https://google.com
+    issues:
+      - Primary CTA ('Google Search') lacks visual distinction/urgency
+      - Secondary CTAs ('I'm Feeling Lucky' variations) create decision friction
+      - New Gemini feature callout buried and not compelling for core search users
+      - No clear value proposition for first-time visitors
+      - Search bar could benefit from placeholder text or microcopy
+      - Limited mobile optimization cues visible
+    summary: >-
+      Google's homepage maintains exceptional clarity through minimalist design and strong branding, achieving high CTA
+      effectiveness. However, conversion could be optimized by reducing interface complexity and providing clearer value
+      propositions for new users while maintaining the iconic simplicity that defines the brand.
+    disclaimer: AI-generated analysis. Results reflect automated assessment, not guaranteed conversion outcomes.
+    cta_clarity: 88
+    suggestions:
+      - Enhance primary CTA button styling (color contrast, size) to reduce cognitive load
+      - Consider A/B testing simplified interface with fewer 'I'm Feeling' options
+      - Make the Gemini Maps feature more prominent or remove if not core to conversion
+      - Add subtle placeholder text in search box (e.g., 'Search the web')
+      - Implement dynamic CTA based on user behavior/device type
+      - Test sign-in prominence for authenticated users vs. new visitors
+    overall_score: 85
+    trust_signals:
+      - Google branding (globally recognized)
+      - Privacy and Terms links in footer
+      - Search settings and advanced options
+      - Official Google account/sign-in
+      - AI transparency messaging (Gemini integration)
+      - Environmental commitment statement
+    mobile_readiness: good
+    headline_effectiveness: 90
+    value_proposition_score: 82
+  properties:
+    issues:
+      type: array
+    cta_clarity:
+      type: integer
+    suggestions:
+      type: array
+    overall_score:
+      type: integer
+    trust_signals:
+      type: array
+    headline_effectiveness:
+      type: integer
+data_source: HTTP fetch + Claude API (conversion analysis)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://google.com
+    expected_fields:
+      - field: overall_score
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    url: https://example.com
+output_field_reliability:
+  issues: guaranteed
+  cta_clarity: guaranteed
+  suggestions: guaranteed
+  overall_score: guaranteed
+  trust_signals: guaranteed
+  headline_effectiveness: guaranteed
+limitations:
+  - title: AI critique covers conversion best practices only — subjective elements like brand tone are not assessed
+    text: AI-generated critique based on conversion best practices — subjective elements like brand tone are not assessed
+    category: accuracy
+    severity: info
+    workaround: >-
+      Use the structural and CTA recommendations directly, but validate brand-voice feedback against your own style
+      guide

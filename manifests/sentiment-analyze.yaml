@@ -1,0 +1,95 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: sentiment-analyze
+name: Sentiment Analysis
+description: >-
+  Analyze the sentiment of text. Returns overall sentiment (positive/negative/neutral/mixed), confidence scores, and
+  aspect-level sentiment.
+category: text-processing
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - text
+  properties:
+    text:
+      type: string
+      description: Text to analyze
+output_schema:
+  type: object
+  example:
+    scores:
+      neutral: 0.95
+      negative: 0
+      positive: 0.05
+    aspects:
+      - aspect: purpose of the text
+        sentiment: neutral
+        text_span: test input for automated capability testing
+    summary: >-
+      The text is neutral in sentiment, describing a technical testing scenario without expressing any emotional
+      valence.
+    sentiment: neutral
+    confidence: 0.95
+    detected_language: English
+  properties:
+    scores:
+      type: object
+    aspects:
+      type: array
+    sentiment:
+      type: string
+    confidence:
+      type: number
+data_source: Claude API (sentiment analysis)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      text: This is a test input for automated capability testing.
+    expected_fields:
+      - field: scores
+        operator: not_null
+        reliability: guaranteed
+      - field: scores
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: aspects
+        operator: not_null
+        reliability: guaranteed
+      - field: aspects
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: sentiment
+        operator: not_null
+        reliability: guaranteed
+      - field: sentiment
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: confidence
+        operator: not_null
+        reliability: guaranteed
+      - field: confidence
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    text: test
+output_field_reliability:
+  scores: guaranteed
+  aspects: guaranteed
+  sentiment: guaranteed
+  confidence: guaranteed
+limitations:
+  - title: AI-based sentiment analysis may misinterpret sarcasm, irony, and culturally-specific expressions
+    text: AI-based sentiment — sarcasm, irony, and culturally-specific expressions may be misinterpreted
+    category: accuracy
+    severity: info
+    workaround: Use the confidence score in the response and flag low-confidence results for human review in critical applications

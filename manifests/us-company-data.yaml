@@ -1,0 +1,83 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: us-company-data
+name: US Company Data
+description: >-
+  Look up US company data from SEC EDGAR. Accepts CIK number, ticker symbol, or fuzzy company name. Returns company
+  name, CIK, SIC code, state, filings summary.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - company
+  properties:
+    company:
+      type: string
+      description: CIK number, ticker symbol, or company name
+output_schema:
+  type: object
+  example:
+    cik: "0001418121"
+    ein: "261379210"
+    sic: "6798"
+    state: VA
+    status: active
+    ticker: APLE
+    address: 814 EAST MAIN STREET, RICHMOND, VA, 23219
+    exchange: NYSE
+    entity_type: operating
+    company_name: Apple Hospitality REIT, Inc.
+    fiscal_year_end: "1231"
+    sic_description: Real Estate Investment Trusts
+  properties:
+    cik:
+      type: string
+    state:
+      type: string
+    sic_code:
+      type: string
+    company_name:
+      type: string
+    fiscal_year_end:
+      type: string
+data_source: SEC EDGAR (US Securities and Exchange Commission)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      company: AAPL
+    expected_fields:
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    company: AAPL
+output_field_reliability:
+  cik: guaranteed
+  state: guaranteed
+  sic_code: rare
+  company_name: guaranteed
+  fiscal_year_end: guaranteed
+limitations:
+  - title: SEC coverage varies by state — some states have limited registry data
+    text: >-
+      Coverage varies by state — Delaware, California, New York most complete. Some states have limited electronic
+      registry access
+    category: coverage
+    severity: warning
+    workaround: For states with limited coverage, supplement with the state's Secretary of State website directly
+  - title: Private company financial data is not included — public filings only
+    text: Does not include privately held financial data — only publicly filed information
+    category: coverage
+    severity: info
+    workaround: Request financials directly from the company or use a commercial data provider like D&B for private company data
+  - title: Secretary of State filings may lag 1-5 business days behind actual filing
+    text: Secretary of State filings may lag 1-5 business days behind actual filing date
+    category: freshness
+    severity: info
+    workaround: For time-critical checks, compare the filing_date in the response against SEC EDGAR for publicly traded companies

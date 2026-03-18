@@ -1,0 +1,96 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: credit-report-summary
+name: Credit Report Summary
+description: >-
+  Get a credit report summary for a Swedish company from Allabolag. Returns credit rating, financial summary, risk
+  indicators, board members. Accepts org number or company name.
+category: financial
+price_cents: 100
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - org_number
+  properties:
+    org_number:
+      type: string
+      description: Swedish org number (10 digits) or company name
+output_schema:
+  type: object
+  example:
+    industry: Radiosändning och distribution av ljudinspelningar
+    employees: 1397
+    equity_sek: 50744661
+    org_number: 556703-7485
+    profit_sek: 10046736
+    fiscal_year: 2024-12
+    revenue_sek: 108131545
+    company_name: Spotify AB
+    board_members:
+      - Carl Peter Christian Luiga
+    credit_rating: null
+    risk_indicator: null
+    credit_limit_sek: null
+    total_assets_sek: 91250324
+    registered_address: Regeringsgatan 19 5tr, 111 53 Stockholm
+  properties:
+    profit_sek:
+      type: number
+    revenue_sek:
+      type: number
+    company_name:
+      type: string
+    credit_rating:
+      type: string
+    risk_indicator:
+      type: string
+data_source: Allabolag.se (Swedish credit data aggregator)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      org_number: 556703-7485
+    expected_fields:
+      - field: profit_sek
+        operator: not_null
+        reliability: guaranteed
+      - field: profit_sek
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: revenue_sek
+        operator: not_null
+        reliability: guaranteed
+      - field: revenue_sek
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: company_name
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    org_number: 556703-7485
+output_field_reliability:
+  profit_sek: guaranteed
+  revenue_sek: guaranteed
+  company_name: guaranteed
+  credit_rating: guaranteed
+  risk_indicator: guaranteed
+limitations:
+  - title: Data from Allabolag.se covers Swedish companies only — credit ratings are indicative, not an official check
+    text: >-
+      Data from Allabolag.se — covers Swedish companies only; credit ratings are indicative, not an official credit
+      check
+    category: coverage
+    severity: info
+    workaround: >-
+      For official credit decisions, use a licensed credit bureau (UC, Creditsafe, Bisnode) with the org number from the
+      response

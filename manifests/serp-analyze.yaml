@@ -1,0 +1,194 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: serp-analyze
+name: SERP Analyze
+description: >-
+  Analyze Google search results for a keyword. Returns organic results, featured snippet, People Also Ask, SERP
+  features.
+category: data-extraction
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - keyword
+  properties:
+    country:
+      type: string
+    keyword:
+      type: string
+    language:
+      type: string
+output_schema:
+  type: object
+  example:
+    country: us
+    keyword: test
+    language: en
+    top_domains:
+      - domain: speedtest.net
+        position: 1
+      - domain: fast.com
+        position: 2
+      - domain: merriam-webster.com
+        position: 3
+      - domain: en.wikipedia.org
+        position: 4
+      - domain: speed.measurementlab.net
+        position: 5
+      - domain: testmy.net
+        position: 6
+      - domain: link.springer.com
+        position: 7
+      - domain: youtube.com
+        position: 8
+      - domain: spectrum.com
+        position: 9
+      - domain: imdb.com
+        position: 10
+    serp_features:
+      - people_also_ask
+      - related_searches
+    total_results: null
+    organic_results:
+      - url: https://www.speedtest.net/
+        title: Speedtest by Ookla - The Global Broadband Speed Test
+        domain: speedtest.net
+        snippet: >-
+          Speedtest is better with the app. Download the Speedtest app for more metrics, video testing, mobile coverage
+          maps, and more. Get it on Google Play.
+        position: 1
+      - url: https://fast.com/
+        title: "Fast.com: Internet Speed Test"
+        domain: fast.com
+        snippet: >-
+          How fast is your download speed? In seconds, FAST.com's simple Internet speed test will estimate your ISP
+          speed.
+        position: 2
+      - url: https://www.merriam-webster.com/dictionary/test
+        title: TEST Definition & Meaning - Merriam-Webster
+        domain: merriam-webster.com
+        snippet: >-
+          1. a : a means of testing: such as (1) : something (such as a series of questions or exercises) for measuring
+          the skill, knowledge, intelligence, capacities, ...
+        position: 3
+      - url: https://en.wikipedia.org/wiki/Test
+        title: Test - Wikipedia
+        domain: en.wikipedia.org
+        snippet: >-
+          Test(s), testing, or TEST may refer to: Test (assessment), an educational assessment intended to measure the
+          respondents' knowledge or other abilities ...
+        position: 4
+      - url: https://speed.measurementlab.net/
+        title: Speed Test by Measurement Lab
+        domain: speed.measurementlab.net
+        snippet: >-
+          Test Your Speed. M-Lab's Speed Test provides advanced diagnostics of the performance of your broadband
+          connection through quick measurements.
+        position: 5
+      - url: https://testmy.net/
+        title: Internet Speed Test
+        domain: testmy.net
+        snippet: >-
+          Accurately test your Internet connection speed with this powerful broadband speed test. Improve your bandwidth
+          speed with the truth.
+        position: 6
+      - url: https://link.springer.com/journal/11749
+        title: TEST | Springer Nature Link
+        domain: link.springer.com
+        snippet: >-
+          Journal TEST focuses on cutting-edge research in all areas of Statistics and Probability with significant
+          theoretical, methodological, and applied impact.
+        position: 7
+      - url: https://www.youtube.com/watch?v=q0zaEGbs-cE
+        title: What is a Test? - YouTube
+        domain: youtube.com
+        snippet: >-
+          This is the first video to provide a testing term explanation. It's the first and probably the biggest term of
+          all. It sets the scene for ...
+        position: 8
+      - url: https://www.spectrum.com/internet/speed-test
+        title: "Spectrum Internet Speed Test: Broadband Internet Speed Check"
+        domain: spectrum.com
+        snippet: >-
+          Test your broadband Internet and WiFi speed with the Internet Speed Test. Check your upload and download
+          speeds for your home Internet network.
+        position: 9
+      - url: https://www.imdb.com/title/tt2407380/
+        title: Test (2013) - IMDb
+        domain: imdb.com
+        snippet: In 1985, a gay dance understudy hopes for his on-stage chance while fearing the growing AIDS epidemic.
+        position: 10
+    people_also_ask:
+      - What diseases can a blood test detect?
+      - How do I pass a test?
+    featured_snippet: null
+    related_searches:
+      - Test speed
+      - Internet speed test
+      - Speed test WiFi
+      - Ookla speed test
+      - Mbps test
+      - Run speed test
+      - Fast speed test
+      - Test 2
+  properties:
+    serp_features:
+      type: array
+    organic_results:
+      type: array
+    people_also_ask:
+      type: array
+    featured_snippet:
+      type: object
+data_source: Serper.dev API (SERP analysis and feature extraction)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      country: SE
+      keyword: artificial intelligence
+      language: en
+    expected_fields:
+      - field: serp_features
+        operator: not_null
+        reliability: guaranteed
+      - field: serp_features
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: organic_results
+        operator: not_null
+        reliability: guaranteed
+      - field: organic_results
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: people_also_ask
+        operator: not_null
+        reliability: guaranteed
+      - field: people_also_ask
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: featured_snippet
+        operator: type
+        reliability: guaranteed
+        value: object
+  health_check_input:
+    country: US
+    keyword: test
+output_field_reliability:
+  serp_features: guaranteed
+  organic_results: guaranteed
+  people_also_ask: guaranteed
+  featured_snippet: guaranteed
+limitations:
+  - title: SERP analysis is a point-in-time snapshot — rankings change frequently with Google algorithm updates
+    text: Analyzes search results at a point in time — SERP rankings change frequently based on Google algorithm updates
+    category: accuracy
+    severity: info
+    workaround: Track SERP positions over time rather than relying on a single snapshot for SEO strategy decisions

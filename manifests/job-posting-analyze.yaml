@@ -1,0 +1,119 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: job-posting-analyze
+name: Job Posting Analyze
+description: >-
+  Analyze a job posting. Extracts title, skills, salary range, remote policy, benefits, red flags, culture signals.
+  Accepts URL or text.
+category: developer-tools
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    url:
+      type: string
+    text:
+      type: string
+output_schema:
+  type: object
+  example:
+    title: null
+    company: null
+    summary: >-
+      This job posting is invalid and contains no actual job description, requirements, or details. It cannot be
+      meaningfully analyzed. A complete resubmission with actual job posting content is required.
+    benefits: []
+    location: null
+    red_flags:
+      - Job posting contains no substantive content
+      - Insufficient information to evaluate the position
+    source_url: https://example.com
+    salary_range:
+      max: null
+      min: null
+      period: annual
+      currency: null
+    remote_policy: not-specified
+    salary_source: estimated
+    culture_signals: []
+    employment_type: null
+    required_skills: []
+    seniority_level: null
+    experience_years:
+      max: null
+      min: null
+    preferred_skills: []
+    education_requirement: null
+  properties:
+    title:
+      type: string
+    red_flags:
+      type: array
+    salary_range:
+      type: object
+    culture_signals:
+      type: array
+    required_skills:
+      type: array
+data_source: Claude API (job posting analysis and extraction)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      text: |-
+        Senior Software Engineer — Remote (EU)
+        We are looking for a Senior Software Engineer to join our platform team.
+        Responsibilities: Design and build scalable APIs, mentor junior engineers.
+        Requirements: 5+ years experience, TypeScript/Node.js expertise, PostgreSQL.
+        Salary: €80,000–€110,000. Benefits: stock options, 30 days PTO, health insurance.
+        Apply at: careers@example.com
+    expected_fields:
+      - field: title
+        operator: not_null
+        reliability: guaranteed
+      - field: title
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: red_flags
+        operator: not_null
+        reliability: guaranteed
+      - field: red_flags
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: salary_range
+        operator: not_null
+        reliability: guaranteed
+      - field: salary_range
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: culture_signals
+        operator: not_null
+        reliability: guaranteed
+      - field: culture_signals
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    url: https://example.com
+    text: test
+output_field_reliability:
+  title: guaranteed
+  red_flags: guaranteed
+  salary_range: guaranteed
+  culture_signals: guaranteed
+  required_skills: guaranteed
+limitations:
+  - title: Job posting salary estimates and seniority are inferred from language patterns, not verified data
+    text: >-
+      AI analysis of job posting text — salary estimates and seniority inference are based on language patterns, not
+      verified data
+    category: accuracy
+    severity: info
+    workaround: Cross-reference inferred salary ranges with salary-benchmark results for the same role and location

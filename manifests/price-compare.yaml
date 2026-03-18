@@ -1,0 +1,73 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: price-compare
+name: Price Compare
+description: Compare prices across merchants via PriceRunner (Nordic) and Google Shopping. Returns lowest/highest/average prices.
+category: data-extraction
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - product
+  properties:
+    country:
+      type: string
+    product:
+      type: string
+output_schema:
+  type: object
+  example:
+    error: No pricing data available - CAPTCHA verification required
+    prices: []
+    source: google.com/shopping
+    country: us
+    price_range: null
+    lowest_price: null
+    product_name: null
+    total_offers: 0
+    average_price: null
+    highest_price: null
+  properties:
+    prices:
+      type: array
+    lowest_price:
+      type: object
+    average_price:
+      type: number
+    highest_price:
+      type: object
+data_source: Headless browser (multi-retailer price comparison)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      product: iPhone 15
+    expected_fields:
+      - field: prices
+        operator: not_null
+        reliability: guaranteed
+      - field: prices
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    product: iPhone 15
+output_field_reliability:
+  prices: guaranteed
+  lowest_price: guaranteed
+  average_price: guaranteed
+  highest_price: guaranteed
+limitations:
+  - title: Prices scraped from retailer websites do not include personalized pricing or member discounts
+    text: >-
+      Prices scraped from retailer websites — results may not include personalized pricing, member discounts, or
+      real-time promotions
+    category: accuracy
+    severity: info
+    workaround: >-
+      Treat as list price comparison; check each retailer link in the response for current promotions before purchase
+      decisions

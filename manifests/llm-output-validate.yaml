@@ -1,0 +1,100 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: llm-output-validate
+name: LLM Output Validate
+description: >-
+  Validate and auto-repair LLM output. Parse JSON, validate against schema, attempt fixes for common LLM mistakes.
+  Algorithmic — no LLM needed.
+category: agent-tooling
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - llm_output
+  properties:
+    llm_output:
+      type: string
+      description: Raw LLM output string
+    strict_mode:
+      type: boolean
+    expected_schema:
+      type: object
+      description: JSON Schema to validate against
+output_schema:
+  type: object
+  example:
+    valid: false
+    errors: []
+    auto_fixed: false
+    error_count: 1
+    parse_error: Unexpected token 'e', "test" is not valid JSON
+    parsed_output: null
+  properties:
+    valid:
+      type: boolean
+    errors:
+      type: array
+    auto_fixed:
+      type: boolean
+    parsed_output: {}
+    auto_fixed_output:
+      type: string
+data_source: Algorithmic (LLM output schema validation, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      llm_output: "{\"name\": \"Alice\", \"age\": 30, \"active\": true}"
+    expected_fields:
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: errors
+        operator: not_null
+        reliability: guaranteed
+      - field: errors
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: auto_fixed
+        operator: not_null
+        reliability: guaranteed
+      - field: auto_fixed
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: parsed_output
+        operator: not_null
+        reliability: guaranteed
+      - field: error_count
+        operator: not_null
+        reliability: common
+  health_check_input:
+    output: "{\"name\": \"Alice\", \"age\": 30}"
+    expected_schema:
+      type: object
+      properties:
+        age:
+          type: integer
+        name:
+          type: string
+output_field_reliability:
+  valid: guaranteed
+  errors: guaranteed
+  auto_fixed: guaranteed
+  parsed_output: guaranteed
+  auto_fixed_output: guaranteed
+limitations:
+  - title: Validates LLM output structure and format only — cannot verify factual correctness of content
+    text: Validates output structure and format — cannot verify factual correctness of LLM-generated content
+    category: accuracy
+    severity: info
+    workaround: Combine with domain-specific validation (e.g., schema checks, reference lookups) for factual verification

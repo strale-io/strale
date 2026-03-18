@@ -1,0 +1,118 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: prompt-optimize
+name: Prompt Optimize
+description: >-
+  Analyze and improve a prompt. Returns improved version with changes and reasoning, clarity score comparison, and
+  techniques applied.
+category: agent-tooling
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - current_prompt
+  properties:
+    bad_examples:
+      type: array
+    good_examples:
+      type: array
+    current_prompt:
+      type: string
+    task_description:
+      type: string
+output_schema:
+  type: object
+  example:
+    changes_made:
+      - change: Added explicit role definition and system context
+        reasoning: Clarifies the purpose and expected behavior, reducing ambiguity about what the prompt should accomplish
+      - change: Restructured vague input into clear task with specific output requirements
+        reasoning: Provides measurable evaluation criteria rather than implicit expectations
+      - change: Added numbered output format expectations
+        reasoning: Enables consistent, structured responses that can be programmatically evaluated
+      - change: Included meta-analysis request (confidence, limitations)
+        reasoning: Makes the testing process more comprehensive and diagnostic for capability assessment
+    issues_found:
+      - Extremely vague - unclear what should happen with 'test_value'
+      - No explicit task definition or expected output format
+      - Cannot be effectively evaluated or reproduced
+      - No context for what 'automated capability testing' means
+      - Insufficient for meaningful testing purposes
+    clarity_score:
+      improved: 9
+      original: 1
+    improved_prompt: >-
+      You are an automated capability testing system. Process the following test input and provide structured feedback
+      on your ability to handle it: 'test_value'. Return your analysis including: (1) successful parsing of the input,
+      (2) any constraints or limitations encountered, (3) confidence level in handling this input type, and (4)
+      recommendations for improvement.
+    techniques_applied:
+      - Role-based prompting
+      - Task decomposition with numbered steps
+      - Explicit output structure definition
+      - Context clarification
+      - Meta-cognitive prompting for self-assessment
+    improved_token_estimate: 65
+    original_token_estimate: 2
+  properties:
+    changes_made:
+      type: array
+    clarity_score:
+      type: object
+    improved_prompt:
+      type: string
+    techniques_applied:
+      type: array
+data_source: Claude API (prompt engineering optimization)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      current_prompt: test_value
+      task_description: This is a test input for automated capability testing.
+    expected_fields:
+      - field: changes_made
+        operator: not_null
+        reliability: guaranteed
+      - field: changes_made
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: clarity_score
+        operator: not_null
+        reliability: guaranteed
+      - field: clarity_score
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: improved_prompt
+        operator: not_null
+        reliability: guaranteed
+      - field: improved_prompt
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: techniques_applied
+        operator: not_null
+        reliability: guaranteed
+      - field: techniques_applied
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    current_prompt: test
+output_field_reliability:
+  changes_made: guaranteed
+  clarity_score: guaranteed
+  improved_prompt: guaranteed
+  techniques_applied: guaranteed
+limitations:
+  - title: Optimization suggestions are model-agnostic — some techniques work better with specific LLM providers
+    text: Optimization suggestions are model-agnostic — some techniques work better with specific LLM providers
+    category: accuracy
+    severity: info
+    workaround: Test optimized prompts against your target model and iterate based on actual output quality

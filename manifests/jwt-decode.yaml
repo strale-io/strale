@@ -1,0 +1,100 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: jwt-decode
+name: JWT Decode
+description: >-
+  Decode a JWT token without verification. Returns header, payload, claims, expiry status, and time until expiry.
+  Algorithmic.
+category: developer-tools
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - token
+  properties:
+    token:
+      type: string
+output_schema:
+  type: object
+  example:
+    claims:
+      - sub
+    header:
+      alg: HS256
+      typ: JWT
+    issuer: null
+    payload:
+      sub: "1234567890"
+    subject: "1234567890"
+    audience: null
+    algorithm: HS256
+    issued_at: null
+    expires_at: null
+    is_expired: null
+    not_before: null
+    token_type: JWT
+    time_until_expiry_seconds: null
+  properties:
+    header:
+      type: object
+    payload:
+      type: object
+    algorithm:
+      type: string
+    expires_at:
+      type: string
+    is_expired:
+      type: boolean
+data_source: Algorithmic (JWT token decoding, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U
+    expected_fields:
+      - field: header
+        operator: not_null
+        reliability: guaranteed
+      - field: header
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: payload
+        operator: not_null
+        reliability: guaranteed
+      - field: payload
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: algorithm
+        operator: not_null
+        reliability: guaranteed
+      - field: algorithm
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: claims
+        operator: not_null
+        reliability: common
+      - field: claims
+        operator: type
+        reliability: common
+        value: array
+  health_check_input:
+    token: eyJhbGciOiJub25lIn0.eyJzdWIiOiJ0ZXN0In0.
+output_field_reliability:
+  header: guaranteed
+  payload: guaranteed
+  algorithm: guaranteed
+  expires_at: guaranteed
+  is_expired: guaranteed
+limitations:
+  - title: Decodes JWT payload only — signature is not verified, so a decoded token is not proof of authenticity
+    text: Decodes JWT payload without signature verification — a decoded token is not proof of authenticity
+    category: coverage
+    severity: info
+    workaround: Always verify JWT signatures using the issuer's public key or JWKS endpoint before trusting claims

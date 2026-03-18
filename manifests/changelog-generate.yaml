@@ -1,0 +1,99 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: changelog-generate
+name: Changelog Generate
+description: >-
+  Generate a user-facing changelog from git commits. Groups by type, writes human-readable descriptions. Supports Keep a
+  Changelog, semantic, and bullet formats.
+category: developer-tools
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    format:
+      type: string
+    commits:
+      type: array
+      description: Array of {message, author, date}
+    raw_log:
+      type: string
+output_schema:
+  type: object
+  example:
+    format: ""
+    sections: []
+    commit_count: 0
+    breaking_changes: []
+    changelog_markdown: |-
+      ## [Unreleased]
+
+      No changes yet.
+    version_suggestion: patch
+  properties:
+    sections:
+      type: array
+    breaking_changes:
+      type: array
+    changelog_markdown:
+      type: string
+    version_suggestion:
+      type: string
+data_source: Claude API (changelog generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      commits:
+        - message: Add user authentication
+        - message: Fix login validation bug
+        - message: Update dependencies
+    expected_fields:
+      - field: sections
+        operator: not_null
+        reliability: guaranteed
+      - field: sections
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: breaking_changes
+        operator: not_null
+        reliability: guaranteed
+      - field: breaking_changes
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: changelog_markdown
+        operator: not_null
+        reliability: guaranteed
+      - field: changelog_markdown
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: version_suggestion
+        operator: not_null
+        reliability: guaranteed
+      - field: version_suggestion
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    commits:
+      - message: Add feature
+      - message: Fix bug
+output_field_reliability:
+  sections: guaranteed
+  breaking_changes: guaranteed
+  changelog_markdown: guaranteed
+  version_suggestion: guaranteed
+limitations:
+  - title: AI-generated changelog may not correctly distinguish user-facing impact from internal code changes
+    text: >-
+      AI-generated changelog from commit messages or diffs — may not correctly identify user-facing impact vs internal
+      changes
+    category: accuracy
+    severity: info
+    workaround: Use conventional commit prefixes (feat:, fix:, chore:) in your commits for more accurate categorization

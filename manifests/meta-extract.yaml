@@ -1,0 +1,136 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: meta-extract
+name: Meta Extract
+description: >-
+  Extract all metadata from a URL: Open Graph, Twitter cards, JSON-LD, favicon, canonical URL, RSS feeds, robots
+  directives.
+category: web-scraping
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: URL to extract metadata from
+output_schema:
+  type: object
+  example:
+    og:
+      url: null
+      type: website
+      image: >-
+        https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/40c97463-fb0c-4144-aa8c-9db65573a574/id-preview-5c2a5484--51ddd28d-009f-48ba-9c99-c76ee3e05d53.lovable.app-1772307174433.png
+      title: Strale — Ship AI agents faster
+      site_name: null
+      description: >-
+        Your agent calls strale.do() and gets company data, compliance checks, financial validation — structured JSON
+        with audit trails. 233+ capabilities, one API key.
+    url: https://strale.dev
+    feeds: []
+    title: Strale — Ship AI agents faster
+    robots: null
+    favicon: https://strale.dev/favicon.ico
+    json_ld:
+      - url: https://strale.dev
+        name: Strale
+        "@type": SoftwareApplication
+        author:
+          url: https://strale.dev
+          name: Strale
+          "@type": Organization
+        offers:
+          "@type": Offer
+          price: "0"
+          description: Free trial with €2.00 in credits
+          priceCurrency: EUR
+        "@context": https://schema.org
+        description: >-
+          Your agent calls strale.do() and gets company data, compliance checks, financial validation — structured JSON
+          with audit trails. 233+ capabilities, one API key.
+        operatingSystem: Any
+        applicationCategory: DeveloperApplication
+    twitter:
+      card: summary_large_image
+      site: null
+      image: >-
+        https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/40c97463-fb0c-4144-aa8c-9db65573a574/id-preview-5c2a5484--51ddd28d-009f-48ba-9c99-c76ee3e05d53.lovable.app-1772307174433.png
+      title: Strale — Ship AI agents faster
+      creator: null
+      description: >-
+        Your agent calls strale.do() and gets company data, compliance checks, financial validation — structured JSON
+        with audit trails. 233+ capabilities, one API key.
+    language: en
+    description: >-
+      Your agent calls strale.do() and gets company data, compliance checks, financial validation — structured JSON with
+      audit trails. 233+ capabilities, one API key.
+    canonical_url: null
+  properties:
+    og:
+      type: object
+    feeds:
+      type: array
+    title:
+      type: string
+    json_ld:
+      type: array
+    twitter:
+      type: object
+    description:
+      type: string
+data_source: HTTP fetch + HTML parsing (meta tag extraction)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://strale.dev
+    expected_fields:
+      - field: og
+        operator: not_null
+        reliability: guaranteed
+      - field: og
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: feeds
+        operator: not_null
+        reliability: guaranteed
+      - field: feeds
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: title
+        operator: not_null
+        reliability: guaranteed
+      - field: title
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: json_ld
+        operator: not_null
+        reliability: guaranteed
+      - field: json_ld
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    url: https://strale.dev
+output_field_reliability:
+  og: guaranteed
+  feeds: guaranteed
+  title: guaranteed
+  json_ld: guaranteed
+  twitter: guaranteed
+  description: guaranteed
+limitations:
+  - title: Extracts meta tags from initial HTML only — meta tags injected dynamically via JavaScript are not captured
+    text: Extracts meta tags from the initial HTML response — dynamically injected meta tags via JavaScript are not captured
+    category: coverage
+    severity: info
+    workaround: For SPAs with dynamic meta tags, use url-to-markdown or web-extract which render JavaScript before extraction

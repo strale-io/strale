@@ -1,0 +1,105 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: french-company-data
+name: French Company Data
+description: >-
+  Look up French company data from the SIRENE registry. Accepts SIREN (9 digits), SIRET (14 digits), or fuzzy company
+  name. Returns company name, address, activity code, directors.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - siren
+  properties:
+    siren:
+      type: string
+      description: SIREN (9 digits), SIRET (14 digits), or company name
+output_schema:
+  type: object
+  example:
+    city: COURBEVOIE
+    siren: "542051180"
+    siret: "54205118000066"
+    status: active
+    address: LA DEFENSE 6 2 PLACE JEAN MILLIER 92400 COURBEVOIE
+    directors:
+      - JACQUES ANDRE ASCHENBROICH (Administrateur)
+      - MARIE CHRISTINE COISNE (Administrateur)
+      - LISE CROTEAU (Administrateur)
+    postal_code: "92400"
+    company_name: TOTALENERGIES SE (TOTALENERGIE SE)
+    activity_code: 70.10Z
+    business_type: "5800"
+    creation_date: "1954-01-01"
+    employee_range: "51"
+  properties:
+    siren:
+      type: string
+    siret:
+      type: string
+    status:
+      type: string
+    address:
+      type: string
+    directors:
+      type: array
+    company_name:
+      type: string
+    activity_code:
+      type: string
+data_source: INSEE / Registre du Commerce (France)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      siren: "542051180"
+    expected_fields:
+      - field: siren
+        operator: not_null
+        reliability: guaranteed
+      - field: siren
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: siret
+        operator: not_null
+        reliability: guaranteed
+      - field: siret
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: address
+        operator: not_null
+        reliability: guaranteed
+      - field: address
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    siren: "542107651"
+output_field_reliability:
+  siren: guaranteed
+  siret: guaranteed
+  status: guaranteed
+  address: guaranteed
+  directors: guaranteed
+  company_name: guaranteed
+  activity_code: guaranteed
+limitations:
+  - title: Data from INSEE/SIRENE via api.gouv.fr — financial statements require separate access to INPI
+    text: Data from api.gouv.fr (INSEE/SIRENE) — financial statements require separate access to INPI or Societe.com
+    category: coverage
+    severity: info
+    workaround: Use the SIREN/SIRET from the response to look up financial data on pappers.fr or societe.com

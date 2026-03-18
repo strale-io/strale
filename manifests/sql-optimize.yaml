@@ -1,0 +1,90 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: sql-optimize
+name: SQL Optimize
+description: >-
+  Analyze and optimize a SQL query for performance. Returns rewritten query, index recommendations, and explanation of
+  improvements.
+category: developer-tools
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - sql
+  properties:
+    sql:
+      type: string
+    dialect:
+      type: string
+    table_schema:
+      type: string
+output_schema:
+  type: object
+  example:
+    dialect: postgres
+    explanation: >-
+      The provided SQL query 'test' is not a valid SQL statement. Please provide a valid SELECT, INSERT, UPDATE, or
+      DELETE query for optimization analysis.
+    changes_made: []
+    original_sql: test
+    optimized_sql: Unable to optimize - invalid input provided
+    estimated_improvement: N/A
+    index_recommendations: []
+  properties:
+    improvements:
+      type: array
+    optimized_sql:
+      type: string
+    estimated_improvement:
+      type: string
+    index_recommendations:
+      type: array
+data_source: Claude API (SQL query optimization)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      sql: SELECT * FROM users WHERE active = true LIMIT 10
+      dialect: postgres
+      table_schema: users(id INT, name TEXT, email TEXT, active BOOL, created_at TIMESTAMP)
+    expected_fields:
+      - field: optimized_sql
+        operator: not_null
+        reliability: guaranteed
+      - field: optimized_sql
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: estimated_improvement
+        operator: not_null
+        reliability: guaranteed
+      - field: estimated_improvement
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: index_recommendations
+        operator: not_null
+        reliability: guaranteed
+      - field: index_recommendations
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    sql: SELECT * FROM users WHERE id = 1
+output_field_reliability:
+  improvements: guaranteed
+  optimized_sql: guaranteed
+  estimated_improvement: guaranteed
+  index_recommendations: guaranteed
+limitations:
+  - title: SQL optimization suggestions are generic — actual gains depend on your database engine, data size, and indexes
+    text: >-
+      Optimization suggestions are generic — actual performance gains depend on your database engine, data size, and
+      index configuration
+    category: accuracy
+    severity: info
+    workaround: Benchmark optimized queries with EXPLAIN ANALYZE against your actual data to measure real improvement

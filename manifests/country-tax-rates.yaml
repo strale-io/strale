@@ -1,0 +1,106 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: country-tax-rates
+name: Country Tax Rates
+description: Get corporate tax, VAT, personal income tax, capital gains, and social security rates for 45+ countries.
+category: data-extraction
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - country_code
+  properties:
+    country_code:
+      type: string
+      description: ISO 2-letter country code
+output_schema:
+  type: object
+  example:
+    notes: Municipal tax ~32% + state tax 20% above SEK 598k
+    currency: SEK
+    tax_year: 2024/2025
+    country_code: SE
+    country_name: Sweden
+    last_updated: 2025-01
+    social_security:
+      employee: 7
+      employer: 31.42
+    withholding_tax:
+      royalty: 0
+      dividend: 30
+      interest: 0
+    vat_reduced_rates:
+      - 12
+      - 6
+    vat_standard_rate: 25
+    capital_gains_rate: 30
+    corporate_tax_rate: 20.6
+    personal_income_tax_top_rate: 52
+  properties:
+    vat_standard_rate:
+      type: number
+    capital_gains_rate:
+      type: number
+    corporate_tax_rate:
+      type: number
+    personal_income_tax_top_rate:
+      type: number
+data_source: Static database (corporate tax rates by country, updated quarterly)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      country_code: SE
+    expected_fields:
+      - field: vat_standard_rate
+        operator: not_null
+        reliability: guaranteed
+      - field: vat_standard_rate
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: vat_standard_rate
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: capital_gains_rate
+        operator: not_null
+        reliability: guaranteed
+      - field: capital_gains_rate
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: capital_gains_rate
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: corporate_tax_rate
+        operator: not_null
+        reliability: guaranteed
+      - field: corporate_tax_rate
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: corporate_tax_rate
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    country_code: US
+output_field_reliability:
+  vat_standard_rate: guaranteed
+  capital_gains_rate: guaranteed
+  corporate_tax_rate: guaranteed
+  personal_income_tax_top_rate: guaranteed
+limitations:
+  - title: Tax rates are based on AI knowledge and may not reflect the most recent annual budget changes
+    text: >-
+      Tax rate data based on AI knowledge — rates change with annual budgets and may not reflect the most recent fiscal
+      year
+    category: freshness
+    severity: info
+    workaround: Verify rates against the national tax authority's website before using in financial calculations or invoicing

@@ -1,0 +1,110 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: api-mock-response
+name: API Mock Response
+description: Generate a realistic mock API response with proper headers, status codes, and schema-matching body data.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+    method:
+      type: string
+    status_code:
+      type: integer
+    response_schema:
+      type: object
+output_schema:
+  type: object
+  example:
+    url: https://example.com
+    body:
+      data:
+        id: user_123456
+        name: John Doe
+        email: john.doe@example.com
+        status: active
+        profile:
+          bio: Software Engineer
+          location: San Francisco, CA
+          avatar_url: https://example.com/avatars/user_123456.jpg
+        created_at: "2023-06-15T08:30:00Z"
+        updated_at: "2024-01-10T14:32:15Z"
+      meta:
+        version: "1.0"
+        timestamp: "2024-01-10T14:32:15Z"
+      success: true
+    method: GET
+    headers:
+      Date: Wed, 10 Jan 2024 14:32:15 GMT
+      ETag: W/"33a64df551425fcc55e4d42a148795d9f25f89d4"
+      Server: nginx/1.24.0
+      Connection: keep-alive
+      Content-Type: application/json
+      X-Request-Id: 550e8400-e29b-41d4-a716-446655440000
+      Cache-Control: public, max-age=300
+      X-RateLimit-Limit: "5000"
+      X-RateLimit-Reset: "1699564800"
+      X-RateLimit-Remaining: "4999"
+    status_code: 200
+    content_type: application/json
+  properties:
+    body: {}
+    headers:
+      type: object
+    status_code:
+      type: integer
+    content_type:
+      type: string
+data_source: Claude API (mock API response generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://example.com
+    expected_fields:
+      - field: body
+        operator: not_null
+        reliability: guaranteed
+      - field: headers
+        operator: not_null
+        reliability: guaranteed
+      - field: headers
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: status_code
+        operator: not_null
+        reliability: guaranteed
+      - field: status_code
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: content_type
+        operator: not_null
+        reliability: guaranteed
+      - field: content_type
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    url: https://example.com
+output_field_reliability:
+  body: guaranteed
+  headers: guaranteed
+  status_code: guaranteed
+  content_type: guaranteed
+limitations:
+  - title: Mock values are schema-based and may not satisfy complex cross-field validation rules
+    text: Generates plausible mock data based on schema — mock values may not satisfy complex cross-field validation rules
+    category: accuracy
+    severity: info
+    workaround: Provide example responses in the input to guide mock generation for fields with specific value constraints

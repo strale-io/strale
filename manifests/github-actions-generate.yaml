@@ -1,0 +1,184 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: github-actions-generate
+name: GitHub Actions Generate
+description: >-
+  Generate CI/CD workflow YAML for GitHub Actions. Supports multiple languages, frameworks, and deploy targets (Railway,
+  Vercel, Fly).
+category: developer-tools
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - language
+  properties:
+    steps:
+      type: array
+    language:
+      type: string
+    triggers:
+      type: array
+    framework:
+      type: string
+    deploy_target:
+      type: string
+output_schema:
+  type: object
+  example:
+    jobs:
+      - install
+      - lint
+      - test
+      - build
+    language: en
+    framework: express
+    deploy_target: null
+    workflow_yaml: |
+      name: CI/CD Pipeline
+
+      on:
+        push:
+          branches: [ main, develop ]
+        pull_request:
+          branches: [ main, develop ]
+
+      jobs:
+        install:
+          runs-on: ubuntu-latest
+          steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                node-version: '18'
+                cache: 'npm'
+            - name: Install dependencies
+              run: npm ci
+            - name: Save node_modules cache
+              uses: actions/cache@v4
+              with:
+                path: node_modules
+                key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+                restore-keys: |
+                  ${{ runner.os }}-node-
+
+        lint:
+          needs: install
+          runs-on: ubuntu-latest
+          steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                node-version: '18'
+                cache: 'npm'
+            - name: Restore node_modules cache
+              uses: actions/cache@v4
+              with:
+                path: node_modules
+                key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+            - name: Run linter
+              run: npm run lint --if-present
+
+        test:
+          needs: install
+          runs-on: ubuntu-latest
+          steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                node-version: '18'
+                cache: 'npm'
+            - name: Restore node_modules cache
+              uses: actions/cache@v4
+              with:
+                path: node_modules
+                key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+            - name: Run tests
+              run: npm test
+
+        build:
+          needs: [lint, test]
+          runs-on: ubuntu-latest
+          steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                node-version: '18'
+                cache: 'npm'
+            - name: Restore node_modules cache
+              uses: actions/cache@v4
+              with:
+                path: node_modules
+                key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+            - name: Build application
+              run: npm run build --if-present
+    secrets_needed: []
+    triggers_configured:
+      - push
+      - pull_request
+    estimated_run_minutes: 8
+  properties:
+    jobs:
+      type: array
+    workflow_yaml:
+      type: string
+    secrets_needed:
+      type: array
+    estimated_run_minutes:
+      type: integer
+data_source: Claude API (GitHub Actions workflow generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      language: en
+      framework: express
+    expected_fields:
+      - field: jobs
+        operator: not_null
+        reliability: guaranteed
+      - field: jobs
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: workflow_yaml
+        operator: not_null
+        reliability: guaranteed
+      - field: workflow_yaml
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: secrets_needed
+        operator: not_null
+        reliability: guaranteed
+      - field: secrets_needed
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: estimated_run_minutes
+        operator: not_null
+        reliability: guaranteed
+      - field: estimated_run_minutes
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    language: test
+output_field_reliability:
+  jobs: guaranteed
+  workflow_yaml: guaranteed
+  secrets_needed: guaranteed
+  estimated_run_minutes: guaranteed
+limitations:
+  - title: Generated workflows use common action versions — pinned SHA references and custom runners are not included
+    text: >-
+      Generated workflows use common action versions — pinned SHA references and organization-specific runners are not
+      included
+    category: accuracy
+    severity: info
+    workaround: >-
+      Pin action versions to SHAs for security and replace runner references with your organization's self-hosted
+      runners if applicable

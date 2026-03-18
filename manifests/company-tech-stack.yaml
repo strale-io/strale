@@ -1,0 +1,116 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: company-tech-stack
+name: Company Tech Stack
+description: >-
+  Deep tech stack analysis of any domain. Analyzes HTTP headers, HTML source, JS libraries, DNS records, meta tags.
+  Returns frontend, analytics, CDN, hosting, CMS, and more.
+category: competitive-intelligence
+price_cents: 30
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+      description: Domain to analyze (e.g. stripe.com)
+output_schema:
+  type: object
+  example:
+    cdn: Cloudflare
+    cms: null
+    domain: example.com
+    analytics: []
+    chat_widget: null
+    dns_records:
+      a:
+        - 104.18.27.120
+        - 104.18.26.120
+      mx:
+        - exchange: ""
+          priority: 0
+      txt:
+        - _k2n1y4vw3qtb4skdx9e7dxt97qrmmq9
+        - v=spf1 -all
+      cname: []
+    css_framework: null
+    email_provider: null
+    meta_framework: null
+    hosting_provider: Cloudflare
+    payment_processor: null
+    frontend_framework: null
+    detected_technologies:
+      - name: Cloudflare
+        category: CDN/Hosting
+        confidence: high
+      - name: SPF
+        category: Email Security
+        confidence: high
+    http_headers_analyzed: []
+  properties:
+    cdn:
+      type: string
+    analytics:
+      type: array
+    hosting_provider:
+      type: string
+    frontend_framework:
+      type: string
+    detected_technologies:
+      type: array
+data_source: HTTP fetch + Claude API (technology stack analysis)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain: https://stripe.com
+    expected_fields:
+      - field: cdn
+        operator: not_null
+        reliability: guaranteed
+      - field: cdn
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: analytics
+        operator: not_null
+        reliability: guaranteed
+      - field: analytics
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: hosting_provider
+        operator: not_null
+        reliability: guaranteed
+      - field: hosting_provider
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: frontend_framework
+        operator: not_null
+        reliability: guaranteed
+      - field: frontend_framework
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    domain: https://stripe.com
+output_field_reliability:
+  cdn: guaranteed
+  analytics: guaranteed
+  hosting_provider: guaranteed
+  frontend_framework: guaranteed
+  detected_technologies: guaranteed
+limitations:
+  - title: Detects technologies in public-facing web properties only — internal tools and backends are not visible
+    text: >-
+      Detects technologies visible in public-facing web properties — internal tools and backend infrastructure are not
+      visible
+    category: accuracy
+    severity: info
+    workaround: Cross-reference with job postings (job-board-search) to infer backend technologies from required skills

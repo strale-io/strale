@@ -1,0 +1,107 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: company-enrich
+name: Company Enrichment
+description: >-
+  Enrich company data from a domain, email, or company name. Scrapes the company website to extract: industry, employee
+  estimate, HQ location, description, social links, tech stack.
+category: data-extraction
+price_cents: 50
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+      description: Company domain (e.g. spotify.com), email, or name
+output_schema:
+  type: object
+  example:
+    website: https://google.com
+    industry: Technology
+    tech_stack:
+      - Gemini
+      - Google AI
+      - Google Cloud
+      - Google DeepMind
+    description: >-
+      Google is a multinational technology company that develops and provides a wide range of products and services
+      including search, cloud computing, artificial intelligence, productivity software (Google Workspace), and maps.
+    hq_location: Mountain View, United States
+    company_name: Google
+    founded_year: 1998
+    social_links:
+      github: null
+      twitter: null
+      linkedin: null
+    employee_estimate: 1000+
+  properties:
+    industry:
+      type: string
+    tech_stack:
+      type: array
+    description:
+      type: string
+    hq_location:
+      type: string
+    company_name:
+      type: string
+    employee_estimate:
+      type: string
+data_source: HTTP fetch + Claude API (company website analysis)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain: google.com
+    expected_fields:
+      - field: industry
+        operator: not_null
+        reliability: guaranteed
+      - field: industry
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: tech_stack
+        operator: not_null
+        reliability: guaranteed
+      - field: tech_stack
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: description
+        operator: not_null
+        reliability: guaranteed
+      - field: description
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: hq_location
+        operator: not_null
+        reliability: guaranteed
+      - field: hq_location
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    domain: example.com
+output_field_reliability:
+  industry: guaranteed
+  tech_stack: guaranteed
+  description: guaranteed
+  hq_location: guaranteed
+  company_name: guaranteed
+  employee_estimate: guaranteed
+limitations:
+  - title: Enrichment combines multiple web sources via AI — some data points may be inferred rather than verified
+    text: Enrichment combines multiple web sources via AI — some data points may be inferred rather than directly verified
+    category: accuracy
+    severity: info
+    workaround: >-
+      Check the data_sources field in the response and independently verify critical data points against the listed
+      sources

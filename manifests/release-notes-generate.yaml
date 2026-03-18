@@ -1,0 +1,101 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: release-notes-generate
+name: Release Notes Generate
+description: >-
+  Generate release notes from commit log or changelog. Keep a Changelog format with Added/Changed/Fixed/Removed
+  sections.
+category: developer-tools
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - commits
+  properties:
+    commits:
+      type: string
+    version:
+      type: string
+output_schema:
+  type: object
+  example:
+    date: "2026-03-09"
+    summary: Test release with minimal changes
+    version: NEXT
+    markdown: |
+      ## Changed
+
+      - test_value
+    sections:
+      added: []
+      fixed: []
+      changed:
+        - test_value
+      removed: []
+      security: []
+      deprecated: []
+    contributors: []
+    breaking_changes: []
+  properties:
+    summary:
+      type: string
+    version:
+      type: string
+    markdown:
+      type: string
+    sections:
+      type: object
+data_source: Claude API (release notes generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      commits: test_value
+    expected_fields:
+      - field: summary
+        operator: not_null
+        reliability: guaranteed
+      - field: summary
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: version
+        operator: not_null
+        reliability: guaranteed
+      - field: version
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: markdown
+        operator: not_null
+        reliability: guaranteed
+      - field: markdown
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: sections
+        operator: not_null
+        reliability: guaranteed
+      - field: sections
+        operator: type
+        reliability: guaranteed
+        value: object
+  health_check_input:
+    commits: test
+output_field_reliability:
+  summary: guaranteed
+  version: guaranteed
+  markdown: guaranteed
+  sections: guaranteed
+limitations:
+  - title: Breaking changes may not be prominently flagged without conventional commit markers in the source
+    text: >-
+      Generated from commits or changelogs — breaking changes may not be prominently flagged without conventional commit
+      markers
+    category: accuracy
+    severity: info
+    workaround: Use breaking change prefixes (BREAKING CHANGE:, feat!:) in commits for accurate breaking change detection

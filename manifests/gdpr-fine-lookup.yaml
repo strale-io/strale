@@ -1,0 +1,66 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: gdpr-fine-lookup
+name: GDPR Fine Lookup
+description: Look up GDPR enforcement fines by company name or country. Returns fine amounts, authorities, articles violated.
+category: data-extraction
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    company:
+      type: string
+    country_code:
+      type: string
+output_schema:
+  type: object
+  example:
+    fines:
+      - date: null
+        company: Meta Platforms Ireland Limited
+        country: IE
+        authority: Irish Data Protection Commission (DPC)
+        amount_eur: 1200000000
+        description: Unlawfully transferring personal data to the United States
+        article_violated: null
+    total_fines: 1
+    total_amount_eur: 1200000000
+  properties:
+    fines:
+      type: array
+    total_fines:
+      type: number
+    total_amount_eur:
+      type: number
+data_source: GDPR Enforcement Tracker (public enforcement database)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      company: Meta
+    expected_fields:
+      - field: fines
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    company: Google
+    country_code: US
+output_field_reliability:
+  fines: guaranteed
+  total_fines: guaranteed
+  total_amount_eur: guaranteed
+limitations:
+  - title: GDPR fine database updates weekly — recently announced fines may take up to 7 days to appear
+    text: Fine database updated weekly — recently announced fines may take up to 7 days to appear
+    category: freshness
+    severity: info
+    workaround: For breaking enforcement news, check enforcementtracker.com directly or subscribe to the relevant DPA's press feed
+  - title: Covers publicly reported fines only, as some national DPAs delay or omit publication
+    text: Covers publicly reported fines only — some national DPAs delay publication
+    category: coverage
+    severity: info
+    workaround: Supplement with the target company's own regulatory disclosure filings, which may reference unpublished penalties

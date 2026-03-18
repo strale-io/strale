@@ -1,0 +1,186 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: sitemap-parse
+name: Sitemap Parse
+description: Fetch and parse a website's XML sitemap. Returns URL count, top path segments, lastmod dates, and sample URLs.
+category: monitoring
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+output_schema:
+  type: object
+  example:
+    url: https://strale.dev/sitemap.xml
+    type: urlset
+    total_urls: 239
+    has_lastmod: true
+    sample_urls:
+      - loc: https://strale.dev/
+        lastmod: "2026-03-12"
+        priority: "1.0"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities
+        lastmod: "2026-03-12"
+        priority: "0.9"
+        changefreq: daily
+      - loc: https://strale.dev/pricing
+        lastmod: "2026-03-12"
+        priority: "0.8"
+        changefreq: monthly
+      - loc: https://strale.dev/docs
+        lastmod: "2026-03-12"
+        priority: "0.8"
+        changefreq: weekly
+      - loc: https://strale.dev/signup
+        lastmod: "2026-03-12"
+        priority: "0.7"
+        changefreq: monthly
+      - loc: https://strale.dev/security
+        lastmod: "2026-03-12"
+        priority: "0.7"
+        changefreq: monthly
+      - loc: https://strale.dev/capabilities/belgian-company-data
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/vat-validate
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/ssl-certificate-chain
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/vat-rate-lookup
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/web-extract
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/invoice-extract
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/swedish-company-data
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/pdf-extract
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/eori-validate
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/iban-validate
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/brand-mention-search
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/norwegian-company-data
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/austrian-company-data
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+      - loc: https://strale.dev/capabilities/danish-company-data
+        lastmod: "2026-03-12"
+        priority: "0.6"
+        changefreq: weekly
+    has_priority: true
+    has_changefreq: true
+    newest_lastmod: "2026-03-12"
+    oldest_lastmod: "2026-03-12"
+    top_path_segments:
+      - count: 234
+        segment: capabilities
+      - count: 1
+        segment: /
+      - count: 1
+        segment: pricing
+      - count: 1
+        segment: docs
+      - count: 1
+        segment: signup
+      - count: 1
+        segment: security
+  properties:
+    type:
+      type: string
+    total_urls:
+      type: integer
+    sample_urls:
+      type: array
+    top_path_segments:
+      type: array
+data_source: HTTP fetch (sitemap.xml from target domain)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://strale.dev/sitemap.xml
+    expected_fields:
+      - field: type
+        operator: not_null
+        reliability: guaranteed
+      - field: type
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: total_urls
+        operator: not_null
+        reliability: guaranteed
+      - field: total_urls
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_urls
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: sample_urls
+        operator: not_null
+        reliability: guaranteed
+      - field: sample_urls
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: top_path_segments
+        operator: not_null
+        reliability: guaranteed
+      - field: top_path_segments
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    url: https://strale.dev/sitemap.xml
+output_field_reliability:
+  type: guaranteed
+  total_urls: guaranteed
+  sample_urls: guaranteed
+  top_path_segments: guaranteed
+limitations:
+  - title: Sitemap index files are not recursively fetched and dynamically generated sitemaps may be incomplete
+    text: >-
+      Parses XML sitemaps — sitemap index files are not recursively fetched and dynamically generated sitemaps may be
+      incomplete
+    category: coverage
+    severity: info
+    workaround: If the sitemap is an index, extract the child sitemap URLs and process each one separately

@@ -1,0 +1,128 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: shipping-cost-estimate
+name: Shipping Cost Estimate
+description: Estimate shipping costs for PostNord, DHL, UPS by origin/destination, weight, and service level.
+category: data-extraction
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - origin_country
+    - destination_country
+    - weight_kg
+  properties:
+    service:
+      type: string
+    weight_kg:
+      type: number
+    origin_country:
+      type: string
+    destination_country:
+      type: string
+output_schema:
+  type: object
+  example:
+    zone: domestic
+    notes: >-
+      Estimates based on published rate guides. Get exact quotes from carrier websites. Prices in EUR, actual currency
+      may vary by carrier and route.
+    origin: TE
+    fastest:
+      carrier: DHL
+      service: express
+      delivery_days: "1"
+    cheapest:
+      price: 5
+      carrier: DHL
+      service: economy
+    estimates:
+      - price: 5
+        carrier: DHL
+        service: economy
+        currency: EUR
+        delivery_days: 3-5
+      - price: 8
+        carrier: DHL
+        service: standard
+        currency: EUR
+        delivery_days: 2-3
+      - price: 15
+        carrier: DHL
+        service: express
+        currency: EUR
+        delivery_days: "1"
+      - price: 6
+        carrier: UPS
+        service: economy
+        currency: EUR
+        delivery_days: 3-5
+      - price: 9
+        carrier: UPS
+        service: standard
+        currency: EUR
+        delivery_days: 2-3
+      - price: 16
+        carrier: UPS
+        service: express
+        currency: EUR
+        delivery_days: "1"
+    weight_kg: 1
+    destination: TE
+  properties:
+    fastest:
+      type: object
+    cheapest:
+      type: object
+    estimates:
+      type: array
+data_source: Algorithmic (dimensional weight + zone-based rate estimation)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      weight_kg: 1
+      origin_country: test_value
+      destination_country: test_value
+    expected_fields:
+      - field: fastest
+        operator: not_null
+        reliability: guaranteed
+      - field: fastest
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: cheapest
+        operator: not_null
+        reliability: guaranteed
+      - field: cheapest
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: estimates
+        operator: not_null
+        reliability: guaranteed
+      - field: estimates
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    weight_kg: 1
+    origin_country: test
+    destination_country: test
+output_field_reliability:
+  fastest: guaranteed
+  cheapest: guaranteed
+  estimates: guaranteed
+limitations:
+  - title: Shipping cost estimates are AI-generated — actual costs depend on account-specific rates and surcharges
+    text: >-
+      AI-generated estimates based on general carrier pricing — actual costs depend on account-specific rates,
+      surcharges, and seasonal adjustments
+    category: accuracy
+    severity: info
+    workaround: Use as an order-of-magnitude estimate and request actual quotes from your contracted carriers for budgeting

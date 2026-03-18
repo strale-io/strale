@@ -1,0 +1,94 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: prompt-compress
+name: Prompt Compress
+description: Compress a prompt to be shorter while preserving semantic meaning. Specify target reduction percentage (10-70%).
+category: developer-tools
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - prompt_text
+  properties:
+    prompt_text:
+      type: string
+    target_reduction_percent:
+      type: integer
+      description: Default 30
+output_schema:
+  type: object
+  example:
+    original_tokens: 14
+    removed_content:
+      - This is a test
+      - for
+    compressed_prompt: Automated capability testing input.
+    compressed_tokens: 9
+    preserved_instructions:
+      - Identify this as test input
+      - Recognize it's for automated capability testing
+    actual_reduction_percent: 36
+  properties:
+    original_tokens:
+      type: integer
+    compressed_prompt:
+      type: string
+    compressed_tokens:
+      type: integer
+    actual_reduction_percent:
+      type: integer
+data_source: Claude API (prompt compression and optimization)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      prompt_text: >-
+        You are a helpful AI assistant. Please help me write a comprehensive function that validates email addresses
+        using a robust regex pattern, handling edge cases like internationalized addresses, plus-sign addressing, and
+        subdomain TLDs.
+    expected_fields:
+      - field: original_tokens
+        operator: not_null
+        reliability: guaranteed
+      - field: original_tokens
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: compressed_prompt
+        operator: not_null
+        reliability: guaranteed
+      - field: compressed_prompt
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: compressed_tokens
+        operator: not_null
+        reliability: guaranteed
+      - field: compressed_tokens
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: actual_reduction_percent
+        operator: not_null
+        reliability: guaranteed
+      - field: actual_reduction_percent
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    prompt_text: test
+output_field_reliability:
+  original_tokens: guaranteed
+  compressed_prompt: guaranteed
+  compressed_tokens: guaranteed
+  actual_reduction_percent: guaranteed
+limitations:
+  - title: Compression may remove context that appears redundant but is semantically important for specific tasks
+    text: Compression may remove context that appears redundant but is semantically important for specific LLM tasks
+    category: accuracy
+    severity: info
+    workaround: Test compressed prompts against your original to verify output quality is maintained before switching

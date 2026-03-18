@@ -1,0 +1,192 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: dockerfile-generate
+name: Dockerfile Generate
+description: >-
+  Generate optimized, production-ready Dockerfiles. Multi-stage builds, Alpine base, non-root user, layer caching.
+  Supports Node, Python, Go, Rust, Java.
+category: developer-tools
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - language
+  properties:
+    alpine:
+      type: boolean
+    language:
+      type: string
+    framework:
+      type: string
+    multi_stage:
+      type: boolean
+output_schema:
+  type: object
+  example:
+    stages:
+      - dependencies
+      - builder
+      - runtime
+    language: en
+    framework: express
+    build_args: []
+    dockerfile: |-
+      # Stage 1: Dependencies
+      FROM node:18-alpine AS dependencies
+      WORKDIR /app
+      COPY package*.json ./
+      RUN npm ci --only=production && npm cache clean --force
+
+      # Stage 2: Builder
+      FROM node:18-alpine AS builder
+      WORKDIR /app
+      COPY package*.json ./
+      RUN npm ci
+      COPY . .
+      RUN npm run build --if-present
+
+      # Stage 3: Runtime
+      FROM node:18-alpine AS runtime
+      WORKDIR /app
+
+      # Install dumb-init for proper signal handling
+      RUN apk add --no-cache dumb-init
+
+      # Create non-root user
+      RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+
+      # Copy production dependencies from dependencies stage
+      COPY --from=dependencies --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+      # Copy application code from builder stage
+      COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
+      COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+      COPY --from=builder --chown=nodejs:nodejs /app/public ./public
+
+      # Switch to non-root user
+      USER nodejs
+
+      # Expose port
+      EXPOSE 3000
+
+      # Healthcheck
+      HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+        CMD node -e "require('http').get('http://localhost:3000/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+
+      # Use dumb-init to handle signals properly
+      ENTRYPOINT ["dumb-init", "--"]
+
+      # Start application
+      CMD ["node", "dist/index.js"]
+    multi_stage: true
+    security_notes:
+      - Non-root user (nodejs:1001) runs the application
+      - Multi-stage build reduces final image size by excluding dev dependencies
+      - Alpine Linux base image minimizes attack surface
+      - dumb-init handles PID 1 and signal forwarding correctly
+      - Only production dependencies copied to final stage
+      - Read-only filesystem recommended in production via security context
+      - No package manager or build tools in final image
+      - HEALTHCHECK validates application responsiveness
+    estimated_image_size: 120-150MB
+    dockerignore_recommended:
+      - node_modules
+      - npm-debug.log
+      - .git
+      - .gitignore
+      - .env
+      - .env.local
+      - .DS_Store
+      - dist
+      - build
+      - .next
+      - coverage
+      - .nyc_output
+      - "*.log"
+      - .vscode
+      - .idea
+      - "*.swp"
+      - "*.swo"
+      - "*~"
+      - .eslintcache
+      - yarn-error.log
+      - .npm
+      - .eslintignore
+      - README.md
+      - LICENSE
+      - .editorconfig
+      - docker-compose*.yml
+      - Dockerfile*
+      - .dockerignore
+      - .github
+      - .gitlab-ci.yml
+      - .circleci
+      - test
+      - tests
+      - jest.config.js
+      - vitest.config.js
+      - .mocharc.json
+  properties:
+    stages:
+      type: array
+    dockerfile:
+      type: string
+    security_notes:
+      type: array
+    estimated_image_size:
+      type: string
+data_source: Claude API (Dockerfile generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      language: en
+      framework: express
+    expected_fields:
+      - field: stages
+        operator: not_null
+        reliability: guaranteed
+      - field: stages
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: dockerfile
+        operator: not_null
+        reliability: guaranteed
+      - field: dockerfile
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: security_notes
+        operator: not_null
+        reliability: guaranteed
+      - field: security_notes
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: estimated_image_size
+        operator: not_null
+        reliability: guaranteed
+      - field: estimated_image_size
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    language: test
+output_field_reliability:
+  stages: guaranteed
+  dockerfile: guaranteed
+  security_notes: guaranteed
+  estimated_image_size: guaranteed
+limitations:
+  - title: Generated Dockerfiles follow best practices but may not account for project-specific build requirements
+    text: >-
+      Generated Dockerfiles follow best practices but may not account for project-specific build requirements or private
+      registries
+    category: accuracy
+    severity: info
+    workaround: Test the generated Dockerfile in a CI pipeline and adjust base images, build args, and secrets as needed

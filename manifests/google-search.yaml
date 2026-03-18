@@ -1,0 +1,161 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: google-search
+name: Google Search
+description: Perform a Google search and return structured results. Returns title, URL, snippet, position for each result.
+category: web-scraping
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Search query
+    country:
+      type: string
+    language:
+      type: string
+    num_results:
+      type: integer
+      description: Number of results (default 10, max 20)
+output_schema:
+  type: object
+  example:
+    query: test
+    results:
+      - url: https://www.speedtest.net/
+        date: null
+        title: Speedtest by Ookla - The Global Broadband Speed Test
+        snippet: >-
+          Speedtest is better with the app. Download the Speedtest app for more metrics, video testing, mobile coverage
+          maps, and more. Get it on Google Play.
+        position: 1
+        sitelinks: null
+      - url: https://fast.com/
+        date: null
+        title: "Fast.com: Internet Speed Test"
+        snippet: >-
+          How fast is your download speed? In seconds, FAST.com's simple Internet speed test will estimate your ISP
+          speed.
+        position: 2
+        sitelinks: null
+      - url: https://en.wikipedia.org/wiki/Test
+        date: null
+        title: Test - Wikipedia
+        snippet: >-
+          Test(s), testing, or TEST may refer to: Test (assessment), an educational assessment intended to measure the
+          respondents' knowledge or other abilities ...
+        position: 3
+        sitelinks: null
+      - url: https://play.google.com/store/apps/details?id=org.zwanoo.android.speedtest&hl=en_US
+        date: null
+        title: Speedtest by Ookla - Apps on Google Play
+        snippet: >-
+          Test your download and upload speeds as well as three measures of latency to check a slow connection or use
+          the app to make sure your network is ready for a ...
+        position: 4
+        sitelinks: null
+      - url: https://speedtest.xfinity.com/
+        date: null
+        title: Xfinity Speed Test - Check Your Internet Speed
+        snippet: >-
+          Test your connection fast with Xfinity's internet speed test tool and get tips on how to improve your internet
+          performance.
+        position: 5
+        sitelinks: null
+      - url: https://www.att.com/support/speedtest/
+        date: null
+        title: Internet Speed Test – AT&T Official Site
+        snippet: >-
+          Internet speed tests. Check the upload and download speeds of your connected devices and AT&T All-Fi Hub® or
+          Wi-Fi Gateway.
+        position: 6
+        sitelinks: null
+      - url: https://test.io/
+        date: null
+        title: "Test IO: Home"
+        snippet: Test IO delivers a full range of web, mobile, and IoT testing, delivered as a service.
+        position: 7
+        sitelinks: null
+      - url: https://fiber.google.com/speedtest/
+        date: null
+        title: Internet Speed Test | Check Broadband Speed - Google Fiber
+        snippet: >-
+          Test your current internet speed, and find out how fast your broadband wi-fi handles uploads and downloads.
+          See Google Fiber plan options for faster ...
+        position: 8
+        sitelinks: null
+      - url: https://satsuite.collegeboard.org/sat
+        date: null
+        title: The SAT – SAT Suite | College Board
+        snippet: >-
+          Find tips on how to study for the SAT using full-length practice tests on Bluebook, downloadable forms if
+          you're approved to test on paper, and Official SAT ...
+        position: 9
+        sitelinks: null
+    answer_box:
+      link: https://www.merriam-webster.com/dictionary/test
+      title: TEST Definition & Meaning - Merriam-Webster
+      snippet: >-
+        (1) : something (such as a series of questions or exercises) for measuring the skill, knowledge, intelligence,
+        capacities, or aptitudes of an individual or group. (2) : a procedure, reaction, or reagent used to identify or
+        characterize a substance or constituent.
+      snippetHighlighted:
+        - >-
+          something (such as a series of questions or exercises) for measuring the skill, knowledge, intelligence,
+          capacities, or aptitudes of an individual or group
+    result_count: 9
+    knowledge_graph: null
+    people_also_ask: []
+    search_parameters:
+      country: US
+      language: null
+  properties:
+    query:
+      type: string
+    results:
+      type: array
+    total_results_estimate:
+      type: string
+data_source: Serper.dev API (Google Search results)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      query: Stripe payment processing
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: query
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: results
+        operator: not_null
+        reliability: guaranteed
+      - field: results
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    query: test
+    country: US
+output_field_reliability:
+  query: guaranteed
+  results: guaranteed
+  total_results_estimate: guaranteed
+limitations:
+  - title: Results come from Google's index via Serper.dev — paywalled, login-required, and deep web content not accessible
+    text: >-
+      Results from Serper.dev API — limited to Google's index; paywalled, login-required, or deep web content is not
+      accessible
+    category: coverage
+    severity: info
+    workaround: For deep web or database content, use specialized search capabilities (ted-procurement, patent-search) instead

@@ -1,0 +1,110 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: agent-trace-analyze
+name: Agent Trace Analyze
+description: >-
+  Analyze AI agent execution traces (LangChain/CrewAI/AutoGen). Identifies failure points, root causes, token waste, and
+  suggests fixes.
+category: developer-tools
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - trace
+  properties:
+    trace:
+      type: string
+      description: Agent log/trace output
+output_schema:
+  type: object
+  example:
+    severity: warning
+    root_cause: >-
+      The trace input 'test_value' is not a valid AI agent execution log. It lacks essential components including:
+      timestamped steps, tool invocations, agent reasoning, state transitions, or error messages. Cannot analyze
+      execution flow without structured trace data.
+    step_count: 0
+    failure_type: none
+    trace_length: 10
+    failure_point: Trace input validation - insufficient execution data provided
+    steps_summary: []
+    suggested_fix: >-
+      Provide a complete agent execution trace with: (1) timestamped sequential steps, (2) agent thoughts/reasoning, (3)
+      tool names and parameters, (4) tool outputs/responses, (5) any error messages or exceptions, (6) final state or
+      outcome
+    patterns_detected:
+      - insufficient_trace_data
+      - missing_execution_steps
+      - cannot_analyze_without_structured_log
+    token_usage_breakdown:
+      total: 97
+      estimated_input_tokens: 12
+      estimated_output_tokens: 85
+  properties:
+    root_cause:
+      type: string
+    step_count:
+      type: integer
+    failure_type:
+      type: string
+    failure_point:
+      type: string
+    suggested_fix:
+      type: string
+data_source: Claude API (agent trace analysis and optimization)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      trace: test_value
+    expected_fields:
+      - field: root_cause
+        operator: not_null
+        reliability: guaranteed
+      - field: root_cause
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: step_count
+        operator: not_null
+        reliability: guaranteed
+      - field: step_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: step_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: failure_type
+        operator: not_null
+        reliability: guaranteed
+      - field: failure_type
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: failure_point
+        operator: not_null
+        reliability: guaranteed
+      - field: failure_point
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    trace: test
+output_field_reliability:
+  root_cause: guaranteed
+  step_count: guaranteed
+  failure_type: guaranteed
+  failure_point: guaranteed
+  suggested_fix: guaranteed
+limitations:
+  - title: AI trace analysis may not identify all performance bottlenecks in complex multi-agent orchestrations
+    text: AI analysis of agent traces — may not identify all performance bottlenecks in complex multi-agent orchestrations
+    category: accuracy
+    severity: info
+    workaround: Provide the full trace including timestamps and tool outputs for the most actionable analysis

@@ -1,0 +1,100 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: summarize
+name: Summarize Text
+description: >-
+  Summarize text into a concise format. Supports paragraph, bullet points, or one-sentence styles. Configurable max
+  length.
+category: text-processing
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - text
+  properties:
+    text:
+      type: string
+      description: Text to summarize
+    style:
+      type: string
+      description: "Summary style: paragraph, bullets, or one_sentence"
+    max_length:
+      type: integer
+      description: Approximate max word count
+output_schema:
+  type: object
+  example:
+    style: conventional
+    summary: This text is a brief test input designed for automated capability testing purposes.
+    key_points:
+      - Text serves as a test input
+      - Intended for automated capability testing
+      - Brief and straightforward in nature
+    word_count: 18
+    detected_language: English
+  properties:
+    style:
+      type: string
+    summary:
+      type: string
+    key_points:
+      type: array
+    word_count:
+      type: integer
+data_source: Claude API (text summarization)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      text: This is a test input for automated capability testing.
+      style: conventional
+    expected_fields:
+      - field: style
+        operator: not_null
+        reliability: guaranteed
+      - field: style
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: summary
+        operator: not_null
+        reliability: guaranteed
+      - field: summary
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: key_points
+        operator: not_null
+        reliability: guaranteed
+      - field: key_points
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: word_count
+        operator: not_null
+        reliability: guaranteed
+      - field: word_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: word_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    text: test
+output_field_reliability:
+  style: guaranteed
+  summary: guaranteed
+  key_points: guaranteed
+  word_count: guaranteed
+limitations:
+  - title: AI-generated summaries may omit nuances or context-dependent details from long or technical documents
+    text: AI-generated summaries may omit nuances or context-dependent details from very long or technical documents
+    category: accuracy
+    severity: info
+    workaround: For critical documents, compare the summary against the original to verify no essential details were lost

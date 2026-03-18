@@ -1,0 +1,98 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: csv-clean
+name: CSV Clean
+description: >-
+  Clean messy CSV: fix inconsistent delimiters, mixed encodings, BOM, trailing commas, quoted fields. Returns clean CSV
+  with issues report.
+category: data-processing
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - csv
+  properties:
+    csv:
+      type: string
+      description: Messy CSV string to clean
+output_schema:
+  type: object
+  example:
+    csv: |-
+      name,age,city
+      Alice,30,Stockholm
+      Bob,25,Oslo
+    row_count: 3
+    column_count: 3
+    issues_fixed: []
+    detected_delimiter: ","
+  properties:
+    csv:
+      type: string
+    row_count:
+      type: integer
+    column_count:
+      type: integer
+    issues_fixed:
+      type: array
+    detected_delimiter:
+      type: string
+data_source: Algorithmic (CSV normalization, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      csv: |-
+        name,age,city
+        Alice,30,Stockholm
+        Bob,25,Oslo
+    expected_fields:
+      - field: csv
+        operator: not_null
+        reliability: guaranteed
+      - field: csv
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: row_count
+        operator: not_null
+        reliability: guaranteed
+      - field: row_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: row_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: column_count
+        operator: not_null
+        reliability: guaranteed
+      - field: column_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: column_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    csv: test
+output_field_reliability:
+  csv: guaranteed
+  row_count: guaranteed
+  column_count: guaranteed
+  issues_fixed: guaranteed
+  detected_delimiter: guaranteed
+limitations:
+  - title: Handles common CSV encoding and delimiter issues — extremely malformed files may require manual preprocessing
+    text: >-
+      Handles common CSV issues (encoding, delimiters, quoting) — extremely malformed files may require manual
+      preprocessing
+    category: coverage
+    severity: info
+    workaround: If cleaning fails, specify the exact delimiter and encoding in the input parameters

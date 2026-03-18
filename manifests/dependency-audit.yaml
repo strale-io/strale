@@ -1,0 +1,116 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: dependency-audit
+name: Dependency Audit
+description: >-
+  Audit npm or Python dependencies. Checks each package against registry for latest version, deprecation,
+  vulnerabilities. Verifiable against actual registries.
+category: developer-tools
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    package_json:
+      type: string
+      description: package.json contents
+    requirements_txt:
+      type: string
+      description: requirements.txt contents
+output_schema:
+  type: object
+  example:
+    summary:
+      total: 2
+      errors: 0
+      outdated: 2
+      deprecated: 0
+      up_to_date: 0
+    ecosystem: npm
+    dependencies:
+      - name: express
+        is_outdated: true
+        is_deprecated: false
+        last_published: "2025-12-01T20:49:43.268Z"
+        latest_version: 5.2.1
+        current_version: 4.18.0
+        is_dev_dependency: false
+      - name: lodash
+        is_outdated: true
+        is_deprecated: false
+        last_published: "2026-01-21T17:29:52.831Z"
+        latest_version: 4.17.23
+        current_version: 4.17.21
+        is_dev_dependency: false
+    outdated_count: 2
+    critical_updates: []
+    deprecated_count: 0
+    total_dependencies: 2
+  properties:
+    summary:
+      type: object
+    ecosystem:
+      type: string
+    dependencies:
+      type: array
+    outdated_count:
+      type: integer
+data_source: Algorithmic (dependency tree analysis, no external data)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      package_json: "{\"name\": \"my-app\", \"version\": \"1.0.0\", \"dependencies\": {\"express\": \"^4.18.0\", \"lodash\": \"^4.17.21\"}}"
+    expected_fields:
+      - field: summary
+        operator: not_null
+        reliability: guaranteed
+      - field: summary
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: ecosystem
+        operator: not_null
+        reliability: guaranteed
+      - field: ecosystem
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: dependencies
+        operator: not_null
+        reliability: guaranteed
+      - field: dependencies
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: outdated_count
+        operator: not_null
+        reliability: guaranteed
+      - field: outdated_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: outdated_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    package_json: "{\"dependencies\":{\"express\":\"^4.18.0\"}}"
+output_field_reliability:
+  summary: guaranteed
+  ecosystem: guaranteed
+  dependencies: guaranteed
+  outdated_count: guaranteed
+limitations:
+  - title: >-
+      AI audit covers declared dependencies only — transitive vulnerability chains and runtime dependencies are not
+      detected
+    text: >-
+      AI-based audit of declared dependencies — cannot detect transitive vulnerability chains or runtime-only
+      dependencies
+    category: accuracy
+    severity: info
+    workaround: Supplement with npm audit or pip-audit for vulnerability scanning that includes transitive dependencies

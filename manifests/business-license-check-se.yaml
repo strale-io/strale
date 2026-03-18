@@ -1,0 +1,98 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: business-license-check-se
+name: Business License Check SE
+description: Check Swedish company registration status, SNI codes, F-skatt, VAT registration, employer registration.
+category: data-extraction
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - org_number
+  properties:
+    org_number:
+      type: string
+      description: Swedish org number (10 digits)
+output_schema:
+  type: object
+  example:
+    f_skatt: true
+    sni_codes:
+      - code: "60100"
+        description: Radiosändning och distribution av ljudinspelningar
+    org_number: 556703-7485
+    company_name: Spotify AB
+    company_type: AB
+    board_members:
+      - Carl Peter Christian Luiga
+    moms_registered: true
+    registered_date: "2006-05-10"
+    registered_address: Regeringsgatan 19 5tr, 111 53 Stockholm
+    employer_registered: true
+    registration_status: active
+  properties:
+    f_skatt:
+      type: boolean
+    sni_codes:
+      type: array
+    company_name:
+      type: string
+    moms_registered:
+      type: boolean
+    registration_status:
+      type: string
+data_source: Headless browser + Swedish authority registries
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      org_number: 556703-7485
+    expected_fields:
+      - field: f_skatt
+        operator: not_null
+        reliability: guaranteed
+      - field: f_skatt
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: sni_codes
+        operator: not_null
+        reliability: guaranteed
+      - field: sni_codes
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: company_name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: moms_registered
+        operator: not_null
+        reliability: guaranteed
+      - field: moms_registered
+        operator: type
+        reliability: guaranteed
+        value: boolean
+  health_check_input:
+    org_number: 556703-7485
+output_field_reliability:
+  f_skatt: guaranteed
+  sni_codes: guaranteed
+  company_name: guaranteed
+  moms_registered: guaranteed
+  registration_status: guaranteed
+limitations:
+  - title: Checks Swedish business licenses via web scraping — only licenses in public registries are covered
+    text: Checks Swedish business licenses via web scraping — coverage limited to licenses published in public registries
+    category: coverage
+    severity: info
+    workaround: >-
+      For regulated industries (banking, insurance), verify directly with the relevant authority (Finansinspektionen,
+      IVO)

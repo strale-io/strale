@@ -1,0 +1,108 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: sepa-xml-validate
+name: SEPA XML Validate
+description: >-
+  Validate SEPA XML files (pain.001 credit transfer, pain.008 direct debit). Checks structure, IBANs, BICs, amounts,
+  transaction counts.
+category: validation
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - xml
+  properties:
+    xml:
+      type: string
+      description: SEPA XML string
+output_schema:
+  type: object
+  example:
+    valid: false
+    debtor:
+      bic: null
+      iban: null
+      name: null
+    errors:
+      - path: Document/@xmlns
+        message: Missing or invalid SEPA namespace. Expected urn:iso:std:iso:20022:tech:xsd:pain.001.001.03 or pain.008.001.02.
+      - path: Document
+        message: Cannot determine SEPA message type. Expected pain.001 (credit transfer) or pain.008 (direct debit).
+      - path: GrpHdr/MsgId
+        message: Missing MsgId (Message Identification).
+      - path: GrpHdr/CreDtTm
+        message: Missing CreDtTm (Creation Date Time).
+      - path: GrpHdr/NbOfTxs
+        message: Missing NbOfTxs (Number of Transactions).
+      - path: PmtInf
+        message: No PmtInf (Payment Information) blocks found.
+    schema: null
+    currency: EUR
+    warnings: []
+    message_id: null
+    message_type: null
+    total_amount: 0
+    creation_date: null
+    payment_count: 0
+    creditor_count: 0
+  properties:
+    valid:
+      type: boolean
+    errors:
+      type: array
+    message_type:
+      type: string
+    total_amount:
+      type: number
+    payment_count:
+      type: number
+data_source: Algorithmic (SEPA XML schema validation, ISO 20022)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      xml: <root><item>test</item></root>
+    expected_fields:
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: errors
+        operator: not_null
+        reliability: guaranteed
+      - field: errors
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_amount
+        operator: not_null
+        reliability: guaranteed
+      - field: total_amount
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    xml: test
+output_field_reliability:
+  valid: guaranteed
+  errors: guaranteed
+  message_type: guaranteed
+  total_amount: guaranteed
+  payment_count: guaranteed
+limitations:
+  - title: Validates standard SEPA XML schemas pain.001 and pain.002 only — bank-specific extensions are not checked
+    text: >-
+      Validates against standard SEPA XML schemas (pain.001, pain.002) — bank-specific extensions or proprietary formats
+      are not checked
+    category: coverage
+    severity: info
+    workaround: >-
+      Submit a test file to your bank's validation endpoint to verify compatibility with their specific SEPA
+      implementation

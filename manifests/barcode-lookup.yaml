@@ -1,0 +1,110 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: barcode-lookup
+name: Barcode Lookup
+description: >-
+  Look up product information by UPC/EAN barcode. Uses Open Food Facts and UPC ItemDB. Returns product name, brand,
+  nutrition, images.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - barcode
+  properties:
+    barcode:
+      type: string
+output_schema:
+  type: object
+  example:
+    brand: nutella
+    found: true
+    source: open_food_facts
+    barcode: "3017620422003"
+    quantity: 400 g
+    allergens: en:milk,en:nuts,en:soybeans
+    countries: >-
+      Belgium, France, Germany, India, Italy, Luxembourg, Morocco, Netherlands, Philippines, Poland, Romania, Spain,
+      Switzerland, Turkey, United Kingdom, en:united-states
+    image_url: https://images.openfoodfacts.org/images/products/301/762/042/2003/front_en.820.400.jpg
+    nutrition:
+      fat_g: 30.9
+      salt_g: 0.107
+      carbs_g: 57.5
+      sugar_g: 56.3
+      protein_g: 6.3
+      energy_kcal: 3860
+    categories: Other
+    nova_group: 4
+    ingredients: >-
+      Sucre, huile de palme, NOISETTES 13%, cacao maigre 7,4%, LAIT écrémé en poudre 6,6%, LACTOSERUM en poudre,
+      émulsifiants: lécithines [SOJA), vanilline. Sans gluten.
+    product_name: Nutella
+    ecoscore_grade: unknown
+    nutriscore_grade: e
+  properties:
+    brand:
+      type: string
+    found:
+      type: boolean
+    barcode:
+      type: string
+    nutrition:
+      type: object
+    product_name:
+      type: string
+data_source: Open Food Facts API (barcode product database)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      barcode: "3017620422003"
+    expected_fields:
+      - field: brand
+        operator: not_null
+        reliability: guaranteed
+      - field: brand
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: found
+        operator: not_null
+        reliability: guaranteed
+      - field: found
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: barcode
+        operator: not_null
+        reliability: guaranteed
+      - field: barcode
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: nutrition
+        operator: not_null
+        reliability: guaranteed
+      - field: nutrition
+        operator: type
+        reliability: guaranteed
+        value: object
+  health_check_input:
+    barcode: "3017620422003"
+output_field_reliability:
+  brand: guaranteed
+  found: guaranteed
+  barcode: guaranteed
+  nutrition: guaranteed
+  product_name: guaranteed
+limitations:
+  - title: Open Food Facts coverage is strong for food and beverage but weak for electronics and general merchandise
+    text: >-
+      Product database via Open Food Facts — coverage strongest for food/beverage products, weaker for electronics and
+      general merchandise
+    category: coverage
+    severity: info
+    workaround: If no result is found, try the barcode with a commercial product API like UPCitemdb or Barcodelookup.com

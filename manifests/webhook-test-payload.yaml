@@ -1,0 +1,114 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: webhook-test-payload
+name: Webhook Test Payload
+description: >-
+  Generate realistic test webhook payloads for Stripe, GitHub, Slack, Twilio, SendGrid, Shopify. Includes proper headers
+  and schema-accurate data.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - service
+    - event_type
+  properties:
+    service:
+      type: string
+      description: stripe/github/slack/twilio/sendgrid/shopify
+    event_type:
+      type: string
+output_schema:
+  type: object
+  example:
+    headers:
+      User-Agent: Webhook-Delivery/1.0
+      X-Timestamp: "1698765432"
+      Content-Type: application/json
+      X-Request-ID: req_test_abc123xyz
+      X-Webhook-Signature: whsec_test_1234567890abcdef
+    payload:
+      id: evt_test_1234567890
+      data:
+        object:
+          id: test_obj_123
+          value: test_value_data
+          object: test_value
+          status: active
+          created: 1698765432
+          updated: 1698765432
+      type: test_value
+      object: event
+      created: 1698765432
+      request:
+        id: null
+        idempotency_key: null
+      livemode: false
+      api_version: "2023-10-16"
+      pending_webhooks: 1
+    service: test_value
+    event_type: test_value
+    documentation_url: https://docs.example.com/webhooks/test_value
+  properties:
+    headers:
+      type: object
+    payload:
+      type: object
+    event_type:
+      type: string
+    documentation_url:
+      type: string
+data_source: Claude API (webhook payload generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      service: test_value
+      event_type: test_value
+    expected_fields:
+      - field: headers
+        operator: not_null
+        reliability: guaranteed
+      - field: headers
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: payload
+        operator: not_null
+        reliability: guaranteed
+      - field: payload
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: event_type
+        operator: not_null
+        reliability: guaranteed
+      - field: event_type
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: documentation_url
+        operator: not_null
+        reliability: guaranteed
+      - field: documentation_url
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    service: test
+    event_type: test
+output_field_reliability:
+  headers: guaranteed
+  payload: guaranteed
+  event_type: guaranteed
+  documentation_url: guaranteed
+limitations:
+  - title: Generated payloads match common webhook schemas — provider-specific fields or versioned formats may differ
+    text: Generated payloads match common webhook schemas — provider-specific fields or versioned payload formats may differ
+    category: accuracy
+    severity: info
+    workaround: Compare generated payloads against the provider's webhook documentation and adjust field names as needed

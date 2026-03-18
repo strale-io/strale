@@ -1,0 +1,74 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: return-policy-extract
+name: Return Policy Extract
+description: Extract return/refund policy from a retailer website. Returns window, conditions, exclusions, process steps.
+category: data-extraction
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: Retailer website URL
+output_schema:
+  type: object
+  example:
+    retailer: example.com
+    conditions:
+      - No return policy information found on this page
+    exclusions: null
+    policy_url: https://example.com
+    contact_info: null
+    free_returns: null
+    process_steps: null
+    refund_method: null
+    restocking_fee: null
+    exchange_available: null
+    return_window_days: null
+    store_credit_option: null
+    international_returns: null
+  properties:
+    conditions:
+      type: array
+    free_returns:
+      type: boolean
+    refund_method:
+      type: string
+    return_window_days:
+      type: number
+data_source: Headless browser + Claude API (return policy extraction from retailer sites)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://www.amazon.com/gp/help/customer/display.html?nodeId=GKM69DUUYKQWKBER
+    expected_fields:
+      - field: conditions
+        operator: not_null
+        reliability: guaranteed
+      - field: conditions
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    url: https://www.amazon.com/gp/help/customer/display.html?nodeId=GKM69DUUYKQWKBER
+output_field_reliability:
+  conditions: guaranteed
+  free_returns: guaranteed
+  refund_method: guaranteed
+  return_window_days: guaranteed
+limitations:
+  - title: Complex conditional return policies or product-specific exceptions may be simplified during extraction
+    text: >-
+      Extracts return policy terms via scraping — policies with complex conditional logic or product-specific exceptions
+      may be simplified
+    category: accuracy
+    severity: info
+    workaround: Verify extracted terms against the retailer's full return policy page for product-category-specific conditions

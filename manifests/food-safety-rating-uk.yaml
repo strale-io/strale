@@ -1,0 +1,199 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: food-safety-rating-uk
+name: Food Safety Rating UK
+description: >-
+  Look up UK food hygiene ratings via the FSA API. Search by business name and optional location. Returns ratings,
+  scores, addresses.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+    location:
+      type: string
+    max_results:
+      type: integer
+output_schema:
+  type: object
+  example:
+    location: null
+    search_term: Google
+    total_results: 99
+    establishments:
+      - scores:
+          hygiene: 0
+          structural: 0
+          confidence_in_management: 0
+        address: 1 St Giles High Street, WC2H 8AG
+        fhrs_id: 708537
+        rating_date: "2023-11-23T00:00:00"
+        rating_value: "5"
+        business_name: Google UK Ltd
+        business_type: Restaurant/Cafe/Canteen
+        local_authority: Camden
+      - scores:
+          hygiene: 0
+          structural: 0
+          confidence_in_management: 0
+        address: Restaurant Associates @ Google, Ground & Lower Ground Floor, 4-5 Bonhill Street, London, EC2A 4BX
+        fhrs_id: 1456337
+        rating_date: "2022-10-20T00:00:00"
+        rating_value: "5"
+        business_name: Restaurant Associates @ Google
+        business_type: Other catering premises
+        local_authority: Islington
+      - scores:
+          hygiene: null
+          structural: null
+          confidence_in_management: null
+        address: 6 King's Boulevard, London, N1C 4BU
+        fhrs_id: 1860499
+        rating_date: "1901-01-01T00:00:00"
+        rating_value: AwaitingInspection
+        business_name: KGX1 – Google King’s Cross
+        business_type: Retailers - other
+        local_authority: Camden
+      - scores:
+          hygiene: 0
+          structural: 0
+          confidence_in_management: 0
+        address: Dove House, Greenbank Road, Eden Business Park, Penrith, CA11 9FB
+        fhrs_id: 1606151
+        rating_date: "2025-08-13T00:00:00"
+        rating_value: "5"
+        business_name: Woggle Goggle
+        business_type: Other catering premises
+        local_authority: Westmorland and Furness
+      - scores:
+          hygiene: null
+          structural: null
+          confidence_in_management: null
+        address: CF24
+        fhrs_id: 1913051
+        rating_date: "1901-01-01T00:00:00"
+        rating_value: AwaitingInspection
+        business_name: Googie Puff
+        business_type: Other catering premises
+        local_authority: Cardiff
+      - scores:
+          hygiene: 5
+          structural: 0
+          confidence_in_management: 0
+        address: Centenary Road, Goole, East Riding Of Yorkshire, DN14 6AN
+        fhrs_id: 1051419
+        rating_date: "2025-03-26T00:00:00"
+        rating_value: "5"
+        business_name: Goole Academy
+        business_type: School/college/university
+        local_authority: East Riding of Yorkshire
+      - scores:
+          hygiene: 0
+          structural: 0
+          confidence_in_management: 5
+        address: Marcus Street, Goole, East Riding Of Yorkshire, DN14 6TN
+        fhrs_id: 1867380
+        rating_date: "2025-09-09T00:00:00"
+        rating_value: "5"
+        business_name: Goole AFC
+        business_type: Pub/bar/nightclub
+        local_authority: East Riding of Yorkshire
+      - scores:
+          hygiene: null
+          structural: null
+          confidence_in_management: null
+        address: 123 Pasture Road, Goole, East Riding Of Yorkshire, DN14 6DP
+        fhrs_id: 112152
+        rating_date: "2025-05-28T00:00:00"
+        rating_value: "5"
+        business_name: Goole Spice
+        business_type: Takeaway/sandwich shop
+        local_authority: East Riding of Yorkshire
+      - scores:
+          hygiene: 0
+          structural: 5
+          confidence_in_management: 5
+        address: Paradise Place, Goole, East Riding Of Yorkshire, DN14 5DL
+        fhrs_id: 272724
+        rating_date: "2023-08-16T00:00:00"
+        rating_value: "5"
+        business_name: Junction Goole
+        business_type: Restaurant/Cafe/Canteen
+        local_authority: East Riding of Yorkshire
+      - scores:
+          hygiene: null
+          structural: null
+          confidence_in_management: null
+        address: 175-177 Pasture Road, Goole, East Riding Of Yorkshire, DN14 6DR
+        fhrs_id: 836696
+        rating_date: "2024-10-22T00:00:00"
+        rating_value: "3"
+        business_name: Londis Goole
+        business_type: Retailers - other
+        local_authority: East Riding of Yorkshire
+    returned_count: 10
+    rating_distribution:
+      "3": 1
+      "5": 7
+      AwaitingInspection: 2
+  properties:
+    total_results:
+      type: integer
+    establishments:
+      type: array
+    rating_distribution:
+      type: object
+data_source: Food Standards Agency (FSA) Ratings API (UK Government)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: reference-data
+test_fixtures:
+  known_answer:
+    input:
+      name: Google
+    expected_fields:
+      - field: total_results
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_results
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: establishments
+        operator: not_null
+        reliability: guaranteed
+      - field: establishments
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: rating_distribution
+        operator: not_null
+        reliability: guaranteed
+      - field: rating_distribution
+        operator: type
+        reliability: guaranteed
+        value: object
+  health_check_input:
+    name: Google
+output_field_reliability:
+  total_results: guaranteed
+  establishments: guaranteed
+  rating_distribution: guaranteed
+limitations:
+  - title: Covers England, Wales, and Northern Ireland via FSA API — Scottish hygiene ratings use a different system
+    text: >-
+      Covers England, Wales, and Northern Ireland via FSA API — Scottish food hygiene ratings (FHIS) use a different
+      system
+    category: coverage
+    severity: info
+    workaround: For Scottish establishments, search the Food Standards Scotland website at foodstandards.gov.scot

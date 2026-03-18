@@ -1,0 +1,122 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: fake-data-generate
+name: Fake Data Generate
+description: >-
+  Generate realistic fake data matching a schema. Locale-aware: Swedish names for 'sv', Japanese for 'ja'. Up to 1000
+  records.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    count:
+      type: integer
+    fields:
+      type: array
+      description: Array of {name, type}
+    locale:
+      type: string
+    schema:
+      type: object
+      description: JSON Schema
+output_schema:
+  type: object
+  example:
+    data:
+      - name: Sarah Mitchell
+        email: sarah.mitchell@gmail.com
+      - name: James Rodriguez
+        email: jrodriguez1987@yahoo.com
+      - name: Emily Chen
+        email: emily.chen@outlook.com
+      - name: Michael Thompson
+        email: mthompson@protonmail.com
+      - name: Jessica Patel
+        email: j.patel92@gmail.com
+      - name: David Kowalski
+        email: dkowalski@icloud.com
+      - name: Amanda Garcia
+        email: agarcia.writer@yahoo.com
+      - name: Christopher Lee
+        email: c.lee2024@gmail.com
+      - name: Nicole Washington
+        email: nicole.w@outlook.com
+      - name: Brandon Murphy
+        email: bmurphy85@protonmail.com
+    locale: en-US
+    schema_used: json_schema
+    record_count: 10
+  properties:
+    data:
+      type: array
+    locale:
+      type: string
+    record_count:
+      type: integer
+data_source: Algorithmic (synthetic data generation, no external data)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      fields:
+        - name: name
+          type: string
+        - name: email
+          type: email
+      locale: en-US
+      schema:
+        type: object
+        properties:
+          name:
+            type: string
+          email:
+            type: string
+    expected_fields:
+      - field: data
+        operator: not_null
+        reliability: guaranteed
+      - field: data
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: locale
+        operator: not_null
+        reliability: guaranteed
+      - field: locale
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: record_count
+        operator: not_null
+        reliability: guaranteed
+      - field: record_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: record_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    fields:
+      - name: id
+        type: integer
+      - name: name
+        type: string
+output_field_reliability:
+  data: guaranteed
+  locale: guaranteed
+  record_count: guaranteed
+limitations:
+  - title: Generated fake data follows realistic patterns but may not pass strict checksum or format validation
+    text: >-
+      Generated fake data follows realistic patterns but may not pass strict validation (e.g., valid-checksum IBANs,
+      real postal codes)
+    category: accuracy
+    severity: info
+    workaround: For fields requiring valid checksums or format validation, use dedicated validators on the generated data

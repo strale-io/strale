@@ -1,0 +1,75 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: swiss-company-data
+name: Swiss Company Data
+description: >-
+  Look up Swiss company data from Zefix (Zentraler Firmenindex). Accepts UID (e.g. CHE-105.805.977) or fuzzy company
+  name.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - uid
+  properties:
+    uid:
+      type: string
+      description: Swiss UID (e.g. CHE-105.805.977) or company name
+output_schema:
+  type: object
+  example:
+    status: unknown
+    address: null
+    industry: null
+    directors: null
+    company_name: null
+    business_type: null
+    registration_date: null
+    registration_number: null
+  properties:
+    status:
+      type: string
+    address:
+      type: string
+    company_name:
+      type: string
+    business_type:
+      type: string
+    registration_number:
+      type: string
+data_source: Zefix / Swiss Commercial Register
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      uid: CHE-116.281.710
+    expected_fields:
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    uid: CHE-116.281.710
+output_field_reliability:
+  status: guaranteed
+  address: guaranteed
+  company_name: guaranteed
+  business_type: guaranteed
+  registration_number: guaranteed
+limitations:
+  - title: >-
+      Extracted from Zefix/Handelsregister via Browserless — detailed financial data is not publicly available in
+      Switzerland
+    text: >-
+      Extracted from Zefix/Handelsregister via Browserless — detailed financial data not publicly available in
+      Switzerland
+    category: coverage
+    severity: info
+    workaround: Use the CHE number from the response to order a certified extract from the cantonal Handelsregisteramt

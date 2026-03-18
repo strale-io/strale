@@ -1,0 +1,154 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: job-board-search
+name: Job Board Search
+description: Search job listings on Arbetsformedlingen (Swedish) and Adzuna (multi-country). Returns title, company, salary, URL.
+category: data-extraction
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+    location:
+      type: string
+    remote_only:
+      type: boolean
+output_schema:
+  type: object
+  example:
+    jobs:
+      - url: https://arbetsformedlingen.se/platsbanken/annonser/30648768
+        title: Bibliotekarie 10%
+        source: arbetsformedlingen.se
+        company: Barnens Montessoriakademi Östermalm AB
+        location: Solna
+        posted_date: "2026-02-23T12:48:35"
+        salary_range: Fast månads- vecko- eller timlön
+      - url: https://arbetsformedlingen.se/platsbanken/annonser/30568778
+        title: Skolkurator 10-15%
+        source: arbetsformedlingen.se
+        company: Dalbackens Friskola Ekonomisk Fören
+        location: Piteå
+        posted_date: "2026-02-05T10:21:20"
+        salary_range: Fast månads- vecko- eller timlön
+      - url: https://arbetsformedlingen.se/platsbanken/annonser/30631336
+        title: Finsktalande teknisk kundtjänstmedarbetare - Work From Home
+        source: arbetsformedlingen.se
+        company: Foundever Sweden AB
+        location: ""
+        posted_date: "2026-02-18T16:24:55"
+        salary_range: Fast månads- vecko- eller timlön
+      - url: https://arbetsformedlingen.se/platsbanken/annonser/30581104
+        title: Underläkare till medicinkliniken from sept 2026
+        source: arbetsformedlingen.se
+        company: REGION SÖRMLAND
+        location: Nyköping
+        posted_date: "2026-02-09T00:01:04"
+        salary_range: Fast månads- vecko- eller timlön
+      - url: https://arbetsformedlingen.se/platsbanken/annonser/30687820
+        title: Solution architect  SAP FI
+        source: arbetsformedlingen.se
+        company: Randstad AB
+        location: Göteborg
+        posted_date: "2026-03-03T12:00:11"
+        salary_range: Hourly
+      - url: https://arbetsformedlingen.se/platsbanken/annonser/30428071
+        title: Senior Active Directory Specialist
+        source: arbetsformedlingen.se
+        company: Eccera Professionals AB
+        location: Stockholm
+        posted_date: "2025-12-30T11:34:44"
+        salary_range: Fast månads- vecko- eller timlön
+      - url: https://arbetsformedlingen.se/platsbanken/annonser/30686968
+        title: Stödassistent till Lektorpsvägen 10
+        source: arbetsformedlingen.se
+        company: Örebro kommun
+        location: Örebro
+        posted_date: "2026-03-03T10:48:41"
+        salary_range: Individuell lönesättning
+      - url: https://arbetsformedlingen.se/platsbanken/annonser/30683642
+        title: Butikssäljare 10% – Trademax Borlänge
+        source: arbetsformedlingen.se
+        company: Home Furnishing Nordic AB
+        location: Borlänge
+        posted_date: "2026-03-02T15:40:57"
+        salary_range: Fast månads- vecko- eller timlön
+      - url: https://arbetsformedlingen.se/platsbanken/annonser/30341319
+        title: Application Support Analyst
+        source: arbetsformedlingen.se
+        company: Hitachi Energy Sweden AB
+        location: Ludvika
+        posted_date: "2025-12-05T08:43:30"
+        salary_range: Fast månads- vecko- eller timlön
+      - url: https://arbetsformedlingen.se/platsbanken/annonser/30628656
+        title: Software Engineer, iOS
+        source: arbetsformedlingen.se
+        company: True Software Scandinavia AB
+        location: Stockholm
+        posted_date: "2026-02-18T11:27:25"
+        salary_range: Fast månads- vecko- eller timlön
+    query: SELECT * FROM users WHERE active = true LIMIT 10
+    location: null
+    total_results: 5302
+    sources_queried:
+      - arbetsformedlingen.se
+  properties:
+    jobs:
+      type: array
+    total_results:
+      type: number
+    sources_queried:
+      type: array
+data_source: Arbetsförmedlingen API (Swedish Employment Agency) + Adzuna API
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      query: SELECT * FROM users WHERE active = true LIMIT 10
+    expected_fields:
+      - field: jobs
+        operator: not_null
+        reliability: guaranteed
+      - field: jobs
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_results
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_results
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: sources_queried
+        operator: not_null
+        reliability: guaranteed
+      - field: sources_queried
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    query: test
+output_field_reliability:
+  jobs: guaranteed
+  total_results: guaranteed
+  sources_queried: guaranteed
+limitations:
+  - title: Uses Arbetsförmedlingen and Adzuna APIs — coverage varies by country and company career pages may be missed
+    text: >-
+      Uses Arbetsförmedlingen (Sweden) and optional Adzuna API — coverage varies by country and may miss company career
+      pages
+    category: coverage
+    severity: info
+    workaround: For comprehensive results, supplement with google-search scoped to the target company's careers page

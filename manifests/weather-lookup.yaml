@@ -1,0 +1,121 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: weather-lookup
+name: Weather Lookup
+description: Get current weather and 7-day forecast for any location. Uses Open-Meteo API. Search by city name or coordinates.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    city:
+      type: string
+    latitude:
+      type: number
+    longitude:
+      type: number
+output_schema:
+  type: object
+  example:
+    current:
+      condition: Overcast
+      feels_like_c: -2.6
+      temperature_c: 0.2
+      wind_speed_kmh: 4.7
+      humidity_percent: 97
+      precipitation_mm: 0
+      wind_direction_deg: 179
+    location: Stockholm
+    timezone: Europe/Stockholm
+    coordinates:
+      latitude: 59.3293
+      longitude: 18.0686
+    forecast_7day:
+      - date: "2026-03-08"
+        low_c: 0.2
+        high_c: 8.3
+        condition: Overcast
+        precipitation_mm: 0
+      - date: "2026-03-09"
+        low_c: 2.5
+        high_c: 8.8
+        condition: Overcast
+        precipitation_mm: 0
+      - date: "2026-03-10"
+        low_c: 1.8
+        high_c: 10.3
+        condition: Overcast
+        precipitation_mm: 0
+      - date: "2026-03-11"
+        low_c: 2
+        high_c: 7.8
+        condition: Overcast
+        precipitation_mm: 0
+      - date: "2026-03-12"
+        low_c: 4.2
+        high_c: 6.8
+        condition: Moderate drizzle
+        precipitation_mm: 2.7
+      - date: "2026-03-13"
+        low_c: 4
+        high_c: 6.3
+        condition: Light drizzle
+        precipitation_mm: 1.9
+      - date: "2026-03-14"
+        low_c: 2.3
+        high_c: 8.9
+        condition: Light drizzle
+        precipitation_mm: 0.2
+  properties:
+    current:
+      type: object
+    location:
+      type: string
+    forecast_7day:
+      type: array
+data_source: Open-Meteo API (open-source weather forecast data)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      city: Stockholm
+      latitude: 59.3293
+      longitude: 18.0686
+    expected_fields:
+      - field: current
+        operator: not_null
+        reliability: guaranteed
+      - field: current
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: location
+        operator: not_null
+        reliability: guaranteed
+      - field: location
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: forecast_7day
+        operator: not_null
+        reliability: guaranteed
+      - field: forecast_7day
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    city: Stockholm
+output_field_reliability:
+  current: guaranteed
+  location: guaranteed
+  forecast_7day: guaranteed
+limitations:
+  - title: Open-Meteo forecast accuracy decreases beyond 3 days and varies by geographic region
+    text: Current weather from Open-Meteo — forecast accuracy decreases beyond 3 days and varies by geographic region
+    category: accuracy
+    severity: info
+    workaround: For critical operations, cross-reference with national meteorological services for severe weather warnings

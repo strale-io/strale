@@ -1,0 +1,90 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: payment-reference-generate
+name: Payment Reference Generate
+description: >-
+  Generate valid payment reference numbers with check digits: Swedish OCR, Norwegian KID, Finnish reference, ISO 11649
+  RF.
+category: utility
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - type
+  properties:
+    type:
+      type: string
+      description: ocr_se/ocr_no/ocr_fi/iso11649/rf
+    base_number:
+      type: string
+output_schema:
+  type: object
+  example:
+    type: ocr_se
+    formatted: "601765530"
+    reference: "601765530"
+    check_digit: "0"
+    algorithm_used: luhn
+  properties:
+    type:
+      type: string
+    formatted:
+      type: string
+    reference:
+      type: string
+    check_digit:
+      type: string
+data_source: Algorithmic (OCR/reference number generation per country standard)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      type: ocr_se
+    expected_fields:
+      - field: type
+        operator: not_null
+        reliability: guaranteed
+      - field: type
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: formatted
+        operator: not_null
+        reliability: guaranteed
+      - field: formatted
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: reference
+        operator: not_null
+        reliability: guaranteed
+      - field: reference
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: check_digit
+        operator: not_null
+        reliability: guaranteed
+      - field: check_digit
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    type: ocr_se
+output_field_reliability:
+  type: guaranteed
+  formatted: guaranteed
+  reference: guaranteed
+  check_digit: guaranteed
+limitations:
+  - title: Generated OCR/reference formats may need additional validation for country-specific payment reference requirements
+    text: >-
+      Generates standard OCR/reference formats — country-specific payment reference formats may have additional
+      validation requirements
+    category: coverage
+    severity: info
+    workaround: Validate generated references against the receiving bank's format requirements before issuing payment instructions

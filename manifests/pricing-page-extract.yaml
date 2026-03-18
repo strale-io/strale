@@ -1,0 +1,94 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: pricing-page-extract
+name: Pricing Page Extract
+description: >-
+  Extract structured pricing data from any SaaS pricing page. Returns plan names, prices, features per plan, billing
+  periods, trial/guarantee info.
+category: competitive-intelligence
+price_cents: 30
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: Pricing page URL
+output_schema:
+  type: object
+  example:
+    url: https://example.com
+    plans: []
+    pricing_model: null
+    enterprise_cta: false
+    annual_discount: null
+    free_tier_available: false
+    free_trial_available: false
+    money_back_guarantee: false
+  properties:
+    plans:
+      type: array
+    pricing_model:
+      type: string
+    enterprise_cta:
+      type: boolean
+    free_trial_available:
+      type: boolean
+data_source: Headless browser + Claude API (pricing page data extraction)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://stripe.com/pricing
+    expected_fields:
+      - field: plans
+        operator: not_null
+        reliability: guaranteed
+      - field: plans
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: pricing_model
+        operator: not_null
+        reliability: guaranteed
+      - field: pricing_model
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: enterprise_cta
+        operator: not_null
+        reliability: guaranteed
+      - field: enterprise_cta
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: free_trial_available
+        operator: not_null
+        reliability: guaranteed
+      - field: free_trial_available
+        operator: type
+        reliability: guaranteed
+        value: boolean
+  health_check_input:
+    url: https://stripe.com/pricing
+output_field_reliability:
+  plans: guaranteed
+  pricing_model: guaranteed
+  enterprise_cta: guaranteed
+  free_trial_available: guaranteed
+limitations:
+  - title: Extracts visible list pricing only — enterprise tiers, volume discounts, and negotiated rates are not available
+    text: Extracts visible pricing — custom/enterprise pricing, volume discounts, and negotiated rates are not available
+    category: coverage
+    severity: info
+    workaround: Flag extracted prices as 'list price' and note that enterprise or high-volume pricing requires direct contact
+  - title: Dynamic pricing pages with complex JavaScript interactions may not render all plan tiers
+    text: Dynamic pricing pages with complex JavaScript interactions may not fully render all plan tiers
+    category: accuracy
+    severity: info
+    workaround: If results appear incomplete, pass the direct pricing page URL rather than the homepage

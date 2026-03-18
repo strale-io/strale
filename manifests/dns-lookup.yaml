@@ -1,0 +1,93 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: dns-lookup
+name: DNS Lookup
+description: >-
+  Perform a comprehensive DNS lookup for a domain. Returns A, AAAA, MX, NS, TXT, CNAME records plus SPF and DMARC
+  detection.
+category: web-intelligence
+price_cents: 3
+is_free_tier: true
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+      description: Domain name (e.g. example.com)
+output_schema:
+  type: object
+  example:
+    domain: google.com
+    has_spf: true
+    a_records:
+      - 142.251.209.142
+    has_dmarc: true
+    mx_records:
+      - exchange: smtp.google.com
+        priority: 10
+    ns_records:
+      - ns3.google.com
+      - ns1.google.com
+      - ns4.google.com
+      - ns2.google.com
+    txt_records:
+      - google-site-verification=TV9-DBe4R80X4v0M4U_bd_J9cpOJM0nikft0jAgjmsQ
+      - v=spf1 include:_spf.google.com ~all
+      - facebook-domain-verification=22rm551cu4k0ab0bxsw536tlds4h95
+      - apple-domain-verification=30afIBcvSuDV2PLX
+      - onetrust-domain-verification=6d685f1d41a94696ad7ef771f68993e0
+      - docusign=05958488-4752-4ef2-95eb-aa7ba8a3bd0e
+      - onetrust-domain-verification=0d477fe608074e6f9c12bca7826035cc
+      - google-site-verification=wD8N7i1JTNTkezJ49swvWW48f8_9xveREV4oB-0Hf5o
+      - cisco-ci-domain-verification=47c38bc8c4b74b7233e9053220c1bbe76bcc1cd33c7acf7acd36cd6a5332004b
+      - docusign=1b0a6754-49b1-4db5-8540-d2c12664b289
+      - globalsign-smime-dv=CDYX+XFHUw2wml6/Gb8+59BsH31KzUr6c1l2BPvqKX8=
+      - google-site-verification=4ibFUgB-wXLQ_S7vsXVomSTVamuOXBiVAzpR5IZ87D0
+      - MS=E4A68B9AB2BB9670BCE15412F62916164C0B20BB
+    aaaa_records:
+      - 2a00:1450:4007:811::200e
+    dmarc_record: v=DMARC1; p=reject; rua=mailto:mailauth-reports@google.com
+    cname_records: []
+  properties:
+    domain:
+      type: string
+    has_spf:
+      type: boolean
+    a_records:
+      type: array
+    has_dmarc:
+      type: boolean
+    mx_records:
+      type: array
+    ns_records:
+      type: array
+data_source: DNS protocol (authoritative nameservers)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain: google.com
+    expected_fields:
+      - field: a_records
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    domain: example.com
+output_field_reliability:
+  domain: guaranteed
+  has_spf: guaranteed
+  a_records: guaranteed
+  has_dmarc: guaranteed
+  mx_records: guaranteed
+  ns_records: guaranteed
+limitations:
+  - title: DNS results reflect current propagation — recent record changes may take up to 48 hours to appear
+    text: Results reflect current DNS propagation — recent changes may take up to 48 hours to appear
+    category: freshness
+    severity: info
+    workaround: Query the authoritative nameserver directly (returned in the NS records) to see changes before full propagation

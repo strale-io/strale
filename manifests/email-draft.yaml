@@ -1,0 +1,128 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: email-draft
+name: Email Draft
+description: >-
+  Draft a professional email. Specify context, intent (cold outreach/follow-up/apology/etc), and tone. Returns subject
+  line options, body, and key phrases.
+category: content-writing
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - context
+  properties:
+    tone:
+      type: string
+    intent:
+      type: string
+    context:
+      type: string
+    recipient_context:
+      type: string
+output_schema:
+  type: object
+  example:
+    body: >-
+      Dear Recipient,
+
+
+      I hope this message finds you well. I am reaching out to connect regarding our automated capability testing
+      initiative.
+
+
+      This communication serves as a demonstration of our professional email communication standards and formatting
+      protocols. We are committed to maintaining clear, concise, and effective correspondence.
+
+
+      Should you have any questions or require additional information, please do not hesitate to contact me directly.
+
+
+      Thank you for your time and consideration.
+
+
+      Best regards,
+
+      Sender
+    word_count: 78
+    tone_applied: professional
+    intent_applied: general
+    key_phrases_used:
+      - I hope this message finds you well
+      - reaching out to connect
+      - do not hesitate to contact me
+      - Thank you for your time and consideration
+      - Best regards
+    subject_line_options:
+      - Professional Outreach - Testing Capabilities
+      - Inquiry Regarding Automated Communication Systems
+      - Test Message - Professional Communication Framework
+  properties:
+    body:
+      type: string
+    word_count:
+      type: integer
+    key_phrases_used:
+      type: array
+    subject_line_options:
+      type: array
+data_source: Claude API (email draft generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      context: This is a test input for automated capability testing.
+      recipient_context: This is a test input for automated capability testing.
+    expected_fields:
+      - field: body
+        operator: not_null
+        reliability: guaranteed
+      - field: body
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: word_count
+        operator: not_null
+        reliability: guaranteed
+      - field: word_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: word_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: key_phrases_used
+        operator: not_null
+        reliability: guaranteed
+      - field: key_phrases_used
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: subject_line_options
+        operator: not_null
+        reliability: guaranteed
+      - field: subject_line_options
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    context: test
+    recipient_context: test
+output_field_reliability:
+  body: guaranteed
+  word_count: guaranteed
+  key_phrases_used: guaranteed
+  subject_line_options: guaranteed
+limitations:
+  - title: Generated drafts follow standard templates and may miss nuances of existing threads or relationships
+    text: >-
+      Generated drafts follow standard professional templates — may not capture nuances of existing email threads or
+      relationships
+    category: accuracy
+    severity: info
+    workaround: Include relevant context from prior correspondence in the input to improve tone and content relevance

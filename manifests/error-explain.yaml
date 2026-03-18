@@ -1,0 +1,121 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: error-explain
+name: Error Explain
+description: Explain an error message or stack trace in plain English. Identifies root cause, suggests fixes with code examples.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - error
+  properties:
+    error:
+      type: string
+    context:
+      type: string
+    language:
+      type: string
+output_schema:
+  type: object
+  example:
+    fixes:
+      - description: Declare and initialize the variable before use
+        code_example: |-
+          test_value = 'some_value'
+          print(test_value)
+      - description: Check variable name spelling and scope
+        code_example: |-
+          # Ensure the variable is defined in the correct scope
+          class MyClass:
+              def __init__(self):
+                  self.test_value = 'initialized_value'
+      - description: Import the variable if it's from another module
+        code_example: from module_name import test_value
+    error_type: Undefined Variable / Missing Value Error
+    prevention: >-
+      Always declare variables before use, use consistent naming conventions, enable linting tools to catch undefined
+      variables, and use type hints to clarify expected values.
+    root_cause: >-
+      The variable 'test_value' was referenced without being declared, initialized, or imported first. This is commonly
+      caused by typos in variable names, missing variable declarations, or attempting to access a variable outside its
+      scope.
+    search_terms:
+      - undefined variable error
+      - NameError Python
+      - variable not defined
+      - scope error
+    related_errors:
+      - "NameError: name is not defined"
+      - "AttributeError: object has no attribute"
+      - "UnboundLocalError: local variable referenced before assignment"
+      - ReferenceError (JavaScript equivalent)
+    plain_explanation: >-
+      The system encountered a reference to 'test_value' that was not defined, initialized, or assigned before being
+      used. This indicates the variable doesn't exist in the current scope or context.
+  properties:
+    fixes:
+      type: array
+    error_type:
+      type: string
+    root_cause:
+      type: string
+    plain_explanation:
+      type: string
+data_source: Claude API (error message explanation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      error: test_value
+      context: This is a test input for automated capability testing.
+      language: en
+    expected_fields:
+      - field: fixes
+        operator: not_null
+        reliability: guaranteed
+      - field: fixes
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: error_type
+        operator: not_null
+        reliability: guaranteed
+      - field: error_type
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: root_cause
+        operator: not_null
+        reliability: guaranteed
+      - field: root_cause
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: plain_explanation
+        operator: not_null
+        reliability: guaranteed
+      - field: plain_explanation
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    error: test
+    context: test
+output_field_reliability:
+  fixes: guaranteed
+  error_type: guaranteed
+  root_cause: guaranteed
+  plain_explanation: guaranteed
+limitations:
+  - title: Root cause suggestions are pattern-based hypotheses and may not match your specific environment
+    text: >-
+      AI explanation of error messages — root cause suggestions are based on common patterns and may not match your
+      specific environment
+    category: accuracy
+    severity: info
+    workaround: Use the suggested causes as debugging hypotheses and verify against your application's logs and configuration

@@ -1,0 +1,90 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: financial-year-dates
+name: Financial Year Dates
+description: Get fiscal year start/end, tax filing deadlines, VAT filing frequency for 42+ countries.
+category: data-extraction
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - country_code
+  properties:
+    country_code:
+      type: string
+      description: ISO 2-letter country code
+output_schema:
+  type: object
+  example:
+    notes: >-
+      Companies may choose a broken fiscal year (e.g., May-Apr, Sep-Aug). Calendar year is most common. Bolagsverket
+      filing required.
+    country_code: SE
+    country_name: Sweden
+    financial_year_end: 12-31
+    tax_filing_deadline: May 1 (calendar year companies); 6 months after FY end for broken fiscal years
+    financial_year_start: 01-01
+    vat_filing_frequency: Monthly (turnover >40M SEK), quarterly (1-40M SEK), or annually (<1M SEK)
+    annual_report_deadline: 7 months after financial year end
+    fiscal_year_matches_calendar: true
+  properties:
+    financial_year_end:
+      type: string
+    tax_filing_deadline:
+      type: string
+    financial_year_start:
+      type: string
+    vat_filing_frequency:
+      type: string
+data_source: Algorithmic (fiscal year calculation by jurisdiction)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      country_code: SE
+    expected_fields:
+      - field: financial_year_end
+        operator: not_null
+        reliability: guaranteed
+      - field: financial_year_end
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: tax_filing_deadline
+        operator: not_null
+        reliability: guaranteed
+      - field: tax_filing_deadline
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: financial_year_start
+        operator: not_null
+        reliability: guaranteed
+      - field: financial_year_start
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: vat_filing_frequency
+        operator: not_null
+        reliability: guaranteed
+      - field: vat_filing_frequency
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    country_code: US
+output_field_reliability:
+  financial_year_end: guaranteed
+  tax_filing_deadline: guaranteed
+  financial_year_start: guaranteed
+  vat_filing_frequency: guaranteed
+limitations:
+  - title: Standard financial year patterns are covered — companies with non-standard fiscal years may compute incorrectly
+    text: Covers standard financial year patterns — companies with non-standard fiscal years may not be accurately computed
+    category: coverage
+    severity: info
+    workaround: Check if the company has filed for a non-standard financial year in their articles of association

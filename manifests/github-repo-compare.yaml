@@ -1,0 +1,165 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: github-repo-compare
+name: GitHub Repo Compare
+description: >-
+  Compare two GitHub repositories side-by-side: stars, forks, activity, language, topics, license. Returns detailed
+  comparison.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - repo_a
+    - repo_b
+  properties:
+    repo_a:
+      type: string
+      description: owner/repo
+    repo_b:
+      type: string
+      description: owner/repo
+output_schema:
+  type: object
+  example:
+    repo_a:
+      forks: 38445
+      stars: 182607
+      topics:
+        - editor
+        - electron
+        - microsoft
+        - typescript
+        - visual-studio-code
+      is_fork: false
+      license: MIT
+      size_kb: 1151810
+      has_wiki: true
+      language: TypeScript
+      watchers: 3404
+      full_name: microsoft/vscode
+      has_pages: false
+      pushed_at: "2026-03-11T21:07:37Z"
+      created_at: "2015-09-03T20:23:38Z"
+      updated_at: "2026-03-11T21:05:16Z"
+      description: Visual Studio Code
+      is_archived: false
+      open_issues: 14956
+      default_branch: main
+    repo_b:
+      forks: 6642
+      stars: 97176
+      topics:
+        - api
+        - c
+        - lua
+        - neovim
+        - nvim
+        - text-editor
+        - vim
+      is_fork: false
+      license: NOASSERTION
+      size_kb: 372541
+      has_wiki: true
+      language: Vim Script
+      watchers: 967
+      full_name: neovim/neovim
+      has_pages: false
+      pushed_at: "2026-03-11T19:05:46Z"
+      created_at: "2014-01-31T13:39:22Z"
+      updated_at: "2026-03-11T21:01:34Z"
+      description: Vim-fork focused on extensibility and usability
+      is_archived: false
+      open_issues: 1969
+      default_branch: master
+    comparison:
+      forks:
+        repo_a: 38445
+        repo_b: 6642
+        winner: microsoft/vscode
+      stars:
+        repo_a: 182607
+        repo_b: 97176
+        winner: microsoft/vscode
+      size_kb:
+        repo_a: 1151810
+        repo_b: 372541
+        winner: microsoft/vscode
+      watchers:
+        repo_a: 3404
+        repo_b: 967
+        winner: microsoft/vscode
+      last_push:
+        repo_a: "2026-03-11T21:07:37Z"
+        repo_b: "2026-03-11T19:05:46Z"
+        winner: microsoft/vscode
+      open_issues:
+        repo_a: 14956
+        repo_b: 1969
+        winner: microsoft/vscode
+    common_topics: []
+    same_language: false
+    age_difference_days: 580
+  properties:
+    repo_a:
+      type: object
+    repo_b:
+      type: object
+    comparison:
+      type: object
+    common_topics:
+      type: array
+data_source: GitHub REST API (public repository comparison)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      repo_a: microsoft/vscode
+      repo_b: neovim/neovim
+    expected_fields:
+      - field: repo_a
+        operator: not_null
+        reliability: guaranteed
+      - field: repo_a
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: repo_b
+        operator: not_null
+        reliability: guaranteed
+      - field: repo_b
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: comparison
+        operator: not_null
+        reliability: guaranteed
+      - field: comparison
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: common_topics
+        operator: not_null
+        reliability: guaranteed
+      - field: common_topics
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    repo_a: torvalds/linux
+    repo_b: torvalds/linux
+output_field_reliability:
+  repo_a: guaranteed
+  repo_b: guaranteed
+  comparison: guaranteed
+  common_topics: guaranteed
+limitations:
+  - title: Compares public GitHub repositories only — private repos require authenticated GitHub API access
+    text: Compares public GitHub repositories only — private repos require authenticated GitHub API access
+    category: coverage
+    severity: info
+    workaround: For private repos, use the GitHub API directly with a personal access token

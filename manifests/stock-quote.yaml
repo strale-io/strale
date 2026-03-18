@@ -1,0 +1,106 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: stock-quote
+name: Stock Quote
+description: >-
+  Get real-time stock quote data for any publicly traded company. Accepts ticker symbols (e.g. AAPL, VOLV-B.ST). Returns
+  price, change, volume, market state.
+category: financial
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - symbol
+  properties:
+    symbol:
+      type: string
+      description: Stock ticker symbol (e.g. AAPL, TSLA, VOLV-B.ST)
+output_schema:
+  type: object
+  example:
+    low: 295.25
+    high: 300.33
+    name: Alphabet Inc.
+    open: 296.07
+    price: 298.3
+    change: -2.61
+    symbol: GOOG
+    volume: 17574900
+    currency: USD
+    exchange: NMS
+    market_state: null
+    trading_date: "2026-03-06"
+    change_percent: -0.87
+    previous_close: 300.91
+  properties:
+    name:
+      type: string
+    price:
+      type: number
+    change:
+      type: number
+    symbol:
+      type: string
+    volume:
+      type: integer
+    change_percent:
+      type: number
+data_source: Yahoo Finance API (real-time market data)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      symbol: GOOG
+    expected_fields:
+      - field: name
+        operator: not_null
+        reliability: guaranteed
+      - field: name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: price
+        operator: not_null
+        reliability: guaranteed
+      - field: price
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: change
+        operator: not_null
+        reliability: guaranteed
+      - field: change
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: symbol
+        operator: not_null
+        reliability: guaranteed
+      - field: symbol
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    symbol: AAPL
+output_field_reliability:
+  name: guaranteed
+  price: guaranteed
+  change: guaranteed
+  symbol: guaranteed
+  volume: guaranteed
+  change_percent: guaranteed
+limitations:
+  - title: Yahoo Finance quotes are delayed approximately 15-20 minutes for most stock exchanges
+    text: Quotes from Yahoo Finance — delayed by approximately 15-20 minutes for most exchanges
+    category: freshness
+    severity: info
+    workaround: For real-time quotes, use the exchange's official data feed or a licensed market data provider
+  - title: Covers major exchange listings only — OTC, pink sheet, and some international exchange stocks may be missing
+    text: Covers stocks listed on major exchanges — OTC, pink sheets, and some international exchanges may have limited data
+    category: coverage
+    severity: info
+    workaround: Use the exchange suffix in the symbol (e.g., VOLV-B.ST for Stockholm) for non-US exchanges

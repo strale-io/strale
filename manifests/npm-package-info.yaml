@@ -1,0 +1,112 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: npm-package-info
+name: npm Package Info
+description: "Fetch npm package metadata: version, dependencies, downloads, repository, license. Includes weekly download count."
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - package
+  properties:
+    package:
+      type: string
+output_schema:
+  type: object
+  example:
+    name: test
+    author: null
+    created: "2011-02-16T22:31:02.088Z"
+    license: MIT
+    homepage: https://github.com/nodejs/node-core-test#readme
+    keywords: []
+    dist_tags:
+      latest: 3.3.0
+    repository: git+https://github.com/nodejs/node-core-test.git
+    description: Node.js 18's node:test, as an npm package
+    dependencies:
+      - minimist
+      - readable-stream
+      - string.prototype.replaceall
+    last_modified: "2026-01-13T15:11:22.334Z"
+    latest_version: 3.3.0
+    total_versions: 29
+    recent_versions:
+      - version: 3.3.0
+        published: "2023-02-08T11:14:06.655Z"
+      - version: 3.2.1
+        published: "2022-08-03T11:26:29.684Z"
+      - version: 3.2.0
+        published: "2022-08-01T08:45:27.997Z"
+      - version: 3.1.0
+        published: "2022-07-20T18:25:10.819Z"
+      - version: 3.0.1
+        published: "2022-06-15T08:43:33.797Z"
+    dev_dependencies:
+      - standard
+    weekly_downloads: 537839
+  properties:
+    name:
+      type: string
+    license:
+      type: string
+    dependencies:
+      type: array
+    latest_version:
+      type: string
+    weekly_downloads:
+      type: integer
+data_source: npm Registry API (package metadata)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      package: express
+    expected_fields:
+      - field: name
+        operator: not_null
+        reliability: guaranteed
+      - field: name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: license
+        operator: not_null
+        reliability: guaranteed
+      - field: license
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: dependencies
+        operator: not_null
+        reliability: guaranteed
+      - field: dependencies
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: latest_version
+        operator: not_null
+        reliability: guaranteed
+      - field: latest_version
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    package: test
+output_field_reliability:
+  name: guaranteed
+  license: guaranteed
+  dependencies: guaranteed
+  latest_version: guaranteed
+  weekly_downloads: guaranteed
+limitations:
+  - title: Queries the public npm registry only — private packages and packages from private registries are not accessible
+    text: Queries the public npm registry — private packages and scoped packages from private registries are not accessible
+    category: coverage
+    severity: info
+    workaround: For private packages, query your organization's registry endpoint directly

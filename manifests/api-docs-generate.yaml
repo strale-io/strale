@@ -1,0 +1,112 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: api-docs-generate
+name: API Docs Generate
+description: >-
+  Generate markdown API documentation from an OpenAPI spec or natural language description. Returns documentation with
+  parameters, examples, error codes.
+category: developer-tools
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    openapi_spec:
+      type: string
+    endpoint_description:
+      type: string
+output_schema:
+  type: object
+  example:
+    markdown: |-
+      # API Documentation
+
+      ## Description
+
+      This is a test input for automated capability testing.
+
+      ## Authentication
+
+      No authentication is currently configured for this API.
+
+      ## Endpoints
+
+      No endpoints have been specified in the provided specification.
+
+      ## Parameters
+
+      No parameters are defined.
+
+      ## Request Example
+
+      ```
+      No examples available
+      ```
+
+      ## Response Example
+
+      ```
+      No examples available
+      ```
+
+      ## Error Codes
+
+      No error codes are documented.
+    source_type: natural_language
+    total_endpoints: 0
+    authentication_type: none
+    endpoints_documented: []
+  properties:
+    markdown:
+      type: string
+    total_endpoints:
+      type: integer
+    endpoints_documented:
+      type: array
+data_source: Claude API (API documentation generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      endpoint_description: This is a test input for automated capability testing.
+    expected_fields:
+      - field: markdown
+        operator: not_null
+        reliability: guaranteed
+      - field: markdown
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: total_endpoints
+        operator: not_null
+        reliability: guaranteed
+      - field: total_endpoints
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_endpoints
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: endpoints_documented
+        operator: not_null
+        reliability: guaranteed
+      - field: endpoints_documented
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    endpoint_description: GET /health returns 200 OK with status field
+output_field_reliability:
+  markdown: guaranteed
+  total_endpoints: guaranteed
+  endpoints_documented: guaranteed
+limitations:
+  - title: Generated documentation reflects only the provided API spec — undocumented behavior is not inferred
+    text: Generated documentation reflects the provided API spec — undocumented behavior and edge cases are not inferred
+    category: accuracy
+    severity: info
+    workaround: Review generated docs against actual API behavior and add examples for complex endpoints

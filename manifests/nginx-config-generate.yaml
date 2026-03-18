@@ -1,0 +1,218 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: nginx-config-generate
+name: Nginx Config Generate
+description: >-
+  Generate production nginx server blocks with SSL, proxy_pass, WebSocket support, security headers, gzip, rate
+  limiting.
+category: developer-tools
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    ssl:
+      type: boolean
+    gzip:
+      type: boolean
+    domain:
+      type: string
+    rate_limit:
+      type: integer
+    www_redirect:
+      type: boolean
+    upstream_port:
+      type: integer
+output_schema:
+  type: object
+  example:
+    notes:
+      - Ensure Let's Encrypt certificate exists at /etc/letsencrypt/live/google.com/ before deploying
+      - Update root directory path /var/www/google.com/public to match your application structure
+      - Upstream service must be running on localhost:3000
+      - HSTS header includes preload flag - only add if domain is in HSTS preload list
+      - SSL session cache uses shared memory for better performance across worker processes
+      - WebSocket upgrade headers ensure proper bidirectional communication
+      - Gzip compression excludes compressed formats to avoid double-compression overhead
+      - Consider adjusting proxy timeouts based on application response times
+      - Access logs can be disabled for health check endpoint to reduce log noise
+      - Certificate renewal with Let's Encrypt certbot is required every 90 days
+    config: |-
+      # HTTP redirect to HTTPS
+      server {
+          listen 80;
+          listen [::]:80;
+          server_name google.com www.google.com;
+          return 301 https://$server_name$request_uri;
+      }
+
+      # WWW redirect to non-WWW
+      server {
+          listen 443 ssl http2;
+          listen [::]:443 ssl http2;
+          server_name www.google.com;
+
+          ssl_certificate /etc/letsencrypt/live/google.com/fullchain.pem;
+          ssl_certificate_key /etc/letsencrypt/live/google.com/privkey.pem;
+
+          return 301 https://google.com$request_uri;
+      }
+
+      # Main server block
+      server {
+          listen 443 ssl http2;
+          listen [::]:443 ssl http2;
+          server_name google.com;
+
+          # SSL Configuration
+          ssl_certificate /etc/letsencrypt/live/google.com/fullchain.pem;
+          ssl_certificate_key /etc/letsencrypt/live/google.com/privkey.pem;
+          ssl_protocols TLSv1.2 TLSv1.3;
+          ssl_ciphers HIGH:!aNULL:!MD5;
+          ssl_prefer_server_ciphers on;
+          ssl_session_cache shared:SSL:10m;
+          ssl_session_timeout 10m;
+
+          # Gzip Compression
+          gzip on;
+          gzip_vary on;
+          gzip_min_length 1000;
+          gzip_proxied any;
+          gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/atom+xml image/svg+xml application/json;
+          gzip_disable "msie6";
+
+          # Security Headers
+          add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+          add_header X-Frame-Options "SAMEORIGIN" always;
+          add_header X-Content-Type-Options "nosniff" always;
+          add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+          add_header X-XSS-Protection "1; mode=block" always;
+          add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+
+          # Logging
+          access_log /var/log/nginx/google.com.access.log;
+          error_log /var/log/nginx/google.com.error.log;
+
+          # Root location
+          root /var/www/google.com/public;
+
+          location / {
+              proxy_pass http://localhost:3000;
+              
+              # Proxy Headers
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              proxy_set_header X-Forwarded-Host $server_name;
+
+              # WebSocket Support
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection "upgrade";
+
+              # Timeouts
+              proxy_connect_timeout 60s;
+              proxy_send_timeout 60s;
+              proxy_read_timeout 60s;
+
+              # Buffering
+              proxy_buffering on;
+              proxy_buffer_size 4k;
+              proxy_buffers 8 4k;
+              proxy_busy_buffers_size 8k;
+          }
+
+          # Health check endpoint (optional)
+          location /health {
+              proxy_pass http://localhost:3000;
+              access_log off;
+          }
+      }
+    domain: google.com
+    upstream_port: 3000
+    features_enabled:
+      - SSL/TLS with Let's Encrypt
+      - HTTP to HTTPS redirect
+      - WWW to non-WWW redirect
+      - WebSocket support
+      - Gzip compression
+      - HTTP/2 support
+      - >-
+        Security headers (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, X-XSS-Protection,
+        Permissions-Policy)
+      - Proxy headers (X-Real-IP, X-Forwarded-For, X-Forwarded-Proto, X-Forwarded-Host)
+      - Connection pooling and buffering
+      - Request timeouts
+      - Logging
+    security_headers_included:
+      - Strict-Transport-Security (HSTS)
+      - X-Frame-Options
+      - X-Content-Type-Options
+      - Referrer-Policy
+      - X-XSS-Protection
+      - Permissions-Policy
+  properties:
+    notes:
+      type: array
+    config:
+      type: string
+    features_enabled:
+      type: array
+    security_headers_included:
+      type: array
+data_source: Claude API (Nginx configuration generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain: google.com
+    expected_fields:
+      - field: notes
+        operator: not_null
+        reliability: guaranteed
+      - field: notes
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: config
+        operator: not_null
+        reliability: guaranteed
+      - field: config
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: features_enabled
+        operator: not_null
+        reliability: guaranteed
+      - field: features_enabled
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: security_headers_included
+        operator: not_null
+        reliability: guaranteed
+      - field: security_headers_included
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    domain: example.com
+output_field_reliability:
+  notes: guaranteed
+  config: guaranteed
+  features_enabled: guaranteed
+  security_headers_included: guaranteed
+limitations:
+  - title: Generates standard nginx configurations — custom modules and OpenResty/Lua blocks are not supported
+    text: >-
+      Generates standard nginx configurations — complex setups with custom modules or OpenResty/Lua blocks are not
+      supported
+    category: accuracy
+    severity: info
+    workaround: Use the generated config as a base template and add custom directives for your specific nginx modules

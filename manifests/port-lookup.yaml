@@ -1,0 +1,66 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: port-lookup
+name: Port Lookup
+description: Look up world ports by name or UN/LOCODE. Returns coordinates, country, timezone. 175+ major ports.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Port name or UN/LOCODE (e.g. SEGOT, NLRTM)
+output_schema:
+  type: object
+  example:
+    query: SELECT * FROM users WHERE active = true LIMIT 10
+    matches: []
+    total_matches: 0
+  properties:
+    matches:
+      type: array
+    total_matches:
+      type: number
+data_source: Static database (UN/LOCODE port registry)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      query: SELECT * FROM users WHERE active = true LIMIT 10
+    expected_fields:
+      - field: matches
+        operator: not_null
+        reliability: guaranteed
+      - field: matches
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_matches
+        operator: not_null
+        reliability: guaranteed
+      - field: total_matches
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_matches
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    query: test
+output_field_reliability:
+  matches: guaranteed
+  total_matches: guaranteed
+limitations:
+  - title: AI-based port information covers major seaports and airports — small inland ports may have limited data
+    text: AI-based port information — covers major seaports and airports; small inland ports may have limited data
+    category: coverage
+    severity: info
+    workaround: For UN/LOCODE validation, cross-reference against the UNECE code list at unece.org/cefact/locode

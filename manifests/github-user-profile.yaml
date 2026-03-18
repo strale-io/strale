@@ -1,0 +1,175 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: github-user-profile
+name: GitHub User Profile
+description: Fetch a GitHub user's profile, stats, and recent repositories. Returns followers, repos, bio, and activity.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - username
+  properties:
+    username:
+      type: string
+output_schema:
+  type: object
+  example:
+    bio: Google ❤️ Open Source
+    blog: https://opensource.google/
+    name: Google
+    email: opensource@google.com
+    company: null
+    twitter: GoogleOSS
+    location: United States of America
+    username: google
+    followers: 68787
+    following: 0
+    avatar_url: https://avatars.githubusercontent.com/u/1342004?v=4
+    created_at: "2012-01-18T01:30:18Z"
+    updated_at: "2025-06-28T19:58:20Z"
+    profile_url: https://github.com/google
+    account_type: Organization
+    public_gists: 0
+    public_repos: 2839
+    recent_repos:
+      - name: langextract
+        forks: 2309
+        stars: 34409
+        is_fork: false
+        language: Python
+        updated_at: "2026-03-08T04:47:37Z"
+        description: >-
+          A Python library for extracting structured information from unstructured text using LLMs with precise source
+          grounding and interactive visualization.
+      - name: XNNPACK
+        forks: 461
+        stars: 2269
+        is_fork: false
+        language: C
+        updated_at: "2026-03-08T04:46:55Z"
+        description: High-efficiency floating-point neural network inference operators for mobile, server, and Web
+      - name: material-design-lite
+        forks: 4943
+        stars: 32215
+        is_fork: false
+        language: HTML
+        updated_at: "2026-03-08T04:46:33Z"
+        description: Material Design Components in HTML/CSS/JS
+      - name: mug
+        forks: 81
+        stars: 477
+        is_fork: false
+        language: Java
+        updated_at: "2026-03-08T04:42:26Z"
+        description: A small Java 8 library (string manipulation, BiStream, Structured Concurrency, SQL Templates)
+      - name: adk-python
+        forks: 3031
+        stars: 18238
+        is_fork: false
+        language: Python
+        updated_at: "2026-03-08T04:35:31Z"
+        description: >-
+          An open-source, code-first Python toolkit for building, evaluating, and deploying sophisticated AI agents with
+          flexibility and control.
+      - name: git-appraise
+        forks: 144
+        stars: 5301
+        is_fork: false
+        language: Go
+        updated_at: "2026-03-08T04:33:46Z"
+        description: Distributed code review system for Git repos
+      - name: tarpc
+        forks: 221
+        stars: 3676
+        is_fork: false
+        language: Rust
+        updated_at: "2026-03-08T04:31:06Z"
+        description: An RPC framework for Rust with a focus on ease of use.
+      - name: flatbuffers
+        forks: 3512
+        stars: 25625
+        is_fork: false
+        language: C++
+        updated_at: "2026-03-08T04:28:33Z"
+        description: "FlatBuffers: Memory Efficient Serialization Library"
+      - name: comprehensive-rust
+        forks: 1983
+        stars: 32703
+        is_fork: false
+        language: Rust
+        updated_at: "2026-03-08T04:18:18Z"
+        description: >-
+          This is the Rust course used by the Android team at Google. It provides you the material to quickly teach
+          Rust.
+      - name: longfellow-zk
+        forks: 93
+        stars: 1054
+        is_fork: false
+        language: C++
+        updated_at: "2026-03-08T04:18:03Z"
+        description: Implementation of the Google Zero-Knowledge library for Identity Protocols.
+  properties:
+    name:
+      type: string
+    username:
+      type: string
+    followers:
+      type: integer
+    public_repos:
+      type: integer
+    recent_repos:
+      type: array
+data_source: GitHub REST API (public user profiles)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      username: Google
+    expected_fields:
+      - field: name
+        operator: not_null
+        reliability: guaranteed
+      - field: name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: username
+        operator: not_null
+        reliability: guaranteed
+      - field: username
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: followers
+        operator: not_null
+        reliability: guaranteed
+      - field: followers
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: public_repos
+        operator: not_null
+        reliability: guaranteed
+      - field: public_repos
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    username: octocat
+output_field_reliability:
+  name: guaranteed
+  username: guaranteed
+  followers: guaranteed
+  public_repos: guaranteed
+  recent_repos: guaranteed
+limitations:
+  - title: Returns public profile and repository data only — private repository contributions are not visible
+    text: Returns public profile and repository data only — contribution details for private repositories are not visible
+    category: coverage
+    severity: info
+    workaround: For organization-level data, use the GitHub API with appropriate org read permissions

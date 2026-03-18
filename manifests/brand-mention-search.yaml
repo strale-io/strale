@@ -1,0 +1,139 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: brand-mention-search
+name: Brand Mention Search
+description: >-
+  Search Google for brand mentions. Returns URLs, titles, snippets, sentiment, and source type. Every result is a
+  clickable, verifiable URL.
+category: competitive-intelligence
+price_cents: 30
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - brand_name
+  properties:
+    brand_name:
+      type: string
+    max_results:
+      type: integer
+    exclude_own_domain:
+      type: string
+output_schema:
+  type: object
+  example:
+    query: "\"test\""
+    mentions:
+      - url: https://www.speedtest.net/
+        title: Speedtest by Ookla - The Global Broadband Speed Test
+        snippet: >-
+          Test Again · Get more metrics, video testing, mobile coverage maps, and lots more... Get it on Google Play ·
+          Get more metrics, video testing, mobile coverage ...
+        relevance: high
+        sentiment: neutral
+        source_type: directory
+      - url: https://fast.com/
+        title: "Fast.com: Internet Speed Test"
+        snippet: >-
+          How fast is your download speed? In seconds, FAST.com's simple Internet speed test will estimate your ISP
+          speed.
+        relevance: high
+        sentiment: neutral
+        source_type: directory
+      - url: https://speedtest.xfinity.com/
+        title: Xfinity Speed Test - Check Your Internet Speed
+        snippet: >-
+          Test your connection fast with Xfinity's internet speed test tool and get tips on how to improve your internet
+          performance.
+        relevance: high
+        sentiment: neutral
+        source_type: directory
+      - url: https://fiber.google.com/speedtest/
+        title: Internet Speed Test | Check Broadband Speed - Google Fiber
+        snippet: >-
+          Take a speed test to see how strong the connection is in your home (and if you don't already have GFiber, see
+          how it compares to our speeds).
+        relevance: high
+        sentiment: neutral
+        source_type: directory
+      - url: https://speed.cloudflare.com/
+        title: Internet Speed Test - Measure Network Performance | Cloudflare
+        snippet: >-
+          Test your Internet connection. Check your network performance with our Internet speed test. Powered by
+          Cloudflare's global edge network.
+        relevance: high
+        sentiment: neutral
+        source_type: directory
+      - url: https://www.att.com/support/speedtest/
+        title: Internet Speed Test – AT&T Official Site
+        snippet: >-
+          Test the speed between your AT&T All-Fi Hub® or Wi-Fi Gateway and our network. This test reflects the internet
+          speed coming into your location. Sign in.
+        relevance: high
+        sentiment: neutral
+        source_type: directory
+    brand_name: test
+    total_results_found: 6
+  properties:
+    mentions:
+      type: array
+    brand_name:
+      type: string
+    total_results_found:
+      type: integer
+data_source: Serper.dev API (Google Search results, brand monitoring)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      brand_name: Stripe
+    expected_fields:
+      - field: mentions
+        operator: not_null
+        reliability: guaranteed
+      - field: mentions
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: brand_name
+        operator: not_null
+        reliability: guaranteed
+      - field: brand_name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: total_results_found
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results_found
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_results_found
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    brand_name: Stripe
+output_field_reliability:
+  mentions: guaranteed
+  brand_name: guaranteed
+  total_results_found: guaranteed
+limitations:
+  - title: Searches web results via Serper.dev — social media posts, private forums, and paywalled content not covered
+    text: Searches web results via Serper.dev — does not cover social media posts, private forums, or paywalled content
+    category: coverage
+    severity: info
+    workaround: >-
+      Supplement with social-profile-check for social media presence and direct platform API monitoring for
+      comprehensive coverage
+  - title: Results depend on Google's index — mentions published within the last 24 hours may not yet appear
+    text: Results depend on Google's index — very recent mentions (under 24 hours) may not yet appear
+    category: freshness
+    severity: info
+    workaround: >-
+      For real-time monitoring, set up Google Alerts or use a dedicated media monitoring service alongside periodic
+      Strale checks

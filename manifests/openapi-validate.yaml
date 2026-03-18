@@ -1,0 +1,83 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: openapi-validate
+name: OpenAPI Validate
+description: Validate an OpenAPI 3.x specification. Checks required fields, endpoint definitions, schema references. Algorithmic.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - spec
+  properties:
+    spec:
+      description: OpenAPI spec as JSON string or object
+output_schema:
+  type: object
+  example:
+    valid: true
+    errors: []
+    warnings:
+      - path: /servers
+        message: No 'servers' defined — consumers won't know the base URL
+    error_count: 0
+    schema_count: 0
+    warning_count: 1
+    endpoint_count: 0
+    version_detected: 3.0.0
+  properties:
+    stats:
+      type: object
+    valid:
+      type: boolean
+    errors:
+      type: array
+    warnings:
+      type: array
+data_source: Algorithmic (OpenAPI 3.x specification validation)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      spec: "{\"openapi\":\"3.0.0\",\"info\":{\"title\":\"Test API\",\"version\":\"1.0\"},\"paths\":{}}"
+    expected_fields:
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: errors
+        operator: not_null
+        reliability: guaranteed
+      - field: errors
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: warnings
+        operator: not_null
+        reliability: guaranteed
+      - field: warnings
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    spec: "{\"openapi\":\"3.0.0\",\"info\":{\"title\":\"Test\",\"version\":\"1.0.0\"},\"paths\":{}}"
+output_field_reliability:
+  stats: guaranteed
+  valid: guaranteed
+  errors: guaranteed
+  warnings: guaranteed
+limitations:
+  - title: Validates against OpenAPI 3.0/3.1 specification only — custom vendor extensions are not checked
+    text: >-
+      Validates against OpenAPI 3.0/3.1 specification — custom extensions and vendor-specific annotations are not
+      checked
+    category: coverage
+    severity: info
+    workaround: For vendor extensions (x- prefixed), add your own validation rules in a post-processing step

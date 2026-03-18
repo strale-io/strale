@@ -1,0 +1,109 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: cookie-scan
+name: Cookie Scan
+description: >-
+  Scan a website for cookies, tracking scripts, and consent banners. Categorizes cookies as
+  necessary/analytics/marketing.
+category: data-extraction
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+output_schema:
+  type: object
+  example:
+    url: https://google.com
+    cookies:
+      - name: __Secure-STRP
+        path: /
+        domain: .google.com
+        secure: true
+        expires: Fri, 13-Mar-2026 14:44:29 GMT
+        category: necessary
+        httponly: false
+        samesite: strict
+        known_service: null
+      - name: AEC
+        path: /
+        domain: .google.com
+        secure: true
+        expires: Wed, 09-Sep-2026 14:39:29 GMT
+        category: functional
+        httponly: true
+        samesite: lax
+        known_service: null
+      - name: NID
+        path: /
+        domain: .google.com
+        secure: true
+        expires: Sat, 12-Sep-2026 14:39:29 GMT
+        category: marketing
+        httponly: true
+        samesite: none
+        known_service: Google Ads
+      - name: __Secure-BUCKET
+        path: /
+        domain: .google.com
+        secure: true
+        expires: Wed, 09-Sep-2026 14:39:29 GMT
+        category: necessary
+        httponly: true
+        samesite: null
+        known_service: null
+    total_cookies: 4
+    potential_issues:
+      - No explicit cookie consent banner detected
+      - >-
+        Tracking functionality present (google.log, google.logUrl functions) without visible consent mechanism in
+        provided HTML
+      - Google's own tracking infrastructure (ei, lei, cshid parameters) active without consent disclosure
+      - Performance monitoring and telemetry collection enabled (window.performance, google.timers)
+      - Third-party domain (gstatic.com) loaded without disclosure in visible consent banner
+    tracking_scripts: []
+    first_party_count: 4
+    third_party_count: 0
+    consent_banner_text: null
+    third_party_domains:
+      - gstatic.com
+    consent_banner_detected: false
+  properties:
+    cookies:
+      type: array
+    total_cookies:
+      type: number
+    tracking_scripts:
+      type: array
+    consent_banner_detected:
+      type: boolean
+data_source: Headless browser (cookie detection, script analysis, consent banner check)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://google.com
+    expected_fields:
+      - field: cookies
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    url: https://example.com
+output_field_reliability:
+  cookies: guaranteed
+  total_cookies: guaranteed
+  tracking_scripts: guaranteed
+  consent_banner_detected: guaranteed
+limitations:
+  - title: Only scans cookies set on initial page load — cookies set after interaction or on sub-pages may be missed
+    text: Scans cookies set on initial page load — cookies set after user interaction or on sub-pages may not be captured
+    category: coverage
+    severity: info
+    workaround: Run separate scans on high-traffic sub-pages (e.g., /checkout, /login) and merge the cookie inventories

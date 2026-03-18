@@ -1,0 +1,77 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: vat-validate
+name: EU VAT Validation + VIES Enrichment
+description: >-
+  Validate a European VAT number against the VIES database and return enriched company data. Handles VIES downtime and
+  rate limiting reliably.
+category: validation
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - vat_number
+  properties:
+    vat_number:
+      type: string
+      description: EU VAT number including country prefix (e.g. SE556703748501)
+output_schema:
+  type: object
+  example:
+    valid: true
+    vat_number: DE811128135
+    company_name: ""
+    country_code: DE
+    request_date: 2026-03-06+01:00
+    company_address: ""
+  properties:
+    valid:
+      type: boolean
+    vat_number:
+      type: string
+    company_name:
+      type: string
+    country_code:
+      type: string
+    company_address:
+      type: string
+data_source: VIES (EU VAT Information Exchange System, European Commission)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      vat_number: DE811128135
+    expected_fields:
+      - field: valid
+        operator: is_true
+        reliability: guaranteed
+  health_check_input:
+    vat_number: SE556703748501
+output_field_reliability:
+  valid: guaranteed
+  vat_number: guaranteed
+  company_name: guaranteed
+  country_code: guaranteed
+  company_address: guaranteed
+limitations:
+  - title: EU VIES validation service has periodic outages that may increase response times
+    text: >-
+      VIES (EU VAT validation service) experiences periodic outages — Strale retries automatically but response times
+      may increase
+    category: availability
+    severity: warning
+    workaround: Cache successful validation results with a TTL matching your business requirements (e.g., 24h for invoicing)
+  - title: VAT registration status may lag up to 24 hours behind national registry changes
+    text: VAT registration status reflects latest VIES database — typically within 24 hours of national registry changes
+    category: freshness
+    severity: info
+    workaround: For same-day registration verification, contact the national tax authority directly or use their local e-service
+  - title: Covers EU member states only — Norwegian and Swiss VAT numbers have reduced detail
+    text: Covers EU member states only. Norwegian and Swiss VAT numbers use separate validation and may have reduced detail
+    category: coverage
+    severity: info
+    workaround: For Norwegian MVA numbers, verify directly via Brønnøysundregistrene; for Swiss UID numbers, use uid.admin.ch

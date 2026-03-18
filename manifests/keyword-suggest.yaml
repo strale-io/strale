@@ -1,0 +1,289 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: keyword-suggest
+name: Keyword Suggest
+description: Get keyword suggestions from Google Autocomplete. Returns suggestions, questions, comparisons, long-tail keywords.
+category: data-extraction
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - keyword
+  properties:
+    country:
+      type: string
+    keyword:
+      type: string
+    language:
+      type: string
+output_schema:
+  type: object
+  example:
+    country: se
+    language: en
+    long_tail:
+      - artificial intelligence movie cast
+      - artificial intelligence a modern approach
+      - artificial intelligence in spanish
+      - artificial intelligence a guide for thinking humans
+      - artificial intelligence a modern approach 4th edition
+      - artificial intelligence a modern approach pdf
+      - artificial intelligence and machine learning
+      - artificial intelligence arms race
+      - artificial intelligence basics a non-technical introduction
+      - artificial intelligence bible verses
+      - artificial intelligence business strategies and applications
+      - artificial intelligence course with certificate
+      - artificial intelligence career paths
+      - artificial intelligence certificate programs
+      - artificial intelligence clothing brand
+      - artificial intelligence help physicians to
+      - artificial intelligence hope and the human spirit
+      - artificial intelligence how does it work
+      - artificial intelligence healthcare jobs
+      - artificial intelligence with python
+      - artificial intelligence what is it
+      - artificial intelligence water usage
+      - artificial intelligence with python mit
+      - artificial intelligence water consumption
+      - artificial intelligence which is the main antagonist of the video game
+      - how to artificial intelligence
+      - how to artificial intelligence course
+      - how to artificial intelligence works
+      - how to use artificial intelligence
+      - how to learn artificial intelligence
+      - how to learn artificial intelligence for beginners
+      - how to define artificial intelligence
+      - how to explain artificial intelligence
+      - how to master artificial intelligence
+      - how to download artificial intelligence app
+      - what is artificial intelligence
+      - what is artificial intelligence with examples
+      - what is artificial intelligence in simple words
+      - what is artificial intelligence (ai)
+      - what is artificial intelligence definition
+      - what is artificial intelligence in computer
+      - what is artificial intelligence mean
+      - what is artificial intelligence (ai) mainly concerned with
+      - what is artificial intelligence devoted to
+      - what is artificial intelligence with examples in everyday life
+      - best artificial intelligence stocks
+      - best artificial intelligence etfs
+      - best artificial intelligence app for android
+      - best artificial intelligence app
+      - best artificial intelligence books
+      - best artificial intelligence programs
+      - best artificial intelligence toys
+      - best artificial intelligence movies
+      - best artificial intelligence courses
+      - artificial intelligence vs machine learning
+      - artificial intelligence vs natural stupidity
+      - artificial intelligence vs human intelligence debate
+      - artificial intelligence vs synthetic intelligence
+      - artificial intelligence vs generative ai
+      - artificial intelligence vs human intelligence
+      - artificial intelligence vs augmented intelligence
+      - artificial intelligence vs general intelligence
+      - artificial intelligence vs artificial consciousness
+      - artificial intelligence vs virtual intelligence
+    questions:
+      - how to artificial intelligence
+      - how to artificial intelligence course
+      - how to artificial intelligence works
+      - how to use artificial intelligence
+      - how to learn artificial intelligence
+      - how to learn artificial intelligence for beginners
+      - how to define artificial intelligence
+      - how to explain artificial intelligence
+      - how to master artificial intelligence
+      - how to download artificial intelligence app
+      - what is artificial intelligence
+      - what is artificial intelligence with examples
+      - what is artificial intelligence in simple words
+      - what is artificial intelligence (ai)
+      - what is artificial intelligence definition
+      - what is artificial intelligence in computer
+      - what is artificial intelligence mean
+      - what is artificial intelligence (ai) mainly concerned with
+      - what is artificial intelligence devoted to
+      - what is artificial intelligence with examples in everyday life
+    comparisons:
+      - artificial intelligence vs machine learning
+      - artificial intelligence vs natural stupidity
+      - artificial intelligence vs human intelligence debate
+      - artificial intelligence vs synthetic intelligence
+      - artificial intelligence vs generative ai
+      - artificial intelligence vs human intelligence
+      - artificial intelligence vs augmented intelligence
+      - artificial intelligence vs general intelligence
+      - artificial intelligence vs artificial consciousness
+      - artificial intelligence vs virtual intelligence
+    suggestions:
+      - artificial intelligence movie
+      - artificial intelligence movie cast
+      - artificial intelligence definition
+      - artificial intelligence a modern approach
+      - artificial intelligence in spanish
+      - artificial intelligence stocks
+      - artificial intelligence hoodie
+      - artificial intelligence app
+      - artificial intelligence (ai)
+      - artificial intelligence a guide for thinking humans
+      - artificial intelligence a modern approach 4th edition
+      - artificial intelligence act
+      - artificial intelligence a modern approach pdf
+      - artificial intelligence and machine learning
+      - artificial intelligence ai
+      - artificial intelligence articles
+      - artificial intelligence arms race
+      - artificial intelligence books
+      - artificial intelligence basics a non-technical introduction
+      - artificial intelligence bomb
+      - artificial intelligence bubble
+      - artificial intelligence benefits
+      - artificial intelligence brand
+      - artificial intelligence bible verses
+      - artificial intelligence business strategies and applications
+      - artificial intelligence basics
+      - artificial intelligence benchmark
+      - artificial intelligence course
+      - artificial intelligence certification
+      - artificial intelligence clothing
+      - artificial intelligence companies
+      - artificial intelligence course with certificate
+      - artificial intelligence cast
+      - artificial intelligence career paths
+      - artificial intelligence certificate programs
+      - artificial intelligence classes
+      - artificial intelligence clothing brand
+      - artificial intelligence history
+      - artificial intelligence hallucinations
+      - artificial intelligence healthcare
+      - artificial intelligence help physicians to
+      - artificial intelligence hope and the human spirit
+      - artificial intelligence help
+      - artificial intelligence how does it work
+      - artificial intelligence healthcare jobs
+      - artificial intelligence human
+      - artificial intelligence website
+      - artificial intelligence wikipedia
+      - artificial intelligence with python
+      - artificial intelligence what is it
+      - artificial intelligence water usage
+      - artificial intelligence with python mit
+      - artificial intelligence water consumption
+      - artificial intelligence watch
+      - artificial intelligence warp
+      - artificial intelligence which is the main antagonist of the video game
+      - how to artificial intelligence
+      - how to artificial intelligence course
+      - how to artificial intelligence works
+      - how to use artificial intelligence
+      - how to learn artificial intelligence
+      - how to learn artificial intelligence for beginners
+      - how to define artificial intelligence
+      - how to explain artificial intelligence
+      - how to master artificial intelligence
+      - how to download artificial intelligence app
+      - what is artificial intelligence
+      - what is artificial intelligence with examples
+      - what is artificial intelligence in simple words
+      - what is artificial intelligence (ai)
+      - what is artificial intelligence definition
+      - what is artificial intelligence in computer
+      - what is artificial intelligence mean
+      - what is artificial intelligence (ai) mainly concerned with
+      - what is artificial intelligence devoted to
+      - what is artificial intelligence with examples in everyday life
+      - best artificial intelligence stocks
+      - best artificial intelligence etfs
+      - best artificial intelligence
+      - best artificial intelligence app for android
+      - best artificial intelligence app
+      - best artificial intelligence books
+      - best artificial intelligence programs
+      - best artificial intelligence toys
+      - best artificial intelligence movies
+      - best artificial intelligence courses
+      - artificial intelligence vs machine learning
+      - artificial intelligence vs natural stupidity
+      - artificial intelligence vs human intelligence debate
+      - artificial intelligence vs synthetic intelligence
+      - artificial intelligence vs generative ai
+      - artificial intelligence vs human intelligence
+      - artificial intelligence vs augmented intelligence
+      - artificial intelligence vs general intelligence
+      - artificial intelligence vs artificial consciousness
+      - artificial intelligence vs virtual intelligence
+    seed_keyword: artificial intelligence
+    total_suggestions: 96
+  properties:
+    long_tail:
+      type: array
+    questions:
+      type: array
+    suggestions:
+      type: array
+    total_suggestions:
+      type: number
+data_source: Google Autocomplete API (keyword suggestions)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      country: SE
+      keyword: artificial intelligence
+      language: en
+    expected_fields:
+      - field: long_tail
+        operator: not_null
+        reliability: guaranteed
+      - field: long_tail
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: questions
+        operator: not_null
+        reliability: guaranteed
+      - field: questions
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: suggestions
+        operator: not_null
+        reliability: guaranteed
+      - field: suggestions
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_suggestions
+        operator: not_null
+        reliability: guaranteed
+      - field: total_suggestions
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_suggestions
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    country: US
+    keyword: test
+output_field_reliability:
+  long_tail: guaranteed
+  questions: guaranteed
+  suggestions: guaranteed
+  total_suggestions: guaranteed
+limitations:
+  - title: Google Autocomplete suggestions reflect search popularity, not commercial intent or conversion potential
+    text: >-
+      Uses Google Autocomplete API — suggestions reflect search popularity, not commercial intent or conversion
+      potential
+    category: accuracy
+    severity: info
+    workaround: Filter suggestions through your conversion data to identify which keywords actually drive business value

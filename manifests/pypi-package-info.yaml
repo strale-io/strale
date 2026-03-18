@@ -1,0 +1,149 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: pypi-package-info
+name: PyPI Package Info
+description: "Fetch Python package metadata from PyPI: version, dependencies, Python compatibility, release history, license."
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - package
+  properties:
+    package:
+      type: string
+output_schema:
+  type: object
+  example:
+    name: requests
+    author: Kenneth Reitz
+    license: Apache Software License
+    summary: Python HTTP for Humans.
+    version: 2.32.5
+    homepage: https://requests.readthedocs.io
+    keywords: []
+    package_url: https://pypi.org/project/requests/
+    dependencies:
+      - charset_normalizer<4,>=2
+      - idna<4,>=2.5
+      - urllib3<3,>=1.21.1
+      - certifi>=2017.4.17
+      - PySocks!=1.5.7,>=1.5.6; extra == "socks"
+      - chardet<6,>=3.0.2; extra == "use-chardet-on-py3"
+    project_urls:
+      Source: https://github.com/psf/requests
+      Homepage: https://requests.readthedocs.io
+      Documentation: https://requests.readthedocs.io
+    total_releases: 157
+    python_versions:
+      - "3"
+      - Only
+      - "3.10"
+      - "3.11"
+      - "3.12"
+      - "3.13"
+      - "3.14"
+      - "3.9"
+      - CPython
+      - PyPy
+    recent_releases:
+      - version: 2.9.2
+        upload_date: "2016-04-29T21:57:23.021820Z"
+        python_requires: null
+      - version: 2.9.1
+        upload_date: "2015-12-21T14:55:10.646407Z"
+        python_requires: null
+      - version: 2.9.0
+        upload_date: "2015-12-15T15:30:34.276097Z"
+        python_requires: null
+      - version: 2.8.1
+        upload_date: "2015-10-13T12:56:41.375848Z"
+        python_requires: null
+      - version: 2.8.0
+        upload_date: "2015-10-06T14:47:57.677398Z"
+        python_requires: null
+      - version: 2.7.0
+        upload_date: "2015-05-03T15:01:28.821871Z"
+        python_requires: null
+      - version: 2.6.2
+        upload_date: "2015-04-23T16:30:52.318157Z"
+        python_requires: null
+      - version: 2.6.1
+        upload_date: "2015-04-23T02:27:04.893535Z"
+        python_requires: null
+      - version: 2.6.0
+        upload_date: "2015-03-14T16:44:37.146829Z"
+        python_requires: null
+      - version: 2.5.3
+        upload_date: "2015-02-24T16:33:49.703522Z"
+        python_requires: null
+    requires_python: ">=3.9"
+    description_content_type: text/markdown
+  properties:
+    name:
+      type: string
+    summary:
+      type: string
+    version:
+      type: string
+    dependencies:
+      type: array
+    recent_releases:
+      type: array
+data_source: PyPI JSON API (Python package metadata)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      package: requests
+    expected_fields:
+      - field: name
+        operator: not_null
+        reliability: guaranteed
+      - field: name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: summary
+        operator: not_null
+        reliability: guaranteed
+      - field: summary
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: version
+        operator: not_null
+        reliability: guaranteed
+      - field: version
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: dependencies
+        operator: not_null
+        reliability: guaranteed
+      - field: dependencies
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    package: requests
+output_field_reliability:
+  name: guaranteed
+  summary: guaranteed
+  version: guaranteed
+  dependencies: guaranteed
+  recent_releases: guaranteed
+limitations:
+  - title: >-
+      Queries the public PyPI registry only — private packages and alternative indexes like Artifactory are not
+      accessible
+    text: >-
+      Queries the public PyPI registry — private packages and packages hosted on alternative indexes (e.g., Artifactory)
+      are not accessible
+    category: coverage
+    severity: info
+    workaround: For private packages, query your organization's Python package index directly

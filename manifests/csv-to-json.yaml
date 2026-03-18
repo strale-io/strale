@@ -1,0 +1,93 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: csv-to-json
+name: CSV to JSON
+description: Convert CSV string to JSON array with auto-detected delimiter and type inference. Algorithmic.
+category: data-processing
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - csv_string
+  properties:
+    delimiter:
+      type: string
+    csv_string:
+      type: string
+    has_header:
+      type: boolean
+output_schema:
+  type: object
+  example:
+    data: []
+    columns:
+      - test_value
+    row_count: 0
+    detected_delimiter: ","
+  properties:
+    data:
+      type: array
+    columns:
+      type: array
+    row_count:
+      type: integer
+    detected_delimiter:
+      type: string
+data_source: Algorithmic (format conversion, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      csv_string: test_value
+    expected_fields:
+      - field: data
+        operator: not_null
+        reliability: guaranteed
+      - field: data
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: columns
+        operator: not_null
+        reliability: guaranteed
+      - field: columns
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: row_count
+        operator: not_null
+        reliability: guaranteed
+      - field: row_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: row_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: detected_delimiter
+        operator: not_null
+        reliability: guaranteed
+      - field: detected_delimiter
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    csv_string: test
+output_field_reliability:
+  data: guaranteed
+  columns: guaranteed
+  row_count: guaranteed
+  detected_delimiter: guaranteed
+limitations:
+  - title: Expects consistent column counts — multi-line cell values or mixed delimiters may cause parse errors
+    text: >-
+      Expects well-formed CSV with consistent column counts — multi-line cell values or mixed delimiters may cause parse
+      errors
+    category: coverage
+    severity: info
+    workaround: Pre-clean the CSV with csv-clean before converting, or specify the delimiter explicitly

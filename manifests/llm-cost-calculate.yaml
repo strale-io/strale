@@ -1,0 +1,121 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: llm-cost-calculate
+name: LLM Cost Calculate
+description: >-
+  Calculate LLM API cost for a prompt+completion across 14 models. Returns cheaper alternatives with savings
+  percentages. Algorithmic.
+category: developer-tools
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - model
+  properties:
+    model:
+      type: string
+    prompt_text:
+      type: string
+    prompt_tokens:
+      type: integer
+    completion_text:
+      type: string
+    completion_tokens:
+      type: integer
+output_schema:
+  type: object
+  example:
+    model: gpt-4o
+    cost_usd: 0.000027
+    input_tokens: 11
+    total_tokens: 11
+    model_pricing:
+      input_per_1k: 0.0025
+      output_per_1k: 0.01
+    output_tokens: 0
+    context_window: 128000
+    cheaper_alternatives:
+      - model: gemini-1.5-flash
+        cost_usd: 0.000001
+        context_window: 1000000
+        savings_percent: 97
+      - model: gpt-4o-mini
+        cost_usd: 0.000002
+        context_window: 128000
+        savings_percent: 94
+      - model: claude-3-haiku
+        cost_usd: 0.000003
+        context_window: 200000
+        savings_percent: 90
+      - model: gpt-3.5-turbo
+        cost_usd: 0.000006
+        context_window: 16385
+        savings_percent: 80
+      - model: llama-3-70b
+        cost_usd: 0.000006
+        context_window: 8192
+        savings_percent: 76
+  properties:
+    cost_usd:
+      type: number
+    input_tokens:
+      type: integer
+    output_tokens:
+      type: integer
+    cheaper_alternatives:
+      type: array
+data_source: Algorithmic (LLM pricing calculation, static rate table)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      model: gpt-4o
+      prompt_text: Write a function to validate email addresses
+    expected_fields:
+      - field: cost_usd
+        operator: not_null
+        reliability: guaranteed
+      - field: cost_usd
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: input_tokens
+        operator: not_null
+        reliability: guaranteed
+      - field: input_tokens
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: output_tokens
+        operator: not_null
+        reliability: guaranteed
+      - field: output_tokens
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: cheaper_alternatives
+        operator: not_null
+        reliability: guaranteed
+      - field: cheaper_alternatives
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    model: claude-3-sonnet
+    input_tokens: 1000
+    output_tokens: 500
+output_field_reliability:
+  cost_usd: guaranteed
+  input_tokens: guaranteed
+  output_tokens: guaranteed
+  cheaper_alternatives: guaranteed
+limitations:
+  - title: LLM pricing uses a built-in model table — new models or recent pricing changes may not be reflected
+    text: Pricing data based on built-in model table — new models or pricing changes may not be reflected immediately
+    category: freshness
+    severity: info
+    workaround: Check the provider's current pricing page for models showing unexpected costs, especially after major releases

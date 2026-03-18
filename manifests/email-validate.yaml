@@ -1,0 +1,76 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: email-validate
+name: Email Validation
+description: >-
+  Validate an email address. Checks format, MX records, disposable domain detection, and role-based address detection.
+  No email is sent.
+category: validation
+price_cents: 3
+is_free_tier: true
+input_schema:
+  type: object
+  required:
+    - email
+  properties:
+    email:
+      type: string
+      description: Email address to validate
+output_schema:
+  type: object
+  example:
+    email: test@google.com
+    valid: true
+    domain: google.com
+    mx_records:
+      - smtp.google.com
+    format_valid: true
+    is_disposable: false
+    has_mx_records: true
+    is_role_address: false
+    is_free_provider: false
+  properties:
+    email:
+      type: string
+    valid:
+      type: boolean
+    is_disposable:
+      type: boolean
+    has_mx_records:
+      type: boolean
+    is_role_address:
+      type: boolean
+data_source: Algorithmic (syntax) + DNS protocol (MX record verification)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      email: clearly-invalid
+    expected_fields:
+      - field: format_valid
+        operator: is_false
+        reliability: common
+  health_check_input:
+    email: test@example.com
+output_field_reliability:
+  email: guaranteed
+  valid: guaranteed
+  is_disposable: common
+  has_mx_records: common
+  is_role_address: common
+limitations:
+  - title: Disposable email detection covers major providers but newly registered throwaway domains may pass
+    text: Disposable email detection covers major providers but new throwaway domains may not be flagged
+    category: coverage
+    severity: info
+    workaround: Supplement with a domain age check — disposable domains are typically registered within the last 30 days
+  - title: Catch-all domains used by enterprises show as valid even for non-existent mailboxes
+    text: Catch-all domains (common in enterprises) will show as valid even for non-existent mailboxes
+    category: accuracy
+    severity: info
+    workaround: >-
+      Check the is_catchall field in the response and require email confirmation via a verification link for catch-all
+      domains

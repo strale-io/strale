@@ -1,0 +1,96 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: tool-call-validate
+name: Tool Call Validate
+description: Validate an LLM tool call against a JSON Schema. Auto-fixes type mismatches (string '42' → number 42). Algorithmic.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - tool_name
+    - tool_input
+    - expected_schema
+  properties:
+    tool_name:
+      type: string
+    tool_input:
+      type: object
+    expected_schema:
+      type: object
+output_schema:
+  type: object
+  example:
+    valid: true
+    errors: []
+    tool_name: test
+    error_count: 0
+    corrected_input: null
+    corrections_applied: null
+  properties:
+    valid:
+      type: boolean
+    errors:
+      type: array
+    corrected_input:
+      type: object
+data_source: Algorithmic (tool call schema validation, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      tool_name: search
+      tool_input:
+        limit: "10"
+        query: test
+      expected_schema:
+        type: object
+        properties:
+          limit:
+            type: number
+          query:
+            type: string
+    expected_fields:
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: errors
+        operator: not_null
+        reliability: guaranteed
+      - field: errors
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: tool_name
+        operator: not_null
+        reliability: common
+      - field: tool_name
+        operator: type
+        reliability: common
+        value: string
+  health_check_input:
+    tool_name: test
+    tool_input:
+      key: value
+    expected_schema:
+      key: value
+output_field_reliability:
+  valid: guaranteed
+  errors: guaranteed
+  corrected_input: guaranteed
+limitations:
+  - title: Validates tool call structure and parameter types only — semantic correctness of parameter values is not checked
+    text: >-
+      Validates tool call structure and parameter types — cannot verify whether parameter values are semantically
+      correct
+    category: coverage
+    severity: info
+    workaround: Combine with runtime testing against the actual tool to verify that parameter values produce expected results

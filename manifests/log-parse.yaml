@@ -1,0 +1,99 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: log-parse
+name: Log Parse
+description: >-
+  Parse log files — auto-detects format (JSON, syslog, ISO, logfmt, Laravel). Extracts timestamps, levels, messages.
+  Returns error/warning summary. Algorithmic.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - logs
+  properties:
+    logs:
+      type: string
+output_schema:
+  type: object
+  example:
+    errors: []
+    warnings: []
+    time_range:
+      last: null
+      first: null
+    error_count: 0
+    total_lines: 1
+    level_counts: {}
+    parsed_sample:
+      - raw: test_value
+        format: unknown
+        message: test_value
+        line_number: 1
+    warning_count: 0
+    detected_format: unknown
+  properties:
+    errors:
+      type: array
+    error_count:
+      type: integer
+    total_lines:
+      type: integer
+    level_counts:
+      type: object
+    detected_format:
+      type: string
+data_source: Algorithmic (log file parsing and structuring, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      logs: test_value
+    expected_fields:
+      - field: errors
+        operator: not_null
+        reliability: guaranteed
+      - field: errors
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: error_count
+        operator: not_null
+        reliability: guaranteed
+      - field: error_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: error_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: total_lines
+        operator: not_null
+        reliability: guaranteed
+      - field: total_lines
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_lines
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    logs: test
+output_field_reliability:
+  errors: guaranteed
+  error_count: guaranteed
+  total_lines: guaranteed
+  level_counts: guaranteed
+  detected_format: guaranteed
+limitations:
+  - title: Custom or proprietary log formats may require specific format hints for accurate AI parsing
+    text: AI-powered log parsing — custom or proprietary log formats may require specific format hints for accurate parsing
+    category: coverage
+    severity: info
+    workaround: Include a sample log line description or format string in the input for non-standard log formats

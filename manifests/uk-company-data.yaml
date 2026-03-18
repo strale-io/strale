@@ -1,0 +1,100 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: uk-company-data
+name: UK Company Data
+description: >-
+  Look up UK company data from Companies House. Accepts company number (8 digits) or fuzzy company name. Returns company
+  name, status, incorporation date, SIC codes, registered address.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - company_number
+  properties:
+    company_number:
+      type: string
+      description: UK Companies House number (8 digits) or company name
+output_schema:
+  type: object
+  example:
+    status: active
+    address: 424 London Road, Westcliff-On-Sea, SS0 9LA, England
+    sic_codes:
+      - "82911"
+    has_charges: false
+    company_name: FALSE DEMANDS - DO NOT PAY AS SOMEONE ELSE USING COMPANY NAME LTD
+    jurisdiction: england-wales
+    business_type: ltd
+    company_number: "10843886"
+    dissolution_date: null
+    incorporation_date: "2017-06-30"
+  properties:
+    status:
+      type: string
+    address:
+      type: string
+    company_name:
+      type: string
+    business_type:
+      type: string
+    company_number:
+      type: string
+    incorporation_date:
+      type: string
+data_source: Companies House (UK Government)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      company_number: "00445790"
+    expected_fields:
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: address
+        operator: not_null
+        reliability: guaranteed
+      - field: address
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: company_name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: business_type
+        operator: not_null
+        reliability: guaranteed
+      - field: business_type
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    company_number: "00445790"
+output_field_reliability:
+  status: guaranteed
+  address: guaranteed
+  company_name: guaranteed
+  business_type: guaranteed
+  company_number: guaranteed
+  incorporation_date: guaranteed
+limitations:
+  - title: Companies House API includes LLPs but sole traders and unregistered partnerships are not covered
+    text: >-
+      Data from Companies House API — LLPs and Scottish LPs included, but sole traders and partnerships are not
+      registered
+    category: coverage
+    severity: info
+    workaround: For sole traders, check HMRC's contractor verification or use the business name with google-search

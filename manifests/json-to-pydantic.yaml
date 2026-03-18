@@ -1,0 +1,85 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: json-to-pydantic
+name: JSON to Pydantic
+description: Convert JSON to Python Pydantic model classes. Handles nested objects, arrays, optional fields. Algorithmic.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - json
+  properties:
+    json:
+      description: JSON string or object
+    root_name:
+      type: string
+output_schema:
+  type: object
+  example:
+    root_type: Root
+    model_count: 1
+    pydantic_model: |-
+      from pydantic import BaseModel
+      from typing import Any, List, Optional
+
+      class Root(BaseModel):
+          name: str
+          value: int
+  properties:
+    root_type:
+      type: string
+    model_count:
+      type: integer
+    pydantic_model:
+      type: string
+data_source: Algorithmic (JSON to Pydantic model generation, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      json: "{\"name\": \"Test\", \"value\": 42}"
+    expected_fields:
+      - field: root_type
+        operator: not_null
+        reliability: guaranteed
+      - field: root_type
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: model_count
+        operator: not_null
+        reliability: guaranteed
+      - field: model_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: model_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: pydantic_model
+        operator: not_null
+        reliability: guaranteed
+      - field: pydantic_model
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    json: "{\"name\":\"Alice\",\"age\":30}"
+output_field_reliability:
+  root_type: guaranteed
+  model_count: guaranteed
+  pydantic_model: guaranteed
+limitations:
+  - title: Optional fields may be marked as required if they appear in every sample provided to the model inferrer
+    text: >-
+      Infers Pydantic models from JSON samples — optional fields may be marked as required if always present in the
+      sample
+    category: accuracy
+    severity: info
+    workaround: Provide samples with null values for optional fields, or manually adjust Field(default=None) after generation

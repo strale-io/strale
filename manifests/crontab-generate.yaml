@@ -1,0 +1,78 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: crontab-generate
+name: Crontab Generate
+description: Convert natural language schedule to cron expression, or explain an existing cron expression. Returns next run times.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - description
+  properties:
+    description:
+      type: string
+      description: Schedule in natural language or cron expression
+output_schema:
+  type: object
+  example:
+    next_5_runs: []
+    timezone_note: Cannot calculate without a valid cron expression or schedule details
+    human_readable: No valid schedule information provided in the description
+    cron_expression: Unable to determine - no schedule specified
+    input_description: This is a test input for automated capability testing.
+  properties:
+    next_5_runs:
+      type: array
+    human_readable:
+      type: string
+    cron_expression:
+      type: string
+data_source: Claude API (crontab expression generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      description: This is a test input for automated capability testing.
+    expected_fields:
+      - field: next_5_runs
+        operator: not_null
+        reliability: guaranteed
+      - field: next_5_runs
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: human_readable
+        operator: not_null
+        reliability: guaranteed
+      - field: human_readable
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: cron_expression
+        operator: not_null
+        reliability: guaranteed
+      - field: cron_expression
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    description: test
+output_field_reliability:
+  next_5_runs: guaranteed
+  human_readable: guaranteed
+  cron_expression: guaranteed
+limitations:
+  - title: Generates standard cron expressions — non-standard extensions like seconds field may not work in all schedulers
+    text: >-
+      Generates standard cron expressions — non-standard extensions (e.g., seconds field, @reboot) may not be supported
+      by all schedulers
+    category: accuracy
+    severity: info
+    workaround: >-
+      Verify the generated expression against your specific cron implementation (e.g., systemd vs crontab vs cloud
+      scheduler)

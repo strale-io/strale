@@ -1,0 +1,91 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: charity-lookup-uk
+name: Charity Lookup UK
+description: >-
+  Look up UK charities via the Charity Commission API. Search by registration number or name. Returns status, income,
+  activities.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    name:
+      type: string
+    charity_number:
+      type: string
+output_schema:
+  type: object
+  example:
+    status: registered
+    website: http://www.cornerstonechurchbristol.com
+    description: >-
+      To propagate the Christian faith by preaching, teaching and helping to meet community needs at home and overseas.
+      By provision of financial and human resources for welfare and education in a Christian context.
+    charity_name: Cornerstone Church Bristol
+    latest_income: 98543
+    trustee_count: 3
+    charity_number: "1038963"
+    company_number: null
+    date_of_removal: null
+    latest_spending: 100550
+    latest_employees: null
+    latest_volunteers: 30
+    date_of_registration: "1994-07-01"
+    latest_financial_year_end: "2024-12-31"
+  properties:
+    income:
+      type: number
+    status:
+      type: string
+    charity_name:
+      type: string
+    charity_number:
+      type: string
+data_source: Charity Commission for England and Wales API
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      charity_number: "202918"
+    expected_fields:
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: charity_name
+        operator: not_null
+        reliability: guaranteed
+      - field: charity_name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: charity_number
+        operator: not_null
+        reliability: guaranteed
+      - field: charity_number
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    charity_number: "1038963"
+output_field_reliability:
+  income: guaranteed
+  status: guaranteed
+  charity_name: guaranteed
+  charity_number: guaranteed
+limitations:
+  - title: Covers charities registered in England and Wales only — Scottish and Northern Irish charities are not included
+    text: >-
+      Covers charities registered with the Charity Commission for England and Wales — Scottish (OSCR) and Northern Irish
+      charities not included
+    category: coverage
+    severity: info
+    workaround: For Scottish charities, query OSCR at oscr.org.uk; for Northern Ireland, use charitycommissionni.org.uk

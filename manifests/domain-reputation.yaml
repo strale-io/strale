@@ -1,0 +1,95 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: domain-reputation
+name: Domain Reputation
+description: >-
+  Check domain reputation via DNS, HTTP, and security analysis. Checks SPF, DMARC, HSTS, HTTPS, suspicious TLD, and
+  domain patterns. Score 0-100.
+category: compliance
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+output_schema:
+  type: object
+  example:
+    grade: A
+    checks:
+      has_mx: true
+      has_csp: false
+      has_spf: true
+      has_xfo: true
+      has_hsts: false
+      has_xcto: false
+      mx_count: 1
+      resolves: true
+      has_dmarc: true
+      https_works: true
+      https_status: 200
+      ip_addresses:
+        - 172.253.63.139
+        - 172.253.63.102
+        - 172.253.63.100
+        - 172.253.63.113
+        - 172.253.63.138
+        - 172.253.63.101
+    domain: google.com
+    issues:
+      - No HSTS header
+      - No X-Content-Type-Options header
+    issue_count: 2
+    reputation_score: 92
+  properties:
+    grade:
+      type: string
+    checks:
+      type: object
+    domain:
+      type: string
+    issues:
+      type: array
+    reputation_score:
+      type: integer
+data_source: Threat intelligence feeds (multi-source scoring)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain: google.com
+    expected_fields:
+      - field: reputation_score
+        operator: not_null
+        reliability: guaranteed
+      - field: reputation_score
+        operator: gt
+        reliability: guaranteed
+        value: 50
+  health_check_input:
+    domain: example.com
+output_field_reliability:
+  grade: guaranteed
+  checks: guaranteed
+  domain: guaranteed
+  issues: guaranteed
+  reputation_score: guaranteed
+limitations:
+  - title: Blocklist data refreshes daily, so resolved issues may still show negative reputation for 24-48 hours
+    text: Blocklist data refreshed daily — recently resolved issues may still show negative reputation for 24-48 hours
+    category: freshness
+    severity: info
+    workaround: If a domain was recently cleaned, re-check after 48 hours and use the trend direction to assess improvement
+  - title: A single blocklist appearance may not indicate actual malicious activity
+    text: Reputation scores aggregate multiple blocklists — a single listing may not indicate actual malicious activity
+    category: accuracy
+    severity: info
+    workaround: >-
+      Check which specific blocklist flagged the domain in the response details and verify the listing reason before
+      blocking

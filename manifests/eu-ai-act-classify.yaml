@@ -1,0 +1,87 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: eu-ai-act-classify
+name: EU AI Act Classify
+description: >-
+  Classify an AI system's risk level under the EU AI Act. Rule-based analysis against Annex III and Article 5/6/50
+  criteria.
+category: validation
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - description
+  properties:
+    description:
+      type: string
+      description: Description of the AI system
+output_schema:
+  type: object
+  example:
+    timeline: No mandatory compliance deadline, but voluntary codes of conduct may apply.
+    prohibited: false
+    risk_level: minimal
+    obligations:
+      - No mandatory obligations under the EU AI Act.
+      - Voluntary codes of conduct encouraged (Article 95).
+    recommendations:
+      - Although not legally required, consider adopting voluntary codes of conduct (Article 95).
+      - Maintain good AI development practices (transparency, fairness, safety).
+      - Monitor regulatory developments — classification may change with delegated acts.
+      - Document your AI system's purpose and functionality for potential future audits.
+    matched_keywords: []
+    applicable_articles:
+      - Article 95 (Codes of conduct for minimal-risk AI)
+    classification_reason: No high-risk, limited-risk, or prohibited keywords detected. System appears to fall under minimal risk.
+    system_description_summary: AI
+    conformity_assessment_needed: false
+  properties:
+    risk_level:
+      type: string
+    obligations:
+      type: array
+    applicable_articles:
+      type: array
+    classification_reason:
+      type: string
+    conformity_assessment_needed:
+      type: boolean
+data_source: Algorithmic (rule-based classification against EU AI Act Annex III, Articles 5/6/50)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      description: Real-time facial recognition system used for law enforcement surveillance in public spaces
+    expected_fields:
+      - field: risk_level
+        operator: not_null
+        reliability: guaranteed
+      - field: risk_level
+        operator: equals
+        reliability: guaranteed
+        value: high
+  health_check_input:
+    description: test
+output_field_reliability:
+  risk_level: guaranteed
+  obligations: guaranteed
+  applicable_articles: guaranteed
+  classification_reason: guaranteed
+  conformity_assessment_needed: guaranteed
+limitations:
+  - title: EU AI Act classification is guidance only — official risk categorization requires legal analysis
+    text: Classification is guidance only — official EU AI Act risk categorization requires legal analysis
+    category: accuracy
+    severity: warning
+    workaround: >-
+      Use the classification output as a starting point for legal review — include the returned risk factors in your
+      compliance documentation
+  - title: Based on the latest published AI Act text — implementing regulations may shift interpretation over time
+    text: Based on AI Act text as of latest published version — implementing regulations may change interpretation
+    category: freshness
+    severity: info
+    workaround: Monitor the EU AI Office website for delegated acts and compare against the version_date field in the response

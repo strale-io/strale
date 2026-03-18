@@ -1,0 +1,111 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: employment-cost-estimate
+name: Employment Cost Estimate
+description: >-
+  Calculate total employer cost and net salary estimate for 20+ countries. Includes social contributions, pension,
+  income tax.
+category: data-extraction
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - gross_salary
+    - country_code
+  properties:
+    currency:
+      type: string
+    country_code:
+      type: string
+    gross_salary:
+      type: number
+output_schema:
+  type: object
+  example:
+    period: annual
+    currency: EUR
+    country_code: SE
+    country_name: Sweden
+    gross_salary: 1
+    breakdown_notes:
+      - Employer contributions (arbetsgivaravgifter) 31.42% cover pension, health, parental insurance, etc.
+      - Municipal tax varies 29-35%; 32% used as average.
+      - State income tax 20% applies above SEK 614,000 (2024).
+      - Reduced employer contributions for young employees (<23) and seniors (>65).
+    effective_tax_rate: 0
+    net_salary_estimate: 1
+    total_employer_cost: 1.31
+    employer_contributions:
+      total_amount: 0.31
+      other_percent: 0
+      total_percent: 31.42
+      pension_percent: 0
+      social_security_percent: 31.42
+  properties:
+    effective_tax_rate:
+      type: number
+    net_salary_estimate:
+      type: number
+    total_employer_cost:
+      type: number
+    employer_contributions:
+      type: object
+data_source: Algorithmic (employment cost calculation by country, tax rules)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      currency: EUR
+      country_code: SE
+      gross_salary: 1
+    expected_fields:
+      - field: effective_tax_rate
+        operator: not_null
+        reliability: guaranteed
+      - field: effective_tax_rate
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: effective_tax_rate
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: net_salary_estimate
+        operator: not_null
+        reliability: guaranteed
+      - field: net_salary_estimate
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_employer_cost
+        operator: not_null
+        reliability: guaranteed
+      - field: total_employer_cost
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_employer_cost
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    currency: USD
+    country_code: US
+    gross_salary: 1
+output_field_reliability:
+  effective_tax_rate: guaranteed
+  net_salary_estimate: guaranteed
+  total_employer_cost: guaranteed
+  employer_contributions: guaranteed
+limitations:
+  - title: AI-generated estimates based on general knowledge — actual employment costs vary by industry and benefits
+    text: >-
+      AI-generated estimates based on general knowledge — actual costs vary by industry, company size, and specific
+      benefits packages
+    category: accuracy
+    severity: info
+    workaround: Use as a ballpark estimate and validate against local payroll provider quotes for budgeting decisions

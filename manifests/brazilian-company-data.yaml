@@ -1,0 +1,100 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: brazilian-company-data
+name: Brazilian Company Data
+description: >-
+  Look up Brazilian company data from ReceitaWS. Requires CNPJ (14 digits). Returns company name, trade name, status,
+  address, activity codes, partners.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - cnpj
+  properties:
+    cnpj:
+      type: string
+      description: CNPJ number (14 digits, e.g. 11222333000181)
+output_schema:
+  type: object
+  example:
+    cnpj: 11.222.333/0001-81
+    size: DEMAIS
+    type: MATRIZ
+    status: ATIVA
+    address: R GARIBALDI, 070, VILA RICA, 95.760-000 SAO SEBASTIAO DO CAI, RS
+    partners:
+      - name: CLAUDIA KICH DA SILVA
+        role: 16-Presidente
+    trade_name: CAIXA ESCOLA DA ESCOLA ESTADUAL DE ENSINO FUNDAMENTAL J
+    company_name: CAIXA ESCOLAR DA ESCOLA ESTADUAL DE ENSINO FUNDAMENTAL JOSEFINA JACQUES NORONHA
+    legal_nature: 399-9 - Associação Privada
+    opening_date: 02/09/2009
+    share_capital: "0.00"
+    activity_codes:
+      - code: 85.50-3-01
+        description: Administração de caixas escolares
+  properties:
+    cnpj:
+      type: string
+    status:
+      type: string
+    address:
+      type: string
+    company_name:
+      type: string
+    activity_codes:
+      type: array
+data_source: Receita Federal / CNPJ Registry (Brazil)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      cnpj: "11222333000181"
+    expected_fields:
+      - field: cnpj
+        operator: not_null
+        reliability: guaranteed
+      - field: cnpj
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: address
+        operator: not_null
+        reliability: guaranteed
+      - field: address
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: company_name
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    cnpj: "33000167000101"
+output_field_reliability:
+  cnpj: guaranteed
+  status: guaranteed
+  address: guaranteed
+  company_name: guaranteed
+  activity_codes: guaranteed
+limitations:
+  - title: Data extracted via web scraping — CNPJ coverage may vary and some registrations show limited detail
+    text: Data extracted via web scraping — CNPJ lookup coverage may vary and some registrations show limited detail
+    category: coverage
+    severity: info
+    workaround: Use the CNPJ from the response to query the Receita Federal directly for the most complete registration data

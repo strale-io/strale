@@ -1,0 +1,112 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: annual-report-extract
+name: Swedish Annual Report Extraction
+description: >-
+  Download and extract structured financial data from a Swedish company's annual report (årsredovisning). Returns
+  balance sheet, income statement, and key ratios.
+category: data-extraction
+price_cents: 100
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - org_number
+  properties:
+    year:
+      type: integer
+      description: Fiscal year (defaults to most recent)
+    org_number:
+      type: string
+      description: Swedish org number (e.g. 559106-8089)
+output_schema:
+  type: object
+  example:
+    auditor: null
+    equity_sek: 50744661000
+    key_ratios:
+      equity_ratio_pct: 55.6
+      profit_margin_pct: 9
+      return_on_equity_pct: null
+    org_number: 556703-7485
+    profit_sek: 10046736000
+    fiscal_year: "2024"
+    revenue_sek: 108131545000
+    company_name: Spotify AB
+    dividend_sek: null
+    board_members:
+      - Carl Peter Christian Luiga (Ordförande)
+    total_assets_sek: 91250324000
+    number_of_employees: 1397
+    operating_profit_sek: null
+  properties:
+    employees:
+      type: integer
+    equity_sek:
+      type: number
+    profit_sek:
+      type: number
+    fiscal_year:
+      type: string
+    revenue_sek:
+      type: number
+    company_name:
+      type: string
+    total_assets_sek:
+      type: number
+data_source: Claude API (financial document analysis)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      year: 2026
+      org_number: 556703-7485
+    expected_fields:
+      - field: equity_sek
+        operator: not_null
+        reliability: guaranteed
+      - field: equity_sek
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: profit_sek
+        operator: not_null
+        reliability: guaranteed
+      - field: profit_sek
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: fiscal_year
+        operator: not_null
+        reliability: guaranteed
+      - field: fiscal_year
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    year: 2026
+    org_number: 556703-7485
+output_field_reliability:
+  employees: guaranteed
+  equity_sek: guaranteed
+  profit_sek: guaranteed
+  fiscal_year: guaranteed
+  revenue_sek: guaranteed
+  company_name: guaranteed
+  total_assets_sek: guaranteed
+limitations:
+  - title: AI extraction from PDF reports may not fully capture complex tables, charts, or footnotes
+    text: AI extraction from PDF reports — complex tables, charts, and footnotes may not be fully captured
+    category: accuracy
+    severity: warning
+    workaround: Cross-reference extracted financial figures against the original PDF for any values used in financial decisions
+  - title: Best results with English and Nordic-language reports — other languages have reduced extraction accuracy
+    text: >-
+      Best results with English and Nordic-language reports — reports in other languages may have reduced extraction
+      accuracy
+    category: coverage
+    severity: info
+    workaround: For non-supported languages, use pdf-extract for raw text and process the output with a language-specific parser

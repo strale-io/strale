@@ -1,0 +1,76 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: australian-company-data
+name: Australian Company Data
+description: Look up Australian company data from ABN Lookup. Accepts ABN (11 digits), ACN (9 digits), or fuzzy company name.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - abn
+  properties:
+    abn:
+      type: string
+      description: ABN (11 digits), ACN (9 digits), or company name
+output_schema:
+  type: object
+  example:
+    status: unknown
+    address: null
+    industry: null
+    directors: null
+    company_name: null
+    business_type: null
+    registration_date: null
+    registration_number: null
+  properties:
+    abn:
+      type: string
+    acn:
+      type: string
+    status:
+      type: string
+    company_name:
+      type: string
+    business_type:
+      type: string
+data_source: ASIC / Australian Securities and Investments Commission
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      abn: "48123123124"
+    expected_fields:
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: company_name
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    abn: "48123123124"
+output_field_reliability:
+  abn: guaranteed
+  acn: guaranteed
+  status: guaranteed
+  company_name: guaranteed
+  business_type: guaranteed
+limitations:
+  - title: Basic data comes from ASIC public records — detailed financial statements require paid ASIC searches
+    text: Data sourced from ASIC public records — detailed financial statements require paid ASIC searches
+    category: coverage
+    severity: info
+    workaround: Use the ACN/ABN from the response to purchase detailed extracts directly from ASIC Connect

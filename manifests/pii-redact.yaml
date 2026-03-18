@@ -1,0 +1,84 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: pii-redact
+name: PII Redaction
+description: >-
+  Detect and redact personally identifiable information (PII) from text. Identifies names, emails, phone numbers,
+  national ID numbers (Swedish personnummer, Finnish henkilötunnus, etc.), addresses, and more.
+category: data-processing
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - text
+  properties:
+    text:
+      type: string
+      description: Text to redact PII from
+output_schema:
+  type: object
+  example:
+    entities:
+      - end: 12
+        type: PERSON_NAME
+        start: 8
+        redacted_as: "[REDACTED_PERSON_NAME]"
+      - end: 42
+        type: EMAIL
+        start: 20
+        redacted_as: "[REDACTED_EMAIL]"
+      - end: 59
+        type: SSN
+        start: 48
+        redacted_as: "[REDACTED_SSN]"
+    entity_counts:
+      SSN: 1
+      IBAN: 0
+      EMAIL: 1
+      PHONE: 0
+      ADDRESS: 0
+      PASSPORT: 0
+      ID_NUMBER: 0
+      CREDIT_CARD: 0
+      PERSON_NAME: 1
+    redacted_text: Contact [REDACTED_PERSON_NAME] at [REDACTED_EMAIL], SSN [REDACTED_SSN]
+  properties:
+    entities:
+      type: array
+    entity_counts:
+      type: object
+    redacted_text:
+      type: string
+data_source: Algorithmic (regex pattern matching + NLP entity recognition)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      text: Contact John at john.smith@example.com, SSN 123-45-6789
+    expected_fields:
+      - field: redacted_text
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    text: test
+output_field_reliability:
+  entities: guaranteed
+  entity_counts: guaranteed
+  redacted_text: guaranteed
+limitations:
+  - title: Names and other PII without surrounding context may occasionally be missed during redaction
+    text: Context-dependent PII (e.g., names without surrounding context) may occasionally be missed
+    category: accuracy
+    severity: warning
+    workaround: Run a second pass with an explicit entity list of known names from your dataset to catch context-free occurrences
+  - title: Optimized for English and Nordic languages — other languages have lower PII detection accuracy
+    text: Optimized for English and Nordic languages — other languages may have lower detection accuracy
+    category: coverage
+    severity: info
+    workaround: >-
+      For non-supported languages, pre-tag known PII patterns (e.g., national ID formats) with regex before calling
+      pii-redact

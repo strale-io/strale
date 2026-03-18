@@ -1,0 +1,71 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: bank-bic-lookup
+name: Bank BIC Lookup
+description: Validate BIC/SWIFT code format and identify the bank. Returns bank name, country, branch info.
+category: validation
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - bic
+  properties:
+    bic:
+      type: string
+      description: BIC/SWIFT code (8 or 11 chars)
+output_schema:
+  type: object
+  example:
+    bic: ESSESESS
+    valid: true
+    country: Sweden
+    bank_code: ESSE
+    bank_name: SEB Stockholm
+    branch_code: XXX
+    country_code: SE
+    location_code: SS
+    is_head_office: true
+  properties:
+    bic:
+      type: string
+    valid:
+      type: boolean
+    country:
+      type: string
+    bank_name:
+      type: string
+    is_head_office:
+      type: boolean
+data_source: SWIFT/BIC directory (bank identification)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      bic: ESSESESS
+    expected_fields:
+      - field: bank_name
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    bic: COBADEFFXXX
+output_field_reliability:
+  bic: guaranteed
+  valid: guaranteed
+  country: guaranteed
+  bank_name: guaranteed
+  is_head_office: guaranteed
+limitations:
+  - title: BIC directory updates monthly, so recently merged or renamed banks may lag up to 30 days
+    text: BIC directory updated monthly — newly merged or renamed banks may show outdated information for up to 30 days
+    category: freshness
+    severity: info
+    workaround: Cross-check the returned BIC against SWIFT's online BIC search (swift.com) for recently merged institutions
+  - title: Small regional banks and credit unions may not be found in the BIC directory
+    text: Database covers major banks globally. Small regional banks or credit unions may not be found
+    category: coverage
+    severity: info
+    workaround: If no result is returned, look up the BIC via the national central bank's payment system participant list

@@ -1,0 +1,77 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: iban-validate
+name: IBAN Validation
+description: >-
+  Validate an IBAN number. Checks format, length, and mod-97 checksum. Extracts country code, bank identifier, and
+  branch code. Pure algorithmic — fast and cheap.
+category: validation
+price_cents: 5
+is_free_tier: true
+input_schema:
+  type: object
+  required:
+    - iban
+  properties:
+    iban:
+      type: string
+      description: IBAN to validate (e.g. SE3550000000054910000003)
+output_schema:
+  type: object
+  example:
+    bban: "50000000058398257466"
+    valid: true
+    bank_code: "500"
+    branch_code: null
+    check_digits: "45"
+    country_code: SE
+    expected_length: 24
+  properties:
+    error:
+      type: string
+    valid:
+      type: boolean
+    bank_code:
+      type: string
+    branch_code:
+      type: string
+    country_code:
+      type: string
+data_source: Algorithmic validation (ISO 13616 IBAN standard + bank registry)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      iban: SE4550000000058398257466
+    expected_fields:
+      - field: valid
+        operator: is_true
+        reliability: guaranteed
+      - field: country_code
+        operator: equals
+        reliability: guaranteed
+        value: SE
+  health_check_input:
+    iban: DE89370400440532013000
+output_field_reliability:
+  error: rare
+  valid: guaranteed
+  bank_code: guaranteed
+  branch_code: rare
+  country_code: guaranteed
+limitations:
+  - title: Validates IBAN structure and checksum only, not whether the account exists or is active
+    text: Validates structure and checksum only — does not confirm the account is open or active
+    category: coverage
+    severity: info
+    workaround: >-
+      Use a SEPA test transaction (€0.01) or bank account verification API to confirm the account is live before large
+      transfers
+  - title: Non-SEPA country IBANs are validated structurally but bank details may be incomplete
+    text: Covers all SEPA-zone IBANs. Non-SEPA country IBANs validated structurally but bank lookup may be incomplete
+    category: coverage
+    severity: info
+    workaround: For non-SEPA IBANs, cross-reference the bank code portion against SWIFT's IBAN Plus directory

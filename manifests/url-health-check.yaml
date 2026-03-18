@@ -1,0 +1,97 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: url-health-check
+name: URL Health Check
+description: >-
+  Check if a URL is alive. Returns status code, response time, redirect chain, SSL validity, content type, server
+  header.
+category: validation
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: URL to check
+    timeout:
+      type: integer
+    follow_redirects:
+      type: boolean
+output_schema:
+  type: object
+  example:
+    url: https://strale.dev
+    is_up: true
+    server: cloudflare
+    final_url: https://strale.dev
+    ssl_valid: true
+    status_code: 200
+    content_type: text/html
+    redirect_chain: []
+    response_time_ms: 37
+  properties:
+    is_up:
+      type: boolean
+    ssl_valid:
+      type: boolean
+    status_code:
+      type: integer
+    redirect_chain:
+      type: array
+    response_time_ms:
+      type: integer
+data_source: HTTP fetch (status code, response time, header analysis)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://strale.dev
+    expected_fields:
+      - field: is_up
+        operator: not_null
+        reliability: guaranteed
+      - field: is_up
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: ssl_valid
+        operator: not_null
+        reliability: guaranteed
+      - field: ssl_valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: status_code
+        operator: not_null
+        reliability: guaranteed
+      - field: status_code
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: redirect_chain
+        operator: not_null
+        reliability: guaranteed
+      - field: redirect_chain
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    url: https://strale.dev
+output_field_reliability:
+  is_up: guaranteed
+  ssl_valid: guaranteed
+  status_code: guaranteed
+  redirect_chain: guaranteed
+  response_time_ms: guaranteed
+limitations:
+  - title: Checks HTTP response status and basic connectivity only — content correctness and page rendering are not assessed
+    text: Checks HTTP response status and basic connectivity — does not assess content correctness or page rendering
+    category: coverage
+    severity: info
+    workaround: Combine with screenshot-url for visual verification or structured-scrape for content validation

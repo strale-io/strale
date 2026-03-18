@@ -1,0 +1,129 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: gitignore-generate
+name: Gitignore Generate
+description: >-
+  Generate .gitignore from language/framework/IDE combinations. Covers TypeScript, Python, Go, Rust, Java, React,
+  Next.js, Django, VSCode, IntelliJ. Algorithmic.
+category: developer-tools
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    ides:
+      type: array
+    languages:
+      type: array
+    frameworks:
+      type: array
+output_schema:
+  type: object
+  example:
+    sources:
+      - common
+      - typescript
+      - javascript
+      - react
+    gitignore: |
+      # Environment & OS
+      .env
+      .env.local
+      .env.*.local
+      .DS_Store
+      Thumbs.db
+      *.log
+      npm-debug.log*
+      yarn-debug.log*
+      yarn-error.log*
+      .cache/
+      coverage/
+      *.pem
+
+      # typescript
+      *.js
+      *.d.ts
+      *.js.map
+      dist/
+      build/
+      node_modules/
+      *.tsbuildinfo
+
+      # javascript
+      node_modules/
+      dist/
+      build/
+      *.min.js
+      *.min.css
+
+      # react
+      .next/
+      out/
+      .cache/
+    total_rules: 23
+    unrecognized:
+      - node
+  properties:
+    sources:
+      type: array
+    gitignore:
+      type: string
+    total_rules:
+      type: integer
+data_source: Algorithmic (gitignore template generation by project type)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      languages:
+        - typescript
+        - javascript
+      frameworks:
+        - react
+        - node
+    expected_fields:
+      - field: sources
+        operator: not_null
+        reliability: guaranteed
+      - field: sources
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: gitignore
+        operator: not_null
+        reliability: guaranteed
+      - field: gitignore
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: total_rules
+        operator: not_null
+        reliability: guaranteed
+      - field: total_rules
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_rules
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    languages:
+      - typescript
+    frameworks:
+      - react
+output_field_reliability:
+  sources: guaranteed
+  gitignore: guaranteed
+  total_rules: guaranteed
+limitations:
+  - title: Generates patterns for common tools and frameworks — project-specific build artifacts may need manual additions
+    text: >-
+      Generates patterns for common tools and frameworks — project-specific build artifacts or custom tooling may need
+      manual additions
+    category: coverage
+    severity: info
+    workaround: Review the generated .gitignore against your actual build output directory and add project-specific patterns

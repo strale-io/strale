@@ -1,0 +1,85 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: json-to-zod
+name: JSON to Zod
+description: Convert JSON to Zod validation schemas. Auto-detects emails, URLs, UUIDs, dates for refined validators. Algorithmic.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - json
+  properties:
+    json:
+      description: JSON string or object
+    root_name:
+      type: string
+output_schema:
+  type: object
+  example:
+    zod_schema: |-
+      import { z } from "zod";
+
+      const rootSchema = z.object({
+        name: z.string(),
+        value: z.number().int(),
+      });
+    root_schema: rootSchema
+    schema_count: 1
+  properties:
+    zod_schema:
+      type: string
+    root_schema:
+      type: string
+    schema_count:
+      type: integer
+data_source: Algorithmic (JSON to Zod schema generation, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      json: "{\"name\": \"Test\", \"value\": 42}"
+    expected_fields:
+      - field: zod_schema
+        operator: not_null
+        reliability: guaranteed
+      - field: zod_schema
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: root_schema
+        operator: not_null
+        reliability: guaranteed
+      - field: root_schema
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: schema_count
+        operator: not_null
+        reliability: guaranteed
+      - field: schema_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: schema_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    json: "{\"name\":\"Alice\",\"age\":30}"
+output_field_reliability:
+  zod_schema: guaranteed
+  root_schema: guaranteed
+  schema_count: guaranteed
+limitations:
+  - title: Generates Zod schemas from JSON samples but string format constraints like email or URL are not inferred
+    text: >-
+      Generates Zod schemas from JSON samples — string format constraints (email, URL, date) are not inferred
+      automatically
+    category: accuracy
+    severity: info
+    workaround: Add .email(), .url(), or .datetime() refinements manually for fields that require format validation

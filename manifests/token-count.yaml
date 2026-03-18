@@ -1,0 +1,98 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: token-count
+name: Token Count
+description: >-
+  Estimate token count and cost for text across LLM models (GPT-4o, Claude, Gemini, Mistral, Llama). Algorithmic — no
+  API calls.
+category: developer-tools
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - text
+  properties:
+    text:
+      type: string
+    model:
+      type: string
+      description: gpt-4o, claude-3-haiku, etc.
+output_schema:
+  type: object
+  example:
+    model: gpt-4o
+    text_length: 54
+    token_count: 14
+    model_recognized: true
+    cost_per_1k_tokens: 0.0025
+    estimated_cost_usd: 0.000035
+    fits_context_window: true
+    chars_per_token_used: 4
+    max_context_for_model: 128000
+  properties:
+    token_count:
+      type: integer
+    estimated_cost_usd:
+      type: number
+    fits_context_window:
+      type: boolean
+    max_context_for_model:
+      type: integer
+data_source: Algorithmic (tokenizer estimation, no external data)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      text: This is a test input for automated capability testing.
+    expected_fields:
+      - field: token_count
+        operator: not_null
+        reliability: guaranteed
+      - field: token_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: token_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: estimated_cost_usd
+        operator: not_null
+        reliability: guaranteed
+      - field: estimated_cost_usd
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: fits_context_window
+        operator: not_null
+        reliability: guaranteed
+      - field: fits_context_window
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: max_context_for_model
+        operator: not_null
+        reliability: guaranteed
+      - field: max_context_for_model
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    text: test
+output_field_reliability:
+  token_count: guaranteed
+  estimated_cost_usd: guaranteed
+  fits_context_window: guaranteed
+  max_context_for_model: guaranteed
+limitations:
+  - title: Token counts use character-based heuristics and may vary 5-15% from the model's actual tokenizer
+    text: >-
+      Token counts are estimated using character-based heuristics — actual counts vary by 5-15% depending on the
+      tokenizer
+    category: accuracy
+    severity: info
+    workaround: For exact counts, use the model provider's official tokenizer (tiktoken for OpenAI, Anthropic's token counter)

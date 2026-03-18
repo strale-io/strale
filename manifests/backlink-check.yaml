@@ -1,0 +1,99 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: backlink-check
+name: Backlink Check
+description: >-
+  Check backlinks for a domain via CommonCrawl and Google search. Returns linking domains, anchor text,
+  dofollow/nofollow counts.
+category: data-extraction
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+output_schema:
+  type: object
+  example:
+    domain: google.com
+    backlinks:
+      - first_seen: "20240223074906"
+        source_url: http://www.google.com.
+        anchor_text: null
+        source_domain: google.com.
+    top_anchors: []
+    total_backlinks: 1
+    dofollow_estimate: null
+    nofollow_estimate: null
+    referring_domains_count: 1
+  properties:
+    backlinks:
+      type: array
+    top_anchors:
+      type: array
+    total_backlinks:
+      type: number
+    referring_domains_count:
+      type: number
+data_source: CommonCrawl index (public backlink database)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain: google.com
+    expected_fields:
+      - field: backlinks
+        operator: not_null
+        reliability: guaranteed
+      - field: backlinks
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: top_anchors
+        operator: not_null
+        reliability: guaranteed
+      - field: top_anchors
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_backlinks
+        operator: not_null
+        reliability: guaranteed
+      - field: total_backlinks
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_backlinks
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: referring_domains_count
+        operator: not_null
+        reliability: guaranteed
+      - field: referring_domains_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: referring_domains_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    domain: example.com
+output_field_reliability:
+  backlinks: guaranteed
+  top_anchors: guaranteed
+  total_backlinks: guaranteed
+  referring_domains_count: guaranteed
+limitations:
+  - title: Uses CommonCrawl index data, which covers a subset of the web and may miss recent or niche backlinks
+    text: Uses CommonCrawl index data — covers a subset of the web and may miss recently created or niche backlinks
+    category: coverage
+    severity: info
+    workaround: Combine with google-search using 'link:domain.com' queries for additional backlink discovery

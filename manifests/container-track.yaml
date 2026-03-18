@@ -1,0 +1,102 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: container-track
+name: Container Track
+description: Track shipping containers by ISO 6346 number. Validates format, detects carrier, provides tracking status.
+category: data-extraction
+price_cents: 25
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - container_number
+  properties:
+    carrier:
+      type: string
+    container_number:
+      type: string
+      description: Container number (e.g. MAEU1234567)
+output_schema:
+  type: object
+  example:
+    error: >-
+      Invalid container number format. Expected ISO 6346: 4 letters (3 owner code + U/J/Z) + 6 digits + 1 check digit.
+      Example: MAEU1234567.
+    carrier: unknown
+    category: ""
+    owner_code: ""
+    check_digit: ""
+    valid_format: false
+    serial_number: ""
+    tracking_urls:
+      searates: https://www.searates.com/container/tracking/?number=TEST
+      track_trace: https://www.track-trace.com/container?number=TEST
+    tracking_status: Container number format is invalid. Cannot track.
+    container_number: TEST
+    check_digit_valid: false
+    expected_check_digit: null
+  properties:
+    events:
+      type: array
+    status:
+      type: string
+    carrier:
+      type: string
+    valid_format:
+      type: boolean
+    container_number:
+      type: string
+data_source: Headless browser (shipping line tracking portals)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      container_number: test_value
+    expected_fields:
+      - field: tracking_status
+        operator: not_null
+        reliability: common
+      - field: tracking_status
+        operator: type
+        reliability: common
+        value: string
+      - field: carrier
+        operator: not_null
+        reliability: guaranteed
+      - field: carrier
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: valid_format
+        operator: not_null
+        reliability: guaranteed
+      - field: valid_format
+        operator: type
+        reliability: guaranteed
+        value: boolean
+  health_check_input:
+    container_number: test
+output_field_reliability:
+  events: guaranteed
+  status: guaranteed
+  carrier: guaranteed
+  valid_format: guaranteed
+  container_number: guaranteed
+limitations:
+  - title: Tracking data is scraped from carrier websites, which may change layouts without notice causing failures
+    text: >-
+      Tracking data scraped from carrier websites — carriers may change page layouts without notice, causing temporary
+      failures
+    category: availability
+    severity: warning
+    workaround: If tracking fails, use the carrier name and container number to check the carrier's website directly
+  - title: Some carriers only update container positions at port milestones, not during transit
+    text: >-
+      Tracking updates depend on carrier reporting frequency — some carriers update positions only at port milestones,
+      not in transit
+    category: freshness
+    severity: info
+    workaround: Check the last_updated timestamp in the response to assess data freshness before making logistics decisions

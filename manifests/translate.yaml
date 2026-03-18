@@ -1,0 +1,97 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: translate
+name: Translate Text
+description: >-
+  Translate text between languages. Auto-detects source language. Supports all major languages. Returns translated text
+  with confidence.
+category: text-processing
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - text
+    - target_language
+  properties:
+    text:
+      type: string
+      description: Text to translate
+    source_language:
+      type: string
+      description: Source language (optional, auto-detected)
+    target_language:
+      type: string
+      description: Target language (e.g. English, Swedish, French)
+output_schema:
+  type: object
+  example:
+    confidence: high
+    source_language: en
+    target_language: en
+    translated_text: This is a test input for automated capability testing.
+  properties:
+    confidence:
+      type: string
+    source_language:
+      type: string
+    target_language:
+      type: string
+    translated_text:
+      type: string
+data_source: Claude API (translation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      text: This is a test input for automated capability testing.
+      source_language: en
+      target_language: en
+    expected_fields:
+      - field: confidence
+        operator: not_null
+        reliability: guaranteed
+      - field: confidence
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: source_language
+        operator: not_null
+        reliability: guaranteed
+      - field: source_language
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: target_language
+        operator: not_null
+        reliability: guaranteed
+      - field: target_language
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: translated_text
+        operator: not_null
+        reliability: guaranteed
+      - field: translated_text
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    text: test
+    target_language: test
+output_field_reliability:
+  confidence: guaranteed
+  source_language: guaranteed
+  target_language: guaranteed
+  translated_text: guaranteed
+limitations:
+  - title: AI translation may render technical terminology, legal language, and domain-specific jargon imprecisely
+    text: AI translation — technical terminology, legal language, and domain-specific jargon may be translated imprecisely
+    category: accuracy
+    severity: info
+    workaround: >-
+      Provide a glossary of key terms in the input or use the domain parameter to improve translation of specialized
+      vocabulary

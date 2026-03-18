@@ -1,0 +1,111 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: swift-message-parse
+name: SWIFT Message Parse
+description: >-
+  Parse SWIFT MT messages (MT103/MT940/MT202) into structured data. Extracts sender/receiver BIC, amount, currency,
+  beneficiary.
+category: data-extraction
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - message
+  properties:
+    message:
+      type: string
+      description: Raw SWIFT message text
+output_schema:
+  type: object
+  example:
+    amount: null
+    fields: []
+    charges: null
+    currency: null
+    direction: null
+    reference: null
+    raw_blocks:
+      block1: null
+      block2: null
+      block3: null
+      block4: null
+    sender_bic: null
+    value_date: null
+    beneficiary: null
+    message_type: unknown
+    receiver_bic: null
+    remittance_info: null
+    ordering_customer: null
+    message_description: null
+  properties:
+    amount:
+      type: number
+    currency:
+      type: string
+    sender_bic:
+      type: string
+    message_type:
+      type: string
+    receiver_bic:
+      type: string
+data_source: Algorithmic (SWIFT MT message parsing, ISO 15022)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      message: |-
+        {1:F01BANKBEBBAXXX0000000000}{2:I103BANKDEBBXXXXN}{4:
+        :20:REFTEST001
+        :23B:CRED
+        :32A:230115EUR1500,00
+        :50K:SENDER NAME
+        SENDER STREET 1
+        :59:RECEIVER NAME
+        RECEIVER STREET 1
+        :71A:SHA
+        -}
+    expected_fields:
+      - field: message_type
+        operator: not_null
+        reliability: guaranteed
+      - field: message_type
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: amount
+        operator: not_null
+        reliability: guaranteed
+      - field: amount
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: currency
+        operator: not_null
+        reliability: guaranteed
+      - field: currency
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    message: |-
+      {1:F01BANKBEBBAXXX0000000000}{2:I103BANKDEBBXXXXN}{4:
+      :20:TEST
+      :23B:CRED
+      :32A:230115EUR100,00
+      -}
+output_field_reliability:
+  amount: guaranteed
+  currency: guaranteed
+  sender_bic: guaranteed
+  message_type: guaranteed
+  receiver_bic: guaranteed
+limitations:
+  - title: Parses MT message formats like MT103 and MT202 only — MX/ISO 20022 XML messages are not supported
+    text: Parses MT message formats (MT103, MT202, etc.) — MX/ISO 20022 XML messages are not supported
+    category: coverage
+    severity: info
+    workaround: For ISO 20022 messages, use xml-to-json to parse the XML structure first

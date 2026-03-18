@@ -1,0 +1,93 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: json-repair
+name: JSON Repair
+description: >-
+  Repair broken JSON: trailing commas, single quotes, unquoted keys, truncated, comments, mixed with markdown. Returns
+  valid JSON.
+category: data-processing
+price_cents: 5
+is_free_tier: true
+input_schema:
+  type: object
+  required:
+    - json
+  properties:
+    json:
+      type: string
+      description: Broken JSON string to repair
+output_schema:
+  type: object
+  example:
+    json: |-
+      {
+        "name": "Test",
+        "value": 42
+      }
+    valid: true
+    parsed:
+      name: Test
+      value: 42
+    fixes_applied: []
+  properties:
+    json:
+      type: string
+    valid:
+      type: boolean
+    parsed:
+      type: object
+    fixes_applied:
+      type: array
+data_source: Algorithmic (syntax correction, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      json: "{\"name\": \"Test\", \"value\": 42}"
+    expected_fields:
+      - field: json
+        operator: not_null
+        reliability: guaranteed
+      - field: json
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: parsed
+        operator: not_null
+        reliability: guaranteed
+      - field: parsed
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: fixes_applied
+        operator: not_null
+        reliability: guaranteed
+      - field: fixes_applied
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    json: "{\"name\":\"Alice\",\"age\":30"
+output_field_reliability:
+  json: guaranteed
+  valid: guaranteed
+  parsed: guaranteed
+  fixes_applied: guaranteed
+limitations:
+  - title: Repairs common JSON errors like trailing commas and unquoted keys — severely malformed input may not recover
+    text: >-
+      Repairs common JSON errors (trailing commas, unquoted keys, single quotes) — severely malformed input may not be
+      recoverable
+    category: coverage
+    severity: info
+    workaround: If repair fails, extract the valid JSON segments manually or use an LLM to reconstruct the intended structure

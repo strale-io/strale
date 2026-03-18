@@ -1,0 +1,96 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: json-schema-validate
+name: JSON Schema Validate
+description: >-
+  Validate a JSON object against a JSON Schema. Returns validation result with detailed error paths and messages.
+  Algorithmic.
+category: validation
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - data
+    - schema
+  properties:
+    data:
+      description: JSON data to validate
+    schema:
+      type: object
+      description: JSON Schema to validate against
+output_schema:
+  type: object
+  example:
+    valid: true
+    errors: []
+    error_count: 0
+  properties:
+    valid:
+      type: boolean
+    errors:
+      type: array
+    error_count:
+      type: integer
+data_source: Algorithmic (JSON Schema Draft-07 validation, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      data:
+        age: 30
+        name: Alice
+      schema:
+        type: object
+        properties:
+          age:
+            type: integer
+          name:
+            type: string
+    expected_fields:
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: errors
+        operator: not_null
+        reliability: guaranteed
+      - field: errors
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: error_count
+        operator: not_null
+        reliability: guaranteed
+      - field: error_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: error_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    data:
+      name: Alice
+    schema:
+      type: object
+      properties:
+        name:
+          type: string
+output_field_reliability:
+  valid: guaranteed
+  errors: guaranteed
+  error_count: guaranteed
+limitations:
+  - title: Validates against JSON Schema Draft-07 only — newer drafts like 2020-12 may have unsupported features
+    text: Validates against JSON Schema Draft-07 — newer drafts (2019-09, 2020-12) may have features not fully supported
+    category: coverage
+    severity: info
+    workaround: Specify your target draft version and test edge cases with draft-specific keywords like $dynamicRef

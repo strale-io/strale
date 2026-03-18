@@ -1,0 +1,109 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: currency-convert
+name: Currency Convert
+description: >-
+  Convert an amount between currencies using ECB exchange rates. Supports all major currencies. Returns converted amount
+  and rate.
+category: financial
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - amount
+    - from
+    - to
+  properties:
+    to:
+      type: string
+      description: Target currency (ISO 4217)
+    from:
+      type: string
+      description: Source currency (ISO 4217)
+    amount:
+      type: number
+      description: Amount to convert
+output_schema:
+  type: object
+  example:
+    to: EUR
+    date: "2026-03-06"
+    from: USD
+    rate: 0.864977
+    amount: 100
+    converted_amount: 86.5
+  properties:
+    to:
+      type: string
+    date:
+      type: string
+    from:
+      type: string
+    rate:
+      type: number
+    amount:
+      type: number
+    converted_amount:
+      type: number
+data_source: European Central Bank daily reference rates
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: reference-data
+test_fixtures:
+  known_answer:
+    input:
+      to: EUR
+      from: USD
+      amount: 100
+    expected_fields:
+      - field: to
+        operator: not_null
+        reliability: guaranteed
+      - field: to
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: date
+        operator: not_null
+        reliability: guaranteed
+      - field: date
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: from
+        operator: not_null
+        reliability: guaranteed
+      - field: from
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: rate
+        operator: not_null
+        reliability: guaranteed
+      - field: rate
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: rate
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    to: EUR
+    from: USD
+    amount: 1
+output_field_reliability:
+  to: guaranteed
+  date: guaranteed
+  from: guaranteed
+  rate: guaranteed
+  amount: guaranteed
+  converted_amount: guaranteed
+limitations:
+  - title: Uses mid-market exchange rates — actual bank and payment processor conversion rates include spread and fees
+    text: Uses mid-market exchange rates — actual conversion rates from banks and payment processors include spread and fees
+    category: accuracy
+    severity: info
+    workaround: Apply your payment processor's typical markup (0.5-3%) to the converted amount for realistic cost estimates

@@ -1,0 +1,86 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: eu-regulation-search
+name: EU Regulation Search
+description: >-
+  Search EU regulations, directives, and decisions on EUR-Lex. Returns matching legislation with titles, CELEX numbers,
+  dates, and summaries.
+category: compliance
+price_cents: 30
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    type:
+      type: string
+      description: Regulation type filter (regulation/directive/decision)
+    query:
+      type: string
+      description: Search topic or keywords
+output_schema:
+  type: object
+  example:
+    query: ;
+    regulations: []
+    result_count: 0
+  properties:
+    query:
+      type: string
+    regulations:
+      type: array
+    result_count:
+      type: integer
+data_source: EUR-Lex (Official Journal of the European Union)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      query: SELECT * FROM users WHERE active = true LIMIT 10
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: query
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: regulations
+        operator: not_null
+        reliability: guaranteed
+      - field: regulations
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: result_count
+        operator: not_null
+        reliability: guaranteed
+      - field: result_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: result_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    query: test
+output_field_reliability:
+  query: guaranteed
+  regulations: guaranteed
+  result_count: guaranteed
+limitations:
+  - title: Searches published EU regulations only — draft proposals and pending amendments are not included
+    text: Searches published EU regulations — draft proposals and pending amendments may not be included
+    category: freshness
+    severity: info
+    workaround: Check EUR-Lex directly for the latest legislative procedure status on regulations returned in results
+  - title: AI relevance ranking means returned regulations should be verified against official EUR-Lex text
+    text: AI-assisted relevance ranking — returned regulations should be verified against the official EUR-Lex text
+    category: accuracy
+    severity: warning
+    workaround: Use the regulation reference numbers from results to retrieve the canonical text from eur-lex.europa.eu

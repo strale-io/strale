@@ -1,0 +1,118 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: regex-explain
+name: Regex Explain
+description: Explain a regular expression in plain English with token-by-token breakdown. Optionally test against sample strings.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - regex
+  properties:
+    regex:
+      type: string
+    test_strings:
+      type: array
+output_schema:
+  type: object
+  example:
+    breakdown:
+      - token: ^
+        explanation: Anchors the match to the start of the string
+      - token: "[a-zA-Z0-9._%+-]+"
+        explanation: Matches one or more characters that are letters (upper/lowercase), digits, or the special characters . _ % + -
+      - token: "@"
+        explanation: Matches the literal @ symbol
+      - token: "[a-zA-Z0-9.-]+"
+        explanation: Matches one or more letters, digits, dots, or hyphens for the domain name
+      - token: \.
+        explanation: Matches a literal dot (escaped with backslash)
+      - token: "[a-zA-Z]{2,}"
+        explanation: Matches 2 or more letters only for the top-level domain (TLD)
+      - token: $
+        explanation: Anchors the match to the end of the string
+    plain_english: >-
+      This regex matches standard email addresses with a local part containing alphanumeric characters and special
+      symbols, followed by an @ symbol, a domain name, and a top-level domain of at least 2 letters.
+    capture_groups: 0
+    common_matches:
+      - user@example.com
+      - john.doe+tag@company.co.uk
+      - test_email.123@domain-name.org
+      - a@b.co
+    flags_detected:
+      g: false
+      i: false
+      m: false
+    original_regex: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+    common_non_matches:
+      - invalid.email@.com
+      - user@domain
+      - user name@example.com
+      - "@example.com"
+      - user@.com
+      - user@domain.c
+  properties:
+    breakdown:
+      type: array
+    plain_english:
+      type: string
+    capture_groups:
+      type: integer
+    common_matches:
+      type: array
+data_source: Claude API (regex pattern explanation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      regex: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+    expected_fields:
+      - field: breakdown
+        operator: not_null
+        reliability: guaranteed
+      - field: breakdown
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: plain_english
+        operator: not_null
+        reliability: guaranteed
+      - field: plain_english
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: capture_groups
+        operator: not_null
+        reliability: guaranteed
+      - field: capture_groups
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: common_matches
+        operator: not_null
+        reliability: guaranteed
+      - field: common_matches
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    regex: test
+output_field_reliability:
+  breakdown: guaranteed
+  plain_english: guaranteed
+  capture_groups: guaranteed
+  common_matches: guaranteed
+limitations:
+  - title: Explains standard regex syntax only — engine-specific features like PCRE2 lookbehinds may not be fully documented
+    text: >-
+      Explains standard regex syntax — engine-specific features (PCRE2 lookbehinds, .NET named groups) may not be fully
+      documented
+    category: coverage
+    severity: info
+    workaround: Specify the target regex engine in the input for more accurate explanations of engine-specific syntax

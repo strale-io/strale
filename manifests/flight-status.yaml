@@ -1,0 +1,103 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: flight-status
+name: Flight Status
+description: >-
+  Look up flight status by flight number (e.g. LH400, BA117). Returns departure/arrival times, delays, gates. Requires
+  AVIATIONSTACK_API_KEY for live data.
+category: data-extraction
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - flight
+  properties:
+    flight:
+      type: string
+      description: Flight number, e.g. LH400
+output_schema:
+  type: object
+  example:
+    note: Set AVIATIONSTACK_API_KEY for live flight data. Showing airline identification only.
+    flight_num: "400"
+    airline_code: LH
+    airline_name: Lufthansa
+    flight_number: LH400
+    tracking_urls:
+      - https://www.flightradar24.com/LH400
+      - https://flightaware.com/live/flight/LH400
+      - https://www.google.com/search?q=LH400+flight+status
+  properties:
+    status:
+      type: string
+    airline:
+      type: object
+    arrival:
+      type: object
+    departure:
+      type: object
+    flight_number:
+      type: string
+data_source: AviationStack API (flight tracking data)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      flight: LH400
+      flight_number: LH400
+    expected_fields:
+      - field: flight_number
+        operator: not_null
+        reliability: guaranteed
+      - field: flight_number
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: airline_code
+        operator: not_null
+        reliability: common
+      - field: airline_code
+        operator: type
+        reliability: common
+        value: string
+      - field: airline_name
+        operator: not_null
+        reliability: common
+      - field: airline_name
+        operator: type
+        reliability: common
+        value: string
+      - field: tracking_urls
+        operator: not_null
+        reliability: common
+      - field: tracking_urls
+        operator: type
+        reliability: common
+        value: array
+  health_check_input:
+    flight: LH400
+output_field_reliability:
+  status: guaranteed
+  airline: guaranteed
+  arrival: guaranteed
+  departure: guaranteed
+  flight_number: guaranteed
+limitations:
+  - title: AviationStack free tier has limited requests and may not include real-time gate or delay information
+    text: Uses AviationStack API — free tier has limited requests and may not include real-time gate or delay information
+    category: availability
+    severity: info
+    workaround: For real-time gate changes, check the airline's official app or FlightAware directly
+  - title: >-
+      Coverage is best for major airlines and international routes — regional carriers and charters may have limited
+      data
+    text: >-
+      Coverage best for major airlines and international routes — regional carriers and charter flights may have limited
+      data
+    category: coverage
+    severity: info
+    workaround: If no data is returned, try searching by route (departure/arrival airports) rather than flight number

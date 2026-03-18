@@ -1,0 +1,81 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: pdf-extract
+name: PDF Data Extraction
+description: >-
+  Extract structured data from any PDF document. Accepts a URL or base64-encoded PDF. Works on contracts, reports, forms
+  — any document type. Returns JSON based on your extraction instructions.
+category: data-extraction
+price_cents: 30
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    url:
+      type: string
+      description: URL to a PDF file
+    base64:
+      type: string
+      description: Base64-encoded PDF
+    extract:
+      type: string
+      description: What data to extract (natural language)
+output_schema:
+  type: object
+  example:
+    data:
+      pages: 1
+      title: Dummy PDF file
+      content:
+        - page: 1
+          text: Dummy PDF file
+      metadata:
+        total_pages: 1
+        has_structured_data: false
+      document_type: PDF
+    source_url: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+  properties:
+    data:
+      type: object
+    source_url:
+      type: string
+data_source: Claude API (PDF document analysis and data extraction)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+    expected_fields:
+      - field: data
+        operator: not_null
+        reliability: guaranteed
+      - field: data
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: source_url
+        operator: not_null
+        reliability: guaranteed
+      - field: source_url
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    url: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+output_field_reliability:
+  data: guaranteed
+  source_url: guaranteed
+limitations:
+  - title: Scanned PDFs (image-based) have lower extraction accuracy than native text PDFs
+    text: AI extraction from PDFs — scanned documents (image PDFs) have lower accuracy than native text PDFs
+    category: accuracy
+    severity: info
+    workaround: For scanned documents, use image-to-text on individual pages for better OCR control
+  - title: Password-protected or DRM-encrypted PDFs cannot be processed and will return an error
+    text: Password-protected or DRM-encrypted PDFs cannot be processed
+    category: coverage
+    severity: info
+    workaround: Remove password protection before submitting, or extract text using a local PDF library with the document password

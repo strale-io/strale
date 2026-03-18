@@ -1,0 +1,87 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: austrian-company-data
+name: Austrian Company Data
+description: Look up Austrian company data from the Firmenbuch. Accepts Firmenbuchnummer (e.g. FN 150913f) or fuzzy company name.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - fn_number
+  properties:
+    fn_number:
+      type: string
+      description: Firmenbuchnummer (e.g. FN 150913f) or company name
+output_schema:
+  type: object
+  example:
+    lei: 5299000HTNHA5ACH9N32
+    city: Fuschl am See
+    status: active
+    address: Am Brunnen 1, 5330 Fuschl am See
+    founded: "1993-10-16"
+    activity: Verwertung der Marke RED BULL
+    directors:
+      - name: Alexander Kirchmayr
+        role: Geschäftsführer/in (handelsrechtlich)
+        since: "2022-11-14"
+      - name: Oliver Mintzlaff
+        role: Geschäftsführer/in (handelsrechtlich)
+        since: "2022-11-14"
+      - name: Franz Watzlawick
+        role: Geschäftsführer/in (handelsrechtlich)
+        since: "2022-11-14"
+      - name: Dr. Marcus Weber
+        role: Prokurist/in
+        since: "2022-11-14"
+    dissolved: null
+    fn_number: FN 56247t
+    eu_vat_ids: null
+    past_names: null
+    company_name: Red Bull GmbH
+    business_type: GmbH (Limited liability company)
+  properties:
+    status:
+      type: string
+    address:
+      type: string
+    company_name:
+      type: string
+    business_type:
+      type: string
+    registration_number:
+      type: string
+data_source: FinAPU Firmenbuch API (Austrian Commercial Register)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      fn_number: 56247t
+    expected_fields:
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    fn_number: 56247t
+output_field_reliability:
+  status: guaranteed
+  address: guaranteed
+  company_name: guaranteed
+  business_type: guaranteed
+  registration_number: guaranteed
+limitations:
+  - title: Extracted from Firmenbuch via web scraping — older registrations may have incomplete fields
+    text: Extracted from Firmenbuch via web scraping — some fields may be incomplete for older registrations
+    category: coverage
+    severity: info
+    workaround: >-
+      For complete records, use the Firmenbuchnummer from the response to query the Austrian Commercial Register
+      directly

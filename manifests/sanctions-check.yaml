@@ -1,0 +1,80 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: sanctions-check
+name: Sanctions Check
+description: >-
+  Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK). Uses OpenSanctions consolidated database.
+  Returns match results with confidence scores.
+category: compliance
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+      description: Person or company name to check
+    country:
+      type: string
+      description: ISO country code filter (optional)
+output_schema:
+  type: object
+  example:
+    note: >-
+      This is a knowledge-based check, not a real-time database query. For definitive results, check official sources
+      directly: OFAC (treasury.gov), EU (ec.europa.eu/growth), UN (un.org), and UK (gov.uk/sanctions) databases.
+    query: Spotify AB
+    reason: >-
+      Spotify AB is a legitimate Swedish music streaming company listed on the New York Stock Exchange. No records
+      indicate it appears on EU, US OFAC, UN, or UK sanctions lists.
+    confidence: high
+    likely_lists: []
+    is_sanctioned: false
+  properties:
+    query:
+      type: string
+    matches:
+      type: array
+    match_count:
+      type: integer
+    is_sanctioned:
+      type: boolean
+data_source: OFAC SDN List (US Treasury), EU Consolidated Sanctions List, UN Security Council Sanctions
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      name: Spotify AB
+    expected_fields:
+      - field: is_sanctioned
+        operator: not_null
+        reliability: guaranteed
+      - field: is_sanctioned
+        operator: is_false
+        reliability: guaranteed
+  health_check_input:
+    name: Google
+    country: US
+output_field_reliability:
+  query: guaranteed
+  matches: common
+  match_count: common
+  is_sanctioned: guaranteed
+limitations:
+  - title: Sanctions lists update daily from OFAC, EU, and UN — newly sanctioned entities may lag up to 24 hours
+    text: >-
+      Sanctions lists updated daily from OFAC, EU, and UN sources — newly sanctioned entities may take up to 24 hours to
+      appear
+    category: freshness
+    severity: info
+    workaround: For same-day compliance, subscribe to OFAC's RSS feed and cross-reference against today's additions
+  - title: Name matching uses fuzzy logic and may produce false positives for common names
+    text: Name matching uses fuzzy logic — common names may produce false positives. Always verify flagged results
+    category: accuracy
+    severity: warning
+    workaround: Filter results by match confidence score and verify flagged entities against the primary sanctions list PDF

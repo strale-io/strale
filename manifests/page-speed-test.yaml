@@ -1,0 +1,105 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: page-speed-test
+name: Page Speed Test
+description: >-
+  Test page speed using Google PageSpeed Insights API. Returns performance score, Core Web Vitals, optimization
+  opportunities.
+category: data-extraction
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+    strategy:
+      type: string
+      description: "mobile or desktop (default: mobile)"
+output_schema:
+  type: object
+  example:
+    url: https://google.com
+    grade: C
+    metrics:
+      fcp_ms: 2761
+      lcp_ms: 6692
+      tbt_ms: 365
+      ttfb_ms: 8
+      cls_score: 0.001
+      speed_index: 2805
+    strategy: mobile
+    diagnostics:
+      - title: Reduce unused CSS
+        description: >-
+          Reduce unused rules from stylesheets and defer CSS not used for above-the-fold content to decrease bytes
+          consumed by network activity. [Learn how to reduce unused
+          CSS](https://developer.chrome.com/docs/lighthouse/performance/unused-css-rules/).
+        displayValue: "Est savings of 10\_KiB"
+      - title: Reduce unused JavaScript
+        description: >-
+          Reduce unused JavaScript and defer loading scripts until they are required to decrease bytes consumed by
+          network activity. [Learn how to reduce unused
+          JavaScript](https://developer.chrome.com/docs/lighthouse/performance/unused-javascript/).
+        displayValue: "Est savings of 296\_KiB"
+    opportunities:
+      - title: Reduce unused JavaScript
+        savings_ms: 1350
+        description: >-
+          Reduce unused JavaScript and defer loading scripts until they are required to decrease bytes consumed by
+          network activity. [Learn how to reduce unused
+          JavaScript](https://developer.chrome.com/docs/lighthouse/performance/unused-javascript/).
+      - title: Avoid multiple page redirects
+        savings_ms: 780
+        description: >-
+          Redirects introduce additional delays before the page can be loaded. [Learn how to avoid page
+          redirects](https://developer.chrome.com/docs/lighthouse/performance/redirects/).
+    performance_score: 64
+  properties:
+    grade:
+      type: string
+    metrics:
+      type: object
+    opportunities:
+      type: array
+    performance_score:
+      type: number
+data_source: Google PageSpeed Insights API (Lighthouse performance analysis)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://google.com
+    expected_fields:
+      - field: performance_score
+        operator: not_null
+        reliability: guaranteed
+      - field: performance_score
+        operator: gt
+        reliability: guaranteed
+        value: 50
+  health_check_input:
+    url: https://example.com
+output_field_reliability:
+  grade: guaranteed
+  metrics: guaranteed
+  opportunities: guaranteed
+  performance_score: guaranteed
+limitations:
+  - title: Page speed scores reflect a single point-in-time test and may vary throughout the day
+    text: Scores reflect a point-in-time test — site performance may vary throughout the day
+    category: freshness
+    severity: info
+    workaround: Schedule periodic tests (e.g., every 6 hours) and track the trend rather than relying on a single measurement
+  - title: Results are measured from a single geographic location and may not reflect all users' experience
+    text: Results measured from a single geographic location — actual user experience varies by region
+    category: accuracy
+    severity: info
+    workaround: >-
+      Run tests at multiple times and average the scores, or use the lab data breakdown to identify bottlenecks
+      independent of location

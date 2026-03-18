@@ -1,0 +1,149 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: country-trade-data
+name: Country Trade Data
+description: "Get trade data for a country: top exports/imports, trade balance, trading partners. World Bank API + embedded data."
+category: data-extraction
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - country_code
+  properties:
+    year:
+      type: number
+    country_code:
+      type: string
+output_schema:
+  type: object
+  example:
+    note: Product breakdown and partner data are estimates based on 2023 published trade statistics.
+    year: 2025
+    data_source: embedded-trade-data
+    top_exports:
+      - product: Refined petroleum
+        value_usd: 14000000000
+        share_percent: 7.2
+      - product: Automobiles (Volvo)
+        value_usd: 12000000000
+        share_percent: 6.2
+      - product: Pharmaceuticals
+        value_usd: 11000000000
+        share_percent: 5.6
+      - product: Iron and steel
+        value_usd: 8000000000
+        share_percent: 4.1
+      - product: Telecommunications equipment (Ericsson)
+        value_usd: 8000000000
+        share_percent: 4.1
+    top_imports:
+      - product: Crude petroleum
+        value_usd: 12000000000
+        share_percent: 6.2
+      - product: Automobiles
+        value_usd: 11000000000
+        share_percent: 5.6
+      - product: Pharmaceuticals
+        value_usd: 5500000000
+        share_percent: 2.8
+      - product: Broadcasting equipment
+        value_usd: 5000000000
+        share_percent: 2.6
+      - product: Computers
+        value_usd: 4500000000
+        share_percent: 2.3
+    country_code: SE
+    country_name: Sweden
+    top_partners:
+      - type: export
+        country: Germany
+        trade_value_usd: 20000000000
+      - type: export
+        country: Norway
+        trade_value_usd: 18000000000
+      - type: import
+        country: Germany
+        trade_value_usd: 30000000000
+      - type: import
+        country: Netherlands
+        trade_value_usd: 15000000000
+      - type: import
+        country: China
+        trade_value_usd: 12000000000
+    total_exports_usd: 195000000000
+    total_imports_usd: 195000000000
+    trade_balance_usd: 0
+  properties:
+    top_exports:
+      type: array
+    top_imports:
+      type: array
+    total_exports_usd:
+      type: number
+    total_imports_usd:
+      type: number
+    trade_balance_usd:
+      type: number
+data_source: Static database (bilateral trade statistics, updated annually)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      year: 2025
+      country_code: SE
+    expected_fields:
+      - field: top_exports
+        operator: not_null
+        reliability: guaranteed
+      - field: top_exports
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: top_imports
+        operator: not_null
+        reliability: guaranteed
+      - field: top_imports
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_exports_usd
+        operator: not_null
+        reliability: guaranteed
+      - field: total_exports_usd
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_exports_usd
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: total_imports_usd
+        operator: not_null
+        reliability: guaranteed
+      - field: total_imports_usd
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_imports_usd
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    year: 2025
+    country_code: US
+output_field_reliability:
+  top_exports: guaranteed
+  top_imports: guaranteed
+  total_exports_usd: guaranteed
+  total_imports_usd: guaranteed
+  trade_balance_usd: guaranteed
+limitations:
+  - title: Trade statistics are based on AI knowledge and may lag 6-12 months behind actual trade flows
+    text: Trade statistics based on AI knowledge — most recent data may lag 6-12 months behind actual trade flows
+    category: freshness
+    severity: info
+    workaround: Cross-reference with UN Comtrade or national customs statistics for the most current trade figures

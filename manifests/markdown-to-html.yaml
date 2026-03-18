@@ -1,0 +1,109 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: markdown-to-html
+name: Markdown to HTML
+description: Convert markdown to styled HTML with inline CSS. Supports light, dark, and plain themes. Algorithmic — instant.
+category: file-conversion
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - markdown
+  properties:
+    theme:
+      type: string
+      description: light, dark, or plain
+    markdown:
+      type: string
+      description: Markdown text to convert
+output_schema:
+  type: object
+  example:
+    html: >-
+      <!DOCTYPE html>
+
+      <html lang="en">
+
+      <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,
+      initial-scale=1.0"><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe
+      UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6;max-width:800px;margin:0 auto;padding:2rem}
+
+      code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:0.9em;padding:0.2em 0.4em;border-radius:3px}
+
+      pre{padding:1rem;border-radius:6px;overflow-x:auto}pre code{padding:0}
+
+      blockquote{border-left:4px solid;padding-left:1rem;margin-left:0}
+
+      img{max-width:100%;height:auto}
+
+      table{border-collapse:collapse;width:100%}th,td{border:1px solid;padding:0.5rem;text-align:left}
+
+      hr{border:none;border-top:1px solid}
+
+      body{background:#fff;color:#333}a{color:#0366d6}code{background:#f6f8fa}pre{background:#f6f8fa}blockquote{border-color:#dfe2e5;color:#6a737d}th,td{border-color:#ddd}hr{border-color:#eee}</style></head>
+
+      <body><h1>Hello World</h1>
+
+
+      <p>This is a <strong>test</strong> document.</p></body>
+
+      </html>
+    theme: light
+    body_html: |-
+      <h1>Hello World</h1>
+
+      <p>This is a <strong>test</strong> document.</p>
+  properties:
+    html:
+      type: string
+    theme:
+      type: string
+    body_html:
+      type: string
+data_source: Algorithmic (Markdown rendering, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      markdown: |-
+        # Hello World
+
+        This is a **test** document.
+    expected_fields:
+      - field: html
+        operator: not_null
+        reliability: guaranteed
+      - field: html
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: theme
+        operator: not_null
+        reliability: guaranteed
+      - field: theme
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: body_html
+        operator: not_null
+        reliability: guaranteed
+      - field: body_html
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    markdown: test
+output_field_reliability:
+  html: guaranteed
+  theme: guaranteed
+  body_html: guaranteed
+limitations:
+  - title: Converts standard CommonMark syntax — GitHub-flavored extensions like task lists and tables may not render
+    text: Converts standard CommonMark syntax — GitHub-flavored extensions (task lists, tables) may not all be supported
+    category: coverage
+    severity: info
+    workaround: Check if your markdown uses GFM extensions and test the output for table and task list rendering

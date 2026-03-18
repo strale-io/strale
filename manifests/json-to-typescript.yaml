@@ -1,0 +1,87 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: json-to-typescript
+name: JSON to TypeScript
+description: >-
+  Convert JSON to TypeScript interfaces. Handles nested objects, arrays, optional fields. Detects date strings and
+  UUIDs. Algorithmic.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - json
+  properties:
+    json:
+      description: JSON string or object
+    export:
+      type: boolean
+    root_name:
+      type: string
+output_schema:
+  type: object
+  example:
+    root_type: Root
+    typescript: |-
+      export interface Root {
+        name: string;
+        value: number;
+      }
+    interface_count: 1
+  properties:
+    root_type:
+      type: string
+    typescript:
+      type: string
+    interface_count:
+      type: integer
+data_source: Algorithmic (JSON to TypeScript type generation, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      json: "{\"name\": \"Test\", \"value\": 42}"
+    expected_fields:
+      - field: root_type
+        operator: not_null
+        reliability: guaranteed
+      - field: root_type
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: typescript
+        operator: not_null
+        reliability: guaranteed
+      - field: typescript
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: interface_count
+        operator: not_null
+        reliability: guaranteed
+      - field: interface_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: interface_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    json: "{\"name\":\"Alice\",\"age\":30}"
+output_field_reliability:
+  root_type: guaranteed
+  typescript: guaranteed
+  interface_count: guaranteed
+limitations:
+  - title: Union types and optional fields may not be detected correctly from a single JSON sample
+    text: >-
+      Infers TypeScript interfaces from JSON samples — union types and optional fields may not be correctly detected
+      from a single sample
+    category: accuracy
+    severity: info
+    workaround: Provide multiple JSON samples with varying shapes to produce more accurate optional and union type inference

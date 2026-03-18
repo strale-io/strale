@@ -1,0 +1,94 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: skill-extract
+name: Skill Extract
+description: >-
+  Extract skills from job descriptions or CVs. Categorizes 500+ skills into technical, soft skills, tools,
+  certifications, languages.
+category: data-extraction
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - text
+  properties:
+    text:
+      type: string
+      description: Job description or CV text
+output_schema:
+  type: object
+  example:
+    tools: []
+    languages: []
+    soft_skills: []
+    certifications: []
+    technical_skills: []
+    seniority_signals: []
+    total_skills_found: 0
+    experience_levels_mentioned: []
+  properties:
+    tools:
+      type: array
+    languages:
+      type: array
+    soft_skills:
+      type: array
+    certifications:
+      type: array
+    technical_skills:
+      type: array
+data_source: Algorithmic (skill taxonomy matching from text, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      text: This is a test input for automated capability testing.
+    expected_fields:
+      - field: tools
+        operator: not_null
+        reliability: guaranteed
+      - field: tools
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: languages
+        operator: not_null
+        reliability: guaranteed
+      - field: languages
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: soft_skills
+        operator: not_null
+        reliability: guaranteed
+      - field: soft_skills
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: certifications
+        operator: not_null
+        reliability: guaranteed
+      - field: certifications
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    text: test
+output_field_reliability:
+  tools: guaranteed
+  languages: guaranteed
+  soft_skills: guaranteed
+  certifications: guaranteed
+  technical_skills: guaranteed
+limitations:
+  - title: AI skill extraction may categorize competencies differently than industry taxonomies like ESCO or O*NET
+    text: >-
+      AI-powered skill extraction — may categorize broad competencies differently than specific industry taxonomies
+      (e.g., ESCO, O*NET)
+    category: accuracy
+    severity: info
+    workaround: Map extracted skills to your target taxonomy (ESCO, O*NET) as a post-processing step for HR system integration

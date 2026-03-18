@@ -1,0 +1,81 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: xml-to-json
+name: XML to JSON
+description: Parse XML string to JSON. Preserves attributes (as @attr), handles CDATA, auto-types values. Algorithmic.
+category: data-processing
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - xml_string
+  properties:
+    xml_string:
+      type: string
+output_schema:
+  type: object
+  example:
+    json: test
+    root_element: root
+    element_count: 0
+    attributes_preserved: false
+  properties:
+    json:
+      type: object
+    root_element:
+      type: string
+    element_count:
+      type: integer
+    attributes_preserved:
+      type: boolean
+data_source: Algorithmic (format conversion, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      xml_string: <root><item>value</item><count>42</count></root>
+    expected_fields:
+      - field: json
+        operator: not_null
+        reliability: guaranteed
+      - field: json
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: root_element
+        operator: not_null
+        reliability: guaranteed
+      - field: root_element
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: element_count
+        operator: not_null
+        reliability: guaranteed
+      - field: element_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: element_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    xml_string: <root><item>test</item></root>
+output_field_reliability:
+  json: guaranteed
+  root_element: guaranteed
+  element_count: guaranteed
+  attributes_preserved: guaranteed
+limitations:
+  - title: XML with mixed content — text interleaved with elements — may lose text ordering during conversion
+    text: >-
+      Converts standard XML — XML with mixed content (text interleaved with elements) may lose text ordering during
+      conversion
+    category: coverage
+    severity: info
+    workaround: For mixed-content XML, use a streaming parser that preserves text node positions

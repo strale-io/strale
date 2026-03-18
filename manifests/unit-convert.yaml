@@ -1,0 +1,105 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: unit-convert
+name: Unit Convert
+description: "Convert between units: length, weight, volume, temperature, area, speed, data storage. Algorithmic — instant."
+category: data-processing
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - value
+    - from_unit
+    - to_unit
+  properties:
+    value:
+      type: number
+      description: Value to convert
+    to_unit:
+      type: string
+      description: Target unit (e.g. mi, kg, °F)
+    from_unit:
+      type: string
+      description: Source unit (e.g. km, lb, °C)
+output_schema:
+  type: object
+  example:
+    value: 100
+    result: 62.1371
+    formula: km → m → mi
+    to_unit: mi
+    category: length
+    from_unit: km
+  properties:
+    value:
+      type: number
+    result:
+      type: number
+    formula:
+      type: string
+    to_unit:
+      type: string
+    category:
+      type: string
+    from_unit:
+      type: string
+data_source: Algorithmic (measurement unit conversion, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      value: 100
+      to_unit: mi
+      from_unit: km
+    expected_fields:
+      - field: value
+        operator: not_null
+        reliability: guaranteed
+      - field: value
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: result
+        operator: not_null
+        reliability: guaranteed
+      - field: result
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: formula
+        operator: not_null
+        reliability: guaranteed
+      - field: formula
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: to_unit
+        operator: not_null
+        reliability: guaranteed
+      - field: to_unit
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    value: 100
+    to_unit: mi
+    from_unit: km
+output_field_reliability:
+  value: guaranteed
+  result: guaranteed
+  formula: guaranteed
+  to_unit: guaranteed
+  category: guaranteed
+  from_unit: guaranteed
+limitations:
+  - title: Covers common unit categories like length, weight, and speed — specialized units like radiation are not supported
+    text: >-
+      Covers common unit categories (length, weight, volume, temperature, speed) — specialized units (e.g., radiation,
+      magnetic flux) not supported
+    category: coverage
+    severity: info
+    workaround: For unsupported unit types, use the conversion factor directly in your application logic

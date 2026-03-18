@@ -1,0 +1,87 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: name-parse
+name: Name Parse
+description: >-
+  Parse a full name into components: first, middle, last, prefix, suffix, nickname. Handles 'Dr. Karl-Johan von
+  Lindström III' correctly.
+category: data-processing
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - full_name
+  properties:
+    full_name:
+      type: string
+      description: Full name to parse
+output_schema:
+  type: object
+  example:
+    prefix: null
+    suffix: null
+    nickname: null
+    full_name: test
+    last_name: null
+    first_name: test
+    middle_name: null
+  properties:
+    prefix:
+      type: string
+    suffix:
+      type: string
+    nickname:
+      type: string
+    last_name:
+      type: string
+    first_name:
+      type: string
+    middle_name:
+      type: string
+data_source: Algorithmic (name component extraction, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      full_name: Dr. John Robert Smith Jr.
+    expected_fields:
+      - field: full_name
+        operator: not_null
+        reliability: common
+      - field: full_name
+        operator: type
+        reliability: common
+        value: string
+      - field: first_name
+        operator: not_null
+        reliability: guaranteed
+      - field: first_name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: last_name
+        operator: not_null
+        reliability: guaranteed
+      - field: last_name
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    full_name: test
+output_field_reliability:
+  prefix: guaranteed
+  suffix: guaranteed
+  nickname: guaranteed
+  last_name: guaranteed
+  first_name: guaranteed
+  middle_name: guaranteed
+limitations:
+  - title: Compound surnames, non-Western naming conventions, and honorifics may be split incorrectly
+    text: AI-powered name parsing — compound surnames, cultural naming conventions, and honorifics may be split incorrectly
+    category: accuracy
+    severity: info
+    workaround: Provide locale or cultural context in the input to improve parsing accuracy for non-Western name formats

@@ -1,0 +1,123 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: test-case-generate
+name: Test Case Generate
+description: >-
+  Generate test cases from a function description or signature. Includes happy path, edge cases, boundary tests, and
+  error cases.
+category: developer-tools
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - function_description
+  properties:
+    language:
+      type: string
+    include_edge_cases:
+      type: boolean
+    function_description:
+      type: string
+output_schema:
+  type: object
+  example:
+    test_cases:
+      - name: Empty function call
+        input: {}
+        category: happy_path
+        description: Tests calling test() with no arguments
+        expected_output: null
+      - name: Null input
+        input: null
+        category: edge_case
+        description: Tests behavior when null is passed
+        expected_output: null
+      - name: Undefined input
+        input: undefined
+        category: edge_case
+        description: Tests behavior when undefined is passed
+        expected_output: null
+      - name: Empty string input
+        input: ""
+        category: boundary
+        description: Tests behavior with empty string
+        expected_output: null
+      - name: Empty array input
+        input: []
+        category: boundary
+        description: Tests behavior with empty array
+        expected_output: null
+      - name: Empty object input
+        input: {}
+        category: boundary
+        description: Tests behavior with empty object
+        expected_output: null
+      - name: Invalid parameter type
+        input: invalid_type
+        category: error_case
+        description: Tests behavior with unexpected parameter type
+        expected_output: null
+    total_cases: 7
+    coverage_notes: >-
+      Limited coverage due to insufficient function signature information. The function name 'test' is generic with no
+      parameters defined. Test cases cover basic null/undefined handling, boundary conditions with empty values, and
+      type validation. Actual coverage would improve with concrete parameter types and return type specification.
+      Consider providing the full function implementation for comprehensive testing.
+    language_detected: JavaScript/TypeScript
+  properties:
+    test_cases:
+      type: array
+    total_cases:
+      type: integer
+    coverage_notes:
+      type: string
+data_source: Claude API (test case generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      function_description: "function add(a: number, b: number): number — returns the sum of two numbers"
+    expected_fields:
+      - field: test_cases
+        operator: not_null
+        reliability: guaranteed
+      - field: test_cases
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_cases
+        operator: not_null
+        reliability: guaranteed
+      - field: total_cases
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_cases
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: coverage_notes
+        operator: not_null
+        reliability: guaranteed
+      - field: coverage_notes
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    function_description: test
+output_field_reliability:
+  test_cases: guaranteed
+  total_cases: guaranteed
+  coverage_notes: guaranteed
+limitations:
+  - title: AI-generated tests cover common paths — edge cases specific to your business logic require manual authoring
+    text: >-
+      AI-generated test cases cover common paths — edge cases specific to your business logic may require manual test
+      authoring
+    category: accuracy
+    severity: info
+    workaround: Use generated tests as a starting coverage baseline and add domain-specific edge cases manually

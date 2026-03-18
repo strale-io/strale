@@ -1,0 +1,113 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: cron-explain
+name: Cron Explain
+description: Parse a cron expression into human-readable explanation + next N execution times. Algorithmic — instant.
+category: validation
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - cron_expression
+  properties:
+    num_next:
+      type: integer
+      description: Number of next runs (default 5)
+    timezone:
+      type: string
+    cron_expression:
+      type: string
+      description: Cron expression (5-7 fields)
+output_schema:
+  type: object
+  example:
+    is_valid: true
+    timezone: Europe/Stockholm
+    next_runs:
+      - "2026-03-09T09:00:00.000Z"
+      - "2026-03-10T09:00:00.000Z"
+      - "2026-03-11T09:00:00.000Z"
+      - "2026-03-12T09:00:00.000Z"
+      - "2026-03-13T09:00:00.000Z"
+    explanation: At 9:00, Monday through Friday
+    cron_expression: 0 9 * * 1-5
+    field_breakdown:
+      - field: minute
+        value: "0"
+        meaning: at 0
+      - field: hour
+        value: "9"
+        meaning: at 9
+      - field: day of month
+        value: "*"
+        meaning: every value
+      - field: month
+        value: "*"
+        meaning: every value
+      - field: day of week
+        value: 1-5
+        meaning: range 1-5
+  properties:
+    is_valid:
+      type: boolean
+    next_runs:
+      type: array
+    explanation:
+      type: string
+    field_breakdown:
+      type: array
+data_source: Algorithmic (cron expression parsing, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      timezone: Europe/Stockholm
+      cron_expression: 0 9 * * 1-5
+    expected_fields:
+      - field: is_valid
+        operator: not_null
+        reliability: guaranteed
+      - field: is_valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: next_runs
+        operator: not_null
+        reliability: guaranteed
+      - field: next_runs
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: explanation
+        operator: not_null
+        reliability: guaranteed
+      - field: explanation
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: field_breakdown
+        operator: not_null
+        reliability: guaranteed
+      - field: field_breakdown
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    cron_expression: test
+output_field_reliability:
+  is_valid: guaranteed
+  next_runs: guaranteed
+  explanation: guaranteed
+  field_breakdown: guaranteed
+limitations:
+  - title: Explains standard 5-field cron syntax only — non-standard extensions like seconds field may not be fully explained
+    text: >-
+      Explains standard 5-field cron syntax — non-standard extensions (seconds, years, L/W/# operators) may not be fully
+      explained
+    category: coverage
+    severity: info
+    workaround: Specify the cron implementation (Quartz, AWS EventBridge, systemd) for accurate explanation of non-standard fields

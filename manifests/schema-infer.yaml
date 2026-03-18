@@ -1,0 +1,120 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: schema-infer
+name: Schema Infer
+description: >-
+  Infer schema from JSON array or CSV. Returns field types, nullability, uniqueness, completeness, min/max/mean for
+  numeric fields. Algorithmic.
+category: data-processing
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      description: JSON array or CSV string
+output_schema:
+  type: object
+  example:
+    fields:
+      - max: 30
+        min: 25
+        mean: 27.5
+        name: age
+        type: number
+        unique: true
+        nullable: false
+        sample_values:
+          - 30
+          - 25
+        completeness_percent: 100
+      - name: city
+        type: string
+        unique: true
+        nullable: false
+        sample_values:
+          - Stockholm
+          - Oslo
+        completeness_percent: 100
+      - name: name
+        type: string
+        unique: true
+        nullable: false
+        sample_values:
+          - Alice
+          - Bob
+        completeness_percent: 100
+    total_rows: 2
+    total_fields: 3
+    format_detected: json
+  properties:
+    fields:
+      type: array
+    total_rows:
+      type: integer
+    total_fields:
+      type: integer
+    format_detected:
+      type: string
+data_source: Algorithmic (schema inference from sample data, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      data:
+        - age: 30
+          city: Stockholm
+          name: Alice
+        - age: 25
+          city: Oslo
+          name: Bob
+    expected_fields:
+      - field: fields
+        operator: not_null
+        reliability: guaranteed
+      - field: fields
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_rows
+        operator: not_null
+        reliability: guaranteed
+      - field: total_rows
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_rows
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: total_fields
+        operator: not_null
+        reliability: guaranteed
+      - field: total_fields
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_fields
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    data:
+      - age: 30
+        name: Alice
+output_field_reliability:
+  fields: guaranteed
+  total_rows: guaranteed
+  total_fields: guaranteed
+  format_detected: guaranteed
+limitations:
+  - title: Schema is inferred from sample data — optional fields or rare value types may not appear in the output
+    text: Infers schema from sample data — optional fields or rare value types may not appear in the inferred schema
+    category: accuracy
+    severity: info
+    workaround: Provide a representative sample including edge cases and null values for more accurate schema inference

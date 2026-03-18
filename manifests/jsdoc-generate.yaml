@@ -1,0 +1,80 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: jsdoc-generate
+name: JSDoc Generate
+description: Add JSDoc comments to JavaScript/TypeScript functions and classes. Infers param types, return types, and throws.
+category: developer-tools
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - code
+  properties:
+    code:
+      type: string
+output_schema:
+  type: object
+  example:
+    tags_used:
+      - "@returns"
+    documented_code: |-
+      /**
+       * Returns a greeting string.
+       * @returns {string} The string 'world'.
+       */
+      function hello() { return 'world'; }
+    functions_documented: 1
+    type_annotations_added: 1
+  properties:
+    tags_used:
+      type: array
+    documented_code:
+      type: string
+    functions_documented:
+      type: integer
+data_source: Claude API (JSDoc documentation generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      code: function hello() { return 'world'; }
+    expected_fields:
+      - field: tags_used
+        operator: not_null
+        reliability: guaranteed
+      - field: tags_used
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: documented_code
+        operator: not_null
+        reliability: guaranteed
+      - field: documented_code
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: functions_documented
+        operator: not_null
+        reliability: guaranteed
+      - field: functions_documented
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    code: const x = 1;
+output_field_reliability:
+  tags_used: guaranteed
+  documented_code: guaranteed
+  functions_documented: guaranteed
+limitations:
+  - title: AI-generated JSDoc may produce incomplete annotations for complex generics or overloaded function signatures
+    text: >-
+      AI-generated JSDoc — complex generic types or overloaded function signatures may produce incomplete type
+      annotations
+    category: accuracy
+    severity: info
+    workaround: Validate generated JSDoc with TypeScript compiler type checking to catch annotation mismatches

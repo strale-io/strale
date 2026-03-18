@@ -1,0 +1,110 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: social-profile-check
+name: Social Profile Check
+description: "Check username availability across 11 platforms: GitHub, Twitter/X, Instagram, YouTube, TikTok, LinkedIn, Reddit, etc."
+category: data-extraction
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - username
+  properties:
+    username:
+      type: string
+output_schema:
+  type: object
+  example:
+    profiles:
+      - url: https://github.com/Google
+        exists: true
+        platform: GitHub
+        status_code: 200
+      - url: https://x.com/Google
+        exists: true
+        platform: Twitter/X
+        status_code: 200
+      - url: https://www.instagram.com/Google/
+        exists: false
+        platform: Instagram
+        status_code: 429
+      - url: https://www.youtube.com/@Google
+        exists: true
+        platform: YouTube
+        status_code: 200
+      - url: https://www.tiktok.com/@Google
+        exists: true
+        platform: TikTok
+        status_code: 200
+      - url: https://www.linkedin.com/company/Google/
+        exists: true
+        platform: LinkedIn
+        status_code: 200
+      - url: https://www.reddit.com/user/Google/
+        exists: false
+        platform: Reddit
+        status_code: 403
+      - url: https://www.pinterest.com/Google/
+        exists: true
+        platform: Pinterest
+        status_code: 200
+      - url: https://www.facebook.com/Google
+        exists: false
+        platform: Facebook
+        status_code: 400
+      - url: https://www.npmjs.com/~Google
+        exists: false
+        platform: npm
+        status_code: 403
+      - url: https://pypi.org/user/Google/
+        exists: true
+        platform: PyPI
+        status_code: 200
+    username: Google
+    found_count: 7
+    not_found_count: 4
+    available_platforms: []
+  properties:
+    profiles:
+      type: array
+    found_count:
+      type: number
+    available_platforms:
+      type: array
+data_source: HTTP fetch (public social media profile pages)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      username: Google
+    expected_fields:
+      - field: profiles
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    username: octocat
+output_field_reliability:
+  profiles: guaranteed
+  found_count: guaranteed
+  available_platforms: guaranteed
+limitations:
+  - title: Profile matching may return incorrect results for very common or generic company names
+    text: Profile matching uses name and domain signals — may return incorrect matches for very common company names
+    category: accuracy
+    severity: info
+    workaround: >-
+      Cross-reference matched profile URLs against the company's official website for link verification before trusting
+      the match
+  - title: Searches LinkedIn, Twitter/X, Facebook, Instagram, and GitHub only — niche or regional platforms not covered
+    text: >-
+      Searches major platforms (LinkedIn, Twitter/X, Facebook, Instagram, GitHub) — niche or regional platforms not
+      covered
+    category: coverage
+    severity: info
+    workaround: >-
+      For regional coverage, supplement with a google-search query scoped to the target platform domain (e.g.,
+      site:xing.com)

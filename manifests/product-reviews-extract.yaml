@@ -1,0 +1,105 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: product-reviews-extract
+name: Product Reviews Extract
+description: >-
+  Extract product reviews from Amazon, Trustpilot, or any review page. Returns rating distribution, pros/cons,
+  sentiment.
+category: data-extraction
+price_cents: 25
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: Product review page URL
+output_schema:
+  type: object
+  example:
+    url: https://example.com
+    source: example.com
+    common_cons: []
+    common_pros: []
+    product_name: null
+    review_count: null
+    average_rating: null
+    recent_reviews: []
+    sentiment_summary: No product review data found on this page
+    rating_distribution:
+      1_star: null
+      2_star: null
+      3_star: null
+      4_star: null
+      5_star: null
+  properties:
+    common_cons:
+      type: array
+    common_pros:
+      type: array
+    review_count:
+      type: number
+    average_rating:
+      type: number
+    rating_distribution:
+      type: object
+data_source: Headless browser + Claude API (product review extraction)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://www.amazon.com/dp/B0CHX3QBCH
+    expected_fields:
+      - field: common_cons
+        operator: not_null
+        reliability: guaranteed
+      - field: common_cons
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: common_pros
+        operator: not_null
+        reliability: guaranteed
+      - field: common_pros
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: review_count
+        operator: not_null
+        reliability: guaranteed
+      - field: review_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: review_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: average_rating
+        operator: not_null
+        reliability: guaranteed
+      - field: average_rating
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    url: https://www.amazon.com/dp/B0CHX3QBCH
+output_field_reliability:
+  common_cons: guaranteed
+  common_pros: guaranteed
+  review_count: guaranteed
+  average_rating: guaranteed
+  rating_distribution: guaranteed
+limitations:
+  - title: Extracts visible product page reviews only — hidden, filtered, or paginated reviews may not be captured
+    text: >-
+      Extracts reviews visible on the product page — filtered/hidden reviews and reviews behind 'load more' may not be
+      captured
+    category: coverage
+    severity: info
+    workaround: Request the direct product review page URL rather than the main product page for more complete review coverage

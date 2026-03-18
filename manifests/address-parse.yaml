@@ -1,0 +1,101 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: address-parse
+name: Address Parse
+description: >-
+  Parse a free-text address into structured components. Returns street, city, postal code, state/province, country.
+  Works with addresses worldwide.
+category: data-processing
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: Free-text address to parse
+output_schema:
+  type: object
+  example:
+    city: Mountain View
+    street: 1600 Amphitheatre Parkway
+    country: United States
+    apartment: null
+    formatted: 1600 Amphitheatre Parkway, Mountain View, CA, United States
+    confidence: high
+    postal_code: null
+    raw_address: 1600 Amphitheatre Parkway, Mountain View, CA
+    street_name: Amphitheatre Parkway
+    country_code: US
+    street_number: "1600"
+    state_province: CA
+  properties:
+    city:
+      type: string
+    street:
+      type: string
+    country:
+      type: string
+    formatted:
+      type: string
+    postal_code:
+      type: string
+    country_code:
+      type: string
+data_source: Algorithmic (address component extraction, no external data)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      address: 1600 Amphitheatre Parkway, Mountain View, CA
+    expected_fields:
+      - field: city
+        operator: not_null
+        reliability: guaranteed
+      - field: city
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: street
+        operator: not_null
+        reliability: guaranteed
+      - field: street
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: country
+        operator: not_null
+        reliability: guaranteed
+      - field: country
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: formatted
+        operator: not_null
+        reliability: guaranteed
+      - field: formatted
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    address: test
+output_field_reliability:
+  city: guaranteed
+  street: guaranteed
+  country: guaranteed
+  formatted: guaranteed
+  postal_code: guaranteed
+  country_code: guaranteed
+limitations:
+  - title: Addresses with ambiguous formatting or missing components may be parsed incorrectly by the AI
+    text: AI-powered parsing — addresses with ambiguous formatting or missing components may be parsed incorrectly
+    category: accuracy
+    severity: info
+    workaround: >-
+      Validate parsed components against a postal address database (e.g., Google Address Validation API) for critical
+      use cases

@@ -1,0 +1,79 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: isbn-validate
+name: ISBN Validation
+description: >-
+  Validate an ISBN-10 or ISBN-13 number. Checks format, length, and checksum. Converts ISBN-10 to ISBN-13. Pure
+  algorithmic — instant.
+category: validation
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - isbn
+  properties:
+    isbn:
+      type: string
+      description: ISBN-10 or ISBN-13 (e.g. 978-3-16-148410-0)
+output_schema:
+  type: object
+  example:
+    type: ISBN-13
+    valid: true
+    isbn13: "9780134685991"
+    ean_prefix: "978"
+    isbn_input: 978-0-13-468599-1
+    isbn_cleaned: "9780134685991"
+  properties:
+    type:
+      type: string
+    valid:
+      type: boolean
+    isbn13:
+      type: string
+data_source: Algorithmic validation (ISBN-10/ISBN-13 check digit calculation)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      isbn: 978-0-13-468599-1
+    expected_fields:
+      - field: type
+        operator: not_null
+        reliability: guaranteed
+      - field: type
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: isbn13
+        operator: not_null
+        reliability: guaranteed
+      - field: isbn13
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    isbn: test
+output_field_reliability:
+  type: guaranteed
+  valid: guaranteed
+  isbn13: guaranteed
+limitations:
+  - title: Validates ISBN-10 and ISBN-13 format and check digits only — does not verify the ISBN is assigned to a publication
+    text: >-
+      Validates ISBN-10 and ISBN-13 format and check digits — does not verify the ISBN is assigned to an actual
+      publication
+    category: coverage
+    severity: info
+    workaround: Use the validated ISBN with Open Library API or Google Books to verify the publication exists

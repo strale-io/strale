@@ -1,0 +1,69 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: lithuanian-company-data
+name: Lithuanian Company Data
+description: Look up Lithuanian company data from Registrų centras. Accepts company code (7-9 digits) or fuzzy company name.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - company_code
+  properties:
+    company_code:
+      type: string
+      description: Lithuanian company code (7-9 digits) or company name
+output_schema:
+  type: object
+  example:
+    status: unknown
+    address: null
+    industry: null
+    directors: null
+    company_name: null
+    business_type: null
+    registration_date: null
+    registration_number: null
+  properties:
+    status:
+      type: string
+    address:
+      type: string
+    company_name:
+      type: string
+    business_type:
+      type: string
+    registration_number:
+      type: string
+data_source: Registrų centras (Lithuanian Centre of Registers)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      company_code: "301524699"
+    expected_fields:
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    company_code: "301524699"
+output_field_reliability:
+  status: guaranteed
+  address: guaranteed
+  company_name: guaranteed
+  business_type: guaranteed
+  registration_number: guaranteed
+limitations:
+  - title: Extracted from Lithuanian Registrų Centras via Browserless — full financial filings require separate access
+    text: Extracted from Registrų Centras via Browserless — full financial filings require separate access
+    category: coverage
+    severity: info
+    workaround: Use the company code from the response to search registrucentras.lt for complete filings

@@ -1,0 +1,80 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: env-template-generate
+name: Env Template Generate
+description: >-
+  Scan source code for environment variable references (process.env, os.environ, etc.) and generate a .env template with
+  descriptions and example values.
+category: developer-tools
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    code:
+      type: string
+      description: Source code to scan
+    project_description:
+      type: string
+output_schema:
+  type: object
+  example:
+    variables: []
+    env_template: |+
+
+    total_variables: 0
+  properties:
+    variables:
+      type: array
+    env_template:
+      type: string
+    total_variables:
+      type: integer
+data_source: Claude API (environment template generation)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      code: function hello() { return 'world'; }
+      project_description: This is a test input for automated capability testing.
+    expected_fields:
+      - field: variables
+        operator: not_null
+        reliability: guaranteed
+      - field: variables
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: env_template
+        operator: not_null
+        reliability: guaranteed
+      - field: env_template
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: total_variables
+        operator: not_null
+        reliability: guaranteed
+      - field: total_variables
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_variables
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    code: const x = 1;
+output_field_reliability:
+  variables: guaranteed
+  env_template: guaranteed
+  total_variables: guaranteed
+limitations:
+  - title: Dynamically constructed environment variable names may be missed during code analysis
+    text: Generates .env templates from code analysis — dynamically constructed environment variable names may be missed
+    category: coverage
+    severity: info
+    workaround: Cross-reference with your deployment documentation to catch environment variables not referenced in code

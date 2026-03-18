@@ -1,0 +1,98 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: sql-generate
+name: SQL Generate
+description: >-
+  Generate SQL queries from natural language descriptions. Provide table schema for best results. Supports PostgreSQL,
+  MySQL, SQLite, MSSQL.
+category: developer-tools
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - natural_language_query
+  properties:
+    dialect:
+      type: string
+      description: postgres/mysql/sqlite/mssql
+    table_schema:
+      type: string
+    natural_language_query:
+      type: string
+output_schema:
+  type: object
+  example:
+    sql: SELECT * FROM users WHERE active = true;
+    dialect: postgres
+    joins_used: []
+    explanation: >-
+      This query retrieves all active users from the users table, selecting all columns (id, name, email, active,
+      created_at) for users where the active flag is set to true.
+    tables_referenced:
+      - users
+    estimated_complexity: simple
+  properties:
+    sql:
+      type: string
+    explanation:
+      type: string
+    tables_referenced:
+      type: array
+    estimated_complexity:
+      type: string
+data_source: Claude API (SQL query generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      dialect: postgres
+      table_schema: users(id INT, name TEXT, email TEXT, active BOOL, created_at TIMESTAMP)
+      natural_language_query: en
+    expected_fields:
+      - field: sql
+        operator: not_null
+        reliability: guaranteed
+      - field: sql
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: explanation
+        operator: not_null
+        reliability: guaranteed
+      - field: explanation
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: tables_referenced
+        operator: not_null
+        reliability: guaranteed
+      - field: tables_referenced
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: estimated_complexity
+        operator: not_null
+        reliability: guaranteed
+      - field: estimated_complexity
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    natural_language_query: test
+output_field_reliability:
+  sql: guaranteed
+  explanation: guaranteed
+  tables_referenced: guaranteed
+  estimated_complexity: guaranteed
+limitations:
+  - title: AI-generated SQL with complex joins and subqueries must be tested against your schema before production use
+    text: AI-generated SQL — complex joins and subqueries should be tested against your schema before running on production
+    category: accuracy
+    severity: warning
+    workaround: >-
+      Test generated queries against a staging database with representative data volume to verify correctness and
+      performance

@@ -1,0 +1,305 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: docker-hub-info
+name: Docker Hub Info
+description: >-
+  Fetch Docker Hub image metadata: pull count, star count, tags, architectures, last updated. Supports official and user
+  images.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - image
+  properties:
+    image:
+      type: string
+      description: Image name (e.g. 'nginx', 'user/repo')
+output_schema:
+  type: object
+  example:
+    name: nginx
+    hub_url: https://hub.docker.com/_/nginx
+    full_name: library/nginx
+    namespace: library
+    is_private: false
+    pull_count: 12852443865
+    star_count: 21206
+    description: Official build of Nginx.
+    is_official: true
+    recent_tags:
+      - name: stable-alpine3.23
+        digest: sha256:5b4900b042cc
+        os_arch:
+          - linux/amd64
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm64
+          - unknown/unknown
+          - linux/386
+          - unknown/unknown
+          - linux/ppc64le
+          - unknown/unknown
+          - linux/riscv64
+          - unknown/unknown
+          - linux/s390x
+          - unknown/unknown
+        last_updated: "2026-03-11T19:52:30.712647Z"
+        full_size_bytes: 25940809
+      - name: stable-alpine
+        digest: sha256:5b4900b042cc
+        os_arch:
+          - linux/amd64
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm64
+          - unknown/unknown
+          - linux/386
+          - unknown/unknown
+          - linux/ppc64le
+          - unknown/unknown
+          - linux/riscv64
+          - unknown/unknown
+          - linux/s390x
+          - unknown/unknown
+        last_updated: "2026-03-11T19:52:24.672055Z"
+        full_size_bytes: 25940809
+      - name: mainline-alpine3.23
+        digest: sha256:f46cb72c7df0
+        os_arch:
+          - linux/amd64
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm64
+          - unknown/unknown
+          - linux/386
+          - unknown/unknown
+          - linux/ppc64le
+          - unknown/unknown
+          - linux/riscv64
+          - unknown/unknown
+          - linux/s390x
+          - unknown/unknown
+        last_updated: "2026-03-11T19:52:10.579481Z"
+        full_size_bytes: 25985966
+      - name: mainline-alpine
+        digest: sha256:f46cb72c7df0
+        os_arch:
+          - linux/amd64
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm64
+          - unknown/unknown
+          - linux/386
+          - unknown/unknown
+          - linux/ppc64le
+          - unknown/unknown
+          - linux/riscv64
+          - unknown/unknown
+          - linux/s390x
+          - unknown/unknown
+        last_updated: "2026-03-11T19:52:04.291161Z"
+        full_size_bytes: 25985966
+      - name: alpine3.23
+        digest: sha256:f46cb72c7df0
+        os_arch:
+          - linux/amd64
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm64
+          - unknown/unknown
+          - linux/386
+          - unknown/unknown
+          - linux/ppc64le
+          - unknown/unknown
+          - linux/riscv64
+          - unknown/unknown
+          - linux/s390x
+          - unknown/unknown
+        last_updated: "2026-03-11T19:51:55.590969Z"
+        full_size_bytes: 25985966
+      - name: alpine
+        digest: sha256:f46cb72c7df0
+        os_arch:
+          - linux/amd64
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm64
+          - unknown/unknown
+          - linux/386
+          - unknown/unknown
+          - linux/ppc64le
+          - unknown/unknown
+          - linux/riscv64
+          - unknown/unknown
+          - linux/s390x
+          - unknown/unknown
+        last_updated: "2026-03-11T19:51:49.315888Z"
+        full_size_bytes: 25985966
+      - name: 1.29.6-alpine3.23
+        digest: sha256:f46cb72c7df0
+        os_arch:
+          - linux/amd64
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm64
+          - unknown/unknown
+          - linux/386
+          - unknown/unknown
+          - linux/ppc64le
+          - unknown/unknown
+          - linux/riscv64
+          - unknown/unknown
+          - linux/s390x
+          - unknown/unknown
+        last_updated: "2026-03-11T19:51:38.918617Z"
+        full_size_bytes: 25985966
+      - name: 1.29.6-alpine
+        digest: sha256:f46cb72c7df0
+        os_arch:
+          - linux/amd64
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm64
+          - unknown/unknown
+          - linux/386
+          - unknown/unknown
+          - linux/ppc64le
+          - unknown/unknown
+          - linux/riscv64
+          - unknown/unknown
+          - linux/s390x
+          - unknown/unknown
+        last_updated: "2026-03-11T19:51:33.256628Z"
+        full_size_bytes: 25985966
+      - name: 1.29-alpine3.23
+        digest: sha256:f46cb72c7df0
+        os_arch:
+          - linux/amd64
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm64
+          - unknown/unknown
+          - linux/386
+          - unknown/unknown
+          - linux/ppc64le
+          - unknown/unknown
+          - linux/riscv64
+          - unknown/unknown
+          - linux/s390x
+          - unknown/unknown
+        last_updated: "2026-03-11T19:51:21.023294Z"
+        full_size_bytes: 25985966
+      - name: 1.29-alpine
+        digest: sha256:f46cb72c7df0
+        os_arch:
+          - linux/amd64
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm
+          - unknown/unknown
+          - linux/arm64
+          - unknown/unknown
+          - linux/386
+          - unknown/unknown
+          - linux/ppc64le
+          - unknown/unknown
+          - linux/riscv64
+          - unknown/unknown
+          - linux/s390x
+          - unknown/unknown
+        last_updated: "2026-03-11T19:51:14.781388Z"
+        full_size_bytes: 25985966
+    last_updated: "2026-03-11T19:52:32.658807Z"
+  properties:
+    name:
+      type: string
+    pull_count:
+      type: integer
+    star_count:
+      type: integer
+    recent_tags:
+      type: array
+data_source: Docker Hub API (container image metadata)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      image: nginx
+    expected_fields:
+      - field: name
+        operator: not_null
+        reliability: guaranteed
+      - field: name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: pull_count
+        operator: not_null
+        reliability: guaranteed
+      - field: pull_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: pull_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: star_count
+        operator: not_null
+        reliability: guaranteed
+      - field: star_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: star_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    image: nginx
+output_field_reliability:
+  name: guaranteed
+  pull_count: guaranteed
+  star_count: guaranteed
+  recent_tags: guaranteed
+limitations:
+  - title: Queries Docker Hub's public API only — private repositories and other registries like GitHub CR are not accessible
+    text: >-
+      Queries Docker Hub's public API — private repositories and other registries (GitHub CR, AWS ECR) are not
+      accessible
+    category: coverage
+    severity: info
+    workaround: For private registries, use their respective APIs; for GitHub Container Registry, use github-repo-analyze

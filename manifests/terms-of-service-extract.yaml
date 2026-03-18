@@ -1,0 +1,85 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: terms-of-service-extract
+name: Terms of Service Extract
+description: "Extract key clauses from a company's Terms of Service: governing law, arbitration, termination, liability limitations."
+category: data-extraction
+price_cents: 30
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: Company website URL
+output_schema:
+  type: object
+  example:
+    source_url: https://github.com/en/site-policy/github-terms
+    user_rights: []
+    company_name: null
+    key_concerns:
+      - Page not found error - the requested Terms of Service document is not accessible at the provided URL
+      - Unable to extract any substantive ToS content due to 404 error
+    last_updated: null
+    governing_law: null
+    age_restriction: null
+    extraction_status: >-
+      FAILED - The URL returns a 404 Page Not Found error. The actual GitHub Terms of Service content is not present in
+      the provided page text. Only navigation menus, login forms, and footer links are visible. The correct URL for
+      GitHub's Terms of Service may be different from the one provided.
+    readability_score: null
+    arbitration_clause: false
+    class_action_waiver: false
+    liability_limitations: []
+    termination_conditions: []
+    data_collection_practices: []
+    intellectual_property_notes: []
+  properties:
+    governing_law:
+      type: string
+    arbitration_clause:
+      type: boolean
+    liability_limitations:
+      type: array
+    termination_conditions:
+      type: array
+data_source: HTTP fetch + Claude API (ToS clause extraction)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://github.com/site/terms
+    expected_fields:
+      - field: liability_limitations
+        operator: not_null
+        reliability: guaranteed
+      - field: liability_limitations
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: termination_conditions
+        operator: not_null
+        reliability: guaranteed
+      - field: termination_conditions
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    url: https://github.com/site/terms
+output_field_reliability:
+  governing_law: guaranteed
+  arbitration_clause: guaranteed
+  liability_limitations: guaranteed
+  termination_conditions: guaranteed
+limitations:
+  - title: AI extracts key terms of service clauses but legal interpretation requires qualified legal review
+    text: AI extraction of key terms — legal interpretation of clauses requires qualified legal review
+    category: accuracy
+    severity: info
+    workaround: Use extracted terms as a quick screening tool and flag unusual clauses for legal counsel review

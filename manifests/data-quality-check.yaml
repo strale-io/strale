@@ -1,0 +1,115 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: data-quality-check
+name: Data Quality Check
+description: >-
+  Check data quality with custom rules (email_format, range, pattern, etc.) or auto-detect issues. Returns quality score
+  and field-level report. Algorithmic.
+category: data-processing
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      description: JSON array of objects
+    rules:
+      type: array
+      description: Optional validation rules
+output_schema:
+  type: object
+  example:
+    issues: []
+    total_rows: 2
+    valid_rows: 2
+    issue_count: 0
+    field_report:
+      - field: age
+        null_count: 0
+        completeness: 100
+        unique_count: 2
+      - field: city
+        null_count: 0
+        completeness: 100
+        unique_count: 2
+      - field: name
+        null_count: 0
+        completeness: 100
+        unique_count: 2
+    invalid_rows: 0
+    quality_score: 100
+  properties:
+    issues:
+      type: array
+    valid_rows:
+      type: integer
+    field_report:
+      type: array
+    invalid_rows:
+      type: integer
+    quality_score:
+      type: integer
+data_source: Algorithmic (data profiling and quality analysis, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      data:
+        - age: 30
+          city: Stockholm
+          name: Alice
+        - age: 25
+          city: Oslo
+          name: Bob
+    expected_fields:
+      - field: issues
+        operator: not_null
+        reliability: guaranteed
+      - field: issues
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: valid_rows
+        operator: not_null
+        reliability: guaranteed
+      - field: valid_rows
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: field_report
+        operator: not_null
+        reliability: guaranteed
+      - field: field_report
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: invalid_rows
+        operator: not_null
+        reliability: guaranteed
+      - field: invalid_rows
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    data:
+      - test
+output_field_reliability:
+  issues: guaranteed
+  valid_rows: guaranteed
+  field_report: guaranteed
+  invalid_rows: guaranteed
+  quality_score: guaranteed
+limitations:
+  - title: Checks for nulls, duplicates, and type mismatches only — domain-specific validation rules are not applied
+    text: >-
+      Checks for common data quality issues (nulls, duplicates, type mismatches) — domain-specific validation rules are
+      not applied
+    category: coverage
+    severity: info
+    workaround: Combine with json-schema-validate to enforce domain-specific constraints on your data

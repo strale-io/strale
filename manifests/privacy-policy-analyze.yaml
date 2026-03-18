@@ -1,0 +1,96 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: privacy-policy-analyze
+name: Privacy Policy Analyze
+description: >-
+  Analyze a company's privacy policy. Extracts data collected, purposes, third parties, user rights, GDPR/CCPA
+  compliance signals.
+category: data-extraction
+price_cents: 30
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: Company website URL
+output_schema:
+  type: object
+  example:
+    purposes: []
+    source_url: >-
+      https://accounts.google.com/ServiceLogin?passive=1209600&amp;continue=https://policies.google.com/privacy&amp;followup=https://policies.google.com/privacy&amp;ec=GAZAoQQ
+    dpo_contact: null
+    legal_basis: []
+    user_rights: []
+    company_name: Google
+    cookie_usage: null
+    last_updated: null
+    children_data: null
+    third_parties: []
+    data_collected: []
+    missing_elements:
+      - No privacy policy content found - this is a login page only
+      - DPO contact information
+      - Data collection specifics
+      - Processing purposes
+      - Third-party sharing details
+      - Data retention periods
+      - User rights documentation
+      - Legal bases for processing
+      - International transfer mechanisms
+      - Cookie policy details
+      - Children's data handling
+      - Automated decision-making disclosure
+      - Right to lodge complaint with supervisory authority
+      - Last updated date
+      - Specific GDPR/CCPA compliance statements
+    retention_periods: []
+    ccpa_compliant_signals: []
+    gdpr_compliant_signals: []
+    international_transfers: []
+  properties:
+    purposes:
+      type: array
+    user_rights:
+      type: array
+    data_collected:
+      type: array
+    missing_elements:
+      type: array
+    gdpr_compliant_signals:
+      type: array
+data_source: HTTP fetch + Claude API (privacy policy analysis)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://stripe.com/privacy
+    expected_fields:
+      - field: data_collected
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    url: https://stripe.com/privacy
+output_field_reliability:
+  purposes: guaranteed
+  user_rights: guaranteed
+  data_collected: guaranteed
+  missing_elements: guaranteed
+  gdpr_compliant_signals: guaranteed
+limitations:
+  - title: AI-powered analysis identifies common GDPR issues but does not replace qualified legal review
+    text: AI-powered analysis identifies common GDPR requirements — does not replace legal review
+    category: accuracy
+    severity: info
+    workaround: Use the gap analysis output to brief your legal counsel on specific sections requiring human review
+  - title: Analyzes the provided privacy policy URL only — separate cookie policies or terms pages are not included
+    text: Analyzes the linked privacy policy page only — separate cookie policies or terms may not be included
+    category: coverage
+    severity: info
+    workaround: Pass each policy URL (privacy, cookies, terms) as separate requests and combine the results

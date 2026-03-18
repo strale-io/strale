@@ -1,0 +1,70 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: eu-trademark-search
+name: EU Trademark Search
+description: >-
+  Search the EUIPO trademark database for registered and pending EU trademarks. Returns trademark names, numbers,
+  status, owners.
+category: data-extraction
+price_cents: 50
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+    nice_class:
+      type: string
+output_schema:
+  type: object
+  example:
+    query: SELECT * FROM users WHERE active = true LIMIT 10
+    source_url: https://euipo.europa.eu/eSearch/#basic/SELECT%20*%20FROM%20users%20WHERE%20active%20%3D%20true%20LIMIT%2010
+    trademarks: []
+    total_results: 0
+  properties:
+    trademarks:
+      type: array
+    total_results:
+      type: integer
+data_source: EUIPO (European Union Intellectual Property Office)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      query: SELECT * FROM users WHERE active = true LIMIT 10
+    expected_fields:
+      - field: trademarks
+        operator: not_null
+        reliability: guaranteed
+      - field: trademarks
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_results
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_results
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    query: test
+output_field_reliability:
+  trademarks: guaranteed
+  total_results: guaranteed
+limitations:
+  - title: Searches EUIPO database for EU trademarks only — national trademark registrations are not included
+    text: Searches EUIPO database for EU trademarks — national trademark registrations are not included
+    category: coverage
+    severity: info
+    workaround: Supplement with national IP office searches (e.g., UKIPO, DPMA, INPI) for complete trademark clearance

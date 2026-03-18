@@ -1,0 +1,94 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: meeting-notes-extract
+name: Meeting Notes Extract
+description: >-
+  Extract structured meeting notes from a transcript. Returns summary, decisions, action items with owners, key
+  discussion points, follow-ups.
+category: document-extraction
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - transcript
+  properties:
+    transcript:
+      type: string
+      description: Meeting transcript text
+output_schema:
+  type: object
+  example:
+    summary: >-
+      Unable to extract meaningful meeting notes. The transcript contains only a test value with no actual meeting
+      content, attendees, decisions, or discussion points.
+    sentiment: unclear
+    word_count: 1
+    action_items: []
+    meeting_type: other
+    decisions_made: []
+    follow_up_needed: []
+    questions_raised: []
+    transcript_length: 10
+    attendees_mentioned: []
+    key_discussion_points: []
+  properties:
+    summary:
+      type: string
+    action_items:
+      type: array
+    decisions_made:
+      type: array
+    key_discussion_points:
+      type: array
+data_source: Claude API (meeting notes extraction and action items)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      transcript: test_value
+    expected_fields:
+      - field: summary
+        operator: not_null
+        reliability: guaranteed
+      - field: summary
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: action_items
+        operator: not_null
+        reliability: guaranteed
+      - field: action_items
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: decisions_made
+        operator: not_null
+        reliability: guaranteed
+      - field: decisions_made
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: key_discussion_points
+        operator: not_null
+        reliability: guaranteed
+      - field: key_discussion_points
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    transcript: test
+output_field_reliability:
+  summary: guaranteed
+  action_items: guaranteed
+  decisions_made: guaranteed
+  key_discussion_points: guaranteed
+limitations:
+  - title: AI extraction of action items may miss nuanced verbal agreements or implicit commitments from meetings
+    text: AI extraction of action items and decisions — nuanced verbal agreements or implicit commitments may be missed
+    category: accuracy
+    severity: info
+    workaround: Distribute extracted notes to all participants for confirmation before treating action items as final

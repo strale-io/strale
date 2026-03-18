@@ -1,0 +1,91 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: ted-procurement
+name: EU Procurement Tender Search
+description: >-
+  Search EU public procurement tenders on TED (Tenders Electronic Daily). Filter by keyword, country, and CPV code.
+  Returns tender titles, authorities, values, deadlines, and links.
+category: data-extraction
+price_cents: 50
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - keyword
+  properties:
+    country:
+      type: string
+      description: ISO country code filter (e.g. SE, DE)
+    keyword:
+      type: string
+      description: Search keyword for tenders
+    cpv_code:
+      type: string
+      description: CPV code filter
+output_schema:
+  type: object
+  example:
+    query:
+      country: SE
+      keyword: artificial intelligence
+      cpv_code: null
+    tenders: []
+    result_count: 0
+  properties:
+    query:
+      type: object
+    tenders:
+      type: array
+    result_count:
+      type: integer
+data_source: TED (Tenders Electronic Daily, European Commission)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      country: SE
+      keyword: artificial intelligence
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: query
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: tenders
+        operator: not_null
+        reliability: guaranteed
+      - field: tenders
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: result_count
+        operator: not_null
+        reliability: guaranteed
+      - field: result_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: result_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    country: US
+    keyword: test
+output_field_reliability:
+  query: guaranteed
+  tenders: guaranteed
+  result_count: guaranteed
+limitations:
+  - title: Covers EU public procurement above threshold values only — below-threshold tenders are on national portals
+    text: >-
+      Covers EU public procurement above threshold values — below-threshold national tenders are published on
+      country-specific portals
+    category: coverage
+    severity: info
+    workaround: For national tenders, supplement with the country's procurement portal (e.g., Mercell, SIMAP, Contracts Finder)

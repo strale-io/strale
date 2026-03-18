@@ -1,0 +1,441 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: readme-generate
+name: README Generate
+description: >-
+  Generate comprehensive README.md from project description. Includes installation, usage, API docs, contributing
+  sections.
+category: developer-tools
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - project_description
+  properties:
+    tech_stack:
+      type: string
+    project_name:
+      type: string
+    project_description:
+      type: string
+output_schema:
+  type: object
+  example:
+    markdown: >
+      # Automated Capability Testing Project
+
+
+      ## Overview
+
+
+      This project is designed to test and validate automated capabilities through comprehensive testing frameworks and
+      protocols. It serves as a foundation for capability assessment and quality assurance in automated systems.
+
+
+      ## Features
+
+
+      - Automated test execution and validation
+
+      - Comprehensive capability assessment
+
+      - Detailed reporting and metrics
+
+      - Modular and extensible architecture
+
+      - CI/CD integration support
+
+
+      ## Installation
+
+
+      ### Prerequisites
+
+
+      - Python 3.8 or higher
+
+      - pip package manager
+
+      - Git
+
+
+      ### Setup Instructions
+
+
+      1. Clone the repository:
+
+      ```bash
+
+      git clone https://github.com/yourusername/automated-capability-testing.git
+
+      cd automated-capability-testing
+
+      ```
+
+
+      2. Create a virtual environment:
+
+      ```bash
+
+      python -m venv venv
+
+      source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+      ```
+
+
+      3. Install dependencies:
+
+      ```bash
+
+      pip install -r requirements.txt
+
+      ```
+
+
+      ## Usage
+
+
+      ### Basic Usage
+
+
+      ```bash
+
+      python main.py --test all
+
+      ```
+
+
+      ### Running Specific Tests
+
+
+      ```bash
+
+      python main.py --test unit
+
+      python main.py --test integration
+
+      python main.py --test capability
+
+      ```
+
+
+      ### Configuration
+
+
+      Edit `config.yaml` to customize test parameters:
+
+
+      ```yaml
+
+      test_mode: automated
+
+      timeout: 300
+
+      verbose: true
+
+      report_format: json
+
+      ```
+
+
+      ### Examples
+
+
+      ```bash
+
+      # Run all tests with verbose output
+
+      python main.py --test all --verbose
+
+
+      # Generate HTML report
+
+      python main.py --test all --report html
+
+
+      # Run with custom configuration
+
+      python main.py --config custom_config.yaml
+
+      ```
+
+
+      ## API Documentation
+
+
+      ### Core Functions
+
+
+      #### `run_capability_test(test_name, timeout=300)`
+
+
+      Executes a capability test with specified parameters.
+
+
+      **Parameters:**
+
+      - `test_name` (str): Name of the test to execute
+
+      - `timeout` (int): Maximum execution time in seconds
+
+
+      **Returns:**
+
+      - `TestResult`: Object containing test results and metrics
+
+
+      **Example:**
+
+      ```python
+
+      from capability_tester import run_capability_test
+
+
+      result = run_capability_test('authentication', timeout=60)
+
+      print(result.status)
+
+      print(result.metrics)
+
+      ```
+
+
+      #### `TestRunner` Class
+
+
+      ```python
+
+      from capability_tester import TestRunner
+
+
+      runner = TestRunner(config_path='config.yaml')
+
+      results = runner.run_all_tests()
+
+      runner.generate_report(format='json')
+
+      ```
+
+
+      ### Response Format
+
+
+      ```json
+
+      {
+        "test_name": "string",
+        "status": "PASSED|FAILED|SKIPPED",
+        "duration": "number (seconds)",
+        "metrics": {
+          "execution_time": "number",
+          "memory_usage": "number",
+          "success_rate": "number"
+        },
+        "details": "string"
+      }
+
+      ```
+
+
+      ## Contributing
+
+
+      We welcome contributions to this project! Please follow the guidelines below.
+
+
+      ### Getting Started
+
+
+      1. Fork the repository
+
+      2. Create a feature branch:
+
+      ```bash
+
+      git checkout -b feature/your-feature-name
+
+      ```
+
+
+      3. Make your changes and commit:
+
+      ```bash
+
+      git commit -m 'Add your feature description'
+
+      ```
+
+
+      4. Push to the branch:
+
+      ```bash
+
+      git push origin feature/your-feature-name
+
+      ```
+
+
+      5. Open a Pull Request
+
+
+      ### Code Standards
+
+
+      - Follow PEP 8 style guidelines
+
+      - Write unit tests for new features
+
+      - Maintain minimum 80% code coverage
+
+      - Update documentation accordingly
+
+
+      ### Testing Requirements
+
+
+      ```bash
+
+      # Run tests
+
+      pytest tests/ -v
+
+
+      # Check code coverage
+
+      pytest tests/ --cov=src
+
+
+      # Lint code
+
+      pylint src/
+
+      ```
+
+
+      ### Pull Request Process
+
+
+      1. Update README.md with relevant changes
+
+      2. Ensure all tests pass
+
+      3. Add/update documentation
+
+      4. Request review from maintainers
+
+
+      ## License
+
+
+      This project is licensed under the MIT License - see the LICENSE file for details.
+
+
+      ## Support
+
+
+      For issues and questions, please open an issue on the GitHub repository.
+
+
+      ## Authors
+
+
+      - Project Team
+
+
+      ## Changelog
+
+
+      ### Version 1.0.0
+
+      - Initial release
+
+      - Core testing framework
+
+      - Basic capability assessment
+
+      - Report generation
+    sections:
+      - Overview
+      - Features
+      - Installation
+      - Usage
+      - API Documentation
+      - Contributing
+      - License
+      - Support
+      - Authors
+      - Changelog
+    has_usage: true
+    has_api_docs: true
+    badges_suggested:
+      - "[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)"
+      - "[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)"
+      - "[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com)"
+      - "[![Code Coverage](https://img.shields.io/badge/coverage-80%25-brightgreen.svg)](https://codecov.io)"
+      - "[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)"
+    has_contributing: true
+    has_installation: true
+  properties:
+    markdown:
+      type: string
+    sections:
+      type: array
+    has_usage:
+      type: boolean
+    has_installation:
+      type: boolean
+data_source: Claude API (README generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      project_description: This is a test input for automated capability testing.
+    expected_fields:
+      - field: markdown
+        operator: not_null
+        reliability: guaranteed
+      - field: markdown
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: sections
+        operator: not_null
+        reliability: guaranteed
+      - field: sections
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: has_usage
+        operator: not_null
+        reliability: guaranteed
+      - field: has_usage
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: has_installation
+        operator: not_null
+        reliability: guaranteed
+      - field: has_installation
+        operator: type
+        reliability: guaranteed
+        value: boolean
+  health_check_input:
+    project_description: test
+output_field_reliability:
+  markdown: guaranteed
+  sections: guaranteed
+  has_usage: guaranteed
+  has_installation: guaranteed
+limitations:
+  - title: AI-generated README installation steps and configuration details may not match your actual setup process
+    text: >-
+      AI-generated README from project context — installation steps and configuration details may not reflect your
+      actual setup process
+    category: accuracy
+    severity: info
+    workaround: Verify all command examples and installation steps in a clean environment before publishing

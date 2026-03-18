@@ -1,0 +1,110 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: port-check
+name: Port Check
+description: >-
+  Check if TCP ports are open on a host. Scans up to 20 ports with configurable timeout. Returns open/closed status with
+  latency.
+category: monitoring
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - host
+  properties:
+    host:
+      type: string
+    ports:
+      description: Array of port numbers or comma-separated string
+    timeout_ms:
+      type: integer
+output_schema:
+  type: object
+  example:
+    host: google.com
+    open_count: 1
+    open_ports:
+      - open: true
+        port: 443
+        service: HTTPS
+        latency_ms: 1
+    closed_count: 0
+    closed_ports: []
+    ports_scanned: 1
+    scan_timeout_ms: 3000
+  properties:
+    host:
+      type: string
+    open_count:
+      type: integer
+    open_ports:
+      type: array
+    closed_count:
+      type: integer
+    closed_ports:
+      type: array
+data_source: TCP connection probe (Node.js net.Socket)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      host: google.com
+      ports: 443
+    expected_fields:
+      - field: host
+        operator: not_null
+        reliability: guaranteed
+      - field: host
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: open_count
+        operator: not_null
+        reliability: guaranteed
+      - field: open_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: open_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: open_ports
+        operator: not_null
+        reliability: guaranteed
+      - field: open_ports
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: closed_count
+        operator: not_null
+        reliability: guaranteed
+      - field: closed_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: closed_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    host: example.com
+    ports: 80
+output_field_reliability:
+  host: guaranteed
+  open_count: guaranteed
+  open_ports: guaranteed
+  closed_count: guaranteed
+  closed_ports: guaranteed
+limitations:
+  - title: TCP connection test only — firewalls may block probes from Strale's IP range while allowing other traffic
+    text: >-
+      TCP connection test only — firewalls may block probes from Strale's IP range while allowing traffic from other
+      sources
+    category: coverage
+    severity: info
+    workaround: If a port shows as closed, verify from your own network before concluding the service is down

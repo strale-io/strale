@@ -1,0 +1,90 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: gdpr-website-check
+name: GDPR Website Check
+description: >-
+  Scan a website for GDPR compliance indicators: cookie consent, privacy policy, tracking scripts, security headers.
+  Returns score A-F.
+category: compliance
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+output_schema:
+  type: object
+  example:
+    url: https://www.google.com/
+    grade: D
+    findings:
+      - No cookie consent mechanism detected
+      - No privacy policy link found
+      - Missing HSTS header
+      - Cookies set without SameSite attribute
+    gdpr_score: 30
+    uses_https: true
+    cookie_issues:
+      - Cookies set without SameSite attribute
+    tracker_count: 0
+    security_headers:
+      csp: false
+      hsts: false
+    tracking_scripts:
+      hotjar: false
+      segment: false
+      mixpanel: false
+      tiktok_pixel: false
+      facebook_pixel: false
+      google_analytics: false
+      linkedin_insight: false
+    has_cookie_policy: false
+    has_cookie_consent: false
+    has_privacy_policy: false
+    has_terms_of_service: false
+  properties:
+    grade:
+      type: string
+    gdpr_score:
+      type: integer
+    tracking_scripts:
+      type: object
+    has_cookie_consent:
+      type: boolean
+    has_privacy_policy:
+      type: boolean
+data_source: HTTP fetch + automated compliance pattern scanning
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://google.com
+    expected_fields:
+      - field: gdpr_score
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    url: https://strale.dev
+output_field_reliability:
+  grade: guaranteed
+  gdpr_score: guaranteed
+  tracking_scripts: guaranteed
+  has_cookie_consent: guaranteed
+  has_privacy_policy: guaranteed
+limitations:
+  - title: Automated scan checks for common GDPR indicators but does not constitute a legal compliance audit
+    text: Automated scan checks for common compliance indicators — does not constitute a legal compliance audit
+    category: accuracy
+    severity: info
+    workaround: Use the flagged items as a checklist for your DPO or legal team to prioritize their manual review
+  - title: Checks only visible website elements — cannot assess internal data processing practices
+    text: Checks visible elements only — cannot assess internal data processing practices
+    category: coverage
+    severity: info
+    workaround: Combine with a manual review of the company's data processing agreements and internal privacy impact assessments

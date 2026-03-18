@@ -1,0 +1,99 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: social-post-generate
+name: Social Post Generate
+description: >-
+  Generate platform-optimized social media posts. Supports Twitter, LinkedIn, Instagram. Returns post text, hashtags,
+  thread version for Twitter.
+category: content-writing
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    url:
+      type: string
+    tone:
+      type: string
+    content:
+      type: string
+    platform:
+      type: string
+    hashtag_count:
+      type: integer
+output_schema:
+  type: object
+  example:
+    hashtags:
+      - "#QualityAssurance"
+      - "#SoftwareTesting"
+      - "#DevOps"
+    platform: twitter
+    post_text: >-
+      Testing is essential to delivering quality software. Our commitment to rigorous testing ensures reliability,
+      security, and optimal performance for our users.
+    thread_version: null
+    character_count: 279
+    engagement_hooks:
+      - Resonates with developers and QA professionals
+      - Demonstrates commitment to quality standards
+      - Relevant to current industry best practices
+  properties:
+    hashtags:
+      type: array
+    post_text:
+      type: string
+    thread_version:
+      type: array
+    character_count:
+      type: integer
+data_source: Claude API (social media post generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      content: artificial intelligence trends 2026
+      platform: twitter
+    expected_fields:
+      - field: hashtags
+        operator: not_null
+        reliability: guaranteed
+      - field: hashtags
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: post_text
+        operator: not_null
+        reliability: guaranteed
+      - field: post_text
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: character_count
+        operator: not_null
+        reliability: guaranteed
+      - field: character_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: character_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    url: https://example.com
+    content: test
+output_field_reliability:
+  hashtags: guaranteed
+  post_text: guaranteed
+  thread_version: guaranteed
+  character_count: guaranteed
+limitations:
+  - title: Generated posts follow platform conventions but may not comply with platform-specific advertising rules
+    text: Generated posts follow platform conventions but cannot verify compliance with platform-specific advertising rules
+    category: accuracy
+    severity: info
+    workaround: Review generated content against the target platform's advertising and content policies before publishing

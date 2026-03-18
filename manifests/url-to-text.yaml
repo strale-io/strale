@@ -1,0 +1,90 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: url-to-text
+name: URL to Text
+description: >-
+  Lightweight text extraction from URL. No JS rendering — just HTTP GET + HTML parse. Fast and cheap for most content
+  sites.
+category: web-scraping
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: URL to extract text from
+output_schema:
+  type: object
+  example:
+    url: https://strale.dev
+    text: Strale — Ship AI agents faster
+    title: Strale — Ship AI agents faster
+    language: en
+    meta_description: >-
+      Your agent calls strale.do() and gets company data, compliance checks, financial validation — structured JSON with
+      audit trails. 233+ capabilities, one API key.
+  properties:
+    text:
+      type: string
+    title:
+      type: string
+    language:
+      type: string
+    meta_description:
+      type: string
+data_source: HTTP fetch + HTML-to-plaintext conversion
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://strale.dev
+    expected_fields:
+      - field: text
+        operator: not_null
+        reliability: guaranteed
+      - field: text
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: title
+        operator: not_null
+        reliability: guaranteed
+      - field: title
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: language
+        operator: not_null
+        reliability: guaranteed
+      - field: language
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: meta_description
+        operator: not_null
+        reliability: guaranteed
+      - field: meta_description
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    url: https://strale.dev
+output_field_reliability:
+  text: guaranteed
+  title: guaranteed
+  language: guaranteed
+  meta_description: guaranteed
+limitations:
+  - title: Extracted text includes navigation, footers, and other boilerplate content alongside the main page content
+    text: >-
+      Extracts text from the rendered page — navigation, footers, and boilerplate content are included alongside main
+      content
+    category: coverage
+    severity: info
+    workaround: Use url-to-markdown for cleaner output that better separates main content from page chrome

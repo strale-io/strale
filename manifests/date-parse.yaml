@@ -1,0 +1,95 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: date-parse
+name: Date Parse
+description: >-
+  Parse ambiguous date strings into ISO 8601. Handles '3/4/25', 'March 4th', '4. mars 2025', '2025-W14'. Detects
+  ambiguity.
+category: data-processing
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - date_string
+  properties:
+    date_string:
+      type: string
+      description: Date string to parse
+    preferred_format:
+      type: string
+      description: DMY, MDY, or YMD (for ambiguous dates)
+output_schema:
+  type: object
+  example:
+    error: Could not parse date string.
+    input: test
+    parsed: false
+  properties:
+    day:
+      type: integer
+    year:
+      type: integer
+    month:
+      type: integer
+    iso_date:
+      type: string
+    day_of_week:
+      type: string
+    is_ambiguous:
+      type: boolean
+data_source: Algorithmic (date/time format normalization, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      date_string: "2025-03-04"
+    expected_fields:
+      - field: day
+        operator: not_null
+        reliability: guaranteed
+      - field: day
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: year
+        operator: not_null
+        reliability: guaranteed
+      - field: year
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: month
+        operator: not_null
+        reliability: guaranteed
+      - field: month
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: iso_date
+        operator: not_null
+        reliability: guaranteed
+      - field: iso_date
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    date_string: "2025-03-04"
+output_field_reliability:
+  day: guaranteed
+  year: guaranteed
+  month: guaranteed
+  iso_date: guaranteed
+  day_of_week: guaranteed
+  is_ambiguous: guaranteed
+limitations:
+  - title: Ambiguous date formats like 01/02/03 may misinterpret month/day order without an explicit locale hint
+    text: >-
+      Ambiguous date formats (e.g., 01/02/03) are resolved using locale hints — may misinterpret month/day order without
+      explicit format
+    category: accuracy
+    severity: info
+    workaround: Pass the expected date format or locale in the input to eliminate ambiguity for MM/DD vs DD/MM formats

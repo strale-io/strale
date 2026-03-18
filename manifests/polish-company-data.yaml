@@ -1,0 +1,89 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: polish-company-data
+name: Polish Company Data
+description: >-
+  Look up Polish company data from KRS (Krajowy Rejestr Sądowy). Accepts KRS number (10 digits) or fuzzy company name.
+  Returns company name, legal form, address, registration date.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - krs_number
+  properties:
+    krs_number:
+      type: string
+      description: KRS number (10 digits) or company name
+output_schema:
+  type: object
+  example:
+    status: active
+    address: null
+    krs_number: "0000033945"
+    legal_form: SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ
+    company_name: PRZEDSIĘBIORSTWO PRODUKCYJNE I HANDLOWO-USŁUGOWE "MARTOM" SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ
+    share_capital: 90000,00 PLN
+    registration_date: null
+  properties:
+    status:
+      type: string
+    address:
+      type: string
+    krs_number:
+      type: string
+    legal_form:
+      type: string
+    company_name:
+      type: string
+    registration_date:
+      type: string
+data_source: KRS / Krajowy Rejestr Sądowy (Polish National Court Register)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      krs_number: "0000033945"
+    expected_fields:
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: krs_number
+        operator: not_null
+        reliability: guaranteed
+      - field: krs_number
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: company_name
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    krs_number: "0000028860"
+output_field_reliability:
+  status: guaranteed
+  address: guaranteed
+  krs_number: guaranteed
+  legal_form: guaranteed
+  company_name: guaranteed
+  registration_date: guaranteed
+limitations:
+  - title: Covers KRS-registered entities only — Polish sole traders registered in CEIDG are not included
+    text: >-
+      Data from KRS — coverage limited to entities registered in the National Court Register; sole traders (CEIDG) not
+      included
+    category: coverage
+    severity: info
+    workaround: For sole traders, query the CEIDG register directly at prod.ceidg.gov.pl using the NIP or PESEL

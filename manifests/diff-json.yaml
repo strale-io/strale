@@ -1,0 +1,108 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: diff-json
+name: Diff JSON
+description: >-
+  Compare two JSON objects and return structured diff. Shows added, removed, and changed fields with paths and values.
+  Algorithmic.
+category: validation
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - before
+    - after
+  properties:
+    after:
+      description: Modified JSON
+    before:
+      description: Original JSON
+output_schema:
+  type: object
+  example:
+    added:
+      - path: /email
+        value: alice@example.com
+    changed:
+      - path: /version
+        new_value: 2
+        old_value: 1
+    removed: []
+    identical: false
+    added_count: 1
+    changed_count: 1
+    removed_count: 0
+  properties:
+    added:
+      type: array
+    changed:
+      type: array
+    removed:
+      type: array
+    identical:
+      type: boolean
+data_source: Algorithmic (JSON diff comparison, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      after:
+        name: Alice
+        email: alice@example.com
+        version: 2
+      before:
+        name: Alice
+        version: 1
+    expected_fields:
+      - field: added
+        operator: not_null
+        reliability: guaranteed
+      - field: added
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: changed
+        operator: not_null
+        reliability: guaranteed
+      - field: changed
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: removed
+        operator: not_null
+        reliability: guaranteed
+      - field: removed
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: identical
+        operator: not_null
+        reliability: guaranteed
+      - field: identical
+        operator: type
+        reliability: guaranteed
+        value: boolean
+  health_check_input:
+    after:
+      name: Alice
+      version: 2
+    before:
+      name: Alice
+      version: 1
+output_field_reliability:
+  added: guaranteed
+  changed: guaranteed
+  removed: guaranteed
+  identical: guaranteed
+limitations:
+  - title: Semantically equivalent values in different formats like '1.0' vs 1 are reported as differences in the diff
+    text: >-
+      Computes structural diff — semantically equivalent values in different formats (e.g., '1.0' vs 1) are reported as
+      differences
+    category: coverage
+    severity: info
+    workaround: Normalize number and boolean types before diffing if your data has mixed string/native representations

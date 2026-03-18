@@ -1,0 +1,113 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: redirect-trace
+name: Redirect Trace
+description: Trace the full HTTP redirect chain for a URL. Shows each hop with status code, location header, server, and latency.
+category: monitoring
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+    max_redirects:
+      type: integer
+output_schema:
+  type: object
+  example:
+    chain:
+      - url: https://httpbin.org/redirect/2
+        step: 1
+        server: gunicorn/19.9.0
+        location: /relative-redirect/1
+        latency_ms: 3
+        status_code: 302
+        status_text: FOUND
+      - url: https://httpbin.org/relative-redirect/1
+        step: 2
+        server: gunicorn/19.9.0
+        location: /get
+        latency_ms: 4
+        status_code: 302
+        status_text: FOUND
+      - url: https://httpbin.org/get
+        step: 3
+        server: gunicorn/19.9.0
+        location: null
+        latency_ms: 5
+        status_code: 200
+        status_text: OK
+    issues: []
+    final_url: https://httpbin.org/get
+    uses_https: true
+    same_domain: true
+    original_url: https://httpbin.org/redirect/2
+    redirect_count: 2
+    total_latency_ms: 12
+    final_status_code: 200
+  properties:
+    chain:
+      type: array
+    issues:
+      type: array
+    final_url:
+      type: string
+    original_url:
+      type: string
+    redirect_count:
+      type: integer
+data_source: HTTP fetch (manual redirect following, full chain capture)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://httpbin.org/redirect/2
+    expected_fields:
+      - field: chain
+        operator: not_null
+        reliability: guaranteed
+      - field: chain
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: issues
+        operator: not_null
+        reliability: guaranteed
+      - field: issues
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: final_url
+        operator: not_null
+        reliability: guaranteed
+      - field: final_url
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: original_url
+        operator: not_null
+        reliability: guaranteed
+      - field: original_url
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    url: https://httpbin.org/redirect/1
+output_field_reliability:
+  chain: guaranteed
+  issues: guaranteed
+  final_url: guaranteed
+  original_url: guaranteed
+  redirect_count: guaranteed
+limitations:
+  - title: Follows HTTP 301/302/307/308 redirects only — JavaScript-based redirects and meta refresh tags are not traced
+    text: Follows HTTP redirects (301, 302, 307, 308) — JavaScript-based redirects and meta refresh tags are not traced
+    category: coverage
+    severity: info
+    workaround: For JavaScript redirects, use screenshot-url or url-to-markdown to see the final rendered destination

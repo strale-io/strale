@@ -1,0 +1,84 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: uptime-check
+name: Uptime Check
+description: Check if a URL is up or down. Returns status code, latency, redirect info, TLS status, and server headers.
+category: monitoring
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+    method:
+      type: string
+    timeout_ms:
+      type: integer
+output_schema:
+  type: object
+  example:
+    tls: true
+    url: https://example.com
+    error: fetch failed
+    status: down
+    checked_at: "2026-03-09T20:03:13.819Z"
+    latency_ms: 22
+    status_code: null
+  properties:
+    status:
+      type: string
+    latency_ms:
+      type: integer
+    redirected:
+      type: boolean
+    status_code:
+      type: integer
+data_source: HTTP fetch (availability and response time measurement)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://strale.dev
+    expected_fields:
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: latency_ms
+        operator: not_null
+        reliability: guaranteed
+      - field: latency_ms
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: url
+        operator: not_null
+        reliability: common
+      - field: url
+        operator: type
+        reliability: common
+        value: string
+  health_check_input:
+    url: https://strale.dev
+output_field_reliability:
+  status: guaranteed
+  latency_ms: guaranteed
+  redirected: guaranteed
+  status_code: guaranteed
+limitations:
+  - title: Single point-in-time check from one server location — does not represent historical or multi-region uptime
+    text: >-
+      Single point-in-time check from one server location — does not represent historical uptime or multi-region
+      availability
+    category: accuracy
+    severity: info
+    workaround: Schedule periodic checks and compute uptime percentage over time rather than relying on a single probe

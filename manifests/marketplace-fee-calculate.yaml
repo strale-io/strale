@@ -1,0 +1,112 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: marketplace-fee-calculate
+name: Marketplace Fee Calculate
+description: Calculate seller fees for Amazon, eBay, Etsy, Shopify. Returns total fees, net revenue, fee breakdown.
+category: utility
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - marketplace
+    - sale_price
+  properties:
+    category:
+      type: string
+    sale_price:
+      type: number
+    marketplace:
+      type: string
+      description: amazon/ebay/etsy/shopify
+output_schema:
+  type: object
+  example:
+    fees:
+      other_fees: null
+      closing_fee: null
+      listing_fee: null
+      referral_fee: 8
+      transaction_fee: null
+      payment_processing_fee: null
+    category: electronics
+    currency: USD
+    sale_price: 100
+    total_fees: 8
+    fee_percent: 8
+    marketplace: amazon
+    net_revenue: 92
+    breakdown_notes:
+      - "Referral fee: 8.0% of sale price"
+      - Professional seller plan ($39.99/month not included in per-item calculation)
+      - FBA fulfillment fees not included (varies by size/weight)
+  properties:
+    fees:
+      type: object
+    total_fees:
+      type: number
+    fee_percent:
+      type: number
+    net_revenue:
+      type: number
+data_source: "Algorithmic (marketplace fee structures: Amazon, eBay, Etsy, Shopify)"
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      category: electronics
+      sale_price: 100
+      marketplace: amazon
+    expected_fields:
+      - field: fees
+        operator: not_null
+        reliability: guaranteed
+      - field: fees
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: total_fees
+        operator: not_null
+        reliability: guaranteed
+      - field: total_fees
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_fees
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: fee_percent
+        operator: not_null
+        reliability: guaranteed
+      - field: fee_percent
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: net_revenue
+        operator: not_null
+        reliability: guaranteed
+      - field: net_revenue
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    category: electronics
+    sale_price: 100
+    marketplace: amazon
+output_field_reliability:
+  fees: guaranteed
+  total_fees: guaranteed
+  fee_percent: guaranteed
+  net_revenue: guaranteed
+limitations:
+  - title: Fee structures based on AI knowledge — marketplaces update fees periodically and actual fees vary by seller tier
+    text: >-
+      Fee structures based on AI knowledge — marketplaces update fees periodically and actual fees depend on seller tier
+      and category
+    category: freshness
+    severity: info
+    workaround: Verify calculated fees against the marketplace's current seller fee schedule before pricing decisions

@@ -1,0 +1,106 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: skill-gap-analyze
+name: Skill Gap Analyze
+description: >-
+  Compare required skills against candidate skills with fuzzy matching. Returns matched, missing, extra, and match
+  score.
+category: data-extraction
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - required_skills
+    - candidate_skills
+  properties:
+    required_skills:
+      type: array
+    candidate_skills:
+      type: array
+output_schema:
+  type: object
+  example:
+    extra: []
+    matched:
+      - exact: true
+        found: test_item
+        required: test_item
+    missing: []
+    summary: All required skills are matched by the candidate.
+    fuzzy_matches: []
+    total_required: 1
+    total_candidate: 1
+    match_score_percent: 100
+  properties:
+    extra:
+      type: array
+    matched:
+      type: array
+    missing:
+      type: array
+    match_score_percent:
+      type: number
+data_source: Algorithmic (skill comparison analysis, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      required_skills:
+        - test_item
+      candidate_skills:
+        - test_item
+    expected_fields:
+      - field: extra
+        operator: not_null
+        reliability: guaranteed
+      - field: extra
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: matched
+        operator: not_null
+        reliability: guaranteed
+      - field: matched
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: missing
+        operator: not_null
+        reliability: guaranteed
+      - field: missing
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: match_score_percent
+        operator: not_null
+        reliability: guaranteed
+      - field: match_score_percent
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: match_score_percent
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    required_skills:
+      - test
+    candidate_skills:
+      - test
+output_field_reliability:
+  extra: guaranteed
+  matched: guaranteed
+  missing: guaranteed
+  match_score_percent: guaranteed
+limitations:
+  - title: Skill gap analysis is based on descriptions only — actual proficiency and certifications are not measured
+    text: >-
+      Gap analysis based on AI assessment of skill descriptions — does not measure actual proficiency or certification
+      status
+    category: accuracy
+    severity: info
+    workaround: Use as a starting point for development planning and validate critical gaps with skills assessments or interviews

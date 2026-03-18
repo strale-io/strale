@@ -1,0 +1,116 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: accessibility-audit
+name: Accessibility Audit
+description: >-
+  WCAG 2.1 accessibility audit of a URL. Checks color contrast, alt text, form labels, ARIA roles, heading hierarchy,
+  link text, language. Mostly deterministic.
+category: validation
+price_cents: 30
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: URL to audit
+output_schema:
+  type: object
+  example:
+    url: https://example.com
+    score: 95
+    passes:
+      - Heading hierarchy is sequential
+      - All links have descriptive text
+      - Page language is declared
+      - Viewport meta tag present
+    summary:
+      low: 1
+      medium: 0
+      critical: 0
+      passed_checks: 4
+    violations:
+      - fix: Use semantic HTML5 elements (nav, main, header, footer) or ARIA landmark roles
+        rule: WCAG 1.3.1 - Landmark Regions
+        element: page structure
+        severity: low
+        description: No landmark regions found (nav, main, header, footer elements or ARIA roles)
+    violation_count: 1
+    manual_review_needed:
+      - Keyboard navigation and focus management
+      - Screen reader compatibility
+      - Color contrast for all text (not just inline styles)
+      - Dynamic content accessibility
+      - Video captions and audio descriptions
+  properties:
+    score:
+      type: integer
+    passes:
+      type: array
+    violations:
+      type: array
+    manual_review_needed:
+      type: array
+data_source: HTTP fetch + WCAG rule engine (automated accessibility testing)
+data_source_type: scrape
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://example.com
+    expected_fields:
+      - field: score
+        operator: not_null
+        reliability: guaranteed
+      - field: score
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: score
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: passes
+        operator: not_null
+        reliability: guaranteed
+      - field: passes
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: violations
+        operator: not_null
+        reliability: guaranteed
+      - field: violations
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: manual_review_needed
+        operator: not_null
+        reliability: guaranteed
+      - field: manual_review_needed
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    url: https://example.com
+output_field_reliability:
+  score: guaranteed
+  passes: guaranteed
+  violations: guaranteed
+  manual_review_needed: guaranteed
+limitations:
+  - title: >-
+      Automated HTML checks cover common WCAG criteria only — cognitive accessibility and screen reader behavior require
+      manual testing
+    text: >-
+      Automated HTML analysis checks common WCAG criteria — cannot assess cognitive accessibility, screen reader
+      behavior, or keyboard-only navigation
+    category: coverage
+    severity: info
+    workaround: >-
+      Use as a first pass and follow up with manual testing using a screen reader (NVDA, VoiceOver) for full WCAG
+      compliance

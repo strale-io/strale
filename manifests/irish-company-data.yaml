@@ -1,0 +1,74 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: irish-company-data
+name: Irish Company Data
+description: >-
+  Look up Irish company data from CRO (Companies Registration Office). Accepts CRO number (5-6 digits) or fuzzy company
+  name.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - cro_number
+  properties:
+    cro_number:
+      type: string
+      description: CRO number (5-6 digits) or company name
+output_schema:
+  type: object
+  example:
+    error: >-
+      Unable to access Irish company registry. Page blocked by Cloudflare security service. No company data available to
+      extract.
+    status: unknown
+    address: null
+    industry: null
+    directors: null
+    company_name: null
+    business_type: null
+    registration_date: null
+    registration_number: null
+  properties:
+    status:
+      type: string
+    address:
+      type: string
+    company_name:
+      type: string
+    business_type:
+      type: string
+    registration_number:
+      type: string
+data_source: CRO / Companies Registration Office (Ireland)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      cro_number: "461461"
+    expected_fields:
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    cro_number: 461onal
+output_field_reliability:
+  status: guaranteed
+  address: guaranteed
+  company_name: guaranteed
+  business_type: guaranteed
+  registration_number: guaranteed
+limitations:
+  - title: Extracted from Irish CRO via Browserless — some company filings require a paid CRO search for full documents
+    text: Extracted from CRO via Browserless — some company filings may require a paid CRO search for full documents
+    category: coverage
+    severity: info
+    workaround: Use the company number from the response to access full filings at core.cro.ie

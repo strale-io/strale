@@ -1,0 +1,85 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: whois-lookup
+name: WHOIS Lookup
+description: >-
+  Perform a WHOIS lookup for a domain. Returns registrar, creation date, expiry date, name servers, registrant info, and
+  raw WHOIS data.
+category: web-intelligence
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+      description: Domain name (e.g. example.com)
+output_schema:
+  type: object
+  example:
+    domain: google.com
+    created: "1997-09-15T04:00:00Z"
+    expires: "2028-09-14T04:00:00Z"
+    updated: "2019-09-09T15:39:04Z"
+    statuses:
+      - clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited
+      - clientTransferProhibited https://icann.org/epp#clientTransferProhibited
+      - clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited
+      - serverDeleteProhibited https://icann.org/epp#serverDeleteProhibited
+      - serverTransferProhibited https://icann.org/epp#serverTransferProhibited
+      - serverUpdateProhibited https://icann.org/epp#serverUpdateProhibited
+      - //icann.org/epp
+    raw_whois: "   Domain Name: GOOGLE.COM\r\n   Registry Domain ID: 2138514_DOMAIN_COM-VRSN\r\n   Registrar WHOIS Server: whois.markmonitor.com\r\n   Registrar URL: http://www.markmonitor.com\r\n   Updated Date: 2019-09-09T15:39:04Z\r\n   Creation Date: 1997-09-15T04:00:00Z\r\n   Registry Expiry Date: 2028-09-14T04:00:00Z\r\n   Registrar: MarkMonitor Inc.\r\n   Registrar IANA ID: 292\r\n   Registrar Abuse Contact Email: abusecomplaints@markmonitor.com\r\n   Registrar Abuse Contact Phone: +1.2086851750\r\n   Domain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited\r\n   Domain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited\r\n   Domain Status: clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited\r\n   Domain Status: serverDeleteProhibited https://icann.org/epp#serverDeleteProhibited\r\n   Domain Status: serverTransferProhibited https://icann.org/epp#serverTransferProhibited\r\n   Domain Status: serverUpdateProhibited https://icann.org/epp#serverUpdateProhibited\r\n   Name Server: NS1.GOOGLE.COM\r\n   Name Server: NS2.GOOGLE.COM\r\n   Name Server: NS3.GOOGLE.COM\r\n   Name Server: NS4.GOOGLE.COM\r\n   DNSSEC: unsigned\r\n   URL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/\r\n>>> Last update of whois database: 2026-03-06T20:03:16Z <<<\r\n\r\nFor more information on Whois status codes, please visit https://icann.org/epp\r\n\r\nNOTICE: The expiration date displayed in this record is the date the\r\nregistrar's sponsorship of the domain name registration in the registry is\r\ncurrently set to expire. This date does not necessarily reflect the expiration\r\ndate of the domain name registrant's agreement with the sponsoring\r\nregistrar.  Users may consult the sponsoring registrar's Whois database to\r\nview the registrar's reported date of expiration for this registration.\r\n\r\nTERMS OF USE: You are not authorized to access or query our Whois\r\ndatabase through the use of electronic processes that are high-volume and\r\nautomated except as reasonably necessary to register domain names or\r\nmodify existing registrations; the Data in VeriSign Global Registry\r\nServices' (\"VeriSign\") Whois database is provided by VeriSign for\r\ninformation purposes only, and to assist persons in obtaining information\r\nabout or related to a domain name registration record. VeriSign does not\r\nguarantee its accuracy. By submitting a Whois query, you agree to abide\r\nby the following terms of use: You agree that you may use this Data only\r\nfor lawful purposes and that under no circumstances will you use this Data\r\nto: (1) allow, enable, or otherwise support the transmission of mass\r\nunsolicited, commercial advertising or solicitations via e-mail, telephone,\r\nor facsimile; or (2) enable high volume, automated, electronic processes\r\nthat apply to VeriSign (or its computer systems). The compilation,\r\nrepackaging, dissemination or other use of this Data is expressly\r\nprohibited without the prior written consent of VeriSign. You agree not to\r\nuse electronic processes"
+    registrar: whois.markmonitor.com
+    name_servers:
+      - ns1.google.com
+      - ns2.google.com
+      - ns3.google.com
+      - ns4.google.com
+  properties:
+    domain:
+      type: string
+    created:
+      type: string
+    expires:
+      type: string
+    registrar:
+      type: string
+    name_servers:
+      type: array
+data_source: WHOIS protocol (ICANN-accredited registrar databases)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain: google.com
+    expected_fields:
+      - field: registrar
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    domain: example.com
+output_field_reliability:
+  domain: guaranteed
+  created: guaranteed
+  expires: guaranteed
+  registrar: guaranteed
+  name_servers: guaranteed
+limitations:
+  - title: Some registrars rate-limit WHOIS queries, causing slower responses during bulk lookups
+    text: Some registrars rate-limit WHOIS queries — bulk lookups may see slower response times
+    category: availability
+    severity: info
+    workaround: Batch lookups with 1-2 second delays between requests, or use the RDAP protocol endpoint when available
+  - title: EU domain registrations are commonly GDPR-redacted, showing limited registrant information
+    text: GDPR-redacted registrations (common for EU domains) show limited registrant information
+    category: coverage
+    severity: warning
+    workaround: >-
+      Use the abuse contact email from the WHOIS response to request registrant details through the registrar's
+      disclosure process

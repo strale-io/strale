@@ -1,0 +1,214 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: blog-post-outline
+name: Blog Post Outline
+description: >-
+  Generate a structured blog post outline. Returns title options, sections with subsections and key points, estimated
+  word count, SEO keywords. JSON, not prose.
+category: content-writing
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - topic
+  properties:
+    tone:
+      type: string
+    topic:
+      type: string
+    keywords:
+      type: array
+    target_audience:
+      type: string
+output_schema:
+  type: object
+  example:
+    tone: ""
+    topic: 🎯🔥💡
+    sections:
+      - heading: "Introduction: The Power Trio of Success"
+        key_points:
+          - Connection between goals, motivation, and innovation
+          - Real-world applications
+          - Expected outcomes
+        subsections:
+          - Why these three elements matter
+          - How they work together
+          - What you'll learn
+        estimated_words: 400
+      - heading: 🎯 Setting Goals That Actually Matter
+        key_points:
+          - Specific, measurable, achievable criteria
+          - Emotional connection to goals
+          - Milestone mapping
+          - Avoiding vague objectives
+        subsections:
+          - SMART goal framework
+          - Defining your why
+          - Breaking down big ambitions
+          - Common goal-setting mistakes
+        estimated_words: 600
+      - heading: 🔥 Fueling Your Passion and Maintaining Momentum
+        key_points:
+          - Intrinsic vs. extrinsic motivation
+          - Daily rituals for energy
+          - Managing setbacks
+          - Support networks and partnerships
+        subsections:
+          - Building genuine motivation
+          - Sustaining energy over time
+          - Overcoming burnout
+          - Creating accountability systems
+        estimated_words: 700
+      - heading: 💡 Fostering Innovative Thinking
+        key_points:
+          - Brainstorming methodologies
+          - Cross-disciplinary thinking
+          - Experimentation culture
+          - Curiosity-driven development
+        subsections:
+          - Creative problem-solving techniques
+          - Embracing unconventional approaches
+          - Learning from failures
+          - Building an innovative mindset
+        estimated_words: 650
+      - heading: "Integrating All Three: An Action Plan"
+        key_points:
+          - Practical integration steps
+          - Measurement metrics
+          - Adjustment protocols
+          - Progress tracking tools
+        subsections:
+          - Weekly planning template
+          - Monthly review process
+          - Quarterly evolution strategy
+          - Annual goal assessment
+        estimated_words: 550
+      - heading: "Case Studies: Real Success Stories"
+        key_points:
+          - How each element contributed
+          - Challenges overcome
+          - Lessons learned
+          - Replicable strategies
+        subsections:
+          - Entrepreneur breakthrough
+          - Career transformation
+          - Creative project success
+          - Team achievement example
+        estimated_words: 500
+      - heading: "Conclusion: Your Next Step"
+        key_points:
+          - Summary of core concepts
+          - Call to action
+          - Encouragement and inspiration
+        subsections:
+          - Key takeaways
+          - Implementation timeline
+          - Resources for continued growth
+        estimated_words: 300
+    hook_ideas:
+      - >-
+        Most people fail at their goals not because they lack ambition, but because they overlook one critical element
+        that separates achievers from dreamers.
+      - >-
+        What if the secret to extraordinary success wasn't working harder, but mastering the intersection of three
+        powerful forces?
+      - >-
+        You've set goals before. You've felt motivated before. But have you ever combined focus, passion, and bold
+        innovation into an unstoppable system?
+    seo_keywords:
+      - goal setting strategies
+      - motivation and passion
+      - innovative thinking
+      - personal development
+      - success mindset
+      - creative problem solving
+      - goal achievement
+      - productivity tips
+      - motivation techniques
+      - innovation skills
+    title_options:
+      - 🎯🔥💡 The Ultimate Guide to Goal Setting, Motivation, and Innovative Thinking
+      - "Master Your Goals: Combining Focus, Passion, and Creative Problem-Solving"
+      - "From Idea to Impact: How Ambition, Energy, and Innovation Transform Results"
+    target_audience: ""
+    meta_description: >-
+      Learn how to combine ambitious goal-setting, sustained motivation, and creative innovation to achieve breakthrough
+      results. Complete action plan included.
+    estimated_total_words: 3700
+  properties:
+    sections:
+      type: array
+    seo_keywords:
+      type: array
+    title_options:
+      type: array
+    estimated_total_words:
+      type: integer
+data_source: Claude API (content outline generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      topic: Getting started with TypeScript
+      keywords:
+        - typescript
+        - javascript
+        - types
+        - static typing
+    expected_fields:
+      - field: sections
+        operator: not_null
+        reliability: guaranteed
+      - field: sections
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: seo_keywords
+        operator: not_null
+        reliability: guaranteed
+      - field: seo_keywords
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: title_options
+        operator: not_null
+        reliability: guaranteed
+      - field: title_options
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: estimated_total_words
+        operator: not_null
+        reliability: guaranteed
+      - field: estimated_total_words
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: estimated_total_words
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    topic: Getting started with TypeScript
+    keywords:
+      - typescript
+      - javascript
+      - types
+output_field_reliability:
+  sections: guaranteed
+  seo_keywords: guaranteed
+  title_options: guaranteed
+  estimated_total_words: guaranteed
+limitations:
+  - title: AI-generated outlines follow general best practices and may not match your brand voice or audience
+    text: >-
+      AI-generated outline reflects general best practices — may not match your specific brand voice or audience
+      expectations
+    category: accuracy
+    severity: info
+    workaround: Provide target audience, tone, and key messaging points in the input for more tailored outlines

@@ -1,0 +1,116 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: contract-extract
+name: Contract Extract
+description: >-
+  Extract key terms from a contract/legal document. Returns parties, dates, obligations, payment terms, liability caps,
+  termination clauses. Not legal advice.
+category: document-extraction
+price_cents: 50
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+    base64:
+      type: string
+    pdf_url:
+      type: string
+output_schema:
+  type: object
+  example:
+    parties: []
+    summary: >-
+      Insufficient contract text provided. The document contains only a generic statement indicating parties agree to
+      terms without specifying the contract type, parties involved, or substantive terms and conditions.
+    disclaimer: AI-extracted summary. Not legal advice. Verify all terms against the original document.
+    document_type: null
+    governing_law: null
+    payment_terms:
+      amount: null
+      due_date: null
+      frequency: null
+    renewal_terms: null
+    effective_date: null
+    liability_caps: []
+    confidentiality: null
+    key_obligations: []
+    unusual_clauses: []
+    termination_date: null
+    termination_clauses: []
+  properties:
+    parties:
+      type: array
+    payment_terms:
+      type: object
+    effective_date:
+      type: string
+    key_obligations:
+      type: array
+    termination_clauses:
+      type: array
+data_source: Claude API (document analysis and clause extraction)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      text: |-
+        SERVICE AGREEMENT
+
+        This agreement is entered into between Acme Corp ("Client") and Tech Solutions AB ("Provider").
+
+        Term: 12 months from 2024-01-01 to 2024-12-31.
+        Payment: EUR 5,000 per month, due on the 1st of each month.
+        Termination: Either party may terminate with 30 days written notice.
+        Governing Law: Swedish law.
+
+        Signed: John Smith (Client), Anna Karlsson (Provider)
+    expected_fields:
+      - field: parties
+        operator: not_null
+        reliability: guaranteed
+      - field: parties
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: payment_terms
+        operator: not_null
+        reliability: guaranteed
+      - field: payment_terms
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: effective_date
+        operator: not_null
+        reliability: guaranteed
+      - field: effective_date
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: key_obligations
+        operator: not_null
+        reliability: guaranteed
+      - field: key_obligations
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    text: "CONTRACT: Parties agree to terms."
+output_field_reliability:
+  parties: guaranteed
+  payment_terms: guaranteed
+  effective_date: guaranteed
+  key_obligations: guaranteed
+  termination_clauses: guaranteed
+limitations:
+  - title: AI extraction of contract terms does not replace qualified legal review of interpretation or enforceability
+    text: >-
+      AI extraction of contract terms — legal interpretation and enforceability assessment require qualified legal
+      review
+    category: accuracy
+    severity: warning
+    workaround: Use extracted terms for initial screening and route flagged clauses to legal counsel for review

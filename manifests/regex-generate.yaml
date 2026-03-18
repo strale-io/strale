@@ -1,0 +1,103 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: regex-generate
+name: Regex Generate
+description: >-
+  Describe what you want to match in natural language, get a tested regex back. Optionally provide test strings for
+  validation.
+category: validation
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - description
+  properties:
+    description:
+      type: string
+      description: What to match in natural language
+    test_strings:
+      type: array
+      description: Optional strings to test against
+output_schema:
+  type: object
+  example:
+    flags: g
+    regex: This is a test input for automated capability testing\.
+    explanation: >-
+      Matches the literal string 'This is a test input for automated capability testing.' - 'This is a test input for
+      automated capability testing' matches the exact phrase, and '\.' matches the literal period at the end. The 'g'
+      flag finds all occurrences.
+    test_results:
+      - input: This is a test input for automated capability testing.
+        match: This is a test input for automated capability testing.
+        matches: true
+      - input: This is a test input for automated capability testing
+        match: null
+        matches: false
+      - input: this is a test input for automated capability testing.
+        match: null
+        matches: false
+      - input: This is a test input for automated capability testing. This is a test input for automated capability testing.
+        match: This is a test input for automated capability testing.
+        matches: true
+  properties:
+    flags:
+      type: string
+    regex:
+      type: string
+    explanation:
+      type: string
+    test_results:
+      type: array
+data_source: Claude API (regex pattern generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      description: This is a test input for automated capability testing.
+    expected_fields:
+      - field: flags
+        operator: not_null
+        reliability: guaranteed
+      - field: flags
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: regex
+        operator: not_null
+        reliability: guaranteed
+      - field: regex
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: explanation
+        operator: not_null
+        reliability: guaranteed
+      - field: explanation
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: test_results
+        operator: not_null
+        reliability: guaranteed
+      - field: test_results
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    description: test
+output_field_reliability:
+  flags: guaranteed
+  regex: guaranteed
+  explanation: guaranteed
+  test_results: guaranteed
+limitations:
+  - title: AI-generated regex may need refinement for edge cases — always test against your full dataset before deploying
+    text: AI-generated regex — complex patterns with edge cases may need refinement and testing against your full dataset
+    category: accuracy
+    severity: info
+    workaround: Test the generated regex against both matching and non-matching examples before deploying in production

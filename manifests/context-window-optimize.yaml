@@ -1,0 +1,105 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: context-window-optimize
+name: Context Window Optimize
+description: >-
+  Rank and select document chunks by relevance to fit within a token budget. Returns selected/excluded chunks with
+  scores.
+category: developer-tools
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - documents
+    - query
+  properties:
+    query:
+      type: string
+    documents:
+      type: array
+      description: Array of {id, text}
+    max_tokens:
+      type: integer
+output_schema:
+  type: object
+  example:
+    query: SELECT * FROM users WHERE active = true LIMIT 10
+    excluded:
+      - reason: low relevance
+    selected: []
+    max_tokens: 4000
+    selected_count: 0
+    total_documents: 1
+    tokens_remaining: 4000
+    total_tokens_used: 0
+  properties:
+    excluded:
+      type: array
+    selected:
+      type: array
+    tokens_remaining:
+      type: integer
+    total_tokens_used:
+      type: integer
+data_source: Claude API (context window optimization)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      query: SELECT * FROM users WHERE active = true LIMIT 10
+      documents:
+        - test_item
+    expected_fields:
+      - field: excluded
+        operator: not_null
+        reliability: guaranteed
+      - field: excluded
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: selected
+        operator: not_null
+        reliability: guaranteed
+      - field: selected
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: tokens_remaining
+        operator: not_null
+        reliability: guaranteed
+      - field: tokens_remaining
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_tokens_used
+        operator: not_null
+        reliability: guaranteed
+      - field: total_tokens_used
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_tokens_used
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    query: test
+    documents:
+      - test
+output_field_reliability:
+  excluded: guaranteed
+  selected: guaranteed
+  tokens_remaining: guaranteed
+  total_tokens_used: guaranteed
+limitations:
+  - title: Token savings from optimization suggestions vary by LLM — actual counts depend on the specific tokenizer
+    text: >-
+      Optimization suggestions based on general best practices — actual token savings depend on the specific LLM's
+      tokenizer
+    category: accuracy
+    severity: info
+    workaround: Measure actual token counts with the target model's tokenizer before and after applying suggestions

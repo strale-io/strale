@@ -1,0 +1,67 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: image-to-text
+name: Image to Text (OCR)
+description: >-
+  OCR on any image via Claude vision. Works on screenshots, photos of documents, handwritten notes. Returns text with
+  confidence.
+category: file-conversion
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    base64:
+      type: string
+      description: Base64-encoded image
+    image_url:
+      type: string
+      description: URL to image
+output_schema:
+  type: object
+  example:
+    text: ""
+    text_type: null
+    confidence: high
+    language_detected: null
+  properties:
+    text:
+      type: string
+    text_type:
+      type: string
+    confidence:
+      type: string
+    language_detected:
+      type: string
+data_source: Claude API (OCR / image analysis)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      image_url: https://httpbin.org/image/jpeg
+    expected_fields:
+      - field: confidence
+        operator: not_null
+        reliability: guaranteed
+      - field: confidence
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    image_url: https://httpbin.org/image/jpeg
+output_field_reliability:
+  text: guaranteed
+  text_type: guaranteed
+  confidence: guaranteed
+  language_detected: guaranteed
+limitations:
+  - title: Handwritten text, low-resolution images, and complex layouts like multi-column pages have lower OCR accuracy
+    text: >-
+      AI-powered OCR — handwritten text, low-resolution images, and complex layouts (multi-column, overlapping) have
+      lower accuracy
+    category: accuracy
+    severity: info
+    workaround: Pre-process images to improve contrast and resolution before submission for better OCR results

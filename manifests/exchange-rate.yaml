@@ -1,0 +1,83 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: exchange-rate
+name: Exchange Rate
+description: >-
+  Get current exchange rate between two currencies using ECB data. Supports all major currencies. Returns rate, inverse
+  rate, and date.
+category: financial
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - from
+    - to
+  properties:
+    to:
+      type: string
+      description: Target currency (ISO 4217, e.g. EUR)
+    from:
+      type: string
+      description: Source currency (ISO 4217, e.g. USD)
+output_schema:
+  type: object
+  example:
+    to: EUR
+    date: "2026-03-06"
+    from: USD
+    rate: 0.864977
+    inverse_rate: 1.1561
+  properties:
+    to:
+      type: string
+    date:
+      type: string
+    from:
+      type: string
+    rate:
+      type: number
+    inverse_rate:
+      type: number
+data_source: European Central Bank daily reference rates
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: reference-data
+test_fixtures:
+  known_answer:
+    input:
+      to: EUR
+      from: USD
+    expected_fields:
+      - field: rate
+        operator: not_null
+        reliability: guaranteed
+      - field: rate
+        operator: gt
+        reliability: guaranteed
+        value: 0.5
+      - field: rate
+        operator: lt
+        reliability: guaranteed
+        value: 1.5
+  health_check_input:
+    to: EUR
+    from: USD
+output_field_reliability:
+  to: guaranteed
+  date: guaranteed
+  from: guaranteed
+  rate: guaranteed
+  inverse_rate: guaranteed
+limitations:
+  - title: Exchange rates update hourly during market hours but may be stale on weekends and holidays
+    text: Rates updated every hour during market hours, may be stale during weekends and holidays
+    category: freshness
+    severity: info
+    workaround: For weekend transactions, use the Friday close rate and flag the amount for reconciliation on Monday
+  - title: Uses mid-market rates — actual bank conversion rates differ by 0.5-3% depending on provider
+    text: Mid-market rates — actual bank conversion rates will differ by 0.5-3% depending on provider
+    category: accuracy
+    severity: info
+    workaround: Apply your bank's typical spread as a margin buffer (e.g., ±1.5%) when displaying converted amounts to users

@@ -1,0 +1,106 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: classify-text
+name: Text Classification
+description: >-
+  Classify text into categories. Optionally provide custom categories. Returns primary category, confidence scores,
+  topic keywords, and summary.
+category: text-processing
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - text
+  properties:
+    text:
+      type: string
+      description: Text to classify
+    categories:
+      type: array
+      description: Optional list of categories to classify into
+output_schema:
+  type: object
+  example:
+    summary: A statement describing sample text used for validating automated testing capabilities and system functionality.
+    confidence: 0.85
+    all_categories:
+      - category: Software Testing
+        confidence: 0.85
+      - category: Quality Assurance
+        confidence: 0.72
+      - category: Technical Documentation
+        confidence: 0.58
+      - category: Automation
+        confidence: 0.65
+    topic_keywords:
+      - test input
+      - automated testing
+      - capability testing
+      - QA
+    primary_category: Software Testing
+    detected_language: English
+  properties:
+    confidence:
+      type: number
+    all_categories:
+      type: array
+    topic_keywords:
+      type: array
+    primary_category:
+      type: string
+data_source: Claude API (text classification)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      text: This is a test input for automated capability testing.
+    expected_fields:
+      - field: confidence
+        operator: not_null
+        reliability: guaranteed
+      - field: confidence
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: all_categories
+        operator: not_null
+        reliability: guaranteed
+      - field: all_categories
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: topic_keywords
+        operator: not_null
+        reliability: guaranteed
+      - field: topic_keywords
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: primary_category
+        operator: not_null
+        reliability: guaranteed
+      - field: primary_category
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    text: test
+output_field_reliability:
+  confidence: guaranteed
+  all_categories: guaranteed
+  topic_keywords: guaranteed
+  primary_category: guaranteed
+limitations:
+  - title: Ambiguous text may be assigned to the wrong category without sufficient category descriptions as context
+    text: >-
+      AI-powered classification — ambiguous text may be assigned to multiple categories or the wrong category without
+      sufficient context
+    category: accuracy
+    severity: info
+    workaround: >-
+      Provide the complete list of valid categories and a brief description of each in the input for more accurate
+      classification

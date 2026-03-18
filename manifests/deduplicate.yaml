@@ -1,0 +1,120 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: deduplicate
+name: Deduplicate
+description: >-
+  Deduplicate a JSON array of objects using fuzzy string matching (Levenshtein + token sort). Specify match fields and
+  threshold.
+category: data-processing
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      description: Array of objects to deduplicate
+    threshold:
+      type: number
+      description: Match threshold 0-1 (default 0.8)
+    match_fields:
+      type: array
+      description: Fields to compare
+output_schema:
+  type: object
+  example:
+    threshold: 0.8
+    deduplicated:
+      - age: 30
+        city: Stockholm
+        name: Alice
+      - age: 25
+        city: Oslo
+        name: Bob
+    match_fields:
+      - age
+      - city
+      - name
+    removed_count: 0
+    original_count: 2
+    duplicates_found: []
+    deduplicated_count: 2
+  properties:
+    deduplicated:
+      type: array
+    original_count:
+      type: integer
+    duplicates_found:
+      type: array
+    deduplicated_count:
+      type: integer
+data_source: Algorithmic (deduplication, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      data:
+        - age: 30
+          city: Stockholm
+          name: Alice
+        - age: 25
+          city: Oslo
+          name: Bob
+    expected_fields:
+      - field: deduplicated
+        operator: not_null
+        reliability: guaranteed
+      - field: deduplicated
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: original_count
+        operator: not_null
+        reliability: guaranteed
+      - field: original_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: original_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: duplicates_found
+        operator: not_null
+        reliability: guaranteed
+      - field: duplicates_found
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: deduplicated_count
+        operator: not_null
+        reliability: guaranteed
+      - field: deduplicated_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: deduplicated_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    data:
+      - test
+output_field_reliability:
+  deduplicated: guaranteed
+  original_count: guaranteed
+  duplicates_found: guaranteed
+  deduplicated_count: guaranteed
+limitations:
+  - title: Exact and fuzzy matching may miss records that are semantic duplicates but structurally different
+    text: >-
+      Uses exact and fuzzy matching — records that are semantically duplicates but structurally different may not be
+      caught
+    category: accuracy
+    severity: info
+    workaround: Adjust the similarity threshold parameter and review the flagged duplicates before automatic removal

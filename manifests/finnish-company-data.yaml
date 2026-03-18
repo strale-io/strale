@@ -1,0 +1,79 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: finnish-company-data
+name: Finnish Company Data
+description: >-
+  Look up Finnish company data from PRH (Patent and Registration Office). Accepts Business ID (e.g. 0112038-9) or fuzzy
+  company name.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - business_id
+  properties:
+    business_id:
+      type: string
+      description: Finnish Business ID (e.g. 0112038-9) or company name
+output_schema:
+  type: object
+  example:
+    status: active
+    address: Karakaari, 7, 02610 ESBO
+    website: www.nokia.com
+    business_id: 0112038-9
+    company_name: Nokia Oyj
+    business_type: Public limited company
+    industry_code: "70100"
+    registration_date: "1896-12-19"
+    industry_description: Activities of head offices
+  properties:
+    status:
+      type: string
+    address:
+      type: string
+    business_id:
+      type: string
+    company_name:
+      type: string
+    business_type:
+      type: string
+    industry_code:
+      type: string
+    registration_date:
+      type: string
+data_source: PRH / Finnish Patent and Registration Office
+data_source_type: api
+transparency_tag: mixed
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      business_id: 0112038-9
+    expected_fields:
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    business_id: 0112038-9
+output_field_reliability:
+  status: guaranteed
+  address: common
+  business_id: guaranteed
+  company_name: guaranteed
+  business_type: guaranteed
+  industry_code: guaranteed
+  registration_date: guaranteed
+limitations:
+  - title: Does not cover sole traders without a separate business ID — about 10%
+    text: Does not cover sole traders (toiminimi) without separate business ID
+    category: coverage
+    severity: info
+    workaround: Search the YTJ register (ytj.fi) by the trader's personal name to find toiminimi entries without a Y-tunnus
+  - title: Financial data comes from annual reports and can be up to 12 months old
+    text: Financial data from annual reports — can be up to 12 months old
+    category: freshness
+    severity: info
+    workaround: Check the report_date field and query PRH's financial statement database for the most recent filing

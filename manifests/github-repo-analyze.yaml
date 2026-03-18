@@ -1,0 +1,193 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: github-repo-analyze
+name: GitHub Repo Analyze
+description: >-
+  Analyze a public GitHub repository. Returns tech stack, documentation quality, activity level, bus factor, maintenance
+  health score. Uses GitHub API + AI analysis.
+category: developer-tools
+price_cents: 50
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: GitHub repo URL (e.g. https://github.com/owner/repo)
+output_schema:
+  type: object
+  example:
+    url: https://github.com/microsoft/vscode
+    repo: microsoft/vscode
+    forks: 38444
+    stars: 182607
+    license: MIT
+    purpose: A lightweight, open-source code editor with comprehensive development tools for editing, debugging, and extending.
+    summary: >-
+      Visual Studio Code is a highly active, well-maintained open-source code editor with exceptional community
+      engagement and clear governance. It represents a mature project with excellent documentation, transparent
+      processes, and a strong commitment to backwards compatibility and user-driven development.
+    concerns:
+      - High volume of open issues may indicate backlog challenges
+      - Dependency on Microsoft infrastructure
+      - Large codebase complexity (TypeScript-heavy)
+      - Potential vendor lock-in concerns despite OSS status
+    languages:
+      C: 818
+      R: 362
+      C#: 864
+      F#: 634
+      Go: 652
+      C++: 2745
+      CSS: 1401176
+      Lua: 252
+      PHP: 998
+      Pug: 654
+      TeX: 1602
+      Cuda: 3634
+      Dart: 324
+      HLSL: 184
+      HTML: 376304
+      Hack: 16
+      Java: 599
+      Less: 1029
+      Perl: 1922
+      Raku: 761
+      Roff: 351
+      Ruby: 1703
+      Rust: 504089
+      SCSS: 6732
+      Julia: 940
+      Shell: 110860
+      Swift: 284
+      Groovy: 3928
+      Python: 4146
+      Scilab: 202892
+      Clojure: 1206
+      Makefile: 2307
+      Batchfile: 23265
+      ShaderLab: 330
+      Dockerfile: 6795
+      Handlebars: 1064
+      Inno Setup: 325997
+      JavaScript: 816981
+      PowerShell: 16560
+      TypeScript: 84393577
+      Objective-C: 1387
+      CoffeeScript: 590
+      Objective-C++: 1387
+      Jupyter Notebook: 929
+      Tree-sitter Query: 14260
+      Visual Basic .NET: 893
+    strengths:
+      - Massive community engagement (182k stars, 38k forks)
+      - Active development with frequent commits (multiple per day)
+      - Excellent documentation and contribution guidelines
+      - MIT license enables wide adoption
+      - Multi-platform support (Windows, macOS, Linux)
+      - Rich extensibility model
+      - Transparent roadmap and iteration planning
+      - Well-organized issue tracking (14k open issues)
+    tech_stack:
+      - TypeScript
+      - Electron
+      - React
+      - Node.js
+      - Rust
+      - CSS
+      - JavaScript
+    open_issues: 14955
+    activity_level: very-active
+    dependency_count: null
+    primary_language: TypeScript
+    top_contributors:
+      - login: bpasero
+        contributions: 14583
+      - login: jrieken
+        contributions: 12582
+      - login: Tyriar
+        contributions: 12493
+      - login: mjbvz
+        contributions: 10020
+      - login: joaomoreno
+        contributions: 8751
+      - login: sandy081
+        contributions: 8634
+      - login: alexdima
+        contributions: 7724
+      - login: isidorn
+        contributions: 6122
+      - login: roblourens
+        contributions: 5587
+      - login: aeschli
+        contributions: 5045
+    bus_factor_estimate: 8
+    documentation_quality: excellent
+    maintenance_health_score: 95
+  properties:
+    stars:
+      type: integer
+    tech_stack:
+      type: array
+    activity_level:
+      type: string
+    top_contributors:
+      type: array
+    maintenance_health_score:
+      type: integer
+data_source: GitHub REST API (repository analysis and metrics)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://github.com/microsoft/vscode
+    expected_fields:
+      - field: stars
+        operator: not_null
+        reliability: guaranteed
+      - field: stars
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: tech_stack
+        operator: not_null
+        reliability: guaranteed
+      - field: tech_stack
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: activity_level
+        operator: not_null
+        reliability: guaranteed
+      - field: activity_level
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: top_contributors
+        operator: not_null
+        reliability: guaranteed
+      - field: top_contributors
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    url: https://github.com/microsoft/vscode
+output_field_reliability:
+  stars: guaranteed
+  tech_stack: guaranteed
+  activity_level: guaranteed
+  top_contributors: guaranteed
+  maintenance_health_score: guaranteed
+limitations:
+  - title: Analyzes public repository metadata only — code quality, test coverage, and internal docs are not assessed
+    text: >-
+      Analyzes public repository metadata — code quality metrics, test coverage, and internal documentation are not
+      assessed
+    category: coverage
+    severity: info
+    workaround: Combine with dependency-audit for security insights and code-review for quality assessment of specific files

@@ -1,0 +1,88 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: invoice-extract
+name: Invoice / Receipt Extraction
+description: >-
+  Extract structured data from an invoice or receipt image/PDF. Returns line items, totals, dates, vendor info, VAT
+  amounts.
+category: data-extraction
+price_cents: 50
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    url:
+      type: string
+      description: URL to invoice image or PDF
+    base64:
+      type: string
+      description: Base64-encoded invoice file
+output_schema:
+  type: object
+  example:
+    iban: null
+    currency: null
+    due_date: null
+    subtotal: null
+    vat_rate: null
+    buyer_vat: null
+    buyer_name: null
+    confidence:
+      line_items: low
+      vat_amount: low
+      vendor_name: low
+      total_amount: low
+    line_items: []
+    vat_amount: null
+    vendor_vat: null
+    vendor_name: null
+    invoice_date: null
+    total_amount: null
+    invoice_number: null
+    payment_reference: null
+  properties:
+    date:
+      type: string
+    total:
+      type: number
+    vendor:
+      type: string
+    currency:
+      type: string
+    line_items:
+      type: array
+    vat_amount:
+      type: number
+data_source: Claude API (document analysis and data extraction)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://httpbin.org/image/jpeg
+    expected_fields: []
+  health_check_input:
+    url: https://httpbin.org/image/jpeg
+output_field_reliability:
+  date: common
+  total: common
+  vendor: common
+  currency: common
+  line_items: rare
+  vat_amount: rare
+  invoice_number: common
+limitations:
+  - title: Best results with standard invoice layouts — handwritten or heavily stylized invoices have lower accuracy
+    text: >-
+      Best results with standard invoice layouts — handwritten invoices or heavily stylized designs may have lower
+      accuracy
+    category: coverage
+    severity: info
+    workaround: For non-standard formats, use pdf-extract for raw text and apply custom parsing rules
+  - title: AI extraction from invoices means line item totals and tax calculations should be verified against source
+    text: AI extraction from invoice documents — line item totals and tax calculations should be verified against source
+    category: accuracy
+    severity: warning
+    workaround: Validate that extracted line items sum to the total amount and cross-check VAT calculations before booking

@@ -1,0 +1,108 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: pr-description-generate
+name: PR Description Generate
+description: Generate pull request descriptions from diffs or commit logs. Returns title, summary, changes list, testing steps.
+category: developer-tools
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - diff
+  properties:
+    diff:
+      type: string
+    title:
+      type: string
+output_schema:
+  type: object
+  example:
+    title: Test Document Title
+    changes:
+      - Changed const x from 1 to 2
+      - Updated return statement to use new constant value
+    summary: Updates the constant value of x from 1 to 2. This change affects the return value of the function.
+    testing:
+      - Verify that the function returns 2 instead of 1
+      - Run existing unit tests to ensure no regressions
+    markdown: |
+      ## Description
+      Updates the constant value of x from 1 to 2. This change affects the return value of the function.
+
+      ## Changes
+      - Changed const x from 1 to 2
+      - Updated return statement to use new constant value
+
+      ## Testing
+      - Verify that the function returns 2 instead of 1
+      - Run existing unit tests to ensure no regressions
+    related_issues: []
+    breaking_changes: []
+  properties:
+    title:
+      type: string
+    changes:
+      type: array
+    summary:
+      type: string
+    testing:
+      type: array
+    markdown:
+      type: string
+data_source: Claude API (pull request description generation)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      diff: |-
+        - const x = 1;
+        + const x = 2;
+          return x;
+      title: Test Document Title
+    expected_fields:
+      - field: title
+        operator: not_null
+        reliability: guaranteed
+      - field: title
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: changes
+        operator: not_null
+        reliability: guaranteed
+      - field: changes
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: summary
+        operator: not_null
+        reliability: guaranteed
+      - field: summary
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: testing
+        operator: not_null
+        reliability: guaranteed
+      - field: testing
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    diff: test
+output_field_reliability:
+  title: guaranteed
+  changes: guaranteed
+  summary: guaranteed
+  testing: guaranteed
+  markdown: guaranteed
+limitations:
+  - title: AI-generated PR descriptions may not capture business motivation or link to relevant issues automatically
+    text: AI-generated from diff content — may not capture the business motivation or link to relevant issues automatically
+    category: accuracy
+    severity: info
+    workaround: Include the ticket/issue number in the input and review the generated description for completeness

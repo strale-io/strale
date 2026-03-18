@@ -1,0 +1,123 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: code-review
+name: Code Review
+description: >-
+  AI code review. Returns issues with severity, line numbers, fix suggestions. Focus on security, performance,
+  readability, or bugs.
+category: agent-tooling
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - code
+  properties:
+    code:
+      type: string
+    focus:
+      type: string
+      description: security/performance/readability/bugs/all
+    language:
+      type: string
+output_schema:
+  type: object
+  example:
+    focus: all
+    issues:
+      - category: readability
+        severity: low
+        description: Function name 'hello' lacks context about what it returns. Naming could be more descriptive.
+        line_number: 1
+        fix_suggestion: Rename to something more specific like 'getGreeting()' or 'getDefaultGreeting()'
+      - category: style
+        severity: low
+        description: Missing JSDoc comment for function documentation
+        line_number: 1
+        fix_suggestion: "Add JSDoc: /** @returns {string} A greeting message */ above the function"
+    summary: >-
+      This is a well-written, secure function with no bugs. Minor improvements would involve adding documentation and
+      considering if a constant might be more appropriate than a function.
+    quick_wins:
+      - Add JSDoc comment for better code documentation
+      - Consider if this function needs parameters or if it should be a constant
+      - Add semicolon for consistency (if not using automatic formatting)
+    code_length: 36
+    overall_score: 85
+    security_flags: []
+    positive_aspects:
+      - Simple, focused function with single responsibility
+      - No security vulnerabilities present
+      - Function is pure with no side effects
+      - Clear, concise implementation
+    language_detected: JavaScript
+  properties:
+    issues:
+      type: array
+    quick_wins:
+      type: array
+    overall_score:
+      type: integer
+    security_flags:
+      type: array
+data_source: Claude API (code analysis and review)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      code: function hello() { return 'world'; }
+      language: en
+    expected_fields:
+      - field: issues
+        operator: not_null
+        reliability: guaranteed
+      - field: issues
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: quick_wins
+        operator: not_null
+        reliability: guaranteed
+      - field: quick_wins
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: overall_score
+        operator: not_null
+        reliability: guaranteed
+      - field: overall_score
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: overall_score
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: security_flags
+        operator: not_null
+        reliability: guaranteed
+      - field: security_flags
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    code: const x = 1;
+output_field_reliability:
+  issues: guaranteed
+  quick_wins: guaranteed
+  overall_score: guaranteed
+  security_flags: guaranteed
+limitations:
+  - title: AI review may miss subtle logic errors that require full codebase context to identify
+    text: AI-powered review may miss subtle logic errors or context-dependent bugs that require full codebase understanding
+    category: accuracy
+    severity: warning
+    workaround: Use as a first-pass filter to catch common issues, then follow up with human review for critical code paths
+  - title: Reviews individual code snippets only — cannot analyze cross-file dependencies or architecture
+    text: Reviews individual code snippets — cannot analyze cross-file dependencies or architectural patterns
+    category: coverage
+    severity: info
+    workaround: Provide surrounding context or interface definitions in the input to improve review accuracy for coupled code

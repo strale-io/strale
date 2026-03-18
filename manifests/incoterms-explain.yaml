@@ -1,0 +1,104 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: incoterms-explain
+name: Incoterms Explain
+description: Explain any Incoterms 2020 rule. Returns seller/buyer obligations, risk/cost transfer points, suitability.
+category: data-extraction
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - incoterm
+  properties:
+    incoterm:
+      type: string
+      description: Incoterm code (EXW/FOB/CIF/DDP/etc)
+output_schema:
+  type: object
+  example:
+    error: "Unknown Incoterm: \"test\". Must be one of the 11 Incoterms 2020 rules."
+    available_codes:
+      - EXW
+      - FCA
+      - CPT
+      - CIP
+      - DAP
+      - DPU
+      - DDP
+      - FAS
+      - FOB
+      - CFR
+      - CIF
+    available_terms:
+      - code: EXW
+        full_name: Ex Works
+        suitable_for: any
+      - code: FCA
+        full_name: Free Carrier
+        suitable_for: any
+      - code: CPT
+        full_name: Carriage Paid To
+        suitable_for: any
+      - code: CIP
+        full_name: Carriage and Insurance Paid To
+        suitable_for: any
+      - code: DAP
+        full_name: Delivered at Place
+        suitable_for: any
+      - code: DPU
+        full_name: Delivered at Place Unloaded
+        suitable_for: any
+      - code: DDP
+        full_name: Delivered Duty Paid
+        suitable_for: any
+      - code: FAS
+        full_name: Free Alongside Ship
+        suitable_for: sea_and_inland_waterway_only
+      - code: FOB
+        full_name: Free On Board
+        suitable_for: sea_and_inland_waterway_only
+      - code: CFR
+        full_name: Cost and Freight
+        suitable_for: sea_and_inland_waterway_only
+      - code: CIF
+        full_name: Cost, Insurance and Freight
+        suitable_for: sea_and_inland_waterway_only
+  properties:
+    full_name:
+      type: string
+    buyer_obligations:
+      type: array
+    seller_obligations:
+      type: array
+    risk_transfer_point:
+      type: string
+data_source: Algorithmic (ICC Incoterms 2020 rule database)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      incoterm: EXW
+    expected_fields:
+      - field: incoterm
+        operator: not_null
+        reliability: common
+      - field: version
+        operator: not_null
+        reliability: common
+  health_check_input:
+    incoterm: EXW
+output_field_reliability:
+  full_name: guaranteed
+  buyer_obligations: guaranteed
+  seller_obligations: guaranteed
+  risk_transfer_point: guaranteed
+limitations:
+  - title: Incoterms 2020 explanation does not account for contractual modifications or local trade customs
+    text: AI-generated explanation of Incoterms 2020 — does not account for contractual modifications or local trade customs
+    category: accuracy
+    severity: info
+    workaround: Verify specific obligations against the ICC Incoterms 2020 publication and your actual contract terms

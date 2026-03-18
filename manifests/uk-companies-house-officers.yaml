@@ -1,0 +1,113 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: uk-companies-house-officers
+name: UK Companies House Officers
+description: >-
+  Look up officers (directors, secretaries) of a UK company via Companies House API. Returns active and resigned
+  officers with appointment dates.
+category: data-extraction
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    company_name:
+      type: string
+    company_number:
+      type: string
+output_schema:
+  type: object
+  example:
+    active_count: 1
+    company_number: "06770815"
+    resigned_count: 1
+    total_officers: 2
+    active_officers:
+      - name: EMIN, Elaine
+        role: director
+        address: Nelmes Way, Hornchurch, RM11 2QY
+        occupation: null
+        nationality: British
+        resigned_on: null
+        appointed_on: "2010-12-22"
+        date_of_birth: 1965-01
+        country_of_residence: United Kingdom
+    resigned_officers:
+      - name: BLAKE, Andrew Charles
+        role: director
+        address: Hainault Road, Chigwell, 1G7 5DL
+        occupation: null
+        nationality: British
+        resigned_on: "2010-12-22"
+        appointed_on: "2008-12-11"
+        date_of_birth: 1970-12
+        country_of_residence: null
+  properties:
+    active_count:
+      type: integer
+    company_number:
+      type: string
+    active_officers:
+      type: array
+    resigned_officers:
+      type: array
+data_source: Companies House API (UK Government, officer records)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      company_name: Tesco PLC
+      company_number: "00445790"
+    expected_fields:
+      - field: active_count
+        operator: not_null
+        reliability: guaranteed
+      - field: active_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: active_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: company_number
+        operator: not_null
+        reliability: guaranteed
+      - field: company_number
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: active_officers
+        operator: not_null
+        reliability: guaranteed
+      - field: active_officers
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: resigned_officers
+        operator: not_null
+        reliability: guaranteed
+      - field: resigned_officers
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    company_name: Google
+output_field_reliability:
+  active_count: guaranteed
+  company_number: guaranteed
+  active_officers: guaranteed
+  resigned_officers: guaranteed
+limitations:
+  - title: >-
+      Returns current and recently resigned officers — historical data beyond Companies House retention may be
+      incomplete
+    text: >-
+      Returns current and recently resigned officers — historical officer data beyond Companies House retention may be
+      incomplete
+    category: coverage
+    severity: info
+    workaround: For complete officer history, use the filing_history endpoint at Companies House with the company number

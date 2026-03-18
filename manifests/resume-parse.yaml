@@ -1,0 +1,115 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: resume-parse
+name: Resume Parse
+description: >-
+  Extract structured data from a CV/resume. Accepts PDF URL, base64, or text. Returns name, contact, experience,
+  education, skills, certifications.
+category: document-extraction
+price_cents: 30
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+    base64:
+      type: string
+    pdf_url:
+      type: string
+output_schema:
+  type: object
+  example:
+    name: John Smith
+    email: null
+    phone: null
+    skills:
+      - Python
+      - SQL
+    summary: null
+    website: null
+    linkedin: null
+    location: null
+    education: []
+    languages: []
+    experience: []
+    certifications: []
+    total_experience_years: 0
+  properties:
+    name:
+      type: string
+    skills:
+      type: array
+    education:
+      type: array
+    experience:
+      type: array
+    total_experience_years:
+      type: number
+data_source: Claude API (resume/CV data extraction)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      text: |-
+        Jane Doe
+        jane@example.com | +1 555-0100
+        Software Engineer with 5 years experience in TypeScript and Node.js.
+
+        Experience:
+        Senior Developer, Acme Corp 2020-2024
+        - Built REST APIs using Node.js
+        - Led team of 3 engineers
+
+        Education:
+        B.Sc. Computer Science, Uppsala University 2019
+
+        Skills: TypeScript, Node.js, PostgreSQL, Docker
+    expected_fields:
+      - field: name
+        operator: not_null
+        reliability: guaranteed
+      - field: name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: skills
+        operator: not_null
+        reliability: guaranteed
+      - field: skills
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: education
+        operator: not_null
+        reliability: guaranteed
+      - field: education
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: experience
+        operator: not_null
+        reliability: guaranteed
+      - field: experience
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    text: "John Smith | Engineer | skills: Python, SQL"
+output_field_reliability:
+  name: guaranteed
+  skills: guaranteed
+  education: guaranteed
+  experience: guaranteed
+  total_experience_years: guaranteed
+limitations:
+  - title: Non-standard layouts, multi-column designs, and heavily formatted PDFs may lose structure during parsing
+    text: >-
+      AI parsing of resume/CV content — non-standard layouts, multi-column designs, or heavily formatted PDFs may lose
+      structure
+    category: accuracy
+    severity: info
+    workaround: For best results, accept resumes in standard single-column formats or plain text alongside the PDF

@@ -1,0 +1,86 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: tech-stack-detect
+name: Tech Stack Detection
+description: >-
+  Detect the technology stack of a website. Identifies frontend framework, CSS framework, CMS, analytics, hosting, CDN,
+  and other technologies.
+category: web-intelligence
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: Website URL (e.g. https://example.com)
+output_schema:
+  type: object
+  example:
+    cdn: Google Static (gstatic.com)
+    cms: null
+    url: https://google.com
+    hosting: null
+    analytics:
+      - Google Analytics
+    confidence: high
+    css_framework: null
+    meta_framework: null
+    frontend_framework: null
+    other_technologies:
+      - Vanilla JavaScript
+      - Google XJS (custom JavaScript framework)
+      - Schema.org markup
+      - Service Worker capable
+  properties:
+    cms:
+      type: string
+    url:
+      type: string
+    hosting:
+      type: string
+    analytics:
+      type: array
+    css_framework:
+      type: string
+    frontend_framework:
+      type: string
+data_source: HTTP response analysis (headers, JavaScript libraries, meta tags)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://google.com
+    expected_fields:
+      - field: url
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    url: https://example.com
+output_field_reliability:
+  cms: guaranteed
+  url: guaranteed
+  hosting: guaranteed
+  analytics: guaranteed
+  css_framework: guaranteed
+  frontend_framework: guaranteed
+limitations:
+  - title: Database covers 1,000+ technologies but niche or custom-built tools may not be identified
+    text: Database covers 1,000+ technologies — niche or custom-built tools may not be identified
+    category: coverage
+    severity: info
+    workaround: >-
+      Check the raw HTTP headers in the response for custom X-Powered-By or Server values that indicate unlisted
+      technology
+  - title: Only detects client-side and header-visible technologies — server-side-only tools are not visible
+    text: >-
+      Detection based on HTTP headers, JavaScript libraries, and HTML signatures — technologies loaded conditionally or
+      server-side only may not be detected
+    category: accuracy
+    severity: info
+    workaround: Complement with dns-lookup and ssl-check results to infer infrastructure choices not visible in the HTML

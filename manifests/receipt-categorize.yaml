@@ -1,0 +1,122 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: receipt-categorize
+name: Receipt Categorize
+description: >-
+  Extract and categorize receipt data. Returns vendor, date, amount, tax, currency, expense category, line items. Ready
+  for expense reports.
+category: document-extraction
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+    base64:
+      type: string
+    image_url:
+      type: string
+output_schema:
+  type: object
+  example:
+    date: null
+    category: groceries
+    currency: USD
+    subtotal: 6.48
+    line_items:
+      - amount: 2.99
+        quantity: null
+        unit_price: null
+        description: Milk
+      - amount: 3.49
+        quantity: null
+        unit_price: null
+        description: Bread
+    tax_amount: null
+    tip_amount: null
+    vendor_name: Grocery store
+    total_amount: 6.48
+    card_last_four: null
+    payment_method: null
+    expense_report_fields:
+      date: null
+      amount: 6.48
+      vendor: Grocery store
+      category: groceries
+      currency: USD
+      description: Grocery store - Milk, Bread
+  properties:
+    category:
+      type: string
+    currency:
+      type: string
+    line_items:
+      type: array
+    vendor_name:
+      type: string
+    total_amount:
+      type: number
+data_source: Claude API (receipt categorization and data extraction)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      text: |-
+        Starbucks Coffee
+        Date: 2024-01-15
+        Caffe Latte x1 $5.50
+        Total: $5.50
+        Visa ending 4242
+    expected_fields:
+      - field: category
+        operator: not_null
+        reliability: guaranteed
+      - field: category
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: currency
+        operator: not_null
+        reliability: guaranteed
+      - field: currency
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: line_items
+        operator: not_null
+        reliability: guaranteed
+      - field: line_items
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: vendor_name
+        operator: not_null
+        reliability: guaranteed
+      - field: vendor_name
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    text: |-
+      Grocery store
+      Milk $2.99
+      Bread $3.49
+      Total $6.48
+output_field_reliability:
+  category: guaranteed
+  currency: guaranteed
+  line_items: guaranteed
+  vendor_name: guaranteed
+  total_amount: guaranteed
+limitations:
+  - title: Unusual merchants or multi-category purchases may be miscategorized by the AI expense categorizer
+    text: >-
+      AI categorization based on merchant name and amount — unusual merchants or multi-category purchases may be
+      miscategorized
+    category: accuracy
+    severity: info
+    workaround: Provide your chart of accounts or category taxonomy in the input for more accurate categorization

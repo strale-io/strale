@@ -1,0 +1,82 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: link-extract
+name: Link Extract
+description: Extract all links from a page with context. Filter by internal/external. Returns URL, anchor text, rel attributes.
+category: web-scraping
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: URL to extract links from
+    filter:
+      type: string
+      description: internal, external, or both (default)
+output_schema:
+  type: object
+  example:
+    links: []
+    filter: both
+    source_url: https://strale.dev
+    total_links: 0
+  properties:
+    links:
+      type: array
+    source_url:
+      type: string
+    total_links:
+      type: integer
+data_source: HTTP fetch + HTML parsing (hyperlink extraction)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://strale.dev
+    expected_fields:
+      - field: links
+        operator: not_null
+        reliability: guaranteed
+      - field: links
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: source_url
+        operator: not_null
+        reliability: guaranteed
+      - field: source_url
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: total_links
+        operator: not_null
+        reliability: guaranteed
+      - field: total_links
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_links
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    url: https://strale.dev
+output_field_reliability:
+  links: guaranteed
+  source_url: guaranteed
+  total_links: guaranteed
+limitations:
+  - title: Extracts links from static HTML only — JavaScript-rendered links in SPAs and lazy-loaded content may be missed
+    text: Extracts links from static HTML — JavaScript-rendered links (SPAs, lazy-loaded content) may not be captured
+    category: coverage
+    severity: info
+    workaround: >-
+      For JavaScript-heavy pages, use web-extract or structured-scrape which render via headless browser before
+      extraction

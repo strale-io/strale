@@ -1,0 +1,106 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: crypto-price
+name: Crypto Price
+description: >-
+  Get current cryptocurrency price, market cap, and trends via CoinGecko API. Supports 10,000+ coins. Multiple fiat
+  currencies.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - coin
+  properties:
+    coin:
+      type: string
+      description: Coin name/symbol (bitcoin, eth, sol)
+    vs_currencies:
+      type: string
+output_schema:
+  type: object
+  example:
+    id: bitcoin
+    name: Bitcoin
+    prices:
+      eur: 61123
+      gbp: 52717
+      usd: 70707
+    symbol: btc
+    ath_usd: 126080
+    ath_date: "2025-10-06T18:57:42.558Z"
+    last_updated: "2026-03-11T21:10:21.102Z"
+    total_supply: 20000937
+    market_cap_usd: 1414306433434
+    market_cap_rank: 1
+    total_volume_usd: 49175581207
+    circulating_supply: 20000937
+    price_change_7d_percent: -4.02237
+    price_change_24h_percent: 0.56163
+    price_change_30d_percent: -0.26107
+  properties:
+    name:
+      type: string
+    prices:
+      type: object
+    market_cap_usd:
+      type: number
+    price_change_24h_percent:
+      type: number
+data_source: CoinGecko API (cryptocurrency market data)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      coin: bitcoin
+    expected_fields:
+      - field: name
+        operator: not_null
+        reliability: guaranteed
+      - field: name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: prices
+        operator: not_null
+        reliability: guaranteed
+      - field: prices
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: market_cap_usd
+        operator: not_null
+        reliability: guaranteed
+      - field: market_cap_usd
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: price_change_24h_percent
+        operator: not_null
+        reliability: guaranteed
+      - field: price_change_24h_percent
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    coin: bitcoin
+output_field_reliability:
+  name: guaranteed
+  prices: guaranteed
+  market_cap_usd: guaranteed
+  price_change_24h_percent: guaranteed
+limitations:
+  - title: CoinGecko prices may have a 1-5 minute delay compared to real-time exchange prices
+    text: Prices from CoinGecko API — may have a 1-5 minute delay from real-time exchange prices
+    category: freshness
+    severity: info
+    workaround: For trading decisions, use the exchange's native API; treat CoinGecko prices as indicative market data
+  - title: Covers tokens listed on CoinGecko only — very new or delisted tokens may not return data
+    text: Covers tokens listed on CoinGecko — very new or delisted tokens may not return data
+    category: coverage
+    severity: info
+    workaround: Search by CoinGecko ID rather than symbol to avoid ambiguity between tokens sharing the same ticker

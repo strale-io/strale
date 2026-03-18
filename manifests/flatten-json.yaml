@@ -1,0 +1,99 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: flatten-json
+name: Flatten JSON
+description: >-
+  Flatten nested JSON to dot-notation keys. E.g. {a:{b:[1,2]}} → {'a.b.0':1,'a.b.1':2}. Configurable delimiter and array
+  handling. Algorithmic.
+category: data-processing
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      description: Nested JSON object
+    delimiter:
+      type: string
+      description: Default '.'
+    array_handling:
+      type: string
+      description: "'index' or 'stringify'"
+output_schema:
+  type: object
+  example:
+    delimiter: .
+    flattened:
+      user.age: 30
+      user.name: John
+      user.address.city: Stockholm
+    key_count: 3
+    array_handling: index
+    max_depth_found: 3
+  properties:
+    flattened:
+      type: object
+    key_count:
+      type: integer
+    max_depth_found:
+      type: integer
+data_source: Algorithmic (JSON flattening, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      data:
+        user:
+          age: 30
+          name: John
+          address:
+            city: Stockholm
+    expected_fields:
+      - field: flattened
+        operator: not_null
+        reliability: guaranteed
+      - field: flattened
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: key_count
+        operator: not_null
+        reliability: guaranteed
+      - field: key_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: key_count
+        operator: gt
+        reliability: guaranteed
+        value: -1
+      - field: max_depth_found
+        operator: not_null
+        reliability: guaranteed
+      - field: max_depth_found
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    data:
+      user:
+        name: John
+        address:
+          city: Stockholm
+output_field_reliability:
+  flattened: guaranteed
+  key_count: guaranteed
+  max_depth_found: guaranteed
+limitations:
+  - title: Circular references or extremely deep nesting beyond 50 levels may cause flattening errors
+    text: >-
+      Flattens nested objects using dot notation — circular references or extremely deep nesting (>50 levels) may cause
+      errors
+    category: coverage
+    severity: info
+    workaround: Pre-process input to remove circular references and limit nesting depth before flattening

@@ -1,0 +1,100 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: code-convert
+name: Code Convert
+description: >-
+  Convert code between programming languages. Uses idiomatic patterns for the target language. Supports all major
+  languages.
+category: developer-tools
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - code
+    - to_language
+  properties:
+    code:
+      type: string
+    to_language:
+      type: string
+    from_language:
+      type: string
+output_schema:
+  type: object
+  example:
+    confidence: high
+    converted_code: function hello() { return 'world'; }
+    source_language: en
+    target_language: en
+    conversion_notes:
+      - Source and target languages are identical; no conversion needed
+    dependencies_needed: []
+  properties:
+    confidence:
+      type: string
+    converted_code:
+      type: string
+    source_language:
+      type: string
+    target_language:
+      type: string
+    dependencies_needed:
+      type: array
+data_source: Claude API (programming language conversion)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      code: function hello() { return 'world'; }
+      to_language: en
+      from_language: en
+    expected_fields:
+      - field: confidence
+        operator: not_null
+        reliability: guaranteed
+      - field: confidence
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: converted_code
+        operator: not_null
+        reliability: guaranteed
+      - field: converted_code
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: source_language
+        operator: not_null
+        reliability: guaranteed
+      - field: source_language
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: target_language
+        operator: not_null
+        reliability: guaranteed
+      - field: target_language
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    code: const x = 1;
+    to_language: test
+output_field_reliability:
+  confidence: guaranteed
+  converted_code: guaranteed
+  source_language: guaranteed
+  target_language: guaranteed
+  dependencies_needed: guaranteed
+limitations:
+  - title: AI code conversion may need manual adjustment for language-specific idioms and library differences
+    text: >-
+      AI-powered code conversion — language-specific idioms, standard library differences, and edge cases may require
+      manual adjustment
+    category: accuracy
+    severity: warning
+    workaround: Run the converted code through the target language's linter and test suite before using in production

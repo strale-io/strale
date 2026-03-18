@@ -1,0 +1,137 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: eu-court-case-search
+name: EU Court Case Search
+description: Search EU court cases on CURIA (CJEU) or HUDOC (ECHR). Returns case number, title, date, parties, summary.
+category: data-extraction
+price_cents: 30
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    court:
+      type: string
+      description: "cjeu or echr (default: cjeu)"
+    query:
+      type: string
+output_schema:
+  type: object
+  example:
+    cases:
+      - url: null
+        date: 31/01/2025
+        court: CJEU
+        title: Traugott Ickeroth
+        parties: Traugott Ickeroth
+        summary: >-
+          Case concerning the classification of website operation and content broadcasting activities. Examines whether
+          voluntary contributions constitute professional activity and the distinction between private and professional
+          activities based on control over content broadcasting.
+        case_number: C-67/25
+      - url: null
+        date: 09/10/2024
+        court: CJEU
+        title: Streamz and Others
+        parties: Streamz and Others
+        summary: >-
+          Request for preliminary ruling concerning streaming services, copyright management by collecting societies,
+          and the application of regulations to information society service providers offering sound and audiovisual
+          works.
+        case_number: C-663/24
+      - url: null
+        date: 17/07/2024
+        court: CJEU
+        title: Stichting de Thuiskopie
+        parties: Stichting de Thuiskopie
+        summary: >-
+          Case examining offline copy services provided by streaming platforms and copyright exceptions. Analyzes
+          whether offline services constitute distinct activities from streaming services from copyright and technical
+          perspectives.
+        case_number: C-496/24
+      - url: null
+        date: 04/07/2024 - 11/12/2025
+        court: CJEU
+        title: Speyer & Grund
+        parties: Speyer & Grund
+        summary: >-
+          Dispute concerning the sale of products containing water and acetic acid. Examines classification under the
+          Biocides Regulation and application of the CLP Regulation to chemical products.
+        case_number: C-473/24
+      - url: null
+        date: 14/06/2024
+        court: CJEU
+        title: AGCOM (Jeux d'argent en ligne)
+        parties: AGCOM
+        summary: >-
+          Case concerning online gambling activities and the application of Directive 2000/31. Addresses exemptions from
+          liability for hosting service providers and whether gambling activities are excluded from the directive's
+          scope.
+        case_number: C-421/24
+      - url: null
+        date: 07/05/2024
+        court: CJEU
+        title: Denmark v Commission (Détroit de Fehmarn)
+        parties: Kingdom of Denmark v European Commission
+        summary: >-
+          Appeal concerning the Fixed Link (Femern) across the Fehmarn Strait. Examines whether the operation
+          constitutes an economic activity or public authority activity based on revenue collection and cost recovery
+          mechanisms.
+        case_number: C-337/24 P
+      - url: null
+        date: 02/05/2024 - 18/12/2025
+        court: CJEU
+        title: Deity Shoes
+        parties: Deity Shoes
+        summary: >-
+          Case involving Deity Shoes. Details of the dispute and legal issues are not fully provided in the search
+          results excerpt.
+        case_number: C-323/24
+    total_results: 375
+  properties:
+    cases:
+      type: array
+    total_results:
+      type: number
+data_source: CURIA (Court of Justice of the European Union)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      query: SELECT * FROM users WHERE active = true LIMIT 10
+    expected_fields:
+      - field: cases
+        operator: not_null
+        reliability: guaranteed
+      - field: cases
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_results
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_results
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    query: test
+output_field_reliability:
+  cases: guaranteed
+  total_results: guaranteed
+limitations:
+  - title: Searches CURIA database only — covers CJEU and General Court, not national courts or ECHR
+    text: Searches CURIA database — covers CJEU and General Court only, not national courts or ECHR
+    category: coverage
+    severity: info
+    workaround: >-
+      For ECHR cases, search hudoc.echr.coe.int directly; for national cases, use the respective country's legal
+      database

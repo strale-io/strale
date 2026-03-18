@@ -1,0 +1,90 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: api-health-check
+name: API Health Check
+description: "Test an API endpoint: send request, validate response status and schema. Integration testing as a service."
+category: validation
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: API endpoint URL
+    body: {}
+    method:
+      type: string
+    headers:
+      type: object
+    expected_schema:
+      type: object
+    expected_status:
+      type: integer
+output_schema:
+  type: object
+  example:
+    url: https://example.com
+    error: fetch failed
+    method: GET
+    is_healthy: false
+    response_time_ms: 12
+  properties:
+    is_healthy:
+      type: boolean
+    status_code:
+      type: integer
+    schema_valid:
+      type: boolean
+    response_body: {}
+    response_time_ms:
+      type: integer
+data_source: HTTP fetch (API endpoint status, response time, schema validation)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://strale-production.up.railway.app/v1/health
+    expected_fields:
+      - field: is_healthy
+        operator: not_null
+        reliability: guaranteed
+      - field: is_healthy
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: status_code
+        operator: not_null
+        reliability: guaranteed
+      - field: status_code
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: response_time_ms
+        operator: not_null
+        reliability: guaranteed
+      - field: response_time_ms
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    url: https://strale-production.up.railway.app/v1/health
+output_field_reliability:
+  is_healthy: guaranteed
+  status_code: guaranteed
+  schema_valid: guaranteed
+  response_body: guaranteed
+  response_time_ms: guaranteed
+limitations:
+  - title: Checks endpoint reachability and HTTP status only — business logic correctness and data integrity are not verified
+    text: Checks endpoint reachability and response status — cannot verify business logic correctness or data integrity
+    category: coverage
+    severity: info
+    workaround: >-
+      Combine with expected response schema validation to verify the API is returning correct data, not just a 200
+      status

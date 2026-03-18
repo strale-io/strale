@@ -1,0 +1,197 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: competitor-compare
+name: Competitor Compare
+description: >-
+  Compare two company websites. Analyzes positioning, pricing model, features, target audience, trust signals, content
+  strategy. Returns structured comparison + strategic analysis.
+category: competitive-intelligence
+price_cents: 100
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain1
+    - domain2
+  properties:
+    domain1:
+      type: string
+      description: First company domain
+    domain2:
+      type: string
+      description: Second company domain
+output_schema:
+  type: object
+  example:
+    company_a:
+      name: GitHub
+      domain: github.com
+      tagline: The future of building happens together
+    company_b:
+      name: GitLab
+      domain: gitlab.com
+      tagline: Finally, AI for the entire software lifecycle
+    comparison:
+      positioning:
+        analysis: >-
+          GitHub positions as a collaboration-first platform with AI enhancement, while GitLab positions as a
+          comprehensive DevSecOps orchestration platform where AI agents autonomously execute tasks.
+        company_a: Collaborative development platform emphasizing AI-powered code assistance and developer workflows
+        company_b: Intelligent orchestration platform for end-to-end DevSecOps with agentic AI automation
+      pricing_model:
+        company_a: Freemium with tiered plans (Free, Pro, Enterprise)
+        company_b: Freemium with tiered plans (Free, Premium, Ultimate) and self-hosted options
+      trust_signals:
+        company_a:
+          - "Enterprise customers: American Airlines, Duolingo, Ernst & Young, Ford, Shopify, Spotify, Vodafone"
+          - 2025 Gartner Magic Quadrant for AI Code Assistants recognition
+          - "Duolingo case study: 25% developer speed boost"
+        company_b:
+          - 50+ million users
+          - Industry-specific case studies and solutions
+          - AI Transparency Center
+          - "Quantified metrics: 82% cycle time decrease, 13x faster security scanning, 97% reduction in bug fix time"
+      target_audience:
+        analysis: >-
+          GitHub appeals to broader developer audiences with accessible tooling; GitLab targets enterprise buyers with
+          complex compliance and security requirements.
+        company_a: Individual developers, small to medium teams, enterprises across multiple industries
+        company_b: >-
+          Enterprise teams, regulated industries (financial services, public sector, aerospace, automotive),
+          organizations requiring unified DevSecOps
+      content_strategy:
+        company_a: >-
+          Developer-centric with focus on AI capabilities, customer stories, and workflow acceleration; emphasis on
+          ease-of-use and integration
+        company_b: >-
+          Enterprise-centric with focus on compliance, security, industry-specific solutions, and measurable business
+          outcomes; emphasis on platform consolidation and governance
+      feature_emphasis:
+        company_a:
+          - GitHub Copilot (AI code assistant)
+          - GitHub Actions (CI/CD automation)
+          - Code Review and collaboration
+          - GitHub Advanced Security
+          - Codespaces (cloud dev environments)
+          - Secret protection
+        company_b:
+          - GitLab Duo Agent Platform (agentic AI)
+          - CI/CD pipeline automation
+          - Application Security Testing (SAST, SCA, DAST)
+          - Source Code Management
+          - Value Stream Management
+          - Software Supply Chain Security
+          - Compliance automation
+    disclaimer: AI-generated competitive analysis. Verify specific claims independently.
+    strategic_analysis: >-
+      GitHub and GitLab represent divergent strategies in the DevOps platform market. GitHub positions itself as a
+      developer-first collaborative platform enhanced by AI, leveraging its strong brand recognition and massive user
+      base to drive adoption through viral, bottom-up adoption patterns. The company emphasizes Copilot as the
+      centerpiece of innovation and targets workflows that begin with coding. GitLab, conversely, positions as an
+      enterprise-grade orchestration platform where AI agents operate autonomously within guardrails set by human teams.
+      GitLab emphasizes end-to-end DevSecOps consolidation, regulatory compliance, and industry-specific solutions,
+      appealing to buyers seeking to consolidate multiple security and deployment tools.
+
+
+      The two platforms represent different buyer motivations: GitHub appeals to developers seeking modern collaboration
+      tools and AI assistance, while GitLab appeals to enterprises seeking unified platforms that reduce tool sprawl,
+      enforce compliance, and enable consistent security practices across the SDLC. GitHub's strength lies in developer
+      experience and network effects; GitLab's strength lies in platform completeness and governance capabilities.
+
+
+      Both companies emphasize AI as a competitive differentiator but with distinct implementations: GitHub's Copilot is
+      an assistant that augments human decision-making, while GitLab's Duo Agent Platform autonomously executes tasks.
+      This reflects a fundamental strategic difference in how each company envisions AI's role in software
+      development—collaborative enhancement versus autonomous task automation.
+    key_differentiators:
+      - "Platform scope: GitHub focuses on collaboration/coding; GitLab provides end-to-end DevSecOps orchestration"
+      - "AI implementation: GitHub Copilot as AI assistant vs. GitLab Duo as autonomous agentic platform"
+      - "Target buyer: GitHub targets developers; GitLab targets enterprise/compliance-focused organizations"
+      - >-
+        Security positioning: GitHub emphasizes security as add-on; GitLab emphasizes security-by-design throughout
+        lifecycle
+      - "Deployment options: GitHub cloud-only; GitLab offers both cloud and self-hosted flexibility"
+      - "Consolidation value: GitHub is point solution; GitLab enables single-platform consolidation of multiple tools"
+      - "Use case maturity: GitHub emphasizes innovation and speed; GitLab emphasizes regulated industries and compliance"
+    competitive_advantages:
+      company_a:
+        - Massive developer community and network effects
+        - Strong brand recognition and market positioning
+        - Superior code review and collaboration UX
+        - Copilot adoption momentum in AI code assistance
+        - Lower barrier to entry for individual developers
+        - Marketplace ecosystem
+      company_b:
+        - Complete platform consolidation reducing tool sprawl
+        - Built-in security testing across entire SDLC
+        - Agentic AI with governance and guardrails
+        - Industry-specific compliance solutions
+        - Self-hosted and air-gapped deployment options
+        - Value stream management and visibility capabilities
+        - Quantifiable enterprise outcomes and metrics
+  properties:
+    company_a:
+      type: object
+    company_b:
+      type: object
+    comparison:
+      type: object
+    strategic_analysis:
+      type: string
+data_source: HTTP fetch + Claude API (competitive analysis)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain1: github.com
+      domain2: gitlab.com
+    expected_fields:
+      - field: company_a
+        operator: not_null
+        reliability: guaranteed
+      - field: company_a
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: company_b
+        operator: not_null
+        reliability: guaranteed
+      - field: company_b
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: comparison
+        operator: not_null
+        reliability: guaranteed
+      - field: comparison
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: strategic_analysis
+        operator: not_null
+        reliability: guaranteed
+      - field: strategic_analysis
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    domain1: github.com
+    domain2: gitlab.com
+output_field_reliability:
+  company_a: guaranteed
+  company_b: guaranteed
+  comparison: guaranteed
+  strategic_analysis: guaranteed
+limitations:
+  - title: Comparison is based on public information only — pricing and features may lag behind actual product changes
+    text: >-
+      Comparison based on publicly available information — pricing, features, and positioning may lag behind actual
+      product changes
+    category: accuracy
+    severity: info
+    workaround: >-
+      Verify key competitive claims against each competitor's current website and changelog before presenting to
+      stakeholders

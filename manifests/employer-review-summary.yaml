@@ -1,0 +1,85 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: employer-review-summary
+name: Employer Review Summary
+description: Get employer review summary from Glassdoor. Returns overall rating, culture/compensation scores, pros/cons themes.
+category: data-extraction
+price_cents: 25
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - company
+  properties:
+    company:
+      type: string
+    country:
+      type: string
+output_schema:
+  type: object
+  example:
+    source: glassdoor.com
+    cons_themes: []
+    pros_themes: []
+    ceo_approval: null
+    company_name: Ñoño & Cía. S.A. / «Тест» 株式会社
+    review_count: null
+    overall_rating: null
+    ratings_breakdown:
+      culture: null
+      management: null
+      compensation: null
+      work_life_balance: null
+      career_opportunities: null
+    recommend_percent: null
+  properties:
+    cons_themes:
+      type: array
+    pros_themes:
+      type: array
+    overall_rating:
+      type: number
+    ratings_breakdown:
+      type: object
+    recommend_percent:
+      type: number
+data_source: Headless browser + Claude API (employer review site analysis)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      company: Google
+    expected_fields:
+      - field: cons_themes
+        operator: not_null
+        reliability: guaranteed
+      - field: cons_themes
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: pros_themes
+        operator: not_null
+        reliability: guaranteed
+      - field: pros_themes
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    company: Google
+output_field_reliability:
+  cons_themes: guaranteed
+  pros_themes: guaranteed
+  overall_rating: guaranteed
+  ratings_breakdown: guaranteed
+  recommend_percent: guaranteed
+limitations:
+  - title: Scraped ratings may be biased toward extreme experiences — very satisfied and very dissatisfied reviews dominate
+    text: >-
+      Reviews scraped from public platforms — ratings may be biased toward extreme experiences (very satisfied or very
+      dissatisfied)
+    category: accuracy
+    severity: info
+    workaround: Consider the sample size in the response and weight results higher when based on 50+ reviews

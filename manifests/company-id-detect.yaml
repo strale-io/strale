@@ -1,0 +1,77 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: company-id-detect
+name: Company ID Detection
+description: >-
+  Identify the type and country of a company registration number. Detects Swedish org numbers, Finnish business IDs,
+  German HRB numbers, LEIs, DUNS, and 20+ other formats. Pure algorithmic.
+category: validation
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - id
+  properties:
+    id:
+      type: string
+      description: Company registration number to identify
+output_schema:
+  type: object
+  example:
+    input: test
+    matches: []
+    message: Could not identify the format of this company ID.
+    detected: false
+  properties:
+    detected:
+      type: boolean
+    best_match:
+      type: object
+    all_matches:
+      type: array
+data_source: Algorithmic (pattern matching for org number formats across 20+ countries)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      id: 556703-7485
+    expected_fields:
+      - field: detected
+        operator: not_null
+        reliability: guaranteed
+      - field: detected
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: best_match
+        operator: not_null
+        reliability: guaranteed
+      - field: best_match
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: all_matches
+        operator: not_null
+        reliability: guaranteed
+      - field: all_matches
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    id: 556703-7485
+output_field_reliability:
+  detected: guaranteed
+  best_match: guaranteed
+  all_matches: guaranteed
+limitations:
+  - title: Ambiguous IDs matching multiple country formats may return multiple candidates requiring manual disambiguation
+    text: >-
+      Pattern-based detection of company IDs — ambiguous formats (e.g., a number matching multiple country patterns) may
+      return multiple candidates
+    category: accuracy
+    severity: info
+    workaround: Provide the expected country or ID type to disambiguate when the input matches multiple format patterns

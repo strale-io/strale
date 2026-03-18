@@ -1,0 +1,105 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: lei-lookup
+name: LEI Lookup
+description: >-
+  Look up a Legal Entity Identifier (LEI) via the GLEIF database. Accepts a 20-character LEI or company name. Returns
+  entity name, jurisdiction, addresses, registration status.
+category: validation
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - lei
+  properties:
+    lei:
+      type: string
+      description: 20-character LEI code or company name
+output_schema:
+  type: object
+  example:
+    lei: 549300MLUDYVRQOOXS22
+    status: ACTIVE
+    category: GENERAL
+    legal_form: YI42
+    legal_name: NORDIC CREDIT RATING AS
+    jurisdiction: "NO"
+    legal_address:
+      city: OSLO
+      line1: Ruseløkkveien 34
+      country: "NO"
+      postal_code: "0251"
+    last_update_date: "2025-10-08T11:04:06Z"
+    registration_status: ISSUED
+    headquarters_address:
+      city: OSLO
+      line1: Ruseløkkveien 34
+      country: "NO"
+      postal_code: "0251"
+    initial_registration_date: "2017-04-29T02:02:00Z"
+  properties:
+    lei:
+      type: string
+    status:
+      type: string
+    legal_name:
+      type: string
+    jurisdiction:
+      type: string
+    legal_address:
+      type: object
+data_source: GLEIF (Global Legal Entity Identifier Foundation)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      lei: 549300MLUDYVRQOOXS22
+    expected_fields:
+      - field: lei
+        operator: not_null
+        reliability: guaranteed
+      - field: lei
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: legal_name
+        operator: not_null
+        reliability: guaranteed
+      - field: legal_name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: jurisdiction
+        operator: not_null
+        reliability: guaranteed
+      - field: jurisdiction
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    lei: test
+output_field_reliability:
+  lei: guaranteed
+  status: guaranteed
+  legal_name: guaranteed
+  jurisdiction: guaranteed
+  legal_address: guaranteed
+limitations:
+  - title: Only approximately 2.5 million entities worldwide have LEIs via GLEIF, primarily financial institutions
+    text: >-
+      Covers entities with LEI registration via GLEIF — only ~2.5 million entities worldwide have LEIs, primarily
+      financial institutions
+    category: coverage
+    severity: info
+    workaround: If no LEI is found, search by company name and jurisdiction; consider that smaller entities may not have an LEI

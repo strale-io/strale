@@ -1,0 +1,81 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: swedish-company-data
+name: Swedish Company Data
+description: >-
+  Extract company data (revenue, employees, profit, fiscal year) for a Swedish organization number. Accepts natural
+  language descriptions — resolves to org number automatically.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - org_number
+  properties:
+    org_number:
+      type: string
+      description: Swedish org number (e.g. 559106-8089) or company name
+output_schema:
+  type: object
+  example:
+    employees: 1397
+    org_number: 556703-7485
+    profit_sek: 9153051000
+    fiscal_year: 2024-12
+    revenue_sek: 108131545000
+    company_name: Spotify AB
+  properties:
+    employees:
+      type: integer
+    org_number:
+      type: string
+    profit_sek:
+      type: number
+    fiscal_year:
+      type: string
+    revenue_sek:
+      type: number
+    company_name:
+      type: string
+data_source: Bolagsverket (Swedish Companies Registration Office)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      org_number: 556703-7485
+    expected_fields:
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: org_number
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    org_number: 556703-7485
+output_field_reliability:
+  employees: guaranteed
+  org_number: guaranteed
+  profit_sek: guaranteed
+  fiscal_year: guaranteed
+  revenue_sek: guaranteed
+  company_name: guaranteed
+limitations:
+  - title: Bolagsverket maintenance windows may cause 2-4 hour quarterly outages
+    text: Bolagsverket maintenance windows may cause temporary unavailability (typically 2-4 hours quarterly)
+    category: availability
+    severity: info
+    workaround: Implement a retry with exponential backoff; maintenance windows are announced at bolagsverket.se/driftinformation
+  - title: Financial data comes from annual reports and can be up to 12 months old
+    text: Financial data from annual reports — can be up to 12 months old
+    category: freshness
+    severity: info
+    workaround: Check the report_date field in the response and fetch directly from Bolagsverket for time-sensitive decisions
+  - title: Does not cover sole proprietorships — about 15% of Swedish businesses
+    text: Does not cover sole proprietorships (enskild firma) — approximately 15% of Swedish businesses
+    category: coverage
+    severity: info
+    workaround: Use the company name to search Skatteverket's public registry directly for enskild firma entities

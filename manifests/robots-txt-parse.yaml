@@ -1,0 +1,123 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: robots-txt-parse
+name: Robots.txt Parse
+description: >-
+  Fetch and parse a website's robots.txt. Returns rules per user-agent, sitemaps, crawl delays, and whether all crawlers
+  are blocked.
+category: monitoring
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+output_schema:
+  type: object
+  example:
+    url: https://strale.dev/robots.txt
+    rules:
+      - allow:
+          - /
+        disallow: []
+        user_agent: Googlebot
+      - allow:
+          - /
+        disallow: []
+        user_agent: Bingbot
+      - allow:
+          - /
+        disallow: []
+        user_agent: Twitterbot
+      - allow:
+          - /
+        disallow: []
+        user_agent: facebookexternalhit
+      - allow:
+          - /
+        disallow: []
+        user_agent: "*"
+    exists: true
+    sitemaps:
+      - https://strale.dev/sitemap.xml
+    raw_length: 201
+    total_rules: 5
+    user_agents:
+      - Googlebot
+      - Bingbot
+      - Twitterbot
+      - facebookexternalhit
+      - "*"
+    total_allow_rules: 5
+    blocks_all_crawlers: false
+    total_disallow_rules: 0
+  properties:
+    rules:
+      type: array
+    exists:
+      type: boolean
+    sitemaps:
+      type: array
+    user_agents:
+      type: array
+    blocks_all_crawlers:
+      type: boolean
+data_source: HTTP fetch (robots.txt file from target domain)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://strale.dev/robots.txt
+    expected_fields:
+      - field: rules
+        operator: not_null
+        reliability: guaranteed
+      - field: rules
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: exists
+        operator: not_null
+        reliability: guaranteed
+      - field: exists
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: sitemaps
+        operator: not_null
+        reliability: guaranteed
+      - field: sitemaps
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: user_agents
+        operator: not_null
+        reliability: guaranteed
+      - field: user_agents
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    url: https://strale.dev
+output_field_reliability:
+  rules: guaranteed
+  exists: guaranteed
+  sitemaps: guaranteed
+  user_agents: guaranteed
+  blocks_all_crawlers: guaranteed
+limitations:
+  - title: >-
+      Parses standard robots.txt directives — non-standard extensions like Crawl-delay may be reported but not
+      interpreted
+    text: >-
+      Parses standard robots.txt directives — non-standard extensions (e.g., Crawl-delay, custom directives) may be
+      reported but not interpreted
+    category: coverage
+    severity: info
+    workaround: Check the raw text in the response for non-standard directives that may affect your specific crawler

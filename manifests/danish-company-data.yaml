@@ -1,0 +1,84 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: danish-company-data
+name: Danish Company Data
+description: >-
+  Look up Danish company data from the Central Business Register (CVR). Accepts CVR number (8 digits) or fuzzy company
+  name.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - cvr_number
+  properties:
+    cvr_number:
+      type: string
+      description: Danish CVR number (8 digits) or company name
+output_schema:
+  type: object
+  example:
+    status: active
+    address: Novo Alle 1, 2880 Bagsværd
+    cvr_number: "24256790"
+    start_date: 28/11 - 1931
+    company_name: NOVO NORDISK A/S
+    business_type: Aktieselskab
+    industry_code: "212000"
+    employee_range: 33167
+    industry_description: Fremstilling af farmaceutiske præparater
+  properties:
+    status:
+      type: string
+    address:
+      type: string
+    cvr_number:
+      type: string
+    start_date:
+      type: string
+    company_name:
+      type: string
+    business_type:
+      type: string
+    industry_code:
+      type: string
+    employee_range:
+      type: string
+data_source: CVR / Danish Business Authority (Erhvervsstyrelsen)
+data_source_type: api
+transparency_tag: mixed
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      cvr_number: "24256790"
+    expected_fields:
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    cvr_number: test
+output_field_reliability:
+  status: guaranteed
+  address: guaranteed
+  cvr_number: guaranteed
+  start_date: guaranteed
+  company_name: guaranteed
+  business_type: guaranteed
+  industry_code: guaranteed
+  employee_range: guaranteed
+limitations:
+  - title: Financial data comes from annual reports and can be up to 12 months old
+    text: Financial data from annual reports — can be up to 12 months old
+    category: freshness
+    severity: info
+    workaround: >-
+      Check the report_date field and retrieve the latest filing from the Danish Business Authority
+      (erhvervsstyrelsen.dk)
+  - title: Does not cover sole proprietorships — about 15% of Danish businesses
+    text: Does not cover sole proprietorships (enkeltmandsvirksomhed)
+    category: coverage
+    severity: info
+    workaround: Search the CVR register (datacvr.virk.dk) directly using the person's CPR-linked CVR number

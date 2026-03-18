@@ -1,0 +1,80 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: structured-scrape
+name: Structured Scrape
+description: >-
+  Extract structured data from any URL using a caller-defined JSON schema. Browserless renders the page, AI maps content
+  to your schema.
+category: web-scraping
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+    - schema
+  properties:
+    url:
+      type: string
+      description: URL to scrape
+    schema:
+      type: object
+      description: JSON schema describing the data to extract
+output_schema:
+  type: object
+  example:
+    url: https://example.com
+    data:
+      name: null
+      email: null
+  properties:
+    url:
+      type: string
+    data:
+      type: object
+data_source: Headless browser + Claude API (structured data extraction)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://example.com
+      schema:
+        type: object
+        properties:
+          name:
+            type: string
+          email:
+            type: string
+    expected_fields:
+      - field: url
+        operator: not_null
+        reliability: guaranteed
+      - field: url
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: data
+        operator: not_null
+        reliability: guaranteed
+      - field: data
+        operator: type
+        reliability: guaranteed
+        value: object
+  health_check_input:
+    url: https://example.com
+    schema:
+      key: value
+output_field_reliability:
+  url: guaranteed
+  data: guaranteed
+limitations:
+  - title: Sites using CSS-in-JS with dynamically generated class names may require adjusted selectors between runs
+    text: >-
+      Requires CSS selectors for extraction — sites with dynamically generated class names (CSS-in-JS) may need adjusted
+      selectors
+    category: coverage
+    severity: info
+    workaround: Use data attributes or semantic HTML tags as selectors instead of class names for sites using CSS-in-JS

@@ -1,0 +1,100 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: hs-code-lookup
+name: HS Code Lookup
+description: >-
+  Classify a product into Harmonized System (HS) commodity codes. Returns primary HS code, chapter, section, and
+  alternative classifications with confidence levels.
+category: trade
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - product
+  properties:
+    product:
+      type: string
+      description: Product description to classify
+output_schema:
+  type: object
+  example:
+    notes: >-
+      The query 'test_value' is a placeholder or test string and does not describe an actual product or commodity. A
+      valid product description is required for HS classification. Please provide a specific product name or detailed
+      description (e.g., 'cotton t-shirt', 'aluminum wire', 'frozen chicken breast', etc.).
+    query: test_value
+    chapter: N/A
+    section: N/A
+    confidence: N/A
+    primary_hs_code: Unable to classify
+    alternative_codes: []
+    chapter_description: N/A
+    primary_description: Not a valid product description
+  properties:
+    chapter:
+      type: string
+    confidence:
+      type: string
+    primary_hs_code:
+      type: string
+    alternative_codes:
+      type: array
+    primary_description:
+      type: string
+data_source: Harmonized System nomenclature database (WCO)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      product: test_value
+    expected_fields:
+      - field: chapter
+        operator: not_null
+        reliability: guaranteed
+      - field: chapter
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: confidence
+        operator: not_null
+        reliability: guaranteed
+      - field: confidence
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: primary_hs_code
+        operator: not_null
+        reliability: guaranteed
+      - field: primary_hs_code
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: alternative_codes
+        operator: not_null
+        reliability: guaranteed
+      - field: alternative_codes
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    product: test
+output_field_reliability:
+  chapter: guaranteed
+  confidence: guaranteed
+  primary_hs_code: guaranteed
+  alternative_codes: guaranteed
+  primary_description: guaranteed
+limitations:
+  - title: >-
+      AI-based HS code suggestion only — official classification requires customs authority review and binding tariff
+      info
+    text: >-
+      AI-based HS code suggestion — official classification requires customs authority review and binding tariff
+      information
+    category: accuracy
+    severity: warning
+    workaround: Use the suggested HS code as a starting point and verify with your customs broker or national tariff database

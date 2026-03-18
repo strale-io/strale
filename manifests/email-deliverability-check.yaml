@@ -1,0 +1,91 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: email-deliverability-check
+name: Email Deliverability Check
+description: "Check email deliverability for a domain: SPF, DKIM, DMARC, MX records, blacklist status. Returns 0-100 score."
+category: validation
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+output_schema:
+  type: object
+  example:
+    spf:
+      valid: true
+      exists: true
+      record: v=spf1 include:_spf.google.com ~all
+      mechanism: ~all (soft fail)
+    dkim:
+      detected: false
+      selector_found: null
+    dmarc:
+      exists: true
+      policy: reject
+      record: v=DMARC1; p=reject; rua=mailto:mailauth-reports@google.com
+    grade: B
+    score: 80
+    domain: google.com
+    issues:
+      - No DKIM record found for common selectors
+    mx_records:
+      - exchange: smtp.google.com
+        priority: 10
+    blacklisted: false
+    recommendations:
+      - "Configure DKIM signing and publish a DKIM DNS record. Note: custom selectors may exist but were not detected."
+    blacklists_checked:
+      - name: zen.spamhaus.org
+        listed: false
+      - name: bl.spamcop.net
+        listed: false
+      - name: b.barracudacentral.org
+        listed: false
+  properties:
+    spf:
+      type: object
+    dkim:
+      type: object
+    dmarc:
+      type: object
+    grade:
+      type: string
+    score:
+      type: number
+    blacklisted:
+      type: boolean
+data_source: DNS protocol (SPF, DKIM, DMARC record verification) + blacklist check
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain: google.com
+    expected_fields:
+      - field: spf
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    domain: example.com
+output_field_reliability:
+  spf: guaranteed
+  dkim: guaranteed
+  dmarc: guaranteed
+  grade: guaranteed
+  score: guaranteed
+  blacklisted: guaranteed
+limitations:
+  - title: SMTP verification may be blocked by some mail servers, so deliverable results are not guaranteed
+    text: SMTP verification may be blocked by some mail servers — a 'deliverable' result is not guaranteed delivery
+    category: accuracy
+    severity: info
+    workaround: >-
+      Treat SMTP-verified results as 'likely deliverable' and implement bounce handling in your email pipeline for
+      definitive status

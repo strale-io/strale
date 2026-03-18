@@ -1,0 +1,58 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: product-search
+name: Product Search
+description: Search products on Google Shopping. Returns product listings with title, price, merchant, rating.
+category: data-extraction
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+    country:
+      type: string
+output_schema:
+  type: object
+  example:
+    note: No product listings available. Page returned CAPTCHA verification challenge instead of search results.
+    query: test
+    products: []
+    search_url: https://www.google.us/search?q=test&tbm=shop&hl=en
+    total_results_estimate: null
+  properties:
+    products:
+      type: array
+    total_results_estimate:
+      type: number
+data_source: Headless browser (e-commerce product search)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      query: laptop
+    expected_fields:
+      - field: products
+        operator: not_null
+        reliability: guaranteed
+      - field: products
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    query: laptop
+output_field_reliability:
+  products: guaranteed
+  total_results_estimate: guaranteed
+limitations:
+  - title: Product search results depend on retailer scraping and vary by region and product category
+    text: Search results depend on retailer website scraping — results vary by region and product category
+    category: coverage
+    severity: info
+    workaround: Include the target market or retailer name in the search query for more relevant results

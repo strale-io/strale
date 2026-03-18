@@ -1,0 +1,195 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: patent-search
+name: Patent Search
+description: >-
+  Search US patents via PatentsView API. Search by keyword, title, or patent number. Returns patent details, inventors,
+  assignees.
+category: data-extraction
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+    max_results:
+      type: integer
+output_schema:
+  type: object
+  example:
+    query: ;
+    patents:
+      - url: https://patents.google.com/patent/US10920276B2
+        date: "2021-02-16"
+        title: Genetic polymorphisms associated with psoriasis, methods of detection and uses
+        abstract: >-
+          The present invention is based on the discovery of genetic polymorphisms that are associated with psoriasis
+          and related pathologies. In particular, the present invention relates to nucleic acid molecules containing the
+          polymorphisms, including groups of nucleic acid molecules that may be used as a
+        assignees:
+          - Celera Corporation
+        inventors:
+          - Ann Begovich
+        patent_number: US10920276B2
+      - url: https://patents.google.com/patent/US11788143B2
+        date: "2023-10-17"
+        title: Genetic polymorphisms associated with psoriasis, methods of detection and uses
+        abstract: >-
+          The present invention is based on the discovery of genetic polymorphisms that are associated with psoriasis
+          and related pathologies. In particular, the present invention relates to nucleic acid molecules containing the
+          polymorphisms, including groups of nucleic acid molecules that may be used as a
+        assignees:
+          - Celera Corporation
+        inventors:
+          - Yonghong Li
+        patent_number: US11788143B2
+      - url: https://patents.google.com/patent/US11008618B2
+        date: "2021-05-18"
+        title: Genetic polymorphisms associated with autoinflammatory diseases, methods of
+        abstract: >-
+          The present invention provides compositions and methods based on genetic polymorphisms that are associated
+          with autoinflammatory diseases such as psoriasis. For example, the present invention relates to nucleic acid
+          molecules containing the polymorphisms, variant proteins encoded by these nucleic
+        assignees:
+          - Celera Corporation
+        inventors:
+          - Steven Schrodi
+        patent_number: US11008618B2
+      - url: https://patents.google.com/patent/US20100196400A1
+        date: "2010-08-05"
+        title: Genetic polymorphisms associated with alzheimer's disease, methods of detection
+        abstract: >-
+          The present invention is based on the discovery of genetic polymorphisms that are associated with Alzheimer's
+          Disease. In particular, the present invention relates to nucleic acid molecules containing the polymorphisms,
+          variant proteins encoded by such nucleic acid molecules, reagents for
+        assignees:
+          - Celera Corporation
+        inventors:
+          - Yonghong Li
+        patent_number: US20100196400A1
+      - url: https://patents.google.com/patent/US9576131B2
+        date: "2017-02-21"
+        title: Malware detection system and method for mobile platforms
+        abstract: >-
+          In one example, a management server is configured to provide malware protection for one or more client mobile
+          platforms in communication with the management server via a mobile network. In the example, the management
+          server includes a processor configured to detect malware in the mobile network,
+        assignees:
+          - Juniper Networks, Inc.
+        inventors:
+          - George Tuvell
+        patent_number: US9576131B2
+      - url: https://patents.google.com/patent/CN110535614B
+        date: "2024-08-09"
+        title: Signaling information transmission method, device, communication node and
+        abstract: >-
+          The present application proposes a method, device, communication node and storage medium for transmitting
+          signaling information, the method comprising: receiving signaling information; determining channel state
+          information of M physical uplink channels based on the signaling information, where M
+        assignees:
+          - 中兴通讯股份有限公司
+        inventors:
+          - 肖华华
+        patent_number: CN110535614B
+      - url: https://patents.google.com/patent/US10313203B2
+        date: "2019-06-04"
+        title: Systems and methods for network monitoring and analysis of a simulated network
+        abstract: >-
+          Systems and methods for monitoring and analyzing components and operation of a simulated network environment
+          including a module configured for storing a predetermined baseline for the simulated network environment,
+          monitoring the simulated network environment during one or more operations,
+        assignees:
+          - Metova Federal, Llc
+        inventors:
+          - Christopher Dyson White
+        patent_number: US10313203B2
+      - url: https://patents.google.com/patent/US11954427B2
+        date: "2024-04-09"
+        title: Transformation in tabular data cleaning tool
+        abstract: >-
+          wherein the selected at least one of the one or more change actions includes modifying the set of data to at
+          least one of: change the spelling of a word, change the case of letters; delete a space, add a space, delete a
+          period, delete a comma, delete a semi-colon , delete a colon; add a period, add
+        assignees:
+          - Palantir Technologies Inc.
+        inventors:
+          - Daniel CERVELLI
+        patent_number: US11954427B2
+      - url: https://patents.google.com/patent/US11086891B2
+        date: "2021-08-10"
+        title: Systems and methods for tracking and representing data science data runs
+        abstract: >-
+          A system for tracking and representing data science data runs includes a hub including a first computing
+          device communicatively coupled with a data store. A runner including a second computing device having a cache
+          is communicatively coupled with the hub through a telecommunications network. An
+        assignees:
+          - Subtree Inc.
+        inventors:
+          - Luke Marsden
+        patent_number: US11086891B2
+      - url: https://patents.google.com/patent/US11829853B2
+        date: "2023-11-28"
+        title: Systems and methods for tracking and representing data science model runs
+        abstract: >-
+          A system for tracking and representing data science model runs includes a hub including a first computing
+          device communicatively coupled with a data store. A runner including a second computing device having a cache
+          is communicatively coupled with the hub through a telecommunications network. An
+        assignees:
+          - Subtree Inc.
+        inventors:
+          - Luke Marsden
+        patent_number: US11829853B2
+    source_url: https://patents.google.com/?q=%3B&num=-1
+    total_found: null
+    returned_count: 10
+  properties:
+    patents:
+      type: array
+    total_found:
+      type: integer
+data_source: Headless browser (Google Patents search)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      query: electric vehicle battery
+    expected_fields:
+      - field: patents
+        operator: not_null
+        reliability: guaranteed
+      - field: patents
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_found
+        operator: not_null
+        reliability: guaranteed
+      - field: total_found
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_found
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    query: electric vehicle battery
+output_field_reliability:
+  patents: guaranteed
+  total_found: guaranteed
+limitations:
+  - title: Searches Google Patents via Browserless — focused on US, EP, and WO patents; some national patents may not appear
+    text: >-
+      Searches via Browserless + Google Patents — coverage focused on US, EP, and WO patents; some national patents may
+      not appear
+    category: coverage
+    severity: info
+    workaround: >-
+      For comprehensive patent searches, supplement with Espacenet (worldwide.espacenet.com) or the national patent
+      office

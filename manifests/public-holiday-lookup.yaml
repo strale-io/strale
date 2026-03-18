@@ -1,0 +1,170 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: public-holiday-lookup
+name: Public Holiday Lookup
+description: Get public holidays for any country and year. Uses Nager.Date API. Returns holiday dates, names, and next upcoming.
+category: data-extraction
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - country_code
+  properties:
+    year:
+      type: number
+    country_code:
+      type: string
+output_schema:
+  type: object
+  example:
+    year: 2025
+    holidays:
+      - date: "2025-01-01"
+        name: New Year's Day
+        type: Public
+        fixed: false
+        global: true
+        local_name: New Year's Day
+      - date: "2025-01-20"
+        name: Martin Luther King, Jr. Day
+        type: Public
+        fixed: false
+        global: true
+        local_name: Martin Luther King, Jr. Day
+      - date: "2025-02-12"
+        name: Lincoln's Birthday
+        type: Observance
+        fixed: false
+        global: false
+        local_name: Lincoln's Birthday
+      - date: "2025-02-17"
+        name: Presidents Day
+        type: Public
+        fixed: false
+        global: true
+        local_name: Washington's Birthday
+      - date: "2025-04-18"
+        name: Good Friday
+        type: Public
+        fixed: false
+        global: false
+        local_name: Good Friday
+      - date: "2025-04-18"
+        name: Good Friday
+        type: Optional
+        fixed: false
+        global: false
+        local_name: Good Friday
+      - date: "2025-05-08"
+        name: Truman Day
+        type: School, Authorities
+        fixed: false
+        global: false
+        local_name: Truman Day
+      - date: "2025-05-26"
+        name: Memorial Day
+        type: Public
+        fixed: false
+        global: true
+        local_name: Memorial Day
+      - date: "2025-06-19"
+        name: Juneteenth National Independence Day
+        type: Public
+        fixed: false
+        global: true
+        local_name: Juneteenth National Independence Day
+      - date: "2025-07-04"
+        name: Independence Day
+        type: Public
+        fixed: false
+        global: true
+        local_name: Independence Day
+      - date: "2025-09-01"
+        name: Labour Day
+        type: Public
+        fixed: false
+        global: true
+        local_name: Labor Day
+      - date: "2025-10-13"
+        name: Columbus Day
+        type: Public
+        fixed: false
+        global: false
+        local_name: Columbus Day
+      - date: "2025-10-13"
+        name: Indigenous Peoples' Day
+        type: Public
+        fixed: false
+        global: false
+        local_name: Indigenous Peoples' Day
+      - date: "2025-11-11"
+        name: Veterans Day
+        type: Public
+        fixed: false
+        global: true
+        local_name: Veterans Day
+      - date: "2025-11-27"
+        name: Thanksgiving Day
+        type: Public
+        fixed: false
+        global: true
+        local_name: Thanksgiving Day
+      - date: "2025-12-25"
+        name: Christmas Day
+        type: Public
+        fixed: false
+        global: true
+        local_name: Christmas Day
+    country_code: US
+    next_upcoming: null
+    total_holidays: 16
+  properties:
+    holidays:
+      type: array
+    next_upcoming:
+      type: object
+    total_holidays:
+      type: number
+data_source: Nager.Date API (public holiday database)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      year: 2027
+      country_code: SE
+    expected_fields:
+      - field: holidays
+        operator: not_null
+        reliability: guaranteed
+      - field: holidays
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: total_holidays
+        operator: not_null
+        reliability: guaranteed
+      - field: total_holidays
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_holidays
+        operator: gt
+        reliability: guaranteed
+        value: -1
+  health_check_input:
+    year: 2025
+    country_code: US
+output_field_reliability:
+  holidays: guaranteed
+  next_upcoming: guaranteed
+  total_holidays: guaranteed
+limitations:
+  - title: Covers national public holidays via Nager.Date — regional, state, and bank holidays may not be included
+    text: Covers national public holidays via Nager.Date API — regional/state holidays and bank holidays may not be included
+    category: coverage
+    severity: info
+    workaround: For regional holidays (e.g., German Bundesländer), check the specific state's official holiday calendar

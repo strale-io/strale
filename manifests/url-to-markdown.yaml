@@ -1,0 +1,75 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: url-to-markdown
+name: URL to Markdown
+description: Render any URL via headless browser and convert to clean markdown. Strips nav, ads, footers. Works on JS-heavy sites.
+category: web-scraping
+price_cents: 5
+is_free_tier: true
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: URL to convert
+    include_links:
+      type: boolean
+    include_images:
+      type: boolean
+output_schema:
+  type: object
+  example:
+    url: https://example.com
+    title: Example Domain
+    markdown: |-
+      Example Domain
+
+      # Example Domain
+
+      This domain is for use in documentation examples without needing permission. Avoid use in operations.
+
+      [Learn more](https://iana.org/domains/example)
+    word_count: 22
+  properties:
+    title:
+      type: string
+    markdown:
+      type: string
+    word_count:
+      type: integer
+data_source: HTTP fetch + HTML-to-markdown conversion
+data_source_type: scrape
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://example.com
+    expected_fields:
+      - field: markdown
+        operator: not_null
+        reliability: guaranteed
+      - field: markdown
+        operator: contains
+        reliability: guaranteed
+        value: Example
+  health_check_input:
+    url: https://example.com
+output_field_reliability:
+  title: guaranteed
+  markdown: guaranteed
+  word_count: guaranteed
+limitations:
+  - title: JavaScript-heavy single-page applications may not render completely before content is extracted
+    text: JavaScript-heavy single-page applications may not render completely
+    category: coverage
+    severity: info
+    workaround: Pass a wait_for_selector parameter if available, or use web-extract-clean which renders JS via headless browser
+  - title: Login-protected or paywalled content cannot be extracted
+    text: Login-protected or paywalled content cannot be extracted
+    category: coverage
+    severity: info
+    workaround: Provide the direct content URL if accessible via API, or pre-fetch the HTML and pass it as raw input instead

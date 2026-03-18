@@ -1,0 +1,75 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: japanese-company-data
+name: Japanese Company Data
+description: >-
+  Look up Japanese company data from the National Tax Agency corporate number system. Accepts 13-digit corporate number
+  or fuzzy company name.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - corporate_number
+  properties:
+    corporate_number:
+      type: string
+      description: 13-digit corporate number or company name
+output_schema:
+  type: object
+  example:
+    status: unknown
+    address: null
+    industry: null
+    directors: null
+    company_name: null
+    business_type: null
+    registration_date: null
+    registration_number: null
+  properties:
+    status:
+      type: string
+    company_name:
+      type: string
+    business_type:
+      type: string
+    corporate_number:
+      type: string
+data_source: National Tax Agency Corporate Number System (Japan)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      corporate_number: "1180301018771"
+    expected_fields:
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: company_name
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    corporate_number: "1180301018771"
+output_field_reliability:
+  status: guaranteed
+  company_name: guaranteed
+  business_type: guaranteed
+  corporate_number: guaranteed
+limitations:
+  - title: Japan NTA database provides corporate numbers only — financial data and officer details are not included
+    text: Extracted from National Tax Agency corporate number database — financial data and officer details are not included
+    category: coverage
+    severity: info
+    workaround: Use the corporate number from the response to search EDINET (edinet-fsa.go.jp) for listed company filings

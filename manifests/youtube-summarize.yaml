@@ -1,0 +1,83 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: youtube-summarize
+name: YouTube Summarize
+description: >-
+  Summarize a YouTube video from its auto-generated transcript. Returns summary, key points, topics, and timestamps of
+  interest.
+category: utility
+price_cents: 20
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: YouTube video URL
+output_schema:
+  type: object
+  properties:
+    title:
+      type: string
+    topics:
+      type: array
+    summary:
+      type: string
+    key_points:
+      type: array
+    timestamps_of_interest:
+      type: array
+data_source: HTTP fetch (YouTube transcript) + Claude API (summarization)
+data_source_type: api
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://www.youtube.com/watch?v=UF8uR6Z6KLc
+    expected_fields:
+      - field: title
+        operator: not_null
+        reliability: guaranteed
+      - field: title
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: topics
+        operator: not_null
+        reliability: guaranteed
+      - field: topics
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: summary
+        operator: not_null
+        reliability: guaranteed
+      - field: summary
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: key_points
+        operator: not_null
+        reliability: guaranteed
+      - field: key_points
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    url: https://www.youtube.com/watch?v=UF8uR6Z6KLc
+output_field_reliability:
+  title: guaranteed
+  topics: guaranteed
+  summary: guaranteed
+  key_points: guaranteed
+  timestamps_of_interest: guaranteed
+limitations:
+  - title: Requires a video with available captions or transcripts — videos without captions cannot be summarized
+    text: Requires videos with available transcripts or captions — videos without captions cannot be summarized
+    category: coverage
+    severity: info
+    workaround: If no transcript is available, use a third-party transcription service first and pass the text to summarize

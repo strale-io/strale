@@ -1,0 +1,115 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: mx-lookup
+name: MX Lookup
+description: >-
+  DNS lookup for MX, A, AAAA, NS, TXT, SOA records. Detects email provider (Google, Microsoft, etc.), SPF, and DMARC
+  records.
+category: monitoring
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+output_schema:
+  type: object
+  example:
+    soa:
+      serial: 879543655
+      primary_ns: ns1.google.com
+      admin_email: dns-admin.google.com
+    domain: google.com
+    has_mx: true
+    has_spf: true
+    has_ipv6: true
+    a_records:
+      - 172.253.115.138
+      - 172.253.115.102
+      - 172.253.115.100
+      - 172.253.115.113
+      - 172.253.115.139
+      - 172.253.115.101
+    has_dmarc: false
+    mx_records:
+      - exchange: smtp.google.com
+        priority: 10
+    spf_record: v=spf1 include:_spf.google.com ~all
+    nameservers:
+      - ns3.google.com
+      - ns2.google.com
+      - ns1.google.com
+      - ns4.google.com
+    aaaa_records:
+      - 2607:f8b0:4004:c1f::71
+      - 2607:f8b0:4004:c1f::8a
+      - 2607:f8b0:4004:c1f::65
+      - 2607:f8b0:4004:c1f::66
+    dmarc_record: null
+    email_provider: Google Workspace
+  properties:
+    domain:
+      type: string
+    has_spf:
+      type: boolean
+    has_dmarc:
+      type: boolean
+    mx_records:
+      type: array
+    email_provider:
+      type: string
+data_source: DNS protocol (MX record query via system resolver)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      domain: google.com
+    expected_fields:
+      - field: domain
+        operator: not_null
+        reliability: guaranteed
+      - field: domain
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: has_spf
+        operator: not_null
+        reliability: guaranteed
+      - field: has_spf
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: has_dmarc
+        operator: not_null
+        reliability: guaranteed
+      - field: has_dmarc
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: mx_records
+        operator: not_null
+        reliability: guaranteed
+      - field: mx_records
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    domain: example.com
+output_field_reliability:
+  domain: guaranteed
+  has_spf: guaranteed
+  has_dmarc: guaranteed
+  mx_records: guaranteed
+  email_provider: guaranteed
+limitations:
+  - title: Returns MX records from DNS only — cannot verify whether the mail server is actually accepting connections
+    text: Returns MX records from DNS — cannot verify whether the mail server is actually accepting connections
+    category: coverage
+    severity: info
+    workaround: Combine with port-check on port 25 of the returned MX hosts to verify mail server reachability

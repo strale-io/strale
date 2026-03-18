@@ -1,0 +1,94 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: phone-normalize
+name: Phone Normalize
+description: >-
+  Parse and normalize phone numbers to E.164 format. Detects country, carrier type, validates format. Uses
+  libphonenumber.
+category: data-processing
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - phone_string
+  properties:
+    phone_string:
+      type: string
+      description: Phone number to normalize
+    default_country:
+      type: string
+      description: ISO country code (e.g. SE)
+output_schema:
+  type: object
+  example:
+    error: Could not parse phone number. Provide a default_country code (e.g. 'SE') for numbers without international prefix.
+    input: test
+    valid: false
+  properties:
+    e164:
+      type: string
+    type:
+      type: string
+    valid:
+      type: boolean
+    country_code:
+      type: string
+    national_format:
+      type: string
+    international_format:
+      type: string
+data_source: Algorithmic (E.164 phone number normalization, no external data)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      phone_string: "+46701234567"
+    expected_fields:
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: e164
+        operator: not_null
+        reliability: guaranteed
+      - field: e164
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: country_code
+        operator: not_null
+        reliability: guaranteed
+      - field: country_code
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: national_format
+        operator: not_null
+        reliability: guaranteed
+      - field: international_format
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    phone_string: "+46701234567"
+output_field_reliability:
+  e164: guaranteed
+  type: guaranteed
+  valid: guaranteed
+  country_code: guaranteed
+  national_format: guaranteed
+  international_format: guaranteed
+limitations:
+  - title: Country code detection relies on input hints when the phone number does not include a + prefix
+    text: >-
+      Normalizes to E.164 format — country code detection relies on input hints when the number doesn't include a
+      +prefix
+    category: coverage
+    severity: info
+    workaround: Always include the country code or specify the default_country parameter to avoid ambiguous normalization

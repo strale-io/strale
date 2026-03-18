@@ -1,0 +1,89 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: header-security-check
+name: Header Security Check
+description: >-
+  Check HTTP response headers for security best practices: HSTS, CSP, X-Frame-Options, X-Content-Type-Options,
+  Referrer-Policy, Permissions-Policy. Returns grade A-F.
+category: security
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+output_schema:
+  type: object
+  example:
+    url: https://google.com
+    cors: null
+    grade: F
+    score: 20
+    server: gws
+    missing:
+      - header: strict-transport-security
+        severity: high
+        recommendation: "Add: Strict-Transport-Security: max-age=31536000; includeSubDomains"
+      - header: content-security-policy
+        severity: high
+        recommendation: Add Content-Security-Policy to prevent XSS and injection attacks
+      - header: x-content-type-options
+        severity: medium
+        recommendation: "Add: X-Content-Type-Options: nosniff to prevent MIME sniffing"
+      - header: referrer-policy
+        severity: medium
+        recommendation: "Add: Referrer-Policy: strict-origin-when-cross-origin"
+      - header: permissions-policy
+        severity: medium
+        recommendation: Add Permissions-Policy to restrict browser features (camera, microphone, etc.)
+    present:
+      - value: SAMEORIGIN
+        header: x-frame-options
+        status: present
+      - value: "0"
+        header: x-xss-protection
+        status: present (deprecated header)
+    response_status: 200
+  properties:
+    grade:
+      type: string
+    score:
+      type: integer
+    missing:
+      type: array
+    present:
+      type: array
+data_source: HTTP response headers from target server (CSP, HSTS, X-Frame-Options)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://google.com
+    expected_fields:
+      - field: score
+        operator: not_null
+        reliability: guaranteed
+      - field: grade
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    url: https://strale.dev
+output_field_reliability:
+  grade: guaranteed
+  score: guaranteed
+  missing: guaranteed
+  present: guaranteed
+limitations:
+  - title: Checks HTTP security headers only, not server configuration, TLS settings, or application vulnerabilities
+    text: >-
+      Checks HTTP security headers only — does not assess server configuration, TLS settings, or application-level
+      vulnerabilities
+    category: coverage
+    severity: info
+    workaround: Combine with ssl-check for TLS assessment and use a full DAST scanner for application-level security testing

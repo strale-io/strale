@@ -1,0 +1,120 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: invoice-validate
+name: Invoice Validate
+description: "Validate invoice data: VAT number format, line item math, tax calculations, EU compliance requirements."
+category: validation
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - invoice
+  properties:
+    invoice:
+      type: object
+      description: Invoice JSON with vendor_vat, buyer_vat, amounts, line_items
+output_schema:
+  type: object
+  example:
+    valid: false
+    errors:
+      - field: invoice_number
+        issue: Required field 'invoice_number' is missing.
+      - field: invoice_date
+        issue: Required field 'invoice_date' is missing.
+      - field: vendor_vat
+        issue: Required field 'vendor_vat' is missing.
+      - field: vendor_name
+        issue: Required field 'vendor_name' is missing.
+      - field: vendor_address
+        issue: Required field 'vendor_address' is missing.
+      - field: line_items
+        issue: Required field 'line_items' is missing.
+      - field: amounts
+        issue: Required field 'amounts' is missing.
+    warnings:
+      - field: buyer_name
+        issue: Recommended field 'buyer_name' is missing for full EU compliance.
+      - field: buyer_vat
+        issue: Recommended field 'buyer_vat' is missing for full EU compliance.
+      - field: buyer_address
+        issue: Recommended field 'buyer_address' is missing for full EU compliance.
+      - field: due_date
+        issue: Recommended field 'due_date' is missing for full EU compliance.
+      - field: currency
+        issue: Recommended field 'currency' is missing for full EU compliance.
+    eu_compliant: false
+    line_items_check:
+      failed: 0
+      passed: 0
+      total_checked: 0
+    tax_calculation_check:
+      pass: true
+      actual_tax: null
+      difference: null
+      expected_tax: null
+  properties:
+    valid:
+      type: boolean
+    errors:
+      type: array
+    warnings:
+      type: array
+    eu_compliant:
+      type: boolean
+data_source: Algorithmic (invoice field validation, cross-check calculations)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      invoice:
+        key: value
+    expected_fields:
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: errors
+        operator: not_null
+        reliability: guaranteed
+      - field: errors
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: warnings
+        operator: not_null
+        reliability: guaranteed
+      - field: warnings
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: eu_compliant
+        operator: not_null
+        reliability: guaranteed
+      - field: eu_compliant
+        operator: type
+        reliability: guaranteed
+        value: boolean
+  health_check_input:
+    invoice:
+      key: value
+output_field_reliability:
+  valid: guaranteed
+  errors: guaranteed
+  warnings: guaranteed
+  eu_compliant: guaranteed
+limitations:
+  - title: Validates invoice structure and arithmetic only — cannot verify items were delivered or prices match contracts
+    text: >-
+      Validates invoice structure and arithmetic — cannot verify that billed items were actually delivered or that
+      prices match contracts
+    category: coverage
+    severity: info
+    workaround: Use as a structural pre-check before manual review of business terms and delivery confirmation

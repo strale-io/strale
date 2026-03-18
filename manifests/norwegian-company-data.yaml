@@ -1,0 +1,82 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: norwegian-company-data
+name: Norwegian Company Data
+description: >-
+  Look up Norwegian company data from the Brønnøysund Register Centre. Accepts org number (9 digits) or fuzzy company
+  name.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - org_number
+  properties:
+    org_number:
+      type: string
+      description: Norwegian org number (9 digits) or company name
+output_schema:
+  type: object
+  example:
+    status: active
+    address: Forusbeen 50, 4035 STAVANGER, Norge
+    org_number: "923609016"
+    company_name: EQUINOR ASA
+    business_type: Allmennaksjeselskap
+    industry_code: "06.100"
+    employee_count: 21412
+    registration_date: "1995-03-12"
+    industry_description: Utvinning av råolje
+  properties:
+    status:
+      type: string
+    address:
+      type: string
+    org_number:
+      type: string
+    company_name:
+      type: string
+    business_type:
+      type: string
+    industry_code:
+      type: string
+    employee_count:
+      type: integer
+    registration_date:
+      type: string
+data_source: Brønnøysund Register Centre (Norway)
+data_source_type: api
+transparency_tag: mixed
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      org_number: "984851006"
+    expected_fields:
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    org_number: 556703-7485
+output_field_reliability:
+  status: guaranteed
+  address: guaranteed
+  org_number: guaranteed
+  company_name: guaranteed
+  business_type: guaranteed
+  industry_code: guaranteed
+  employee_count: guaranteed
+  registration_date: guaranteed
+limitations:
+  - title: Does not cover sole proprietorships — about 15% of Norwegian businesses
+    text: Does not cover sole proprietorships (enkeltpersonforetak)
+    category: coverage
+    severity: info
+    workaround: Query Brønnøysundregistrene (brreg.no) directly for enkeltpersonforetak using the person's national ID
+  - title: Financial data comes from annual reports and can be up to 12 months old
+    text: Financial data from annual reports — can be up to 12 months old
+    category: freshness
+    severity: info
+    workaround: Check the report_date field and query Brønnøysundregistrene's regnskapsregisteret for the latest filing

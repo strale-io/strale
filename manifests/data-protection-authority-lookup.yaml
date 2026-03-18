@@ -1,0 +1,64 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: data-protection-authority-lookup
+name: Data Protection Authority Lookup
+description: Find the data protection authority (DPA) for any EU/EEA country. Returns name, website, complaint URL, contact info.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - country_code
+  properties:
+    country_code:
+      type: string
+      description: EU/EEA country code
+output_schema:
+  type: object
+  example:
+    phone: +43 1 52 152-0
+    address: Barichgasse 40-42, 1030 Vienna, Austria
+    website: https://www.dsb.gv.at
+    country_code: AT
+    country_name: Austria
+    complaint_url: https://www.dsb.gv.at/download-links/dokumente.html
+    contact_email: dsb@dsb.gv.at
+    authority_name: Österreichische Datenschutzbehörde
+  properties:
+    website:
+      type: string
+    complaint_url:
+      type: string
+    contact_email:
+      type: string
+    authority_name:
+      type: string
+data_source: Static database (EU/EEA Data Protection Authority registry)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      country_code: SE
+    expected_fields:
+      - field: authority_name
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    country_code: US
+output_field_reliability:
+  website: guaranteed
+  complaint_url: guaranteed
+  contact_email: guaranteed
+  authority_name: guaranteed
+limitations:
+  - title: Covers EU/EEA national DPAs only — sub-national authorities like German Länder DPAs are not included
+    text: Covers all EU/EEA member state DPAs — does not include sub-national authorities (e.g., German Länder DPAs)
+    category: coverage
+    severity: info
+    workaround: >-
+      For German entities, map the company's registered state to the corresponding Landesdatenschutzbeauftragter via
+      datenschutz.de

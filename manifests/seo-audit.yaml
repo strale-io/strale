@@ -1,0 +1,125 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: seo-audit
+name: SEO Audit
+description: >-
+  Comprehensive SEO audit of a URL. Checks title, meta description, h1 structure, image alt tags, canonical, robots.txt,
+  sitemap, Open Graph, schema.org, link ratio.
+category: competitive-intelligence
+price_cents: 30
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: URL to audit
+output_schema:
+  type: object
+  example:
+    url: https://google.com
+    checks:
+      h1:
+        count: 0
+        values: []
+        optimal: false
+      links:
+        ratio: 3.25
+        external: 13
+        internal: 4
+      title:
+        value: Google
+        length: 6
+        optimal: false
+        present: true
+      images:
+        total: 10
+        with_alt: 0
+        without_alt: 10
+      sitemap:
+        referenced_in_robots: true
+      canonical:
+        url: null
+        present: false
+      open_graph:
+        image: false
+        title: false
+        complete: false
+        description: false
+      robots_txt:
+        present: true
+      schema_org:
+        present: false
+        json_ld_blocks: 0
+      meta_description:
+        value: null
+        length: 0
+        optimal: false
+        present: false
+      heading_hierarchy:
+        count: 0
+        structure: []
+    issues:
+      - Missing meta description
+      - No H1 tag found
+      - 10 images missing alt text
+    overall_score: 35
+    prioritized_fixes:
+      - fix: Title is 6 chars. Aim for 30-60 characters.
+        issue: Title length not optimal
+        priority: medium
+      - fix: Add a meta description between 120-160 characters
+        issue: Missing meta description
+        priority: high
+      - fix: Add exactly one H1 tag per page
+        issue: Missing H1
+        priority: high
+      - fix: Add descriptive alt attributes to all images
+        issue: Images missing alt text
+        priority: medium
+      - fix: Add a <link rel='canonical'> tag
+        issue: No canonical URL
+        priority: low
+      - fix: Add og:title, og:description, and og:image meta tags
+        issue: Incomplete Open Graph tags
+        priority: medium
+      - fix: Add JSON-LD schema.org markup
+        issue: No structured data
+        priority: low
+  properties:
+    checks:
+      type: object
+    issues:
+      type: array
+    overall_score:
+      type: integer
+    prioritized_fixes:
+      type: array
+data_source: HTTP response analysis (meta tags, heading structure, performance metrics)
+data_source_type: scrape
+transparency_tag: ai_generated
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://google.com
+    expected_fields:
+      - field: overall_score
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    url: https://example.com
+output_field_reliability:
+  checks: guaranteed
+  issues: guaranteed
+  overall_score: guaranteed
+  prioritized_fixes: guaranteed
+limitations:
+  - title: Analyzes on-page SEO factors only — backlink profile and domain authority are not assessed
+    text: Analyzes on-page SEO factors only — does not assess backlink profile, domain authority, or content quality
+    category: accuracy
+    severity: info
+    workaround: Combine with domain-reputation for authority signals and google-search to check actual SERP positioning

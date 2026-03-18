@@ -1,0 +1,75 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: dangerous-goods-classify
+name: Dangerous Goods Classify
+description: >-
+  Classify dangerous goods by UN number or substance name. Returns hazard class, packing group, labels, marine pollutant
+  status. 200+ substances.
+category: data-extraction
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - substance
+  properties:
+    substance:
+      type: string
+      description: Substance name or UN number (e.g. UN1203, Gasoline)
+output_schema:
+  type: object
+  example:
+    error: >-
+      No dangerous goods found matching "test". Try a UN number (e.g. 'UN1203') or substance name (e.g. 'Gasoline',
+      'Lithium', 'Acid').
+    query: test
+    matches: []
+    total_matches: 0
+  properties:
+    class:
+      type: string
+    un_number:
+      type: string
+    packing_group:
+      type: string
+    marine_pollutant:
+      type: boolean
+    proper_shipping_name:
+      type: string
+data_source: Algorithmic (UN dangerous goods classification, ADR/IMDG/IATA rules)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      substance: acid
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: common
+      - field: matches
+        operator: not_null
+        reliability: common
+      - field: total_matches
+        operator: not_null
+        reliability: common
+  health_check_input:
+    substance: acid
+output_field_reliability:
+  class: guaranteed
+  un_number: guaranteed
+  packing_group: guaranteed
+  marine_pollutant: guaranteed
+  proper_shipping_name: guaranteed
+limitations:
+  - title: >-
+      AI-based dangerous goods classification is a preliminary screen only — certified testing and documentation are
+      required
+    text: >-
+      AI-based classification guidance — official dangerous goods classification requires certified testing and
+      documentation
+    category: accuracy
+    severity: warning
+    workaround: Use as a preliminary screen and confirm the UN number and packing group with your certified DG advisor

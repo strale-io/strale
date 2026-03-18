@@ -1,0 +1,87 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: eori-validate
+name: EORI Validation
+description: >-
+  Validate an EORI (Economic Operators Registration and Identification) number against the EU customs validation
+  service. Returns trader name and address if valid.
+category: validation
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - eori
+  properties:
+    eori:
+      type: string
+      description: EORI number (e.g. DE123456789012345)
+output_schema:
+  type: object
+  example:
+    city: null
+    valid: false
+    street: null
+    country: null
+    eori_number: TEST
+    postal_code: null
+    trader_name: null
+    country_code: TE
+    trader_address: null
+  properties:
+    valid:
+      type: boolean
+    eori_number:
+      type: string
+    trader_name:
+      type: string
+    country_code:
+      type: string
+data_source: EU EORI Validation System (European Commission DG TAXUD)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      eori: DE123456789012345
+    expected_fields:
+      - field: valid
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: eori_number
+        operator: not_null
+        reliability: guaranteed
+      - field: eori_number
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: country_code
+        operator: not_null
+        reliability: guaranteed
+      - field: country_code
+        operator: type
+        reliability: guaranteed
+        value: string
+  health_check_input:
+    eori: test
+output_field_reliability:
+  valid: guaranteed
+  eori_number: guaranteed
+  trader_name: guaranteed
+  country_code: guaranteed
+limitations:
+  - title: EU EORI validation service has periodic downtime and may respond slowly during peak hours
+    text: >-
+      Validates against the EU EORI service — the service experiences periodic downtime and may be slow during peak
+      hours
+    category: availability
+    severity: info
+    workaround: >-
+      Cache successful validations and implement retry logic; the EORI database is updated weekly so cached results
+      remain valid short-term

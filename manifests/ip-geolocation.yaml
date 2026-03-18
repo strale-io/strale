@@ -1,0 +1,100 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: ip-geolocation
+name: IP Geolocation
+description: Look up geographic location, ISP, and network information for an IP address. Detects proxies and hosting providers.
+category: data-extraction
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - ip
+  properties:
+    ip:
+      type: string
+output_schema:
+  type: object
+  example:
+    ip: 8.8.8.8
+    isp: Google LLC
+    zip: "20149"
+    city: Ashburn
+    region: Virginia
+    country: United States
+    is_proxy: false
+    timezone: America/New_York
+    as_number: AS15169 Google LLC
+    is_mobile: false
+    is_hosting: true
+    coordinates:
+      latitude: 39.03
+      longitude: -77.5
+    region_code: VA
+    country_code: US
+    organization: Google Public DNS
+  properties:
+    isp:
+      type: string
+    city:
+      type: string
+    country:
+      type: string
+    is_proxy:
+      type: boolean
+    coordinates:
+      type: object
+data_source: ip-api.com (IP geolocation database)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      ip: 8.8.8.8
+    expected_fields:
+      - field: isp
+        operator: not_null
+        reliability: guaranteed
+      - field: isp
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: city
+        operator: not_null
+        reliability: guaranteed
+      - field: city
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: country
+        operator: not_null
+        reliability: guaranteed
+      - field: country
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: is_proxy
+        operator: not_null
+        reliability: guaranteed
+      - field: is_proxy
+        operator: type
+        reliability: guaranteed
+        value: boolean
+  health_check_input:
+    ip: 8.8.8.8
+output_field_reliability:
+  isp: guaranteed
+  city: guaranteed
+  country: guaranteed
+  is_proxy: guaranteed
+  coordinates: guaranteed
+limitations:
+  - title: City-level accuracy is approximately 80% for fixed IPs but lower for mobile and VPN traffic
+    text: >-
+      IP location accuracy varies — city-level accuracy is approximately 80% for fixed IPs but lower for mobile and VPN
+      traffic
+    category: accuracy
+    severity: info
+    workaround: Use country-level data for access control decisions; city-level data is best used for analytics, not enforcement

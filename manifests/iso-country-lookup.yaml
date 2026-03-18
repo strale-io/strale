@@ -1,0 +1,72 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: iso-country-lookup
+name: ISO Country Lookup
+description: >-
+  Look up any country by name, ISO code (alpha-2/3/numeric). Returns region, capital, currency, EU/Schengen/Eurozone
+  membership.
+category: data-extraction
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Country name, alpha-2, alpha-3, or numeric code
+output_schema:
+  type: object
+  example:
+    error: No country found matching "test".
+    query: test
+    matches: []
+    total_matches: 0
+  properties:
+    name:
+      type: string
+    region:
+      type: string
+    alpha_2:
+      type: string
+    alpha_3:
+      type: string
+    schengen:
+      type: boolean
+    eu_member:
+      type: boolean
+data_source: Algorithmic (ISO 3166-1 country code database)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      query: land
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: common
+      - field: matches
+        operator: not_null
+        reliability: common
+      - field: total_matches
+        operator: not_null
+        reliability: common
+  health_check_input:
+    query: land
+output_field_reliability:
+  name: guaranteed
+  region: guaranteed
+  alpha_2: guaranteed
+  alpha_3: guaranteed
+  schengen: guaranteed
+  eu_member: guaranteed
+limitations:
+  - title: Country data is based on ISO 3166-1 — newly created or renamed countries may not yet be reflected
+    text: Country data based on ISO 3166-1 standard — newly created or renamed countries may take time to be reflected
+    category: freshness
+    severity: info
+    workaround: For edge cases, cross-reference with the ISO Online Browsing Platform at iso.org/obp

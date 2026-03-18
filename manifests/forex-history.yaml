@@ -1,0 +1,599 @@
+# Auto-generated from database on 2026-03-17
+# Review and adjust before using as onboarding template
+
+slug: forex-history
+name: Forex History
+description: Get historical exchange rates between two currencies. Returns daily rates, average, min, max, change percentage.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - from
+    - to
+  properties:
+    to:
+      type: string
+      description: Target currency (e.g. USD)
+    from:
+      type: string
+      description: Source currency (e.g. EUR)
+    end_date:
+      type: string
+    start_date:
+      type: string
+output_schema:
+  type: object
+  example:
+    max: 0.9735
+    min: 0.8448
+    rates:
+      - date: "2025-01-15"
+        rate: 0.97087
+      - date: "2025-01-16"
+        rate: 0.97352
+      - date: "2025-01-17"
+        rate: 0.97106
+      - date: "2025-01-20"
+        rate: 0.96937
+      - date: "2025-01-21"
+        rate: 0.96553
+      - date: "2025-01-22"
+        rate: 0.95758
+      - date: "2025-01-23"
+        rate: 0.96117
+      - date: "2025-01-24"
+        rate: 0.95493
+      - date: "2025-01-27"
+        rate: 0.94967
+      - date: "2025-01-28"
+        rate: 0.9596
+      - date: "2025-01-29"
+        rate: 0.96191
+      - date: "2025-01-30"
+        rate: 0.96126
+      - date: "2025-01-31"
+        rate: 0.96219
+      - date: "2025-02-03"
+        rate: 0.97333
+      - date: "2025-02-04"
+        rate: 0.96759
+      - date: "2025-02-05"
+        rate: 0.95951
+      - date: "2025-02-06"
+        rate: 0.96525
+      - date: "2025-02-07"
+        rate: 0.96367
+      - date: "2025-02-10"
+        rate: 0.96899
+      - date: "2025-02-11"
+        rate: 0.96862
+      - date: "2025-02-12"
+        rate: 0.96432
+      - date: "2025-02-13"
+        rate: 0.96246
+      - date: "2025-02-14"
+        rate: 0.95438
+      - date: "2025-02-17"
+        rate: 0.95484
+      - date: "2025-02-18"
+        rate: 0.95721
+      - date: "2025-02-19"
+        rate: 0.95841
+      - date: "2025-02-20"
+        rate: 0.95758
+      - date: "2025-02-21"
+        rate: 0.95557
+      - date: "2025-02-24"
+        rate: 0.95547
+      - date: "2025-02-25"
+        rate: 0.95265
+      - date: "2025-02-26"
+        rate: 0.95356
+      - date: "2025-02-27"
+        rate: 0.95447
+      - date: "2025-02-28"
+        rate: 0.96052
+      - date: "2025-03-03"
+        rate: 0.95557
+      - date: "2025-03-04"
+        rate: 0.94724
+      - date: "2025-03-05"
+        rate: 0.9351
+      - date: "2025-03-06"
+        rate: 0.92627
+      - date: "2025-03-07"
+        rate: 0.92106
+      - date: "2025-03-10"
+        rate: 0.92208
+      - date: "2025-03-11"
+        rate: 0.91642
+      - date: "2025-03-12"
+        rate: 0.91861
+      - date: "2025-03-13"
+        rate: 0.92336
+      - date: "2025-03-14"
+        rate: 0.91836
+      - date: "2025-03-17"
+        rate: 0.91718
+      - date: "2025-03-18"
+        rate: 0.91592
+      - date: "2025-03-19"
+        rate: 0.91768
+      - date: "2025-03-20"
+        rate: 0.92311
+      - date: "2025-03-21"
+        rate: 0.92362
+      - date: "2025-03-24"
+        rate: 0.92387
+      - date: "2025-03-25"
+        rate: 0.92379
+      - date: "2025-03-26"
+        rate: 0.92696
+      - date: "2025-03-27"
+        rate: 0.92721
+      - date: "2025-03-28"
+        rate: 0.92618
+      - date: "2025-03-31"
+        rate: 0.92464
+      - date: "2025-04-01"
+        rate: 0.92696
+      - date: "2025-04-02"
+        rate: 0.92567
+      - date: "2025-04-03"
+        rate: 0.90114
+      - date: "2025-04-04"
+        rate: 0.9044
+      - date: "2025-04-07"
+        rate: 0.91183
+      - date: "2025-04-08"
+        rate: 0.91324
+      - date: "2025-04-09"
+        rate: 0.90539
+      - date: "2025-04-10"
+        rate: 0.90236
+      - date: "2025-04-11"
+        rate: 0.88137
+      - date: "2025-04-14"
+        rate: 0.87897
+      - date: "2025-04-15"
+        rate: 0.88308
+      - date: "2025-04-16"
+        rate: 0.88067
+      - date: "2025-04-17"
+        rate: 0.88028
+      - date: "2025-04-22"
+        rate: 0.87138
+      - date: "2025-04-23"
+        rate: 0.87604
+      - date: "2025-04-24"
+        rate: 0.87904
+      - date: "2025-04-25"
+        rate: 0.88051
+      - date: "2025-04-28"
+        rate: 0.88044
+      - date: "2025-04-29"
+        rate: 0.87928
+      - date: "2025-04-30"
+        rate: 0.87928
+      - date: "2025-05-02"
+        rate: 0.8816
+      - date: "2025-05-05"
+        rate: 0.8816
+      - date: "2025-05-06"
+        rate: 0.883
+      - date: "2025-05-07"
+        rate: 0.88028
+      - date: "2025-05-08"
+        rate: 0.88519
+      - date: "2025-05-09"
+        rate: 0.88873
+      - date: "2025-05-12"
+        rate: 0.90041
+      - date: "2025-05-13"
+        rate: 0.89993
+      - date: "2025-05-14"
+        rate: 0.89174
+      - date: "2025-05-15"
+        rate: 0.89405
+      - date: "2025-05-16"
+        rate: 0.89334
+      - date: "2025-05-19"
+        rate: 0.88794
+      - date: "2025-05-20"
+        rate: 0.8896
+      - date: "2025-05-21"
+        rate: 0.88331
+      - date: "2025-05-22"
+        rate: 0.88425
+      - date: "2025-05-23"
+        rate: 0.88488
+      - date: "2025-05-26"
+        rate: 0.87866
+      - date: "2025-05-27"
+        rate: 0.88059
+      - date: "2025-05-28"
+        rate: 0.88363
+      - date: "2025-05-29"
+        rate: 0.88645
+      - date: "2025-05-30"
+        rate: 0.88191
+      - date: "2025-06-02"
+        rate: 0.87573
+      - date: "2025-06-03"
+        rate: 0.87827
+      - date: "2025-06-04"
+        rate: 0.87843
+      - date: "2025-06-05"
+        rate: 0.87543
+      - date: "2025-06-06"
+        rate: 0.87635
+      - date: "2025-06-09"
+        rate: 0.87642
+      - date: "2025-06-10"
+        rate: 0.87497
+      - date: "2025-06-11"
+        rate: 0.87466
+      - date: "2025-06-12"
+        rate: 0.86252
+      - date: "2025-06-13"
+        rate: 0.86866
+      - date: "2025-06-16"
+        rate: 0.86401
+      - date: "2025-06-17"
+        rate: 0.86445
+      - date: "2025-06-18"
+        rate: 0.86896
+      - date: "2025-06-19"
+        rate: 0.87123
+      - date: "2025-06-20"
+        rate: 0.86843
+      - date: "2025-06-23"
+        rate: 0.87169
+      - date: "2025-06-24"
+        rate: 0.86155
+      - date: "2025-06-25"
+        rate: 0.86222
+      - date: "2025-06-26"
+        rate: 0.85507
+      - date: "2025-06-27"
+        rate: 0.85441
+      - date: "2025-06-30"
+        rate: 0.85324
+      - date: "2025-07-01"
+        rate: 0.84674
+      - date: "2025-07-02"
+        rate: 0.8507
+      - date: "2025-07-03"
+        rate: 0.84875
+      - date: "2025-07-04"
+        rate: 0.84983
+      - date: "2025-07-07"
+        rate: 0.85266
+      - date: "2025-07-08"
+        rate: 0.85339
+      - date: "2025-07-09"
+        rate: 0.85485
+      - date: "2025-07-10"
+        rate: 0.85404
+      - date: "2025-07-11"
+        rate: 0.85594
+      - date: "2025-07-14"
+        rate: 0.85543
+      - date: "2025-07-15"
+        rate: 0.85727
+      - date: "2025-07-16"
+        rate: 0.86192
+      - date: "2025-07-17"
+        rate: 0.86363
+      - date: "2025-07-18"
+        rate: 0.85837
+      - date: "2025-07-21"
+        rate: 0.85712
+      - date: "2025-07-22"
+        rate: 0.85477
+      - date: "2025-07-23"
+        rate: 0.85281
+      - date: "2025-07-24"
+        rate: 0.85063
+      - date: "2025-07-25"
+        rate: 0.85295
+      - date: "2025-07-28"
+        rate: 0.85807
+      - date: "2025-07-29"
+        rate: 0.86708
+      - date: "2025-07-30"
+        rate: 0.86753
+      - date: "2025-07-31"
+        rate: 0.87367
+      - date: "2025-08-01"
+        rate: 0.87689
+      - date: "2025-08-04"
+        rate: 0.86468
+      - date: "2025-08-05"
+        rate: 0.8661
+      - date: "2025-08-06"
+        rate: 0.86177
+      - date: "2025-08-07"
+        rate: 0.85889
+      - date: "2025-08-08"
+        rate: 0.85852
+      - date: "2025-08-11"
+        rate: 0.86044
+      - date: "2025-08-12"
+        rate: 0.86162
+      - date: "2025-08-13"
+        rate: 0.8539
+      - date: "2025-08-14"
+        rate: 0.85543
+      - date: "2025-08-15"
+        rate: 0.85558
+      - date: "2025-08-18"
+        rate: 0.85668
+      - date: "2025-08-19"
+        rate: 0.85602
+      - date: "2025-08-20"
+        rate: 0.8583
+      - date: "2025-08-21"
+        rate: 0.85918
+      - date: "2025-08-22"
+        rate: 0.86147
+      - date: "2025-08-25"
+        rate: 0.85492
+      - date: "2025-08-26"
+        rate: 0.85793
+      - date: "2025-08-27"
+        rate: 0.86259
+      - date: "2025-08-28"
+        rate: 0.85646
+      - date: "2025-08-29"
+        rate: 0.85778
+      - date: "2025-09-01"
+        rate: 0.85361
+      - date: "2025-09-02"
+        rate: 0.85866
+      - date: "2025-09-03"
+        rate: 0.85815
+      - date: "2025-09-04"
+        rate: 0.85859
+      - date: "2025-09-05"
+        rate: 0.85492
+      - date: "2025-09-08"
+        rate: 0.85266
+      - date: "2025-09-09"
+        rate: 0.8515
+      - date: "2025-09-10"
+        rate: 0.85419
+      - date: "2025-09-11"
+        rate: 0.8558
+      - date: "2025-09-12"
+        rate: 0.85339
+      - date: "2025-09-15"
+        rate: 0.84991
+      - date: "2025-09-16"
+        rate: 0.84696
+      - date: "2025-09-17"
+        rate: 0.84481
+      - date: "2025-09-18"
+        rate: 0.84617
+      - date: "2025-09-19"
+        rate: 0.85208
+      - date: "2025-09-22"
+        rate: 0.84882
+      - date: "2025-09-23"
+        rate: 0.84796
+      - date: "2025-09-24"
+        rate: 0.85063
+      - date: "2025-09-25"
+        rate: 0.85186
+      - date: "2025-09-26"
+        rate: 0.85675
+      - date: "2025-09-29"
+        rate: 0.85302
+      - date: "2025-09-30"
+        rate: 0.85172
+      - date: "2025-10-01"
+        rate: 0.85295
+      - date: "2025-10-02"
+        rate: 0.85077
+      - date: "2025-10-03"
+        rate: 0.85222
+      - date: "2025-10-06"
+        rate: 0.85631
+      - date: "2025-10-07"
+        rate: 0.85719
+      - date: "2025-10-08"
+        rate: 0.86007
+      - date: "2025-10-09"
+        rate: 0.86125
+      - date: "2025-10-10"
+        rate: 0.86445
+      - date: "2025-10-13"
+        rate: 0.86438
+      - date: "2025-10-14"
+        rate: 0.86558
+      - date: "2025-10-15"
+        rate: 0.86044
+      - date: "2025-10-16"
+        rate: 0.85844
+      - date: "2025-10-17"
+        rate: 0.85609
+      - date: "2025-10-20"
+        rate: 0.858
+      - date: "2025-10-21"
+        rate: 0.86155
+      - date: "2025-10-22"
+        rate: 0.86304
+      - date: "2025-10-23"
+        rate: 0.86259
+      - date: "2025-10-24"
+        rate: 0.86118
+      - date: "2025-10-27"
+        rate: 0.85911
+      - date: "2025-10-28"
+        rate: 0.85985
+      - date: "2025-10-29"
+        rate: 0.8594
+      - date: "2025-10-30"
+        rate: 0.8658
+      - date: "2025-10-31"
+        rate: 0.8655
+      - date: "2025-11-03"
+        rate: 0.86851
+      - date: "2025-11-04"
+        rate: 0.87025
+      - date: "2025-11-05"
+        rate: 0.87017
+      - date: "2025-11-06"
+        rate: 0.86708
+      - date: "2025-11-07"
+        rate: 0.86498
+      - date: "2025-11-10"
+        rate: 0.86423
+      - date: "2025-11-11"
+        rate: 0.86393
+      - date: "2025-11-12"
+        rate: 0.86386
+      - date: "2025-11-13"
+        rate: 0.86066
+      - date: "2025-11-14"
+        rate: 0.85852
+      - date: "2025-11-17"
+        rate: 0.86259
+      - date: "2025-11-18"
+        rate: 0.86281
+      - date: "2025-11-19"
+        rate: 0.86333
+      - date: "2025-11-20"
+        rate: 0.86851
+      - date: "2025-11-21"
+        rate: 0.86806
+      - date: "2025-11-24"
+        rate: 0.86625
+      - date: "2025-11-25"
+        rate: 0.86573
+      - date: "2025-11-26"
+        rate: 0.86378
+      - date: "2025-11-27"
+        rate: 0.86311
+      - date: "2025-11-28"
+        rate: 0.8646
+      - date: "2025-12-01"
+        rate: 0.85866
+      - date: "2025-12-02"
+        rate: 0.86103
+      - date: "2025-12-03"
+        rate: 0.85704
+      - date: "2025-12-04"
+        rate: 0.85719
+      - date: "2025-12-05"
+        rate: 0.85874
+      - date: "2025-12-08"
+        rate: 0.858
+      - date: "2025-12-09"
+        rate: 0.85933
+      - date: "2025-12-10"
+        rate: 0.85955
+      - date: "2025-12-11"
+        rate: 0.85368
+      - date: "2025-12-12"
+        rate: 0.85244
+      - date: "2025-12-15"
+        rate: 0.85085
+      - date: "2025-12-16"
+        rate: 0.84918
+      - date: "2025-12-17"
+        rate: 0.8531
+      - date: "2025-12-18"
+        rate: 0.85332
+      - date: "2025-12-19"
+        rate: 0.85383
+      - date: "2025-12-22"
+        rate: 0.85143
+      - date: "2025-12-23"
+        rate: 0.84846
+      - date: "2025-12-24"
+        rate: 0.84839
+      - date: "2025-12-29"
+        rate: 0.84991
+      - date: "2025-12-30"
+        rate: 0.85056
+      - date: "2025-12-31"
+        rate: 0.85106
+    average: 0.8837
+    end_date: "2025-12-31"
+    start_date: "2025-01-15"
+    data_points: 246
+    to_currency: EUR
+    from_currency: USD
+    change_percent: -12.34
+  properties:
+    max:
+      type: number
+    min:
+      type: number
+    rates:
+      type: array
+    average:
+      type: number
+    change_percent:
+      type: number
+data_source: Frankfurter.app API (ECB historical exchange rates)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      to: EUR
+      from: USD
+      end_date: "2025-12-31"
+      start_date: "2025-01-15"
+    expected_fields:
+      - field: max
+        operator: not_null
+        reliability: guaranteed
+      - field: max
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: min
+        operator: not_null
+        reliability: guaranteed
+      - field: min
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: rates
+        operator: not_null
+        reliability: guaranteed
+      - field: rates
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: average
+        operator: not_null
+        reliability: guaranteed
+      - field: average
+        operator: type
+        reliability: guaranteed
+        value: number
+  health_check_input:
+    to: EUR
+    from: USD
+    start_date: "2025-01-15"
+output_field_reliability:
+  max: guaranteed
+  min: guaranteed
+  rates: guaranteed
+  average: guaranteed
+  change_percent: guaranteed
+limitations:
+  - title: Frankfurter API provides ECB reference rates published daily at 16:00 CET — no intraday data available
+    text: Historical rates from Frankfurter API (ECB reference rates) — published daily around 16:00 CET, no intraday data
+    category: freshness
+    severity: info
+    workaround: >-
+      For intraday rates, use a commercial forex data provider; ECB reference rates are suitable for accounting and
+      reporting
