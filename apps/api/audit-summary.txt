@@ -1,0 +1,146 @@
+=== STRALE CAPABILITY QUALITY AUDIT ===
+Date: 2026-03-16
+Total active capabilities: 233
+
+--- TIER DISTRIBUTION ---
+Green  (SQS ≥75, full coverage):  167 (72%)
+Yellow (SQS 50–74, partial):       28 (12%)
+Orange (SQS 25–49, upstream):      32 (14%)
+Red    (SQS <25, broken):           0 (0%)
+Pending (insufficient data):        6 (3%)
+
+--- BY TRANSPARENCY TAG ---
+algorithmic           124  (avg SQS: 96)
+ai_generated          106  (avg SQS: 69.5)
+mixed                   3  (avg SQS: 89.1)
+
+--- BY CATEGORY ---
+data-extraction               91  (avg SQS: 73)
+developer-tools               43  (avg SQS: 93.1)
+validation                    23  (avg SQS: 97.7)
+data-processing               15  (avg SQS: 96.6)
+web-scraping                   7  (avg SQS: 83.1)
+monitoring                     7  (avg SQS: 97.9)
+competitive-intelligence       6  (avg SQS: 57.1)
+file-conversion                5  (avg SQS: 88)
+utility                        5  (avg SQS: 83.8)
+text-processing                4  (avg SQS: 98)
+document-extraction            4  (avg SQS: 75.2)
+financial                      4  (avg SQS: 80.5)
+security                       4  (avg SQS: 94.6)
+web-intelligence               4  (avg SQS: 86.7)
+compliance                     4  (avg SQS: 82.8)
+content-writing                3  (avg SQS: 76.7)
+agent-tooling                  3  (avg SQS: 98)
+trade                          1  (avg SQS: 96.9)
+
+--- BY DATA SOURCE PATTERN ---
+Other external             75
+Claude API                 59
+Algorithmic                58
+Direct API                 37
+Browserless + LLM           3
+Serper/Search               1
+
+--- TEST TYPE COVERAGE ---
+Capabilities with all 5 types: 233
+Missing known_answer        : 0
+Missing schema_check        : 0
+Missing negative            : 0
+Missing edge_case           : 0
+Missing dependency_health   : 0
+
+--- RED TIER DETAILS (0) ---
+
+--- ORANGE TIER DETAILS (32) ---
+  annual-report-extract                    SQS  30.1 | 16% upstream | 55× Execution error: Failed to load Allabolag annual report page: HTTP 401
+  australian-company-data                  SQS  29.5 | 11% upstream | 33× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  belgian-company-data                     SQS  37.7 | 11% upstream | 34× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  canadian-company-data                    SQS  29.6 | 14% upstream | 34× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  company-tech-stack                       SQS  35.9 | 13% upstream | 34× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  credit-report-summary                    SQS    28 | 19% upstream | 32× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  customs-duty-lookup                      SQS  29.6 | 5% upstream | 23× Execution error: Invalid HS code format: "test_value". Must be 4-10 digits (e.g. '8471.30' or '847130').
+  dutch-company-data                       SQS  48.2 | 15% upstream | 34× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  employer-review-summary                  SQS    28 | 11% upstream | 34× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  german-company-data                      SQS  48.5 | 10% upstream | 33× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  google-search                            SQS  28.5 | 4% upstream | 63× Execution error: SERPER_API_KEY is required. Sign up at https://serper.dev (free tier: 2,500 queries/month).
+  hong-kong-company-data                   SQS  28.2 | 9% upstream | 36× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  indian-company-data                      SQS  29.3 | 11% upstream | 34× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  invoice-extract                          SQS  49.5 | 67% upstream | 47× Execution error: fetch failed
+  irish-company-data                       SQS  48.5 | 14% upstream | 33× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  italian-company-data                     SQS  48.5 | 12% upstream | 33× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  japanese-company-data                    SQS  29.9 | 11% upstream | 32× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  latvian-company-data                     SQS  48.5 | 14% upstream | 33× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  lithuanian-company-data                  SQS  48.5 | 21% upstream | 33× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  patent-search                            SQS  49.3 | 25% upstream | 34× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  portuguese-company-data                  SQS  48.6 | 12% upstream | 32× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  price-compare                            SQS  29.8 | 13% upstream | 32× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  pricing-page-extract                     SQS  36.1 | 13% upstream | 34× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  privacy-policy-analyze                   SQS  40.6 | 13% upstream | 36× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  product-reviews-extract                  SQS  35.9 | 11% upstream | 32× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  product-search                           SQS    28 | 14% upstream | 34× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  return-policy-extract                    SQS  29.8 | 13% upstream | 32× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  salary-benchmark                         SQS  29.8 | 12% upstream | 34× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  singapore-company-data                   SQS  28.2 | 9% upstream | 36× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  swiss-company-data                       SQS  48.6 | 13% upstream | 33× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  terms-of-service-extract                 SQS    28 | 9% upstream | 36× Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+  youtube-summarize                        SQS  29.6 | 5% upstream | 43× Execution error: Could not extract YouTube video ID from URL.
+
+--- PENDING TIER DETAILS (6) ---
+  amazon-price                             QP:pending  RP:pending  tests:147 last:2026-03-15 17:25:55.523599+00
+  austrian-company-data                    QP:pending  RP:pending  tests:202 last:2026-03-15 11:30:42.685713+00
+  ecb-interest-rates                       QP:pending  RP:pending  tests:157 last:2026-03-15 12:26:47.150881+00
+  estonian-company-data                    QP:pending  RP:pending  tests:137 last:2026-03-15 12:26:07.490529+00
+  page-speed-test                          QP:pending  RP:pending  tests:203 last:2026-03-15 19:25:42.561615+00
+  spanish-company-data                     QP:pending  RP:D        tests:152 last:2026-03-15 10:29:58.392037+00
+
+--- TOP 20 FAILURE REASONS ---
+   1523 | internal         | Execution error: Browserless returned HTTP 500: 500 Internal Server Error 500 Internal Server Error openresty/1.27.1.2
+   1395 | external_service | Execution error: fetch failed
+    250 | internal         | Execution error: Browserless returned HTTP 401: You've reached the units usage limit allowed under our free plan, please…
+    162 | internal         | chain: expected non-null
+    132 | internal         | Execution error: Connection error.
+    123 | external_service | Execution error: WHOIS query failed: getaddrinfo ENOTFOUND whois.nic.google
+    110 | internal         | valid: expected true, got false
+    108 | internal         | Execution error: SERPER_API_KEY is required. Sign up at https://serper.dev (free tier: 2,500 queries/month).
+     92 | internal         | Missing required input field: 'host'
+     82 | internal         | best_match: expected non-null
+     78 | external_service | Execution error: PageSpeed Insights returned HTTP 429: {
+  "error": {
+    "code": 429,
+    "message": "Quota exceeded fo…
+     76 | internal         | Execution error: Could not retrieve any ECB interest rates. The ECB API may be temporarily unavailable.
+     73 | external_service | Execution error: Browserless returned HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<cent…
+     71 | internal         | address: expected non-null
+     60 | internal         | Execution error: 'json' (JSON string or object) is required.
+     58 | internal         | Execution error: No DNS records found for "strale.dev". Domain may not exist.
+     58 | internal         | Execution error: No DNS records found for "google.com". Domain may not exist.
+     56 | internal         | Execution error: COMPANIES_HOUSE_API_KEY is required.
+     55 | external_service | Execution error: VIES error: MS_MAX_CONCURRENT_REQ
+     55 | internal         | Execution error: Failed to load Allabolag annual report page: HTTP 401
+
+--- UPSTREAM-DOMINATED FAILURES >80% (18) ---
+  base64-encode-url                        67/67 upstream | 67× Execution error: fetch failed
+  contract-extract                         47/47 upstream | 47× Execution error: fetch failed
+  gdpr-website-check                       25/31 upstream | 25× Execution error: fetch failed
+  header-security-check                    30/30 upstream | 30× Execution error: fetch failed
+  link-extract                             70/70 upstream | 70× Execution error: fetch failed
+  meta-extract                             69/69 upstream | 69× Execution error: fetch failed
+  og-image-check                           67/67 upstream | 67× Execution error: fetch failed
+  page-speed-test                          121/121 upstream | 78× Execution error: PageSpeed Insights returned HTTP 429: {
+  "error": {
+    "code": 429,
+    "message": "Quota exceeded fo…
+  pdf-extract                              47/47 upstream | 47× Execution error: fetch failed
+  receipt-categorize                       47/47 upstream | 47× Execution error: fetch failed
+  redirect-trace                           67/67 upstream | 67× Execution error: fetch failed
+  resume-parse                             47/47 upstream | 47× Execution error: fetch failed
+  robots-txt-parse                         67/67 upstream | 67× Execution error: fetch failed
+  sitemap-parse                            67/67 upstream | 67× Execution error: fetch failed
+  url-health-check                         67/67 upstream | 67× Execution error: fetch failed
+  url-to-text                              67/67 upstream | 67× Execution error: fetch failed
+  website-carbon-estimate                  63/63 upstream | 63× Execution error: fetch failed
+  whois-lookup                             123/124 upstream | 123× Execution error: WHOIS query failed: getaddrinfo ENOTFOUND whois.nic.google
