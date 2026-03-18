@@ -1,6 +1,7 @@
 {
   "name": "strale-mcp",
-  "version": "0.1.6",
+  "mcpName": "io.github.strale-io/strale",
+  "version": "0.1.7",
   "description": "MCP server for Strale — exposes 229+ capabilities as tools for Claude, Cursor, Windsurf, and any MCP client",
   "type": "module",
   "main": "./dist/server.js",
@@ -47,7 +48,6 @@
     "url": "https://github.com/strale-io/strale/issues"
   },
   "license": "MIT",
-  "mcpName": "io.github.strale-io/strale",
   "engines": {
     "node": ">=20.0.0"
   }
