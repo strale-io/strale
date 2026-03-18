@@ -1535,6 +1535,432 @@ const SOLUTIONS: SolutionDef[] = [
       },
     ],
   },
+
+  // ── Cross-model demand solutions (Batch 2 expansion) ──────────────────────
+
+  // ── Enhanced Due Diligence ──
+  {
+    slug: "enhanced-due-diligence",
+    name: "Enhanced Due Diligence",
+    marketingName: "Enhanced Due Diligence",
+    description:
+      "Comprehensive due diligence on a company: registry verification, beneficial ownership, sanctions screening, PEP screening, and adverse media analysis. Returns everything a compliance officer needs in one call.",
+    longDescription:
+      "Runs a full Enhanced Due Diligence (EDD) workflow: fetches official company registry data, looks up beneficial owners via OpenOwnership/Companies House, screens against international sanctions lists, checks for Politically Exposed Persons, and searches for adverse media coverage. All steps run in parallel where possible for fast results.",
+    agentDescription:
+      "full company due diligence, EDD check, enhanced due diligence company, KYC AML company check, compliance screening company, beneficial ownership sanctions PEP adverse media",
+    category: "compliance",
+    priceCents: 300,
+    componentSumCents: 150,
+    valueTier: "compliance",
+    maintenanceLevel: "low",
+    geography: "eu-global",
+    targetAudience: "Compliance teams, legal departments, investment firms, banks — anyone doing KYC/AML on companies",
+    transparencyTag: "mixed",
+    extendsWith: ["aml-risk-score", "insolvency-check", "domain-age-check"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        company_name: { type: "string", description: "Company name to investigate" },
+        country_code: { type: "string", description: "ISO 2-letter country code" },
+        company_number: { type: "string", description: "Company registration number (optional)" },
+      },
+      required: ["company_name", "country_code"],
+    },
+    exampleInput: { company_name: "Tesco PLC", country_code: "GB", company_number: "00445790" },
+    exampleOutput: {
+      company: { name: "TESCO PLC", status: "active" },
+      beneficial_owners: [{ name: "Example Owner", percentage: 15.2 }],
+      sanctions: { match: false },
+      pep: { match: false },
+      adverse_media: { risk_level: "low", findings: [] },
+    },
+    steps: [
+      {
+        capabilitySlug: "uk-company-data",
+        stepOrder: 1,
+        canParallel: false,
+        parallelGroup: null,
+        inputMap: { company_number: "$input.company_number" },
+      },
+      {
+        capabilitySlug: "beneficial-ownership-lookup",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { company_name: "$input.company_name", jurisdiction: "$input.country_code" },
+      },
+      {
+        capabilitySlug: "sanctions-check",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$input.company_name" },
+      },
+      {
+        capabilitySlug: "pep-check",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$input.company_name" },
+      },
+      {
+        capabilitySlug: "adverse-media-check",
+        stepOrder: 5,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$input.company_name" },
+      },
+    ],
+  },
+
+  // ── Customer Risk Screen ──
+  {
+    slug: "customer-risk-screen",
+    name: "Customer Risk Screen",
+    marketingName: "Customer Risk Screen",
+    description:
+      "AML screening for customer onboarding: sanctions check, PEP screening, and adverse media analysis in one call. The essential compliance screen for every new customer.",
+    longDescription:
+      "Runs the three core AML screening steps in parallel: sanctions list check (EU, US OFAC, UN, UK), Politically Exposed Persons screening, and adverse media search. Designed for high-volume customer onboarding — all steps run in parallel for sub-second results on cached data.",
+    agentDescription:
+      "AML screening customer, KYC check person, customer onboarding compliance, sanctions PEP adverse media screen, new customer risk check",
+    category: "compliance",
+    priceCents: 100,
+    componentSumCents: 45,
+    valueTier: "compliance",
+    maintenanceLevel: "low",
+    geography: "global",
+    targetAudience: "Any business onboarding customers — banks, fintechs, marketplaces, platforms with KYC requirements",
+    transparencyTag: "mixed",
+    extendsWith: ["aml-risk-score", "id-number-validate"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Person or company name to screen" },
+        country_code: { type: "string", description: "Country code (optional)" },
+        birth_date: { type: "string", description: "Date of birth for person screening (optional)" },
+      },
+      required: ["name"],
+    },
+    exampleInput: { name: "Jane Doe", country_code: "GB" },
+    exampleOutput: {
+      sanctions: { match: false },
+      pep: { is_pep: false, total_matches: 0 },
+      adverse_media: { risk_level: "none", total_findings: 0 },
+    },
+    steps: [
+      {
+        capabilitySlug: "sanctions-check",
+        stepOrder: 1,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$input.name" },
+      },
+      {
+        capabilitySlug: "pep-check",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$input.name", country: "$input.country_code", birth_date: "$input.birth_date" },
+      },
+      {
+        capabilitySlug: "adverse-media-check",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$input.name" },
+      },
+    ],
+  },
+
+  // ── Contact Verification ──
+  {
+    slug: "contact-verify",
+    name: "Contact Verification",
+    marketingName: "Contact Verification",
+    description:
+      "Verify a contact's email, phone number, and address in parallel. Returns validation status for each channel. Essential for CRM hygiene and lead qualification.",
+    longDescription:
+      "Validates all three contact channels simultaneously: email (format + MX records + disposable detection), phone (format + type classification + carrier), and address (geocoding + component extraction). All steps run in parallel — results in under 2 seconds.",
+    agentDescription:
+      "verify contact details, validate email phone address, CRM data hygiene, lead qualification check, contact data verification",
+    category: "sales-outreach",
+    priceCents: 25,
+    componentSumCents: 8,
+    valueTier: "verification",
+    maintenanceLevel: "near-zero",
+    geography: "global",
+    targetAudience: "Sales teams, CRM administrators, marketing ops — anyone maintaining contact databases",
+    transparencyTag: "mixed",
+    extendsWith: ["phone-type-detect", "email-reputation-score", "address-geocode"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        email: { type: "string", description: "Email address to verify" },
+        phone_number: { type: "string", description: "Phone number to verify (optional)" },
+        address: { type: "string", description: "Postal address to verify (optional)" },
+      },
+      required: ["email"],
+    },
+    exampleInput: { email: "jane@acme.com", phone_number: "+447911123456", address: "10 Downing Street, London, UK" },
+    exampleOutput: {
+      email: { valid: true, has_mx: true },
+      phone: { valid: true, type: "mobile" },
+      address: { valid: true, formatted: "10 Downing Street, London SW1A 2AA, UK" },
+    },
+    steps: [
+      {
+        capabilitySlug: "email-validate",
+        stepOrder: 1,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { email: "$input.email" },
+      },
+      {
+        capabilitySlug: "phone-validate",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { phone_number: "$input.phone_number" },
+      },
+      {
+        capabilitySlug: "address-validate",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { address: "$input.address" },
+      },
+    ],
+  },
+
+  // ── Invoice Processing Pipeline ──
+  {
+    slug: "invoice-process",
+    name: "Invoice Processing Pipeline",
+    marketingName: "Invoice Processing Pipeline",
+    description:
+      "End-to-end invoice verification: extract structured data from the invoice, validate the vendor's VAT number, verify the payment IBAN, and convert currency if needed. Returns everything an AP automation agent needs.",
+    longDescription:
+      "Processes an invoice in four steps: (1) extracts structured data (vendor, amounts, line items, VAT, IBAN) using AI, (2) validates the VAT number against VIES, (3) validates the IBAN checksum and bank, (4) converts the total to a target currency. Steps 2-3 run in parallel after extraction.",
+    agentDescription:
+      "process invoice, extract invoice data, verify invoice VAT IBAN, AP automation, accounts payable processing, invoice validation pipeline",
+    category: "data-research",
+    priceCents: 50,
+    componentSumCents: 23,
+    valueTier: "verification",
+    maintenanceLevel: "low",
+    geography: "eu-global",
+    targetAudience: "Finance teams, AP automation, ERP integrations — anyone processing invoices",
+    transparencyTag: "mixed",
+    extendsWith: ["invoice-validate", "payment-reference-generate"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        text: { type: "string", description: "Invoice text or OCR output" },
+        target_currency: { type: "string", description: "Convert amounts to this currency (optional)" },
+      },
+      required: ["text"],
+    },
+    exampleInput: {
+      text: "Invoice #2024-001\nFrom: Acme Ltd, VAT: GB123456789\nIBAN: GB82WEST12345698765432\nTotal: €1,250.00",
+      target_currency: "SEK",
+    },
+    exampleOutput: {
+      extracted: { vendor: "Acme Ltd", vat_number: "GB123456789", total: 1250.0 },
+      vat_valid: true,
+      iban_valid: true,
+      converted: { amount: 14375.0, currency: "SEK" },
+    },
+    steps: [
+      {
+        capabilitySlug: "invoice-extract",
+        stepOrder: 1,
+        canParallel: false,
+        parallelGroup: null,
+        inputMap: { text: "$input.text" },
+      },
+      {
+        capabilitySlug: "vat-validate",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { vat_number: "$steps[0].vat_number" },
+      },
+      {
+        capabilitySlug: "iban-validate",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { iban: "$steps[0].iban" },
+      },
+      {
+        capabilitySlug: "currency-convert",
+        stepOrder: 4,
+        canParallel: false,
+        parallelGroup: null,
+        inputMap: { from: "$steps[0].currency", to: "$input.target_currency", amount: "$steps[0].total_amount" },
+      },
+    ],
+  },
+
+  // ── Vendor Onboarding Check ──
+  {
+    slug: "vendor-onboard",
+    name: "Vendor Onboarding Check",
+    marketingName: "Vendor Onboarding Check",
+    description:
+      "Everything a procurement agent needs to onboard a new vendor: company verification, VAT validation, bank account verification, sanctions screening, and address validation. One call replaces a 45-minute manual check.",
+    longDescription:
+      "Runs five verification steps: (1) fetches company registry data, (2-5) validates VAT number, verifies IBAN, screens against sanctions lists, and validates the vendor address — all in parallel after the initial company lookup.",
+    agentDescription:
+      "vendor onboarding check, onboard new supplier, procurement compliance, verify vendor company VAT IBAN sanctions, supplier due diligence",
+    category: "compliance",
+    priceCents: 150,
+    componentSumCents: 104,
+    valueTier: "compliance",
+    maintenanceLevel: "low",
+    geography: "eu-global",
+    targetAudience: "Procurement teams, vendor management, supply chain compliance",
+    transparencyTag: "mixed",
+    extendsWith: ["beneficial-ownership-lookup", "insolvency-check", "domain-age-check"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        company_name: { type: "string", description: "Vendor company name" },
+        country_code: { type: "string", description: "Vendor country code" },
+        vat_number: { type: "string", description: "Vendor VAT number (optional)" },
+        iban: { type: "string", description: "Vendor bank IBAN (optional)" },
+        address: { type: "string", description: "Vendor address (optional)" },
+      },
+      required: ["company_name", "country_code"],
+    },
+    exampleInput: { company_name: "Volvo AB", country_code: "SE", vat_number: "SE556012573201", iban: "SE3550000000054910000003" },
+    exampleOutput: {
+      company: { name: "Volvo AB", status: "active" },
+      vat_valid: true,
+      iban_valid: true,
+      sanctions_match: false,
+      address_valid: true,
+    },
+    steps: [
+      {
+        capabilitySlug: "swedish-company-data",
+        stepOrder: 1,
+        canParallel: false,
+        parallelGroup: null,
+        inputMap: { org_number: "$input.company_name" },
+      },
+      {
+        capabilitySlug: "vat-validate",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { vat_number: "$input.vat_number" },
+      },
+      {
+        capabilitySlug: "iban-validate",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { iban: "$input.iban" },
+      },
+      {
+        capabilitySlug: "sanctions-check",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$input.company_name" },
+      },
+      {
+        capabilitySlug: "address-validate",
+        stepOrder: 5,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { address: "$input.address" },
+      },
+    ],
+  },
+
+  // ── HR Candidate Screening ──
+  {
+    slug: "hr-candidate-screen",
+    name: "HR Candidate Screening",
+    marketingName: "HR Candidate Screening",
+    description:
+      "Screen a job candidate: parse their resume, validate their email and phone, and run sanctions and PEP checks. Returns structured candidate data with verification status.",
+    longDescription:
+      "Parses the resume to extract candidate name and details, then runs four verification steps in parallel: email validation, phone validation, sanctions screening, and PEP check. Designed for HR tech platforms and recruitment agencies in regulated industries.",
+    agentDescription:
+      "screen job candidate, HR background check, recruitment compliance, verify candidate email phone sanctions PEP, candidate screening pipeline",
+    category: "data-research",
+    priceCents: 80,
+    componentSumCents: 30,
+    valueTier: "verification",
+    maintenanceLevel: "low",
+    geography: "global",
+    targetAudience: "HR tech, recruitment platforms, staffing agencies, compliance-heavy industries",
+    transparencyTag: "mixed",
+    extendsWith: ["id-number-validate", "adverse-media-check"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        resume_text: { type: "string", description: "Resume/CV text content" },
+        email: { type: "string", description: "Candidate email (optional)" },
+        phone_number: { type: "string", description: "Candidate phone (optional)" },
+      },
+      required: ["resume_text"],
+    },
+    exampleInput: {
+      resume_text: "Jane Smith\nSenior Engineer at Acme Corp\njane@acme.com\n+44 7911 123456",
+      email: "jane@acme.com",
+      phone_number: "+447911123456",
+    },
+    exampleOutput: {
+      candidate: { name: "Jane Smith", skills: ["engineering"] },
+      email_valid: true,
+      phone_valid: true,
+      sanctions_match: false,
+      pep_match: false,
+    },
+    steps: [
+      {
+        capabilitySlug: "resume-parse",
+        stepOrder: 1,
+        canParallel: false,
+        parallelGroup: null,
+        inputMap: { text: "$input.resume_text" },
+      },
+      {
+        capabilitySlug: "email-validate",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { email: "$input.email" },
+      },
+      {
+        capabilitySlug: "phone-validate",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { phone_number: "$input.phone_number" },
+      },
+      {
+        capabilitySlug: "sanctions-check",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$steps[0].name" },
+      },
+      {
+        capabilitySlug: "pep-check",
+        stepOrder: 5,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$steps[0].name" },
+      },
+    ],
+  },
 ];
 
 // ─── Seed logic ─────────────────────────────────────────────────────────────
