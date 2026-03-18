@@ -15,6 +15,12 @@ import { sanitizeErrorMessage, getTestResultsForSlug } from "./trust-helpers.js"
 import { computeDualProfileSQS } from "./sqs.js";
 import { computeExecutionGuidance, type ComputeGuidanceInput } from "./execution-guidance.js";
 import { classifyFailure } from "./failure-classifier.js";
+import {
+  attemptRemediation,
+  buildRunSummary,
+  formatRunSummary,
+  type RemediationResult,
+} from "./self-heal.js";
 import { checkUpstreamEscalation } from "./upstream-tracker.js";
 import { evaluateLifecycle } from "./lifecycle.js";
 import { logHealthEvent } from "./health-monitor.js";
@@ -66,6 +72,7 @@ interface SingleTestResult {
   passed: boolean;
   failureReason: string | null;
   responseTimeMs: number;
+  remediation?: RemediationResult;
 }
 
 // ─── Tier-specific delays ───────────────────────────────────────────────────
@@ -135,6 +142,42 @@ export async function runTests(
   for (let i = 0; i < suites.length; i++) {
     const suite = suites[i];
     const result = await runSingleTest(suite, fieldReliabilityMap);
+
+    // ── Self-healing: attempt remediation on failures ──────────────────
+    if (!result.passed && result.failureReason) {
+      try {
+        const remediation = await attemptRemediation(
+          suite.id,
+          suite.capabilitySlug,
+          result.testName,
+          result.testType,
+          result.failureReason,
+        );
+        result.remediation = remediation;
+
+        if (remediation.outcome === "auto_resolved" && remediation.verificationPassed) {
+          result.passed = true;
+          result.failureReason = null;
+          console.log(
+            `[self-heal] ✅ Auto-resolved: ${suite.capabilitySlug} — ${remediation.action}`,
+          );
+        } else if (remediation.outcome === "monitoring") {
+          console.log(
+            `[self-heal] 🟡 Monitoring: ${suite.capabilitySlug} — ${remediation.action}`,
+          );
+        } else {
+          console.warn(
+            `[self-heal] 🔴 Escalate: ${suite.capabilitySlug} — ${remediation.action}`,
+          );
+        }
+      } catch (healErr) {
+        console.error(
+          `[self-heal] Remediation threw for ${suite.capabilitySlug}:`,
+          healErr,
+        );
+      }
+    }
+
     results.push(result);
     totalResponseTime += result.responseTimeMs;
     totalEstimatedCost += suite.estimatedCostCents;
@@ -1167,11 +1210,31 @@ async function runAdaptiveScheduler(): Promise<void> {
       passed += summary.passed;
       failed += summary.failed;
 
-      for (const r of summary.results) {
-        if (!r.passed) {
-          console.warn(`[scheduler] FAIL [${slug}] ${r.testName} — ${r.failureReason}`);
+        // Collect remediations from this run
+        const remediations = summary.results
+          .filter((r) => r.remediation)
+          .map((r) => r.remediation!);
+
+        if (remediations.length > 0) {
+          const runSummary = buildRunSummary(
+            summary.passed,
+            summary.total,
+            remediations,
+          );
+          console.log(`[self-heal] Run summary:\n${formatRunSummary(runSummary)}`);
         }
-      }
+
+        // Still log individual failures for Railway log monitoring
+        for (const r of summary.results) {
+          if (!r.passed) {
+            const tag = r.remediation
+              ? `[${r.remediation.outcome}]`
+              : "[escalate]";
+            console.warn(
+              `[test-runner] FAIL ${tag} [${r.capabilitySlug}] ${r.testName} — ${r.failureReason}`,
+            );
+          }
+        }
     } catch (err) {
       console.error(`[scheduler] ${slug} threw:`, err);
     }

@@ -63,10 +63,11 @@ const TYPE_TO_FACTOR: Record<string, keyof typeof WEIGHTS> = {
 
 const EXTERNAL_SERVICE_PATTERNS = [
   /HTTP 429/i, /HTTP 503/i, /HTTP 502/i,
-  /Too Many Requests/i, /rate limit/i,
-  /ECONNRESET/i, /ECONNREFUSED/i, /ETIMEDOUT/i,
+  /Too Many Requests/i, /rate limit/i, /QUOTA_EXCEEDED/i,
+  /ECONNRESET/i, /ECONNREFUSED/i, /ETIMEDOUT/i, /ENOTFOUND/i,
   /timeout/i, /upstream/i, /Browserless/i,
   /VIES error/i, /Navigation timeout/i,
+  /fetch failed/i,
 ];
 
 function isExternalServiceFailure(reason: string | null): boolean {
@@ -202,7 +203,7 @@ export async function computeCapabilitySQS(slug: string): Promise<SQSResult> {
       AND (
         tr.passed = true
         OR tr.failure_classification IS NULL
-        OR tr.failure_classification IN ('upstream_degraded', 'upstream_changed', 'capability_bug')
+        OR tr.failure_classification NOT IN ('test_infrastructure', 'stale_input')
       )
   `);
 
@@ -349,6 +350,16 @@ function computeFromRows(
 
   let externalServiceIssues = 0;
 
+  // Track external service failures per factor so we can fall back
+  // to counting them as failures when a factor has zero real data
+  const externalPerFactor: Record<keyof typeof WEIGHTS, { count: number; weightedTotal: number }> = {
+    correctness: { count: 0, weightedTotal: 0 },
+    schema: { count: 0, weightedTotal: 0 },
+    availability: { count: 0, weightedTotal: 0 },
+    error_handling: { count: 0, weightedTotal: 0 },
+    edge_cases: { count: 0, weightedTotal: 0 },
+  };
+
   // Per-window pass tracking for trend computation
   const windowPassed = new Map<number, number>();
   const windowTotal = new Map<number, number>();
@@ -371,10 +382,23 @@ function computeFromRows(
       windowTotal.set(runIndex, (windowTotal.get(runIndex) ?? 0) + 1);
     } else if (isExternalServiceFailure(row.failure_reason)) {
       externalServiceIssues++;
+      externalPerFactor[factor].count++;
+      externalPerFactor[factor].weightedTotal += recencyWeight;
     } else {
       accum[factor].weightedTotal += recencyWeight;
       accum[factor].total++;
       windowTotal.set(runIndex, (windowTotal.get(runIndex) ?? 0) + 1);
+    }
+  }
+
+  // For factors with zero real data but external-service-only failures,
+  // count those failures so the factor registers as "has data" (at 0% rate)
+  // rather than hiding behind "Building track record".
+  for (const key of FACTOR_KEYS) {
+    if (accum[key].total === 0 && externalPerFactor[key].count > 0) {
+      accum[key].total = externalPerFactor[key].count;
+      accum[key].weightedTotal = externalPerFactor[key].weightedTotal;
+      // passed stays 0 — rate will be 0%
     }
   }
 
