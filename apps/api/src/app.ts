@@ -301,6 +301,21 @@ import "./capabilities/social-profile-check.js";
 import "./capabilities/og-image-check.js";
 import "./capabilities/email-deliverability-check.js";
 import "./capabilities/website-carbon-estimate.js";
+// Dark launch batch 1 — compliance, contact verification, financial utilities
+import "./capabilities/pep-check.js";
+import "./capabilities/adverse-media-check.js";
+import "./capabilities/beneficial-ownership-lookup.js";
+import "./capabilities/aml-risk-score.js";
+import "./capabilities/address-validate.js";
+import "./capabilities/address-geocode.js";
+import "./capabilities/phone-validate.js";
+import "./capabilities/phone-type-detect.js";
+import "./capabilities/holiday-calendar.js";
+import "./capabilities/business-day-check.js";
+import "./capabilities/timezone-lookup.js";
+import "./capabilities/insolvency-check.js";
+import "./capabilities/language-detect.js";
+import "./capabilities/age-verify.js";
 
 export const app = new Hono();
 
