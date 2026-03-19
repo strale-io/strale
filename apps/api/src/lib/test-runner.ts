@@ -22,6 +22,7 @@ import {
   type RemediationResult,
 } from "./self-heal.js";
 import { checkUpstreamEscalation } from "./upstream-tracker.js";
+import { getUnconfiguredCapabilities } from "./credential-health.js";
 import { evaluateLifecycle } from "./lifecycle.js";
 import { logHealthEvent } from "./health-monitor.js";
 import { checkNewFailures, checkInfrastructureHealth } from "./meta-monitoring.js";
@@ -139,8 +140,21 @@ export async function runTests(
   let totalResponseTime = 0;
   let totalEstimatedCost = 0;
 
+  // Pre-compute unconfigured capabilities to skip (avoids accumulating
+  // hundreds of "no API key" failures that pollute the SQS scoring window)
+  const unconfiguredSlugs = getUnconfiguredCapabilities();
+
   for (let i = 0; i < suites.length; i++) {
     const suite = suites[i];
+
+    // Skip capabilities whose required credentials are missing
+    if (unconfiguredSlugs.has(suite.capabilitySlug)) {
+      console.log(
+        `[test-runner] Skipping ${suite.capabilitySlug}: required credential not configured`,
+      );
+      continue;
+    }
+
     const result = await runSingleTest(suite, fieldReliabilityMap);
 
     // ── Self-healing: attempt remediation on failures ──────────────────

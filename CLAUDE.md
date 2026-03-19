@@ -220,6 +220,19 @@ limitations:
     severity: "info"
 ```
 
+### Scoring Integrity
+
+NEVER modify SQS scoring logic (`sqs.ts`, `EXTERNAL_SERVICE_PATTERNS`, `isExternalServiceFailure`, `computeFromRows`) to fix a specific capability's score. If a capability scores poorly:
+
+1. First: diagnose the ROOT CAUSE (missing credential? bad fixture? real bug?)
+2. Fix the root cause (configure the key, fix the fixture, fix the code)
+3. The score will improve naturally on the next test run
+
+Adding exclusion patterns to make a score look better is PROHIBITED. The SQS must always reflect the user's actual experience.
+
+See: Scoring Integrity Rules comment block in `apps/api/src/lib/sqs.ts`
+See: SQS Constitution in Notion
+
 ### Quick Session Checklist
 1. Declare session intent
 2. Connectivity check (Git + handoff; Notion if needed). Log failures.

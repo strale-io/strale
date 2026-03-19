@@ -16,6 +16,7 @@ import { generateTestInput } from "../lib/test-input-generator.js";
 import { categorizeFailureReason, sanitizeErrorMessage } from "../lib/trust-helpers.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { runDependencyHealthChecks } from "../lib/dependency-health.js";
+import { getCredentialStatus } from "../lib/credential-health.js";
 import { apiError } from "../lib/errors.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import type { AppEnv } from "../types.js";
@@ -644,9 +645,16 @@ internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
 internalTestsRoute.get("/health", async (c) => {
   const results = await runDependencyHealthChecks();
   const allHealthy = Object.values(results).every((r) => r.healthy);
+  const credentials = getCredentialStatus();
+  const missingCreds = credentials.filter((c) => !c.isConfigured && c.capabilities.length > 0);
   return c.json({
-    status: allHealthy ? "healthy" : "degraded",
+    status: allHealthy && missingCreds.length === 0 ? "healthy" : "degraded",
     dependencies: results,
+    credentials: credentials.map((c) => ({
+      provider: c.provider,
+      configured: c.isConfigured,
+      affected_capabilities: c.isConfigured ? undefined : c.capabilities.length,
+    })),
   });
 });
 

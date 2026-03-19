@@ -1,3 +1,26 @@
+/**
+ * SCORING INTEGRITY RULES
+ *
+ * 1. SQS must reflect the user's reality.
+ *    If a capability can't execute, the score must be low —
+ *    regardless of WHY it can't execute.
+ *
+ * 2. Only genuine upstream failures are excluded.
+ *    "Upstream" means: an external service that Strale does not control
+ *    returned an error (timeout, rate limit, 5xx).
+ *    Infrastructure misconfig (missing API keys, wrong env) is NOT
+ *    upstream — it's Strale's responsibility.
+ *
+ * 3. No case-by-case exclusions.
+ *    Adding patterns to EXTERNAL_SERVICE_PATTERNS to fix a specific
+ *    capability's score is prohibited. New patterns must apply to a
+ *    general class of external service failures.
+ *
+ * 4. Changes to this file require methodology review.
+ *    Any PR touching scoring logic must be reviewed against the
+ *    SQS Constitution before merging.
+ */
+
 import { sql, eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilityHealth, testSuites } from "../db/schema.js";
@@ -68,6 +91,9 @@ const EXTERNAL_SERVICE_PATTERNS = [
   /timeout/i, /upstream/i, /Browserless/i,
   /VIES error/i, /Navigation timeout/i,
   /fetch failed/i,
+  // NOTE: "no api key" and "is required for" are intentionally NOT here.
+  // Missing API keys are Strale's infrastructure responsibility — the score
+  // must reflect that the capability cannot serve users. See Scoring Integrity Rules.
 ];
 
 function isExternalServiceFailure(reason: string | null): boolean {

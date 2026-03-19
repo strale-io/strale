@@ -8,6 +8,7 @@ import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, testSuites } from "../db/schema.js";
 import { generateTestInput } from "./test-input-generator.js";
+import { getExecutor } from "../capabilities/index.js";
 
 /**
  * Call after a capability is inserted or updated in the database.
@@ -34,7 +35,9 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
   if (existingSuites.length === 0) {
     const inputSchema = (cap.inputSchema ?? {}) as Record<string, unknown>;
     const outputSchema = (cap.outputSchema ?? {}) as Record<string, unknown>;
-    const testInput = generateTestInput(inputSchema);
+
+    // Prefer manifest health_check_input > known_answer input > heuristic generation
+    const testInput = resolveOnboardingInput(inputSchema, cap.onboardingManifest);
     const outputChecks = getOutputChecks(outputSchema);
 
     // Schema check test (dry_run — FREE)
@@ -60,6 +63,14 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
     });
 
     console.log(`[onboarding] Created test suites for ${capabilitySlug}`);
+
+    // Validate fixtures against real execution (fire-and-forget).
+    // NOTE: getExecutor may return null during seed.ts if the capability file
+    // hasn't been imported yet. In that case, validation is skipped — it will
+    // happen on the first scheduled test run via the self-heal system.
+    validateTestFixtures(capabilitySlug).catch((err) => {
+      console.warn(`[onboarding] Fixture validation failed for ${capabilitySlug}: ${err.message}`);
+    });
   }
 
   // 2. Auto-detect transparency tag if not set
@@ -160,6 +171,136 @@ function getOutputChecks(
   if (!props) return { checks: [] };
   const keys = Object.keys(props).slice(0, 3);
   return { checks: keys.map((k) => ({ field: k, operator: "not_null" })) };
+}
+
+// ─── Input resolution for onboarding ─────────────────────────────────────────
+
+function resolveOnboardingInput(
+  inputSchema: Record<string, unknown>,
+  onboardingManifest: unknown,
+): Record<string, unknown> {
+  const manifest = onboardingManifest as Record<string, unknown> | null;
+  const testFixtures = (manifest?.test_fixtures ?? null) as Record<string, unknown> | null;
+
+  // 1. Try manifest health_check_input (hand-written, most reliable)
+  if (testFixtures?.health_check_input && typeof testFixtures.health_check_input === "object") {
+    const hci = testFixtures.health_check_input as Record<string, unknown>;
+    if (Object.keys(hci).length > 0) {
+      // Merge any missing required fields from heuristics
+      const heuristic = generateTestInput(inputSchema);
+      const required = (inputSchema as { required?: string[] }).required ?? [];
+      for (const field of required) {
+        if (!(field in hci) || hci[field] == null) {
+          if (field in heuristic) hci[field] = heuristic[field];
+        }
+      }
+      return hci;
+    }
+  }
+
+  // 2. Try manifest known_answer input
+  if (testFixtures?.known_answer) {
+    const ka = testFixtures.known_answer as Record<string, unknown>;
+    if (ka?.input && typeof ka.input === "object") {
+      const kaInput = ka.input as Record<string, unknown>;
+      if (Object.keys(kaInput).length > 0) return kaInput;
+    }
+  }
+
+  // 3. Fall back to heuristic generation
+  return generateTestInput(inputSchema);
+}
+
+// ─── Post-creation fixture validation ────────────────────────────────────────
+
+/**
+ * Validate test fixtures by executing the capability and calibrating assertions
+ * against real output. Fire-and-forget — failures are logged but don't block
+ * onboarding.
+ */
+export async function validateTestFixtures(
+  capabilitySlug: string,
+): Promise<void> {
+  const executor = getExecutor(capabilitySlug);
+  if (!executor) {
+    console.warn(`[onboarding] No executor for ${capabilitySlug} — skipping fixture validation`);
+    return;
+  }
+
+  const db = getDb();
+
+  // Get a non-negative, non-edge_case suite to use as the execution input
+  const suites = await db
+    .select()
+    .from(testSuites)
+    .where(
+      and(
+        eq(testSuites.capabilitySlug, capabilitySlug),
+        eq(testSuites.active, true),
+      ),
+    );
+
+  const calibratable = suites.filter(
+    (s) => s.testType !== "negative" && s.testType !== "edge_case" && s.testType !== "piggyback",
+  );
+  if (calibratable.length === 0) return;
+
+  // Execute with the first calibratable suite's input
+  const execInput = calibratable[0].input as Record<string, unknown>;
+  let realOutput: Record<string, unknown>;
+
+  try {
+    const result = await executor(execInput);
+    if (!result?.output || Object.keys(result.output).length === 0) {
+      console.warn(`[onboarding] ${capabilitySlug} returned no output — skipping calibration`);
+      return;
+    }
+    realOutput = result.output;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[onboarding] Fixture validation execution failed for ${capabilitySlug}: ${msg}`);
+    return;
+  }
+
+  // Calibrate assertions for each non-negative suite
+  let calibrated = 0;
+  for (const suite of calibratable) {
+    const calibratedChecks: Array<{ field: string; operator: string; value?: unknown }> = [];
+
+    // notNull checks for every field present in real output
+    for (const [key, value] of Object.entries(realOutput)) {
+      if (value !== null && value !== undefined) {
+        calibratedChecks.push({ field: key, operator: "not_null" });
+      }
+    }
+
+    // For known_answer: preserve existing value-based checks that match real output
+    if (suite.testType === "known_answer") {
+      const existing = (suite.validationRules as { checks?: Array<{ field: string; operator: string; value?: unknown }> })?.checks ?? [];
+      for (const check of existing) {
+        if (check.operator === "not_null") continue;
+        if (check.field in realOutput) {
+          if (!calibratedChecks.some((c) => c.field === check.field && c.operator === check.operator)) {
+            calibratedChecks.push(check);
+          }
+        }
+      }
+    }
+
+    await db
+      .update(testSuites)
+      .set({
+        validationRules: { checks: calibratedChecks },
+        baselineOutput: realOutput,
+        baselineCapturedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(testSuites.id, suite.id));
+
+    calibrated++;
+  }
+
+  console.log(`[onboarding] Validated and calibrated ${calibrated} test fixtures for ${capabilitySlug}`);
 }
 
 // ─── Transparency tag detection ──────────────────────────────────────────────

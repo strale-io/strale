@@ -42,15 +42,21 @@ const INFRA_ENV_PATTERNS = [
   /PAGESPEED_API_KEY/i,
   /AVIATIONSTACK_API_KEY/i,
   /ADZUNA_APP_ID/i,
+  /OPENSANCTIONS_API_KEY/i,
   /BROWSERLESS_URL/i,
   /missing.*api.*key/i,
+  /no api key/i,
   /env.*not.*set/i,
   /api.?key.*required/i,
+  /api.?key.*not.*configured/i,
   /subscription.?required/i,
+  /HTTP 401.*api key/i,                   // API rejecting due to missing key
+  /HTTP 401.*unauthorized.*key/i,
+  /is required for/i,                      // "SERPER_API_KEY is required for..."
 ];
 
 const INFRA_QUOTA_PATTERNS = [
-  /quota exceeded/i,
+  /quota.?exceeded/i,
   /billing/i,
   /subscription required/i,
   /account.*limit/i,

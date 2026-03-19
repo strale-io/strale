@@ -175,6 +175,9 @@ export function categorizeFailureReason(reason: string | null): "external_servic
   if (lower.includes("econnrefused") || lower.includes("enotfound") || lower.includes("502") ||
       lower.includes("503") || lower.includes("504") || lower.includes("fetch failed")) return "external_service";
   if (lower.includes("ms_max_concurrent")) return "external_service";
+  if (lower.includes("quota_exceeded")) return "external_service";
+  // NOTE: "no api key" and "is required for" intentionally return "internal".
+  // Missing credentials are Strale's infrastructure problem, not upstream.
   return "internal";
 }
 

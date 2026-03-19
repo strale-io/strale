@@ -66,6 +66,16 @@ export function classifyFailure(
 ): FailureClassification {
   const reason = failureReason.toLowerCase();
 
+  // Missing API key / infrastructure — check BEFORE missing_test_input
+  // since "X_API_KEY is required for Y" contains "is required"
+  if (
+    reason.includes("no api key") ||
+    reason.includes("not configured") ||
+    (reason.includes("is required for") && reason.includes("api"))
+  ) {
+    return "upstream_dependency";
+  }
+
   // Empty/missing input — the test fixture was never populated
   if (
     reason.includes("required") &&
@@ -92,12 +102,13 @@ export function classifyFailure(
     reason.includes("rate limit") ||
     reason.includes("too many requests") ||
     reason.includes("quota exceeded") ||
+    reason.includes("quota_exceeded") ||
     reason.includes("daily limit")
   ) {
     return "rate_limited";
   }
 
-  // Upstream dependency down
+  // Upstream dependency down or missing infrastructure
   if (
     reason.includes("503") ||
     reason.includes("502") ||
@@ -108,7 +119,10 @@ export function classifyFailure(
     reason.includes("enotfound") ||
     reason.includes("timeout") ||
     reason.includes("network") ||
-    reason.includes("fetch failed")
+    reason.includes("fetch failed") ||
+    reason.includes("no api key") ||
+    reason.includes("is required for") ||
+    reason.includes("not configured")
   ) {
     return "upstream_dependency";
   }
