@@ -25,9 +25,10 @@ const CREDENTIAL_REGISTRY: CredentialEntry[] = [
   {
     provider: "opensanctions",
     envVar: "OPENSANCTIONS_API_KEY",
-    capabilities: ["pep-check", "aml-risk-score"],
-    // NOTE: sanctions-check and adverse-media-check have Claude fallbacks
-    // and work without this key — intentionally excluded
+    capabilities: ["pep-check"],
+    // NOTE: sanctions-check has Claude fallback and works without this key.
+    // aml-risk-score is pure algorithmic — doesn't call OpenSanctions.
+    // adverse-media-check uses Serper, not OpenSanctions.
   },
   {
     provider: "browserless",

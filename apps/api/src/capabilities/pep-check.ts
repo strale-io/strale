@@ -30,12 +30,18 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
     queries: { q1: query },
   };
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  const opensanctionsKey = process.env.OPENSANCTIONS_API_KEY;
+  if (opensanctionsKey) {
+    headers["Authorization"] = `ApiKey ${opensanctionsKey}`;
+  }
+
   const res = await fetch(OPENSANCTIONS_API, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers,
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(15000),
   });
