@@ -85,7 +85,7 @@ test_fixtures:
 output_field_reliability:
   valid: guaranteed
   errors: guaranteed
-  corrected_input: guaranteed
+  corrected_input: common
 limitations:
   - title: Validates tool call structure and parameter types only — semantic correctness of parameter values is not checked
     text: >-

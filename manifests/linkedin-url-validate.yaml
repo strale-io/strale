@@ -69,7 +69,7 @@ test_fixtures:
   health_check_input:
     url: https://example.com
 output_field_reliability:
-  slug: guaranteed
+  slug: common
   url_type: guaranteed
   accessible: guaranteed
   valid_format: guaranteed
