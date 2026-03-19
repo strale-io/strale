@@ -677,20 +677,14 @@ function resolveRecalInput(
   const manifest = cap.onboardingManifest as Record<string, unknown> | null;
   const testFixtures = (manifest?.test_fixtures ?? null) as Record<string, unknown> | null;
 
+  // Priority: health_check_input → existing non-generic → heuristic.
+  // known_answer.input is deliberately excluded — it's designed for correctness
+  // testing and may trigger special code paths (e.g., email-validate "clearly-invalid"
+  // returns a `reason` field absent in normal output, causing stale assertions).
   if (testFixtures?.health_check_input && typeof testFixtures.health_check_input === "object") {
     const hci = testFixtures.health_check_input as Record<string, unknown>;
     if (Object.keys(hci).length > 0) {
       return { input: hci, source: "manifest_health_check", upgraded: true };
-    }
-  }
-
-  if (testFixtures?.known_answer) {
-    const ka = testFixtures.known_answer as Record<string, unknown>;
-    if (ka?.input && typeof ka.input === "object") {
-      const kaInput = ka.input as Record<string, unknown>;
-      if (Object.keys(kaInput).length > 0) {
-        return { input: kaInput, source: "manifest_known_answer", upgraded: true };
-      }
     }
   }
 
@@ -717,12 +711,18 @@ function calibrateChecks(
   testType: string,
   existingRules: { checks?: RecalValidationCheck[] },
   realOutput: Record<string, unknown>,
+  fieldReliability?: Record<string, string> | null,
 ): { checks: RecalValidationCheck[] } {
   const checks: RecalValidationCheck[] = [];
 
+  // Only assert not_null on fields marked 'guaranteed' in output_field_reliability.
+  // Fields marked 'common'/'rare' or absent from the map are skipped (DEC-20260319-D).
   for (const [key, value] of Object.entries(realOutput)) {
     if (value !== null && value !== undefined) {
-      checks.push({ field: key, operator: "not_null" });
+      const reliability = fieldReliability?.[key];
+      if (reliability === "guaranteed") {
+        checks.push({ field: key, operator: "not_null" });
+      }
     }
   }
 
@@ -765,10 +765,14 @@ internalTestsRoute.post("/recalibrate", async (c) => {
     .where(and(...conditions));
 
   const slugs = [...new Set(allSuites.map((s) => s.capabilitySlug))];
-  const capMap = new Map<string, { inputSchema: unknown; onboardingManifest: unknown }>();
+  const capMap = new Map<string, { inputSchema: unknown; onboardingManifest: unknown; outputFieldReliability: unknown }>();
   for (const slug of slugs) {
     const [cap] = await db
-      .select({ inputSchema: capabilities.inputSchema, onboardingManifest: capabilities.onboardingManifest })
+      .select({
+        inputSchema: capabilities.inputSchema,
+        onboardingManifest: capabilities.onboardingManifest,
+        outputFieldReliability: capabilities.outputFieldReliability,
+      })
       .from(capabilities)
       .where(eq(capabilities.slug, slug))
       .limit(1);
@@ -856,7 +860,8 @@ internalTestsRoute.post("/recalibrate", async (c) => {
 
       const oldRules = suite.validationRules as { checks?: RecalValidationCheck[] };
       const oldChecks = oldRules?.checks ?? [];
-      const newRules = calibrateChecks(suite.testType, oldRules, realOutput);
+      const reliability = (cap.outputFieldReliability ?? null) as Record<string, string> | null;
+      const newRules = calibrateChecks(suite.testType, oldRules, realOutput, reliability);
 
       const hadStatus = oldChecks.some((c) => c.field === "status" && c.operator === "not_null");
       if (hadStatus && !("status" in realOutput)) report.statusAssertionRemoved++;

@@ -229,6 +229,14 @@ export async function validateTestFixtures(
 
   const db = getDb();
 
+  // Load field reliability metadata to generate correct assertions
+  const [capRow] = await db
+    .select({ fieldReliability: capabilities.outputFieldReliability })
+    .from(capabilities)
+    .where(eq(capabilities.slug, capabilitySlug))
+    .limit(1);
+  const fieldReliability = (capRow?.fieldReliability ?? {}) as Record<string, string>;
+
   // Get a non-negative, non-edge_case suite to use as the execution input
   const suites = await db
     .select()
@@ -267,10 +275,15 @@ export async function validateTestFixtures(
   for (const suite of calibratable) {
     const calibratedChecks: Array<{ field: string; operator: string; value?: unknown }> = [];
 
-    // notNull checks for every field present in real output
+    // Only assert not_null on fields marked 'guaranteed' in output_field_reliability.
+    // Fields marked 'common' or 'rare' (or absent from the map) are skipped — they may
+    // be null in certain execution paths, causing stale fixture drift (DEC-20260319-D).
     for (const [key, value] of Object.entries(realOutput)) {
       if (value !== null && value !== undefined) {
-        calibratedChecks.push({ field: key, operator: "not_null" });
+        const reliability = fieldReliability[key];
+        if (reliability === "guaranteed") {
+          calibratedChecks.push({ field: key, operator: "not_null" });
+        }
       }
     }
 

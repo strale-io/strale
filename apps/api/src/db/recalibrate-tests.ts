@@ -91,7 +91,7 @@ function resolveInput(
   const manifest = cap.onboardingManifest as Record<string, unknown> | null;
   const testFixtures = (manifest?.test_fixtures ?? null) as Record<string, unknown> | null;
 
-  // 1. Try manifest health_check_input
+  // 1. Try manifest health_check_input (designed for normal execution paths)
   if (testFixtures?.health_check_input && typeof testFixtures.health_check_input === "object") {
     const hci = testFixtures.health_check_input as Record<string, unknown>;
     if (Object.keys(hci).length > 0) {
@@ -99,18 +99,10 @@ function resolveInput(
     }
   }
 
-  // 2. Try manifest known_answer input
-  if (testFixtures?.known_answer) {
-    const ka = testFixtures.known_answer as Record<string, unknown>;
-    if (ka?.input && typeof ka.input === "object") {
-      const kaInput = ka.input as Record<string, unknown>;
-      if (Object.keys(kaInput).length > 0) {
-        return { input: kaInput, source: "manifest_known_answer", upgraded: true };
-      }
-    }
-  }
+  // known_answer.input is deliberately excluded — it may trigger special code
+  // paths that return fields absent in normal output (DEC-20260319-D).
 
-  // 3. Use existing input if it's non-generic
+  // 2. Use existing input if it's non-generic
   if (Object.keys(suiteInput).length > 0 && !isGenericInput(suiteInput)) {
     return { input: suiteInput, source: "existing", upgraded: false };
   }
@@ -130,13 +122,19 @@ function resolveInput(
 function calibrateAssertions(
   suite: { testType: string; validationRules: unknown },
   realOutput: Record<string, unknown>,
+  fieldReliability?: Record<string, string> | null,
 ): { checks: ValidationCheck[] } {
   const checks: ValidationCheck[] = [];
 
-  // Generate notNull checks for every top-level field present in real output
+  // Only assert not_null on fields marked 'guaranteed' in output_field_reliability.
+  // Fields marked 'common' or 'rare' (or absent from the map) are skipped — they may
+  // be null in certain execution paths, causing stale fixture drift (DEC-20260319-D).
   for (const [key, value] of Object.entries(realOutput)) {
     if (value !== null && value !== undefined) {
-      checks.push({ field: key, operator: "not_null" });
+      const reliability = fieldReliability?.[key];
+      if (reliability === "guaranteed") {
+        checks.push({ field: key, operator: "not_null" });
+      }
     }
   }
 
@@ -184,13 +182,14 @@ async function main() {
 
   // Load capability data (inputSchema, onboardingManifest) for all relevant slugs
   const slugs = [...new Set(suites.map((s) => s.capabilitySlug))];
-  const capMap = new Map<string, { inputSchema: unknown; onboardingManifest: unknown }>();
+  const capMap = new Map<string, { inputSchema: unknown; onboardingManifest: unknown; outputFieldReliability: unknown }>();
 
   for (const slug of slugs) {
     const [cap] = await db
       .select({
         inputSchema: capabilities.inputSchema,
         onboardingManifest: capabilities.onboardingManifest,
+        outputFieldReliability: capabilities.outputFieldReliability,
       })
       .from(capabilities)
       .where(eq(capabilities.slug, slug))
@@ -337,7 +336,8 @@ async function main() {
       // Calibrate assertions
       const oldRules = suite.validationRules as { checks?: ValidationCheck[] };
       const oldChecks = oldRules?.checks ?? [];
-      const newRules = calibrateAssertions(suite, realOutput);
+      const reliability = (cap.outputFieldReliability ?? null) as Record<string, string> | null;
+      const newRules = calibrateAssertions(suite, realOutput, reliability);
 
       // Track assertion changes
       const hadStatusCheck = oldChecks.some((c) => c.field === "status" && c.operator === "not_null");
