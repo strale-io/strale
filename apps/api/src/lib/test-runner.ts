@@ -23,6 +23,7 @@ import {
 } from "./self-heal.js";
 import { checkUpstreamEscalation } from "./upstream-tracker.js";
 import { getUnconfiguredCapabilities } from "./credential-health.js";
+import { isChromiumHealthy, isBrowserlessCapability, probeChromiumHealth } from "./chromium-health.js";
 import { evaluateLifecycle } from "./lifecycle.js";
 import { logHealthEvent } from "./health-monitor.js";
 import { checkNewFailures, checkInfrastructureHealth } from "./meta-monitoring.js";
@@ -151,6 +152,15 @@ export async function runTests(
     if (unconfiguredSlugs.has(suite.capabilitySlug)) {
       console.log(
         `[test-runner] Skipping ${suite.capabilitySlug}: required credential not configured`,
+      );
+      continue;
+    }
+
+    // Skip Browserless-dependent capabilities when Chromium is down
+    // (prevents hundreds of timeout failures from polluting the SQS window)
+    if (isBrowserlessCapability(suite.capabilitySlug) && !isChromiumHealthy()) {
+      console.log(
+        `[test-runner] Skipping ${suite.capabilitySlug}: Chromium/Browserless unhealthy`,
       );
       continue;
     }
@@ -1330,6 +1340,18 @@ export function startScheduledTests(): void {
 
   setTimeout(runHealthChecks, 60_000); // 1min after startup
   setInterval(runHealthChecks, HEALTH_CHECK_INTERVAL_MS);
+
+  // Chromium/Browserless health probe — 30-min cycle, faster than the 6h
+  // dependency check. When Chromium is down, the test runner skips all 52
+  // Browserless capabilities to prevent SQS pollution from timeout failures.
+  const CHROMIUM_CHECK_INTERVAL_MS = 30 * 60 * 1000;
+  const runChromiumProbe = () => {
+    probeChromiumHealth().catch((err) =>
+      console.error("[chromium-health] Probe error:", err instanceof Error ? err.message : err),
+    );
+  };
+  setTimeout(runChromiumProbe, 45_000); // 45s after startup
+  setInterval(runChromiumProbe, CHROMIUM_CHECK_INTERVAL_MS);
 
   // Weekly health sweep — auto-remediation + quarantine review + health report
   const runSweep = async () => {
