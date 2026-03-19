@@ -17,6 +17,7 @@ import { categorizeFailureReason, sanitizeErrorMessage } from "../lib/trust-help
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { runDependencyHealthChecks } from "../lib/dependency-health.js";
 import { getCredentialStatus } from "../lib/credential-health.js";
+import { classifyFieldVolatility, makeVolatilityAwareCheck } from "../lib/field-volatility.js";
 import { apiError } from "../lib/errors.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import type { AppEnv } from "../types.js";
@@ -712,6 +713,7 @@ function calibrateChecks(
   existingRules: { checks?: RecalValidationCheck[] },
   realOutput: Record<string, unknown>,
   fieldReliability?: Record<string, string> | null,
+  fieldVolatilityOverrides?: Record<string, "stable" | "volatile" | "computed"> | null,
 ): { checks: RecalValidationCheck[] } {
   const checks: RecalValidationCheck[] = [];
 
@@ -726,12 +728,21 @@ function calibrateChecks(
     }
   }
 
+  // For known_answer: apply volatility filtering (DEC-20260319-E).
+  // Volatile/computed fields get type checks instead of equals.
   if (testType === "known_answer") {
     for (const check of existingRules.checks ?? []) {
       if (check.operator === "not_null") continue;
-      if (check.field in realOutput) {
-        if (!checks.some((c) => c.field === check.field && c.operator === check.operator)) {
-          checks.push(check);
+      if (!(check.field in realOutput)) continue;
+      if (checks.some((c) => c.field === check.field && c.operator === check.operator)) continue;
+
+      const volatility = classifyFieldVolatility(check.field, realOutput[check.field], fieldVolatilityOverrides);
+      if (volatility === "stable") {
+        checks.push(check);
+      } else {
+        const typeCheck = makeVolatilityAwareCheck(check.field, realOutput[check.field], volatility);
+        if (typeCheck && !checks.some((c) => c.field === typeCheck.field && c.operator === typeCheck.operator)) {
+          checks.push(typeCheck as RecalValidationCheck);
         }
       }
     }
@@ -861,7 +872,9 @@ internalTestsRoute.post("/recalibrate", async (c) => {
       const oldRules = suite.validationRules as { checks?: RecalValidationCheck[] };
       const oldChecks = oldRules?.checks ?? [];
       const reliability = (cap.outputFieldReliability ?? null) as Record<string, string> | null;
-      const newRules = calibrateChecks(suite.testType, oldRules, realOutput, reliability);
+      const manifest = cap.onboardingManifest as Record<string, unknown> | null;
+      const volOverrides = (manifest?.field_volatility ?? null) as Record<string, "stable" | "volatile" | "computed"> | null;
+      const newRules = calibrateChecks(suite.testType, oldRules, realOutput, reliability, volOverrides);
 
       const hadStatus = oldChecks.some((c) => c.field === "status" && c.operator === "not_null");
       if (hadStatus && !("status" in realOutput)) report.statusAssertionRemoved++;

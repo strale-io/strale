@@ -9,6 +9,7 @@ import { getDb } from "../db/index.js";
 import { capabilities, testSuites } from "../db/schema.js";
 import { generateTestInput } from "./test-input-generator.js";
 import { getExecutor } from "../capabilities/index.js";
+import { classifyFieldVolatility, makeVolatilityAwareCheck } from "./field-volatility.js";
 
 /**
  * Call after a capability is inserted or updated in the database.
@@ -229,13 +230,18 @@ export async function validateTestFixtures(
 
   const db = getDb();
 
-  // Load field reliability metadata to generate correct assertions
+  // Load field reliability + manifest metadata for assertion generation
   const [capRow] = await db
-    .select({ fieldReliability: capabilities.outputFieldReliability })
+    .select({
+      fieldReliability: capabilities.outputFieldReliability,
+      onboardingManifest: capabilities.onboardingManifest,
+    })
     .from(capabilities)
     .where(eq(capabilities.slug, capabilitySlug))
     .limit(1);
   const fieldReliability = (capRow?.fieldReliability ?? {}) as Record<string, string>;
+  const manifest = capRow?.onboardingManifest as Record<string, unknown> | null;
+  const fieldVolatilityOverrides = (manifest?.field_volatility ?? null) as Record<string, "stable" | "volatile" | "computed"> | null;
 
   // Get a non-negative, non-edge_case suite to use as the execution input
   const suites = await db
@@ -287,14 +293,25 @@ export async function validateTestFixtures(
       }
     }
 
-    // For known_answer: preserve existing value-based checks that match real output
+    // For known_answer: preserve existing value-based checks, but apply volatility
+    // filtering (DEC-20260319-E). Volatile fields (revenue, counts, rates) get type
+    // checks instead of equals. Computed fields (is_sanctioned, risk_score) also get
+    // type checks since their values change with external data updates.
     if (suite.testType === "known_answer") {
       const existing = (suite.validationRules as { checks?: Array<{ field: string; operator: string; value?: unknown }> })?.checks ?? [];
       for (const check of existing) {
         if (check.operator === "not_null") continue;
-        if (check.field in realOutput) {
-          if (!calibratedChecks.some((c) => c.field === check.field && c.operator === check.operator)) {
-            calibratedChecks.push(check);
+        if (!(check.field in realOutput)) continue;
+        if (calibratedChecks.some((c) => c.field === check.field && c.operator === check.operator)) continue;
+
+        const volatility = classifyFieldVolatility(check.field, realOutput[check.field], fieldVolatilityOverrides);
+        if (volatility === "stable") {
+          calibratedChecks.push(check);
+        } else {
+          // Replace equals with type check for volatile/computed fields
+          const typeCheck = makeVolatilityAwareCheck(check.field, realOutput[check.field], volatility);
+          if (typeCheck && !calibratedChecks.some((c) => c.field === typeCheck.field && c.operator === typeCheck.operator)) {
+            calibratedChecks.push(typeCheck);
           }
         }
       }

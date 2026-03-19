@@ -43,16 +43,29 @@ import {
   triggerOnDeploy,
 } from "../lib/event-triggers.js";
 
-// ─── Report state ────────────────────────────────────────────────────────────
+// ─── Report types ────────────────────────────────────────────────────────────
 
-interface CheckResult {
+export interface CheckResult {
   name: string;
   passed: boolean;
   details: string[];
   warnings: string[];
 }
 
-const results: CheckResult[] = [];
+export interface DiagnosticReport {
+  checksRun: number;
+  totalChecks: number;
+  passed: number;
+  failed: number;
+  results: CheckResult[];
+  criticalFindings: string[];
+  warnings: string[];
+  timestamp: string;
+}
+
+// ─── Report state (scoped per run) ──────────────────────────────────────────
+
+let results: CheckResult[] = [];
 
 function check(name: string): CheckResult {
   const r: CheckResult = { name, passed: true, details: [], warnings: [] };
@@ -545,14 +558,17 @@ async function check6() {
   );
 }
 
-// ─── Main ────────────────────────────────────────────────────────────────────
+// ─── Public API ──────────────────────────────────────────────────────────────
 
-async function main() {
-  console.log("╔══════════════════════════════════════════════════════════╗");
-  console.log("║            SELF-HEALING DIAGNOSTIC REPORT               ║");
-  console.log("╚══════════════════════════════════════════════════════════╝\n");
+/**
+ * Run the full diagnostic and return a structured report.
+ * Safe to call from the scheduler — no process.exit, no console output.
+ */
+export async function runDiagnostic(): Promise<DiagnosticReport> {
+  // Reset per-run state
+  results = [];
 
-  // Check 2, 4, 5 are sync; 1, 3, 6 need DB
+  // Run all checks (sync first, then async)
   check2();
   check4();
   check5();
@@ -560,7 +576,6 @@ async function main() {
   await check3();
   await check6();
 
-  // Print results in order
   const ordered = [
     results.find((r) => r.name.startsWith("Failure")),
     results.find((r) => r.name.startsWith("Self-heal")),
@@ -570,33 +585,78 @@ async function main() {
     results.find((r) => r.name.startsWith("Test runner")),
   ].filter(Boolean) as CheckResult[];
 
-  for (let i = 0; i < ordered.length; i++) {
-    const r = ordered[i];
-    const icon = r.passed ? "PASS" : "FAIL";
-    console.log(`Check ${i + 1}: ${r.name}`);
-    for (const d of r.details) {
-      console.log(`  ${d}`);
+  const passed = ordered.filter((r) => r.passed).length;
+  const failed = ordered.length - passed;
+
+  // Collect critical findings — things that warrant an alert
+  const criticalFindings: string[] = [];
+  const warnings: string[] = [];
+
+  for (const r of ordered) {
+    if (!r.passed) {
+      criticalFindings.push(`${r.name}: FAILED`);
     }
     for (const w of r.warnings) {
-      console.log(`  WARNING: ${w}`);
+      warnings.push(`${r.name}: ${w}`);
     }
-    console.log(`  ${icon}`);
-    console.log();
   }
 
-  // Summary
-  const passedCount = ordered.filter((r) => r.passed).length;
-  const totalCount = ordered.length;
-  console.log("══════════════════════════════════════════════════════════");
-  console.log(
-    `RESULT: ${passedCount}/${totalCount} checks passed${passedCount === totalCount ? "" : " — SEE FAILURES ABOVE"}`,
-  );
-  console.log("══════════════════════════════════════════════════════════");
-
-  process.exit(passedCount === totalCount ? 0 : 1);
+  return {
+    checksRun: ordered.length,
+    totalChecks: 6,
+    passed,
+    failed,
+    results: ordered,
+    criticalFindings,
+    warnings,
+    timestamp: new Date().toISOString(),
+  };
 }
 
-main().catch((err) => {
-  console.error("Fatal error:", err);
-  process.exit(2);
-});
+/**
+ * Format a diagnostic report for console output.
+ */
+export function formatReport(report: DiagnosticReport): string {
+  const lines: string[] = [
+    "╔══════════════════════════════════════════════════════════╗",
+    "║            SELF-HEALING DIAGNOSTIC REPORT               ║",
+    "╚══════════════════════════════════════════════════════════╝",
+    "",
+  ];
+
+  for (let i = 0; i < report.results.length; i++) {
+    const r = report.results[i];
+    lines.push(`Check ${i + 1}: ${r.name}`);
+    for (const d of r.details) {
+      lines.push(`  ${d}`);
+    }
+    for (const w of r.warnings) {
+      lines.push(`  WARNING: ${w}`);
+    }
+    lines.push(`  ${r.passed ? "PASS" : "FAIL"}`);
+    lines.push("");
+  }
+
+  lines.push("══════════════════════════════════════════════════════════");
+  lines.push(
+    `RESULT: ${report.passed}/${report.checksRun} checks passed${report.failed > 0 ? " — SEE FAILURES ABOVE" : ""}`,
+  );
+  lines.push("══════════════════════════════════════════════════════════");
+
+  return lines.join("\n");
+}
+
+// ─── Standalone runner ──────────────────────────────────────────────────────
+
+const isStandalone = process.argv[1]?.includes("self-heal-check");
+if (isStandalone) {
+  runDiagnostic()
+    .then((report) => {
+      console.log(formatReport(report));
+      process.exit(report.failed > 0 ? 1 : 0);
+    })
+    .catch((err) => {
+      console.error("Fatal error:", err);
+      process.exit(2);
+    });
+}

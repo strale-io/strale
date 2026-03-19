@@ -23,6 +23,7 @@ import { testSuites, capabilities } from "./schema.js";
 import { eq, and } from "drizzle-orm";
 import { getExecutor } from "../capabilities/index.js";
 import { generateTestInput } from "../lib/test-input-generator.js";
+import { classifyFieldVolatility, makeVolatilityAwareCheck } from "../lib/field-volatility.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -123,6 +124,7 @@ function calibrateAssertions(
   suite: { testType: string; validationRules: unknown },
   realOutput: Record<string, unknown>,
   fieldReliability?: Record<string, string> | null,
+  fieldVolatilityOverrides?: Record<string, "stable" | "volatile" | "computed"> | null,
 ): { checks: ValidationCheck[] } {
   const checks: ValidationCheck[] = [];
 
@@ -138,16 +140,22 @@ function calibrateAssertions(
     }
   }
 
-  // For known_answer: preserve existing value-based checks that match real output
+  // For known_answer: preserve existing value-based checks, but apply volatility
+  // filtering (DEC-20260319-E). Volatile/computed fields get type checks instead of equals.
   if (suite.testType === "known_answer") {
     const existing = (suite.validationRules as { checks?: ValidationCheck[] })?.checks ?? [];
     for (const check of existing) {
-      if (check.operator === "not_null") continue; // Already generated above
-      // Keep value-based check if the field exists in real output
-      if (check.field in realOutput) {
-        // Don't add duplicates
-        if (!checks.some((c) => c.field === check.field && c.operator === check.operator)) {
-          checks.push(check);
+      if (check.operator === "not_null") continue;
+      if (!(check.field in realOutput)) continue;
+      if (checks.some((c) => c.field === check.field && c.operator === check.operator)) continue;
+
+      const volatility = classifyFieldVolatility(check.field, realOutput[check.field], fieldVolatilityOverrides);
+      if (volatility === "stable") {
+        checks.push(check);
+      } else {
+        const typeCheck = makeVolatilityAwareCheck(check.field, realOutput[check.field], volatility);
+        if (typeCheck && !checks.some((c) => c.field === typeCheck.field && c.operator === typeCheck.operator)) {
+          checks.push(typeCheck as ValidationCheck);
         }
       }
     }
@@ -337,7 +345,9 @@ async function main() {
       const oldRules = suite.validationRules as { checks?: ValidationCheck[] };
       const oldChecks = oldRules?.checks ?? [];
       const reliability = (cap.outputFieldReliability ?? null) as Record<string, string> | null;
-      const newRules = calibrateAssertions(suite, realOutput, reliability);
+      const manifest = cap.onboardingManifest as Record<string, unknown> | null;
+      const volOverrides = (manifest?.field_volatility ?? null) as Record<string, "stable" | "volatile" | "computed"> | null;
+      const newRules = calibrateAssertions(suite, realOutput, reliability, volOverrides);
 
       // Track assertion changes
       const hadStatusCheck = oldChecks.some((c) => c.field === "status" && c.operator === "not_null");

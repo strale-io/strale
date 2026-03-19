@@ -1344,6 +1344,37 @@ export function startScheduledTests(): void {
   setTimeout(runSweep, 5 * 60_000); // 5min after startup
   setInterval(runSweep, WEEKLY_SWEEP_INTERVAL_MS);
 
+  // Daily self-healing diagnostic (DEC-20260319-F)
+  const DIAGNOSTIC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+  const runDiagnosticCheck = async () => {
+    try {
+      const { runDiagnostic } = await import("../diagnostics/self-heal-check.js");
+      const report = await runDiagnostic();
+
+      if (report.failed > 0) {
+        console.error(
+          `[diagnostic] ${report.passed}/${report.checksRun} passed — ${report.criticalFindings.length} critical finding(s):`,
+        );
+        for (const f of report.criticalFindings) {
+          console.error(`[diagnostic]   ${f}`);
+        }
+      } else {
+        console.log(
+          `[diagnostic] ${report.passed}/${report.checksRun} checks passed`,
+        );
+      }
+
+      if (report.warnings.length > 0) {
+        console.warn(`[diagnostic] ${report.warnings.length} warning(s)`);
+      }
+    } catch (err) {
+      console.error("[diagnostic] Failed to run:", err instanceof Error ? err.message : err);
+    }
+  };
+
+  setTimeout(runDiagnosticCheck, 10 * 60_000); // 10min after startup
+  setInterval(runDiagnosticCheck, DIAGNOSTIC_INTERVAL_MS);
+
   // Weekly digest — Monday 08:00 CET (07:00 UTC in winter, 06:00 UTC in summer)
   scheduleWeeklyDigest();
 }
