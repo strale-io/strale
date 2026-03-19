@@ -898,7 +898,7 @@ internalTestsRoute.post("/patch-suite-rules", async (c) => {
 
   const body = await c.req.json().catch(() => null);
   if (!body || !body.slug || !body.test_name || !Array.isArray(body.checks)) {
-    return c.json(apiError("bad_request", "slug, test_name, and checks[] are required"), 400);
+    return c.json(apiError("invalid_request", "slug, test_name, and checks[] are required"), 400);
   }
 
   const { slug, test_name, checks } = body;
