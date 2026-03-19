@@ -882,3 +882,37 @@ internalTestsRoute.post("/recalibrate", async (c) => {
 
   return c.json(report);
 });
+
+// ─── Patch validation rules ──────────────────────────────────────────────────
+// Surgical update: directly replace a test suite's validation_rules by slug+name.
+// Useful for fixing stale value assertions that the recalibrate endpoint preserves.
+//
+// Body: { slug: string, test_name: string, checks: Array<{field, operator, value?}> }
+internalTestsRoute.post("/patch-suite-rules", async (c) => {
+  if (!ADMIN_SECRET) {
+    return c.json(apiError("unauthorized", "Admin endpoint is not configured."), 503);
+  }
+  if (!isValidAdminAuth(c.req.header("Authorization"))) {
+    return c.json(apiError("unauthorized", "Invalid admin secret."), 401);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  if (!body || !body.slug || !body.test_name || !Array.isArray(body.checks)) {
+    return c.json(apiError("bad_request", "slug, test_name, and checks[] are required"), 400);
+  }
+
+  const { slug, test_name, checks } = body;
+  const db = getDb();
+
+  const result = await db
+    .update(testSuites)
+    .set({ validationRules: { checks }, updatedAt: new Date() })
+    .where(and(eq(testSuites.capabilitySlug, slug), eq(testSuites.testName, test_name)))
+    .returning({ id: testSuites.id, testName: testSuites.testName });
+
+  if (result.length === 0) {
+    return c.json(apiError("not_found", `No active test suite found for slug=${slug} test_name=${test_name}`), 404);
+  }
+
+  return c.json({ patched: true, slug, test_name, updated_checks: checks });
+});

@@ -54,9 +54,8 @@ test_fixtures:
       - field: is_sanctioned
         operator: not_null
         reliability: guaranteed
-      - field: is_sanctioned
-        operator: is_false
-        reliability: guaranteed
+      # NOTE: No is_false assertion — OpenSanctions fuzzy matching can return false
+      # positives for common company names. Schema validation only.
   health_check_input:
     name: Google
     country: US
