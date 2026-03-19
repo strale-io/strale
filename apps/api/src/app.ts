@@ -24,6 +24,7 @@ import { internalTrustRoute } from "./routes/internal-trust.js";
 import { internalHealthMonitorRoute } from "./routes/internal-health-monitor.js";
 import { replyWebhookRoute } from "./routes/reply-webhook.js";
 import { auditRoute } from "./routes/audit.js";
+import { x402Route } from "./routes/x402-gateway.js";
 import { startScheduledTests } from "./lib/test-runner.js";
 
 // Register capability executors (side-effect imports)
@@ -400,6 +401,9 @@ const publicCors = cors({
   allowHeaders: ["Content-Type"],
 });
 
+// x402 payment gateway — permissive CORS handled inside the route itself
+app.use("/x402/*", publicCors);
+
 // Public read-only endpoints — open CORS (data is intentionally public)
 app.use("/v1/capabilities/*", publicCors);
 app.use("/v1/capabilities", publicCors);
@@ -474,4 +478,7 @@ app.route("/.well-known/agent-card.json", agentCardRoute);
 app.route("/.well-known/agent.json", agentCardRoute); // alias
 app.route("/agent.json", agentCardRoute); // convenience alias
 app.route("/a2a", a2aRoute);
+
+// x402 payment gateway — paid API endpoints for the 402 ecosystem (402index.io)
+app.route("/x402", x402Route);
 
