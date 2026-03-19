@@ -20,6 +20,7 @@ import {
   recordFailure,
 } from "../lib/circuit-breaker.js";
 import { recordQuality } from "../lib/quality-capture.js";
+import { triggerOnFailure } from "../lib/event-triggers.js";
 import { getTestResultsForSlug } from "../lib/trust-helpers.js";
 import { recordPiggybackResult } from "../lib/piggyback-monitor.js";
 import { computeDualProfileSQS } from "../lib/sqs.js";
@@ -590,6 +591,7 @@ async function executeFreeTier(
       .where(eq(transactions.id, txnRecord.id));
 
     recordFailure(capability.slug).catch(() => {});
+    triggerOnFailure(capability.slug).catch(() => {});
     recordQuality({
       transactionId: txnRecord.id,
       responseTimeMs: latencyMs,
@@ -720,6 +722,7 @@ async function executeFreeTierAuthenticated(
       .where(eq(transactions.id, txnRecord.id));
 
     recordFailure(capability.slug).catch(() => {});
+    triggerOnFailure(capability.slug).catch(() => {});
     recordQuality({
       transactionId: txnRecord.id,
       responseTimeMs: latencyMs,
@@ -925,6 +928,7 @@ async function executeSync(
       .catch(() => {});
   } else if (result.errorCode === "execution_failed") {
     recordFailure(capability.slug).catch(() => {});
+    triggerOnFailure(capability.slug).catch(() => {});
     recordQuality({
       transactionId: result.transactionId,
       responseTimeMs: Date.now() - startTime,
@@ -1283,6 +1287,7 @@ async function executeInBackground(
 
     // Record failure for circuit breaker + quality
     await recordFailure(capability.slug).catch(() => {});
+    triggerOnFailure(capability.slug).catch(() => {});
     recordQuality({
       transactionId,
       responseTimeMs: latencyMs,

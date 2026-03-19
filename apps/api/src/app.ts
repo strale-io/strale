@@ -451,6 +451,11 @@ app.route("/v1/audit", auditRoute);
 // Start scheduled test runner (every 6 hours)
 startScheduledTests();
 
+// Post-deploy verification (30s delay, tests unstable/recovering capabilities)
+import("./lib/event-triggers.js")
+  .then(({ triggerOnDeploy }) => triggerOnDeploy().catch(() => {}))
+  .catch(() => {});
+
 // Pre-warm the suggest catalog (called after env is loaded, see index.ts)
 export { warmCatalog } from "./lib/suggest.js";
 

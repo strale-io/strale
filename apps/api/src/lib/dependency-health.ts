@@ -122,5 +122,15 @@ export async function runDependencyHealthChecks(): Promise<
       }
     }),
   );
+
+  // Fire-and-forget: notify event triggers of any state changes
+  import("./event-triggers.js")
+    .then(({ triggerOnDependencyChange }) => {
+      for (const [name, result] of Object.entries(results)) {
+        triggerOnDependencyChange(name, result.healthy).catch(() => {});
+      }
+    })
+    .catch(() => {});
+
   return results;
 }

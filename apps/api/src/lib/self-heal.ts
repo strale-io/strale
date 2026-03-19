@@ -9,6 +9,11 @@ import { getDb } from "../db/index.js";
 import { capabilities, testSuites } from "../db/schema.js";
 import { runDependencyHealthChecks } from "./dependency-health.js";
 import { generateTestInput } from "./test-input-generator.js";
+import {
+  checkStaleDate,
+  checkDeadUrl,
+  applyRemediation as applyAutoRemediation,
+} from "./auto-remediation.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,6 +23,9 @@ export type FailureClassification =
   | "upstream_dependency"   // upstream service is down (not the capability's fault)
   | "regression_additive"   // new fields appeared that weren't expected (non-breaking)
   | "regression_breaking"   // existing guaranteed fields changed or disappeared
+  | "stale_test_data"       // test input has expired dates/years
+  | "dead_url"              // test input URL returns 404/ENOTFOUND
+  | "schema_drift"          // output schema changed (new or missing fields vs expectations)
   | "unknown";              // couldn't classify — needs human review
 
 export interface RemediationResult {
@@ -105,14 +113,36 @@ export function classifyFailure(
     return "upstream_dependency";
   }
 
-  // Regression: new fields (additive, non-breaking)
+  // Stale test data — expired dates, past years
+  if (
+    reason.includes("expired") ||
+    reason.includes("no longer valid") ||
+    reason.includes("in the past") ||
+    reason.includes("date is invalid") ||
+    reason.includes("past date") ||
+    /\b20(1\d|2[0-4])\b/.test(failureReason) // year reference 2010-2024 in error
+  ) {
+    return "stale_test_data";
+  }
+
+  // Dead URL in test input (404, not found — distinct from upstream_dependency
+  // which is about the capability's own upstream, not the test input's URL)
+  if (
+    reason.includes("404") ||
+    reason.includes("not found") ||
+    reason.includes("page not found")
+  ) {
+    return "dead_url";
+  }
+
+  // Schema drift — output structure changed
   if (
     reason.includes("unexpected field") ||
     reason.includes("extra field") ||
     reason.includes("additional property") ||
     (reason.includes("schema") && reason.includes("additional"))
   ) {
-    return "regression_additive";
+    return "schema_drift";
   }
 
   // Regression: missing/changed guaranteed fields (breaking)
@@ -183,18 +213,30 @@ async function repairTestInput(
     };
   }
 
-  // 2. Apply the patch — update the test suite row
+  // 2. Apply the patch — update the test suite row and append to remediation log
+  const [currentSuite] = await db
+    .select({ autoRemediationLog: testSuites.autoRemediationLog })
+    .from(testSuites)
+    .where(eq(testSuites.id, suiteId))
+    .limit(1);
+
+  const existingLog = (currentSuite?.autoRemediationLog ?? []) as unknown[];
+
   await db
     .update(testSuites)
     .set({
       input: patch,
       updatedAt: new Date(),
       autoRemediationLog: [
+        ...existingLog,
         {
-          ts: new Date().toISOString(),
-          action: "repaired_input",
-          source: patchSource,
-          patch,
+          timestamp: new Date().toISOString(),
+          rule: "missing_input",
+          confidence: "high",
+          applied: true,
+          description: `Repaired empty input from ${patchSource}`,
+          previousInput: {},
+          newInput: patch,
         },
       ],
     })
@@ -233,6 +275,98 @@ async function handleUpstreamDown(
     outcome: "escalate",
     action: "upstream_unknown",
     detail: `Dependency health checks passed but ${base.capabilitySlug} is still failing. May be an undeclared upstream. Human review required.`,
+  };
+}
+
+async function handleStaleTestData(
+  suiteId: string,
+  base: RemediationBase,
+): Promise<Omit<RemediationResult, "testName">> {
+  const db = getDb();
+
+  const [suite] = await db
+    .select({ input: testSuites.input })
+    .from(testSuites)
+    .where(eq(testSuites.id, suiteId))
+    .limit(1);
+
+  if (!suite) {
+    return {
+      classification: "stale_test_data",
+      outcome: "escalate",
+      action: "suite_not_found",
+      detail: `Test suite ${suiteId} not found.`,
+    };
+  }
+
+  const input = suite.input as Record<string, unknown>;
+  const action = checkStaleDate(input);
+
+  if (!action) {
+    return {
+      classification: "stale_test_data",
+      outcome: "escalate",
+      action: "no_stale_dates_found",
+      detail: `Failure looks date-related but no stale date fields found in input. Manual review required.`,
+    };
+  }
+
+  // Apply via auto-remediation's unified apply function (writes to autoRemediationLog)
+  await applyAutoRemediation(suiteId, [action]);
+
+  return {
+    classification: "stale_test_data",
+    outcome: "auto_resolved",
+    action: `Stale date fix: ${action.description}`,
+    detail: action.description,
+    verificationPassed: true,
+    patchApplied: action.changes,
+  };
+}
+
+async function handleDeadUrl(
+  suiteId: string,
+  base: RemediationBase,
+): Promise<Omit<RemediationResult, "testName">> {
+  const db = getDb();
+
+  const [suite] = await db
+    .select({ input: testSuites.input })
+    .from(testSuites)
+    .where(eq(testSuites.id, suiteId))
+    .limit(1);
+
+  if (!suite) {
+    return {
+      classification: "dead_url",
+      outcome: "escalate",
+      action: "suite_not_found",
+      detail: `Test suite ${suiteId} not found.`,
+    };
+  }
+
+  const input = suite.input as Record<string, unknown>;
+  const action = checkDeadUrl(input, base.failureReason);
+
+  if (!action) {
+    return {
+      classification: "dead_url",
+      outcome: "escalate",
+      action: "no_dead_url_fix",
+      detail: `URL in test input appears dead but no known fallback available. Manual review required.`,
+    };
+  }
+
+  // Apply via auto-remediation's unified apply function (writes to autoRemediationLog)
+  await applyAutoRemediation(suiteId, [action]);
+
+  return {
+    classification: "dead_url",
+    outcome: "auto_resolved",
+    action: `Dead URL fix: ${action.description}`,
+    detail: action.description,
+    verificationPassed: true,
+    patchApplied: action.changes,
   };
 }
 
@@ -278,12 +412,20 @@ export async function attemptRemediation(
       result = await handleUpstreamDown(base);
       break;
 
-    case "regression_additive":
+    case "stale_test_data":
+      result = await handleStaleTestData(suiteId, base);
+      break;
+
+    case "dead_url":
+      result = await handleDeadUrl(suiteId, base);
+      break;
+
+    case "schema_drift":
       result = {
         classification,
         outcome: "monitoring",
-        action: "regression_additive",
-        detail: `New fields detected in output. Non-breaking — monitoring for 3 consecutive occurrences before flagging.`,
+        action: "schema_drift",
+        detail: `Output schema changed — new or unexpected fields detected. Non-breaking, monitoring. Update test expectations if persistent.`,
       };
       break;
 

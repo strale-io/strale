@@ -65,8 +65,9 @@ const FALLBACK_URLS: Record<string, string> = {
 /**
  * Rule 1: Stale Date — HIGH confidence, auto-apply.
  * Updates expired year/date fields in test input to current values.
+ * Exported for use by self-heal.ts (inline remediation).
  */
-function checkStaleDate(
+export function checkStaleDate(
   input: Record<string, unknown>,
 ): RemediationAction | null {
   const currentYear = new Date().getFullYear();
@@ -110,8 +111,9 @@ function checkStaleDate(
 /**
  * Rule 2: Dead URL — MEDIUM confidence, auto-apply with fallback.
  * Replaces URLs in test input that point to unreachable hosts.
+ * Exported for use by self-heal.ts (inline remediation).
  */
-function checkDeadUrl(
+export function checkDeadUrl(
   input: Record<string, unknown>,
   failureReason: string,
 ): RemediationAction | null {
