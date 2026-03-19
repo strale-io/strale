@@ -1017,6 +1017,15 @@ const seedCapabilities = [
     outputSchema: { type: "object", properties: { is_healthy: { type: "boolean" }, status_code: { type: "integer" }, response_time_ms: { type: "integer" }, schema_valid: { type: "boolean" }, response_body: {} } },
     priceCents: 5,
   },
+  {
+    name: "Paid API Pre-flight Check",
+    slug: "paid-api-preflight",
+    description: "Verify any paid API endpoint before your agent spends money. Checks reachability, SSL, response time, and validates the payment protocol handshake (L402, x402, MPP). Returns a proceed/caution/avoid recommendation with parsed payment details. Use this before calling any paid external API to avoid wasting funds on broken, misconfigured, or fraudulent endpoints. Detects HTTP 402 payment-required responses and parses Lightning Network (L402), Coinbase/Base (x402), and Stripe/Tempo (MPP) protocols.",
+    category: "validation",
+    inputSchema: { type: "object", properties: { url: { type: "string", description: "The paid API endpoint URL to check before paying" } }, required: ["url"] },
+    outputSchema: { type: "object", properties: { url: { type: "string" }, is_reachable: { type: "boolean" }, response_time_ms: { type: "integer" }, status_code: { type: "integer" }, ssl_valid: { type: "boolean" }, payment_protocol: { type: "string" }, payment_details: { type: "object" }, payment_handshake_valid: { type: "boolean" }, facilitator_reachable: { type: "boolean" }, server: { type: "string" }, recommendation: { type: "string" }, issues: { type: "array", items: { type: "string" } } } },
+    priceCents: 2,
+  },
   // ─── Competitive Intelligence (5) ──────────────────────────────────────────
   {
     name: "Landing Page Roast",

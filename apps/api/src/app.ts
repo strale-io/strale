@@ -127,6 +127,7 @@ import "./capabilities/regex-generate.js";
 import "./capabilities/cron-explain.js";
 import "./capabilities/diff-json.js";
 import "./capabilities/api-health-check.js";
+import "./capabilities/paid-api-preflight.js";
 // ─── Competitive intelligence ─────────────────────────────────────────────────
 import "./capabilities/landing-page-roast.js";
 import "./capabilities/seo-audit.js";

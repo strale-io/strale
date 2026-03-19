@@ -102,6 +102,7 @@ const updates: [string, number][] = [
   ["cron-explain", 30],
   ["diff-json", 20],
   ["api-health-check", 200],
+  ["paid-api-preflight", 2000],
   // ─── Competitive intelligence ───────────────────────────────────────────────
   ["landing-page-roast", 8000],
   ["seo-audit", 5000],
