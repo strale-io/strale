@@ -330,6 +330,9 @@ import "./capabilities/credit-score-band.js";
 
 // ─── DataProvider fallback chains (loaded after capability executors) ────────
 import "./capabilities/providers/norwegian-company-data.js";
+import "./capabilities/providers/finnish-company-data.js";
+import "./capabilities/providers/australian-company-data.js";
+import "./capabilities/providers/swiss-company-data.js";
 
 export const app = new Hono();
 
