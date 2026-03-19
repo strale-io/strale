@@ -1,8 +1,8 @@
 {
   "name": "strale-mcp",
   "mcpName": "io.github.strale-io/strale",
-  "version": "0.1.7",
-  "description": "MCP server for Strale — exposes 229+ capabilities as tools for Claude, Cursor, Windsurf, and any MCP client",
+  "version": "0.2.0",
+  "description": "MCP server for Strale — pre-flight check any paid API before your agent pays, plus 225+ business data, compliance, and validation tools for Claude, Cursor, Windsurf, and any MCP client",
   "type": "module",
   "main": "./dist/server.js",
   "exports": {
@@ -35,7 +35,15 @@
     "model-context-protocol",
     "claude",
     "cursor",
-    "windsurf"
+    "windsurf",
+    "paid-api",
+    "preflight",
+    "x402",
+    "l402",
+    "mpp",
+    "trust",
+    "verification",
+    "agentic-payments"
   ],
   "author": "Strale <hello@strale.io> (https://strale.dev)",
   "homepage": "https://strale.dev",

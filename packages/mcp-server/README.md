@@ -121,6 +121,22 @@ Run the MCP server locally on your machine:
 
 ## Available Tools (8)
 
+### Highlighted: Pre-flight check for paid APIs
+
+Before your agent pays for any external API call, use `paid-api-preflight` to verify the endpoint is live, the SSL is valid, and the payment handshake (L402, x402, or MPP) is properly configured. Returns a simple proceed/caution/avoid recommendation. Costs €0.02.
+
+### Example capabilities
+
+| Tool | Description | Price |
+|------|-------------|-------|
+| `paid-api-preflight` | Verify any paid API endpoint before your agent spends money (L402, x402, MPP) | €0.02 |
+| `vat-validate` | Validate EU VAT number via VIES | €0.10 |
+| `swedish-company-data` | Extract Swedish company data | €0.80 |
+| `email-validate` | Verify email deliverability | Free |
+| `iban-validate` | Validate international bank account numbers | Free |
+
+### Meta-tools
+
 | Tool | Auth Required | Description |
 |------|:---:|-------------|
 | `strale_ping` | No | Health check. Returns server status, tool count, and capability count. |
