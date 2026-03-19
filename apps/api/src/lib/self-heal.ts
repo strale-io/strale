@@ -122,7 +122,10 @@ export function classifyFailure(
     reason.includes("fetch failed") ||
     reason.includes("no api key") ||
     reason.includes("is required for") ||
-    reason.includes("not configured")
+    reason.includes("not configured") ||
+    reason.includes("vies error") ||        // VIES SOAP service errors (MS_UNAVAILABLE, SERVER_BUSY, etc.)
+    reason.includes("units usage limit") || // Browserless billing/quota exhaustion
+    (reason.includes("browserless") && reason.includes("401"))  // Browserless auth/billing
   ) {
     return "upstream_dependency";
   }
@@ -166,6 +169,8 @@ export function classifyFailure(
     reason.includes("required field") ||
     reason.includes("assertion failed") ||
     reason.includes("not equal") ||
+    /expected ['"].*['"], got ['"]/.test(reason) || // value assertion mismatch
+    /expected (true|false), got /.test(reason) ||   // boolean assertion mismatch
     (reason.includes("schema") &&
       (reason.includes("missing") || reason.includes("invalid type")))
   ) {
