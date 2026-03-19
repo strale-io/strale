@@ -59,7 +59,7 @@ test_fixtures:
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    cvr_number: test
+    cvr_number: "24256790"
 output_field_reliability:
   status: guaranteed
   address: guaranteed

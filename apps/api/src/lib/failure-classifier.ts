@@ -98,6 +98,9 @@ const UPSTREAM_TRANSIENT_PATTERNS = [
   /UNABLE_TO_GET_ISSUER_CERT/i,
   /Connection error/i,             // generic connection failure to external service
   /VIES error: MS_MAX_CONCURRENT/i, // EU VAT validation service rate limit
+  /VIES error: MS_UNAVAILABLE/i,   // VIES member state server down
+  /VIES error: SERVER_BUSY/i,      // VIES server overloaded
+  /VIES error: GLOBAL_MAX_CONCURRENT/i, // VIES overall rate limit
   // Browserless forwarding target-site failures (not Browserless billing):
   /Browserless.*HTTP 5\d\d/i,      // target site loading failure (Browserless wraps it)
   /Browserless.*error/i,           // generic Browserless error (usually target site)
