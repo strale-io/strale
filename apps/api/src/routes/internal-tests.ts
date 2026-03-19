@@ -11,6 +11,8 @@ import {
 } from "../db/schema.js";
 import { runTests } from "../lib/test-runner.js";
 import type { ScheduleTier } from "../lib/test-runner.js";
+import { getExecutor } from "../capabilities/index.js";
+import { generateTestInput } from "../lib/test-input-generator.js";
 import { categorizeFailureReason, sanitizeErrorMessage } from "../lib/trust-helpers.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { runDependencyHealthChecks } from "../lib/dependency-health.js";
@@ -646,4 +648,229 @@ internalTestsRoute.get("/health", async (c) => {
     status: allHealthy ? "healthy" : "degraded",
     dependencies: results,
   });
+});
+
+// ─── Recalibration endpoint ──────────────────────────────────────────────────
+
+const GENERIC_VALUES = new Set([
+  "test_value", "test", "test_item", "Google", "556703-7485",
+]);
+
+function isGenericInput(input: Record<string, unknown>): boolean {
+  const values = Object.values(input);
+  if (values.length === 0) return true;
+  return values.every((v) => typeof v === "string" && GENERIC_VALUES.has(v));
+}
+
+function resolveRecalInput(
+  suiteInput: Record<string, unknown>,
+  cap: { inputSchema: unknown; onboardingManifest: unknown },
+): { input: Record<string, unknown>; source: string; upgraded: boolean } {
+  const manifest = cap.onboardingManifest as Record<string, unknown> | null;
+  const testFixtures = (manifest?.test_fixtures ?? null) as Record<string, unknown> | null;
+
+  if (testFixtures?.health_check_input && typeof testFixtures.health_check_input === "object") {
+    const hci = testFixtures.health_check_input as Record<string, unknown>;
+    if (Object.keys(hci).length > 0) {
+      return { input: hci, source: "manifest_health_check", upgraded: true };
+    }
+  }
+
+  if (testFixtures?.known_answer) {
+    const ka = testFixtures.known_answer as Record<string, unknown>;
+    if (ka?.input && typeof ka.input === "object") {
+      const kaInput = ka.input as Record<string, unknown>;
+      if (Object.keys(kaInput).length > 0) {
+        return { input: kaInput, source: "manifest_known_answer", upgraded: true };
+      }
+    }
+  }
+
+  if (Object.keys(suiteInput).length > 0 && !isGenericInput(suiteInput)) {
+    return { input: suiteInput, source: "existing", upgraded: false };
+  }
+
+  const generated = generateTestInput(cap.inputSchema as Record<string, unknown>);
+  if (Object.keys(generated).length > 0) {
+    return { input: generated, source: "heuristic", upgraded: true };
+  }
+
+  return { input: suiteInput, source: "existing", upgraded: false };
+}
+
+interface RecalValidationCheck {
+  field: string;
+  operator: string;
+  value?: unknown;
+  values?: unknown[];
+}
+
+function calibrateChecks(
+  testType: string,
+  existingRules: { checks?: RecalValidationCheck[] },
+  realOutput: Record<string, unknown>,
+): { checks: RecalValidationCheck[] } {
+  const checks: RecalValidationCheck[] = [];
+
+  for (const [key, value] of Object.entries(realOutput)) {
+    if (value !== null && value !== undefined) {
+      checks.push({ field: key, operator: "not_null" });
+    }
+  }
+
+  if (testType === "known_answer") {
+    for (const check of existingRules.checks ?? []) {
+      if (check.operator === "not_null") continue;
+      if (check.field in realOutput) {
+        if (!checks.some((c) => c.field === check.field && c.operator === check.operator)) {
+          checks.push(check);
+        }
+      }
+    }
+  }
+
+  return { checks };
+}
+
+// POST /v1/internal/tests/recalibrate — recalibrate test suites against real output
+// Query params: ?slug= (optional, recalibrate specific capability), ?dry-run (preview only)
+// Long-running: ~25min for all capabilities. Returns JSON report when done.
+internalTestsRoute.post("/recalibrate", async (c) => {
+  if (!ADMIN_SECRET) {
+    return c.json(apiError("unauthorized", "Admin endpoint is not configured."), 503);
+  }
+  const auth = c.req.header("Authorization");
+  if (!isValidAdminAuth(auth)) {
+    return c.json(apiError("unauthorized", "Invalid admin secret."), 401);
+  }
+
+  const targetSlug = c.req.query("slug") || undefined;
+  const dryRun = c.req.query("dry-run") !== undefined;
+  const db = getDb();
+
+  const conditions = [eq(testSuites.active, true)];
+  if (targetSlug) conditions.push(eq(testSuites.capabilitySlug, targetSlug));
+
+  const allSuites = await db
+    .select()
+    .from(testSuites)
+    .where(and(...conditions));
+
+  const slugs = [...new Set(allSuites.map((s) => s.capabilitySlug))];
+  const capMap = new Map<string, { inputSchema: unknown; onboardingManifest: unknown }>();
+  for (const slug of slugs) {
+    const [cap] = await db
+      .select({ inputSchema: capabilities.inputSchema, onboardingManifest: capabilities.onboardingManifest })
+      .from(capabilities)
+      .where(eq(capabilities.slug, slug))
+      .limit(1);
+    if (cap) capMap.set(slug, cap);
+  }
+
+  const report = {
+    totalProcessed: 0,
+    calibrated: 0,
+    inputUpgraded: 0,
+    assertionsRegenerated: 0,
+    skippedNegative: 0,
+    skippedEdgeCase: 0,
+    skippedPiggyback: 0,
+    failedNoExecutor: 0,
+    failedExecution: 0,
+    failedNoOutput: 0,
+    statusAssertionRemoved: 0,
+    newFieldsDiscovered: 0,
+    manualReview: [] as Array<{ slug: string; testType: string; reason: string }>,
+    dryRun,
+  };
+
+  // Group by slug
+  const bySlug = new Map<string, typeof allSuites>();
+  for (const s of allSuites) {
+    const list = bySlug.get(s.capabilitySlug) ?? [];
+    list.push(s);
+    bySlug.set(s.capabilitySlug, list);
+  }
+
+  for (const [slug, slugSuites] of bySlug) {
+    const cap = capMap.get(slug);
+    if (!cap) continue;
+
+    const executor = getExecutor(slug);
+    let realOutput: Record<string, unknown> | null = null;
+    let executionError: string | null = null;
+
+    if (executor) {
+      const calibratable = slugSuites.filter(
+        (s) => s.testType === "known_answer" || s.testType === "schema_check" || s.testType === "dependency_health",
+      );
+      const bestSuite = calibratable[0] ?? slugSuites[0];
+      const resolution = resolveRecalInput(bestSuite.input as Record<string, unknown>, cap);
+
+      try {
+        const result = await executor(resolution.input);
+        if (result?.output && Object.keys(result.output).length > 0) {
+          realOutput = result.output;
+        }
+      } catch (err: any) {
+        executionError = err.message?.slice(0, 200) ?? "Unknown error";
+      }
+
+      // 2s delay between capabilities
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+
+    for (const suite of slugSuites) {
+      report.totalProcessed++;
+
+      if (suite.testType === "negative") { report.skippedNegative++; continue; }
+      if (suite.testType === "edge_case") { report.skippedEdgeCase++; continue; }
+      if (suite.testType === "piggyback") { report.skippedPiggyback++; continue; }
+
+      if (!executor) {
+        report.failedNoExecutor++;
+        report.manualReview.push({ slug, testType: suite.testType, reason: "No executor" });
+        continue;
+      }
+      if (executionError) {
+        report.failedExecution++;
+        report.manualReview.push({ slug, testType: suite.testType, reason: executionError });
+        continue;
+      }
+      if (!realOutput) {
+        report.failedNoOutput++;
+        report.manualReview.push({ slug, testType: suite.testType, reason: "No output" });
+        continue;
+      }
+
+      const resolution = resolveRecalInput(suite.input as Record<string, unknown>, cap);
+      if (resolution.upgraded) report.inputUpgraded++;
+
+      const oldRules = suite.validationRules as { checks?: RecalValidationCheck[] };
+      const oldChecks = oldRules?.checks ?? [];
+      const newRules = calibrateChecks(suite.testType, oldRules, realOutput);
+
+      const hadStatus = oldChecks.some((c) => c.field === "status" && c.operator === "not_null");
+      if (hadStatus && !("status" in realOutput)) report.statusAssertionRemoved++;
+
+      const oldFields = new Set(oldChecks.map((c) => c.field));
+      report.newFieldsDiscovered += newRules.checks.filter((c) => !oldFields.has(c.field)).length;
+
+      const changed = JSON.stringify(oldRules) !== JSON.stringify(newRules);
+      if (changed) report.assertionsRegenerated++;
+
+      if (!dryRun && (resolution.upgraded || changed)) {
+        const updates: Record<string, unknown> = { updatedAt: new Date() };
+        if (resolution.upgraded) updates.input = resolution.input;
+        if (changed) updates.validationRules = newRules;
+        updates.baselineOutput = realOutput;
+        updates.baselineCapturedAt = new Date();
+        await db.update(testSuites).set(updates).where(eq(testSuites.id, suite.id));
+      }
+
+      report.calibrated++;
+    }
+  }
+
+  return c.json(report);
 });
