@@ -19,11 +19,31 @@ const healthChecks: HealthCheck[] = [
     name: "browserless",
     check: async () => {
       const url = process.env.BROWSERLESS_URL;
-      if (!url) return { healthy: false, latency_ms: 0, error: "BROWSERLESS_URL not configured" };
+      const key = process.env.BROWSERLESS_API_KEY;
+      if (!url || !key) return { healthy: false, latency_ms: 0, error: "BROWSERLESS_URL/API_KEY not configured" };
       const start = Date.now();
       try {
-        const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(5000) });
-        return { healthy: res.ok, latency_ms: Date.now() - start };
+        // Browserless.io managed service requires auth on all endpoints.
+        // Use a minimal /content request with example.com (fast, reliable) as
+        // a real health probe — the /health endpoint may not exist on managed plans.
+        const res = await fetch(`${url}/content`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${key}`,
+          },
+          body: JSON.stringify({
+            url: "https://example.com",
+            gotoOptions: { waitUntil: "domcontentloaded", timeout: 5000 },
+          }),
+          signal: AbortSignal.timeout(10000),
+        });
+        const latency = Date.now() - start;
+        if (res.ok) {
+          const html = await res.text();
+          return { healthy: html.length > 50, latency_ms: latency };
+        }
+        return { healthy: false, latency_ms: latency, error: `HTTP ${res.status}` };
       } catch (e: any) {
         return { healthy: false, latency_ms: Date.now() - start, error: e.message };
       }
