@@ -328,6 +328,9 @@ import "./capabilities/company-name-match.js";
 import "./capabilities/postal-code-lookup.js";
 import "./capabilities/credit-score-band.js";
 
+// ─── DataProvider fallback chains (loaded after capability executors) ────────
+import "./capabilities/providers/norwegian-company-data.js";
+
 export const app = new Hono();
 
 // Global error handler — never leak internals to client
