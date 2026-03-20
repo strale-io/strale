@@ -582,15 +582,29 @@ export function registerStraleTools(
 
       const catFilter = category ? category.toLowerCase() : null;
 
+      // Tokenize query for multi-word matching (OR logic — any word matches)
+      const queryTokens = q.split(/\s+/).filter((t) => t.length >= 2);
+
+      // Score function: count how many query tokens appear in the text
+      function matchScore(text: string): number {
+        if (!queryTokens.length) return text.includes(q) ? 1 : 0;
+        let score = 0;
+        for (const token of queryTokens) {
+          if (text.includes(token)) score++;
+        }
+        return score;
+      }
+
       // Match solutions
       const matchedSolutions = solutions
         .filter((s) => {
           if (catFilter && !s.category.toLowerCase().includes(catFilter)) return false;
           const text = `${s.name} ${s.description} ${s.slug} ${s.category}`.toLowerCase();
-          return text.includes(q);
+          return matchScore(text) > 0;
         })
         .map((s) => {
           const solTrust = solutionTrustData?.get(s.slug);
+          const text = `${s.name} ${s.description} ${s.slug} ${s.category}`.toLowerCase();
           return {
             type: "solution" as const,
             slug: s.slug,
@@ -609,8 +623,16 @@ export function registerStraleTools(
             usable: solTrust?.usable ?? s.usable ?? true,
             strategy: solTrust?.strategy ?? s.strategy ?? "direct",
             badge: solTrust?.badge ?? null,
+            _score: matchScore(text),
+            _usable: solTrust?.usable ?? s.usable ?? true,
           };
         });
+
+      // Sort solutions: usable first, then by match score descending
+      matchedSolutions.sort((a, b) => {
+        if (a._usable !== b._usable) return a._usable ? -1 : 1;
+        return b._score - a._score;
+      });
 
       // Match capabilities — source data from /v1/capabilities already filters is_active.
       // Additional filter: exclude unusable + zero-SQS (pending/degraded).
@@ -621,16 +643,24 @@ export function registerStraleTools(
         const effectiveSqs = trust?.sqs ?? c.sqs ?? 0;
         if (!effectiveUsable && effectiveSqs === 0) return false;
         const text = `${c.name} ${c.description} ${c.slug} ${c.category}`.toLowerCase();
-        return text.includes(q);
+        return matchScore(text) > 0;
       });
 
+      // Sort capabilities: usable first, then slug match, then name match, then score
       matchedCaps.sort((a, b) => {
+        const aTrust = trustData?.get(a.slug);
+        const bTrust = trustData?.get(b.slug);
+        const aUsable = aTrust?.usable ?? a.usable ?? true;
+        const bUsable = bTrust?.usable ?? b.usable ?? true;
+        if (aUsable !== bUsable) return aUsable ? -1 : 1;
+        const aText = `${a.name} ${a.description} ${a.slug} ${a.category}`.toLowerCase();
+        const bText = `${b.name} ${b.description} ${b.slug} ${b.category}`.toLowerCase();
+        const aScore = matchScore(aText);
+        const bScore = matchScore(bText);
+        if (aScore !== bScore) return bScore - aScore;
         const aSlug = a.slug.toLowerCase().includes(q) ? 0 : 1;
         const bSlug = b.slug.toLowerCase().includes(q) ? 0 : 1;
-        if (aSlug !== bSlug) return aSlug - bSlug;
-        const aName = a.name.toLowerCase().includes(q) ? 0 : 1;
-        const bName = b.name.toLowerCase().includes(q) ? 0 : 1;
-        return aName - bName;
+        return aSlug - bSlug;
       });
 
       const capResults = matchedCaps.map((c) => {
@@ -674,8 +704,9 @@ export function registerStraleTools(
         };
       });
 
-      // Solutions first, then capabilities
-      const combined = [...matchedSolutions, ...capResults];
+      // Solutions first, then capabilities — strip internal scoring fields
+      const cleanSolutions = matchedSolutions.map(({ _score, _usable, ...rest }) => rest);
+      const combined = [...cleanSolutions, ...capResults];
       const page = combined.slice(skip, skip + 20);
 
       return {
@@ -763,7 +794,7 @@ export function registerStraleTools(
     "strale_methodology",
     {
       description:
-        "Get Strale's quality and trust methodology. Explains the dual-profile scoring model: Quality Profile (code quality, 4 factors) and Reliability Profile (operational dependability, 4 factors weighted by capability type), combined via a published 5×5 matrix into the SQS confidence score. Covers execution guidance, test infrastructure (1,215 test suites with tiered scheduling), provenance tracking, audit trails, badge system, and honest disclosure of current limitations.",
+        "Get Strale's quality and trust methodology. Explains the dual-profile scoring model: Quality Profile (code quality, 4 factors) and Reliability Profile (operational dependability, 4 factors weighted by capability type), combined via a published 5×5 matrix into the SQS confidence score. Covers execution guidance, test infrastructure (~1,350 test suites with tiered scheduling), provenance tracking, audit trails, badge system, and honest disclosure of current limitations.",
       inputSchema: z.object({}),
     },
     async () => {

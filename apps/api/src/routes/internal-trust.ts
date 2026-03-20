@@ -592,18 +592,19 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       score: solutionSqs,
       label: sqsLabel(solutionSqs),
       trend: solutionTrend,
+      scoring_note: "Solution SQS is a weighted average of per-step SQS scores, capped at weakest step + 20. QP/RP grades below show the weakest step (conservative). These grades may not directly map to the SQS score via the matrix — the matrix applies at step level, not solution level.",
     },
 
     quality_profile: {
       grade: worstQuality,
       score: solutionQpScore,
-      label: `Code quality: ${worstQuality}`,
+      label: `Code quality: ${worstQuality} (weakest step)`,
     },
 
     reliability_profile: {
       grade: worstReliability,
       score: solutionRpScore,
-      label: rpGradeToLabel(worstReliability),
+      label: `${rpGradeToLabel(worstReliability)} (weakest step)`,
     },
 
     execution_guidance: {
