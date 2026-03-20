@@ -499,7 +499,7 @@ export function registerStraleTools(
           {
             type: "text" as const,
             text: JSON.stringify({
-              welcome: "Strale is the trust layer for AI agents. 229 verified data capabilities with dual-profile quality scores.",
+              welcome: "Strale is the trust layer for AI agents. 256 verified data capabilities and 81 bundled solutions with dual-profile quality scores.",
               free_capabilities: [
                 { slug: "email-validate", description: "Validate any email address", example_input: { email: "test@example.com" } },
                 { slug: "dns-lookup", description: "DNS records for any domain", example_input: { domain: "example.com" } },
@@ -508,7 +508,7 @@ export function registerStraleTools(
                 { slug: "iban-validate", description: "Validate IBAN numbers", example_input: { iban: "DE89370400440532013000" } },
               ],
               try_now: "Call strale_execute with any free capability above — no API key needed (10/day limit).",
-              full_access: "Sign up at https://strale.dev/signup for 229 capabilities. Free €2 credits, no card needed.",
+              full_access: "Sign up at https://strale.dev/signup for 256 capabilities and 81 solutions (KYB, Invoice Verify). Free €2 credits, no card needed.",
               learn_more: "Call strale_methodology for quality scoring details, or strale_search to browse all capabilities.",
             }, null, 2),
           },
@@ -557,7 +557,7 @@ export function registerStraleTools(
     "strale_search",
     {
       description:
-        "Searches Strale's catalog of 229 capabilities and 20 solutions across categories: validation, data-extraction, finance, legal, compliance, logistics, recruiting, e-commerce, marketing, developer-tools, competitive-intelligence, and more. Returns matches with SQS confidence score (0-100), Quality grade (code quality, A-F), Reliability grade (operational dependability, A-F), usable flag, execution strategy, trend, price, and required input fields. Full quality breakdown available via strale_trust_profile.",
+        "Searches Strale's catalog of 256 capabilities and 81 solutions (including KYB Essentials, KYB Complete, and Invoice Verify across 20 countries) across categories: validation, data-extraction, finance, legal, compliance, logistics, recruiting, e-commerce, marketing, developer-tools, competitive-intelligence, and more. Returns matches with SQS confidence score (0-100), Quality grade (code quality, A-F), Reliability grade (operational dependability, A-F), usable flag, execution strategy, trend, price, and required input fields. Full quality breakdown available via strale_trust_profile.",
       inputSchema: z.object({
         query: z
           .string()
@@ -853,7 +853,7 @@ Every execution records:
   Retrieve any past transaction: call strale_transaction with the transaction ID returned from strale_execute.
 
 TEST INFRASTRUCTURE
-  ~1,195 active test suites across all 229 active capabilities
+  ~1,348 active test suites across all 256 active capabilities
   Tiered scheduling: Tier A (critical) every 6 hours, Tier B every 24 hours, Tier C every 72 hours
   Test types: known_answer, schema_check, dependency_health, negative, edge_case
   Automated failure categorization distinguishes external service issues from Strale bugs

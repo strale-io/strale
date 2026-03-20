@@ -1,6 +1,6 @@
 # strale-mcp
 
-MCP server for [Strale](https://strale.io) — gives AI agents access to 250+ capabilities via 8 meta-tools. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
+MCP server for [Strale](https://strale.io) — gives AI agents access to 256 capabilities via 8 meta-tools. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
 
 ## Installation
 
@@ -16,7 +16,7 @@ npm install -g strale-mcp
 
 ## Architecture
 
-**Meta-tools only**: Instead of registering 250+ individual tools (which exceeds limits in ChatGPT, Cursor, and Copilot), the server exposes 8 meta-tools. Agents discover capabilities via `strale_search`, then execute via `strale_execute`.
+**Meta-tools only**: Instead of registering 256 individual tools (which exceeds limits in ChatGPT, Cursor, and Copilot), the server exposes 8 meta-tools. Agents discover capabilities via `strale_search`, then execute via `strale_execute`.
 
 At startup, the server fetches the capability catalog, solutions, and trust data from the Strale API and caches them for search.
 
@@ -141,7 +141,7 @@ Before your agent pays for any external API call, use `paid-api-preflight` to ve
 |------|:---:|-------------|
 | `strale_ping` | No | Health check. Returns server status, tool count, and capability count. |
 | `strale_getting_started` | No | Onboarding guide. Returns free capabilities available without an API key, usage steps, and signup link. |
-| `strale_search` | No | Search 250+ capabilities and 20+ solutions by keyword or category. Returns matches with price, input fields, SQS score, quality grade, reliability grade, and execution guidance. |
+| `strale_search` | No | Search 256 capabilities and 81 solutions by keyword or category. Returns matches with price, input fields, SQS score, quality grade, reliability grade, and execution guidance. |
 | `strale_execute` | No* | Execute any capability by slug. Returns output data, cost, latency, provenance, and dual-profile quality assessment. *Free-tier capabilities work without an API key. |
 | `strale_methodology` | No | Returns Strale's quality methodology — dual-profile scoring (QP + RP), SQS matrix, execution guidance, and test infrastructure. |
 | `strale_trust_profile` | No | Returns the full trust profile for any capability or solution — Quality Profile, Reliability Profile, SQS score, execution guidance, limitations, and badge status. |
@@ -270,15 +270,32 @@ else:
 }
 ```
 
+## Solutions (bundled workflows)
+
+Strale offers 81 pre-built solutions that chain multiple capabilities:
+
+- **KYB Essentials** (20 countries) — Quick company verification: registry + VAT + sanctions + LEI. €1.50.
+- **KYB Complete** (20 countries) — Full compliance: registry, PEP, adverse media, digital presence + risk narrative. €2.50.
+- **Invoice Verify** (20 countries) — Fraud detection: company verify, payment validation, sender analysis + risk narrative. €2.50.
+
+```
+Agent: strale_search(query: "kyb essentials sweden")
+→ Returns: kyb-essentials-se | €1.50 | 4 checks
+
+Agent: strale_execute(slug: "kyb-essentials-se", inputs: { org_number: "5591674668" })
+→ Returns: { checks: { company_exists: true, sanctions_clear: true, ... }, disclaimer: {...} }
+```
+
 ## Try It
 
 After connecting, ask your agent:
 
 - "Use Strale to validate the email hello@example.com"
 - "Use Strale to check the DNS records for github.com"
-- "Search Strale for company data capabilities"
+- "Search Strale for KYB solutions"
+- "Run a full compliance check on a Swedish company"
 
-These use free capabilities — no API key needed.
+These use free capabilities — no API key needed (KYB/Invoice solutions require an API key).
 
 ## Usage Workflow
 
@@ -346,7 +363,7 @@ Report bugs or request capabilities at: [github.com/strale-io/strale/issues](htt
 - `url-to-markdown` — convert any URL to markdown
 - `iban-validate` — validate international bank account numbers
 
-For all 250+ capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
+For all 256 capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
 
 ## Resources
 

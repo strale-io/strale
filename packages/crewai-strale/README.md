@@ -1,6 +1,6 @@
 # crewai-strale
 
-All 250+ [Strale](https://strale.dev) capabilities as CrewAI tools. Company data, VAT validation, web scraping, compliance checks, and more — available to your CrewAI agents with a single import.
+All 256 [Strale](https://strale.dev) capabilities as CrewAI tools. Company data, VAT validation, web scraping, compliance checks, and more — available to your CrewAI agents with a single import.
 
 ## Install
 
@@ -14,7 +14,7 @@ pip install crewai-strale
 from crewai_strale import StraleToolkit
 
 toolkit = StraleToolkit(api_key="sk_live_...")
-tools = toolkit.get_tools()  # 250+ capabilities + search & balance tools
+tools = toolkit.get_tools()  # 256 capabilities + search & balance tools
 ```
 
 ## Filter by category
@@ -63,6 +63,10 @@ Plus two meta-tools:
 - **strale_search** — discover capabilities by keyword
 - **strale_balance** — check your wallet balance
 
+## Solutions (KYB & Invoice Verify)
+
+81 pre-built solutions are available, including KYB Essentials, KYB Complete, and Invoice Verify across 20 countries. Use `strale_search` to discover them.
+
 ## Get an API key
 
 Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in trial credits, no card required.
@@ -79,7 +83,7 @@ Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in tria
 - `url-to-markdown` — convert any URL to markdown
 - `iban-validate` — validate international bank account numbers
 
-For all 250+ capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
+For all 256 capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
 
 ## Resources
 

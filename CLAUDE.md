@@ -110,11 +110,26 @@ strale/
 
 ### Capabilities & Quality
 <!-- Reminder: changes to capabilities, SDKs, or integrations require updating public/llms.txt in strale-frontend -->
-243+ capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 20 bundled solutions across 6 categories (including 5 US-first solutions shipped 2026-03-07). Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions.
+256 capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 81 bundled solutions across 6 categories. Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions.
 
-SQS engine live (Constitution v1): 5-factor scoring (correctness 40%, schema 25%, availability 20%, error handling 10%, edge cases 5%), recency-weighted rolling 10-run window, missing-factor re-weighting, circuit breaker score penalties (3 consecutive failures → −30, 5 correctness failures → −20, schema break → −15), trend computation (improving/stable/declining), floor-aware solution SQS (lowest step + 20 cap), min_sqs quality gate on POST /v1/do, platform floor SQS 25. 1215 auto-generated test suites (all 233 capabilities × 5 test types) with tiered scheduling (A: 6h, B: 24h, C: 72h). Public quality endpoint: GET /v1/quality/:slug.
+**New capabilities (March 2026):**
+- `pep-check` — Screens individuals against OpenSanctions PEP dataset. Category: compliance. Price: €0.15. Transparency: mixed. Uses OPENSANCTIONS_API_KEY.
+- `adverse-media-check` — Google search + Claude Haiku risk assessment for adverse news. Category: compliance. Price: €0.20. Transparency: ai_generated. Uses SERPER_API_KEY + ANTHROPIC_API_KEY.
+- `risk-narrative-generate` — AI synthesis of structured check results into plain-language risk narrative. Category: agent-tooling. Price: €0.05. Transparency: ai_generated. Uses ANTHROPIC_API_KEY.
+- `au-company-data` — Australian Business Register (ABR) lookup by ABN. Category: company-data. Price: €0.05. Transparency: algorithmic. Uses ABN_LOOKUP_GUID.
+
+**New solutions (March 2026):**
+- KYB Essentials (×20 countries) — Quick company verification. 3-4 checks, €1.50. Slug: `kyb-essentials-{cc}`
+- KYB Complete (×20 countries) — Full compliance check with risk narrative. 11-14 checks, €2.50. Slug: `kyb-complete-{cc}`
+- Invoice Verify (×20 countries) — Invoice fraud detection with risk narrative. 12-14 checks, €2.50. Slug: `invoice-verify-{cc}`
+- Countries: SE, NO, DK, FI, UK, DE, FR, NL, BE, AT, IE, ES, IT, CH, PL, PT, US, CA, AU, SG
+- Deprecated: kyc-sweden, kyc-norway, kyc-denmark, kyc-finland, verify-us-company (isActive: false)
+
+SQS engine live (Constitution v1): 5-factor scoring (correctness 40%, schema 25%, availability 20%, error handling 10%, edge cases 5%), recency-weighted rolling 10-run window, missing-factor re-weighting, circuit breaker score penalties (3 consecutive failures → −30, 5 correctness failures → −20, schema break → −15), trend computation (improving/stable/declining), floor-aware solution SQS (lowest step + 20 cap), min_sqs quality gate on POST /v1/do, platform floor SQS 25. 1,348 test suites with tiered scheduling (A: 6h, B: 24h, C: 72h) plus fixture and canary test modes. Public quality endpoint: GET /v1/quality/:slug.
 
 Free-tier: 5 capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) require no auth/signup. IP-based daily rate limit (10/day). Authenticated users calling free-tier capabilities get normal rate limits and no wallet debit.
+
+Testing: test_suites table has `test_mode` column: `live` (calls real API), `fixture` (uses saved data, €0 external cost), `canary` (periodic live check at reduced frequency). `external_cost_cents` tracks estimated external API cost per test execution.
 
 Stripe is in SANDBOX mode — live key activation pending.
 

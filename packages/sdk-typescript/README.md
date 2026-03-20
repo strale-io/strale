@@ -33,6 +33,34 @@ const result = await strale.do({
 });
 ```
 
+## Solutions (bundled workflows)
+
+```typescript
+// Quick company verification (KYB Essentials — 20 countries)
+const result = await strale.do({
+  solution: "kyb-essentials-se",
+  input: { org_number: "5591674668" },
+});
+
+// Full compliance check with risk narrative (KYB Complete)
+const fullCheck = await strale.do({
+  solution: "kyb-complete-se",
+  input: { org_number: "5591674668", domain: "example.com" },
+});
+// fullCheck.narrative — plain-language risk assessment
+// fullCheck.checks — structured results for programmatic use
+
+// Invoice fraud detection (Invoice Verify)
+const invoiceCheck = await strale.do({
+  solution: "invoice-verify-se",
+  input: {
+    org_number: "5591674668",
+    vat_number: "SE559167466801",
+    iban: "SE3550000000058398257466",
+  },
+});
+```
+
 ## Dry run (preview cost without executing)
 
 ```typescript
@@ -55,7 +83,7 @@ console.log(balance.balance_eur); // "1.84"
 
 ```typescript
 const capabilities = await strale.listCapabilities();
-// 250+ capabilities with slug, name, price, category
+// 256 capabilities with slug, name, price, category
 ```
 
 ## Free-tier (no API key)
@@ -109,7 +137,7 @@ try {
 - `url-to-markdown` — convert any URL to markdown
 - `iban-validate` — validate international bank account numbers
 
-For all 250+ capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
+For all 256 capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
 
 ## Resources
 

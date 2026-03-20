@@ -1,6 +1,6 @@
 # strale-semantic-kernel
 
-All 233 [Strale](https://strale.dev) capabilities as Semantic Kernel functions. Company data, VAT validation, web scraping, compliance checks, and more — available to your SK agents with a single import.
+All 256 [Strale](https://strale.dev) capabilities as Semantic Kernel functions. Company data, VAT validation, web scraping, compliance checks, and more — available to your SK agents with a single import.
 
 ## Install
 
@@ -15,7 +15,7 @@ import { createStralePlugin } from "strale-semantic-kernel";
 
 const plugin = await createStralePlugin({ apiKey: "sk_live_..." });
 
-// plugin.functions contains 250+ kernel functions
+// plugin.functions contains 256 kernel functions
 console.log(`Loaded ${plugin.functions.length} Strale capabilities`);
 ```
 
@@ -90,6 +90,17 @@ Plus two meta-functions:
 - **strale_search** — discover capabilities by keyword
 - **strale_balance** — check your wallet balance
 
+## Solutions (KYB & Invoice Verify)
+
+```typescript
+// Solutions are discoverable via strale_search
+// 81 pre-built solutions: KYB Essentials, KYB Complete, Invoice Verify × 20 countries
+const result = await client.execute({
+  solution: "kyb-essentials-se",
+  inputs: { org_number: "5591674668" },
+});
+```
+
 ## Get an API key
 
 Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in trial credits, no card required.
@@ -106,7 +117,7 @@ Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in tria
 - `url-to-markdown` — convert any URL to markdown
 - `iban-validate` — validate international bank account numbers
 
-For all 250+ capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
+For all 256 capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
 
 ## Resources
 
