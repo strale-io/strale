@@ -13,8 +13,8 @@ import { config } from "dotenv";
 import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
-// Side-effect imports to register all executors
-import "../src/app.js";
+// Register all capability executors so smoke tests can execute them
+import { autoRegisterCapabilities } from "../src/capabilities/auto-register.js";
 
 import { eq } from "drizzle-orm";
 import { getDb } from "../src/db/index.js";
@@ -439,6 +439,9 @@ function printReport(result: { slug: string; steps: StepResult[]; passed: boolea
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
+  // Register executors so smoke tests can execute capabilities
+  await autoRegisterCapabilities();
+
   const args = process.argv.slice(2);
   const slugIdx = args.indexOf("--slug");
   const allMode = args.includes("--all");

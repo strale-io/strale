@@ -27,8 +27,8 @@ import { config } from "dotenv";
 import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
-// Side-effect imports to register all executors
-import "../src/app.js";
+// Register all capability executors so --discover and --verify can execute them
+import { autoRegisterCapabilities } from "../src/capabilities/auto-register.js";
 
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../src/db/index.js";
@@ -982,6 +982,9 @@ async function backfill(
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
+  // Register executors so --discover and fixture verification can execute capabilities
+  await autoRegisterCapabilities();
+
   const args = process.argv.slice(2);
   const manifestIdx = args.indexOf("--manifest");
   const dryRun = args.includes("--dry-run");
