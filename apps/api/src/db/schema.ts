@@ -379,6 +379,7 @@ export const testRunLog = pgTable("test_run_log", {
   passed: integer("passed").notNull(),
   failed: integer("failed").notNull(),
   estimatedCostCents: integer("estimated_cost_cents").notNull().default(0),
+  actualCostCents: integer("actual_cost_cents").notNull().default(0),
 });
 
 // ─── capability_limitations ─────────────────────────────────────────────────

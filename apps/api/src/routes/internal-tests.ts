@@ -5,6 +5,7 @@ import { getDb } from "../db/index.js";
 import {
   testSuites,
   testResults,
+  testRunLog,
   solutions,
   solutionSteps,
   capabilities,
@@ -1054,4 +1055,109 @@ internalTestsRoute.post("/patch-suite-rules", async (c) => {
   }
 
   return c.json({ patched: true, slug, test_name, updated_checks: checks });
+});
+
+// GET /v1/internal/tests/cost-summary — Test execution cost breakdown
+internalTestsRoute.get("/cost-summary", async (c) => {
+  const days = Math.min(Math.max(parseInt(c.req.query("days") ?? "30", 10) || 30, 1), 365);
+  const cacheKey = `test-cost:${days}`;
+  const cached = getCached(cacheKey);
+  if (cached) return c.json(cached);
+
+  const db = getDb();
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+
+  // Aggregate from test_run_log
+  const runLogRows = await db.execute(sql`
+    SELECT
+      COALESCE(SUM(actual_cost_cents), 0)::integer AS total_actual,
+      COALESCE(SUM(estimated_cost_cents), 0)::integer AS total_estimated,
+      COUNT(*)::integer AS total_runs,
+      COALESCE(SUM(total_tests), 0)::integer AS total_tests,
+      COALESCE(SUM(passed), 0)::integer AS total_passed,
+      COALESCE(SUM(failed), 0)::integer AS total_failed
+    FROM test_run_log
+    WHERE started_at >= ${cutoff.toISOString()}::timestamptz
+  `);
+  const runLog = ((Array.isArray(runLogRows) ? runLogRows : (runLogRows as any)?.rows ?? [])[0] ?? {}) as any;
+
+  // Cost by capability_type (from external_cost_cents on test_suites)
+  const byTypeRows = await db.execute(sql`
+    SELECT
+      c.capability_type,
+      COUNT(DISTINCT ts.capability_slug)::integer AS capability_count,
+      COUNT(ts.id)::integer AS suite_count,
+      COALESCE(SUM(ts.external_cost_cents), 0)::integer AS total_external_cost
+    FROM test_suites ts
+    JOIN capabilities c ON c.slug = ts.capability_slug
+    WHERE ts.active = true
+    GROUP BY c.capability_type
+    ORDER BY total_external_cost DESC
+  `);
+  const byType = (Array.isArray(byTypeRows) ? byTypeRows : (byTypeRows as any)?.rows ?? []) as any[];
+
+  // Cost by test_mode (fixture = free, live = real cost)
+  const byModeRows = await db.execute(sql`
+    SELECT
+      ts.test_mode,
+      COUNT(ts.id)::integer AS suite_count,
+      COALESCE(SUM(ts.external_cost_cents), 0)::integer AS total_external_cost
+    FROM test_suites ts
+    WHERE ts.active = true
+    GROUP BY ts.test_mode
+    ORDER BY suite_count DESC
+  `);
+  const byMode = (Array.isArray(byModeRows) ? byModeRows : (byModeRows as any)?.rows ?? []) as any[];
+
+  // Fixture savings estimate: fixture suites that would have cost money if live
+  const fixtureSavingsRows = await db.execute(sql`
+    SELECT COUNT(*)::integer AS fixture_suites
+    FROM test_suites ts
+    JOIN capabilities c ON c.slug = ts.capability_slug
+    WHERE ts.active = true
+      AND ts.test_mode = 'fixture'
+      AND c.capability_type != 'deterministic'
+  `);
+  const fixtureSavings = ((Array.isArray(fixtureSavingsRows) ? fixtureSavingsRows : (fixtureSavingsRows as any)?.rows ?? [])[0] as any)?.fixture_suites ?? 0;
+
+  // Piggyback savings: count of piggyback results (free correctness data)
+  const piggybackRows = await db.execute(sql`
+    SELECT COUNT(*)::integer AS piggyback_results
+    FROM test_results tr
+    JOIN test_suites ts ON ts.id = tr.test_suite_id
+    WHERE ts.test_type = 'piggyback'
+      AND tr.executed_at >= ${cutoff.toISOString()}::timestamptz
+  `);
+  const piggybackResults = ((Array.isArray(piggybackRows) ? piggybackRows : (piggybackRows as any)?.rows ?? [])[0] as any)?.piggyback_results ?? 0;
+
+  const result = {
+    period_days: days,
+    total_cost_cents: runLog.total_actual ?? 0,
+    total_estimated_cents: runLog.total_estimated ?? 0,
+    total_test_runs: runLog.total_runs ?? 0,
+    total_tests_executed: runLog.total_tests ?? 0,
+    total_passed: runLog.total_passed ?? 0,
+    total_failed: runLog.total_failed ?? 0,
+    by_capability_type: Object.fromEntries(
+      byType.map((r: any) => [r.capability_type, {
+        capability_count: r.capability_count,
+        suite_count: r.suite_count,
+        accumulated_cost_cents: r.total_external_cost,
+      }]),
+    ),
+    by_test_mode: Object.fromEntries(
+      byMode.map((r: any) => [r.test_mode ?? "live", {
+        suite_count: r.suite_count,
+        accumulated_cost_cents: r.total_external_cost,
+      }]),
+    ),
+    savings: {
+      fixture_suites_avoiding_live_calls: fixtureSavings,
+      piggyback_free_correctness_results: piggybackResults,
+    },
+  };
+
+  setCache(cacheKey, result);
+  return c.json(result);
 });

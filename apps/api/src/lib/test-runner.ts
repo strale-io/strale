@@ -149,6 +149,7 @@ export async function runTests(
   const results: SingleTestResult[] = [];
   let totalResponseTime = 0;
   let totalEstimatedCost = 0;
+  let totalActualCost = 0;
 
   // Pre-compute unconfigured capabilities to skip (avoids accumulating
   // hundreds of "no API key" failures that pollute the SQS scoring window)
@@ -260,6 +261,11 @@ export async function runTests(
     results.push(result);
     totalResponseTime += result.responseTimeMs;
     totalEstimatedCost += suite.estimatedCostCents;
+    totalActualCost += estimateTestCost(
+      capabilityTypeMap?.get(suite.capabilitySlug),
+      suite.testMode,
+      result.responseTimeMs,
+    );
 
     // Staggered delay between tests
     if (i < suites.length - 1) {
@@ -280,6 +286,7 @@ export async function runTests(
     passed,
     failed,
     estimatedCostCents: totalEstimatedCost,
+    actualCostCents: totalActualCost,
   });
 
   // ── Persist dual-profile SQS scores for affected capabilities ──────────
@@ -389,6 +396,13 @@ async function runSingleTest(
   // ── Regression test: compare current output structure against baseline ───
   if (suite.testType === "regression") {
     return runRegressionTest(suite);
+  }
+
+  // ── Fixture mode: validate stored baseline without calling the executor ────
+  // For deterministic capabilities where the output never changes.
+  // Zero cost — just validates baseline_output against validation_rules.
+  if (suite.testMode === "fixture" && suite.baselineOutput) {
+    return runFixtureTest(suite, fieldReliabilityMap);
   }
 
   // ── Real execution for other test types (negative, edge_case, known_answer)
@@ -668,6 +682,51 @@ function validateOutputSchemaStructure(
   }
 
   return errors;
+}
+
+// ─── Fixture test (FREE — validates stored baseline) ─────────────────────────
+
+/**
+ * Run a fixture test: validate stored baseline_output against validation_rules
+ * WITHOUT calling the real executor. Zero external cost.
+ *
+ * Used for deterministic capabilities where the output never changes for the
+ * same input. Baselines are refreshed periodically via canary runs.
+ */
+async function runFixtureTest(
+  suite: typeof testSuites.$inferSelect,
+  fieldReliabilityMap?: Map<string, Record<string, string>>,
+): Promise<SingleTestResult> {
+  const db = getDb();
+  const baselineOutput = suite.baselineOutput as Record<string, unknown>;
+
+  // Validate baseline against current validation rules
+  const reliability = fieldReliabilityMap?.get(suite.capabilitySlug) ?? null;
+  const mockResult: CapabilityResult = {
+    output: baselineOutput,
+    provenance: { source: "fixture", fetched_at: new Date().toISOString() },
+  };
+  const { passed, failureReason } = validateResult(suite, mockResult, null, reliability);
+
+  // Record the fixture test result (responseTimeMs = 0 since no external call)
+  await db.insert(testResults).values({
+    testSuiteId: suite.id,
+    capabilitySlug: suite.capabilitySlug,
+    passed,
+    actualOutput: baselineOutput,
+    failureReason,
+    responseTimeMs: 0,
+    outputHash: computeOutputHash(baselineOutput),
+  });
+
+  return {
+    testName: suite.testName,
+    testType: suite.testType,
+    capabilitySlug: suite.capabilitySlug,
+    passed,
+    failureReason,
+    responseTimeMs: 0,
+  };
 }
 
 // ─── Regression test (FREE — compares structure) ─────────────────────────────
@@ -1209,6 +1268,65 @@ async function updateLastClassification(
   }).where(eq(testSuites.id, suiteId));
 }
 
+// ─── Test execution cost estimation ────────────────────────────────────────────
+
+/**
+ * Estimate the actual cost of a test execution in cents.
+ * Based on capability type and whether a real API call was made.
+ *
+ * These are estimates — precise to within ~2x, good enough for cost tracking.
+ */
+function estimateTestCost(
+  capabilityType: string | undefined,
+  testMode: string | null,
+  responseTimeMs: number,
+): number {
+  // Fixture and dry-run tests are free
+  if (testMode === "fixture") return 0;
+
+  switch (capabilityType) {
+    case "deterministic":
+      return 0; // No external calls
+    case "scraping":
+      return 1; // ~€0.01 per Browserless page render
+    case "ai_assisted":
+      return 1; // ~€0.01 per Haiku call (most use cheapest model)
+    case "stable_api":
+      // Most API calls are free (government registries, etc.)
+      // Paid APIs (Serper, OpenSanctions) cost ~€0.01-0.02 per call
+      return responseTimeMs > 5000 ? 1 : 0; // Long response = likely paid API
+    default:
+      return 0;
+  }
+}
+
+// ─── Piggyback count cache ────────────────────────────────────────────────────
+
+const _piggybackCountCache = new Map<string, { count: number; expiresAt: number }>();
+const PIGGYBACK_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+async function getPiggybackCountLast30Days(slug: string): Promise<number> {
+  const cached = _piggybackCountCache.get(slug);
+  if (cached && Date.now() < cached.expiresAt) return cached.count;
+
+  const db = getDb();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const rows = await db.execute(sql`
+    SELECT COUNT(*)::integer AS count
+    FROM test_results tr
+    WHERE tr.capability_slug = ${slug}
+      AND tr.test_suite_id IN (
+        SELECT id FROM test_suites WHERE test_type = 'piggyback' AND capability_slug = ${slug}
+      )
+      AND tr.executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
+  `);
+  const count = ((Array.isArray(rows) ? rows : (rows as any)?.rows ?? [])[0] as any)?.count ?? 0;
+  _piggybackCountCache.set(slug, { count, expiresAt: Date.now() + PIGGYBACK_CACHE_TTL_MS });
+  return count;
+}
+
 // ─── Adaptive scheduled execution ────────────────────────────────────────────
 
 const TIER_MINIMUM_MS: Record<string, number> = {
@@ -1245,6 +1363,20 @@ async function computeAdaptiveInterval(slug: string, tier: string): Promise<numb
   // Score-triggered intensification: SQS < 50 → 6h but respect tier ceiling
   if (!dual.matrix.pending && dual.score < 50) {
     return Math.min(sixHoursMs, tierMs);
+  }
+
+  // Piggyback optimization: if enough customer traffic is providing free
+  // correctness data, reduce the frequency of expensive scheduled tests.
+  // 10+ piggyback results in 30d → extend interval to Tier C minimum (72h).
+  // This makes heavily-used capabilities cheaper to test.
+  try {
+    const piggybackCount = await getPiggybackCountLast30Days(slug);
+    if (piggybackCount >= 10) {
+      const tierCMs = TIER_MINIMUM_MS.C;
+      return Math.max(tierCMs, tierMs);
+    }
+  } catch {
+    // Piggyback lookup failure shouldn't affect scheduling
   }
 
   // Normal: health-state-driven frequency, bounded by tier minimum
