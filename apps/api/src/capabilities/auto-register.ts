@@ -23,22 +23,29 @@ export function getDeactivatedCapabilities(): ReadonlyMap<string, string> {
 export async function autoRegisterCapabilities(): Promise<void> {
   const dir = import.meta.dirname;
 
-  // Phase 1: capability executors (top-level .ts files excluding index + this file)
+  // Phase 1: capability executors (top-level .ts/.js files excluding index, this file, and .d.ts declarations)
   const executorFiles = readdirSync(dir)
-    .filter(
-      (f) =>
-        f.endsWith(".ts") &&
-        f !== "index.ts" &&
-        f !== "auto-register.ts",
-    )
+    .filter((f) => {
+      if (!f.endsWith(".ts") && !f.endsWith(".js")) return false;
+      if (f === "index.ts" || f === "index.js") return false;
+      if (f === "auto-register.ts" || f === "auto-register.js") return false;
+      // Exclude TypeScript declaration files (.d.ts in source, .d.js in compiled output)
+      const nameWithoutExt = f.replace(/\.(ts|js)$/, "");
+      if (nameWithoutExt.endsWith(".d")) return false;
+      return true;
+    })
     .sort();
 
   let registered = 0;
   let skipped = 0;
   let errors = 0;
 
+  // Deduplicate: in compiled output both .js and .d.ts exist; locally only .ts
+  const seen = new Set<string>();
   for (const file of executorFiles) {
-    const slug = file.replace(/\.ts$/, "");
+    const slug = file.replace(/\.(ts|js)$/, "");
+    if (seen.has(slug)) continue;
+    seen.add(slug);
     if (DEACTIVATED.has(slug)) {
       console.log(
         `[auto-register] Skipping deactivated: ${slug} (${DEACTIVATED.get(slug)})`,
@@ -61,11 +68,19 @@ export async function autoRegisterCapabilities(): Promise<void> {
   let providerCount = 0;
   try {
     const providerFiles = readdirSync(providersDir)
-      .filter((f) => f.endsWith(".ts"))
+      .filter((f) => {
+        if (!f.endsWith(".ts") && !f.endsWith(".js")) return false;
+        const nameWithoutExt = f.replace(/\.(ts|js)$/, "");
+        if (nameWithoutExt.endsWith(".d")) return false;
+        return true;
+      })
       .sort();
 
+    const seenProviders = new Set<string>();
     for (const file of providerFiles) {
-      const name = file.replace(/\.ts$/, "");
+      const name = file.replace(/\.(ts|js)$/, "");
+      if (seenProviders.has(name)) continue;
+      seenProviders.add(name);
       try {
         await import(`./providers/${name}.js`);
         providerCount++;

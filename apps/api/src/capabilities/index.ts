@@ -56,3 +56,8 @@ export function getExecutor(slug: string): CapabilityExecutor | undefined {
 export function getDirectExecutor(slug: string): CapabilityExecutor | undefined {
   return executors.get(slug);
 }
+
+/** Number of directly registered executors. Used by the startup health gate. */
+export function getRegisteredCount(): number {
+  return executors.size;
+}
