@@ -444,6 +444,153 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
   return c.json(result);
 });
 
+// ─── GET /v1/internal/trust/solutions/batch ──────────────────────────────────
+// Returns trust data for multiple solutions in a single request.
+// Optimized: collects all unique capability slugs across all solutions,
+// batch-computes trust data once per capability, then assembles per-solution profiles.
+// MUST be registered before /solutions/:slug to avoid :slug matching "batch".
+
+internalTrustRoute.get("/solutions/batch", async (c) => {
+  const slugsParam = c.req.query("slugs") ?? "";
+  const requestedSlugs = slugsParam.split(",").map((s) => s.trim()).filter(Boolean);
+
+  if (requestedSlugs.length === 0) {
+    return c.json(apiError("invalid_request", "slugs query parameter is required"), 400);
+  }
+
+  const cacheKey = `trust:sol-batch:v1:${requestedSlugs.sort().join(",")}`;
+  const batchCached = getCached(cacheKey);
+  if (batchCached) return c.json(batchCached);
+
+  const limitedSlugs = requestedSlugs.slice(0, 50);
+  const db = getDb();
+
+  // 1. Fetch all requested solutions and their steps in batch
+  const solRows = await db
+    .select({ id: solutions.id, slug: solutions.slug })
+    .from(solutions)
+    .where(inArray(solutions.slug, limitedSlugs));
+
+  if (solRows.length === 0) {
+    const empty = { solutions: {} };
+    setCache(cacheKey, empty);
+    return c.json(empty);
+  }
+
+  const solIds = solRows.map((r) => r.id);
+  const solIdToSlug = new Map(solRows.map((r) => [r.id, r.slug]));
+
+  const batchSteps = await db
+    .select({
+      solutionId: solutionSteps.solutionId,
+      capabilitySlug: solutionSteps.capabilitySlug,
+      stepOrder: solutionSteps.stepOrder,
+      guidanceUsable: capabilities.guidanceUsable,
+      guidanceStrategy: capabilities.guidanceStrategy,
+    })
+    .from(solutionSteps)
+    .leftJoin(capabilities, eq(solutionSteps.capabilitySlug, capabilities.slug))
+    .where(inArray(solutionSteps.solutionId, solIds))
+    .orderBy(asc(solutionSteps.stepOrder));
+
+  // Group steps by solution slug
+  const stepsBySolution = new Map<string, typeof batchSteps>();
+  for (const step of batchSteps) {
+    const solSlug = solIdToSlug.get(step.solutionId);
+    if (!solSlug) continue;
+    if (!stepsBySolution.has(solSlug)) stepsBySolution.set(solSlug, []);
+    stepsBySolution.get(solSlug)!.push(step);
+  }
+
+  // 2. Collect all unique capability slugs across all solutions
+  const uniqueCapSlugs = [...new Set(batchSteps.map((s) => s.capabilitySlug))];
+
+  // 3. Batch-compute dual-profile SQS for all unique capabilities
+  const dualResults = await Promise.all(
+    uniqueCapSlugs.map((s) => computeDualProfileSQS(s).catch(() => null)),
+  );
+  const dualMap = new Map<string, Awaited<ReturnType<typeof computeDualProfileSQS>> | null>();
+  for (let i = 0; i < uniqueCapSlugs.length; i++) {
+    dualMap.set(uniqueCapSlugs[i], dualResults[i]);
+  }
+
+  // 4. Assemble per-solution trust profiles
+  const gradeOrder = ["A", "B", "C", "D", "F", "pending"];
+  const strategyOrder = ["direct", "retry_with_backoff", "queue_for_later", "unavailable"];
+
+  function batchSqsLabel(s: number): string {
+    if (s >= 90) return "Excellent";
+    if (s >= 75) return "Good";
+    if (s >= 50) return "Fair";
+    if (s >= 25) return "Poor";
+    return "Degraded";
+  }
+
+  const solutionsResult: Record<string, unknown> = {};
+
+  for (const solSlug of limitedSlugs) {
+    const solSteps = stepsBySolution.get(solSlug);
+    if (!solSteps || solSteps.length === 0) continue;
+
+    const stepData = solSteps.map((step) => {
+      const dual = dualMap.get(step.capabilitySlug);
+      return {
+        capability: step.capabilitySlug,
+        sqs: dual?.matrix.score ?? 0,
+        quality: dual?.qp.grade ?? "pending",
+        reliability: dual?.rp.grade ?? "pending",
+        qp_score: dual?.qp.score ?? 0,
+        rp_score: dual?.rp.score ?? 0,
+        trend: dual?.rp.trend ?? ("stable" as const),
+        usable: step.guidanceUsable ?? (dual ? dual.matrix.score >= 25 : true),
+        strategy: step.guidanceStrategy ?? "direct",
+      };
+    });
+
+    const stepSqsValues = stepData.map((s) => s.sqs);
+    const avgSqs = stepSqsValues.reduce((a, b) => a + b, 0) / stepSqsValues.length;
+    const minSqs = Math.min(...stepSqsValues);
+    const solutionSqs = Math.round(Math.min(avgSqs, minSqs + 20) * 10) / 10;
+
+    const worstQuality = stepData.reduce((w, s) => {
+      return gradeOrder.indexOf(s.quality) > gradeOrder.indexOf(w) ? s.quality : w;
+    }, "A");
+    const worstReliability = stepData.reduce((w, s) => {
+      return gradeOrder.indexOf(s.reliability) > gradeOrder.indexOf(w) ? s.reliability : w;
+    }, "A");
+
+    const solutionQpScore = Math.round(Math.min(...stepData.map((s) => s.qp_score)) * 10) / 10;
+    const solutionRpScore = Math.round(Math.min(...stepData.map((s) => s.rp_score)) * 10) / 10;
+
+    const trendCounts = { improving: 0, declining: 0, stable: 0 };
+    for (const s of stepData) trendCounts[s.trend]++;
+    const solutionTrend =
+      trendCounts.declining > trendCounts.improving ? "declining"
+        : trendCounts.improving > trendCounts.declining ? "improving"
+          : "stable";
+
+    const solutionUsable = stepData.every((s) => s.usable);
+    const solutionStrategy = stepData.reduce((w, s) => {
+      return strategyOrder.indexOf(s.strategy) > strategyOrder.indexOf(w) ? s.strategy : w;
+    }, "direct");
+
+    const { badge } = determineBadge(stepData.length, 0, null);
+
+    solutionsResult[solSlug] = {
+      sqs: { score: solutionSqs, label: batchSqsLabel(solutionSqs), trend: solutionTrend },
+      quality_profile: { grade: worstQuality, score: solutionQpScore, label: `Code quality: ${worstQuality} (weakest step)` },
+      reliability_profile: { grade: worstReliability, score: solutionRpScore, label: `${rpGradeToLabel(worstReliability)} (weakest step)` },
+      execution_guidance: { usable: solutionUsable, strategy: solutionStrategy },
+      badge,
+      steps: stepData,
+    };
+  }
+
+  const batchResult = { solutions: solutionsResult };
+  setCache(cacheKey, batchResult);
+  return c.json(batchResult);
+});
+
 // ─── GET /v1/internal/trust/solutions/:slug ─────────────────────────────────
 
 internalTrustRoute.get("/solutions/:slug", async (c) => {
