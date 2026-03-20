@@ -1,7 +1,5 @@
-// TODO: OpenSanctions commercial resale license pending confirmation.
-// Email sent to info@opensanctions.org on 2026-03-19.
-// Current implementation uses the existing OPENSANCTIONS_API_KEY.
-// If licensing requires a different endpoint or key, update here.
+// OpenSanctions commercial API tier confirmed (DEC-20260320-E).
+// Standard tier at €0.10/call. Uses OPENSANCTIONS_API_KEY env var.
 
 import { registerCapability, type CapabilityInput } from "./index.js";
 
