@@ -166,6 +166,21 @@ export async function runDependencyHealthChecks(): Promise<
     console.error("[dependency-health] Failed to persist probe results:", err instanceof Error ? err.message : err);
   });
 
+  // Fire-and-forget: run situation assessment for unhealthy probes
+  import("./situation-assessment.js")
+    .then(async ({ assessDependencyProbeFailure }) => {
+      const { handleDependencyProbeResult } = await import("./intelligent-alerts.js");
+      for (const [name, result] of Object.entries(results)) {
+        try {
+          const assessment = await assessDependencyProbeFailure(name, result);
+          await handleDependencyProbeResult(name, result.healthy, assessment);
+        } catch (err) {
+          console.error(`[situation] Assessment failed for ${name}:`, err instanceof Error ? err.message : err);
+        }
+      }
+    })
+    .catch(() => {});
+
   return results;
 }
 

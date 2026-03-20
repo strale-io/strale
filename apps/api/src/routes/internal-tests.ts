@@ -1391,3 +1391,51 @@ internalTestsRoute.post("/admin/run-script", async (c) => {
     return c.json(apiError("execution_failed", `Script failed: ${err instanceof Error ? err.message : err}`), 500);
   }
 });
+
+// GET /v1/internal/tests/situations — Recent situation assessments
+internalTestsRoute.get("/situations", async (c) => {
+  const days = Math.min(Math.max(parseInt(c.req.query("days") ?? "7", 10) || 7, 1), 90);
+  const cacheKey = `situations:${days}`;
+  const cached = getCached(cacheKey);
+  if (cached) return c.json(cached);
+
+  const db = getDb();
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+
+  const rows = await db
+    .select({
+      createdAt: healthMonitorEvents.createdAt,
+      actionTaken: healthMonitorEvents.actionTaken,
+      tier: healthMonitorEvents.tier,
+      details: healthMonitorEvents.details,
+    })
+    .from(healthMonitorEvents)
+    .where(and(
+      eq(healthMonitorEvents.eventType, "situation_assessment"),
+      sql`${healthMonitorEvents.createdAt} >= ${cutoff.toISOString()}::timestamptz`,
+    ))
+    .orderBy(desc(healthMonitorEvents.createdAt))
+    .limit(100);
+
+  // Also include pending alerts (in-memory)
+  let pendingAlerts: Record<string, unknown> = {};
+  try {
+    const { getAllPendingAlerts } = await import("../lib/intelligent-alerts.js");
+    pendingAlerts = getAllPendingAlerts();
+  } catch { /* module may not be loaded */ }
+
+  const result = {
+    period_days: days,
+    assessments: rows.map((r) => ({
+      timestamp: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+      summary: r.actionTaken,
+      tier: r.tier,
+      ...(r.details as Record<string, unknown>),
+    })),
+    pending_alerts: pendingAlerts,
+  };
+
+  setCache(cacheKey, result);
+  return c.json(result);
+});

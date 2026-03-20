@@ -909,17 +909,12 @@ export async function checkSchedulerHeartbeat(): Promise<MetaCheckResult> {
         { last_heartbeat: lastHeartbeat.createdAt.toISOString(), hours_ago: hoursAgo },
       );
 
-      // Fire interrupt email
+      // Situation assessment → alert
       try {
-        const { sendInterruptEmail } = await import("./interrupt-sender.js");
-        await sendInterruptEmail({
-          type: "infrastructure_down",
-          details: {
-            service: "test_scheduler",
-            error: `Scheduler has not run in ${hoursAgo} hours`,
-            last_heartbeat: lastHeartbeat.createdAt.toISOString(),
-          },
-        });
+        const { assessSchedulerStale } = await import("./situation-assessment.js");
+        const { evaluateAndAlert } = await import("./intelligent-alerts.js");
+        const assessment = await assessSchedulerStale(lastHeartbeat.createdAt);
+        await evaluateAndAlert(assessment);
       } catch { /* best effort */ }
 
       return {

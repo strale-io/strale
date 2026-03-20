@@ -173,19 +173,17 @@ function handleFailure(reason: string): boolean {
 
 async function fireAlert(reason: string): Promise<void> {
   try {
-    const { sendInterruptEmail } = await import("./interrupt-sender.js");
-    await sendInterruptEmail({
-      type: "infrastructure_down",
-      details: {
-        service: "browserless",
-        error: reason,
-        affected_capabilities: _browserlessSlugs.size,
-        consecutive_failures: _consecutiveFailures,
-      },
+    // Use situation assessment pipeline — correlates with probe history,
+    // test results, and customer impact before deciding to alert.
+    const { assessDependencyProbeFailure } = await import("./situation-assessment.js");
+    const { handleDependencyProbeResult } = await import("./intelligent-alerts.js");
+    const assessment = await assessDependencyProbeFailure("browserless", {
+      healthy: false, latency_ms: 0, error: reason,
     });
+    await handleDependencyProbeResult("browserless", false, assessment);
   } catch (err) {
     console.error(
-      "[chromium-health] Failed to send alert:",
+      "[chromium-health] Failed to assess situation:",
       err instanceof Error ? err.message : err,
     );
   }
