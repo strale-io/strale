@@ -1161,3 +1161,104 @@ internalTestsRoute.get("/cost-summary", async (c) => {
   setCache(cacheKey, result);
   return c.json(result);
 });
+
+// POST /v1/internal/tests/admin/apply-migrations — Apply pending DB migrations
+// Admin-only, secured with ADMIN_SECRET
+internalTestsRoute.post("/admin/apply-migrations", async (c) => {
+  if (!isValidAdminAuth(c.req.header("Authorization"))) {
+    return c.json(apiError("unauthorized", "Admin authentication required"), 401);
+  }
+
+  const db = getDb();
+  const results: string[] = [];
+
+  // Migration 0028: sqs_daily_snapshot
+  try {
+    const check1 = await db.execute(sql`
+      SELECT count(*)::text as cnt FROM information_schema.tables
+      WHERE table_name = 'sqs_daily_snapshot'
+    `);
+    const rows1 = Array.isArray(check1) ? check1 : (check1 as any)?.rows ?? [];
+    if (rows1[0]?.cnt === "0") {
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "sqs_daily_snapshot" (
+          "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+          "capability_slug" text NOT NULL,
+          "snapshot_date" date NOT NULL,
+          "matrix_sqs" numeric(5, 2) NOT NULL,
+          "qp_score" numeric(5, 2),
+          "rp_score" numeric(5, 2),
+          "qp_grade" varchar(2),
+          "rp_grade" varchar(2),
+          "trend" varchar(20),
+          "health_state" varchar(20),
+          "runs_analyzed" integer,
+          "created_at" timestamp with time zone DEFAULT now() NOT NULL
+        )
+      `);
+      await db.execute(sql`
+        CREATE UNIQUE INDEX IF NOT EXISTS "sqs_daily_snapshot_slug_date_unique"
+        ON "sqs_daily_snapshot" ("capability_slug", "snapshot_date")
+      `);
+      await db.execute(sql`
+        CREATE INDEX IF NOT EXISTS "sqs_daily_snapshot_slug_date_desc_idx"
+        ON "sqs_daily_snapshot" ("capability_slug", "snapshot_date" DESC)
+      `);
+      results.push("0028: sqs_daily_snapshot created");
+    } else {
+      results.push("0028: sqs_daily_snapshot already exists");
+    }
+  } catch (err) {
+    results.push(`0028: FAILED — ${err instanceof Error ? err.message : err}`);
+  }
+
+  // Migration 0029: actual_cost_cents on test_run_log
+  try {
+    const check2 = await db.execute(sql`
+      SELECT count(*)::text as cnt FROM information_schema.columns
+      WHERE table_name = 'test_run_log' AND column_name = 'actual_cost_cents'
+    `);
+    const rows2 = Array.isArray(check2) ? check2 : (check2 as any)?.rows ?? [];
+    if (rows2[0]?.cnt === "0") {
+      await db.execute(sql`
+        ALTER TABLE "test_run_log" ADD COLUMN "actual_cost_cents" integer DEFAULT 0 NOT NULL
+      `);
+      results.push("0029: actual_cost_cents added");
+    } else {
+      results.push("0029: actual_cost_cents already exists");
+    }
+  } catch (err) {
+    results.push(`0029: FAILED — ${err instanceof Error ? err.message : err}`);
+  }
+
+  return c.json({ migrations: results });
+});
+
+// POST /v1/internal/tests/admin/run-script — Run a post-deploy script
+// Admin-only, secured with ADMIN_SECRET
+internalTestsRoute.post("/admin/run-script", async (c) => {
+  if (!isValidAdminAuth(c.req.header("Authorization"))) {
+    return c.json(apiError("unauthorized", "Admin authentication required"), 401);
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const script = body.script as string | undefined;
+
+  if (!script) {
+    return c.json(apiError("invalid_request", "script field required: seed-snapshot"), 400);
+  }
+
+  try {
+    switch (script) {
+      case "seed-snapshot": {
+        const { captureDailySnapshots } = await import("../lib/sqs-snapshots.js");
+        await captureDailySnapshots();
+        return c.json({ script, status: "completed", message: "SQS snapshots captured" });
+      }
+      default:
+        return c.json(apiError("invalid_request", `Unknown script: ${script}. Use: seed-snapshot`), 400);
+    }
+  } catch (err) {
+    return c.json(apiError("execution_failed", `Script failed: ${err instanceof Error ? err.message : err}`), 500);
+  }
+});
