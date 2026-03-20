@@ -9,12 +9,20 @@
  *   - db/generate-tests.ts (bulk test generation script)
  */
 
+/**
+ * @param purpose - 'schema_check' uses alternate values to avoid overlapping
+ *   with known_answer fixtures. 'known_answer' uses the default values.
+ */
 export function generateTestInput(
   inputSchema: Record<string, unknown>,
+  purpose: "schema_check" | "known_answer" = "known_answer",
 ): Record<string, unknown> {
   const input: Record<string, unknown> = {};
   const props = (inputSchema as { properties?: Record<string, any> }).properties;
   if (!props) return input;
+
+  // Alternate values for schema_check to avoid colliding with known_answer fixtures
+  const alt = purpose === "schema_check";
 
   const required = new Set(
     (inputSchema as { required?: string[] }).required ?? [],
@@ -43,31 +51,31 @@ export function generateTestInput(
       continue;
     }
     if (name === "domain" || name === "hostname") {
-      input[key] = "google.com";
+      input[key] = alt ? "example.org" : "google.com";
       continue;
     }
     if (name === "host") {
-      input[key] = "google.com";
+      input[key] = alt ? "example.org" : "google.com";
       continue;
     }
 
     // Email
     if (name.includes("email")) {
-      input[key] = "test@google.com";
+      input[key] = alt ? "info@example.org" : "test@google.com";
       continue;
     }
 
     // Financial identifiers
     if (name.includes("iban")) {
-      input[key] = "DE89370400440532013000";
+      input[key] = alt ? "GB29NWBK60161331926819" : "DE89370400440532013000";
       continue;
     }
     if (name === "bic" || name === "swift_code" || name.includes("swift")) {
-      input[key] = "COBADEFFXXX";
+      input[key] = alt ? "NWBKGB2LXXX" : "COBADEFFXXX";
       continue;
     }
     if (name.includes("vat") && name.includes("number")) {
-      input[key] = "SE556703748501";
+      input[key] = alt ? "DE136695270" : "SE556703748501";
       continue;
     }
     if (
@@ -79,7 +87,7 @@ export function generateTestInput(
       name === "business_id" ||
       name === "registry_code"
     ) {
-      input[key] = "556703-7485";
+      input[key] = alt ? "5560360793" : "556703-7485";
       continue;
     }
     if (name === "lei") {
@@ -97,21 +105,21 @@ export function generateTestInput(
 
     // Company / name fields
     if (name === "company" || name === "company_name" || name === "name") {
-      input[key] = "Google";
+      input[key] = alt ? "Volvo" : "Google";
       continue;
     }
     if (name === "ticker" || name === "symbol") {
-      input[key] = "GOOG";
+      input[key] = alt ? "MSFT" : "GOOG";
       continue;
     }
     if (name === "username") {
-      input[key] = "Google";
+      input[key] = alt ? "torvalds" : "Google";
       continue;
     }
 
     // Country / locale
     if (name === "country_code" || name === "country") {
-      input[key] = "SE";
+      input[key] = alt ? "DE" : "SE";
       continue;
     }
     if (name === "locale") {

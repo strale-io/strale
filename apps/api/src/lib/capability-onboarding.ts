@@ -4,12 +4,14 @@
  * and detects the transparency tag.
  */
 
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, testSuites } from "../db/schema.js";
 import { generateTestInput } from "./test-input-generator.js";
 import { getExecutor } from "../capabilities/index.js";
 import { classifyFieldVolatility, makeVolatilityAwareCheck } from "./field-volatility.js";
+import { getOutputChecks } from "./test-generation.js";
+import { checkReadiness, clearReadinessCache } from "./capability-readiness.js";
 
 /**
  * Call after a capability is inserted or updated in the database.
@@ -39,7 +41,26 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
 
     // Prefer manifest health_check_input > known_answer input > heuristic generation
     const testInput = resolveOnboardingInput(inputSchema, cap.onboardingManifest);
-    const outputChecks = getOutputChecks(outputSchema);
+
+    // Gather baseline outputs + existing reliability metadata for smarter assertions
+    const existingBaselines = await db
+      .select({ baselineOutput: testSuites.baselineOutput })
+      .from(testSuites)
+      .where(
+        and(
+          eq(testSuites.capabilitySlug, capabilitySlug),
+          isNotNull(testSuites.baselineOutput),
+        ),
+      );
+    const baselineOutputs = existingBaselines
+      .map((b) => b.baselineOutput as Record<string, unknown>)
+      .filter(Boolean);
+    const existingReliability = (cap.outputFieldReliability ?? null) as Record<string, string> | null;
+
+    const outputChecks = getOutputChecks(outputSchema, {
+      existingReliability,
+      baselineOutputs,
+    });
 
     // Schema check test (dry_run — FREE)
     await db.insert(testSuites).values({
@@ -94,6 +115,18 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
       const icon = w.severity === "warning" ? "⚠️" : "ℹ️";
       console.log(`  ${icon} ${w.field}: ${w.message}`);
     }
+  }
+
+  // 4. Readiness gate — single source of truth for onboarding completeness
+  clearReadinessCache();
+  const readiness = await checkReadiness(capabilitySlug);
+  if (!readiness.ready) {
+    console.warn(`[onboarding] ${capabilitySlug} is NOT fully onboarded. Issues:`);
+    for (const issue of readiness.issues) {
+      console.warn(`  - ${issue}`);
+    }
+  } else {
+    console.log(`[onboarding] ${capabilitySlug} is fully onboarded`);
   }
 }
 
@@ -161,17 +194,6 @@ export function validateMetadataCompleteness(
   }
 
   return warnings;
-}
-
-// ─── Input generation (shared with generate-tests.ts) ────────────────────────
-
-function getOutputChecks(
-  outputSchema: Record<string, unknown>,
-): { checks: Array<{ field: string; operator: string }> } {
-  const props = (outputSchema as { properties?: Record<string, any> }).properties;
-  if (!props) return { checks: [] };
-  const keys = Object.keys(props).slice(0, 3);
-  return { checks: keys.map((k) => ({ field: k, operator: "not_null" })) };
 }
 
 // ─── Input resolution for onboarding ─────────────────────────────────────────

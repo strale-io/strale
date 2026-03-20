@@ -1025,6 +1025,8 @@ const seedCapabilities = [
     inputSchema: { type: "object", properties: { url: { type: "string", description: "The paid API endpoint URL to check before paying" } }, required: ["url"] },
     outputSchema: { type: "object", properties: { url: { type: "string" }, is_reachable: { type: "boolean" }, response_time_ms: { type: "integer" }, status_code: { type: "integer" }, ssl_valid: { type: "boolean" }, payment_protocol: { type: "string" }, payment_details: { type: "object" }, payment_handshake_valid: { type: "boolean" }, facilitator_reachable: { type: "boolean" }, server: { type: "string" }, recommendation: { type: "string" }, issues: { type: "array", items: { type: "string" } } } },
     priceCents: 2,
+    lifecycleState: "active",
+    visible: true,
   },
   // ─── Competitive Intelligence (5) ──────────────────────────────────────────
   {
@@ -2559,6 +2561,28 @@ async function seed() {
   }
 
   console.log(`Done. ${seedCapabilities.length} capabilities seeded.`);
+
+  // Onboarding readiness check
+  console.log("\n--- Running onboarding readiness check ---");
+  const { checkAllReadiness } = await import("../lib/capability-readiness.js");
+  const readiness = await checkAllReadiness();
+
+  const onboardingIssues: string[] = [];
+  for (const cap of seedCapabilities) {
+    const r = readiness.get(cap.slug);
+    if (r && !r.ready && !r.deactivated) {
+      onboardingIssues.push(`  ${cap.slug}: ${r.issues.join(", ")}`);
+    }
+  }
+
+  if (onboardingIssues.length > 0) {
+    console.warn(`\n${onboardingIssues.length} capabilities have onboarding issues:`);
+    for (const issue of onboardingIssues) console.warn(issue);
+    console.warn("\nRun: npx tsx src/db/audit-onboarding.ts --issues-only  for full details\n");
+  } else {
+    console.log("All seeded capabilities are fully onboarded");
+  }
+
   process.exit(0);
 }
 

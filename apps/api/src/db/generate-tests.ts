@@ -7,56 +7,12 @@ import { getDb } from "./index.js";
 import { capabilities, testSuites } from "./schema.js";
 import { eq } from "drizzle-orm";
 import { generateTestInput } from "../lib/test-input-generator.js";
-
-// ─── Helpers (same patterns as seed-tests.ts) ──────────────────────────────
-
-function checks(
-  ...c: Array<{
-    field: string;
-    operator: string;
-    value?: unknown;
-    values?: unknown[];
-  }>
-) {
-  return { checks: c };
-}
-
-function notNull(field: string) {
-  return { field, operator: "not_null" };
-}
-
-// ─── Extract expected output keys for schema_check ─────────────────────────
-
-function getOutputChecks(
-  outputSchema: Record<string, unknown>,
-): ReturnType<typeof checks> {
-  const props = (outputSchema as { properties?: Record<string, any> })
-    .properties;
-  if (!props) return checks();
-
-  // Pick up to 3 top-level keys to check for not_null
-  const keys = Object.keys(props).slice(0, 3);
-  return checks(...keys.map((k) => notNull(k)));
-}
-
-// ─── Cost estimation by transparency tag ───────────────────────────────────
-
-function estimateCostCents(
-  _priceCents: number,
-  _transparencyTag: string | null,
-): number {
-  // schema_check tests now use dry-run mode — no external API calls, zero cost
-  return 0;
-}
-
-// ─── Schedule tier by cost ─────────────────────────────────────────────────
-
-function assignTier(transparencyTag: string | null): string {
-  // Algorithmic caps are cheap — test more frequently
-  if (transparencyTag === "algorithmic") return "B";
-  // AI/mixed caps cost money — daily is fine
-  return "B";
-}
+import {
+  checks,
+  getOutputChecks,
+  assignTier,
+  estimateCostCents,
+} from "../lib/test-generation.js";
 
 // ─── Main ──────────────────────────────────────────────────────────────────
 
@@ -91,9 +47,10 @@ async function generateTests() {
 
     const inputSchema = (cap.inputSchema ?? {}) as Record<string, unknown>;
     const outputSchema = (cap.outputSchema ?? {}) as Record<string, unknown>;
+    const existingReliability = (cap.outputFieldReliability ?? null) as Record<string, string> | null;
 
-    const testInput = generateTestInput(inputSchema);
-    const outputChecks = getOutputChecks(outputSchema);
+    const testInput = generateTestInput(inputSchema, "schema_check");
+    const outputChecks = getOutputChecks(outputSchema, { existingReliability });
     const tier = assignTier(cap.transparencyTag);
     const costCents = estimateCostCents(cap.priceCents, cap.transparencyTag);
 
