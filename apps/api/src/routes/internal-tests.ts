@@ -1245,8 +1245,11 @@ internalTestsRoute.post("/admin/run-script", async (c) => {
   const script = body.script as string | undefined;
 
   if (!script) {
-    return c.json(apiError("invalid_request", "script field required: seed-snapshot"), 400);
+    return c.json(apiError("invalid_request", "script field required: seed-snapshot | reclassify-unknowns | generate-known-bad | convert-fixtures"), 400);
   }
+
+  const dryRun = body.dry_run === true;
+  const db = getDb();
 
   try {
     switch (script) {
@@ -1255,8 +1258,134 @@ internalTestsRoute.post("/admin/run-script", async (c) => {
         await captureDailySnapshots();
         return c.json({ script, status: "completed", message: "SQS snapshots captured" });
       }
+
+      case "reclassify-unknowns": {
+        const { classifyFailure } = await import("../lib/failure-classifier.js");
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const unknowns = await db.execute(sql`
+          SELECT tr.id, tr.failure_reason, tr.capability_slug, tr.passed,
+                 tr.actual_output IS NOT NULL AS has_output,
+                 ts.test_type, ts.input AS test_input, ts.last_classification,
+                 c.capability_type
+          FROM test_results tr
+          JOIN test_suites ts ON tr.test_suite_id = ts.id
+          JOIN capabilities c ON c.slug = tr.capability_slug
+          WHERE tr.failure_classification = 'unknown'
+            AND tr.executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
+          ORDER BY tr.executed_at DESC
+        `);
+        const rows = (Array.isArray(unknowns) ? unknowns : (unknowns as any)?.rows ?? []) as any[];
+
+        const counts: Record<string, number> = {};
+        let reclassified = 0;
+
+        for (const row of rows) {
+          const testInput = (typeof row.test_input === "string" ? JSON.parse(row.test_input) : row.test_input) ?? {};
+          const lastCls = typeof row.last_classification === "string" ? JSON.parse(row.last_classification) : row.last_classification;
+          const result = classifyFailure(
+            row.failure_reason ?? "", row.has_output, row.has_output && !row.passed,
+            row.test_type, testInput, lastCls?.verdict !== "test_design", row.capability_type,
+          );
+          counts[result.verdict] = (counts[result.verdict] ?? 0) + 1;
+          if (result.verdict !== "unknown" && !dryRun) {
+            await db.execute(sql`UPDATE test_results SET failure_classification = ${result.verdict} WHERE id = ${row.id}::uuid`);
+            reclassified++;
+          } else if (result.verdict !== "unknown") {
+            reclassified++;
+          }
+        }
+
+        return c.json({
+          script, dry_run: dryRun, status: "completed",
+          total_unknowns: rows.length, reclassified, still_unknown: rows.length - reclassified,
+          distribution: counts,
+        });
+      }
+
+      case "generate-known-bad": {
+        const { autoRegisterCapabilities } = await import("../capabilities/auto-register.js");
+        await autoRegisterCapabilities();
+
+        const allCaps = await db.execute(sql`
+          SELECT slug, category, input_schema FROM capabilities WHERE is_active = true
+        `);
+        const caps = (Array.isArray(allCaps) ? allCaps : (allCaps as any)?.rows ?? []) as any[];
+
+        const existingRows = await db.execute(sql`
+          SELECT DISTINCT capability_slug FROM test_suites WHERE test_type = 'known_bad' AND active = true
+        `);
+        const existing = new Set(((Array.isArray(existingRows) ? existingRows : (existingRows as any)?.rows ?? []) as any[]).map((r: any) => r.capability_slug));
+
+        const SKIP = new Set(["json-repair", "csv-clean", "deduplicate", "markdown-to-html", "base64-encode-url",
+          "flatten-json", "csv-to-json", "xml-to-json", "json-to-csv", "image-resize", "risk-narrative-generate",
+          "url-to-text", "pii-redact"]);
+        const VALIDATION = new Set(["iban-validate", "vat-validate", "vat-format-validate", "swift-validate",
+          "isbn-validate", "email-validate", "json-schema-validate", "sepa-xml-validate", "openapi-validate",
+          "invoice-validate", "eori-validate"]);
+        const BAD_VALUES: Record<string, unknown> = {
+          iban: "INVALID123", vat_number: "XX000000000", email: "not-an-email", url: "not-a-url",
+          domain: "thisisnotarealdomain12345.xyz", company_number: "0000000", org_number: "000000-0000",
+          host: "thisisnotarealdomain12345.xyz", ticker: "ZZZZZZZZZ",
+        };
+
+        let created = 0;
+        for (const cap of caps) {
+          if (existing.has(cap.slug) || SKIP.has(cap.slug)) continue;
+          const schema = typeof cap.input_schema === "string" ? JSON.parse(cap.input_schema) : cap.input_schema;
+          if (!schema?.properties) continue;
+          const required = schema.required ?? Object.keys(schema.properties);
+          const badInput: Record<string, unknown> = {};
+          for (const f of required) {
+            badInput[f] = BAD_VALUES[f.toLowerCase()] ?? "INVALID_TEST_VALUE_12345";
+          }
+          if (Object.keys(badInput).length === 0) continue;
+          const checks = VALIDATION.has(cap.slug) ? [{ field: "valid", operator: "is_false" }] : [];
+          if (!dryRun) {
+            await db.execute(sql`
+              INSERT INTO test_suites (capability_slug, test_name, test_type, input, validation_rules, schedule_tier, estimated_cost_cents)
+              VALUES (${cap.slug}, ${cap.slug + "__known_bad"}, 'known_bad', ${JSON.stringify(badInput)}::jsonb, ${JSON.stringify({ checks })}::jsonb, 'B', 0)
+            `);
+          }
+          created++;
+        }
+
+        return c.json({ script, dry_run: dryRun, status: "completed", total_caps: caps.length, created, already_exist: existing.size });
+      }
+
+      case "convert-fixtures": {
+        const deterministicRows = await db.execute(sql`
+          SELECT slug FROM capabilities WHERE capability_type = 'deterministic' AND is_active = true
+        `);
+        const slugs = ((Array.isArray(deterministicRows) ? deterministicRows : (deterministicRows as any)?.rows ?? []) as any[]).map((r: any) => r.slug);
+
+        let converted = 0;
+        let noBaseline = 0;
+        for (const slug of slugs) {
+          const suites = await db.execute(sql`
+            SELECT id, baseline_output FROM test_suites
+            WHERE capability_slug = ${slug} AND active = true AND test_mode = 'live'
+              AND test_type IN ('known_answer', 'edge_case')
+          `);
+          const rows = (Array.isArray(suites) ? suites : (suites as any)?.rows ?? []) as any[];
+          for (const suite of rows) {
+            if (!suite.baseline_output) { noBaseline++; continue; }
+            if (!dryRun) {
+              await db.execute(sql`
+                UPDATE test_suites SET test_mode = 'fixture', fixture_last_refreshed = NOW(), updated_at = NOW()
+                WHERE id = ${suite.id}::uuid
+              `);
+            }
+            converted++;
+          }
+        }
+
+        return c.json({ script, dry_run: dryRun, status: "completed", deterministic_caps: slugs.length, converted, no_baseline: noBaseline });
+      }
+
       default:
-        return c.json(apiError("invalid_request", `Unknown script: ${script}. Use: seed-snapshot`), 400);
+        return c.json(apiError("invalid_request", `Unknown script: ${script}. Use: seed-snapshot | reclassify-unknowns | generate-known-bad | convert-fixtures`), 400);
     }
   } catch (err) {
     return c.json(apiError("execution_failed", `Script failed: ${err instanceof Error ? err.message : err}`), 500);
