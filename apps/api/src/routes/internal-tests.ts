@@ -1231,6 +1231,26 @@ internalTestsRoute.post("/admin/apply-migrations", async (c) => {
     results.push(`0029: FAILED — ${err instanceof Error ? err.message : err}`);
   }
 
+  // Migration 0030: compliance infrastructure (integrity_hash, previous_hash, legal_hold)
+  try {
+    const check3 = await db.execute(sql`
+      SELECT count(*)::text as cnt FROM information_schema.columns
+      WHERE table_name = 'transactions' AND column_name = 'integrity_hash'
+    `);
+    const rows3 = Array.isArray(check3) ? check3 : (check3 as any)?.rows ?? [];
+    if (rows3[0]?.cnt === "0") {
+      await db.execute(sql`ALTER TABLE "transactions" ADD COLUMN "integrity_hash" varchar(128)`);
+      await db.execute(sql`ALTER TABLE "transactions" ADD COLUMN "previous_hash" varchar(128)`);
+      await db.execute(sql`ALTER TABLE "transactions" ADD COLUMN "legal_hold" boolean DEFAULT false NOT NULL`);
+      await db.execute(sql`CREATE INDEX IF NOT EXISTS "transactions_integrity_hash_idx" ON "transactions" ("integrity_hash")`);
+      results.push("0030: compliance columns added (integrity_hash, previous_hash, legal_hold)");
+    } else {
+      results.push("0030: compliance columns already exist");
+    }
+  } catch (err) {
+    results.push(`0030: FAILED — ${err instanceof Error ? err.message : err}`);
+  }
+
   return c.json({ migrations: results });
 });
 
