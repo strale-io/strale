@@ -1,37 +1,36 @@
 slug: adverse-media-check
 name: Adverse Media Check
 description: >-
-  Screen a person or company for negative news coverage. Searches recent media for mentions of
-  fraud, money laundering, sanctions violations, lawsuits, regulatory actions, and other risk
-  indicators. Returns categorized findings with sources.
+  Searches public news sources for adverse media about a company or individual, with AI-powered risk
+  assessment. Returns risk level, categorized findings, and sources.
 category: compliance
 price_cents: 20
 is_free_tier: false
 input_schema:
   type: object
   required:
-    - name
+    - entity_name
   properties:
-    name:
+    entity_name:
       type: string
       description: Person or company name to screen
-    context:
+    country:
       type: string
-      description: Additional context (e.g., country, industry) to improve accuracy (optional)
+      description: Country to narrow search results (optional)
 output_schema:
   type: object
   properties:
     query:
-      type: string
+      type: object
+    risk_detected:
+      type: boolean
     risk_level:
       type: string
-    total_findings:
-      type: integer
     findings:
       type: array
-    categories_found:
+    searches_performed:
       type: array
-    screened_at:
+    disclaimer:
       type: string
 data_source: Google (Serper.dev) + Claude Haiku classification
 data_source_type: api
@@ -40,30 +39,35 @@ freshness_category: live-fetch
 test_fixtures:
   known_answer:
     input:
-      name: "Wirecard AG"
+      entity_name: "Wirecard AG"
     expected_fields:
+      - field: risk_detected
+        operator: not_null
+        reliability: guaranteed
       - field: risk_level
         operator: not_null
         reliability: guaranteed
       - field: findings
         operator: not_null
         reliability: guaranteed
-      - field: total_findings
+      - field: searches_performed
         operator: not_null
         reliability: guaranteed
-      - field: screened_at
+      - field: disclaimer
+        operator: not_null
+        reliability: guaranteed
+      - field: query
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    name: "Wirecard AG"
+    entity_name: "Wirecard AG"
 output_field_reliability:
   query: guaranteed
+  risk_detected: guaranteed
   risk_level: guaranteed
-  total_findings: guaranteed
   findings: guaranteed
-  categories_found: common
-  screened_at: guaranteed
-  context: common
+  searches_performed: guaranteed
+  disclaimer: guaranteed
 limitations:
   - title: AI-classified results may miss subtle risk signals
     text: AI-classified results — may miss subtle risk signals or produce false positives

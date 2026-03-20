@@ -318,6 +318,11 @@ export const testSuites = pgTable(
     quarantineReason: text("quarantine_reason"),
     lastClassification: jsonb("last_classification"),
     autoRemediationLog: jsonb("auto_remediation_log"),
+    // Test mode and cost tracking
+    testMode: varchar("test_mode", { length: 20 }).default("live"),
+    // 'live' (real API), 'fixture' (saved data), 'canary' (periodic live check)
+    fixtureLastRefreshed: timestamp("fixture_last_refreshed", { withTimezone: true }),
+    externalCostCents: integer("external_cost_cents").default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

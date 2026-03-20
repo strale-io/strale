@@ -1,9 +1,8 @@
 slug: pep-check
 name: PEP Check
 description: >-
-  Screen a person against Politically Exposed Persons (PEP) databases. Returns match status,
-  PEP type (national, international, family member, close associate), position held, country,
-  and data source.
+  Screens an individual against the Politically Exposed Persons (PEP) database via OpenSanctions.
+  Returns match results with position, jurisdiction, and confidence score.
 category: compliance
 price_cents: 15
 is_free_tier: false
@@ -15,7 +14,7 @@ input_schema:
     name:
       type: string
       description: Full name of person to screen
-    birth_date:
+    date_of_birth:
       type: string
       description: Date of birth (YYYY-MM-DD) for disambiguation (optional)
     country:
@@ -25,18 +24,16 @@ output_schema:
   type: object
   properties:
     query:
-      type: string
+      type: object
     is_pep:
       type: boolean
-    total_matches:
-      type: integer
-    matches:
+    pep_matches:
       type: array
-    screened_at:
-      type: string
+    checked_sources:
+      type: array
 data_source: OpenSanctions API (opensanctions.org)
 data_source_type: api
-transparency_tag: external_api
+transparency_tag: mixed
 freshness_category: live-fetch
 test_fixtures:
   known_answer:
@@ -46,14 +43,13 @@ test_fixtures:
       - field: is_pep
         operator: not_null
         reliability: guaranteed
-      - field: total_matches
-        operator: gt
-        value: 0
-        reliability: guaranteed
-      - field: matches
+      - field: pep_matches
         operator: not_null
         reliability: guaranteed
-      - field: screened_at
+      - field: checked_sources
+        operator: not_null
+        reliability: guaranteed
+      - field: query
         operator: not_null
         reliability: guaranteed
   health_check_input:
@@ -61,18 +57,15 @@ test_fixtures:
 output_field_reliability:
   query: guaranteed
   is_pep: guaranteed
-  total_matches: guaranteed
-  matches: guaranteed
-  screened_at: guaranteed
-  birth_date_filter: common
-  country_filter: common
+  pep_matches: guaranteed
+  checked_sources: guaranteed
 limitations:
   - title: Coverage depends on OpenSanctions dataset
     text: Coverage depends on OpenSanctions dataset — may not include all national PEP lists
     category: coverage
     severity: info
   - title: Fuzzy name matching may produce false positives
-    text: Name matching is fuzzy — common names may produce false positives. Birth date strongly recommended for disambiguation.
+    text: Name matching is fuzzy — common names may produce false positives. Date of birth strongly recommended for disambiguation.
     category: accuracy
     severity: warning
-    workaround: Provide birth_date parameter for disambiguation
+    workaround: Provide date_of_birth parameter for disambiguation

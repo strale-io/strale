@@ -1,3 +1,8 @@
+// TODO: OpenSanctions commercial resale license pending confirmation.
+// Email sent to info@opensanctions.org on 2026-03-19.
+// Current implementation uses the existing OPENSANCTIONS_API_KEY.
+// If licensing requires a different endpoint or key, update here.
+
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 // OpenSanctions API — PEP-specific search
@@ -9,7 +14,7 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
     throw new Error("'name' is required. Provide a person's full name to screen.");
   }
 
-  const birthDate = ((input.birth_date as string) ?? "").trim() || undefined;
+  const dateOfBirth = ((input.date_of_birth as string) ?? (input.birth_date as string) ?? "").trim() || undefined;
   const country = ((input.country as string) ?? "").trim().toUpperCase() || undefined;
 
   const query: Record<string, unknown> = {
@@ -19,16 +24,14 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
     },
   };
 
-  if (birthDate) {
-    (query.properties as any).birthDate = [birthDate];
+  if (dateOfBirth) {
+    (query.properties as any).birthDate = [dateOfBirth];
   }
   if (country) {
     (query.properties as any).country = [country];
   }
 
-  const body = {
-    queries: { q1: query },
-  };
+  const body = { queries: { q1: query } };
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -67,19 +70,24 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
     })
     .map((r: any) => {
       const topics = r.properties?.topics ?? [];
-      let pepType = "unknown";
-      if (topics.includes("role.pep")) pepType = "pep";
-      else if (topics.includes("role.rca")) pepType = "close_associate";
-      else if (topics.some((t: string) => t.startsWith("role."))) pepType = "related";
+      let pepLevel = "unknown";
+      if (topics.includes("role.pep")) pepLevel = "pep";
+      else if (topics.includes("role.rca")) pepLevel = "close_associate";
+      else if (topics.some((t: string) => t.startsWith("role."))) pepLevel = "related";
+
+      // Derive relationship from topics
+      let relationship = "direct";
+      if (topics.includes("role.rca")) relationship = "close_associate";
+      else if (topics.includes("role.family")) relationship = "family_member";
 
       return {
         name: r.properties?.name?.[0] ?? r.caption ?? "Unknown",
-        pep_type: pepType,
-        position: r.properties?.position?.[0] ?? null,
-        country: (r.properties?.country ?? [])[0] ?? null,
-        dataset: (r.datasets ?? [])[0] ?? null,
         score: r.score ?? 0,
-        active: r.last_seen ? new Date(r.last_seen) > new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) : true,
+        position: r.properties?.position?.[0] ?? null,
+        jurisdiction: (r.properties?.country ?? [])[0] ?? null,
+        pep_level: pepLevel,
+        relationship,
+        datasets: r.datasets ?? [],
       };
     })
     .slice(0, 20);
@@ -89,12 +97,12 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
     .filter((r: any) => r.score > 0.7)
     .map((r: any) => ({
       name: r.properties?.name?.[0] ?? r.caption ?? "Unknown",
-      pep_type: "potential",
-      position: r.properties?.position?.[0] ?? null,
-      country: (r.properties?.country ?? [])[0] ?? null,
-      dataset: (r.datasets ?? [])[0] ?? null,
       score: r.score ?? 0,
-      active: true,
+      position: r.properties?.position?.[0] ?? null,
+      jurisdiction: (r.properties?.country ?? [])[0] ?? null,
+      pep_level: "potential",
+      relationship: "direct",
+      datasets: r.datasets ?? [],
     }));
 
   // Merge, deduplicate by name
@@ -104,15 +112,19 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
     ...allHighConf.filter((m: any) => !seen.has(m.name)),
   ].slice(0, 20);
 
+  // Collect unique dataset sources
+  const checkedSources = [
+    ...new Set(
+      results.flatMap((r: any) => r.datasets ?? []),
+    ),
+  ];
+
   return {
     output: {
-      query: name,
-      birth_date_filter: birthDate ?? null,
-      country_filter: country ?? null,
-      is_pep: merged.some((m) => m.score > 0.6 && (m.pep_type === "pep" || m.pep_type === "close_associate")),
-      total_matches: merged.length,
-      matches: merged,
-      screened_at: new Date().toISOString(),
+      query: { name, country: country ?? null, date_of_birth: dateOfBirth ?? null },
+      is_pep: merged.some((m) => m.score > 0.6 && (m.pep_level === "pep" || m.pep_level === "close_associate")),
+      pep_matches: merged,
+      checked_sources: checkedSources.length > 0 ? checkedSources : ["OpenSanctions (consolidated)"],
     },
     provenance: { source: "opensanctions.org", fetched_at: new Date().toISOString() },
   };
