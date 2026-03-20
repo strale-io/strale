@@ -135,6 +135,7 @@ const DATE_FIELD_PATTERNS = /year|date|from_date|to_date|check_date|expires|vali
  * @param testType           - The test type (schema_check, known_answer, etc.)
  * @param testInput          - The test input object (checked for stale dates)
  * @param previouslyPassed   - True if this test suite has passed before (from last_classification)
+ * @param capabilityType     - The capability type (deterministic, stable_api, scraping, ai_assisted)
  */
 export function classifyFailure(
   failureReason: string | null,
@@ -143,6 +144,7 @@ export function classifyFailure(
   testType: string,
   testInput: Record<string, unknown>,
   previouslyPassed = false,
+  capabilityType?: string,
 ): ClassificationResult {
   const reason = failureReason ?? "";
 
@@ -183,22 +185,22 @@ export function classifyFailure(
   // ── 2. UPSTREAM_TRANSIENT ──────────────────────────────────────────────
   // External service temporarily unavailable (timeouts, connection errors, 5xx)
   if (matchesAny(reason, UPSTREAM_TRANSIENT_PATTERNS)) {
-    return {
+    return validateByCapabilityType({
       verdict: "upstream_transient",
       confidence: "high",
       reason: `External service issue: ${truncate(reason, 120)}`,
-    };
+    }, capabilityType);
   }
 
   // ── 3. UPSTREAM_CHANGED / TEST_DESIGN ──────────────────────────────────
   // Execution succeeded but validation failed — either the API changed or test is wrong
   if (executionSucceeded && validationFailed) {
     if (previouslyPassed) {
-      return {
+      return validateByCapabilityType({
         verdict: "upstream_changed",
         confidence: "medium",
         reason: `Validation failed on previously-passing test: ${truncate(reason, 120)}`,
-      };
+      }, capabilityType);
     }
     return {
       verdict: "test_design",
@@ -228,11 +230,42 @@ export function classifyFailure(
   }
 
   // ── 6. UNKNOWN ─────────────────────────────────────────────────────────
-  return {
+  return validateByCapabilityType({
     verdict: "unknown",
     confidence: "low",
     reason: truncate(reason, 200) || "No failure reason provided",
-  };
+  }, capabilityType);
+}
+
+/**
+ * Post-classification validation: deterministic capabilities (zero external
+ * dependencies) should never be classified as upstream failures. If pattern
+ * matching produced an upstream verdict for a deterministic capability,
+ * reclassify it — the failure is internal by definition.
+ */
+function validateByCapabilityType(
+  result: ClassificationResult,
+  capabilityType?: string,
+): ClassificationResult {
+  if (capabilityType !== "deterministic") return result;
+
+  if (result.verdict === "upstream_transient" || result.verdict === "upstream_degraded") {
+    return {
+      verdict: "capability_bug",
+      confidence: "medium",
+      reason: `Reclassified: deterministic capability cannot have upstream failures. Original: ${result.reason}`,
+    };
+  }
+
+  if (result.verdict === "upstream_changed") {
+    return {
+      verdict: "test_design",
+      confidence: "medium",
+      reason: `Reclassified: deterministic capability output is code-controlled. Original: ${result.reason}`,
+    };
+  }
+
+  return result;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

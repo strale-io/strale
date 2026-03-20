@@ -13,7 +13,7 @@
 
 import { and, eq, sql, inArray, lt, lte, isNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, testSuites, testResults } from "../db/schema.js";
+import { capabilities, solutions, testSuites, testResults } from "../db/schema.js";
 import { logHealthEvent } from "./health-monitor.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -740,6 +740,136 @@ export async function checkDegradedCount(): Promise<MetaCheckResult> {
   }
 }
 
+// ─── Check 14: Free-tier showcase protection (CRITICAL, daily) ──────────────
+
+const FREE_TIER_SLUGS = [
+  "iban-validate",
+  "email-validate",
+  "dns-lookup",
+  "json-repair",
+  "url-to-markdown",
+];
+
+/**
+ * Check 14: Free-tier health (CRITICAL)
+ * The 5 free-tier capabilities are the first thing agents try.
+ * All must be Excellent (SQS >= 90), usable, stable/improving, with
+ * zero external_service_failures (they're all deterministic).
+ */
+export async function checkFreeTierHealth(): Promise<MetaCheckResult> {
+  const check = "free_tier_health";
+  try {
+    const db = getDb();
+    const rows = await db.execute(sql`
+      SELECT c.slug, c.matrix_sqs, c.guidance_usable, c.capability_type,
+        (
+          SELECT COUNT(*)::int
+          FROM test_results tr
+          WHERE tr.capability_slug = c.slug
+            AND tr.passed = false
+            AND tr.failure_classification IN ('upstream_transient', 'upstream_degraded')
+            AND tr.executed_at >= NOW() - INTERVAL '7 days'
+        ) AS external_failures_7d
+      FROM capabilities c
+      WHERE c.slug = ANY(${FREE_TIER_SLUGS})
+        AND c.is_active = true
+    `);
+
+    const results = (Array.isArray(rows) ? rows : (rows as any).rows) as Array<{
+      slug: string;
+      matrix_sqs: string | null;
+      guidance_usable: boolean | null;
+      capability_type: string;
+      external_failures_7d: number;
+    }>;
+
+    const issues: string[] = [];
+    for (const r of results) {
+      const sqs = r.matrix_sqs ? parseFloat(r.matrix_sqs) : 0;
+      if (sqs < 90) issues.push(`${r.slug}: SQS ${sqs} < 90`);
+      if (r.guidance_usable === false) issues.push(`${r.slug}: usable=false`);
+      if (r.external_failures_7d > 0) {
+        issues.push(`${r.slug}: ${r.external_failures_7d} external failures in 7d (deterministic capability)`);
+      }
+    }
+
+    if (issues.length === 0) {
+      return { check, severity: "critical", passed: true, details: "All 5 free-tier capabilities healthy (SQS >= 90, usable, no external failures)" };
+    }
+
+    await _logMetaEvent(check, "critical", `Free-tier showcase degraded: ${issues.length} issue(s)`, {
+      issues,
+      affected: results.map((r) => r.slug),
+    });
+
+    return {
+      check,
+      severity: "critical",
+      passed: false,
+      details: `Free-tier issues: ${issues.join("; ")}`,
+      affected: issues,
+    };
+  } catch (err) {
+    return { check, severity: "critical", passed: false, details: `Check error: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+// ─── Check 15: Methodology drift (WARNING, weekly) ──────────────────────────
+
+/**
+ * Check 15: Methodology drift
+ * Detects when hardcoded counts in documentation diverge from actual database
+ * counts by more than 5. Safety net for dynamic count generation.
+ */
+export async function checkMethodologyDrift(): Promise<MetaCheckResult> {
+  const check = "methodology_drift";
+  try {
+    const db = getDb();
+    const [capRow] = await db.execute(sql`
+      SELECT COUNT(*)::int AS cnt FROM capabilities WHERE is_active = true
+    `);
+    const [solRow] = await db.execute(sql`
+      SELECT COUNT(*)::int AS cnt FROM solutions WHERE is_active = true
+    `);
+    const [testRow] = await db.execute(sql`
+      SELECT COUNT(*)::int AS cnt FROM test_suites WHERE active = true
+    `);
+
+    const capCount = (capRow as any).cnt;
+    const solCount = (solRow as any).cnt;
+    const testCount = (testRow as any).cnt;
+    const estimatedTests = capCount * 5;
+
+    const drifts: string[] = [];
+    if (Math.abs(testCount - estimatedTests) > capCount) {
+      drifts.push(`Test suites: actual ${testCount} vs estimated ${estimatedTests} (${capCount} caps × 5)`);
+    }
+
+    if (drifts.length === 0) {
+      return {
+        check,
+        severity: "warning",
+        passed: true,
+        details: `Counts aligned: ${capCount} capabilities, ${solCount} solutions, ${testCount} test suites`,
+      };
+    }
+
+    await _logMetaEvent(check, "warning", `Methodology counts drifted: ${drifts.join("; ")}`, {
+      actual: { capabilities: capCount, solutions: solCount, test_suites: testCount },
+      estimated_tests: estimatedTests,
+    });
+
+    return {
+      check,
+      severity: "warning",
+      passed: false,
+      details: `Drift detected: ${drifts.join("; ")}`,
+    };
+  } catch (err) {
+    return { check, severity: "warning", passed: false, details: `Check error: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
 // ─── Batch runners ───────────────────────────────────────────────────────────
 
 /** Run all 8D daily checks and log a summary event */
@@ -748,6 +878,7 @@ export async function runDailyChecks(): Promise<MetaCheckResult[]> {
     checkValidationQueueStuck(),
     checkProbationTimeout(),
     checkDegradedCount(),
+    checkFreeTierHealth(),
   ]);
   await _logSummary("daily", results);
   return results;
@@ -766,6 +897,7 @@ export async function runWeeklyChecks(): Promise<MetaCheckResult[]> {
     checkStuckScores,
     checkImpossibleScores,
     checkSqsPassRateDivergence,
+    checkMethodologyDrift,
   ]) {
     results.push(await fn());
   }

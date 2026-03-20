@@ -118,7 +118,7 @@ export async function runTests(
 
   // T-1: Inner join with capabilities to skip test suites for deactivated capabilities
   const suitesRaw = await db
-    .select({ suite: testSuites, fieldReliability: capabilities.outputFieldReliability })
+    .select({ suite: testSuites, fieldReliability: capabilities.outputFieldReliability, capabilityType: capabilities.capabilityType })
     .from(testSuites)
     .innerJoin(capabilities, eq(testSuites.capabilitySlug, capabilities.slug))
     .where(and(...conditions, eq(capabilities.isActive, true)));
@@ -126,12 +126,17 @@ export async function runTests(
 
   // Build field reliability map for validateResult
   const fieldReliabilityMap = new Map<string, Record<string, string>>();
+  // Build capability type map for failure classification
+  const capabilityTypeMap = new Map<string, string>();
   for (const row of suitesRaw) {
     if (row.fieldReliability && !fieldReliabilityMap.has(row.suite.capabilitySlug)) {
       fieldReliabilityMap.set(
         row.suite.capabilitySlug,
         row.fieldReliability as Record<string, string>,
       );
+    }
+    if (row.capabilityType && !capabilityTypeMap.has(row.suite.capabilitySlug)) {
+      capabilityTypeMap.set(row.suite.capabilitySlug, row.capabilityType);
     }
   }
 
@@ -165,7 +170,7 @@ export async function runTests(
       continue;
     }
 
-    const result = await runSingleTest(suite, fieldReliabilityMap);
+    const result = await runSingleTest(suite, fieldReliabilityMap, capabilityTypeMap);
 
     // ── Self-healing: attempt remediation on failures ──────────────────
     if (!result.passed && result.failureReason) {
@@ -319,6 +324,7 @@ export async function runTests(
 async function runSingleTest(
   suite: typeof testSuites.$inferSelect,
   fieldReliabilityMap?: Map<string, Record<string, string>>,
+  capabilityTypeMap?: Map<string, string>,
 ): Promise<SingleTestResult> {
   const db = getDb();
   const startTime = Date.now();
@@ -343,6 +349,7 @@ async function runSingleTest(
     const classification = classifyFailure(
       failureReason, false, false, suite.testType,
       suite.input as Record<string, unknown>,
+      false, capabilityTypeMap?.get(suite.capabilitySlug),
     );
 
     await db.insert(testResults).values({
@@ -396,7 +403,7 @@ async function runSingleTest(
     ? classifyFailure(
         failureReason, executionSucceeded, validationFailed,
         suite.testType, suite.input as Record<string, unknown>,
-        previouslyPassed,
+        previouslyPassed, capabilityTypeMap?.get(suite.capabilitySlug),
       )
     : null;
 

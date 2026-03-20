@@ -560,7 +560,7 @@ export function registerStraleTools(
     "strale_search",
     {
       description:
-        "Searches Strale's catalog of 256 capabilities and 81 solutions (including KYB Essentials, KYB Complete, and Invoice Verify across 20 countries) across categories: validation, data-extraction, finance, legal, compliance, logistics, recruiting, e-commerce, marketing, developer-tools, competitive-intelligence, and more. Returns matches with SQS confidence score (0-100), Quality grade (code quality, A-F), Reliability grade (operational dependability, A-F), usable flag, execution strategy, trend, price, and required input fields. Full quality breakdown available via strale_trust_profile.",
+        `Searches Strale's catalog of ${capabilities.length} capabilities and ${solutions.length} solutions (including KYB Essentials, KYB Complete, and Invoice Verify across 20 countries) across categories: validation, data-extraction, finance, legal, compliance, logistics, recruiting, e-commerce, marketing, developer-tools, competitive-intelligence, and more. Returns matches with SQS confidence score (0-100), Quality grade (code quality, A-F), Reliability grade (operational dependability, A-F), usable flag, execution strategy, trend, price, and required input fields. Full quality breakdown available via strale_trust_profile.`,
       inputSchema: z.object({
         query: z
           .string()
@@ -851,7 +851,7 @@ export function registerStraleTools(
     "strale_methodology",
     {
       description:
-        "Get Strale's quality and trust methodology. Explains the dual-profile scoring model: Quality Profile (code quality, 4 factors) and Reliability Profile (operational dependability, 4 factors weighted by capability type), combined via a published 5×5 matrix into the SQS confidence score. Covers execution guidance, test infrastructure (~1,350 test suites with tiered scheduling), provenance tracking, audit trails, badge system, and honest disclosure of current limitations.",
+        `Get Strale's quality and trust methodology. Explains the dual-profile scoring model: Quality Profile (code quality, 4 factors) and Reliability Profile (operational dependability, 4 factors weighted by capability type), combined via a published 5×5 matrix into the SQS confidence score. Covers execution guidance, test infrastructure (~${capabilities.length * 5} test suites with tiered scheduling), provenance tracking, audit trails, badge system, and honest disclosure of current limitations.`,
       inputSchema: z.object({}),
     },
     async () => {
@@ -941,7 +941,7 @@ Every execution records:
   Retrieve any past transaction: call strale_transaction with the transaction ID returned from strale_execute.
 
 TEST INFRASTRUCTURE
-  ~1,348 active test suites across all 256 active capabilities
+  ~${capabilities.length * 5} active test suites across all ${capabilities.length} active capabilities
   Tiered scheduling: Tier A (critical) every 6 hours, Tier B every 24 hours, Tier C every 72 hours
   Test types: known_answer, schema_check, dependency_health, negative, edge_case
   Automated failure categorization distinguishes external service issues from Strale bugs

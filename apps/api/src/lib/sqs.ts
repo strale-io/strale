@@ -535,20 +535,31 @@ function computeTrend(
 
   let recentSum = 0, recentCount = 0;
   let olderSum = 0, olderCount = 0;
+  let recentFailures = 0;
 
   for (let i = 0; i < Math.min(runsAnalyzed, 10); i++) {
     const total = windowTotal.get(i) ?? 0;
     if (total === 0) continue;
-    const rate = ((windowPassed.get(i) ?? 0) / total) * 100;
-    if (i < 5) { recentSum += rate; recentCount++; }
-    else { olderSum += rate; olderCount++; }
+    const passed = windowPassed.get(i) ?? 0;
+    const rate = (passed / total) * 100;
+    if (i < 5) {
+      recentSum += rate;
+      recentCount++;
+      recentFailures += (total - passed);
+    } else {
+      olderSum += rate;
+      olderCount++;
+    }
   }
 
   if (recentCount === 0 || olderCount === 0) return "stable";
 
   const diff = (recentSum / recentCount) - (olderSum / olderCount);
   if (diff > 5) return "improving";
-  if (diff < -5) return "declining";
+  // Require both a significant rate drop AND minimum 3 failures in recent window.
+  // This prevents 1-2 test failures at a high-pass-rate capability from triggering
+  // "declining" — single failures are noise, not signal. (DEC-20260320-J)
+  if (diff < -5 && recentFailures >= 3) return "declining";
   return "stable";
 }
 
