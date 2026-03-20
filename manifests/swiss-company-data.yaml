@@ -1,11 +1,8 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: swiss-company-data
 name: Swiss Company Data
 description: >-
-  Look up Swiss company data from Zefix (Zentraler Firmenindex). Accepts UID (e.g. CHE-105.805.977) or fuzzy company
-  name.
+  Look up Swiss company data from the Zefix PublicREST API (Federal Office of Justice). Accepts UID
+  (e.g. CHE-105.805.977), EHRAID, or fuzzy company name.
 category: data-extraction
 price_cents: 80
 is_free_tier: false
@@ -16,60 +13,111 @@ input_schema:
   properties:
     uid:
       type: string
-      description: Swiss UID (e.g. CHE-105.805.977) or company name
+      description: Swiss UID (e.g. CHE-105.805.977), EHRAID, or company name
 output_schema:
   type: object
   example:
-    status: unknown
-    address: null
-    industry: null
-    directors: null
-    company_name: null
-    business_type: null
+    company_name: Nestlé SA
+    uid: CHE105805977
+    ehraid: 218570
+    ch_id: null
+    legal_form: Association
+    status: ACTIVE
+    canton: VD
+    municipality: Vevey
+    address: "Avenue Nestlé 55, 1800 Vevey"
+    purpose: null
     registration_date: null
-    registration_number: null
+    data_source: "Zefix, Federal Office of Justice, Switzerland"
+    data_source_url: "https://www.zefix.admin.ch/"
+    data_attribution: "Data from Zefix, Federal Office of Justice, Switzerland"
   properties:
+    company_name:
+      type: string
+    uid:
+      type: string
+    ehraid:
+      type: integer
+    ch_id:
+      type: integer
+    legal_form:
+      type: string
     status:
+      type: string
+    canton:
+      type: string
+    municipality:
       type: string
     address:
       type: string
-    company_name:
+    purpose:
       type: string
-    business_type:
+    registration_date:
       type: string
-    registration_number:
+    deletion_date:
       type: string
-data_source: Zefix / Swiss Commercial Register
-data_source_type: scrape
-transparency_tag: ai_generated
+    data_source:
+      type: string
+    data_source_url:
+      type: string
+    data_attribution:
+      type: string
+data_source: Zefix PublicREST API (Federal Office of Justice, Switzerland)
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
 test_fixtures:
   known_answer:
     input:
-      uid: CHE-116.281.710
+      uid: CHE-105.805.977
     expected_fields:
-      - field: status
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: uid
         operator: not_null
         reliability: guaranteed
       - field: status
-        operator: type
+        operator: not_null
         reliability: guaranteed
-        value: string
+      - field: data_attribution
+        operator: not_null
+        reliability: guaranteed
   health_check_input:
-    uid: CHE-116.281.710
+    uid: CHE-105.805.977
 output_field_reliability:
-  status: guaranteed
-  address: guaranteed
   company_name: guaranteed
-  business_type: guaranteed
-  registration_number: guaranteed
+  uid: guaranteed
+  ehraid: guaranteed
+  ch_id: common
+  legal_form: guaranteed
+  status: guaranteed
+  canton: common
+  municipality: common
+  address: common
+  purpose: rare
+  registration_date: common
+  deletion_date: rare
+  data_source: guaranteed
+  data_source_url: guaranteed
+  data_attribution: guaranteed
 limitations:
-  - title: >-
-      Extracted from Zefix/Handelsregister via Browserless — detailed financial data is not publicly available in
-      Switzerland
+  - title: Financial data not available
     text: >-
-      Extracted from Zefix/Handelsregister via Browserless — detailed financial data not publicly available in
-      Switzerland
+      The Zefix API provides registry data only. Detailed financial statements and annual reports
+      are not publicly available through this API.
     category: coverage
     severity: info
-    workaround: Use the CHE number from the response to order a certified extract from the cantonal Handelsregisteramt
+    workaround: Use the UID from the response to order a certified extract from the cantonal Handelsregisteramt
+  - title: Purpose field may be absent
+    text: >-
+      The company purpose (Zweck) is not always included in API responses, particularly for
+      older registrations.
+    category: coverage
+    severity: info
+  - title: Address limited to registered office
+    text: >-
+      Only the registered office (Sitz) address is returned. Branch office addresses require
+      separate lookups.
+    category: coverage
+    severity: info
