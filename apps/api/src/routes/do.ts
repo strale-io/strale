@@ -32,6 +32,8 @@ import {
   type FreshnessInfo,
 } from "../lib/trust-grade.js";
 import { withRetry } from "../lib/retry.js";
+import { buildFailureProvenance, getProcessingJurisdictions } from "../lib/provenance-builder.js";
+import { computeIntegrityHash, getPreviousHash } from "../lib/integrity-hash.js";
 import type { AppEnv } from "../types.js";
 
 // Dual-profile quality block for /v1/do responses
@@ -553,7 +555,7 @@ async function executeFreeTier(
       input: executionInput,
       priceCents: 0,
       transparencyMarker: marker,
-      dataJurisdiction: "EU",
+      dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
       isFreeTier: true,
     })
     .returning({ id: transactions.id });
@@ -600,6 +602,7 @@ async function executeFreeTier(
         capability.slug, capResult.output, outputSchema, latencyMs,
       ).catch(() => {});
     }
+    storeIntegrityHash(txnRecord.id).catch(() => {});
 
     const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
     return c.json({
@@ -617,11 +620,23 @@ async function executeFreeTier(
     const latencyMs = Date.now() - startTime;
     const errorMessage = err instanceof Error ? err.message : String(err);
 
+    const failAudit = buildFailureAudit({
+      transactionId: txnRecord.id, startTime, capability, executionInput,
+      errorMessage, executionMode: "sync",
+    });
+    const failProvenance = buildFailureProvenance(
+      capability.dataSource, capability.capabilityType, capability.transparencyTag, "execution_error",
+    );
+
     await db
       .update(transactions)
-      .set({ status: "failed", error: errorMessage, latencyMs, completedAt: new Date() })
+      .set({
+        status: "failed", error: errorMessage, latencyMs, completedAt: new Date(),
+        auditTrail: failAudit, provenance: failProvenance,
+      })
       .where(eq(transactions.id, txnRecord.id));
 
+    storeIntegrityHash(txnRecord.id).catch(() => {});
     recordFailure(capability.slug).catch(() => {});
     triggerOnFailure(capability.slug).catch(() => {});
     recordQuality({
@@ -672,7 +687,7 @@ async function executeFreeTierAuthenticated(
       input: executionInput,
       priceCents: 0,
       transparencyMarker: marker,
-      dataJurisdiction: "EU",
+      dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
     })
     .returning({ id: transactions.id });
 
@@ -718,6 +733,7 @@ async function executeFreeTierAuthenticated(
         capability.slug, capResult.output, outputSchema, latencyMs,
       ).catch(() => {});
     }
+    storeIntegrityHash(txnRecord.id).catch(() => {});
 
     // Get wallet balance for response
     const [wallet] = await db
@@ -743,6 +759,14 @@ async function executeFreeTierAuthenticated(
     const latencyMs = Date.now() - startTime;
     const errorMessage = err instanceof Error ? err.message : String(err);
 
+    const failAudit = buildFailureAudit({
+      transactionId: txnRecord.id, startTime, capability, executionInput,
+      errorMessage, executionMode: "sync",
+    });
+    const failProvenance = buildFailureProvenance(
+      capability.dataSource, capability.capabilityType, capability.transparencyTag, "execution_error",
+    );
+
     await db
       .update(transactions)
       .set({
@@ -750,9 +774,12 @@ async function executeFreeTierAuthenticated(
         error: errorMessage,
         latencyMs,
         completedAt: new Date(),
+        auditTrail: failAudit,
+        provenance: failProvenance,
       })
       .where(eq(transactions.id, txnRecord.id));
 
+    storeIntegrityHash(txnRecord.id).catch(() => {});
     recordFailure(capability.slug).catch(() => {});
     triggerOnFailure(capability.slug).catch(() => {});
     recordQuality({
@@ -855,7 +882,7 @@ async function executeSync(
         input: executionInput,
         priceCents: capability.priceCents,
         transparencyMarker: marker,
-        dataJurisdiction: "EU",
+        dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
       })
       .returning({ id: transactions.id });
 
@@ -911,6 +938,14 @@ async function executeSync(
             : String(err);
 
       // Mark transaction failed — no charge (wallet not debited)
+      const failAudit = buildFailureAudit({
+        transactionId: txnRecord.id, startTime, capability, executionInput,
+        errorMessage, executionMode: "sync",
+      });
+      const failProvenance = buildFailureProvenance(
+        capability.dataSource, capability.capabilityType, capability.transparencyTag, "execution_error",
+      );
+
       await tx
         .update(transactions)
         .set({
@@ -918,6 +953,8 @@ async function executeSync(
           error: errorMessage,
           latencyMs,
           completedAt: new Date(),
+          auditTrail: failAudit,
+          provenance: failProvenance,
         })
         .where(eq(transactions.id, txnRecord.id));
 
@@ -926,7 +963,7 @@ async function executeSync(
         errorCode: "execution_failed" as const,
         error: errorMessage,
         transactionId: txnRecord.id,
-        balanceAfter: wallet.balanceCents, // unchanged — no charge on failure
+        balanceAfter: wallet.balanceCents,
       };
     }
   });
@@ -1026,6 +1063,7 @@ async function executeSync(
   db.update(transactions)
     .set({ auditTrail: audit })
     .where(eq(transactions.id, result.transactionId))
+    .then(() => storeIntegrityHash(result.transactionId))
     .catch(() => {});
 
   const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
@@ -1119,7 +1157,7 @@ async function executeAsync(
         input: executionInput,
         priceCents: capability.priceCents,
         transparencyMarker: marker,
-        dataJurisdiction: "EU",
+        dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
       })
       .returning({ id: transactions.id });
 
@@ -1249,6 +1287,7 @@ async function executeInBackground(
         latencyMs,
       ).catch(() => {});
     }
+    storeIntegrityHash(transactionId).catch(() => {});
 
     // Check transaction milestones (fire-and-forget)
     db.execute(
@@ -1293,7 +1332,15 @@ async function executeInBackground(
         description: `Refund: ${capability.slug} execution failed`,
       });
 
-      // Mark transaction failed
+      // Mark transaction failed with audit trail
+      const failAudit = buildFailureAudit({
+        transactionId, startTime, capability, executionInput,
+        errorMessage, executionMode: "async",
+      });
+      const failProvenance = buildFailureProvenance(
+        capability.dataSource, capability.capabilityType, capability.transparencyTag, "execution_error",
+      );
+
       await tx
         .update(transactions)
         .set({
@@ -1301,10 +1348,13 @@ async function executeInBackground(
           error: errorMessage,
           latencyMs,
           completedAt: new Date(),
+          auditTrail: failAudit,
+          provenance: failProvenance,
         })
         .where(eq(transactions.id, transactionId));
     });
 
+    storeIntegrityHash(transactionId).catch(() => {});
     // Record failure for circuit breaker + quality
     await recordFailure(capability.slug).catch(() => {});
     triggerOnFailure(capability.slug).catch(() => {});
@@ -1434,6 +1484,81 @@ function buildFullAudit(params: {
       },
     },
   };
+}
+
+// ─── Failure audit trail (EU AI Act Art. 12 — log ALL executions) ─────────────
+
+function buildFailureAudit(params: {
+  transactionId: string;
+  startTime: number;
+  capability: CapabilityInfo;
+  executionInput: Record<string, unknown>;
+  errorMessage: string;
+  executionMode: "sync" | "async";
+}) {
+  const { transactionId, startTime, capability, executionInput, errorMessage, executionMode } = params;
+  const marker = getTransparencyMarker(capability.transparencyTag);
+  return {
+    transaction_id: transactionId,
+    status: "failed",
+    started_at: new Date(startTime).toISOString(),
+    failed_at: new Date().toISOString(),
+    capability: capability.slug,
+    data_source: capability.dataSource ?? capability.name,
+    transparency_marker: marker,
+    data_jurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
+    processing_location: "eu-west (Railway EU)",
+    execution_mode: executionMode,
+    latency_ms: Date.now() - startTime,
+    input_hash: hashInput(executionInput),
+    error_message: errorMessage.substring(0, 500),
+    compliance: {
+      ai_involvement: getAiDescription(capability.slug, marker),
+      regulations_addressed: {
+        eu_ai_act: { article_12: "Failure logging — execution attempted and error captured" },
+      },
+    },
+  };
+}
+
+/**
+ * Compute and store integrity hash on a completed/failed transaction.
+ * Fire-and-forget — never blocks the response.
+ */
+async function storeIntegrityHash(transactionId: string): Promise<void> {
+  try {
+    const db = getDb();
+    const [txn] = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.id, transactionId))
+      .limit(1);
+    if (!txn) return;
+
+    const previousHash = await getPreviousHash();
+    const hash = computeIntegrityHash({
+      id: txn.id,
+      userId: txn.userId,
+      status: txn.status,
+      input: txn.input,
+      output: txn.output,
+      error: txn.error,
+      priceCents: txn.priceCents,
+      latencyMs: txn.latencyMs,
+      provenance: txn.provenance,
+      auditTrail: txn.auditTrail,
+      transparencyMarker: txn.transparencyMarker,
+      dataJurisdiction: txn.dataJurisdiction,
+      createdAt: txn.createdAt,
+      completedAt: txn.completedAt,
+    }, previousHash);
+
+    await db.update(transactions)
+      .set({ integrityHash: hash, previousHash })
+      .where(eq(transactions.id, transactionId));
+  } catch (err) {
+    console.error(`[integrity] Hash computation failed for ${transactionId}:`, err instanceof Error ? err.message : err);
+  }
 }
 
 // ─── EU AI Act transparency markers (DEC-20260226-P-s3t4) ─────────────────────

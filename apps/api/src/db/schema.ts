@@ -170,6 +170,10 @@ export const transactions = pgTable(
       .notNull()
       .default("EU"), // ISO 3166-1 region code where data was processed
     isFreeTier: boolean("is_free_tier").notNull().default(false), // unauthenticated free-tier calls: public lookup allowed by transaction_id
+    // Compliance infrastructure
+    integrityHash: varchar("integrity_hash", { length: 128 }),
+    previousHash: varchar("previous_hash", { length: 128 }),
+    legalHold: boolean("legal_hold").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
