@@ -1,7 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 // Australian Business Register (ABR) — free government API
-// Requires ABR_AUTH_GUID env var (register at https://abr.business.gov.au/Tools/WebServices)
+// Requires ABN_LOOKUP_GUID env var (register at https://abr.business.gov.au/Tools/WebServices)
 const ABR_API =
   "https://abr.business.gov.au/abrxmlsearch/AbrXmlSearch.asmx/ABRSearchByABN";
 
@@ -14,10 +14,10 @@ function cleanAbn(input: string): string | null {
 }
 
 function getGuid(): string {
-  const guid = process.env.ABR_AUTH_GUID;
+  const guid = process.env.ABN_LOOKUP_GUID;
   if (!guid) {
     throw new Error(
-      "ABR_AUTH_GUID is required. Register at https://abr.business.gov.au/Tools/WebServices",
+      "ABN_LOOKUP_GUID is required. Register at https://abr.business.gov.au/Tools/WebServices",
     );
   }
   return guid;

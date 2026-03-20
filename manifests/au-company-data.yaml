@@ -18,17 +18,17 @@ output_schema:
   type: object
   example:
     abn: "51824753556"
-    acn: "123456789"
+    acn: null
     state: NSW
     status: Active
-    postcode: "2000"
-    company_name: COMMONWEALTH BANK OF AUSTRALIA
-    entity_type: Australian Public Company
+    postcode: "2640"
+    company_name: AUSTRALIAN TAXATION OFFICE
+    entity_type: Commonwealth Government Entity
     gst_registered: true
     business_names: null
     last_updated: "1999-11-01"
     data_source: Australian Business Register (ABR)
-    data_source_url: "https://abr.business.gov.au/"
+    data_source_url: https://abr.business.gov.au/
     retrieved_at: "2026-03-20T10:00:00.000Z"
   properties:
     abn:
@@ -73,25 +73,38 @@ test_fixtures:
         reliability: guaranteed
       - field: abn
         operator: equals
+        reliability: guaranteed
         value: "51824753556"
-        reliability: guaranteed
       - field: status
-        operator: not_null
+        operator: equals
         reliability: guaranteed
+        value: Active
       - field: entity_type
         operator: not_null
         reliability: guaranteed
-      - field: last_updated
-        operator: not_null
-        reliability: guaranteed
-      - field: data_source
+      - field: state
         operator: equals
-        value: Australian Business Register (ABR)
+        reliability: guaranteed
+        value: NSW
+      - field: postcode
+        operator: equals
+        reliability: guaranteed
+        value: "2640"
+      - field: gst_registered
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: last_updated
+        operator: equals
+        reliability: guaranteed
+        value: "1999-11-01"
+      - field: data_source
+        operator: not_null
         reliability: guaranteed
       - field: data_source_url
         operator: equals
-        value: "https://abr.business.gov.au/"
         reliability: guaranteed
+        value: https://abr.business.gov.au/
       - field: retrieved_at
         operator: not_null
         reliability: guaranteed
@@ -119,12 +132,10 @@ limitations:
     category: coverage
     severity: info
   - title: Physical address limited to state and postcode
-    text: >-
-      The ABR API only returns state and postcode for the main business address, not full street address.
+    text: The ABR API only returns state and postcode for the main business address, not full street address.
     category: accuracy
     severity: info
   - title: Historical data not included by default
-    text: >-
-      The lookup returns current entity status. Historical name changes and status changes are not included.
+    text: The lookup returns current entity status. Historical name changes and status changes are not included.
     category: coverage
     severity: info
