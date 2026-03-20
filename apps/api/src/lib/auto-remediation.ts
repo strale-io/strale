@@ -14,10 +14,11 @@
  *   LOW    → propose only (log to auto_remediation_log)
  */
 
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { testSuites, testResults, capabilities } from "../db/schema.js";
 import type { FailureClassification } from "./failure-classifier.js";
+import { logHealthEvent } from "./health-monitor.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -26,7 +27,9 @@ export type RemediationRule =
   | "dead_url"
   | "field_rename"
   | "field_removal"
-  | "schema_drift";
+  | "schema_drift"
+  | "field_reliability_downgrade"
+  | "volatile_value_recalibration";
 
 export type RemediationConfidence = "high" | "medium" | "low";
 
@@ -59,6 +62,38 @@ const FALLBACK_URLS: Record<string, string> = {
   "httpbin.org": "https://httpbin.org/get",
   "jsonplaceholder.typicode.com": "https://jsonplaceholder.typicode.com/posts/1",
 };
+
+// ─── Volatile vs stable field heuristics ───────────────────────────────────
+
+const VOLATILE_PATTERNS = [
+  /revenue/i, /income/i, /profit/i, /sales/i, /turnover/i,
+  /employee/i, /staff/i, /headcount/i,
+  /price/i, /rate/i, /exchange/i, /fee/i,
+  /score/i, /rating/i, /rank/i,
+  /last_updated/i, /modified/i, /checked_at/i, /fetched_at/i, /retrieved_at/i,
+  /count/i, /total/i, /balance/i, /amount/i,
+  /status/i, /state/i,
+  /age/i, /days_since/i,
+  /market_cap/i, /volume/i, /shares/i,
+  /followers/i, /subscribers/i,
+  /active_since/i, /registered_at/i,
+];
+
+const STABLE_PATTERNS = [
+  /^name$/i, /^country/i, /^iban$/i, /^bic$/i, /^swift/i,
+  /^valid$/i, /^format/i, /^type$/i, /^slug$/i,
+  /^id$/i, /^code$/i, /^number$/i, /^org_number/i,
+  /^legal_form/i, /^industry/i, /^sector/i,
+  /^address$/i, /^city$/i, /^postal/i, /^zip/i,
+  /^currency$/i, /^country_code/i,
+  /^vat_number/i, /^lei$/i, /^isin$/i,
+];
+
+export function isVolatileField(fieldName: string): boolean {
+  if (STABLE_PATTERNS.some((p) => p.test(fieldName))) return false;
+  if (VOLATILE_PATTERNS.some((p) => p.test(fieldName))) return true;
+  return false; // default: stable (conservative)
+}
 
 // ─── Rule implementations ───────────────────────────────────────────────────
 
@@ -250,11 +285,102 @@ function checkSchemaDrift(
   };
 }
 
+// ─── Rule 6: Field Reliability Downgrade ──────────────────────────────────
+
+/**
+ * Rule 6: Field Reliability Downgrade — HIGH confidence, auto-apply.
+ * When a `guaranteed` field returns null in actual output, downgrade
+ * the field's reliability to `common` and update the validation rule
+ * from `not_null` to a type check (or remove it).
+ *
+ * This is the single most common failure pattern in production:
+ * "field: expected non-null" when the field is actually optional.
+ */
+function checkFieldReliabilityDowngrade(
+  validationRules: { checks: Array<{ field: string; operator: string; value?: unknown }> },
+  actualOutput: Record<string, unknown> | null,
+  failureReason: string,
+): RemediationAction | null {
+  if (!actualOutput || !validationRules?.checks) return null;
+
+  // Only trigger on "expected non-null" failures
+  const nonNullMatch = failureReason.match(/^(\S+): expected non-null/i)
+    ?? failureReason.match(/not_null.*failed.*(\S+)/i);
+  if (!nonNullMatch) return null;
+
+  const failedField = nonNullMatch[1];
+  const value = getNestedValue(actualOutput, failedField);
+
+  // Confirm the field IS null in the output (not a false positive)
+  if (value !== null && value !== undefined) return null;
+
+  // Find and downgrade the matching check
+  const checkIdx = validationRules.checks.findIndex(
+    (c) => c.field === failedField && c.operator === "not_null",
+  );
+  if (checkIdx === -1) return null;
+
+  return {
+    rule: "field_reliability_downgrade",
+    confidence: "high",
+    description: `Downgraded '${failedField}' from guaranteed to common (field was null in actual output)`,
+    applied: true,
+    changes: { field: failedField, from_reliability: "guaranteed", to_reliability: "common", check_index: checkIdx },
+  };
+}
+
+// ─── Rule 7: Volatile Value Recalibration ──────────────────────────────────
+
+/**
+ * Rule 7: Volatile Value Recalibration — MEDIUM confidence, auto-apply.
+ * When a known_answer test fails because a volatile field's value changed
+ * (but the output structure is correct), auto-update the expected value.
+ *
+ * Only recalibrates fields classified as volatile (revenue, employee_count,
+ * price, score, etc.). Stable fields (name, country, id) are never touched.
+ */
+function checkVolatileValueRecalibration(
+  validationRules: { checks: Array<{ field: string; operator: string; value?: unknown }> },
+  actualOutput: Record<string, unknown> | null,
+  failureReason: string,
+  testType: string,
+): RemediationAction | null {
+  if (testType !== "known_answer") return null;
+  if (!actualOutput || !validationRules?.checks) return null;
+
+  // Parse "field: expected X, got Y" pattern
+  const valueMatch = failureReason.match(/^(\S+): expected (.+), got (.+)$/i)
+    ?? failureReason.match(/^(\S+): expected (true|false), got (true|false)$/i);
+  if (!valueMatch) return null;
+
+  const [, failedField] = valueMatch;
+
+  // Only recalibrate volatile fields
+  if (!isVolatileField(failedField)) return null;
+
+  const actualValue = getNestedValue(actualOutput, failedField);
+  if (actualValue === undefined) return null;
+
+  // Find the matching check
+  const checkIdx = validationRules.checks.findIndex(
+    (c) => c.field === failedField && (c.operator === "equals" || c.operator === "is_true" || c.operator === "is_false"),
+  );
+  if (checkIdx === -1) return null;
+
+  return {
+    rule: "volatile_value_recalibration",
+    confidence: "medium",
+    description: `Recalibrated volatile field '${failedField}': value changed in upstream data`,
+    applied: true,
+    changes: { field: failedField, check_index: checkIdx, new_value: actualValue },
+  };
+}
+
 // ─── Main remediation function ──────────────────────────────────────────────
 
 /**
  * Analyze a failing test suite and apply/propose remediations.
- * Called by the health sweep for suites with recent failures.
+ * Called by the health sweep AND inline from the test runner after failures.
  */
 export async function analyzeAndRemediate(
   suite: typeof testSuites.$inferSelect,
@@ -274,7 +400,7 @@ export async function analyzeAndRemediate(
     })
     .from(testResults)
     .where(eq(testResults.testSuiteId, suite.id))
-    .orderBy(eq(testResults.executedAt, testResults.executedAt)) // most recent
+    .orderBy(desc(testResults.executedAt))
     .limit(1);
 
   const actualOutput = (latestResult?.actualOutput ?? null) as Record<string, unknown> | null;
@@ -318,6 +444,22 @@ export async function analyzeAndRemediate(
   // Rule 5: Schema drift (LOW — propose only)
   if (actualOutput) {
     const action = checkSchemaDrift(actualOutput, outputSchema);
+    if (action) actions.push(action);
+  }
+
+  // Rule 6: Field reliability downgrade (HIGH — auto-apply)
+  // "expected non-null" on optional fields — the dominant failure pattern
+  if (lastCls.verdict === "upstream_changed" || lastCls.verdict === "test_design") {
+    const action = checkFieldReliabilityDowngrade(validationRules, actualOutput, failureReason);
+    if (action) actions.push(action);
+  }
+
+  // Rule 7: Volatile value recalibration (MEDIUM — auto-apply)
+  // known_answer test value changed on a volatile field (revenue, score, etc.)
+  if (lastCls.verdict === "upstream_changed") {
+    const action = checkVolatileValueRecalibration(
+      validationRules, actualOutput, failureReason, suite.testType,
+    );
     if (action) actions.push(action);
   }
 
@@ -395,6 +537,35 @@ export async function applyRemediation(
               rulesModified = true;
             }
           }
+        }
+        break;
+      }
+
+      case "field_reliability_downgrade": {
+        // Remove the not_null check for the downgraded field
+        const idx = action.changes?.check_index as number;
+        if (typeof idx === "number" && validationRules?.checks?.[idx]) {
+          // Replace not_null with a softer check: just remove it
+          // (the field is now "common" — not asserted)
+          validationRules.checks.splice(idx, 1);
+          rulesModified = true;
+        }
+        break;
+      }
+
+      case "volatile_value_recalibration": {
+        // Update the expected value in the validation rule
+        const idx = action.changes?.check_index as number;
+        const newValue = action.changes?.new_value;
+        if (typeof idx === "number" && validationRules?.checks?.[idx] && newValue !== undefined) {
+          const check = validationRules.checks[idx];
+          if (check.operator === "equals") {
+            check.value = newValue;
+          } else if (check.operator === "is_true" || check.operator === "is_false") {
+            // Switch the operator to match the new boolean value
+            check.operator = newValue ? "is_true" : "is_false";
+          }
+          rulesModified = true;
         }
         break;
       }

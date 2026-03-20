@@ -143,6 +143,15 @@ export async function runDependencyHealthChecks(): Promise<
     }),
   );
 
+  // Update shared upstream health state (used by test runner to skip tests)
+  import("./upstream-health-gate.js")
+    .then(({ updateUpstreamHealth }) => {
+      for (const [name, result] of Object.entries(results)) {
+        updateUpstreamHealth(name, result.healthy);
+      }
+    })
+    .catch(() => {});
+
   // Fire-and-forget: notify event triggers of any state changes
   import("./event-triggers.js")
     .then(({ triggerOnDependencyChange }) => {

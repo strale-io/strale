@@ -11,10 +11,11 @@
  * preventing recursive loops.
  */
 
-import { eq, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilityHealth, capabilities } from "../db/schema.js";
 import { runTests } from "./test-runner.js";
+import { getCapabilityUpstreams, refreshUpstreamMapping, isCacheExpired } from "./upstream-health-gate.js";
 
 // ─── Rate limiter ────────────────────────────────────────────────────────────
 
@@ -42,87 +43,47 @@ function isRateLimited(slug: string): boolean {
   return false;
 }
 
-// ─── Dependency → capability mapping ─────────────────────────────────────────
+// ─── Dependency → capability mapping (DB-backed via upstream-health-gate) ────
 
 /**
- * Maps dependency health check names to the capability slugs that rely on them.
- * Derived from scanning apps/api/src/capabilities/ for service references.
- * Only includes capabilities with direct runtime dependency on the service.
+ * Build inverted index: dependency → [capability slugs] from the upstream gate.
+ * Uses the same DB-cached mapping as the test runner.
  */
-const DEPENDENCY_CAPABILITY_MAP: Record<string, string[]> = {
-  browserless: [
-    "accessibility-audit",
-    "annual-report-extract",
-    "austrian-company-data",
-    "belgian-company-data",
-    "business-license-check-se",
-    "company-enrich",
-    "company-tech-stack",
-    "competitor-compare",
-    "container-track",
-    "cookie-scan",
-    "credit-report-summary",
-    "custom-scrape",
-    "customs-duty-lookup",
-    "danish-company-data",
-    "dutch-company-data",
-    "employer-review-summary",
-    "estonian-company-data",
-    "eu-court-case-search",
-    "eu-regulation-search",
-    "eu-trademark-search",
-    "gdpr-fine-lookup",
-    "german-company-data",
-    "hong-kong-company-data",
-    "html-to-pdf",
-    "indian-company-data",
-    "irish-company-data",
-    "italian-company-data",
-    "japanese-company-data",
-    "landing-page-roast",
-    "latvian-company-data",
-    "lithuanian-company-data",
-    "patent-search",
-    "portuguese-company-data",
-    "price-compare",
-    "pricing-page-extract",
-    "privacy-policy-analyze",
-    "product-reviews-extract",
-    "product-search",
-    "return-policy-extract",
-    "salary-benchmark",
-    "screenshot-url",
-    "seo-audit",
-    "spanish-company-data",
-    "structured-scrape",
-    "swedish-company-data",
-    "swiss-company-data",
-    "tech-stack-detect",
-    "terms-of-service-extract",
-    "trustpilot-score",
-    "url-to-markdown",
-    "web-extract",
-    "youtube-summarize",
-  ],
-  vies: [
-    "vat-validate",
-    "eori-validate",
-    "vat-format-validate",
-  ],
-  opensanctions: [
-    "sanctions-check",
-    "pep-check",
-    "adverse-media-check",
-    "aml-risk-score",
-  ],
-  gleif: ["lei-lookup"],
-  brreg: ["norwegian-company-data"],
-  anthropic: [
-    // Too many (97+) — skip individual listing. If Anthropic goes down,
-    // the scheduled sweep will catch it. Testing all 97 on every health
-    // check toggle would be a test storm.
-  ],
-};
+async function getDependencyCapabilities(dependencyName: string): Promise<string[]> {
+  // Ensure cache is fresh
+  if (isCacheExpired()) {
+    await refreshUpstreamMapping().catch(() => {});
+  }
+
+  // Build inverted index from the gate's capability → upstream mapping
+  const db = getDb();
+  let slugs: string[];
+
+  if (dependencyName === "browserless") {
+    const rows = await db
+      .select({ slug: capabilities.slug })
+      .from(capabilities)
+      .where(and(eq(capabilities.capabilityType, "scraping"), eq(capabilities.isActive, true)));
+    slugs = rows.map((r) => r.slug);
+  } else if (dependencyName === "anthropic") {
+    const rows = await db
+      .select({ slug: capabilities.slug })
+      .from(capabilities)
+      .where(and(eq(capabilities.capabilityType, "ai_assisted"), eq(capabilities.isActive, true)));
+    slugs = rows.map((r) => r.slug);
+  } else {
+    // Fixed mappings for specific APIs (small lists, safe to hardcode)
+    const FIXED: Record<string, string[]> = {
+      vies: ["vat-validate", "eori-validate", "vat-format-validate"],
+      opensanctions: ["sanctions-check", "pep-check", "adverse-media-check", "aml-risk-score"],
+      gleif: ["lei-lookup"],
+      brreg: ["norwegian-company-data"],
+    };
+    slugs = FIXED[dependencyName] ?? [];
+  }
+
+  return slugs;
+}
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
@@ -189,8 +150,8 @@ export async function triggerOnDependencyChange(
   // Skip if no previous state (first check after startup) or no change
   if (previousState === undefined || previousState === newHealthy) return;
 
-  const affectedSlugs = DEPENDENCY_CAPABILITY_MAP[dependencyName];
-  if (!affectedSlugs || affectedSlugs.length === 0) return;
+  const affectedSlugs = await getDependencyCapabilities(dependencyName);
+  if (affectedSlugs.length === 0) return;
 
   // Cap the number of capabilities tested per dependency change
   const MAX_PER_CHANGE = 10;

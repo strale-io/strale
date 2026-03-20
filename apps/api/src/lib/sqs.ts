@@ -76,6 +76,7 @@ const FACTOR_KEYS = Object.keys(WEIGHTS) as (keyof typeof WEIGHTS)[];
 // test_type → SQS factor mapping
 const TYPE_TO_FACTOR: Record<string, keyof typeof WEIGHTS> = {
   known_answer: "correctness",
+  known_bad: "correctness",
   piggyback: "correctness",
   regression: "correctness",
   schema_check: "schema",

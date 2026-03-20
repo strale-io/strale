@@ -83,6 +83,7 @@ const FACTOR_KEYS = ["correctness", "schema", "availability", "error_handling", 
 
 const TYPE_TO_FACTOR: Record<string, typeof FACTOR_KEYS[number]> = {
   known_answer: "correctness",
+  known_bad: "correctness",
   piggyback: "correctness",
   regression: "correctness",
   schema_check: "schema",

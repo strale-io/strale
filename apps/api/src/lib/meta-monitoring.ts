@@ -11,9 +11,9 @@
  * Functions never throw — errors are caught and returned as failed checks.
  */
 
-import { and, eq, sql, inArray, lt, lte, isNull } from "drizzle-orm";
+import { and, eq, desc, sql, inArray, lt, lte, isNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, testSuites, testResults } from "../db/schema.js";
+import { capabilities, solutions, testSuites, testResults, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "./health-monitor.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -870,6 +870,77 @@ export async function checkMethodologyDrift(): Promise<MetaCheckResult> {
   }
 }
 
+// ─── Scheduler heartbeat check (CRITICAL) ─────────────────────────────────
+
+/**
+ * Check 16: Scheduler heartbeat (CRITICAL)
+ * Verifies the test scheduler has run within the last 2 hours.
+ * If not, fires a critical alert — tests may not be executing.
+ */
+export async function checkSchedulerHeartbeat(): Promise<MetaCheckResult> {
+  const check = "scheduler_heartbeat";
+  try {
+    const db = getDb();
+    const [lastHeartbeat] = await db
+      .select({ createdAt: healthMonitorEvents.createdAt })
+      .from(healthMonitorEvents)
+      .where(eq(healthMonitorEvents.eventType, "scheduler_heartbeat"))
+      .orderBy(desc(healthMonitorEvents.createdAt))
+      .limit(1);
+
+    const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+
+    if (!lastHeartbeat) {
+      // No heartbeat ever recorded — might be first startup
+      await _logMetaEvent(check, "warning", "No scheduler heartbeat found — scheduler may not have run yet", {});
+      return {
+        check,
+        severity: "warning",
+        passed: false,
+        details: "No scheduler heartbeat found in health_monitor_events",
+      };
+    }
+
+    const msSinceHeartbeat = Date.now() - lastHeartbeat.createdAt.getTime();
+    if (msSinceHeartbeat > TWO_HOURS_MS) {
+      const hoursAgo = Math.round(msSinceHeartbeat / 3600_000 * 10) / 10;
+      await _logMetaEvent(check, "critical",
+        `Scheduler has not run in ${hoursAgo}h — tests may not be executing`,
+        { last_heartbeat: lastHeartbeat.createdAt.toISOString(), hours_ago: hoursAgo },
+      );
+
+      // Fire interrupt email
+      try {
+        const { sendInterruptEmail } = await import("./interrupt-sender.js");
+        await sendInterruptEmail({
+          type: "infrastructure_down",
+          details: {
+            service: "test_scheduler",
+            error: `Scheduler has not run in ${hoursAgo} hours`,
+            last_heartbeat: lastHeartbeat.createdAt.toISOString(),
+          },
+        });
+      } catch { /* best effort */ }
+
+      return {
+        check,
+        severity: "critical",
+        passed: false,
+        details: `Last scheduler heartbeat was ${hoursAgo}h ago`,
+      };
+    }
+
+    return { check, severity: "info", passed: true, details: "Scheduler heartbeat within 2h" };
+  } catch (err) {
+    return {
+      check,
+      severity: "warning",
+      passed: false,
+      details: `Check failed: ${err instanceof Error ? err.message : err}`,
+    };
+  }
+}
+
 // ─── Batch runners ───────────────────────────────────────────────────────────
 
 /** Run all 8D daily checks and log a summary event */
@@ -879,6 +950,7 @@ export async function runDailyChecks(): Promise<MetaCheckResult[]> {
     checkProbationTimeout(),
     checkDegradedCount(),
     checkFreeTierHealth(),
+    checkSchedulerHeartbeat(),
   ]);
   await _logSummary("daily", results);
   return results;

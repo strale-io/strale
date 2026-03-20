@@ -312,6 +312,20 @@ doRoute.post(
   const capability = match.capability;
   const isFreeTier = capability.isFreeTier;
 
+  // ── 3a. Platform SQS quality floor — don't serve from known-broken capabilities
+  const PLATFORM_SQS_FLOOR = 15;
+  const capSqs = capability.matrixSqs != null ? parseFloat(String(capability.matrixSqs)) : null;
+  if (capSqs !== null && capSqs < PLATFORM_SQS_FLOOR && capability.lifecycleState !== "probation") {
+    return c.json(
+      apiError(
+        "capability_unavailable",
+        `Capability '${capability.slug}' is temporarily below the platform quality threshold (SQS ${capSqs}). It may recover after the next test cycle.`,
+        { sqs: capSqs, threshold: PLATFORM_SQS_FLOOR },
+      ),
+      503,
+    );
+  }
+
   // ── 3b. Hourly spend cap check (DEC-21) — authenticated only ────────────
   if (user && user.maxSpendPerHourCents) {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);

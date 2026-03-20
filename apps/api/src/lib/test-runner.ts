@@ -21,9 +21,11 @@ import {
   formatRunSummary,
   type RemediationResult,
 } from "./self-heal.js";
+import { analyzeAndRemediate, applyRemediation } from "./auto-remediation.js";
 import { checkUpstreamEscalation } from "./upstream-tracker.js";
 import { getUnconfiguredCapabilities } from "./credential-health.js";
 import { isChromiumHealthy, isBrowserlessCapability, probeChromiumHealth } from "./chromium-health.js";
+import { findUnhealthyUpstream, refreshUpstreamMapping, isCacheExpired } from "./upstream-health-gate.js";
 import { evaluateLifecycle } from "./lifecycle.js";
 import { logHealthEvent } from "./health-monitor.js";
 import { checkNewFailures, checkInfrastructureHealth } from "./meta-monitoring.js";
@@ -163,11 +165,12 @@ export async function runTests(
       continue;
     }
 
-    // Skip Browserless-dependent capabilities when Chromium is down
-    // (prevents hundreds of timeout failures from polluting the SQS window)
-    if (isBrowserlessCapability(suite.capabilitySlug) && !isChromiumHealthy()) {
+    // Skip capabilities whose upstream dependency is unhealthy
+    // (prevents timeout failures from polluting the SQS window)
+    const unhealthyUpstream = findUnhealthyUpstream(suite.capabilitySlug);
+    if (unhealthyUpstream) {
       console.log(
-        `[test-runner] Skipping ${suite.capabilitySlug}: Chromium/Browserless unhealthy`,
+        `[test-runner] Skipping ${suite.capabilitySlug}: upstream '${unhealthyUpstream}' unhealthy`,
       );
       continue;
     }
@@ -205,6 +208,51 @@ export async function runTests(
         console.error(
           `[self-heal] Remediation threw for ${suite.capabilitySlug}:`,
           healErr,
+        );
+      }
+
+      // Auto-remediation: structural fixes (field reliability, volatile values)
+      // Runs for upstream_changed/test_design failures that self-heal didn't resolve
+      try {
+        const autoActions = await analyzeAndRemediate(suite);
+        if (autoActions.length > 0) {
+          await applyRemediation(suite.id, autoActions);
+          const applied = autoActions.filter((a) => a.applied);
+          if (applied.length > 0) {
+            // Mark the test result as auto-fixed
+            const [latestRow] = await db
+              .select({ id: testResults.id })
+              .from(testResults)
+              .where(eq(testResults.testSuiteId, suite.id))
+              .orderBy(desc(testResults.executedAt))
+              .limit(1);
+            if (latestRow) {
+              await db.update(testResults)
+                .set({ autoFixed: true })
+                .where(eq(testResults.id, latestRow.id));
+            }
+
+            for (const action of applied) {
+              console.log(`[auto-remediation] ${suite.capabilitySlug}: ${action.description}`);
+              logHealthEvent({
+                eventType: "auto_remediation",
+                capabilitySlug: suite.capabilitySlug,
+                tier: 1,
+                actionTaken: action.description,
+                details: {
+                  rule: action.rule,
+                  confidence: action.confidence,
+                  test_name: suite.testName,
+                  changes: action.changes,
+                },
+              }).catch(() => {});
+            }
+          }
+        }
+      } catch (autoErr) {
+        console.error(
+          `[auto-remediation] Analysis threw for ${suite.capabilitySlug}:`,
+          autoErr instanceof Error ? autoErr.message : autoErr,
         );
       }
     }
@@ -799,6 +847,32 @@ function validateResult(
     }
   }
 
+  // known_bad: expects the capability to REJECT bad input or return a rejection signal.
+  // Pass if: execution throws an error (correctly rejected), OR validation rules pass
+  //          (e.g., {valid: false} as expected).
+  // Fail if: execution succeeds with no rejection signal (semantic regression).
+  if (suite.testType === "known_bad") {
+    if (executionError) {
+      return { passed: true, failureReason: null }; // Correctly rejected
+    }
+    // Execution succeeded — check if the output contains the expected rejection signal
+    // via validation rules (e.g., is_false on "valid" field)
+    if (capResult) {
+      const output = capResult.output;
+      for (const check of rules.checks) {
+        const checkResult = runCheck(check, output);
+        if (!checkResult.passed) {
+          return {
+            passed: false,
+            failureReason: `Semantic regression: capability accepted bad input. ${checkResult.reason}`,
+          };
+        }
+      }
+      return { passed: true, failureReason: null }; // Rejection signal confirmed
+    }
+    return { passed: false, failureReason: "Semantic regression: no output and no error for bad input" };
+  }
+
   if (suite.testType === "edge_case") {
     if (executionError) {
       return { passed: true, failureReason: null };
@@ -1197,6 +1271,11 @@ async function getLastTestRun(slug: string): Promise<Date | null> {
 async function runAdaptiveScheduler(): Promise<void> {
   const db = getDb();
 
+  // Refresh upstream health mapping if stale
+  if (isCacheExpired()) {
+    await refreshUpstreamMapping().catch(() => {});
+  }
+
   // Get unique capabilities with their schedule tier, excluding quarantined/infra_limited
   const suiteRows = await db
     .select({
@@ -1286,6 +1365,18 @@ async function runAdaptiveScheduler(): Promise<void> {
   }
 
   console.log(`[scheduler] Sweep done: ${passed} passed, ${failed} failed across ${dueSlugs.length} capabilities`);
+
+  // Write scheduler heartbeat for watchdog monitoring
+  logHealthEvent({
+    eventType: "scheduler_heartbeat",
+    tier: 1,
+    actionTaken: `Scheduler sweep completed: ${dueSlugs.length} capabilities tested`,
+    details: {
+      tested: dueSlugs.length,
+      passed,
+      failed,
+    },
+  }).catch(() => {});
 }
 
 /**

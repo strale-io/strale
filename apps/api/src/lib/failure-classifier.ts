@@ -120,6 +120,42 @@ const CAPABILITY_BUG_PATTERNS = [
   /SyntaxError/i,
   /RangeError/i,
   /Maximum call stack/i,
+  /JSON\.parse/i,                  // JSON parse failures (LLM response extraction)
+  /Unexpected end of JSON/i,
+  /Invalid JSON/i,
+];
+
+// Executor-thrown input validation errors — test sent bad input, executor correctly rejected it.
+// These are test_design issues (the negative/edge_case test worked as intended).
+const INPUT_REJECTION_PATTERNS = [
+  /Missing required input field/i,
+  /Missing required field/i,
+  /required.*field/i,
+  /invalid input/i,
+  /must provide/i,
+  /is required/i,
+  /expected.*string.*got/i,
+  /expected.*number.*got/i,
+];
+
+// Upstream returned empty/HTML instead of expected data — transient
+const UPSTREAM_EMPTY_PATTERNS = [
+  /Empty response/i,
+  /No data returned/i,
+  /No results found/i,
+  /<!DOCTYPE/i,                   // HTML error page instead of JSON
+  /<html/i,                       // HTML error page
+  /Unexpected token.*</i,         // JSON.parse on HTML
+  /unexpected.*<.*position 0/i,   // JSON.parse on HTML at position 0
+];
+
+// Upstream API returned data but specific fields are wrong/missing
+const VALIDATION_ASSERTION_PATTERNS = [
+  /expected non-null/i,           // field was null when guaranteed
+  /expected true, got false/i,    // boolean assertion failed
+  /expected false, got true/i,
+  /expected.*got/i,               // generic value mismatch
+  /not_null.*failed/i,
 ];
 
 const DATE_FIELD_PATTERNS = /year|date|from_date|to_date|check_date|expires|valid_until|expiry/i;
@@ -219,7 +255,46 @@ export function classifyFailure(
     };
   }
 
-  // ── 5. STALE_INPUT ─────────────────────────────────────────────────────
+  // ── 5. INPUT REJECTION (test_design) ──────────────────────────────────
+  // Executor correctly rejected invalid input — this is the test working as designed
+  if (!executionSucceeded && matchesAny(reason, INPUT_REJECTION_PATTERNS)) {
+    return {
+      verdict: "test_design",
+      confidence: "high",
+      reason: `Executor rejected input (expected for negative/edge_case tests): ${truncate(reason, 120)}`,
+    };
+  }
+
+  // ── 6. UPSTREAM EMPTY/HTML (upstream_transient) ─────────────────────
+  // Upstream returned empty body, HTML error page, or unparseable response
+  if (matchesAny(reason, UPSTREAM_EMPTY_PATTERNS)) {
+    return validateByCapabilityType({
+      verdict: "upstream_transient",
+      confidence: "medium",
+      reason: `Upstream returned empty or invalid response: ${truncate(reason, 120)}`,
+    }, capabilityType);
+  }
+
+  // ── 7. VALIDATION ASSERTION FAILURES (upstream_changed) ──────────────
+  // Execution succeeded but a specific field check failed (value wrong, field missing)
+  // If not caught by the executionSucceeded && validationFailed check above,
+  // these are from error messages that include assertion details
+  if (matchesAny(reason, VALIDATION_ASSERTION_PATTERNS)) {
+    if (previouslyPassed) {
+      return validateByCapabilityType({
+        verdict: "upstream_changed",
+        confidence: "medium",
+        reason: `Field assertion failed (was previously passing): ${truncate(reason, 120)}`,
+      }, capabilityType);
+    }
+    return {
+      verdict: "test_design",
+      confidence: "medium",
+      reason: `Field assertion failed (test has never passed): ${truncate(reason, 120)}`,
+    };
+  }
+
+  // ── 8. STALE_INPUT ─────────────────────────────────────────────────────
   // Input contains expired temporal data (past dates/years)
   if (hasStaleInput(testInput)) {
     return {
@@ -229,7 +304,17 @@ export function classifyFailure(
     };
   }
 
-  // ── 6. UNKNOWN ─────────────────────────────────────────────────────────
+  // ── 9. QUOTA_EXCEEDED fallback ──────────────────────────────────────────
+  // Catch quota patterns that don't match exact INFRA_QUOTA phrasing
+  if (/QUOTA_EXCEEDED/i.test(reason) || /limit.*exceeded/i.test(reason)) {
+    return {
+      verdict: "test_infrastructure",
+      confidence: "medium",
+      reason: `API quota exceeded: ${truncate(reason, 120)}`,
+    };
+  }
+
+  // ── 10. UNKNOWN ────────────────────────────────────────────────────────
   return validateByCapabilityType({
     verdict: "unknown",
     confidence: "low",

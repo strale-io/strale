@@ -38,7 +38,8 @@ import {
   capabilityLimitations,
 } from "../src/db/schema.js";
 import * as yaml from "js-yaml";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
+import { join } from "node:path";
 import { getExecutor } from "../src/capabilities/index.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -981,20 +982,213 @@ async function backfill(
 
 // ─── Main ───────────────────────────────────────────────────────────────────
 
+// ─── Single-manifest processing ────────────────────────────────────────────
+
+interface OnboardResult {
+  slug: string;
+  status: "success" | "failed" | "skipped";
+  timeMs: number;
+  error?: string;
+}
+
+async function processSingleManifest(
+  manifestPath: string,
+  dryRun: boolean,
+  isBackfill: boolean,
+  flags: { strict: boolean; fix: boolean; discover: boolean },
+): Promise<OnboardResult> {
+  const start = Date.now();
+  let raw: string;
+  try {
+    raw = readFileSync(manifestPath, "utf-8");
+  } catch {
+    return { slug: manifestPath, status: "failed", timeMs: 0, error: "Could not read file" };
+  }
+
+  let manifest: Manifest;
+  try {
+    manifest = yaml.load(raw) as Manifest;
+  } catch (err) {
+    return { slug: manifestPath, status: "failed", timeMs: 0, error: `YAML parse: ${err instanceof Error ? err.message : err}` };
+  }
+
+  const errors = validateManifest(manifest, flags.discover);
+  if (errors.length > 0) {
+    return { slug: manifest.slug ?? manifestPath, status: "failed", timeMs: 0, error: errors.join("; ") };
+  }
+
+  try {
+    if (isBackfill) {
+      await backfill(manifest, dryRun, flags, manifestPath);
+    } else {
+      await onboard(manifest, dryRun, flags, manifestPath);
+    }
+    return { slug: manifest.slug, status: "success", timeMs: Date.now() - start };
+  } catch (err) {
+    return { slug: manifest.slug, status: "failed", timeMs: Date.now() - start, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+// ─── Batch processing ────────────────────────────────────────────────────────
+
+async function runBatch(
+  manifestDir: string,
+  dryRun: boolean,
+  isBackfill: boolean,
+  flags: { strict: boolean; fix: boolean; discover: boolean },
+  delayMs: number,
+): Promise<void> {
+  if (!existsSync(manifestDir)) {
+    console.error(`Directory not found: ${manifestDir}`);
+    process.exit(1);
+  }
+
+  // Find all YAML files
+  const files = readdirSync(manifestDir)
+    .filter((f) => f.endsWith(".yaml") || f.endsWith(".yml"))
+    .sort()
+    .map((f) => join(manifestDir, f));
+
+  if (files.length === 0) {
+    console.error(`No .yaml files found in ${manifestDir}`);
+    process.exit(1);
+  }
+
+  console.log(`\n[batch] Found ${files.length} manifests in ${manifestDir}`);
+
+  // Parse all manifests upfront for validation
+  const manifests: Array<{ path: string; manifest: Manifest; errors: string[] }> = [];
+  for (const file of files) {
+    try {
+      const raw = readFileSync(file, "utf-8");
+      const manifest = yaml.load(raw) as Manifest;
+      const errors = validateManifest(manifest, flags.discover);
+      manifests.push({ path: file, manifest, errors });
+    } catch (err) {
+      manifests.push({
+        path: file,
+        manifest: { slug: file } as any,
+        errors: [`YAML parse error: ${err instanceof Error ? err.message : err}`],
+      });
+    }
+  }
+
+  // Fail fast if any manifests are invalid
+  const invalid = manifests.filter((m) => m.errors.length > 0);
+  if (invalid.length > 0) {
+    console.error(`\n[batch] ${invalid.length} invalid manifests — fix before batch processing:`);
+    for (const m of invalid) {
+      console.error(`  ${m.manifest.slug ?? m.path}: ${m.errors.join("; ")}`);
+    }
+    process.exit(1);
+  }
+
+  // Resumability: check which capabilities already exist
+  const db = getDb();
+  const existingRows = await db
+    .select({ slug: capabilities.slug })
+    .from(capabilities);
+  const existingSlugs = new Set(existingRows.map((r) => r.slug));
+
+  const toProcess = isBackfill
+    ? manifests // backfill mode processes all
+    : manifests.filter((m) => !existingSlugs.has(m.manifest.slug));
+  const skippedCount = manifests.length - toProcess.length;
+
+  if (skippedCount > 0 && !isBackfill) {
+    console.log(`[batch] ${skippedCount} already onboarded — skipping`);
+  }
+  console.log(`[batch] Processing ${toProcess.length} manifests (${isBackfill ? "backfill" : "onboard"} mode)\n`);
+
+  // Process sequentially with delay between capabilities
+  const results: OnboardResult[] = [];
+  for (let i = 0; i < toProcess.length; i++) {
+    const { path: mPath } = toProcess[i];
+    const shortName = mPath.split(/[/\\]/).pop() ?? mPath;
+    console.log(`[batch] (${i + 1}/${toProcess.length}) Processing ${shortName}...`);
+
+    const result = await processSingleManifest(mPath, dryRun, isBackfill, flags);
+    results.push(result);
+
+    if (result.status === "failed") {
+      console.error(`  FAILED: ${result.error}`);
+    } else {
+      console.log(`  OK (${(result.timeMs / 1000).toFixed(1)}s)`);
+    }
+
+    // Delay between capabilities to avoid rate-limiting upstreams
+    if (i < toProcess.length - 1 && delayMs > 0) {
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+
+  // Add skipped results
+  if (!isBackfill) {
+    for (const m of manifests.filter((m) => existingSlugs.has(m.manifest.slug))) {
+      results.push({ slug: m.manifest.slug, status: "skipped", timeMs: 0 });
+    }
+  }
+
+  // Summary table
+  const succeeded = results.filter((r) => r.status === "success");
+  const failed = results.filter((r) => r.status === "failed");
+  const skipped = results.filter((r) => r.status === "skipped");
+
+  console.log("\n" + "═".repeat(60));
+  console.log("BATCH SUMMARY");
+  console.log("═".repeat(60));
+  console.log(`  Total manifests:  ${manifests.length}`);
+  console.log(`  Succeeded:        ${succeeded.length}`);
+  console.log(`  Failed:           ${failed.length}`);
+  console.log(`  Skipped (exists): ${skipped.length}`);
+  console.log(`  Total time:       ${(results.reduce((s, r) => s + r.timeMs, 0) / 1000).toFixed(1)}s`);
+
+  if (failed.length > 0) {
+    console.log("\nFailed capabilities:");
+    for (const r of failed) {
+      console.log(`  ${r.slug}: ${r.error}`);
+    }
+  }
+
+  if (failed.length > 0) {
+    process.exit(1);
+  }
+}
+
+// ─── Main ──────────────────────────────────────────────────────────────────────
+
 async function main() {
   // Register executors so --discover and fixture verification can execute capabilities
   await autoRegisterCapabilities();
 
   const args = process.argv.slice(2);
-  const manifestIdx = args.indexOf("--manifest");
   const dryRun = args.includes("--dry-run");
   const isBackfill = args.includes("--backfill");
   const strict = args.includes("--strict");
   const fix = args.includes("--fix");
   const discover = args.includes("--discover");
+  const isBatch = args.includes("--batch");
+  const flags = { strict, fix, discover };
 
+  // Batch mode
+  if (isBatch) {
+    const dirIdx = args.indexOf("--manifest-dir");
+    if (dirIdx === -1 || !args[dirIdx + 1]) {
+      console.error("Batch usage: npx tsx scripts/onboard.ts --batch --manifest-dir <dir> [--discover] [--backfill] [--dry-run] [--delay-ms N]");
+      process.exit(1);
+    }
+    const manifestDir = resolve(args[dirIdx + 1]);
+    const delayIdx = args.indexOf("--delay-ms");
+    const delayMs = delayIdx !== -1 ? parseInt(args[delayIdx + 1], 10) || 2000 : 2000;
+    await runBatch(manifestDir, dryRun, isBackfill, flags, delayMs);
+    return;
+  }
+
+  // Single manifest mode
+  const manifestIdx = args.indexOf("--manifest");
   if (manifestIdx === -1 || !args[manifestIdx + 1]) {
     console.error("Usage: npx tsx scripts/onboard.ts --manifest <path> [--dry-run] [--backfill] [--strict] [--fix] [--discover]");
+    console.error("Batch: npx tsx scripts/onboard.ts --batch --manifest-dir <dir> [--discover] [--backfill] [--dry-run]");
     process.exit(1);
   }
 
@@ -1027,8 +1221,6 @@ async function main() {
     process.exit(1);
   }
   console.log("Manifest validation: all checks passed");
-
-  const flags = { strict, fix, discover };
 
   if (isBackfill) {
     await backfill(manifest, dryRun, flags, manifestPath);

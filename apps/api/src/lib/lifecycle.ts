@@ -19,7 +19,7 @@
 
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, healthMonitorEvents } from "../db/schema.js";
+import { capabilities, testSuites, healthMonitorEvents } from "../db/schema.js";
 import { computeDualProfileSQS } from "./sqs.js";
 import { logHealthEvent } from "./health-monitor.js";
 
@@ -97,6 +97,18 @@ export async function transitionCapability(
   const fromState = cap.lifecycleState as LifecycleState;
   if (fromState === toState) return; // no-op
 
+  // Probation guard: must have at least 1 active test suite to enter probation
+  if (toState === "probation") {
+    const [suiteCount] = await db
+      .select({ count: testSuites.id })
+      .from(testSuites)
+      .where(and(eq(testSuites.capabilitySlug, slug), eq(testSuites.active, true)))
+      .limit(1);
+    if (!suiteCount) {
+      throw new Error(`Cannot transition '${slug}' to probation: no active test suites. Run the onboarding pipeline first.`);
+    }
+  }
+
   await db
     .update(capabilities)
     .set({
@@ -157,6 +169,23 @@ export async function evaluateLifecycle(
   // ── probation → active ────────────────────────────────────────────────────
   // Requires: SQS ≥ 50 AND qualified (not pending = has ≥5 runs + all factors)
   if (state === "probation") {
+    // Bypass detection: probation without test suites = violation
+    const [suiteCheck] = await db
+      .select({ id: testSuites.id })
+      .from(testSuites)
+      .where(and(eq(testSuites.capabilitySlug, slug), eq(testSuites.active, true)))
+      .limit(1);
+    if (!suiteCheck) {
+      await logHealthEvent({
+        eventType: "lifecycle_violation",
+        capabilitySlug: slug,
+        tier: 3,
+        actionTaken: "Capability in probation state has no active test suites — potential bypass",
+        details: { current_state: "probation", test_count: 0 },
+      });
+      return null;
+    }
+
     if (!dual.matrix.pending && dual.score >= ACTIVE_SQS_MIN) {
       const reason = `SQS ${dual.score.toFixed(1)} ≥ ${ACTIVE_SQS_MIN}, ${dual.qp.runs_analyzed} runs, all factors qualified`;
       await transitionCapability(slug, "active", reason, "auto", dual.score);
