@@ -29,6 +29,7 @@ solutionsRoute.get("/", async (c) => {
       geography: solutions.geography,
       transparencyTag: solutions.transparencyTag,
       complianceCoverage: solutions.complianceCoverage,
+      searchTags: solutions.searchTags,
       id: solutions.id,
     })
     .from(solutions)
@@ -103,6 +104,7 @@ solutionsRoute.get("/", async (c) => {
         geography: row.geography,
         transparency_tag: row.transparencyTag,
         compliance_coverage: row.complianceCoverage ?? [],
+        search_tags: row.searchTags ?? [],
         capabilities: steps.map((s) => s.capabilitySlug),
         data_sources: [...new Set(steps.map((s) => s.dataSource).filter(Boolean))],
         sqs,

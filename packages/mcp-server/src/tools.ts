@@ -23,6 +23,7 @@ export interface Solution {
   step_count: number;
   capabilities: string[];
   transparency_tag: string | null;
+  search_tags?: string[];
   // Dual-profile fields
   sqs?: number;
   sqs_label?: string;
@@ -43,6 +44,7 @@ export interface Capability {
   input_schema: JsonSchema | null;
   output_schema: unknown;
   is_free_tier?: boolean;
+  search_tags?: string[];
   // Dual-profile fields
   sqs?: number;
   sqs_label?: string;
@@ -366,6 +368,7 @@ export async function fetchSolutions(baseUrl: string): Promise<Solution[]> {
     step_count: (s.step_count ?? s.stepCount) as number,
     capabilities: (s.capabilities as string[]) ?? [],
     transparency_tag: ((s.transparency_tag ?? s.transparencyTag) as string) ?? null,
+    search_tags: (s.search_tags ?? s.searchTags) as string[] | undefined,
     sqs: s.sqs as number | undefined,
     sqs_label: s.sqs_label as string | undefined,
     quality: s.quality as string | undefined,
@@ -582,16 +585,64 @@ export function registerStraleTools(
 
       const catFilter = category ? category.toLowerCase() : null;
 
-      // Tokenize query for multi-word matching (OR logic — any word matches)
-      const queryTokens = q.split(/\s+/).filter((t) => t.length >= 2);
+      // ─── Synonym expansion ─────────────────────────────────────────
+      const SEARCH_SYNONYMS: Record<string, string[]> = {
+        kyc: ["kyb", "know your customer", "know your business", "verification", "company check", "onboarding"],
+        kyb: ["kyc", "know your business", "company verification", "business verification"],
+        aml: ["anti-money laundering", "sanctions", "pep", "compliance screening", "watchlist"],
+        gdpr: ["data protection", "privacy", "compliance", "cookie"],
+        fraud: ["invoice fraud", "payment fraud", "invoice verification", "scam"],
+        "due diligence": ["edd", "enhanced due diligence", "company verification", "kyb"],
+        screening: ["compliance screening", "sanctions screening", "pep screening", "aml"],
+        edd: ["enhanced due diligence", "due diligence", "deep compliance"],
+        bec: ["business email compromise", "invoice fraud", "payment fraud"],
+        pep: ["politically exposed", "compliance screening"],
+      };
 
-      // Score function: count how many query tokens appear in the text
-      function matchScore(text: string): number {
+      // Tokenize query
+      const rawTokens = q.split(/\s+/).filter((t) => t.length >= 2);
+
+      // Expand with synonyms
+      const expandedTokens = new Set(rawTokens);
+      // Also match the full query as a phrase
+      expandedTokens.add(q);
+      for (const token of rawTokens) {
+        const synonyms = SEARCH_SYNONYMS[token];
+        if (synonyms) {
+          for (const syn of synonyms) expandedTokens.add(syn);
+        }
+      }
+      // Check multi-word synonym keys (e.g., "due diligence")
+      for (const [key, synonyms] of Object.entries(SEARCH_SYNONYMS)) {
+        if (q.includes(key)) {
+          for (const syn of synonyms) expandedTokens.add(syn);
+          expandedTokens.add(key);
+        }
+      }
+      const queryTokens = [...expandedTokens];
+
+      // ─── Scoring function ──────────────────────────────────────────
+      // Matches tokens against text + search_tags. Category boost for category matches.
+      function matchScore(text: string, itemCategory: string, searchTags: string[]): number {
         if (!queryTokens.length) return text.includes(q) ? 1 : 0;
         let score = 0;
+        const lowerText = text.toLowerCase();
+        const lowerTags = searchTags.map((t) => t.toLowerCase()).join(" ");
+        const combinedText = `${lowerText} ${lowerTags}`;
+
         for (const token of queryTokens) {
-          if (text.includes(token)) score++;
+          if (combinedText.includes(token)) score++;
         }
+
+        // Category boost: +2 if any query token matches the category
+        const lowerCat = itemCategory.toLowerCase();
+        for (const token of rawTokens) {
+          if (lowerCat.includes(token) || lowerCat.replace("-", " ").includes(token)) {
+            score += 2;
+            break;
+          }
+        }
+
         return score;
       }
 
@@ -599,12 +650,13 @@ export function registerStraleTools(
       const matchedSolutions = solutions
         .filter((s) => {
           if (catFilter && !s.category.toLowerCase().includes(catFilter)) return false;
-          const text = `${s.name} ${s.description} ${s.slug} ${s.category}`.toLowerCase();
-          return matchScore(text) > 0;
+          const text = `${s.name} ${s.description} ${s.slug} ${s.category}`;
+          return matchScore(text, s.category, s.search_tags ?? []) > 0;
         })
         .map((s) => {
           const solTrust = solutionTrustData?.get(s.slug);
-          const text = `${s.name} ${s.description} ${s.slug} ${s.category}`.toLowerCase();
+          const text = `${s.name} ${s.description} ${s.slug} ${s.category}`;
+          const sqs = solTrust?.sqs ?? s.sqs ?? 0;
           return {
             type: "solution" as const,
             slug: s.slug,
@@ -615,7 +667,7 @@ export function registerStraleTools(
             geography: s.geography,
             step_count: s.step_count,
             capabilities: s.capabilities,
-            sqs: solTrust?.sqs ?? s.sqs ?? 0,
+            sqs,
             sqs_label: solTrust?.sqs_label ?? s.sqs_label ?? "Pending",
             quality: solTrust?.quality ?? s.quality ?? "pending",
             reliability: solTrust?.reliability ?? s.reliability ?? "pending",
@@ -623,14 +675,16 @@ export function registerStraleTools(
             usable: solTrust?.usable ?? s.usable ?? true,
             strategy: solTrust?.strategy ?? s.strategy ?? "direct",
             badge: solTrust?.badge ?? null,
-            _score: matchScore(text),
+            _score: matchScore(text, s.category, s.search_tags ?? []),
             _usable: solTrust?.usable ?? s.usable ?? true,
+            _sqs: sqs,
           };
         });
 
-      // Sort solutions: usable first, then by match score descending
+      // Sort solutions: usable first, then by SQS descending, then match score as tiebreaker
       matchedSolutions.sort((a, b) => {
         if (a._usable !== b._usable) return a._usable ? -1 : 1;
+        if (b._sqs !== a._sqs) return b._sqs - a._sqs;
         return b._score - a._score;
       });
 
@@ -642,21 +696,24 @@ export function registerStraleTools(
         const effectiveUsable = trust?.usable ?? c.usable ?? true;
         const effectiveSqs = trust?.sqs ?? c.sqs ?? 0;
         if (!effectiveUsable && effectiveSqs === 0) return false;
-        const text = `${c.name} ${c.description} ${c.slug} ${c.category}`.toLowerCase();
-        return matchScore(text) > 0;
+        const text = `${c.name} ${c.description} ${c.slug} ${c.category}`;
+        return matchScore(text, c.category, c.search_tags ?? []) > 0;
       });
 
-      // Sort capabilities: usable first, then slug match, then name match, then score
+      // Sort capabilities: usable first, then SQS descending, then match score, then slug match
       matchedCaps.sort((a, b) => {
         const aTrust = trustData?.get(a.slug);
         const bTrust = trustData?.get(b.slug);
         const aUsable = aTrust?.usable ?? a.usable ?? true;
         const bUsable = bTrust?.usable ?? b.usable ?? true;
         if (aUsable !== bUsable) return aUsable ? -1 : 1;
-        const aText = `${a.name} ${a.description} ${a.slug} ${a.category}`.toLowerCase();
-        const bText = `${b.name} ${b.description} ${b.slug} ${b.category}`.toLowerCase();
-        const aScore = matchScore(aText);
-        const bScore = matchScore(bText);
+        const aSqs = aTrust?.sqs ?? a.sqs ?? 0;
+        const bSqs = bTrust?.sqs ?? b.sqs ?? 0;
+        if (bSqs !== aSqs) return bSqs - aSqs;
+        const aText = `${a.name} ${a.description} ${a.slug} ${a.category}`;
+        const bText = `${b.name} ${b.description} ${b.slug} ${b.category}`;
+        const aScore = matchScore(aText, a.category, a.search_tags ?? []);
+        const bScore = matchScore(bText, b.category, b.search_tags ?? []);
         if (aScore !== bScore) return bScore - aScore;
         const aSlug = a.slug.toLowerCase().includes(q) ? 0 : 1;
         const bSlug = b.slug.toLowerCase().includes(q) ? 0 : 1;
@@ -705,7 +762,7 @@ export function registerStraleTools(
       });
 
       // Solutions first, then capabilities — strip internal scoring fields
-      const cleanSolutions = matchedSolutions.map(({ _score, _usable, ...rest }) => rest);
+      const cleanSolutions = matchedSolutions.map(({ _score, _usable, _sqs, ...rest }) => rest);
       const combined = [...cleanSolutions, ...capResults];
       const page = combined.slice(skip, skip + 20);
 

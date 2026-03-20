@@ -132,6 +132,7 @@ export const capabilities = pgTable("capabilities", {
   visible: boolean("visible").notNull().default(false),
   onboardingManifest: jsonb("onboarding_manifest"),
   degradedRecoveryCount: integer("degraded_recovery_count").notNull().default(0),
+  searchTags: text("search_tags").array().default([]),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -258,6 +259,7 @@ export const solutions = pgTable("solutions", {
   complianceCoverage: jsonb("compliance_coverage").$type<ComplianceCoverageItem[]>().default([]),
   isActive: boolean("is_active").notNull().default(true),
   displayOrder: integer("display_order").notNull().default(0),
+  searchTags: text("search_tags").array().default([]),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

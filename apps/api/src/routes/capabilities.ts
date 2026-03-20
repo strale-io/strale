@@ -26,6 +26,7 @@ capabilitiesRoute.get("/", async (c) => {
       geography: capabilities.geography,
       data_source: capabilities.dataSource,
       is_free_tier: capabilities.isFreeTier,
+      search_tags: capabilities.searchTags,
       // Dual-profile cached columns
       matrix_sqs: capabilities.matrixSqs,
       qp_score: capabilities.qpScore,
@@ -76,6 +77,7 @@ capabilitiesRoute.get("/", async (c) => {
       geography: r.geography ?? "global",
       data_source: r.data_source,
       is_free_tier: r.is_free_tier,
+      search_tags: r.search_tags ?? [],
       sqs: sqs,
       sqs_label: sqsLabel(sqs),
       quality: gradeFromScore(qpScore),
