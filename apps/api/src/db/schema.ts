@@ -6,6 +6,7 @@ import {
   integer,
   boolean,
   timestamp,
+  date,
   jsonb,
   decimal,
   uniqueIndex,
@@ -449,3 +450,35 @@ export const healthMonitorEvents = pgTable("health_monitor_events", {
     .notNull()
     .defaultNow(),
 });
+
+// ─── sqs_daily_snapshot ──────────────────────────────────────────────────────
+// Daily snapshots of SQS scores for historical trend analysis
+export const sqsDailySnapshot = pgTable(
+  "sqs_daily_snapshot",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    capabilitySlug: text("capability_slug").notNull(),
+    snapshotDate: date("snapshot_date").notNull(),
+    matrixSqs: decimal("matrix_sqs", { precision: 5, scale: 2 }).notNull(),
+    qpScore: decimal("qp_score", { precision: 5, scale: 2 }),
+    rpScore: decimal("rp_score", { precision: 5, scale: 2 }),
+    qpGrade: varchar("qp_grade", { length: 2 }),
+    rpGrade: varchar("rp_grade", { length: 2 }),
+    trend: varchar("trend", { length: 20 }),
+    healthState: varchar("health_state", { length: 20 }),
+    runsAnalyzed: integer("runs_analyzed"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("sqs_daily_snapshot_slug_date_unique").on(
+      table.capabilitySlug,
+      table.snapshotDate,
+    ),
+    index("sqs_daily_snapshot_slug_date_desc_idx").on(
+      table.capabilitySlug,
+      table.snapshotDate,
+    ),
+  ],
+);

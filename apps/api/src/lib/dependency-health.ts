@@ -152,5 +152,40 @@ export async function runDependencyHealthChecks(): Promise<
     })
     .catch(() => {});
 
+  // Fire-and-forget: persist probe results to health_monitor_events
+  persistProbeResults(results).catch((err) => {
+    console.error("[dependency-health] Failed to persist probe results:", err instanceof Error ? err.message : err);
+  });
+
   return results;
+}
+
+async function persistProbeResults(results: Record<string, HealthCheckResult>): Promise<void> {
+  const { getDb } = await import("../db/index.js");
+  const { healthMonitorEvents } = await import("../db/schema.js");
+  const db = getDb();
+
+  for (const [name, result] of Object.entries(results)) {
+    try {
+      await db.insert(healthMonitorEvents).values({
+        eventType: "dependency_probe",
+        capabilitySlug: null,
+        tier: result.healthy ? 1 : 2,
+        actionTaken: result.healthy
+          ? `${name}: healthy (${result.latency_ms}ms)`
+          : `${name}: unhealthy — ${result.error ?? "unknown"}`,
+        details: {
+          dependency: name,
+          healthy: result.healthy,
+          latency_ms: result.latency_ms,
+          error: result.error ?? null,
+        },
+      });
+    } catch (err) {
+      console.error(
+        `[dependency-health] Failed to persist probe for ${name}:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
 }

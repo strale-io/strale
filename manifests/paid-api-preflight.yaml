@@ -1,0 +1,139 @@
+slug: paid-api-preflight
+name: Paid API Pre-flight Check
+description: >-
+  Verify any paid API endpoint before your agent spends money. Checks reachability, SSL, response
+  time, and validates the payment protocol handshake (L402, x402, MPP). Returns a
+  proceed/caution/avoid recommendation with parsed payment details. Use this before calling any paid
+  external API to avoid wasting funds on broken, misconfigured, or fraudulent endpoints.
+category: validation
+price_cents: 2
+is_free_tier: false
+capability_type: stable_api
+lifecycle_state: active
+visible: true
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: The paid API endpoint URL to check before paying
+output_schema:
+  type: object
+  example:
+    url: https://api.example.com/v1/data
+    is_reachable: true
+    response_time_ms: 340
+    status_code: 402
+    ssl_valid: true
+    payment_protocol: x402
+    payment_details:
+      has_accepts: true
+      has_pay_to: true
+      network: base-sepolia
+      scheme: exact
+      amount: "1000000"
+    payment_handshake_valid: true
+    facilitator_reachable: true
+    server: nginx
+    recommendation: proceed
+    issues: []
+  properties:
+    url:
+      type: string
+    is_reachable:
+      type: boolean
+    response_time_ms:
+      type: integer
+    status_code:
+      type: integer
+    ssl_valid:
+      type: boolean
+    payment_protocol:
+      type: string
+    payment_details:
+      type: object
+    payment_handshake_valid:
+      type: boolean
+    facilitator_reachable:
+      type: boolean
+    server:
+      type: string
+    recommendation:
+      type: string
+    issues:
+      type: array
+      items:
+        type: string
+data_source: HTTP fetch (endpoint reachability + payment protocol header parsing)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+test_fixtures:
+  known_answer:
+    input:
+      url: https://httpbin.org/get
+    expected_fields:
+      - field: url
+        operator: not_null
+        reliability: guaranteed
+      - field: is_reachable
+        operator: is_true
+        reliability: guaranteed
+      - field: ssl_valid
+        operator: is_true
+        reliability: guaranteed
+      - field: recommendation
+        operator: not_null
+        reliability: guaranteed
+      - field: recommendation
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: issues
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    url: https://httpbin.org/get
+output_field_reliability:
+  url: guaranteed
+  is_reachable: guaranteed
+  response_time_ms: guaranteed
+  status_code: guaranteed
+  ssl_valid: guaranteed
+  payment_protocol: guaranteed
+  payment_details: guaranteed
+  payment_handshake_valid: guaranteed
+  facilitator_reachable: common
+  server: common
+  recommendation: guaranteed
+  issues: guaranteed
+limitations:
+  - title: Only detects L402, x402, and MPP — other payment protocols are not parsed
+    text: >-
+      Parses L402 (Lightning), x402 (Base/Coinbase), and MPP (Stripe/Tempo) protocols only.
+      Endpoints using proprietary or non-standard payment headers will return payment_protocol:
+      "unknown" with a non-402 or unparsed 402 response.
+    category: coverage
+    severity: info
+    workaround: >-
+      For unknown protocols, inspect the raw response headers manually via the payment_details
+      field which includes the raw header value.
+  - title: Endpoint must return HTTP 402 to validate payment handshake
+    text: >-
+      If the endpoint requires specific request parameters (POST body, auth token, etc.) to trigger
+      the paywall, a plain GET request may return 200 or 401 instead of 402. The handshake check
+      will be skipped and recommendation will be "proceed" based on reachability only.
+    category: coverage
+    severity: info
+    workaround: >-
+      Pre-flight is most accurate for endpoints that gate on HTTP 402 without requiring a specific
+      payload. For parameterized paywalls, verify the protocol docs directly.
+  - title: Facilitator reachability check uses HEAD with 2s timeout
+    text: >-
+      The x402 facilitator reachability check sends a HEAD request with a 2-second timeout.
+      Slow facilitators may appear unreachable even if functional.
+    category: performance
+    severity: info
+    workaround: "Treat facilitator_reachable: false as a caution signal, not a hard block."

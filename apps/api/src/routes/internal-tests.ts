@@ -8,6 +8,7 @@ import {
   solutions,
   solutionSteps,
   capabilities,
+  healthMonitorEvents,
 } from "../db/schema.js";
 import { runTests } from "../lib/test-runner.js";
 import type { ScheduleTier } from "../lib/test-runner.js";
@@ -657,6 +658,126 @@ internalTestsRoute.get("/health", async (c) => {
       affected_capabilities: c.isConfigured ? undefined : c.capabilities.length,
     })),
   });
+});
+
+// GET /v1/internal/tests/dependency-health/summary — 7-day uptime for all dependencies
+internalTestsRoute.get("/dependency-health/summary", async (c) => {
+  const cacheKey = "dep-health:summary";
+  const cached = getCached(cacheKey);
+  if (cached) return c.json(cached);
+
+  const db = getDb();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const rows = await db
+    .select({
+      details: healthMonitorEvents.details,
+      createdAt: healthMonitorEvents.createdAt,
+    })
+    .from(healthMonitorEvents)
+    .where(
+      and(
+        eq(healthMonitorEvents.eventType, "dependency_probe"),
+        sql`${healthMonitorEvents.createdAt} >= ${sevenDaysAgo.toISOString()}::timestamptz`,
+      ),
+    )
+    .orderBy(desc(healthMonitorEvents.createdAt));
+
+  const byDep = new Map<string, Array<{ healthy: boolean; latency_ms: number; checked_at: string; error?: string }>>();
+
+  for (const row of rows) {
+    const d = row.details as { dependency: string; healthy: boolean; latency_ms: number; error?: string | null };
+    if (!d?.dependency) continue;
+    if (!byDep.has(d.dependency)) byDep.set(d.dependency, []);
+    byDep.get(d.dependency)!.push({
+      healthy: d.healthy,
+      latency_ms: d.latency_ms,
+      checked_at: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+      ...(d.error ? { error: d.error } : {}),
+    });
+  }
+
+  const dependencies: Record<string, unknown> = {};
+  for (const [name, probes] of byDep) {
+    const healthyCount = probes.filter((p) => p.healthy).length;
+    const healthyProbes = probes.filter((p) => p.healthy && p.latency_ms > 0);
+    const avgLatency = healthyProbes.length > 0
+      ? Math.round(healthyProbes.reduce((s, p) => s + p.latency_ms, 0) / healthyProbes.length)
+      : 0;
+
+    dependencies[name] = {
+      current: probes[0]?.healthy ? "healthy" : "unhealthy",
+      latency_ms: probes[0]?.latency_ms ?? 0,
+      uptime_7d_pct: probes.length > 0 ? Math.round((healthyCount / probes.length) * 1000) / 10 : null,
+      avg_latency_ms: avgLatency,
+      total_probes_7d: probes.length,
+      last_checked: probes[0]?.checked_at ?? null,
+    };
+  }
+
+  const result = { dependencies };
+  setCache(cacheKey, result);
+  return c.json(result);
+});
+
+// GET /v1/internal/tests/dependency-health/history?dependency=vies&days=7
+internalTestsRoute.get("/dependency-health/history", async (c) => {
+  const dependency = c.req.query("dependency");
+  if (!dependency) {
+    return c.json(apiError("invalid_request", "dependency query parameter is required"), 400);
+  }
+
+  const days = Math.min(Math.max(parseInt(c.req.query("days") ?? "7", 10) || 7, 1), 90);
+  const cacheKey = `dep-health:history:${dependency}:${days}`;
+  const cached = getCached(cacheKey);
+  if (cached) return c.json(cached);
+
+  const db = getDb();
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+
+  const rows = await db
+    .select({
+      details: healthMonitorEvents.details,
+      createdAt: healthMonitorEvents.createdAt,
+    })
+    .from(healthMonitorEvents)
+    .where(
+      and(
+        eq(healthMonitorEvents.eventType, "dependency_probe"),
+        sql`${healthMonitorEvents.details}->>'dependency' = ${dependency}`,
+        sql`${healthMonitorEvents.createdAt} >= ${cutoff.toISOString()}::timestamptz`,
+      ),
+    )
+    .orderBy(desc(healthMonitorEvents.createdAt));
+
+  const probes = rows.map((row) => {
+    const d = row.details as { healthy: boolean; latency_ms: number; error?: string | null };
+    return {
+      checked_at: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+      healthy: d.healthy,
+      latency_ms: d.latency_ms,
+      ...(d.error ? { error: d.error } : {}),
+    };
+  });
+
+  const healthyCount = probes.filter((p) => p.healthy).length;
+  const healthyProbes = probes.filter((p) => p.healthy && p.latency_ms > 0);
+  const avgLatency = healthyProbes.length > 0
+    ? Math.round(healthyProbes.reduce((s, p) => s + p.latency_ms, 0) / healthyProbes.length)
+    : 0;
+
+  const result = {
+    dependency,
+    period_days: days,
+    probes,
+    uptime_pct: probes.length > 0 ? Math.round((healthyCount / probes.length) * 1000) / 10 : null,
+    avg_latency_ms: avgLatency,
+  };
+
+  setCache(cacheKey, result);
+  return c.json(result);
 });
 
 // ─── Recalibration endpoint ──────────────────────────────────────────────────

@@ -21,7 +21,6 @@ import {
 } from "../lib/circuit-breaker.js";
 import { recordQuality } from "../lib/quality-capture.js";
 import { triggerOnFailure } from "../lib/event-triggers.js";
-import { getTestResultsForSlug } from "../lib/trust-helpers.js";
 import { recordPiggybackResult } from "../lib/piggyback-monitor.js";
 import { computeDualProfileSQS } from "../lib/sqs.js";
 import { createHash } from "node:crypto";
@@ -32,6 +31,7 @@ import {
   computeFreshnessGrade,
   type FreshnessInfo,
 } from "../lib/trust-grade.js";
+import { withRetry } from "../lib/retry.js";
 import type { AppEnv } from "../types.js";
 
 // Dual-profile quality block for /v1/do responses
@@ -98,12 +98,30 @@ type CapabilityInfo = {
   name: string;
   priceCents: number;
   lifecycleState: string;
+  capabilityType: string;
+  transparencyTag: string | null;
   dataSource: string | null;
   dataClassification: string | null;
   freshnessCategory: string | null;
   dataUpdateCycleDays: number | null;
   datasetLastUpdated: Date | null;
 };
+
+/** Execute with retry for non-deterministic capabilities. */
+function executeWithRetry(
+  executor: (input: Record<string, unknown>) => Promise<any>,
+  input: Record<string, unknown>,
+  capability: CapabilityInfo,
+): Promise<any> {
+  if (capability.capabilityType === "deterministic") {
+    return executor(input);
+  }
+  return withRetry(() => executor(input), {
+    maxRetries: 1,
+    baseDelayMs: 1000,
+    slug: capability.slug,
+  });
+}
 
 const MAX_TIMEOUT_SECONDS = 60;
 const DEFAULT_TIMEOUT_SECONDS = 30;
@@ -509,7 +527,7 @@ async function executeFreeTier(
   dual: DualProfileSQSResult | null,
 ) {
   const startTime = Date.now();
-  const marker = getTransparencyMarker(capability.slug);
+  const marker = getTransparencyMarker(capability.transparencyTag);
 
   // Create a persisted transaction record so the audit trail is verifiable
   const [txnRecord] = await db
@@ -527,7 +545,7 @@ async function executeFreeTier(
     .returning({ id: transactions.id });
 
   try {
-    const capResult = await executor(executionInput);
+    const capResult = await executeWithRetry(executor, executionInput, capability);
     const latencyMs = Date.now() - startTime;
 
     const audit = buildFullAudit({
@@ -627,7 +645,7 @@ async function executeFreeTierAuthenticated(
   dual: DualProfileSQSResult | null,
 ) {
   const startTime = Date.now();
-  const marker = getTransparencyMarker(capability.slug);
+  const marker = getTransparencyMarker(capability.transparencyTag);
 
   // Create transaction record (for usage history), but no wallet lock/debit
   const [txnRecord] = await db
@@ -645,7 +663,7 @@ async function executeFreeTierAuthenticated(
     .returning({ id: transactions.id });
 
   try {
-    const capResult = await executor(executionInput);
+    const capResult = await executeWithRetry(executor, executionInput, capability);
     const latencyMs = Date.now() - startTime;
 
     const audit = buildFullAudit({
@@ -810,7 +828,7 @@ async function executeSync(
     }
 
     // Determine transparency marker based on capability type
-    const marker = getTransparencyMarker(capability.slug);
+    const marker = getTransparencyMarker(capability.transparencyTag);
 
     // Create transaction record as "executing"
     const [txnRecord] = await tx
@@ -829,7 +847,7 @@ async function executeSync(
 
     // Execute the capability
     try {
-      const capResult = await executor(executionInput);
+      const capResult = await executeWithRetry(executor, executionInput, capability);
       const latencyMs = Date.now() - startTime;
 
       // Deduct from wallet
@@ -969,27 +987,13 @@ async function executeSync(
     );
   }
 
-  // Look up quality data for the capability (non-blocking, best-effort)
-  let qualityStatus: "healthy" | "degraded" | "unhealthy" | "unknown" = "unknown";
-  let qualityPassRate: number | null = null;
-  try {
-    const testData = await getTestResultsForSlug(capability.slug);
-    qualityPassRate = testData.pass_rate;
-    if (qualityPassRate === null || testData.total_tests === 0) {
-      qualityStatus = "unknown";
-    } else if (qualityPassRate >= 95) {
-      qualityStatus = "healthy";
-    } else if (qualityPassRate >= 80) {
-      qualityStatus = "degraded";
-    } else {
-      qualityStatus = "unhealthy";
-    }
-  } catch {
-    // Quality lookup failure should never block the response
-  }
+  // Derive pass_rate from already-loaded dual profile (avoids expensive DB query)
+  const qualityPassRate = dual && !dual.qp.pending
+    ? dual.qp.factors.correctness.rate
+    : null;
 
   // Success — build full audit object
-  const marker = getTransparencyMarker(capability.slug);
+  const marker = getTransparencyMarker(capability.transparencyTag);
   const audit = buildFullAudit({
     transactionId: result.transactionId,
     startTime,
@@ -1090,7 +1094,7 @@ async function executeAsync(
       .where(eq(wallets.id, wallet.id));
 
     // Create transaction record
-    const marker = getTransparencyMarker(capability.slug);
+    const marker = getTransparencyMarker(capability.transparencyTag);
     const [txnRecord] = await tx
       .insert(transactions)
       .values({
@@ -1159,6 +1163,7 @@ async function executeAsync(
   });
 
   // Return 202 immediately — client polls GET /v1/transactions/:id
+  const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
   return c.json(
     {
       transaction_id: transactionId,
@@ -1166,6 +1171,7 @@ async function executeAsync(
       capability_used: capability.slug,
       price_cents: capability.priceCents,
       wallet_balance_cents: balanceAfter,
+      ...dualProfile,
     },
     202,
   );
@@ -1182,11 +1188,11 @@ async function executeInBackground(
   outputSchema: Record<string, unknown>,
 ) {
   try {
-    const capResult = await executor(executionInput);
+    const capResult = await executeWithRetry(executor, executionInput, capability);
     const latencyMs = Date.now() - startTime;
 
     // Success: update transaction record with full audit trail
-    const marker = getTransparencyMarker(capability.slug);
+    const marker = getTransparencyMarker(capability.transparencyTag);
     const audit = buildFullAudit({
       transactionId,
       startTime,
@@ -1322,7 +1328,7 @@ function hashInput(input: Record<string, unknown>): string {
 }
 
 function buildFreeTierAudit(capability: CapabilityInfo, latencyMs: number) {
-  const marker = getTransparencyMarker(capability.slug);
+  const marker = getTransparencyMarker(capability.transparencyTag);
   return {
     timestamp: new Date().toISOString(),
     capability: capability.slug,
@@ -1417,133 +1423,10 @@ function buildFullAudit(params: {
 }
 
 // ─── EU AI Act transparency markers (DEC-20260226-P-s3t4) ─────────────────────
-// 'ai_generated' = uses LLM, 'algorithmic' = pure logic, 'hybrid' = both
-const ALGORITHMIC_CAPABILITIES = new Set([
-  "vat-validate",
-  "iban-validate",
-  "swift-validate",
-  "vat-format-validate",
-  "isbn-validate",
-  "company-id-detect",
-  "email-validate",
-  "exchange-rate",
-  "dns-lookup",
-  "ssl-check",
-  "json-to-csv",
-  "currency-convert",
-  "url-to-text",
-  "link-extract",
-  "meta-extract",
-  "name-parse",
-  "phone-normalize",
-  "date-parse",
-  "unit-convert",
-  "csv-clean",
-  "deduplicate",
-  "json-repair",
-  "markdown-to-html",
-  "image-resize",
-  "base64-encode-url",
-  "json-schema-validate",
-  "url-health-check",
-  "cron-explain",
-  "diff-json",
-  "api-health-check",
-  // Batch 3 algorithmic capabilities
-  "llm-output-validate",
-  "timezone-meeting-find",
-  "startup-domain-check",
-  "dependency-audit",
-  "accessibility-audit",
-  // Batch 4 algorithmic capabilities
-  "token-count",
-  "tool-call-validate",
-  "llm-cost-calculate",
-  "schema-infer",
-  "data-quality-check",
-  "csv-to-json",
-  "xml-to-json",
-  "flatten-json",
-  "secret-scan",
-  "header-security-check",
-  "password-strength",
-  "gitignore-generate",
-  // Batch 5 — developer workflow (algorithmic)
-  "openapi-validate",
-  "http-to-curl",
-  "jwt-decode",
-  "json-to-typescript",
-  "json-to-zod",
-  "json-to-pydantic",
-  "log-parse",
-  "uptime-check",
-  // Batch 5 — external data (non-LLM)
-  "uk-companies-house-officers",
-  "charity-lookup-uk",
-  "food-safety-rating-uk",
-  "weather-lookup",
-  "ip-geolocation",
-  "shipping-track",
-  "flight-status",
-  "crypto-price",
-  "port-check",
-  "mx-lookup",
-  "redirect-trace",
-  "robots-txt-parse",
-  "sitemap-parse",
-  "github-user-profile",
-  "npm-package-info",
-  "pypi-package-info",
-  "docker-hub-info",
-  "github-repo-compare",
-  "gdpr-website-check",
-  "ssl-certificate-chain",
-  "domain-reputation",
-  // Batch 6 — Finance/fintech (algorithmic/API)
-  "invoice-validate",
-  "payment-reference-generate",
-  "swift-message-parse",
-  "financial-year-dates",
-  "sepa-xml-validate",
-  "bank-bic-lookup",
-  "ecb-interest-rates",
-  "ticker-lookup",
-  "forex-history",
-  "country-tax-rates",
-  // Batch 6 — Legal/compliance (algorithmic)
-  "eu-ai-act-classify",
-  "data-protection-authority-lookup",
-  // Batch 6 — Logistics/supply chain (algorithmic)
-  "incoterms-explain",
-  "port-lookup",
-  "country-trade-data",
-  "iso-country-lookup",
-  "dangerous-goods-classify",
-  // Batch 6 — Recruiting/HR (algorithmic/API)
-  "job-board-search",
-  "skill-extract",
-  "skill-gap-analyze",
-  "linkedin-url-validate",
-  "work-permit-requirements",
-  "public-holiday-lookup",
-  "employment-cost-estimate",
-  // Batch 6 — E-commerce/retail (algorithmic)
-  "vat-rate-lookup",
-  "shipping-cost-estimate",
-  "marketplace-fee-calculate",
-  // Batch 6 — Marketing/SEO (algorithmic/API)
-  "keyword-suggest",
-  "serp-analyze",
-  "backlink-check",
-  "page-speed-test",
-  "social-profile-check",
-  "og-image-check",
-  "email-deliverability-check",
-  "website-carbon-estimate",
-  "barcode-lookup",
-]);
-
-function getTransparencyMarker(slug: string): string {
-  if (ALGORITHMIC_CAPABILITIES.has(slug)) return "algorithmic";
+// Derived from the capabilities table's transparency_tag column.
+// 'algorithmic' = pure logic/API, 'hybrid' = mixed LLM+algo, 'ai_generated' = uses LLM
+function getTransparencyMarker(transparencyTag: string | null): string {
+  if (transparencyTag === "algorithmic") return "algorithmic";
+  if (transparencyTag === "mixed") return "hybrid";
   return "ai_generated";
 }

@@ -28,6 +28,8 @@ import { evaluateLifecycle } from "./lifecycle.js";
 import { logHealthEvent } from "./health-monitor.js";
 import { checkNewFailures, checkInfrastructureHealth } from "./meta-monitoring.js";
 import type { CapabilityType } from "./reliability-profile.js";
+import { computeFreshnessDecay, applyFreshnessDecay, shouldOverrideTrend } from "./freshness-decay.js";
+import { withRetry } from "./retry.js";
 import { createHash } from "node:crypto";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -377,8 +379,19 @@ async function runSingleTest(
   let executionError: string | null = null;
   let responseTimeMs: number;
 
+  // Skip retry for deterministic capabilities (no external calls — failure is permanent)
+  const capType = capabilityTypeMap?.get(suite.capabilitySlug);
+  const shouldRetry = capType !== "deterministic";
+
   try {
-    capResult = await executor(suite.input as Record<string, unknown>);
+    if (shouldRetry) {
+      capResult = await withRetry(
+        () => executor(suite.input as Record<string, unknown>),
+        { maxRetries: 1, baseDelayMs: 2000, slug: suite.capabilitySlug },
+      );
+    } else {
+      capResult = await executor(suite.input as Record<string, unknown>);
+    }
     responseTimeMs = Date.now() - startTime;
   } catch (err) {
     responseTimeMs = Date.now() - startTime;
@@ -1404,6 +1417,34 @@ export function startScheduledTests(): void {
   setTimeout(runDiagnosticCheck, 10 * 60_000); // 10min after startup
   setInterval(runDiagnosticCheck, DIAGNOSTIC_INTERVAL_MS);
 
+  // Daily SQS snapshot — captures scores for historical trend analysis
+  // Runs once per day, 2 hours after startup (after daily test batches complete)
+  const SNAPSHOT_INTERVAL_MS = 24 * 60 * 60 * 1000;
+  const runDailySnapshot = async () => {
+    try {
+      const { captureDailySnapshots } = await import("./sqs-snapshots.js");
+      await captureDailySnapshots();
+    } catch (err) {
+      console.error("[sqs-snapshot] Daily snapshot failed:", err instanceof Error ? err.message : err);
+    }
+  };
+  setTimeout(runDailySnapshot, 2 * 60 * 60_000); // 2h after startup
+  setInterval(runDailySnapshot, SNAPSHOT_INTERVAL_MS);
+
+  // Weekly data retention cleanup — purges old test_results, transaction_quality,
+  // health_monitor_events, and sqs_daily_snapshot beyond their retention windows
+  const RETENTION_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+  const runRetentionCleanup = async () => {
+    try {
+      const { cleanupOldTestData } = await import("./data-retention.js");
+      await cleanupOldTestData();
+    } catch (err) {
+      console.error("[retention] Cleanup failed:", err instanceof Error ? err.message : err);
+    }
+  };
+  setTimeout(runRetentionCleanup, 3 * 60 * 60_000); // 3h after startup
+  setInterval(runRetentionCleanup, RETENTION_INTERVAL_MS);
+
   // Weekly digest — Monday 08:00 CET (07:00 UTC in winter, 06:00 UTC in summer)
   scheduleWeeklyDigest();
 }
@@ -1526,6 +1567,9 @@ async function persistDualProfileScores(slugs: string[]): Promise<void> {
 
   const db = getDb();
 
+  // Tier-to-hours mapping
+  const TIER_HOURS: Record<string, number> = { A: 6, B: 24, C: 72 };
+
   for (const slug of slugs) {
     try {
       const dual = await computeDualProfileSQS(slug);
@@ -1542,7 +1586,7 @@ async function persistDualProfileScores(slugs: string[]): Promise<void> {
         .where(eq(capabilities.slug, slug))
         .limit(1);
 
-      // Get last test time and schedule for this capability
+      // Get last test time for this capability
       const [lastTest] = await db
         .select({ executedAt: testResults.executedAt })
         .from(testResults)
@@ -1550,36 +1594,78 @@ async function persistDualProfileScores(slugs: string[]): Promise<void> {
         .orderBy(desc(testResults.executedAt))
         .limit(1);
 
+      // Look up effective schedule tier (most frequent active suite)
+      const [suiteRow] = await db
+        .select({ scheduleTier: testSuites.scheduleTier })
+        .from(testSuites)
+        .where(and(eq(testSuites.capabilitySlug, slug), eq(testSuites.active, true)))
+        .orderBy(testSuites.scheduleTier) // A < B < C — picks most frequent
+        .limit(1);
+      const scheduleTierHours = TIER_HOURS[suiteRow?.scheduleTier ?? "B"] ?? 24;
+
+      // Compute freshness decay
+      const freshness = computeFreshnessDecay(
+        lastTest?.executedAt ?? null,
+        scheduleTierHours,
+      );
+      const rawMatrixSqs = dual.matrix.score;
+      const decayedMatrixSqs = dual.matrix.pending
+        ? rawMatrixSqs
+        : applyFreshnessDecay(rawMatrixSqs, freshness);
+
       const capType = (cap?.capabilityType as CapabilityType) ?? "stable_api";
       const rpAvailRate = dual.rp.factors.current_availability.score;
+      const hasExtFailures = rpAvailRate < 90;
 
-      // Check for external service failures in recent results
-      const hasExtFailures = dual.rp.factors.current_availability.score < 90;
+      // Override trend to "stale" when freshness warrants it
+      const effectiveTrend = shouldOverrideTrend(freshness) ? "stale" as const : dual.rp.trend;
 
       const guidanceInput: ComputeGuidanceInput = {
         slug,
         qpGrade: dual.qp.grade === "pending" ? "F" : dual.qp.grade,
         rpGrade: dual.rp.grade === "pending" ? "F" : dual.rp.grade,
         rpScore: dual.rp.score,
-        rpTrend: dual.rp.trend,
+        rpTrend: effectiveTrend === "stale" ? "declining" : dual.rp.trend,
         rpAvailabilityRate: rpAvailRate,
-        matrixSqs: dual.matrix.score,
+        matrixSqs: decayedMatrixSqs,
         capabilityType: capType,
-        testScheduleHours: 24, // Default B-tier
+        testScheduleHours: scheduleTierHours,
         lastTestedAt: lastTest?.executedAt?.toISOString() ?? null,
         priceCents: cap?.priceCents ?? 0,
         dataSource: cap?.dataSource ?? null,
         hasExternalFailures: hasExtFailures,
       };
 
-      const guidance = await computeExecutionGuidance(guidanceInput);
+      let guidance = await computeExecutionGuidance(guidanceInput);
+
+      // Apply freshness overrides to execution guidance
+      if (freshness.staleness_level === "expired" || freshness.staleness_level === "unverified") {
+        const daysSinceTested = lastTest?.executedAt
+          ? Math.round((Date.now() - lastTest.executedAt.getTime()) / 86400_000)
+          : null;
+        guidance = {
+          ...guidance,
+          usable: false,
+          strategy: "unavailable",
+          confidence_after_strategy: 0,
+          context: daysSinceTested != null
+            ? `Capability has not been tested in ${daysSinceTested} days. Quality cannot be verified.`
+            : "Capability has never been tested. Quality cannot be verified.",
+        };
+      } else if (freshness.staleness_level === "stale") {
+        guidance = {
+          ...guidance,
+          confidence_after_strategy: Math.round(guidance.confidence_after_strategy * 0.5),
+          strategy: guidance.strategy === "direct" ? "retry_with_backoff" : guidance.strategy,
+        };
+      }
 
       await db
         .update(capabilities)
         .set({
           qpScore: dual.qp.pending ? null : String(dual.qp.score),
           rpScore: dual.rp.pending ? null : String(dual.rp.score),
-          matrixSqs: dual.matrix.pending ? null : String(dual.matrix.score),
+          matrixSqs: dual.matrix.pending ? null : String(decayedMatrixSqs),
           guidanceUsable: guidance.usable,
           guidanceStrategy: guidance.strategy,
           guidanceConfidence: String(guidance.confidence_after_strategy),

@@ -6,8 +6,15 @@
  * to skip Browserless-dependent capabilities when the service is down,
  * preventing hundreds of timeout failures from polluting the SQS window.
  *
+ * Browserless-dependent capabilities are determined from the database
+ * (capability_type = 'scraping') with a 5-minute cache.
+ *
  * State transitions are logged and trigger interrupt emails on critical changes.
  */
+
+import { eq } from "drizzle-orm";
+import { getDb } from "../db/index.js";
+import { capabilities } from "../db/schema.js";
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -17,27 +24,33 @@ let _healthy = true; // Optimistic default until first check
 let _lastHealthyAt = Date.now();
 let _consecutiveFailures = 0;
 
-// ─── Browserless capability list (mirrors credential-health.ts) ─────────────
+// ─── Browserless capability cache (from DB) ─────────────────────────────────
 
-const BROWSERLESS_CAPABILITIES = new Set([
-  "accessibility-audit", "annual-report-extract", "austrian-company-data",
-  "belgian-company-data", "business-license-check-se", "company-enrich",
-  "company-tech-stack", "competitor-compare", "container-track",
-  "cookie-scan", "credit-report-summary", "custom-scrape",
-  "customs-duty-lookup", "danish-company-data", "dutch-company-data",
-  "employer-review-summary", "estonian-company-data", "eu-court-case-search",
-  "eu-regulation-search", "eu-trademark-search", "gdpr-fine-lookup",
-  "german-company-data", "hong-kong-company-data", "html-to-pdf",
-  "indian-company-data", "irish-company-data", "italian-company-data",
-  "japanese-company-data", "landing-page-roast", "latvian-company-data",
-  "lithuanian-company-data", "patent-search", "portuguese-company-data",
-  "price-compare", "pricing-page-extract", "privacy-policy-analyze",
-  "product-reviews-extract", "product-search", "return-policy-extract",
-  "salary-benchmark", "screenshot-url", "seo-audit",
-  "spanish-company-data", "structured-scrape", "swedish-company-data",
-  "swiss-company-data", "tech-stack-detect", "terms-of-service-extract",
-  "trustpilot-score", "url-to-markdown", "web-extract", "youtube-summarize",
-]);
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+let _browserlessSlugs: Set<string> = new Set();
+let _browserlessCacheExpiry = 0;
+
+// Pre-warm cache on module load (fire-and-forget, non-blocking)
+setTimeout(() => refreshBrowserlessCache().catch(() => {}), 5_000);
+
+async function refreshBrowserlessCache(): Promise<Set<string>> {
+  try {
+    const db = getDb();
+    const rows = await db
+      .select({ slug: capabilities.slug })
+      .from(capabilities)
+      .where(eq(capabilities.capabilityType, "scraping"));
+    _browserlessSlugs = new Set(rows.map((r) => r.slug));
+    _browserlessCacheExpiry = Date.now() + CACHE_TTL_MS;
+  } catch (err) {
+    // On DB error, keep the stale cache rather than clearing it
+    console.error(
+      "[chromium-health] Failed to refresh Browserless capability cache:",
+      err instanceof Error ? err.message : err,
+    );
+  }
+  return _browserlessSlugs;
+}
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
@@ -46,24 +59,34 @@ export function isChromiumHealthy(): boolean {
   return _healthy;
 }
 
-/** Whether a capability depends on Browserless for execution. */
+/**
+ * Whether a capability depends on Browserless for execution.
+ * Reads from cached Set (populated from DB). Safe to call synchronously —
+ * cache is refreshed during probeChromiumHealth() every 30 minutes.
+ */
 export function isBrowserlessCapability(slug: string): boolean {
-  return BROWSERLESS_CAPABILITIES.has(slug);
+  return _browserlessSlugs.has(slug);
 }
 
 /** Number of capabilities that would be skipped when Chromium is down. */
 export function getBrowserlessCapabilityCount(): number {
-  return BROWSERLESS_CAPABILITIES.size;
+  return _browserlessSlugs.size;
 }
 
 /**
  * Probe Browserless health. Called by the scheduler every 30 minutes.
+ * Also refreshes the Browserless capability cache from DB.
  * Returns true if healthy. Manages state transitions and alerts internally.
  */
 export async function probeChromiumHealth(): Promise<boolean> {
   const now = Date.now();
   if (now - _lastCheck < CHECK_INTERVAL_MS) return _healthy;
   _lastCheck = now;
+
+  // Refresh the capability cache on each probe cycle
+  if (now >= _browserlessCacheExpiry) {
+    await refreshBrowserlessCache();
+  }
 
   const url = process.env.BROWSERLESS_URL;
   const key = process.env.BROWSERLESS_API_KEY;
@@ -156,7 +179,7 @@ async function fireAlert(reason: string): Promise<void> {
       details: {
         service: "browserless",
         error: reason,
-        affected_capabilities: BROWSERLESS_CAPABILITIES.size,
+        affected_capabilities: _browserlessSlugs.size,
         consecutive_failures: _consecutiveFailures,
       },
     });
