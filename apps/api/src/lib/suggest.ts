@@ -1,4 +1,4 @@
-import { eq, and, asc, inArray } from "drizzle-orm";
+import { eq, and, asc, inArray, sql } from "drizzle-orm";
 import Anthropic from "@anthropic-ai/sdk";
 import { getDb } from "../db/index.js";
 import {
@@ -8,9 +8,7 @@ import {
 } from "../db/schema.js";
 import { embedQuery, embedDocuments, cosineSimilarity } from "./embeddings.js";
 import { tokenize } from "./tokenize.js";
-import { getCapabilityQuality, getSolutionQuality } from "./quality-aggregation.js";
-import { determineBadge, getTestResultsForSlug } from "./trust-helpers.js";
-import { computeDualProfileSQS, computeSolutionSQS } from "./sqs.js";
+import { determineBadge } from "./trust-helpers.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -294,76 +292,146 @@ async function loadCatalog(): Promise<CatalogItem[]> {
         }
       }
 
-      // Precompute trust summaries for all items
-      // TODO: batch trust data queries — currently individual calls, OK since catalog refresh is every 5 min
-      await Promise.all(
-        allItems.map(async (item) => {
-          try {
-            if (item.type === "solution") {
-              // Aggregate trust across solution steps
-              const solQuality = await getSolutionQuality(item.slug);
-              const stepSlugs = (item.steps ?? []).map((s) => s.capabilitySlug);
-              const stepTestResults = await Promise.all(
-                stepSlugs.map((s) => getTestResultsForSlug(s)),
-              );
-              const totalPassed = stepTestResults.reduce((s, r) => s + r.passed, 0);
-              const totalFailed = stepTestResults.reduce((s, r) => s + r.failed, 0);
-              const totalTests = stepTestResults.reduce((s, r) => s + r.total_tests, 0);
-              const lastRuns = stepTestResults
-                .map((r) => r.last_run)
-                .filter((t): t is string => t !== null)
-                .sort();
-              const lastTestedAt = lastRuns[lastRuns.length - 1] ?? null;
+      // Batch-fetch persisted SQS scores and test counts (2-3 queries instead of ~5,355)
+      const allCapSlugs = capItems.map((c) => c.slug);
+      const allStepSlugs = solItems.flatMap((s) => (s.steps ?? []).map((st) => st.capabilitySlug));
+      const allSlugsNeeded = [...new Set([...allCapSlugs, ...allStepSlugs])];
 
-              const totalTxns = solQuality?.totalTransactionsAll ?? 0;
-              const { badge, badge_label } = determineBadge(
-                totalTxns,
-                0,
-                solQuality?.successRate ?? null,
-              );
+      const [persistedRows, testCountRows] = await Promise.all([
+        // Query 1: Persisted SQS scores from capabilities table
+        allSlugsNeeded.length > 0
+          ? db
+              .select({
+                slug: capabilities.slug,
+                matrixSqs: capabilities.matrixSqs,
+                successRate: capabilities.successRate,
+                avgLatencyMs: capabilities.avgLatencyMs,
+              })
+              .from(capabilities)
+              .where(
+                and(
+                  eq(capabilities.isActive, true),
+                  inArray(capabilities.slug, allSlugsNeeded),
+                ),
+              )
+          : Promise.resolve([]),
+        // Query 2: Batch test pass/fail counts + last tested (one query for all slugs)
+        allSlugsNeeded.length > 0
+          ? db.execute(sql`
+              WITH latest_results AS (
+                SELECT DISTINCT ON (tr.test_suite_id)
+                  tr.capability_slug,
+                  tr.passed,
+                  tr.executed_at
+                FROM test_results tr
+                INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
+                WHERE ts.active = true
+                  AND tr.capability_slug = ANY(${allSlugsNeeded})
+                ORDER BY tr.test_suite_id, tr.executed_at DESC
+              )
+              SELECT
+                capability_slug,
+                COUNT(*) FILTER (WHERE passed = true)::int AS passed,
+                COUNT(*)::int AS total,
+                MAX(executed_at) AS last_tested_at
+              FROM latest_results
+              GROUP BY capability_slug
+            `)
+          : Promise.resolve([]),
+      ]);
 
-              const sqs = await computeSolutionSQS(stepSlugs);
-              item.trustSummary = {
-                badge,
-                badge_label,
-                avg_response_time_ms: solQuality?.avgResponseTimeMs ?? null,
-                tests_passing: totalPassed,
-                tests_total: totalTests,
-                last_tested_at: lastTestedAt,
-                data_source: totalTxns > 0 ? "internal_testing" : "internal_testing",
-                sqs: sqs.score,
-                sqs_label: sqs.label,
-              };
-            } else {
-              // Individual capability trust
-              const quality = await getCapabilityQuality(item.slug);
-              const testData = await getTestResultsForSlug(item.slug);
-
-              const testTxns = quality.totalTransactionsAll;
-              const { badge, badge_label } = determineBadge(
-                testTxns,
-                0,
-                quality.successRate,
-              );
-
-              const dual = await computeDualProfileSQS(item.slug);
-              item.trustSummary = {
-                badge,
-                badge_label,
-                avg_response_time_ms: quality.avgResponseTimeMs,
-                tests_passing: testData.passed,
-                tests_total: testData.total_tests,
-                last_tested_at: testData.last_run,
-                data_source: testTxns > 0 ? "internal_testing" : "internal_testing",
-                sqs: dual.score,
-                sqs_label: dual.label,
-              };
-            }
-          } catch (err) {
-            console.warn(`[suggest] Failed to load trust data for ${item.slug}:`, err);
-          }
-        }),
+      // Build lookup maps
+      const sqsMap = new Map(
+        persistedRows.map((r) => [r.slug, r]),
       );
+      const testCountRaw = Array.isArray(testCountRows) ? testCountRows : (testCountRows as any)?.rows ?? [];
+      const testCountMap = new Map<string, { passed: number; total: number; last_tested_at: string | null }>();
+      for (const r of testCountRaw as any[]) {
+        testCountMap.set(r.capability_slug, {
+          passed: Number(r.passed),
+          total: Number(r.total),
+          last_tested_at: r.last_tested_at ? new Date(r.last_tested_at).toISOString() : null,
+        });
+      }
+
+      function sqsLabel(score: number): string {
+        if (score >= 90) return "Excellent";
+        if (score >= 75) return "Good";
+        if (score >= 50) return "Fair";
+        if (score >= 25) return "Poor";
+        return "Degraded";
+      }
+
+      // Assign trust summaries from batch data
+      for (const item of allItems) {
+        try {
+          if (item.type === "capability") {
+            const persisted = sqsMap.get(item.slug);
+            const tests = testCountMap.get(item.slug);
+            const sqs = persisted?.matrixSqs ? parseFloat(persisted.matrixSqs) : 0;
+            const sr = persisted?.successRate ? parseFloat(persisted.successRate) : null;
+            const { badge, badge_label } = determineBadge(tests?.total ?? 0, 0, sr);
+
+            item.trustSummary = {
+              badge,
+              badge_label,
+              avg_response_time_ms: persisted?.avgLatencyMs ?? null,
+              tests_passing: tests?.passed ?? 0,
+              tests_total: tests?.total ?? 0,
+              last_tested_at: tests?.last_tested_at ?? null,
+              data_source: "internal_testing",
+              sqs,
+              sqs_label: sqs > 0 ? sqsLabel(sqs) : "Pending",
+            };
+          } else {
+            // Solution: aggregate from step capabilities
+            const stepSlugs = (item.steps ?? []).map((s) => s.capabilitySlug);
+            let totalPassed = 0;
+            let totalTests = 0;
+            let lastTestedAt: string | null = null;
+            const stepScores: number[] = [];
+
+            for (const ss of stepSlugs) {
+              const tests = testCountMap.get(ss);
+              if (tests) {
+                totalPassed += tests.passed;
+                totalTests += tests.total;
+                if (tests.last_tested_at) {
+                  if (!lastTestedAt || tests.last_tested_at > lastTestedAt) {
+                    lastTestedAt = tests.last_tested_at;
+                  }
+                }
+              }
+              const persisted = sqsMap.get(ss);
+              stepScores.push(persisted?.matrixSqs ? parseFloat(persisted.matrixSqs) : 0);
+            }
+
+            // Solution SQS: floor-aware — cannot exceed lowest step + 20
+            let solSqs = 0;
+            if (stepScores.length > 0 && stepScores.every((s) => s > 0)) {
+              const avg = stepScores.reduce((a, b) => a + b, 0) / stepScores.length;
+              const lowest = Math.min(...stepScores);
+              solSqs = Math.round(Math.min(avg, lowest + 20) * 10) / 10;
+            }
+
+            const { badge, badge_label } = determineBadge(totalTests, 0, null);
+
+            item.trustSummary = {
+              badge,
+              badge_label,
+              avg_response_time_ms: null,
+              tests_passing: totalPassed,
+              tests_total: totalTests,
+              last_tested_at: lastTestedAt,
+              data_source: "internal_testing",
+              sqs: solSqs,
+              sqs_label: solSqs > 0 ? sqsLabel(solSqs) : "Pending",
+            };
+          }
+        } catch (err) {
+          console.warn(`[suggest] Failed to load trust data for ${item.slug}:`, err);
+        }
+      }
 
       // Embed if Voyage API key is available
       if (process.env.VOYAGE_API_KEY) {

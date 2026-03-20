@@ -369,6 +369,7 @@ export const testResults = pgTable(
     index("test_results_executed_at_idx").on(table.executedAt),
     index("test_results_test_suite_id_idx").on(table.testSuiteId),
     index("test_results_slug_executed_idx").on(table.capabilitySlug, table.executedAt),
+    index("test_results_suite_executed_idx").on(table.testSuiteId, table.executedAt),
   ],
 );
 

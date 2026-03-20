@@ -20,6 +20,7 @@
     "franc": "^6.2.0",
     "hono": "^4.7.4",
     "libphonenumber-js": "^1.12.38",
+    "p-limit": "^7.3.0",
     "postgres": "^3.4.5",
     "resend": "^6.9.4",
     "sharp": "^0.34.5",

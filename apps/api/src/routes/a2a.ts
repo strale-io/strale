@@ -11,8 +11,9 @@
 
 import { Hono } from "hono";
 import { eq, and } from "drizzle-orm";
+import { createHash } from "node:crypto";
 import { getDb } from "../db/index.js";
-import { capabilities, transactions, users } from "../db/schema.js";
+import { capabilities, solutions, transactions, users } from "../db/schema.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { timingSafeEqual } from "node:crypto";
@@ -28,8 +29,9 @@ const BASE_URL =
 // ─── Agent Card cache ───────────────────────────────────────────────────────
 
 let cachedCard: object | null = null;
+let cachedETag: string | null = null;
 let cachedAt = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour (matches Cache-Control max-age)
 
 // ─── Category to tags mapping ───────────────────────────────────────────────
 
@@ -77,63 +79,99 @@ function generateExamples(
 
 // ─── Build Agent Card ───────────────────────────────────────────────────────
 
-async function buildAgentCard(): Promise<object> {
+async function buildAgentCard(): Promise<{ card: object; etag: string }> {
   const now = Date.now();
-  if (cachedCard && now - cachedAt < CACHE_TTL_MS) {
-    return cachedCard;
+  if (cachedCard && cachedETag && now - cachedAt < CACHE_TTL_MS) {
+    return { card: cachedCard, etag: cachedETag };
   }
 
   const db = getDb();
-  const rows = await db
+
+  // Fetch capabilities with SQS scores and free-tier flag
+  const capRows = await db
     .select({
       slug: capabilities.slug,
       name: capabilities.name,
       description: capabilities.description,
       category: capabilities.category,
       priceCents: capabilities.priceCents,
+      matrixSqs: capabilities.matrixSqs,
+      isFreeTier: capabilities.isFreeTier,
     })
     .from(capabilities)
     .where(eq(capabilities.isActive, true));
 
-  const skills = rows.map((cap) => ({
-    id: cap.slug,
-    name: cap.name,
-    description: `${cap.description} Cost: €${(cap.priceCents / 100).toFixed(2)}`,
-    tags: categoryToTags(cap.category, cap.slug),
-    examples: generateExamples(cap.slug, cap.name, cap.description),
+  // Fetch active solutions
+  const solRows = await db
+    .select({
+      slug: solutions.slug,
+      name: solutions.name,
+      description: solutions.description,
+      category: solutions.category,
+      priceCents: solutions.priceCents,
+    })
+    .from(solutions)
+    .where(eq(solutions.isActive, true));
+
+  // Build capability skills
+  const capSkills = capRows.map((cap) => {
+    const sqs = cap.matrixSqs ? parseFloat(String(cap.matrixSqs)) : 0;
+    const sqsStr = sqs > 0 ? ` SQS: ${Math.round(sqs)}/100.` : "";
+    const freeStr = cap.isFreeTier ? " FREE — no API key required." : "";
+    return {
+      id: cap.slug,
+      name: cap.name,
+      description: `${cap.description}${sqsStr}${freeStr}`,
+      tags: categoryToTags(cap.category, cap.slug),
+      examples: generateExamples(cap.slug, cap.name, cap.description),
+    };
+  });
+
+  // Build solution skills
+  const solSkills = solRows.map((sol) => ({
+    id: `solution-${sol.slug}`,
+    name: sol.name,
+    description: sol.description,
+    tags: ["solution", sol.category],
+    examples: [sol.description.split(/\.\s/)[0].replace(/\.$/, "")],
   }));
 
+  const skills = [...capSkills, ...solSkills];
+
   const card = {
-    protocolVersion: "0.3.0",
     name: "Strale",
     description:
-      "Commercial capability marketplace for AI agents. 233+ capabilities with transparent per-call pricing (€0.02–€1.00). Company data across 27 countries, EU compliance, finance, logistics, recruiting, e-commerce, marketing, and developer tools. Every capability returns structured JSON.",
-    url: `${BASE_URL}/a2a`,
+      "The trust layer for AI agents. Quality-scored capabilities for company verification, compliance screening, data validation, financial data, and web extraction — covering 27 countries. Every capability independently tested. One API call: strale.do(task). Audit trails on every transaction.",
+    url: `${BASE_URL}`,
     version: "1.0.0",
+    documentationUrl: "https://strale.dev/docs",
     provider: {
       organization: "Strale",
-      url: "https://strale.dev",
+      url: "https://strale.io",
     },
     capabilities: {
       streaming: false,
       pushNotifications: false,
+      stateTransitionHistory: false,
     },
-    securitySchemes: {
-      apiKey: {
-        type: "http",
-        scheme: "bearer",
-      },
+    authentication: {
+      schemes: ["apiKey"],
     },
-    security: [{ apiKey: [] }],
-    defaultInputModes: ["text/plain", "application/json"],
+    defaultInputModes: ["application/json", "text/plain"],
     defaultOutputModes: ["application/json"],
     skills,
   };
 
+  const etag = createHash("sha256")
+    .update(JSON.stringify(card))
+    .digest("hex")
+    .substring(0, 16);
+
   cachedCard = card;
+  cachedETag = etag;
   cachedAt = now;
 
-  return card;
+  return { card, etag };
 }
 
 // ─── Agent Card route ───────────────────────────────────────────────────────
@@ -141,10 +179,24 @@ async function buildAgentCard(): Promise<object> {
 export const agentCardRoute = new Hono();
 
 agentCardRoute.get("/", async (c) => {
-  const card = await buildAgentCard();
+  const { card, etag } = await buildAgentCard();
+
+  // Conditional request support (304 Not Modified)
+  const ifNoneMatch = c.req.header("If-None-Match");
+  if (ifNoneMatch && ifNoneMatch === `"${etag}"`) {
+    return new Response(null, {
+      status: 304,
+      headers: {
+        ETag: `"${etag}"`,
+        "Cache-Control": "public, max-age=3600",
+      },
+    });
+  }
+
   return c.json(card, 200, {
-    "Cache-Control": "public, max-age=300",
-    "Content-Type": "application/json",
+    "Cache-Control": "public, max-age=3600",
+    ETag: `"${etag}"`,
+    "Access-Control-Allow-Origin": "*",
   });
 });
 

@@ -10,7 +10,7 @@ export function getDb(): PostgresJsDatabase<typeof schema> {
     if (!connectionString) {
       throw new Error("DATABASE_URL environment variable is required");
     }
-    const client = postgres(connectionString);
+    const client = postgres(connectionString, { max: 30 });
     _db = drizzle(client, { schema });
   }
   return _db;

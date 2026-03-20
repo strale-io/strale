@@ -12,6 +12,7 @@
 
 import { Hono } from "hono";
 import { eq, and, asc, desc, sql, inArray, gte } from "drizzle-orm";
+import pLimit from "p-limit";
 import { getDb } from "../db/index.js";
 import { getRelatedCapabilities, getRelatedSolutions } from "../lib/related-items.js";
 import {
@@ -23,7 +24,7 @@ import {
   testResults,
   sqsDailySnapshot,
 } from "../db/schema.js";
-import { determineBadge, getTestResultsForSlug } from "../lib/trust-helpers.js";
+import { determineBadge, getTestResultsForSlug, getTestResultsForSlugs } from "../lib/trust-helpers.js";
 import { computeDualProfileSQS } from "../lib/sqs.js";
 import { computeExecutionGuidance, type ComputeGuidanceInput, type ExecutionGuidance } from "../lib/execution-guidance.js";
 import { computeFreshnessGrade } from "../lib/trust-grade.js";
@@ -34,20 +35,48 @@ import type { AppEnv } from "../types.js";
 
 export const internalTrustRoute = new Hono<AppEnv>();
 
-// ─── Cache ──────────────────────────────────────────────────────────────────
+// ─── Cache (stale-while-revalidate) ─────────────────────────────────────────
 
-const CACHE_TTL_MS = 2 * 60 * 1000;
-interface CacheEntry<T> { data: T; expiresAt: number }
+const CACHE_FRESH_MS = 2 * 60 * 1000;   // Fresh for 2 min
+const CACHE_STALE_MS = 30 * 60 * 1000;  // Serve stale up to 30 min
+
+interface CacheEntry<T> { data: T; freshUntil: number; staleUntil: number }
 const cache = new Map<string, CacheEntry<unknown>>();
+const revalidating = new Set<string>();
 
 function getCached<T>(key: string): T | null {
   const entry = cache.get(key);
-  if (!entry || Date.now() > entry.expiresAt) { cache.delete(key); return null; }
+  if (!entry) return null;
+  const now = Date.now();
+  if (now > entry.staleUntil) { cache.delete(key); return null; }
   return entry.data as T;
 }
-function setCache<T>(key: string, data: T): void {
-  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+
+function getCachedWithRevalidate<T>(key: string, compute: () => Promise<T>): T | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  const now = Date.now();
+  if (now > entry.staleUntil) { cache.delete(key); return null; }
+  if (now < entry.freshUntil) return entry.data as T;
+  // Stale — trigger background revalidation
+  if (!revalidating.has(key)) {
+    revalidating.add(key);
+    compute()
+      .then((data) => setCache(key, data))
+      .catch((err) => console.warn(`[cache] Background revalidation failed for ${key}:`, err))
+      .finally(() => revalidating.delete(key));
+  }
+  return entry.data as T;
 }
+
+function setCache<T>(key: string, data: T): void {
+  const now = Date.now();
+  cache.set(key, { data, freshUntil: now + CACHE_FRESH_MS, staleUntil: now + CACHE_STALE_MS });
+}
+
+// ─── Concurrency limiter for parallel SQS computations ──────────────────────
+// Prevents connection pool saturation when batch endpoints fire 100+ parallel queries
+const dbConcurrency = pLimit(10);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -265,15 +294,19 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
     return c.json(apiError("invalid_request", "slugs query parameter is required"), 400);
   }
 
-  const cacheKey = `trust:batch:v2:${slugs.sort().join(",")}`;
-  const cached = getCached(cacheKey);
-  if (cached) return c.json(cached);
-
   const limitedSlugs = slugs.slice(0, 100);
+  const cacheKey = `trust:batch:v2:${limitedSlugs.sort().join(",")}`;
 
-  // Compute dual-profile SQS for all slugs
+  const computeBatch = async () => {
+
+  // Pre-fetch test results for ALL slugs in 3 batch queries (replaces N+1 per-suite loop)
+  const prefetchedTestResults = await getTestResultsForSlugs(limitedSlugs);
+
+  // Compute dual-profile SQS with pre-fetched test data (concurrency-limited)
   const dualResults = await Promise.all(
-    limitedSlugs.map((s) => computeDualProfileSQS(s).catch(() => null)),
+    limitedSlugs.map((s) => dbConcurrency(() =>
+      computeDualProfileSQS(s, prefetchedTestResults.get(s)).catch(() => null),
+    )),
   );
 
   const trustMap: Record<string, {
@@ -379,8 +412,15 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
     };
   }
 
-  setCache(cacheKey, trustMap);
-  return c.json(trustMap);
+    return trustMap;
+  };
+
+  const cached = getCachedWithRevalidate(cacheKey, computeBatch);
+  if (cached) return c.json(cached);
+
+  const result = await computeBatch();
+  setCache(cacheKey, result);
+  return c.json(result);
 });
 
 // ─── GET /v1/internal/trust/capabilities/:slug/sqs-history ──────────────────
@@ -389,45 +429,49 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
 internalTrustRoute.get("/capabilities/:slug/sqs-history", async (c) => {
   const slug = c.req.param("slug");
   const cacheKey = `trust:sqs-history:${slug}`;
-  const cached = getCached(cacheKey);
-  if (cached) return c.json(cached);
 
-  const db = getDb();
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  const computeHistory = async () => {
+    const db = getDb();
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-  const rows = await db
-    .select({
-      date: sqsDailySnapshot.snapshotDate,
-      sqs: sqsDailySnapshot.matrixSqs,
-      qpGrade: sqsDailySnapshot.qpGrade,
-      rpGrade: sqsDailySnapshot.rpGrade,
-      trend: sqsDailySnapshot.trend,
-      healthState: sqsDailySnapshot.healthState,
-      runsAnalyzed: sqsDailySnapshot.runsAnalyzed,
-    })
-    .from(sqsDailySnapshot)
-    .where(
-      and(
-        eq(sqsDailySnapshot.capabilitySlug, slug),
-        gte(sqsDailySnapshot.snapshotDate, ninetyDaysAgo.toISOString().slice(0, 10)),
-      ),
-    )
-    .orderBy(desc(sqsDailySnapshot.snapshotDate));
+    const rows = await db
+      .select({
+        date: sqsDailySnapshot.snapshotDate,
+        sqs: sqsDailySnapshot.matrixSqs,
+        qpGrade: sqsDailySnapshot.qpGrade,
+        rpGrade: sqsDailySnapshot.rpGrade,
+        trend: sqsDailySnapshot.trend,
+        healthState: sqsDailySnapshot.healthState,
+        runsAnalyzed: sqsDailySnapshot.runsAnalyzed,
+      })
+      .from(sqsDailySnapshot)
+      .where(
+        and(
+          eq(sqsDailySnapshot.capabilitySlug, slug),
+          gte(sqsDailySnapshot.snapshotDate, ninetyDaysAgo.toISOString().slice(0, 10)),
+        ),
+      )
+      .orderBy(desc(sqsDailySnapshot.snapshotDate));
 
-  const result = {
-    capability_slug: slug,
-    history: rows.map((r) => ({
-      date: r.date,
-      sqs: parseFloat(r.sqs),
-      qp_grade: r.qpGrade,
-      rp_grade: r.rpGrade,
-      trend: r.trend,
-      health_state: r.healthState,
-      runs_analyzed: r.runsAnalyzed,
-    })),
+    return {
+      capability_slug: slug,
+      history: rows.map((r) => ({
+        date: r.date,
+        sqs: parseFloat(r.sqs),
+        qp_grade: r.qpGrade,
+        rp_grade: r.rpGrade,
+        trend: r.trend,
+        health_state: r.healthState,
+        runs_analyzed: r.runsAnalyzed,
+      })),
+    };
   };
 
+  const cached = getCachedWithRevalidate(cacheKey, computeHistory);
+  if (cached) return c.json(cached);
+
+  const result = await computeHistory();
   setCache(cacheKey, result);
   return c.json(result);
 });
@@ -437,9 +481,8 @@ internalTrustRoute.get("/capabilities/:slug/sqs-history", async (c) => {
 internalTrustRoute.get("/capabilities/:slug", async (c) => {
   const slug = c.req.param("slug");
   const cacheKey = `trust:cap:v2:${slug}`;
-  const cached = getCached(cacheKey);
-  if (cached) return c.json(cached);
 
+  const computeCapDetail = async () => {
   const db = getDb();
 
   // Parallel data fetch
@@ -480,9 +523,7 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
     `),
   ]);
 
-  if (!capRow) {
-    return c.json(apiError("not_found", `Capability '${slug}' not found.`), 404);
-  }
+  if (!capRow) return null; // Signal 404
 
   const scheduleTier = suiteRows[0]?.scheduleTier ?? "B";
   const scheduleFrequencyHours = TIER_HOURS[scheduleTier] ?? 24;
@@ -595,6 +636,16 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
 
     methodology_url: "https://strale.dev/trust/methodology",
   };
+  return result;
+  };
+
+  const cached = getCachedWithRevalidate(cacheKey, computeCapDetail);
+  if (cached) return c.json(cached);
+
+  const result = await computeCapDetail();
+  if (!result) {
+    return c.json(apiError("not_found", `Capability '${slug}' not found.`), 404);
+  }
 
   setCache(cacheKey, result);
   return c.json(result);
@@ -614,11 +665,10 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
     return c.json(apiError("invalid_request", "slugs query parameter is required"), 400);
   }
 
-  const cacheKey = `trust:sol-batch:v1:${requestedSlugs.sort().join(",")}`;
-  const batchCached = getCached(cacheKey);
-  if (batchCached) return c.json(batchCached);
-
   const limitedSlugs = requestedSlugs.slice(0, 50);
+  const cacheKey = `trust:sol-batch:v1:${limitedSlugs.sort().join(",")}`;
+
+  const computeSolBatch = async () => {
   const db = getDb();
 
   // 1. Fetch all requested solutions and their steps in batch
@@ -628,9 +678,7 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
     .where(inArray(solutions.slug, limitedSlugs));
 
   if (solRows.length === 0) {
-    const empty = { solutions: {} };
-    setCache(cacheKey, empty);
-    return c.json(empty);
+    return { solutions: {} };
   }
 
   const solIds = solRows.map((r) => r.id);
@@ -661,9 +709,13 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
   // 2. Collect all unique capability slugs across all solutions
   const uniqueCapSlugs = [...new Set(batchSteps.map((s) => s.capabilitySlug))];
 
-  // 3. Batch-compute dual-profile SQS + freshness data for all unique capabilities
+  // 3. Pre-fetch test results for all unique capabilities, then compute SQS
+  const solPrefetchedTestResults = await getTestResultsForSlugs(uniqueCapSlugs);
+
   const [dualResults, solLastTestRows, solSuiteRows] = await Promise.all([
-    Promise.all(uniqueCapSlugs.map((s) => computeDualProfileSQS(s).catch(() => null))),
+    Promise.all(uniqueCapSlugs.map((s) => dbConcurrency(() =>
+      computeDualProfileSQS(s, solPrefetchedTestResults.get(s)).catch(() => null),
+    ))),
     db.execute(sql`
       SELECT DISTINCT ON (capability_slug)
         capability_slug, executed_at
@@ -775,9 +827,15 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
     };
   }
 
-  const batchResult = { solutions: solutionsResult };
-  setCache(cacheKey, batchResult);
-  return c.json(batchResult);
+    return { solutions: solutionsResult };
+  };
+
+  const cached = getCachedWithRevalidate(cacheKey, computeSolBatch);
+  if (cached) return c.json(cached);
+
+  const result = await computeSolBatch();
+  setCache(cacheKey, result);
+  return c.json(result);
 });
 
 // ─── GET /v1/internal/trust/solutions/:slug ─────────────────────────────────
@@ -785,9 +843,8 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
 internalTrustRoute.get("/solutions/:slug", async (c) => {
   const slug = c.req.param("slug");
   const cacheKey = `trust:sol:v2:${slug}`;
-  const cached = getCached(cacheKey);
-  if (cached) return c.json(cached);
 
+  const computeSolDetail = async () => {
   const db = getDb();
 
   const [solRow] = await db
@@ -796,9 +853,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
     .where(eq(solutions.slug, slug))
     .limit(1);
 
-  if (!solRow) {
-    return c.json(apiError("not_found", `Solution '${slug}' not found.`), 404);
-  }
+  if (!solRow) return null; // Signal 404
 
   // Look up steps
   const steps = await db
@@ -815,16 +870,21 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
     .where(eq(solutionSteps.solutionId, solRow.id))
     .orderBy(asc(solutionSteps.stepOrder));
 
-  if (steps.length === 0) {
-    return c.json(apiError("not_found", `Solution '${slug}' has no steps.`), 404);
-  }
+  if (steps.length === 0) return null; // Signal 404
 
-  // Per-step dual-profile data (with freshness decay)
+  // Pre-fetch test results for all steps in 3 batch queries
+  const stepSlugs = steps.map((s) => s.capabilitySlug);
+  const stepPrefetchedTestResults = await getTestResultsForSlugs(stepSlugs);
+
+  // Per-step dual-profile data (with freshness decay, concurrency-limited)
   const stepData = await Promise.all(
-    steps.map(async (step) => {
-      const [dual, testResultsData, suiteRows] = await Promise.all([
-        computeDualProfileSQS(step.capabilitySlug),
-        getTestResultsForSlug(step.capabilitySlug),
+    steps.map((step) => dbConcurrency(async () => {
+      const testResultsData = stepPrefetchedTestResults.get(step.capabilitySlug) ?? {
+        last_run: null, total_tests: 0, passed: 0, failed: 0,
+        pass_rate: null, avg_response_time_ms: null, by_type: {}, history_30d: [],
+      };
+      const [dual, suiteRows] = await Promise.all([
+        computeDualProfileSQS(step.capabilitySlug, testResultsData),
         db.select({ scheduleTier: testSuites.scheduleTier })
           .from(testSuites)
           .where(and(eq(testSuites.capabilitySlug, step.capabilitySlug), eq(testSuites.active, true)))
@@ -862,7 +922,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
         usable: guidance.usable,
         strategy: guidance.strategy,
       };
-    }),
+    })),
   );
 
   // Solution-level: use weakest step approach
@@ -980,6 +1040,16 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
 
     methodology_url: "https://strale.dev/trust/methodology",
   };
+  return result;
+  };
+
+  const cached = getCachedWithRevalidate(cacheKey, computeSolDetail);
+  if (cached) return c.json(cached);
+
+  const result = await computeSolDetail();
+  if (!result) {
+    return c.json(apiError("not_found", `Solution '${slug}' not found or has no steps.`), 404);
+  }
 
   setCache(cacheKey, result);
   return c.json(result);

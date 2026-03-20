@@ -1251,6 +1251,17 @@ internalTestsRoute.post("/admin/apply-migrations", async (c) => {
     results.push(`0030: FAILED — ${err instanceof Error ? err.message : err}`);
   }
 
+  // Migration 0031: composite index on test_results(test_suite_id, executed_at DESC)
+  try {
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS "test_results_suite_executed_idx"
+      ON "test_results" ("test_suite_id", "executed_at" DESC)
+    `);
+    results.push("0031: test_results_suite_executed_idx created (or already exists)");
+  } catch (err) {
+    results.push(`0031: FAILED — ${err instanceof Error ? err.message : err}`);
+  }
+
   return c.json({ migrations: results });
 });
 

@@ -29,7 +29,7 @@ import { computeReliabilityProfile, type RPResult, type RPContext } from "./reli
 import { computeMatrixSQS, type MatrixSQSResult } from "./sqs-matrix.js";
 import { MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS } from "./sqs-constants.js";
 import { getCapabilityQuality } from "./quality-aggregation.js";
-import { getTestResultsForSlug } from "./trust-helpers.js";
+import { getTestResultsForSlug, type TestResultsData } from "./trust-helpers.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -720,16 +720,20 @@ const dualCache = new Map<string, { data: DualProfileSQSResult; expiresAt: numbe
  * Compute dual-profile SQS for a single capability.
  * Returns QP, RP, and the matrix-combined score.
  */
-export async function computeDualProfileSQS(slug: string): Promise<DualProfileSQSResult> {
+export async function computeDualProfileSQS(
+  slug: string,
+  prefetchedTestResults?: TestResultsData,
+): Promise<DualProfileSQSResult> {
   const cacheKey = `dual:${slug}`;
   const cached = dualCache.get(cacheKey);
   if (cached && Date.now() <= cached.expiresAt) return cached.data;
 
   // Fetch RP context data in parallel with QP and legacy
+  // If test results are pre-fetched (batch callers), skip the per-slug query
   const [qp, legacy, testResultsData, qualityMetrics] = await Promise.all([
     computeQualityProfile(slug),
     computeCapabilitySQS(slug),
-    getTestResultsForSlug(slug),
+    prefetchedTestResults ? Promise.resolve(prefetchedTestResults) : getTestResultsForSlug(slug),
     getCapabilityQuality(slug),
   ]);
 

@@ -1,7 +1,183 @@
-import { eq, and, desc, asc, sql } from "drizzle-orm";
+import { eq, and, desc, asc, sql, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { testSuites, testResults } from "../db/schema.js";
 import { sanitizeFailureReason } from "./sanitize.js";
+
+// ─── Batch test results (replaces N+1 per-suite loop) ────────────────────────
+
+export type TestResultsData = Awaited<ReturnType<typeof getTestResultsForSlug>>;
+
+/**
+ * Batch-fetch test results for multiple capability slugs in 2 queries
+ * instead of S queries per slug (where S = number of test suites).
+ *
+ * Returns the exact same data shape as getTestResultsForSlug per slug.
+ */
+export async function getTestResultsForSlugs(
+  slugs: string[],
+): Promise<Map<string, TestResultsData>> {
+  if (slugs.length === 0) return new Map();
+  const db = getDb();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  // Query 1: Get all active suites for all slugs
+  const allSuites = await db
+    .select({
+      id: testSuites.id,
+      capabilitySlug: testSuites.capabilitySlug,
+      testName: testSuites.testName,
+      testType: testSuites.testType,
+    })
+    .from(testSuites)
+    .where(and(
+      inArray(testSuites.capabilitySlug, slugs),
+      eq(testSuites.active, true),
+    ));
+
+  if (allSuites.length === 0) {
+    const emptyMap = new Map<string, TestResultsData>();
+    for (const slug of slugs) {
+      emptyMap.set(slug, {
+        last_run: null, total_tests: 0, passed: 0, failed: 0,
+        pass_rate: null, avg_response_time_ms: null, by_type: {}, history_30d: [],
+      });
+    }
+    return emptyMap;
+  }
+
+  // Query 2: Get latest result per suite in a single DISTINCT ON query
+  const suiteIds = allSuites.map((s) => s.id);
+  const latestRows = await db.execute(sql`
+    SELECT DISTINCT ON (tr.test_suite_id)
+      tr.test_suite_id,
+      tr.capability_slug,
+      tr.passed,
+      tr.failure_reason,
+      tr.response_time_ms,
+      tr.executed_at,
+      tr.failure_classification
+    FROM test_results tr
+    WHERE tr.test_suite_id = ANY(${suiteIds})
+    ORDER BY tr.test_suite_id, tr.executed_at DESC
+  `);
+  const latestBysuiteId = new Map<string, any>();
+  for (const row of (Array.isArray(latestRows) ? latestRows : (latestRows as any)?.rows ?? []) as any[]) {
+    latestBysuiteId.set(row.test_suite_id, row);
+  }
+
+  // Query 3: Batch 30-day history for all slugs
+  const historyRows = await db.execute(sql`
+    WITH latest_per_suite_per_day AS (
+      SELECT DISTINCT ON (tr.test_suite_id, DATE(tr.executed_at AT TIME ZONE 'UTC'))
+        tr.capability_slug,
+        DATE(tr.executed_at AT TIME ZONE 'UTC') AS date,
+        tr.passed,
+        tr.response_time_ms
+      FROM test_results tr
+      JOIN test_suites ts ON ts.id = tr.test_suite_id
+      WHERE tr.capability_slug = ANY(${slugs})
+        AND ts.active = true
+        AND tr.executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
+      ORDER BY tr.test_suite_id, DATE(tr.executed_at AT TIME ZONE 'UTC'), tr.executed_at DESC
+    )
+    SELECT
+      capability_slug,
+      date,
+      ROUND(SUM(CASE WHEN passed THEN 1 ELSE 0 END)::numeric / COUNT(*) * 100, 1)::text AS pass_rate,
+      ROUND(AVG(response_time_ms))::text AS avg_response_time_ms
+    FROM latest_per_suite_per_day
+    GROUP BY capability_slug, date
+    ORDER BY capability_slug, date
+  `);
+
+  // Group history by slug
+  const historyBySlug = new Map<string, Array<{ date: string; pass_rate: number; avg_response_time_ms: number }>>();
+  for (const row of (Array.isArray(historyRows) ? historyRows : (historyRows as any)?.rows ?? []) as any[]) {
+    const slug = row.capability_slug;
+    if (!historyBySlug.has(slug)) historyBySlug.set(slug, []);
+    historyBySlug.get(slug)!.push({
+      date: row.date,
+      pass_rate: parseFloat(row.pass_rate),
+      avg_response_time_ms: parseInt(row.avg_response_time_ms, 10),
+    });
+  }
+
+  // Assemble per-slug results (same shape as getTestResultsForSlug)
+  const resultMap = new Map<string, TestResultsData>();
+
+  // Group suites by slug
+  const suitesBySlug = new Map<string, typeof allSuites>();
+  for (const suite of allSuites) {
+    if (!suitesBySlug.has(suite.capabilitySlug)) suitesBySlug.set(suite.capabilitySlug, []);
+    suitesBySlug.get(suite.capabilitySlug)!.push(suite);
+  }
+
+  for (const slug of slugs) {
+    const suites = suitesBySlug.get(slug) ?? [];
+    let passed = 0;
+    let failed = 0;
+    let totalResponseTime = 0;
+    let withResults = 0;
+    let lastRun: string | null = null;
+    const byType: Record<string, { total: number; passed: number; failed: number }> = {};
+    const failures: Array<{
+      test_name: string;
+      test_type: string;
+      failure_reason: string;
+      failure_category: "external_service" | "internal" | "unknown";
+    }> = [];
+
+    for (const suite of suites) {
+      const testType = suite.testType ?? "unknown";
+      if (!byType[testType]) byType[testType] = { total: 0, passed: 0, failed: 0 };
+      byType[testType].total++;
+
+      const latest = latestBysuiteId.get(suite.id);
+      if (latest) {
+        withResults++;
+        if (latest.passed) {
+          passed++;
+          byType[testType].passed++;
+        } else {
+          failed++;
+          byType[testType].failed++;
+          if (latest.failure_reason) {
+            failures.push({
+              test_name: suite.testName,
+              test_type: testType,
+              failure_reason: sanitizeFailureReason(latest.failure_reason),
+              failure_category: categorizeFailureReason(latest.failure_reason),
+            });
+          }
+        }
+        totalResponseTime += latest.response_time_ms ?? 0;
+        const ts = latest.executed_at instanceof Date
+          ? latest.executed_at.toISOString()
+          : String(latest.executed_at);
+        if (!lastRun || ts > lastRun) lastRun = ts;
+      }
+    }
+
+    resultMap.set(slug, {
+      last_run: lastRun,
+      total_tests: suites.length,
+      passed,
+      failed,
+      pass_rate: withResults > 0
+        ? parseFloat(((passed / withResults) * 100).toFixed(1))
+        : null,
+      avg_response_time_ms: withResults > 0
+        ? Math.round(totalResponseTime / withResults)
+        : null,
+      by_type: byType,
+      ...(failures.length > 0 ? { failures } : {}),
+      history_30d: historyBySlug.get(slug) ?? [],
+    });
+  }
+
+  return resultMap;
+}
 
 // ─── Solution complete-run helpers ───────────────────────────────────────────
 
