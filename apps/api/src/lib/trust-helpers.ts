@@ -48,6 +48,7 @@ export async function getTestResultsForSlugs(
 
   // Query 2: Get latest result per suite in a single DISTINCT ON query
   const suiteIds = allSuites.map((s) => s.id);
+  const suiteIdList = sql.join(suiteIds.map((id) => sql`${id}::uuid`), sql`, `);
   const latestRows = await db.execute(sql`
     SELECT DISTINCT ON (tr.test_suite_id)
       tr.test_suite_id,
@@ -58,7 +59,7 @@ export async function getTestResultsForSlugs(
       tr.executed_at,
       tr.failure_classification
     FROM test_results tr
-    WHERE tr.test_suite_id = ANY(${suiteIds})
+    WHERE tr.test_suite_id IN (${suiteIdList})
     ORDER BY tr.test_suite_id, tr.executed_at DESC
   `);
   const latestBysuiteId = new Map<string, any>();
@@ -76,7 +77,7 @@ export async function getTestResultsForSlugs(
         tr.response_time_ms
       FROM test_results tr
       JOIN test_suites ts ON ts.id = tr.test_suite_id
-      WHERE tr.capability_slug = ANY(${slugs})
+      WHERE tr.capability_slug IN (${sql.join(slugs.map((s) => sql`${s}`), sql`, `)})
         AND ts.active = true
         AND tr.executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
       ORDER BY tr.test_suite_id, DATE(tr.executed_at AT TIME ZONE 'UTC'), tr.executed_at DESC

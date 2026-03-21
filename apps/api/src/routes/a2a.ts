@@ -11,12 +11,11 @@
 
 import { Hono } from "hono";
 import { eq, and } from "drizzle-orm";
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, transactions, users } from "../db/schema.js";
-import { authMiddleware } from "../lib/middleware.js";
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
-import { timingSafeEqual } from "node:crypto";
+import { suggest } from "../lib/suggest.js";
 import type { AppEnv } from "../types.js";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -142,7 +141,7 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
     name: "Strale",
     description:
       "The trust layer for AI agents. Quality-scored capabilities for company verification, compliance screening, data validation, financial data, and web extraction — covering 27 countries. Every capability independently tested. One API call: strale.do(task). Audit trails on every transaction.",
-    url: `${BASE_URL}`,
+    url: `${BASE_URL}/a2a`,
     version: "1.0.0",
     documentationUrl: "https://strale.dev/docs",
     provider: {
@@ -259,7 +258,7 @@ async function handleMessageSend(
   id: string | number | null,
 ) {
   const message = params.message;
-  const skillId = params.skillId;
+  let skillId: string | undefined = params.skillId;
 
   if (!message || !message.parts || !Array.isArray(message.parts)) {
     return c.json({
@@ -272,52 +271,63 @@ async function handleMessageSend(
     });
   }
 
-  // Extract capability slug from skillId
-  const capabilitySlug = skillId;
-  if (!capabilitySlug) {
-    return c.json({
-      jsonrpc: "2.0",
-      error: {
-        code: -32602,
-        message:
-          "Invalid params: skillId is required to specify which capability to execute",
-      },
-      id,
-    });
-  }
-
-  // Extract inputs from message parts
+  // Extract text and structured data from message parts
+  // Support both A2A v0.3 `kind` field and older `type` field
   let task: string | undefined;
   let inputs: Record<string, unknown> | undefined;
 
   for (const part of message.parts) {
-    if (part.type === "text" && part.text) {
+    const partKind = part.kind ?? part.type;
+    if (partKind === "text" && part.text) {
       task = part.text;
-    } else if (part.type === "data" && part.data) {
+    } else if (partKind === "data" && part.data) {
       inputs = part.data as Record<string, unknown>;
     }
   }
 
-  // Require auth for capability execution
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
+  // If no skillId provided, use the suggest engine to match natural language
+  if (!skillId && task) {
+    try {
+      const suggestion = await suggest({ query: task, limit: 1 });
+      if (suggestion.recommendation) {
+        skillId = suggestion.recommendation.slug;
+      }
+    } catch {
+      // Suggest engine failure is non-fatal — fall through to error
+    }
+  }
+
+  if (!skillId) {
     return c.json({
       jsonrpc: "2.0",
-      error: {
-        code: -32000,
-        message:
-          "Authentication required. Pass Authorization: Bearer sk_live_... header.",
-        data: { state: "auth-required" },
+      result: {
+        id: `task-${Date.now()}`,
+        status: {
+          state: "failed",
+          message: {
+            role: "agent",
+            parts: [{
+              kind: "text",
+              text: "Could not match your request to a Strale capability. Provide a skillId parameter, or try a more specific task description. Free capabilities: email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate.",
+            }],
+            kind: "message",
+          },
+        },
       },
       id,
     });
   }
 
-  const apiKey = authHeader.slice(7);
+  // Auth: pass through if present, or omit for free-tier
+  const authHeader = c.req.header("Authorization");
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (authHeader?.startsWith("Bearer ")) {
+    headers.Authorization = authHeader;
+  }
 
-  // Call Strale API (thin proxy, reuses all middleware)
+  // Build the /v1/do request body
   const doBody: Record<string, unknown> = {
-    capability_slug: capabilitySlug,
+    capability_slug: skillId,
     max_price_cents: 200,
   };
   if (inputs) {
@@ -333,32 +343,20 @@ async function handleMessageSend(
   try {
     const resp = await fetch(`${BASE_URL}/v1/do`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers,
       body: JSON.stringify(doBody),
     });
 
     const data = await resp.json().catch(() => ({})) as Record<string, unknown>;
 
     if (resp.status === 202) {
-      // Async execution
-      const transactionId = data.transaction_id as string;
       return c.json({
         jsonrpc: "2.0",
         result: {
-          kind: "task",
-          id: transactionId,
-          contextId: transactionId,
-          status: {
-            state: "running",
-            timestamp: new Date().toISOString(),
-          },
-          metadata: {
-            capability_used: data.capability_used,
-            price_cents: data.price_cents,
-          },
+          id: data.transaction_id as string,
+          contextId: data.transaction_id as string,
+          status: { state: "working", timestamp: new Date().toISOString() },
+          metadata: { capability_used: data.capability_used, price_cents: data.price_cents },
         },
         id,
       });
@@ -370,55 +368,73 @@ async function handleMessageSend(
 
       // Map Strale errors to A2A task states
       let state = "failed";
-      if (errorCode === "unauthorized") state = "auth-required";
-      if (errorCode === "insufficient_balance") state = "failed";
+      if (errorCode === "unauthorized") state = "failed";
       if (errorCode === "no_matching_capability") state = "rejected";
+
+      // Helpful message for unauthenticated users hitting paid capabilities
+      let helpText = String(errorMsg);
+      if (errorCode === "unauthorized" && !authHeader) {
+        helpText += " Free capabilities (no auth): email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate. For paid capabilities, get an API key with €2 free credits at https://strale.dev";
+      }
 
       return c.json({
         jsonrpc: "2.0",
-        error: {
-          code: -32000,
-          message: String(errorMsg),
-          data: { state, error_code: errorCode, details: data.details },
+        result: {
+          id: `task-${Date.now()}`,
+          status: {
+            state,
+            message: {
+              role: "agent",
+              parts: [{ kind: "text", text: helpText }],
+              kind: "message",
+            },
+          },
         },
         id,
       });
     }
 
-    // Success
+    // Success — include SQS metadata
+    const quality = data.quality as Record<string, unknown> | undefined;
     const transactionId = data.transaction_id as string;
+
     return c.json({
       jsonrpc: "2.0",
       result: {
-        kind: "task",
         id: transactionId,
         contextId: transactionId,
         status: {
           state: "completed",
           message: {
             role: "agent",
-            parts: [
-              {
-                type: "data",
+            parts: [{
+              kind: "data",
+              data: data.output,
+              metadata: {
                 mimeType: "application/json",
-                data: data.output,
+                sqs: quality?.sqs ?? null,
+                sqs_label: quality?.label ?? null,
+                capability_used: data.capability_used,
+                latency_ms: data.latency_ms,
+                audit_trail_id: transactionId,
               },
-            ],
+            }],
+            kind: "message",
           },
           timestamp: new Date().toISOString(),
         },
-        artifacts: [
-          {
-            name: capabilitySlug,
-            parts: [
-              {
-                type: "data",
-                mimeType: "application/json",
-                data: data.output,
-              },
-            ],
-          },
-        ],
+        artifacts: [{
+          name: skillId,
+          parts: [{
+            kind: "data",
+            data: data.output,
+            metadata: {
+              mimeType: "application/json",
+              sqs: quality?.sqs ?? null,
+              sqs_label: quality?.label ?? null,
+            },
+          }],
+        }],
         metadata: {
           capability_used: data.capability_used,
           price_cents: data.price_cents,
@@ -433,10 +449,7 @@ async function handleMessageSend(
     console.error("[a2a] message/send error:", err instanceof Error ? err.message : err);
     return c.json({
       jsonrpc: "2.0",
-      error: {
-        code: -32603,
-        message: "Internal error processing request.",
-      },
+      error: { code: -32603, message: "Internal error processing request." },
       id,
     });
   }
