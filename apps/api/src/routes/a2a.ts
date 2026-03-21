@@ -154,7 +154,7 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
       stateTransitionHistory: false,
     },
     authentication: {
-      schemes: ["apiKey"],
+      schemes: ["apiKey", "x402"],
     },
     defaultInputModes: ["application/json", "text/plain"],
     defaultOutputModes: ["application/json"],

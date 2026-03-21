@@ -34,6 +34,12 @@ import {
 import { withRetry } from "../lib/retry.js";
 import { buildFailureProvenance, getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import { computeIntegrityHash, getPreviousHash } from "../lib/integrity-hash.js";
+import {
+  isX402Configured,
+  build402Response,
+  verifyX402Payment,
+  extractPaymentHeader,
+} from "../lib/x402-gateway.js";
 import type { AppEnv } from "../types.js";
 
 // Dual-profile quality block for /v1/do responses
@@ -246,24 +252,60 @@ doRoute.post(
   }
 
   // ── 3. Early auth gate for unauthenticated requests ───────────────────
-  // Check BEFORE matching so non-free capabilities return a clear 401
-  // instead of the generic "no_matching_capability" error.
+  // Check BEFORE matching so non-free capabilities return a clear response:
+  //   - x402 configured + payment header → verify and continue
+  //   - x402 configured + no payment → return 402 with price
+  //   - x402 not configured → return 401 with signup prompt
   if (!user && capabilitySlug) {
-    // Direct slug request without auth: check if the capability is free-tier
     const [lookedUp] = await db
-      .select({ isFreeTier: capabilities.isFreeTier, isActive: capabilities.isActive })
+      .select({
+        isFreeTier: capabilities.isFreeTier,
+        isActive: capabilities.isActive,
+        priceCents: capabilities.priceCents,
+        name: capabilities.name,
+        matrixSqs: capabilities.matrixSqs,
+      })
       .from(capabilities)
       .where(eq(capabilities.slug, capabilitySlug))
       .limit(1);
 
     if (lookedUp && lookedUp.isActive && !lookedUp.isFreeTier) {
-      const freeSlugs = await getFreeTierSlugs(db);
-      return c.json({
-        error_code: "unauthorized",
-        message: "This capability requires an API key. Sign up at strale.dev/signup for full access with €2 free credits.",
-        free_capabilities: freeSlugs,
-        hint: `These ${freeSlugs.length} capabilities are free with no signup — try them without an API key.`,
-      }, 401);
+      // Check for x402 payment header
+      const paymentHeader = extractPaymentHeader(c.req.raw.headers);
+
+      if (paymentHeader && isX402Configured()) {
+        // Verify x402 payment → if valid, proceed with execution
+        const verification = await verifyX402Payment(paymentHeader, lookedUp.priceCents);
+        if (!verification.valid) {
+          return c.json({
+            error_code: "payment_failed",
+            message: verification.error ?? "x402 payment verification failed",
+          }, 402);
+        }
+        // Payment verified — store settlement ID in request context for audit trail
+        c.set("x402_settlement" as any, verification.settlementId);
+        c.set("x402_paid" as any, true);
+        // Fall through to normal execution — the capability will execute
+        // and the transaction will be logged with payment_method: "x402"
+      } else if (isX402Configured()) {
+        // No payment header, x402 configured → return 402 with price
+        const resp = build402Response({
+          slug: capabilitySlug,
+          name: lookedUp.name,
+          priceCents: lookedUp.priceCents,
+          matrixSqs: lookedUp.matrixSqs,
+        });
+        return c.json(resp.body, 402);
+      } else {
+        // x402 not configured → return 401 with signup prompt
+        const freeSlugs = await getFreeTierSlugs(db);
+        return c.json({
+          error_code: "unauthorized",
+          message: "This capability requires an API key. Sign up at strale.dev/signup for full access with €2 free credits.",
+          free_capabilities: freeSlugs,
+          hint: `These ${freeSlugs.length} capabilities are free with no signup — try them without an API key.`,
+        }, 401);
+      }
     }
   }
 
@@ -508,6 +550,11 @@ doRoute.post(
         400,
       );
     }
+  }
+
+  // x402 paid: on-chain settlement already verified — execute like free-tier (no wallet debit)
+  if (!user && (c.get("x402_paid" as any))) {
+    return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, sqs, freshness, dual);
   }
 
   // Free-tier without auth: persisted execution (no wallet, no user — but transaction record stored for audit)
