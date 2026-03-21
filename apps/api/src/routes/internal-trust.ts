@@ -341,12 +341,13 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
       ORDER BY capability_slug, executed_at DESC
     `),
     // Batch fetch most frequent schedule tier per slug
+    // Use LEAST frequent tier (DESC) for freshness — prevents false "stale" on multi-tier capabilities
     db.execute(sql`
       SELECT DISTINCT ON (capability_slug)
         capability_slug, schedule_tier
       FROM test_suites
       WHERE capability_slug IN (${sql.join(limitedSlugs.map((s: string) => sql`${s}`), sql`, `)}) AND active = true
-      ORDER BY capability_slug, schedule_tier ASC
+      ORDER BY capability_slug, schedule_tier DESC
     `),
   ]);
 
@@ -723,12 +724,15 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
       WHERE capability_slug IN (${sql.join(uniqueCapSlugs.map((s: string) => sql`${s}`), sql`, `)})
       ORDER BY capability_slug, executed_at DESC
     `),
+    // Use the LEAST frequent tier (DESC = C before B before A) for freshness checking.
+    // This prevents false "stale" labels when a capability has tier A suites that run
+    // frequently but the capability hasn't been tested in a few hours.
     db.execute(sql`
       SELECT DISTINCT ON (capability_slug)
         capability_slug, schedule_tier
       FROM test_suites
       WHERE capability_slug IN (${sql.join(uniqueCapSlugs.map((s: string) => sql`${s}`), sql`, `)}) AND active = true
-      ORDER BY capability_slug, schedule_tier ASC
+      ORDER BY capability_slug, schedule_tier DESC
     `),
   ]);
 
