@@ -337,7 +337,7 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
       SELECT DISTINCT ON (capability_slug)
         capability_slug, executed_at
       FROM test_results
-      WHERE capability_slug = ANY(${limitedSlugs})
+      WHERE capability_slug IN (${sql.join(limitedSlugs.map((s: string) => sql`${s}`), sql`, `)})
       ORDER BY capability_slug, executed_at DESC
     `),
     // Batch fetch most frequent schedule tier per slug
@@ -345,7 +345,7 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
       SELECT DISTINCT ON (capability_slug)
         capability_slug, schedule_tier
       FROM test_suites
-      WHERE capability_slug = ANY(${limitedSlugs}) AND active = true
+      WHERE capability_slug IN (${sql.join(limitedSlugs.map((s: string) => sql`${s}`), sql`, `)}) AND active = true
       ORDER BY capability_slug, schedule_tier ASC
     `),
   ]);
@@ -720,14 +720,14 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
       SELECT DISTINCT ON (capability_slug)
         capability_slug, executed_at
       FROM test_results
-      WHERE capability_slug = ANY(${uniqueCapSlugs})
+      WHERE capability_slug IN (${sql.join(uniqueCapSlugs.map((s: string) => sql`${s}`), sql`, `)})
       ORDER BY capability_slug, executed_at DESC
     `),
     db.execute(sql`
       SELECT DISTINCT ON (capability_slug)
         capability_slug, schedule_tier
       FROM test_suites
-      WHERE capability_slug = ANY(${uniqueCapSlugs}) AND active = true
+      WHERE capability_slug IN (${sql.join(uniqueCapSlugs.map((s: string) => sql`${s}`), sql`, `)}) AND active = true
       ORDER BY capability_slug, schedule_tier ASC
     `),
   ]);
