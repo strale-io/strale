@@ -174,3 +174,8 @@ app.route("/a2a", a2aRoute);
 // x402 payment gateway — paid API endpoints for the 402 ecosystem (402index.io)
 app.route("/x402", x402Route);
 
+// 402 Index domain verification token
+app.get("/.well-known/402index-verify.txt", (c) => {
+  return c.text("17d2659be9455122b7f464fa3c960a165f7d9dc6d828c90bdc96f33129b626d8");
+});
+
