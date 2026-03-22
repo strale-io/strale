@@ -31,8 +31,32 @@ import { MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS } from "./sqs-constants.js";
 import { getCapabilityQuality } from "./quality-aggregation.js";
 import { getTestResultsForSlug, type TestResultsData } from "./trust-helpers.js";
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SQS SCORING — ARCHITECTURE NOTE
+//
+// This file contains TWO scoring models:
+//
+// 1. LEGACY: Single-composite 5-factor weighted model
+//    - Entry: computeCapabilitySQS(), computeSolutionSQS()
+//    - Type: SQSResult
+//    - Status: OBSOLETE for external use. Still called internally by
+//      computeDualProfileSQS() to produce `legacy_score` for regression
+//      comparison. Do NOT call directly from new code.
+//
+// 2. CURRENT: Dual-profile model (Quality Profile + Reliability Profile + Matrix)
+//    - Entry: computeDualProfileSQS()
+//    - Type: DualProfileSQSResult
+//    - Status: CANONICAL. Used exclusively by all trust API endpoints.
+//    - Depends on: quality-profile.ts, reliability-profile.ts, sqs-matrix.ts
+//
+// See Notion: "SQS Codebase Map — Legacy vs Current Architecture"
+// See Notion: "SQS Constitution" for scoring philosophy
+// ═══════════════════════════════════════════════════════════════════════════
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+// LEGACY result type — kept for computeCapabilitySQS() which feeds legacy_score.
+// New code should use DualProfileSQSResult.
 export interface SQSResult {
   score: number;          // integer 0-100
   label: string;          // "Excellent" | "Good" | "Fair" | "Poor" | "Degraded" | "Pending"
@@ -61,6 +85,9 @@ interface FactorResult {
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
+// LEGACY weights — used only by the old single-composite model.
+// Current QP weights are in quality-profile.ts (correctness 50%, schema 31%, etc.)
+// Current RP weights are in reliability-profile.ts (type-specific).
 const WEIGHTS = {
   correctness: 0.40,
   schema: 0.25,
@@ -128,7 +155,9 @@ function setCachedSQS(key: string, data: SQSResult): void {
   sqsCache.set(key, { data, expiresAt: Date.now() + SQS_CACHE_TTL_MS });
 }
 
-// ─── Core computation ───────────────────────────────────────────────────────
+// ─── LEGACY: Single-composite SQS ────────────────────────────────────────
+// Called internally by computeDualProfileSQS() for legacy_score comparison.
+// Do NOT call directly from new code — use computeDualProfileSQS() instead.
 
 /**
  * Compute SQS for a single capability.
@@ -253,6 +282,10 @@ export async function computeCapabilitySQS(slug: string): Promise<SQSResult> {
   return result;
 }
 
+// ─── LEGACY: Solution SQS (single-composite) ────────────────────────────
+// Replaced by dual-profile solution scoring in internal-trust.ts.
+// Kept for backward compatibility. Do NOT use in new features.
+
 /**
  * Compute SQS for a solution — floor-aware weighted average of step scores.
  * Score cannot exceed lowest step SQS + 20.
@@ -361,6 +394,7 @@ interface FactorAccum {
   total: number;
 }
 
+// LEGACY helper — accumulates the old 5-factor model. Used by computeCapabilitySQS().
 function computeFromRows(
   testRows: TestRow[],
   runsAnalyzed: number,
@@ -700,8 +734,12 @@ function makeBuildingTrackRecordResult(runsAnalyzed = 0): SQSResult {
 
 // D-3: computeLegacySQS alias removed — no callers found. Use computeCapabilitySQS directly.
 
-// ─── Dual-profile SQS ──────────────────────────────────────────────────────
+// ─── CURRENT: Dual-Profile SQS (CANONICAL) ──────────────────────────────
+// THE production scoring entry point. All trust API endpoints use this.
+// Computes QP (quality-profile.ts) + RP (reliability-profile.ts),
+// combines via matrix (sqs-matrix.ts), and includes legacy_score for comparison.
 
+// CURRENT — the canonical result type for all SQS computations.
 export interface DualProfileSQSResult {
   /** Matrix SQS score (0-100, the new canonical score) */
   score: number;
@@ -717,7 +755,7 @@ export interface DualProfileSQSResult {
 const dualCache = new Map<string, { data: DualProfileSQSResult; expiresAt: number }>();
 
 /**
- * Compute dual-profile SQS for a single capability.
+ * Compute dual-profile SQS for a single capability. (CURRENT — canonical entry point)
  * Returns QP, RP, and the matrix-combined score.
  */
 export async function computeDualProfileSQS(

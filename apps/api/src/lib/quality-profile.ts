@@ -21,6 +21,9 @@ import { getDb } from "../db/index.js";
 import { capabilityHealth, testSuites } from "../db/schema.js";
 import { MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS } from "./sqs-constants.js";
 
+// CURRENT — Quality Profile (QP) computation. Part of the dual-profile model.
+// QP measures code/methodology quality. Upstream failures EXCLUDED.
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface QPResult {

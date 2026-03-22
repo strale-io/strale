@@ -26,6 +26,9 @@ import { replyWebhookRoute } from "./routes/reply-webhook.js";
 import { auditRoute } from "./routes/audit.js";
 import { internalOnboardingRoute } from "./routes/internal-onboarding.js";
 import { x402Route } from "./routes/x402-gateway.js";
+import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
+import { aiCatalogRoute } from "./routes/ai-catalog.js";
+import { llmsTxtRoute } from "./routes/llms-txt.js";
 
 // Capability executors + DataProvider chains are registered by
 // autoRegisterCapabilities() in index.ts before the server starts.
@@ -107,6 +110,8 @@ app.use("/v1/internal/*", publicCors);
 app.use("/v1/internal/*", rateLimitByIp(120, 60_000));  // S-7: rate limit public internal endpoints
 app.use("/v1/audit/*", publicCors);
 app.use("/.well-known/*", publicCors);
+app.use("/llms.txt", publicCors);
+app.use("/llms-full.txt", publicCors);
 
 // Authenticated / mutating endpoints — restricted CORS
 app.use("/v1/*", restrictedCors);
@@ -170,6 +175,11 @@ app.route("/.well-known/agent-card.json", agentCardRoute);
 app.route("/.well-known/agent.json", agentCardRoute); // alias
 app.route("/agent.json", agentCardRoute); // convenience alias
 app.route("/a2a", a2aRoute);
+
+// Agent discovery — MCP Server Card, AI Catalog, LLM-friendly text
+app.route("/.well-known/mcp.json", mcpServerCardRoute);
+app.route("/.well-known/ai-catalog.json", aiCatalogRoute);
+app.route("/", llmsTxtRoute);
 
 // x402 payment gateway — paid API endpoints for the 402 ecosystem (402index.io)
 app.route("/x402", x402Route);

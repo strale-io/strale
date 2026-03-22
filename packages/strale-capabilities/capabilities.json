@@ -1,0 +1,5416 @@
+{
+  "generated_at": "2026-03-22T08:59:33.351Z",
+  "total_count": 251,
+  "categories": [
+    "agent-tooling",
+    "competitive-intelligence",
+    "compliance",
+    "content-writing",
+    "data-extraction",
+    "data-processing",
+    "developer-tools",
+    "document-extraction",
+    "file-conversion",
+    "financial",
+    "monitoring",
+    "security",
+    "text-processing",
+    "trade",
+    "utility",
+    "validation",
+    "web-intelligence",
+    "web-scraping"
+  ],
+  "capabilities": [
+    {
+      "slug": "unit-convert",
+      "name": "Unit Convert",
+      "description": "Convert between units: length, weight, volume, temperature, area, speed, data storage. Algorithmic — instant.",
+      "category": "data-processing",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "value",
+          "from_unit",
+          "to_unit"
+        ],
+        "properties": {
+          "value": {
+            "type": "number",
+            "description": "Value to convert"
+          },
+          "to_unit": {
+            "type": "string",
+            "description": "Target unit (e.g. mi, kg, °F)"
+          },
+          "from_unit": {
+            "type": "string",
+            "description": "Source unit (e.g. km, lb, °C)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "competitor-compare",
+      "name": "Competitor Compare",
+      "description": "Compare two company websites. Analyzes positioning, pricing model, features, target audience, trust signals, content strategy. Returns structured comparison + strategic analysis.",
+      "category": "competitive-intelligence",
+      "price_cents": 100,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain1",
+          "domain2"
+        ],
+        "properties": {
+          "domain1": {
+            "type": "string",
+            "description": "First company domain"
+          },
+          "domain2": {
+            "type": "string",
+            "description": "Second company domain"
+          }
+        }
+      }
+    },
+    {
+      "slug": "sql-optimize",
+      "name": "SQL Optimize",
+      "description": "Analyze and optimize a SQL query for performance. Returns rewritten query, index recommendations, and explanation of improvements.",
+      "category": "developer-tools",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "sql"
+        ],
+        "properties": {
+          "sql": {
+            "type": "string"
+          },
+          "dialect": {
+            "type": "string"
+          },
+          "table_schema": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "pii-redact",
+      "name": "PII Redaction",
+      "description": "Detect and redact personally identifiable information (PII) from text. Identifies names, emails, phone numbers, national ID numbers (Swedish personnummer, Finnish henkilötunnus, etc.), addresses, and more.",
+      "category": "data-processing",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to redact PII from"
+          }
+        }
+      }
+    },
+    {
+      "slug": "name-parse",
+      "name": "Name Parse",
+      "description": "Parse a full name into components: first, middle, last, prefix, suffix, nickname. Handles 'Dr. Karl-Johan von Lindström III' correctly.",
+      "category": "data-processing",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "full_name"
+        ],
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "description": "Full name to parse"
+          }
+        }
+      }
+    },
+    {
+      "slug": "sentiment-analyze",
+      "name": "Sentiment Analysis",
+      "description": "Analyze the sentiment of text. Returns overall sentiment (positive/negative/neutral/mixed), confidence scores, and aspect-level sentiment.",
+      "category": "text-processing",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to analyze"
+          }
+        }
+      }
+    },
+    {
+      "slug": "job-posting-analyze",
+      "name": "Job Posting Analyze",
+      "description": "Analyze a job posting. Extracts title, skills, salary range, remote policy, benefits, red flags, culture signals. Accepts URL or text.",
+      "category": "developer-tools",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "lithuanian-company-data",
+      "name": "Lithuanian Company Data",
+      "description": "Look up Lithuanian company data from Registrų centras. Accepts company code (7-9 digits) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "company_code"
+        ],
+        "properties": {
+          "company_code": {
+            "type": "string",
+            "description": "Lithuanian company code (7-9 digits) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "meta-extract",
+      "name": "Meta Extract",
+      "description": "Extract all metadata from a URL: Open Graph, Twitter cards, JSON-LD, favicon, canonical URL, RSS feeds, robots directives.",
+      "category": "web-scraping",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to extract metadata from"
+          }
+        }
+      }
+    },
+    {
+      "slug": "canadian-company-data",
+      "name": "Canadian Company Data",
+      "description": "Look up Canadian company data from Corporations Canada. Accepts corporation number or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "corporation_number"
+        ],
+        "properties": {
+          "corporation_number": {
+            "type": "string",
+            "description": "Canadian corporation number or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "translate",
+      "name": "Translate Text",
+      "description": "Translate text between languages. Auto-detects source language. Supports all major languages. Returns translated text with confidence.",
+      "category": "text-processing",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "text",
+          "target_language"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to translate"
+          },
+          "source_language": {
+            "type": "string",
+            "description": "Source language (optional, auto-detected)"
+          },
+          "target_language": {
+            "type": "string",
+            "description": "Target language (e.g. English, Swedish, French)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "csv-clean",
+      "name": "CSV Clean",
+      "description": "Clean messy CSV: fix inconsistent delimiters, mixed encodings, BOM, trailing commas, quoted fields. Returns clean CSV with issues report.",
+      "category": "data-processing",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "csv"
+        ],
+        "properties": {
+          "csv": {
+            "type": "string",
+            "description": "Messy CSV string to clean"
+          }
+        }
+      }
+    },
+    {
+      "slug": "charity-lookup-uk",
+      "name": "Charity Lookup UK",
+      "description": "Look up UK charities via the Charity Commission API. Search by registration number or name. Returns status, income, activities.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "charity_number": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "social-profile-check",
+      "name": "Social Profile Check",
+      "description": "Check username availability across 11 platforms: GitHub, Twitter/X, Instagram, YouTube, TikTok, LinkedIn, Reddit, etc.",
+      "category": "data-extraction",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "gitignore-generate",
+      "name": "Gitignore Generate",
+      "description": "Generate .gitignore from language/framework/IDE combinations. Covers TypeScript, Python, Go, Rust, Java, React, Next.js, Django, VSCode, IntelliJ. Algorithmic.",
+      "category": "developer-tools",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "ides": {
+            "type": "array"
+          },
+          "languages": {
+            "type": "array"
+          },
+          "frameworks": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    {
+      "slug": "youtube-summarize",
+      "name": "YouTube Summarize",
+      "description": "Summarize a YouTube video from its auto-generated transcript. Returns summary, key points, topics, and timestamps of interest.",
+      "category": "utility",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "YouTube video URL"
+          }
+        }
+      }
+    },
+    {
+      "slug": "ecb-interest-rates",
+      "name": "ECB Interest Rates",
+      "description": "Get current ECB key interest rates: main refinancing rate, deposit facility rate, and marginal lending rate.",
+      "category": "data-extraction",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Optional date (default: latest)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "password-strength",
+      "name": "Password Strength",
+      "description": "Analyze password strength: entropy, crack time estimate, character class diversity, common password check, keyboard pattern detection. Password is NOT stored. Algorithmic.",
+      "category": "security",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "forex-history",
+      "name": "Forex History",
+      "description": "Get historical exchange rates between two currencies. Returns daily rates, average, min, max, change percentage.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Target currency (e.g. USD)"
+          },
+          "from": {
+            "type": "string",
+            "description": "Source currency (e.g. EUR)"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "crypto-price",
+      "name": "Crypto Price",
+      "description": "Get current cryptocurrency price, market cap, and trends via CoinGecko API. Supports 10,000+ coins. Multiple fiat currencies.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "coin"
+        ],
+        "properties": {
+          "coin": {
+            "type": "string",
+            "description": "Coin name/symbol (bitcoin, eth, sol)"
+          },
+          "vs_currencies": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "annual-report-extract",
+      "name": "Swedish Annual Report Extraction",
+      "description": "Download and extract structured financial data from a Swedish company's annual report (årsredovisning). Returns balance sheet, income statement, and key ratios.",
+      "category": "data-extraction",
+      "price_cents": 100,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "org_number"
+        ],
+        "properties": {
+          "year": {
+            "type": "integer",
+            "description": "Fiscal year (defaults to most recent)"
+          },
+          "org_number": {
+            "type": "string",
+            "description": "Swedish org number (e.g. 556703-7485)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "vat-rate-lookup",
+      "name": "VAT Rate Lookup",
+      "description": "Look up VAT rates for EU/EEA countries. Returns standard, reduced, zero-rated categories. Supports category-specific queries.",
+      "category": "data-extraction",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "country_code"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "standard/food/books/medicine/transport/digital"
+          },
+          "country_code": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "landing-page-roast",
+      "name": "Landing Page Roast",
+      "description": "AI conversion expert analyzes any landing page. Returns overall score, headline effectiveness, CTA clarity, value proposition, trust signals, issues, and suggestions.",
+      "category": "competitive-intelligence",
+      "price_cents": 50,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Landing page URL to analyze"
+          }
+        }
+      }
+    },
+    {
+      "slug": "token-count",
+      "name": "Token Count",
+      "description": "Estimate token count and cost for text across LLM models (GPT-4o, Claude, Gemini, Mistral, Llama). Algorithmic — no API calls.",
+      "category": "developer-tools",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string",
+            "description": "gpt-4o, claude-3-haiku, etc."
+          }
+        }
+      }
+    },
+    {
+      "slug": "schema-infer",
+      "name": "Schema Infer",
+      "description": "Infer schema from JSON array or CSV. Returns field types, nullability, uniqueness, completeness, min/max/mean for numeric fields. Algorithmic.",
+      "category": "data-processing",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "JSON array or CSV string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "code-convert",
+      "name": "Code Convert",
+      "description": "Convert code between programming languages. Uses idiomatic patterns for the target language. Supports all major languages.",
+      "category": "developer-tools",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "code",
+          "to_language"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "to_language": {
+            "type": "string"
+          },
+          "from_language": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "danish-company-data",
+      "name": "Danish Company Data",
+      "description": "Look up Danish company data from the Central Business Register (CVR). Accepts CVR number (8 digits) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "cvr_number"
+        ],
+        "properties": {
+          "cvr_number": {
+            "type": "string",
+            "description": "Danish CVR number (8 digits) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "bank-bic-lookup",
+      "name": "Bank BIC Lookup",
+      "description": "Validate BIC/SWIFT code format and identify the bank. Returns bank name, country, branch info.",
+      "category": "validation",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "bic"
+        ],
+        "properties": {
+          "bic": {
+            "type": "string",
+            "description": "BIC/SWIFT code (8 or 11 chars)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "cookie-scan",
+      "name": "Cookie Scan",
+      "description": "Scan a website for cookies, tracking scripts, and consent banners. Categorizes cookies as necessary/analytics/marketing.",
+      "category": "data-extraction",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "brand-mention-search",
+      "name": "Brand Mention Search",
+      "description": "Search Google for brand mentions. Returns URLs, titles, snippets, sentiment, and source type. Every result is a clickable, verifiable URL.",
+      "category": "competitive-intelligence",
+      "price_cents": 30,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "brand_name"
+        ],
+        "properties": {
+          "brand_name": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          },
+          "exclude_own_domain": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "domain-reputation",
+      "name": "Domain Reputation",
+      "description": "Check domain reputation via DNS, HTTP, and security analysis. Checks SPF, DMARC, HSTS, HTTPS, suspicious TLD, and domain patterns. Score 0-100.",
+      "category": "compliance",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "summarize",
+      "name": "Summarize Text",
+      "description": "Summarize text into a concise format. Supports paragraph, bullet points, or one-sentence styles. Configurable max length.",
+      "category": "text-processing",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to summarize"
+          },
+          "style": {
+            "type": "string",
+            "description": "Summary style: paragraph, bullets, or one_sentence"
+          },
+          "max_length": {
+            "type": "integer",
+            "description": "Approximate max word count"
+          }
+        }
+      }
+    },
+    {
+      "slug": "insolvency-check",
+      "name": "Insolvency Check",
+      "description": "Check if a company has any insolvency, bankruptcy, or winding-up proceedings. Currently covers UK (via Companies House). Returns status and key dates.",
+      "category": "compliance",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "company_name",
+          "country_code"
+        ],
+        "properties": {
+          "company_name": {
+            "type": "string",
+            "description": "Company name"
+          },
+          "country_code": {
+            "type": "string",
+            "description": "Country code (ISO 2-letter)"
+          },
+          "company_number": {
+            "type": "string",
+            "description": "Company registration number if known (optional)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "company-enrich",
+      "name": "Company Enrichment",
+      "description": "Enrich company data from a domain, email, or company name. Scrapes the company website to extract: industry, employee estimate, HQ location, description, social links, tech stack.",
+      "category": "data-extraction",
+      "price_cents": 50,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Company domain (e.g. spotify.com), email, or name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "whois-lookup",
+      "name": "WHOIS Lookup",
+      "description": "Perform a WHOIS lookup for a domain. Returns registrar, creation date, expiry date, name servers, registrant info, and raw WHOIS data.",
+      "category": "web-intelligence",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Domain name (e.g. example.com)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "shipping-track",
+      "name": "Shipping Track",
+      "description": "Detect shipping carrier from tracking number format and provide tracking URLs. Supports UPS, FedEx, USPS, DHL, Royal Mail, PostNord, and more. Algorithmic.",
+      "category": "data-extraction",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "tracking_number"
+        ],
+        "properties": {
+          "tracking_number": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "context-window-optimize",
+      "name": "Context Window Optimize",
+      "description": "Rank and select document chunks by relevance to fit within a token budget. Returns selected/excluded chunks with scores.",
+      "category": "developer-tools",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "documents",
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "documents": {
+            "type": "array",
+            "description": "Array of {id, text}"
+          },
+          "max_tokens": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "credit-report-summary",
+      "name": "Credit Report Summary",
+      "description": "Get a credit report summary for a Swedish company from Allabolag. Returns credit rating, financial summary, risk indicators, board members. Accepts org number or company name.",
+      "category": "financial",
+      "price_cents": 100,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "org_number"
+        ],
+        "properties": {
+          "org_number": {
+            "type": "string",
+            "description": "Swedish org number (10 digits) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "redirect-trace",
+      "name": "Redirect Trace",
+      "description": "Trace the full HTTP redirect chain for a URL. Shows each hop with status code, location header, server, and latency.",
+      "category": "monitoring",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "max_redirects": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "curl-to-code",
+      "name": "cURL to Code",
+      "description": "Convert a curl command to equivalent code in TypeScript, Python, Go, Rust, Java, or PHP.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "curl_command"
+        ],
+        "properties": {
+          "curl_command": {
+            "type": "string"
+          },
+          "target_language": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "code-review",
+      "name": "Code Review",
+      "description": "AI code review. Returns issues with severity, line numbers, fix suggestions. Focus on security, performance, readability, or bugs.",
+      "category": "agent-tooling",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "focus": {
+            "type": "string",
+            "description": "security/performance/readability/bugs/all"
+          },
+          "language": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "docstring-generate",
+      "name": "Docstring Generate",
+      "description": "Add Python docstrings to functions and classes. Supports Google, NumPy, and Sphinx styles.",
+      "category": "developer-tools",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "style": {
+            "type": "string",
+            "description": "google/numpy/sphinx"
+          }
+        }
+      }
+    },
+    {
+      "slug": "classify-text",
+      "name": "Text Classification",
+      "description": "Classify text into categories. Optionally provide custom categories. Returns primary category, confidence scores, topic keywords, and summary.",
+      "category": "text-processing",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to classify"
+          },
+          "categories": {
+            "type": "array",
+            "description": "Optional list of categories to classify into"
+          }
+        }
+      }
+    },
+    {
+      "slug": "timezone-meeting-find",
+      "name": "Timezone Meeting Finder",
+      "description": "Find optimal meeting times across time zones. Returns ranked slots by fairness, with local times for each participant. Algorithmic.",
+      "category": "utility",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "timezones"
+        ],
+        "properties": {
+          "timezones": {
+            "type": "array",
+            "description": "List of IANA timezone names"
+          },
+          "preferred_hours": {
+            "type": "string",
+            "description": "Preferred hours (e.g. 09:00-17:00)"
+          },
+          "duration_minutes": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "eu-court-case-search",
+      "name": "EU Court Case Search",
+      "description": "Search EU court cases on CURIA (CJEU) or HUDOC (ECHR). Returns case number, title, date, parties, summary.",
+      "category": "data-extraction",
+      "price_cents": 30,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "court": {
+            "type": "string",
+            "description": "cjeu or echr (default: cjeu)"
+          },
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "sql-explain",
+      "name": "SQL Explain",
+      "description": "Explain a SQL query in plain language. Identifies tables, joins, filters, aggregations, and potential performance issues.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "sql"
+        ],
+        "properties": {
+          "sql": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "jwt-decode",
+      "name": "JWT Decode",
+      "description": "Decode a JWT token without verification. Returns header, payload, claims, expiry status, and time until expiry. Algorithmic.",
+      "category": "developer-tools",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "screenshot-url",
+      "name": "Screenshot URL",
+      "description": "Take a full-page or viewport screenshot of any URL. Handles cookie banners, lazy loading, SPAs. Returns base64 PNG.",
+      "category": "web-scraping",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to screenshot"
+          },
+          "wait_for": {
+            "type": "string",
+            "description": "CSS selector or seconds to wait"
+          },
+          "full_page": {
+            "type": "boolean",
+            "description": "Full page vs viewport (default: true)"
+          },
+          "viewport_width": {
+            "type": "integer"
+          },
+          "viewport_height": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "data-protection-authority-lookup",
+      "name": "Data Protection Authority Lookup",
+      "description": "Find the data protection authority (DPA) for any EU/EEA country. Returns name, website, complaint URL, contact info.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "country_code"
+        ],
+        "properties": {
+          "country_code": {
+            "type": "string",
+            "description": "EU/EEA country code"
+          }
+        }
+      }
+    },
+    {
+      "slug": "isbn-validate",
+      "name": "ISBN Validation",
+      "description": "Validate an ISBN-10 or ISBN-13 number. Checks format, length, and checksum. Converts ISBN-10 to ISBN-13. Pure algorithmic — instant.",
+      "category": "validation",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "isbn"
+        ],
+        "properties": {
+          "isbn": {
+            "type": "string",
+            "description": "ISBN-10 or ISBN-13 (e.g. 978-3-16-148410-0)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "incoterms-explain",
+      "name": "Incoterms Explain",
+      "description": "Explain any Incoterms 2020 rule. Returns seller/buyer obligations, risk/cost transfer points, suitability.",
+      "category": "data-extraction",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "incoterm"
+        ],
+        "properties": {
+          "incoterm": {
+            "type": "string",
+            "description": "Incoterm code (EXW/FOB/CIF/DDP/etc)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "spanish-company-data",
+      "name": "Spanish Company Data",
+      "description": "Look up Spanish company data from the Registro Mercantil. Accepts CIF/NIF (e.g. A28015865) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "cif"
+        ],
+        "properties": {
+          "cif": {
+            "type": "string",
+            "description": "CIF/NIF number (e.g. A28015865) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "swift-validate",
+      "name": "SWIFT/BIC Validation",
+      "description": "Validate a SWIFT/BIC code. Checks format, length, and country code. Extracts bank code, location, and branch. Pure algorithmic — instant and cheap.",
+      "category": "validation",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "swift"
+        ],
+        "properties": {
+          "swift": {
+            "type": "string",
+            "description": "SWIFT/BIC code (e.g. DABASESX)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "skill-extract",
+      "name": "Skill Extract",
+      "description": "Extract skills from job descriptions or CVs. Categorizes 500+ skills into technical, soft skills, tools, certifications, languages.",
+      "category": "data-extraction",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Job description or CV text"
+          }
+        }
+      }
+    },
+    {
+      "slug": "keyword-suggest",
+      "name": "Keyword Suggest",
+      "description": "Get keyword suggestions from Google Autocomplete. Returns suggestions, questions, comparisons, long-tail keywords.",
+      "category": "data-extraction",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "keyword"
+        ],
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "keyword": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "social-post-generate",
+      "name": "Social Post Generate",
+      "description": "Generate platform-optimized social media posts. Supports Twitter, LinkedIn, Instagram. Returns post text, hashtags, thread version for Twitter.",
+      "category": "content-writing",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "tone": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "hashtag_count": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "address-parse",
+      "name": "Address Parse",
+      "description": "Parse a free-text address into structured components. Returns street, city, postal code, state/province, country. Works with addresses worldwide.",
+      "category": "data-processing",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Free-text address to parse"
+          }
+        }
+      }
+    },
+    {
+      "slug": "email-draft",
+      "name": "Email Draft",
+      "description": "Draft a professional email. Specify context, intent (cold outreach/follow-up/apology/etc), and tone. Returns subject line options, body, and key phrases.",
+      "category": "content-writing",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "context"
+        ],
+        "properties": {
+          "tone": {
+            "type": "string"
+          },
+          "intent": {
+            "type": "string"
+          },
+          "context": {
+            "type": "string"
+          },
+          "recipient_context": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "nginx-config-generate",
+      "name": "Nginx Config Generate",
+      "description": "Generate production nginx server blocks with SSL, proxy_pass, WebSocket support, security headers, gzip, rate limiting.",
+      "category": "developer-tools",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "ssl": {
+            "type": "boolean"
+          },
+          "gzip": {
+            "type": "boolean"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "rate_limit": {
+            "type": "integer"
+          },
+          "www_redirect": {
+            "type": "boolean"
+          },
+          "upstream_port": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "financial-year-dates",
+      "name": "Financial Year Dates",
+      "description": "Get fiscal year start/end, tax filing deadlines, VAT filing frequency for 42+ countries.",
+      "category": "data-extraction",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "country_code"
+        ],
+        "properties": {
+          "country_code": {
+            "type": "string",
+            "description": "ISO 2-letter country code"
+          }
+        }
+      }
+    },
+    {
+      "slug": "eu-regulation-search",
+      "name": "EU Regulation Search",
+      "description": "Search EU regulations, directives, and decisions on EUR-Lex. Returns matching legislation with titles, CELEX numbers, dates, and summaries.",
+      "category": "compliance",
+      "price_cents": 30,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Regulation type filter (regulation/directive/decision)"
+          },
+          "query": {
+            "type": "string",
+            "description": "Search topic or keywords"
+          }
+        }
+      }
+    },
+    {
+      "slug": "work-permit-requirements",
+      "name": "Work Permit Requirements",
+      "description": "Check work permit requirements by nationality and destination. Covers EU free movement, Schengen, Nordic rules.",
+      "category": "data-extraction",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "nationality",
+          "destination"
+        ],
+        "properties": {
+          "purpose": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string",
+            "description": "Country code"
+          },
+          "nationality": {
+            "type": "string",
+            "description": "Country code"
+          }
+        }
+      }
+    },
+    {
+      "slug": "startup-domain-check",
+      "name": "Startup Domain Check",
+      "description": "Check domain and handle availability for a startup name. Checks .com/.io/.ai/.co/.dev domains, Twitter, GitHub, npm, PyPI.",
+      "category": "utility",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "company_name"
+        ],
+        "properties": {
+          "company_name": {
+            "type": "string",
+            "description": "Company name or keyword"
+          }
+        }
+      }
+    },
+    {
+      "slug": "dns-lookup",
+      "name": "DNS Lookup",
+      "description": "Perform a comprehensive DNS lookup for a domain. Returns A, AAAA, MX, NS, TXT, CNAME records plus SPF and DMARC detection.",
+      "category": "web-intelligence",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Domain name (e.g. example.com)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "github-repo-compare",
+      "name": "GitHub Repo Compare",
+      "description": "Compare two GitHub repositories side-by-side: stars, forks, activity, language, topics, license. Returns detailed comparison.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "repo_a",
+          "repo_b"
+        ],
+        "properties": {
+          "repo_a": {
+            "type": "string",
+            "description": "owner/repo"
+          },
+          "repo_b": {
+            "type": "string",
+            "description": "owner/repo"
+          }
+        }
+      }
+    },
+    {
+      "slug": "pricing-page-extract",
+      "name": "Pricing Page Extract",
+      "description": "Extract structured pricing data from any SaaS pricing page. Returns plan names, prices, features per plan, billing periods, trial/guarantee info.",
+      "category": "competitive-intelligence",
+      "price_cents": 30,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Pricing page URL"
+          }
+        }
+      }
+    },
+    {
+      "slug": "iban-validate",
+      "name": "IBAN Validation",
+      "description": "Validate an IBAN number. Checks format, length, and mod-97 checksum. Extracts country code, bank identifier, and branch code. Pure algorithmic — fast and cheap.",
+      "category": "validation",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "iban"
+        ],
+        "properties": {
+          "iban": {
+            "type": "string",
+            "description": "IBAN to validate (e.g. SE3550000000054910000003)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "data-quality-check",
+      "name": "Data Quality Check",
+      "description": "Check data quality with custom rules (email_format, range, pattern, etc.) or auto-detect issues. Returns quality score and field-level report. Algorithmic.",
+      "category": "data-processing",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "JSON array of objects"
+          },
+          "rules": {
+            "type": "array",
+            "description": "Optional validation rules"
+          }
+        }
+      }
+    },
+    {
+      "slug": "commit-message-generate",
+      "name": "Commit Message Generate",
+      "description": "Generate conventional commit messages from git diffs or change descriptions. Returns subject, body, type, scope.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "diff"
+        ],
+        "properties": {
+          "diff": {
+            "type": "string"
+          },
+          "style": {
+            "type": "string",
+            "description": "conventional/angular/simple"
+          }
+        }
+      }
+    },
+    {
+      "slug": "openapi-validate",
+      "name": "OpenAPI Validate",
+      "description": "Validate an OpenAPI 3.x specification. Checks required fields, endpoint definitions, schema references. Algorithmic.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "spec"
+        ],
+        "properties": {
+          "spec": {
+            "description": "OpenAPI spec as JSON string or object"
+          }
+        }
+      }
+    },
+    {
+      "slug": "seo-audit",
+      "name": "SEO Audit",
+      "description": "Comprehensive SEO audit of a URL. Checks title, meta description, h1 structure, image alt tags, canonical, robots.txt, sitemap, Open Graph, schema.org, link ratio.",
+      "category": "competitive-intelligence",
+      "price_cents": 30,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to audit"
+          }
+        }
+      }
+    },
+    {
+      "slug": "http-to-curl",
+      "name": "HTTP to cURL",
+      "description": "Convert HTTP request parameters to curl command + equivalent fetch/axios code. Supports auth, headers, body. Algorithmic.",
+      "category": "developer-tools",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "body": {},
+          "method": {
+            "type": "string"
+          },
+          "headers": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "slug": "link-extract",
+      "name": "Link Extract",
+      "description": "Extract all links from a page with context. Filter by internal/external. Returns URL, anchor text, rel attributes.",
+      "category": "web-scraping",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to extract links from"
+          },
+          "filter": {
+            "type": "string",
+            "description": "internal, external, or both (default)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "flight-status",
+      "name": "Flight Status",
+      "description": "Look up flight status by flight number (e.g. LH400, BA117). Returns departure/arrival times, delays, gates. Requires AVIATIONSTACK_API_KEY for live data.",
+      "category": "data-extraction",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "flight"
+        ],
+        "properties": {
+          "flight": {
+            "type": "string",
+            "description": "Flight number, e.g. LH400"
+          }
+        }
+      }
+    },
+    {
+      "slug": "vat-format-validate",
+      "name": "VAT Format Validation",
+      "description": "Validate a European VAT number format against country-specific rules. Pure algorithmic — does NOT check VIES. Use vat-validate for full VIES verification. Supports all 27 EU countries + GB, CH, NO.",
+      "category": "validation",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "vat_number"
+        ],
+        "properties": {
+          "vat_number": {
+            "type": "string",
+            "description": "VAT number including country prefix (e.g. SE556703748501)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "readme-generate",
+      "name": "README Generate",
+      "description": "Generate comprehensive README.md from project description. Includes installation, usage, API docs, contributing sections.",
+      "category": "developer-tools",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "project_description"
+        ],
+        "properties": {
+          "tech_stack": {
+            "type": "string"
+          },
+          "project_name": {
+            "type": "string"
+          },
+          "project_description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "dependency-audit",
+      "name": "Dependency Audit",
+      "description": "Audit npm or Python dependencies. Checks each package against registry for latest version, deprecation, vulnerabilities. Verifiable against actual registries.",
+      "category": "developer-tools",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "package_json": {
+            "type": "string",
+            "description": "package.json contents"
+          },
+          "requirements_txt": {
+            "type": "string",
+            "description": "requirements.txt contents"
+          }
+        }
+      }
+    },
+    {
+      "slug": "shipping-cost-estimate",
+      "name": "Shipping Cost Estimate",
+      "description": "Estimate shipping costs for PostNord, DHL, UPS by origin/destination, weight, and service level.",
+      "category": "data-extraction",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "origin_country",
+          "destination_country",
+          "weight_kg"
+        ],
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "weight_kg": {
+            "type": "number"
+          },
+          "origin_country": {
+            "type": "string"
+          },
+          "destination_country": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "github-user-profile",
+      "name": "GitHub User Profile",
+      "description": "Fetch a GitHub user's profile, stats, and recent repositories. Returns followers, repos, bio, and activity.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "blog-post-outline",
+      "name": "Blog Post Outline",
+      "description": "Generate a structured blog post outline. Returns title options, sections with subsections and key points, estimated word count, SEO keywords. JSON, not prose.",
+      "category": "content-writing",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "topic"
+        ],
+        "properties": {
+          "tone": {
+            "type": "string"
+          },
+          "topic": {
+            "type": "string"
+          },
+          "keywords": {
+            "type": "array"
+          },
+          "target_audience": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "sepa-xml-validate",
+      "name": "SEPA XML Validate",
+      "description": "Validate SEPA XML files (pain.001 credit transfer, pain.008 direct debit). Checks structure, IBANs, BICs, amounts, transaction counts.",
+      "category": "validation",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "xml"
+        ],
+        "properties": {
+          "xml": {
+            "type": "string",
+            "description": "SEPA XML string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "github-repo-analyze",
+      "name": "GitHub Repo Analyze",
+      "description": "Analyze a public GitHub repository. Returns tech stack, documentation quality, activity level, bus factor, maintenance health score. Uses GitHub API + AI analysis.",
+      "category": "developer-tools",
+      "price_cents": 50,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "GitHub repo URL (e.g. https://github.com/owner/repo)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "cron-explain",
+      "name": "Cron Explain",
+      "description": "Parse a cron expression into human-readable explanation + next N execution times. Algorithmic — instant.",
+      "category": "validation",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "cron_expression"
+        ],
+        "properties": {
+          "num_next": {
+            "type": "integer",
+            "description": "Number of next runs (default 5)"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "cron_expression": {
+            "type": "string",
+            "description": "Cron expression (5-7 fields)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "trustpilot-score",
+      "name": "Trustpilot Score",
+      "description": "Get Trustpilot score and reviews for a domain. Returns trust score, rating distribution, recent reviews.",
+      "category": "data-extraction",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Domain name (e.g. stripe.com)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "port-check",
+      "name": "Port Check",
+      "description": "Check if TCP ports are open on a host. Scans up to 20 ports with configurable timeout. Returns open/closed status with latency.",
+      "category": "monitoring",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "host"
+        ],
+        "properties": {
+          "host": {
+            "type": "string"
+          },
+          "ports": {
+            "description": "Array of port numbers or comma-separated string"
+          },
+          "timeout_ms": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "italian-company-data",
+      "name": "Italian Company Data",
+      "description": "Look up Italian company data from Registro Imprese. Accepts Partita IVA (11 digits) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "partita_iva"
+        ],
+        "properties": {
+          "partita_iva": {
+            "type": "string",
+            "description": "Partita IVA (11 digits) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "json-schema-validate",
+      "name": "JSON Schema Validate",
+      "description": "Validate a JSON object against a JSON Schema. Returns validation result with detailed error paths and messages. Algorithmic.",
+      "category": "validation",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "data",
+          "schema"
+        ],
+        "properties": {
+          "data": {
+            "description": "JSON data to validate"
+          },
+          "schema": {
+            "type": "object",
+            "description": "JSON Schema to validate against"
+          }
+        }
+      }
+    },
+    {
+      "slug": "schema-migration-generate",
+      "name": "Schema Migration Generate",
+      "description": "Generate database migration code from current→desired schema description. Supports Drizzle, Prisma, Knex, and raw SQL.",
+      "category": "developer-tools",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "desired_schema"
+        ],
+        "properties": {
+          "orm": {
+            "type": "string",
+            "description": "drizzle/prisma/knex/raw"
+          },
+          "current_schema": {
+            "type": "string"
+          },
+          "desired_schema": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "page-speed-test",
+      "name": "Page Speed Test",
+      "description": "Test page speed using Google PageSpeed Insights API. Returns performance score, Core Web Vitals, optimization opportunities.",
+      "category": "data-extraction",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "strategy": {
+            "type": "string",
+            "description": "mobile or desktop (default: mobile)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "ip-geolocation",
+      "name": "IP Geolocation",
+      "description": "Look up geographic location, ISP, and network information for an IP address. Detects proxies and hosting providers.",
+      "category": "data-extraction",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "ip"
+        ],
+        "properties": {
+          "ip": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "web-extract",
+      "name": "Web Page Data Extraction",
+      "description": "Extract structured data from any web page with full JavaScript rendering. Handles SPAs, dynamic content, and pages that require JS to load.",
+      "category": "data-extraction",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to extract data from"
+          },
+          "extract": {
+            "type": "string",
+            "description": "What data to extract (natural language)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "json-to-pydantic",
+      "name": "JSON to Pydantic",
+      "description": "Convert JSON to Python Pydantic model classes. Handles nested objects, arrays, optional fields. Algorithmic.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "json"
+        ],
+        "properties": {
+          "json": {
+            "description": "JSON string or object"
+          },
+          "root_name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "json-to-typescript",
+      "name": "JSON to TypeScript",
+      "description": "Convert JSON to TypeScript interfaces. Handles nested objects, arrays, optional fields. Detects date strings and UUIDs. Algorithmic.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "json"
+        ],
+        "properties": {
+          "json": {
+            "description": "JSON string or object"
+          },
+          "export": {
+            "type": "boolean"
+          },
+          "root_name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "llm-output-validate",
+      "name": "LLM Output Validate",
+      "description": "Validate and auto-repair LLM output. Parse JSON, validate against schema, attempt fixes for common LLM mistakes. Algorithmic — no LLM needed.",
+      "category": "agent-tooling",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "llm_output"
+        ],
+        "properties": {
+          "llm_output": {
+            "type": "string",
+            "description": "Raw LLM output string"
+          },
+          "strict_mode": {
+            "type": "boolean"
+          },
+          "expected_schema": {
+            "type": "object",
+            "description": "JSON Schema to validate against"
+          }
+        }
+      }
+    },
+    {
+      "slug": "invoice-validate",
+      "name": "Invoice Validate",
+      "description": "Validate invoice data: VAT number format, line item math, tax calculations, EU compliance requirements.",
+      "category": "validation",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "invoice"
+        ],
+        "properties": {
+          "invoice": {
+            "type": "object",
+            "description": "Invoice JSON with vendor_vat, buyer_vat, amounts, line_items"
+          }
+        }
+      }
+    },
+    {
+      "slug": "pdf-extract",
+      "name": "PDF Data Extraction",
+      "description": "Extract structured data from any PDF document. Accepts a URL or base64-encoded PDF. Works on contracts, reports, forms — any document type. Returns JSON based on your extraction instructions.",
+      "category": "data-extraction",
+      "price_cents": 30,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to a PDF file"
+          },
+          "base64": {
+            "type": "string",
+            "description": "Base64-encoded PDF"
+          },
+          "extract": {
+            "type": "string",
+            "description": "What data to extract (natural language)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "ticker-lookup",
+      "name": "Ticker Lookup",
+      "description": "Find stock ticker symbols by company name. Returns matches with symbol, exchange, and type.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Company name (e.g. 'Spotify', 'Tesla')"
+          }
+        }
+      }
+    },
+    {
+      "slug": "structured-scrape",
+      "name": "Structured Scrape",
+      "description": "Extract structured data from any URL using a caller-defined JSON schema. Browserless renders the page, AI maps content to your schema.",
+      "category": "web-scraping",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url",
+          "schema"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to scrape"
+          },
+          "schema": {
+            "type": "object",
+            "description": "JSON schema describing the data to extract"
+          }
+        }
+      }
+    },
+    {
+      "slug": "job-board-search",
+      "name": "Job Board Search",
+      "description": "Search job listings on Arbetsformedlingen (Swedish) and Adzuna (multi-country). Returns title, company, salary, URL.",
+      "category": "data-extraction",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "remote_only": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "slug": "swedish-company-data",
+      "name": "Swedish Company Data",
+      "description": "Extract company data (revenue, employees, profit, fiscal year) for a Swedish organization number. Accepts natural language descriptions — resolves to org number automatically.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "org_number"
+        ],
+        "properties": {
+          "org_number": {
+            "type": "string",
+            "description": "Swedish org number (e.g. 556703-7485) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "api-mock-response",
+      "name": "API Mock Response",
+      "description": "Generate a realistic mock API response with proper headers, status codes, and schema-matching body data.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "status_code": {
+            "type": "integer"
+          },
+          "response_schema": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "slug": "webhook-test-payload",
+      "name": "Webhook Test Payload",
+      "description": "Generate realistic test webhook payloads for Stripe, GitHub, Slack, Twilio, SendGrid, Shopify. Includes proper headers and schema-accurate data.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "service",
+          "event_type"
+        ],
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "stripe/github/slack/twilio/sendgrid/shopify"
+          },
+          "event_type": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "json-to-zod",
+      "name": "JSON to Zod",
+      "description": "Convert JSON to Zod validation schemas. Auto-detects emails, URLs, UUIDs, dates for refined validators. Algorithmic.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "json"
+        ],
+        "properties": {
+          "json": {
+            "description": "JSON string or object"
+          },
+          "root_name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "payment-reference-generate",
+      "name": "Payment Reference Generate",
+      "description": "Generate valid payment reference numbers with check digits: Swedish OCR, Norwegian KID, Finnish reference, ISO 11649 RF.",
+      "category": "utility",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "ocr_se/ocr_no/ocr_fi/iso11649/rf"
+          },
+          "base_number": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "timezone-lookup",
+      "name": "Timezone Lookup",
+      "description": "Get timezone information for a country code, city name, or coordinates. Returns IANA timezone, current UTC offset, DST status, and current local time.",
+      "category": "data-extraction",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Country code, city name, or coordinates"
+          }
+        }
+      }
+    },
+    {
+      "slug": "skill-gap-analyze",
+      "name": "Skill Gap Analyze",
+      "description": "Compare required skills against candidate skills with fuzzy matching. Returns matched, missing, extra, and match score.",
+      "category": "data-extraction",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "required_skills",
+          "candidate_skills"
+        ],
+        "properties": {
+          "required_skills": {
+            "type": "array"
+          },
+          "candidate_skills": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    {
+      "slug": "port-lookup",
+      "name": "Port Lookup",
+      "description": "Look up world ports by name or UN/LOCODE. Returns coordinates, country, timezone. 175+ major ports.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Port name or UN/LOCODE (e.g. SEGOT, NLRTM)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "meeting-notes-extract",
+      "name": "Meeting Notes Extract",
+      "description": "Extract structured meeting notes from a transcript. Returns summary, decisions, action items with owners, key discussion points, follow-ups.",
+      "category": "document-extraction",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "transcript"
+        ],
+        "properties": {
+          "transcript": {
+            "type": "string",
+            "description": "Meeting transcript text"
+          }
+        }
+      }
+    },
+    {
+      "slug": "country-trade-data",
+      "name": "Country Trade Data",
+      "description": "Get trade data for a country: top exports/imports, trade balance, trading partners. World Bank API + embedded data.",
+      "category": "data-extraction",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "country_code"
+        ],
+        "properties": {
+          "year": {
+            "type": "number"
+          },
+          "country_code": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "openapi-generate",
+      "name": "OpenAPI Generate",
+      "description": "Generate a complete OpenAPI 3.1 specification from a natural language API description.",
+      "category": "developer-tools",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "description"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "html-to-pdf",
+      "name": "HTML to PDF",
+      "description": "Convert HTML string or URL to PDF via headless browser. Configurable paper size, margins, landscape mode. Returns base64 PDF.",
+      "category": "file-conversion",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to convert"
+          },
+          "html": {
+            "type": "string",
+            "description": "HTML string to convert"
+          },
+          "margins": {
+            "type": "object"
+          },
+          "landscape": {
+            "type": "boolean"
+          },
+          "paper_size": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "eu-ai-act-classify",
+      "name": "EU AI Act Classify",
+      "description": "Classify an AI system's risk level under the EU AI Act. Rule-based analysis against Annex III and Article 5/6/50 criteria.",
+      "category": "validation",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "description"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Description of the AI system"
+          }
+        }
+      }
+    },
+    {
+      "slug": "address-geocode",
+      "name": "Address Geocode",
+      "description": "Convert an address to geographic coordinates (latitude/longitude). Also returns structured address components and bounding box via OpenStreetMap Nominatim.",
+      "category": "data-extraction",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Address or place name to geocode"
+          }
+        }
+      }
+    },
+    {
+      "slug": "image-to-text",
+      "name": "Image to Text (OCR)",
+      "description": "OCR on any image via Claude vision. Works on screenshots, photos of documents, handwritten notes. Returns text with confidence.",
+      "category": "file-conversion",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "base64": {
+            "type": "string",
+            "description": "Base64-encoded image"
+          },
+          "image_url": {
+            "type": "string",
+            "description": "URL to image"
+          }
+        }
+      }
+    },
+    {
+      "slug": "gdpr-fine-lookup",
+      "name": "GDPR Fine Lookup",
+      "description": "Look up GDPR enforcement fines by company name or country. Returns fine amounts, authorities, articles violated.",
+      "category": "data-extraction",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "company": {
+            "type": "string"
+          },
+          "country_code": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "postal-code-lookup",
+      "name": "Postal Code Lookup",
+      "description": "Look up location information from a postal/ZIP code. Returns city, region/state, and approximate coordinates. Covers 60+ countries via Zippopotam.us.",
+      "category": "data-extraction",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "postal_code"
+        ],
+        "properties": {
+          "postal_code": {
+            "type": "string",
+            "description": "Postal/ZIP code to look up"
+          },
+          "country_code": {
+            "type": "string",
+            "description": "ISO 2-letter country code (default US)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "company-tech-stack",
+      "name": "Company Tech Stack",
+      "description": "Deep tech stack analysis of any domain. Analyzes HTTP headers, HTML source, JS libraries, DNS records, meta tags. Returns frontend, analytics, CDN, hosting, CMS, and more.",
+      "category": "competitive-intelligence",
+      "price_cents": 30,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Domain to analyze (e.g. stripe.com)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "regex-generate",
+      "name": "Regex Generate",
+      "description": "Describe what you want to match in natural language, get a tested regex back. Optionally provide test strings for validation.",
+      "category": "validation",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "description"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "What to match in natural language"
+          },
+          "test_strings": {
+            "type": "array",
+            "description": "Optional strings to test against"
+          }
+        }
+      }
+    },
+    {
+      "slug": "jsdoc-generate",
+      "name": "JSDoc Generate",
+      "description": "Add JSDoc comments to JavaScript/TypeScript functions and classes. Infers param types, return types, and throws.",
+      "category": "developer-tools",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "price-compare",
+      "name": "Price Compare",
+      "description": "Compare prices across merchants via PriceRunner (Nordic) and Google Shopping. Returns lowest/highest/average prices.",
+      "category": "data-extraction",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "product"
+        ],
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "product": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "company-industry-classify",
+      "name": "Company Industry Classify",
+      "description": "Classify a company's industry using standard codes. Given a company name, description, or website URL, returns SIC, NAICS, and NACE codes with confidence levels.",
+      "category": "data-processing",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Company description or business activity"
+          },
+          "company_name": {
+            "type": "string",
+            "description": "Company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "cve-lookup",
+      "name": "CVE Lookup",
+      "description": "Look up known vulnerabilities for a package+version via OSV API. Supports npm, PyPI, Maven, Go, Cargo, NuGet. Returns CVEs with severity and fix versions.",
+      "category": "security",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "package_name",
+          "version"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "ecosystem": {
+            "type": "string",
+            "description": "npm/pypi/maven/go/cargo/nuget"
+          },
+          "package_name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "food-safety-rating-uk",
+      "name": "Food Safety Rating UK",
+      "description": "Look up UK food hygiene ratings via the FSA API. Search by business name and optional location. Returns ratings, scores, addresses.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "api-docs-generate",
+      "name": "API Docs Generate",
+      "description": "Generate markdown API documentation from an OpenAPI spec or natural language description. Returns documentation with parameters, examples, error codes.",
+      "category": "developer-tools",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "openapi_spec": {
+            "type": "string"
+          },
+          "endpoint_description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "dangerous-goods-classify",
+      "name": "Dangerous Goods Classify",
+      "description": "Classify dangerous goods by UN number or substance name. Returns hazard class, packing group, labels, marine pollutant status. 200+ substances.",
+      "category": "data-extraction",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "substance"
+        ],
+        "properties": {
+          "substance": {
+            "type": "string",
+            "description": "Substance name or UN number (e.g. UN1203, Gasoline)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "uptime-check",
+      "name": "Uptime Check",
+      "description": "Check if a URL is up or down. Returns status code, latency, redirect info, TLS status, and server headers.",
+      "category": "monitoring",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "timeout_ms": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "polish-company-data",
+      "name": "Polish Company Data",
+      "description": "Look up Polish company data from KRS (Krajowy Rejestr Sądowy). Accepts KRS number (10 digits) or fuzzy company name. Returns company name, legal form, address, registration date.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "krs_number"
+        ],
+        "properties": {
+          "krs_number": {
+            "type": "string",
+            "description": "KRS number (10 digits) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "dockerfile-generate",
+      "name": "Dockerfile Generate",
+      "description": "Generate optimized, production-ready Dockerfiles. Multi-stage builds, Alpine base, non-root user, layer caching. Supports Node, Python, Go, Rust, Java.",
+      "category": "developer-tools",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "language"
+        ],
+        "properties": {
+          "alpine": {
+            "type": "boolean"
+          },
+          "language": {
+            "type": "string"
+          },
+          "framework": {
+            "type": "string"
+          },
+          "multi_stage": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "slug": "linkedin-url-validate",
+      "name": "LinkedIn URL Validate",
+      "description": "Validate LinkedIn profile/company/job URL format and check accessibility. Returns URL type, slug, normalized URL.",
+      "category": "validation",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "release-notes-generate",
+      "name": "Release Notes Generate",
+      "description": "Generate release notes from commit log or changelog. Keep a Changelog format with Added/Changed/Fixed/Removed sections.",
+      "category": "developer-tools",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "commits"
+        ],
+        "properties": {
+          "commits": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "privacy-policy-analyze",
+      "name": "Privacy Policy Analyze",
+      "description": "Analyze a company's privacy policy. Extracts data collected, purposes, third parties, user rights, GDPR/CCPA compliance signals.",
+      "category": "data-extraction",
+      "price_cents": 30,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Company website URL"
+          }
+        }
+      }
+    },
+    {
+      "slug": "prompt-compress",
+      "name": "Prompt Compress",
+      "description": "Compress a prompt to be shorter while preserving semantic meaning. Specify target reduction percentage (10-70%).",
+      "category": "developer-tools",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "prompt_text"
+        ],
+        "properties": {
+          "prompt_text": {
+            "type": "string"
+          },
+          "target_reduction_percent": {
+            "type": "integer",
+            "description": "Default 30"
+          }
+        }
+      }
+    },
+    {
+      "slug": "dutch-company-data",
+      "name": "Dutch Company Data",
+      "description": "Look up Dutch company data from KVK (Kamer van Koophandel). Accepts KVK number (8 digits) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "kvk_number"
+        ],
+        "properties": {
+          "kvk_number": {
+            "type": "string",
+            "description": "Dutch KVK number (8 digits) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "regex-explain",
+      "name": "Regex Explain",
+      "description": "Explain a regular expression in plain English with token-by-token breakdown. Optionally test against sample strings.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "regex"
+        ],
+        "properties": {
+          "regex": {
+            "type": "string"
+          },
+          "test_strings": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    {
+      "slug": "csv-to-json",
+      "name": "CSV to JSON",
+      "description": "Convert CSV string to JSON array with auto-detected delimiter and type inference. Algorithmic.",
+      "category": "data-processing",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "csv_string"
+        ],
+        "properties": {
+          "delimiter": {
+            "type": "string"
+          },
+          "csv_string": {
+            "type": "string"
+          },
+          "has_header": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "slug": "test-case-generate",
+      "name": "Test Case Generate",
+      "description": "Generate test cases from a function description or signature. Includes happy path, edge cases, boundary tests, and error cases.",
+      "category": "developer-tools",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "function_description"
+        ],
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "include_edge_cases": {
+            "type": "boolean"
+          },
+          "function_description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "iso-country-lookup",
+      "name": "ISO Country Lookup",
+      "description": "Look up any country by name, ISO code (alpha-2/3/numeric). Returns region, capital, currency, EU/Schengen/Eurozone membership.",
+      "category": "data-extraction",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Country name, alpha-2, alpha-3, or numeric code"
+          }
+        }
+      }
+    },
+    {
+      "slug": "french-company-data",
+      "name": "French Company Data",
+      "description": "Look up French company data from the SIRENE registry. Accepts SIREN (9 digits), SIRET (14 digits), or fuzzy company name. Returns company name, address, activity code, directors.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "siren"
+        ],
+        "properties": {
+          "siren": {
+            "type": "string",
+            "description": "SIREN (9 digits), SIRET (14 digits), or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "header-security-check",
+      "name": "Header Security Check",
+      "description": "Check HTTP response headers for security best practices: HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy. Returns grade A-F.",
+      "category": "security",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "json-repair",
+      "name": "JSON Repair",
+      "description": "Repair broken JSON: trailing commas, single quotes, unquoted keys, truncated, comments, mixed with markdown. Returns valid JSON.",
+      "category": "data-processing",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "json"
+        ],
+        "properties": {
+          "json": {
+            "type": "string",
+            "description": "Broken JSON string to repair"
+          }
+        }
+      }
+    },
+    {
+      "slug": "iban-to-bank",
+      "name": "IBAN to Bank",
+      "description": "Extract bank name and branch information from an IBAN. Returns bank name, BIC/SWIFT code, branch, and country. Pure algorithmic — uses bank code lookup tables.",
+      "category": "data-extraction",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "iban"
+        ],
+        "properties": {
+          "iban": {
+            "type": "string",
+            "description": "IBAN number to look up"
+          }
+        }
+      }
+    },
+    {
+      "slug": "language-detect",
+      "name": "Language Detect",
+      "description": "Detect the language of input text. Returns top language with confidence score, plus alternative possibilities. Supports 170+ languages via trigram analysis.",
+      "category": "data-processing",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text to detect language of"
+          },
+          "min_length": {
+            "type": "integer",
+            "description": "Minimum text length for reliable detection (default: 10)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "diff-json",
+      "name": "Diff JSON",
+      "description": "Compare two JSON objects and return structured diff. Shows added, removed, and changed fields with paths and values. Algorithmic.",
+      "category": "validation",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "before",
+          "after"
+        ],
+        "properties": {
+          "after": {
+            "description": "Modified JSON"
+          },
+          "before": {
+            "description": "Original JSON"
+          }
+        }
+      }
+    },
+    {
+      "slug": "sitemap-parse",
+      "name": "Sitemap Parse",
+      "description": "Fetch and parse a website's XML sitemap. Returns URL count, top path segments, lastmod dates, and sample URLs.",
+      "category": "monitoring",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "holiday-calendar",
+      "name": "Holiday Calendar",
+      "description": "Get public holidays for any country and year. Returns holiday names, dates, types (public/bank/optional), and whether they are fixed or variable. Covers 100+ countries.",
+      "category": "data-extraction",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "country_code"
+        ],
+        "properties": {
+          "year": {
+            "type": "integer",
+            "description": "Year (default: current year)"
+          },
+          "country_code": {
+            "type": "string",
+            "description": "ISO 2-letter country code"
+          }
+        }
+      }
+    },
+    {
+      "slug": "sql-generate",
+      "name": "SQL Generate",
+      "description": "Generate SQL queries from natural language descriptions. Provide table schema for best results. Supports PostgreSQL, MySQL, SQLite, MSSQL.",
+      "category": "developer-tools",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "natural_language_query"
+        ],
+        "properties": {
+          "dialect": {
+            "type": "string",
+            "description": "postgres/mysql/sqlite/mssql"
+          },
+          "table_schema": {
+            "type": "string"
+          },
+          "natural_language_query": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "tech-stack-detect",
+      "name": "Tech Stack Detection",
+      "description": "Detect the technology stack of a website. Identifies frontend framework, CSS framework, CMS, analytics, hosting, CDN, and other technologies.",
+      "category": "web-intelligence",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Website URL (e.g. https://example.com)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "age-verify",
+      "name": "Age Verify",
+      "description": "Verify if a person meets a minimum age requirement based on their date of birth. Returns exact age, whether the threshold is met, and days until the threshold (if not met). Accounts for leap years.",
+      "category": "validation",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "date_of_birth"
+        ],
+        "properties": {
+          "minimum_age": {
+            "type": "integer",
+            "description": "Minimum age to verify (default: 18)"
+          },
+          "date_of_birth": {
+            "type": "string",
+            "description": "Date of birth (YYYY-MM-DD)"
+          },
+          "reference_date": {
+            "type": "string",
+            "description": "Date to check against (default: today)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "us-company-data",
+      "name": "US Company Data",
+      "description": "Look up US company data from SEC EDGAR. Accepts CIK number, ticker symbol, or fuzzy company name. Returns company name, CIK, SIC code, state, filings summary.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "company"
+        ],
+        "properties": {
+          "company": {
+            "type": "string",
+            "description": "CIK number, ticker symbol, or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "salary-benchmark",
+      "name": "Salary Benchmark",
+      "description": "Get salary benchmarks for a job title. Returns median, 25th/75th percentile, comparable titles.",
+      "category": "data-extraction",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "job_title"
+        ],
+        "properties": {
+          "city": {
+            "type": "string"
+          },
+          "job_title": {
+            "type": "string"
+          },
+          "country_code": {
+            "type": "string"
+          },
+          "experience_level": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "email-validate",
+      "name": "Email Validation",
+      "description": "Validate an email address. Checks format, MX records, disposable domain detection, and role-based address detection. No email is sent.",
+      "category": "validation",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email address to validate"
+          }
+        }
+      }
+    },
+    {
+      "slug": "irish-company-data",
+      "name": "Irish Company Data",
+      "description": "Look up Irish company data from CRO (Companies Registration Office). Accepts CRO number (5-6 digits) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "cro_number"
+        ],
+        "properties": {
+          "cro_number": {
+            "type": "string",
+            "description": "CRO number (5-6 digits) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "tax-id-validate",
+      "name": "Tax ID Validate",
+      "description": "Validate tax identification number (TIN) formats for 40+ countries. Checks format rules and checksum algorithms where applicable. Does not verify with tax authorities.",
+      "category": "validation",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "tax_id"
+        ],
+        "properties": {
+          "tax_id": {
+            "type": "string",
+            "description": "Tax identification number (with or without country prefix)"
+          },
+          "country_code": {
+            "type": "string",
+            "description": "ISO 2-letter country code (auto-detected from prefix if omitted)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "ssl-certificate-chain",
+      "name": "SSL Certificate Chain",
+      "description": "Inspect the full SSL/TLS certificate chain for a domain. Returns cert details, expiry, issuer, TLS version, cipher suite, and security issues.",
+      "category": "monitoring",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "host"
+        ],
+        "properties": {
+          "host": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "env-template-generate",
+      "name": "Env Template Generate",
+      "description": "Scan source code for environment variable references (process.env, os.environ, etc.) and generate a .env template with descriptions and example values.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Source code to scan"
+          },
+          "project_description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "business-license-check-se",
+      "name": "Business License Check SE",
+      "description": "Check Swedish company registration status, SNI codes, F-skatt, VAT registration, employer registration.",
+      "category": "data-extraction",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "org_number"
+        ],
+        "properties": {
+          "org_number": {
+            "type": "string",
+            "description": "Swedish org number (10 digits)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "terms-of-service-extract",
+      "name": "Terms of Service Extract",
+      "description": "Extract key clauses from a company's Terms of Service: governing law, arbitration, termination, liability limitations.",
+      "category": "data-extraction",
+      "price_cents": 30,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Company website URL"
+          }
+        }
+      }
+    },
+    {
+      "slug": "email-reputation-score",
+      "name": "Email Reputation Score",
+      "description": "Calculate a trust score for an email address. Assesses domain age, MX configuration, disposable domain detection, and email provider reputation. Returns a 0-100 risk score.",
+      "category": "validation",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email address to score"
+          }
+        }
+      }
+    },
+    {
+      "slug": "google-search",
+      "name": "Google Search",
+      "description": "Perform a Google search and return structured results. Returns title, URL, snippet, position for each result.",
+      "category": "web-scraping",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query"
+          },
+          "country": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "num_results": {
+            "type": "integer",
+            "description": "Number of results (default 10, max 20)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "flatten-json",
+      "name": "Flatten JSON",
+      "description": "Flatten nested JSON to dot-notation keys. E.g. {a:{b:[1,2]}} → {'a.b.0':1,'a.b.1':2}. Configurable delimiter and array handling. Algorithmic.",
+      "category": "data-processing",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Nested JSON object"
+          },
+          "delimiter": {
+            "type": "string",
+            "description": "Default '.'"
+          },
+          "array_handling": {
+            "type": "string",
+            "description": "'index' or 'stringify'"
+          }
+        }
+      }
+    },
+    {
+      "slug": "domain-age-check",
+      "name": "Domain Age Check",
+      "description": "Quick domain registration age lookup. Returns creation date, age in days, registrar, and expiry date. Useful for fraud detection — newly registered domains are higher risk.",
+      "category": "data-extraction",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Domain name to check (e.g., google.com)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "tool-call-validate",
+      "name": "Tool Call Validate",
+      "description": "Validate an LLM tool call against a JSON Schema. Auto-fixes type mismatches (string '42' → number 42). Algorithmic.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "tool_name",
+          "tool_input",
+          "expected_schema"
+        ],
+        "properties": {
+          "tool_name": {
+            "type": "string"
+          },
+          "tool_input": {
+            "type": "object"
+          },
+          "expected_schema": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "slug": "employer-review-summary",
+      "name": "Employer Review Summary",
+      "description": "Get employer review summary from Glassdoor. Returns overall rating, culture/compensation scores, pros/cons themes.",
+      "category": "data-extraction",
+      "price_cents": 25,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "company"
+        ],
+        "properties": {
+          "company": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "resume-parse",
+      "name": "Resume Parse",
+      "description": "Extract structured data from a CV/resume. Accepts PDF URL, base64, or text. Returns name, contact, experience, education, skills, certifications.",
+      "category": "document-extraction",
+      "price_cents": 30,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "base64": {
+            "type": "string"
+          },
+          "pdf_url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "brazilian-company-data",
+      "name": "Brazilian Company Data",
+      "description": "Look up Brazilian company data from ReceitaWS. Requires CNPJ (14 digits). Returns company name, trade name, status, address, activity codes, partners.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "cnpj"
+        ],
+        "properties": {
+          "cnpj": {
+            "type": "string",
+            "description": "CNPJ number (14 digits, e.g. 11222333000181)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "credit-score-band",
+      "name": "Credit Score Band",
+      "description": "Convert and interpret credit scores between different scoring systems. Maps FICO, VantageScore, Experian, Equifax scores to universal risk bands with percentile estimates.",
+      "category": "data-processing",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "score"
+        ],
+        "properties": {
+          "score": {
+            "type": "number",
+            "description": "Credit score value"
+          },
+          "system": {
+            "type": "string",
+            "description": "Scoring system: fico, vantagescore, experian, equifax (default: fico)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "lei-lookup",
+      "name": "LEI Lookup",
+      "description": "Look up a Legal Entity Identifier (LEI) via the GLEIF database. Accepts a 20-character LEI or company name. Returns entity name, jurisdiction, addresses, registration status.",
+      "category": "validation",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "lei"
+        ],
+        "properties": {
+          "lei": {
+            "type": "string",
+            "description": "20-character LEI code or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "return-policy-extract",
+      "name": "Return Policy Extract",
+      "description": "Extract return/refund policy from a retailer website. Returns window, conditions, exclusions, process steps.",
+      "category": "data-extraction",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Retailer website URL"
+          }
+        }
+      }
+    },
+    {
+      "slug": "product-reviews-extract",
+      "name": "Product Reviews Extract",
+      "description": "Extract product reviews from Amazon, Trustpilot, or any review page. Returns rating distribution, pros/cons, sentiment.",
+      "category": "data-extraction",
+      "price_cents": 25,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Product review page URL"
+          }
+        }
+      }
+    },
+    {
+      "slug": "country-tax-rates",
+      "name": "Country Tax Rates",
+      "description": "Get corporate tax, VAT, personal income tax, capital gains, and social security rates for 45+ countries.",
+      "category": "data-extraction",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "country_code"
+        ],
+        "properties": {
+          "country_code": {
+            "type": "string",
+            "description": "ISO 2-letter country code"
+          }
+        }
+      }
+    },
+    {
+      "slug": "api-health-check",
+      "name": "API Health Check",
+      "description": "Test an API endpoint: send request, validate response status and schema. Integration testing as a service.",
+      "category": "validation",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "API endpoint URL"
+          },
+          "body": {},
+          "method": {
+            "type": "string"
+          },
+          "headers": {
+            "type": "object"
+          },
+          "expected_schema": {
+            "type": "object"
+          },
+          "expected_status": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "phone-validate",
+      "name": "Phone Validate",
+      "description": "Validate a phone number and classify its type. Returns E.164 format, country, carrier name, and whether it is mobile, landline, or VOIP. Covers 200+ countries.",
+      "category": "validation",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "phone_number"
+        ],
+        "properties": {
+          "country_code": {
+            "type": "string",
+            "description": "ISO 2-letter country code hint (optional)"
+          },
+          "phone_number": {
+            "type": "string",
+            "description": "Phone number in any format"
+          }
+        }
+      }
+    },
+    {
+      "slug": "url-to-markdown",
+      "name": "URL to Markdown",
+      "description": "Render any URL via headless browser and convert to clean markdown. Strips nav, ads, footers. Works on JS-heavy sites.",
+      "category": "web-scraping",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to convert"
+          },
+          "include_links": {
+            "type": "boolean"
+          },
+          "include_images": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "slug": "belgian-company-data",
+      "name": "Belgian Company Data",
+      "description": "Look up Belgian company data from KBO/BCE (Crossroads Bank for Enterprises). Accepts enterprise number (10 digits, e.g. 0404.616.494) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "enterprise_number"
+        ],
+        "properties": {
+          "enterprise_number": {
+            "type": "string",
+            "description": "KBO/BCE enterprise number (e.g. 0404.616.494) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "json-to-csv",
+      "name": "JSON to CSV",
+      "description": "Convert a JSON array of objects to CSV format. Supports custom delimiters. Pure algorithmic — instant and cheap.",
+      "category": "data-processing",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "Array of objects to convert"
+          },
+          "delimiter": {
+            "type": "string",
+            "description": "Column delimiter (default: comma)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "sanctions-check",
+      "name": "Sanctions Check",
+      "description": "Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK). Uses OpenSanctions consolidated database. Returns match results with confidence scores.",
+      "category": "compliance",
+      "price_cents": 25,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Person or company name to check"
+          },
+          "country": {
+            "type": "string",
+            "description": "ISO country code filter (optional)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "accessibility-audit",
+      "name": "Accessibility Audit",
+      "description": "WCAG 2.1 accessibility audit of a URL. Checks color contrast, alt text, form labels, ARIA roles, heading hierarchy, link text, language. Mostly deterministic.",
+      "category": "validation",
+      "price_cents": 30,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to audit"
+          }
+        }
+      }
+    },
+    {
+      "slug": "estonian-company-data",
+      "name": "Estonian Company Data",
+      "description": "Look up Estonian company data from the e-Business Register. Accepts registry code (8 digits) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "registry_code"
+        ],
+        "properties": {
+          "registry_code": {
+            "type": "string",
+            "description": "Estonian registry code (8 digits) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "business-day-check",
+      "name": "Business Day Check",
+      "description": "Check if a specific date is a business day in a given country. Accounts for weekends and public holidays. Also returns the next business day if the given date is not one.",
+      "category": "validation",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "date",
+          "country_code"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Date to check (YYYY-MM-DD)"
+          },
+          "country_code": {
+            "type": "string",
+            "description": "ISO 2-letter country code"
+          }
+        }
+      }
+    },
+    {
+      "slug": "receipt-categorize",
+      "name": "Receipt Categorize",
+      "description": "Extract and categorize receipt data. Returns vendor, date, amount, tax, currency, expense category, line items. Ready for expense reports.",
+      "category": "document-extraction",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "base64": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "company-name-match",
+      "name": "Company Name Match",
+      "description": "Fuzzy match and normalize company names. Compares two names accounting for Ltd/Limited, AB/Aktiebolag, Inc/Incorporated, GmbH, etc. Returns match confidence using Levenshtein, Jaro-Winkler, and token overlap algorithms.",
+      "category": "data-processing",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "name_a",
+          "name_b"
+        ],
+        "properties": {
+          "name_a": {
+            "type": "string",
+            "description": "First company name"
+          },
+          "name_b": {
+            "type": "string",
+            "description": "Second company name to compare"
+          }
+        }
+      }
+    },
+    {
+      "slug": "eu-trademark-search",
+      "name": "EU Trademark Search",
+      "description": "Search the EUIPO trademark database for registered and pending EU trademarks. Returns trademark names, numbers, status, owners.",
+      "category": "data-extraction",
+      "price_cents": 50,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "nice_class": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "mx-lookup",
+      "name": "MX Lookup",
+      "description": "DNS lookup for MX, A, AAAA, NS, TXT, SOA records. Detects email provider (Google, Microsoft, etc.), SPF, and DMARC records.",
+      "category": "monitoring",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "ssl-check",
+      "name": "SSL Certificate Check",
+      "description": "Check a domain's SSL/TLS certificate. Returns issuer, validity dates, days until expiry, protocol version, cipher, and SAN entries.",
+      "category": "web-intelligence",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Domain name (e.g. example.com)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "finnish-company-data",
+      "name": "Finnish Company Data",
+      "description": "Look up Finnish company data from PRH (Patent and Registration Office). Accepts Business ID (e.g. 0112038-9) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "business_id"
+        ],
+        "properties": {
+          "business_id": {
+            "type": "string",
+            "description": "Finnish Business ID (e.g. 0112038-9) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "swiss-company-data",
+      "name": "Swiss Company Data",
+      "description": "Look up Swiss company data from the Zefix PublicREST API (Federal Office of Justice). Accepts UID (e.g. CHE-105.805.977), EHRAID, or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "uid"
+        ],
+        "properties": {
+          "uid": {
+            "type": "string",
+            "description": "Swiss UID (e.g. CHE-105.805.977) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "base64-encode-url",
+      "name": "Base64 Encode URL",
+      "description": "Fetch a URL and return content as base64. Useful for embedding images, PDFs in API calls. Returns base64, content type, data URI.",
+      "category": "file-conversion",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to fetch and encode"
+          }
+        }
+      }
+    },
+    {
+      "slug": "weather-lookup",
+      "name": "Weather Lookup",
+      "description": "Get current weather and 7-day forecast for any location. Uses Open-Meteo API. Search by city name or coordinates.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string"
+          },
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    {
+      "slug": "image-resize",
+      "name": "Image Resize",
+      "description": "Resize, crop, and convert images. Supports PNG, JPEG, WebP. Configurable dimensions, quality, fit mode. Uses Sharp.",
+      "category": "file-conversion",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "fit": {
+            "type": "string",
+            "description": "cover, contain, fill, inside, outside"
+          },
+          "base64": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "description": "png, jpeg, or webp"
+          },
+          "quality": {
+            "type": "integer"
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "target_width": {
+            "type": "integer"
+          },
+          "target_height": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "docker-hub-info",
+      "name": "Docker Hub Info",
+      "description": "Fetch Docker Hub image metadata: pull count, star count, tags, architectures, last updated. Supports official and user images.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "image"
+        ],
+        "properties": {
+          "image": {
+            "type": "string",
+            "description": "Image name (e.g. 'nginx', 'user/repo')"
+          }
+        }
+      }
+    },
+    {
+      "slug": "austrian-company-data",
+      "name": "Austrian Company Data",
+      "description": "Look up Austrian company data from the Firmenbuch. Accepts Firmenbuchnummer (e.g. FN 150913f) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "fn_number"
+        ],
+        "properties": {
+          "fn_number": {
+            "type": "string",
+            "description": "Firmenbuchnummer (e.g. FN 150913f) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "australian-company-data",
+      "name": "Australian Company Data",
+      "description": "Look up Australian company data from ABN Lookup. Accepts ABN (11 digits), ACN (9 digits), or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "abn"
+        ],
+        "properties": {
+          "abn": {
+            "type": "string",
+            "description": "ABN (11 digits), ACN (9 digits), or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "log-parse",
+      "name": "Log Parse",
+      "description": "Parse log files — auto-detects format (JSON, syslog, ISO, logfmt, Laravel). Extracts timestamps, levels, messages. Returns error/warning summary. Algorithmic.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "logs"
+        ],
+        "properties": {
+          "logs": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "phone-normalize",
+      "name": "Phone Normalize",
+      "description": "Parse and normalize phone numbers to E.164 format. Detects country, carrier type, validates format. Uses libphonenumber.",
+      "category": "data-processing",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "phone_string"
+        ],
+        "properties": {
+          "phone_string": {
+            "type": "string",
+            "description": "Phone number to normalize"
+          },
+          "default_country": {
+            "type": "string",
+            "description": "ISO country code (e.g. SE)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "employment-cost-estimate",
+      "name": "Employment Cost Estimate",
+      "description": "Calculate total employer cost and net salary estimate for 20+ countries. Includes social contributions, pension, income tax.",
+      "category": "data-extraction",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "gross_salary",
+          "country_code"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "country_code": {
+            "type": "string"
+          },
+          "gross_salary": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    {
+      "slug": "npm-package-info",
+      "name": "npm Package Info",
+      "description": "Fetch npm package metadata: version, dependencies, downloads, repository, license. Includes weekly download count.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "package"
+        ],
+        "properties": {
+          "package": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "ted-procurement",
+      "name": "EU Procurement Tender Search",
+      "description": "Search EU public procurement tenders on TED (Tenders Electronic Daily). Filter by keyword, country, and CPV code. Returns tender titles, authorities, values, deadlines, and links.",
+      "category": "data-extraction",
+      "price_cents": 50,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "keyword"
+        ],
+        "properties": {
+          "country": {
+            "type": "string",
+            "description": "ISO country code filter (e.g. SE, DE)"
+          },
+          "keyword": {
+            "type": "string",
+            "description": "Search keyword for tenders"
+          },
+          "cpv_code": {
+            "type": "string",
+            "description": "CPV code filter"
+          }
+        }
+      }
+    },
+    {
+      "slug": "serp-analyze",
+      "name": "SERP Analyze",
+      "description": "Analyze Google search results for a keyword. Returns organic results, featured snippet, People Also Ask, SERP features.",
+      "category": "data-extraction",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "keyword"
+        ],
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "keyword": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "id-number-validate",
+      "name": "ID Number Validate",
+      "description": "Validate national identification number formats. Supports Swedish personnummer, Finnish henkilötunnus, Norwegian fødselsnummer, Danish CPR, UK National Insurance, US SSN format, and German Steuer-ID. Checks format and checksum where applicable. Does NOT verify identity.",
+      "category": "validation",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "id_number",
+          "country_code"
+        ],
+        "properties": {
+          "id_number": {
+            "type": "string",
+            "description": "National identification number"
+          },
+          "country_code": {
+            "type": "string",
+            "description": "ISO 2-letter country code (SE, FI, NO, DK, GB, US, DE)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "latvian-company-data",
+      "name": "Latvian Company Data",
+      "description": "Look up Latvian company data from the Enterprise Register (Uzņēmumu reģistrs). Accepts registration number (11 digits) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "reg_number"
+        ],
+        "properties": {
+          "reg_number": {
+            "type": "string",
+            "description": "Latvian registration number (11 digits) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "swift-message-parse",
+      "name": "SWIFT Message Parse",
+      "description": "Parse SWIFT MT messages (MT103/MT940/MT202) into structured data. Extracts sender/receiver BIC, amount, currency, beneficiary.",
+      "category": "data-extraction",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Raw SWIFT message text"
+          }
+        }
+      }
+    },
+    {
+      "slug": "ip-risk-score",
+      "name": "IP Risk Score",
+      "description": "Assess fraud risk for an IP address. Detects VPNs, proxies, Tor exit nodes, hosting/datacenter IPs. Returns risk score and risk factors.",
+      "category": "validation",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "ip"
+        ],
+        "properties": {
+          "ip": {
+            "type": "string",
+            "description": "IP address (IPv4 or IPv6)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "markdown-to-html",
+      "name": "Markdown to HTML",
+      "description": "Convert markdown to styled HTML with inline CSS. Supports light, dark, and plain themes. Algorithmic — instant.",
+      "category": "file-conversion",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "markdown"
+        ],
+        "properties": {
+          "theme": {
+            "type": "string",
+            "description": "light, dark, or plain"
+          },
+          "markdown": {
+            "type": "string",
+            "description": "Markdown text to convert"
+          }
+        }
+      }
+    },
+    {
+      "slug": "xml-to-json",
+      "name": "XML to JSON",
+      "description": "Parse XML string to JSON. Preserves attributes (as @attr), handles CDATA, auto-types values. Algorithmic.",
+      "category": "data-processing",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "xml_string"
+        ],
+        "properties": {
+          "xml_string": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "address-validate",
+      "name": "Address Validate",
+      "description": "Validate and standardize a postal address. Returns structured components, validity confidence, and suggested corrections. Works for 200+ countries via OpenStreetMap Nominatim.",
+      "category": "validation",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Full address as free text"
+          },
+          "country_code": {
+            "type": "string",
+            "description": "ISO 2-letter country code hint (optional)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "uk-companies-house-officers",
+      "name": "UK Companies House Officers",
+      "description": "Look up officers (directors, secretaries) of a UK company via Companies House API. Returns active and resigned officers with appointment dates.",
+      "category": "data-extraction",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "company_name": {
+            "type": "string"
+          },
+          "company_number": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "uk-company-data",
+      "name": "UK Company Data",
+      "description": "Look up UK company data from Companies House. Accepts company number (8 digits) or fuzzy company name. Returns company name, status, incorporation date, SIC codes, registered address.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "company_number"
+        ],
+        "properties": {
+          "company_number": {
+            "type": "string",
+            "description": "UK Companies House number (8 digits) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "og-image-check",
+      "name": "OG Image Check",
+      "description": "Validate Open Graph and Twitter Card images for a URL. Checks dimensions, file size, format, alt text.",
+      "category": "validation",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "robots-txt-parse",
+      "name": "Robots.txt Parse",
+      "description": "Fetch and parse a website's robots.txt. Returns rules per user-agent, sitemaps, crawl delays, and whether all crawlers are blocked.",
+      "category": "monitoring",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "patent-search",
+      "name": "Patent Search",
+      "description": "Search US patents via PatentsView API. Search by keyword, title, or patent number. Returns patent details, inventors, assignees.",
+      "category": "data-extraction",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "product-search",
+      "name": "Product Search",
+      "description": "Search products on Google Shopping. Returns product listings with title, price, merchant, rating.",
+      "category": "data-extraction",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "german-company-data",
+      "name": "German Company Data",
+      "description": "Look up German company data from the Handelsregister. Accepts HRB/HRA number or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "hrb_number"
+        ],
+        "properties": {
+          "hrb_number": {
+            "type": "string",
+            "description": "Handelsregister number (e.g. HRB 86891) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "url-to-text",
+      "name": "URL to Text",
+      "description": "Lightweight text extraction from URL. No JS rendering — just HTTP GET + HTML parse. Fast and cheap for most content sites.",
+      "category": "web-scraping",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to extract text from"
+          }
+        }
+      }
+    },
+    {
+      "slug": "agent-trace-analyze",
+      "name": "Agent Trace Analyze",
+      "description": "Analyze AI agent execution traces (LangChain/CrewAI/AutoGen). Identifies failure points, root causes, token waste, and suggests fixes.",
+      "category": "developer-tools",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "trace"
+        ],
+        "properties": {
+          "trace": {
+            "type": "string",
+            "description": "Agent log/trace output"
+          }
+        }
+      }
+    },
+    {
+      "slug": "portuguese-company-data",
+      "name": "Portuguese Company Data",
+      "description": "Look up Portuguese company data from RNPC. Accepts NIPC (9 digits) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "nipc"
+        ],
+        "properties": {
+          "nipc": {
+            "type": "string",
+            "description": "NIPC number (9 digits) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "website-carbon-estimate",
+      "name": "Website Carbon Estimate",
+      "description": "Estimate CO2 emissions per page view using the Website Carbon methodology. Returns rating A-F, annual estimate.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "beneficial-ownership-lookup",
+      "name": "Beneficial Ownership Lookup",
+      "description": "Look up beneficial ownership (UBO) information for a company. Returns individuals who ultimately own or control the entity, their ownership percentage, and the ownership chain. Uses OpenOwnership and Companies House for UK companies.",
+      "category": "compliance",
+      "price_cents": 25,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "company_name"
+        ],
+        "properties": {
+          "company_name": {
+            "type": "string",
+            "description": "Company name"
+          },
+          "jurisdiction": {
+            "type": "string",
+            "description": "Country code (ISO 2-letter) for narrowing results (optional)"
+          },
+          "company_number": {
+            "type": "string",
+            "description": "Company registration number if known (optional)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "phone-type-detect",
+      "name": "Phone Type Detect",
+      "description": "Detect whether a phone number is mobile, landline, VOIP, toll-free, or premium rate. Essential for SMS delivery verification and communication routing.",
+      "category": "validation",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "phone_number"
+        ],
+        "properties": {
+          "country_code": {
+            "type": "string",
+            "description": "ISO 2-letter country code hint (optional)"
+          },
+          "phone_number": {
+            "type": "string",
+            "description": "Phone number in any format"
+          }
+        }
+      }
+    },
+    {
+      "slug": "deduplicate",
+      "name": "Deduplicate",
+      "description": "Deduplicate a JSON array of objects using fuzzy string matching (Levenshtein + token sort). Specify match fields and threshold.",
+      "category": "data-processing",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "Array of objects to deduplicate"
+          },
+          "threshold": {
+            "type": "number",
+            "description": "Match threshold 0-1 (default 0.8)"
+          },
+          "match_fields": {
+            "type": "array",
+            "description": "Fields to compare"
+          }
+        }
+      }
+    },
+    {
+      "slug": "changelog-generate",
+      "name": "Changelog Generate",
+      "description": "Generate a user-facing changelog from git commits. Groups by type, writes human-readable descriptions. Supports Keep a Changelog, semantic, and bullet formats.",
+      "category": "developer-tools",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string"
+          },
+          "commits": {
+            "type": "array",
+            "description": "Array of {message, author, date}"
+          },
+          "raw_log": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "url-health-check",
+      "name": "URL Health Check",
+      "description": "Check if a URL is alive. Returns status code, response time, redirect chain, SSL validity, content type, server header.",
+      "category": "validation",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to check"
+          },
+          "timeout": {
+            "type": "integer"
+          },
+          "follow_redirects": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "slug": "prompt-optimize",
+      "name": "Prompt Optimize",
+      "description": "Analyze and improve a prompt. Returns improved version with changes and reasoning, clarity score comparison, and techniques applied.",
+      "category": "agent-tooling",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "current_prompt"
+        ],
+        "properties": {
+          "bad_examples": {
+            "type": "array"
+          },
+          "good_examples": {
+            "type": "array"
+          },
+          "current_prompt": {
+            "type": "string"
+          },
+          "task_description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "paid-api-preflight",
+      "name": "Paid API Pre-flight Check",
+      "description": "Verify any paid API endpoint before your agent spends money. Checks reachability, SSL, response time, and validates the payment protocol handshake (L402, x402, MPP). Returns a proceed/caution/avoid recommendation with parsed payment details.",
+      "category": "validation",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The paid API endpoint URL to check before paying"
+          }
+        }
+      }
+    },
+    {
+      "slug": "currency-convert",
+      "name": "Currency Convert",
+      "description": "Convert an amount between currencies using ECB exchange rates. Supports all major currencies. Returns converted amount and rate.",
+      "category": "financial",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "amount",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Target currency (ISO 4217)"
+          },
+          "from": {
+            "type": "string",
+            "description": "Source currency (ISO 4217)"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Amount to convert"
+          }
+        }
+      }
+    },
+    {
+      "slug": "exchange-rate",
+      "name": "Exchange Rate",
+      "description": "Get current exchange rate between two currencies using ECB data. Supports all major currencies. Returns rate, inverse rate, and date.",
+      "category": "financial",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Target currency (ISO 4217, e.g. EUR)"
+          },
+          "from": {
+            "type": "string",
+            "description": "Source currency (ISO 4217, e.g. USD)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "japanese-company-data",
+      "name": "Japanese Company Data",
+      "description": "Look up Japanese company data from the National Tax Agency corporate number system. Accepts 13-digit corporate number or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "corporate_number"
+        ],
+        "properties": {
+          "corporate_number": {
+            "type": "string",
+            "description": "13-digit corporate number or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "crontab-generate",
+      "name": "Crontab Generate",
+      "description": "Convert natural language schedule to cron expression, or explain an existing cron expression. Returns next run times.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "description"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Schedule in natural language or cron expression"
+          }
+        }
+      }
+    },
+    {
+      "slug": "secret-scan",
+      "name": "Secret Scan",
+      "description": "Scan code/config/logs for leaked secrets: AWS keys, GitHub tokens, Stripe keys, API keys, private keys, DB URLs, JWTs. Algorithmic regex matching.",
+      "category": "security",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Code, config, or log output"
+          }
+        }
+      }
+    },
+    {
+      "slug": "gdpr-website-check",
+      "name": "GDPR Website Check",
+      "description": "Scan a website for GDPR compliance indicators: cookie consent, privacy policy, tracking scripts, security headers. Returns score A-F.",
+      "category": "compliance",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "container-track",
+      "name": "Container Track",
+      "description": "Track shipping containers by ISO 6346 number. Validates format, detects carrier, provides tracking status.",
+      "category": "data-extraction",
+      "price_cents": 25,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "container_number"
+        ],
+        "properties": {
+          "carrier": {
+            "type": "string"
+          },
+          "container_number": {
+            "type": "string",
+            "description": "Container number (e.g. MAEU1234567)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "date-parse",
+      "name": "Date Parse",
+      "description": "Parse ambiguous date strings into ISO 8601. Handles '3/4/25', 'March 4th', '4. mars 2025', '2025-W14'. Detects ambiguity.",
+      "category": "data-processing",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "date_string"
+        ],
+        "properties": {
+          "date_string": {
+            "type": "string",
+            "description": "Date string to parse"
+          },
+          "preferred_format": {
+            "type": "string",
+            "description": "DMY, MDY, or YMD (for ambiguous dates)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "fake-data-generate",
+      "name": "Fake Data Generate",
+      "description": "Generate realistic fake data matching a schema. Locale-aware: Swedish names for 'sv', Japanese for 'ja'. Up to 1000 records.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "fields": {
+            "type": "array",
+            "description": "Array of {name, type}"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "schema": {
+            "type": "object",
+            "description": "JSON Schema"
+          }
+        }
+      }
+    },
+    {
+      "slug": "pr-description-generate",
+      "name": "PR Description Generate",
+      "description": "Generate pull request descriptions from diffs or commit logs. Returns title, summary, changes list, testing steps.",
+      "category": "developer-tools",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "diff"
+        ],
+        "properties": {
+          "diff": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "customs-duty-lookup",
+      "name": "Customs Duty Lookup",
+      "description": "Look up EU customs duty rates by HS code and origin country. Returns duty rate, preferential rates, anti-dumping status.",
+      "category": "data-extraction",
+      "price_cents": 20,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "hs_code"
+        ],
+        "properties": {
+          "hs_code": {
+            "type": "string"
+          },
+          "origin_country": {
+            "type": "string"
+          },
+          "destination_country": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "stock-quote",
+      "name": "Stock Quote",
+      "description": "Get real-time stock quote data for any publicly traded company. Accepts ticker symbols (e.g. AAPL, VOLV-B.ST). Returns price, change, volume, market state.",
+      "category": "financial",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "symbol"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Stock ticker symbol (e.g. AAPL, TSLA, VOLV-B.ST)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "eori-validate",
+      "name": "EORI Validation",
+      "description": "Validate an EORI (Economic Operators Registration and Identification) number against the EU customs validation service. Returns trader name and address if valid.",
+      "category": "validation",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "eori"
+        ],
+        "properties": {
+          "eori": {
+            "type": "string",
+            "description": "EORI number (e.g. DE123456789012345)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "pypi-package-info",
+      "name": "PyPI Package Info",
+      "description": "Fetch Python package metadata from PyPI: version, dependencies, Python compatibility, release history, license.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "package"
+        ],
+        "properties": {
+          "package": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "company-id-detect",
+      "name": "Company ID Detection",
+      "description": "Identify the type and country of a company registration number. Detects Swedish org numbers, Finnish business IDs, German HRB numbers, LEIs, DUNS, and 20+ other formats. Pure algorithmic.",
+      "category": "validation",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Company registration number to identify"
+          }
+        }
+      }
+    },
+    {
+      "slug": "contract-extract",
+      "name": "Contract Extract",
+      "description": "Extract key terms from a contract/legal document. Returns parties, dates, obligations, payment terms, liability caps, termination clauses. Not legal advice.",
+      "category": "document-extraction",
+      "price_cents": 50,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "base64": {
+            "type": "string"
+          },
+          "pdf_url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "llm-cost-calculate",
+      "name": "LLM Cost Calculate",
+      "description": "Calculate LLM API cost for a prompt+completion across 14 models. Returns cheaper alternatives with savings percentages. Algorithmic.",
+      "category": "developer-tools",
+      "price_cents": 2,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "model"
+        ],
+        "properties": {
+          "model": {
+            "type": "string"
+          },
+          "prompt_text": {
+            "type": "string"
+          },
+          "prompt_tokens": {
+            "type": "integer"
+          },
+          "completion_text": {
+            "type": "string"
+          },
+          "completion_tokens": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "slug": "hs-code-lookup",
+      "name": "HS Code Lookup",
+      "description": "Classify a product into Harmonized System (HS) commodity codes. Returns primary HS code, chapter, section, and alternative classifications with confidence levels.",
+      "category": "trade",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "product"
+        ],
+        "properties": {
+          "product": {
+            "type": "string",
+            "description": "Product description to classify"
+          }
+        }
+      }
+    },
+    {
+      "slug": "barcode-lookup",
+      "name": "Barcode Lookup",
+      "description": "Look up product information by UPC/EAN barcode. Uses Open Food Facts and UPC ItemDB. Returns product name, brand, nutrition, images.",
+      "category": "data-extraction",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "barcode"
+        ],
+        "properties": {
+          "barcode": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "backlink-check",
+      "name": "Backlink Check",
+      "description": "Check backlinks for a domain via CommonCrawl and Google search. Returns linking domains, anchor text, dofollow/nofollow counts.",
+      "category": "data-extraction",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "error-explain",
+      "name": "Error Explain",
+      "description": "Explain an error message or stack trace in plain English. Identifies root cause, suggests fixes with code examples.",
+      "category": "developer-tools",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "context": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "norwegian-company-data",
+      "name": "Norwegian Company Data",
+      "description": "Look up Norwegian company data from the Brønnøysund Register Centre. Accepts org number (9 digits) or fuzzy company name.",
+      "category": "data-extraction",
+      "price_cents": 80,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "org_number"
+        ],
+        "properties": {
+          "org_number": {
+            "type": "string",
+            "description": "Norwegian org number (9 digits) or company name"
+          }
+        }
+      }
+    },
+    {
+      "slug": "marketplace-fee-calculate",
+      "name": "Marketplace Fee Calculate",
+      "description": "Calculate seller fees for Amazon, eBay, Etsy, Shopify. Returns total fees, net revenue, fee breakdown.",
+      "category": "utility",
+      "price_cents": 5,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "marketplace",
+          "sale_price"
+        ],
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "sale_price": {
+            "type": "number"
+          },
+          "marketplace": {
+            "type": "string",
+            "description": "amazon/ebay/etsy/shopify"
+          }
+        }
+      }
+    },
+    {
+      "slug": "github-actions-generate",
+      "name": "GitHub Actions Generate",
+      "description": "Generate CI/CD workflow YAML for GitHub Actions. Supports multiple languages, frameworks, and deploy targets (Railway, Vercel, Fly).",
+      "category": "developer-tools",
+      "price_cents": 15,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "language"
+        ],
+        "properties": {
+          "steps": {
+            "type": "array"
+          },
+          "language": {
+            "type": "string"
+          },
+          "triggers": {
+            "type": "array"
+          },
+          "framework": {
+            "type": "string"
+          },
+          "deploy_target": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "vat-validate",
+      "name": "EU VAT Validation + VIES Enrichment",
+      "description": "Validate a European VAT number against the VIES database and return enriched company data. Handles VIES downtime and rate limiting reliably.",
+      "category": "validation",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "vat_number"
+        ],
+        "properties": {
+          "vat_number": {
+            "type": "string",
+            "description": "EU VAT number including country prefix (e.g. SE556703748501)"
+          }
+        }
+      }
+    },
+    {
+      "slug": "public-holiday-lookup",
+      "name": "Public Holiday Lookup",
+      "description": "Get public holidays for any country and year. Uses Nager.Date API. Returns holiday dates, names, and next upcoming.",
+      "category": "data-extraction",
+      "price_cents": 3,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "country_code"
+        ],
+        "properties": {
+          "year": {
+            "type": "number"
+          },
+          "country_code": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "slug": "invoice-extract",
+      "name": "Invoice / Receipt Extraction",
+      "description": "Extract structured data from an invoice or receipt image/PDF. Returns line items, totals, dates, vendor info, VAT amounts.",
+      "category": "data-extraction",
+      "price_cents": 50,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to invoice image or PDF"
+          },
+          "base64": {
+            "type": "string",
+            "description": "Base64-encoded invoice file"
+          }
+        }
+      }
+    },
+    {
+      "slug": "email-deliverability-check",
+      "name": "Email Deliverability Check",
+      "description": "Check email deliverability for a domain: SPF, DKIM, DMARC, MX records, blacklist status. Returns 0-100 score.",
+      "category": "validation",
+      "price_cents": 10,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

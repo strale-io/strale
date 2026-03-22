@@ -23,6 +23,9 @@ import { capabilityHealth, testSuites, capabilities } from "../db/schema.js";
 import { MIN_RUNS, ROLLING_RUNS, RECENCY_WEIGHTS } from "./sqs-constants.js";
 import { computeHealthState, type HealthState } from "./health-state.js";
 
+// CURRENT — Reliability Profile (RP) computation. Part of the dual-profile model.
+// RP measures operational reliability. Upstream failures INCLUDED. Type-specific weights.
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export type CapabilityType = "deterministic" | "stable_api" | "scraping" | "ai_assisted";

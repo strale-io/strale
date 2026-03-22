@@ -1,0 +1,29 @@
+{
+  "name": "strale",
+  "display_name": "Strale",
+  "description": "The trust layer for AI agents. 250+ independently tested business data capabilities across 27 countries.",
+  "repository": "https://github.com/petterlindstrom79/strale",
+  "homepage": "https://strale.dev",
+  "transport": {
+    "type": "streamable-http",
+    "url": "https://api.strale.io/mcp"
+  },
+  "authentication": {
+    "type": "bearer",
+    "description": "API key from https://strale.dev. strale_search works without auth."
+  },
+  "categories": ["business", "finance", "compliance", "data", "security"],
+  "tags": [
+    "iban",
+    "vat",
+    "compliance",
+    "eu",
+    "company-data",
+    "sanctions",
+    "trust-scoring",
+    "a2a",
+    "x402"
+  ],
+  "tools_count": 251,
+  "free_tier": true
+}

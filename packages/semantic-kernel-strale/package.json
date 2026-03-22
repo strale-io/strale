@@ -1,7 +1,7 @@
 {
   "name": "strale-semantic-kernel",
   "version": "0.1.2",
-  "description": "Semantic Kernel plugin for Strale — 233 business capabilities as kernel functions",
+  "description": "Semantic Kernel plugin for Strale — 250+ business capabilities as kernel functions",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

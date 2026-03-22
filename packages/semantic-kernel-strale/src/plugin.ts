@@ -1,5 +1,5 @@
 /**
- * Semantic Kernel plugin for Strale — 233 capabilities as kernel functions.
+ * Semantic Kernel plugin for Strale — 250+ capabilities as kernel functions.
  */
 
 import { kernelFunction } from "semantic-kernel";
@@ -196,7 +196,7 @@ export async function createStralePlugin(
   return {
     name: "strale",
     description:
-      "Strale capability marketplace — 233 business tools for AI agents including company data, compliance, web intelligence, and more.",
+      "Strale capability marketplace — 250+ business tools for AI agents including company data, compliance, web intelligence, and more.",
     functions,
   };
 }

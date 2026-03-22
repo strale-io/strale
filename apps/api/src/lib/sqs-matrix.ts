@@ -17,6 +17,9 @@
 import type { QPResult } from "./quality-profile.js";
 import type { RPResult } from "./reliability-profile.js";
 
+// CURRENT — 5×5 matrix lookup combining QP grade × RP grade into SQS score.
+// Part of the dual-profile model. Values published on strale.dev/trust.
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface MatrixSQSResult {
