@@ -93,6 +93,11 @@ if (WALLET) {
     };
   }
 
+  // Debug: log actual path seen by middleware
+  x402Route.use("*", async (c, next) => {
+    console.log(`[x402-debug] path=${c.req.path} method=${c.req.method} routePath=${c.req.routePath}`);
+    await next();
+  });
   x402Route.use("*", paymentMiddleware(routes, resourceServer, undefined, undefined, false));
 
   console.log(`[x402] Payment middleware active — wallet: ${WALLET.slice(0, 8)}...${WALLET.slice(-4)}, network: ${NETWORK}, facilitator: ${FACILITATOR_URL}`);
