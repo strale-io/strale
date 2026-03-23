@@ -13,10 +13,7 @@ function parseEcbCsv(csv: string): { date: string; value: number } | null {
 }
 
 registerCapability("ecb-interest-rates", async (input: CapabilityInput) => {
-  // Primary: new ECB Data API (works globally, no geo-restrictions)
-  // Fallback: legacy SDW endpoint (geo-restricted to EU)
-  const primary = "https://data-api.ecb.europa.eu/service/data/FM";
-  const legacy = "https://sdw-wsrest.ecb.europa.eu/service/data/FM";
+  const base = "https://data-api.ecb.europa.eu/service/data/FM";
   const suffix = "?format=csvdata&lastNObservations=1";
 
   const rateKeys = {
@@ -31,19 +28,10 @@ registerCapability("ecb-interest-rates", async (input: CapabilityInput) => {
   const entries = Object.entries(rateKeys);
   const responses = await Promise.allSettled(
     entries.map(async ([key, path]) => {
-      // Try primary endpoint first, fall back to legacy
-      let resp: Response;
-      try {
-        resp = await fetch(`${primary}${path}${suffix}`, {
-          headers: { Accept: "text/csv" },
-          signal: AbortSignal.timeout(10000),
-        });
-      } catch {
-        resp = await fetch(`${legacy}${path}${suffix}`, {
-          headers: { Accept: "text/csv" },
-          signal: AbortSignal.timeout(10000),
-        });
-      }
+      const resp = await fetch(`${base}${path}${suffix}`, {
+        headers: { Accept: "text/csv" },
+        signal: AbortSignal.timeout(10000),
+      });
       if (!resp.ok) throw new Error(`ECB API returned ${resp.status}`);
       const csv = await resp.text();
       const parsed = parseEcbCsv(csv);
@@ -71,7 +59,7 @@ registerCapability("ecb-interest-rates", async (input: CapabilityInput) => {
       marginal_lending_rate: results.marginal_lending_rate,
       effective_date: effectiveDate,
       currency: "EUR",
-      source_url: "https://sdw-wsrest.ecb.europa.eu",
+      source_url: "https://data-api.ecb.europa.eu",
     },
     provenance: { source: "ecb.europa.eu", fetched_at: new Date().toISOString() },
   };
