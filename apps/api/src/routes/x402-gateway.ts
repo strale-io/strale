@@ -2,18 +2,21 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { getExecutor } from "../capabilities/index.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
+import { paymentMiddleware, x402ResourceServer } from "@x402/hono";
+import { HTTPFacilitatorClient } from "@x402/core/server";
+import { ExactEvmScheme } from "@x402/evm/exact/server";
 
 // ─── x402 payment gateway ─────────────────────────────────────────────────────
 // Exposes selected Strale capabilities as x402-compatible paid API endpoints.
 // Ref: https://x402.org — Coinbase open payment protocol (HTTP 402 + USDC/Base)
 //
 // Uses the official @x402/hono middleware with the Coinbase CDP facilitator
-// for real on-chain USDC payment verification on Base mainnet.
+// for real on-chain USDC payment verification on Base.
 
 const BASE_URL = process.env.API_BASE_URL ?? "https://api.strale.io";
 const WALLET = process.env.X402_WALLET_ADDRESS;
 const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://facilitator.x402.org";
-const NETWORK = process.env.X402_NETWORK ?? "eip155:8453"; // Base mainnet
+const NETWORK = (process.env.X402_NETWORK ?? "eip155:8453") as `${string}:${string}`;
 
 interface EndpointConfig {
   slug: string;
@@ -68,42 +71,31 @@ x402Route.use(
   }),
 );
 
-// ─── Apply @x402/hono middleware if wallet is configured ──────────────────────
+// ─── Apply @x402/hono payment middleware ──────────────────────────────────────
 
 if (WALLET) {
-  // Dynamic import to avoid startup crash if @x402 packages aren't installed
-  import("@x402/hono").then(async ({ paymentMiddleware, x402ResourceServer }) => {
-    const { HTTPFacilitatorClient } = await import("@x402/core/server");
-    const { ExactEvmScheme } = await import("@x402/evm/exact/server");
+  const facilitatorClient = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
+  const resourceServer = new x402ResourceServer(facilitatorClient)
+    .register(NETWORK, new ExactEvmScheme());
 
-    const facilitatorClient = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
-    const network = NETWORK as `${string}:${string}`;
-    const resourceServer = new x402ResourceServer(facilitatorClient)
-      .register(network, new ExactEvmScheme());
+  // Build routes config from ENDPOINTS
+  const routes: Record<string, any> = {};
+  for (const [path, config] of Object.entries(ENDPOINTS)) {
+    routes[`GET /x402/${path}`] = {
+      accepts: {
+        scheme: "exact",
+        price: config.priceUsd,
+        network: NETWORK,
+        payTo: WALLET,
+      },
+      description: config.description,
+      resource: `${BASE_URL}/x402/${path}`,
+    };
+  }
 
-    // Build routes config from ENDPOINTS
-    const routes: Record<string, any> = {};
+  x402Route.use("*", paymentMiddleware(routes, resourceServer, undefined, undefined, false));
 
-    for (const [path, config] of Object.entries(ENDPOINTS)) {
-      routes[`GET /x402/${path}`] = {
-        accepts: {
-          scheme: "exact",
-          price: config.priceUsd,
-          network,
-          payTo: WALLET,
-        },
-        description: config.description,
-        resource: `${BASE_URL}/x402/${path}`,
-      };
-    }
-
-    x402Route.use("*", paymentMiddleware(routes, resourceServer, undefined, undefined, false));
-
-    console.log(`[x402] Payment middleware active — wallet: ${WALLET.slice(0, 8)}...${WALLET.slice(-4)}, network: ${NETWORK}, facilitator: ${FACILITATOR_URL}`);
-  }).catch((err) => {
-    console.warn(`[x402] Failed to initialize payment middleware: ${err instanceof Error ? err.message : err}`);
-    console.warn("[x402] Falling back to stub mode (any X-PAYMENT header accepted)");
-  });
+  console.log(`[x402] Payment middleware active — wallet: ${WALLET.slice(0, 8)}...${WALLET.slice(-4)}, network: ${NETWORK}, facilitator: ${FACILITATOR_URL}`);
 } else {
   console.warn("[x402] X402_WALLET_ADDRESS not configured — x402 routes use stub verification");
 }
@@ -113,9 +105,8 @@ if (WALLET) {
 for (const [path, config] of Object.entries(ENDPOINTS)) {
   x402Route.get(`/${path}`, async (c) => {
     // If @x402 middleware is active, payment is already verified at this point.
-    // If wallet isn't configured (stub mode), accept any request for development.
+    // If wallet isn't configured (stub mode), return stub 402 for dev/testing.
     if (!WALLET && !c.req.header("x-payment")) {
-      // Stub 402 response for when wallet isn't configured
       return c.json(
         {
           error: "Payment required",
