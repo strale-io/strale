@@ -28,11 +28,19 @@ setInterval(() => {
   }
 }, 60_000).unref();
 
+interface RateCheckResult {
+  allowed: boolean;
+  retryAfterSeconds: number;
+  limit: number;
+  remaining: number;
+  resetAt: number; // Unix timestamp in seconds
+}
+
 function checkRate(
   identifier: string,
   maxRequests: number,
   windowMs: number,
-): { allowed: boolean; retryAfterSeconds: number } {
+): RateCheckResult {
   const now = Date.now();
   let entry = store.get(identifier);
 
@@ -51,11 +59,32 @@ function checkRate(
     return {
       allowed: false,
       retryAfterSeconds: Math.ceil(retryAfterMs / 1000),
+      limit: maxRequests,
+      remaining: 0,
+      resetAt: Math.ceil((oldest + windowMs) / 1000),
     };
   }
 
   entry.timestamps.push(now);
-  return { allowed: true, retryAfterSeconds: 0 };
+  const resetAt = Math.ceil((now + windowMs) / 1000);
+  return {
+    allowed: true,
+    retryAfterSeconds: 0,
+    limit: maxRequests,
+    remaining: maxRequests - entry.timestamps.length,
+    resetAt,
+  };
+}
+
+// ─── Rate limit response headers ──────────────────────────────────────────────
+
+function setRateLimitHeaders(c: Context, result: RateCheckResult): void {
+  c.header("X-RateLimit-Limit", String(result.limit));
+  c.header("X-RateLimit-Remaining", String(result.remaining));
+  c.header("X-RateLimit-Reset", String(result.resetAt));
+  if (!result.allowed) {
+    c.header("Retry-After", String(result.retryAfterSeconds));
+  }
 }
 
 // ─── Middleware factories ───────────────────────────────────────────────────────
@@ -76,10 +105,11 @@ export function rateLimitByKey(maxRequests: number, windowMs: number) {
 
     const key = `key:${user.id}`;
     const result = checkRate(key, maxRequests, windowMs);
+    setRateLimitHeaders(c, result);
 
     if (!result.allowed) {
       return c.json(
-        apiError("rate_limited", "Too many requests. Please slow down.", {
+        apiError("rate_limited", `Rate limit exceeded. Try again in ${result.retryAfterSeconds} seconds.`, {
           retry_after_seconds: result.retryAfterSeconds,
         }),
         429,
@@ -155,8 +185,14 @@ export function rateLimitFreeTierByIp(maxPerDay: number) {
     const key = `free:${ip}`;
     const result = checkDailyRate(key, maxPerDay);
 
+    // Set rate limit headers for daily free-tier limiter
+    c.header("X-RateLimit-Limit", String(maxPerDay));
+    c.header("X-RateLimit-Remaining", String(result.remaining));
+    c.header("X-RateLimit-Reset", String(Math.ceil(result.resetAt / 1000)));
+
     if (!result.allowed) {
       const retryAfterSeconds = Math.ceil((result.resetAt - Date.now()) / 1000);
+      c.header("Retry-After", String(retryAfterSeconds));
       return c.json(
         apiError("rate_limited",
           `Free-tier daily limit reached (${maxPerDay} calls/day). Sign up at strale.dev/signup for unlimited access.`,
@@ -202,10 +238,11 @@ export function rateLimitByIp(maxRequests: number, windowMs: number) {
 
     const key = `ip:${ip}`;
     const result = checkRate(key, maxRequests, windowMs);
+    setRateLimitHeaders(c, result);
 
     if (!result.allowed) {
       return c.json(
-        apiError("rate_limited", "Too many requests. Please try again later.", {
+        apiError("rate_limited", `Rate limit exceeded. Try again in ${result.retryAfterSeconds} seconds.`, {
           retry_after_seconds: result.retryAfterSeconds,
         }),
         429,

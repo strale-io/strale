@@ -29,6 +29,7 @@ import { x402Route } from "./routes/x402-gateway.js";
 import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
+import { openApiSpec } from "./openapi.js";
 
 // Capability executors + DataProvider chains are registered by
 // autoRegisterCapabilities() in index.ts before the server starts.
@@ -69,6 +70,7 @@ app.use("*", async (c, next) => {
   c.header("X-XSS-Protection", "0"); // modern browsers use CSP instead
   c.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
   c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  c.header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
 });
 
 // CORS — split policy: public read-only endpoints allow all origins,
@@ -112,6 +114,7 @@ app.use("/v1/audit/*", publicCors);
 app.use("/.well-known/*", publicCors);
 app.use("/llms.txt", publicCors);
 app.use("/llms-full.txt", publicCors);
+app.use("/openapi.json", publicCors);
 
 // Authenticated / mutating endpoints — restricted CORS
 app.use("/v1/*", restrictedCors);
@@ -134,6 +137,9 @@ app.use("*", async (c, next) => {
 
 // Health check
 app.get("/health", (c) => c.json({ status: "ok" }));
+
+// OpenAPI specification
+app.get("/openapi.json", (c) => c.json(openApiSpec));
 
 // Stripe webhook — must be before any body-parsing middleware
 // Needs raw body for signature verification
