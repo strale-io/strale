@@ -1517,6 +1517,15 @@ export function startScheduledTests(): void {
 
   console.log("[scheduler] Adaptive scheduler started (hourly checks, health-state-driven frequency)");
 
+  // Repair stale scores 15s after startup — re-persist for capabilities where
+  // test_results are newer than capabilities.last_tested_at (indicates a prior
+  // persist failure that left scores stale despite successful test runs).
+  setTimeout(() => {
+    repairStaleScores().catch((err) =>
+      console.error("[scheduler] Stale score repair failed:", err),
+    );
+  }, 15_000);
+
   // Initial sweep 30s after startup to avoid competing with server init
   setTimeout(() => {
     runAdaptiveScheduler().catch((err) =>
@@ -1769,6 +1778,47 @@ function stockholmLocalToUtc(year: number, month: number, day: number, hour: num
   const offsetMins = (hour * 60 + minute) - (localH * 60 + localM);
 
   return approxUtcMs + offsetMins * 60_000;
+}
+
+// ─── Stale score repair ─────────────────────────────────────────────────────
+// Detects capabilities where test_results exist more recently than
+// capabilities.last_tested_at — indicating a prior persist failure. Re-runs
+// persistDualProfileScores for those capabilities to recover their scores.
+
+async function repairStaleScores(): Promise<void> {
+  const db = getDb();
+
+  // Find capabilities where the latest test_result is newer than last_tested_at
+  const staleRows = await db.execute(sql`
+    SELECT c.slug,
+           c.last_tested_at AS cap_tested,
+           MAX(tr.executed_at) AS result_tested
+    FROM capabilities c
+    INNER JOIN test_results tr ON tr.capability_slug = c.slug
+    WHERE c.is_active = true
+    GROUP BY c.slug, c.last_tested_at
+    HAVING MAX(tr.executed_at) > COALESCE(c.last_tested_at, '1970-01-01'::timestamptz) + INTERVAL '1 hour'
+    ORDER BY MAX(tr.executed_at) - COALESCE(c.last_tested_at, '1970-01-01'::timestamptz) DESC
+    LIMIT 50
+  `);
+
+  const rows = (Array.isArray(staleRows) ? staleRows : (staleRows as any)?.rows ?? []) as Array<{
+    slug: string;
+    cap_tested: Date | null;
+    result_tested: Date;
+  }>;
+
+  if (rows.length === 0) {
+    console.log("[stale-repair] No stale scores detected — all capabilities up to date");
+    return;
+  }
+
+  const slugs = rows.map((r) => r.slug);
+  console.log(`[stale-repair] Found ${slugs.length} capabilities with stale scores — re-persisting: ${slugs.join(", ")}`);
+
+  await persistDualProfileScores(slugs);
+
+  console.log("[stale-repair] Repair complete");
 }
 
 // ─── Dual-profile score persistence ──────────────────────────────────────────
