@@ -245,6 +245,7 @@ function setWelcomeHeaders(c: { header: (name: string, value: string) => void })
   c.header("X-RateLimit-Limit", "60");
   c.header("X-RateLimit-Remaining", "59");
   c.header("X-RateLimit-Reset", String(Math.floor(Date.now() / 1000) + 60));
+  c.header("X-Credits-Info", "Authenticate to see usage. GET /v1/wallet/balance for current balance.");
 }
 
 function serveWelcome(c: { req: { header: (name: string) => string | undefined }; header: (name: string, value: string) => void; json: (data: unknown) => Response; text: (data: string) => Response }) {
@@ -267,15 +268,27 @@ const PRICING = {
   "@context": "https://schema.org",
   "@type": "WebAPI",
   name: "Strale API",
-  offers: {
-    "@type": "AggregateOffer",
-    priceCurrency: "EUR",
-    lowPrice: "0.02",
-    highPrice: "0.50",
-    offerCount: 250,
-    description:
-      "Pay-per-use. \u20ac0.02\u2013\u20ac0.50 per capability execution. \u20ac2.00 trial credits free, no credit card required.",
-  },
+  offers: [
+    {
+      "@type": "Offer",
+      name: "Free Trial",
+      price: "0",
+      priceCurrency: "EUR",
+      description:
+        "\u20ac2.00 trial credits on signup. No credit card required.",
+      eligibleCustomerType: "NewCustomer",
+      availability: "https://schema.org/InStock",
+    },
+    {
+      "@type": "AggregateOffer",
+      priceCurrency: "EUR",
+      lowPrice: "0.02",
+      highPrice: "0.50",
+      offerCount: 250,
+      description:
+        "Pay-per-use. \u20ac0.02\u2013\u20ac0.50 per capability execution.",
+    },
+  ],
   model: "pay-per-use",
   currency: "EUR",
   wallet_based: true,

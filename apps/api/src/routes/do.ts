@@ -43,6 +43,15 @@ import {
 } from "../lib/x402-gateway.js";
 import type { AppEnv } from "../types.js";
 
+// Usage/cost headers for Beacon transactability
+function setCreditsHeaders(c: { header: (name: string, value: string) => void }, balanceCents: number, costCents?: number) {
+  c.header("X-Credits-Remaining", String(balanceCents));
+  c.header("X-Credits-Currency", "EUR");
+  if (costCents !== undefined) {
+    c.header("X-Cost-Cents", String(costCents));
+  }
+}
+
 // Dual-profile quality block for /v1/do responses
 interface DualProfileQuality {
   sqs: number;
@@ -794,6 +803,7 @@ async function executeFreeTierAuthenticated(
       .limit(1);
 
     const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
+    setCreditsHeaders(c, wallet?.balanceCents ?? 0, 0);
     return c.json({
       transaction_id: txnRecord.id,
       status: "completed",
@@ -1119,6 +1129,7 @@ async function executeSync(
 
   const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
 
+  setCreditsHeaders(c, result.balanceAfter, capability.priceCents);
   return c.json({
     transaction_id: result.transactionId,
     status: "completed",

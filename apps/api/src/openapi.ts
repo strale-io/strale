@@ -247,6 +247,11 @@ export const openApiSpec = {
         responses: {
           "200": {
             description: "Capability executed successfully (synchronous).",
+            headers: {
+              "X-Credits-Remaining": { description: "Wallet balance in EUR cents after this transaction", schema: { type: "integer" as const } },
+              "X-Cost-Cents": { description: "Cost of this execution in EUR cents", schema: { type: "integer" as const } },
+              "X-Credits-Currency": { description: "Currency for credit values (always EUR)", schema: { type: "string" as const, example: "EUR" } },
+            },
             content: { "application/json": { schema: { $ref: "#/components/schemas/DoResponse" } } },
           },
           "202": {

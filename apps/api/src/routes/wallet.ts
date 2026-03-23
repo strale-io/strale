@@ -82,8 +82,11 @@ walletRoute.get("/balance", async (c) => {
     .where(eq(wallets.userId, user.id))
     .limit(1);
 
+  const balance = wallet?.balanceCents ?? 0;
+  c.header("X-Credits-Remaining", String(balance));
+  c.header("X-Credits-Currency", "EUR");
   return c.json({
-    balance_cents: wallet?.balanceCents ?? 0,
+    balance_cents: balance,
     currency: "EUR",
   });
 });
