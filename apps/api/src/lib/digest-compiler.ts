@@ -9,6 +9,7 @@ import { eq, and, gte, lt, desc, sql, inArray, notInArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   capabilities,
+  capabilityHealth,
   healthMonitorEvents,
   failedRequests,
   testResults,
@@ -489,5 +490,214 @@ async function getTestStats(db: ReturnType<typeof getDb>, since: Date) {
     testRunsThisWeek: totalRuns,
     passRateThisWeek: totalRuns > 0 ? Math.round((passedRuns / totalRuns) * 1000) / 10 : 0,
     estimatedCostCents: costCents,
+  };
+}
+
+// ─── Data enrichment for email templates ────────────────────────────────────
+
+export interface AffectedCapabilityDetail {
+  slug: string;
+  sqs_score: number;
+  sqs_grade: string;
+  freshness: string;
+  last_tested: string;
+}
+
+/**
+ * Get current SQS details for a list of capability slugs.
+ * Used by capabilityTable() in email templates.
+ */
+export async function getAffectedCapabilityDetails(
+  slugs: string[],
+): Promise<AffectedCapabilityDetail[]> {
+  if (slugs.length === 0) return [];
+  const db = getDb();
+
+  // Get SQS scores from the capabilities table (cached after each test run)
+  const capRows = await db
+    .select({
+      slug: capabilities.slug,
+      matrixSqs: capabilities.matrixSqs,
+      freshnessCategory: capabilities.freshnessCategory,
+    })
+    .from(capabilities)
+    .where(inArray(capabilities.slug, slugs));
+
+  // Get last test timestamp per slug
+  const lastTestResult = await db.execute(sql`
+    SELECT DISTINCT ON (capability_slug)
+      capability_slug, executed_at
+    FROM test_results
+    WHERE capability_slug IN (${sql.join(slugs.map((s) => sql`${s}`), sql`, `)})
+    ORDER BY capability_slug, executed_at DESC
+  `);
+  const lastTestRows = (
+    Array.isArray(lastTestResult) ? lastTestResult : (lastTestResult as any)?.rows ?? []
+  ) as any[];
+  const lastTestMap = new Map<string, string>();
+  for (const r of lastTestRows) {
+    lastTestMap.set(r.capability_slug, r.executed_at);
+  }
+
+  return capRows.map((c) => {
+    const sqs = c.matrixSqs ? parseFloat(String(c.matrixSqs)) : 0;
+    const grade = sqs >= 90 ? "A" : sqs >= 75 ? "B" : sqs >= 50 ? "C" : sqs >= 25 ? "D" : "F";
+    const lastTested = lastTestMap.get(c.slug);
+    const lastTestedStr = lastTested
+      ? new Date(lastTested).toLocaleString("en-GB", {
+          timeZone: "Europe/Stockholm",
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Never";
+
+    return {
+      slug: c.slug,
+      sqs_score: Math.round(sqs),
+      sqs_grade: grade,
+      freshness: c.freshnessCategory ?? "unknown",
+      last_tested: lastTestedStr,
+    };
+  });
+}
+
+export interface DependencyOutageEvent {
+  time: string;
+  event: string;
+  badge?: string;
+}
+
+/**
+ * Get outage/recovery history for a dependency from health_monitor_events.
+ * Used by eventLogTable() in email templates.
+ */
+export async function getDependencyOutageHistory(
+  dependencyName: string,
+  days: number,
+): Promise<DependencyOutageEvent[]> {
+  const db = getDb();
+  const since = new Date(Date.now() - days * 24 * 3600_000);
+
+  const rows = await db
+    .select({
+      eventType: healthMonitorEvents.eventType,
+      actionTaken: healthMonitorEvents.actionTaken,
+      createdAt: healthMonitorEvents.createdAt,
+      details: healthMonitorEvents.details,
+    })
+    .from(healthMonitorEvents)
+    .where(
+      and(
+        gte(healthMonitorEvents.createdAt, since),
+        sql`${healthMonitorEvents.details}->>'dependency' = ${dependencyName}`,
+      ),
+    )
+    .orderBy(desc(healthMonitorEvents.createdAt))
+    .limit(20);
+
+  return rows.map((r) => ({
+    time: new Date(r.createdAt).toLocaleString("en-GB", {
+      timeZone: "Europe/Stockholm",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    event: r.actionTaken,
+    badge: r.eventType === "probe_recovered" ? "recovered" : undefined,
+  }));
+}
+
+export interface CircuitBreakerState {
+  state: string;
+  consecutiveFailures: number;
+  nextRetryAt: string | null;
+  backoffMinutes: number;
+  lastFailureAt: string | null;
+  lastSuccessAt: string | null;
+}
+
+/**
+ * Get current circuit breaker state for a capability.
+ */
+export async function getCircuitBreakerState(
+  slug: string,
+): Promise<CircuitBreakerState | null> {
+  const db = getDb();
+
+  const [row] = await db
+    .select({
+      state: capabilityHealth.state,
+      consecutiveFailures: capabilityHealth.consecutiveFailures,
+      nextRetryAt: capabilityHealth.nextRetryAt,
+      backoffMinutes: capabilityHealth.backoffMinutes,
+      lastFailureAt: capabilityHealth.lastFailureAt,
+      lastSuccessAt: capabilityHealth.lastSuccessAt,
+    })
+    .from(capabilityHealth)
+    .where(eq(capabilityHealth.capabilitySlug, slug))
+    .limit(1);
+
+  if (!row) return null;
+
+  return {
+    state: row.state,
+    consecutiveFailures: row.consecutiveFailures,
+    nextRetryAt: row.nextRetryAt ? row.nextRetryAt.toISOString() : null,
+    backoffMinutes: row.backoffMinutes,
+    lastFailureAt: row.lastFailureAt ? row.lastFailureAt.toISOString() : null,
+    lastSuccessAt: row.lastSuccessAt ? row.lastSuccessAt.toISOString() : null,
+  };
+}
+
+/**
+ * Check whether an environment variable is defined (not its value).
+ * Used to distinguish "API key missing" from "service down."
+ */
+export function checkEnvVarExists(varName: string): boolean {
+  return process.env[varName] != null && process.env[varName] !== "";
+}
+
+export interface TestActivitySummary {
+  totalRuns: number;
+  passCount: number;
+  failCount: number;
+  passRate: number;
+}
+
+/**
+ * Get test activity summary for the last N days.
+ */
+export async function getTestActivitySummary(
+  days: number,
+): Promise<TestActivitySummary> {
+  const db = getDb();
+  const since = new Date(Date.now() - days * 24 * 3600_000);
+
+  const result = await db.execute(sql`
+    SELECT
+      COUNT(*)::int AS total_runs,
+      COUNT(*) FILTER (WHERE passed = true)::int AS pass_count,
+      COUNT(*) FILTER (WHERE passed = false)::int AS fail_count
+    FROM test_results
+    WHERE executed_at >= ${since.toISOString()}::timestamptz
+  `);
+
+  const rows = (
+    Array.isArray(result) ? result : (result as any)?.rows ?? []
+  ) as any[];
+  const row = rows[0] ?? {};
+
+  const total = Number(row.total_runs ?? 0);
+  const passed = Number(row.pass_count ?? 0);
+  const failed = Number(row.fail_count ?? 0);
+
+  return {
+    totalRuns: total,
+    passCount: passed,
+    failCount: failed,
+    passRate: total > 0 ? Math.round((passed / total) * 1000) / 10 : 0,
   };
 }

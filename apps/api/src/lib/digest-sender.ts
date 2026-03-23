@@ -30,7 +30,7 @@ export async function sendDigestEmail(html: string, subject: string, toOverride?
   const resend = getResend();
 
   const to = toOverride ?? process.env.HEALTH_DIGEST_EMAIL ?? "admin@strale.io";
-  const from = process.env.HEALTH_DIGEST_FROM ?? "Strale Health Monitor <health@strale.io>";
+  const from = process.env.HEALTH_DIGEST_FROM ?? "Strale Health Monitor <noreply@strale.io>";
 
   // Reply-To: the inbound address so email replies hit the webhook
   const replyTo = process.env.HEALTH_MONITOR_INBOUND;
