@@ -158,11 +158,13 @@ const WELCOME = {
 
 welcomeRoute.get("/", (c) => {
   c.header("Cache-Control", "public, max-age=3600");
+  c.header("Access-Control-Allow-Origin", "*");
   return c.json(WELCOME);
 });
 
 welcomeRoute.get("/api", (c) => {
   c.header("Cache-Control", "public, max-age=3600");
+  c.header("Access-Control-Allow-Origin", "*");
   return c.json(WELCOME);
 });
 
