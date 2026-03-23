@@ -30,6 +30,7 @@ import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
 import { openApiSpec } from "./openapi.js";
+import { welcomeRoute } from "./routes/welcome.js";
 
 // Capability executors + DataProvider chains are registered by
 // autoRegisterCapabilities() in index.ts before the server starts.
@@ -115,6 +116,9 @@ app.use("/.well-known/*", publicCors);
 app.use("/llms.txt", publicCors);
 app.use("/llms-full.txt", publicCors);
 app.use("/openapi.json", publicCors);
+app.use("/robots.txt", publicCors);
+app.use("/sitemap.xml", publicCors);
+app.use("/api", publicCors);
 
 // Authenticated / mutating endpoints — restricted CORS
 app.use("/v1/*", restrictedCors);
@@ -181,6 +185,9 @@ app.route("/.well-known/agent-card.json", agentCardRoute);
 app.route("/.well-known/agent.json", agentCardRoute); // alias
 app.route("/agent.json", agentCardRoute); // convenience alias
 app.route("/a2a", a2aRoute);
+
+// Agent welcome mat — self-describing entry point + robots.txt + sitemap.xml
+app.route("/", welcomeRoute);
 
 // Agent discovery — MCP Server Card, AI Catalog, LLM-friendly text
 app.route("/.well-known/mcp.json", mcpServerCardRoute);
