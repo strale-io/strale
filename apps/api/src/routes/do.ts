@@ -697,7 +697,7 @@ async function executeFreeTier(
       .where(eq(transactions.id, txnRecord.id));
 
     storeIntegrityHash(txnRecord.id).catch(() => {});
-    recordFailure(capability.slug).catch(() => {});
+    recordFailure(capability.slug, errorMessage).catch(() => {});
     triggerOnFailure(capability.slug).catch(() => {});
     recordQuality({
       transactionId: txnRecord.id,
@@ -841,7 +841,7 @@ async function executeFreeTierAuthenticated(
       .where(eq(transactions.id, txnRecord.id));
 
     storeIntegrityHash(txnRecord.id).catch(() => {});
-    recordFailure(capability.slug).catch(() => {});
+    recordFailure(capability.slug, errorMessage).catch(() => {});
     triggerOnFailure(capability.slug).catch(() => {});
     recordQuality({
       transactionId: txnRecord.id,
@@ -1057,7 +1057,7 @@ async function executeSync(
       })
       .catch(() => {});
   } else if (result.errorCode === "execution_failed") {
-    recordFailure(capability.slug).catch(() => {});
+    recordFailure(capability.slug, result.error).catch(() => {});
     triggerOnFailure(capability.slug).catch(() => {});
     recordQuality({
       transactionId: result.transactionId,
@@ -1418,7 +1418,7 @@ async function executeInBackground(
 
     storeIntegrityHash(transactionId).catch(() => {});
     // Record failure for circuit breaker + quality
-    await recordFailure(capability.slug).catch(() => {});
+    await recordFailure(capability.slug, errorMessage).catch(() => {});
     triggerOnFailure(capability.slug).catch(() => {});
     recordQuality({
       transactionId,
