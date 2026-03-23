@@ -23,7 +23,7 @@ import { getDb } from "./index.js";
 import { capabilities, testSuites, testResults, capabilityHealth } from "./schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import { computeDualProfileSQS, type DualProfileSQSResult } from "../lib/sqs.js";
-import { categorizeFailureReason } from "../lib/trust-helpers.js";
+import { categorizeFailureReason, toLegacyCategory } from "../lib/trust-helpers.js";
 
 // ─── Side-effect imports: populate executor registry ────────────────────────
 // Mirrors apps/api/src/app.ts lines 27–302
@@ -276,7 +276,7 @@ interface CapAudit {
   has_executor: boolean;
   test_suites: Record<string, number>;
   test_results_30d: { total: number; passed: number; failed: number };
-  failure_analysis: { external_service: number; internal: number; unknown: number };
+  failure_analysis: Record<string, number>;
   top_failure_reasons: string[];
   sqs: {
     matrix_score: number;
@@ -460,12 +460,13 @@ async function main() {
     const dual = sqsMap.get(cap.slug);
     const sqsError = sqsErrors.get(cap.slug) ?? null;
 
-    // Classify failures
-    const failureAnalysis = { external_service: 0, internal: 0, unknown: 0 };
+    // Classify failures (use legacy categories for audit summary)
+    const failureAnalysis: Record<string, number> = { external_service: 0, internal: 0, unknown: 0 };
     const reasonCounts = new Map<string, number>();
     for (const reason of failures) {
       const cat = categorizeFailureReason(reason);
-      failureAnalysis[cat]++;
+      const legacy = toLegacyCategory(cat);
+      failureAnalysis[legacy] = (failureAnalysis[legacy] ?? 0) + 1;
       // Truncate reason for grouping
       const key = reason.length > 120 ? reason.slice(0, 120) + "…" : reason;
       reasonCounts.set(key, (reasonCounts.get(key) ?? 0) + 1);

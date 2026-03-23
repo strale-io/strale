@@ -15,7 +15,7 @@ import { runTests } from "../lib/test-runner.js";
 import type { ScheduleTier } from "../lib/test-runner.js";
 import { getExecutor } from "../capabilities/index.js";
 import { generateTestInput } from "../lib/test-input-generator.js";
-import { categorizeFailureReason, sanitizeErrorMessage } from "../lib/trust-helpers.js";
+import { categorizeFailureReason, toLegacyCategory, sanitizeErrorMessage } from "../lib/trust-helpers.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { runDependencyHealthChecks } from "../lib/dependency-health.js";
 import { getCredentialStatus } from "../lib/credential-health.js";
@@ -161,12 +161,16 @@ internalTestsRoute.get("/capabilities/:slug", async (c) => {
   // Collect failures with categorization
   const failures = tests
     .filter((t) => t.passed === false && t.failure_reason)
-    .map((t) => ({
-      test_name: t.test_name,
-      test_type: t.test_type,
-      failure_reason: sanitizeFailureReason(t.failure_reason),
-      failure_category: categorizeFailureReason(t.failure_reason),
-    }));
+    .map((t) => {
+      const cat = categorizeFailureReason(t.failure_reason);
+      return {
+        test_name: t.test_name,
+        test_type: t.test_type,
+        failure_reason: sanitizeErrorMessage(t.failure_reason) ?? t.failure_reason,
+        failure_category: cat,
+        failure_category_legacy: toLegacyCategory(cat),
+      };
+    });
 
   return c.json({
     capability_slug: slug,
@@ -307,6 +311,7 @@ internalTestsRoute.get("/capabilities/:slug/runs", async (c) => {
         test_type: string;
         failure_reason: string;
         failure_category: string;
+        failure_category_legacy: string;
       }> = [];
 
       if (failedCount > 0) {
@@ -322,12 +327,16 @@ internalTestsRoute.get("/capabilities/:slug/runs", async (c) => {
             AND tr.passed = false
         `);
         const failData = (Array.isArray(failRows) ? failRows : (failRows as any)?.rows ?? []) as any[];
-        failures = failData.map((f: any) => ({
-          test_name: f.test_name,
-          test_type: f.test_type,
-          failure_reason: sanitizeFailureReason(f.failure_reason),
-          failure_category: categorizeFailureReason(f.failure_reason),
-        }));
+        failures = failData.map((f: any) => {
+          const cat = categorizeFailureReason(f.failure_reason);
+          return {
+            test_name: f.test_name,
+            test_type: f.test_type,
+            failure_reason: sanitizeErrorMessage(f.failure_reason) ?? f.failure_reason,
+            failure_category: cat,
+            failure_category_legacy: toLegacyCategory(cat),
+          };
+        });
       }
 
       return {
@@ -559,6 +568,7 @@ internalTestsRoute.get("/solutions/:slug/runs", async (c) => {
         capability_name: string;
         failure_reason: string;
         failure_category: string;
+        failure_category_legacy: string;
       }> = [];
 
       if (failedCount > 0) {
@@ -577,14 +587,18 @@ internalTestsRoute.get("/solutions/:slug/runs", async (c) => {
             AND tr.passed = false
         `);
         const failData = (Array.isArray(failRows) ? failRows : (failRows as any)?.rows ?? []) as any[];
-        failures = failData.map((f: any) => ({
-          test_name: f.test_name,
-          test_type: f.test_type,
-          capability_slug: f.capability_slug,
-          capability_name: f.capability_name ?? f.capability_slug,
-          failure_reason: sanitizeFailureReason(f.failure_reason),
-          failure_category: categorizeFailureReason(f.failure_reason),
-        }));
+        failures = failData.map((f: any) => {
+          const cat = categorizeFailureReason(f.failure_reason);
+          return {
+            test_name: f.test_name,
+            test_type: f.test_type,
+            capability_slug: f.capability_slug,
+            capability_name: f.capability_name ?? f.capability_slug,
+            failure_reason: sanitizeErrorMessage(f.failure_reason) ?? f.failure_reason,
+            failure_category: cat,
+            failure_category_legacy: toLegacyCategory(cat),
+          };
+        });
       }
 
       return {

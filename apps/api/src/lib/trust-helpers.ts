@@ -126,7 +126,8 @@ export async function getTestResultsForSlugs(
       test_name: string;
       test_type: string;
       failure_reason: string;
-      failure_category: "external_service" | "internal" | "unknown";
+      failure_category: FailureCategory;
+    failure_category_legacy: "external_service" | "internal" | "unknown";
     }> = [];
 
     for (const suite of suites) {
@@ -144,11 +145,13 @@ export async function getTestResultsForSlugs(
           failed++;
           byType[testType].failed++;
           if (latest.failure_reason) {
+            const cat = categorizeFailureReason(latest.failure_reason);
             failures.push({
               test_name: suite.testName,
               test_type: testType,
               failure_reason: sanitizeFailureReason(latest.failure_reason),
-              failure_category: categorizeFailureReason(latest.failure_reason),
+              failure_category: cat,
+              failure_category_legacy: toLegacyCategory(cat),
             });
           }
         }
@@ -198,7 +201,8 @@ export async function getLatestCompleteRunForSolution(
   pass_rate: number | null;
   avg_response_time_ms: number | null;
   by_type: Record<string, { total: number; passed: number; failed: number }>;
-  failures: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: "external_service" | "internal" | "unknown"; capability_slug: string }>;
+  failures: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: FailureCategory;
+    failure_category_legacy: "external_service" | "internal" | "unknown"; capability_slug: string }>;
 } | null> {
   const db = getDb();
   const slugList = sql.join(capabilitySlugs.map((s) => sql`${s}`), sql`, `);
@@ -258,7 +262,8 @@ export async function getLatestCompleteRunForSolution(
   }
 
   // Get failures for this window
-  const failures: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: "external_service" | "internal" | "unknown"; capability_slug: string }> = [];
+  const failures: Array<{ test_name: string; test_type: string; failure_reason: string; failure_category: FailureCategory;
+    failure_category_legacy: "external_service" | "internal" | "unknown"; capability_slug: string }> = [];
   if (failed > 0) {
     const failRows = await db.execute(sql`
       SELECT
@@ -274,11 +279,13 @@ export async function getLatestCompleteRunForSolution(
     `);
     const failData = (Array.isArray(failRows) ? failRows : (failRows as any)?.rows ?? []) as any[];
     for (const f of failData) {
+      const cat = categorizeFailureReason(f.failure_reason);
       failures.push({
         test_name: f.test_name,
         test_type: f.test_type ?? "unknown",
         failure_reason: sanitizeFailureReason(f.failure_reason),
-        failure_category: categorizeFailureReason(f.failure_reason),
+        failure_category: cat,
+        failure_category_legacy: toLegacyCategory(cat),
         capability_slug: f.capability_slug,
       });
     }
@@ -344,18 +351,92 @@ export function sanitizeErrorMessage(msg: string | null): string | null {
 
 // ─── Failure categorization ─────────────────────────────────────────────────
 
-export function categorizeFailureReason(reason: string | null): "external_service" | "internal" | "unknown" {
+/**
+ * Detailed failure categories for health monitoring and alerting.
+ * NOTE: This is separate from isExternalServiceFailure() in sqs.ts which is
+ * used for SQS scoring. Do NOT modify sqs.ts patterns here (Scoring Integrity).
+ */
+export type FailureCategory =
+  | "transient"           // timeout, rate limit, 429, 503, temp network error — retry will help
+  | "permanent_move"      // 301, 308 — endpoint moved permanently
+  | "endpoint_gone"       // 404, 410 on a previously-working URL
+  | "auth_expired"        // 401, 403 — credentials invalid or expired
+  | "format_changed"      // 200 response but parsing fails — upstream changed response format
+  | "dependency_missing"  // env var not set or not configured
+  | "scraping_broken"     // HTML/regex extraction returns no data from a 200 response
+  | "internal"            // Strale code error, not upstream
+  | "unknown";            // cannot determine
+
+export function categorizeFailureReason(reason: string | null): FailureCategory {
   if (!reason) return "unknown";
   const lower = reason.toLowerCase();
-  if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("etimedout")) return "external_service";
-  if (lower.includes("rate limit") || lower.includes("429") || lower.includes("too many")) return "external_service";
-  if (lower.includes("econnrefused") || lower.includes("enotfound") || lower.includes("502") ||
-      lower.includes("503") || lower.includes("504") || lower.includes("fetch failed")) return "external_service";
-  if (lower.includes("ms_max_concurrent")) return "external_service";
-  if (lower.includes("quota_exceeded")) return "external_service";
-  // NOTE: "no api key" and "is required for" intentionally return "internal".
-  // Missing credentials are Strale's infrastructure problem, not upstream.
-  return "internal";
+
+  // 1. dependency_missing — env var / credential not configured
+  if (/not (configured|set)|is required/i.test(reason) && /[A-Z_]{3,}/.test(reason)) return "dependency_missing";
+  if (lower.includes("enoent")) return "dependency_missing";
+
+  // 2. auth_expired — credentials present but rejected
+  if (lower.includes("401") || lower.includes("403") || lower.includes("unauthorized") ||
+      lower.includes("forbidden") || lower.includes("invalid api key") ||
+      lower.includes("invalid token") || lower.includes("authentication failed")) return "auth_expired";
+
+  // 3. permanent_move — endpoint URL has changed
+  if (lower.includes("301") || lower.includes("308") || lower.includes("moved permanently") ||
+      lower.includes("permanent redirect")) return "permanent_move";
+
+  // 4. endpoint_gone — URL no longer exists
+  if ((lower.includes("404") || lower.includes("410") || lower.includes("gone")) &&
+      !lower.includes("no matching capability")) return "endpoint_gone";
+
+  // 5. transient — temporary failures, retry will help
+  if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("etimedout") ||
+      lower.includes("rate limit") || lower.includes("429") || lower.includes("too many") ||
+      lower.includes("econnrefused") || lower.includes("enotfound") || lower.includes("502") ||
+      lower.includes("503") || lower.includes("504") || lower.includes("fetch failed") ||
+      lower.includes("econnreset") || lower.includes("epipe") || lower.includes("network error") ||
+      lower.includes("ms_max_concurrent") || lower.includes("quota_exceeded") ||
+      lower.includes("dns")) return "transient";
+
+  // 6. scraping_broken — HTTP succeeded but content extraction failed
+  if (lower.includes("could not extract") || lower.includes("could not fetch transcript") ||
+      lower.includes("could not parse") || lower.includes("no data found") ||
+      lower.includes("no match") || lower.includes("expected marker")) return "scraping_broken";
+
+  // 7. format_changed — response arrived but format is wrong
+  if (lower.includes("unexpected token") || lower.includes("invalid json") ||
+      lower.includes("is not valid json") || lower.includes("expected csv") ||
+      lower.includes("no exchange rate data") || lower.includes("could not retrieve any")) return "format_changed";
+
+  // 8. internal — clear JS runtime errors
+  if (lower.includes("typeerror") || lower.includes("referenceerror") || lower.includes("syntaxerror") ||
+      lower.includes("cannot read propert") || lower.includes("is not a function") ||
+      lower.includes("stack overflow")) return "internal";
+
+  // 9. unknown — cannot determine
+  return "unknown";
+}
+
+/** Whether a failure category suggests retry will help */
+export function isRetryableFailure(category: FailureCategory): boolean {
+  return category === "transient" || category === "unknown";
+}
+
+/** Map detailed categories to legacy 3-value API categories for backward compatibility */
+export function toLegacyCategory(category: FailureCategory): "external_service" | "internal" | "unknown" {
+  switch (category) {
+    case "transient":
+    case "permanent_move":
+    case "endpoint_gone":
+    case "auth_expired":
+    case "format_changed":
+    case "scraping_broken":
+    case "dependency_missing":
+      return "external_service";
+    case "internal":
+      return "internal";
+    case "unknown":
+      return "unknown";
+  }
 }
 
 // ─── Test results helper ────────────────────────────────────────────────────
@@ -380,7 +461,8 @@ export async function getTestResultsForSlug(slug: string) {
     test_name: string;
     test_type: string;
     failure_reason: string;
-    failure_category: "external_service" | "internal" | "unknown";
+    failure_category: FailureCategory;
+    failure_category_legacy: "external_service" | "internal" | "unknown";
   }> = [];
 
   for (const suite of suites) {
@@ -404,11 +486,13 @@ export async function getTestResultsForSlug(slug: string) {
         failed++;
         byType[testType].failed++;
         if (latest.failureReason) {
+          const cat = categorizeFailureReason(latest.failureReason);
           failures.push({
             test_name: suite.testName,
             test_type: testType,
             failure_reason: sanitizeFailureReason(latest.failureReason),
-            failure_category: categorizeFailureReason(latest.failureReason),
+            failure_category: cat,
+            failure_category_legacy: toLegacyCategory(cat),
           });
         }
       }
