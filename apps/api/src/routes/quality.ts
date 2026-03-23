@@ -14,6 +14,7 @@ import { capabilities } from "../db/schema.js";
 import { computeDualProfileSQS, estimateQualificationTime } from "../lib/sqs.js";
 import { computeFreshnessGrade } from "../lib/trust-grade.js";
 import { apiError } from "../lib/errors.js";
+import { sqsLabel } from "../lib/trust-labels.js";
 import type { AppEnv } from "../types.js";
 
 // Public — no auth required (lets agents check quality before paid calls)
@@ -42,6 +43,10 @@ qualityRoute.get("/:slug", async (c) => {
       freshnessCategory: capabilities.freshnessCategory,
       dataUpdateCycleDays: capabilities.dataUpdateCycleDays,
       datasetLastUpdated: capabilities.datasetLastUpdated,
+      matrixSqs: capabilities.matrixSqs,
+      matrixSqsRaw: capabilities.matrixSqsRaw,
+      trend: capabilities.trend,
+      freshnessLevel: capabilities.freshnessLevel,
     })
     .from(capabilities)
     .where(and(eq(capabilities.slug, slug), eq(capabilities.isActive, true)))
@@ -92,12 +97,17 @@ qualityRoute.get("/:slug", async (c) => {
 
   c.header("Cache-Control", "public, max-age=300");
 
+  // Headline score from DB column (consistent with all other endpoints)
+  const headlineSqs = cap.matrixSqs ? parseFloat(cap.matrixSqs) : dual.score;
+  const headlineRaw = cap.matrixSqsRaw ? parseFloat(cap.matrixSqsRaw) : dual.score;
   return c.json({
     capability: slug,
     sqs: {
-      score: dual.score,
-      label: dual.label,
-      trend: dual.rp.trend,
+      score: headlineSqs,
+      raw_score: headlineRaw,
+      label: dual.qp.pending && dual.rp.pending ? dual.label : sqsLabel(headlineSqs),
+      trend: cap.trend ?? dual.rp.trend,
+      freshness_level: cap.freshnessLevel ?? "fresh",
     },
     quality_profile: {
       grade: dual.qp.grade,

@@ -646,6 +646,15 @@ internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
 
 // GET /v1/internal/tests/health — dependency health checks (free HTTP pings)
 internalTestsRoute.get("/health", async (c) => {
+  // S-3: Credential status is operational data — require admin auth
+  if (!ADMIN_SECRET) {
+    return c.json(apiError("unauthorized", "Admin endpoint is not configured."), 503);
+  }
+  const auth = c.req.header("Authorization");
+  if (!isValidAdminAuth(auth)) {
+    return c.json(apiError("unauthorized", "Invalid admin secret."), 401);
+  }
+
   const results = await runDependencyHealthChecks();
   const allHealthy = Object.values(results).every((r) => r.healthy);
   const credentials = getCredentialStatus();
@@ -1059,6 +1068,15 @@ internalTestsRoute.post("/patch-suite-rules", async (c) => {
 
 // GET /v1/internal/tests/cost-summary — Test execution cost breakdown
 internalTestsRoute.get("/cost-summary", async (c) => {
+  // S-4: Cost data is operational data — require admin auth
+  if (!ADMIN_SECRET) {
+    return c.json(apiError("unauthorized", "Admin endpoint is not configured."), 503);
+  }
+  const auth = c.req.header("Authorization");
+  if (!isValidAdminAuth(auth)) {
+    return c.json(apiError("unauthorized", "Invalid admin secret."), 401);
+  }
+
   const days = Math.min(Math.max(parseInt(c.req.query("days") ?? "30", 10) || 30, 1), 365);
   const cacheKey = `test-cost:${days}`;
   const cached = getCached(cacheKey);

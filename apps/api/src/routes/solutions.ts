@@ -4,6 +4,7 @@ import { getDb } from "../db/index.js";
 import { solutions, solutionSteps, capabilities } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
 import { getRelatedSolutions } from "../lib/related-items.js";
+import { sqsLabel, gradeFromScore, computeSolutionScore, computeSolutionTrend, worstFreshnessLevel, oldestTestedAt } from "../lib/trust-labels.js";
 import type { AppEnv } from "../types.js";
 
 // Solutions are public — no auth required (catalog data, same as capabilities)
@@ -36,87 +37,84 @@ solutionsRoute.get("/", async (c) => {
     .where(and(...conditions))
     .orderBy(asc(solutions.displayOrder));
 
-  // For each solution, get step slugs + cached dual-profile data from step capabilities
-  const result = await Promise.all(
-    rows.map(async (row) => {
-      const steps = await db
+  // Batch-fetch ALL steps for ALL solutions in one query (eliminates N+1)
+  const solIds = rows.map((r) => r.id);
+  const allSteps = solIds.length > 0
+    ? await db
         .select({
+          solutionId: solutionSteps.solutionId,
           capabilitySlug: solutionSteps.capabilitySlug,
           matrixSqs: capabilities.matrixSqs,
           qpScore: capabilities.qpScore,
           rpScore: capabilities.rpScore,
+          trend: capabilities.trend,
+          freshnessLevel: capabilities.freshnessLevel,
+          lastTestedAt: capabilities.lastTestedAt,
           guidanceUsable: capabilities.guidanceUsable,
           guidanceStrategy: capabilities.guidanceStrategy,
           dataSource: capabilities.dataSource,
         })
         .from(solutionSteps)
         .leftJoin(capabilities, eq(solutionSteps.capabilitySlug, capabilities.slug))
-        .where(eq(solutionSteps.solutionId, row.id))
-        .orderBy(asc(solutionSteps.stepOrder));
+        .where(inArray(solutionSteps.solutionId, solIds))
+        .orderBy(solutionSteps.solutionId, asc(solutionSteps.stepOrder))
+    : [];
 
-      // Solution-level SQS = avg capped at weakest + 20
-      const stepSqs = steps.map((s) => s.matrixSqs ? parseFloat(s.matrixSqs) : 0);
-      const avgSqs = stepSqs.length > 0 ? stepSqs.reduce((a, b) => a + b, 0) / stepSqs.length : 0;
-      const minSqs = stepSqs.length > 0 ? Math.min(...stepSqs) : 0;
-      const sqs = Math.round(Math.min(avgSqs, minSqs + 20) * 10) / 10;
+  // Group steps by solution ID
+  const stepsBySolution = new Map<string, typeof allSteps>();
+  for (const step of allSteps) {
+    const list = stepsBySolution.get(step.solutionId) ?? [];
+    list.push(step);
+    stepsBySolution.set(step.solutionId, list);
+  }
 
-      const gradeOrder = ["A", "B", "C", "D", "F", "pending"];
-      function gradeFromScore(score: string | null): string {
-        const v = score ? parseFloat(score) : null;
-        if (v == null) return "pending";
-        if (v >= 90) return "A";
-        if (v >= 75) return "B";
-        if (v >= 50) return "C";
-        if (v >= 25) return "D";
-        return "F";
-      }
-      function sqsLabel(s: number): string {
-        if (s >= 90) return "Excellent";
-        if (s >= 75) return "Good";
-        if (s >= 50) return "Fair";
-        if (s >= 25) return "Poor";
-        return "Degraded";
-      }
+  const gradeOrder = ["A", "B", "C", "D", "F", "pending"];
+  const strategyOrder = ["direct", "retry_with_backoff", "queue_for_later", "unavailable"];
 
-      const worstQuality = steps.reduce((w, s) => {
-        const g = gradeFromScore(s.qpScore);
-        return gradeOrder.indexOf(g) > gradeOrder.indexOf(w) ? g : w;
-      }, "A");
-      const worstReliability = steps.reduce((w, s) => {
-        const g = gradeFromScore(s.rpScore);
-        return gradeOrder.indexOf(g) > gradeOrder.indexOf(w) ? g : w;
-      }, "A");
+  const result = rows.map((row) => {
+    const steps = stepsBySolution.get(row.id) ?? [];
+    const stepSqs = steps.map((s) => s.matrixSqs ? parseFloat(s.matrixSqs) : 0);
+    const sqs = computeSolutionScore(stepSqs);
 
-      const allUsable = steps.every((s) => s.guidanceUsable ?? true);
-      const strategyOrder = ["direct", "retry_with_backoff", "queue_for_later", "unavailable"];
-      const worstStrategy = steps.reduce((w, s) => {
-        const st = s.guidanceStrategy ?? "direct";
-        return strategyOrder.indexOf(st) > strategyOrder.indexOf(w) ? st : w;
-      }, "direct");
+    const worstQuality = steps.reduce((w, s) => {
+      const g = gradeFromScore(s.qpScore);
+      return gradeOrder.indexOf(g) > gradeOrder.indexOf(w) ? g : w;
+    }, "A");
+    const worstReliability = steps.reduce((w, s) => {
+      const g = gradeFromScore(s.rpScore);
+      return gradeOrder.indexOf(g) > gradeOrder.indexOf(w) ? g : w;
+    }, "A");
 
-      return {
-        slug: row.slug,
-        name: row.name,
-        description: row.description,
-        category: row.category,
-        price_cents: row.priceCents,
-        step_count: steps.length,
-        geography: row.geography,
-        transparency_tag: row.transparencyTag,
-        compliance_coverage: row.complianceCoverage ?? [],
-        search_tags: row.searchTags ?? [],
-        capabilities: steps.map((s) => s.capabilitySlug),
-        data_sources: [...new Set(steps.map((s) => s.dataSource).filter(Boolean))],
-        sqs,
-        sqs_label: sqsLabel(sqs),
-        quality: worstQuality,
-        reliability: worstReliability,
-        trend: "stable" as const,
-        usable: allUsable,
-        strategy: worstStrategy,
-      };
-    }),
-  );
+    const allUsable = steps.every((s) => s.guidanceUsable ?? true);
+    const worstStrategy = steps.reduce((w, s) => {
+      const st = s.guidanceStrategy ?? "direct";
+      return strategyOrder.indexOf(st) > strategyOrder.indexOf(w) ? st : w;
+    }, "direct");
+
+    return {
+      slug: row.slug,
+      name: row.name,
+      description: row.description,
+      category: row.category,
+      price_cents: row.priceCents,
+      step_count: steps.length,
+      geography: row.geography,
+      transparency_tag: row.transparencyTag,
+      compliance_coverage: row.complianceCoverage ?? [],
+      search_tags: row.searchTags ?? [],
+      capabilities: steps.map((s) => s.capabilitySlug),
+      data_sources: [...new Set(steps.map((s) => s.dataSource).filter(Boolean))],
+      sqs,
+      sqs_label: sqsLabel(sqs),
+      quality: worstQuality,
+      reliability: worstReliability,
+      trend: computeSolutionTrend(steps.map((s) => s.trend ?? "stable")),
+      freshness_level: worstFreshnessLevel(steps.map((s) => s.freshnessLevel ?? "fresh")),
+      last_tested_at: oldestTestedAt(steps.map((s) => s.lastTestedAt)),
+      usable: allUsable,
+      strategy: worstStrategy,
+    };
+  });
 
   return c.json({ solutions: result, total: result.length });
 });
@@ -127,7 +125,27 @@ solutionsRoute.get("/:slug", async (c) => {
   const db = getDb();
 
   const [sol] = await db
-    .select()
+    .select({
+      id: solutions.id,
+      slug: solutions.slug,
+      name: solutions.name,
+      marketingName: solutions.marketingName,
+      description: solutions.description,
+      longDescription: solutions.longDescription,
+      agentDescription: solutions.agentDescription,
+      category: solutions.category,
+      priceCents: solutions.priceCents,
+      componentSumCents: solutions.componentSumCents,
+      valueTier: solutions.valueTier,
+      geography: solutions.geography,
+      transparencyTag: solutions.transparencyTag,
+      targetAudience: solutions.targetAudience,
+      inputSchema: solutions.inputSchema,
+      exampleInput: solutions.exampleInput,
+      exampleOutput: solutions.exampleOutput,
+      complianceCoverage: solutions.complianceCoverage,
+      extendsWith: solutions.extendsWith,
+    })
     .from(solutions)
     .where(and(eq(solutions.slug, slug), eq(solutions.isActive, true)))
     .limit(1);

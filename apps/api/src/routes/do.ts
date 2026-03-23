@@ -27,6 +27,7 @@ import { createHash } from "node:crypto";
 import { getShareableUrl } from "../lib/audit-token.js";
 import { getAiDescription, getDataSourceUrl, detectPersonalData } from "../lib/audit-helpers.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
+import { sanitizeFailureReason } from "../lib/sanitize.js";
 import {
   computeFreshnessGrade,
   type FreshnessInfo,
@@ -457,7 +458,10 @@ doRoute.post(
 
   // ── 5c. SQS quality gate (uses dual-profile matrix score) ───────────
   const PLATFORM_FLOOR_SQS = 25;
-  const dual = await computeDualProfileSQS(capability.slug).catch(() => null);
+  const dual = await computeDualProfileSQS(capability.slug).catch((err) => {
+    console.warn("[do] dual-profile SQS failed:", capability.slug, err instanceof Error ? err.message : err);
+    return null;
+  });
   // If dual-profile fails, treat as pending so the gate is skipped (fail open)
   const sqs = dual
     ? { score: dual.score, label: dual.label, pending: dual.matrix.pending, trend: dual.rp.trend }
@@ -698,7 +702,7 @@ async function executeFreeTier(
       apiError(
         "execution_failed",
         "The capability failed to execute.",
-        { error: errorMessage },
+        { error: sanitizeFailureReason(errorMessage) },
       ),
       500,
     );
@@ -849,7 +853,7 @@ async function executeFreeTierAuthenticated(
         "The capability failed to execute. You were not charged.",
         {
           transaction_id: txnRecord.id,
-          error: errorMessage,
+          error: sanitizeFailureReason(errorMessage),
           wallet_balance_cents: wallet?.balanceCents ?? 0,
         },
       ),
@@ -1077,7 +1081,7 @@ async function executeSync(
         "The capability failed to execute. You were not charged.",
         {
           transaction_id: result.transactionId,
-          error: result.error,
+          error: sanitizeFailureReason(result.error),
           wallet_balance_cents: result.balanceAfter,
         },
       ),

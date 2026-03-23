@@ -120,6 +120,14 @@ export const capabilities = pgTable("capabilities", {
   qpScore: decimal("qp_score", { precision: 5, scale: 2 }),
   rpScore: decimal("rp_score", { precision: 5, scale: 2 }),
   matrixSqs: decimal("matrix_sqs", { precision: 5, scale: 2 }),
+  // Trust metadata (written after each test run + staleness refresh job)
+  matrixSqsRaw: decimal("matrix_sqs_raw", { precision: 5, scale: 1 }),
+  trend: varchar("trend", { length: 20 }).default("stable"),
+  // 'improving' | 'declining' | 'stable' | 'stale'
+  freshnessLevel: varchar("freshness_level", { length: 20 }).default("fresh"),
+  // 'fresh' | 'aging' | 'stale' | 'expired' | 'unverified'
+  lastTestedAt: timestamp("last_tested_at", { withTimezone: true }),
+  freshnessDecayedAt: timestamp("freshness_decayed_at", { withTimezone: true }),
   // Execution guidance cache (written after each test run)
   guidanceUsable: boolean("guidance_usable"),
   guidanceStrategy: text("guidance_strategy"),

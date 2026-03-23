@@ -4,6 +4,7 @@ import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
 import { authMiddleware } from "../lib/middleware.js";
+import { sqsLabel, gradeFromScore } from "../lib/trust-labels.js";
 import { getAllHealth } from "../lib/circuit-breaker.js";
 import type { AppEnv } from "../types.js";
 
@@ -29,8 +30,12 @@ capabilitiesRoute.get("/", async (c) => {
       search_tags: capabilities.searchTags,
       // Dual-profile cached columns
       matrix_sqs: capabilities.matrixSqs,
+      matrix_sqs_raw: capabilities.matrixSqsRaw,
       qp_score: capabilities.qpScore,
       rp_score: capabilities.rpScore,
+      trend: capabilities.trend,
+      freshness_level: capabilities.freshnessLevel,
+      last_tested_at: capabilities.lastTestedAt,
       guidance_usable: capabilities.guidanceUsable,
       guidance_strategy: capabilities.guidanceStrategy,
     })
@@ -42,23 +47,6 @@ capabilitiesRoute.get("/", async (c) => {
         inArray(capabilities.lifecycleState, ["active", "degraded"]),
       ),
     );
-
-  function gradeFromScore(score: number | null): string {
-    if (score == null) return "pending";
-    if (score >= 90) return "A";
-    if (score >= 75) return "B";
-    if (score >= 50) return "C";
-    if (score >= 25) return "D";
-    return "F";
-  }
-
-  function sqsLabel(score: number): string {
-    if (score >= 90) return "Excellent";
-    if (score >= 75) return "Good";
-    if (score >= 50) return "Fair";
-    if (score >= 25) return "Poor";
-    return "Degraded";
-  }
 
   const capabilitiesWithDualProfile = rows.map((r) => {
     const sqs = r.matrix_sqs ? parseFloat(r.matrix_sqs) : 0;
@@ -79,10 +67,13 @@ capabilitiesRoute.get("/", async (c) => {
       is_free_tier: r.is_free_tier,
       search_tags: r.search_tags ?? [],
       sqs: sqs,
+      sqs_raw: r.matrix_sqs_raw ? parseFloat(r.matrix_sqs_raw) : sqs,
       sqs_label: sqsLabel(sqs),
       quality: gradeFromScore(qpScore),
       reliability: gradeFromScore(rpScore),
-      trend: "stable" as const, // Cached trend not stored; stable is safe default
+      trend: r.trend ?? "stable",
+      freshness_level: r.freshness_level ?? "fresh",
+      last_tested_at: r.last_tested_at?.toISOString() ?? null,
       usable: r.guidance_usable ?? true,
       strategy: r.guidance_strategy ?? "direct",
     };
@@ -162,25 +153,30 @@ capabilitiesRoute.get("/:slug", async (c) => {
       ),
     );
 
-  const partOfSolutions = await Promise.all(
-    parentSolutions.map(async (sol) => {
-      const [countRow] = await db
-        .select({ count: sql<number>`count(*)` })
+  // Batch step counts for all parent solutions in one query
+  const solSlugs = parentSolutions.map((s) => s.slug);
+  const stepCounts = solSlugs.length > 0
+    ? await db
+        .select({
+          slug: solutions.slug,
+          count: sql<number>`count(*)`,
+        })
         .from(solutionSteps)
         .innerJoin(solutions, eq(solutionSteps.solutionId, solutions.id))
-        .where(eq(solutions.slug, sol.slug));
+        .where(inArray(solutions.slug, solSlugs))
+        .groupBy(solutions.slug)
+    : [];
+  const stepCountMap = new Map(stepCounts.map((r) => [r.slug, Number(r.count)]));
 
-      return {
-        slug: sol.slug,
-        name: sol.name,
-        description: sol.description,
-        price_cents: sol.priceCents,
-        category: sol.category,
-        geography: sol.geography,
-        step_count: Number(countRow?.count ?? 0),
-      };
-    }),
-  );
+  const partOfSolutions = parentSolutions.map((sol) => ({
+    slug: sol.slug,
+    name: sol.name,
+    description: sol.description,
+    price_cents: sol.priceCents,
+    category: sol.category,
+    geography: sol.geography,
+    step_count: stepCountMap.get(sol.slug) ?? 0,
+  }));
 
   return c.json({ ...cap, partOfSolutions });
 });

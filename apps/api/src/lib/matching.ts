@@ -145,7 +145,8 @@ function betterRate(
   b: CapabilityRow | null,
 ): boolean {
   if (!b) return true;
-  const rateA = a.successRate ? parseFloat(a.successRate) : 0;
-  const rateB = b.successRate ? parseFloat(b.successRate) : 0;
+  // Use matrix SQS (dual-profile, freshness-decayed) as tiebreaker
+  const rateA = a.matrixSqs ? parseFloat(a.matrixSqs) : 0;
+  const rateB = b.matrixSqs ? parseFloat(b.matrixSqs) : 0;
   return rateA > rateB;
 }

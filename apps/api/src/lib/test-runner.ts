@@ -1642,6 +1642,19 @@ export function startScheduledTests(): void {
   setTimeout(runRetentionCleanup, 3 * 60 * 60_000); // 3h after startup
   setInterval(runRetentionCleanup, RETENTION_INTERVAL_MS);
 
+  // Staleness refresh — re-decays matrix_sqs for untested capabilities every 2h
+  const STALE_REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000;
+  const runStaleRefresh = async () => {
+    try {
+      const { refreshStaleScores } = await import("../jobs/refresh-stale-scores.js");
+      await refreshStaleScores();
+    } catch (err) {
+      console.error("[stale-refresh] Failed:", err instanceof Error ? err.message : err);
+    }
+  };
+  setTimeout(runStaleRefresh, 90 * 60_000); // 1.5h after startup
+  setInterval(runStaleRefresh, STALE_REFRESH_INTERVAL_MS);
+
   // Weekly digest — Monday 08:00 CET (07:00 UTC in winter, 06:00 UTC in summer)
   scheduleWeeklyDigest();
 }
@@ -1857,16 +1870,22 @@ async function persistDualProfileScores(slugs: string[]): Promise<void> {
         };
       }
 
+      const now = new Date();
       await db
         .update(capabilities)
         .set({
           qpScore: dual.qp.pending ? null : String(dual.qp.score),
           rpScore: dual.rp.pending ? null : String(dual.rp.score),
           matrixSqs: dual.matrix.pending ? null : String(decayedMatrixSqs),
+          matrixSqsRaw: dual.matrix.pending ? null : String(rawMatrixSqs),
+          trend: effectiveTrend,
+          freshnessLevel: freshness.staleness_level,
+          lastTestedAt: lastTest?.executedAt ?? null,
+          freshnessDecayedAt: now,
           guidanceUsable: guidance.usable,
           guidanceStrategy: guidance.strategy,
           guidanceConfidence: String(guidance.confidence_after_strategy),
-          updatedAt: new Date(),
+          updatedAt: now,
         })
         .where(eq(capabilities.slug, slug));
     } catch (err) {

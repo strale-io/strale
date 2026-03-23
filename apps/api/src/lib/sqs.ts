@@ -37,7 +37,7 @@ import { getTestResultsForSlug, type TestResultsData } from "./trust-helpers.js"
 // This file contains TWO scoring models:
 //
 // 1. LEGACY: Single-composite 5-factor weighted model
-//    - Entry: computeCapabilitySQS(), computeSolutionSQS()
+//    - Entry: computeCapabilitySQS()
 //    - Type: SQSResult
 //    - Status: OBSOLETE for external use. Still called internally by
 //      computeDualProfileSQS() to produce `legacy_score` for regression
@@ -85,9 +85,7 @@ interface FactorResult {
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-// LEGACY weights — used only by the old single-composite model.
-// Current QP weights are in quality-profile.ts (correctness 50%, schema 31%, etc.)
-// Current RP weights are in reliability-profile.ts (type-specific).
+/** @deprecated Legacy weights — used only by computeCapabilitySQS() for legacy_score. */
 const WEIGHTS = {
   correctness: 0.40,
   schema: 0.25,
@@ -140,7 +138,9 @@ function scoreToLabel(score: number, pending: boolean, qualifier?: "building" | 
   return "Degraded";
 }
 
-// ─── Cache ──────────────────────────────────────────────────────────────────
+// ─── Cache (write-path only) ────────────────────────────────────────────────
+// Used by test runner + refresh job when computing scores to persist to DB.
+// Read-path endpoints use DB columns and don't call these functions.
 
 const SQS_CACHE_TTL_MS = 10 * 60 * 1000;
 const sqsCache = new Map<string, { data: SQSResult; expiresAt: number }>();
@@ -155,14 +155,18 @@ function setCachedSQS(key: string, data: SQSResult): void {
   sqsCache.set(key, { data, expiresAt: Date.now() + SQS_CACHE_TTL_MS });
 }
 
-// ─── LEGACY: Single-composite SQS ────────────────────────────────────────
-// Called internally by computeDualProfileSQS() for legacy_score comparison.
-// Do NOT call directly from new code — use computeDualProfileSQS() instead.
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// LEGACY SINGLE-COMPOSITE MODEL
+// Used ONLY by computeDualProfileSQS() for the legacy_score field.
+// Do NOT call these functions from any endpoint or new code.
+// The canonical scoring model is dual-profile (QP/RP + matrix).
+// Read-path endpoints use DB columns; these functions are write-path only.
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * Compute SQS for a single capability.
- * Uses rolling 10-run window with recency-weighted scoring.
- * Returns pending until all 5 factors have data and >= 5 runs exist.
+ * @deprecated Used only by computeDualProfileSQS() for legacy_score regression tracking.
+ * Do NOT call directly — use computeDualProfileSQS() for the write path,
+ * or read from DB columns (matrixSqs, qpScore, rpScore, trend) for the read path.
  */
 export async function computeCapabilitySQS(slug: string): Promise<SQSResult> {
   const cacheKey = `sqs:cap:${slug}`;
@@ -278,102 +282,6 @@ export async function computeCapabilitySQS(slug: string): Promise<SQSResult> {
     windowIndexMap,
     health?.consecutiveFailures ?? 0,
   );
-  setCachedSQS(cacheKey, result);
-  return result;
-}
-
-// ─── LEGACY: Solution SQS (single-composite) ────────────────────────────
-// Replaced by dual-profile solution scoring in internal-trust.ts.
-// Kept for backward compatibility. Do NOT use in new features.
-
-/**
- * Compute SQS for a solution — floor-aware weighted average of step scores.
- * Score cannot exceed lowest step SQS + 20.
- */
-export async function computeSolutionSQS(
-  stepSlugs: string[],
-): Promise<SQSResult> {
-  const cacheKey = `sqs:sol:${stepSlugs.sort().join(",")}`;
-  const cached = getCachedSQS(cacheKey);
-  if (cached) return cached;
-
-  const stepScores = await Promise.all(
-    stepSlugs.map((slug) => computeCapabilitySQS(slug)),
-  );
-
-  // If any step is Unverified, the solution is Unverified
-  if (stepScores.some((s) => s.label === "Unverified")) {
-    const result = makeUnverifiedResult();
-    setCachedSQS(cacheKey, result);
-    return result;
-  }
-
-  // If any step is Building track record, the solution is Building track record
-  if (stepScores.some((s) => s.label === "Building track record")) {
-    const result = makeBuildingTrackRecordResult(0);
-    setCachedSQS(cacheKey, result);
-    return result;
-  }
-
-  // If any step is pending, the solution is pending
-  if (stepScores.some((s) => s.pending)) {
-    const result = makePendingResult(0);
-    setCachedSQS(cacheKey, result);
-    return result;
-  }
-
-  // Weighted average by test count per step
-  const totalTests = stepScores.reduce((s, r) => {
-    const factorTests = Object.values(r.factors).reduce((a, f) => a + f.total, 0);
-    return s + Math.max(factorTests, 1);
-  }, 0);
-
-  // Aggregate each factor across steps (weighted by test count)
-  const factors: SQSResult["factors"] = {
-    correctness: aggregateFactor(stepScores, "correctness", totalTests),
-    schema: aggregateFactor(stepScores, "schema", totalTests),
-    availability: aggregateFactor(stepScores, "availability", totalTests),
-    error_handling: aggregateFactor(stepScores, "error_handling", totalTests),
-    edge_cases: aggregateFactor(stepScores, "edge_cases", totalTests),
-  };
-
-  let score = Object.values(factors).reduce((s, f) => s + f.weighted_contribution, 0);
-  score = Math.round(score * 10) / 10;
-
-  // Floor-aware cap: score cannot exceed lowest step SQS + 20
-  const lowestStepScore = Math.min(...stepScores.map((s) => s.score));
-  const floorCap = lowestStepScore + 20;
-  if (score > floorCap) score = floorCap;
-
-  score = Math.max(0, Math.min(100, score));
-
-  const externalServiceIssues = stepScores.reduce((s, r) => s + r.external_service_issues, 0);
-  const runsAnalyzed = Math.min(...stepScores.map((s) => s.runs_analyzed));
-
-  // Solution trend: majority of step trends
-  const trendCounts = { improving: 0, declining: 0, stable: 0 };
-  for (const s of stepScores) trendCounts[s.trend]++;
-  const trend: SQSResult["trend"] =
-    trendCounts.improving > trendCounts.declining && trendCounts.improving > trendCounts.stable
-      ? "improving"
-      : trendCounts.declining > trendCounts.improving && trendCounts.declining > trendCounts.stable
-        ? "declining"
-        : "stable";
-
-  // Solution circuit_breaker: true if any step has active penalty
-  const circuitBreaker = stepScores.some((s) => s.circuit_breaker);
-
-  const result: SQSResult = {
-    score,
-    label: scoreToLabel(score, false),
-    factors,
-    trend,
-    circuit_breaker: circuitBreaker,
-    external_service_issues: externalServiceIssues,
-    runs_analyzed: runsAnalyzed,
-    pending: false,
-  };
-
   setCachedSQS(cacheKey, result);
   return result;
 }

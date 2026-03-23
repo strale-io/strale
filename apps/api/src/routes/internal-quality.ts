@@ -13,7 +13,7 @@ import { Hono } from "hono";
 import { eq, and, asc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { solutions, solutionSteps, capabilities } from "../db/schema.js";
-import { computeDualProfileSQS } from "../lib/sqs.js";
+import { sqsLabel, gradeFromScore, computeSolutionScore } from "../lib/trust-labels.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
@@ -26,34 +26,42 @@ internalQualityRoute.get("/capabilities/:slug", async (c) => {
 
   // API-5: Filter deactivated capabilities
   const db = getDb();
-  const [capCheck] = await db
-    .select({ isActive: capabilities.isActive })
+  const [capRow] = await db
+    .select({
+      isActive: capabilities.isActive,
+      matrixSqs: capabilities.matrixSqs,
+      qpScore: capabilities.qpScore,
+      rpScore: capabilities.rpScore,
+      trend: capabilities.trend,
+      capabilityType: capabilities.capabilityType,
+    })
     .from(capabilities)
     .where(eq(capabilities.slug, slug))
     .limit(1);
-  if (!capCheck || !capCheck.isActive) {
+  if (!capRow || !capRow.isActive) {
     return c.json(apiError("not_found", `Capability '${slug}' not found.`), 404);
   }
 
-  const [dual, metrics] = await Promise.all([
-    computeDualProfileSQS(slug).catch(() => null),
-    getCapabilityQuality(slug),
-  ]);
+  const metrics = await getCapabilityQuality(slug);
+
+  const sqs = capRow.matrixSqs ? parseFloat(capRow.matrixSqs) : 0;
+  const qpScore = capRow.qpScore ? parseFloat(capRow.qpScore) : 0;
+  const rpScore = capRow.rpScore ? parseFloat(capRow.rpScore) : 0;
 
   return c.json({
-    sqs: dual ? dual.score : 0,
-    sqs_label: dual ? dual.label : "Pending",
-    quality_profile: dual ? {
-      grade: dual.qp.grade,
-      score: dual.qp.score,
-      label: dual.qp.label,
-    } : { grade: "pending", score: 0, label: "Pending" },
-    reliability_profile: dual ? {
-      grade: dual.rp.grade,
-      score: dual.rp.score,
-      capability_type: dual.rp.capability_type,
-    } : { grade: "pending", score: 0, capability_type: "unknown" },
-    trend: dual ? dual.rp.trend : "stable",
+    sqs,
+    sqs_label: sqsLabel(sqs),
+    quality_profile: {
+      grade: gradeFromScore(capRow.qpScore),
+      score: qpScore,
+      label: `Code quality: ${gradeFromScore(capRow.qpScore)}`,
+    },
+    reliability_profile: {
+      grade: gradeFromScore(capRow.rpScore),
+      score: rpScore,
+      capability_type: capRow.capabilityType ?? "stable_api",
+    },
+    trend: capRow.trend ?? "stable",
     avg_response_time_ms: metrics.avgResponseTimeMs,
     p95_response_time_ms: metrics.p95ResponseTimeMs,
     total_transactions_30d: metrics.totalTransactions30d,
@@ -81,27 +89,31 @@ internalQualityRoute.get("/solutions/:slug", async (c) => {
     );
   }
 
-  // Get steps
+  // Get steps with trust columns from DB
   const steps = await db
     .select({
       capabilitySlug: solutionSteps.capabilitySlug,
       stepOrder: solutionSteps.stepOrder,
+      matrixSqs: capabilities.matrixSqs,
+      qpScore: capabilities.qpScore,
+      rpScore: capabilities.rpScore,
+      trend: capabilities.trend,
     })
     .from(solutionSteps)
+    .leftJoin(capabilities, eq(solutionSteps.capabilitySlug, capabilities.slug))
     .where(eq(solutionSteps.solutionId, sol.id))
     .orderBy(asc(solutionSteps.stepOrder));
 
-  // Compute dual-profile for each step
+  // Read trust from DB columns, metrics still from quality aggregation
   const stepResults = await Promise.all(
     steps.map(async (s) => {
-      const dual = await computeDualProfileSQS(s.capabilitySlug).catch(() => null);
       const metrics = await getCapabilityQuality(s.capabilitySlug);
       return {
         capability_slug: s.capabilitySlug,
-        sqs: dual ? dual.score : 0,
-        quality: dual ? dual.qp.grade : "pending",
-        reliability: dual ? dual.rp.grade : "pending",
-        trend: dual ? dual.rp.trend : "stable" as const,
+        sqs: s.matrixSqs ? parseFloat(s.matrixSqs) : 0,
+        quality: gradeFromScore(s.qpScore),
+        reliability: gradeFromScore(s.rpScore),
+        trend: s.trend ?? "stable",
         avg_response_time_ms: metrics.avgResponseTimeMs,
         total_transactions_30d: metrics.totalTransactions30d,
       };
@@ -109,18 +121,7 @@ internalQualityRoute.get("/solutions/:slug", async (c) => {
   );
 
   // Solution-level: weakest link
-  const sqsScores = stepResults.map((s) => s.sqs);
-  const minSqs = Math.min(...sqsScores);
-  const avgSqs = sqsScores.length > 0 ? Math.round(sqsScores.reduce((a, b) => a + b, 0) / sqsScores.length) : 0;
-  const solutionSqs = Math.min(avgSqs, minSqs + 20);
-
-  function sqsLabel(score: number): string {
-    if (score >= 90) return "Excellent";
-    if (score >= 75) return "Good";
-    if (score >= 50) return "Fair";
-    if (score >= 25) return "Poor";
-    return "Degraded";
-  }
+  const solutionSqs = computeSolutionScore(stepResults.map((s) => s.sqs));
 
   return c.json({
     sqs: solutionSqs,

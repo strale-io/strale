@@ -9,6 +9,7 @@ import {
 import { embedQuery, embedDocuments, cosineSimilarity } from "./embeddings.js";
 import { tokenize } from "./tokenize.js";
 import { determineBadge } from "./trust-helpers.js";
+import { sqsLabel as sharedSqsLabel, computeSolutionScore } from "./trust-labels.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -187,51 +188,59 @@ async function loadCatalog(): Promise<CatalogItem[]> {
         .where(eq(solutions.isActive, true))
         .orderBy(asc(solutions.displayOrder));
 
-      const solItems: CatalogItem[] = await Promise.all(
-        solRows.map(async (sol) => {
-          const steps = await db
+      // Batch-fetch ALL steps for ALL solutions in one query (eliminates N+1)
+      const solIds = solRows.map((s) => s.id);
+      const allSolSteps = solIds.length > 0
+        ? await db
             .select({
+              solutionId: solutionSteps.solutionId,
               capabilitySlug: solutionSteps.capabilitySlug,
               parallelGroup: solutionSteps.parallelGroup,
               capabilityName: capabilities.name,
             })
             .from(solutionSteps)
-            .leftJoin(
-              capabilities,
-              eq(solutionSteps.capabilitySlug, capabilities.slug),
-            )
-            .where(eq(solutionSteps.solutionId, sol.id))
-            .orderBy(asc(solutionSteps.stepOrder));
+            .leftJoin(capabilities, eq(solutionSteps.capabilitySlug, capabilities.slug))
+            .where(inArray(solutionSteps.solutionId, solIds))
+            .orderBy(solutionSteps.solutionId, asc(solutionSteps.stepOrder))
+        : [];
 
-          const stepNames = steps
-            .map((s) => s.capabilityName ?? s.capabilitySlug)
-            .join(", ");
-          const embeddingText = sol.agentDescription
-            ? `${sol.name}. ${sol.agentDescription}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.`
-            : `${sol.name}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.`;
-          const tokenText = `${sol.name} ${sol.description} ${sol.agentDescription ?? ""} ${sol.category} ${sol.geography} ${sol.slug} ${steps.map((s) => s.capabilitySlug).join(" ")}`;
+      const stepsBySolId = new Map<string, typeof allSolSteps>();
+      for (const step of allSolSteps) {
+        const list = stepsBySolId.get(step.solutionId) ?? [];
+        list.push(step);
+        stepsBySolId.set(step.solutionId, list);
+      }
 
-          return {
-            type: "solution" as const,
-            slug: sol.slug,
-            name: sol.name,
-            description: sol.description,
-            category: sol.category,
-            priceCents: sol.priceCents,
-            isFreeTier: false,
-            geography: sol.geography,
-            steps: steps.map((s) => ({
-              name: s.capabilityName ?? s.capabilitySlug,
-              capabilitySlug: s.capabilitySlug,
-              parallelGroup: s.parallelGroup,
-            })),
-            stepCount: steps.length,
-            embedding: [],
-            embeddingText,
-            tokens: tokenize(tokenText),
-          };
-        }),
-      );
+      const solItems: CatalogItem[] = solRows.map((sol) => {
+        const steps = stepsBySolId.get(sol.id) ?? [];
+        const stepNames = steps
+          .map((s) => s.capabilityName ?? s.capabilitySlug)
+          .join(", ");
+        const embeddingText = sol.agentDescription
+          ? `${sol.name}. ${sol.agentDescription}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.`
+          : `${sol.name}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.`;
+        const tokenText = `${sol.name} ${sol.description} ${sol.agentDescription ?? ""} ${sol.category} ${sol.geography} ${sol.slug} ${steps.map((s) => s.capabilitySlug).join(" ")}`;
+
+        return {
+          type: "solution" as const,
+          slug: sol.slug,
+          name: sol.name,
+          description: sol.description,
+          category: sol.category,
+          priceCents: sol.priceCents,
+          isFreeTier: false,
+          geography: sol.geography,
+          steps: steps.map((s) => ({
+            name: s.capabilityName ?? s.capabilitySlug,
+            capabilitySlug: s.capabilitySlug,
+            parallelGroup: s.parallelGroup,
+          })),
+          stepCount: steps.length,
+          embedding: [],
+          embeddingText,
+          tokens: tokenize(tokenText),
+        };
+      });
 
       // Load capabilities
       const capRows = await db
@@ -354,14 +363,6 @@ async function loadCatalog(): Promise<CatalogItem[]> {
         });
       }
 
-      function sqsLabel(score: number): string {
-        if (score >= 90) return "Excellent";
-        if (score >= 75) return "Good";
-        if (score >= 50) return "Fair";
-        if (score >= 25) return "Poor";
-        return "Degraded";
-      }
-
       // Assign trust summaries from batch data
       for (const item of allItems) {
         try {
@@ -381,7 +382,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
               last_tested_at: tests?.last_tested_at ?? null,
               data_source: "internal_testing",
               sqs,
-              sqs_label: sqs > 0 ? sqsLabel(sqs) : "Pending",
+              sqs_label: sqs > 0 ? sharedSqsLabel(sqs) : "Pending",
             };
           } else {
             // Solution: aggregate from step capabilities
@@ -409,9 +410,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
             // Solution SQS: floor-aware — cannot exceed lowest step + 20
             let solSqs = 0;
             if (stepScores.length > 0 && stepScores.every((s) => s > 0)) {
-              const avg = stepScores.reduce((a, b) => a + b, 0) / stepScores.length;
-              const lowest = Math.min(...stepScores);
-              solSqs = Math.round(Math.min(avg, lowest + 20) * 10) / 10;
+              solSqs = computeSolutionScore(stepScores);
             }
 
             const { badge, badge_label } = determineBadge(totalTests, 0, null);
@@ -425,7 +424,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
               last_tested_at: lastTestedAt,
               data_source: "internal_testing",
               sqs: solSqs,
-              sqs_label: solSqs > 0 ? sqsLabel(solSqs) : "Pending",
+              sqs_label: solSqs > 0 ? sharedSqsLabel(solSqs) : "Pending",
             };
           }
         } catch (err) {

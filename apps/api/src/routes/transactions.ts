@@ -6,6 +6,8 @@ import { authMiddleware, optionalAuthMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import { computeIntegrityHash } from "../lib/integrity-hash.js";
+import { sqsLabel, gradeFromScore } from "../lib/trust-labels.js";
+import { sanitizeFailureReason } from "../lib/sanitize.js";
 import type { AppEnv } from "../types.js";
 
 export const transactionsRoute = new Hono<AppEnv>();
@@ -82,23 +84,7 @@ transactionsRoute.get(
       const qpScore = row._qp_score != null ? parseFloat(row._qp_score) : null;
       const rpScore = row._rp_score != null ? parseFloat(row._rp_score) : null;
 
-      function scoreToGrade(s: number | null): string {
-        if (s == null) return "pending";
-        if (s >= 90) return "A";
-        if (s >= 75) return "B";
-        if (s >= 50) return "C";
-        if (s >= 25) return "D";
-        return "F";
-      }
 
-      function sqsLabel(s: number | null): string {
-        if (s == null) return "Pending";
-        if (s >= 90) return "Excellent";
-        if (s >= 75) return "Good";
-        if (s >= 50) return "Fair";
-        if (s >= 25) return "Poor";
-        return "Degraded";
-      }
 
       return {
         id: row.id,
@@ -106,7 +92,7 @@ transactionsRoute.get(
         capability_slug: row.capability_slug,
         input: row.input,
         output: row.output,
-        error: row.error,
+        error: row.error ? sanitizeFailureReason(row.error) : null,
         price_cents: row.price_cents,
         latency_ms: row.latency_ms,
         provenance: row.provenance,
@@ -119,8 +105,8 @@ transactionsRoute.get(
         quality: {
           sqs: sqs ?? 0,
           sqs_label: sqsLabel(sqs),
-          quality_grade: scoreToGrade(qpScore),
-          reliability_grade: scoreToGrade(rpScore),
+          quality_grade: gradeFromScore(qpScore),
+          reliability_grade: gradeFromScore(rpScore),
           usable: row._guidance_usable ?? true,
           strategy: row._guidance_strategy ?? "direct",
         },

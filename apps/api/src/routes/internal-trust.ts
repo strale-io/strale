@@ -31,6 +31,7 @@ import { computeFreshnessGrade } from "../lib/trust-grade.js";
 import { computeFreshnessDecay, applyFreshnessDecay, shouldOverrideTrend, type FreshnessResult } from "../lib/freshness-decay.js";
 import type { CapabilityType } from "../lib/reliability-profile.js";
 import { apiError } from "../lib/errors.js";
+import { sqsLabel, gradeFromScore, computeSolutionScore, computeSolutionTrend } from "../lib/trust-labels.js";
 import type { AppEnv } from "../types.js";
 
 export const internalTrustRoute = new Hono<AppEnv>();
@@ -299,15 +300,22 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
 
   const computeBatch = async () => {
 
-  // Pre-fetch test results for ALL slugs in 3 batch queries (replaces N+1 per-suite loop)
-  const prefetchedTestResults = await getTestResultsForSlugs(limitedSlugs);
-
-  // Compute dual-profile SQS with pre-fetched test data (concurrency-limited)
-  const dualResults = await Promise.all(
-    limitedSlugs.map((s) => dbConcurrency(() =>
-      computeDualProfileSQS(s, prefetchedTestResults.get(s)).catch(() => null),
-    )),
-  );
+  // Read all trust data from DB columns (populated by test runner + staleness refresh job)
+  const db = getDb();
+  const capRows = await db
+    .select({
+      slug: capabilities.slug,
+      matrixSqs: capabilities.matrixSqs,
+      matrixSqsRaw: capabilities.matrixSqsRaw,
+      qpScore: capabilities.qpScore,
+      rpScore: capabilities.rpScore,
+      trend: capabilities.trend,
+      freshnessLevel: capabilities.freshnessLevel,
+      guidanceUsable: capabilities.guidanceUsable,
+      guidanceStrategy: capabilities.guidanceStrategy,
+    })
+    .from(capabilities)
+    .where(inArray(capabilities.slug, limitedSlugs));
 
   const trustMap: Record<string, {
     sqs: number;
@@ -322,61 +330,11 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
     freshness_level: string;
   }> = {};
 
-  // Get cached guidance + last test times + schedule tiers from DB
-  const db = getDb();
-  const [capRows, lastTestRows, suiteRows] = await Promise.all([
-    db.select({
-      slug: capabilities.slug,
-      guidanceUsable: capabilities.guidanceUsable,
-      guidanceStrategy: capabilities.guidanceStrategy,
-    })
-      .from(capabilities)
-      .where(inArray(capabilities.slug, limitedSlugs)),
-    // Batch fetch last test time per slug
-    db.execute(sql`
-      SELECT DISTINCT ON (capability_slug)
-        capability_slug, executed_at
-      FROM test_results
-      WHERE capability_slug IN (${sql.join(limitedSlugs.map((s: string) => sql`${s}`), sql`, `)})
-      ORDER BY capability_slug, executed_at DESC
-    `),
-    // Batch fetch most frequent schedule tier per slug
-    // Use LEAST frequent tier (DESC) for freshness — prevents false "stale" on multi-tier capabilities
-    db.execute(sql`
-      SELECT DISTINCT ON (capability_slug)
-        capability_slug, schedule_tier
-      FROM test_suites
-      WHERE capability_slug IN (${sql.join(limitedSlugs.map((s: string) => sql`${s}`), sql`, `)}) AND active = true
-      ORDER BY capability_slug, schedule_tier DESC
-    `),
-  ]);
+  const capMap = new Map(capRows.map((r) => [r.slug, r]));
 
-  const guidanceMap = new Map(capRows.map((r) => [r.slug, r]));
-  const lastTestMap = new Map<string, Date>();
-  const lastTestRaw = Array.isArray(lastTestRows) ? lastTestRows : (lastTestRows as any)?.rows ?? [];
-  for (const r of lastTestRaw as any[]) {
-    lastTestMap.set(r.capability_slug, new Date(r.executed_at));
-  }
-  const tierMap = new Map<string, string>();
-  const tierRaw = Array.isArray(suiteRows) ? suiteRows : (suiteRows as any)?.rows ?? [];
-  for (const r of tierRaw as any[]) {
-    tierMap.set(r.capability_slug, r.schedule_tier);
-  }
-
-  function batchSqsLabel(s: number): string {
-    if (s >= 90) return "Excellent";
-    if (s >= 75) return "Good";
-    if (s >= 50) return "Fair";
-    if (s >= 25) return "Poor";
-    return "Degraded";
-  }
-
-  for (let i = 0; i < limitedSlugs.length; i++) {
-    const slug = limitedSlugs[i];
-    const dual = dualResults[i];
-    const cachedGuidance = guidanceMap.get(slug);
-
-    if (!dual) {
+  for (const slug of limitedSlugs) {
+    const cap = capMap.get(slug);
+    if (!cap || cap.matrixSqs == null) {
       trustMap[slug] = {
         sqs: 0,
         raw_sqs: 0,
@@ -384,32 +342,28 @@ internalTrustRoute.get("/capabilities/batch", async (c) => {
         quality: "pending",
         reliability: "pending",
         trend: "stable",
-        usable: cachedGuidance?.guidanceUsable ?? true,
-        strategy: cachedGuidance?.guidanceStrategy ?? "direct",
+        usable: cap?.guidanceUsable ?? true,
+        strategy: cap?.guidanceStrategy ?? "direct",
         badge: null,
-        freshness_level: "unverified",
+        freshness_level: cap?.freshnessLevel ?? "unverified",
       };
       continue;
     }
 
-    // Compute freshness decay for this capability
-    const scheduleTierHours = TIER_HOURS[tierMap.get(slug) ?? "B"] ?? 24;
-    const freshness = computeFreshnessDecay(lastTestMap.get(slug) ?? null, scheduleTierHours);
-    const rawSqs = dual.matrix.score;
-    const decayedSqs = dual.matrix.pending ? rawSqs : applyFreshnessDecay(rawSqs, freshness);
-    const effectiveTrend = shouldOverrideTrend(freshness) ? "stale" : dual.rp.trend;
+    const sqs = parseFloat(cap.matrixSqs);
+    const rawSqs = cap.matrixSqsRaw ? parseFloat(cap.matrixSqsRaw) : sqs;
 
     trustMap[slug] = {
-      sqs: decayedSqs,
+      sqs,
       raw_sqs: rawSqs,
-      sqs_label: dual.matrix.pending ? dual.matrix.label : batchSqsLabel(decayedSqs),
-      quality: dual.qp.grade,
-      reliability: dual.rp.grade,
-      trend: effectiveTrend,
-      usable: cachedGuidance?.guidanceUsable ?? (decayedSqs >= 25),
-      strategy: cachedGuidance?.guidanceStrategy ?? "direct",
-      badge: dual.matrix.pending ? null : "strale_tested",
-      freshness_level: freshness.staleness_level,
+      sqs_label: sqsLabel(sqs),
+      quality: gradeFromScore(cap.qpScore),
+      reliability: gradeFromScore(cap.rpScore),
+      trend: cap.trend ?? "stable",
+      usable: cap.guidanceUsable ?? (sqs >= 25),
+      strategy: cap.guidanceStrategy ?? "direct",
+      badge: "strale_tested",
+      freshness_level: cap.freshnessLevel ?? "fresh",
     };
   }
 
@@ -560,15 +514,6 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
     datasetLastUpdated: capRow.datasetLastUpdated,
   });
 
-  // SQS label based on decayed score
-  function sqsLabel(s: number): string {
-    if (s >= 90) return "Excellent";
-    if (s >= 75) return "Good";
-    if (s >= 50) return "Fair";
-    if (s >= 25) return "Poor";
-    return "Degraded";
-  }
-
   const result = {
     capability_slug: slug,
     data_source: capRow.dataSource ?? null,
@@ -707,62 +652,27 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
     stepsBySolution.get(solSlug)!.push(step);
   }
 
-  // 2. Collect all unique capability slugs across all solutions
+  // 2. Collect all unique capability slugs and batch-read trust columns from DB
   const uniqueCapSlugs = [...new Set(batchSteps.map((s) => s.capabilitySlug))];
 
-  // 3. Pre-fetch test results for all unique capabilities, then compute SQS
-  const solPrefetchedTestResults = await getTestResultsForSlugs(uniqueCapSlugs);
+  const capTrustRows = await db
+    .select({
+      slug: capabilities.slug,
+      matrixSqs: capabilities.matrixSqs,
+      matrixSqsRaw: capabilities.matrixSqsRaw,
+      qpScore: capabilities.qpScore,
+      rpScore: capabilities.rpScore,
+      trend: capabilities.trend,
+      freshnessLevel: capabilities.freshnessLevel,
+    })
+    .from(capabilities)
+    .where(inArray(capabilities.slug, uniqueCapSlugs));
 
-  const [dualResults, solLastTestRows, solSuiteRows] = await Promise.all([
-    Promise.all(uniqueCapSlugs.map((s) => dbConcurrency(() =>
-      computeDualProfileSQS(s, solPrefetchedTestResults.get(s)).catch(() => null),
-    ))),
-    db.execute(sql`
-      SELECT DISTINCT ON (capability_slug)
-        capability_slug, executed_at
-      FROM test_results
-      WHERE capability_slug IN (${sql.join(uniqueCapSlugs.map((s: string) => sql`${s}`), sql`, `)})
-      ORDER BY capability_slug, executed_at DESC
-    `),
-    // Use the LEAST frequent tier (DESC = C before B before A) for freshness checking.
-    // This prevents false "stale" labels when a capability has tier A suites that run
-    // frequently but the capability hasn't been tested in a few hours.
-    db.execute(sql`
-      SELECT DISTINCT ON (capability_slug)
-        capability_slug, schedule_tier
-      FROM test_suites
-      WHERE capability_slug IN (${sql.join(uniqueCapSlugs.map((s: string) => sql`${s}`), sql`, `)}) AND active = true
-      ORDER BY capability_slug, schedule_tier DESC
-    `),
-  ]);
+  const capTrustMap = new Map(capTrustRows.map((r) => [r.slug, r]));
 
-  const dualMap = new Map<string, Awaited<ReturnType<typeof computeDualProfileSQS>> | null>();
-  for (let i = 0; i < uniqueCapSlugs.length; i++) {
-    dualMap.set(uniqueCapSlugs[i], dualResults[i]);
-  }
-
-  const solLastTestMap = new Map<string, Date>();
-  const solLastTestRaw = Array.isArray(solLastTestRows) ? solLastTestRows : (solLastTestRows as any)?.rows ?? [];
-  for (const r of solLastTestRaw as any[]) {
-    solLastTestMap.set(r.capability_slug, new Date(r.executed_at));
-  }
-  const solTierMap = new Map<string, string>();
-  const solTierRaw = Array.isArray(solSuiteRows) ? solSuiteRows : (solSuiteRows as any)?.rows ?? [];
-  for (const r of solTierRaw as any[]) {
-    solTierMap.set(r.capability_slug, r.schedule_tier);
-  }
-
-  // 4. Assemble per-solution trust profiles
+  // 3. Assemble per-solution trust profiles
   const gradeOrder = ["A", "B", "C", "D", "F", "pending"];
   const strategyOrder = ["direct", "retry_with_backoff", "queue_for_later", "unavailable"];
-
-  function solBatchSqsLabel(s: number): string {
-    if (s >= 90) return "Excellent";
-    if (s >= 75) return "Good";
-    if (s >= 50) return "Fair";
-    if (s >= 25) return "Poor";
-    return "Degraded";
-  }
 
   const solutionsResult: Record<string, unknown> = {};
 
@@ -771,30 +681,25 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
     if (!solSteps || solSteps.length === 0) continue;
 
     const stepData = solSteps.map((step) => {
-      const dual = dualMap.get(step.capabilitySlug);
-      const tierHours = TIER_HOURS[solTierMap.get(step.capabilitySlug) ?? "B"] ?? 24;
-      const freshness = computeFreshnessDecay(solLastTestMap.get(step.capabilitySlug) ?? null, tierHours);
-      const rawSqs = dual?.matrix.score ?? 0;
-      const decayedSqs = dual?.matrix.pending ? rawSqs : applyFreshnessDecay(rawSqs, freshness);
-      const effectiveTrend = shouldOverrideTrend(freshness) ? ("stale" as const) : (dual?.rp.trend ?? ("stable" as const));
+      const ct = capTrustMap.get(step.capabilitySlug);
+      const sqs = ct?.matrixSqs ? parseFloat(ct.matrixSqs) : 0;
+      const qpScore = ct?.qpScore ? parseFloat(ct.qpScore) : 0;
+      const rpScore = ct?.rpScore ? parseFloat(ct.rpScore) : 0;
 
       return {
         capability: step.capabilitySlug,
-        sqs: decayedSqs,
-        quality: dual?.qp.grade ?? "pending",
-        reliability: dual?.rp.grade ?? "pending",
-        qp_score: dual?.qp.score ?? 0,
-        rp_score: dual?.rp.score ?? 0,
-        trend: effectiveTrend,
-        usable: step.guidanceUsable ?? (decayedSqs >= 25),
+        sqs,
+        quality: gradeFromScore(ct?.qpScore ?? null),
+        reliability: gradeFromScore(ct?.rpScore ?? null),
+        qp_score: qpScore,
+        rp_score: rpScore,
+        trend: ct?.trend ?? "stable",
+        usable: step.guidanceUsable ?? (sqs >= 25),
         strategy: step.guidanceStrategy ?? "direct",
       };
     });
 
-    const stepSqsValues = stepData.map((s) => s.sqs);
-    const avgSqs = stepSqsValues.reduce((a, b) => a + b, 0) / stepSqsValues.length;
-    const minSqs = Math.min(...stepSqsValues);
-    const solutionSqs = Math.round(Math.min(avgSqs, minSqs + 20) * 10) / 10;
+    const solutionSqs = computeSolutionScore(stepData.map((s) => s.sqs));
 
     const worstQuality = stepData.reduce((w, s) => {
       return gradeOrder.indexOf(s.quality) > gradeOrder.indexOf(w) ? s.quality : w;
@@ -806,13 +711,7 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
     const solutionQpScore = Math.round(Math.min(...stepData.map((s) => s.qp_score)) * 10) / 10;
     const solutionRpScore = Math.round(Math.min(...stepData.map((s) => s.rp_score)) * 10) / 10;
 
-    const trendCounts: Record<string, number> = { improving: 0, declining: 0, stable: 0, stale: 0 };
-    for (const s of stepData) trendCounts[s.trend] = (trendCounts[s.trend] ?? 0) + 1;
-    const solutionTrend =
-      (trendCounts.stale ?? 0) > 0 ? "stale"
-        : trendCounts.declining > trendCounts.improving ? "declining"
-          : trendCounts.improving > trendCounts.declining ? "improving"
-            : "stable";
+    const solutionTrend = computeSolutionTrend(stepData.map((s) => s.trend));
 
     const solutionUsable = stepData.every((s) => s.usable);
     const solutionStrategy = stepData.reduce((w, s) => {
@@ -822,7 +721,7 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
     const { badge } = determineBadge(stepData.length, 0, null);
 
     solutionsResult[solSlug] = {
-      sqs: { score: solutionSqs, label: solBatchSqsLabel(solutionSqs), trend: solutionTrend },
+      sqs: { score: solutionSqs, label: sqsLabel(solutionSqs), trend: solutionTrend },
       quality_profile: { grade: worstQuality, score: solutionQpScore, label: `Code quality: ${worstQuality} (weakest step)` },
       reliability_profile: { grade: worstReliability, score: solutionRpScore, label: `${rpGradeToLabel(worstReliability)} (weakest step)` },
       execution_guidance: { usable: solutionUsable, strategy: solutionStrategy },
@@ -868,6 +767,15 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       dataSource: capabilities.dataSource,
       priceCents: capabilities.priceCents,
       capabilityType: capabilities.capabilityType,
+      // Trust columns from DB (written by test runner + staleness refresh job)
+      matrixSqs: capabilities.matrixSqs,
+      matrixSqsRaw: capabilities.matrixSqsRaw,
+      qpScore: capabilities.qpScore,
+      rpScore: capabilities.rpScore,
+      trend: capabilities.trend,
+      freshnessLevel: capabilities.freshnessLevel,
+      guidanceUsable: capabilities.guidanceUsable,
+      guidanceStrategy: capabilities.guidanceStrategy,
     })
     .from(solutionSteps)
     .leftJoin(capabilities, eq(solutionSteps.capabilitySlug, capabilities.slug))
@@ -876,58 +784,27 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
 
   if (steps.length === 0) return null; // Signal 404
 
-  // Pre-fetch test results for all steps in 3 batch queries
+  // Pre-fetch test results for test history (still needed for test_history section)
   const stepSlugs = steps.map((s) => s.capabilitySlug);
-  const stepPrefetchedTestResults = await getTestResultsForSlugs(stepSlugs);
 
-  // Per-step dual-profile data (with freshness decay, concurrency-limited)
-  const stepData = await Promise.all(
-    steps.map((step) => dbConcurrency(async () => {
-      const testResultsData = stepPrefetchedTestResults.get(step.capabilitySlug) ?? {
-        last_run: null, total_tests: 0, passed: 0, failed: 0,
-        pass_rate: null, avg_response_time_ms: null, by_type: {}, history_30d: [],
-      };
-      const [dual, suiteRows] = await Promise.all([
-        computeDualProfileSQS(step.capabilitySlug, testResultsData),
-        db.select({ scheduleTier: testSuites.scheduleTier })
-          .from(testSuites)
-          .where(and(eq(testSuites.capabilitySlug, step.capabilitySlug), eq(testSuites.active, true)))
-          .limit(1),
-      ]);
+  // Per-step trust data — read from DB columns
+  const stepData = steps.map((step) => {
+    const sqs = step.matrixSqs ? parseFloat(step.matrixSqs) : 0;
+    const qpScore = step.qpScore ? parseFloat(step.qpScore) : 0;
+    const rpScore = step.rpScore ? parseFloat(step.rpScore) : 0;
 
-      const scheduleTier = suiteRows[0]?.scheduleTier ?? "B";
-      const scheduleFrequencyHours = TIER_HOURS[scheduleTier] ?? 24;
-
-      // Compute freshness decay for this step
-      const stepFreshness = computeFreshnessDecay(
-        testResultsData.last_run ? new Date(testResultsData.last_run) : null,
-        scheduleFrequencyHours,
-      );
-      const rawStepSqs = dual.matrix.score;
-      const decayedStepSqs = dual.matrix.pending ? rawStepSqs : applyFreshnessDecay(rawStepSqs, stepFreshness);
-      const stepTrend = shouldOverrideTrend(stepFreshness) ? "stale" : dual.rp.trend;
-
-      const guidance = await computeGuidanceForSlug(
-        step.capabilitySlug, dual,
-        { capabilityType: step.capabilityType ?? "stable_api", priceCents: step.priceCents ?? 0, dataSource: step.dataSource },
-        testResultsData.last_run,
-        scheduleFrequencyHours,
-        stepFreshness,
-      );
-
-      return {
-        capability: step.capabilitySlug,
-        sqs: decayedStepSqs,
-        quality: dual.qp.grade,
-        reliability: dual.rp.grade,
-        qp_score: dual.qp.score,
-        rp_score: dual.rp.score,
-        trend: stepTrend,
-        usable: guidance.usable,
-        strategy: guidance.strategy,
-      };
-    })),
-  );
+    return {
+      capability: step.capabilitySlug,
+      sqs,
+      quality: gradeFromScore(step.qpScore),
+      reliability: gradeFromScore(step.rpScore),
+      qp_score: qpScore,
+      rp_score: rpScore,
+      trend: step.trend ?? "stable",
+      usable: step.guidanceUsable ?? (sqs >= 25),
+      strategy: step.guidanceStrategy ?? "direct",
+    };
+  });
 
   // Solution-level: use weakest step approach
   const stepSqsValues = stepData.map((s) => s.sqs);
@@ -945,26 +822,10 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
   const solutionRpScore = Math.round(Math.min(...stepData.map((s) => s.rp_score)) * 10) / 10;
 
   // Solution SQS = average, capped at weakest + 20
-  const avgSqs = stepSqsValues.reduce((a, b) => a + b, 0) / stepSqsValues.length;
-  const minSqs = Math.min(...stepSqsValues);
-  const solutionSqs = Math.round(Math.min(avgSqs, minSqs + 20) * 10) / 10;
-
-  function solSqsLabel(s: number): string {
-    if (s >= 90) return "Excellent";
-    if (s >= 75) return "Good";
-    if (s >= 50) return "Fair";
-    if (s >= 25) return "Poor";
-    return "Degraded";
-  }
+  const solutionSqs = computeSolutionScore(stepSqsValues);
 
   // Solution trend: majority of step trends (stale overrides all)
-  const trendCounts: Record<string, number> = { improving: 0, declining: 0, stable: 0, stale: 0 };
-  for (const s of stepData) trendCounts[s.trend] = (trendCounts[s.trend] ?? 0) + 1;
-  const solutionTrend =
-    (trendCounts.stale ?? 0) > 0 ? "stale"
-      : trendCounts.declining > trendCounts.improving ? "declining"
-        : trendCounts.improving > trendCounts.declining ? "improving"
-          : "stable";
+  const solutionTrend = computeSolutionTrend(stepData.map((s) => s.trend));
 
   // Solution usable = all steps usable
   const solutionUsable = stepData.every((s) => s.usable);
@@ -1001,7 +862,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
 
     sqs: {
       score: solutionSqs,
-      label: solSqsLabel(solutionSqs),
+      label: sqsLabel(solutionSqs),
       trend: solutionTrend,
       scoring_note: "Solution SQS is a weighted average of per-step SQS scores, capped at weakest step + 20. QP/RP grades below show the weakest step (conservative). These grades may not directly map to the SQS score via the matrix — the matrix applies at step level, not solution level.",
     },
