@@ -1,24 +1,24 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { getExecutor } from "../capabilities/index.js";
+import { sanitizeFailureReason } from "../lib/sanitize.js";
 
 // ─── x402 payment gateway ─────────────────────────────────────────────────────
 // Exposes selected Strale capabilities as x402-compatible paid API endpoints.
 // Ref: https://x402.org — Coinbase open payment protocol (HTTP 402 + USDC/Base)
 //
-// Phase 1: Returns valid 402 responses for directory listing (402index.io).
-//   Payment verification deferred — any X-PAYMENT header grants access.
-// Phase 2 (future): Add @x402/hono middleware with real facilitator + wallet.
+// Uses the official @x402/hono middleware with the Coinbase CDP facilitator
+// for real on-chain USDC payment verification on Base mainnet.
 
-// USDC contract on Base mainnet (6 decimals: 50000 = $0.05)
-const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const BASE_URL = process.env.API_BASE_URL ?? "https://api.strale.io";
-const WALLET = process.env.X402_WALLET_ADDRESS ?? "0x0000000000000000000000000000000000000001";
+const WALLET = process.env.X402_WALLET_ADDRESS;
+const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://facilitator.x402.org";
+const NETWORK = process.env.X402_NETWORK ?? "eip155:8453"; // Base mainnet
 
 interface EndpointConfig {
   slug: string;
   description: string;
-  maxAmountRequired: string; // USDC atomic units (6 decimals)
+  priceUsd: string; // e.g. "$0.05"
   mapInput: (query: Record<string, string>) => Record<string, unknown>;
 }
 
@@ -26,56 +26,34 @@ const ENDPOINTS: Record<string, EndpointConfig> = {
   "iban-validate": {
     slug: "iban-validate",
     description: "Validate IBAN numbers — structure check, checksum, bank code extraction. 75+ countries.",
-    maxAmountRequired: "50000", // $0.05
+    priceUsd: "$0.02",
     mapInput: (q) => ({ iban: q.iban ?? "" }),
   },
   "vat-format-validate": {
     slug: "vat-format-validate",
     description: "Validate EU VAT number format against country-specific rules. 30+ countries.",
-    maxAmountRequired: "50000", // $0.05
+    priceUsd: "$0.02",
     mapInput: (q) => ({ vat_number: q.vat_number ?? "" }),
   },
   "paid-api-preflight": {
     slug: "paid-api-preflight",
     description: "Pre-flight trust check for paid API endpoints — detects x402/L402/MPP protocol, validates headers.",
-    maxAmountRequired: "20000", // $0.02
+    priceUsd: "$0.03",
     mapInput: (q) => ({ url: q.url ?? "" }),
   },
   "ssl-check": {
     slug: "ssl-check",
     description: "Check SSL/TLS certificate validity, expiry, chain, and configuration for any domain.",
-    maxAmountRequired: "50000", // $0.05
+    priceUsd: "$0.05",
     mapInput: (q) => ({ domain: q.domain ?? "" }),
   },
   "sanctions-check": {
     slug: "sanctions-check",
     description: "Screen names against global sanctions lists (OFAC, EU, UN). Powered by OpenSanctions.",
-    maxAmountRequired: "100000", // $0.10
+    priceUsd: "$0.10",
     mapInput: (q) => ({ name: q.name ?? "", ...(q.country ? { country: q.country } : {}) }),
   },
 };
-
-// Build the x402 PAYMENT-REQUIRED header payload for an endpoint
-function buildPaymentRequired(path: string, config: EndpointConfig): string {
-  const resource = `${BASE_URL}/x402${path}`;
-  const payload = {
-    x402Version: 1,
-    accepts: [
-      {
-        scheme: "exact",
-        network: "base-mainnet",
-        maxAmountRequired: config.maxAmountRequired,
-        resource,
-        description: config.description,
-        mimeType: "application/json",
-        payTo: WALLET,
-        maxTimeoutSeconds: 300,
-        asset: USDC_BASE,
-      },
-    ],
-  };
-  return Buffer.from(JSON.stringify(payload)).toString("base64");
-}
 
 export const x402Route = new Hono();
 
@@ -90,34 +68,66 @@ x402Route.use(
   }),
 );
 
-// Register one handler per capability
+// ─── Apply @x402/hono middleware if wallet is configured ──────────────────────
+
+if (WALLET) {
+  // Dynamic import to avoid startup crash if @x402 packages aren't installed
+  import("@x402/hono").then(async ({ paymentMiddleware, x402ResourceServer }) => {
+    const { HTTPFacilitatorClient } = await import("@x402/core/server");
+    const { ExactEvmScheme } = await import("@x402/evm/exact/server");
+
+    const facilitatorClient = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
+    const network = NETWORK as `${string}:${string}`;
+    const resourceServer = new x402ResourceServer(facilitatorClient)
+      .register(network, new ExactEvmScheme());
+
+    // Build routes config from ENDPOINTS
+    const routes: Record<string, any> = {};
+
+    for (const [path, config] of Object.entries(ENDPOINTS)) {
+      routes[`GET /x402/${path}`] = {
+        accepts: {
+          scheme: "exact",
+          price: config.priceUsd,
+          network,
+          payTo: WALLET,
+        },
+        description: config.description,
+        resource: `${BASE_URL}/x402/${path}`,
+      };
+    }
+
+    x402Route.use("*", paymentMiddleware(routes, resourceServer, undefined, undefined, false));
+
+    console.log(`[x402] Payment middleware active — wallet: ${WALLET.slice(0, 8)}...${WALLET.slice(-4)}, network: ${NETWORK}, facilitator: ${FACILITATOR_URL}`);
+  }).catch((err) => {
+    console.warn(`[x402] Failed to initialize payment middleware: ${err instanceof Error ? err.message : err}`);
+    console.warn("[x402] Falling back to stub mode (any X-PAYMENT header accepted)");
+  });
+} else {
+  console.warn("[x402] X402_WALLET_ADDRESS not configured — x402 routes use stub verification");
+}
+
+// ─── Route handlers (execute capability after payment verified) ───────────────
+
 for (const [path, config] of Object.entries(ENDPOINTS)) {
   x402Route.get(`/${path}`, async (c) => {
-    const hasPayment = !!c.req.header("x-payment");
-
-    if (!hasPayment) {
-      // Return 402 with PAYMENT-REQUIRED header — this is what 402 Index health-checks
-      const paymentHeader = buildPaymentRequired(`/${path}`, config);
-      c.header("Payment-Required", paymentHeader);
-      c.header("Content-Type", "application/json");
+    // If @x402 middleware is active, payment is already verified at this point.
+    // If wallet isn't configured (stub mode), accept any request for development.
+    if (!WALLET && !c.req.header("x-payment")) {
+      // Stub 402 response for when wallet isn't configured
       return c.json(
         {
           error: "Payment required",
-          x402Version: 1,
-          accepts: [
-            {
-              network: "base-mainnet",
-              asset: "USDC",
-              amount: `$${(parseInt(config.maxAmountRequired) / 1_000_000).toFixed(2)}`,
-            },
-          ],
+          message: "x402 payment gateway is in stub mode. Set X402_WALLET_ADDRESS to enable real payments.",
+          x402: true,
+          endpoint: `${BASE_URL}/x402/${path}`,
+          price: config.priceUsd,
         },
         402,
       );
     }
 
-    // X-PAYMENT header present — execute the capability
-    // Phase 1: skip verification (any header grants access)
     const query = c.req.query() as Record<string, string>;
     const executor = getExecutor(config.slug);
 
@@ -131,7 +141,7 @@ for (const [path, config] of Object.entries(ENDPOINTS)) {
       return c.json(result.output);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Execution failed";
-      return c.json({ error: message }, 400);
+      return c.json({ error: sanitizeFailureReason(message) }, 400);
     }
   });
 }

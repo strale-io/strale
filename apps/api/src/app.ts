@@ -235,6 +235,27 @@ app.route("/", llmsTxtRoute);
 // x402 payment gateway — paid API endpoints for the 402 ecosystem (402index.io)
 app.route("/x402", x402Route);
 
+// x402 manifest — machine-readable list of x402-enabled endpoints
+app.get("/.well-known/x402.json", (c) => {
+  const wallet = process.env.X402_WALLET_ADDRESS;
+  const network = process.env.X402_NETWORK ?? "eip155:8453";
+  const facilitator = process.env.X402_FACILITATOR_URL ?? "https://facilitator.x402.org";
+  c.header("Cache-Control", "public, max-age=3600");
+  return c.json({
+    x402: true,
+    facilitator,
+    network,
+    wallet: wallet ?? null,
+    endpoints: [
+      { path: "/x402/iban-validate", method: "GET", price: "0.02", currency: "USDC", network, description: "Validate an IBAN number" },
+      { path: "/x402/vat-format-validate", method: "GET", price: "0.02", currency: "USDC", network, description: "Validate EU VAT number format" },
+      { path: "/x402/paid-api-preflight", method: "GET", price: "0.03", currency: "USDC", network, description: "Pre-flight trust check for paid API endpoints" },
+      { path: "/x402/ssl-check", method: "GET", price: "0.05", currency: "USDC", network, description: "Check SSL certificate for a domain" },
+      { path: "/x402/sanctions-check", method: "GET", price: "0.10", currency: "USDC", network, description: "Screen against global sanctions lists" },
+    ],
+  });
+});
+
 // 402 Index domain verification token
 app.get("/.well-known/402index-verify.txt", (c) => {
   return c.text("17d2659be9455122b7f464fa3c960a165f7d9dc6d828c90bdc96f33129b626d8");
