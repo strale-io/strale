@@ -4,7 +4,7 @@
  * The single highest-impact Beacon fix: a rich JSON self-description
  * that lets any agent fully understand and navigate the API on first contact.
  *
- * Also serves robots.txt and sitemap.xml for AI crawler discovery.
+ * Also serves robots.txt, sitemap.xml, pricing, status, and redirect routes.
  */
 
 import { Hono } from "hono";
@@ -29,6 +29,7 @@ const WELCOME = {
     wallet_balance: "GET /v1/wallet/balance",
     wallet_topup: "POST /v1/wallet/topup",
     transactions: "GET /v1/transactions",
+    pricing: "GET /v1/pricing",
   },
 
   discovery: {
@@ -45,23 +46,25 @@ const WELCOME = {
     docs: "https://strale.dev/docs",
     api_reference: "https://strale.dev/api-reference",
     quickstart: "https://strale.dev/docs/quickstart",
-    changelog: "https://strale.dev/changelog",
-    status: "https://api.strale.io/health",
+    changelog: "https://api.strale.io/changelog",
+    status: "https://api.strale.io/status",
   },
 
   authentication: {
     type: "bearer",
     header: "Authorization: Bearer sk_live_...",
     signup: "https://strale.dev/signup",
+    credit_card_required: false,
     description:
-      "Register via POST /v1/auth/register with email. Returns API key and \u20ac2.00 trial credits instantly. No credit card required.",
+      "Register via POST /v1/auth/register with email. Returns API key and \u20ac2.00 trial credits instantly. No credit card required. No payment method needed to start.",
   },
 
   sandbox: {
     free_tier: true,
     trial_credits_eur: 2.0,
+    credit_card_required: false,
     description:
-      "New accounts receive \u20ac2.00 in trial credits. No credit card required. The free-tier iban-validate capability can be used to test the integration.",
+      "New accounts receive \u20ac2.00 in trial credits automatically. No credit card required. No payment method needed. The free-tier iban-validate capability can be used to test the integration.",
     test_example: {
       endpoint: "POST /v1/do",
       body: {
@@ -76,9 +79,14 @@ const WELCOME = {
     model: "pay-per-use",
     currency: "EUR",
     wallet_based: true,
+    credit_card_required: false,
+    trial_credits_eur: 2.0,
     range: "\u20ac0.02 \u2013 \u20ac0.50 per capability execution",
+    pricing_endpoint: "https://api.strale.io/v1/pricing",
     pricing_page: "https://strale.dev/pricing",
     capabilities_with_prices: "https://api.strale.io/v1/capabilities",
+    description:
+      "Pay only for what you use. New accounts receive \u20ac2.00 in trial credits instantly \u2014 no credit card required.",
   },
 
   sdks: {
@@ -126,8 +134,8 @@ const WELCOME = {
   },
 
   legal: {
-    terms_of_service: "https://strale.dev/terms",
-    privacy_policy: "https://strale.dev/privacy",
+    terms_of_service: "https://api.strale.io/terms",
+    privacy_policy: "https://api.strale.io/privacy",
     agent_usage:
       "API and automated agent access is explicitly permitted. No restrictions on bot or programmatic usage.",
   },
@@ -135,7 +143,7 @@ const WELCOME = {
   support: {
     email: "hello@strale.io",
     security: "security@strale.io",
-    status_endpoint: "https://api.strale.io/health",
+    status_endpoint: "https://api.strale.io/status",
   },
 
   structured_data: {
@@ -167,6 +175,108 @@ welcomeRoute.get("/api", (c) => {
   c.header("Access-Control-Allow-Origin", "*");
   return c.json(WELCOME);
 });
+
+// ─── Pricing endpoint ───────────────────────────────────────────────────────
+
+const PRICING = {
+  model: "pay-per-use",
+  currency: "EUR",
+  wallet_based: true,
+  trial_credits_eur: 2.0,
+  credit_card_required: false,
+  description:
+    "Pay only for what you use. New accounts receive \u20ac2.00 in trial credits instantly \u2014 no credit card required. No payment method needed to start.",
+  price_range: {
+    min_cents: 2,
+    max_cents: 50,
+    description: "\u20ac0.02 \u2013 \u20ac0.50 per capability execution",
+  },
+  top_up: {
+    minimum_eur: 10,
+    suggested_amounts_eur: [10, 25, 50, 100],
+    method: "Stripe Checkout",
+    endpoint: "POST /v1/wallet/topup",
+  },
+  free_capabilities: [
+    {
+      slug: "iban-validate",
+      price_cents: 3,
+      description: "Validate IBAN structure and extract bank details",
+    },
+    {
+      slug: "email-validate",
+      price_cents: 2,
+      description: "Validate email address format and deliverability",
+    },
+    {
+      slug: "dns-lookup",
+      price_cents: 2,
+      description: "DNS record lookup for any domain",
+    },
+    {
+      slug: "json-repair",
+      price_cents: 2,
+      description: "Repair malformed JSON strings",
+    },
+    {
+      slug: "url-to-markdown",
+      price_cents: 5,
+      description: "Convert any URL to clean markdown",
+    },
+  ],
+  full_catalog: "https://api.strale.io/v1/capabilities",
+  pricing_page: "https://strale.dev/pricing",
+};
+
+welcomeRoute.get("/v1/pricing", (c) => {
+  c.header("Cache-Control", "public, max-age=3600");
+  c.header("Access-Control-Allow-Origin", "*");
+  return c.json(PRICING);
+});
+
+welcomeRoute.get("/pricing", (c) => {
+  c.header("Cache-Control", "public, max-age=3600");
+  c.header("Access-Control-Allow-Origin", "*");
+  return c.json(PRICING);
+});
+
+// ─── Status endpoint ────────────────────────────────────────────────────────
+
+welcomeRoute.get("/status", (c) => {
+  c.header("Cache-Control", "public, max-age=60");
+  c.header("Access-Control-Allow-Origin", "*");
+  return c.json({
+    status: "operational",
+    health_endpoint: "https://api.strale.io/health",
+    uptime_check: "https://api.strale.io/health",
+    changelog: "https://strale.dev/changelog",
+    incidents: [],
+  });
+});
+
+// ─── Redirect routes ────────────────────────────────────────────────────────
+
+const REDIRECTS: Array<[string, string]> = [
+  ["/changelog", "https://strale.dev/changelog"],
+  ["/terms", "https://strale.dev/terms"],
+  ["/terms-of-service", "https://strale.dev/terms"],
+  ["/privacy", "https://strale.dev/privacy"],
+  ["/docs", "https://strale.dev/docs"],
+  ["/developers", "https://strale.dev/docs"],
+  ["/api-reference", "https://strale.dev/api-reference"],
+  ["/signup", "https://strale.dev/signup"],
+];
+
+for (const [path, target] of REDIRECTS) {
+  welcomeRoute.get(path, (c) => {
+    c.header("Location", target);
+    c.header("Access-Control-Allow-Origin", "*");
+    return c.json(
+      { redirect: target, message: `This resource is available at ${target}` },
+      301,
+    );
+  });
+}
 
 // ─── robots.txt ─────────────────────────────────────────────────────────────
 
@@ -220,9 +330,17 @@ const SITEMAP_XML = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://api.strale.io/.well-known/ai-catalog.json</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://api.strale.io/v1/capabilities</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://api.strale.io/v1/solutions</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
+  <url><loc>https://api.strale.io/v1/pricing</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://api.strale.io/status</loc><changefreq>always</changefreq><priority>0.5</priority></url>
   <url><loc>https://api.strale.io/health</loc><changefreq>always</changefreq><priority>0.3</priority></url>
   <url><loc>https://api.strale.io/llms.txt</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
   <url><loc>https://api.strale.io/llms-full.txt</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://strale.dev/docs</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://strale.dev/pricing</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://strale.dev/changelog</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://strale.dev/signup</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://strale.dev/terms</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://strale.dev/privacy</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
 </urlset>
 `;
 

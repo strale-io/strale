@@ -119,6 +119,16 @@ app.use("/openapi.json", publicCors);
 app.use("/robots.txt", publicCors);
 app.use("/sitemap.xml", publicCors);
 app.use("/api", publicCors);
+app.use("/pricing", publicCors);
+app.use("/status", publicCors);
+app.use("/changelog", publicCors);
+app.use("/terms", publicCors);
+app.use("/terms-of-service", publicCors);
+app.use("/privacy", publicCors);
+app.use("/docs", publicCors);
+app.use("/developers", publicCors);
+app.use("/api-reference", publicCors);
+app.use("/signup", publicCors);
 
 // Authenticated / mutating endpoints — restricted CORS
 app.use("/v1/*", restrictedCors);
