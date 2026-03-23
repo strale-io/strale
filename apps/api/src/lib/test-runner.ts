@@ -1438,17 +1438,18 @@ async function runAdaptiveScheduler(): Promise<void> {
       if (msSinceLastRun >= interval) {
         dueSlugs.push(slug);
       }
-    } catch {
-      // Skip capabilities that error during interval computation
+    } catch (err) {
+      console.warn(`[scheduler] Skipping ${slug}: interval computation failed:`, err instanceof Error ? err.message : err);
     }
   }
 
+  // Log scheduler diagnostics
+  const totalEligible = tierBySlug.size;
+  console.log(`[scheduler] ${totalEligible} eligible capabilities, ${dueSlugs.length} due for testing`);
+
   if (dueSlugs.length === 0) {
-    console.log("[scheduler] No capabilities due for testing");
     return;
   }
-
-  console.log(`[scheduler] ${dueSlugs.length} capabilities due — running tests`);
 
   let passed = 0;
   let failed = 0;
