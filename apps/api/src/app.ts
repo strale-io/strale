@@ -25,7 +25,7 @@ import { internalHealthMonitorRoute } from "./routes/internal-health-monitor.js"
 import { replyWebhookRoute } from "./routes/reply-webhook.js";
 import { auditRoute } from "./routes/audit.js";
 import { internalOnboardingRoute } from "./routes/internal-onboarding.js";
-import { x402Route } from "./routes/x402-gateway.js";
+import { x402Route, ENDPOINTS as X402_ENDPOINTS, WALLET as X402_WALLET, FACILITATOR_URL as X402_FACILITATOR_URL, NETWORK as X402_NETWORK, BASE_URL as X402_BASE_URL } from "./routes/x402-gateway.js";
 import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
@@ -231,6 +231,53 @@ app.route("/", welcomeRoute);
 app.route("/.well-known/mcp.json", mcpServerCardRoute);
 app.route("/.well-known/ai-catalog.json", aiCatalogRoute);
 app.route("/", llmsTxtRoute);
+
+// x402 payment middleware — lazy-init wrapper for async @x402/hono import
+// Registered synchronously so Hono processes it before route handlers.
+// On first request, initializes the real payment middleware, then delegates.
+if (X402_WALLET) {
+  let _x402Middleware: ((c: any, next: any) => Promise<any>) | null = null;
+  let _x402InitPromise: Promise<void> | null = null;
+
+  async function initX402() {
+    const { paymentMiddleware, x402ResourceServer } = await import("@x402/hono");
+    const { HTTPFacilitatorClient } = await import("@x402/core/server");
+    const { ExactEvmScheme } = await import("@x402/evm/exact/server");
+
+    const facilitatorClient = new HTTPFacilitatorClient({ url: X402_FACILITATOR_URL });
+    const resourceServer = new x402ResourceServer(facilitatorClient)
+      .register(X402_NETWORK, new ExactEvmScheme());
+
+    const routes: Record<string, any> = {};
+    for (const [path, config] of Object.entries(X402_ENDPOINTS)) {
+      routes[`GET /x402/${path}`] = {
+        accepts: { scheme: "exact", price: config.priceUsd, network: X402_NETWORK, payTo: X402_WALLET },
+        description: config.description,
+        resource: `${X402_BASE_URL}/x402/${path}`,
+      };
+    }
+
+    _x402Middleware = paymentMiddleware(routes, resourceServer, undefined, undefined, false);
+    console.log(`[x402] Payment middleware ready — wallet: ${X402_WALLET!.slice(0, 8)}...`);
+  }
+
+  // Start init immediately but don't block startup
+  _x402InitPromise = initX402().catch((err) => {
+    console.warn(`[x402] Init failed: ${err instanceof Error ? err.message : err}`);
+  });
+
+  app.use("/x402/*", async (c, next) => {
+    // Wait for init on first request (typically already complete)
+    if (!_x402Middleware && _x402InitPromise) {
+      await _x402InitPromise;
+    }
+    if (_x402Middleware) {
+      return _x402Middleware(c, next);
+    }
+    // Fallback if init failed
+    await next();
+  });
+}
 
 // x402 payment gateway — paid API endpoints for the 402 ecosystem (402index.io)
 app.route("/x402", x402Route);
