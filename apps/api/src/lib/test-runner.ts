@@ -1787,7 +1787,7 @@ async function persistDualProfileScores(slugs: string[]): Promise<void> {
   for (const slug of slugs) {
     try {
       const dual = await computeDualProfileSQS(slug);
-      if (dual.qp.pending && dual.rp.pending) {
+      if (dual.matrix.pending) {
         skippedPending++;
         continue;
       }
