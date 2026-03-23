@@ -81,7 +81,7 @@ if (WALLET) {
   // Build routes config from ENDPOINTS
   const routes: Record<string, any> = {};
   for (const [path, config] of Object.entries(ENDPOINTS)) {
-    routes[`GET /x402/${path}`] = {
+    routes[`GET /${path}`] = {
       accepts: {
         scheme: "exact",
         price: config.priceUsd,
