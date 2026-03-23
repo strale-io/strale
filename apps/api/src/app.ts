@@ -152,8 +152,36 @@ app.use("*", async (c, next) => {
 // Health check
 app.get("/health", (c) => c.json({ status: "ok" }));
 
-// OpenAPI specification
-app.get("/openapi.json", (c) => c.json(openApiSpec));
+// OpenAPI specification (with content negotiation)
+let _openApiMd: string | null = null;
+function getOpenApiMarkdown(): string {
+  if (_openApiMd) return _openApiMd;
+  const spec = openApiSpec as { info?: { title?: string; version?: string; description?: string }; servers?: { url: string }[]; paths?: Record<string, Record<string, { summary?: string; description?: string }>> };
+  let md = `# ${spec.info?.title ?? "Strale API"} \u2014 OpenAPI ${spec.info?.version ?? "3.1.0"}\n\n`;
+  md += `${spec.info?.description ?? ""}\n\n`;
+  md += `Base URL: ${spec.servers?.[0]?.url ?? "https://api.strale.io"}\n\n`;
+  md += "## Authentication\n\nBearer token: `Authorization: Bearer sk_live_...`\n\n## Endpoints\n\n";
+  for (const [path, methods] of Object.entries(spec.paths ?? {})) {
+    for (const [method, op] of Object.entries(methods)) {
+      if (method === "parameters") continue;
+      md += `### ${method.toUpperCase()} ${path}\n${op.summary ?? ""}\n\n`;
+    }
+  }
+  md += "## Full Spec\n\nThe complete OpenAPI 3.1.0 JSON specification is available at:\nhttps://api.strale.io/openapi.json (request with Accept: application/json)\n";
+  _openApiMd = md;
+  return md;
+}
+
+app.get("/openapi.json", (c) => {
+  c.header("Vary", "Accept");
+  const accept = c.req.header("Accept") || "";
+  if (accept.includes("text/markdown")) {
+    c.header("Content-Type", "text/markdown; charset=utf-8");
+    c.header("Cache-Control", "public, max-age=3600");
+    return c.text(getOpenApiMarkdown());
+  }
+  return c.json(openApiSpec);
+});
 
 // Stripe webhook — must be before any body-parsing middleware
 // Needs raw body for signature verification

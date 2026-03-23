@@ -180,23 +180,86 @@ const WELCOME = {
   },
 };
 
+// ─── Markdown version of the welcome response ──────────────────────────────
+
+const WELCOME_MD = `# Strale API
+
+> The trust layer for AI agents
+
+250+ independently tested and scored data capabilities across 27 countries.
+
+## Quick Start
+
+1. Register: \`POST /v1/auth/register\` with your email
+2. Get your API key (starts with \`sk_live_\`)
+3. Execute: \`POST /v1/do\` with \`capability_slug\` and \`inputs\`
+
+Free trial: €2.00 credits, no credit card required.
+
+## Endpoints
+
+- \`POST /v1/do\` — Execute a capability
+- \`GET /v1/capabilities\` — Browse capabilities
+- \`GET /v1/solutions\` — Browse solutions
+- \`POST /v1/suggest\` — AI-powered capability suggestion
+- \`POST /v1/auth/register\` — Register
+- \`GET /v1/wallet/balance\` — Check balance
+- \`GET /v1/wallet/topup\` — Top up wallet
+- \`GET /v1/transactions\` — Transaction history
+- \`GET /v1/pricing\` — Pricing info
+
+## Links
+
+- Documentation: https://strale.dev/docs
+- OpenAPI spec: https://api.strale.io/openapi.json
+- MCP server: https://api.strale.io/mcp
+- Agent card: https://api.strale.io/.well-known/agent-card.json
+- Pricing: https://api.strale.io/v1/pricing
+- Changelog: https://strale.dev/changelog
+- Status: https://api.strale.io/status
+
+## Authentication
+
+Bearer token: \`Authorization: Bearer sk_live_...\`
+
+Register via \`POST /v1/auth/register\` with email. Returns API key and €2.00 trial credits instantly. No credit card required.
+
+## SDKs
+
+- TypeScript: \`npm install @petter_lindstrom/strale\`
+- Python: \`pip install straleio\`
+- MCP: \`npm install strale-mcp\`
+- LangChain: \`pip install langchain-strale\`
+- CrewAI: \`pip install crewai-strale\`
+
+## Support
+
+- Email: hello@strale.io
+- Security: security@strale.io
+`;
+
 function setWelcomeHeaders(c: { header: (name: string, value: string) => void }) {
   c.header("Cache-Control", "public, max-age=3600");
   c.header("Access-Control-Allow-Origin", "*");
+  c.header("Vary", "Accept");
   c.header("X-RateLimit-Limit", "60");
   c.header("X-RateLimit-Remaining", "59");
   c.header("X-RateLimit-Reset", String(Math.floor(Date.now() / 1000) + 60));
 }
 
-welcomeRoute.get("/", (c) => {
+function serveWelcome(c: { req: { header: (name: string) => string | undefined }; header: (name: string, value: string) => void; json: (data: unknown) => Response; text: (data: string) => Response }) {
   setWelcomeHeaders(c);
+  const accept = c.req.header("Accept") || "";
+  if (accept.includes("text/markdown")) {
+    c.header("Content-Type", "text/markdown; charset=utf-8");
+    return c.text(WELCOME_MD);
+  }
   return c.json(WELCOME);
-});
+}
 
-welcomeRoute.get("/api", (c) => {
-  setWelcomeHeaders(c);
-  return c.json(WELCOME);
-});
+welcomeRoute.get("/", (c) => serveWelcome(c));
+
+welcomeRoute.get("/api", (c) => serveWelcome(c));
 
 // ─── Pricing endpoint ───────────────────────────────────────────────────────
 
