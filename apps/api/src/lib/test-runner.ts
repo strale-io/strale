@@ -1780,10 +1780,17 @@ async function persistDualProfileScores(slugs: string[]): Promise<void> {
   // Tier-to-hours mapping
   const TIER_HOURS: Record<string, number> = { A: 6, B: 24, C: 72 };
 
+  let persisted = 0;
+  let skippedPending = 0;
+  let failed = 0;
+
   for (const slug of slugs) {
     try {
       const dual = await computeDualProfileSQS(slug);
-      if (dual.qp.pending && dual.rp.pending) continue;
+      if (dual.qp.pending && dual.rp.pending) {
+        skippedPending++;
+        continue;
+      }
 
       // Look up capability metadata for guidance computation
       const [cap] = await db
@@ -1888,8 +1895,24 @@ async function persistDualProfileScores(slugs: string[]): Promise<void> {
           updatedAt: now,
         })
         .where(eq(capabilities.slug, slug));
+
+      persisted++;
     } catch (err) {
-      console.error(`[dual-profile] Failed to persist scores for ${slug}:`, err);
+      failed++;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[dual-profile] PERSIST FAILED for ${slug}: ${msg}`);
+      // Log to health events for visibility (do not swallow silently)
+      logHealthEvent({
+        eventType: "persist_failure",
+        capabilitySlug: slug,
+        tier: 1,
+        actionTaken: `persistDualProfileScores failed: ${msg}`,
+        details: { slug, error: msg },
+      }).catch(() => {});
     }
+  }
+
+  if (slugs.length > 0) {
+    console.log(`[dual-profile] Persist complete: ${persisted} updated, ${skippedPending} pending, ${failed} failed (of ${slugs.length} total)`);
   }
 }
