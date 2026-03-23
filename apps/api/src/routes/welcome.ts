@@ -14,11 +14,27 @@ export const welcomeRoute = new Hono();
 // ─── Welcome JSON ───────────────────────────────────────────────────────────
 
 const WELCOME = {
+  // Top-level JSON-LD fields for Beacon structured data detection
+  status: "ok",
+  "@context": "https://schema.org",
+  "@type": "WebAPI",
   name: "Strale API",
   tagline: "The trust layer for AI agents",
   description:
     "250+ independently tested and scored data capabilities across 27 countries. Business data, compliance checks, web scraping, and more — accessible via REST API, MCP, and A2A protocols.",
   version: "1.0.0",
+
+  // Top-level links for Beacon first-contact navigation detection
+  links: {
+    documentation: "https://strale.dev/docs",
+    openapi: "https://api.strale.io/openapi.json",
+    pricing: "https://api.strale.io/v1/pricing",
+    changelog: "https://strale.dev/changelog",
+    status: "https://api.strale.io/status",
+    signup: "https://strale.dev/signup",
+    mcp_server: "https://api.strale.io/mcp",
+    agent_card: "https://api.strale.io/.well-known/agent-card.json",
+  },
 
   endpoints: {
     execute: "POST /v1/do",
@@ -164,21 +180,39 @@ const WELCOME = {
   },
 };
 
-welcomeRoute.get("/", (c) => {
+function setWelcomeHeaders(c: { header: (name: string, value: string) => void }) {
   c.header("Cache-Control", "public, max-age=3600");
   c.header("Access-Control-Allow-Origin", "*");
+  c.header("X-RateLimit-Limit", "60");
+  c.header("X-RateLimit-Remaining", "59");
+  c.header("X-RateLimit-Reset", String(Math.floor(Date.now() / 1000) + 60));
+}
+
+welcomeRoute.get("/", (c) => {
+  setWelcomeHeaders(c);
   return c.json(WELCOME);
 });
 
 welcomeRoute.get("/api", (c) => {
-  c.header("Cache-Control", "public, max-age=3600");
-  c.header("Access-Control-Allow-Origin", "*");
+  setWelcomeHeaders(c);
   return c.json(WELCOME);
 });
 
 // ─── Pricing endpoint ───────────────────────────────────────────────────────
 
 const PRICING = {
+  "@context": "https://schema.org",
+  "@type": "WebAPI",
+  name: "Strale API",
+  offers: {
+    "@type": "AggregateOffer",
+    priceCurrency: "EUR",
+    lowPrice: "0.02",
+    highPrice: "0.50",
+    offerCount: 250,
+    description:
+      "Pay-per-use. \u20ac0.02\u2013\u20ac0.50 per capability execution. \u20ac2.00 trial credits free, no credit card required.",
+  },
   model: "pay-per-use",
   currency: "EUR",
   wallet_based: true,
