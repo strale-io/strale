@@ -42,6 +42,99 @@ import {
   getCircuitBreakerState,
   checkEnvVarExists,
 } from "./digest-compiler.js";
+import { categorizeFailureReason, type FailureCategory } from "./trust-helpers.js";
+
+// ─── Category Guidance — plain-English failure classification for emails ─────
+
+const CATEGORY_BADGE_MAP: Record<string, { label: string; color: "down" | "warning" | "info" }> = {
+  permanent_move:    { label: "ENDPOINT MOVED",   color: "down" },
+  endpoint_gone:     { label: "ENDPOINT REMOVED", color: "down" },
+  auth_expired:      { label: "AUTH FAILED",      color: "warning" },
+  format_changed:    { label: "FORMAT CHANGED",   color: "warning" },
+  dependency_missing: { label: "CONFIG MISSING",  color: "warning" },
+  scraping_broken:   { label: "SCRAPING BROKEN",  color: "warning" },
+  transient:         { label: "TRANSIENT",         color: "info" },
+  internal:          { label: "INTERNAL ERROR",    color: "down" },
+  unknown:           { label: "UNCLASSIFIED",      color: "info" },
+};
+
+function categoryBadge(category: string): string {
+  const entry = CATEGORY_BADGE_MAP[category] ?? CATEGORY_BADGE_MAP.unknown;
+  return statusBadge(entry.color, entry.label);
+}
+
+function categoryGuidance(category: string): { headline: string; explanation: string; suggestedAction: string } {
+  switch (category) {
+    case "permanent_move":
+      return {
+        headline: "Endpoint has permanently moved",
+        explanation: "The upstream API returned a 301/308 redirect. The URL this capability uses is no longer valid — the service has moved to a new address.",
+        suggestedAction: "Check the redirect target URL and update the capability's endpoint. Other Strale capabilities using the same upstream may already point to the new URL.",
+      };
+    case "endpoint_gone":
+      return {
+        headline: "Endpoint no longer exists",
+        explanation: "The upstream API returned 404 or 410. The URL this capability uses has been removed or discontinued.",
+        suggestedAction: "Check the upstream provider's documentation or changelog for a replacement endpoint. The capability may need to be rewritten or retired.",
+      };
+    case "auth_expired":
+      return {
+        headline: "Authentication failed",
+        explanation: "The upstream API rejected our credentials (401/403). The API key may have expired, been revoked, or the account may need attention.",
+        suggestedAction: "Check Railway env vars for the relevant API key. Verify the key is still valid with the upstream provider.",
+      };
+    case "format_changed":
+      return {
+        headline: "Response format has changed",
+        explanation: "The upstream API responded successfully (200) but the response format no longer matches what the capability expects. The provider may have updated their API version.",
+        suggestedAction: "Check the upstream API's changelog or documentation for format changes. The capability's parsing logic needs to be updated.",
+      };
+    case "dependency_missing":
+      return {
+        headline: "Required configuration is missing",
+        explanation: "The capability requires an environment variable or service that is not configured.",
+        suggestedAction: "Check Railway env vars. The error message will specify which variable is missing.",
+      };
+    case "scraping_broken":
+      return {
+        headline: "Content extraction is broken",
+        explanation: "The upstream page loads successfully but the content extraction logic (HTML parsing, regex matching) no longer finds the expected data. The upstream site has likely changed its page structure.",
+        suggestedAction: "The capability's scraping code needs to be updated to match the new page structure. This requires a code change.",
+      };
+    case "transient":
+      return {
+        headline: "Temporary upstream issue",
+        explanation: "The upstream service is experiencing a temporary issue (timeout, rate limit, or service unavailable). The system will automatically retry.",
+        suggestedAction: "No immediate action needed. The circuit breaker will retry automatically. If this persists for more than 24 hours, investigate the upstream service status.",
+      };
+    case "internal":
+      return {
+        headline: "Internal code error",
+        explanation: "The failure is a JavaScript runtime error in Strale's own code (TypeError, ReferenceError, etc.), not an upstream issue.",
+        suggestedAction: "Check the error details below. This is a code bug that needs fixing.",
+      };
+    default:
+      return {
+        headline: "Unknown failure",
+        explanation: "The failure could not be automatically classified.",
+        suggestedAction: "Check the error details below for more information.",
+      };
+  }
+}
+
+/** Render a category guidance box in email HTML */
+function categoryGuidanceHtml(category: string): string {
+  const g = categoryGuidance(category);
+  return `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin:16px 0;border:1px solid ${COLORS.borderLight};border-radius:6px;">
+<tr><td style="padding:14px 16px;">
+  <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:${COLORS.textPrimary};text-transform:uppercase;letter-spacing:0.5px;">
+    ${categoryBadge(category)} &nbsp; ${esc(g.headline)}
+  </p>
+  <p style="margin:6px 0;font-size:13px;color:${COLORS.textSecondary};line-height:1.5;">${esc(g.explanation)}</p>
+  <p style="margin:6px 0 0;font-size:13px;color:${COLORS.textPrimary};line-height:1.5;"><strong>Suggested action:</strong> ${esc(g.suggestedAction)}</p>
+</td></tr>
+</table>`;
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -252,8 +345,15 @@ async function buildInfrastructureDown(
   const affectedSlugs = payload.affectedSlugs ?? await getAffectedSlugsForDependency(dep);
   const affectedCount = affectedSlugs.length;
 
+  // Classify the failure
+  const failCategory = categorizeFailureReason(payload.probeError ?? null);
+  const isNonTransient = failCategory !== "transient" && failCategory !== "unknown";
+
   const subjectPrefix = severity === "critical" ? "[ACTION REQUIRED]" : "[MONITORING]";
-  const subject = `${subjectPrefix} ${dep} down — ${affectedCount} capability${affectedCount === 1 ? "" : "ies"} affected`;
+  const categorySuffix = isNonTransient
+    ? ` — ${categoryGuidance(failCategory).headline.toLowerCase()}`
+    : "";
+  const subject = `${subjectPrefix} ${dep} down${categorySuffix} — ${affectedCount} capability${affectedCount === 1 ? "" : "ies"} affected`;
 
   const capDetails = affectedSlugs.length > 0
     ? await getAffectedCapabilityDetails(affectedSlugs.slice(0, 10))
@@ -311,6 +411,9 @@ async function buildInfrastructureDown(
       { label: "Detected", value: detectedAt.replace(" CET", ""), subtitle: "CET" },
     ]) +
 
+    // 2b. Failure classification guidance
+    categoryGuidanceHtml(failCategory) +
+
     // 3. Automated response
     automatedResponseBox(
       `<p style="margin:0 0 8px;font-size:12px;font-weight:600;color:${COLORS.textPrimary};">Already done:</p>
@@ -350,7 +453,7 @@ async function buildInfrastructureDown(
     probeDataTable([
       { label: "Dependency", value: dep },
       ...(payload.probeError ? [{ label: "Error", value: payload.probeError }] : []),
-      { label: "Classification", value: { badge: statusBadge("upstream", "Upstream failure") } },
+      { label: "Classification", value: { badge: categoryBadge(failCategory) } },
       { label: "Circuit breaker", value: cbState ? `${cbState.state} (${cbFailures} consecutive failures)` : "Unknown" },
       ...(nextRetry ? [{ label: "Next retry", value: nextRetry }] : []),
       ...(envVar ? [{ label: envVar, value: { badge: envVarConfigured ? statusBadge("healthy", "Configured") : statusBadge("warning", "Not set") } }] : []),
@@ -478,10 +581,14 @@ async function buildSuspensionWarning(
     ? formatCET(String(d.auto_suspend_at))
     : "within 24h";
 
-  const subject = `[WARNING] ${slug} approaching suspension — action needed within 24h`;
-
   const capDetails = await getAffectedCapabilityDetails([slug]);
   const cbState = await getCircuitBreakerState(slug);
+  const failCategory = cbState?.lastFailureCategory ?? "unknown";
+  const isNonTransient = failCategory !== "transient" && failCategory !== "unknown";
+  const categorySuffix = isNonTransient
+    ? ` — ${categoryGuidance(failCategory).headline.toLowerCase()}`
+    : "";
+  const subject = `[WARNING] ${slug}${categorySuffix} — approaching suspension`;
 
   const body =
     `<p style="margin:0 0 16px;font-size:14px;color:${COLORS.textPrimary};line-height:1.6;">
@@ -499,9 +606,15 @@ async function buildSuspensionWarning(
       { label: "Capability", value: slug },
       { label: "State", value: { badge: statusBadge("warning", "Degraded") } },
       { label: "Reason", value: reason },
-      ...(cbState ? [{ label: "Circuit breaker", value: `${cbState.state} (${cbState.consecutiveFailures} failures)` }] : []),
+      ...(cbState ? [
+        { label: "Circuit breaker", value: `${cbState.state} (${cbState.consecutiveFailures} failures)` },
+        { label: "Failure type", value: { badge: categoryBadge(failCategory) } },
+      ] : []),
     ]) +
     sourceAttribution("Source: capabilities table, capability_health") +
+
+    // Category-specific guidance
+    (isNonTransient ? categoryGuidanceHtml(failCategory) : "") +
 
     sectionHeader("WHAT SUSPENDED MEANS") +
     `<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:${COLORS.bgWarning};border-radius:6px;margin-bottom:16px;">

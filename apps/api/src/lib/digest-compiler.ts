@@ -617,6 +617,7 @@ export interface CircuitBreakerState {
   backoffMinutes: number;
   lastFailureAt: string | null;
   lastSuccessAt: string | null;
+  lastFailureCategory: string;
 }
 
 /**
@@ -635,6 +636,7 @@ export async function getCircuitBreakerState(
       backoffMinutes: capabilityHealth.backoffMinutes,
       lastFailureAt: capabilityHealth.lastFailureAt,
       lastSuccessAt: capabilityHealth.lastSuccessAt,
+      lastFailureCategory: capabilityHealth.lastFailureCategory,
     })
     .from(capabilityHealth)
     .where(eq(capabilityHealth.capabilitySlug, slug))
@@ -649,6 +651,7 @@ export async function getCircuitBreakerState(
     backoffMinutes: row.backoffMinutes,
     lastFailureAt: row.lastFailureAt ? row.lastFailureAt.toISOString() : null,
     lastSuccessAt: row.lastSuccessAt ? row.lastSuccessAt.toISOString() : null,
+    lastFailureCategory: row.lastFailureCategory ?? "unknown",
   };
 }
 
