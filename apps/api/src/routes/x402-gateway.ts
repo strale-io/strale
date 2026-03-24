@@ -148,20 +148,30 @@ for (const [path, config] of Object.entries(ENDPOINTS)) {
     const paymentHeader = c.req.header("x-payment");
 
     if (!paymentHeader) {
-      // Return 402 with PAYMENT-REQUIRED header
-      const paymentRequired = buildPaymentRequired(`/${path}`, config);
-      c.header("Payment-Required", paymentRequired);
+      // Return 402 with both v1 header (base64) and v2 body (paymentRequirements)
+      const resource = `${BASE_URL}/x402/${path}`;
+      const requirement = {
+        scheme: "exact",
+        network: NETWORK,
+        maxAmountRequired: config.maxAmountRequired,
+        resource,
+        description: config.description,
+        mimeType: "application/json",
+        payTo: WALLET ?? "0x0000000000000000000000000000000000000001",
+        maxTimeoutSeconds: 300,
+        asset: USDC_BASE,
+      };
+      // v1: base64 header
+      const v1Payload = Buffer.from(JSON.stringify({ x402Version: 1, accepts: [requirement] })).toString("base64");
+      c.header("Payment-Required", v1Payload);
+      // v2: JSON body with paymentRequirements array
       return c.json(
         {
-          error: "Payment required",
           x402Version: 1,
-          accepts: [
-            {
-              network: NETWORK,
-              asset: "USDC",
-              amount: config.priceUsd,
-            },
-          ],
+          paymentRequirements: [requirement],
+          // Simplified fields for human/agent readability
+          error: "Payment required",
+          accepts: [{ network: NETWORK, asset: "USDC", amount: config.priceUsd }],
         },
         402,
       );
