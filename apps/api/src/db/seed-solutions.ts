@@ -1961,6 +1961,138 @@ const SOLUTIONS: SolutionDef[] = [
       },
     ],
   },
+
+  // ── Crypto/Web3 solutions ──────────────────────────────────────────────────
+
+  {
+    slug: "token-project-dd",
+    name: "Token Project Due Diligence",
+    marketingName: "Token Project Due Diligence",
+    description:
+      "Your agent is evaluating a token project or crypto startup. This solution checks the team's web presence, verifies the company entity, screens for sanctions, and assesses domain trust — the off-chain due diligence that on-chain analysis can't provide.",
+    longDescription:
+      "Detects the project's tech stack, validates SSL certificates, assesses domain reputation, looks up WHOIS records, and screens the team entity against global sanctions lists. Covers the off-chain risk factors that blockchain analytics miss: is the website real, is the domain trustworthy, is the team sanctioned?",
+    agentDescription:
+      "crypto due diligence, token project check, verify crypto startup, web3 team verification, off-chain risk check, token launch evaluation, crypto VC due diligence, defi project assessment",
+    category: "data-research",
+    priceCents: 200,
+    componentSumCents: 63,
+    valueTier: "data-lookup",
+    maintenanceLevel: "low",
+    geography: "global",
+    targetAudience: "Crypto VCs, token analysts, DeFi protocol evaluators, ai16z-style investment agents",
+    transparencyTag: "mixed",
+    extendsWith: ["landing-page-roast", "social-profile-check", "backlink-check"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        project_url: { type: "string", format: "uri", description: "Token project website URL" },
+        team_entity_name: { type: "string", description: "Legal entity or team name behind the project" },
+      },
+      required: ["project_url", "team_entity_name"],
+    },
+    exampleInput: { project_url: "https://uniswap.org", team_entity_name: "Uniswap Labs" },
+    exampleOutput: {
+      tech_stack: { frontend: "React", hosting: "Vercel" },
+      ssl_valid: true,
+      domain_reputation: "clean",
+      domain_age_days: 1825,
+      is_sanctioned: false,
+    },
+    steps: [
+      { capabilitySlug: "tech-stack-detect", stepOrder: 1, canParallel: true, parallelGroup: 1, inputMap: { url: "$input.project_url" } },
+      { capabilitySlug: "ssl-check", stepOrder: 2, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.project_url" } },
+      { capabilitySlug: "domain-reputation", stepOrder: 3, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.project_url" } },
+      { capabilitySlug: "whois-lookup", stepOrder: 4, canParallel: true, parallelGroup: 2, inputMap: { domain: "$input.project_url" } },
+      { capabilitySlug: "sanctions-check", stepOrder: 5, canParallel: true, parallelGroup: 2, inputMap: { name: "$input.team_entity_name" } },
+    ],
+  },
+
+  {
+    slug: "defi-risk-check",
+    name: "DeFi Protocol Risk Check",
+    marketingName: "DeFi Protocol Risk Check",
+    description:
+      "Before your agent deposits funds into a DeFi protocol, verify the team isn't sanctioned, the domain is legitimate, and the SSL certificate is valid. The off-chain risk layer for on-chain DeFi.",
+    longDescription:
+      "Validates the protocol's SSL certificate, assesses domain reputation, screens the protocol name against global sanctions lists, and looks up WHOIS records. Provides the off-chain trust signals that complement on-chain protocol analysis.",
+    agentDescription:
+      "defi risk check, protocol safety check, is this defi protocol safe, verify defi protocol, yield farming risk, defi due diligence, smart contract risk, protocol trust score",
+    category: "compliance-verification",
+    priceCents: 150,
+    componentSumCents: 43,
+    valueTier: "compliance",
+    maintenanceLevel: "low",
+    geography: "global",
+    targetAudience: "DeFi aggregators, yield farming agents, portfolio managers, risk teams",
+    transparencyTag: "mixed",
+    extendsWith: ["privacy-policy-analyze", "cookie-scan"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        protocol_url: { type: "string", format: "uri", description: "DeFi protocol website URL" },
+        protocol_name: { type: "string", description: "Protocol name (e.g. Aave, Compound)" },
+      },
+      required: ["protocol_url", "protocol_name"],
+    },
+    exampleInput: { protocol_url: "https://aave.com", protocol_name: "Aave" },
+    exampleOutput: {
+      ssl_valid: true,
+      domain_reputation: "clean",
+      is_sanctioned: false,
+      domain_registrar: "MarkMonitor",
+    },
+    steps: [
+      { capabilitySlug: "ssl-check", stepOrder: 1, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.protocol_url" } },
+      { capabilitySlug: "domain-reputation", stepOrder: 2, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.protocol_url" } },
+      { capabilitySlug: "sanctions-check", stepOrder: 3, canParallel: true, parallelGroup: 1, inputMap: { name: "$input.protocol_name" } },
+      { capabilitySlug: "whois-lookup", stepOrder: 4, canParallel: true, parallelGroup: 2, inputMap: { domain: "$input.protocol_url" } },
+    ],
+  },
+
+  {
+    slug: "crypto-counterparty-kyb",
+    name: "Crypto Counterparty KYB",
+    marketingName: "Crypto Counterparty KYB",
+    description:
+      "Know Your Business for crypto counterparties. Verify the legal entity exists, check sanctions lists, validate their web presence, and assess domain trust. The compliance layer agents need before transacting with a new counterparty.",
+    longDescription:
+      "Screens the counterparty against global sanctions lists (OFAC, EU, UN), assesses domain reputation, validates SSL certificates, looks up WHOIS records, and checks email deliverability for the entity's domain. Covers the off-chain compliance requirements for crypto-native businesses.",
+    agentDescription:
+      "crypto KYB, know your business crypto, verify crypto counterparty, OTC desk compliance, exchange counterparty check, institutional defi compliance, crypto entity verification",
+    category: "compliance-verification",
+    priceCents: 180,
+    componentSumCents: 53,
+    valueTier: "compliance",
+    maintenanceLevel: "low",
+    geography: "global",
+    targetAudience: "OTC desks, crypto exchanges, institutional DeFi, compliance teams",
+    transparencyTag: "mixed",
+    extendsWith: ["company-enrich", "pep-check", "adverse-media-check"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        entity_name: { type: "string", description: "Legal entity or company name" },
+        entity_website: { type: "string", format: "uri", description: "Entity's website URL" },
+      },
+      required: ["entity_name", "entity_website"],
+    },
+    exampleInput: { entity_name: "Circle Internet Financial", entity_website: "https://circle.com" },
+    exampleOutput: {
+      is_sanctioned: false,
+      domain_reputation: "clean",
+      ssl_valid: true,
+      email_deliverable: true,
+      domain_registrar: "MarkMonitor",
+    },
+    steps: [
+      { capabilitySlug: "sanctions-check", stepOrder: 1, canParallel: true, parallelGroup: 1, inputMap: { name: "$input.entity_name" } },
+      { capabilitySlug: "domain-reputation", stepOrder: 2, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.entity_website" } },
+      { capabilitySlug: "ssl-check", stepOrder: 3, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.entity_website" } },
+      { capabilitySlug: "whois-lookup", stepOrder: 4, canParallel: true, parallelGroup: 2, inputMap: { domain: "$input.entity_website" } },
+      { capabilitySlug: "email-deliverability-check", stepOrder: 5, canParallel: true, parallelGroup: 2, inputMap: { domain: "$input.entity_website" } },
+    ],
+  },
 ];
 
 // ─── Seed logic ─────────────────────────────────────────────────────────────
