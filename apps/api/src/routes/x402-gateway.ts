@@ -34,36 +34,36 @@ export const ENDPOINTS: Record<string, EndpointConfig> = {
   "iban-validate": {
     slug: "iban-validate",
     description: "Validate IBAN numbers — structure check, checksum, bank code extraction. 75+ countries.",
-    priceUsd: "$0.02",
-    maxAmountRequired: "20000",
+    priceUsd: "$0.01",
+    maxAmountRequired: "10000",
     mapInput: (q) => ({ iban: q.iban ?? "" }),
   },
   "vat-format-validate": {
     slug: "vat-format-validate",
     description: "Validate EU VAT number format against country-specific rules. 30+ countries.",
-    priceUsd: "$0.02",
-    maxAmountRequired: "20000",
+    priceUsd: "$0.01",
+    maxAmountRequired: "10000",
     mapInput: (q) => ({ vat_number: q.vat_number ?? "" }),
   },
   "paid-api-preflight": {
     slug: "paid-api-preflight",
     description: "Pre-flight trust check for paid API endpoints — detects x402/L402/MPP protocol, validates headers.",
-    priceUsd: "$0.03",
-    maxAmountRequired: "30000",
+    priceUsd: "$0.00",
+    maxAmountRequired: "0",
     mapInput: (q) => ({ url: q.url ?? "" }),
   },
   "ssl-check": {
     slug: "ssl-check",
     description: "Check SSL/TLS certificate validity, expiry, chain, and configuration for any domain.",
-    priceUsd: "$0.05",
-    maxAmountRequired: "50000",
+    priceUsd: "$0.01",
+    maxAmountRequired: "10000",
     mapInput: (q) => ({ domain: q.domain ?? "" }),
   },
   "sanctions-check": {
     slug: "sanctions-check",
     description: "Screen names against global sanctions lists (OFAC, EU, UN). Powered by OpenSanctions.",
-    priceUsd: "$0.10",
-    maxAmountRequired: "100000",
+    priceUsd: "$0.02",
+    maxAmountRequired: "20000",
     mapInput: (q) => ({ name: q.name ?? "", ...(q.country ? { country: q.country } : {}) }),
   },
 };
@@ -147,7 +147,10 @@ for (const [path, config] of Object.entries(ENDPOINTS)) {
   x402Route.get(`/${path}`, async (c) => {
     const paymentHeader = c.req.header("x-payment");
 
-    if (!paymentHeader) {
+    // Free endpoints skip payment entirely
+    const isFree = config.maxAmountRequired === "0";
+
+    if (!paymentHeader && !isFree) {
       // Return 402 with both v1 header (base64) and v2 body (paymentRequirements)
       const resource = `${BASE_URL}/x402/${path}`;
       const requirement = {
@@ -177,16 +180,18 @@ for (const [path, config] of Object.entries(ENDPOINTS)) {
       );
     }
 
-    // Verify payment via facilitator
-    const verification = await verifyPayment(paymentHeader, config);
-    if (!verification.valid) {
-      return c.json(
-        {
-          error: "Payment verification failed",
-          detail: verification.error ?? "The payment could not be verified by the facilitator.",
-        },
-        402,
-      );
+    // Verify payment via facilitator (skip for free endpoints)
+    if (!isFree) {
+      const verification = await verifyPayment(paymentHeader!, config);
+      if (!verification.valid) {
+        return c.json(
+          {
+            error: "Payment verification failed",
+            detail: verification.error ?? "The payment could not be verified by the facilitator.",
+          },
+          402,
+        );
+      }
     }
 
     // Payment verified — execute the capability
