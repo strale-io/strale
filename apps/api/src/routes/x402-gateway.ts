@@ -136,7 +136,7 @@ x402Route.use(
   "*",
   cors({
     origin: "*",
-    allowMethods: ["GET", "OPTIONS"],
+    allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "X-Payment", "X-Payment-Response"],
     exposeHeaders: ["Payment-Required", "X-Payment-Response"],
   }),
@@ -144,7 +144,7 @@ x402Route.use(
 
 // Register one handler per capability
 for (const [path, config] of Object.entries(ENDPOINTS)) {
-  x402Route.get(`/${path}`, async (c) => {
+  x402Route.on(["GET", "POST"], `/${path}`, async (c) => {
     const paymentHeader = c.req.header("x-payment");
 
     // Free endpoints skip payment entirely
@@ -195,7 +195,14 @@ for (const [path, config] of Object.entries(ENDPOINTS)) {
     }
 
     // Payment verified — execute the capability
-    const query = c.req.query() as Record<string, string>;
+    // Accept input from query params (GET) or JSON body (POST)
+    let query = c.req.query() as Record<string, string>;
+    if (c.req.method === "POST") {
+      try {
+        const body = await c.req.json() as Record<string, string>;
+        query = { ...query, ...body };
+      } catch { /* no JSON body — use query params */ }
+    }
     const executor = getExecutor(config.slug);
 
     if (!executor) {
