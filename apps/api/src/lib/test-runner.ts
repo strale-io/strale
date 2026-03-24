@@ -1507,9 +1507,9 @@ async function runAdaptiveScheduler(): Promise<void> {
 }
 
 /**
- * Start the adaptive scheduled test runner.
- * Checks every hour which capabilities are due based on health state + tier.
- * Safe to call multiple times — only starts once.
+ * @deprecated Use startTestScheduler() from jobs/test-scheduler.ts instead.
+ * This uses setInterval which resets on every deploy — the DB-driven scheduler
+ * polls based on last_tested_at and is deploy-resistant.
  */
 export function startScheduledTests(): void {
   if (_schedulerRunning) return;
@@ -1674,7 +1674,7 @@ export function startScheduledTests(): void {
  * Computes the next Monday 08:00 CET and uses setTimeout to fire it,
  * then repeats weekly via setInterval.
  */
-function scheduleWeeklyDigest(): void {
+export function scheduleWeeklyDigest(): void {
   const msUntilNextMonday0800CET = computeMsUntilNextMonday0800CET();
 
   console.log(
@@ -1785,7 +1785,7 @@ function stockholmLocalToUtc(year: number, month: number, day: number, hour: num
 // capabilities.last_tested_at — indicating a prior persist failure. Re-runs
 // persistDualProfileScores for those capabilities to recover their scores.
 
-async function repairStaleScores(): Promise<void> {
+export async function repairStaleScores(): Promise<void> {
   const db = getDb();
 
   // Find capabilities where the latest test_result is newer than last_tested_at

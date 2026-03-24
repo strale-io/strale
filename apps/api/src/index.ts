@@ -26,9 +26,9 @@ async function main() {
 
   // Import app after executors are registered
   const { app, warmCatalog } = await import("./app.js");
-  const { startScheduledTests } = await import("./lib/test-runner.js");
+  const { startTestScheduler } = await import("./jobs/test-scheduler.js");
 
-  startScheduledTests();
+  startTestScheduler();
 
   const { startInvariantChecker } = await import("./jobs/invariant-checker.js");
   startInvariantChecker();
