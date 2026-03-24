@@ -453,6 +453,16 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
       dataUpdateCycleDays: capabilities.dataUpdateCycleDays,
       datasetLastUpdated: capabilities.datasetLastUpdated,
       isActive: capabilities.isActive,
+      // Pre-computed trust columns (written by persistDualProfileScores + staleness refresh)
+      matrixSqs: capabilities.matrixSqs,
+      matrixSqsRaw: capabilities.matrixSqsRaw,
+      qpScore: capabilities.qpScore,
+      rpScore: capabilities.rpScore,
+      trend: capabilities.trend,
+      freshnessLevel: capabilities.freshnessLevel,
+      lastTestedAt: capabilities.lastTestedAt,
+      guidanceUsable: capabilities.guidanceUsable,
+      guidanceStrategy: capabilities.guidanceStrategy,
     })
       .from(capabilities)
       .where(and(eq(capabilities.slug, slug), eq(capabilities.isActive, true)))
@@ -483,19 +493,19 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
   const scheduleTier = suiteRows[0]?.scheduleTier ?? "B";
   const scheduleFrequencyHours = TIER_HOURS[scheduleTier] ?? 24;
 
-  // Compute dual-profile SQS
+  // Live dual-profile computation — used for factor breakdowns + guidance only.
+  // Headline SQS/grades/trend/freshness come from DB columns (same source as
+  // solution pages, list pages, batch endpoints — ensures consistency).
   const dual = await computeDualProfileSQS(slug);
 
-  // Compute freshness decay
+  // Freshness decay — still needed for guidance computation.
+  // NOT used for headline SQS (DB matrix_sqs already has decay applied).
   const freshnessDecay = computeFreshnessDecay(
     testResultsData.last_run ? new Date(testResultsData.last_run) : null,
     scheduleFrequencyHours,
   );
-  const rawMatrixSqs = dual.matrix.score;
-  const decayedMatrixSqs = dual.matrix.pending ? rawMatrixSqs : applyFreshnessDecay(rawMatrixSqs, freshnessDecay);
-  const effectiveTrend = shouldOverrideTrend(freshnessDecay) ? "stale" : dual.rp.trend;
 
-  // Compute execution guidance (with freshness awareness)
+  // Compute execution guidance (needs live dual + freshness for full breakdown)
   const guidance = await computeGuidanceForSlug(
     slug, dual, capRow,
     testResultsData.last_run,
@@ -514,28 +524,58 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
     datasetLastUpdated: capRow.datasetLastUpdated,
   });
 
+  // Headline values: prefer pre-computed DB columns (consistent with all other
+  // endpoints). Fall back to live computation for newly created capabilities
+  // that haven't been through a persist cycle yet.
+  const hasDbScores = capRow.matrixSqs != null;
+
+  const headlineSqs = hasDbScores
+    ? parseFloat(capRow.matrixSqs!)
+    : (dual.matrix.pending ? dual.matrix.score : applyFreshnessDecay(dual.matrix.score, freshnessDecay));
+  const headlineRawSqs = hasDbScores && capRow.matrixSqsRaw
+    ? parseFloat(capRow.matrixSqsRaw)
+    : dual.matrix.score;
+  const headlinePending = !hasDbScores && dual.matrix.pending;
+  const headlineLabel = headlinePending ? dual.matrix.label : sqsLabel(headlineSqs);
+  const headlineTrend = hasDbScores ? (capRow.trend ?? "stable") : (shouldOverrideTrend(freshnessDecay) ? "stale" : dual.rp.trend);
+  const headlineFreshnessLevel = hasDbScores ? (capRow.freshnessLevel ?? "fresh") : freshnessDecay.staleness_level;
+  const headlineLastTestedAt = hasDbScores
+    ? (capRow.lastTestedAt?.toISOString() ?? null)
+    : freshnessDecay.last_tested_at;
+
+  // For freshness detail: when using DB columns, derive decay_applied from
+  // the difference between raw and decayed scores.
+  const headlineDecayApplied = hasDbScores
+    ? Math.round((headlineRawSqs - headlineSqs) * 10) / 10
+    : (freshnessDecay.staleness_level === "unverified" ? dual.matrix.score : freshnessDecay.decay_points);
+
+  // Headline QP/RP grades from DB (consistent with solution pages)
+  const headlineQpGrade = hasDbScores ? gradeFromScore(capRow.qpScore) : dual.qp.grade;
+  const headlineQpScore = hasDbScores && capRow.qpScore != null ? parseFloat(capRow.qpScore) : dual.qp.score;
+  const headlineRpGrade = hasDbScores ? gradeFromScore(capRow.rpScore) : dual.rp.grade;
+  const headlineRpScore = hasDbScores && capRow.rpScore != null ? parseFloat(capRow.rpScore) : dual.rp.score;
+
   const result = {
     capability_slug: slug,
     data_source: capRow.dataSource ?? null,
 
     sqs: {
-      score: decayedMatrixSqs,
-      raw_score: rawMatrixSqs,
-      label: dual.matrix.pending ? dual.matrix.label : sqsLabel(decayedMatrixSqs),
-      trend: effectiveTrend,
+      score: headlineSqs,
+      raw_score: headlineRawSqs,
+      label: headlineLabel,
+      trend: headlineTrend,
       freshness: {
-        level: freshnessDecay.staleness_level,
-        last_tested_at: freshnessDecay.last_tested_at,
-        decay_applied: freshnessDecay.staleness_level === "unverified"
-          ? rawMatrixSqs // entire score removed
-          : freshnessDecay.decay_points,
+        level: headlineFreshnessLevel,
+        last_tested_at: headlineLastTestedAt,
+        decay_applied: headlineDecayApplied,
       },
     },
 
     quality_profile: {
-      grade: dual.qp.grade,
-      score: dual.qp.score,
+      grade: headlineQpGrade,
+      score: headlineQpScore,
       label: dual.qp.label,
+      // Factor breakdowns from live computation (detailed per-factor pass/fail)
       factors: {
         correctness: { score: dual.qp.factors.correctness.rate, passed: dual.qp.factors.correctness.passed, total: dual.qp.factors.correctness.total, weight: dual.qp.factors.correctness.weight },
         schema: { score: dual.qp.factors.schema.rate, passed: dual.qp.factors.schema.passed, total: dual.qp.factors.schema.total, weight: dual.qp.factors.schema.weight },
@@ -545,9 +585,10 @@ internalTrustRoute.get("/capabilities/:slug", async (c) => {
     },
 
     reliability_profile: {
-      grade: dual.rp.grade,
-      score: dual.rp.score,
-      label: rpGradeToLabel(dual.rp.grade),
+      grade: headlineRpGrade,
+      score: headlineRpScore,
+      label: rpGradeToLabel(headlineRpGrade),
+      // Factor breakdowns from live computation (detailed per-factor scores)
       factors: {
         current_availability: { score: dual.rp.factors.current_availability.score, weight: dual.rp.factors.current_availability.weight, detail: dual.rp.factors.current_availability.detail, source: dual.rp.factors.current_availability.source },
         rolling_success: { score: dual.rp.factors.rolling_success.score, weight: dual.rp.factors.rolling_success.weight, detail: dual.rp.factors.rolling_success.detail, source: dual.rp.factors.rolling_success.source },
