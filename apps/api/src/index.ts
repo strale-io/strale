@@ -30,6 +30,9 @@ async function main() {
 
   startScheduledTests();
 
+  const { startInvariantChecker } = await import("./jobs/invariant-checker.js");
+  startInvariantChecker();
+
   const port = parseInt(process.env.PORT || "3000", 10);
 
   serve({ fetch: app.fetch, port }, (info) => {

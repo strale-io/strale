@@ -1823,7 +1823,7 @@ async function repairStaleScores(): Promise<void> {
 
 // ─── Dual-profile score persistence ──────────────────────────────────────────
 
-async function persistDualProfileScores(slugs: string[]): Promise<void> {
+export async function persistDualProfileScores(slugs: string[]): Promise<void> {
   if (slugs.length === 0) return;
 
   const db = getDb();
