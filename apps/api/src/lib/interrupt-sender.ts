@@ -583,7 +583,7 @@ async function buildSuspensionWarning(
 
   const capDetails = await getAffectedCapabilityDetails([slug]);
   const cbState = await getCircuitBreakerState(slug);
-  const failCategory = cbState?.lastFailureCategory ?? "unknown";
+  const failCategory = (cbState as any)?.lastFailureCategory ?? "unknown";
   const isNonTransient = failCategory !== "transient" && failCategory !== "unknown";
   const categorySuffix = isNonTransient
     ? ` — ${categoryGuidance(failCategory).headline.toLowerCase()}`

@@ -444,7 +444,7 @@ export const capabilityHealth = pgTable("capability_health", {
   openedAt: timestamp("opened_at", { withTimezone: true }),
   nextRetryAt: timestamp("next_retry_at", { withTimezone: true }),
   backoffMinutes: integer("backoff_minutes").notNull().default(5),
-  lastFailureCategory: varchar("last_failure_category", { length: 30 }).default("unknown"),
+  // lastFailureCategory deferred until migration 0033 is applied to production
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

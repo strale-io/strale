@@ -163,7 +163,6 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
         openedAt: now,
         nextRetryAt: nextRetry,
         backoffMinutes: MAX_BACKOFF_MINUTES,
-        lastFailureCategory: category,
         updatedAt: now,
       });
 
@@ -183,7 +182,6 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
         totalSuccesses: 0,
         lastFailureAt: now,
         backoffMinutes: INITIAL_BACKOFF_MINUTES,
-        lastFailureCategory: category,
         updatedAt: now,
       });
     }
@@ -217,7 +215,6 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
         openedAt: now,
         nextRetryAt: nextRetry,
         backoffMinutes: backoff,
-        lastFailureCategory: category,
         updatedAt: now,
       })
       .where(eq(capabilityHealth.id, health.id));
@@ -244,7 +241,6 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
       consecutiveFailures: newConsecutive,
       totalFailures: newTotalFailures,
       lastFailureAt: now,
-      lastFailureCategory: category,
       updatedAt: now,
     })
     .where(eq(capabilityHealth.id, health.id));
@@ -263,7 +259,6 @@ export async function getAllHealth(): Promise<
     last_failure_at: string | null;
     last_success_at: string | null;
     next_retry_at: string | null;
-    last_failure_category: string;
   }>
 > {
   const db = getDb();
@@ -279,6 +274,5 @@ export async function getAllHealth(): Promise<
     last_failure_at: r.lastFailureAt?.toISOString() ?? null,
     last_success_at: r.lastSuccessAt?.toISOString() ?? null,
     next_retry_at: r.nextRetryAt?.toISOString() ?? null,
-    last_failure_category: r.lastFailureCategory ?? "unknown",
   }));
 }
