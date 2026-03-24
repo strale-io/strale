@@ -31,7 +31,7 @@ import { computeFreshnessGrade } from "../lib/trust-grade.js";
 import { computeFreshnessDecay, applyFreshnessDecay, shouldOverrideTrend, type FreshnessResult } from "../lib/freshness-decay.js";
 import type { CapabilityType } from "../lib/reliability-profile.js";
 import { apiError } from "../lib/errors.js";
-import { sqsLabel, gradeFromScore, computeSolutionScore, computeSolutionTrend } from "../lib/trust-labels.js";
+import { sqsLabel, gradeFromScore, computeSolutionScore, computeSolutionTrend, worstFreshnessLevel, oldestTestedAt } from "../lib/trust-labels.js";
 import type { AppEnv } from "../types.js";
 
 export const internalTrustRoute = new Hono<AppEnv>();
@@ -705,6 +705,7 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
       rpScore: capabilities.rpScore,
       trend: capabilities.trend,
       freshnessLevel: capabilities.freshnessLevel,
+      lastTestedAt: capabilities.lastTestedAt,
     })
     .from(capabilities)
     .where(inArray(capabilities.slug, uniqueCapSlugs));
@@ -735,6 +736,8 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
         qp_score: qpScore,
         rp_score: rpScore,
         trend: ct?.trend ?? "stable",
+        freshness_level: ct?.freshnessLevel ?? "fresh",
+        last_tested_at: ct?.lastTestedAt?.toISOString() ?? null,
         usable: step.guidanceUsable ?? (sqs >= 25),
         strategy: step.guidanceStrategy ?? "direct",
       };
@@ -753,6 +756,8 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
     const solutionRpScore = Math.round(Math.min(...stepData.map((s) => s.rp_score)) * 10) / 10;
 
     const solutionTrend = computeSolutionTrend(stepData.map((s) => s.trend));
+    const solutionFreshness = worstFreshnessLevel(stepData.map((s) => s.freshness_level));
+    const solutionLastTestedAt = oldestTestedAt(stepData.map((s) => s.last_tested_at ? new Date(s.last_tested_at) : null));
 
     const solutionUsable = stepData.every((s) => s.usable);
     const solutionStrategy = stepData.reduce((w, s) => {
@@ -762,7 +767,7 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
     const { badge } = determineBadge(stepData.length, 0, null);
 
     solutionsResult[solSlug] = {
-      sqs: { score: solutionSqs, label: sqsLabel(solutionSqs), trend: solutionTrend },
+      sqs: { score: solutionSqs, label: sqsLabel(solutionSqs), trend: solutionTrend, freshness_level: solutionFreshness, last_tested_at: solutionLastTestedAt },
       quality_profile: { grade: worstQuality, score: solutionQpScore, label: `Code quality: ${worstQuality} (weakest step)` },
       reliability_profile: { grade: worstReliability, score: solutionRpScore, label: `${rpGradeToLabel(worstReliability)} (weakest step)` },
       execution_guidance: { usable: solutionUsable, strategy: solutionStrategy },
@@ -815,6 +820,7 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       rpScore: capabilities.rpScore,
       trend: capabilities.trend,
       freshnessLevel: capabilities.freshnessLevel,
+      lastTestedAt: capabilities.lastTestedAt,
       guidanceUsable: capabilities.guidanceUsable,
       guidanceStrategy: capabilities.guidanceStrategy,
     })
@@ -842,6 +848,8 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       qp_score: qpScore,
       rp_score: rpScore,
       trend: step.trend ?? "stable",
+      freshness_level: step.freshnessLevel ?? "fresh",
+      last_tested_at: step.lastTestedAt?.toISOString() ?? null,
       usable: step.guidanceUsable ?? (sqs >= 25),
       strategy: step.guidanceStrategy ?? "direct",
     };
@@ -867,6 +875,10 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
 
   // Solution trend: majority of step trends (stale overrides all)
   const solutionTrend = computeSolutionTrend(stepData.map((s) => s.trend));
+
+  // Solution freshness: worst across steps
+  const solutionFreshness = worstFreshnessLevel(stepData.map((s) => s.freshness_level));
+  const solutionLastTestedAt = oldestTestedAt(stepData.map((s) => s.last_tested_at ? new Date(s.last_tested_at) : null));
 
   // Solution usable = all steps usable
   const solutionUsable = stepData.every((s) => s.usable);
@@ -905,6 +917,8 @@ internalTrustRoute.get("/solutions/:slug", async (c) => {
       score: solutionSqs,
       label: sqsLabel(solutionSqs),
       trend: solutionTrend,
+      freshness_level: solutionFreshness,
+      last_tested_at: solutionLastTestedAt,
       scoring_note: "Solution SQS is a weighted average of per-step SQS scores, capped at weakest step + 20. QP/RP grades below show the weakest step (conservative). These grades may not directly map to the SQS score via the matrix — the matrix applies at step level, not solution level.",
     },
 
