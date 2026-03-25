@@ -75,6 +75,14 @@ export async function runInvariantChecks(): Promise<void> {
     console.error("[invariant-checker] CHECK 5 (algorithmic correctness floor) failed:", err);
   }
 
+  try {
+    const r6 = await checkBrokenSolutions();
+    alerts += r6.alerts;
+    checked += r6.checked;
+  } catch (err) {
+    console.error("[invariant-checker] CHECK 6 (broken solution integrity) failed:", err);
+  }
+
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
 
   if (healed === 0 && alerts === 0) {
@@ -290,7 +298,45 @@ async function checkOrphanedSolutionSteps(): Promise<{ alerts: number; checked: 
     });
   }
 
-  return { alerts: bySolution.size, checked: 1 };
+  // Also check for inactive solutions where all steps are now active (reactivation candidates)
+  const reactivationCandidates = await db.execute(sql`
+    SELECT DISTINCT s.slug, s.name,
+      COUNT(ss.id)::text AS step_count,
+      COUNT(*) FILTER (WHERE c.is_active = true)::text AS active_step_count
+    FROM solutions s
+    INNER JOIN solution_steps ss ON ss.solution_id = s.id
+    LEFT JOIN capabilities c ON c.slug = ss.capability_slug
+    WHERE s.is_active = false
+    GROUP BY s.slug, s.name
+    HAVING COUNT(*) FILTER (WHERE c.is_active = true) = COUNT(ss.id)
+  `);
+
+  const reactivationRows = (Array.isArray(reactivationCandidates)
+    ? reactivationCandidates
+    : (reactivationCandidates as any)?.rows ?? []) as Array<{
+    slug: string;
+    name: string;
+    step_count: string;
+    active_step_count: string;
+  }>;
+
+  if (reactivationRows.length > 0) {
+    const slugs = reactivationRows.map((r) => r.slug);
+    console.log(
+      `[invariant-checker] CHECK 3: ${slugs.length} inactive solution(s) could be reactivated (all steps active): ${slugs.join(", ")}`,
+    );
+    await logHealthEvent({
+      eventType: "invariant_alert",
+      tier: 3,
+      actionTaken: `${slugs.length} inactive solution(s) have all steps active — candidates for reactivation via onCapabilityReactivated`,
+      details: {
+        check: "reactivation_candidates",
+        solutions: reactivationRows.map((r) => ({ slug: r.slug, name: r.name, steps: parseInt(r.step_count, 10) })),
+      },
+    });
+  }
+
+  return { alerts: bySolution.size + (reactivationRows.length > 0 ? 1 : 0), checked: 1 };
 }
 
 // ─── CHECK 4: Freshness decay drift (Tier 1 — AUTO-HEAL) ────────────────────
@@ -448,4 +494,91 @@ async function checkAlgorithmicCorrectnessFloor(): Promise<{ alerts: number; che
   }
 
   return { alerts, checked: algorithmicCaps.length };
+}
+
+// ─── CHECK 6: Broken solution integrity (Tier 1 — CRITICAL ALERT) ───────────
+// Detects active solutions where one or more step capabilities are missing or
+// inactive. This is the sole ongoing enforcement layer — the lifecycle hooks
+// (onCapabilityDeactivated) prevent new broken states, but this check catches
+// anything that slipped through or was caused by direct DB changes.
+
+async function checkBrokenSolutions(): Promise<{ alerts: number; checked: number }> {
+  const db = getDb();
+
+  const brokenRows = await db.execute(sql`
+    SELECT
+      s.slug AS solution_slug,
+      s.name AS solution_name,
+      ss.capability_slug,
+      CASE
+        WHEN c.slug IS NULL THEN 'missing'
+        WHEN c.is_active = false THEN 'inactive'
+        ELSE 'ok'
+      END AS step_status
+    FROM solutions s
+    INNER JOIN solution_steps ss ON ss.solution_id = s.id
+    LEFT JOIN capabilities c ON c.slug = ss.capability_slug
+    WHERE s.is_active = true
+      AND (c.slug IS NULL OR c.is_active = false)
+    ORDER BY s.slug
+    LIMIT ${MAX_ITEMS_PER_CHECK}
+  `);
+
+  const rows = (Array.isArray(brokenRows)
+    ? brokenRows
+    : (brokenRows as any)?.rows ?? []) as Array<{
+    solution_slug: string;
+    solution_name: string;
+    capability_slug: string;
+    step_status: "missing" | "inactive";
+  }>;
+
+  if (rows.length === 0) return { alerts: 0, checked: 1 };
+
+  // Group by solution for cleaner reporting
+  const bySolution = new Map<
+    string,
+    { name: string; brokenSteps: Array<{ slug: string; status: string }> }
+  >();
+
+  for (const row of rows) {
+    if (!bySolution.has(row.solution_slug)) {
+      bySolution.set(row.solution_slug, { name: row.solution_name, brokenSteps: [] });
+    }
+    bySolution.get(row.solution_slug)!.brokenSteps.push({
+      slug: row.capability_slug,
+      status: row.step_status,
+    });
+  }
+
+  let alerts = 0;
+
+  for (const [solutionSlug, { name, brokenSteps }] of bySolution) {
+    const stepDescriptions = brokenSteps
+      .map((s) => `${s.slug} (${s.status})`)
+      .join(", ");
+
+    alerts++;
+
+    await logHealthEvent({
+      eventType: "invariant_violation",
+      tier: 1,
+      actionTaken: `BROKEN SOLUTION: '${solutionSlug}' (${name}) is active but has broken steps: ${stepDescriptions}. ` +
+        `Deactivate solution or repair broken capability steps. ` +
+        `Call onCapabilityDeactivated for each inactive capability.`,
+      details: {
+        check: "broken_solution_integrity",
+        solutionSlug,
+        solutionName: name,
+        brokenSteps,
+        actionRequired: "Deactivate solution or repair broken capability steps",
+      },
+    });
+
+    console.error(
+      `[invariant-checker] CHECK 6: Active solution '${solutionSlug}' has broken steps: ${stepDescriptions}`,
+    );
+  }
+
+  return { alerts, checked: 1 };
 }
