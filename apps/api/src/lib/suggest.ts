@@ -434,15 +434,23 @@ async function loadCatalog(): Promise<CatalogItem[]> {
 
       // Embed if Voyage API key is available
       if (process.env.VOYAGE_API_KEY) {
-        useEmbeddings = true;
-        const texts = allItems.map((item) => item.embeddingText);
-        const vectors = await embedDocuments(texts);
-        for (let i = 0; i < allItems.length; i++) {
-          allItems[i].embedding = vectors[i];
+        try {
+          const texts = allItems.map((item) => item.embeddingText);
+          const vectors = await embedDocuments(texts);
+          for (let i = 0; i < allItems.length; i++) {
+            allItems[i].embedding = vectors[i];
+          }
+          useEmbeddings = true;
+          console.log(
+            `[suggest] Catalog loaded: ${solItems.length} solutions + ${capItems.length} capabilities, embeddings computed`,
+          );
+        } catch (embErr) {
+          useEmbeddings = false;
+          console.error(
+            `[suggest] Embedding failed, using keyword fallback:`,
+            embErr instanceof Error ? embErr.message : embErr,
+          );
         }
-        console.log(
-          `[suggest] Catalog loaded: ${solItems.length} solutions + ${capItems.length} capabilities, embeddings computed`,
-        );
       } else {
         useEmbeddings = false;
         console.warn(
@@ -456,6 +464,9 @@ async function loadCatalog(): Promise<CatalogItem[]> {
       catalog = allItems;
       catalogCachedAt = Date.now();
       return allItems;
+    } catch (err) {
+      console.error("[suggest] Catalog load failed:", err instanceof Error ? err.stack : err);
+      throw err;
     } finally {
       catalogLoading = null;
     }
