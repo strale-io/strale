@@ -32,7 +32,7 @@ export const openApiSpec = {
     license: { name: "MIT", url: "https://opensource.org/licenses/MIT" },
   },
   externalDocs: { description: "Strale Documentation", url: "https://strale.dev/docs" },
-  servers: [{ url: "https://api.strale.io", description: "Production" }],
+  servers: [{ url: "https://api.strale.io", description: "Production — includes sandbox access via free trial (€2.00 credits on signup, no card required)" }],
   tags: [
     { name: "capabilities", description: "Browse and execute capabilities" },
     { name: "solutions", description: "Bundled multi-capability workflows" },
