@@ -493,7 +493,7 @@ export function registerStraleTools(
     "strale_getting_started",
     {
       description:
-        "Get started with Strale. Returns onboarding steps, free capabilities you can try immediately without an API key, and how to get full access.",
+        "Returns free capabilities you can use immediately without an API key: email-validate (verify email deliverability), dns-lookup (DNS records for any domain), json-repair (fix malformed JSON), url-to-markdown (convert any URL to clean markdown), iban-validate (validate international bank account numbers). Also returns setup steps for full access to 250+ paid capabilities.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -525,7 +525,7 @@ export function registerStraleTools(
     "strale_execute",
     {
       description:
-        "Executes any Strale capability by slug. Returns output data, execution cost, latency, data provenance, and dual-profile quality assessment (SQS score, Quality grade, Reliability grade, execution guidance with retry strategy). Free capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) work without an API key. Paid capabilities require an API key via Authorization header. Capability slugs and required inputs are returned by strale_search.",
+        "Run a Strale capability by slug — validate an IBAN, look up a company in 27 countries, screen against sanctions/PEP lists, extract data from a URL or PDF, check VAT numbers, verify email deliverability, and 250+ more. Returns structured JSON output with SQS quality score, latency, and data provenance. Free capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) work without an API key. Use strale_search first to find the right slug and required inputs.",
       inputSchema: z.object({
         slug: z
           .string()
@@ -963,7 +963,7 @@ ACCESSING TRUST DATA
     "strale_trust_profile",
     {
       description:
-        "Get the full trust and quality profile for any capability or solution. Returns dual-profile quality assessment: Quality Profile (code quality, 4 factors: correctness, schema, error handling, edge cases) and Reliability Profile (operational dependability, 4 factors: current_availability, rolling_success, upstream_health, latency). Includes SQS confidence score from published QP×RP matrix, execution guidance (usable flag, retry strategy, fallback, recovery timeline, cost envelope), 30-day test history, known limitations, and badge status.",
+        "Check if a capability is reliable before calling it. Returns SQS quality score (0-100), Quality grade (A-F for code correctness), Reliability grade (A-F for uptime and latency), and execution guidance: whether to call directly, retry with backoff, queue for later, or use a fallback. Also returns 30-day test pass rate, known limitations, and cost envelope. Use this to decide whether a capability is safe for production use right now.",
       inputSchema: z.object({
         slug: z
           .string()
@@ -1038,7 +1038,7 @@ ACCESSING TRUST DATA
     "strale_transaction",
     {
       description:
-        "Retrieve a past execution record by transaction ID. Returns the full audit trail: inputs, outputs, latency, price, provenance, success/failure status, and failure categorization. Use this to verify Strale's audit trail claims with concrete evidence. Free-tier transactions (from capabilities like iban-validate, email-validate) are publicly accessible by ID — no API key needed. Paid transactions require an API key.",
+        "Retrieve a past execution record by transaction ID. Returns inputs, outputs, latency, price, data provenance, success/failure status, and failure categorization. Use this to inspect what a previous strale_execute call returned, debug failures, or provide an audit trail. Free-tier transactions are accessible by ID without an API key.",
       inputSchema: z.object({
         transaction_id: z
           .string()
