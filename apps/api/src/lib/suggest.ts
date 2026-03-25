@@ -484,6 +484,7 @@ export interface TypeaheadResult {
   is_free_tier?: boolean;
   step_count?: number;
   match_snippet?: string;
+  also_available_for?: string[];
 }
 
 export interface TypeaheadResponse {
@@ -505,7 +506,7 @@ export async function typeahead(
     return { results: [], total: 0 };
   }
 
-  const scored: Array<{ item: CatalogItem; score: number; snippet?: string }> = [];
+  const scored: Array<{ item: CatalogItem; score: number; snippet?: string; _alsoAvailable?: string[] }> = [];
 
   for (const item of items) {
     // Type filter: skip items that don't match the requested type
@@ -560,10 +561,37 @@ export async function typeahead(
 
   scored.sort((a, b) => b.score - a.score);
 
-  const total = scored.length;
-  const topItems = scored.slice(0, limit);
+  // Deduplicate country-variant solutions (e.g., "KYB Essentials — Sweden",
+  // "KYB Essentials — Norway"). Keep highest-scored variant per base name,
+  // add also_available_for with the collapsed country names.
+  const deduped: typeof scored = [];
+  const solutionGroupBest = new Map<string, number>(); // base name → index in deduped
 
-  const results: TypeaheadResult[] = topItems.map(({ item, snippet }) => {
+  for (const entry of scored) {
+    if (entry.item.type === "solution") {
+      // Split on " — " or " – " to find base name and variant suffix
+      const dashIdx = entry.item.name.search(/\s[—–]\s/);
+      if (dashIdx > 0) {
+        const baseName = entry.item.name.slice(0, dashIdx);
+        const variant = entry.item.name.slice(dashIdx).replace(/^\s[—–]\s/, "");
+        const existingIdx = solutionGroupBest.get(baseName);
+        if (existingIdx != null) {
+          // Already have a higher-scored variant — just add this one's name
+          const existing = deduped[existingIdx];
+          if (!existing._alsoAvailable) existing._alsoAvailable = [];
+          existing._alsoAvailable.push(variant);
+          continue;
+        }
+        solutionGroupBest.set(baseName, deduped.length);
+      }
+    }
+    deduped.push(entry);
+  }
+
+  const total = deduped.length;
+  const topItems = deduped.slice(0, limit);
+
+  const results: TypeaheadResult[] = topItems.map(({ item, snippet, _alsoAvailable }) => {
     const result: TypeaheadResult = {
       type: item.type,
       slug: item.slug,
@@ -582,6 +610,9 @@ export async function typeahead(
     }
     if (snippet) {
       result.match_snippet = snippet;
+    }
+    if (_alsoAvailable && _alsoAvailable.length > 0) {
+      result.also_available_for = _alsoAvailable;
     }
     return result;
   });

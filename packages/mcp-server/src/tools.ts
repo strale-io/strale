@@ -560,7 +560,7 @@ export function registerStraleTools(
     "strale_search",
     {
       description:
-        `Searches Strale's catalog of ${capabilities.length} capabilities and ${solutions.length} solutions (including KYB Essentials, KYB Complete, and Invoice Verify across 20 countries) across categories: validation, data-extraction, finance, legal, compliance, logistics, recruiting, e-commerce, marketing, developer-tools, competitive-intelligence, and more. Returns matches with SQS confidence score (0-100), Quality grade (code quality, A-F), Reliability grade (operational dependability, A-F), usable flag, execution strategy, trend, price, and required input fields. Full quality breakdown available via strale_trust_profile.`,
+        "Search Strale's 250+ API capabilities and bundled solutions. Covers: KYC & compliance (company verification, VAT validation, sanctions screening), data validation (IBAN, email, phone numbers), company registries (Nordic countries, US SEC EDGAR), domain & website intelligence (WHOIS, DNS, SSL certificates, trust scores, security headers, PageSpeed, tech stack detection), Web3 (live crypto prices, gas fees), and more (translation, invoice extraction, lead enrichment, AI Act assessment). Most under €0.10. Free to search.",
       inputSchema: z.object({
         query: z
           .string()
@@ -571,7 +571,7 @@ export function registerStraleTools(
           .string()
           .optional()
           .describe(
-            "Filter by category (e.g., data-extraction, validation, finance, legal, logistics, recruiting, e-commerce, marketing)",
+            "Filter by category: compliance, validation, data-extraction, developer-tools, web3, security, domain-intel, recruiting, sales, legal, text",
           ),
         offset: z
           .number()
@@ -580,69 +580,121 @@ export function registerStraleTools(
       }),
     },
     async ({ query, category, offset }) => {
-      const q = (query ?? "").toLowerCase();
       const skip = offset ?? 0;
 
+      // ─── Try the /v1/suggest/typeahead endpoint first ────────────────
+      // It has smarter ranking, solution deduplication, and geography awareness.
+      // Fall back to local keyword matching if the API is unreachable.
+      if (!category) {
+        try {
+          const url = `${opts.baseUrl}/v1/suggest/typeahead?q=${encodeURIComponent(query)}&limit=10`;
+          const resp = await fetch(url, {
+            headers: { Accept: "application/json" },
+            signal: AbortSignal.timeout(5000),
+          });
+
+          if (resp.ok) {
+            const data = (await resp.json()) as {
+              results: Array<{
+                type: "solution" | "capability";
+                slug: string;
+                name: string;
+                description: string;
+                category: string;
+                price_cents: number | null;
+                geography: string | null;
+                sqs: number | null;
+                sqs_label: string | null;
+                is_free_tier?: boolean;
+                step_count?: number;
+                also_available_for?: string[];
+              }>;
+              total: number;
+            };
+
+            // Map typeahead results to the strale_search response format
+            const results = data.results.map((r) => {
+              const base: Record<string, unknown> = {
+                type: r.type,
+                slug: r.slug,
+                name: r.name,
+                description: r.description,
+                category: r.category,
+                geography: r.geography ?? "global",
+                price: r.price_cents != null ? `€${(r.price_cents / 100).toFixed(2)}` : null,
+                sqs: r.sqs ?? 0,
+                sqs_label: r.sqs_label ?? "Pending",
+              };
+              if (r.type === "solution") {
+                if (r.step_count) base.step_count = r.step_count;
+                if (r.also_available_for) base.also_available_for = r.also_available_for;
+              }
+              if (r.type === "capability") {
+                // Enrich with input_fields from local capability data
+                const cap = capabilities.find((c) => c.slug === r.slug);
+                if (cap?.input_schema?.properties && Object.keys(cap.input_schema.properties).length > 0) {
+                  const required = new Set(cap.input_schema.required ?? []);
+                  const reqFields = Object.entries(cap.input_schema.properties)
+                    .filter(([key]) => required.has(key))
+                    .map(([key, prop]) => `${key} (${prop.type ?? "any"})`);
+                  const optFields = Object.entries(cap.input_schema.properties)
+                    .filter(([key]) => !required.has(key))
+                    .map(([key, prop]) => `${key} (${prop.type ?? "any"})`);
+                  const parts: string[] = [];
+                  if (reqFields.length > 0) parts.push(`Required: ${reqFields.join(", ")}`);
+                  if (optFields.length > 0) parts.push(`Optional: ${optFields.join(", ")}`);
+                  base.input_fields = parts.join(". ") || "No parameters";
+                } else {
+                  base.input_fields = "Accepts: task (string) — describe what you need in natural language";
+                }
+                if (r.is_free_tier) base.is_free_tier = true;
+              }
+              return base;
+            });
+
+            const page = results.slice(skip);
+
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: JSON.stringify(
+                    {
+                      query,
+                      category: null,
+                      total_matches: data.total,
+                      offset: skip,
+                      showing: page.length,
+                      has_more: data.total > skip + page.length,
+                      results: page,
+                      tip: "Use strale_execute to run any capability. Use strale_trust_profile for full quality breakdown and execution guidance.",
+                    },
+                    null,
+                    2,
+                  ),
+                },
+              ],
+            };
+          }
+        } catch (err) {
+          console.error("[strale_search] Typeahead API unavailable, falling back to local search:", err instanceof Error ? err.message : err);
+        }
+      }
+
+      // ─── Fallback: local keyword matching ──────────────────────────
+      // Used when: category filter is set (typeahead doesn't support it),
+      // or when the typeahead endpoint is unreachable.
+      const q = (query ?? "").toLowerCase();
       const catFilter = category ? category.toLowerCase() : null;
 
-      // ─── Synonym expansion ─────────────────────────────────────────
-      const SEARCH_SYNONYMS: Record<string, string[]> = {
-        kyc: ["kyb", "know your customer", "know your business", "verification", "company check", "onboarding"],
-        kyb: ["kyc", "know your business", "company verification", "business verification"],
-        aml: ["anti-money laundering", "sanctions", "pep", "compliance screening", "watchlist"],
-        gdpr: ["data protection", "privacy", "compliance", "cookie"],
-        fraud: ["invoice fraud", "payment fraud", "invoice verification", "scam"],
-        "due diligence": ["edd", "enhanced due diligence", "company verification", "kyb"],
-        screening: ["compliance screening", "sanctions screening", "pep screening", "aml"],
-        edd: ["enhanced due diligence", "due diligence", "deep compliance"],
-        bec: ["business email compromise", "invoice fraud", "payment fraud"],
-        pep: ["politically exposed", "compliance screening"],
-      };
-
-      // Tokenize query
-      const rawTokens = q.split(/\s+/).filter((t) => t.length >= 2);
-
-      // Expand with synonyms
-      const expandedTokens = new Set(rawTokens);
-      // Also match the full query as a phrase
-      expandedTokens.add(q);
-      for (const token of rawTokens) {
-        const synonyms = SEARCH_SYNONYMS[token];
-        if (synonyms) {
-          for (const syn of synonyms) expandedTokens.add(syn);
-        }
-      }
-      // Check multi-word synonym keys (e.g., "due diligence")
-      for (const [key, synonyms] of Object.entries(SEARCH_SYNONYMS)) {
-        if (q.includes(key)) {
-          for (const syn of synonyms) expandedTokens.add(syn);
-          expandedTokens.add(key);
-        }
-      }
-      const queryTokens = [...expandedTokens];
-
-      // ─── Scoring function ──────────────────────────────────────────
-      // Matches tokens against text + search_tags. Category boost for category matches.
-      function matchScore(text: string, itemCategory: string, searchTags: string[]): number {
-        if (!queryTokens.length) return text.includes(q) ? 1 : 0;
+      function localMatchScore(text: string): number {
+        const tokens = q.split(/\s+/).filter((t) => t.length >= 2);
+        if (tokens.length === 0) return text.toLowerCase().includes(q) ? 1 : 0;
         let score = 0;
-        const lowerText = text.toLowerCase();
-        const lowerTags = searchTags.map((t) => t.toLowerCase()).join(" ");
-        const combinedText = `${lowerText} ${lowerTags}`;
-
-        for (const token of queryTokens) {
-          if (combinedText.includes(token)) score++;
+        const lower = text.toLowerCase();
+        for (const token of tokens) {
+          if (lower.includes(token)) score++;
         }
-
-        // Category boost: +2 if any query token matches the category
-        const lowerCat = itemCategory.toLowerCase();
-        for (const token of rawTokens) {
-          if (lowerCat.includes(token) || lowerCat.replace("-", " ").includes(token)) {
-            score += 2;
-            break;
-          }
-        }
-
         return score;
       }
 
@@ -650,120 +702,59 @@ export function registerStraleTools(
       const matchedSolutions = solutions
         .filter((s) => {
           if (catFilter && !s.category.toLowerCase().includes(catFilter)) return false;
-          const text = `${s.name} ${s.description} ${s.slug} ${s.category}`;
-          return matchScore(text, s.category, s.search_tags ?? []) > 0;
+          return localMatchScore(`${s.name} ${s.description} ${s.slug} ${s.category}`) > 0;
         })
-        .map((s) => {
-          const solTrust = solutionTrustData?.get(s.slug);
-          const text = `${s.name} ${s.description} ${s.slug} ${s.category}`;
-          const sqs = solTrust?.sqs ?? s.sqs ?? 0;
+        .map((s) => ({
+          type: "solution" as const,
+          slug: s.slug,
+          name: s.name,
+          description: s.description,
+          category: s.category,
+          price: `€${(s.price_cents / 100).toFixed(2)}`,
+          geography: s.geography,
+          step_count: s.step_count,
+          capabilities: s.capabilities,
+          sqs: s.sqs ?? 0,
+          sqs_label: s.sqs_label ?? "Pending",
+        }));
+
+      // Match capabilities
+      const matchedCaps = capabilities
+        .filter((c) => {
+          if (catFilter && !c.category.toLowerCase().includes(catFilter)) return false;
+          return localMatchScore(`${c.name} ${c.description} ${c.slug} ${c.category}`) > 0;
+        })
+        .map((c) => {
+          let inputFields = "Accepts: task (string) — describe what you need in natural language";
+          const schema = c.input_schema;
+          if (schema?.properties && Object.keys(schema.properties).length > 0) {
+            const required = new Set(schema.required ?? []);
+            const reqFields = Object.entries(schema.properties)
+              .filter(([key]) => required.has(key))
+              .map(([key, prop]) => `${key} (${prop.type ?? "any"})`);
+            const optFields = Object.entries(schema.properties)
+              .filter(([key]) => !required.has(key))
+              .map(([key, prop]) => `${key} (${prop.type ?? "any"})`);
+            const parts: string[] = [];
+            if (reqFields.length > 0) parts.push(`Required: ${reqFields.join(", ")}`);
+            if (optFields.length > 0) parts.push(`Optional: ${optFields.join(", ")}`);
+            inputFields = parts.join(". ") || "No parameters";
+          }
           return {
-            type: "solution" as const,
-            slug: s.slug,
-            name: s.name,
-            description: s.description,
-            category: s.category,
-            price: `€${(s.price_cents / 100).toFixed(2)}`,
-            geography: s.geography,
-            step_count: s.step_count,
-            capabilities: s.capabilities,
-            sqs,
-            sqs_label: solTrust?.sqs_label ?? s.sqs_label ?? "Pending",
-            quality: solTrust?.quality ?? s.quality ?? "pending",
-            reliability: solTrust?.reliability ?? s.reliability ?? "pending",
-            trend: solTrust?.trend ?? s.trend ?? "stable",
-            usable: solTrust?.usable ?? s.usable ?? true,
-            strategy: solTrust?.strategy ?? s.strategy ?? "direct",
-            badge: solTrust?.badge ?? null,
-            _score: matchScore(text, s.category, s.search_tags ?? []),
-            _usable: solTrust?.usable ?? s.usable ?? true,
-            _sqs: sqs,
+            type: "capability" as const,
+            slug: c.slug,
+            name: c.name,
+            description: c.description,
+            category: c.category,
+            geography: c.geography ?? "global",
+            price: `€${(c.price_cents / 100).toFixed(2)}`,
+            input_fields: inputFields,
+            sqs: c.sqs ?? 0,
+            sqs_label: c.sqs_label ?? "Pending",
           };
         });
 
-      // Sort solutions: usable first, then by SQS descending, then match score as tiebreaker
-      matchedSolutions.sort((a, b) => {
-        if (a._usable !== b._usable) return a._usable ? -1 : 1;
-        if (b._sqs !== a._sqs) return b._sqs - a._sqs;
-        return b._score - a._score;
-      });
-
-      // Match capabilities — source data from /v1/capabilities already filters is_active.
-      // Additional filter: exclude unusable + zero-SQS (pending/degraded).
-      let matchedCaps = capabilities.filter((c) => {
-        if (catFilter && !c.category.toLowerCase().includes(catFilter)) return false;
-        const trust = trustData?.get(c.slug);
-        const effectiveUsable = trust?.usable ?? c.usable ?? true;
-        const effectiveSqs = trust?.sqs ?? c.sqs ?? 0;
-        if (!effectiveUsable && effectiveSqs === 0) return false;
-        const text = `${c.name} ${c.description} ${c.slug} ${c.category}`;
-        return matchScore(text, c.category, c.search_tags ?? []) > 0;
-      });
-
-      // Sort capabilities: usable first, then SQS descending, then match score, then slug match
-      matchedCaps.sort((a, b) => {
-        const aTrust = trustData?.get(a.slug);
-        const bTrust = trustData?.get(b.slug);
-        const aUsable = aTrust?.usable ?? a.usable ?? true;
-        const bUsable = bTrust?.usable ?? b.usable ?? true;
-        if (aUsable !== bUsable) return aUsable ? -1 : 1;
-        const aSqs = aTrust?.sqs ?? a.sqs ?? 0;
-        const bSqs = bTrust?.sqs ?? b.sqs ?? 0;
-        if (bSqs !== aSqs) return bSqs - aSqs;
-        const aText = `${a.name} ${a.description} ${a.slug} ${a.category}`;
-        const bText = `${b.name} ${b.description} ${b.slug} ${b.category}`;
-        const aScore = matchScore(aText, a.category, a.search_tags ?? []);
-        const bScore = matchScore(bText, b.category, b.search_tags ?? []);
-        if (aScore !== bScore) return bScore - aScore;
-        const aSlug = a.slug.toLowerCase().includes(q) ? 0 : 1;
-        const bSlug = b.slug.toLowerCase().includes(q) ? 0 : 1;
-        return aSlug - bSlug;
-      });
-
-      const capResults = matchedCaps.map((c) => {
-        const trust = trustData?.get(c.slug);
-        const badge = trust ? "strale_tested" : null;
-
-        // Build input fields summary
-        let inputFields = "Accepts: task (string) — describe what you need in natural language";
-        const schema = c.input_schema;
-        if (schema?.properties && Object.keys(schema.properties).length > 0) {
-          const required = new Set(schema.required ?? []);
-          const reqFields = Object.entries(schema.properties)
-            .filter(([key]) => required.has(key))
-            .map(([key, prop]) => `${key} (${prop.type ?? "any"})`);
-          const optFields = Object.entries(schema.properties)
-            .filter(([key]) => !required.has(key))
-            .map(([key, prop]) => `${key} (${prop.type ?? "any"})`);
-          const parts: string[] = [];
-          if (reqFields.length > 0) parts.push(`Required: ${reqFields.join(", ")}`);
-          if (optFields.length > 0) parts.push(`Optional: ${optFields.join(", ")}`);
-          inputFields = parts.join(". ") || "No parameters";
-        }
-
-        return {
-          type: "capability" as const,
-          slug: c.slug,
-          name: c.name,
-          description: c.description,
-          category: c.category,
-          geography: c.geography ?? "global",
-          price: `€${(c.price_cents / 100).toFixed(2)}`,
-          input_fields: inputFields,
-          sqs: trust?.sqs ?? c.sqs ?? 0,
-          sqs_label: trust?.sqs_label ?? c.sqs_label ?? "Pending",
-          quality: trust?.quality ?? c.quality ?? "pending",
-          reliability: trust?.reliability ?? c.reliability ?? "pending",
-          trend: trust?.trend ?? c.trend ?? "stable",
-          usable: trust?.usable ?? c.usable ?? true,
-          strategy: trust?.strategy ?? c.strategy ?? "direct",
-          badge,
-        };
-      });
-
-      // Solutions first, then capabilities — strip internal scoring fields
-      const cleanSolutions = matchedSolutions.map(({ _score, _usable, _sqs, ...rest }) => rest);
-      const combined = [...cleanSolutions, ...capResults];
+      const combined = [...matchedSolutions, ...matchedCaps];
       const page = combined.slice(skip, skip + 20);
 
       return {
@@ -774,8 +765,7 @@ export function registerStraleTools(
               {
                 query,
                 category: category ?? null,
-                total_solution_matches: matchedSolutions.length,
-                total_capability_matches: matchedCaps.length,
+                total_matches: combined.length,
                 offset: skip,
                 showing: page.length,
                 has_more: skip + page.length < combined.length,
