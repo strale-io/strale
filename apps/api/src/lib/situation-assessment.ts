@@ -106,18 +106,18 @@ export const DEPENDENCY_CONTEXT: Record<string, DependencyMeta> = {
       "Consider: publish a status note on affected capability pages",
     ],
   },
-  opensanctions: {
-    displayName: "OpenSanctions API",
+  dilisense: {
+    displayName: "Dilisense API",
     ownership: "external_api",
-    ownershipExplanation: "This is the OpenSanctions API used for sanctions and PEP screening.",
+    ownershipExplanation: "Dilisense provides AML screening (sanctions, PEP, adverse media) via consolidated global databases.",
     probeInterval: "6 hours",
     statusPageUrl: null,
-    typicalRecovery: "Check if OPENSANCTIONS_API_KEY is configured. If valid, wait for the service to recover.",
-    customerImpact: "Sanctions screening and PEP check capabilities will return errors.",
+    typicalRecovery: "Check if DILISENSE_API_KEY is configured. If valid, wait for the service to recover.",
+    customerImpact: "Sanctions screening, PEP check, and adverse media capabilities will fall back to Claude Haiku.",
     checkSteps: [
-      "Check Railway env vars: is OPENSANCTIONS_API_KEY set?",
+      "Check Railway env vars: is DILISENSE_API_KEY set?",
       "If not set: add the API key to Railway environment variables",
-      "If set: the OpenSanctions service may be experiencing issues — wait",
+      "If set: the Dilisense service may be experiencing issues — capabilities will use fallback",
     ],
   },
   gleif: {
@@ -239,7 +239,7 @@ async function getRecentRailwayEvents(hours: number): Promise<string[]> {
 function getAffectedCapabilityCount(dependency: string): number {
   if (dependency === "browserless") return getBrowserlessCapabilityCount();
   if (dependency === "anthropic") return 68; // Known count of ai_assisted caps
-  const fixed: Record<string, number> = { vies: 3, opensanctions: 4, gleif: 1, brreg: 1 };
+  const fixed: Record<string, number> = { vies: 3, dilisense: 4, gleif: 1, brreg: 1 };
   return fixed[dependency] ?? 0;
 }
 

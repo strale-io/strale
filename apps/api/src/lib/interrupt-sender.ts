@@ -325,7 +325,7 @@ async function getAffectedSlugsForDependency(dependency: string): Promise<string
   // Fixed upstream mappings
   const FIXED: Record<string, string[]> = {
     vies: ["vat-validate", "eori-validate", "vat-format-validate"],
-    opensanctions: ["sanctions-check", "pep-check", "adverse-media-check", "aml-risk-score"],
+    dilisense: ["sanctions-check", "pep-check", "adverse-media-check", "aml-risk-score"],
     gleif: ["lei-lookup"],
     brreg: ["norwegian-company-data"],
   };
@@ -375,7 +375,7 @@ async function buildInfrastructureDown(
   // Check if this might be a missing API key rather than service down
   const envVarMap: Record<string, string> = {
     browserless: "BROWSERLESS_API_KEY",
-    opensanctions: "OPENSANCTIONS_API_KEY",
+    dilisense: "DILISENSE_API_KEY",
     anthropic: "ANTHROPIC_API_KEY",
     companies_house: "COMPANIES_HOUSE_API_KEY",
     serper: "SERPER_API_KEY",
@@ -388,7 +388,7 @@ async function buildInfrastructureDown(
     browserless: "Browserless provides headless browser rendering for capabilities that scrape web pages (company registries, compliance databases, web intelligence).",
     anthropic: "Anthropic's Claude API powers AI-assisted capabilities including data extraction, text analysis, and risk narrative generation.",
     vies: "VIES (VAT Information Exchange System) is the EU Commission's service for validating VAT numbers across member states.",
-    opensanctions: "OpenSanctions provides sanctions list matching for PEP checks, adverse media screening, and AML risk scoring.",
+    dilisense: "Dilisense provides sanctions screening, PEP checks, and adverse media scanning via consolidated global databases.",
     gleif: "GLEIF provides the Global LEI Index for Legal Entity Identifier lookups.",
   };
 

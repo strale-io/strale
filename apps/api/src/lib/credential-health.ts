@@ -23,12 +23,11 @@ export interface CredentialStatus extends CredentialEntry {
 
 const CREDENTIAL_REGISTRY: CredentialEntry[] = [
   {
-    provider: "opensanctions",
-    envVar: "OPENSANCTIONS_API_KEY",
-    capabilities: ["pep-check"],
-    // NOTE: sanctions-check has Claude fallback and works without this key.
-    // aml-risk-score is pure algorithmic — doesn't call OpenSanctions.
-    // adverse-media-check uses Serper, not OpenSanctions.
+    provider: "dilisense",
+    envVar: "DILISENSE_API_KEY",
+    capabilities: ["sanctions-check", "pep-check", "adverse-media-check"],
+    // NOTE: all three have Claude Haiku or graceful fallbacks if key is missing.
+    // aml-risk-score is pure algorithmic — doesn't call dilisense.
   },
   {
     provider: "browserless",

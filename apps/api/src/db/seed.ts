@@ -699,7 +699,7 @@ const seedCapabilities = [
   {
     name: "Sanctions Check",
     slug: "sanctions-check",
-    description: "Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK). Uses OpenSanctions consolidated database. Returns match results with confidence scores.",
+    description: "Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK OFSI, and 120+ other sources). Uses dilisense consolidated database. Returns match results with source details.",
     category: "compliance",
     inputSchema: { type: "object", properties: { name: { type: "string", description: "Person or company name to check" }, country: { type: "string", description: "ISO country code filter (optional)" } }, required: ["name"] },
     outputSchema: { type: "object", properties: { query: { type: "string" }, is_sanctioned: { type: "boolean" }, match_count: { type: "integer" }, matches: { type: "array" } } },

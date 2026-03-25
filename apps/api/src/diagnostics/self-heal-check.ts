@@ -180,7 +180,7 @@ function check2() {
     },
     {
       label: "Rate limited (HTTP 429)",
-      reason: "OpenSanctions API error: HTTP 429 Too Many Requests",
+      reason: "Dilisense API error: HTTP 429 Too Many Requests",
       testType: "known_answer",
       executionSucceeded: false,
       validationFailed: false,
@@ -198,7 +198,7 @@ function check2() {
     },
     {
       label: "API key error — must NOT be missing_test_input",
-      reason: "OPENSANCTIONS_API_KEY is required for this capability",
+      reason: "DILISENSE_API_KEY is required for this capability",
       testType: "known_answer",
       executionSucceeded: false,
       validationFailed: false,
@@ -442,7 +442,7 @@ function check5() {
   // Infrastructure errors: MUST NOT be classified as external/upstream
   const infraCases = [
     "No API key provided",
-    "OPENSANCTIONS_API_KEY is required for this capability",
+    "DILISENSE_API_KEY is required for this capability",
     "Key not configured",
     "ANTHROPIC_API_KEY is required.",
     "SERPER_API_KEY is required for adverse-media-check",

@@ -65,14 +65,15 @@ const healthChecks: HealthCheck[] = [
     },
   },
   {
-    name: "opensanctions",
+    name: "dilisense",
     check: async () => {
       const start = Date.now();
       try {
-        const res = await fetch("https://api.opensanctions.org/health/ready", {
+        const res = await fetch("https://api.dilisense.com/v1/checkIndividual?names=test&fuzzy_search=0", {
+          headers: { "x-api-key": process.env.DILISENSE_API_KEY || "" },
           signal: AbortSignal.timeout(5000),
         });
-        return { healthy: res.ok, latency_ms: Date.now() - start };
+        return { healthy: res.ok || res.status === 401, latency_ms: Date.now() - start };
       } catch (e: any) {
         return { healthy: false, latency_ms: Date.now() - start, error: e.message };
       }

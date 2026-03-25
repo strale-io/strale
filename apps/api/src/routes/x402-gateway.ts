@@ -61,7 +61,7 @@ export const ENDPOINTS: Record<string, EndpointConfig> = {
   },
   "sanctions-check": {
     slug: "sanctions-check",
-    description: "Screen names against global sanctions lists (OFAC, EU, UN). Powered by OpenSanctions.",
+    description: "Screen names against global sanctions lists (OFAC, EU, UN, UK OFSI, and 120+ sources).",
     priceUsd: "$0.02",
     maxAmountRequired: "20000",
     mapInput: (q) => ({ name: q.name ?? "", ...(q.country ? { country: q.country } : {}) }),

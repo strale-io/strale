@@ -1287,7 +1287,7 @@ function estimateTestCost(
       return 1; // ~€0.01 per Haiku call (most use cheapest model)
     case "stable_api":
       // Most API calls are free (government registries, etc.)
-      // Paid APIs (Serper, OpenSanctions) cost ~€0.01-0.02 per call
+      // Paid APIs (Serper, Dilisense) cost ~€0.01-0.02 per call
       return responseTimeMs > 5000 ? 1 : 0; // Long response = likely paid API
     default:
       return 0;

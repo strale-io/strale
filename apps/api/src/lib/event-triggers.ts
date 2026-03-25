@@ -75,7 +75,7 @@ async function getDependencyCapabilities(dependencyName: string): Promise<string
     // Fixed mappings for specific APIs (small lists, safe to hardcode)
     const FIXED: Record<string, string[]> = {
       vies: ["vat-validate", "eori-validate", "vat-format-validate"],
-      opensanctions: ["sanctions-check", "pep-check", "adverse-media-check", "aml-risk-score"],
+      dilisense: ["sanctions-check", "pep-check", "adverse-media-check", "aml-risk-score"],
       gleif: ["lei-lookup"],
       brreg: ["norwegian-company-data"],
     };

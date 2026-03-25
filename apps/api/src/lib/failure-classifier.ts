@@ -42,7 +42,7 @@ const INFRA_ENV_PATTERNS = [
   /PAGESPEED_API_KEY/i,
   /AVIATIONSTACK_API_KEY/i,
   /ADZUNA_APP_ID/i,
-  /OPENSANCTIONS_API_KEY/i,
+  /DILISENSE_API_KEY/i,
   /BROWSERLESS_URL/i,
   /missing.*api.*key/i,
   /no api key/i,
