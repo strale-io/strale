@@ -35,7 +35,19 @@ registerCapability("beneficial-ownership-lookup", async (input: CapabilityInput)
   }
 
   if (jurisdiction !== "gb" && jurisdiction !== "uk") {
-    throw new Error("Beneficial ownership lookup is currently available for UK companies only. More jurisdictions coming soon.");
+    return {
+      output: {
+        company_name: companyName || null,
+        company_number: companyNumber ?? null,
+        jurisdiction,
+        beneficial_owners: [],
+        total_beneficial_owners: 0,
+        has_psc_data: false,
+        error: "Beneficial ownership lookup is currently available for UK companies only. More jurisdictions coming soon.",
+        supported_jurisdictions: ["gb"],
+      },
+      provenance: { source: "none", fetched_at: new Date().toISOString() },
+    };
   }
 
   const apiKey = process.env.COMPANIES_HOUSE_API_KEY;
