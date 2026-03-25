@@ -171,8 +171,6 @@ async function loadCatalog(): Promise<CatalogItem[]> {
   catalogLoading = (async () => {
     try {
       const db = getDb();
-      console.log("[suggest] loadCatalog: starting DB queries...");
-
       // Load solutions with steps
       const solRows = await db
         .select({
@@ -188,8 +186,6 @@ async function loadCatalog(): Promise<CatalogItem[]> {
         .from(solutions)
         .where(eq(solutions.isActive, true))
         .orderBy(asc(solutions.displayOrder));
-      console.log(`[suggest] loadCatalog: ${solRows.length} solutions loaded`);
-
       // Batch-fetch ALL steps for ALL solutions in one query (eliminates N+1)
       const solIds = solRows.map((s) => s.id);
       const allSolSteps = solIds.length > 0
@@ -205,8 +201,6 @@ async function loadCatalog(): Promise<CatalogItem[]> {
             .where(inArray(solutionSteps.solutionId, solIds))
             .orderBy(solutionSteps.solutionId, asc(solutionSteps.stepOrder))
         : [];
-      console.log(`[suggest] loadCatalog: ${allSolSteps.length} steps loaded`);
-
       const stepsBySolId = new Map<string, typeof allSolSteps>();
       for (const step of allSolSteps) {
         const list = stepsBySolId.get(step.solutionId) ?? [];
@@ -264,8 +258,6 @@ async function loadCatalog(): Promise<CatalogItem[]> {
             inArray(capabilities.lifecycleState, ["active", "degraded"]),
           ),
         );
-
-      console.log(`[suggest] loadCatalog: ${capRows.length} capabilities loaded`);
 
       const capItems: CatalogItem[] = capRows.map((cap) => {
         const slugWords = cap.slug.replace(/-/g, " ");
@@ -340,7 +332,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
                 FROM test_results tr
                 INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
                 WHERE ts.active = true
-                  AND tr.capability_slug = ANY(${allSlugsNeeded})
+                  AND tr.capability_slug IN (${sql.join(allSlugsNeeded.map(s => sql`${s}`), sql`, `)})
                 ORDER BY tr.test_suite_id, tr.executed_at DESC
               )
               SELECT
@@ -353,8 +345,6 @@ async function loadCatalog(): Promise<CatalogItem[]> {
             `)
           : Promise.resolve([]),
       ]);
-
-      console.log(`[suggest] loadCatalog: trust data loaded (${persistedRows.length} rows)`);
 
       // Build lookup maps
       const sqsMap = new Map(
