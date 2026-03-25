@@ -84,6 +84,15 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
       estimatedCostCents: 0,
     });
 
+    // For algorithmic capabilities: generate a regression known_answer test
+    // by executing the capability once and capturing the output as ground truth.
+    // Algorithmic caps are free to test — no external cost — so this is safe.
+    if (cap.transparencyTag === "algorithmic") {
+      await generateAlgorithmicRegressionTest(cap, testInput).catch((err) => {
+        console.warn(`[onboarding] Regression test generation failed for ${capabilitySlug}: ${err.message}`);
+      });
+    }
+
     console.log(`[onboarding] Created test suites for ${capabilitySlug}`);
 
     // Validate fixtures against real execution (fire-and-forget).
@@ -353,6 +362,75 @@ export async function validateTestFixtures(
   }
 
   console.log(`[onboarding] Validated and calibrated ${calibrated} test fixtures for ${capabilitySlug}`);
+}
+
+// ─── Algorithmic regression test generation ──────────────────────────────────
+
+/**
+ * For algorithmic capabilities: execute with the onboarding input, capture the
+ * actual output, and create a known_answer test that asserts the output shape
+ * and key boolean fields. This catches regressions in pure-logic capabilities
+ * that have zero external cost to test.
+ */
+async function generateAlgorithmicRegressionTest(
+  cap: typeof capabilities.$inferSelect,
+  testInput: Record<string, unknown>,
+): Promise<void> {
+  const db = getDb();
+  const executor = getExecutor(cap.slug);
+
+  if (!executor) {
+    console.warn(`[onboarding] No executor for ${cap.slug} — skipping regression test`);
+    return;
+  }
+
+  let result: Awaited<ReturnType<typeof executor>> | null = null;
+  try {
+    result = await executor(testInput);
+  } catch (err) {
+    console.warn(
+      `[onboarding] Regression test execution failed for ${cap.slug}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    return;
+  }
+
+  if (!result?.output || typeof result.output !== "object") {
+    console.warn(`[onboarding] No usable output for ${cap.slug} — skipping regression test`);
+    return;
+  }
+
+  const output = result.output as Record<string, unknown>;
+  const outputFields = Object.keys(output);
+
+  // Build validation rules: assert top-level output fields are not null
+  const validationChecks: Array<{ field: string; operator: string }> = outputFields
+    .slice(0, 6)
+    .map((field) => ({ field, operator: "not_null" }));
+
+  // Capture exact values for key discriminating boolean fields
+  // (fields named 'valid', 'is_*', 'has_*' are worth asserting exact values)
+  const exactChecks = outputFields
+    .filter((f) => /^(valid|is_|has_|error)/.test(f) && typeof output[f] === "boolean")
+    .map((f) => ({ field: f, operator: output[f] ? "is_true" : "is_false" }));
+
+  if (exactChecks.length > 0) {
+    validationChecks.push(...exactChecks);
+  }
+
+  await db.insert(testSuites).values({
+    capabilitySlug: cap.slug,
+    testName: `${cap.name} — regression (auto-generated)`,
+    testType: "known_answer",
+    input: testInput,
+    expectedOutput: output,
+    validationRules: { checks: validationChecks },
+    scheduleTier: "A", // Algorithmic caps are free — run every 6h
+    estimatedCostCents: 0,
+  });
+
+  console.log(
+    `[onboarding] Created regression test for ${cap.slug} with ${validationChecks.length} checks`,
+  );
 }
 
 // ─── Transparency tag detection ──────────────────────────────────────────────

@@ -155,7 +155,8 @@ export function estimateCostCents(
 }
 
 export function assignTier(transparencyTag: string | null): string {
-  // All auto-generated tests get daily scheduling (tier B)
-  if (transparencyTag === "algorithmic") return "B";
+  // Algorithmic capabilities have zero external cost — test every 6h (tier A)
+  if (transparencyTag === "algorithmic") return "A";
+  // AI/mixed/external API capabilities — daily (tier B)
   return "B";
 }

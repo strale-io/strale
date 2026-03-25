@@ -43,6 +43,67 @@ function lt(field: string, value: number) {
   return { field, operator: "lt", value };
 }
 
+// ─── Known-answer verification ──────────────────────────────────────────────
+// Before inserting a known_answer test, execute the capability and verify the
+// assertions hold against the actual output. If getExecutor returns null (e.g.
+// running in bare seed context without app.ts importing executors), the test is
+// allowed through — verification will happen on the first scheduled test run.
+
+let _executorModule: typeof import("../capabilities/index.js") | null = null;
+
+async function tryGetExecutor(slug: string) {
+  if (!_executorModule) {
+    try {
+      _executorModule = await import("../capabilities/index.js");
+    } catch {
+      return null; // Executor registry not available in seed context
+    }
+  }
+  return _executorModule.getExecutor(slug) ?? null;
+}
+
+async function verifyKnownAnswerTest(
+  test: TestDef,
+): Promise<{ ok: boolean; reason?: string }> {
+  if (test.testType !== "known_answer") return { ok: true };
+
+  const executor = await tryGetExecutor(test.capabilitySlug);
+  if (!executor) return { ok: true }; // Can't verify without executor — allow insert
+
+  let result: { output: unknown } | null = null;
+  try {
+    result = await executor(test.input);
+  } catch (err) {
+    return {
+      ok: false,
+      reason: `Execution threw: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+
+  if (!result?.output) return { ok: false, reason: "No output returned" };
+
+  const output = result.output as Record<string, unknown>;
+  const rules = test.validationRules?.checks ?? [];
+
+  for (const rule of rules) {
+    const value = output[rule.field];
+    if (rule.operator === "not_null" && (value === null || value === undefined)) {
+      return { ok: false, reason: `Field '${rule.field}' is null in actual output` };
+    }
+    if (rule.operator === "is_true" && value !== true) {
+      return { ok: false, reason: `Field '${rule.field}' expected true, got ${JSON.stringify(value)}` };
+    }
+    if (rule.operator === "is_false" && value !== false) {
+      return { ok: false, reason: `Field '${rule.field}' expected false, got ${JSON.stringify(value)}` };
+    }
+    if (rule.operator === "equals" && rule.value !== undefined && value !== rule.value) {
+      return { ok: false, reason: `Field '${rule.field}' expected ${JSON.stringify(rule.value)}, got ${JSON.stringify(value)}` };
+    }
+  }
+
+  return { ok: true };
+}
+
 // ─── Test definitions ───────────────────────────────────────────────────────
 
 interface TestDef {
@@ -657,6 +718,18 @@ async function seed() {
       .where(eq(testSuites.capabilitySlug, test.capabilitySlug));
 
     if (allForSlug.find((t) => t.testName === test.testName)) {
+      skipped++;
+      continue;
+    }
+
+    // Verify known_answer tests against actual capability output before inserting
+    const verification = await verifyKnownAnswerTest(test);
+    if (!verification.ok) {
+      console.error(
+        `  ✗ VERIFICATION FAILED — ${test.capabilitySlug} / "${test.testName}": ${verification.reason}`,
+      );
+      console.error(`    Input: ${JSON.stringify(test.input)}`);
+      console.error(`    This test will NOT be inserted. Fix the test data or the capability.`);
       skipped++;
       continue;
     }
