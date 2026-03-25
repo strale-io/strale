@@ -2416,10 +2416,10 @@ const seedCapabilities = [
   {
     name: "Adverse Media Check",
     slug: "adverse-media-check",
-    description: "Screen a person or company for negative news coverage. Searches recent media for mentions of fraud, money laundering, sanctions violations, lawsuits, regulatory actions, and other risk indicators. Returns categorized findings with sources.",
+    description: "Screen a person or company for negative news coverage across 235,000+ global sources. Returns risk level, categorized findings (financial crime, terrorism, organized crime, regulatory, political, violent crime), and top article headlines with sources. FATF-aligned categorization.",
     category: "compliance",
-    inputSchema: { type: "object", properties: { name: { type: "string", description: "Person or company name to screen" }, context: { type: "string", description: "Additional context (e.g., country, industry) to improve accuracy (optional)" } }, required: ["name"] },
-    outputSchema: { type: "object", properties: { query: { type: "string" }, risk_level: { type: "string" }, total_findings: { type: "integer" }, findings: { type: "array" }, categories_found: { type: "array" }, screened_at: { type: "string" } } },
+    inputSchema: { type: "object", properties: { name: { type: "string", description: "Person or company name to screen" }, context: { type: "string", description: "Additional context like industry or country (optional)" }, entity_type: { type: "string", description: "Override auto-detection: 'person' or 'company' (optional)" } }, required: ["name"] },
+    outputSchema: { type: "object", properties: { query: { type: "string" }, risk_level: { type: "string" }, total_hits: { type: "number" }, categories: { type: "object" }, top_articles: { type: "array" }, screened_at: { type: "string" } } },
     priceCents: 20,
   },
   {

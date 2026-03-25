@@ -196,6 +196,20 @@ const LIMITATIONS: LimitationDef[] = [
     limitationText: "PEP lists updated multiple times per day — recently appointed officials may take up to 48 hours to appear",
     workaround: "For time-sensitive checks on recently appointed officials, cross-reference with news sources" },
 
+  // ── adverse-media-check ──
+  { capabilitySlug: "adverse-media-check", category: "accuracy", severity: "warning",
+    title: "AI-categorized results may produce false positives for common names",
+    limitationText: "AI-categorized results — may produce false positives for common names or names that appear in unrelated news contexts",
+    workaround: "Review top articles manually to confirm relevance. Use entity_type parameter to improve precision" },
+  { capabilitySlug: "adverse-media-check", category: "coverage", severity: "info",
+    title: "Screens 235,000+ sources but paywalled content may not be fully indexed",
+    limitationText: "Screens 235,000+ sources but paywalled content may not be fully indexed. Non-English language coverage varies by region",
+    workaround: "For high-stakes screening, supplement with manual searches in local-language news sources" },
+  { capabilitySlug: "adverse-media-check", category: "freshness", severity: "info",
+    title: "Articles typically appear in near real-time with 24-48 hour indexing delay for some sources",
+    limitationText: "Articles typically appear in near real-time but some sources may have a 24-48 hour indexing delay",
+    workaround: "For breaking news events, supplement with direct web search" },
+
   // ── url-to-markdown ──
   { capabilitySlug: "url-to-markdown", category: "coverage", severity: "info",
     title: "JavaScript-heavy single-page applications may not render completely before content is extracted",

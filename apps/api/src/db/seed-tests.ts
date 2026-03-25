@@ -532,6 +532,17 @@ const TESTS: TestDef[] = [
     input: { name: "X" },
     validationRules: checks(notNull("is_pep")) },
 
+  // ── adverse-media-check ──
+  { capabilitySlug: "adverse-media-check", testName: "Deutsche Bank — known adverse media", testType: "schema_check",
+    input: { name: "Deutsche Bank", entity_type: "company" },
+    validationRules: checks(notNull("risk_level"), notNull("total_hits")) },
+  { capabilitySlug: "adverse-media-check", testName: "Random clean company", testType: "schema_check",
+    input: { name: "Smålands Bästa Städfirma AB" },
+    validationRules: checks(notNull("risk_level")) },
+  { capabilitySlug: "adverse-media-check", testName: "Schema validation", testType: "schema_check",
+    input: { name: "Test Person" },
+    validationRules: checks(notNull("risk_level"), notNull("categories")) },
+
   // ── seo-audit — known_answer + edge_case ──
   { capabilitySlug: "seo-audit", testName: "google.com — SEO score", testType: "known_answer",
     input: { url: "https://google.com" },
