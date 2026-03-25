@@ -22,11 +22,15 @@ suggestRoute.get("/suggest/typeahead", rateLimitByIp(30, 1000), async (c) => {
   const typeParam = c.req.query("type");
   const typeFilter = typeParam === "solution" || typeParam === "capability" ? typeParam : undefined;
 
-  const result = await typeahead(q, limit, geo, typeFilter);
-
-  return c.json(result, 200, {
-    "Cache-Control": "public, max-age=30",
-  });
+  try {
+    const result = await typeahead(q, limit, geo, typeFilter);
+    return c.json(result, 200, {
+      "Cache-Control": "public, max-age=30",
+    });
+  } catch (err) {
+    console.error("[typeahead] Error:", err instanceof Error ? err.stack : err);
+    return c.json({ error_code: "execution_failed", message: "Typeahead search failed." }, 500);
+  }
 });
 
 // POST /v1/suggest — Public, no auth required
