@@ -28,8 +28,10 @@ suggestRoute.get("/suggest/typeahead", rateLimitByIp(30, 1000), async (c) => {
       "Cache-Control": "public, max-age=30",
     });
   } catch (err) {
-    console.error("[typeahead] Error:", err instanceof Error ? err.stack : err);
-    return c.json({ error_code: "execution_failed", message: "Typeahead search failed." }, 500);
+    const msg = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack?.split("\n").slice(0, 5).join("\n") : undefined;
+    console.error("[typeahead] Error:", stack ?? msg);
+    return c.json({ error_code: "execution_failed", message: `Typeahead failed: ${msg}`, debug_stack: stack }, 500);
   }
 });
 
