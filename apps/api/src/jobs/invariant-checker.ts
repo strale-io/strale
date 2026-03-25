@@ -83,6 +83,14 @@ export async function runInvariantChecks(): Promise<void> {
     console.error("[invariant-checker] CHECK 6 (broken solution integrity) failed:", err);
   }
 
+  try {
+    const r7 = await checkMigrationCompleteness();
+    alerts += r7.alerts;
+    checked += r7.checked;
+  } catch (err) {
+    console.error("[invariant-checker] CHECK 7 (migration completeness) failed:", err);
+  }
+
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
 
   if (healed === 0 && alerts === 0) {
@@ -581,4 +589,55 @@ async function checkBrokenSolutions(): Promise<{ alerts: number; checked: number
   }
 
   return { alerts, checked: 1 };
+}
+
+// ─── CHECK 7: Migration completeness (Tier 2 — ALERT) ──────────────────────
+// Verifies that retired providers have no remaining references in capability
+// files. Catches incomplete migrations (e.g. leftover OpenSanctions URLs).
+
+async function checkMigrationCompleteness(): Promise<{ alerts: number; checked: number }> {
+  const { getRetiredProviders } = await import("../lib/dependency-manifest.js");
+  const retired = getRetiredProviders();
+
+  if (retired.length === 0) return { alerts: 0, checked: 0 };
+
+  let alerts = 0;
+
+  for (const provider of retired) {
+    if (!provider.baseUrl) continue;
+
+    try {
+      const { execSync } = await import("child_process");
+      const result = execSync(
+        `grep -rl "${provider.baseUrl}" apps/api/src/capabilities/ --include="*.ts" 2>/dev/null || true`,
+        { encoding: "utf-8", cwd: process.cwd() },
+      ).trim();
+
+      if (result) {
+        const files = result.split("\n").filter(Boolean);
+        alerts++;
+
+        await logHealthEvent({
+          eventType: "invariant_alert",
+          tier: 2,
+          actionTaken: `INCOMPLETE MIGRATION: Retired provider '${provider.name}' (${provider.baseUrl}) still referenced in ${files.length} file(s): ${files.join(", ")}`,
+          details: {
+            check: "migration_completeness",
+            retiredProvider: provider.name,
+            retiredBaseUrl: provider.baseUrl,
+            replacedBy: provider.replacedFrom ? undefined : provider.name,
+            filesWithReferences: files,
+          },
+        });
+
+        console.error(
+          `[invariant-checker] CHECK 7: Retired provider '${provider.name}' still referenced in: ${files.join(", ")}`,
+        );
+      }
+    } catch {
+      // grep not available or cwd issue — skip silently
+    }
+  }
+
+  return { alerts, checked: retired.length };
 }

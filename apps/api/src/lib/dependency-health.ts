@@ -1,145 +1,119 @@
 /**
- * Lightweight health checks for external dependencies.
- * Zero cost — just HTTP pings, no capability execution.
+ * Dependency health checks — auto-generated from dependency-manifest.ts.
+ *
+ * DO NOT add hand-written checks here. Add providers to dependency-manifest.ts
+ * instead. This file is a generic probe runner.
  */
 
-interface HealthCheckResult {
+import { getActiveProviders, type DependencyProvider } from "./dependency-manifest.js";
+
+export interface HealthCheckResult {
   healthy: boolean;
   latency_ms: number;
   error?: string;
 }
 
-interface HealthCheck {
-  name: string;
-  check: () => Promise<HealthCheckResult>;
-}
+async function probeProvider(
+  provider: DependencyProvider,
+): Promise<HealthCheckResult> {
+  // Resolve base URL — Browserless reads from env at runtime
+  const baseUrl = provider.name === "browserless"
+    ? process.env.BROWSERLESS_URL ?? ""
+    : provider.baseUrl;
 
-const healthChecks: HealthCheck[] = [
-  {
-    name: "browserless",
-    check: async () => {
-      const url = process.env.BROWSERLESS_URL;
-      const key = process.env.BROWSERLESS_API_KEY;
-      if (!url || !key) return { healthy: false, latency_ms: 0, error: "BROWSERLESS_URL/API_KEY not configured" };
-      const start = Date.now();
-      try {
-        // Browserless.io managed service requires auth on all endpoints.
-        // Use a minimal /content request with example.com (fast, reliable) as
-        // a real health probe — the /health endpoint may not exist on managed plans.
-        const res = await fetch(`${url}/content`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${key}`,
-          },
-          body: JSON.stringify({
-            url: "https://example.com",
-            gotoOptions: { waitUntil: "domcontentloaded", timeout: 5000 },
-          }),
-          signal: AbortSignal.timeout(10000),
-        });
-        const latency = Date.now() - start;
-        if (res.ok) {
-          const html = await res.text();
-          return { healthy: html.length > 50, latency_ms: latency };
-        }
-        return { healthy: false, latency_ms: latency, error: `HTTP ${res.status}` };
-      } catch (e: any) {
-        return { healthy: false, latency_ms: Date.now() - start, error: e.message };
+  if (!baseUrl) {
+    return {
+      healthy: false,
+      latency_ms: 0,
+      error: provider.name === "browserless"
+        ? "BROWSERLESS_URL not configured"
+        : `baseUrl not set for provider '${provider.name}'`,
+    };
+  }
+
+  // Check required env var
+  if (provider.envVar) {
+    const key = process.env[provider.envVar];
+    if (!key) {
+      return {
+        healthy: false,
+        latency_ms: 0,
+        error: `${provider.envVar} not configured`,
+      };
+    }
+  }
+
+  const apiKey = provider.envVar ? process.env[provider.envVar]! : undefined;
+  const probe = provider.healthProbe;
+  const url = `${baseUrl}${probe.path}`;
+
+  // Build auth headers
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (apiKey) {
+    switch (provider.authType) {
+      case "api-key-header":
+        headers[provider.authHeader!] = apiKey;
+        break;
+      case "bearer":
+        headers["Authorization"] = `Bearer ${apiKey}`;
+        break;
+      case "basic":
+        headers["Authorization"] = `Basic ${Buffer.from(apiKey + ":").toString("base64")}`;
+        break;
+    }
+  }
+
+  // Add any extra probe headers (e.g. anthropic-version)
+  if (provider.extraProbeHeaders) {
+    for (const [k, v] of Object.entries(provider.extraProbeHeaders)) {
+      headers[k] = v;
+    }
+  }
+
+  const start = Date.now();
+  try {
+    const res = await fetch(url, {
+      method: probe.method,
+      headers,
+      body: probe.body ? JSON.stringify(probe.body) : undefined,
+      signal: AbortSignal.timeout(probe.timeoutMs),
+    });
+
+    const latency_ms = Date.now() - start;
+    const healthy = probe.healthyStatuses.includes(res.status);
+
+    if (!healthy) {
+      if (res.status === 401 || res.status === 403) {
+        return {
+          healthy: false,
+          latency_ms,
+          error: `${provider.envVar ?? "API key"} is invalid (HTTP ${res.status})`,
+        };
       }
-    },
-  },
-  {
-    name: "vies",
-    check: async () => {
-      const start = Date.now();
-      try {
-        const res = await fetch(
-          "https://ec.europa.eu/taxation_customs/vies/rest-api/check-status",
-          { signal: AbortSignal.timeout(5000) },
-        );
-        return { healthy: res.ok, latency_ms: Date.now() - start };
-      } catch (e: any) {
-        return { healthy: false, latency_ms: Date.now() - start, error: e.message };
-      }
-    },
-  },
-  {
-    name: "dilisense",
-    check: async () => {
-      const start = Date.now();
-      try {
-        const res = await fetch("https://api.dilisense.com/v1/checkIndividual?names=test&fuzzy_search=0", {
-          headers: { "x-api-key": process.env.DILISENSE_API_KEY || "" },
-          signal: AbortSignal.timeout(5000),
-        });
-        return { healthy: res.ok || res.status === 401, latency_ms: Date.now() - start };
-      } catch (e: any) {
-        return { healthy: false, latency_ms: Date.now() - start, error: e.message };
-      }
-    },
-  },
-  {
-    name: "gleif",
-    check: async () => {
-      const start = Date.now();
-      try {
-        const res = await fetch("https://api.gleif.org/api/v1/lei-records?page[size]=1", {
-          signal: AbortSignal.timeout(5000),
-        });
-        return { healthy: res.ok, latency_ms: Date.now() - start };
-      } catch (e: any) {
-        return { healthy: false, latency_ms: Date.now() - start, error: e.message };
-      }
-    },
-  },
-  {
-    name: "brreg",
-    check: async () => {
-      const start = Date.now();
-      try {
-        const res = await fetch("https://data.brreg.no/enhetsregisteret/api/enheter?size=1", {
-          signal: AbortSignal.timeout(5000),
-        });
-        return { healthy: res.ok, latency_ms: Date.now() - start };
-      } catch (e: any) {
-        return { healthy: false, latency_ms: Date.now() - start, error: e.message };
-      }
-    },
-  },
-  {
-    name: "anthropic",
-    check: async () => {
-      const key = process.env.ANTHROPIC_API_KEY;
-      if (!key) return { healthy: false, latency_ms: 0, error: "ANTHROPIC_API_KEY not configured" };
-      const start = Date.now();
-      try {
-        // Just check auth is valid with a cheap models list call
-        const res = await fetch("https://api.anthropic.com/v1/models", {
-          headers: {
-            "x-api-key": key,
-            "anthropic-version": "2023-06-01",
-          },
-          signal: AbortSignal.timeout(5000),
-        });
-        return { healthy: res.ok, latency_ms: Date.now() - start };
-      } catch (e: any) {
-        return { healthy: false, latency_ms: Date.now() - start, error: e.message };
-      }
-    },
-  },
-];
+      return { healthy: false, latency_ms, error: `Unexpected HTTP ${res.status}` };
+    }
+
+    return { healthy: true, latency_ms };
+  } catch (e: any) {
+    return { healthy: false, latency_ms: Date.now() - start, error: e.message };
+  }
+}
 
 export async function runDependencyHealthChecks(): Promise<
   Record<string, HealthCheckResult>
 > {
+  const activeProviders = getActiveProviders();
   const results: Record<string, HealthCheckResult> = {};
+
   await Promise.all(
-    healthChecks.map(async (hc) => {
+    activeProviders.map(async (provider) => {
       try {
-        results[hc.name] = await hc.check();
+        results[provider.name] = await probeProvider(provider);
       } catch (e: any) {
-        results[hc.name] = { healthy: false, latency_ms: 0, error: e.message };
+        results[provider.name] = { healthy: false, latency_ms: 0, error: e.message };
       }
     }),
   );

@@ -24,6 +24,23 @@ async function main() {
   }
   console.log(`[startup] Health gate passed: ${count} executors registered`);
 
+  // Validate required provider env vars
+  const { getActiveProviders } = await import("./lib/dependency-manifest.js");
+  const missingVars: string[] = [];
+  for (const provider of getActiveProviders()) {
+    if (provider.envVar && !process.env[provider.envVar]) {
+      missingVars.push(`${provider.envVar} (${provider.displayName})`);
+    }
+  }
+  if (missingVars.length > 0) {
+    console.warn(
+      "[startup] Missing provider env vars — affected capabilities will use fallbacks:\n" +
+        missingVars.map((v) => `  - ${v}`).join("\n"),
+    );
+  } else {
+    console.log("[startup] All provider env vars present.");
+  }
+
   // Import app after executors are registered
   const { app, warmCatalog } = await import("./app.js");
   const { startTestScheduler } = await import("./jobs/test-scheduler.js");
