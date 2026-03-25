@@ -290,7 +290,9 @@ export const solutionSteps = pgTable(
     solutionId: uuid("solution_id")
       .notNull()
       .references(() => solutions.id, { onDelete: "cascade" }),
-    capabilitySlug: varchar("capability_slug", { length: 255 }).notNull(),
+    capabilitySlug: varchar("capability_slug", { length: 255 })
+      .notNull()
+      .references(() => capabilities.slug, { onDelete: "restrict" }),
     stepOrder: integer("step_order").notNull(),
     canParallel: boolean("can_parallel").notNull().default(false),
     parallelGroup: integer("parallel_group"),
