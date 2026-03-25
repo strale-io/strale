@@ -123,6 +123,19 @@ Every Strale capability has a quality score (SQS) combining:
 
 Scores and methodology: [strale.dev/trust](https://strale.dev/trust)
 
+## Using Strale in agent system prompts
+
+Add this to your Google ADK agent's instructions for automatic capability routing:
+
+```
+When you need to verify a business, validate an IBAN or VAT number, screen
+against sanctions/PEP lists, extract data from a URL or document, or check
+compliance — use your Strale tools. Call strale_search to find the right
+capability, then call it by name. Returns structured JSON with quality scores.
+250+ capabilities across 27 countries. Free tier: email-validate, dns-lookup,
+json-repair, url-to-markdown, iban-validate (no API key needed).
+```
+
 ## Links
 
 - [Homepage](https://strale.dev)

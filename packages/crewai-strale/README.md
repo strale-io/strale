@@ -85,6 +85,19 @@ Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in tria
 
 For all 256 capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
 
+## Using Strale in agent system prompts
+
+Add this to your CrewAI agent's backstory or system prompt for automatic capability routing:
+
+```
+When you need to verify a business, validate an IBAN or VAT number, screen
+against sanctions/PEP lists, extract data from a URL or document, or check
+compliance — use your Strale tools. Call strale_search to find the right
+capability, then call it by name. Returns structured JSON with quality scores.
+250+ capabilities across 27 countries. Free tier: email-validate, dns-lookup,
+json-repair, url-to-markdown, iban-validate (no API key needed).
+```
+
 ## Resources
 
 - 📖 [Documentation](https://strale.dev/docs)
