@@ -182,7 +182,7 @@ export const PROVIDERS: DependencyProvider[] = [
     healthProbe: {
       path: "/v1/checkIndividual?names=test&fuzzy_search=0",
       method: "GET",
-      healthyStatuses: [200, 404],
+      healthyStatuses: [200, 400, 401, 404],
       timeoutMs: 5000,
     },
     capabilities: ["sanctions-check", "pep-check", "adverse-media-check"],
