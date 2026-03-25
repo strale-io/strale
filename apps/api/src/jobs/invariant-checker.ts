@@ -14,7 +14,7 @@
 
 import { sql, eq, and, inArray, asc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, solutionSteps, testResults } from "../db/schema.js";
+import { capabilities, solutions, solutionSteps, testResults, testSuites } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { persistDualProfileScores } from "../lib/test-runner.js";
 import { computeSolutionScore } from "../lib/trust-labels.js";
@@ -65,6 +65,14 @@ export async function runInvariantChecks(): Promise<void> {
     checked += r4.checked;
   } catch (err) {
     console.error("[invariant-checker] CHECK 4 (freshness drift) failed:", err);
+  }
+
+  try {
+    const r5 = await checkAlgorithmicCorrectnessFloor();
+    alerts += r5.alerts;
+    checked += r5.checked;
+  } catch (err) {
+    console.error("[invariant-checker] CHECK 5 (algorithmic correctness floor) failed:", err);
   }
 
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
@@ -347,4 +355,97 @@ async function checkFreshnessDecayDrift(): Promise<{ healed: number; alerts: num
   }
 
   return { healed, alerts, checked: rows.length };
+}
+
+// ─── CHECK 5: Algorithmic correctness floor (Tier 1 — CRITICAL ALERT) ───────
+// Pure algorithmic capabilities have zero environmental variability.
+// Correctness below 85% is definitionally a code defect, not a transient issue.
+
+async function checkAlgorithmicCorrectnessFloor(): Promise<{ alerts: number; checked: number }> {
+  const db = getDb();
+  const CORRECTNESS_FLOOR = 85;
+  const ROLLING_WINDOW_HOURS = 12;
+  const cutoff = new Date(Date.now() - ROLLING_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
+
+  const algorithmicCaps = await db
+    .select({ slug: capabilities.slug, name: capabilities.name })
+    .from(capabilities)
+    .where(
+      and(
+        eq(capabilities.isActive, true),
+        eq(capabilities.transparencyTag, "algorithmic"),
+      ),
+    );
+
+  if (algorithmicCaps.length === 0) return { alerts: 0, checked: 0 };
+
+  let alerts = 0;
+
+  for (const cap of algorithmicCaps) {
+    const recentResults = await db.execute(sql`
+      SELECT
+        ts.test_name,
+        tr.passed,
+        tr.failure_reason,
+        tr.executed_at
+      FROM test_results tr
+      INNER JOIN test_suites ts ON ts.id = tr.test_suite_id
+      WHERE tr.capability_slug = ${cap.slug}
+        AND ts.test_type = 'known_answer'
+        AND tr.executed_at >= ${cutoff}::timestamptz
+      ORDER BY tr.executed_at DESC
+      LIMIT 20
+    `);
+
+    const rows = (Array.isArray(recentResults)
+      ? recentResults
+      : (recentResults as any)?.rows ?? []) as Array<{
+      test_name: string;
+      passed: boolean;
+      failure_reason: string | null;
+      executed_at: string;
+    }>;
+
+    if (rows.length === 0) continue;
+
+    const passed = rows.filter((r) => r.passed).length;
+    const correctnessRate = Math.round((passed / rows.length) * 100);
+
+    if (correctnessRate < CORRECTNESS_FLOOR) {
+      const failingTests = rows
+        .filter((r) => !r.passed)
+        .map((r) => `"${r.test_name}": ${r.failure_reason ?? "no reason recorded"}`)
+        .slice(0, 5);
+
+      const message = [
+        `ALGORITHMIC CORRECTNESS VIOLATION: ${cap.slug}`,
+        `Correctness rate: ${correctnessRate}% (floor: ${CORRECTNESS_FLOOR}%)`,
+        `Tests checked: ${rows.length} | Passed: ${passed} | Failed: ${rows.length - passed}`,
+        `Failing tests:`,
+        ...failingTests.map((t) => `  - ${t}`),
+        `This is a CODE BUG, not an environmental issue.`,
+      ].join("\n");
+
+      console.error(`[invariant-checker] ${message}`);
+      alerts++;
+
+      await logHealthEvent({
+        eventType: "invariant_violation",
+        capabilitySlug: cap.slug,
+        tier: 1,
+        actionTaken: message,
+        details: {
+          check: "algorithmic_correctness_floor",
+          capability_slug: cap.slug,
+          capability_name: cap.name,
+          correctness_rate: correctnessRate,
+          floor: CORRECTNESS_FLOOR,
+          failing_tests: failingTests,
+          window_hours: ROLLING_WINDOW_HOURS,
+        },
+      });
+    }
+  }
+
+  return { alerts, checked: algorithmicCaps.length };
 }
