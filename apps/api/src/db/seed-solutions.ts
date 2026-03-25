@@ -181,14 +181,14 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Nordic KYC — Sweden",
     marketingName: "Nordic KYC — Sweden",
     description:
-      "Check if a Swedish company is real and safe to do business with. Official registry data, VAT validation, sanctions screening, and PEP check in one call.",
+      "Check if a Swedish company is real and safe to do business with. Official registry data, VAT validation, sanctions screening, PEP check, and adverse media scan in one call.",
     longDescription:
       "Looks up the company in Sweden's official business registry (Bolagsverket), validates their EU VAT number against VIES, and screens the company name against OFAC, EU, and UN sanctions lists. Use this before onboarding a customer, signing a contract, or generating a partnership agreement involving a Swedish entity.",
     agentDescription:
       "verify swedish company, is this swedish company legit, KYC check sweden, check swedish org number, onboard swedish business customer, validate swedish organization, bolagsverket lookup",
     category: "compliance-verification",
     priceCents: 150,
-    componentSumCents: 125,
+    componentSumCents: 145,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "nordic",
@@ -215,6 +215,7 @@ const SOLUTIONS: SolutionDef[] = [
       match_count: 0,
       is_pep: false,
       pep_match_count: 0,
+      adverse_media_risk: "none",
     },
     steps: [
       {
@@ -245,6 +246,13 @@ const SOLUTIONS: SolutionDef[] = [
         parallelGroup: 1,
         inputMap: { name: "$steps[0].company_name" },
       },
+      {
+        capabilitySlug: "adverse-media-check",
+        stepOrder: 5,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$steps[0].company_name" },
+      },
     ],
   },
 
@@ -254,14 +262,14 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Nordic KYC — Norway",
     marketingName: "Nordic KYC — Norway",
     description:
-      "Check if a Norwegian company is real and safe to do business with. Official registry data, VAT validation, sanctions screening, and PEP check in one call.",
+      "Check if a Norwegian company is real and safe to do business with. Official registry data, VAT validation, sanctions screening, PEP check, and adverse media scan in one call.",
     longDescription:
       "Looks up the company in Norway's Brønnøysund Register Centre, validates their VAT number, and screens against international sanctions lists. Use this before doing business with a Norwegian entity.",
     agentDescription:
       "verify norwegian company, is this norwegian company legit, KYC check norway, check norwegian org number, brønnøysund lookup, validate norwegian organization",
     category: "compliance-verification",
     priceCents: 150,
-    componentSumCents: 125,
+    componentSumCents: 145,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "nordic",
@@ -288,6 +296,7 @@ const SOLUTIONS: SolutionDef[] = [
       match_count: 0,
       is_pep: false,
       pep_match_count: 0,
+      adverse_media_risk: "none",
     },
     steps: [
       {
@@ -318,6 +327,13 @@ const SOLUTIONS: SolutionDef[] = [
         parallelGroup: 1,
         inputMap: { name: "$steps[0].company_name" },
       },
+      {
+        capabilitySlug: "adverse-media-check",
+        stepOrder: 5,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$steps[0].company_name" },
+      },
     ],
   },
 
@@ -327,14 +343,14 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Nordic KYC — Denmark",
     marketingName: "Nordic KYC — Denmark",
     description:
-      "Check if a Danish company is real and safe to do business with. Official registry data, VAT validation, sanctions screening, and PEP check in one call.",
+      "Check if a Danish company is real and safe to do business with. Official registry data, VAT validation, sanctions screening, PEP check, and adverse media scan in one call.",
     longDescription:
       "Looks up the company in Denmark's CVR register, validates their EU VAT number, and screens against international sanctions lists. Use this before doing business with a Danish entity.",
     agentDescription:
       "verify danish company, is this danish company legit, KYC check denmark, check danish CVR number, validate danish organization",
     category: "compliance-verification",
     priceCents: 150,
-    componentSumCents: 125,
+    componentSumCents: 145,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "nordic",
@@ -358,6 +374,7 @@ const SOLUTIONS: SolutionDef[] = [
       match_count: 0,
       is_pep: false,
       pep_match_count: 0,
+      adverse_media_risk: "none",
     },
     steps: [
       {
@@ -388,6 +405,13 @@ const SOLUTIONS: SolutionDef[] = [
         parallelGroup: 1,
         inputMap: { name: "$steps[0].company_name" },
       },
+      {
+        capabilitySlug: "adverse-media-check",
+        stepOrder: 5,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$steps[0].company_name" },
+      },
     ],
   },
 
@@ -397,14 +421,14 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Nordic KYC — Finland",
     marketingName: "Nordic KYC — Finland",
     description:
-      "Check if a Finnish company is real and safe to do business with. Official registry data, VAT validation, sanctions screening, and PEP check in one call.",
+      "Check if a Finnish company is real and safe to do business with. Official registry data, VAT validation, sanctions screening, PEP check, and adverse media scan in one call.",
     longDescription:
       "Looks up the company in Finland's PRH business register using their Y-tunnus (business ID), validates their EU VAT number, and screens against international sanctions lists. Use this before doing business with a Finnish entity.",
     agentDescription:
       "verify finnish company, is this finnish company legit, KYC check finland, check finnish business id, Y-tunnus lookup, validate finnish organization",
     category: "compliance-verification",
     priceCents: 150,
-    componentSumCents: 125,
+    componentSumCents: 145,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "nordic",
@@ -431,6 +455,7 @@ const SOLUTIONS: SolutionDef[] = [
       match_count: 0,
       is_pep: false,
       pep_match_count: 0,
+      adverse_media_risk: "none",
     },
     steps: [
       {
@@ -457,6 +482,13 @@ const SOLUTIONS: SolutionDef[] = [
       {
         capabilitySlug: "pep-check",
         stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$steps[0].company_name" },
+      },
+      {
+        capabilitySlug: "adverse-media-check",
+        stepOrder: 5,
         canParallel: true,
         parallelGroup: 1,
         inputMap: { name: "$steps[0].company_name" },
@@ -657,14 +689,14 @@ const SOLUTIONS: SolutionDef[] = [
     name: "US Company Verify",
     marketingName: "US Company Verification",
     description:
-      "Look up any US company using SEC EDGAR data, screen against international sanctions lists, and check for politically exposed persons (PEP). Filing data, company status, sanctions and PEP check.",
+      "Look up any US company using SEC EDGAR data, screen against international sanctions lists, check for politically exposed persons (PEP), and scan for adverse media coverage. Filing data, company status, sanctions, PEP, and media check.",
     longDescription:
       "Queries SEC EDGAR for official filing data using a company name, ticker symbol, or CIK number, then screens the company against OFAC, EU, and UN sanctions lists. Returns company name, CIK, state of incorporation, and sanctions status. Use before doing business with a US entity.",
     agentDescription:
       "verify US company, check if american company exists, SEC company lookup, is this US company legit, US company sanctions check, EDGAR lookup",
     category: "compliance-verification",
     priceCents: 130,
-    componentSumCents: 115,
+    componentSumCents: 135,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "us",
@@ -691,6 +723,7 @@ const SOLUTIONS: SolutionDef[] = [
       match_count: 0,
       is_pep: false,
       pep_match_count: 0,
+      adverse_media_risk: "none",
     },
     steps: [
       {
@@ -710,6 +743,13 @@ const SOLUTIONS: SolutionDef[] = [
       {
         capabilitySlug: "pep-check",
         stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$steps[0].company_name" },
+      },
+      {
+        capabilitySlug: "adverse-media-check",
+        stepOrder: 4,
         canParallel: true,
         parallelGroup: 1,
         inputMap: { name: "$steps[0].company_name" },
