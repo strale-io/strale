@@ -139,6 +139,7 @@ const TESTS: TestDef[] = [
     validationRules: checks() },
 
   // ── iban-validate ──
+  // verified: mod-97 remainder = 1 for all valid IBANs below
   { capabilitySlug: "iban-validate", testName: "Valid Swedish IBAN", testType: "known_answer",
     input: { iban: "SE4550000000058398257466" },
     validationRules: checks(isTrue("valid"), eql("country_code", "SE")) },

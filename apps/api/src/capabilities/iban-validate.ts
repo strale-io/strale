@@ -113,11 +113,15 @@ registerCapability("iban-validate", async (input: CapabilityInput) => {
     throw new Error("'iban' is required. Provide an IBAN to validate (e.g. SE3550000000054910000003).");
   }
 
-  // Try to find an IBAN pattern in the input
+  // Extract IBAN from input — only use regex if input looks like free text
   let ibanStr = rawIban.trim();
-  const ibanMatch = ibanStr.match(/[A-Za-z]{2}\s?\d{2}[\s-]?[A-Za-z0-9\s-]{10,32}/);
-  if (ibanMatch) {
-    ibanStr = ibanMatch[0];
+  const looksLikeFreeText = ibanStr.length > 34 || /\s{2,}|\b(validate|check|iban is|iban:)\b/i.test(ibanStr);
+  if (looksLikeFreeText) {
+    // Strict extraction: 2 letters + 2 digits + only alphanumeric (no trailing words)
+    const ibanMatch = ibanStr.match(/[A-Za-z]{2}\d{2}[A-Za-z0-9]{10,30}/);
+    if (ibanMatch) {
+      ibanStr = ibanMatch[0];
+    }
   }
 
   const result = validateIban(ibanStr);
@@ -130,3 +134,23 @@ registerCapability("iban-validate", async (input: CapabilityInput) => {
     },
   };
 });
+
+// ─── Self-check (runs on startup in dev/test) ────────────────────────────────
+if (process.env.NODE_ENV !== "production") {
+  const SELF_CHECK_CASES: Array<{ iban: string; expectedValid: boolean }> = [
+    { iban: "DE89370400440532013000", expectedValid: true },
+    { iban: "GB82WEST12345698765432", expectedValid: true },
+    { iban: "SE3550000000054910000003", expectedValid: true },
+    { iban: "NO9386011117947", expectedValid: true },
+    { iban: "SE0000000000000000000000", expectedValid: false },
+    { iban: "XX1234567890", expectedValid: false },
+  ];
+  for (const { iban, expectedValid } of SELF_CHECK_CASES) {
+    const result = validateIban(iban);
+    if (result.valid !== expectedValid) {
+      throw new Error(
+        `[iban-validate] Self-check failed: ${iban} — expected valid=${expectedValid}, got ${result.valid}`,
+      );
+    }
+  }
+}
