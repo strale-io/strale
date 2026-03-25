@@ -2425,10 +2425,10 @@ const seedCapabilities = [
   {
     name: "Beneficial Ownership Lookup",
     slug: "beneficial-ownership-lookup",
-    description: "Look up beneficial ownership (UBO) information for a company. Returns individuals who ultimately own or control the entity, their ownership percentage, and the ownership chain. Uses OpenOwnership and Companies House for UK companies.",
+    description: "Look up the beneficial owners (UBOs) of a UK company. Returns individuals and entities with significant control (25%+ ownership), their ownership percentage, nationality, and nature of control. Data sourced directly from the UK Companies House PSC Register.",
     category: "compliance",
-    inputSchema: { type: "object", properties: { company_name: { type: "string", description: "Company name" }, jurisdiction: { type: "string", description: "Country code (ISO 2-letter) for narrowing results (optional)" }, company_number: { type: "string", description: "Company registration number if known (optional)" } }, required: ["company_name"] },
-    outputSchema: { type: "object", properties: { query: { type: "string" }, beneficial_owners: { type: "array" }, total_owners: { type: "integer" }, data_source: { type: "string" }, lookup_date: { type: "string" } } },
+    inputSchema: { type: "object", properties: { company_name: { type: "string", description: "Company name to search for" }, company_number: { type: "string", description: "UK company registration number (e.g. 00445790)" }, jurisdiction: { type: "string", description: "Country code — currently only 'gb' supported (default: gb)" } } },
+    outputSchema: { type: "object", properties: { company_name: { type: "string" }, company_number: { type: "string" }, beneficial_owners: { type: "array" }, total_beneficial_owners: { type: "number" }, has_psc_data: { type: "boolean" } } },
     priceCents: 25,
   },
   {

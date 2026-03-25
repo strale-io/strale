@@ -210,6 +210,20 @@ const LIMITATIONS: LimitationDef[] = [
     limitationText: "Articles typically appear in near real-time but some sources may have a 24-48 hour indexing delay",
     workaround: "For breaking news events, supplement with direct web search" },
 
+  // ── beneficial-ownership-lookup ──
+  { capabilitySlug: "beneficial-ownership-lookup", category: "coverage", severity: "warning",
+    title: "Currently covers UK companies only — more jurisdictions coming soon",
+    limitationText: "Currently covers UK companies only. Beneficial ownership data depends on company filings — some companies may not have filed PSC information",
+    workaround: "For non-UK companies, use company-data capabilities for the relevant country and check local UBO registries" },
+  { capabilitySlug: "beneficial-ownership-lookup", category: "accuracy", severity: "info",
+    title: "PSC data is self-reported by companies to Companies House",
+    limitationText: "PSC data is self-reported by companies to Companies House. Accuracy depends on the filing company — data is not independently verified",
+    workaround: "Cross-reference with other compliance data sources for high-value due diligence" },
+  { capabilitySlug: "beneficial-ownership-lookup", category: "coverage", severity: "info",
+    title: "Companies listed on regulated markets are exempt from PSC filing requirements",
+    limitationText: "Companies listed on regulated markets (e.g. London Stock Exchange) are exempt from PSC filing requirements",
+    workaround: "For listed companies, check shareholder registers and annual reports instead" },
+
   // ── url-to-markdown ──
   { capabilitySlug: "url-to-markdown", category: "coverage", severity: "info",
     title: "JavaScript-heavy single-page applications may not render completely before content is extracted",

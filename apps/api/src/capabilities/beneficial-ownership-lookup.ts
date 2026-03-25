@@ -1,135 +1,220 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import Anthropic from "@anthropic-ai/sdk";
 
-// OpenOwnership Register (BODS) — free, no key needed
-const OPENOWNERSHIP_API = "https://register.openownership.org/api/v0.4";
+const CH_API = "https://api.company-information.service.gov.uk";
 
-registerCapability("beneficial-ownership-lookup", async (input: CapabilityInput) => {
-  const companyName = ((input.company_name as string) ?? (input.name as string) ?? (input.task as string) ?? "").trim();
-  if (!companyName) {
-    throw new Error("'company_name' is required.");
-  }
+function getAuthHeader(apiKey: string): string {
+  return "Basic " + Buffer.from(apiKey + ":").toString("base64");
+}
 
-  const jurisdiction = ((input.jurisdiction as string) ?? (input.country_code as string) ?? "").trim().toUpperCase() || undefined;
-  const companyNumber = ((input.company_number as string) ?? "").trim() || undefined;
-
-  // Try OpenOwnership BODS API
-  const searchQuery = companyNumber || companyName;
-  const url = `${OPENOWNERSHIP_API}/entities?q=${encodeURIComponent(searchQuery)}&page=1&per_page=5`;
-
-  let ownershipData: any[] = [];
-  let dataSource = "openownership.org";
-  let companyMatch: any = null;
-
-  try {
-    const res = await fetch(url, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (res.ok) {
-      const data = (await res.json()) as any;
-      const entities = data?.data ?? data ?? [];
-
-      // Find the best company match
-      const companies = (Array.isArray(entities) ? entities : []).filter(
-        (e: any) => e.type === "registeredEntity" || e.entity_type === "registeredEntity",
-      );
-
-      if (companies.length > 0) {
-        companyMatch = companies[0];
-
-        // Fetch ownership statements for this entity
-        const entityId = companyMatch.id ?? companyMatch._id;
-        if (entityId) {
-          const statementsUrl = `${OPENOWNERSHIP_API}/statements?subject=${encodeURIComponent(entityId)}&statementType=ownershipOrControlStatement&per_page=20`;
-          const stmtRes = await fetch(statementsUrl, {
-            headers: { Accept: "application/json" },
-            signal: AbortSignal.timeout(10000),
-          });
-
-          if (stmtRes.ok) {
-            const stmtData = (await stmtRes.json()) as any;
-            ownershipData = stmtData?.data ?? stmtData ?? [];
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.error("[beneficial-ownership] OpenOwnership error:", err instanceof Error ? err.message : err);
-  }
-
-  // If OpenOwnership didn't return data and it's a UK company, try Companies House PSC
-  if (ownershipData.length === 0 && (jurisdiction === "GB" || jurisdiction === "UK") && companyNumber) {
-    const chKey = process.env.COMPANIES_HOUSE_API_KEY;
-    if (chKey) {
-      try {
-        const chUrl = `https://api.company-information.service.gov.uk/company/${encodeURIComponent(companyNumber)}/persons-with-significant-control`;
-        const chRes = await fetch(chUrl, {
-          headers: {
-            Authorization: `Basic ${Buffer.from(chKey + ":").toString("base64")}`,
-            Accept: "application/json",
-          },
-          signal: AbortSignal.timeout(10000),
-        });
-
-        if (chRes.ok) {
-          const chData = (await chRes.json()) as any;
-          const pscs = chData?.items ?? [];
-          ownershipData = pscs.map((psc: any) => ({
-            name: psc.name ?? psc.name_elements?.forename + " " + psc.name_elements?.surname,
-            ownership_percentage: parseOwnershipNature(psc.natures_of_control ?? []),
-            control_type: psc.kind ?? "person-with-significant-control",
-            nationality: psc.nationality ?? null,
-            date_from: psc.notified_on ?? null,
-            country_of_residence: psc.country_of_residence ?? null,
-          }));
-          dataSource = "companies-house-uk";
-        }
-      } catch (err) {
-        console.error("[beneficial-ownership] Companies House error:", err instanceof Error ? err.message : err);
-      }
-    }
-  }
-
-  // Format results
-  const beneficialOwners = ownershipData.length > 0 && dataSource === "companies-house-uk"
-    ? ownershipData
-    : (Array.isArray(ownershipData) ? ownershipData : []).map((stmt: any) => {
-        const interested = stmt.interestedParty ?? stmt.interested_party ?? {};
-        return {
-          name: interested.name ?? interested.unspecifiedEntityDetails?.name ?? "Unknown",
-          ownership_percentage: stmt.interests?.[0]?.share?.exact ?? stmt.interests?.[0]?.share?.minimum ?? null,
-          control_type: stmt.interests?.[0]?.type ?? "ownership",
-          nationality: interested.nationalities?.[0]?.code ?? null,
-          date_from: stmt.statementDate ?? null,
-        };
-      });
-
-  return {
-    output: {
-      query: companyName,
-      company_number: companyNumber ?? null,
-      jurisdiction: jurisdiction ?? null,
-      beneficial_owners: beneficialOwners.slice(0, 20),
-      total_owners: beneficialOwners.length,
-      company_match: companyMatch
-        ? { name: companyMatch.name ?? companyMatch.company_name, identifier: companyMatch.identifiers?.[0]?.id ?? null }
-        : null,
-      data_source: dataSource,
-      lookup_date: new Date().toISOString(),
-      coverage_note: ownershipData.length === 0
-        ? "No beneficial ownership data found. Coverage varies by jurisdiction — UK and some EU countries have the best public registers."
-        : null,
-    },
-    provenance: { source: dataSource, fetched_at: new Date().toISOString() },
-  };
-});
-
-function parseOwnershipNature(natures: string[]): string | null {
+function parseOwnershipLevel(natures: string[]): string {
   for (const n of natures) {
     if (n.includes("75-to-100")) return "75-100%";
     if (n.includes("50-to-75")) return "50-75%";
     if (n.includes("25-to-50")) return "25-50%";
   }
-  return natures.length > 0 ? natures[0] : null;
+  if (natures.some((n) => n.includes("significant-influence") || n.includes("right-to-appoint"))) {
+    return "significant-influence";
+  }
+  return "unknown";
+}
+
+function pscKindToType(kind: string): "individual" | "corporate" | "legal_person" {
+  if (kind.startsWith("corporate-entity")) return "corporate";
+  if (kind.startsWith("legal-person")) return "legal_person";
+  return "individual";
+}
+
+registerCapability("beneficial-ownership-lookup", async (input: CapabilityInput) => {
+  const companyName = ((input.company_name as string) ?? (input.name as string) ?? "").trim();
+  const companyNumber = ((input.company_number as string) ?? "").trim() || undefined;
+  const jurisdiction = ((input.jurisdiction as string) ?? "gb").trim().toLowerCase();
+
+  if (!companyName && !companyNumber) {
+    throw new Error("At least one of 'company_name' or 'company_number' is required.");
+  }
+
+  if (jurisdiction !== "gb" && jurisdiction !== "uk") {
+    throw new Error("Beneficial ownership lookup is currently available for UK companies only. More jurisdictions coming soon.");
+  }
+
+  const apiKey = process.env.COMPANIES_HOUSE_API_KEY;
+  if (!apiKey) {
+    // Fall back to LLM knowledge for well-known companies
+    return fallbackToLLM(companyName || companyNumber!);
+  }
+
+  const authHeader = getAuthHeader(apiKey);
+  const headers = { Authorization: authHeader, Accept: "application/json" };
+
+  try {
+    // Step 1: Resolve company number
+    let resolvedNumber = companyNumber;
+    let resolvedName = companyName;
+
+    if (!resolvedNumber) {
+      const searchRes = await fetch(
+        `${CH_API}/search/companies?q=${encodeURIComponent(companyName)}&items_per_page=5`,
+        { headers, signal: AbortSignal.timeout(10000) },
+      );
+
+      if (!searchRes.ok) {
+        throw new Error(`Companies House search failed: HTTP ${searchRes.status}`);
+      }
+
+      const searchData = (await searchRes.json()) as {
+        items?: Array<{ company_number: string; title: string; company_status: string }>;
+      };
+      const items = searchData.items ?? [];
+
+      // Prefer active companies
+      const active = items.find((i) => i.company_status === "active");
+      const match = active ?? items[0];
+
+      if (!match) {
+        throw new Error(`No UK company found matching '${companyName}'.`);
+      }
+
+      resolvedNumber = match.company_number;
+      resolvedName = match.title;
+    }
+
+    // Step 2: Fetch company profile + PSC data in parallel
+    const [profileRes, pscRes] = await Promise.all([
+      fetch(`${CH_API}/company/${resolvedNumber}`, {
+        headers,
+        signal: AbortSignal.timeout(10000),
+      }),
+      fetch(`${CH_API}/company/${resolvedNumber}/persons-with-significant-control`, {
+        headers,
+        signal: AbortSignal.timeout(10000),
+      }),
+    ]);
+
+    // Parse company profile
+    let companyStatus = "unknown";
+    if (profileRes.ok) {
+      const profile = (await profileRes.json()) as {
+        company_name?: string;
+        company_status?: string;
+      };
+      resolvedName = profile.company_name ?? resolvedName;
+      companyStatus = profile.company_status ?? "unknown";
+    }
+
+    // Parse PSC data
+    if (!pscRes.ok) {
+      if (pscRes.status === 404) {
+        return {
+          output: {
+            company_name: resolvedName,
+            company_number: resolvedNumber,
+            jurisdiction: "gb",
+            company_status: companyStatus,
+            beneficial_owners: [],
+            total_beneficial_owners: 0,
+            has_psc_data: false,
+            note: "No PSC data filed for this company. It may be exempt (e.g. listed on a regulated market) or filings may be outstanding.",
+            data_source: "UK Companies House PSC Register",
+          },
+          provenance: { source: "company-information.service.gov.uk", fetched_at: new Date().toISOString() },
+        };
+      }
+      throw new Error(`Companies House PSC lookup failed: HTTP ${pscRes.status}`);
+    }
+
+    const pscData = (await pscRes.json()) as {
+      items?: Array<{
+        name: string;
+        kind: string;
+        nationality?: string;
+        country_of_residence?: string;
+        date_of_birth?: { month: number; year: number };
+        natures_of_control?: string[];
+        notified_on?: string;
+        ceased_on?: string;
+        address?: Record<string, string>;
+      }>;
+      total_results?: number;
+    };
+
+    const items = pscData.items ?? [];
+
+    // Filter out ceased PSCs — only active beneficial owners
+    const activePscs = items.filter((item) => !item.ceased_on);
+
+    const beneficialOwners = activePscs.map((item) => ({
+      name: item.name,
+      type: pscKindToType(item.kind),
+      nationality: item.nationality ?? null,
+      country_of_residence: item.country_of_residence ?? null,
+      date_of_birth: item.date_of_birth
+        ? { month: item.date_of_birth.month, year: item.date_of_birth.year }
+        : null,
+      ownership_level: parseOwnershipLevel(item.natures_of_control ?? []),
+      natures_of_control: item.natures_of_control ?? [],
+      notified_on: item.notified_on ?? null,
+    }));
+
+    return {
+      output: {
+        company_name: resolvedName,
+        company_number: resolvedNumber,
+        jurisdiction: "gb",
+        company_status: companyStatus,
+        beneficial_owners: beneficialOwners,
+        total_beneficial_owners: beneficialOwners.length,
+        has_psc_data: true,
+        data_source: "UK Companies House PSC Register",
+      },
+      provenance: { source: "company-information.service.gov.uk", fetched_at: new Date().toISOString() },
+    };
+  } catch (err) {
+    console.error("[beneficial-ownership-lookup] Companies House:", err instanceof Error ? err.message : err);
+
+    // If it's a validation error (not found, bad jurisdiction), rethrow
+    if (err instanceof Error && (err.message.includes("No UK company found") || err.message.includes("currently available"))) {
+      throw err;
+    }
+
+    // API failure — fall back to LLM
+    return fallbackToLLM(companyName || companyNumber!);
+  }
+});
+
+async function fallbackToLLM(query: string) {
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) throw new Error("COMPANIES_HOUSE_API_KEY is required for beneficial ownership lookup. ANTHROPIC_API_KEY not available for fallback.");
+
+  const client = new Anthropic({ apiKey: anthropicKey });
+  const r = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 800,
+    messages: [
+      {
+        role: "user",
+        content: `Who are the beneficial owners (persons with significant control) of "${query}" (UK company)? Return ONLY valid JSON.
+
+Return:
+{
+  "company_name": "...",
+  "beneficial_owners": [{ "name": "...", "type": "individual or corporate", "ownership_level": "approximate %", "source": "public knowledge" }],
+  "total_beneficial_owners": 0,
+  "has_psc_data": false,
+  "note": "This is based on public knowledge, not official Companies House data. Register for a Companies House API key for authoritative results.",
+  "data_source": "llm-knowledge"
+}`,
+      },
+    ],
+  });
+
+  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("Failed to perform beneficial ownership lookup.");
+
+  const output = JSON.parse(jsonMatch[0]);
+  return {
+    output,
+    provenance: { source: "llm-knowledge", fetched_at: new Date().toISOString() },
+  };
 }

@@ -543,6 +543,17 @@ const TESTS: TestDef[] = [
     input: { name: "Test Person" },
     validationRules: checks(notNull("risk_level"), notNull("categories")) },
 
+  // ── beneficial-ownership-lookup ──
+  { capabilitySlug: "beneficial-ownership-lookup", testName: "Tesco PLC by number", testType: "schema_check",
+    input: { company_number: "00445790" },
+    validationRules: checks(notNull("company_name"), notNull("beneficial_owners")) },
+  { capabilitySlug: "beneficial-ownership-lookup", testName: "Search by company name", testType: "schema_check",
+    input: { company_name: "Tesco" },
+    validationRules: checks(notNull("company_number"), notNull("beneficial_owners")) },
+  { capabilitySlug: "beneficial-ownership-lookup", testName: "Schema validation", testType: "schema_check",
+    input: { company_number: "00445790" },
+    validationRules: checks(notNull("has_psc_data"), notNull("total_beneficial_owners")) },
+
   // ── seo-audit — known_answer + edge_case ──
   { capabilitySlug: "seo-audit", testName: "google.com — SEO score", testType: "known_answer",
     input: { url: "https://google.com" },
