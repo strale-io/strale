@@ -2407,7 +2407,7 @@ const seedCapabilities = [
   {
     name: "PEP Check",
     slug: "pep-check",
-    description: "Screen a person against Politically Exposed Persons (PEP) databases. Returns match status, PEP type (national, international, family member, close associate), position held, country, and data source.",
+    description: "Screen a person against Politically Exposed Persons (PEP) databases. Returns match status, PEP type (politician, judge, military official, etc.), positions held, political parties, and country. Required for AML/KYC compliance.",
     category: "compliance",
     inputSchema: { type: "object", properties: { name: { type: "string", description: "Full name of person to screen" }, birth_date: { type: "string", description: "Date of birth (YYYY-MM-DD) for disambiguation (optional)" }, country: { type: "string", description: "Country code for narrowing results (optional)" } }, required: ["name"] },
     outputSchema: { type: "object", properties: { query: { type: "string" }, is_pep: { type: "boolean" }, total_matches: { type: "integer" }, matches: { type: "array" }, screened_at: { type: "string" } } },

@@ -518,6 +518,20 @@ const TESTS: TestDef[] = [
     input: { name: "X" },
     validationRules: checks(notNull("is_sanctioned")) },
 
+  // ── pep-check ──
+  { capabilitySlug: "pep-check", testName: "Angela Merkel — known PEP", testType: "known_answer",
+    input: { name: "Angela Merkel" },
+    validationRules: checks(notNull("is_pep"), isTrue("is_pep")) },
+  { capabilitySlug: "pep-check", testName: "Random unknown person", testType: "schema_check",
+    input: { name: "John Random Randomsson" },
+    validationRules: checks(notNull("is_pep")) },
+  { capabilitySlug: "pep-check", testName: "Schema validation", testType: "schema_check",
+    input: { name: "Test Person" },
+    validationRules: checks(notNull("is_pep"), notNull("match_count")) },
+  { capabilitySlug: "pep-check", testName: "Single character name", testType: "edge_case",
+    input: { name: "X" },
+    validationRules: checks(notNull("is_pep")) },
+
   // ── seo-audit — known_answer + edge_case ──
   { capabilitySlug: "seo-audit", testName: "google.com — SEO score", testType: "known_answer",
     input: { url: "https://google.com" },

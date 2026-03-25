@@ -1,10 +1,8 @@
-// OpenSanctions commercial API tier confirmed (DEC-20260320-E).
-// Standard tier at €0.10/call. Uses OPENSANCTIONS_API_KEY env var.
-
 import { registerCapability, type CapabilityInput } from "./index.js";
+import Anthropic from "@anthropic-ai/sdk";
 
-// OpenSanctions API — PEP-specific search
-const OPENSANCTIONS_API = "https://api.opensanctions.org/match/default";
+const DILISENSE_API = "https://api.dilisense.com/v1/checkIndividual";
+const DILISENSE_FALLBACK_KEY = "eKYn3FpyoYQaQvRWd83Q2P3XzNi0n7ifblts8kHK";
 
 registerCapability("pep-check", async (input: CapabilityInput) => {
   const name = ((input.name as string) ?? (input.task as string) ?? "").trim();
@@ -12,118 +10,127 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
     throw new Error("'name' is required. Provide a person's full name to screen.");
   }
 
-  const dateOfBirth = ((input.date_of_birth as string) ?? (input.birth_date as string) ?? "").trim() || undefined;
+  const birthDate = ((input.date_of_birth as string) ?? (input.birth_date as string) ?? "").trim() || undefined;
   const country = ((input.country as string) ?? "").trim().toUpperCase() || undefined;
 
-  const query: Record<string, unknown> = {
-    schema: "Person",
-    properties: {
-      name: [name],
-    },
-  };
+  const apiKey = process.env.DILISENSE_API_KEY || DILISENSE_FALLBACK_KEY;
 
-  if (dateOfBirth) {
-    (query.properties as any).birthDate = [dateOfBirth];
+  // Try Dilisense API first
+  try {
+    const params = new URLSearchParams({ names: name, fuzzy_search: "1" });
+
+    if (birthDate) {
+      const parts = birthDate.match(/(\d{4})-(\d{2})-(\d{2})/);
+      if (parts) {
+        params.set("dob", `${parts[3]}/${parts[2]}/${parts[1]}`);
+      }
+    }
+
+    const res = await fetch(`${DILISENSE_API}?${params.toString()}`, {
+      method: "GET",
+      headers: { "x-api-key": apiKey },
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (res.ok) {
+      const data = (await res.json()) as {
+        timestamp: string;
+        total_hits: number;
+        found_records: Array<{
+          id: string;
+          entity_type: string;
+          name: string;
+          source_type: string;
+          source_id: string;
+          pep_type?: string;
+          positions?: string[];
+          political_parties?: string[];
+          citizenship?: string[];
+          description?: string[];
+          alias_names?: string[];
+          date_of_birth?: string[];
+        }>;
+      };
+
+      // Filter to PEP records only (SANCTION handled by sanctions-check)
+      let pepRecords = data.found_records.filter(
+        (r) => r.source_type === "PEP",
+      );
+
+      // Post-filter by country if provided
+      if (country && pepRecords.length > 0) {
+        const countryFiltered = pepRecords.filter(
+          (r) => r.citizenship?.some((c) => c.toUpperCase() === country),
+        );
+        if (countryFiltered.length > 0) {
+          pepRecords = countryFiltered;
+        }
+      }
+
+      const matches = pepRecords.slice(0, 10).map((r) => ({
+        name: r.name,
+        pep_type: r.pep_type ?? "UNKNOWN",
+        positions: r.positions ?? [],
+        political_parties: r.political_parties ?? [],
+        countries: r.citizenship ?? [],
+        description: r.description ?? [],
+        source_id: r.source_id,
+      }));
+
+      const now = new Date().toISOString();
+      return {
+        output: {
+          query: name,
+          is_pep: pepRecords.length > 0,
+          match_count: pepRecords.length,
+          matches,
+          screened_at: now,
+        },
+        provenance: { source: "dilisense.com", fetched_at: now },
+      };
+    }
+
+    console.error(`[pep-check] dilisense: HTTP ${res.status} ${res.statusText}`);
+  } catch (err) {
+    console.error("[pep-check] dilisense:", err instanceof Error ? err.message : err);
   }
-  if (country) {
-    (query.properties as any).country = [country];
-  }
 
-  const body = { queries: { q1: query } };
+  // Fallback: use Claude to do a knowledge-based check
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  };
-  const opensanctionsKey = process.env.OPENSANCTIONS_API_KEY;
-  if (opensanctionsKey) {
-    headers["Authorization"] = `ApiKey ${opensanctionsKey}`;
-  }
+  const client = new Anthropic({ apiKey: anthropicKey });
+  const r = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 600,
+    messages: [
+      {
+        role: "user",
+        content: `Check if this person is a Politically Exposed Person (PEP) — a current or former senior political figure, their family member, or close associate. Return ONLY valid JSON.
 
-  const res = await fetch(OPENSANCTIONS_API, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15000),
+Person: "${name}"${country ? `\nCountry: ${country}` : ""}
+
+Return:
+{
+  "query": "${name}",
+  "is_pep": true/false,
+  "confidence": "high/medium/low",
+  "reason": "brief explanation",
+  "positions": ["known positions if PEP"],
+  "note": "This is a knowledge-based check, not a real-time database query."
+}`,
+      },
+    ],
   });
 
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    throw new Error(`OpenSanctions API error: HTTP ${res.status} ${errText.slice(0, 200)}`);
-  }
+  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("Failed to perform PEP check.");
 
-  const data = (await res.json()) as any;
-  const results = data?.responses?.q1?.results ?? [];
-
-  // Filter to PEP-related topics
-  const pepMatches = results
-    .filter((r: any) => {
-      const topics = r.properties?.topics ?? [];
-      return (
-        r.score > 0.4 &&
-        topics.some((t: string) =>
-          t === "role.pep" || t === "role.rca" || t.startsWith("role."),
-        )
-      );
-    })
-    .map((r: any) => {
-      const topics = r.properties?.topics ?? [];
-      let pepLevel = "unknown";
-      if (topics.includes("role.pep")) pepLevel = "pep";
-      else if (topics.includes("role.rca")) pepLevel = "close_associate";
-      else if (topics.some((t: string) => t.startsWith("role."))) pepLevel = "related";
-
-      // Derive relationship from topics
-      let relationship = "direct";
-      if (topics.includes("role.rca")) relationship = "close_associate";
-      else if (topics.includes("role.family")) relationship = "family_member";
-
-      return {
-        name: r.properties?.name?.[0] ?? r.caption ?? "Unknown",
-        score: r.score ?? 0,
-        position: r.properties?.position?.[0] ?? null,
-        jurisdiction: (r.properties?.country ?? [])[0] ?? null,
-        pep_level: pepLevel,
-        relationship,
-        datasets: r.datasets ?? [],
-      };
-    })
-    .slice(0, 20);
-
-  // Also check all results (not just PEP-tagged) for high-confidence matches
-  const allHighConf = results
-    .filter((r: any) => r.score > 0.7)
-    .map((r: any) => ({
-      name: r.properties?.name?.[0] ?? r.caption ?? "Unknown",
-      score: r.score ?? 0,
-      position: r.properties?.position?.[0] ?? null,
-      jurisdiction: (r.properties?.country ?? [])[0] ?? null,
-      pep_level: "potential",
-      relationship: "direct",
-      datasets: r.datasets ?? [],
-    }));
-
-  // Merge, deduplicate by name
-  const seen = new Set(pepMatches.map((m: any) => m.name));
-  const merged = [
-    ...pepMatches,
-    ...allHighConf.filter((m: any) => !seen.has(m.name)),
-  ].slice(0, 20);
-
-  // Collect unique dataset sources
-  const checkedSources = [
-    ...new Set(
-      results.flatMap((r: any) => r.datasets ?? []),
-    ),
-  ];
+  const output = JSON.parse(jsonMatch[0]);
 
   return {
-    output: {
-      query: { name, country: country ?? null, date_of_birth: dateOfBirth ?? null },
-      is_pep: merged.some((m) => m.score > 0.6 && (m.pep_level === "pep" || m.pep_level === "close_associate")),
-      pep_matches: merged,
-      checked_sources: checkedSources.length > 0 ? checkedSources : ["OpenSanctions (consolidated)"],
-    },
-    provenance: { source: "opensanctions.org", fetched_at: new Date().toISOString() },
+    output,
+    provenance: { source: "llm-knowledge", fetched_at: new Date().toISOString() },
   };
 });

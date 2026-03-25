@@ -182,6 +182,20 @@ const LIMITATIONS: LimitationDef[] = [
     limitationText: "Name matching uses fuzzy logic — common names may produce false positives. Always verify flagged results",
     workaround: "Filter results by match confidence score and verify flagged entities against the primary sanctions list PDF" },
 
+  // ── pep-check ──
+  { capabilitySlug: "pep-check", category: "coverage", severity: "warning",
+    title: "PEP coverage varies by country — major economies and EU members have strong coverage",
+    limitationText: "PEP coverage varies by country — major economies and EU members have strong coverage, smaller nations may have gaps",
+    workaround: "For countries with limited coverage, supplement with local registry checks or use the LLM fallback as a secondary signal" },
+  { capabilitySlug: "pep-check", category: "accuracy", severity: "warning",
+    title: "Name matching uses fuzzy logic and may produce false positives for common names",
+    limitationText: "Name matching uses fuzzy logic — common names may produce false positives. Birth date strongly recommended for disambiguation",
+    workaround: "Always provide birth_date when available to reduce false positives. Verify flagged results against official government records" },
+  { capabilitySlug: "pep-check", category: "freshness", severity: "info",
+    title: "PEP lists updated multiple times per day — recently appointed officials may take up to 48 hours",
+    limitationText: "PEP lists updated multiple times per day — recently appointed officials may take up to 48 hours to appear",
+    workaround: "For time-sensitive checks on recently appointed officials, cross-reference with news sources" },
+
   // ── url-to-markdown ──
   { capabilitySlug: "url-to-markdown", category: "coverage", severity: "info",
     title: "JavaScript-heavy single-page applications may not render completely before content is extracted",
