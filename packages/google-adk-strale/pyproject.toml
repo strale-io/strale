@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "google-adk-strale"
-version = "0.1.0"
+version = "0.1.1"
 description = "Google ADK integration for Strale — 250+ business capabilities as agent tools"
 readme = "README.md"
 license = "MIT"
