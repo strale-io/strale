@@ -181,14 +181,14 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Nordic KYC — Sweden",
     marketingName: "Nordic KYC — Sweden",
     description:
-      "Check if a Swedish company is real and safe to do business with. Official registry data, VAT validation, and sanctions screening in one call.",
+      "Check if a Swedish company is real and safe to do business with. Official registry data, VAT validation, sanctions screening, and PEP check in one call.",
     longDescription:
       "Looks up the company in Sweden's official business registry (Bolagsverket), validates their EU VAT number against VIES, and screens the company name against OFAC, EU, and UN sanctions lists. Use this before onboarding a customer, signing a contract, or generating a partnership agreement involving a Swedish entity.",
     agentDescription:
       "verify swedish company, is this swedish company legit, KYC check sweden, check swedish org number, onboard swedish business customer, validate swedish organization, bolagsverket lookup",
     category: "compliance-verification",
     priceCents: 150,
-    componentSumCents: 110,
+    componentSumCents: 125,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "nordic",
@@ -213,6 +213,8 @@ const SOLUTIONS: SolutionDef[] = [
       vat_number: "SE556703748501",
       is_sanctioned: false,
       match_count: 0,
+      is_pep: false,
+      pep_match_count: 0,
     },
     steps: [
       {
@@ -236,6 +238,13 @@ const SOLUTIONS: SolutionDef[] = [
         parallelGroup: 1,
         inputMap: { name: "$steps[0].company_name" },
       },
+      {
+        capabilitySlug: "pep-check",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$steps[0].company_name" },
+      },
     ],
   },
 
@@ -245,14 +254,14 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Nordic KYC — Norway",
     marketingName: "Nordic KYC — Norway",
     description:
-      "Check if a Norwegian company is real and safe to do business with. Official registry data, VAT validation, and sanctions screening in one call.",
+      "Check if a Norwegian company is real and safe to do business with. Official registry data, VAT validation, sanctions screening, and PEP check in one call.",
     longDescription:
       "Looks up the company in Norway's Brønnøysund Register Centre, validates their VAT number, and screens against international sanctions lists. Use this before doing business with a Norwegian entity.",
     agentDescription:
       "verify norwegian company, is this norwegian company legit, KYC check norway, check norwegian org number, brønnøysund lookup, validate norwegian organization",
     category: "compliance-verification",
     priceCents: 150,
-    componentSumCents: 110,
+    componentSumCents: 125,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "nordic",
@@ -277,6 +286,8 @@ const SOLUTIONS: SolutionDef[] = [
       vat_number: "NO923609016MVA",
       is_sanctioned: false,
       match_count: 0,
+      is_pep: false,
+      pep_match_count: 0,
     },
     steps: [
       {
@@ -300,6 +311,13 @@ const SOLUTIONS: SolutionDef[] = [
         parallelGroup: 1,
         inputMap: { name: "$steps[0].company_name" },
       },
+      {
+        capabilitySlug: "pep-check",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$steps[0].company_name" },
+      },
     ],
   },
 
@@ -309,14 +327,14 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Nordic KYC — Denmark",
     marketingName: "Nordic KYC — Denmark",
     description:
-      "Check if a Danish company is real and safe to do business with. Official registry data, VAT validation, and sanctions screening in one call.",
+      "Check if a Danish company is real and safe to do business with. Official registry data, VAT validation, sanctions screening, and PEP check in one call.",
     longDescription:
       "Looks up the company in Denmark's CVR register, validates their EU VAT number, and screens against international sanctions lists. Use this before doing business with a Danish entity.",
     agentDescription:
       "verify danish company, is this danish company legit, KYC check denmark, check danish CVR number, validate danish organization",
     category: "compliance-verification",
     priceCents: 150,
-    componentSumCents: 110,
+    componentSumCents: 125,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "nordic",
@@ -338,6 +356,8 @@ const SOLUTIONS: SolutionDef[] = [
       vat_number: "DK47458714",
       is_sanctioned: false,
       match_count: 0,
+      is_pep: false,
+      pep_match_count: 0,
     },
     steps: [
       {
@@ -361,6 +381,13 @@ const SOLUTIONS: SolutionDef[] = [
         parallelGroup: 1,
         inputMap: { name: "$steps[0].company_name" },
       },
+      {
+        capabilitySlug: "pep-check",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$steps[0].company_name" },
+      },
     ],
   },
 
@@ -370,14 +397,14 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Nordic KYC — Finland",
     marketingName: "Nordic KYC — Finland",
     description:
-      "Check if a Finnish company is real and safe to do business with. Official registry data, VAT validation, and sanctions screening in one call.",
+      "Check if a Finnish company is real and safe to do business with. Official registry data, VAT validation, sanctions screening, and PEP check in one call.",
     longDescription:
       "Looks up the company in Finland's PRH business register using their Y-tunnus (business ID), validates their EU VAT number, and screens against international sanctions lists. Use this before doing business with a Finnish entity.",
     agentDescription:
       "verify finnish company, is this finnish company legit, KYC check finland, check finnish business id, Y-tunnus lookup, validate finnish organization",
     category: "compliance-verification",
     priceCents: 150,
-    componentSumCents: 110,
+    componentSumCents: 125,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "nordic",
@@ -402,6 +429,8 @@ const SOLUTIONS: SolutionDef[] = [
       vat_number: "FI01120389",
       is_sanctioned: false,
       match_count: 0,
+      is_pep: false,
+      pep_match_count: 0,
     },
     steps: [
       {
@@ -421,6 +450,13 @@ const SOLUTIONS: SolutionDef[] = [
       {
         capabilitySlug: "sanctions-check",
         stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$steps[0].company_name" },
+      },
+      {
+        capabilitySlug: "pep-check",
+        stepOrder: 4,
         canParallel: true,
         parallelGroup: 1,
         inputMap: { name: "$steps[0].company_name" },
@@ -621,14 +657,14 @@ const SOLUTIONS: SolutionDef[] = [
     name: "US Company Verify",
     marketingName: "US Company Verification",
     description:
-      "Look up any US company using SEC EDGAR data and screen against international sanctions lists. Filing data, company status, and sanctions check.",
+      "Look up any US company using SEC EDGAR data, screen against international sanctions lists, and check for politically exposed persons (PEP). Filing data, company status, sanctions and PEP check.",
     longDescription:
       "Queries SEC EDGAR for official filing data using a company name, ticker symbol, or CIK number, then screens the company against OFAC, EU, and UN sanctions lists. Returns company name, CIK, state of incorporation, and sanctions status. Use before doing business with a US entity.",
     agentDescription:
       "verify US company, check if american company exists, SEC company lookup, is this US company legit, US company sanctions check, EDGAR lookup",
     category: "compliance-verification",
     priceCents: 130,
-    componentSumCents: 100,
+    componentSumCents: 115,
     valueTier: "verification",
     maintenanceLevel: "very-low",
     geography: "us",
@@ -653,6 +689,8 @@ const SOLUTIONS: SolutionDef[] = [
       state: "CA",
       is_sanctioned: false,
       match_count: 0,
+      is_pep: false,
+      pep_match_count: 0,
     },
     steps: [
       {
@@ -665,8 +703,15 @@ const SOLUTIONS: SolutionDef[] = [
       {
         capabilitySlug: "sanctions-check",
         stepOrder: 2,
-        canParallel: false,
-        parallelGroup: null,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$steps[0].company_name" },
+      },
+      {
+        capabilitySlug: "pep-check",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
         inputMap: { name: "$steps[0].company_name" },
       },
     ],
@@ -2091,6 +2136,151 @@ const SOLUTIONS: SolutionDef[] = [
       { capabilitySlug: "ssl-check", stepOrder: 3, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.entity_website" } },
       { capabilitySlug: "whois-lookup", stepOrder: 4, canParallel: true, parallelGroup: 2, inputMap: { domain: "$input.entity_website" } },
       { capabilitySlug: "email-deliverability-check", stepOrder: 5, canParallel: true, parallelGroup: 2, inputMap: { domain: "$input.entity_website" } },
+    ],
+  },
+
+  // ── Web3 Solutions ────────────────────────────────────────────────────────
+
+  {
+    slug: "token-project-dd",
+    name: "Token Project Due Diligence",
+    marketingName: "Token Project Due Diligence",
+    description:
+      "Evaluates a token project's legitimacy before investment or integration. Checks domain infrastructure, security posture, sanctions status, and technology stack. The answer to \"is this token project real?\"",
+    category: "security-risk",
+    priceCents: 75,
+    componentSumCents: 52,
+    valueTier: "verification",
+    maintenanceLevel: "near-zero",
+    geography: "global",
+    targetAudience:
+      "Web3 fund compliance agents, DeFi risk bots, ElizaOS agents, Solana Agent Kit users, x402 clients evaluating counterparties",
+    transparencyTag: "mixed",
+    extendsWith: ["crypto-price", "us-company-data"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        domain: {
+          type: "string",
+          description: "Token project website domain (e.g. uniswap.org)",
+        },
+        entity_name: {
+          type: "string",
+          description: "Project or company name for sanctions screening",
+        },
+      },
+      required: ["domain", "entity_name"],
+    },
+    exampleInput: { domain: "uniswap.org", entity_name: "Uniswap Labs" },
+    exampleOutput: {
+      registrar: "Cloudflare Inc.",
+      ssl_valid: true,
+      days_until_expiry: 312,
+      reputation_score: 91,
+      header_security_grade: "B",
+      is_sanctioned: false,
+      tech_stack: { frontend: "React", hosting: "Cloudflare" },
+    },
+    steps: [
+      { capabilitySlug: "whois-lookup", stepOrder: 1, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.domain" } },
+      { capabilitySlug: "ssl-check", stepOrder: 2, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.domain" } },
+      { capabilitySlug: "dns-lookup", stepOrder: 3, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.domain" } },
+      { capabilitySlug: "domain-reputation", stepOrder: 4, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.domain" } },
+      { capabilitySlug: "header-security-check", stepOrder: 5, canParallel: true, parallelGroup: 1, inputMap: { url: "$input.domain" } },
+      { capabilitySlug: "sanctions-check", stepOrder: 6, canParallel: true, parallelGroup: 1, inputMap: { name: "$input.entity_name" } },
+      { capabilitySlug: "tech-stack-detect", stepOrder: 7, canParallel: true, parallelGroup: 1, inputMap: { url: "$input.domain" } },
+    ],
+  },
+  {
+    slug: "defi-protocol-risk",
+    name: "DeFi Protocol Risk Check",
+    marketingName: "DeFi Protocol Risk Check",
+    description:
+      "Evaluates a DeFi protocol's infrastructure security before interaction. Checks SSL certificate health, HTTP security headers, DNS configuration, domain reputation, and technology surface area. Answers \"is this protocol's infrastructure secure?\"",
+    category: "security-risk",
+    priceCents: 50,
+    componentSumCents: 32,
+    valueTier: "data-lookup",
+    maintenanceLevel: "near-zero",
+    geography: "global",
+    targetAudience:
+      "DeFi risk agents, yield farming bots, portfolio management agents, x402 clients, Solana Agent Kit users",
+    transparencyTag: "mixed",
+    extendsWith: ["crypto-price", "whois-lookup", "sanctions-check"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        domain: {
+          type: "string",
+          description: "DeFi protocol domain (e.g. app.aave.com)",
+        },
+      },
+      required: ["domain"],
+    },
+    exampleInput: { domain: "app.aave.com" },
+    exampleOutput: {
+      ssl_valid: true,
+      days_until_expiry: 245,
+      header_security_grade: "A",
+      reputation_score: 94,
+      dns_records: true,
+      tech_stack: { frontend: "React", hosting: "Cloudflare" },
+    },
+    steps: [
+      { capabilitySlug: "ssl-check", stepOrder: 1, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.domain" } },
+      { capabilitySlug: "header-security-check", stepOrder: 2, canParallel: true, parallelGroup: 1, inputMap: { url: "$input.domain" } },
+      { capabilitySlug: "dns-lookup", stepOrder: 3, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.domain" } },
+      { capabilitySlug: "domain-reputation", stepOrder: 4, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.domain" } },
+      { capabilitySlug: "tech-stack-detect", stepOrder: 5, canParallel: true, parallelGroup: 1, inputMap: { url: "$input.domain" } },
+    ],
+  },
+  {
+    slug: "web3-counterparty-kyb",
+    name: "Web3 Counterparty KYB",
+    marketingName: "Web3 Counterparty KYB",
+    description:
+      "Counterparty due diligence for Web3 companies, DAOs, and token projects. Sanctions screening on the entity plus full domain infrastructure audit. Answers \"should we transact with this counterparty?\"",
+    category: "security-risk",
+    priceCents: 70,
+    componentSumCents: 49,
+    valueTier: "verification",
+    maintenanceLevel: "near-zero",
+    geography: "global",
+    targetAudience:
+      "Web3 OTC desks, DAO treasury agents, DeFi lending protocol risk engines, x402 payment agents, ElizaOS agents",
+    transparencyTag: "mixed",
+    extendsWith: ["crypto-price", "us-company-data", "tech-stack-detect"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        entity_name: {
+          type: "string",
+          description: "Company, DAO, or project name for sanctions screening",
+        },
+        domain: {
+          type: "string",
+          description: "Counterparty website domain",
+        },
+      },
+      required: ["entity_name", "domain"],
+    },
+    exampleInput: { entity_name: "Circle Internet Financial", domain: "circle.com" },
+    exampleOutput: {
+      is_sanctioned: false,
+      confidence: "high",
+      registrar: "MarkMonitor Inc.",
+      ssl_valid: true,
+      reputation_score: 96,
+      header_security_grade: "A",
+      dns_records: true,
+    },
+    steps: [
+      { capabilitySlug: "sanctions-check", stepOrder: 1, canParallel: true, parallelGroup: 1, inputMap: { name: "$input.entity_name" } },
+      { capabilitySlug: "whois-lookup", stepOrder: 2, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.domain" } },
+      { capabilitySlug: "ssl-check", stepOrder: 3, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.domain" } },
+      { capabilitySlug: "domain-reputation", stepOrder: 4, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.domain" } },
+      { capabilitySlug: "header-security-check", stepOrder: 5, canParallel: true, parallelGroup: 1, inputMap: { url: "$input.domain" } },
+      { capabilitySlug: "dns-lookup", stepOrder: 6, canParallel: true, parallelGroup: 1, inputMap: { domain: "$input.domain" } },
     ],
   },
 ];
