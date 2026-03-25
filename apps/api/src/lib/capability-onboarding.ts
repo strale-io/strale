@@ -4,9 +4,9 @@
  * and detects the transparency tag.
  */
 
-import { eq, and, isNotNull } from "drizzle-orm";
+import { eq, and, isNotNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, testSuites } from "../db/schema.js";
+import { capabilities, solutions, solutionSteps, testSuites } from "../db/schema.js";
 import { generateTestInput } from "./test-input-generator.js";
 import { getExecutor } from "../capabilities/index.js";
 import { classifyFieldVolatility, makeVolatilityAwareCheck } from "./field-volatility.js";
@@ -461,4 +461,137 @@ function detectTransparencyTag(slug: string): string | null {
 
   // Default to algorithmic — safer assumption
   return "algorithmic";
+}
+
+// ─── Capability deactivation lifecycle ──────────────────────────────────────
+
+/**
+ * Call when a capability is deactivated (is_active set to false).
+ * Propagates deactivation to any solutions that depend on this capability.
+ *
+ * Deactivation cascade logic:
+ * - Find all active solutions that have a step referencing this slug
+ * - Set those solutions to is_active = false
+ * - Log each deactivation with the reason
+ *
+ * This is intentionally conservative: it deactivates rather than auto-repairs,
+ * because fixing a broken solution requires human judgment about replacement.
+ *
+ * IMPORTANT: This hook must be called any time a capability is deactivated.
+ * As of 2026-03-25, no code path in the codebase sets capabilities.isActive = false
+ * programmatically — deactivation only happens via direct DB queries. When an admin
+ * endpoint or CLI command is added for capability deactivation, it MUST call this
+ * hook. Search for: capabilities.isActive = false, set({ isActive: false })
+ */
+export async function onCapabilityDeactivated(
+  capabilitySlug: string,
+  reason?: string,
+): Promise<{ deactivatedSolutions: string[] }> {
+  const db = getDb();
+  const deactivatedSolutions: string[] = [];
+
+  // Find all active solutions that include this capability as a step
+  const affectedSolutions = await db.execute(sql`
+    SELECT DISTINCT s.slug, s.id, s.name
+    FROM solutions s
+    INNER JOIN solution_steps ss ON ss.solution_id = s.id
+    WHERE ss.capability_slug = ${capabilitySlug}
+      AND s.is_active = true
+  `);
+
+  const rows = (Array.isArray(affectedSolutions)
+    ? affectedSolutions
+    : (affectedSolutions as any)?.rows ?? []) as Array<{
+    slug: string;
+    id: string;
+    name: string;
+  }>;
+
+  if (rows.length === 0) {
+    console.log(
+      `[capability-lifecycle] Deactivating ${capabilitySlug} — no active solutions affected`,
+    );
+    return { deactivatedSolutions: [] };
+  }
+
+  for (const sol of rows) {
+    await db
+      .update(solutions)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(solutions.id, sol.id));
+
+    deactivatedSolutions.push(sol.slug);
+
+    console.warn(
+      `[capability-lifecycle] Deactivated solution '${sol.slug}' (${sol.name}) ` +
+        `because capability '${capabilitySlug}' was deactivated` +
+        (reason ? ` — reason: ${reason}` : ""),
+    );
+  }
+
+  console.warn(
+    `[capability-lifecycle] Capability '${capabilitySlug}' deactivated. ` +
+      `${deactivatedSolutions.length} solution(s) also deactivated: ${deactivatedSolutions.join(", ")}`,
+  );
+
+  return { deactivatedSolutions };
+}
+
+/**
+ * Call when a capability is reactivated (is_active set back to true).
+ * Checks whether any solutions that were deactivated due to this capability
+ * can now be safely reactivated (all their steps are now active).
+ */
+export async function onCapabilityReactivated(
+  capabilitySlug: string,
+): Promise<{ reactivatedSolutions: string[] }> {
+  const db = getDb();
+  const reactivatedSolutions: string[] = [];
+
+  // Find inactive solutions that reference this capability
+  const candidateSolutions = await db.execute(sql`
+    SELECT DISTINCT s.slug, s.id, s.name
+    FROM solutions s
+    INNER JOIN solution_steps ss ON ss.solution_id = s.id
+    WHERE ss.capability_slug = ${capabilitySlug}
+      AND s.is_active = false
+  `);
+
+  const rows = (Array.isArray(candidateSolutions)
+    ? candidateSolutions
+    : (candidateSolutions as any)?.rows ?? []) as Array<{
+    slug: string;
+    id: string;
+    name: string;
+  }>;
+
+  for (const sol of rows) {
+    // Check if ALL steps of this solution now have active capabilities
+    const allStepsActive = await db.execute(sql`
+      SELECT COUNT(*) FILTER (WHERE c.is_active = false OR c.slug IS NULL)::text AS inactive_count
+      FROM solution_steps ss
+      LEFT JOIN capabilities c ON c.slug = ss.capability_slug
+      WHERE ss.solution_id = ${sol.id}
+    `);
+
+    const checkRows = (Array.isArray(allStepsActive)
+      ? allStepsActive
+      : (allStepsActive as any)?.rows ?? []) as Array<{ inactive_count: string }>;
+
+    const inactiveCount = parseInt(checkRows[0]?.inactive_count ?? "1", 10);
+
+    if (inactiveCount === 0) {
+      await db
+        .update(solutions)
+        .set({ isActive: true, updatedAt: new Date() })
+        .where(eq(solutions.id, sol.id));
+
+      reactivatedSolutions.push(sol.slug);
+      console.log(
+        `[capability-lifecycle] Reactivated solution '${sol.slug}' — all steps now active`,
+      );
+    }
+  }
+
+  return { reactivatedSolutions };
 }
