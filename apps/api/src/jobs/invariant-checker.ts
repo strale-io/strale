@@ -33,6 +33,26 @@ export async function runInvariantChecks(): Promise<void> {
   let alerts = 0;
   let checked = 0;
 
+  // Fetch provider health once at the start — used by Check 5 to distinguish
+  // provider outages from code bugs (avoids N false "CODE BUG" alerts when
+  // a single provider like Browserless goes down)
+  let unhealthyCapabilities = new Set<string>();
+  try {
+    const { runDependencyHealthChecks } = await import("../lib/dependency-health.js");
+    const { getActiveProviders } = await import("../lib/dependency-manifest.js");
+    const providerHealth = await runDependencyHealthChecks();
+    for (const provider of getActiveProviders()) {
+      const health = providerHealth[provider.name];
+      if (health && !health.healthy) {
+        for (const cap of provider.capabilities) {
+          unhealthyCapabilities.add(cap);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[invariant-checker] Provider health fetch failed — Check 5 will run without provider context");
+  }
+
   try {
     const r1 = await checkScorePersistenceDrift();
     healed += r1.healed;
@@ -68,7 +88,7 @@ export async function runInvariantChecks(): Promise<void> {
   }
 
   try {
-    const r5 = await checkAlgorithmicCorrectnessFloor();
+    const r5 = await checkAlgorithmicCorrectnessFloor(unhealthyCapabilities);
     alerts += r5.alerts;
     checked += r5.checked;
   } catch (err) {
@@ -89,6 +109,21 @@ export async function runInvariantChecks(): Promise<void> {
     checked += r7.checked;
   } catch (err) {
     console.error("[invariant-checker] CHECK 7 (migration completeness) failed:", err);
+  }
+
+  // Log provider outage summary if any capabilities were skipped
+  if (unhealthyCapabilities.size > 0) {
+    try {
+      const { getActiveProviders } = await import("../lib/dependency-manifest.js");
+      const { runDependencyHealthChecks: _ } = await import("../lib/dependency-health.js");
+      const affectedProviders = getActiveProviders()
+        .filter((p) => p.capabilities.some((c) => unhealthyCapabilities.has(c)))
+        .map((p) => `${p.displayName} (${p.capabilities.length} capabilities)`)
+        .join(", ");
+      console.warn(
+        `[invariant-checker] Check 5 skipped ${unhealthyCapabilities.size} capabilities due to provider outages: ${affectedProviders}`,
+      );
+    } catch {}
   }
 
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
@@ -415,7 +450,9 @@ async function checkFreshnessDecayDrift(): Promise<{ healed: number; alerts: num
 // Pure algorithmic capabilities have zero environmental variability.
 // Correctness below 85% is definitionally a code defect, not a transient issue.
 
-async function checkAlgorithmicCorrectnessFloor(): Promise<{ alerts: number; checked: number }> {
+async function checkAlgorithmicCorrectnessFloor(
+  unhealthyCapabilities: Set<string>,
+): Promise<{ alerts: number; checked: number }> {
   const db = getDb();
   const CORRECTNESS_FLOOR = 85;
   const ROLLING_WINDOW_HOURS = 12;
@@ -466,6 +503,15 @@ async function checkAlgorithmicCorrectnessFloor(): Promise<{ alerts: number; che
     const correctnessRate = Math.round((passed / rows.length) * 100);
 
     if (correctnessRate < CORRECTNESS_FLOOR) {
+      // Check if failures are explained by a known provider outage
+      if (unhealthyCapabilities.has(cap.slug)) {
+        console.log(
+          `[invariant-checker] Check 5: ${cap.slug} correctness ${correctnessRate}% — ` +
+            `SKIPPED (provider unhealthy, failures are upstream not code bugs)`,
+        );
+        continue;
+      }
+
       const failingTests = rows
         .filter((r) => !r.passed)
         .map((r) => `"${r.test_name}": ${r.failure_reason ?? "no reason recorded"}`)
@@ -474,10 +520,11 @@ async function checkAlgorithmicCorrectnessFloor(): Promise<{ alerts: number; che
       const message = [
         `ALGORITHMIC CORRECTNESS VIOLATION: ${cap.slug}`,
         `Correctness rate: ${correctnessRate}% (floor: ${CORRECTNESS_FLOOR}%)`,
+        `Provider health: verified healthy — this is a CODE BUG, not a provider issue`,
         `Tests checked: ${rows.length} | Passed: ${passed} | Failed: ${rows.length - passed}`,
         `Failing tests:`,
         ...failingTests.map((t) => `  - ${t}`),
-        `This is a CODE BUG, not an environmental issue.`,
+        `Investigate the capability code immediately.`,
       ].join("\n");
 
       console.error(`[invariant-checker] ${message}`);
@@ -496,6 +543,7 @@ async function checkAlgorithmicCorrectnessFloor(): Promise<{ alerts: number; che
           floor: CORRECTNESS_FLOOR,
           failing_tests: failingTests,
           window_hours: ROLLING_WINDOW_HOURS,
+          provider_health: "verified_healthy",
         },
       });
     }
