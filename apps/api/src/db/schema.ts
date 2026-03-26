@@ -340,6 +340,19 @@ export const testSuites = pgTable(
     // 'live' (real API), 'fixture' (saved data), 'canary' (periodic live check)
     fixtureLastRefreshed: timestamp("fixture_last_refreshed", { withTimezone: true }),
     externalCostCents: integer("external_cost_cents").default(0),
+    // For auto-generated tests: the capability's updated_at at generation time.
+    // If the capability was modified after this timestamp, the ground truth
+    // may be contaminated and should be re-verified.
+    generationCapabilityUpdatedAt: timestamp(
+      "generation_capability_updated_at",
+      { withTimezone: true },
+    ),
+    // When the ground truth was last verified (human review or clean post-fix run).
+    // NULL = never verified — treat with caution for auto-generated tests.
+    groundTruthVerifiedAt: timestamp(
+      "ground_truth_verified_at",
+      { withTimezone: true },
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -596,6 +596,48 @@ async function checkAlgorithmicCorrectnessFloor(
         continue;
       }
 
+      // Check for potential ground truth contamination before classifying as code bug.
+      // If the capability was modified after an auto-generated test was created, the
+      // test's ground truth may be stale (captured before the fix).
+      const contaminatedTests = await db.execute(sql`
+        SELECT ts.test_name
+        FROM test_suites ts
+        JOIN capabilities c ON c.slug = ts.capability_slug
+        WHERE ts.capability_slug = ${cap.slug}
+          AND ts.test_type = 'known_answer'
+          AND ts.generation_capability_updated_at IS NOT NULL
+          AND ts.ground_truth_verified_at IS NULL
+          AND c.updated_at > ts.generation_capability_updated_at
+      `);
+
+      const contamRows = (Array.isArray(contaminatedTests)
+        ? contaminatedTests
+        : (contaminatedTests as any)?.rows ?? []) as Array<{ test_name: string }>;
+
+      if (contamRows.length > 0) {
+        const testNames = contamRows.map((r) => r.test_name).join(", ");
+        console.warn(
+          `[invariant-checker] Check 5: ${cap.slug} has ${contamRows.length} ` +
+            `auto-generated test(s) with unverified ground truth: ${testNames}. ` +
+            `Capability was modified after test generation. ` +
+            `Suppressing CODE BUG alert — run tests manually to re-verify.`,
+        );
+
+        await logHealthEvent({
+          eventType: "ground_truth_contamination_risk",
+          capabilitySlug: cap.slug,
+          tier: 2,
+          actionTaken: `Auto-generated tests for ${cap.slug} may have contaminated ground truth: ${testNames}`,
+          details: {
+            check: "ground_truth_contamination",
+            capabilitySlug: cap.slug,
+            contaminatedTests: contamRows.map((r) => r.test_name),
+            actionRequired: "Run the capability manually to verify ground truth is still correct",
+          },
+        });
+        continue; // Skip CODE BUG alert for this capability
+      }
+
       const failingTests = rows
         .filter((r) => !r.passed)
         .map((r) => `"${r.test_name}": ${r.failure_reason ?? "no reason recorded"}`)

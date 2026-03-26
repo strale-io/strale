@@ -348,15 +348,30 @@ export async function validateTestFixtures(
       }
     }
 
+    // If this is an auto-generated test with unverified ground truth,
+    // verify it now — the first successful execution after generation
+    // confirms the ground truth is still valid.
+    const shouldVerify =
+      suite.generationCapabilityUpdatedAt !== null &&
+      suite.groundTruthVerifiedAt === null;
+
     await db
       .update(testSuites)
       .set({
         validationRules: { checks: calibratedChecks },
         baselineOutput: realOutput,
         baselineCapturedAt: new Date(),
+        ...(shouldVerify ? { groundTruthVerifiedAt: new Date() } : {}),
         updatedAt: new Date(),
       })
       .where(eq(testSuites.id, suite.id));
+
+    if (shouldVerify) {
+      console.log(
+        `[onboarding] Ground truth verified for ${capabilitySlug} ` +
+          `test "${suite.testName}" — first clean run after generation`,
+      );
+    }
 
     calibrated++;
   }
@@ -399,6 +414,16 @@ async function generateAlgorithmicRegressionTest(
     return;
   }
 
+  // Record the capability's current updated_at as generation metadata.
+  // This enables temporal contamination detection: if the capability is
+  // modified after this timestamp, the ground truth may no longer be valid.
+  const [capRow] = await db
+    .select({ updatedAt: capabilities.updatedAt })
+    .from(capabilities)
+    .where(eq(capabilities.slug, cap.slug))
+    .limit(1);
+  const capabilityUpdatedAt = capRow?.updatedAt ?? new Date();
+
   const output = result.output as Record<string, unknown>;
   const outputFields = Object.keys(output);
 
@@ -424,8 +449,10 @@ async function generateAlgorithmicRegressionTest(
     input: testInput,
     expectedOutput: output,
     validationRules: { checks: validationChecks },
-    scheduleTier: "A", // Algorithmic caps are free — run every 6h
+    scheduleTier: "A",
     estimatedCostCents: 0,
+    generationCapabilityUpdatedAt: capabilityUpdatedAt,
+    groundTruthVerifiedAt: null, // unverified until a clean run confirms it
   });
 
   console.log(
