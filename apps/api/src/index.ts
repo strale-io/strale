@@ -41,6 +41,10 @@ async function main() {
     console.log("[startup] All provider env vars present.");
   }
 
+  // Schema validation: fail fast if DB is missing columns the code expects
+  const { validateSchema } = await import("./lib/schema-validator.js");
+  await validateSchema();
+
   // Import app after executors are registered
   const { app, warmCatalog } = await import("./app.js");
   const { startTestScheduler } = await import("./jobs/test-scheduler.js");
