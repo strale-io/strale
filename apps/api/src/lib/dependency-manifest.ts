@@ -257,6 +257,9 @@ export const PROVIDERS: DependencyProvider[] = [
   },
 
   // ─── Retired providers (keep for migration completeness checks) ───────────
+  // NOTE: OPENSANCTIONS_API_KEY in Railway can be removed — this provider
+  // is retired (replaced by Dilisense on 2026-03-25). The key is dead.
+  // Remove via: Railway dashboard → strale service → Variables → Delete OPENSANCTIONS_API_KEY
   {
     name: "opensanctions",
     displayName: "OpenSanctions (RETIRED)",
