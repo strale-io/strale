@@ -87,6 +87,14 @@ export async function runInvariantChecks(): Promise<void> {
     console.error("[invariant-checker] CHECK 4 (freshness drift) failed:", err);
   }
 
+  // Correlated failure detection — fires ONE provider-level alert instead of N
+  // individual alerts when a shared provider is down
+  try {
+    await detectCorrelatedFailures(unhealthyCapabilities);
+  } catch (err) {
+    console.error("[invariant-checker] Correlated failure detection threw:", err);
+  }
+
   try {
     const r5 = await checkAlgorithmicCorrectnessFloor(unhealthyCapabilities);
     alerts += r5.alerts;
@@ -444,6 +452,82 @@ async function checkFreshnessDecayDrift(): Promise<{ healed: number; alerts: num
   }
 
   return { healed, alerts, checked: rows.length };
+}
+
+// ─── Correlated failure detection ────────────────────────────────────────────
+// When a shared provider (Browserless, Anthropic, Dilisense) is down, multiple
+// capabilities fail simultaneously. This detector fires ONE provider-level
+// alert instead of letting Check 5 fire N individual capability alerts.
+
+async function detectCorrelatedFailures(
+  unhealthyCapabilities: Set<string>,
+): Promise<void> {
+  if (unhealthyCapabilities.size === 0) return;
+
+  const { getActiveProviders } = await import("../lib/dependency-manifest.js");
+  const { runDependencyHealthChecks } = await import("../lib/dependency-health.js");
+
+  const db = getDb();
+  const MIN_CORRELATED = 3;
+  const WINDOW_MINUTES = 30;
+  const cutoff = new Date(Date.now() - WINDOW_MINUTES * 60 * 1000).toISOString();
+
+  const providerHealth = await runDependencyHealthChecks().catch(() => ({} as Record<string, { healthy: boolean; error?: string }>));
+
+  for (const provider of getActiveProviders()) {
+    const health = providerHealth[provider.name] as { healthy: boolean; error?: string } | undefined;
+    if (!health || health.healthy) continue;
+    if (provider.capabilities.length < MIN_CORRELATED) continue;
+
+    // Count recent failures across this provider's capabilities
+    const capSlugs = provider.capabilities;
+    const recentFailures = await db.execute(sql`
+      SELECT
+        tr.capability_slug,
+        COUNT(*)::text AS fail_count
+      FROM test_results tr
+      WHERE tr.capability_slug = ANY(${capSlugs})
+        AND tr.executed_at >= ${cutoff}::timestamptz
+        AND tr.passed = false
+      GROUP BY tr.capability_slug
+      HAVING COUNT(*) > 0
+    `);
+
+    const rows = (Array.isArray(recentFailures)
+      ? recentFailures
+      : (recentFailures as any)?.rows ?? []) as Array<{
+      capability_slug: string;
+      fail_count: string;
+    }>;
+
+    if (rows.length < MIN_CORRELATED) continue;
+
+    const affectedSlugs = rows.map((r) => r.capability_slug);
+    const message = [
+      `PROVIDER OUTAGE DETECTED: ${provider.displayName}`,
+      `${rows.length} of ${provider.capabilities.length} capabilities have recent failures`,
+      `Provider health probe: ${health.error ?? "unhealthy"}`,
+      `Affected capabilities: ${affectedSlugs.slice(0, 10).join(", ")}${affectedSlugs.length > 10 ? ` (+${affectedSlugs.length - 10} more)` : ""}`,
+      `Individual capability alerts are suppressed while provider is unhealthy.`,
+    ].join("\n");
+
+    console.error(`[invariant-checker] ${message}`);
+
+    await logHealthEvent({
+      eventType: "provider_outage",
+      tier: 1,
+      actionTaken: message,
+      details: {
+        check: "correlated_failure_detector",
+        providerName: provider.name,
+        providerDisplayName: provider.displayName,
+        affectedCapabilities: affectedSlugs,
+        totalAffected: rows.length,
+        windowMinutes: WINDOW_MINUTES,
+        probeError: health.error ?? null,
+      },
+    });
+  }
 }
 
 // ─── CHECK 5: Algorithmic correctness floor (Tier 1 — CRITICAL ALERT) ───────

@@ -254,20 +254,55 @@ async function pollCycle(): Promise<void> {
       return;
     }
 
+    // Check provider health — skip capabilities whose provider is unhealthy
+    // to prevent SQS score pollution during outages
+    let runnableCaps = overdue;
+    try {
+      const { runDependencyHealthChecks } = await import("../lib/dependency-health.js");
+      const { getActiveProviders } = await import("../lib/dependency-manifest.js");
+      const providerHealth = await runDependencyHealthChecks();
+      const unhealthySlugs = new Set<string>();
+      for (const provider of getActiveProviders()) {
+        const health = providerHealth[provider.name];
+        if (health && !health.healthy) {
+          for (const cap of provider.capabilities) {
+            unhealthySlugs.add(cap);
+          }
+        }
+      }
+      if (unhealthySlugs.size > 0) {
+        const before = runnableCaps.length;
+        runnableCaps = overdue.filter((cap) => !unhealthySlugs.has(cap.slug));
+        const skipped = before - runnableCaps.length;
+        if (skipped > 0) {
+          console.log(
+            `[test-scheduler] Skipping ${skipped} capabilities with unhealthy providers`,
+          );
+        }
+      }
+    } catch {
+      // If health check fails, run all tests (graceful degradation)
+    }
+
+    if (runnableCaps.length === 0) {
+      console.log("[test-scheduler] Poll: all overdue capabilities have unhealthy providers, skipping");
+      return;
+    }
+
     // Summarize by tier
     const tierCounts: Record<string, number> = {};
-    for (const cap of overdue) {
+    for (const cap of runnableCaps) {
       tierCounts[cap.scheduleTier] = (tierCounts[cap.scheduleTier] ?? 0) + 1;
     }
     const tierSummary = Object.entries(tierCounts)
       .map(([tier, count]) => `${count} tier-${tier}`)
       .join(", ");
-    console.log(`[test-scheduler] Poll: ${overdue.length} overdue capabilities (${tierSummary})`);
+    console.log(`[test-scheduler] Poll: ${runnableCaps.length} overdue capabilities (${tierSummary})`);
 
     let totalPassed = 0;
     let totalFailed = 0;
 
-    for (const cap of overdue) {
+    for (const cap of runnableCaps) {
       const agoMs = cap.lastTestedAt ? Date.now() - cap.lastTestedAt.getTime() : null;
       const agoLabel = agoMs != null ? `${Math.round(agoMs / 3600_000)}h ago` : "never tested";
 
@@ -304,16 +339,16 @@ async function pollCycle(): Promise<void> {
     }
 
     console.log(
-      `[test-scheduler] Poll complete: ${overdue.length} capabilities tested, ${totalPassed} passed, ${totalFailed} failed`,
+      `[test-scheduler] Poll complete: ${runnableCaps.length} capabilities tested, ${totalPassed} passed, ${totalFailed} failed`,
     );
 
     // Write scheduler heartbeat for watchdog monitoring
     logHealthEvent({
       eventType: "scheduler_heartbeat",
       tier: 1,
-      actionTaken: `DB-driven poll: ${overdue.length} capabilities tested`,
+      actionTaken: `DB-driven poll: ${runnableCaps.length} capabilities tested`,
       details: {
-        tested: overdue.length,
+        tested: runnableCaps.length,
         passed: totalPassed,
         failed: totalFailed,
         tierCounts,
