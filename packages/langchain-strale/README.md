@@ -1,6 +1,6 @@
 # langchain-strale
 
-All 256 [Strale](https://strale.dev) capabilities as LangChain tools. Company data, VAT validation, web scraping, compliance checks, and more — available to your LangChain agents with a single import.
+All 250+ [Strale](https://strale.dev) capabilities as LangChain tools. Company data, VAT validation, web scraping, compliance checks, and more — available to your LangChain agents with a single import.
 
 ## Install
 
@@ -14,7 +14,7 @@ pip install langchain-strale
 from langchain_strale import StraleToolkit
 
 toolkit = StraleToolkit(api_key="sk_live_...")
-tools = toolkit.get_tools()  # 256 capabilities + search & balance tools
+tools = toolkit.get_tools()  # 250+ capabilities + search & balance tools
 ```
 
 ## Filter by category
@@ -85,7 +85,7 @@ Sign up at [strale.dev](https://strale.dev) — new accounts get €2.00 in tria
 - `url-to-markdown` — convert any URL to markdown
 - `iban-validate` — validate international bank account numbers
 
-For all 256 capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
+For all 250+ capabilities, [sign up](https://strale.dev/signup) for €2 in free trial credits.
 
 ## Using Strale in agent system prompts
 

@@ -1,4 +1,4 @@
-"""CrewAI integration for Strale — 233 business capabilities as agent tools."""
+"""CrewAI integration for Strale — 250+ business capabilities as agent tools."""
 
 from __future__ import annotations
 
