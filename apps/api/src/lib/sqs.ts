@@ -111,7 +111,7 @@ const TYPE_TO_FACTOR: Record<string, keyof typeof WEIGHTS> = {
 };
 
 const EXTERNAL_SERVICE_PATTERNS = [
-  /HTTP 429/i, /HTTP 503/i, /HTTP 502/i,
+  /HTTP 408/i, /HTTP 429/i, /HTTP 5\d{2}/i,
   /Too Many Requests/i, /rate limit/i, /QUOTA_EXCEEDED/i,
   /ECONNRESET/i, /ECONNREFUSED/i, /ETIMEDOUT/i, /ENOTFOUND/i,
   /timeout/i, /upstream/i, /Browserless/i,
