@@ -137,6 +137,62 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
   } else {
     console.log(`[onboarding] ${capabilitySlug} is fully onboarded`);
   }
+
+  // 5. Visibility gate — verify capability is externally visible
+  // Catches silent exclusion issues like visible=false that leave
+  // a capability internally healthy but invisible to users for days.
+  await verifyCapabilityVisibility(capabilitySlug);
+}
+
+// ─── Visibility verification ────────────────────────────────────────────────
+
+/**
+ * Verify that a capability will appear in /v1/capabilities.
+ * Called as the final step of onCapabilityCreated.
+ *
+ * Does NOT throw — logs a warning so onboarding isn't rolled back.
+ * The capability exists and will work; it just isn't visible to users yet.
+ */
+async function verifyCapabilityVisibility(slug: string): Promise<void> {
+  const db = getDb();
+
+  const [cap] = await db
+    .select({
+      isActive: capabilities.isActive,
+      visible: capabilities.visible,
+      lifecycleState: capabilities.lifecycleState,
+    })
+    .from(capabilities)
+    .where(eq(capabilities.slug, slug))
+    .limit(1);
+
+  if (!cap) {
+    console.warn(`[onboarding] Visibility check: '${slug}' not found in DB`);
+    return;
+  }
+
+  const issues: string[] = [];
+
+  if (!cap.isActive) {
+    issues.push("is_active = false — set to true to make it executable");
+  }
+  if (!cap.visible) {
+    issues.push("visible = false — set to true to appear in /v1/capabilities");
+  }
+  if (cap.lifecycleState !== "active" && cap.lifecycleState !== "degraded") {
+    issues.push(`lifecycle_state = '${cap.lifecycleState}' — must be 'active' or 'degraded'`);
+  }
+
+  if (issues.length > 0) {
+    console.warn(
+      `[onboarding] VISIBILITY WARNING: '${slug}' is onboarded but NOT visible to users.\n` +
+        `  Issues:\n` +
+        issues.map((i) => `  - ${i}`).join("\n") + "\n" +
+        `  Fix: UPDATE capabilities SET visible = true, is_active = true, lifecycle_state = 'active' WHERE slug = '${slug}';`,
+    );
+  } else {
+    console.log(`[onboarding] Visibility check passed: '${slug}' is active and visible`);
+  }
 }
 
 // ─── Metadata completeness validation ────────────────────────────────────────
