@@ -2540,7 +2540,7 @@ async function seed() {
   for (const cap of seedCapabilities) {
     await db
       .insert(capabilities)
-      .values({ ...cap, lifecycleState: "active" })
+      .values({ ...cap, lifecycleState: "active", visible: true })
       .onConflictDoUpdate({
         target: capabilities.slug,
         set: {
