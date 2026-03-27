@@ -88,7 +88,7 @@ const restrictedCors = cors({
     // origin === "null" intentionally rejected — sandboxed iframes should not
     // be able to issue credentialed cross-origin requests to payment endpoints.
     if (ALLOWED_ORIGINS.includes(origin)) return origin;
-    if (origin.endsWith(".lovable.app") || origin.endsWith(".lovable.dev")) return origin;
+    if (origin.endsWith(".lovable.app") || origin.endsWith(".lovable.dev") || origin.endsWith(".lovableproject.com")) return origin;
     return "";
   },
   allowMethods: ["GET", "POST", "OPTIONS"],
