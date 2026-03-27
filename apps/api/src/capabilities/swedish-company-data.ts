@@ -326,7 +326,7 @@ registerCapability(
   "swedish-company-data",
   async (input: CapabilityInput) => {
     const rawInput =
-      (input.org_number as string) ?? (input.task as string) ?? "";
+      (input.org_number as string) ?? (input.company_number as string) ?? "";
     if (typeof rawInput !== "string" || !rawInput.trim()) {
       throw new Error(
         "'org_number' is required. Provide a Swedish org number (e.g. 556703-7485) or company name.",

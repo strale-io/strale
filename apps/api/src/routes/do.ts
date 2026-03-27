@@ -544,12 +544,12 @@ doRoute.post(
   }
 
   // ── 6. Decide execution path ─────────────────────────────────────────
-  const executionInput = inputs ?? { task };
+  const executionInput = inputs ?? {};
   const outputSchema = (match.capability.outputSchema ?? {}) as Record<string, unknown>;
 
   // S-8: Validate inputs against capability's input_schema (required fields check)
   const inputSchema = (match.capability as any).inputSchema as { required?: string[]; properties?: Record<string, unknown> } | null;
-  if (inputs && inputSchema?.required && inputSchema?.properties) {
+  if (inputSchema?.required && inputSchema?.properties) {
     const missingFields = inputSchema.required.filter(
       (field) => !(field in executionInput) || executionInput[field] === undefined,
     );

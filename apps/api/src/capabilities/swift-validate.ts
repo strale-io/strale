@@ -25,7 +25,7 @@ const COUNTRY_CODES = new Set([
 ]);
 
 registerCapability("swift-validate", async (input: CapabilityInput) => {
-  const raw = (input.swift as string) ?? (input.bic as string) ?? (input.task as string) ?? "";
+  const raw = (input.swift as string) ?? (input.bic as string) ?? (input.swift_code as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
     throw new Error("'swift' is required. Provide a SWIFT/BIC code (e.g. DABASESX).");
   }

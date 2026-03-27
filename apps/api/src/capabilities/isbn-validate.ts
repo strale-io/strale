@@ -48,7 +48,7 @@ function formatIsbn13(isbn: string): string {
 }
 
 registerCapability("isbn-validate", async (input: CapabilityInput) => {
-  const raw = (input.isbn as string) ?? (input.task as string) ?? "";
+  const raw = (input.isbn as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
     throw new Error("'isbn' is required. Provide an ISBN-10 or ISBN-13.");
   }

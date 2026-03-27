@@ -81,7 +81,7 @@ registerCapability("adverse-media-check", async (input: CapabilityInput) => {
     (input.name as string) ??
     (input.entity_name as string) ??
     (input.entity as string) ??
-    (input.task as string) ??
+    (input.subject as string) ??
     ""
   ).trim();
   if (!name) {

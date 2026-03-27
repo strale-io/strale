@@ -45,7 +45,7 @@ const VAT_FORMATS: Record<string, VatFormat> = {
 };
 
 registerCapability("vat-format-validate", async (input: CapabilityInput) => {
-  const raw = (input.vat_number as string) ?? (input.task as string) ?? "";
+  const raw = (input.vat_number as string) ?? (input.vat as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
     throw new Error("'vat_number' is required. Provide a VAT number including country prefix (e.g. SE556703748501).");
   }

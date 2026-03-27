@@ -40,7 +40,7 @@ function extractTag(xml: string, tag: string): string | null {
 }
 
 registerCapability("vat-validate", async (input: CapabilityInput) => {
-  const rawVat = input.vat_number ?? input.task;
+  const rawVat = input.vat_number ?? input.vat;
   if (typeof rawVat !== "string" || !rawVat) {
     throw new Error("'vat_number' is required. Provide an EU VAT number including country prefix (e.g. SE556703748501).");
   }

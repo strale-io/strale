@@ -11,7 +11,7 @@ function looksLikeCompany(name: string): boolean {
 }
 
 registerCapability("sanctions-check", async (input: CapabilityInput) => {
-  const name = ((input.name as string) ?? (input.entity as string) ?? (input.task as string) ?? "").trim();
+  const name = ((input.name as string) ?? (input.entity as string) ?? (input.entity_name as string) ?? "").trim();
   if (!name) {
     throw new Error("'name' is required. Provide a person or company name to check.");
   }

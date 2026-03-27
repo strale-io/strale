@@ -5,7 +5,7 @@ const DILISENSE_API = "https://api.dilisense.com/v1/checkIndividual";
 const DILISENSE_FALLBACK_KEY = "eKYn3FpyoYQaQvRWd83Q2P3XzNi0n7ifblts8kHK";
 
 registerCapability("pep-check", async (input: CapabilityInput) => {
-  const name = ((input.name as string) ?? (input.task as string) ?? "").trim();
+  const name = ((input.name as string) ?? (input.full_name as string) ?? "").trim();
   if (!name) {
     throw new Error("'name' is required. Provide a person's full name to screen.");
   }

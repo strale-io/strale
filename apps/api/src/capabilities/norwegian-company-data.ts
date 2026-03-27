@@ -92,7 +92,7 @@ async function fetchCompany(orgNumber: string): Promise<Record<string, unknown>>
 }
 
 registerCapability("norwegian-company-data", async (input: CapabilityInput) => {
-  const rawInput = (input.org_number as string) ?? (input.task as string) ?? "";
+  const rawInput = (input.org_number as string) ?? (input.company_number as string) ?? "";
   if (typeof rawInput !== "string" || !rawInput.trim()) {
     throw new Error("'org_number' is required. Provide a Norwegian org number (9 digits) or company name.");
   }
