@@ -2,7 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { resolve4, resolve6, resolveMx, resolveNs, resolveTxt, resolveCname } from "node:dns/promises";
 
 registerCapability("dns-lookup", async (input: CapabilityInput) => {
-  const domain = ((input.domain as string) ?? (input.task as string) ?? "").trim().toLowerCase();
+  const domain = ((input.domain as string) ?? (input.hostname as string) ?? "").trim().toLowerCase();
   if (!domain) {
     throw new Error("'domain' is required. Provide a domain name (e.g. example.com).");
   }

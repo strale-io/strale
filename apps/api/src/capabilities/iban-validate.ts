@@ -108,7 +108,7 @@ function validateIban(iban: string): {
 }
 
 registerCapability("iban-validate", async (input: CapabilityInput) => {
-  const rawIban = (input.iban as string) ?? (input.task as string) ?? "";
+  const rawIban = (input.iban as string) ?? "";
   if (typeof rawIban !== "string" || !rawIban.trim()) {
     throw new Error("'iban' is required. Provide an IBAN to validate (e.g. SE3550000000054910000003).");
   }

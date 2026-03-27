@@ -48,9 +48,17 @@ async function checkMx(domain: string): Promise<{ has_mx: boolean; mx_records: s
 }
 
 registerCapability("email-validate", async (input: CapabilityInput) => {
-  const raw = (input.email as string) ?? (input.task as string) ?? "";
+  const raw = (input.email as string) ?? (input.email_address as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
     throw new Error("'email' is required. Provide an email address to validate.");
+  }
+  // Guard: if the value looks like a capability slug, the caller likely
+  // sent input in the wrong field (e.g. "input" instead of "inputs")
+  if (raw.includes("-") && !raw.includes("@")) {
+    throw new Error(
+      `'email' value '${raw}' does not look like an email address. ` +
+      `Check that you are sending { "inputs": { "email": "..." } } not { "input": { "email": "..." } }.`,
+    );
   }
 
   const email = raw.trim().toLowerCase();

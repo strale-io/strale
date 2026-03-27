@@ -1,7 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 registerCapability("json-repair", async (input: CapabilityInput) => {
-  const raw = ((input.json as string) ?? (input.data as string) ?? (input.text as string) ?? (input.task as string) ?? "").trim();
+  const raw = ((input.json as string) ?? (input.data as string) ?? (input.text as string) ?? (input.content as string) ?? "").trim();
   if (!raw) throw new Error("'json' is required. Provide a broken JSON string to repair.");
 
   const fixes: string[] = [];

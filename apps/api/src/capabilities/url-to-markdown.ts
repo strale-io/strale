@@ -2,7 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 
 registerCapability("url-to-markdown", async (input: CapabilityInput) => {
-  const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
+  const url = ((input.url as string) ?? (input.link as string) ?? "").trim();
   if (!url) throw new Error("'url' is required.");
 
   const includeLinks = input.include_links !== false;
