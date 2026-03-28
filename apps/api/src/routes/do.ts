@@ -162,6 +162,14 @@ doRoute.post(
   const user = c.get("user") as any | undefined;
   const db = getDb();
 
+  // Capture request context for attribution tracking (stored in audit trail)
+  const requestContext = {
+    referer: c.req.header("referer") ?? c.req.header("referrer") ?? null,
+    origin: c.req.header("origin") ?? null,
+    userAgent: c.req.header("user-agent") ?? null,
+  };
+  c.set("requestContext" as any, requestContext);
+
   // ── 1. Parse and validate request ──────────────────────────────────────
   const body = await c.req.json().catch(() => null);
   if (!body) {
@@ -635,6 +643,7 @@ async function executeFreeTier(
       output: capResult.output,
       provenance: capResult.provenance,
       sqs,
+      requestContext: c.get("requestContext" as any),
     });
 
     await db
@@ -766,6 +775,7 @@ async function executeFreeTierAuthenticated(
       output: capResult.output,
       provenance: capResult.provenance,
       sqs,
+      requestContext: c.get("requestContext" as any),
     });
 
     await db
@@ -1118,6 +1128,7 @@ async function executeSync(
     provenance: result.provenance,
     sqs: { score: sqs.score, label: sqs.label, trend: sqs.trend ?? "stable", pending: sqs.pending },
     qualityPassRate,
+    requestContext: c.get("requestContext" as any),
   });
 
   // Store full audit in DB (fire-and-forget, non-blocking)
@@ -1318,6 +1329,7 @@ async function executeInBackground(
       output: capResult.output,
       provenance: capResult.provenance,
       sqs: { score: 0, label: "unknown", trend: "stable", pending: true },
+      requestContext: undefined, // background execution — no request context available
     });
 
     await db
@@ -1488,10 +1500,12 @@ function buildFullAudit(params: {
   provenance?: unknown;
   sqs: { score: number; label: string; trend: string; pending: boolean };
   qualityPassRate?: number | null;
+  requestContext?: { referer: string | null; origin: string | null; userAgent: string | null };
 }) {
   const {
     transactionId, startTime, capability, marker, executionMode,
     latencyMs, executionInput, output, provenance, sqs, qualityPassRate,
+    requestContext,
   } = params;
 
   const personalDataDetected = detectPersonalData(output);
@@ -1511,6 +1525,7 @@ function buildFullAudit(params: {
     execution_mode: executionMode,
     latency_ms: latencyMs,
     input_hash: hashInput(executionInput),
+    request_context: requestContext ?? null,
     schema_validated: true,
     quality: {
       sqs: sqs.pending ? null : sqs.score,
