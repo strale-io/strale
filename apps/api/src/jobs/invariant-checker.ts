@@ -12,7 +12,7 @@
  * Rate limit: max 20 items processed per check per run.
  */
 
-import { sql, eq, and, inArray, asc } from "drizzle-orm";
+import { sql, eq, and, or, inArray, asc, isNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps, testResults, testSuites } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
@@ -117,6 +117,14 @@ export async function runInvariantChecks(): Promise<void> {
     checked += r7.checked;
   } catch (err) {
     console.error("[invariant-checker] CHECK 7 (migration completeness) failed:", err);
+  }
+
+  try {
+    const r8 = await checkDataSourceCompleteness();
+    alerts += r8.alerts;
+    checked += r8.checked;
+  } catch (err) {
+    console.error("[invariant-checker] CHECK 8 (data_source completeness) failed:", err);
   }
 
   // Log provider outage summary if any capabilities were skipped
@@ -814,4 +822,49 @@ async function checkMigrationCompleteness(): Promise<{ alerts: number; checked: 
   }
 
   return { alerts, checked: retired.length };
+}
+
+// ─── CHECK 8: data_source completeness (Tier 2 — WARNING) ──────────────────
+// Every active capability must have a non-null, non-empty data_source.
+// A missing data_source means the frontend can't show where data comes from,
+// violating the transparency promise. This is a warning, not a hard failure —
+// the capability still works, it just lacks provenance labeling.
+
+async function checkDataSourceCompleteness(): Promise<{ alerts: number; checked: number }> {
+  const db = getDb();
+
+  const capsWithoutSource = await db
+    .select({ slug: capabilities.slug, name: capabilities.name })
+    .from(capabilities)
+    .where(
+      and(
+        eq(capabilities.isActive, true),
+        or(
+          isNull(capabilities.dataSource),
+          eq(capabilities.dataSource, ""),
+        ),
+      ),
+    );
+
+  if (capsWithoutSource.length > 0) {
+    const slugList = capsWithoutSource.map((c) => c.slug).join(", ");
+    console.warn(
+      `[invariant-checker] CHECK 8: ${capsWithoutSource.length} active capabilities missing data_source: ${slugList}`,
+    );
+
+    await logHealthEvent({
+      eventType: "invariant_alert",
+      tier: 2,
+      actionTaken: `${capsWithoutSource.length} active capability(s) have no data_source: ${slugList}`,
+      details: {
+        check: "data_source_completeness",
+        missingCount: capsWithoutSource.length,
+        slugs: capsWithoutSource.map((c) => c.slug),
+      },
+    });
+
+    return { alerts: 1, checked: capsWithoutSource.length };
+  }
+
+  return { alerts: 0, checked: 1 };
 }

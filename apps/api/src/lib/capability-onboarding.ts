@@ -161,6 +161,7 @@ async function verifyCapabilityVisibility(slug: string): Promise<void> {
       isActive: capabilities.isActive,
       visible: capabilities.visible,
       lifecycleState: capabilities.lifecycleState,
+      dataSource: capabilities.dataSource,
     })
     .from(capabilities)
     .where(eq(capabilities.slug, slug))
@@ -181,6 +182,9 @@ async function verifyCapabilityVisibility(slug: string): Promise<void> {
   }
   if (cap.lifecycleState !== "active" && cap.lifecycleState !== "degraded") {
     issues.push(`lifecycle_state = '${cap.lifecycleState}' — must be 'active' or 'degraded'`);
+  }
+  if (!cap.dataSource) {
+    issues.push("data_source = NULL — set to describe where this capability gets its data");
   }
 
   if (issues.length > 0) {
