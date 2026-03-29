@@ -53,7 +53,7 @@ async function fetchCompany(
   const response = await fetch(url, {
     headers: {
       Accept: "application/json",
-      "User-Agent": "Strale/1.0 danish-company-data",
+      "User-Agent": "Strale/1.0 (hello@strale.io) danish-company-data",
     },
     signal: AbortSignal.timeout(10000),
   });
@@ -86,7 +86,7 @@ async function fetchCompany(
 }
 
 registerCapability("danish-company-data", async (input: CapabilityInput) => {
-  const rawInput = (input.cvr_number as string) ?? (input.org_number as string) ?? (input.task as string) ?? "";
+  const rawInput = (input.cvr_number as string) ?? (input.org_number as string) ?? (input.company_number as string) ?? "";
   if (typeof rawInput !== "string" || !rawInput.trim()) {
     throw new Error("'cvr_number' is required. Provide a Danish CVR number (8 digits) or company name.");
   }
