@@ -117,6 +117,8 @@ const EXTERNAL_SERVICE_PATTERNS = [
   /timeout/i, /upstream/i, /Browserless/i,
   /VIES error/i, /Navigation timeout/i,
   /fetch failed/i,
+  /Etherscan/i, /etherscan\.io/i,
+  /cloudflare-eth/i, /llamarpc/i,
   // NOTE: "no api key" and "is required for" are intentionally NOT here.
   // Missing API keys are Strale's infrastructure responsibility — the score
   // must reflect that the capability cannot serve users. See Scoring Integrity Rules.

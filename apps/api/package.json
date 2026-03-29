@@ -29,6 +29,7 @@
     "sharp": "^0.34.5",
     "strale-mcp": "*",
     "stripe": "^17.5.0",
+    "viem": "^2.47.6",
     "zod": "^3.25.0"
   },
   "devDependencies": {

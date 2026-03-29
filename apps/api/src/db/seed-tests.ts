@@ -692,6 +692,66 @@ const TESTS: TestDef[] = [
   { capabilitySlug: "us-company-data", testName: "Company with special characters", testType: "edge_case",
     input: { company: "AT&T" },
     validationRules: checks() },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Web3 — ENS, Etherscan, GoPlus, DeFi Llama
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ── ens-resolve ──
+  { capabilitySlug: "ens-resolve", testName: "vitalik.eth — known address", testType: "known_answer",
+    input: { name: "vitalik.eth" },
+    validationRules: checks(isTrue("resolved"), notNull("address")),
+  },
+  { capabilitySlug: "ens-resolve", testName: "nonexistent.eth — no resolution", testType: "edge_case",
+    input: { name: "thisdoesnotexist99999.eth" },
+    validationRules: checks(isFalse("resolved")),
+  },
+
+  // ── ens-reverse-lookup ──
+  { capabilitySlug: "ens-reverse-lookup", testName: "Vitalik address — has ENS", testType: "known_answer",
+    input: { address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" },
+    validationRules: checks(isTrue("has_ens"), notNull("ens_name")),
+  },
+  { capabilitySlug: "ens-reverse-lookup", testName: "Burn address — no ENS", testType: "edge_case",
+    input: { address: "0x0000000000000000000000000000000000000001" },
+    validationRules: checks(isFalse("has_ens")),
+  },
+
+  // ── wallet-age-check ──
+  { capabilitySlug: "wallet-age-check", testName: "Ethereum Foundation — old wallet", testType: "known_answer",
+    input: { address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe", chain_id: "1" },
+    validationRules: checks(isTrue("has_activity"), notNull("first_tx_date")),
+  },
+
+  // ── contract-verify-check ──
+  { capabilitySlug: "contract-verify-check", testName: "USDC — verified contract", testType: "known_answer",
+    input: { contract_address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", chain_id: "1" },
+    validationRules: checks(isTrue("is_verified"), notNull("contract_name")),
+  },
+
+  // ── gas-price-check ──
+  { capabilitySlug: "gas-price-check", testName: "Ethereum mainnet gas", testType: "known_answer",
+    input: { chain_id: "1" },
+    validationRules: checks(notNull("safe_gas_gwei"), notNull("fast_gas_gwei")),
+  },
+
+  // ── wallet-risk-score (Phase 1 — adding tests) ──
+  { capabilitySlug: "wallet-risk-score", testName: "Vitalik — clean wallet", testType: "known_answer",
+    input: { address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" },
+    validationRules: checks(isFalse("is_malicious")),
+  },
+
+  // ── token-security-check (Phase 1 — adding tests) ──
+  { capabilitySlug: "token-security-check", testName: "USDC — safe token", testType: "known_answer",
+    input: { contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+    validationRules: checks(isFalse("is_honeypot")),
+  },
+
+  // ── protocol-tvl-lookup (Phase 1 — adding tests) ──
+  { capabilitySlug: "protocol-tvl-lookup", testName: "Aave V3 — known protocol", testType: "known_answer",
+    input: { protocol: "aave-v3" },
+    validationRules: checks(notNull("name"), notNull("tvl_usd")),
+  },
 ];
 
 // ─── Seed logic ─────────────────────────────────────────────────────────────
