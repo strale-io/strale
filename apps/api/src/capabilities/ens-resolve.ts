@@ -4,8 +4,9 @@ import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
 
 // Public Ethereum RPC endpoints (free, no key)
-const PRIMARY_RPC = "https://cloudflare-eth.com";
-const FALLBACK_RPC = "https://eth.llamarpc.com";
+// llama is more permissive with rate limits than Cloudflare
+const PRIMARY_RPC = "https://eth.llamarpc.com";
+const FALLBACK_RPC = "https://cloudflare-eth.com";
 
 function makeClient(rpcUrl: string) {
   return createPublicClient({

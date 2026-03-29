@@ -3,8 +3,8 @@ import { createPublicClient, http, type Address } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
 
-const PRIMARY_RPC = "https://cloudflare-eth.com";
-const FALLBACK_RPC = "https://eth.llamarpc.com";
+const PRIMARY_RPC = "https://eth.llamarpc.com";
+const FALLBACK_RPC = "https://cloudflare-eth.com";
 
 function makeClient(rpcUrl: string) {
   return createPublicClient({
