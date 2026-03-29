@@ -13,7 +13,8 @@ export type ErrorCode =
   | "capability_degraded"
   | "below_quality_threshold"
   | "freshness_check_failed"
-  | "latency_threshold_exceeded";
+  | "latency_threshold_exceeded"
+  | "budget_exceeded";
 
 export interface ApiError {
   error_code: ErrorCode;

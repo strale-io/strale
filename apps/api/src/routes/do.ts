@@ -335,7 +335,23 @@ doRoute.post(
     maxPriceCents: effectiveMaxPrice,
   });
 
-  if (!match) {
+  if (!match || match.budgetExceeded) {
+    // Budget exceeded: capability exists but costs more than max_price_cents
+    if (match?.budgetExceeded) {
+      return c.json(
+        apiError(
+          "budget_exceeded",
+          `Capability '${match.capability.slug}' costs €${(match.capability.priceCents / 100).toFixed(2)} (${match.capability.priceCents} cents) which exceeds your max_price_cents of ${effectiveMaxPrice}.`,
+          {
+            capability_slug: match.capability.slug,
+            actual_price_cents: match.capability.priceCents,
+            max_price_cents: effectiveMaxPrice,
+          },
+        ),
+        402,
+      );
+    }
+
     // Log the failed request for demand analysis (DEC-20260225-P-c5d6)
     if (user) {
       await db.insert(failedRequests).values({
@@ -562,11 +578,20 @@ doRoute.post(
       (field) => !(field in executionInput) || executionInput[field] === undefined,
     );
     if (missingFields.length > 0) {
+      // Detect common mistake: input fields placed at top level instead of inside "inputs"
+      const topLevelMatches = missingFields.filter((f) => f in body);
+      const hint = topLevelMatches.length > 0
+        ? ` It looks like you placed ${topLevelMatches.map((f) => `'${f}'`).join(", ")} at the top level — wrap them inside "inputs": { ${topLevelMatches.map((f) => `"${f}": ...`).join(", ")} }.`
+        : undefined;
       return c.json(
         apiError(
           "invalid_request",
           `Missing required input fields: ${missingFields.join(", ")}`,
-          { missing_fields: missingFields, expected_fields: Object.keys(inputSchema.properties) },
+          {
+            missing_fields: missingFields,
+            expected_fields: Object.keys(inputSchema.properties),
+            ...(hint ? { hint } : {}),
+          },
         ),
         400,
       );

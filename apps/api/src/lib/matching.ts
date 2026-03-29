@@ -7,6 +7,7 @@ type CapabilityRow = typeof capabilities.$inferSelect;
 
 export interface MatchResult {
   capability: CapabilityRow;
+  budgetExceeded?: boolean; // true when slug matched but price > max_price_cents
 }
 
 export interface MatchRequest {
@@ -49,7 +50,9 @@ export async function matchCapability(
 
     if (!cap) return null;
     // Free-tier capabilities bypass the price check
-    if (!cap.isFreeTier && cap.priceCents > req.maxPriceCents) return null;
+    if (!cap.isFreeTier && cap.priceCents > req.maxPriceCents) {
+      return { capability: cap, budgetExceeded: true };
+    }
     return { capability: cap };
   }
 
