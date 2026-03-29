@@ -249,6 +249,21 @@ See: Scoring Integrity Rules comment block in `apps/api/src/lib/sqs.ts`
 See: SQS Constitution in Notion
 See also: Capability Onboarding Protocol (DEC-20260320-B) — the equivalent enforcement rule for capability onboarding.
 
+### Test Infrastructure Cost Principles (always enforce)
+
+**Principle A — Zero-cost health probes:** Health probes in `dependency-manifest.ts` must
+never consume billable API calls. Use `skipAuth: true` on the health probe for paid APIs
+so the probe sends no auth header — a 401 proves connectivity without consuming quota.
+Probes run ~4×/day per provider; authenticated probes waste 120+ API calls/month.
+
+**Principle B — Input validation before paid APIs:** Every capability that calls a paid
+external API must validate input and throw an error for empty, null, or sub-2-character
+input BEFORE making the API call. This protects both test budget and customer-traffic budget.
+
+**Principle C — Piggyback suites never scheduled:** Piggyback test suites (`test_type = 'piggyback'`)
+receive data exclusively from real customer traffic via `recordPiggybackResult()`. The test
+scheduler excludes them from all runs (test-runner.ts line 117). They are never executed proactively.
+
 ### Capability Onboarding Protocol (DEC-20260320-B)
 
 **MANDATORY — applies to ANY session that creates, modifies, or onboards a capability.**

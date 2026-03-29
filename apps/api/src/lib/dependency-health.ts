@@ -3,6 +3,11 @@
  *
  * DO NOT add hand-written checks here. Add providers to dependency-manifest.ts
  * instead. This file is a generic probe runner.
+ *
+ * PRINCIPLE A: Health probes must NEVER consume billable API calls.
+ * Probes run ~4×/day. For paid APIs, set `skipAuth: true` on the health probe
+ * in dependency-manifest.ts. An unauthenticated 401 proves the service is
+ * reachable without consuming quota. Only network errors = unhealthy.
  */
 
 import { getActiveProviders, type DependencyProvider } from "./dependency-manifest.js";

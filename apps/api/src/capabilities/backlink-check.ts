@@ -4,10 +4,11 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
   const raw = (
     (input.domain as string) ??
     (input.url as string) ??
-    (input.task as string) ??
+    (input.site as string) ??
     ""
   ).trim();
   if (!raw) throw new Error("'domain' is required. Provide a domain to check backlinks for.");
+  if (raw.length < 3) throw new Error("'domain' must be at least 3 characters.");
 
   // Clean domain
   const domain = raw

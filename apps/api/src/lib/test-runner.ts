@@ -114,7 +114,10 @@ export async function runTests(
 
   const conditions = [
     eq(testSuites.active, true),
-    not(eq(testSuites.testType, "piggyback")), // piggyback suites receive data from customer traffic only
+    // PRINCIPLE C: Piggyback suites are NEVER scheduled.
+    // They receive data exclusively from real customer traffic via recordPiggybackResult().
+    // Scheduling them wastes API calls by duplicating what regular tests already cover.
+    not(eq(testSuites.testType, "piggyback")),
   ];
   if (opts.capabilitySlug) {
     conditions.push(eq(testSuites.capabilitySlug, opts.capabilitySlug));

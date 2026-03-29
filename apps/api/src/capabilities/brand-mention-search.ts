@@ -3,8 +3,9 @@ import Anthropic from "@anthropic-ai/sdk";
 
 // Uses Serper.dev API for search (avoids CAPTCHA issues from direct Google scraping)
 registerCapability("brand-mention-search", async (input: CapabilityInput) => {
-  const brandName = ((input.brand_name as string) ?? (input.brand as string) ?? (input.task as string) ?? "").trim();
+  const brandName = ((input.brand_name as string) ?? (input.brand as string) ?? (input.name as string) ?? "").trim();
   if (!brandName) throw new Error("'brand_name' is required.");
+  if (brandName.length < 2) throw new Error("'brand_name' must be at least 2 characters.");
 
   const excludeOwnDomain = (input.exclude_own_domain as string)?.trim();
   const maxResults = Math.min((input.max_results as number) ?? 10, 20);

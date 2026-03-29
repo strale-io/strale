@@ -3,8 +3,9 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 // Uses Serper.dev API (free tier: 2,500 queries/month, no CAPTCHA issues)
 // Requires SERPER_API_KEY env var
 registerCapability("google-search", async (input: CapabilityInput) => {
-  const query = ((input.query as string) ?? (input.q as string) ?? (input.task as string) ?? "").trim();
+  const query = ((input.query as string) ?? (input.q as string) ?? (input.search as string) ?? "").trim();
   if (!query) throw new Error("'query' is required.");
+  if (query.length < 2) throw new Error("'query' must be at least 2 characters.");
 
   const numResults = Math.min((input.num_results as number) ?? 10, 20);
   const language = ((input.language as string) ?? "").trim();

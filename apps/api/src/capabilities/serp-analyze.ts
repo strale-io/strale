@@ -4,10 +4,11 @@ registerCapability("serp-analyze", async (input: CapabilityInput) => {
   const keyword = (
     (input.keyword as string) ??
     (input.query as string) ??
-    (input.task as string) ??
+    (input.search as string) ??
     ""
   ).trim();
   if (!keyword) throw new Error("'keyword' is required. Provide a search query to analyze.");
+  if (keyword.length < 2) throw new Error("'keyword' must be at least 2 characters.");
 
   const country = ((input.country as string) ?? "us").trim().toLowerCase();
   const language = ((input.language as string) ?? "en").trim().toLowerCase();

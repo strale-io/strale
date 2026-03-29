@@ -164,11 +164,14 @@ export const PROVIDERS: DependencyProvider[] = [
     envVar: "SERPER_API_KEY",
     authHeader: "X-API-KEY",
     healthProbe: {
+      // Unauthenticated POST — 401/403 proves service is reachable
+      // without consuming a billable Google search query.
       path: "/search",
       method: "POST",
-      body: { q: "test", num: 1 },
-      healthyStatuses: [200],
+      body: { q: "connectivity_probe", num: 1 },
+      healthyStatuses: [200, 401, 403],
       timeoutMs: 8000,
+      skipAuth: true,
     },
     capabilities: ["google-search", "serp-analyze", "brand-mention-search", "backlink-check"],
     tier: "paid",
