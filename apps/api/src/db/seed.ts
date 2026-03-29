@@ -2541,6 +2541,37 @@ const seedCapabilities = [
     outputSchema: { type: "object", properties: { age_years: { type: "integer" }, age_months: { type: "integer" }, age_days: { type: "integer" }, meets_minimum: { type: "boolean" }, minimum_age_checked: { type: "integer" }, days_until_minimum: { type: "integer" } } },
     priceCents: 2,
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Web3 — On-chain security & DeFi intelligence
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    name: "Wallet Risk Score",
+    slug: "wallet-risk-score",
+    description: "Check if a wallet address is associated with malicious activity: phishing, money laundering, darknet, blackmail, or other fraud. Uses GoPlus Security's malicious address database covering 30+ blockchains.",
+    category: "web3",
+    inputSchema: { type: "object", properties: { address: { type: "string", description: "Wallet address to check (0x...)" }, chain_id: { type: "string", description: "Chain ID (1=Ethereum, 56=BSC, 8453=Base, 137=Polygon). Default: 1" } }, required: ["address"] },
+    outputSchema: { type: "object", properties: { address: { type: "string" }, chain_id: { type: "string" }, risk_level: { type: "string" }, is_malicious: { type: "boolean" }, risk_labels: { type: "array", items: { type: "string" } }, details: { type: "object" } } },
+    priceCents: 2,
+  },
+  {
+    name: "Token Security Check",
+    slug: "token-security-check",
+    description: "Analyze a token contract for security risks: honeypot detection, sell tax, hidden ownership, mint functions, proxy status, and holder distribution. Uses GoPlus Security covering 30+ blockchains and 10M+ tokens.",
+    category: "web3",
+    inputSchema: { type: "object", properties: { contract_address: { type: "string", description: "Token contract address (0x...)" }, chain_id: { type: "string", description: "Chain ID (1=Ethereum, 56=BSC, 8453=Base). Default: 1" } }, required: ["contract_address"] },
+    outputSchema: { type: "object", properties: { contract_address: { type: "string" }, chain_id: { type: "string" }, risk_level: { type: "string" }, is_honeypot: { type: "boolean" }, sell_tax: { type: "string" }, buy_tax: { type: "string" }, is_mintable: { type: "boolean" }, hidden_owner: { type: "boolean" }, holder_count: { type: "number" }, is_open_source: { type: "boolean" }, is_proxy: { type: "boolean" }, creator_address: { type: "string" }, owner_address: { type: "string" } } },
+    priceCents: 2,
+  },
+  {
+    name: "Protocol TVL Lookup",
+    slug: "protocol-tvl-lookup",
+    description: "Get the current Total Value Locked (TVL), chain distribution, category, audit status, and metadata for any DeFi protocol. Covers 7,000+ protocols across 500+ chains via DeFi Llama.",
+    category: "web3",
+    inputSchema: { type: "object", properties: { protocol: { type: "string", description: "Protocol name or DeFi Llama slug (e.g., 'aave', 'uniswap', 'compound')" } }, required: ["protocol"] },
+    outputSchema: { type: "object", properties: { name: { type: "string" }, slug: { type: "string" }, category: { type: "string" }, tvl_usd: { type: "number" }, tvl_change_1d_pct: { type: "number" }, tvl_change_7d_pct: { type: "number" }, chains: { type: "array" }, audits: { type: "number" }, audit_links: { type: "array" }, is_open_source: { type: "boolean" }, url: { type: "string" }, twitter: { type: "string" }, listed_since: { type: "string" } } },
+    priceCents: 2,
+  },
 ];
 
 async function seed() {
