@@ -25,7 +25,7 @@ import { internalHealthMonitorRoute } from "./routes/internal-health-monitor.js"
 import { replyWebhookRoute } from "./routes/reply-webhook.js";
 import { auditRoute } from "./routes/audit.js";
 import { internalOnboardingRoute } from "./routes/internal-onboarding.js";
-import { x402Route, WALLET as X402_WALLET, FACILITATOR_URL as X402_FACILITATOR_URL } from "./routes/x402-gateway.js";
+import { x402GatewayV2, getX402Manifest } from "./routes/x402-gateway-v2.js";
 import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
@@ -233,34 +233,21 @@ app.route("/.well-known/ai-catalog.json", aiCatalogRoute);
 app.route("/", llmsTxtRoute);
 
 // Log x402 configuration
-if (X402_WALLET) {
-  console.log(`[x402] Gateway active — wallet: ${X402_WALLET.slice(0, 8)}..., facilitator: ${X402_FACILITATOR_URL}`);
+const _x402Wallet = process.env.X402_WALLET_ADDRESS;
+if (_x402Wallet) {
+  console.log(`[x402] Gateway active — wallet: ${_x402Wallet.slice(0, 8)}..., DB-driven catalog`);
 } else {
   console.warn("[x402] X402_WALLET_ADDRESS not set — x402 routes in stub mode");
 }
 
-// x402 payment gateway — paid API endpoints for the 402 ecosystem (402index.io)
-app.route("/x402", x402Route);
+// x402 payment gateway — DB-driven, scalable to 100K+ capabilities
+app.route("/x402", x402GatewayV2);
 
-// x402 manifest — machine-readable list of x402-enabled endpoints
-app.get("/.well-known/x402.json", (c) => {
-  const wallet = process.env.X402_WALLET_ADDRESS;
-  const network = process.env.X402_NETWORK ?? "eip155:8453";
-  const facilitator = process.env.X402_FACILITATOR_URL ?? "https://facilitator.x402.org";
-  c.header("Cache-Control", "public, max-age=3600");
-  return c.json({
-    x402: true,
-    facilitator,
-    network,
-    wallet: wallet ?? null,
-    endpoints: [
-      { path: "/x402/iban-validate", method: "GET", price: "0.02", currency: "USDC", network, description: "Validate an IBAN number" },
-      { path: "/x402/vat-format-validate", method: "GET", price: "0.02", currency: "USDC", network, description: "Validate EU VAT number format" },
-      { path: "/x402/paid-api-preflight", method: "GET", price: "0.03", currency: "USDC", network, description: "Pre-flight trust check for paid API endpoints" },
-      { path: "/x402/ssl-check", method: "GET", price: "0.05", currency: "USDC", network, description: "Check SSL certificate for a domain" },
-      { path: "/x402/sanctions-check", method: "GET", price: "0.10", currency: "USDC", network, description: "Screen against global sanctions lists" },
-    ],
-  });
+// x402 manifest — DB-driven machine-readable list of x402-enabled endpoints
+app.get("/.well-known/x402.json", async (c) => {
+  c.header("Cache-Control", "public, max-age=300");
+  const manifest = await getX402Manifest();
+  return c.json(manifest);
 });
 
 // 402 Index domain verification token

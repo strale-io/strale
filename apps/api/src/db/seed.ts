@@ -7,6 +7,17 @@ import { getDb } from "./index.js";
 import { capabilities } from "./schema.js";
 import { onCapabilityCreated } from "../lib/capability-onboarding.js";
 
+/** Convert EUR cents price to x402-friendly USD price tier. */
+function eurToX402Price(priceCents: number): number {
+  if (priceCents <= 5) return 0.005;
+  if (priceCents <= 10) return 0.01;
+  if (priceCents <= 20) return 0.02;
+  if (priceCents <= 30) return 0.03;
+  if (priceCents <= 50) return 0.05;
+  if (priceCents <= 100) return 0.08;
+  return 0.10;
+}
+
 const seedCapabilities = [
   {
     name: "Swedish Company Data",
@@ -2540,7 +2551,14 @@ async function seed() {
   for (const cap of seedCapabilities) {
     await db
       .insert(capabilities)
-      .values({ ...cap, lifecycleState: "active", visible: true })
+      .values({
+        ...cap,
+        lifecycleState: "active",
+        visible: true,
+        x402Enabled: true,
+        x402PriceUsd: eurToX402Price(cap.priceCents).toFixed(4),
+        x402Method: "GET",
+      })
       .onConflictDoUpdate({
         target: capabilities.slug,
         set: {

@@ -142,6 +142,10 @@ export const capabilities = pgTable("capabilities", {
   onboardingManifest: jsonb("onboarding_manifest"),
   degradedRecoveryCount: integer("degraded_recovery_count").notNull().default(0),
   searchTags: text("search_tags").array().default([]),
+  // x402 payment gateway (DB-driven, no-deploy exposure)
+  x402Enabled: boolean("x402_enabled").notNull().default(false),
+  x402PriceUsd: decimal("x402_price_usd", { precision: 10, scale: 4 }),
+  x402Method: varchar("x402_method", { length: 4 }).notNull().default("POST"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -182,6 +186,10 @@ export const transactions = pgTable(
     integrityHash: varchar("integrity_hash", { length: 128 }),
     previousHash: varchar("previous_hash", { length: 128 }),
     legalHold: boolean("legal_hold").notNull().default(false),
+    // x402 payment tracking
+    paymentMethod: varchar("payment_method", { length: 20 }).notNull().default("wallet"),
+    x402SettlementId: text("x402_settlement_id"),
+    priceUsd: decimal("price_usd", { precision: 10, scale: 4 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -273,6 +281,9 @@ export const solutions = pgTable("solutions", {
   isActive: boolean("is_active").notNull().default(true),
   displayOrder: integer("display_order").notNull().default(0),
   searchTags: text("search_tags").array().default([]),
+  // x402 payment gateway (DB-driven, no-deploy exposure)
+  x402Enabled: boolean("x402_enabled").notNull().default(false),
+  x402PriceUsd: decimal("x402_price_usd", { precision: 10, scale: 4 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
