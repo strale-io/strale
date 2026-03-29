@@ -44,7 +44,7 @@ let _cacheExpiry = 0;
 // Fixed mappings for capabilities that depend on specific APIs (not derivable from capability_type)
 const FIXED_UPSTREAM_SLUGS: Record<string, string[]> = {
   vies: ["vat-validate", "eori-validate", "vat-format-validate"],
-  dilisense: ["sanctions-check", "pep-check", "adverse-media-check", "aml-risk-score"],
+  dilisense: ["sanctions-check", "pep-check", "adverse-media-check"],
   gleif: ["lei-lookup"],
   brreg: ["norwegian-company-data"],
 };

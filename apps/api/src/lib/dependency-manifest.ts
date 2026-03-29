@@ -36,6 +36,10 @@ export interface HealthProbe {
   healthyStatuses: number[];
   timeoutMs: number;
   functional?: boolean;
+  /** Skip auth headers on the probe request. Use when an unauthenticated
+   *  request (e.g. 401 response) is sufficient to prove connectivity
+   *  without consuming API quota. */
+  skipAuth?: boolean;
 }
 
 export interface DependencyProvider {
@@ -180,10 +184,13 @@ export const PROVIDERS: DependencyProvider[] = [
     envVar: "DILISENSE_API_KEY",
     authHeader: "x-api-key",
     healthProbe: {
-      path: "/v1/checkIndividual?names=test&fuzzy_search=0",
+      // Unauthenticated probe: 401 proves the service is reachable without
+      // consuming API quota. skipAuth omits the x-api-key header.
+      path: "/v1/checkIndividual?names=connectivity_probe",
       method: "GET",
       healthyStatuses: [200, 400, 401, 404],
       timeoutMs: 5000,
+      skipAuth: true,
     },
     capabilities: ["sanctions-check", "pep-check", "adverse-media-check"],
     tier: "paid",

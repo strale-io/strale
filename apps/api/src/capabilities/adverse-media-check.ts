@@ -87,6 +87,9 @@ registerCapability("adverse-media-check", async (input: CapabilityInput) => {
   if (!name) {
     throw new Error("'name' is required. Provide a person or company name to screen.");
   }
+  if (name.length < 2) {
+    throw new Error("Name must be at least 2 characters for adverse media screening.");
+  }
 
   const entityTypeOverride = (input.entity_type as string) ?? undefined;
   const apiKey = process.env.DILISENSE_API_KEY || DILISENSE_FALLBACK_KEY;

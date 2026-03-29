@@ -325,7 +325,7 @@ async function getAffectedSlugsForDependency(dependency: string): Promise<string
   // Fixed upstream mappings
   const FIXED: Record<string, string[]> = {
     vies: ["vat-validate", "eori-validate", "vat-format-validate"],
-    dilisense: ["sanctions-check", "pep-check", "adverse-media-check", "aml-risk-score"],
+    dilisense: ["sanctions-check", "pep-check", "adverse-media-check"],
     gleif: ["lei-lookup"],
     brreg: ["norwegian-company-data"],
   };

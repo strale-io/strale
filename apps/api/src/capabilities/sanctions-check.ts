@@ -15,6 +15,9 @@ registerCapability("sanctions-check", async (input: CapabilityInput) => {
   if (!name) {
     throw new Error("'name' is required. Provide a person or company name to check.");
   }
+  if (name.length < 2) {
+    throw new Error("Name must be at least 2 characters for sanctions screening.");
+  }
 
   const country = ((input.country as string) ?? "").trim().toUpperCase() || undefined;
   const birthDate = (input.birth_date as string) ?? undefined;

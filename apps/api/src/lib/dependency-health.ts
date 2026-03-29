@@ -52,7 +52,7 @@ async function probeProvider(
     "Content-Type": "application/json",
   };
 
-  if (apiKey) {
+  if (apiKey && !probe.skipAuth) {
     switch (provider.authType) {
       case "api-key-header":
         headers[provider.authHeader!] = apiKey;

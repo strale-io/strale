@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, not, sql, desc, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   testSuites,
@@ -112,7 +112,10 @@ export async function runTests(
   const db = getDb();
   const startedAt = new Date();
 
-  const conditions = [eq(testSuites.active, true)];
+  const conditions = [
+    eq(testSuites.active, true),
+    not(eq(testSuites.testType, "piggyback")), // piggyback suites receive data from customer traffic only
+  ];
   if (opts.capabilitySlug) {
     conditions.push(eq(testSuites.capabilitySlug, opts.capabilitySlug));
   }

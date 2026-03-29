@@ -9,6 +9,9 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
   if (!name) {
     throw new Error("'name' is required. Provide a person's full name to screen.");
   }
+  if (name.length < 2) {
+    throw new Error("Name must be at least 2 characters for PEP screening.");
+  }
 
   const birthDate = ((input.date_of_birth as string) ?? (input.birth_date as string) ?? "").trim() || undefined;
   const country = ((input.country as string) ?? "").trim().toUpperCase() || undefined;
