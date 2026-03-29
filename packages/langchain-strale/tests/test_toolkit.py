@@ -23,7 +23,7 @@ class TestToolkitInit:
     def test_get_tools_returns_list(self):
         tools = self.toolkit.get_tools()
         assert isinstance(tools, list)
-        assert len(tools) > 200  # 233 capabilities + 2 meta-tools
+        assert len(tools) > 200  # 256 capabilities + 2 meta-tools
 
     def test_tools_include_meta_tools(self):
         tools = self.toolkit.get_tools()

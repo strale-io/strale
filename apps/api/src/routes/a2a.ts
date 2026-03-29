@@ -140,7 +140,7 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
   const card = {
     name: "Strale",
     description:
-      "The trust layer for AI agents. Quality-scored capabilities for company verification, compliance screening, data validation, financial data, and web extraction — covering 27 countries. Every capability independently tested. One API call: strale.do(task). Audit trails on every transaction.",
+      "Commercial capability marketplace for AI agents. 250+ capabilities with transparent per-call pricing. Available via API key (EUR wallet) or x402 pay-per-use (USDC on Base). Compliance, KYC/KYB, payment validation, company data across 27 countries, regulatory intelligence, and developer tools. Quality-scored with the Strale Quality Score (SQS).",
     url: `${BASE_URL}/a2a`,
     version: "1.0.0",
     documentationUrl: "https://strale.dev/docs",

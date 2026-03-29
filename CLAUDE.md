@@ -110,7 +110,10 @@ strale/
 
 ### Capabilities & Quality
 <!-- Reminder: changes to capabilities, SDKs, or integrations require updating public/llms.txt in strale-frontend -->
-256 capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 81 bundled solutions across 6 categories. Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions.
+256 capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 88 bundled solutions across 6 categories. Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions.
+
+**x402 Payment Gateway (March 2026):**
+All 256 capabilities and 88 solutions available via x402 pay-per-use USDC payments on Base mainnet. No signup or API key needed — payment IS the auth. DB-driven: adding capabilities to x402 requires only `UPDATE capabilities SET x402_enabled = true`. Catalog: GET /x402/catalog. Discovery: GET /.well-known/x402.json. Wildcard handler: GET/POST /x402/:slug.
 
 **New capabilities (March 2026):**
 - `pep-check` — Screens individuals against OpenSanctions PEP dataset. Category: compliance. Price: €0.15. Transparency: mixed. Uses OPENSANCTIONS_API_KEY.

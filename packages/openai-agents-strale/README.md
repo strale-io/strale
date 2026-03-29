@@ -129,6 +129,14 @@ capability, then call it by name. Returns structured JSON with quality scores.
 json-repair, url-to-markdown, iban-validate (no API key needed).
 ```
 
+## x402 pay-per-use access
+
+All Strale capabilities are also available via [x402](https://x402.org) — the HTTP-native payment protocol for AI agents. Pay per request with USDC on Base mainnet. No signup or API key needed.
+
+- Catalog: https://api.strale.io/x402/catalog
+- Protocol: USDC on Base (eip155:8453)
+- Discovery: https://api.strale.io/.well-known/x402.json
+
 ## Links
 
 - [Homepage](https://strale.dev)

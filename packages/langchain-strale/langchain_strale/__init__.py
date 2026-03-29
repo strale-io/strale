@@ -1,4 +1,4 @@
-"""langchain-strale — All 233 Strale capabilities as LangChain tools."""
+"""langchain-strale — All 250+ Strale capabilities as LangChain tools."""
 
 from .client import StraleClient
 from .toolkit import StraleToolkit

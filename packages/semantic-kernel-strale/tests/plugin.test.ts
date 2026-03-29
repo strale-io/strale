@@ -32,7 +32,7 @@ describe("StraleClient", { skip }, () => {
 });
 
 describe("createStralePlugin", { skip }, () => {
-  it("returns a plugin with 233+ functions", async () => {
+  it("returns a plugin with 250+ functions", async () => {
     const plugin = await createStralePlugin({ apiKey: API_KEY, baseUrl: BASE_URL });
     assert.equal(plugin.name, "strale");
     assert.ok(plugin.functions.length > 200);
