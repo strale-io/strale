@@ -4,8 +4,8 @@ import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
 
 // Public Ethereum RPC endpoints (free, no key)
-const PRIMARY_RPC = "https://eth.llamarpc.com";
-const FALLBACK_RPC = "https://cloudflare-eth.com";
+const PRIMARY_RPC = "https://ethereum-rpc.publicnode.com";
+const FALLBACK_RPC = "https://eth.llamarpc.com";
 
 // ENS Registry and Public Resolver addresses on mainnet
 const ENS_REGISTRY = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e" as const;
