@@ -707,7 +707,18 @@ async function executeFreeTier(
       latency_ms: latencyMs,
       output: capResult.output,
       provenance: capResult.provenance,
+      free_tier: true,
       ...dualProfile,
+      upgrade: {
+        message: "You're using a free capability. Sign up for €2 free credits to access 270+ paid capabilities — company data, compliance checks, Web3 security, and more.",
+        signup_url: "https://strale.dev/signup",
+        paid_examples: [
+          { slug: "sanctions-check", description: "Screen against global sanctions lists", price: "€0.02" },
+          { slug: "swedish-company-data", description: "Company data from Bolagsverket", price: "€0.80" },
+          { slug: "wallet-risk-score", description: "Web3 wallet fraud detection", price: "€0.02" },
+        ],
+        x402_note: "Or pay per call with USDC on Base — no signup needed. Try: GET https://api.strale.io/x402/catalog",
+      },
       audit,
     });
   } catch (err) {
