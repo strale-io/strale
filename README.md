@@ -2,6 +2,8 @@
 
 Trust and quality infrastructure for AI agents.
 
+[![strale MCP server](https://glama.ai/mcp/servers/strale-io/strale/badges/card.svg)](https://glama.ai/mcp/servers/strale-io/strale)
+
 [![npm](https://img.shields.io/npm/v/strale-mcp?label=strale-mcp)](https://www.npmjs.com/package/strale-mcp)
 [![npm](https://img.shields.io/npm/v/straleio?label=straleio)](https://www.npmjs.com/package/straleio)
 [![PyPI](https://img.shields.io/pypi/v/straleio?label=straleio%20PyPI)](https://pypi.org/project/straleio/)
@@ -10,13 +12,31 @@ Trust and quality infrastructure for AI agents.
 
 ## What is Strale
 
-Strale is a capability marketplace for AI agents. Agents call `strale.do()` at runtime to access 250+ verified capabilities — company lookups, compliance checks, financial data, web extraction, and more — without hardcoding integrations or managing credentials.
+Strale is a capability marketplace for AI agents. Agents call `strale.do()` at runtime to access 250+ verified capabilities — company lookups, compliance checks, financial validation, Web3 security, and more — plus 80+ bundled solutions for multi-step workflows like full KYB checks or company due diligence. No hardcoded integrations or credential management.
 
-Every capability is continuously tested and assigned a Strale Quality Score (SQS): a 0–100 confidence score derived from two independent profiles — a Quality Profile (code correctness, schema compliance, error handling, edge cases) and a Reliability Profile (current availability, rolling success, upstream health, latency) — combined via a published matrix. Agents get reliable, scored tools. You get observability into what your agent is actually doing.
+Every capability is continuously tested and assigned a Strale Quality Score (SQS): a 0-100 confidence score derived from two independent profiles — a Quality Profile (code correctness, schema compliance, error handling, edge cases) and a Reliability Profile (current availability, rolling success, upstream health, latency) — combined via a published matrix. Agents get reliable, scored tools. You get observability into what your agent is actually doing.
 
 ## Quick Start: MCP Server
 
-Add to your Claude Desktop or Cursor config:
+### Recommended: Streamable HTTP (remote, no install)
+
+```json
+{
+  "mcpServers": {
+    "strale": {
+      "type": "streamableHttp",
+      "url": "https://api.strale.io/mcp",
+      "headers": {
+        "Authorization": "Bearer sk_live_your_key_here"
+      }
+    }
+  }
+}
+```
+
+No installation required. Works with Claude Desktop, Claude Code, Cursor, and any MCP client supporting Streamable HTTP.
+
+### Local (stdio)
 
 ```json
 {
@@ -66,16 +86,30 @@ result = strale.do("eu-vat-validate", {"vat_number": "SE556000000001"})
 
 | Package | Registry | Description |
 |---|---|---|
-| [`strale-mcp`](https://www.npmjs.com/package/strale-mcp) | npm | MCP server — Claude Desktop, Cursor, any MCP host |
+| [`strale-mcp`](https://www.npmjs.com/package/strale-mcp) | npm | MCP server — 250+ capabilities via Claude, Cursor, any MCP host |
 | [`straleio`](https://www.npmjs.com/package/straleio) | npm | TypeScript/JavaScript SDK |
 | [`straleio`](https://pypi.org/project/straleio/) | PyPI | Python SDK |
 | [`langchain-strale`](https://pypi.org/project/langchain-strale/) | PyPI | LangChain toolkit — 250+ tools via `StraleToolkit` |
 | [`crewai-strale`](https://pypi.org/project/crewai-strale/) | PyPI | CrewAI integration — drop-in BaseTools for agents |
 | [`strale-semantic-kernel`](https://www.npmjs.com/package/strale-semantic-kernel) | npm | Semantic Kernel plugin for .NET and TypeScript agents |
+| [`composio-strale`](https://pypi.org/project/composio-strale/) | PyPI | Composio integration — 250+ tools as Composio custom actions |
+
+## Web3
+
+17 Web3 capabilities and 9 bundled solutions for on-chain agents: wallet risk scoring (GoPlus), token honeypot detection, ENS resolution, DeFi protocol TVL and fees (DeFi Llama), gas oracle, EU MiCA VASP verification (ESMA register), and market sentiment. All available via the x402 payment protocol — pay per call with USDC on Base mainnet, no signup required.
+
+```
+GET https://api.strale.io/x402/catalog
+```
 
 ## Quality Scoring (SQS)
 
-Every capability has a Strale Quality Score (SQS) from 0 to 100. The score is derived from two independent profiles combined via a published 5×5 matrix: a **Quality Profile** (code correctness, schema compliance, error handling, edge cases) and a **Reliability Profile** (current availability, rolling success, upstream health, latency). Weights vary by capability type (deterministic, stable API, scraping, AI-assisted).
+Every capability has a Strale Quality Score (SQS) from 0 to 100, built on a dual-profile model:
+
+- **Quality Profile (QP):** Measures code-level quality across four factors — correctness (50%), schema compliance (31%), error handling (13%), and edge case coverage (6%). Upstream failures are excluded.
+- **Reliability Profile (RP):** Measures operational dependability — upstream availability, latency consistency, error recovery, and degradation handling. Factor weights vary by capability type (API-dependent, algorithmic, mixed).
+
+The two profiles combine via a published 5x5 matrix with interpolation into the final SQS score. Grades run A through E (A >= 90, B >= 75, C >= 50, D >= 25, E < 25), computed over a recency-weighted rolling 10-run window.
 
 Scores are public. Check any capability:
 
@@ -91,7 +125,9 @@ Agents can set a `min_sqs` threshold on any `POST /v1/do` call — requests are 
 - [strale.dev/docs](https://strale.dev/docs) — API reference
 - [strale.dev/pricing](https://strale.dev/pricing) — Pricing
 - [strale.dev/quality](https://strale.dev/quality) — Quality methodology
-- 💡 [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
+- [scan.strale.io](https://scan.strale.io) — Beacon (free agent-readiness scanner)
+- [api.strale.io/mcp](https://api.strale.io/mcp) — MCP endpoint (Streamable HTTP)
+- [Examples](https://github.com/strale-io/strale-examples) — copy-paste examples for every integration
 
 ## Agent Skills & Code Examples
 
