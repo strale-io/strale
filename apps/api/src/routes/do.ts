@@ -650,6 +650,48 @@ doRoute.post(
   }
 });
 
+// ─── Free-tier usage counter ────────────────────────────────────────────────
+
+const FREE_TIER_DAILY_LIMIT = 10;
+
+async function getFreeTierUsageToday(
+  db: ReturnType<typeof getDb>,
+  ipHash: string | null,
+): Promise<number> {
+  if (!ipHash) return 0;
+  try {
+    const [row] = await db.execute(sql`
+      SELECT COUNT(*)::int AS cnt FROM transactions
+      WHERE created_at >= CURRENT_DATE
+        AND user_id IS NULL
+        AND is_free_tier = true
+        AND audit_trail->'request_context'->>'ipHash' = ${ipHash}
+    `);
+    return (row as any)?.cnt ?? 0;
+  } catch {
+    return 0; // Don't fail the request if the counter query errors
+  }
+}
+
+function buildUsageBlock(callsToday: number): Record<string, unknown> {
+  const nextMidnight = new Date();
+  nextMidnight.setUTCHours(24, 0, 0, 0);
+
+  const exceeded = callsToday > FREE_TIER_DAILY_LIMIT;
+  return {
+    calls_today: callsToday,
+    daily_limit: FREE_TIER_DAILY_LIMIT,
+    resets_at: nextMidnight.toISOString(),
+    ...(exceeded ? {
+      limit_exceeded: true,
+      message: "You've exceeded today's free limit. Sign up for €2 free credits to continue without interruption.",
+    } : {}),
+  };
+}
+
+// TODO: Enforce FREE_TIER_DAILY_LIMIT once we understand usage patterns
+// For now, just report the counter — don't block requests over the limit
+
 // ─── Free-tier execution: unauthenticated, no wallet, persisted for audit ───
 
 async function executeFreeTier(
@@ -727,6 +769,11 @@ async function executeFreeTier(
     storeIntegrityHash(txnRecord.id).catch(() => {});
 
     const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
+
+    // Usage counter for free-tier calls (non-blocking, informational)
+    const reqCtx = c.get("requestContext" as any) as { ipHash?: string | null } | undefined;
+    const callsToday = await getFreeTierUsageToday(db, reqCtx?.ipHash ?? null);
+
     return c.json({
       transaction_id: txnRecord.id,
       status: "completed",
@@ -736,6 +783,7 @@ async function executeFreeTier(
       output: capResult.output,
       provenance: capResult.provenance,
       free_tier: true,
+      usage: buildUsageBlock(callsToday),
       ...dualProfile,
       upgrade: {
         message: "You're using a free capability. Sign up for €2 free credits to access 270+ paid capabilities — company data, compliance checks, Web3 security, and more.",
