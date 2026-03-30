@@ -766,11 +766,29 @@ internalTrustRoute.get("/solutions/batch", async (c) => {
 
     const { badge } = determineBadge(stepData.length, 0, null);
 
+    // Detect pending steps: SQS 0 AND qp_score 0 (never tested, not degraded)
+    const hasPendingStep = stepData.some((s) => s.sqs === 0 && s.qp_score === 0 && s.quality === "pending");
+
     solutionsResult[solSlug] = {
-      sqs: { score: solutionSqs, label: sqsLabel(solutionSqs), trend: solutionTrend, freshness_level: solutionFreshness, last_tested_at: solutionLastTestedAt },
-      quality_profile: { grade: worstQuality, score: solutionQpScore, label: `Code quality: ${worstQuality} (weakest step)` },
-      reliability_profile: { grade: worstReliability, score: solutionRpScore, label: `${rpGradeToLabel(worstReliability)} (weakest step)` },
-      execution_guidance: { usable: solutionUsable, strategy: solutionStrategy },
+      sqs: {
+        score: hasPendingStep ? null : solutionSqs,
+        label: hasPendingStep ? "Building track record" : sqsLabel(solutionSqs),
+        trend: hasPendingStep ? "stable" : solutionTrend,
+        freshness_level: solutionFreshness,
+        last_tested_at: solutionLastTestedAt,
+        pending: hasPendingStep || undefined,
+      },
+      quality_profile: {
+        grade: hasPendingStep ? "pending" : worstQuality,
+        score: hasPendingStep ? 0 : solutionQpScore,
+        label: hasPendingStep ? "Building track record" : `Code quality: ${worstQuality} (weakest step)`,
+      },
+      reliability_profile: {
+        grade: hasPendingStep ? "pending" : worstReliability,
+        score: hasPendingStep ? 0 : solutionRpScore,
+        label: hasPendingStep ? "Building track record" : `${rpGradeToLabel(worstReliability)} (weakest step)`,
+      },
+      execution_guidance: { usable: hasPendingStep ? false : solutionUsable, strategy: hasPendingStep ? "queue_for_later" : solutionStrategy },
       badge,
       steps: stepData,
     };

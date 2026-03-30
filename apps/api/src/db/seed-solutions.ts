@@ -2760,6 +2760,56 @@ async function seed() {
   console.log(
     `\nDone: ${seeded} solutions seeded, ${skipped} skipped.`,
   );
+
+  // ── Solution quality gate ──────────────────────────────────────────────────
+  // Deactivate solutions where any step has SQS 0 (no test data).
+  // Auto-reactivate when all steps become qualified.
+  console.log("\n--- Solution quality gate ---");
+  let gated = 0;
+  let activated = 0;
+
+  const allSols = await db.select({
+    id: solutions.id,
+    slug: solutions.slug,
+    isActive: solutions.isActive,
+  }).from(solutions);
+
+  for (const sol of allSols) {
+    const steps = await db.select({
+      capabilitySlug: solutionSteps.capabilitySlug,
+    }).from(solutionSteps).where(eq(solutionSteps.solutionId, sol.id));
+
+    if (steps.length === 0) continue;
+
+    // Check each step's capability for SQS > 0
+    const stepSlugs = steps.map((s) => s.capabilitySlug);
+    const capRows = await db.select({
+      slug: capabilities.slug,
+      matrixSqs: capabilities.matrixSqs,
+    }).from(capabilities).where(inArray(capabilities.slug, stepSlugs));
+
+    const capMap = new Map(capRows.map((c) => [c.slug, c.matrixSqs]));
+    const unqualified = stepSlugs.filter((slug) => {
+      const sqs = capMap.get(slug);
+      return !sqs || parseFloat(String(sqs)) === 0;
+    });
+
+    if (unqualified.length > 0 && sol.isActive) {
+      await db.update(solutions)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(solutions.id, sol.id));
+      console.log(`  GATED: ${sol.slug} — unqualified: ${unqualified.join(', ')}`);
+      gated++;
+    } else if (unqualified.length === 0 && !sol.isActive) {
+      await db.update(solutions)
+        .set({ isActive: true, updatedAt: new Date() })
+        .where(eq(solutions.id, sol.id));
+      console.log(`  ACTIVATED: ${sol.slug} — all steps qualified`);
+      activated++;
+    }
+  }
+
+  console.log(`Quality gate: ${gated} gated, ${activated} activated`);
   process.exit(0);
 }
 

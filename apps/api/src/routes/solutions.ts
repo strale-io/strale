@@ -76,6 +76,11 @@ solutionsRoute.get("/", async (c) => {
     const stepSqs = steps.map((s) => s.matrixSqs ? parseFloat(s.matrixSqs) : 0);
     const sqs = computeSolutionScore(stepSqs);
 
+    // Detect pending steps: SQS 0 AND qpScore null (never tested, not degraded)
+    const hasPendingStep = steps.some((s) =>
+      (!s.matrixSqs || parseFloat(s.matrixSqs) === 0) && s.qpScore === null,
+    );
+
     const worstQuality = steps.reduce((w, s) => {
       const g = gradeFromScore(s.qpScore);
       return gradeOrder.indexOf(g) > gradeOrder.indexOf(w) ? g : w;
@@ -104,15 +109,16 @@ solutionsRoute.get("/", async (c) => {
       search_tags: row.searchTags ?? [],
       capabilities: steps.map((s) => s.capabilitySlug),
       data_sources: [...new Set(steps.map((s) => s.dataSource).filter(Boolean))],
-      sqs,
-      sqs_label: sqsLabel(sqs),
-      quality: worstQuality,
-      reliability: worstReliability,
-      trend: computeSolutionTrend(steps.map((s) => s.trend ?? "stable")),
+      sqs: hasPendingStep ? null : sqs,
+      sqs_label: hasPendingStep ? "Building track record" : sqsLabel(sqs),
+      quality: hasPendingStep ? "pending" : worstQuality,
+      reliability: hasPendingStep ? "pending" : worstReliability,
+      trend: hasPendingStep ? "stable" : computeSolutionTrend(steps.map((s) => s.trend ?? "stable")),
       freshness_level: worstFreshnessLevel(steps.map((s) => s.freshnessLevel ?? "fresh")),
       last_tested_at: oldestTestedAt(steps.map((s) => s.lastTestedAt)),
-      usable: allUsable,
-      strategy: worstStrategy,
+      usable: hasPendingStep ? false : allUsable,
+      strategy: hasPendingStep ? "queue_for_later" : worstStrategy,
+      pending: hasPendingStep || undefined,
     };
   });
 

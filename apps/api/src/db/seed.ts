@@ -7,6 +7,16 @@ import { getDb } from "./index.js";
 import { capabilities } from "./schema.js";
 import { onCapabilityCreated } from "../lib/capability-onboarding.js";
 
+/** Estimate default latency for capabilities missing avgLatencyMs. */
+function estimateDefaultLatency(cap: { category: string; description?: string }): number {
+  if (cap.category === "web3") return 500;
+  if (cap.category === "validation") return 50;
+  // AI-generated caps tend to be slow (Claude, scraping + LLM)
+  if (cap.description?.includes("Claude") || cap.description?.includes("LLM")) return 3000;
+  // Default for external API calls
+  return 500;
+}
+
 /** Convert EUR cents price to x402-friendly USD price tier. */
 function eurToX402Price(priceCents: number): number {
   if (priceCents <= 5) return 0.005;
@@ -2712,6 +2722,7 @@ async function seed() {
         ...cap,
         lifecycleState: "active",
         visible: true,
+        avgLatencyMs: estimateDefaultLatency(cap),
         x402Enabled: true,
         x402PriceUsd: eurToX402Price(cap.priceCents).toFixed(4),
         x402Method: "GET",

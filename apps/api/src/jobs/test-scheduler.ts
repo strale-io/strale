@@ -17,11 +17,48 @@
 
 import { sql, eq, and, inArray, asc, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, testSuites, testResults } from "../db/schema.js";
+import { capabilities, solutions, solutionSteps, testSuites, testResults } from "../db/schema.js";
 import { runTests, persistDualProfileScores } from "../lib/test-runner.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { isCacheExpired, refreshUpstreamMapping } from "../lib/upstream-health-gate.js";
 import { probeChromiumHealth } from "../lib/chromium-health.js";
+
+// ─── Solution quality gate (auto-activate when all steps are scored) ────────
+
+async function checkSolutionGates(capabilitySlug: string): Promise<void> {
+  const db = getDb();
+
+  // Find inactive solutions that include this capability as a step
+  const affectedSteps = await db
+    .select({ solutionId: solutionSteps.solutionId })
+    .from(solutionSteps)
+    .where(eq(solutionSteps.capabilitySlug, capabilitySlug));
+
+  const solutionIds = [...new Set(affectedSteps.map((s) => s.solutionId))];
+  if (solutionIds.length === 0) return;
+
+  for (const solId of solutionIds) {
+    const [sol] = await db.select({ slug: solutions.slug, isActive: solutions.isActive })
+      .from(solutions).where(eq(solutions.id, solId)).limit(1);
+    if (!sol || sol.isActive) continue; // Already active
+
+    // Check all steps
+    const steps = await db.select({ capabilitySlug: solutionSteps.capabilitySlug })
+      .from(solutionSteps).where(eq(solutionSteps.solutionId, solId));
+
+    const slugs = steps.map((s) => s.capabilitySlug);
+    const caps = await db.select({ slug: capabilities.slug, matrixSqs: capabilities.matrixSqs })
+      .from(capabilities).where(inArray(capabilities.slug, slugs));
+
+    const allQualified = caps.every((c) => c.matrixSqs && parseFloat(String(c.matrixSqs)) > 0);
+    if (allQualified && caps.length === slugs.length) {
+      await db.update(solutions)
+        .set({ isActive: true, updatedAt: new Date() })
+        .where(eq(solutions.id, solId));
+      console.log(`[solution-gate] AUTO-ACTIVATED: ${sol.slug} — all steps now qualified`);
+    }
+  }
+}
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -319,6 +356,13 @@ async function pollCycle(): Promise<void> {
         console.log(
           `[test-scheduler] ${cap.slug}: ${summary.passed}/${summary.total} passed`,
         );
+
+        // Auto-activate gated solutions when all steps become qualified
+        try {
+          await checkSolutionGates(cap.slug);
+        } catch (gateErr) {
+          // Non-critical — don't block the scheduler
+        }
 
         // Log individual failures for Railway log monitoring
         for (const r of summary.results) {

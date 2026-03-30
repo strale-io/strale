@@ -62,13 +62,28 @@ async function tryGetExecutor(slug: string) {
   return _executorModule.getExecutor(slug) ?? null;
 }
 
-async function verifyKnownAnswerTest(
+async function verifyTestFixture(
   test: TestDef,
 ): Promise<{ ok: boolean; reason?: string }> {
-  if (test.testType !== "known_answer") return { ok: true };
+  // Skip schema_check tests — they don't need pre-verification
+  if (test.testType === "schema_check") return { ok: true };
 
   const executor = await tryGetExecutor(test.capabilitySlug);
   if (!executor) return { ok: true }; // Can't verify without executor — allow insert
+
+  // Negative tests should THROW — verify they do
+  if (test.testType === "negative") {
+    try {
+      await executor(test.input as Record<string, unknown>);
+      // If we get here, the negative test is wrong — capability should have thrown
+      return { ok: false, reason: "Negative test succeeded but should throw an error" };
+    } catch {
+      return { ok: true }; // Expected — negative test is valid
+    }
+  }
+
+  // known_answer and edge_case: execute and verify assertions
+  if (test.testType !== "known_answer" && test.testType !== "edge_case") return { ok: true };
 
   let result: { output: unknown } | null = null;
   try {
@@ -869,7 +884,7 @@ async function seed() {
     }
 
     // Verify known_answer tests against actual capability output before inserting
-    const verification = await verifyKnownAnswerTest(test);
+    const verification = await verifyTestFixture(test);
     if (!verification.ok) {
       console.error(
         `  ✗ VERIFICATION FAILED — ${test.capabilitySlug} / "${test.testName}": ${verification.reason}`,
