@@ -1,7 +1,10 @@
 {
   "name": "strale",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/api",
     "build": "npm run build --workspace=apps/api",
@@ -14,5 +17,8 @@
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "esbuild": "^0.27.4"
   }
 }
