@@ -120,6 +120,7 @@ const EXTERNAL_SERVICE_PATTERNS = [
   /Etherscan/i, /etherscan\.io/i,
   /cloudflare-eth/i, /llamarpc/i, /publicnode/i,
   /alternative\.me/i, /stablecoins\.llama\.fi/i,
+  /esma\.europa\.eu/i, /ESMA/i,
   // NOTE: "no api key" and "is required for" are intentionally NOT here.
   // Missing API keys are Strale's infrastructure responsibility — the score
   // must reflect that the capability cannot serve users. See Scoring Integrity Rules.

@@ -806,6 +806,38 @@ const TESTS: TestDef[] = [
     input: { days: 7 },
     validationRules: checks(notNull("current_value"), notNull("history")),
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Web3 Phase 3b — VASP, Wallet Balance/Transactions
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ── vasp-verify ──
+  { capabilitySlug: "vasp-verify", testName: "Coinbase — known CASP", testType: "known_answer",
+    input: { entity_name: "Coinbase" },
+    validationRules: checks(notNull("match_found")),
+  },
+  { capabilitySlug: "vasp-verify", testName: "Nonexistent entity", testType: "edge_case",
+    input: { entity_name: "Totally Fake Crypto Exchange XYZ 999" },
+    validationRules: checks(isFalse("match_found")),
+  },
+
+  // ── vasp-non-compliant-check ──
+  { capabilitySlug: "vasp-non-compliant-check", testName: "Google — not on list", testType: "known_answer",
+    input: { entity_name: "Google" },
+    validationRules: checks(isFalse("on_non_compliant_list")),
+  },
+
+  // ── wallet-balance-lookup ──
+  { capabilitySlug: "wallet-balance-lookup", testName: "Ethereum Foundation — has balance", testType: "known_answer",
+    input: { address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe", chain_id: "1" },
+    validationRules: checks(notNull("native_balance_eth")),
+  },
+
+  // ── wallet-transactions-lookup ──
+  { capabilitySlug: "wallet-transactions-lookup", testName: "Ethereum Foundation — has transactions", testType: "known_answer",
+    input: { address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe", chain_id: "1", limit: 5 },
+    validationRules: checks(notNull("total_returned"), notNull("transactions")),
+  },
 ];
 
 // ─── Seed logic ─────────────────────────────────────────────────────────────

@@ -2662,6 +2662,42 @@ const seedCapabilities = [
     outputSchema: { type: "object", properties: { current_value: { type: "number" }, classification: { type: "string" }, timestamp: { type: "string" }, history: { type: "array" }, average: { type: "number" }, trend: { type: "string" } } },
     priceCents: 2,
   },
+  {
+    name: "VASP Verification",
+    slug: "vasp-verify",
+    description: "Check if a crypto-asset service provider (CASP/VASP) is authorized under the EU MiCA regulation. Searches ESMA's official register of authorized CASPs. Returns authorization status, licensed services, home country, and passporting rights.",
+    category: "web3",
+    inputSchema: { type: "object", properties: { entity_name: { type: "string", description: "Company or entity name to search for" }, website: { type: "string", description: "Entity website domain (optional)" }, lei: { type: "string", description: "Legal Entity Identifier (optional)" } }, required: ["entity_name"] },
+    outputSchema: { type: "object", properties: { entity_name_searched: { type: "string" }, match_found: { type: "boolean" }, authorized: { type: "boolean" }, matches: { type: "array" }, register_last_updated: { type: "string" } } },
+    priceCents: 2,
+  },
+  {
+    name: "VASP Non-Compliant Check",
+    slug: "vasp-non-compliant-check",
+    description: "Check if a crypto-asset service provider is on ESMA's non-compliant entities list under MiCA regulation. Flags entities that have been identified for regulatory infringement.",
+    category: "web3",
+    inputSchema: { type: "object", properties: { entity_name: { type: "string", description: "Company or entity name to check" }, website: { type: "string", description: "Entity website (optional)" } }, required: ["entity_name"] },
+    outputSchema: { type: "object", properties: { entity_name_searched: { type: "string" }, on_non_compliant_list: { type: "boolean" }, data_available: { type: "boolean" }, matches: { type: "array" }, register_last_updated: { type: "string" } } },
+    priceCents: 2,
+  },
+  {
+    name: "Wallet Balance Lookup",
+    slug: "wallet-balance-lookup",
+    description: "Get the native token balance for any wallet address and a list of recently interacted ERC-20 tokens. Supports Ethereum and other EVM chains via Etherscan V2.",
+    category: "web3",
+    inputSchema: { type: "object", properties: { address: { type: "string", description: "Wallet address (0x...)" }, chain_id: { type: "string", description: "Chain ID (1=Ethereum). Default: 1" } }, required: ["address"] },
+    outputSchema: { type: "object", properties: { address: { type: "string" }, chain_id: { type: "string" }, native_balance_wei: { type: "string" }, native_balance_eth: { type: "number" }, recent_tokens: { type: "array" }, token_transfer_count: { type: "number" } } },
+    priceCents: 2,
+  },
+  {
+    name: "Wallet Transactions Lookup",
+    slug: "wallet-transactions-lookup",
+    description: "Get recent transactions for any wallet address. Returns up to 50 transactions with hash, value, timestamp, and gas details. Supports Ethereum and other EVM chains via Etherscan V2.",
+    category: "web3",
+    inputSchema: { type: "object", properties: { address: { type: "string", description: "Wallet address (0x...)" }, chain_id: { type: "string", description: "Chain ID (1=Ethereum). Default: 1" }, limit: { type: "number", description: "Number of transactions (1-50). Default: 20" } }, required: ["address"] },
+    outputSchema: { type: "object", properties: { address: { type: "string" }, chain_id: { type: "string" }, total_returned: { type: "number" }, sent_count: { type: "number" }, received_count: { type: "number" }, transactions: { type: "array" } } },
+    priceCents: 2,
+  },
 ];
 
 async function seed() {
