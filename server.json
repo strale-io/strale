@@ -7,12 +7,12 @@
     "url": "https://github.com/strale-io/strale",
     "source": "github"
   },
-  "version": "0.2.0",
+  "version": "0.2.3",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "strale-mcp",
-      "version": "0.2.0",
+      "version": "0.2.3",
       "transport": {
         "type": "stdio"
       },
