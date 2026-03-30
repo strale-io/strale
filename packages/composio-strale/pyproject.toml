@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "composio-strale"
+version = "0.1.4"
+description = "Composio integration for Strale — 270+ business capabilities as agent tools"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Strale", email = "hello@strale.io" },
+]
+keywords = [
+    "composio",
+    "strale",
+    "ai",
+    "agent",
+    "tools",
+    "capabilities",
+    "compliance",
+    "web3",
+    "mcp",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "composio>=0.7.0",
+    "httpx>=0.24.0",
+    "pydantic>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://strale.dev"
+Repository = "https://github.com/strale-io/strale/tree/main/packages/composio-strale"
+Documentation = "https://strale.dev/docs"
