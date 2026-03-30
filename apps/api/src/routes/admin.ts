@@ -196,3 +196,100 @@ adminRoute.get("/stats", async (c) => {
   c.header("Cache-Control", "private, max-age=300");
   return c.json(stats);
 });
+
+// ─── Request analytics (aggregate, no PII) ──────────────────────────────────
+
+adminRoute.get("/request-analytics", async (c) => {
+  const days = Math.min(parseInt(c.req.query("days") ?? "7", 10) || 7, 90);
+  const db = getDb();
+
+  const rows = await db.execute(sql`
+    SELECT
+      t.audit_trail->'request_context'->>'userAgent' AS user_agent,
+      t.audit_trail->'request_context'->>'mcpClient' AS mcp_client,
+      t.audit_trail->'request_context'->>'referer' AS referer,
+      t.audit_trail->'request_context'->>'ipHash' AS ip_hash,
+      t.audit_trail->'request_context'->>'acceptLanguage' AS accept_language,
+      c.slug AS capability_slug,
+      t.is_free_tier,
+      t.payment_method,
+      u.email
+    FROM transactions t
+    LEFT JOIN capabilities c ON c.id = t.capability_id
+    LEFT JOIN users u ON u.id = t.user_id
+    WHERE t.created_at >= NOW() - make_interval(days := ${days})
+    ORDER BY t.created_at DESC
+    LIMIT 10000
+  `);
+
+  const data = (Array.isArray(rows) ? rows : (rows as any).rows ?? []) as any[];
+  const internal = new Set(["petter@strale.io", "test2@strale.io", "test@strale.io", "system@strale.internal"]);
+  const external = data.filter((r) => !r.email || !internal.has(r.email));
+
+  // Aggregate by mcp_client
+  const byMcpClient: Record<string, number> = {};
+  for (const r of external) {
+    const key = r.mcp_client || "unknown";
+    byMcpClient[key] = (byMcpClient[key] ?? 0) + 1;
+  }
+
+  // Aggregate by referer (top 10)
+  const byReferer: Record<string, number> = {};
+  for (const r of external) {
+    const key = r.referer || "direct";
+    byReferer[key] = (byReferer[key] ?? 0) + 1;
+  }
+
+  // Aggregate by user_agent (top 10)
+  const byUserAgent: Record<string, number> = {};
+  for (const r of external) {
+    const ua = r.user_agent ? String(r.user_agent).slice(0, 60) : "none";
+    byUserAgent[ua] = (byUserAgent[ua] ?? 0) + 1;
+  }
+
+  // Unique IP hashes
+  const uniqueIpHashes = new Set(external.map((r: any) => r.ip_hash).filter(Boolean));
+
+  // Top capabilities
+  const byCap: Record<string, number> = {};
+  for (const r of external) {
+    if (r.capability_slug) byCap[r.capability_slug] = (byCap[r.capability_slug] ?? 0) + 1;
+  }
+  const topCapabilities = Object.entries(byCap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([slug, count]) => ({ slug, count }));
+
+  // By payment method
+  const byPayment: Record<string, number> = {};
+  for (const r of external) {
+    const method = r.is_free_tier ? "free_tier" : (r.payment_method ?? "wallet");
+    byPayment[method] = (byPayment[method] ?? 0) + 1;
+  }
+
+  // Accept-Language distribution
+  const byLanguage: Record<string, number> = {};
+  for (const r of external) {
+    const lang = r.accept_language || "unknown";
+    byLanguage[lang] = (byLanguage[lang] ?? 0) + 1;
+  }
+
+  return c.json({
+    period_days: days,
+    total_requests: data.length,
+    external_requests: external.length,
+    unique_sources: uniqueIpHashes.size,
+    by_mcp_client: byMcpClient,
+    by_referer: Object.fromEntries(
+      Object.entries(byReferer).sort((a, b) => b[1] - a[1]).slice(0, 10),
+    ),
+    by_user_agent: Object.fromEntries(
+      Object.entries(byUserAgent).sort((a, b) => b[1] - a[1]).slice(0, 10),
+    ),
+    by_payment_method: byPayment,
+    by_language: Object.fromEntries(
+      Object.entries(byLanguage).sort((a, b) => b[1] - a[1]).slice(0, 10),
+    ),
+    top_capabilities: topCapabilities,
+  });
+});

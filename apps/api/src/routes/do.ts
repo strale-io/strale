@@ -141,6 +141,22 @@ function executeWithRetry(
   });
 }
 
+// ─── MCP client detection from User-Agent ────────────────────────────────────
+
+function parseMcpClient(ua: string | null): string | null {
+  if (!ua) return null;
+  const lower = ua.toLowerCase();
+  if (lower.includes("claude") || lower.includes("claude-desktop")) return "claude-desktop";
+  if (lower.includes("cursor")) return "cursor";
+  if (lower.includes("windsurf")) return "windsurf";
+  if (lower.includes("copilot")) return "copilot";
+  if (lower.includes("straleio") || lower.includes("strale-mcp")) return "strale-sdk";
+  if (lower.includes("python-httpx") || lower.includes("python-requests")) return "python-sdk";
+  if (lower.includes("node-fetch") || lower.includes("undici")) return "node-sdk";
+  if (lower.includes("axios")) return "axios";
+  return null;
+}
+
 const MAX_TIMEOUT_SECONDS = 60;
 const DEFAULT_TIMEOUT_SECONDS = 30;
 const MAX_PRICE_CAP_CENTS = 2000; // €20 absolute cap per request
@@ -163,10 +179,22 @@ doRoute.post(
   const db = getDb();
 
   // Capture request context for attribution tracking (stored in audit trail)
+  const userAgent = c.req.header("user-agent") ?? null;
   const requestContext = {
     referer: c.req.header("referer") ?? c.req.header("referrer") ?? null,
     origin: c.req.header("origin") ?? null,
-    userAgent: c.req.header("user-agent") ?? null,
+    userAgent,
+    // Hash IP for aggregate pattern analysis (never store raw IPs)
+    ipHash: (() => {
+      const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
+        ?? c.req.header("cf-connecting-ip")
+        ?? c.req.header("x-real-ip")
+        ?? null;
+      return ip ? createHash("sha256").update(ip).digest("hex").slice(0, 16) : null;
+    })(),
+    acceptLanguage: c.req.header("accept-language")?.split(",")[0]?.trim() ?? null,
+    // Parse known MCP/SDK clients from User-Agent
+    mcpClient: parseMcpClient(userAgent),
   };
   c.set("requestContext" as any, requestContext);
 
@@ -1536,7 +1564,14 @@ function buildFullAudit(params: {
   provenance?: unknown;
   sqs: { score: number; label: string; trend: string; pending: boolean };
   qualityPassRate?: number | null;
-  requestContext?: { referer: string | null; origin: string | null; userAgent: string | null };
+  requestContext?: {
+    referer: string | null;
+    origin: string | null;
+    userAgent: string | null;
+    ipHash?: string | null;
+    acceptLanguage?: string | null;
+    mcpClient?: string | null;
+  };
 }) {
   const {
     transactionId, startTime, capability, marker, executionMode,
