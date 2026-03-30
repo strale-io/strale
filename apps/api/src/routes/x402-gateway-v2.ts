@@ -201,6 +201,130 @@ async function extractInputs(
   return result;
 }
 
+// ─── Bazaar discovery extension builder ─────────────────────────────────────
+
+/**
+ * Generate an example input object from a JSON Schema's properties.
+ * Used by the bazaar extension to show agents what a typical request looks like.
+ */
+function generateExampleFromSchema(
+  schema: Record<string, unknown> | null,
+): Record<string, unknown> {
+  if (!schema) return {};
+  const props = (schema as any).properties;
+  if (!props) return {};
+
+  const example: Record<string, unknown> = {};
+  for (const [key, prop] of Object.entries(props)) {
+    const p = prop as any;
+    if (p.enum && p.enum.length > 0) {
+      example[key] = p.enum[0];
+    } else if (p.default !== undefined) {
+      example[key] = p.default;
+    } else if (p.type === "string") {
+      example[key] = `example_${key}`;
+    } else if (p.type === "number" || p.type === "integer") {
+      example[key] = 0;
+    } else if (p.type === "boolean") {
+      example[key] = true;
+    } else if (p.type === "object") {
+      example[key] = {};
+    } else if (p.type === "array") {
+      example[key] = [];
+    }
+  }
+  return example;
+}
+
+/**
+ * Build the bazaar discovery extension for inclusion in 402 responses.
+ * Follows the x402 bazaar extension spec (specs/extensions/bazaar.md).
+ *
+ * Each capability gets its own bazaar entry keyed by its concrete URL.
+ * Facilitators catalog these when they process payments, making the
+ * endpoints discoverable via GET /discovery/resources.
+ */
+function buildBazaarExtension(
+  method: string,
+  inputSchema: Record<string, unknown> | null,
+): { info: Record<string, unknown>; schema: Record<string, unknown> } {
+  const httpMethod = method.toUpperCase();
+  const isBodyMethod = ["POST", "PUT", "PATCH"].includes(httpMethod);
+
+  if (isBodyMethod) {
+    const exampleBody = generateExampleFromSchema(inputSchema);
+    return {
+      info: {
+        input: {
+          type: "http",
+          method: httpMethod,
+          bodyType: "json",
+          body: exampleBody,
+        },
+        output: { type: "json" },
+      },
+      schema: {
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        type: "object",
+        properties: {
+          input: {
+            type: "object",
+            properties: {
+              type: { type: "string", const: "http" },
+              method: { type: "string", enum: [httpMethod] },
+              bodyType: { type: "string", enum: ["json", "form-data", "text"] },
+              body: inputSchema ?? { type: "object" },
+            },
+            required: ["type", "method", "bodyType", "body"],
+            additionalProperties: false,
+          },
+          output: {
+            type: "object",
+            properties: { type: { type: "string" }, example: { type: "object" } },
+            required: ["type"],
+          },
+        },
+        required: ["input"],
+      },
+    };
+  }
+
+  // GET / HEAD / DELETE — query param methods
+  const exampleParams = generateExampleFromSchema(inputSchema);
+  return {
+    info: {
+      input: {
+        type: "http",
+        method: httpMethod,
+        queryParams: exampleParams,
+      },
+      output: { type: "json" },
+    },
+    schema: {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
+      properties: {
+        input: {
+          type: "object",
+          properties: {
+            type: { type: "string", const: "http" },
+            method: { type: "string", enum: [httpMethod] },
+            queryParams: inputSchema ?? { type: "object" },
+          },
+          required: ["type", "method"],
+          additionalProperties: false,
+        },
+        output: {
+          type: "object",
+          properties: { type: { type: "string" }, example: { type: "object" } },
+          required: ["type"],
+        },
+      },
+      required: ["input"],
+    },
+  };
+}
+
 // ─── 402 Response builder ───────────────────────────────────────────────────
 
 function build402(
@@ -209,6 +333,8 @@ function build402(
   priceUsd: number,
   resourceUrl: string,
   matrixSqs?: string | null,
+  inputSchema?: Record<string, unknown> | null,
+  method?: string,
 ) {
   const maxAmount = usdToUsdcAtomic(priceUsd);
   const sqs = matrixSqs ? parseFloat(String(matrixSqs)) : null;
@@ -227,11 +353,21 @@ function build402(
     extra: { name: "USDC", version: "2" },
   };
 
+  const httpMethod = (method ?? "POST").toUpperCase();
+  const bazaar = buildBazaarExtension(httpMethod, inputSchema ?? null);
+
   const body = {
-    x402Version: 1,
-    paymentRequirements: [paymentRequirement],
+    x402Version: 2,
     error: `Payment required. ${name} costs $${priceUsd.toFixed(4)} USDC per call.`,
-    accepts: [{ network: NETWORK, asset: "USDC", amount: `$${priceUsd.toFixed(2)}` }],
+    resource: {
+      url: resourceUrl,
+      description: `${description}${sqsStr}`,
+      mimeType: "application/json",
+    },
+    accepts: [paymentRequirement],
+    extensions: { bazaar },
+    // v1 backward-compat: keep paymentRequirements for older clients
+    paymentRequirements: [paymentRequirement],
   };
 
   // v1 backward-compat header
@@ -377,6 +513,7 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
       const { body, headerPayload } = build402(
         sol.name, sol.description, sol.x402PriceUsd,
         `${BASE_URL}/x402/solutions/${slug}`,
+        null, sol.inputSchema, "POST",
       );
       c.header("Payment-Required", headerPayload);
       return c.json(body, 402);
@@ -537,6 +674,7 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
       const { body, headerPayload } = build402(
         cap.name, cap.description, cap.x402PriceUsd,
         `${BASE_URL}/x402/${slug}`, cap.matrixSqs,
+        cap.inputSchema, cap.x402Method,
       );
       c.header("Payment-Required", headerPayload);
       return c.json(body, 402);
