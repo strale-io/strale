@@ -752,6 +752,60 @@ const TESTS: TestDef[] = [
     input: { protocol: "aave-v3" },
     validationRules: checks(notNull("name"), notNull("tvl_usd")),
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Web3 Phase 3a — GoPlus, DeFi Llama, Alternative.me
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ── approval-security-check ──
+  { capabilitySlug: "approval-security-check", testName: "Vitalik address — check approvals", testType: "known_answer",
+    input: { address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", chain_id: "1" },
+    validationRules: checks(notNull("total_approvals"), notNull("risk_level")),
+  },
+  { capabilitySlug: "approval-security-check", testName: "Missing address — error", testType: "negative",
+    input: { chain_id: "1" },
+    validationRules: checks(),
+  },
+
+  // ── phishing-site-check ──
+  { capabilitySlug: "phishing-site-check", testName: "google.com — not phishing", testType: "known_answer",
+    input: { url: "https://google.com" },
+    validationRules: checks(isFalse("is_phishing")),
+  },
+  { capabilitySlug: "phishing-site-check", testName: "Missing URL — error", testType: "negative",
+    input: {},
+    validationRules: checks(),
+  },
+
+  // ── protocol-fees-lookup ──
+  { capabilitySlug: "protocol-fees-lookup", testName: "Uniswap — has fees", testType: "known_answer",
+    input: { protocol: "uniswap" },
+    validationRules: checks(notNull("fees_24h_usd")),
+  },
+  { capabilitySlug: "protocol-fees-lookup", testName: "Nonexistent protocol", testType: "negative",
+    input: { protocol: "nonexistent-protocol-xyz-99999" },
+    validationRules: checks(),
+  },
+
+  // ── stablecoin-flow-check ──
+  { capabilitySlug: "stablecoin-flow-check", testName: "Ethereum stablecoin supply", testType: "known_answer",
+    input: { chain: "Ethereum" },
+    validationRules: checks(notNull("total_supply_usd")),
+  },
+  { capabilitySlug: "stablecoin-flow-check", testName: "USDC specific", testType: "edge_case",
+    input: { stablecoin: "USDC" },
+    validationRules: checks(notNull("total_supply_usd")),
+  },
+
+  // ── fear-greed-index ──
+  { capabilitySlug: "fear-greed-index", testName: "Current index", testType: "known_answer",
+    input: {},
+    validationRules: checks(notNull("current_value"), notNull("classification")),
+  },
+  { capabilitySlug: "fear-greed-index", testName: "7-day history", testType: "edge_case",
+    input: { days: 7 },
+    validationRules: checks(notNull("current_value"), notNull("history")),
+  },
 ];
 
 // ─── Seed logic ─────────────────────────────────────────────────────────────
