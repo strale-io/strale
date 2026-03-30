@@ -22,6 +22,7 @@ import { getDb } from "../db/index.js";
 import { capabilities, testSuites, healthMonitorEvents } from "../db/schema.js";
 import { computeDualProfileSQS } from "./sqs.js";
 import { logHealthEvent } from "./health-monitor.js";
+import { getExecutor } from "../capabilities/index.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,39 @@ const STATE_VISIBILITY: Record<LifecycleState, boolean> = {
   degraded: true,
   suspended: false,
 };
+
+// ─── Smoke test: execute once from production before promoting ───────────────
+
+/**
+ * Run a single execution of the capability from the production environment.
+ * Uses the first known_answer test input as the smoke test input.
+ * Only applies to probation → active transitions (first-time activation).
+ */
+async function smokeTest(slug: string): Promise<{ passed: boolean; error?: string }> {
+  const executor = getExecutor(slug);
+  if (!executor) return { passed: false, error: "No executor registered" };
+
+  const db = getDb();
+  const [suite] = await db.select({ input: testSuites.input })
+    .from(testSuites)
+    .where(and(
+      eq(testSuites.capabilitySlug, slug),
+      eq(testSuites.testType, "known_answer"),
+      eq(testSuites.active, true),
+    ))
+    .limit(1);
+
+  if (!suite) return { passed: false, error: "No known_answer test suite for smoke test input" };
+
+  try {
+    const result = await executor(suite.input as Record<string, unknown>);
+    if (!result?.output) return { passed: false, error: "Executor returned no output" };
+    return { passed: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { passed: false, error: msg.slice(0, 200) };
+  }
+}
 
 // ─── Core: write a transition ─────────────────────────────────────────────────
 
@@ -187,7 +221,23 @@ export async function evaluateLifecycle(
     }
 
     if (!dual.matrix.pending && dual.score >= ACTIVE_SQS_MIN) {
-      const reason = `SQS ${dual.score.toFixed(1)} ≥ ${ACTIVE_SQS_MIN}, ${dual.qp.runs_analyzed} runs, all factors qualified`;
+      // Production smoke test: execute once from this environment before activating
+      const smokeResult = await smokeTest(slug);
+      if (!smokeResult.passed) {
+        console.warn(
+          `[lifecycle] ${slug}: SQS qualifies (${dual.score.toFixed(1)}) but smoke test failed: ${smokeResult.error}`,
+        );
+        await logHealthEvent({
+          eventType: "lifecycle_transition",
+          capabilitySlug: slug,
+          tier: 2,
+          actionTaken: `Smoke test blocked probation→active: ${smokeResult.error}`,
+          details: { sqs: dual.score, smoke_error: smokeResult.error },
+        });
+        return null; // Stay in probation — will retry next evaluation cycle
+      }
+
+      const reason = `SQS ${dual.score.toFixed(1)} ≥ ${ACTIVE_SQS_MIN}, ${dual.qp.runs_analyzed} runs, smoke test passed`;
       await transitionCapability(slug, "active", reason, "auto", dual.score);
       return { slug, from: "probation", to: "active", reason };
     }

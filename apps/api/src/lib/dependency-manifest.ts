@@ -266,6 +266,95 @@ export const PROVIDERS: DependencyProvider[] = [
     tier: "free",
   },
 
+  // ─── Web3 providers (free, no key) ────────────────────────────────────────
+  {
+    name: "goplus",
+    displayName: "GoPlus Security",
+    description: "Web3 security API — wallet risk, token security, approval risk, phishing detection.",
+    baseUrl: "https://api.gopluslabs.io",
+    authType: "none",
+    healthProbe: {
+      path: "/api/v1/token_security/1?contract_addresses=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      method: "GET",
+      healthyStatuses: [200],
+      timeoutMs: 5000,
+    },
+    capabilities: [
+      "wallet-risk-score", "token-security-check",
+      "approval-security-check", "phishing-site-check",
+    ],
+    tier: "free",
+  },
+  {
+    name: "defillama",
+    displayName: "DeFi Llama",
+    description: "DeFi analytics — protocol TVL, fees, revenue, stablecoin flows.",
+    baseUrl: "https://api.llama.fi",
+    authType: "none",
+    healthProbe: {
+      path: "/protocols",
+      method: "GET",
+      healthyStatuses: [200],
+      timeoutMs: 10000,
+    },
+    capabilities: [
+      "protocol-tvl-lookup", "protocol-fees-lookup", "stablecoin-flow-check",
+    ],
+    tier: "free",
+  },
+  {
+    name: "etherscan",
+    displayName: "Etherscan V2",
+    description: "EVM chain explorer API — wallet age, contract verification, gas prices, balances.",
+    baseUrl: "https://api.etherscan.io",
+    authType: "api-key-query",
+    envVar: "ETHERSCAN_API_KEY",
+    healthProbe: {
+      // Unauthenticated probe — 401/403 proves reachability without quota consumption
+      path: "/v2/api?chainid=1&module=gastracker&action=gasoracle",
+      method: "GET",
+      healthyStatuses: [200, 401, 403],
+      timeoutMs: 5000,
+      skipAuth: true,
+    },
+    capabilities: [
+      "wallet-age-check", "contract-verify-check", "gas-price-check",
+      "wallet-balance-lookup", "wallet-transactions-lookup",
+    ],
+    tier: "free",
+  },
+  {
+    name: "alternative-me",
+    displayName: "Alternative.me",
+    description: "Crypto Fear & Greed Index — market sentiment indicator.",
+    baseUrl: "https://api.alternative.me",
+    authType: "none",
+    healthProbe: {
+      path: "/fng/?limit=1&format=json",
+      method: "GET",
+      healthyStatuses: [200],
+      timeoutMs: 3000,
+    },
+    capabilities: ["fear-greed-index"],
+    tier: "free",
+  },
+  {
+    name: "publicnode",
+    displayName: "PublicNode Ethereum RPC",
+    description: "Free public Ethereum JSON-RPC endpoint for ENS resolution.",
+    baseUrl: "https://ethereum-rpc.publicnode.com",
+    authType: "none",
+    healthProbe: {
+      path: "/",
+      method: "POST",
+      body: { jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 },
+      healthyStatuses: [200],
+      timeoutMs: 5000,
+    },
+    capabilities: ["ens-resolve", "ens-reverse-lookup"],
+    tier: "free",
+  },
+
   // ─── Retired providers (keep for migration completeness checks) ───────────
   // NOTE: OPENSANCTIONS_API_KEY in Railway can be removed — this provider
   // is retired (replaced by Dilisense on 2026-03-25). The key is dead.

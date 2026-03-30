@@ -11,7 +11,7 @@
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps, transactions } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
@@ -78,7 +78,13 @@ async function ensureCache(): Promise<void> {
         dataJurisdiction: capabilities.geography,
       })
       .from(capabilities)
-      .where(and(eq(capabilities.x402Enabled, true), eq(capabilities.isActive, true)));
+      .where(and(
+        eq(capabilities.x402Enabled, true),
+        eq(capabilities.isActive, true),
+        // Only serve active or probation capabilities via x402
+        // Block degraded/suspended to prevent serving known-broken capabilities
+        inArray(capabilities.lifecycleState, ["active", "probation"]),
+      ));
 
     const newCapCache = new Map<string, X402Capability>();
     for (const row of capRows) {
