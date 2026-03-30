@@ -54,6 +54,11 @@ function categoryToTags(category: string, slug: string): string[] {
   if (slug.includes("vat")) tags.push("tax", "eu");
   if (slug.includes("invoice") || slug.includes("receipt"))
     tags.push("finance", "accounting");
+  if (category === "web3") tags.push("defi", "blockchain", "crypto", "ethereum");
+  if (slug.includes("wallet")) tags.push("wallet");
+  if (slug.includes("token")) tags.push("token", "erc20");
+  if (slug.includes("ens")) tags.push("ens", "ethereum");
+  if (slug.includes("vasp") || slug.includes("mica")) tags.push("mica", "vasp", "compliance");
 
   return [...new Set(tags)];
 }

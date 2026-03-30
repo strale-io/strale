@@ -525,7 +525,7 @@ export function registerStraleTools(
     "strale_execute",
     {
       description:
-        "Run a Strale capability by slug — validate an IBAN, look up a company in 27 countries, screen against sanctions/PEP lists, extract data from a URL or PDF, check VAT numbers, verify email deliverability, and 250+ more. Returns structured JSON output with SQS quality score, latency, and data provenance. Free capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) work without an API key. Use strale_search first to find the right slug and required inputs.",
+        "Run a Strale capability by slug — validate an IBAN, look up a company in 27 countries, screen against sanctions/PEP lists, extract data from a URL or PDF, check VAT numbers, verify email deliverability, assess wallet risk, check token contract safety, resolve ENS names, look up DeFi protocol TVL, and 270+ more. Returns structured JSON output with SQS quality score, latency, and data provenance. Free capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) work without an API key. Use strale_search first to find the right slug and required inputs.",
       inputSchema: z.object({
         slug: z
           .string()
@@ -560,7 +560,7 @@ export function registerStraleTools(
     "strale_search",
     {
       description:
-        "Search Strale's 250+ API capabilities and bundled solutions. Covers: KYC & compliance (company verification, VAT validation, sanctions screening), data validation (IBAN, email, phone numbers), company registries (Nordic countries, US SEC EDGAR), domain & website intelligence (WHOIS, DNS, SSL certificates, trust scores, security headers, PageSpeed, tech stack detection), Web3 (live crypto prices, gas fees), and more (translation, invoice extraction, lead enrichment, AI Act assessment). Most under €0.10. Free to search.",
+        "Search Strale's 270+ API capabilities and bundled solutions. Covers: KYC & compliance (company verification, VAT validation, sanctions screening), data validation (IBAN, email, phone numbers), company registries (Nordic countries, US SEC EDGAR), domain & website intelligence (WHOIS, DNS, SSL certificates, trust scores, security headers, PageSpeed, tech stack detection), Web3 & DeFi (wallet risk scoring, token contract safety, honeypot detection, ENS resolution, DeFi protocol TVL/fees, gas prices, VASP/MiCA compliance, stablecoin flows, market sentiment, approval security, phishing detection), and more (translation, invoice extraction, lead enrichment, AI Act assessment). Most under €0.10. Free to search.",
       inputSchema: z.object({
         query: z
           .string()

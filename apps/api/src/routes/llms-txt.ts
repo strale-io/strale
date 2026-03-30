@@ -31,6 +31,28 @@ Strale provides business data capabilities that AI agents can use at runtime via
 - Convert currencies with real-time exchange rates
 - Run compliance checks (KYB, AML, GDPR)
 - Extract data from invoices, receipts, contracts, or web pages
+- Assess wallet risk, token contract safety, or DeFi protocol health
+- Resolve ENS names, check VASP licensing, detect phishing dApps
+
+## Web3 and DeFi Agent Capabilities
+
+17 Web3-specific capabilities and 9 solutions for on-chain agents. All payable via x402 (USDC on Base) or standard API key.
+
+Wallet security: wallet-risk-score, approval-security-check, wallet-age-check, wallet-balance-lookup, wallet-transactions-lookup.
+Token and contract safety: token-security-check, contract-verify-check, phishing-site-check.
+DeFi intelligence: protocol-tvl-lookup, protocol-fees-lookup, stablecoin-flow-check, fear-greed-index, gas-price-check.
+Identity and compliance: ens-resolve, ens-reverse-lookup, vasp-verify, vasp-non-compliant-check.
+
+Pre-built solutions (single-call multi-step workflows):
+- web3-counterparty-dd: wallet risk + age + ENS + sanctions + PEP + adverse media ($0.12)
+- web3-token-safety: contract security + verification + deployer risk + domain ($0.05)
+- web3-pre-tx-gate: go/no-go middleware for DeFi agents ($0.12)
+- web3-dapp-trust: phishing detection + domain intelligence ($0.05)
+- web3-protocol-health: TVL + fees + stablecoins + domain trust ($0.05)
+- web3-pre-trade: price + security + TVL + sentiment + gas ($0.08)
+- web3-wallet-snapshot: balance + transactions + age + ENS + price ($0.05)
+- web3-vasp-check: EU MiCA VASP verification + sanctions ($0.08)
+- web3-wallet-identity: ENS reverse + risk + age + balance ($0.08)
 
 ## Quick Start
 
@@ -87,6 +109,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   "agent-tooling": "Agent Tooling",
   validation: "Validation",
   "data-extraction": "Data Extraction",
+  web3: "Web3 & DeFi",
 };
 
 // ─── Cache for full version ─────────────────────────────────────────────────
