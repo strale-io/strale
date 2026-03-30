@@ -1,33 +1,33 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
   "name": "io.github.strale-io/strale",
-  "title": "Strale",
-  "description": "Trust and quality infrastructure for AI agents. 250+ quality-scored capabilities.",
+  "title": "Strale - 270+ API capabilities for AI agents",
+  "description": "270+ quality-scored API capabilities for AI agents across 27 countries via MCP.",
   "repository": {
     "url": "https://github.com/strale-io/strale",
     "source": "github"
   },
-  "version": "0.2.0",
+  "version": "0.2.3",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "strale-mcp",
-      "version": "0.2.0",
+      "version": "0.2.3",
       "transport": {
         "type": "stdio"
       },
       "environmentVariables": [
         {
           "name": "STRALE_API_KEY",
-          "description": "Your Strale API key. Get one at strale.dev/signup. 5 capabilities work without a key.",
-          "isRequired": false,
+          "description": "Your Strale API key (starts with sk_)",
+          "isRequired": true,
           "format": "string",
           "isSecret": true
         }
       ]
     }
   ],
- "remotes": [
+  "remotes": [
     {
       "type": "streamable-http",
       "url": "https://api.strale.io/mcp"
