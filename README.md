@@ -144,6 +144,16 @@ Code examples:
 
 Strale is the trust layer for AI agents.
 
+## IDE Rules for Safe Data Handling
+
+Drop these files into your project to give your coding agent security guidance for trust-sensitive data (IBANs, company registries, sanctions, PII):
+
+- **Cursor:** Copy [`docs/ide-rules/strale-compliance.mdc`](docs/ide-rules/strale-compliance.mdc) to `.cursor/rules/`
+- **Windsurf:** Copy [`docs/ide-rules/strale-compliance.windsurfrules`](docs/ide-rules/strale-compliance.windsurfrules) to your project root, or into `.windsurf/rules/` as a `.md` file
+- **Claude Code:** Copy the snippet from [`docs/claude-md-snippet.md`](docs/claude-md-snippet.md) into your project's `CLAUDE.md`
+
+These rules prevent the most common vibe-coding vulnerabilities: client-side IBAN validation, hardcoded API keys, missing provenance metadata, and direct registry scraping. Free-tier endpoints are referenced as safe defaults that require no API key.
+
 ## License
 
 MIT

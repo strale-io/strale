@@ -1,0 +1,58 @@
+{
+  "$schema": "https://context7.com/schema/v1.json",
+  "projectTitle": "Strale",
+  "description": "Trust layer for AI agents. 250+ verified data capabilities (IBAN validation, sanctions screening, company registry lookups, KYB, adverse media) with real-time quality scores and audit trails. TypeScript and Python SDKs, MCP server, plus integrations for LangChain, CrewAI, Semantic Kernel, and more.",
+  "folders": [
+    "packages/sdk-typescript",
+    "packages/sdk-python",
+    "packages/mcp-server",
+    "packages/langchain-strale",
+    "packages/crewai-strale",
+    "packages/semantic-kernel-strale",
+    "packages/openai-agents-strale",
+    "packages/pydantic-ai-strale",
+    "packages/google-adk-strale",
+    "docs"
+  ],
+  "excludeFolders": [
+    "node_modules",
+    "**/node_modules",
+    "**/dist",
+    "**/build",
+    "apps",
+    "audit",
+    "audit-output",
+    "handoff",
+    "manifests",
+    "tasks",
+    "distribution",
+    "strale-frontend",
+    "a2a-sample",
+    ".claude",
+    "**/__pycache__",
+    "**/venv",
+    "**/.venv"
+  ],
+  "excludeFiles": [
+    "*.lock",
+    "*.map",
+    "tsconfig.json",
+    "drizzle.config.ts",
+    "CLAUDE.md",
+    "AUDIT-*.md",
+    "DIAGNOSTIC-*.md",
+    "audit-backend-report.md",
+    "capability-inventory.md"
+  ],
+  "rules": [
+    "Strale uses a prepaid wallet model — users top up via Stripe, then spend credits on API calls. No per-transaction Stripe fees.",
+    "5 capabilities are free-tier (no API key needed): email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate. IP rate limited to 10/day.",
+    "The primary API endpoint is POST /v1/do — it accepts natural language (task field) or direct slug (capabilitySlug field).",
+    "Solutions are bundled multi-step workflows (e.g. kyb-essentials-se, kyb-complete-se, invoice-verify-se) covering 20 countries.",
+    "MCP server connects via Streamable HTTP at https://api.strale.io/mcp — no local install needed.",
+    "Every capability has a Strale Quality Score (SQS) from 0-100 based on continuous testing. Check via GET /v1/quality/:slug.",
+    "The npm package is 'straleio' (not 'strale'). The MCP server package is 'strale-mcp'.",
+    "Python package is also 'straleio' on PyPI. Import: from straleio import Strale.",
+    "API keys start with 'sk_live_'. Base URL is https://api.strale.io."
+  ]
+}
