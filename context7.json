@@ -1,5 +1,7 @@
 {
   "$schema": "https://context7.com/schema/v1.json",
+  "url": "https://context7.com/strale-io/strale",
+  "public_key": "pk_rMxluszI9MAyNKSnvTIm3",
   "projectTitle": "Strale",
   "description": "Trust layer for AI agents. 250+ verified data capabilities (IBAN validation, email validation, company registries, sanctions screening, web scraping, lead enrichment) with quality scores, audit trails, and data provenance. Free tier available — no API key needed.",
   "folders": [
