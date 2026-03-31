@@ -9,7 +9,7 @@ import {
   capabilities,
 } from "../db/schema.js";
 import { checkMilestone } from "../lib/milestones.js";
-import { optionalAuthMiddleware } from "../lib/middleware.js";
+import { optionalAuthMiddleware, getClientIp, hashIp } from "../lib/middleware.js";
 import { rateLimitByKey, rateLimitFreeTierByIp, rateLimitByIp } from "../lib/rate-limit.js";
 import { matchCapability } from "../lib/matching.js";
 import { getExecutor } from "../capabilities/index.js";
@@ -381,14 +381,17 @@ doRoute.post(
     }
 
     // Log the failed request for demand analysis (DEC-20260225-P-c5d6)
-    if (user) {
-      await db.insert(failedRequests).values({
-        userId: user.id,
-        task: task ?? capabilitySlug ?? "",
-        category: body.category ?? null,
-        maxPriceCents: effectiveMaxPrice,
-      });
-    }
+    // Now captures both authenticated and unauthenticated failures
+    const clientIp = getClientIp(c);
+    db.insert(failedRequests).values({
+      userId: user?.id ?? null,
+      ipHash: clientIp !== "unknown" ? hashIp(clientIp) : null,
+      task: task ?? capabilitySlug ?? "",
+      category: body.category ?? null,
+      maxPriceCents: effectiveMaxPrice ?? null,
+      failureType: "no_match",
+      userAgent: (c.req.header("user-agent") ?? "").slice(0, 255) || null,
+    }).catch(() => {}); // fire-and-forget
 
     // Unauthenticated task-based requests that found no free-tier match
     if (!user) {
@@ -601,6 +604,37 @@ doRoute.post(
 
   // S-8: Validate inputs against capability's input_schema (required fields check)
   const inputSchema = (match.capability as any).inputSchema as { required?: string[]; properties?: Record<string, unknown> } | null;
+  // Detect common mistake: passing the /v1/do body shape as "inputs"
+  // e.g., {"capability_slug": "email-validate", "inputs": {"task": "email-validate"}}
+  const DO_BODY_KEYS = new Set(["task", "capability_slug", "inputs", "max_price_cents", "dry_run", "min_sqs"]);
+  const confusedKeys = Object.keys(executionInput).filter((k) => DO_BODY_KEYS.has(k));
+  if (confusedKeys.length > 0 && inputSchema?.properties) {
+    const expectedFields = Object.keys(inputSchema.properties);
+    const cIp = getClientIp(c);
+    db.insert(failedRequests).values({
+      userId: user?.id ?? null,
+      ipHash: cIp !== "unknown" ? hashIp(cIp) : null,
+      task: capabilitySlug ?? task ?? "",
+      failureType: "input_confusion",
+      errorDetail: `Confused keys: ${confusedKeys.join(", ")}. Expected: ${expectedFields.join(", ")}`,
+      userAgent: (c.req.header("user-agent") ?? "").slice(0, 255) || null,
+    }).catch(() => {});
+    return c.json(
+      apiError(
+        "invalid_request",
+        `It looks like you passed the /v1/do request body as "inputs". The "inputs" field should contain the capability's parameters: { ${expectedFields.map((f) => `"${f}": ...`).join(", ")} }`,
+        {
+          confused_keys: confusedKeys,
+          expected_fields: expectedFields,
+          example: expectedFields.length > 0
+            ? { [expectedFields[0]]: "your_value_here" }
+            : undefined,
+        },
+      ),
+      400,
+    );
+  }
+
   if (inputSchema?.required && inputSchema?.properties) {
     const missingFields = inputSchema.required.filter(
       (field) => !(field in executionInput) || executionInput[field] === undefined,
@@ -611,6 +645,16 @@ doRoute.post(
       const hint = topLevelMatches.length > 0
         ? ` It looks like you placed ${topLevelMatches.map((f) => `'${f}'`).join(", ")} at the top level — wrap them inside "inputs": { ${topLevelMatches.map((f) => `"${f}": ...`).join(", ")} }.`
         : undefined;
+      const fType = topLevelMatches.length > 0 ? "input_misplaced" : "missing_fields";
+      const mIp = getClientIp(c);
+      db.insert(failedRequests).values({
+        userId: user?.id ?? null,
+        ipHash: mIp !== "unknown" ? hashIp(mIp) : null,
+        task: capabilitySlug ?? task ?? "",
+        failureType: fType,
+        errorDetail: `Missing: ${missingFields.join(", ")}`,
+        userAgent: (c.req.header("user-agent") ?? "").slice(0, 255) || null,
+      }).catch(() => {});
       return c.json(
         apiError(
           "invalid_request",

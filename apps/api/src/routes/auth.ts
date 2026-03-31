@@ -4,7 +4,7 @@ import { getDb } from "../db/index.js";
 import { users, wallets, walletTransactions } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { apiError } from "../lib/errors.js";
-import { authMiddleware } from "../lib/middleware.js";
+import { authMiddleware, getClientIp, hashIp } from "../lib/middleware.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sendWebhook } from "../lib/webhook.js";
 import { sendWelcomeEmail, sendRecoveryEmail } from "../lib/welcome-email.js";
@@ -53,9 +53,12 @@ authRoute.post("/register", rateLimitByIp(3, 60_000), async (c) => {
   const keyPrefix = getKeyPrefix(apiKey);
 
   // Create user + wallet + trial credits
+  const clientIp = getClientIp(c);
+  const signupIpHash = clientIp !== "unknown" ? hashIp(clientIp) : null;
+
   const [user] = await db
     .insert(users)
-    .values({ email, name, apiKeyHash, keyPrefix })
+    .values({ email, name, apiKeyHash, keyPrefix, signupIpHash })
     .returning({ id: users.id, email: users.email });
 
   const [wallet] = await db

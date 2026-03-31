@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 255 }),
   apiKeyHash: varchar("api_key_hash", { length: 255 }).notNull().unique(),
   keyPrefix: varchar("key_prefix", { length: 16 }).notNull(),
+  signupIpHash: varchar("signup_ip_hash", { length: 16 }),
   maxSpendPerHourCents: integer("max_spend_per_hour_cents")
     .notNull()
     .default(10000), // €100/hr
@@ -231,17 +232,20 @@ export const transactionQuality = pgTable("transaction_quality", {
 });
 
 // ─── failed_requests (DEC-20260225-P-c5d6) ─────────────────────────────────
-// Logs every no_matching_capability response — demand signal for future capabilities
+// Logs demand signals: no-match responses, validation errors, input confusion.
+// userId nullable to capture unauthenticated free-tier failures.
 export const failedRequests = pgTable(
   "failed_requests",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id),
+    userId: uuid("user_id").references(() => users.id),
+    ipHash: varchar("ip_hash", { length: 16 }),
     task: text("task").notNull(),
     category: varchar("category", { length: 50 }),
-    maxPriceCents: integer("max_price_cents").notNull(),
+    maxPriceCents: integer("max_price_cents"),
+    failureType: varchar("failure_type", { length: 50 }).notNull().default("no_match"),
+    errorDetail: text("error_detail"),
+    userAgent: varchar("user_agent", { length: 255 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

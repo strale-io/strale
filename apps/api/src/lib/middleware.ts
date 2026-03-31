@@ -1,5 +1,5 @@
 import type { Context, Next } from "hono";
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { users } from "../db/schema.js";
@@ -98,4 +98,23 @@ export async function optionalAuthMiddleware(
 
   c.set("user", user);
   await next();
+}
+
+// ─── Shared IP helpers ────────────────────────────────────────────────────────
+
+const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;
+const IPV6_RE = /^[0-9a-fA-F:]{2,45}$/;
+
+/** Extract client IP from proxy headers. Returns "unknown" if not available. */
+export function getClientIp(c: Context): string {
+  const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
+  if (forwarded && (IPV4_RE.test(forwarded) || IPV6_RE.test(forwarded))) return forwarded;
+  const realIp = c.req.header("x-real-ip")?.trim();
+  if (realIp && (IPV4_RE.test(realIp) || IPV6_RE.test(realIp))) return realIp;
+  return "unknown";
+}
+
+/** Hash an IP for storage (first 16 chars of SHA-256). Never store raw IPs. */
+export function hashIp(ip: string): string {
+  return createHash("sha256").update(ip).digest("hex").slice(0, 16);
 }

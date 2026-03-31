@@ -134,6 +134,42 @@ export async function fetchPage(
     }
   }
 
+  // ── Fast-path: try plain HTTP fetch first ──────────────────────────────────
+  // Many pages serve full HTML without JavaScript rendering. This avoids
+  // Browserless entirely — faster, cheaper, more reliable. Falls through to
+  // Browserless if the response looks like an SPA shell or is too short.
+  if (!options?.waitUntil || options.waitUntil === "networkidle0") {
+    try {
+      const start = Date.now();
+      const plainResp = await fetch(targetUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; StraleBot/1.0; +https://strale.dev)",
+          "Accept": "text/html,application/xhtml+xml",
+        },
+        redirect: "follow",
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (plainResp.ok) {
+        const contentType = plainResp.headers.get("content-type") ?? "";
+        if (contentType.includes("text/html") || contentType.includes("xhtml")) {
+          const html = await plainResp.text();
+          // Heuristic: if body has substantial text content, skip Browserless
+          const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+          const bodyText = bodyMatch ? bodyMatch[1].replace(/<[^>]+>/g, "").trim() : "";
+          if (html.length > 2000 && bodyText.length > 200) {
+            const fetchTimeMs = Date.now() - start;
+            if (!skipCache) setCache(targetUrl, html);
+            return { html, cached: false, fetchTimeMs, attempt: 0 };
+          }
+        }
+      }
+    } catch {
+      // Plain fetch failed (timeout, DNS, etc.) — fall through to Browserless
+    }
+  }
+
+  // ── Browserless path ──────────────────────────────────────────────────────
   // Acquire a browser concurrency slot to prevent OOM on Railway (1GB limit)
   return withBrowserLimit(async () => {
     const { url, key } = getBrowserlessConfig();
