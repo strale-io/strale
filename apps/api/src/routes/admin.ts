@@ -197,6 +197,34 @@ adminRoute.get("/stats", async (c) => {
   return c.json(stats);
 });
 
+// ─── All users ──────────────────────────────────────────────────────────────
+
+adminRoute.get("/users", async (c) => {
+  const db = getDb();
+
+  const rows = await db.execute(sql`
+    SELECT
+      u.email,
+      u.created_at::text AS created_at,
+      COUNT(t.id)::text AS transaction_count,
+      COALESCE(w.balance_cents, 0)::text AS balance_cents
+    FROM users u
+    LEFT JOIN wallets w ON w.user_id = u.id
+    LEFT JOIN transactions t ON t.user_id = u.id AND t.status = 'completed'
+    GROUP BY u.id, u.email, u.created_at, w.balance_cents
+    ORDER BY u.created_at DESC
+  `);
+
+  const users = toRows(rows).map((row: any) => ({
+    email: row.email,
+    created_at: row.created_at,
+    transaction_count: Number(row.transaction_count),
+    balance_cents: Number(row.balance_cents),
+  }));
+
+  return c.json({ total: users.length, users });
+});
+
 // ─── Request analytics (aggregate, no PII) ──────────────────────────────────
 
 adminRoute.get("/request-analytics", async (c) => {
