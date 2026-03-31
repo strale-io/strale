@@ -22,6 +22,8 @@ walletRoute.post("/topup", async (c) => {
   const user = c.get("user");
   const body = await c.req.json().catch(() => null);
 
+  console.log(`[topup-attempt] user=${user.id} email=${user.email} amount_cents=${body?.amount_cents ?? 'unknown'} timestamp=${new Date().toISOString()}`);
+
   const amountCents = body?.amount_cents;
   if (
     typeof amountCents !== "number" ||
@@ -63,6 +65,8 @@ walletRoute.post("/topup", async (c) => {
     success_url: `${c.req.url.split("/v1")[0]}/v1/wallet/balance`,
     cancel_url: `${c.req.url.split("/v1")[0]}/v1/wallet/balance`,
   });
+
+  console.log(`[topup-session-created] user=${user.id} email=${user.email} amount_cents=${amountCents} session_id=${session.id} timestamp=${new Date().toISOString()}`);
 
   return c.json({
     checkout_url: session.url,

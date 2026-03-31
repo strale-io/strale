@@ -225,6 +225,48 @@ adminRoute.get("/users", async (c) => {
   return c.json({ total: users.length, users });
 });
 
+// ─── Wallet health ────────────────────────────────────────────────────────────
+
+adminRoute.get("/wallet-health", async (c) => {
+  const db = getDb();
+
+  const rows = await db.execute(sql`
+    SELECT
+      u.email,
+      u.created_at::text AS signed_up,
+      COALESCE(w.balance_cents, 0)::int AS balance_cents,
+      COUNT(t.id)::int AS completed_transactions,
+      MAX(t.created_at)::text AS last_transaction_at
+    FROM users u
+    LEFT JOIN wallets w ON w.user_id = u.id
+    LEFT JOIN transactions t ON t.user_id = u.id AND t.status = 'completed'
+    GROUP BY u.id, u.email, u.created_at, w.balance_cents
+    ORDER BY w.balance_cents ASC NULLS FIRST
+  `);
+
+  const walletRows = toRows(rows).map((row: any) => ({
+    email: row.email,
+    signed_up: row.signed_up,
+    balance_cents: Number(row.balance_cents),
+    completed_transactions: Number(row.completed_transactions),
+    last_transaction_at: row.last_transaction_at,
+  }));
+
+  const exhausted = walletRows.filter((w) => w.balance_cents <= 0).length;
+  const low = walletRows.filter((w) => w.balance_cents > 0 && w.balance_cents <= 50).length;
+  const healthy = walletRows.filter((w) => w.balance_cents > 50).length;
+
+  return c.json({
+    wallets: walletRows,
+    summary: {
+      total_users: walletRows.length,
+      exhausted_credits: exhausted,
+      low_credits: low,
+      healthy_credits: healthy,
+    },
+  });
+});
+
 // ─── Request analytics (aggregate, no PII) ──────────────────────────────────
 
 adminRoute.get("/request-analytics", async (c) => {
