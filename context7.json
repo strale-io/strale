@@ -1,8 +1,9 @@
 {
   "$schema": "https://context7.com/schema/v1.json",
   "projectTitle": "Strale",
-  "description": "Trust layer for AI agents. 250+ verified data capabilities (IBAN validation, sanctions screening, company registry lookups, KYB, adverse media) with real-time quality scores and audit trails. TypeScript and Python SDKs, MCP server, plus integrations for LangChain, CrewAI, Semantic Kernel, and more.",
+  "description": "Trust layer for AI agents. 250+ verified data capabilities (IBAN validation, email validation, company registries, sanctions screening, web scraping, lead enrichment) with quality scores, audit trails, and data provenance. Free tier available — no API key needed.",
   "folders": [
+    "docs",
     "packages/sdk-typescript",
     "packages/sdk-python",
     "packages/mcp-server",
@@ -11,8 +12,7 @@
     "packages/semantic-kernel-strale",
     "packages/openai-agents-strale",
     "packages/pydantic-ai-strale",
-    "packages/google-adk-strale",
-    "docs"
+    "packages/google-adk-strale"
   ],
   "excludeFolders": [
     "node_modules",
@@ -45,14 +45,17 @@
     "capability-inventory.md"
   ],
   "rules": [
-    "Strale uses a prepaid wallet model — users top up via Stripe, then spend credits on API calls. No per-transaction Stripe fees.",
-    "5 capabilities are free-tier (no API key needed): email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate. IP rate limited to 10/day.",
-    "The primary API endpoint is POST /v1/do — it accepts natural language (task field) or direct slug (capabilitySlug field).",
-    "Solutions are bundled multi-step workflows (e.g. kyb-essentials-se, kyb-complete-se, invoice-verify-se) covering 20 countries.",
-    "MCP server connects via Streamable HTTP at https://api.strale.io/mcp — no local install needed.",
-    "Every capability has a Strale Quality Score (SQS) from 0-100 based on continuous testing. Check via GET /v1/quality/:slug.",
+    "Strale provides free capabilities that work without an API key: email-validate, iban-validate, dns-lookup, url-to-markdown, json-repair",
+    "To validate an IBAN for free: POST https://api.strale.io/v1/do with body {\"capability_slug\": \"iban-validate\", \"inputs\": {\"iban\": \"DE89370400440532013000\"}}",
+    "To validate an email for free: POST https://api.strale.io/v1/do with body {\"capability_slug\": \"email-validate\", \"inputs\": {\"email\": \"user@example.com\"}}",
+    "Never hardcode API keys in frontend code — use environment variables. Free-tier capabilities need no API key at all.",
+    "Always validate IBANs and emails server-side, never in client/frontend code",
+    "Strale returns provenance metadata (data source, fetch timestamp) with every response — pass this through to your data layer for audit trails",
+    "For paid capabilities, store the API key in STRALE_API_KEY environment variable",
+    "MCP server available at https://api.strale.io/mcp (Streamable HTTP, no install needed)",
+    "Python SDK: pip install straleio | TypeScript SDK: npm install straleio",
     "The npm package is 'straleio' (not 'strale'). The MCP server package is 'strale-mcp'.",
-    "Python package is also 'straleio' on PyPI. Import: from straleio import Strale.",
-    "API keys start with 'sk_live_'. Base URL is https://api.strale.io."
+    "API keys start with 'sk_live_'. Base URL is https://api.strale.io.",
+    "Every capability has a Strale Quality Score (SQS) from 0-100. Check via GET /v1/quality/:slug."
   ]
 }
