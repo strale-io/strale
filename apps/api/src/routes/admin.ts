@@ -394,13 +394,12 @@ adminRoute.get("/external-transactions", async (c) => {
     LEFT JOIN capabilities c ON c.id = t.capability_id
     LEFT JOIN users u ON u.id = t.user_id
     WHERE t.created_at >= NOW() - make_interval(days := ${days})
+      AND (u.email IS NULL OR u.email NOT IN ('petter@strale.io', 'test2@strale.io', 'test@strale.io', 'system@strale.internal'))
     ORDER BY t.created_at DESC
     LIMIT ${limit}
   `);
 
-  const data = toRows(rows);
-  const internal = new Set(["petter@strale.io", "test2@strale.io", "test@strale.io", "system@strale.internal"]);
-  const external = data.filter((r: Record<string, unknown>) => !r.email || !internal.has(r.email as string));
+  const external = toRows(rows);
 
   return c.json({
     period_days: days,
