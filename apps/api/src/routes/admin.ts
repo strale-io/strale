@@ -363,3 +363,65 @@ adminRoute.get("/request-analytics", async (c) => {
     top_capabilities: topCapabilities,
   });
 });
+
+// ─── External transaction log (detailed, for learning) ───────────────────────
+
+adminRoute.get("/external-transactions", async (c) => {
+  const days = Math.min(parseInt(c.req.query("days") ?? "7", 10) || 7, 90);
+  const limit = Math.min(parseInt(c.req.query("limit") ?? "100", 10) || 100, 500);
+  const db = getDb();
+
+  const rows = await db.execute(sql`
+    SELECT
+      t.id,
+      t.status,
+      t.created_at::text AS created_at,
+      t.completed_at::text AS completed_at,
+      c.slug AS capability_slug,
+      t.input,
+      t.output,
+      t.error,
+      t.price_cents,
+      t.latency_ms,
+      t.is_free_tier,
+      t.payment_method,
+      t.audit_trail->'request_context'->>'userAgent' AS user_agent,
+      t.audit_trail->'request_context'->>'mcpClient' AS mcp_client,
+      t.audit_trail->'request_context'->>'referer' AS referer,
+      t.audit_trail->'request_context'->>'ipHash' AS ip_hash,
+      u.email
+    FROM transactions t
+    LEFT JOIN capabilities c ON c.id = t.capability_id
+    LEFT JOIN users u ON u.id = t.user_id
+    WHERE t.created_at >= NOW() - make_interval(days := ${days})
+    ORDER BY t.created_at DESC
+    LIMIT ${limit}
+  `);
+
+  const data = toRows(rows);
+  const internal = new Set(["petter@strale.io", "test2@strale.io", "test@strale.io", "system@strale.internal"]);
+  const external = data.filter((r: Record<string, unknown>) => !r.email || !internal.has(r.email as string));
+
+  return c.json({
+    period_days: days,
+    total: external.length,
+    transactions: external.map((r: Record<string, unknown>) => ({
+      id: r.id,
+      status: r.status,
+      created_at: r.created_at,
+      completed_at: r.completed_at,
+      capability_slug: r.capability_slug,
+      input: r.input,
+      output: r.output,
+      error: r.error,
+      price_cents: r.price_cents,
+      latency_ms: r.latency_ms,
+      is_free_tier: r.is_free_tier,
+      payment_method: r.payment_method,
+      user_agent: r.user_agent,
+      mcp_client: r.mcp_client,
+      referer: r.referer,
+      ip_hash: r.ip_hash,
+    })),
+  });
+});
