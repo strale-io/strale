@@ -18,6 +18,52 @@ function getResend(): Resend | null {
 
 const INTERNAL_DOMAINS = ["@strale.io", "@strale.internal", "@example.com"];
 
+export async function sendRecoveryEmail(email: string, apiKey: string): Promise<void> {
+  if (INTERNAL_DOMAINS.some((d) => email.endsWith(d))) {
+    console.log(`[key-recovery-email-skip] internal email: ${email}`);
+    return;
+  }
+
+  const resend = getResend();
+  if (!resend) {
+    console.log("[key-recovery-email-skip] RESEND_API_KEY not set");
+    return;
+  }
+
+  const text = `Hey,
+
+You requested a new API key for your Strale account. Here it is:
+
+${apiKey}
+
+Your previous key has been deactivated. Save this one somewhere safe.
+
+If you didn't request this, you can ignore this email — your old key was already replaced, so just request another one when you need it.
+
+— Petter
+Founder, Strale
+`;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: "Petter at Strale <petter@strale.io>",
+      to: email,
+      subject: "Your new Strale API key",
+      text,
+      replyTo: "petter@strale.io",
+    });
+
+    if (error) {
+      console.error(`[key-recovery-email-error] email=${email} error=${error.message}`);
+      return;
+    }
+
+    console.log(`[key-recovery-email-sent] ${email}`);
+  } catch (err) {
+    console.error(`[key-recovery-email-error] email=${email} error=${err instanceof Error ? err.message : err}`);
+  }
+}
+
 export async function sendWelcomeEmail(email: string, apiKey: string): Promise<void> {
   if (INTERNAL_DOMAINS.some((d) => email.endsWith(d))) {
     console.log(`[welcome-email-skip] internal email: ${email}`);

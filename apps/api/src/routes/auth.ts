@@ -7,7 +7,7 @@ import { apiError } from "../lib/errors.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sendWebhook } from "../lib/webhook.js";
-import { sendWelcomeEmail } from "../lib/welcome-email.js";
+import { sendWelcomeEmail, sendRecoveryEmail } from "../lib/welcome-email.js";
 import type { AppEnv } from "../types.js";
 
 const TRIAL_CREDITS_CENTS = 200; // €2.00 per DEC-10
@@ -97,6 +97,63 @@ authRoute.post("/register", rateLimitByIp(3, 60_000), async (c) => {
     },
     201,
   );
+});
+
+// POST /v1/auth/recover — Email-based API key recovery
+// No auth required. Strict rate limit: 2 per 5 minutes per IP.
+authRoute.post("/recover", rateLimitByIp(2, 300_000), async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body.email !== "string" || !body.email.includes("@")) {
+    return c.json(
+      apiError("invalid_request", "A valid email address is required.", {
+        field: "email",
+      }),
+      400,
+    );
+  }
+
+  const email = body.email.trim().toLowerCase();
+  const genericResponse = {
+    message:
+      "If an account exists with that email, a new API key has been sent.",
+  };
+
+  const db = getDb();
+  const [user] = await db
+    .select({ id: users.id, email: users.email })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  if (!user) {
+    console.log(
+      `[key-recovery] email=${email} user_found=false timestamp=${new Date().toISOString()}`,
+    );
+    return c.json(genericResponse);
+  }
+
+  // Generate new key, invalidate old one
+  const newApiKey = generateApiKey();
+  const newHash = hashApiKey(newApiKey);
+  const newPrefix = getKeyPrefix(newApiKey);
+
+  await db
+    .update(users)
+    .set({
+      apiKeyHash: newHash,
+      keyPrefix: newPrefix,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, user.id));
+
+  console.log(
+    `[key-recovery] email=${email} user_found=true timestamp=${new Date().toISOString()}`,
+  );
+
+  // Fire-and-forget recovery email
+  sendRecoveryEmail(user.email, newApiKey).catch(() => {});
+
+  return c.json(genericResponse);
 });
 
 // POST /v1/auth/api-key — Regenerate API key
