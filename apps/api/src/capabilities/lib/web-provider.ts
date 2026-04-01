@@ -138,6 +138,8 @@ export async function fetchPage(
   // Many pages serve full HTML without JavaScript rendering. This avoids
   // Browserless entirely — faster, cheaper, more reliable. Falls through to
   // Browserless if the response looks like an SPA shell or is too short.
+  // IMPORTANT: DNS failures and connection refused are fatal — don't waste
+  // 30+ seconds on Browserless for a URL that doesn't resolve.
   if (!options?.waitUntil || options.waitUntil === "networkidle0") {
     try {
       const start = Date.now();
@@ -163,9 +165,29 @@ export async function fetchPage(
             return { html, cached: false, fetchTimeMs, attempt: 0 };
           }
         }
+        // HTTP response received but not usable HTML — fall through to Browserless
+      } else if (plainResp.status >= 400 && plainResp.status < 500) {
+        // 4xx errors (404, 403, etc.) are permanent — don't retry via Browserless
+        throw new Error(`URL returned HTTP ${plainResp.status}. Check the URL is correct.`);
       }
-    } catch {
-      // Plain fetch failed (timeout, DNS, etc.) — fall through to Browserless
+      // 5xx errors: fall through to Browserless (server might render differently)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // DNS failures, connection refused, and SSL errors are fatal — no point
+      // sending to Browserless, the domain simply doesn't resolve.
+      if (
+        msg.includes("ENOTFOUND") ||
+        msg.includes("ECONNREFUSED") ||
+        msg.includes("ERR_TLS") ||
+        msg.includes("getaddrinfo") ||
+        msg.includes("URL returned HTTP 4")
+      ) {
+        const hostname = new URL(targetUrl).hostname;
+        throw new Error(
+          `Could not reach ${hostname}. The domain may not exist or is not responding. Check the URL and try again.`,
+        );
+      }
+      // Timeouts and other transient errors: fall through to Browserless
     }
   }
 

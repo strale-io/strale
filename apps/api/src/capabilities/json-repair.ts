@@ -60,13 +60,26 @@ registerCapability("json-repair", async (input: CapabilityInput) => {
   repaired = repaired.replace(/:\s*NaN\b/g, ": null");
   if (repaired !== beforeNull) fixes.push("Replaced undefined/NaN with null");
 
+  // 9. Fix missing values (e.g., "key": } → "key": null })
+  const beforeMissing = repaired;
+  repaired = repaired.replace(/:\s*([,}\]])/g, ": null$1");
+  if (repaired !== beforeMissing) fixes.push("Added null for missing values");
+
+  // 10. Fix empty values with trailing content (e.g., ", }" → "}")
+  repaired = repaired.replace(/,\s*([}\]])/g, "$1");
+
   // Try parsing
   let parsed: unknown;
   try {
     parsed = JSON.parse(repaired);
-  } catch (e) {
-    // Last resort: try eval (safely construct)
-    throw new Error(`Could not repair JSON: ${e instanceof Error ? e.message : String(e)}`);
+  } catch {
+    // Provide a helpful error with the attempted repair state
+    const snippet = repaired.length > 120 ? repaired.slice(0, 120) + "..." : repaired;
+    throw new Error(
+      `Could not fully repair the JSON. The input has structural issues beyond what automated repair can fix. ` +
+      `Partial repair attempted: ${snippet}. ` +
+      `Tip: ensure every key has a value (e.g., "key": "value" not "key": ) and all strings are properly quoted.`,
+    );
   }
 
   return {
