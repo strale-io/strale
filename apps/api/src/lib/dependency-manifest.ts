@@ -395,6 +395,15 @@ export const PROVIDERS: DependencyProvider[] = [
   },
 ];
 
+// ─── Capability-level overrides (documentation, no runtime behavior) ────────
+
+export const CAPABILITY_OVERRIDES: Record<string, { required_region?: string; note?: string }> = {
+  "ecb-interest-rates": {
+    required_region: "eu",
+    note: "ECB SDW API only accessible from EU IPs — suspended until EU infrastructure available",
+  },
+};
+
 /** Returns only active (non-retired) providers */
 export function getActiveProviders(): DependencyProvider[] {
   return PROVIDERS.filter((p) => !p.retired);

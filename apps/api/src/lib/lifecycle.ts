@@ -17,9 +17,9 @@
  *   validating → draft:     any check fails
  */
 
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, testSuites, healthMonitorEvents } from "../db/schema.js";
+import { capabilities, testSuites, testResults, healthMonitorEvents } from "../db/schema.js";
 import { computeDualProfileSQS } from "./sqs.js";
 import { logHealthEvent } from "./health-monitor.js";
 import { getExecutor } from "../capabilities/index.js";
@@ -32,7 +32,8 @@ export type LifecycleState =
   | "probation"
   | "active"
   | "degraded"
-  | "suspended";
+  | "suspended"
+  | "deactivated";
 
 export type TransitionTrigger = "auto" | "admin" | "validation";
 
@@ -49,6 +50,10 @@ const ACTIVE_SQS_MIN = 50;           // SQS required to promote probation → ac
 const DEGRADE_SQS_THRESHOLD = 25;    // SQS below which active → degraded (platform floor per SQS Constitution)
 const DEGRADED_SUSPEND_DAYS = 7;     // consecutive days in degraded → suspended (regardless of SQS)
 const DEGRADED_RECOVERY_RUNS = 3;    // consecutive qualifying SQS runs required before degraded → active (anti-flap)
+const SUSPENDED_DEACTIVATE_DAYS = 30; // days in suspended before auto-deactivation
+const DRAFT_MIN_SUITES = 2;           // min test suites to auto-promote draft → validating
+const VALIDATING_MIN_RUNS = 5;        // min completed test runs for validating → probation
+const VALIDATING_MIN_QP = 50;         // min QP score for validating → probation
 
 // Tier for health monitor events per transition
 function transitionTier(to: LifecycleState): 1 | 2 | 3 {
@@ -70,6 +75,7 @@ const STATE_VISIBILITY: Record<LifecycleState, boolean> = {
   active: true,
   degraded: true,
   suspended: false,
+  deactivated: false,
 };
 
 // ─── Smoke test: execute once from production before promoting ───────────────
@@ -195,7 +201,61 @@ export async function evaluateLifecycle(
   const state = cap.lifecycleState as LifecycleState;
 
   // Only auto-evaluate states with auto-transitions
-  if (!["probation", "active", "degraded"].includes(state)) return null;
+  if (!["draft", "validating", "probation", "active", "degraded", "suspended"].includes(state)) return null;
+
+  // ── draft → validating ───────────────────────────────────────────────────
+  // Requires: ≥2 test suites, non-null schemas, registered executor
+  if (state === "draft") {
+    const [suiteCount] = await db
+      .select({ count: sql<number>`COUNT(*)::int` })
+      .from(testSuites)
+      .where(and(eq(testSuites.capabilitySlug, slug), eq(testSuites.active, true)));
+
+    const [capRow] = await db
+      .select({ inputSchema: capabilities.inputSchema, outputSchema: capabilities.outputSchema })
+      .from(capabilities)
+      .where(eq(capabilities.slug, slug))
+      .limit(1);
+
+    const hasSchemas = capRow?.inputSchema != null && capRow?.outputSchema != null;
+    const hasExecutor = !!getExecutor(slug);
+
+    if ((suiteCount?.count ?? 0) >= DRAFT_MIN_SUITES && hasSchemas && hasExecutor) {
+      const reason = `Auto-promoted: ${suiteCount.count} test suites, schemas present, executor registered`;
+      await transitionCapability(slug, "validating", reason, "auto");
+      return { slug, from: "draft", to: "validating", reason };
+    }
+    return null;
+  }
+
+  // ── validating → probation ───────────────────────────────────────────────
+  // Requires: QP ≥ 50, ≥5 completed test runs, ≥1 passing in last 3
+  if (state === "validating") {
+    const [runCount] = await db
+      .select({ count: sql<number>`COUNT(*)::int` })
+      .from(testResults)
+      .where(eq(testResults.capabilitySlug, slug));
+
+    if ((runCount?.count ?? 0) < VALIDATING_MIN_RUNS) return null;
+
+    const dual = await computeDualProfileSQS(slug);
+    if (dual.qp.score < VALIDATING_MIN_QP) return null;
+
+    // Check at least 1 pass in last 3 runs
+    const recentRuns = await db
+      .select({ passed: testResults.passed })
+      .from(testResults)
+      .where(eq(testResults.capabilitySlug, slug))
+      .orderBy(desc(testResults.executedAt))
+      .limit(3);
+
+    const hasRecentPass = recentRuns.some((r) => r.passed);
+    if (!hasRecentPass) return null;
+
+    const reason = `Auto-promoted: QP ${dual.qp.score.toFixed(1)} ≥ ${VALIDATING_MIN_QP}, ${runCount.count} runs, recent passes`;
+    await transitionCapability(slug, "probation", reason, "auto", dual.score);
+    return { slug, from: "validating", to: "probation", reason };
+  }
 
   const dual = await computeDualProfileSQS(slug);
   const now = Date.now();
@@ -323,13 +383,38 @@ export async function evaluateLifecycle(
     return null;
   }
 
+  // ── suspended → deactivated (30-day TTL) ──────────────────────────────────
+  if (state === "suspended") {
+    const suspendedSince = await getStateEnteredAt(slug, "suspended");
+    if (suspendedSince !== null) {
+      const suspendedDays = (now - suspendedSince) / (1000 * 60 * 60 * 24);
+      if (suspendedDays >= SUSPENDED_DEACTIVATE_DAYS) {
+        const reason = `${Math.floor(suspendedDays)}d suspended — auto-deactivated`;
+        await transitionCapability(slug, "deactivated", reason, "auto");
+        // Also set is_active=false so test scheduler stops
+        await db.update(capabilities).set({
+          isActive: false,
+          deactivationReason: reason,
+          updatedAt: new Date(),
+        }).where(eq(capabilities.slug, slug));
+        // Cascade to dependent solutions
+        try {
+          const { onCapabilityDeactivated } = await import("./capability-onboarding.js");
+          await onCapabilityDeactivated(slug, reason);
+        } catch { /* ignore cascade errors */ }
+        return { slug, from: "suspended", to: "deactivated", reason };
+      }
+    }
+    return null;
+  }
+
   return null;
 }
 
 // ─── Bulk lifecycle sweep ────────────────────────────────────────────────────
 
 /**
- * Evaluate auto-transitions for all probation/active/degraded capabilities.
+ * Evaluate auto-transitions for all capabilities in auto-evaluable states.
  * Called from the weekly health sweep.
  */
 export async function runLifecycleSweep(): Promise<TransitionResult[]> {
@@ -341,7 +426,7 @@ export async function runLifecycleSweep(): Promise<TransitionResult[]> {
     .where(
       and(
         eq(capabilities.isActive, true),
-        inArray(capabilities.lifecycleState, ["probation", "active", "degraded"]),
+        inArray(capabilities.lifecycleState, ["draft", "validating", "probation", "active", "degraded", "suspended"]),
       ),
     );
 

@@ -126,12 +126,18 @@ export async function runTests(
     conditions.push(eq(testSuites.scheduleTier, opts.tier));
   }
 
-  // T-1: Inner join with capabilities to skip test suites for deactivated capabilities
+  // T-1: Inner join with capabilities to skip deactivated/suspended capabilities.
+  // Suspended caps are intentionally offline — testing them wastes resources.
+  // Draft and validating caps ARE tested (they need runs for auto-promotion).
   const suitesRaw = await db
     .select({ suite: testSuites, fieldReliability: capabilities.outputFieldReliability, capabilityType: capabilities.capabilityType })
     .from(testSuites)
     .innerJoin(capabilities, eq(testSuites.capabilitySlug, capabilities.slug))
-    .where(and(...conditions, eq(capabilities.isActive, true)));
+    .where(and(
+      ...conditions,
+      eq(capabilities.isActive, true),
+      not(inArray(capabilities.lifecycleState, ["suspended", "deactivated"])),
+    ));
   const suites = suitesRaw.map((r) => r.suite);
 
   // Build field reliability map for validateResult

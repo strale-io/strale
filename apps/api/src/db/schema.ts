@@ -136,7 +136,8 @@ export const capabilities = pgTable("capabilities", {
   guidanceConfidence: decimal("guidance_confidence", { precision: 5, scale: 1 }),
   // Pipeline Phase I: Lifecycle management
   lifecycleState: varchar("lifecycle_state", { length: 20 }).notNull().default("draft"),
-  // 'draft' | 'validating' | 'probation' | 'active' | 'degraded' | 'suspended'
+  // 'draft' | 'validating' | 'probation' | 'active' | 'degraded' | 'suspended' | 'deactivated'
+  deactivationReason: text("deactivation_reason"),
   outputFieldReliability: jsonb("output_field_reliability"),
   // { field_name: 'guaranteed' | 'common' | 'rare' }
   visible: boolean("visible").notNull().default(false),
