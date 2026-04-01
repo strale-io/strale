@@ -88,15 +88,22 @@ export async function getPlatformHealth(): Promise<PlatformHealth> {
   const testRow = toRows(testRaw)[0] ?? { passed: 0, failed: 0, total: 0 };
   const testTotal = testRow.total || 1;
 
-  // SQS grade changes: compare current grades to yesterday via sqs_daily_snapshot
+  // SQS grade changes: compare current scores to yesterday's snapshot grades
   const gradeChangesRaw = await db.execute(sql`
     WITH today AS (
-      SELECT slug, qp_grade, rp_grade
+      SELECT slug,
+        CASE
+          WHEN qp_score >= 90 THEN 'A'
+          WHEN qp_score >= 75 THEN 'B'
+          WHEN qp_score >= 50 THEN 'C'
+          WHEN qp_score >= 25 THEN 'D'
+          ELSE 'F'
+        END AS qp_grade
       FROM capabilities
-      WHERE is_active = true
+      WHERE is_active = true AND qp_score IS NOT NULL
     ),
     yesterday AS (
-      SELECT DISTINCT ON (capability_slug) capability_slug, qp_grade, rp_grade
+      SELECT DISTINCT ON (capability_slug) capability_slug, qp_grade
       FROM sqs_daily_snapshot
       WHERE snapshot_date = CURRENT_DATE - 1
       ORDER BY capability_slug, created_at DESC
