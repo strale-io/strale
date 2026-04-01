@@ -452,3 +452,175 @@ adminRoute.get("/external-transactions", async (c) => {
     })),
   });
 });
+
+// ─── Platform status (comprehensive) ─────────────────────────────────────────
+
+adminRoute.get("/platform-status", async (c) => {
+  const db = getDb();
+
+  // Visibility expectations per lifecycle state
+  const EXPECTED_VISIBLE: Record<string, boolean> = {
+    draft: false, validating: false, probation: false,
+    active: true, degraded: true, suspended: false, deactivated: false,
+  };
+
+  // Run all queries in parallel
+  const [
+    lifecycleRaw, inactiveRaw, solutionRaw, breakerRaw,
+    freeTierRaw, suspendedRaw, validatingRaw, transitionsRaw, suiteCountRaw,
+  ] = await Promise.all([
+    // Lifecycle breakdown
+    db.execute(sql`
+      SELECT is_active, visible, lifecycle_state, COUNT(*)::int AS cnt
+      FROM capabilities GROUP BY is_active, visible, lifecycle_state
+    `),
+    // Inactive count
+    db.execute(sql`SELECT COUNT(*)::int AS cnt FROM capabilities WHERE is_active = false`),
+    // Solutions
+    db.execute(sql`
+      SELECT COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE is_active = true)::int AS active,
+        COUNT(*) FILTER (WHERE is_active = false)::int AS inactive
+      FROM solutions
+    `),
+    // Circuit breakers
+    db.execute(sql`
+      SELECT ch.state, ch.capability_slug AS slug, ch.opened_at, ch.consecutive_failures, ch.next_retry_at
+      FROM capability_health ch
+    `),
+    // Free tier with breaker state
+    db.execute(sql`
+      SELECT c.slug, ch.state, ch.opened_at
+      FROM capabilities c
+      LEFT JOIN capability_health ch ON ch.capability_slug = c.slug
+      WHERE c.is_active = true AND c.is_free_tier = true
+    `),
+    // Suspended details
+    db.execute(sql`
+      SELECT slug, updated_at, deactivation_reason FROM capabilities WHERE lifecycle_state = 'suspended'
+    `),
+    // Validating details
+    db.execute(sql`
+      SELECT c.slug, c.qp_score,
+        (SELECT COUNT(*)::int FROM test_results tr WHERE tr.capability_slug = c.slug) AS run_count
+      FROM capabilities c WHERE c.lifecycle_state = 'validating'
+    `),
+    // Recent transitions from health events
+    db.execute(sql`
+      SELECT capability_slug AS slug, details->>'from' AS from_state, details->>'to' AS to_state,
+        details->>'triggered_by' AS trigger, created_at
+      FROM health_monitor_events
+      WHERE event_type = 'lifecycle_transition'
+      ORDER BY created_at DESC LIMIT 20
+    `),
+    // Test suite count
+    db.execute(sql`SELECT COUNT(*)::int AS cnt FROM test_suites WHERE active = true`),
+  ]);
+
+  const rows = (r: unknown) => Array.isArray(r) ? r : (r as any)?.rows ?? [];
+
+  // Build lifecycle state counts
+  const byState: Record<string, number> = { draft: 0, validating: 0, probation: 0, active: 0, degraded: 0, suspended: 0, deactivated: 0 };
+  let total = 0;
+  let apiVisible = 0;
+  const anomalies: Array<{ slug?: string; is_active: boolean; visible: boolean; lifecycle_state: string; issue: string }> = [];
+
+  for (const row of rows(lifecycleRaw)) {
+    const state = row.lifecycle_state as string;
+    const cnt = row.cnt as number;
+    byState[state] = (byState[state] ?? 0) + cnt;
+    total += cnt;
+    if (row.is_active && row.visible && (state === "active" || state === "degraded")) apiVisible += cnt;
+
+    // Anomaly detection
+    const expectedVisible = EXPECTED_VISIBLE[state];
+    if (expectedVisible !== undefined) {
+      if (!row.is_active && state !== "deactivated") {
+        anomalies.push({ is_active: false, visible: row.visible, lifecycle_state: state, issue: `is_active=false but lifecycle_state=${state}` });
+      }
+      if (row.visible !== expectedVisible && cnt > 0) {
+        anomalies.push({ is_active: row.is_active, visible: row.visible, lifecycle_state: state, issue: `visible=${row.visible} but expected ${expectedVisible} for ${state}` });
+      }
+    }
+  }
+
+  // Circuit breakers
+  const breakerCounts = { closed: 0, open: 0, half_open: 0 };
+  const openCaps: Array<{ slug: string; opened_at: string | null; consecutive_failures: number; next_retry_at: string | null }> = [];
+  for (const row of rows(breakerRaw)) {
+    const state = row.state as "closed" | "open" | "half_open";
+    breakerCounts[state] = (breakerCounts[state] ?? 0) + 1;
+    if (state === "open" || state === "half_open") {
+      openCaps.push({
+        slug: row.slug,
+        opened_at: row.opened_at?.toISOString?.() ?? row.opened_at ?? null,
+        consecutive_failures: row.consecutive_failures ?? 0,
+        next_retry_at: row.next_retry_at?.toISOString?.() ?? row.next_retry_at ?? null,
+      });
+    }
+  }
+
+  // Free tier
+  const freeTierRows = rows(freeTierRaw);
+  const freeDegraded = freeTierRows
+    .filter((r: any) => r.state === "open" || r.state === "half_open")
+    .map((r: any) => ({ slug: r.slug, breaker_state: r.state, opened_at: r.opened_at?.toISOString?.() ?? r.opened_at ?? null }));
+
+  // Suspended
+  const now = Date.now();
+  const suspendedDetails = rows(suspendedRaw).map((r: any) => ({
+    slug: r.slug,
+    updated_at: r.updated_at?.toISOString?.() ?? r.updated_at,
+    days_suspended: Math.floor((now - new Date(r.updated_at).getTime()) / (1000 * 60 * 60 * 24)),
+    deactivation_reason: r.deactivation_reason ?? null,
+  }));
+
+  // Validating
+  const validatingDetails = rows(validatingRaw).map((r: any) => ({
+    slug: r.slug,
+    sqs_quality_profile: r.qp_score ? parseFloat(r.qp_score) : null,
+    test_run_count: r.run_count ?? 0,
+  }));
+
+  // Transitions
+  const recentTransitions = rows(transitionsRaw).map((r: any) => ({
+    slug: r.slug,
+    from_state: r.from_state,
+    to_state: r.to_state,
+    trigger: r.trigger,
+    created_at: r.created_at?.toISOString?.() ?? r.created_at,
+  }));
+
+  const solRow = rows(solutionRaw)[0] ?? {};
+
+  return c.json({
+    capabilities: {
+      total,
+      by_lifecycle_state: byState,
+      api_visible: apiVisible,
+      inactive: rows(inactiveRaw)[0]?.cnt ?? 0,
+      anomalies,
+    },
+    solutions: {
+      total: solRow.total ?? 0,
+      active: solRow.active ?? 0,
+      inactive: solRow.inactive ?? 0,
+    },
+    circuit_breakers: {
+      ...breakerCounts,
+      open_capabilities: openCaps,
+    },
+    free_tier: {
+      total: freeTierRows.length,
+      healthy: freeTierRows.length - freeDegraded.length,
+      degraded: freeDegraded,
+    },
+    suspended_details: suspendedDetails,
+    validating_details: validatingDetails,
+    recent_transitions: recentTransitions,
+    meta: {
+      generated_at: new Date().toISOString(),
+      test_suites_count: rows(suiteCountRaw)[0]?.cnt ?? 0,
+    },
+  });
+});
