@@ -364,6 +364,34 @@ adminRoute.get("/request-analytics", async (c) => {
   });
 });
 
+// ─── Trigger digest email now ─────────────────────────────────────────────────
+
+adminRoute.post("/digest", async (c) => {
+  // Dynamic imports to avoid loading digest module on every API request
+  const { gatherDigestData } = await import("../lib/daily-digest/index.js");
+  const { analyzeDigest } = await import("../lib/daily-digest/analyze.js");
+  const { renderDigestEmail } = await import("../lib/daily-digest/render-email.js");
+  const { sendDigestEmail } = await import("../lib/daily-digest/send.js");
+  const { saveSnapshot } = await import("../lib/daily-digest/snapshots.js");
+
+  // Fire and forget — respond immediately
+  (async () => {
+    try {
+      console.log("[admin/digest] Generating digest...");
+      const data = await gatherDigestData();
+      const analysis = await analyzeDigest(data);
+      const html = renderDigestEmail(data, analysis);
+      await sendDigestEmail(html, new Date());
+      await saveSnapshot(data);
+      console.log("[admin/digest] Digest sent successfully");
+    } catch (err) {
+      console.error("[admin/digest] Failed:", err);
+    }
+  })();
+
+  return c.json({ status: "digest_triggered", note: "Email will arrive in ~30 seconds" });
+});
+
 // ─── External transaction log (detailed, for learning) ───────────────────────
 
 adminRoute.get("/external-transactions", async (c) => {
