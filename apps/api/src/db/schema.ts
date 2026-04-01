@@ -527,3 +527,14 @@ export const sqsDailySnapshot = pgTable(
     ),
   ],
 );
+
+// ─── digest_snapshots ───────────────────────────────────────────────────────
+// Daily digest data snapshots for delta computation
+export const digestSnapshots = pgTable("digest_snapshots", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  snapshotDate: date("snapshot_date").notNull().unique(),
+  data: jsonb("data").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
