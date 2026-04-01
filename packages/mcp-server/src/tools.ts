@@ -95,6 +95,7 @@ export interface StraleClientOptions {
   apiKey: string;
   maxPriceCents: number;
   clientIp?: string;
+  version?: string;
 }
 
 // ─── HTTP helpers ───────────────────────────────────────────────────────────
@@ -476,7 +477,7 @@ export function registerStraleTools(
             text: JSON.stringify({
               status: "ok",
               server: "strale-mcp",
-              version: "0.1.4",
+              version: opts.version ?? "unknown",
               tools_registered: 8, // UPDATE if tools are added/removed
               capabilities_available: capabilities.length,
               solutions_available: solutions.length,

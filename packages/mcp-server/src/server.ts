@@ -8,9 +8,19 @@
  * Tool registration logic is shared with the HTTP transport via tools.ts.
  */
 
+import { readFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { fetchCapabilities, fetchSolutions, fetchTrustBatch, fetchSolutionTrust, registerStraleTools, type TrustBatchEntry, type SolutionTrustEntry } from "./tools.js";
+
+const PKG_VERSION = (() => {
+  try {
+    const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
+    return pkg.version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+})();
 
 const STRALE_BASE_URL =
   process.env.STRALE_BASE_URL ??
@@ -25,7 +35,7 @@ async function main() {
   const server = new McpServer(
     {
       name: "strale",
-      version: "0.1.0",
+      version: PKG_VERSION,
     },
     {
       capabilities: {
@@ -66,6 +76,7 @@ async function main() {
     baseUrl: STRALE_BASE_URL,
     apiKey: STRALE_API_KEY,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
+    version: PKG_VERSION,
   }, trustData, solutionTrustData);
 
   // Connect via stdio

@@ -2,6 +2,8 @@
 
 MCP server for [Strale](https://strale.io) — gives AI agents access to 250+ capabilities via 8 meta-tools. Compatible with Claude, ChatGPT, Cursor, Windsurf, GitHub Copilot, and any MCP client.
 
+The MCP server version reported in the `initialize` response matches the npm package version.
+
 ## Installation
 
 ```bash

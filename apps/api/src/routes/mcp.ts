@@ -133,6 +133,7 @@ async function handleStatelessRequest(
     apiKey,
     clientIp,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
+    version: "0.2.3", // matches strale-mcp npm version — update on publish
   }, trustData, solutionTrustData);
 
   const transport = new WebStandardStreamableHTTPServerTransport({
