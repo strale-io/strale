@@ -822,7 +822,7 @@ const seedCapabilities = [
   {
     name: "URL to Markdown",
     slug: "url-to-markdown",
-    description: "Render any URL via headless browser and convert to clean markdown. Strips nav, ads, footers. Works on JS-heavy sites.",
+    description: "Convert any URL to clean, article-quality markdown. Extracts main content and strips navigation, ads, and boilerplate. Handles static sites instantly and JavaScript-rendered pages via fallback rendering. Supports blogs, documentation, news articles, and most public web pages.",
     category: "web-scraping",
     inputSchema: { type: "object", properties: { url: { type: "string", description: "URL to convert" }, include_links: { type: "boolean" }, include_images: { type: "boolean" } }, required: ["url"] },
     outputSchema: { type: "object", properties: { markdown: { type: "string" }, title: { type: "string" }, word_count: { type: "integer" } } },

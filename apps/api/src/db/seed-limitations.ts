@@ -226,9 +226,9 @@ const LIMITATIONS: LimitationDef[] = [
 
   // ── url-to-markdown ──
   { capabilitySlug: "url-to-markdown", category: "coverage", severity: "info",
-    title: "JavaScript-heavy single-page applications may not render completely before content is extracted",
-    limitationText: "JavaScript-heavy single-page applications may not render completely",
-    workaround: "Pass a wait_for_selector parameter if available, or use web-extract-clean which renders JS via headless browser" },
+    title: "Some JavaScript-heavy SPAs may return incomplete content",
+    limitationText: "Some JavaScript-heavy single-page applications may return incomplete content if all rendering fallbacks (plain fetch, Jina Reader, Browserless) are exhausted",
+    workaround: "Try a direct content URL, or use web-extract which provides more control over JS rendering" },
   { capabilitySlug: "url-to-markdown", category: "coverage", severity: "info",
     title: "Login-protected or paywalled content cannot be extracted",
     limitationText: "Login-protected or paywalled content cannot be extracted",

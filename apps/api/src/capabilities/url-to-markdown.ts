@@ -108,10 +108,20 @@ function mapBrowserlessError(msg: string): Error {
   return new Error(`Failed to fetch page content: ${msg.slice(0, 200)}`);
 }
 
+/** Post-process markdown to strip links/images if requested. */
+function postProcess(md: string, includeLinks: boolean, includeImages: boolean): string {
+  let result = md;
+  if (!includeLinks) result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+  if (!includeImages) result = result.replace(/!\[[^\]]*\]\([^)]+\)/g, "");
+  return result;
+}
+
 registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.link as string) ?? "").trim();
   if (!url) throw new Error("'url' is required.");
 
+  const includeLinks = input.include_links !== false;
+  const includeImages = input.include_images !== false;
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
 
   // ── Layer 1: Plain fetch + Readability/Turndown (~200ms for static sites) ──
@@ -119,7 +129,8 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
 
   if (plainHtml) {
     const result = htmlToCleanMarkdown(plainHtml, fullUrl);
-    const wordCount = result.markdown.split(/\s+/).filter(Boolean).length;
+    const markdown = postProcess(result.markdown, includeLinks, includeImages);
+    const wordCount = markdown.split(/\s+/).filter(Boolean).length;
 
     if (wordCount < 10) {
       throw new Error(
@@ -129,7 +140,7 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
     }
 
     return {
-      output: { markdown: result.markdown, title: result.title, word_count: wordCount, url: fullUrl },
+      output: { markdown, title: result.title, word_count: wordCount, url: fullUrl },
       provenance: {
         source: "http-get",
         extraction: result.usedReadability ? "readability+turndown" : "turndown",
@@ -142,10 +153,11 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   const jinaResult = await fetchViaJina(fullUrl);
 
   if (jinaResult) {
-    const wordCount = jinaResult.markdown.split(/\s+/).filter(Boolean).length;
+    const jinaMarkdown = postProcess(jinaResult.markdown, includeLinks, includeImages);
+    const wordCount = jinaMarkdown.split(/\s+/).filter(Boolean).length;
 
     return {
-      output: { markdown: jinaResult.markdown, title: jinaResult.title, word_count: wordCount, url: fullUrl },
+      output: { markdown: jinaMarkdown, title: jinaResult.title, word_count: wordCount, url: fullUrl },
       provenance: {
         source: "jina-reader",
         fetch_time_ms: jinaResult.fetchTimeMs,
@@ -163,9 +175,10 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   }
 
   const result = htmlToCleanMarkdown(browserlessHtml, fullUrl);
-  const wordCount = result.markdown.split(/\s+/).filter(Boolean).length;
+  const browserMarkdown = postProcess(result.markdown, includeLinks, includeImages);
+  const wordCount = browserMarkdown.split(/\s+/).filter(Boolean).length;
 
-  if (wordCount < 10 && result.markdown.length < 100) {
+  if (wordCount < 10 && browserMarkdown.length < 100) {
     throw new Error(
       `This page returned almost no readable text (${wordCount} words). ` +
       "It may require JavaScript to render its content, or the URL may point to a login page.",
@@ -173,7 +186,7 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   }
 
   return {
-    output: { markdown: result.markdown, title: result.title, word_count: wordCount, url: fullUrl },
+    output: { markdown: browserMarkdown, title: result.title, word_count: wordCount, url: fullUrl },
     provenance: {
       source: "browserless",
       extraction: result.usedReadability ? "readability+turndown" : "turndown",
