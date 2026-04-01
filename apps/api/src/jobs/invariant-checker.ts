@@ -12,12 +12,13 @@
  * Rate limit: max 20 items processed per check per run.
  */
 
-import { sql, eq, and, or, inArray, asc, isNull } from "drizzle-orm";
+import { sql, eq, and, or, inArray, asc, isNull, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, solutionSteps, testResults, testSuites } from "../db/schema.js";
+import { capabilities, solutions, solutionSteps, testResults, testSuites, capabilityHealth, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { persistDualProfileScores } from "../lib/test-runner.js";
 import { computeSolutionScore } from "../lib/trust-labels.js";
+import { sendAlert } from "../lib/alerting.js";
 
 const CHECK_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
 const STARTUP_DELAY_MS = 60_000; // 60 seconds
@@ -125,6 +126,23 @@ export async function runInvariantChecks(): Promise<void> {
     checked += r8.checked;
   } catch (err) {
     console.error("[invariant-checker] CHECK 8 (data_source completeness) failed:", err);
+  }
+
+  try {
+    const r9 = await checkFreeTierCircuitBreakers();
+    alerts += r9.alerts;
+    checked += r9.checked;
+  } catch (err) {
+    console.error("[invariant-checker] CHECK 9 (free-tier breakers) failed:", err);
+  }
+
+  try {
+    const r10 = await checkSuspendedCapabilityTTL();
+    healed += r10.healed;
+    alerts += r10.alerts;
+    checked += r10.checked;
+  } catch (err) {
+    console.error("[invariant-checker] CHECK 10 (suspended TTL) failed:", err);
   }
 
   // Log provider outage summary if any capabilities were skipped
@@ -867,4 +885,181 @@ async function checkDataSourceCompleteness(): Promise<{ alerts: number; checked:
   }
 
   return { alerts: 0, checked: 1 };
+}
+
+// ─── CHECK 9: Free-tier circuit breaker monitor (Tier 2 — ALERT + EMAIL) ─────
+
+async function checkFreeTierCircuitBreakers(): Promise<{ alerts: number; checked: number }> {
+  const db = getDb();
+
+  // Find free-tier capabilities with open/half_open circuit breakers
+  const degraded = await db
+    .select({
+      slug: capabilities.slug,
+      state: capabilityHealth.state,
+      consecutiveFailures: capabilityHealth.consecutiveFailures,
+      openedAt: capabilityHealth.openedAt,
+      nextRetryAt: capabilityHealth.nextRetryAt,
+    })
+    .from(capabilities)
+    .innerJoin(capabilityHealth, eq(capabilityHealth.capabilitySlug, capabilities.slug))
+    .where(
+      and(
+        eq(capabilities.isActive, true),
+        eq(capabilities.isFreeTier, true),
+        or(eq(capabilityHealth.state, "open"), eq(capabilityHealth.state, "half_open")),
+      ),
+    );
+
+  if (degraded.length === 0) return { alerts: 0, checked: 1 };
+
+  const slugs = degraded.map((d) => d.slug);
+  console.warn(`[invariant-checker] CHECK 9: ${degraded.length} free-tier capability(s) have open circuit breakers: ${slugs.join(", ")}`);
+
+  await logHealthEvent({
+    eventType: "invariant_alert",
+    tier: 2,
+    actionTaken: `Free-tier circuit breaker open: ${slugs.join(", ")}`,
+    details: {
+      check: "free_tier_circuit_breaker",
+      degraded: degraded.map((d) => ({
+        slug: d.slug,
+        state: d.state,
+        consecutive_failures: d.consecutiveFailures,
+        opened_at: d.openedAt?.toISOString() ?? null,
+        next_retry_at: d.nextRetryAt?.toISOString() ?? null,
+      })),
+    },
+  });
+
+  // Send email alert
+  const details = degraded
+    .map((d) =>
+      `  - ${d.slug}: state=${d.state}, failures=${d.consecutiveFailures}, opened=${d.openedAt?.toISOString() ?? "unknown"}`,
+    )
+    .join("\n");
+
+  await sendAlert({
+    subject: `Free-tier capability degraded: ${slugs.join(", ")}`,
+    body: `${degraded.length} free-tier capability(s) have open circuit breakers:\n\n${details}\n\nFree-tier capabilities are the first thing users try. Fix these urgently.`,
+    severity: "warning",
+  });
+
+  return { alerts: degraded.length, checked: degraded.length };
+}
+
+// ─── CHECK 10: Suspended capability TTL enforcement (Tier 2 — ALERT + DEACTIVATE) ─
+
+async function checkSuspendedCapabilityTTL(): Promise<{ healed: number; alerts: number; checked: number }> {
+  const db = getDb();
+  let healed = 0;
+  let alerts = 0;
+
+  const suspended = await db
+    .select({
+      slug: capabilities.slug,
+      updatedAt: capabilities.updatedAt,
+    })
+    .from(capabilities)
+    .where(eq(capabilities.lifecycleState, "suspended"));
+
+  if (suspended.length === 0) return { healed: 0, alerts: 0, checked: 0 };
+
+  const now = Date.now();
+
+  for (const cap of suspended) {
+    const daysSuspended = (now - new Date(cap.updatedAt).getTime()) / (1000 * 60 * 60 * 24);
+
+    // Check if we already sent a TTL warning for this slug in the last 24h
+    const recentWarning = await db
+      .select({ id: healthMonitorEvents.id })
+      .from(healthMonitorEvents)
+      .where(
+        and(
+          eq(healthMonitorEvents.capabilitySlug, cap.slug),
+          eq(healthMonitorEvents.eventType, "invariant_alert"),
+          sql`${healthMonitorEvents.createdAt} >= NOW() - INTERVAL '24 hours'`,
+          sql`${healthMonitorEvents.details}->>'check' = 'suspended_ttl'`,
+        ),
+      )
+      .limit(1);
+    const alreadyWarned = recentWarning.length > 0;
+
+    if (daysSuspended >= 30) {
+      // Auto-deactivate
+      const reason = `TTL expiry: suspended for ${Math.floor(daysSuspended)} days without resolution`;
+      try {
+        const { transitionCapability } = await import("../lib/lifecycle.js");
+        await transitionCapability(cap.slug, "deactivated", reason, "auto");
+        await db.update(capabilities).set({
+          isActive: false,
+          deactivationReason: reason,
+          updatedAt: new Date(),
+        }).where(eq(capabilities.slug, cap.slug));
+
+        const { onCapabilityDeactivated } = await import("../lib/capability-onboarding.js");
+        await onCapabilityDeactivated(cap.slug, reason);
+
+        console.warn(`[invariant-checker] CHECK 10: Auto-deactivated ${cap.slug} (${Math.floor(daysSuspended)}d suspended)`);
+        healed++;
+      } catch (err) {
+        console.error(`[invariant-checker] CHECK 10 deactivation failed for ${cap.slug}:`, err);
+      }
+
+      await logHealthEvent({
+        eventType: "invariant_alert",
+        capabilitySlug: cap.slug,
+        tier: 1,
+        actionTaken: `Auto-deactivated after ${Math.floor(daysSuspended)}d suspended`,
+        details: { check: "suspended_ttl", days_suspended: Math.floor(daysSuspended), action: "deactivated" },
+      });
+
+      await sendAlert({
+        subject: `Capability auto-deactivated: ${cap.slug}`,
+        body: `${cap.slug} was auto-deactivated after ${Math.floor(daysSuspended)} days suspended.\n\nReason: ${reason}\nDependent solutions have been cascade-deactivated.`,
+        severity: "critical",
+      });
+      alerts++;
+
+    } else if (daysSuspended >= 15) {
+      // Escalation warning
+      await logHealthEvent({
+        eventType: "invariant_alert",
+        capabilitySlug: cap.slug,
+        tier: 2,
+        actionTaken: `Suspended for ${Math.floor(daysSuspended)}d — will auto-deactivate at 30d`,
+        details: { check: "suspended_ttl", days_suspended: Math.floor(daysSuspended), action: "escalation_warning" },
+      });
+
+      if (!alreadyWarned) {
+        await sendAlert({
+          subject: `Suspension escalation: ${cap.slug} (${Math.floor(daysSuspended)}d)`,
+          body: `${cap.slug} has been suspended for ${Math.floor(daysSuspended)} days.\n\nWill be auto-deactivated at 30 days. Investigate root cause or deactivate manually.`,
+          severity: "warning",
+        });
+      }
+      alerts++;
+
+    } else if (daysSuspended >= 7) {
+      // First warning
+      await logHealthEvent({
+        eventType: "invariant_alert",
+        capabilitySlug: cap.slug,
+        tier: 2,
+        actionTaken: `Suspended for ${Math.floor(daysSuspended)}d — review needed`,
+        details: { check: "suspended_ttl", days_suspended: Math.floor(daysSuspended), action: "first_warning" },
+      });
+
+      if (!alreadyWarned) {
+        await sendAlert({
+          subject: `Suspended capability needs review: ${cap.slug} (${Math.floor(daysSuspended)}d)`,
+          body: `${cap.slug} has been suspended for ${Math.floor(daysSuspended)} days.\n\nReview needed: investigate root cause or deactivate. Auto-deactivation at 30 days.`,
+          severity: "info",
+        });
+      }
+      alerts++;
+    }
+  }
+
+  return { healed, alerts, checked: suspended.length };
 }
