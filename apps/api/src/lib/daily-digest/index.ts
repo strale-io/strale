@@ -5,6 +5,7 @@ import type {
   ShipLog,
   BeaconActivity,
   EcosystemMetrics,
+  WebsiteTraffic,
   DistributionSurface,
   Priorities,
   Scoreboard,
@@ -13,6 +14,7 @@ import { getPlatformActivity, getPlatformHealth } from "./fetch-platform.js";
 import { getShipLog } from "./fetch-shiplog.js";
 import { getBeaconActivity } from "./fetch-beacon.js";
 import { getEcosystemMetrics } from "./fetch-ecosystem.js";
+import { getWebsiteTraffic } from "./fetch-traffic.js";
 import { getDistributionSurfaces, getPriorities } from "./fetch-notion.js";
 import { getScoreboard } from "./fetch-scoreboard.js";
 import { getYesterdaySnapshot, saveSnapshot } from "./snapshots.js";
@@ -20,7 +22,7 @@ import { getYesterdaySnapshot, saveSnapshot } from "./snapshots.js";
 // ── Defaults for failed fetches ───────────────────────────────────────────────
 
 const defaultPlatformActivity: PlatformActivity = {
-  signups: { count: 0, delta: 0, emails: [] },
+  signups: { count: 0, delta: 0, emails: [], internalEmails: [] },
   apiCalls: { total: 0, delta: 0, byCapability: [] },
   uniqueUsers: { count: 0, delta: 0 },
   transactions: { count: 0, delta: 0 },
@@ -53,9 +55,16 @@ const defaultEcosystem: EcosystemMetrics = {
   pypiDownloads: [],
 };
 
+const defaultTraffic: WebsiteTraffic = {
+  straleDev: { available: false, note: "Unavailable" },
+  beacon: { available: false, note: "Unavailable" },
+};
+
 const defaultPriorities: Priorities = {
   unreviewedDecisions: [],
+  olderUnreviewedCount: 0,
   actionRequired: [],
+  olderActionRequiredCount: 0,
 };
 
 const defaultScoreboard: Scoreboard = {
@@ -90,6 +99,7 @@ export async function gatherDigestData(): Promise<DigestData> {
     platformHealthResult,
     shipLogResult,
     ecosystemResult,
+    trafficResult,
     distributionResult,
     prioritiesResult,
     scoreboardResult,
@@ -98,6 +108,7 @@ export async function gatherDigestData(): Promise<DigestData> {
     getPlatformHealth(),
     getShipLog(),
     getEcosystemMetrics(yesterday),
+    getWebsiteTraffic(),
     getDistributionSurfaces(),
     getPriorities(),
     getScoreboard(beaconResult.totalScans),
@@ -110,6 +121,7 @@ export async function gatherDigestData(): Promise<DigestData> {
     shipLog: unwrap(shipLogResult, defaultShipLog, "shipLog"),
     beaconActivity: beaconResult,
     ecosystem: unwrap(ecosystemResult, defaultEcosystem, "ecosystem"),
+    websiteTraffic: unwrap(trafficResult, defaultTraffic, "websiteTraffic"),
     distributionSurfaces: unwrap(distributionResult, [] as DistributionSurface[], "distributionSurfaces"),
     priorities: unwrap(prioritiesResult, defaultPriorities, "priorities"),
     scoreboard: unwrap(scoreboardResult, defaultScoreboard, "scoreboard"),

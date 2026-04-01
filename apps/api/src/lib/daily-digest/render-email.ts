@@ -71,12 +71,23 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
   const eco = data.ecosystem;
   const sb = data.scoreboard;
 
+  // ── Timespan label ───────────────────────────────────────────────────────
+  const sinceTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const sinceStr = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(sinceTime) + " UTC";
+
   // ── Sections ────────────────────────────────────────────────────────────
 
   // Situation assessment
   const situationHtml = `
     ${sectionHeader("📊", "Situation Assessment")}
     <tr><td style="padding: 4px 0 0 0; font-size: 15px; line-height: 1.6; color: ${TEXT};">${escHtml(analysis.situationAssessment)}</td></tr>`;
+
+  // Strategic focus
+  const strategicHtml = analysis.strategicFocus ? `
+    ${sectionHeader("🧭", "Strategic Focus")}
+    <tr><td style="padding: 4px 0 0 0;">
+      <div style="background: #f0f4f8; padding: 14px 16px; border-radius: 6px; font-size: 14px; line-height: 1.6; color: #334155;">${escHtml(analysis.strategicFocus)}</div>
+    </td></tr>` : "";
 
   // Ship log
   const journalItems = sl.journalEntries.length > 0
@@ -105,7 +116,7 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
     .join(", ");
 
   const activityHtml = `
-    ${sectionHeader("📈", "Platform Activity (24h)")}
+    ${sectionHeader("📈", `Platform Activity (last 24h — since ${sinceStr})`)}
     ${pa.zeroActivity ? warningBanner("⚠️ No platform activity in the last 24 hours") : ""}
     <tr><td style="padding: 4px 0;">
       <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 14px;">
@@ -117,7 +128,8 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
       </table>
     </td></tr>
     ${topCaps ? `<tr><td style="padding: 8px 0 0 0; font-size: 13px; color: ${MUTED};">Top: ${topCaps}</td></tr>` : ""}
-    ${pa.signups.emails.length > 0 ? `<tr><td style="padding: 6px 0 0 0; font-size: 12px; color: ${MUTED};">New: ${pa.signups.emails.map(escHtml).join(", ")}</td></tr>` : ""}`;
+    ${pa.signups.emails.length > 0 ? `<tr><td style="padding: 6px 0 0 0; font-size: 12px; color: ${MUTED};">New: ${pa.signups.emails.map(escHtml).join(", ")}</td></tr>` : ""}
+    ${pa.signups.internalEmails.length > 0 ? `<tr><td style="padding: 2px 0 0 0; font-size: 11px; color: ${NEUTRAL};">Internal: ${pa.signups.internalEmails.map(escHtml).join(", ")}</td></tr>` : ""}`;
 
   // Platform health
   const breakerHtml = ph.circuitBreakers.length > 0
@@ -146,6 +158,17 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
         ${metricRow("Domains", ba.scanDomains.length > 0 ? ba.scanDomains.slice(0, 5).join(", ") : "—")}
         ${metricRow("New Subscribers", ba.newSubscribers)}
         ${metricRow("Total Scans", ba.totalScans)}
+      </table>
+    </td></tr>`;
+
+  // Website traffic
+  const wt = data.websiteTraffic;
+  const trafficHtml = `
+    ${sectionHeader("🌐", "Website Traffic")}
+    <tr><td style="padding: 4px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 13px;">
+        <tr><td style="padding: 3px 0; color: ${MUTED};">strale.dev</td><td style="padding: 3px 0; text-align: right; color: ${wt.straleDev.available ? TEXT : NEUTRAL};">${escHtml(wt.straleDev.note)}</td></tr>
+        <tr><td style="padding: 3px 0; color: ${MUTED};">scan.strale.io</td><td style="padding: 3px 0; text-align: right; color: ${wt.beacon.available ? TEXT : NEUTRAL};">${escHtml(wt.beacon.note)}</td></tr>
       </table>
     </td></tr>`;
 
@@ -189,14 +212,27 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
     `<li style="margin-bottom: 4px; font-size: 13px;">${escHtml(a.title)}</li>`
   ).join("");
 
-  const prioritiesHtml = (data.priorities.unreviewedDecisions.length > 0 || data.priorities.actionRequired.length > 0) ? `
+  const olderDecisionsLine = data.priorities.olderUnreviewedCount > 0
+    ? `<tr><td style="padding: 4px 0 0 20px; font-size: 12px; color: ${NEUTRAL};">+ ${data.priorities.olderUnreviewedCount} older decisions need review</td></tr>`
+    : "";
+  const olderActionsLine = data.priorities.olderActionRequiredCount > 0
+    ? `<tr><td style="padding: 4px 0 0 20px; font-size: 12px; color: ${NEUTRAL};">+ ${data.priorities.olderActionRequiredCount} older action items</td></tr>`
+    : "";
+
+  const totalDecisions = data.priorities.unreviewedDecisions.length + data.priorities.olderUnreviewedCount;
+  const totalActions = data.priorities.actionRequired.length + data.priorities.olderActionRequiredCount;
+  const hasPriorities = totalDecisions > 0 || totalActions > 0;
+
+  const prioritiesHtml = hasPriorities ? `
     ${sectionHeader("📋", "Priorities")}
-    ${data.priorities.unreviewedDecisions.length > 0 ? `
-      <tr><td style="padding: 4px 0; font-size: 13px; font-weight: 600; color: ${TEXT};">Unreviewed Decisions: ${data.priorities.unreviewedDecisions.length}</td></tr>
-      <tr><td><ul style="margin: 4px 0 8px 20px; padding: 0;">${decisionItems}</ul></td></tr>` : ""}
-    ${data.priorities.actionRequired.length > 0 ? `
-      <tr><td style="padding: 4px 0; font-size: 13px; font-weight: 600; color: ${TEXT};">Action Required: ${data.priorities.actionRequired.length}</td></tr>
-      <tr><td><ul style="margin: 4px 0 0 20px; padding: 0;">${actionItems}</ul></td></tr>` : ""}` : "";
+    ${totalDecisions > 0 ? `
+      <tr><td style="padding: 4px 0; font-size: 13px; font-weight: 600; color: ${TEXT};">Unreviewed Decisions: ${data.priorities.unreviewedDecisions.length} recent${data.priorities.olderUnreviewedCount > 0 ? ` + ${data.priorities.olderUnreviewedCount} older` : ""}</td></tr>
+      ${decisionItems ? `<tr><td><ul style="margin: 4px 0 4px 20px; padding: 0;">${decisionItems}</ul></td></tr>` : ""}
+      ${olderDecisionsLine}` : ""}
+    ${totalActions > 0 ? `
+      <tr><td style="padding: 8px 0 4px 0; font-size: 13px; font-weight: 600; color: ${TEXT};">Action Required: ${data.priorities.actionRequired.length} recent${data.priorities.olderActionRequiredCount > 0 ? ` + ${data.priorities.olderActionRequiredCount} older` : ""}</td></tr>
+      ${actionItems ? `<tr><td><ul style="margin: 4px 0 4px 20px; padding: 0;">${actionItems}</ul></td></tr>` : ""}
+      ${olderActionsLine}` : ""}` : "";
 
   // Recommended actions
   const actionRows = analysis.recommendedActions.map((a, i) => {
@@ -259,10 +295,12 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
   <tr><td style="padding: 0 32px 32px 32px;">
     <table width="100%" cellpadding="0" cellspacing="0">
       ${situationHtml}
+      ${strategicHtml}
       ${shipLogHtml}
       ${activityHtml}
       ${healthHtml}
       ${beaconHtml}
+      ${trafficHtml}
       ${ecosystemHtml}
       ${surfacesHtml}
       ${prioritiesHtml}

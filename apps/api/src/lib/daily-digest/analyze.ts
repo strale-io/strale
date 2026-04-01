@@ -3,6 +3,7 @@ import type { DigestData } from "./types.js";
 
 export interface DigestAnalysis {
   situationAssessment: string;
+  strategicFocus: string;
   shipLogSummary: string;
   recommendedActions: Array<{
     action: string;
@@ -16,6 +17,7 @@ export interface DigestAnalysis {
 
 const FALLBACK: DigestAnalysis = {
   situationAssessment: "AI analysis unavailable — review raw data below.",
+  strategicFocus: "",
   shipLogSummary: "",
   recommendedActions: [],
   anomalies: [],
@@ -96,7 +98,8 @@ Based on all of the above, provide your analysis as JSON:
     }
   ],
   "anomalies": ["anything unusual — spikes, drops, failures, unexpected patterns"],
-  "bottleneck": "the single biggest thing limiting Strale's growth right now, or null if unclear"
+  "bottleneck": "the single biggest thing limiting Strale's growth right now, or null if unclear",
+  "strategic_focus": "2-3 sentences of strategic advice for a solo founder in distribution phase. What should Petter focus on THIS WEEK based on the data? Not tactical (don't say 'fix this bug') — strategic (say 'you're spending time brainstorming but not shipping, shift to execution' or 'your framework PRs are the highest-leverage thing, prioritize getting them merged'). Be direct and honest, even if uncomfortable."
 }
 
 Return 3 recommended actions maximum, ranked by impact. Be specific — 'ping PR #4866' not 'follow up on PRs'. Ground every recommendation in actual data from above. No generic advice.
@@ -127,6 +130,7 @@ export async function analyzeDigest(data: DigestData): Promise<DigestAnalysis> {
 
     return {
       situationAssessment: (parsed.situation_assessment as string) ?? FALLBACK.situationAssessment,
+      strategicFocus: (parsed.strategic_focus as string) ?? "",
       shipLogSummary: (parsed.ship_log_summary as string) ?? "",
       recommendedActions: ((parsed.recommended_actions as any[]) ?? []).map((a) => ({
         action: a.action ?? "",

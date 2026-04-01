@@ -22,6 +22,31 @@ function extractTitle(page: any): string {
   return "Untitled";
 }
 
+// Keywords indicating internal dev work (not distribution surfaces)
+const INTERNAL_KEYWORDS = [
+  "fixed", "fix ", "CORS", "enabled discussions", "created issues",
+  "good-first-issue", "topics added", "root cause", "tracking",
+  "fallback", "bumped", "refactor", "migration", "self-hosted",
+  "seed data", "test suite", "schema", "drizzle",
+];
+
+// Keywords indicating distribution surfaces
+const SURFACE_KEYWORDS = [
+  "PR #", "PR#", "awaiting", "merge", "submitted", "published",
+  "listing", "registry", "blog", "post", "dev.to", "stack overflow",
+  "awesome-", "directory", "cookbook", "follow-up", "npmjs",
+  "pypi", "glama", "smithery", "mcp registry", "context7",
+  "pydantic", "langchain", "crewai", "agno", "cursor", "windsurf",
+  "coinbase", "x402", "n8n", "composio", "docker",
+];
+
+function isDistributionSurface(text: string): boolean {
+  const lower = text.toLowerCase();
+  if (SURFACE_KEYWORDS.some((kw) => lower.includes(kw.toLowerCase()))) return true;
+  if (INTERNAL_KEYWORDS.some((kw) => lower.includes(kw.toLowerCase()))) return false;
+  return true; // default: include
+}
+
 export async function getDistributionSurfaces(): Promise<DistributionSurface[]> {
   if (!process.env.NOTION_API_KEY) return [];
 
@@ -36,24 +61,21 @@ export async function getDistributionSurfaces(): Promise<DistributionSurface[]> 
 
     if (dbResp.ok) {
       const data = await dbResp.json() as { results: any[] };
-      return data.results.map((page) => {
-        const props = page.properties ?? {};
-        const status = props.Status?.select?.name ?? props.status?.select?.name ?? "unknown";
-        const url = props.URL?.url ?? props.url?.url ?? null;
-        const createdAt = page.created_time;
+      return data.results
+        .map((page) => {
+          const props = page.properties ?? {};
+          const status = props.Status?.select?.name ?? props.status?.select?.name ?? "unknown";
+          const url = props.URL?.url ?? props.url?.url ?? null;
+          const createdAt = page.created_time;
 
-        let daysPending: number | null = null;
-        if (status.toLowerCase().includes("pending") || status.toLowerCase().includes("submitted")) {
-          daysPending = Math.floor((Date.now() - new Date(createdAt).getTime()) / (24 * 60 * 60 * 1000));
-        }
+          let daysPending: number | null = null;
+          if (status.toLowerCase().includes("pending") || status.toLowerCase().includes("submitted")) {
+            daysPending = Math.floor((Date.now() - new Date(createdAt).getTime()) / (24 * 60 * 60 * 1000));
+          }
 
-        return {
-          name: extractTitle(page),
-          status,
-          daysPending,
-          url,
-        };
-      });
+          return { name: extractTitle(page), status, daysPending, url };
+        })
+        .filter((s) => isDistributionSurface(s.name));
     }
 
     // Fall back to page blocks
@@ -67,12 +89,11 @@ export async function getDistributionSurfaces(): Promise<DistributionSurface[]> 
     if (!blocksResp.ok) return [];
     const blocksData = await blocksResp.json() as { results: any[] };
 
-    // Extract text content from blocks as surfaces
     const surfaces: DistributionSurface[] = [];
     for (const block of blocksData.results) {
       if (block.type === "bulleted_list_item" || block.type === "numbered_list_item") {
         const text = block[block.type]?.rich_text?.map((t: any) => t.plain_text).join("") ?? "";
-        if (text) {
+        if (text && isDistributionSurface(text)) {
           surfaces.push({ name: text, status: "listed", daysPending: null, url: null });
         }
       }
@@ -83,9 +104,11 @@ export async function getDistributionSurfaces(): Promise<DistributionSurface[]> 
   }
 }
 
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
 export async function getPriorities(): Promise<Priorities> {
   if (!process.env.NOTION_API_KEY) {
-    return { unreviewedDecisions: [], actionRequired: [] };
+    return { unreviewedDecisions: [], olderUnreviewedCount: 0, actionRequired: [], olderActionRequiredCount: 0 };
   }
 
   const [decisionsResult, actionsResult] = await Promise.allSettled([
@@ -93,9 +116,20 @@ export async function getPriorities(): Promise<Priorities> {
     fetchActionRequired(),
   ]);
 
+  const allDecisions = decisionsResult.status === "fulfilled" ? decisionsResult.value : [];
+  const allActions = actionsResult.status === "fulfilled" ? actionsResult.value : [];
+
+  const cutoff = new Date(Date.now() - FOURTEEN_DAYS_MS);
+  const recentDecisions = allDecisions.filter((d) => new Date(d.date) >= cutoff);
+  const olderDecisions = allDecisions.filter((d) => new Date(d.date) < cutoff);
+  const recentActions = allActions.filter((a) => new Date(a.createdAt) >= cutoff);
+  const olderActions = allActions.filter((a) => new Date(a.createdAt) < cutoff);
+
   return {
-    unreviewedDecisions: decisionsResult.status === "fulfilled" ? decisionsResult.value : [],
-    actionRequired: actionsResult.status === "fulfilled" ? actionsResult.value : [],
+    unreviewedDecisions: recentDecisions,
+    olderUnreviewedCount: olderDecisions.length,
+    actionRequired: recentActions,
+    olderActionRequiredCount: olderActions.length,
   };
 }
 

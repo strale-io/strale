@@ -1,5 +1,5 @@
 export interface PlatformActivity {
-  signups: { count: number; delta: number; emails: string[] };
+  signups: { count: number; delta: number; emails: string[]; internalEmails: string[] };
   apiCalls: { total: number; delta: number; byCapability: Array<{ slug: string; count: number }> };
   uniqueUsers: { count: number; delta: number };
   transactions: { count: number; delta: number };
@@ -32,6 +32,11 @@ export interface EcosystemMetrics {
   pypiDownloads: Array<{ package: string; recentDownloads: number }>;
 }
 
+export interface WebsiteTraffic {
+  straleDev: { available: boolean; note: string };
+  beacon: { available: boolean; note: string };
+}
+
 export interface DistributionSurface {
   name: string;
   status: string;
@@ -41,7 +46,9 @@ export interface DistributionSurface {
 
 export interface Priorities {
   unreviewedDecisions: Array<{ id: string; title: string; date: string }>;
+  olderUnreviewedCount: number;
   actionRequired: Array<{ title: string; createdAt: string }>;
+  olderActionRequiredCount: number;
 }
 
 export interface Scoreboard {
@@ -59,6 +66,7 @@ export interface DigestData {
   shipLog: ShipLog;
   beaconActivity: BeaconActivity;
   ecosystem: EcosystemMetrics;
+  websiteTraffic: WebsiteTraffic;
   distributionSurfaces: DistributionSurface[];
   priorities: Priorities;
   scoreboard: Scoreboard;

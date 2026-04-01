@@ -8,10 +8,18 @@ function toRows(result: unknown): any[] {
   return (result as any)?.rows ?? [];
 }
 
+const INTERNAL_EMAIL_SUFFIXES = ["@strale.io", "@strale.internal", "@example.com"];
+
 export async function getPlatformActivity(
   yesterday: Partial<Scoreboard> | null,
 ): Promise<PlatformActivity> {
   const db = getDb();
+
+  // Look up system test user to exclude from transaction counts
+  const sysRows = await db.execute(sql`
+    SELECT id FROM users WHERE email = 'system@strale.internal' LIMIT 1
+  `);
+  const systemUserId = toRows(sysRows)[0]?.id ?? "00000000-0000-0000-0000-000000000000";
 
   const [signupsRaw, txnRaw, revenueRaw, uniqueRaw, topCapsRaw] = await Promise.all([
     db.execute(sql`
@@ -23,28 +31,36 @@ export async function getPlatformActivity(
     db.execute(sql`
       SELECT COUNT(*)::int AS cnt
       FROM transactions
-      WHERE status = 'completed' AND created_at >= NOW() - INTERVAL '24 hours'
+      WHERE status = 'completed'
+        AND created_at >= NOW() - INTERVAL '24 hours'
+        AND (user_id IS NULL OR user_id != ${systemUserId})
     `),
     db.execute(sql`
       SELECT COALESCE(SUM(price_cents), 0)::int AS cents
       FROM transactions
-      WHERE status = 'completed' AND created_at >= NOW() - INTERVAL '24 hours'
+      WHERE status = 'completed'
+        AND created_at >= NOW() - INTERVAL '24 hours'
+        AND (user_id IS NULL OR user_id != ${systemUserId})
     `),
     db.execute(sql`
       SELECT COUNT(DISTINCT user_id)::int AS cnt
       FROM transactions
-      WHERE status = 'completed' AND created_at >= NOW() - INTERVAL '24 hours'
+      WHERE status = 'completed'
+        AND created_at >= NOW() - INTERVAL '24 hours'
+        AND (user_id IS NULL OR user_id != ${systemUserId})
     `),
     db.execute(sql`
       SELECT c.slug, COUNT(*)::int AS cnt
       FROM transactions t
       JOIN capabilities c ON c.id = t.capability_id
-      WHERE t.status = 'completed' AND t.created_at >= NOW() - INTERVAL '24 hours'
+      WHERE t.status = 'completed'
+        AND t.created_at >= NOW() - INTERVAL '24 hours'
+        AND (t.user_id IS NULL OR t.user_id != ${systemUserId})
       GROUP BY c.slug ORDER BY cnt DESC LIMIT 10
     `),
   ]);
 
-  // New signup emails
+  // New signup emails — split into external and internal
   const newSignupsRaw = await db.execute(sql`
     SELECT email FROM users WHERE created_at >= NOW() - INTERVAL '24 hours' ORDER BY created_at DESC
   `);
@@ -54,13 +70,15 @@ export async function getPlatformActivity(
   const revCents = toRows(revenueRaw)[0]?.cents ?? 0;
   const uniqueCount = toRows(uniqueRaw)[0]?.cnt ?? 0;
   const topCaps = toRows(topCapsRaw).map((r: any) => ({ slug: r.slug, count: r.cnt }));
-  const newEmails = toRows(newSignupsRaw).map((r: any) => r.email as string);
+
+  const allNewEmails = toRows(newSignupsRaw).map((r: any) => r.email as string);
+  const externalEmails = allNewEmails.filter((e) => !INTERNAL_EMAIL_SUFFIXES.some((s) => e.endsWith(s)));
+  const internalEmails = allNewEmails.filter((e) => INTERNAL_EMAIL_SUFFIXES.some((s) => e.endsWith(s)));
 
   const ySignups = yesterday?.totalUsers ?? signups.total;
-  const yApiCalls = yesterday?.totalApiCalls ?? txnCount;
 
   return {
-    signups: { count: signups.last_24h, delta: signups.total - ySignups, emails: newEmails },
+    signups: { count: signups.last_24h, delta: signups.total - ySignups, emails: externalEmails, internalEmails },
     apiCalls: { total: txnCount, delta: 0, byCapability: topCaps },
     uniqueUsers: { count: uniqueCount, delta: 0 },
     transactions: { count: txnCount, delta: 0 },
@@ -72,11 +90,9 @@ export async function getPlatformActivity(
 export async function getPlatformHealth(): Promise<PlatformHealth> {
   const db = getDb();
 
-  // Circuit breakers
   const allHealth = await getAllHealth();
   const openBreakers = allHealth.filter((h) => h.state !== "closed");
 
-  // Test pass rate (last 24h)
   const testRaw = await db.execute(sql`
     SELECT
       COUNT(*) FILTER (WHERE passed = true)::int AS passed,
@@ -88,7 +104,6 @@ export async function getPlatformHealth(): Promise<PlatformHealth> {
   const testRow = toRows(testRaw)[0] ?? { passed: 0, failed: 0, total: 0 };
   const testTotal = testRow.total || 1;
 
-  // SQS grade changes: compare current scores to yesterday's snapshot grades
   const gradeChangesRaw = await db.execute(sql`
     WITH today AS (
       SELECT slug,
