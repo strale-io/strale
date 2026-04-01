@@ -21,7 +21,7 @@ export async function sendDigestEmail(html: string, date: Date): Promise<void> {
     body: JSON.stringify({
       from: "Strale Digest <petter@strale.io>",
       to: ["petter@strale.io"],
-      subject: `Strale Daily Digest — ${dateStr}`,
+      subject: `Strale Daily Digest - ${dateStr}`,
       html,
     }),
   });
