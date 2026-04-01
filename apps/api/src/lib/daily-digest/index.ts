@@ -40,6 +40,7 @@ const defaultShipLog: ShipLog = {
   journalEntries: [],
   githubCommits: [],
   socialPosts: [],
+  notionActivity: [],
 };
 
 const defaultBeacon: BeaconActivity = {

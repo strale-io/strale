@@ -99,6 +99,20 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
     ? sl.socialPosts.map((p) => `${escHtml(p.title)} (${escHtml(p.platform)})`).join(", ")
     : "None";
 
+  // Notion workspace activity (beyond journal/social)
+  const notionItems = (sl.notionActivity ?? []).slice(0, 10);
+  const notionExtraCount = Math.max(0, (sl.notionActivity ?? []).length - 10);
+  const notionActivityHtml = notionItems.length > 0 ? `
+      <br><strong>Other Notion activity:</strong>
+      <ul style="margin: 4px 0 4px 20px; padding: 0;">
+        ${notionItems.map((a) => {
+          const tag = a.isNew ? `<span style="color:${GREEN};">NEW</span>` : `<span style="color:${NEUTRAL};">EDITED</span>`;
+          const parent = a.parentName ? ` <span style="color:${NEUTRAL};">in ${escHtml(a.parentName)}</span>` : "";
+          return `<li style="margin-bottom: 3px;">${tag} ${escHtml(a.title)}${parent}</li>`;
+        }).join("")}
+        ${notionExtraCount > 0 ? `<li style="color:${NEUTRAL};">...and ${notionExtraCount} more changes</li>` : ""}
+      </ul>` : "";
+
   const shipLogHtml = `
     ${sectionHeader("🚀", "Yesterday's Shiplog")}
     <tr><td style="padding: 4px 0; font-size: 14px; line-height: 1.6; color: ${TEXT};">
@@ -108,6 +122,7 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
       <strong>Journal:</strong><ul style="margin: 4px 0 8px 20px; padding: 0;">${journalItems}</ul>
       <strong>Commits:</strong> ${commitCount > 0 ? `${commitCount} across ${commitRepos.join(", ")}` : "None"}<br>
       <strong>Posts:</strong> ${socialItems}
+      ${notionActivityHtml}
     </td></tr>`;
 
   // Platform activity

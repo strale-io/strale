@@ -60,6 +60,13 @@ YESTERDAY'S WORK (from Notion Journal + GitHub commits):
 - GitHub commits: ${JSON.stringify(sl.githubCommits.map((c) => ({ repo: c.repo, message: c.message })))}
 - Social posts: ${JSON.stringify(sl.socialPosts.map((p) => ({ title: p.title, platform: p.platform })))}
 
+NOTION WORKSPACE ACTIVITY (last 24h):
+New pages created: ${sl.notionActivity.filter((a) => a.isNew).length}
+Pages modified: ${sl.notionActivity.filter((a) => !a.isNew).length}
+${sl.notionActivity.slice(0, 30).map((a) =>
+  `- ${a.isNew ? "NEW" : "EDITED"}: "${a.title}" (in ${a.parentName ?? "unknown"})${Object.keys(a.properties).length > 0 ? " [" + Object.entries(a.properties).map(([k, v]) => `${k}:${v}`).join(", ") + "]" : ""}`
+).join("\n")}
+
 BEACON:
 - Scans (24h): ${ba.scansLast24h}
 - Domains scanned: ${JSON.stringify(ba.scanDomains)}
@@ -88,7 +95,7 @@ Based on all of the above, provide your analysis as JSON:
 
 {
   "situation_assessment": "3-5 sentences. Lead with the most important signal. Be direct — if nothing happened, say so. Connect dots across data points. Mention specific numbers.",
-  "ship_log_summary": "2-3 sentences summarizing what was built/shipped/posted yesterday. If nothing, say 'No recorded activity yesterday.' Be specific about what was done.",
+  "ship_log_summary": "2-3 sentences summarizing what was built, shipped, discussed, or decided yesterday. Use the NOTION WORKSPACE ACTIVITY to see everything that happened — not just commits. Include strategy discussions, distribution actions, and content posted. If there were commits, mention them. If there were no commits but other work happened, say what the work was. Be specific.",
   "recommended_actions": [
     {
       "action": "specific action to take today",

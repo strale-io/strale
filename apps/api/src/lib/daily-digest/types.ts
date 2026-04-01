@@ -13,10 +13,23 @@ export interface PlatformHealth {
   sqsChanges: Array<{ slug: string; oldGrade: string; newGrade: string; direction: "up" | "down" }>;
 }
 
+export interface NotionActivity {
+  id: string;
+  type: "page" | "database_entry";
+  title: string;
+  parentName: string | null;
+  url: string;
+  createdTime: string;
+  lastEditedTime: string;
+  isNew: boolean;
+  properties: Record<string, string>;
+}
+
 export interface ShipLog {
   journalEntries: Array<{ title: string; type: string; createdAt: string }>;
   githubCommits: Array<{ repo: string; message: string; sha: string; author: string; date: string }>;
   socialPosts: Array<{ title: string; platform: string; createdAt: string }>;
+  notionActivity: NotionActivity[];
 }
 
 export interface BeaconActivity {
