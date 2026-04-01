@@ -247,6 +247,66 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
 }
 
 /**
+ * Record a successful test execution as evidence of capability health.
+ * Only called for test types that prove end-to-end functionality
+ * (known_answer, edge_case) — NOT for dry-run schema checks.
+ *
+ * Transitions: open (past retry) → closed, open (in backoff) → half_open,
+ * half_open → closed, closed → no-op.
+ */
+export async function recordTestEvidence(slug: string): Promise<void> {
+  const db = getDb();
+
+  const [health] = await db
+    .select()
+    .from(capabilityHealth)
+    .where(eq(capabilityHealth.capabilitySlug, slug))
+    .limit(1);
+
+  if (!health) return; // No breaker record — nothing to recover
+  const state = health.state as CircuitState;
+  if (state === "closed") return; // Already healthy
+
+  const now = new Date();
+
+  if (state === "half_open" || (state === "open" && health.nextRetryAt && now >= health.nextRetryAt)) {
+    // Retry window passed or already half_open — close immediately
+    await db
+      .update(capabilityHealth)
+      .set({
+        state: "closed",
+        consecutiveFailures: 0,
+        lastSuccessAt: now,
+        backoffMinutes: INITIAL_BACKOFF_MINUTES,
+        openedAt: null,
+        nextRetryAt: null,
+        updatedAt: now,
+      })
+      .where(eq(capabilityHealth.id, health.id));
+
+    console.log(`[circuit-breaker] ${slug} recovered via test evidence (was ${state})`);
+    logHealthEvent({
+      eventType: "circuit_breaker",
+      capabilitySlug: slug,
+      tier: 1,
+      actionTaken: "Circuit breaker recovered via test evidence",
+      details: { previous_state: state, recovery_source: "test_evidence" },
+    }).catch(() => {});
+    return;
+  }
+
+  // Open but still in backoff — move to half_open so next call goes through
+  if (state === "open") {
+    await db
+      .update(capabilityHealth)
+      .set({ state: "half_open", updatedAt: now })
+      .where(eq(capabilityHealth.id, health.id));
+
+    console.log(`[circuit-breaker] ${slug} half_open via test evidence (retry window not yet passed)`);
+  }
+}
+
+/**
  * Get health status for all capabilities (for monitoring endpoint).
  */
 export async function getAllHealth(): Promise<

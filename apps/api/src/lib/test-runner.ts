@@ -516,7 +516,14 @@ async function runSingleTest(
         error_snippet: (failureReason ?? "").substring(0, 200),
       },
     }).catch(() => {});
-  } else if (suite.lastClassification) {
+  } else if (passed && (suite.testType === "known_answer" || suite.testType === "edge_case")) {
+    // Test passed with real execution — feed evidence to circuit breaker
+    import("./circuit-breaker.js").then(({ recordTestEvidence }) =>
+      recordTestEvidence(suite.capabilitySlug),
+    ).catch(() => {});
+  }
+
+  if (!classification && suite.lastClassification) {
     // Test passed — clear last_classification (indicates recovery)
     await db.update(testSuites).set({
       lastClassification: null,
