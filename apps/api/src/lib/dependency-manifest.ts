@@ -355,6 +355,24 @@ export const PROVIDERS: DependencyProvider[] = [
     tier: "free",
   },
 
+  // ─── Jina Reader (free markdown extraction for url-to-markdown) ────────────
+  {
+    name: "jina-reader",
+    displayName: "Jina Reader",
+    description: "Free URL-to-markdown extraction via r.jina.ai. Handles JS rendering. 20 RPM free, 200 RPM with key.",
+    baseUrl: "https://r.jina.ai",
+    authType: "none",
+    healthProbe: {
+      path: "/https://example.com",
+      method: "GET",
+      healthyStatuses: [200],
+      timeoutMs: 10000,
+      skipAuth: true,
+    },
+    capabilities: ["url-to-markdown"],
+    tier: "free",
+  },
+
   // ─── Retired providers (keep for migration completeness checks) ───────────
   // NOTE: OPENSANCTIONS_API_KEY in Railway can be removed — this provider
   // is retired (replaced by Dilisense on 2026-03-25). The key is dead.
