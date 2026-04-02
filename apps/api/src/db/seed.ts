@@ -1448,6 +1448,15 @@ const seedCapabilities = [
     outputSchema: { type: "object", properties: { vulnerabilities: { type: "array" }, total_vulnerabilities: { type: "integer" }, highest_severity: { type: "string" }, recommendation: { type: "string" } } },
     priceCents: 10,
   },
+  {
+    name: "Package Security Audit",
+    slug: "package-security-audit",
+    description: "Composite security audit for npm and PyPI packages: CVE check (OSV.dev), OpenSSF Scorecard, license analysis, freshness, deprecation status. Returns a 0-100 risk score aggregating multiple data sources.",
+    category: "security",
+    inputSchema: { type: "object", properties: { name: { type: "string", description: "Package name (e.g. 'express', 'requests')" }, version: { type: "string", description: "Specific version to audit. If omitted, audits latest." }, ecosystem: { type: "string", enum: ["npm", "pypi"], description: "Package ecosystem. Default: auto-detect." } }, required: ["name"] },
+    outputSchema: { type: "object", properties: { name: { type: "string" }, version: { type: "string" }, ecosystem: { type: "string" }, risk_score: { type: "integer" }, risk_level: { type: "string" }, vulnerabilities: { type: "object" }, license: { type: "object" }, freshness: { type: "object" }, scorecard: { type: "object" }, maintainers: { type: "integer" }, dependency_count: { type: "integer" } } },
+    priceCents: 15,
+  },
   // ─── DevOps config generation ──────────────────────────────────────────────────
   {
     name: "Dockerfile Generate",
