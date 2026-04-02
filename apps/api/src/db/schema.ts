@@ -36,6 +36,10 @@ export const users = pgTable("users", {
   maxSpendPerHourCents: integer("max_spend_per_hour_cents")
     .notNull()
     .default(10000), // €100/hr
+  // Activation funnel tracking
+  firstTransactionAt: timestamp("first_transaction_at", { withTimezone: true }),
+  activationEmailStage: integer("activation_email_stage").notNull().default(0),
+  activationCompletedAt: timestamp("activation_completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

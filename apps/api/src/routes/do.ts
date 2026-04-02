@@ -960,6 +960,12 @@ async function executeFreeTierAuthenticated(
       ).catch(() => {});
     }
     storeIntegrityHash(txnRecord.id).catch(() => {});
+    // Activation hook: detect first successful call
+    if (user) {
+      import("../lib/activation-hook.js").then(({ onFirstTransaction }) =>
+        onFirstTransaction(user.id, capability.slug),
+      ).catch(() => {});
+    }
 
     // Get wallet balance for response
     const [wallet] = await db
@@ -1222,6 +1228,10 @@ async function executeSync(
         checkMilestone(Number(rows[0]?.count ?? 0));
       })
       .catch(() => {});
+    // Activation hook: detect first successful call (sync paid)
+    import("../lib/activation-hook.js").then(({ onFirstTransaction }) =>
+      onFirstTransaction(user.id, capability.slug),
+    ).catch(() => {});
   } else if (result.errorCode === "execution_failed") {
     recordFailure(capability.slug, result.error).catch(() => {});
     triggerOnFailure(capability.slug).catch(() => {});

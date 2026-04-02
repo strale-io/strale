@@ -54,6 +54,9 @@ async function main() {
   const { startInvariantChecker } = await import("./jobs/invariant-checker.js");
   startInvariantChecker();
 
+  const { startActivationDrip } = await import("./jobs/activation-drip.js");
+  startActivationDrip();
+
   const port = parseInt(process.env.PORT || "3000", 10);
 
   serve({ fetch: app.fetch, port }, (info) => {
