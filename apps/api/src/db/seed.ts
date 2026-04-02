@@ -1449,6 +1449,15 @@ const seedCapabilities = [
     priceCents: 10,
   },
   {
+    name: "License Compatibility Check",
+    slug: "license-compatibility-check",
+    description: "Check whether a set of software licenses are compatible with each other and a given use case (commercial, open-source, SaaS, internal). Covers 30+ SPDX licenses including MIT, Apache-2.0, GPL, AGPL, MPL, and proprietary licenses.",
+    category: "security",
+    inputSchema: { type: "object", properties: { licenses: { type: "array", items: { type: "string" }, description: "SPDX license identifiers (e.g. ['MIT', 'Apache-2.0', 'GPL-3.0-only'])" }, use_case: { type: "string", enum: ["commercial", "open-source", "saas", "internal"], description: "How the software will be used. Default: 'commercial'" } }, required: ["licenses"] },
+    outputSchema: { type: "object", properties: { compatible: { type: "boolean" }, use_case: { type: "string" }, license_count: { type: "integer" }, licenses_analyzed: { type: "array" }, conflicts: { type: "array" }, warnings: { type: "array" }, summary: { type: "string" } } },
+    priceCents: 5,
+  },
+  {
     name: "Package Security Audit",
     slug: "package-security-audit",
     description: "Composite security audit for npm and PyPI packages: CVE check (OSV.dev), OpenSSF Scorecard, license analysis, freshness, deprecation status. Returns a 0-100 risk score aggregating multiple data sources.",
