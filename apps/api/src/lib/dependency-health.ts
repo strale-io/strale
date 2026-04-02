@@ -78,33 +78,50 @@ async function probeProvider(
     }
   }
 
-  const start = Date.now();
-  try {
-    const res = await fetch(url, {
-      method: probe.method,
-      headers,
-      body: probe.body ? JSON.stringify(probe.body) : undefined,
-      signal: AbortSignal.timeout(probe.timeoutMs),
-    });
+  // Probe with one retry — filters out transient network blips
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const start = Date.now();
+    try {
+      const res = await fetch(url, {
+        method: probe.method,
+        headers,
+        body: probe.body ? JSON.stringify(probe.body) : undefined,
+        signal: AbortSignal.timeout(probe.timeoutMs),
+      });
 
-    const latency_ms = Date.now() - start;
-    const healthy = probe.healthyStatuses.includes(res.status);
+      const latency_ms = Date.now() - start;
+      const healthy = probe.healthyStatuses.includes(res.status);
 
-    if (!healthy) {
-      if (res.status === 401 || res.status === 403) {
-        return {
-          healthy: false,
-          latency_ms,
-          error: `${provider.envVar ?? "API key"} is invalid (HTTP ${res.status})`,
-        };
+      if (!healthy) {
+        if (res.status === 401 || res.status === 403) {
+          // Auth errors don't improve on retry
+          return {
+            healthy: false,
+            latency_ms,
+            error: `${provider.envVar ?? "API key"} is invalid (HTTP ${res.status})`,
+          };
+        }
+        if (attempt === 0) {
+          // First attempt failed with non-auth error — retry after 5s
+          await new Promise((r) => setTimeout(r, 5000));
+          continue;
+        }
+        return { healthy: false, latency_ms, error: `Unexpected HTTP ${res.status}` };
       }
-      return { healthy: false, latency_ms, error: `Unexpected HTTP ${res.status}` };
-    }
 
-    return { healthy: true, latency_ms };
-  } catch (e: any) {
-    return { healthy: false, latency_ms: Date.now() - start, error: e.message };
+      return { healthy: true, latency_ms };
+    } catch (e: any) {
+      if (attempt === 0) {
+        // Network error on first attempt — retry after 5s
+        await new Promise((r) => setTimeout(r, 5000));
+        continue;
+      }
+      return { healthy: false, latency_ms: Date.now() - start, error: e.message };
+    }
   }
+
+  // Shouldn't reach here, but TypeScript needs it
+  return { healthy: false, latency_ms: 0, error: "probe exhausted retries" };
 }
 
 export async function runDependencyHealthChecks(): Promise<

@@ -27,6 +27,28 @@ interface PendingAlert {
 
 const pendingAlerts = new Map<string, PendingAlert>();
 
+// ─── Flap dampening: per-provider cooldown ───────────────────────────────────
+// After sending an alert (outage or recovery), suppress further alerts for this
+// provider for COOLDOWN_MS. Prevents Resend quota burn on flapping providers.
+const COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
+const alertCooldowns = new Map<string, { sentAt: number; lastState: "healthy" | "unhealthy" }>();
+
+function isInCooldown(key: string, newState: "healthy" | "unhealthy"): boolean {
+  const cooldown = alertCooldowns.get(key);
+  if (!cooldown) return false;
+  const elapsed = Date.now() - cooldown.sentAt;
+  if (elapsed >= COOLDOWN_MS) return false; // Cooldown expired
+  if (cooldown.lastState === newState) return true; // Same state, suppress
+  // Different state but within cooldown — still suppress
+  const minutesAgo = Math.round(elapsed / 60_000);
+  console.log(`[situation] Alert suppressed for ${key} — cooldown active (last alert ${minutesAgo}m ago, state change ${cooldown.lastState}→${newState})`);
+  return true;
+}
+
+function recordCooldown(key: string, state: "healthy" | "unhealthy"): void {
+  alertCooldowns.set(key, { sentAt: Date.now(), lastState: state });
+}
+
 /** Get pending alert for a key (for testing/debugging). */
 export function getPendingAlert(key: string): PendingAlert | undefined {
   return pendingAlerts.get(key);
@@ -138,8 +160,16 @@ export async function handleDependencyProbeResult(
 
       if (!pending.alerted) {
         // Confirmed: customer impact check is already in the assessment
-        const result = await evaluateAndAlert(assessment);
-        if (result.alertSent) pending.alerted = true;
+        if (isInCooldown(key, "unhealthy")) {
+          // Cooldown active — skip alert but still mark as confirmed
+          pending.alerted = false;
+        } else {
+          const result = await evaluateAndAlert(assessment);
+          if (result.alertSent) {
+            pending.alerted = true;
+            recordCooldown(key, "unhealthy");
+          }
+        }
       }
     }
   } else {
@@ -147,8 +177,13 @@ export async function handleDependencyProbeResult(
     const pending = pendingAlerts.get(key);
     if (pending) {
       if (pending.alerted || pending.probeCount >= 2) {
-        // Was a confirmed outage — send recovery notification
-        await sendRecoveryEmail(dependency, pending);
+        // Was a confirmed outage — send recovery notification (with cooldown)
+        if (!isInCooldown(key, "healthy")) {
+          await sendRecoveryEmail(dependency, pending);
+          recordCooldown(key, "healthy");
+        } else {
+          console.log(`[situation] Recovery alert suppressed for ${dependency} — cooldown active`);
+        }
       } else {
         // Was a single blip — silently clear
         console.log(`[situation] ${dependency}: recovered after single probe failure (transient, no alert sent)`);
