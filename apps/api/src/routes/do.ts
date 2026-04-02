@@ -844,18 +844,22 @@ async function executeFreeTier(
     const callsToday = await getFreeTierUsageToday(db, reqCtx?.ipHash ?? null);
 
     return c.json({
-      transaction_id: txnRecord.id,
-      status: "completed",
-      capability_used: capability.slug,
-      price_cents: 0,
-      latency_ms: latencyMs,
-      output: capResult.output,
-      provenance: capResult.provenance,
+      result: {
+        transaction_id: txnRecord.id,
+        status: "completed",
+        capability_used: capability.slug,
+        price_cents: 0,
+        latency_ms: latencyMs,
+        output: capResult.output,
+        provenance: capResult.provenance,
+      },
+      meta: {
+        ...dualProfile,
+        audit,
+      },
       free_tier: true,
       usage: buildUsageBlock(callsToday),
-      ...dualProfile,
       upgrade: buildUpgradeBlock(capability.slug),
-      audit,
     });
   } catch (err) {
     const latencyMs = Date.now() - startTime;
@@ -993,16 +997,20 @@ async function executeFreeTierAuthenticated(
     const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
     setCreditsHeaders(c, wallet?.balanceCents ?? 0, 0);
     return c.json({
-      transaction_id: txnRecord.id,
-      status: "completed",
-      capability_used: capability.slug,
-      price_cents: 0,
-      latency_ms: latencyMs,
-      wallet_balance_cents: wallet?.balanceCents ?? 0,
-      output: capResult.output,
-      provenance: capResult.provenance,
-      ...dualProfile,
-      audit,
+      result: {
+        transaction_id: txnRecord.id,
+        status: "completed",
+        capability_used: capability.slug,
+        price_cents: 0,
+        latency_ms: latencyMs,
+        wallet_balance_cents: wallet?.balanceCents ?? 0,
+        output: capResult.output,
+        provenance: capResult.provenance,
+      },
+      meta: {
+        ...dualProfile,
+        audit,
+      },
     });
   } catch (err) {
     const latencyMs = Date.now() - startTime;
@@ -1324,16 +1332,20 @@ async function executeSync(
 
   setCreditsHeaders(c, result.balanceAfter, capability.priceCents);
   return c.json({
-    transaction_id: result.transactionId,
-    status: "completed",
-    capability_used: capability.slug,
-    price_cents: capability.priceCents,
-    latency_ms: result.latencyMs,
-    wallet_balance_cents: result.balanceAfter,
-    output: result.output,
-    provenance: result.provenance,
-    ...dualProfile,
-    audit,
+    result: {
+      transaction_id: result.transactionId,
+      status: "completed",
+      capability_used: capability.slug,
+      price_cents: capability.priceCents,
+      latency_ms: result.latencyMs,
+      wallet_balance_cents: result.balanceAfter,
+      output: result.output,
+      provenance: result.provenance,
+    },
+    meta: {
+      ...dualProfile,
+      audit,
+    },
   });
 }
 
@@ -1473,12 +1485,16 @@ async function executeAsync(
   const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
   return c.json(
     {
-      transaction_id: transactionId,
-      status: "executing",
-      capability_used: capability.slug,
-      price_cents: capability.priceCents,
-      wallet_balance_cents: balanceAfter,
-      ...dualProfile,
+      result: {
+        transaction_id: transactionId,
+        status: "executing",
+        capability_used: capability.slug,
+        price_cents: capability.priceCents,
+        wallet_balance_cents: balanceAfter,
+      },
+      meta: {
+        ...dualProfile,
+      },
     },
     202,
   );

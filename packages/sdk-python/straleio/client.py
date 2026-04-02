@@ -283,20 +283,25 @@ class Strale:
 
     @staticmethod
     def _parse_do_response(data: Dict[str, Any]) -> DoResponse:
-        prov = data.get("provenance")
+        # Support nested { result, meta } shape
+        r = data.get("result", data)
+        m = data.get("meta", {})
+        prov = r.get("provenance")
         return DoResponse(
-            transaction_id=data["transaction_id"],
-            status=data["status"],
-            capability_used=data.get("capability_used", ""),
-            price_cents=data.get("price_cents", 0),
-            latency_ms=data.get("latency_ms", 0),
-            wallet_balance_cents=data.get("wallet_balance_cents", 0),
-            output=data.get("output", {}),
+            transaction_id=r["transaction_id"],
+            status=r["status"],
+            capability_used=r.get("capability_used", ""),
+            price_cents=r.get("price_cents", 0),
+            latency_ms=r.get("latency_ms", 0),
+            output=r.get("output", {}),
             provenance=Provenance(
                 source=prov["source"], fetched_at=prov["fetched_at"]
             )
             if prov
             else Provenance(source="unknown", fetched_at=""),
+            wallet_balance_cents=r.get("wallet_balance_cents"),
+            meta=m if m else None,
+            free_tier=data.get("free_tier"),
         )
 
     @staticmethod

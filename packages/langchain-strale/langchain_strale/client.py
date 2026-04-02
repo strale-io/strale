@@ -46,7 +46,13 @@ class StraleClient:
             payload["max_price_cents"] = max_price_cents
 
         resp = self._session.post(f"{self.base_url}/v1/do", json=payload)
-        return resp.json()
+        data = resp.json()
+        # Unwrap nested { result, meta } response shape
+        if "result" in data and isinstance(data["result"], dict):
+            flat = {**data["result"], "meta": data.get("meta", {})}
+            if "free_tier" in data: flat["free_tier"] = data["free_tier"]
+            data = flat
+        return data
 
     def get_balance(self) -> dict[str, Any]:
         """Get wallet balance via GET /v1/wallet/balance."""

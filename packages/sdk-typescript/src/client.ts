@@ -2,6 +2,8 @@ import type {
   StraleOptions,
   DoRequest,
   DoResponse,
+  DoResult,
+  DoMeta,
   DryRunResponse,
   Capability,
   BalanceResponse,
@@ -10,6 +12,21 @@ import type {
   ApiErrorResponse,
 } from "./types.js";
 import { createError, StraleError } from "./errors.js";
+
+/** Unwrap nested { result, meta } response into flat DoResponse for convenience. */
+function unwrapDoResponse(raw: Record<string, unknown>): DoResponse {
+  const r = (raw.result ?? raw) as DoResult;
+  const m = (raw.meta ?? {}) as DoMeta;
+  return {
+    // Spread result fields to top level for convenience (response.output, response.transaction_id, etc.)
+    ...r,
+    _result: r,
+    meta: m,
+    free_tier: raw.free_tier as boolean | undefined,
+    usage: raw.usage as DoResponse["usage"],
+    upgrade: raw.upgrade as Record<string, unknown> | undefined,
+  };
+}
 
 const DEFAULT_BASE_URL = "https://api.strale.io";
 const DEFAULT_TIMEOUT = 60_000;
@@ -77,8 +94,11 @@ export class Strale {
       return response;
     }
 
+    // Unwrap nested { result, meta } into flat convenience interface
+    const raw = response as unknown as Record<string, unknown>;
+    const doResponse = unwrapDoResponse(raw);
+
     // If async (status: "executing"), auto-poll until terminal state
-    const doResponse = response as DoResponse;
     if (doResponse.status === "executing") {
       return this.pollTransaction(doResponse);
     }
@@ -137,19 +157,17 @@ export class Strale {
       const detail = await this.transaction(initial.transaction_id);
 
       if (detail.status === "completed") {
-        return {
+        const r: DoResult = {
           transaction_id: detail.id,
           status: "completed" as const,
           capability_used: detail.capability_slug,
           price_cents: detail.price_cents,
           latency_ms: detail.latency_ms,
-          wallet_balance_cents: initial.wallet_balance_cents, // best known
+          wallet_balance_cents: initial.wallet_balance_cents,
           output: detail.output ?? {},
-          provenance: detail.provenance ?? {
-            source: "unknown",
-            fetched_at: new Date().toISOString(),
-          },
+          provenance: detail.provenance ?? { source: "unknown", fetched_at: new Date().toISOString() },
         };
+        return { ...r, _result: r, meta: initial.meta ?? {} };
       }
 
       if (detail.status === "failed") {

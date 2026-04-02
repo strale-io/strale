@@ -92,6 +92,12 @@ class StraleClient:
         )
         data = resp.json()
 
+        # Unwrap nested { result, meta } response shape
+        if "result" in data and isinstance(data["result"], dict):
+            flat = {**data["result"], "meta": data.get("meta", {})}
+            if "free_tier" in data: flat["free_tier"] = data["free_tier"]
+            data = flat
+
         if data.get("status") == "executing" and data.get("transaction_id"):
             return self._poll(data["transaction_id"])
 

@@ -34,15 +34,33 @@ export interface DoRequest {
   idempotency_key?: string;
 }
 
-export interface DoResponse {
+export interface DoResult {
   transaction_id: string;
   status: "completed" | "executing" | "failed";
   capability_used: string;
   price_cents: number;
   latency_ms: number;
-  wallet_balance_cents: number;
+  wallet_balance_cents?: number;
   output: Record<string, unknown>;
   provenance: Provenance;
+}
+
+export interface DoMeta {
+  quality?: Record<string, unknown>;
+  execution_guidance?: Record<string, unknown>;
+  audit?: Record<string, unknown>;
+  quality_warning?: string;
+}
+
+/** Response from POST /v1/do. Access result fields directly (e.g., response.output). */
+export interface DoResponse extends DoResult {
+  /** Full result block as returned by the API. */
+  _result: DoResult;
+  /** Trust layer metadata (quality scores, execution guidance, audit trail). */
+  meta: DoMeta;
+  free_tier?: boolean;
+  usage?: { calls_today: number; daily_limit: number; resets_at: string };
+  upgrade?: Record<string, unknown>;
 }
 
 export interface DryRunResponse {

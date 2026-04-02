@@ -121,32 +121,56 @@ export const openApiSpec = {
       },
       DoResponse: {
         type: "object" as const,
+        description: "Response from POST /v1/do. Core execution data in `result`, trust metadata in `meta`.",
         properties: {
-          transaction_id: { type: "string" as const, format: "uuid" },
-          status: { type: "string" as const, enum: ["completed", "pending", "failed"] },
-          capability_used: { type: "string" as const },
-          price_cents: { type: "integer" as const },
-          latency_ms: { type: "integer" as const },
-          wallet_balance_cents: { type: "integer" as const, description: "Remaining wallet balance (authenticated only)." },
-          output: { type: "object" as const, nullable: true },
-          provenance: {
+          result: {
             type: "object" as const,
+            description: "What the caller asked for — the execution result.",
             properties: {
-              source: { type: "string" as const },
-              fetched_at: { type: "string" as const, format: "date-time" },
+              transaction_id: { type: "string" as const, format: "uuid" },
+              status: { type: "string" as const, enum: ["completed", "executing", "failed"] },
+              capability_used: { type: "string" as const },
+              price_cents: { type: "integer" as const },
+              latency_ms: { type: "integer" as const },
+              wallet_balance_cents: { type: "integer" as const, description: "Remaining wallet balance (authenticated only)." },
+              output: { type: "object" as const, nullable: true },
+              provenance: {
+                type: "object" as const,
+                properties: {
+                  source: { type: "string" as const },
+                  fetched_at: { type: "string" as const, format: "date-time" },
+                },
+              },
             },
           },
-          quality: {
+          meta: {
             type: "object" as const,
+            description: "Trust layer metadata — quality scores, execution guidance, audit trail.",
             properties: {
-              sqs: { type: "number" as const },
-              label: { type: "string" as const },
-              quality_profile: { type: "object" as const },
-              reliability_profile: { type: "object" as const },
-              trend: { type: "string" as const },
+              quality: {
+                type: "object" as const,
+                properties: {
+                  sqs: { type: "number" as const },
+                  label: { type: "string" as const },
+                  quality_profile: { type: "object" as const },
+                  reliability_profile: { type: "object" as const },
+                  trend: { type: "string" as const },
+                },
+              },
+              execution_guidance: {
+                type: "object" as const,
+                properties: {
+                  usable: { type: "boolean" as const },
+                  strategy: { type: "string" as const },
+                  confidence_after_strategy: { type: "number" as const },
+                },
+              },
+              audit: { type: "object" as const, description: "EU AI Act compliant audit trail." },
             },
           },
-          audit: { type: "object" as const, description: "EU AI Act compliant audit trail." },
+          free_tier: { type: "boolean" as const, description: "True for unauthenticated free-tier calls." },
+          usage: { type: "object" as const, description: "Free-tier usage counter (unauthenticated only)." },
+          upgrade: { type: "object" as const, description: "Upgrade prompt with paid capability examples (free-tier only)." },
         },
       },
     },

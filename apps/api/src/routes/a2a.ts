@@ -353,15 +353,18 @@ async function handleMessageSend(
     });
 
     const data = await resp.json().catch(() => ({})) as Record<string, unknown>;
+    // Support nested (result/meta) response shape
+    const r = (data.result ?? data) as Record<string, unknown>;
+    const m = (data.meta ?? data) as Record<string, unknown>;
 
     if (resp.status === 202) {
       return c.json({
         jsonrpc: "2.0",
         result: {
-          id: data.transaction_id as string,
-          contextId: data.transaction_id as string,
+          id: r.transaction_id as string,
+          contextId: r.transaction_id as string,
           status: { state: "working", timestamp: new Date().toISOString() },
-          metadata: { capability_used: data.capability_used, price_cents: data.price_cents },
+          metadata: { capability_used: r.capability_used, price_cents: r.price_cents },
         },
         id,
       });
@@ -400,8 +403,8 @@ async function handleMessageSend(
     }
 
     // Success — include SQS metadata
-    const quality = data.quality as Record<string, unknown> | undefined;
-    const transactionId = data.transaction_id as string;
+    const quality = (m.quality ?? data.quality) as Record<string, unknown> | undefined;
+    const transactionId = r.transaction_id as string;
 
     return c.json({
       jsonrpc: "2.0",
@@ -414,13 +417,13 @@ async function handleMessageSend(
             role: "agent",
             parts: [{
               kind: "data",
-              data: data.output,
+              data: r.output,
               metadata: {
                 mimeType: "application/json",
                 sqs: quality?.sqs ?? null,
                 sqs_label: quality?.label ?? null,
-                capability_used: data.capability_used,
-                latency_ms: data.latency_ms,
+                capability_used: r.capability_used,
+                latency_ms: r.latency_ms,
                 audit_trail_id: transactionId,
               },
             }],
@@ -432,7 +435,7 @@ async function handleMessageSend(
           name: skillId,
           parts: [{
             kind: "data",
-            data: data.output,
+            data: r.output,
             metadata: {
               mimeType: "application/json",
               sqs: quality?.sqs ?? null,
@@ -441,11 +444,11 @@ async function handleMessageSend(
           }],
         }],
         metadata: {
-          capability_used: data.capability_used,
-          price_cents: data.price_cents,
-          latency_ms: data.latency_ms,
-          wallet_balance_cents: data.wallet_balance_cents,
-          provenance: data.provenance,
+          capability_used: r.capability_used,
+          price_cents: r.price_cents,
+          latency_ms: r.latency_ms,
+          wallet_balance_cents: r.wallet_balance_cents,
+          provenance: r.provenance,
         },
       },
       id,

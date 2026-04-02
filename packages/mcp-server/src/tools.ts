@@ -255,7 +255,7 @@ export async function executeCapability(
   );
 
   if (status === 202) {
-    const txId = (data as any).transaction_id;
+    const txId = (data as any).result?.transaction_id ?? (data as any).transaction_id;
     return {
       content: [
         {
@@ -308,26 +308,26 @@ export async function executeCapability(
   }
 
   // ── Success ──
-  const output = (data as any).output ?? data;
+  // Support both new nested (result/meta) and legacy flat response shapes
+  const r = (data as any).result ?? data;
+  const m = (data as any).meta ?? data;
+  const output = r.output ?? (data as any).output ?? data;
   const meta: Record<string, unknown> = {};
-  if ((data as any).price_cents != null)
-    meta.price_cents = (data as any).price_cents;
-  if ((data as any).latency_ms != null)
-    meta.latency_ms = (data as any).latency_ms;
-  if ((data as any).wallet_balance_cents != null)
-    meta.wallet_balance_cents = (data as any).wallet_balance_cents;
-  if ((data as any).provenance) meta.provenance = (data as any).provenance;
+  if (r.price_cents != null) meta.price_cents = r.price_cents;
+  if (r.latency_ms != null) meta.latency_ms = r.latency_ms;
+  if (r.wallet_balance_cents != null) meta.wallet_balance_cents = r.wallet_balance_cents;
+  if (r.provenance) meta.provenance = r.provenance;
 
-  // Dual-profile quality data
-  if ((data as any).quality) meta.quality = (data as any).quality;
-  if ((data as any).execution_guidance) meta.execution_guidance = (data as any).execution_guidance;
+  // Dual-profile quality data (lives in meta block now)
+  if (m.quality) meta.quality = m.quality;
+  if (m.execution_guidance) meta.execution_guidance = m.execution_guidance;
 
-  // Transaction ID — present for all executions including free-tier; enables audit trail verification
-  if ((data as any).transaction_id) meta.transaction_id = (data as any).transaction_id;
+  // Transaction ID
+  if (r.transaction_id) meta.transaction_id = r.transaction_id;
 
   // Next-steps guidance on every successful execution
   meta.next_steps = [
-    `Transaction ID recorded. Call strale_transaction with id "${(data as any).transaction_id ?? ""}" to retrieve the full audit record.`,
+    `Transaction ID recorded. Call strale_transaction with id "${r.transaction_id ?? ""}" to retrieve the full audit record.`,
     `Call strale_trust_profile with slug "${slug}" to see its dual-profile quality assessment.`,
     "Call strale_search to find related capabilities.",
   ];

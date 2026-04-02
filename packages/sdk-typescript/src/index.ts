@@ -5,6 +5,8 @@ export type {
   StraleOptions,
   DoRequest,
   DoResponse,
+  DoResult,
+  DoMeta,
   DryRunResponse,
   Provenance,
   Capability,

@@ -42,16 +42,22 @@ class Provenance:
 
 @dataclass
 class DoResponse:
-    """Response from POST /v1/do (completed or executing)."""
+    """Response from POST /v1/do (completed or executing).
+
+    Result fields are available directly (e.g., response.output, response.transaction_id).
+    Trust metadata is in response.meta (quality scores, execution guidance, audit trail).
+    """
 
     transaction_id: str
     status: str
     capability_used: str
     price_cents: int
     latency_ms: int
-    wallet_balance_cents: int
     output: Dict[str, Any]
     provenance: Provenance
+    wallet_balance_cents: Optional[int] = None
+    meta: Optional[Dict[str, Any]] = None
+    free_tier: Optional[bool] = None
 
 
 @dataclass

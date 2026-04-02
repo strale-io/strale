@@ -143,7 +143,12 @@ class StraleToolkit:
                 headers=toolkit._headers(),
                 timeout=30,
             )
-            return resp.json()
+            data = resp.json()
+            # Unwrap nested { result, meta } response shape
+            if "result" in data and isinstance(data["result"], dict):
+                flat = {**data["result"], "meta": data.get("meta", {})}
+                data = flat
+            return data
 
         @composio.tools.custom_tool(toolkit="strale")
         def strale_balance(request: StraleBalanceInput) -> dict:
