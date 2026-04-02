@@ -529,6 +529,60 @@ export const openApiSpec = {
       },
     },
 
+    // ─── Verification ─────────────────────────────────────────────────
+    "/v1/verify/{transactionId}": {
+      get: {
+        tags: ["trust"],
+        summary: "Verify transaction integrity",
+        description: "Verify the integrity of a transaction's audit trail by recomputing its SHA-256 hash and walking the hash chain backward to genesis. Public, no auth required.",
+        parameters: [
+          { name: "transactionId", in: "path" as const, required: true, schema: { type: "string" as const, format: "uuid" } },
+          { name: "depth", in: "query" as const, required: false, schema: { type: "integer" as const, minimum: 1, maximum: 200, default: 50 }, description: "Max chain depth to verify (default 50, max 200)" },
+        ],
+        responses: {
+          "200": {
+            description: "Verification result",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object" as const,
+                  properties: {
+                    transaction_id: { type: "string" as const, format: "uuid" },
+                    verified: { type: "boolean" as const, description: "True if hash is valid and chain has no broken links" },
+                    hash_valid: { type: "boolean" as const, description: "True if recomputed hash matches stored hash" },
+                    chain: {
+                      type: "object" as const,
+                      properties: {
+                        length: { type: "integer" as const },
+                        verified_links: { type: "integer" as const },
+                        broken_links: { type: "integer" as const },
+                        reaches_genesis: { type: "boolean" as const },
+                        chain_start_date: { type: "string" as const, format: "date", nullable: true },
+                        chain_end_date: { type: "string" as const, format: "date" },
+                        max_depth: { type: "integer" as const },
+                      },
+                    },
+                    transaction_metadata: {
+                      type: "object" as const,
+                      properties: {
+                        created_at: { type: "string" as const, format: "date-time" },
+                        capability_slug: { type: "string" as const, nullable: true },
+                        transparency_marker: { type: "string" as const },
+                        data_jurisdiction: { type: "string" as const },
+                        status: { type: "string" as const },
+                      },
+                    },
+                    methodology_url: { type: "string" as const, format: "uri" },
+                  },
+                },
+              },
+            },
+          },
+          "404": errorResponse("not_found", "Transaction not found."),
+        },
+      },
+    },
+
     // ─── Trust / Quality ──────────────────────────────────────────────
     "/v1/quality/{slug}": {
       get: {

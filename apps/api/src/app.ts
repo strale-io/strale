@@ -207,6 +207,9 @@ app.route("/v1/internal", replyWebhookRoute);
 app.route("/v1/internal/onboarding", internalOnboardingRoute);
 app.route("/v1/audit", auditRoute);
 
+import { verifyRoute } from "./routes/verify.js";
+app.route("/v1/verify", verifyRoute);
+
 // Post-deploy verification (30s delay, tests unstable/recovering capabilities)
 import("./lib/event-triggers.js")
   .then(({ triggerOnDeploy }) => triggerOnDeploy().catch(() => {}))
