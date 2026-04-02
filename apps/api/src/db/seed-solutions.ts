@@ -2620,6 +2620,60 @@ const SOLUTIONS: SolutionDef[] = [
       { capabilitySlug: "wallet-balance-lookup", stepOrder: 4, canParallel: true, parallelGroup: 2, inputMap: { address: "$input.wallet_address", chain_id: "$input.chain_id" } },
     ],
   },
+
+  // ── Dependency Risk Check ──
+  {
+    slug: "dependency-risk-check",
+    name: "Dependency Risk Check",
+    marketingName: "Dependency Risk Assessment",
+    description:
+      "Complete security and license risk assessment for any npm or PyPI package. Combines CVE scanning (OSV.dev), OpenSSF Scorecard analysis, freshness check, and license compatibility verification into one call.",
+    longDescription:
+      "Answers: is this dependency safe to use in my project? Runs a composite CVE check via OSV.dev, fetches the OpenSSF Scorecard, checks package freshness and deprecation status, and verifies license compatibility with your use case. All data sources are free and require no API keys.",
+    agentDescription:
+      "dependency risk check, package security audit, npm pypi vulnerability scan, license compatibility, OpenSSF scorecard, CVE check, dependency audit",
+    category: "security",
+    priceCents: 25,
+    componentSumCents: 20,
+    valueTier: "verification",
+    maintenanceLevel: "near-zero",
+    geography: "global",
+    targetAudience:
+      "Developers using coding agents (Claude Code, Cursor, Windsurf), CI/CD pipelines, security teams evaluating dependencies",
+    transparencyTag: null,
+    extendsWith: ["npm-package-info", "pypi-package-info", "cve-lookup"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Package name (e.g. 'express', 'requests')" },
+        version: { type: "string", description: "Version to audit (optional — defaults to latest)" },
+        ecosystem: { type: "string", enum: ["npm", "pypi"], description: "Package ecosystem (optional — auto-detected)" },
+        use_case: { type: "string", enum: ["commercial", "open-source", "saas", "internal"], description: "How the software will be used (for license check). Default: commercial" },
+      },
+      required: ["name"],
+    },
+    exampleInput: { name: "express", version: "4.18.2", use_case: "commercial" },
+    exampleOutput: {
+      security_audit: { risk_score: 82, risk_level: "low", vulnerabilities: { total: 1 } },
+      license_check: { compatible: true, conflicts: [] },
+    },
+    steps: [
+      {
+        capabilitySlug: "package-security-audit",
+        stepOrder: 1,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { name: "$input.name", version: "$input.version", ecosystem: "$input.ecosystem" },
+      },
+      {
+        capabilitySlug: "license-compatibility-check",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { licenses: "$steps[0].license.spdx", use_case: "$input.use_case" },
+      },
+    ],
+  },
 ];
 
 // ─── Seed logic ─────────────────────────────────────────────────────────────
