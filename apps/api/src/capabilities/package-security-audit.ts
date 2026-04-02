@@ -27,14 +27,21 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
   }
   if (!version) throw new Error(`Could not determine version for ${name}.`);
 
+  // ── Determine previous version (for supply chain checks) ───────────
+  const previousVersion = findPreviousVersion(registry.versionTimestamps, version);
+
   // ── Parallel API calls ──────────────────────────────────────────────
-  const [osvResult, depsResult] = await Promise.allSettled([
+  const [osvResult, depsResult, prevDepsResult] = await Promise.allSettled([
     fetchOsv(name, version, ecosystem),
     fetchDepsdev(name, version, ecosystem),
+    previousVersion
+      ? fetchDepsdevProvenance(name, previousVersion, ecosystem)
+      : Promise.resolve(null),
   ]);
 
   const vulns = osvResult.status === "fulfilled" ? osvResult.value : null;
   const deps = depsResult.status === "fulfilled" ? depsResult.value : null;
+  const prevDeps = prevDepsResult.status === "fulfilled" ? prevDepsResult.value : null;
 
   // Fetch scorecard if deps.dev returned a project link
   let scorecard: ScorecardResult | null = null;
@@ -43,6 +50,21 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
       scorecard = await fetchScorecard(deps.projectId);
     } catch { /* ignore */ }
   }
+
+  // ── Supply chain analysis ───────────────────────────────────────────
+  const versionAgeHours = computeVersionAgeHours(registry.versionTimestamps, version);
+
+  const publisherInfo = ecosystem === "npm"
+    ? detectPublisherChange(registry.versionPublishers, version, previousVersion)
+    : { changed: null, previous: null, current: null };
+
+  const currentHasAttestation = deps?.hasAttestation ?? null;
+  const previousHadAttestation = prevDeps?.hasAttestation ?? null;
+  const attestationMissing = previousHadAttestation === true && currentHasAttestation === false;
+
+  const installScripts = ecosystem === "npm"
+    ? detectInstallScripts(registry.versionScripts, version)
+    : { has: false, names: [] as string[] };
 
   // ── Compute risk score ──────────────────────────────────────────────
   let riskScore = 100;
@@ -70,6 +92,15 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
     riskScore -= 15;
   }
 
+  // Supply chain anomaly penalties
+  if (publisherInfo.changed) riskScore -= 20;
+  if (attestationMissing) riskScore -= 15;
+  if (versionAgeHours !== null) {
+    if (versionAgeHours < 24) riskScore -= 10;
+    else if (versionAgeHours < 72) riskScore -= 5;
+  }
+  if (installScripts.has) riskScore -= 5;
+
   riskScore = Math.max(0, riskScore);
   const riskLevel = riskScore >= 80 ? "low" : riskScore >= 50 ? "medium" : riskScore >= 25 ? "high" : "critical";
 
@@ -93,7 +124,7 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
       license: license
         ? {
             spdx: license,
-            is_osi_approved: !COPYLEFT_LICENSES.has(license), // simplified
+            is_osi_approved: !COPYLEFT_LICENSES.has(license),
             is_copyleft: COPYLEFT_LICENSES.has(license),
           }
         : null,
@@ -103,6 +134,8 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
         is_latest: version === registry.latestVersion,
         is_deprecated: registry.isDeprecated,
         days_since_last_release: registry.daysSinceLastRelease,
+        version_age_hours: versionAgeHours,
+        recently_published: versionAgeHours !== null && versionAgeHours < 72,
       },
       scorecard: scorecard
         ? {
@@ -110,6 +143,18 @@ registerCapability("package-security-audit", async (input: CapabilityInput) => {
             checks: scorecard.checks,
           }
         : null,
+      supply_chain: {
+        publisher_changed: publisherInfo.changed,
+        previous_publisher: publisherInfo.previous,
+        current_publisher: publisherInfo.current,
+        provenance: {
+          has_attestation: currentHasAttestation,
+          previous_had_attestation: previousHadAttestation,
+          attestation_missing: attestationMissing,
+        },
+        has_install_scripts: installScripts.has,
+        install_script_names: installScripts.names,
+      },
       maintainers: registry.maintainerCount,
       dependency_count: deps?.dependencyCount ?? null,
     },
@@ -135,6 +180,11 @@ interface DepsdevResult {
   license: string | null;
   dependencyCount: number;
   projectId: string | null;
+  hasAttestation: boolean | null;
+}
+
+interface ProvenanceResult {
+  hasAttestation: boolean | null;
 }
 
 interface ScorecardResult {
@@ -148,6 +198,63 @@ interface RegistryResult {
   isDeprecated: boolean;
   daysSinceLastRelease: number | null;
   maintainerCount: number | null;
+  versionTimestamps: Record<string, string>;
+  versionPublishers: Record<string, { name: string; email: string } | null>;
+  versionScripts: Record<string, Record<string, string> | null>;
+}
+
+// ── Supply chain helpers ─────────────────────────────────────────────────────
+
+function findPreviousVersion(
+  versionTimestamps: Record<string, string>,
+  currentVersion: string,
+): string | null {
+  const entries = Object.entries(versionTimestamps)
+    .filter(([v]) => v !== "created" && v !== "modified" && v !== currentVersion)
+    .sort((a, b) => new Date(a[1]).getTime() - new Date(b[1]).getTime());
+
+  const currentTime = versionTimestamps[currentVersion];
+  if (!currentTime) return entries.at(-1)?.[0] ?? null;
+
+  const currentMs = new Date(currentTime).getTime();
+  const before = entries.filter(([, t]) => new Date(t).getTime() < currentMs);
+  return before.at(-1)?.[0] ?? null;
+}
+
+function computeVersionAgeHours(
+  versionTimestamps: Record<string, string>,
+  version: string,
+): number | null {
+  const ts = versionTimestamps[version];
+  if (!ts) return null;
+  return Math.round((Date.now() - new Date(ts).getTime()) / (3600 * 1000));
+}
+
+function detectPublisherChange(
+  versionPublishers: Record<string, { name: string; email: string } | null>,
+  currentVersion: string,
+  previousVersion: string | null,
+): { changed: boolean | null; previous: string | null; current: string | null } {
+  if (!previousVersion) return { changed: null, previous: null, current: null };
+  const current = versionPublishers[currentVersion];
+  const previous = versionPublishers[previousVersion];
+  if (!current || !previous) return { changed: null, previous: previous?.name ?? null, current: current?.name ?? null };
+  return {
+    changed: current.name !== previous.name,
+    previous: previous.name,
+    current: current.name,
+  };
+}
+
+function detectInstallScripts(
+  versionScripts: Record<string, Record<string, string> | null>,
+  version: string,
+): { has: boolean; names: string[] } {
+  const scripts = versionScripts[version];
+  if (!scripts) return { has: false, names: [] };
+  const dangerous = ["preinstall", "install", "postinstall"];
+  const found = dangerous.filter((s) => s in scripts);
+  return { has: found.length > 0, names: found };
 }
 
 // ── Ecosystem detection ───────────────────────────────────────────────────────
@@ -251,7 +358,7 @@ async function fetchDepsdev(name: string, version: string, ecosystem: string): P
     { signal: AbortSignal.timeout(10000) },
   );
 
-  if (!resp.ok) return { license: null, dependencyCount: 0, projectId: null };
+  if (!resp.ok) return { license: null, dependencyCount: 0, projectId: null, hasAttestation: null };
 
   const data = (await resp.json()) as Record<string, unknown>;
   const links = (data.links as Array<{ label: string; url: string }>) ?? [];
@@ -266,11 +373,42 @@ async function fetchDepsdev(name: string, version: string, ecosystem: string): P
   const licenses = (data.licenses as string[]) ?? [];
   const depNodes = (data.dependencyCount as number) ?? 0;
 
+  // Check provenance attestations
+  const slsaProvenances = (data.slsaProvenances as unknown[]) ?? [];
+  const attestations = (data.attestations as unknown[]) ?? [];
+  const hasAttestation = slsaProvenances.length > 0 || attestations.length > 0;
+
   return {
     license: licenses[0] ?? null,
     dependencyCount: depNodes,
     projectId,
+    hasAttestation,
   };
+}
+
+async function fetchDepsdevProvenance(
+  name: string,
+  version: string,
+  ecosystem: string,
+): Promise<ProvenanceResult | null> {
+  const system = ecosystem === "npm" ? "npm" : "pypi";
+  const encodedName = encodeURIComponent(name);
+  const encodedVersion = encodeURIComponent(version);
+
+  try {
+    const resp = await fetch(
+      `https://api.deps.dev/v3alpha/systems/${system}/packages/${encodedName}/versions/${encodedVersion}`,
+      { signal: AbortSignal.timeout(5000) },
+    );
+
+    if (!resp.ok) return null;
+    const data = (await resp.json()) as Record<string, unknown>;
+    const slsaProvenances = (data.slsaProvenances as unknown[]) ?? [];
+    const attestations = (data.attestations as unknown[]) ?? [];
+    return { hasAttestation: slsaProvenances.length > 0 || attestations.length > 0 };
+  } catch {
+    return null;
+  }
 }
 
 // ── OpenSSF Scorecard ─────────────────────────────────────────────────────────
@@ -315,12 +453,22 @@ async function fetchNpmRegistry(name: string): Promise<RegistryResult> {
   const latestTime = latest ? times[latest] : null;
 
   const maintainers = (data.maintainers as Array<unknown>) ?? [];
-  const versionData = latest ? (data.versions as Record<string, Record<string, unknown>>)?.[latest] : null;
-  const deprecated = !!versionData?.deprecated;
+  const versions = (data.versions as Record<string, Record<string, unknown>>) ?? {};
+  const latestData = latest ? versions[latest] : null;
+  const deprecated = !!latestData?.deprecated;
 
   let daysSinceLastRelease: number | null = null;
   if (latestTime) {
     daysSinceLastRelease = Math.floor((Date.now() - new Date(latestTime).getTime()) / (86400 * 1000));
+  }
+
+  // Extract per-version publisher info and scripts
+  const versionPublishers: Record<string, { name: string; email: string } | null> = {};
+  const versionScripts: Record<string, Record<string, string> | null> = {};
+  for (const [ver, verData] of Object.entries(versions)) {
+    const npmUser = verData._npmUser as { name?: string; email?: string } | undefined;
+    versionPublishers[ver] = npmUser?.name ? { name: npmUser.name, email: npmUser.email ?? "" } : null;
+    versionScripts[ver] = (verData.scripts as Record<string, string>) ?? null;
   }
 
   return {
@@ -329,6 +477,9 @@ async function fetchNpmRegistry(name: string): Promise<RegistryResult> {
     isDeprecated: deprecated,
     daysSinceLastRelease,
     maintainerCount: maintainers.length,
+    versionTimestamps: times,
+    versionPublishers,
+    versionScripts,
   };
 }
 
@@ -357,14 +508,24 @@ async function fetchPypiRegistry(name: string, version: string | null): Promise<
     daysSinceLastRelease = Math.floor((Date.now() - new Date(publishedAt).getTime()) / (86400 * 1000));
   }
 
-  // PyPI doesn't expose maintainer count directly; use author as proxy
+  // Build version timestamps from releases
+  const versionTimestamps: Record<string, string> = {};
+  for (const [ver, files] of Object.entries(releases)) {
+    if (files[0]?.upload_time_iso_8601) {
+      versionTimestamps[ver] = files[0].upload_time_iso_8601;
+    }
+  }
+
   const maintainerCount = info.author ? 1 : 0;
 
   return {
     latestVersion,
     publishedAt,
-    isDeprecated: false, // PyPI doesn't have a deprecation flag per-version
+    isDeprecated: false,
     daysSinceLastRelease,
     maintainerCount,
+    versionTimestamps,
+    versionPublishers: {},  // PyPI doesn't expose per-version publisher
+    versionScripts: {},      // Not applicable for PyPI
   };
 }

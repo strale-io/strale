@@ -1,0 +1,117 @@
+slug: package-security-audit
+name: Package Security Audit
+description: Composite security audit for npm and PyPI packages with supply chain anomaly detection
+category: security
+price_cents: 15
+data_source: OSV.dev + deps.dev + npm Registry + PyPI
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+input_schema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: Package name
+    version:
+      type: string
+      description: Version to audit
+    ecosystem:
+      type: string
+      description: npm or pypi
+  required:
+    - name
+output_schema:
+  type: object
+  properties:
+    name:
+      type: string
+    version:
+      type: string
+    ecosystem:
+      type: string
+    risk_score:
+      type: integer
+    risk_level:
+      type: string
+    vulnerabilities:
+      type: object
+    license:
+      type: object
+    freshness:
+      type: object
+    supply_chain:
+      type: object
+      description: Supply chain anomaly signals
+test_fixtures:
+  known_answer:
+    input:
+      name: lodash
+      ecosystem: npm
+    expected_fields:
+      - field: name
+        operator: equals
+        reliability: guaranteed
+        value: lodash
+      - field: version
+        operator: equals
+        reliability: guaranteed
+        value: 4.18.1
+      - field: ecosystem
+        operator: equals
+        reliability: guaranteed
+        value: npm
+      - field: risk_score
+        operator: not_null
+        reliability: guaranteed
+      - field: risk_level
+        operator: equals
+        reliability: guaranteed
+        value: low
+      - field: vulnerabilities
+        operator: not_null
+        reliability: guaranteed
+      - field: license
+        operator: not_null
+        reliability: guaranteed
+      - field: freshness
+        operator: not_null
+        reliability: guaranteed
+      - field: supply_chain
+        operator: not_null
+        reliability: guaranteed
+      - field: maintainers
+        operator: not_null
+        reliability: guaranteed
+      - field: dependency_count
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    name: lodash
+    ecosystem: npm
+output_field_reliability:
+  name: guaranteed
+  version: guaranteed
+  ecosystem: guaranteed
+  risk_score: guaranteed
+  risk_level: guaranteed
+  vulnerabilities: common
+  license: common
+  freshness: guaranteed
+  scorecard: rare
+  supply_chain: guaranteed
+  maintainers: common
+  dependency_count: common
+limitations:
+  - title: Vulnerability data depends on OSV.dev availability
+    text: If OSV.dev is down, vulnerability data returns null but other signals still produce a risk score.
+    category: availability
+    severity: info
+  - title: Publisher change detection is npm-only
+    text: PyPI does not expose per-version publisher data in the registry API, so publisher_changed is null for PyPI packages.
+    category: coverage
+    severity: info
+  - title: Provenance check requires deps.dev data
+    text: If deps.dev is unavailable or the package is not indexed, provenance attestation fields return null.
+    category: availability
+    severity: info

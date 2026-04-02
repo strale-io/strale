@@ -1460,10 +1460,10 @@ const seedCapabilities = [
   {
     name: "Package Security Audit",
     slug: "package-security-audit",
-    description: "Composite security audit for npm and PyPI packages: CVE check (OSV.dev), OpenSSF Scorecard, license analysis, freshness, deprecation status. Returns a 0-100 risk score aggregating multiple data sources.",
+    description: "Composite security audit for npm and PyPI packages: CVE check (OSV.dev), OpenSSF Scorecard, license analysis, freshness, supply chain anomaly detection (publisher change, provenance regression, install scripts). Returns a 0-100 risk score.",
     category: "security",
     inputSchema: { type: "object", properties: { name: { type: "string", description: "Package name (e.g. 'express', 'requests')" }, version: { type: "string", description: "Specific version to audit. If omitted, audits latest." }, ecosystem: { type: "string", enum: ["npm", "pypi"], description: "Package ecosystem. Default: auto-detect." } }, required: ["name"] },
-    outputSchema: { type: "object", properties: { name: { type: "string" }, version: { type: "string" }, ecosystem: { type: "string" }, risk_score: { type: "integer" }, risk_level: { type: "string" }, vulnerabilities: { type: "object" }, license: { type: "object" }, freshness: { type: "object" }, scorecard: { type: "object" }, maintainers: { type: "integer" }, dependency_count: { type: "integer" } } },
+    outputSchema: { type: "object", properties: { name: { type: "string" }, version: { type: "string" }, ecosystem: { type: "string" }, risk_score: { type: "integer" }, risk_level: { type: "string" }, vulnerabilities: { type: "object" }, license: { type: "object" }, freshness: { type: "object" }, scorecard: { type: "object" }, supply_chain: { type: "object", description: "Supply chain anomaly signals: publisher change, provenance attestation regression, install scripts" }, maintainers: { type: "integer" }, dependency_count: { type: "integer" } } },
     priceCents: 15,
   },
   // ─── DevOps config generation ──────────────────────────────────────────────────
