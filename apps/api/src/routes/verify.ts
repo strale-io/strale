@@ -4,7 +4,7 @@
  */
 
 import { Hono } from "hono";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { transactions, capabilities } from "../db/schema.js";
 import { computeIntegrityHash } from "../lib/integrity-hash.js";
@@ -144,52 +144,50 @@ async function walkChain(
       break;
     }
 
-    // Find the transaction with this integrity hash
-    const rows = await db.execute(
-      sql`SELECT * FROM transactions WHERE integrity_hash = ${currentHash} LIMIT 1`,
-    );
-    const prev = (Array.isArray(rows) ? rows[0] : (rows as any)?.rows?.[0]) as any;
+    // Use Drizzle ORM (not raw SQL) for consistent Date/JSONB handling
+    const [prev] = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.integrityHash, currentHash))
+      .limit(1);
 
-    if (!prev) {
-      // Chain is broken — can't find the previous link
-      break;
-    }
+    if (!prev) break;
 
     length++;
 
-    // Recompute and verify this link
+    // Same field mapping as storeIntegrityHash() in do.ts
     const recomputed = computeIntegrityHash(
       {
         id: prev.id,
-        userId: prev.user_id,
+        userId: prev.userId,
         status: prev.status,
         input: prev.input,
         output: prev.output,
         error: prev.error,
-        priceCents: prev.price_cents,
-        latencyMs: prev.latency_ms,
+        priceCents: prev.priceCents,
+        latencyMs: prev.latencyMs,
         provenance: prev.provenance,
-        auditTrail: prev.audit_trail,
-        transparencyMarker: prev.transparency_marker,
-        dataJurisdiction: prev.data_jurisdiction,
-        createdAt: prev.created_at,
-        completedAt: prev.completed_at,
+        auditTrail: prev.auditTrail,
+        transparencyMarker: prev.transparencyMarker,
+        dataJurisdiction: prev.dataJurisdiction,
+        createdAt: prev.createdAt,
+        completedAt: prev.completedAt,
       },
-      prev.previous_hash ?? GENESIS_HASH,
+      prev.previousHash ?? GENESIS_HASH,
     );
 
-    if (recomputed === prev.integrity_hash) {
+    if (recomputed === prev.integrityHash) {
       verifiedLinks++;
     } else {
       brokenLinks++;
       if (!firstBrokenLinkId) firstBrokenLinkId = prev.id;
     }
 
-    startDate = prev.created_at instanceof Date
-      ? prev.created_at.toISOString().slice(0, 10)
-      : String(prev.created_at).slice(0, 10);
+    startDate = prev.createdAt instanceof Date
+      ? prev.createdAt.toISOString().slice(0, 10)
+      : String(prev.createdAt).slice(0, 10);
 
-    currentHash = prev.previous_hash;
+    currentHash = prev.previousHash;
   }
 
   // Check if we ended at genesis after exiting the loop
