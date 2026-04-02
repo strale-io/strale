@@ -70,6 +70,31 @@ interface DualProfileGuidance {
   confidence_after_strategy: number;
 }
 
+// ── Contextual upgrade block for free-tier responses ──────────────────────────
+
+const UPGRADE_EXAMPLES: Record<string, Array<{ slug: string; description: string; price: string }>> = {
+  "url-to-markdown":  [{ slug: "web-extract", description: "Extract structured data from any web page", price: "€0.05" }, { slug: "meta-extract", description: "Extract Open Graph, title, and structured data", price: "€0.02" }, { slug: "screenshot-url", description: "Take a screenshot of any web page", price: "€0.10" }],
+  "email-validate":   [{ slug: "domain-reputation", description: "Assess domain trust and reputation signals", price: "€0.05" }, { slug: "dns-lookup", description: "DNS records for any domain (free)", price: "€0.00" }, { slug: "mx-lookup", description: "Mail server lookup for deliverability", price: "€0.02" }],
+  "iban-validate":    [{ slug: "vat-validate", description: "Validate EU VAT numbers via VIES", price: "€0.02" }, { slug: "swift-validate", description: "Validate SWIFT/BIC codes", price: "€0.02" }, { slug: "beneficial-ownership-lookup", description: "UK beneficial ownership (PSC) lookup", price: "€0.25" }],
+  "dns-lookup":       [{ slug: "whois-lookup", description: "WHOIS registration data for any domain", price: "€0.05" }, { slug: "ssl-check", description: "SSL certificate validity and details", price: "€0.02" }, { slug: "domain-reputation", description: "Domain trust signals and reputation", price: "€0.05" }],
+  "json-repair":      [{ slug: "json-schema-validate", description: "Validate JSON against a schema", price: "€0.02" }, { slug: "xml-to-json", description: "Convert XML to structured JSON", price: "€0.02" }, { slug: "csv-to-json", description: "Parse CSV to JSON array", price: "€0.02" }],
+};
+
+const DEFAULT_EXAMPLES = [
+  { slug: "sanctions-check", description: "Screen against global sanctions lists", price: "€0.02" },
+  { slug: "swedish-company-data", description: "Company data from Bolagsverket", price: "€0.80" },
+  { slug: "package-security-audit", description: "CVE + license + scorecard audit for npm/PyPI", price: "€0.15" },
+];
+
+function buildUpgradeBlock(capabilitySlug: string) {
+  return {
+    message: "You're using a free capability. Sign up for €2 free credits to access 270+ paid capabilities — company data, compliance checks, Web3 security, and more.",
+    signup_url: "https://strale.dev/signup",
+    paid_examples: UPGRADE_EXAMPLES[capabilitySlug] ?? DEFAULT_EXAMPLES,
+    x402_note: "Or pay per call with USDC on Base — no signup needed. Try: GET https://api.strale.io/x402/catalog",
+  };
+}
+
 // Dual-profile response helpers
 type DualProfileSQSResult = Awaited<ReturnType<typeof computeDualProfileSQS>>;
 
@@ -829,16 +854,7 @@ async function executeFreeTier(
       free_tier: true,
       usage: buildUsageBlock(callsToday),
       ...dualProfile,
-      upgrade: {
-        message: "You're using a free capability. Sign up for €2 free credits to access 270+ paid capabilities — company data, compliance checks, Web3 security, and more.",
-        signup_url: "https://strale.dev/signup",
-        paid_examples: [
-          { slug: "sanctions-check", description: "Screen against global sanctions lists", price: "€0.02" },
-          { slug: "swedish-company-data", description: "Company data from Bolagsverket", price: "€0.80" },
-          { slug: "wallet-risk-score", description: "Web3 wallet fraud detection", price: "€0.02" },
-        ],
-        x402_note: "Or pay per call with USDC on Base — no signup needed. Try: GET https://api.strale.io/x402/catalog",
-      },
+      upgrade: buildUpgradeBlock(capability.slug),
       audit,
     });
   } catch (err) {
