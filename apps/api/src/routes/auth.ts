@@ -97,6 +97,25 @@ authRoute.post("/register", rateLimitByIp(3, 60_000), async (c) => {
       email: user.email,
       api_key: apiKey, // Shown once — store it safely
       wallet_balance_cents: TRIAL_CREDITS_CENTS,
+      getting_started: {
+        message: "Try your first call now — paste any of these into a terminal.",
+        try_free: {
+          description: "Validate a German IBAN (free, no credits used)",
+          curl: `curl -X POST https://api.strale.io/v1/do -H "Authorization: Bearer ${apiKey}" -H "Content-Type: application/json" -d '{"capability_slug":"iban-validate","inputs":{"iban":"DE89370400440532013000"},"max_price_cents":100}'`,
+        },
+        try_paid: [
+          {
+            description: "Screen against sanctions lists (€0.02)",
+            curl: `curl -X POST https://api.strale.io/v1/do -H "Authorization: Bearer ${apiKey}" -H "Content-Type: application/json" -d '{"capability_slug":"sanctions-check","inputs":{"name":"John Smith"},"max_price_cents":100}'`,
+          },
+          {
+            description: "Audit an npm package for vulnerabilities (€0.15)",
+            curl: `curl -X POST https://api.strale.io/v1/do -H "Authorization: Bearer ${apiKey}" -H "Content-Type: application/json" -d '{"capability_slug":"package-security-audit","inputs":{"name":"express"},"max_price_cents":100}'`,
+          },
+        ],
+        browse_capabilities: "https://api.strale.io/v1/capabilities",
+        docs: "https://strale.dev/docs",
+      },
     },
     201,
   );
