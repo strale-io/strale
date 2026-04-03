@@ -4,6 +4,27 @@ import { htmlToCleanMarkdown } from "./lib/readability-convert.js";
 import { fetchViaJina } from "./lib/jina-reader.js";
 import { validateUrl } from "../lib/url-validator.js";
 
+/** Sites known to block server-side fetches with specific guidance. */
+const BLOCKED_SITE_HINTS: Record<string, string> = {
+  "npmjs.com": "npmjs.com blocks automated access. Use the 'npm-package-info' capability instead to get package metadata.",
+  "pypi.org": "pypi.org blocks automated scraping. Use the 'pypi-package-info' capability instead.",
+  "linkedin.com": "LinkedIn blocks all automated access. No workaround available.",
+  "twitter.com": "Twitter/X blocks automated access. No workaround available.",
+  "x.com": "Twitter/X blocks automated access. No workaround available.",
+  "instagram.com": "Instagram blocks automated access. No workaround available.",
+  "facebook.com": "Facebook blocks automated access. No workaround available.",
+};
+
+function getBlockedSiteHint(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, "");
+    for (const [domain, hint] of Object.entries(BLOCKED_SITE_HINTS)) {
+      if (hostname === domain || hostname.endsWith(`.${domain}`)) return hint;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 /**
  * Try a plain HTTP GET before heavier providers. Returns the raw HTML if the
  * page has enough text content (>500 chars after stripping tags), or null to
@@ -26,6 +47,10 @@ async function tryPlainFetch(url: string): Promise<string | null> {
 
     if (!resp.ok) {
       if (resp.status >= 400 && resp.status < 500) {
+        const hint = getBlockedSiteHint(url);
+        if (hint) {
+          throw new Error(hint);
+        }
         throw new Error(
           `URL returned HTTP ${resp.status}. Check the URL is correct and publicly accessible.`,
         );
