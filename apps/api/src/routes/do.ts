@@ -1033,14 +1033,15 @@ async function executeFreeTier(
       error: errorMessage,
     });
 
-    return c.json(
-      apiError(
+    return c.json({
+      ...apiError(
         "execution_failed",
         "The capability failed to execute.",
         { error: sanitizeFailureReason(errorMessage) },
       ),
-      500,
-    );
+      free_tier: true,
+      upgrade: buildUpgradeBlock(capability.slug, executionInput),
+    }, 500);
   }
 }
 
