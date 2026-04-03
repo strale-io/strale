@@ -131,12 +131,44 @@ export async function recordSuccess(slug: string): Promise<void> {
 }
 
 /**
+ * Errors caused by user input, not by capability malfunction.
+ * These should NOT count toward circuit breaker tripping — the capability
+ * worked correctly, the user just asked for something that doesn't exist.
+ */
+const USER_INPUT_ERROR_PATTERNS = [
+  "No DNS records found",        // dns-lookup: non-existent domain (correct result)
+  "Domain may not exist",        // dns-lookup: variant
+  "URL returned HTTP 4",         // url-to-markdown: 400/401/403/404 from target site
+  "This site exists but blocks", // url-to-markdown: 403 bot protection
+  "blocks automated access",     // url-to-markdown: known blocked sites
+  "is required",                 // missing input field
+  "not found",                   // package/entity not found in registry
+  "This URL returns JSON",       // url-to-markdown: user passed an API endpoint
+  "This URL points to a PDF",    // url-to-markdown: PDF file
+  "This URL points to an image", // url-to-markdown: image file
+  "Could not repair JSON",       // json-repair: unrecoverable input
+];
+
+function isUserInputError(reason: string): boolean {
+  return USER_INPUT_ERROR_PATTERNS.some((p) => reason.includes(p));
+}
+
+/**
  * Record a failed execution. May trip the circuit breaker open.
  * Non-retryable failures (permanent_move, endpoint_gone, auth_expired, etc.)
  * trip the breaker immediately with max backoff. Transient failures use the
  * normal 3-consecutive threshold with exponential backoff.
+ *
+ * User-input errors (non-existent domains, 404s on target URLs, missing fields)
+ * are silently ignored — the capability worked correctly, it's the input that's
+ * invalid. See USER_INPUT_ERROR_PATTERNS.
  */
 export async function recordFailure(slug: string, failureReason?: string): Promise<void> {
+  // Skip circuit breaker for user-input errors — the capability is healthy
+  if (failureReason && isUserInputError(failureReason)) {
+    return;
+  }
+
   const db = getDb();
   const category = categorizeFailureReason(failureReason ?? null);
   const retryable = isRetryableFailure(category);
