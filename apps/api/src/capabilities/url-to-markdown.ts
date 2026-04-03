@@ -51,6 +51,11 @@ async function tryPlainFetch(url: string): Promise<string | null> {
         if (hint) {
           throw new Error(hint);
         }
+        if (resp.status === 403) {
+          throw new Error(
+            "This site exists but blocks automated access (HTTP 403). Many sites use bot protection that prevents content extraction. Try 'whois-lookup' or 'domain-reputation' for structured data about this domain instead.",
+          );
+        }
         throw new Error(
           `URL returned HTTP ${resp.status}. Check the URL is correct and publicly accessible.`,
         );
