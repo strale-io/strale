@@ -6,7 +6,7 @@
 
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { testSuites, testResults } from "../db/schema.js";
+import { testSuites, testResults, capabilities } from "../db/schema.js";
 
 /**
  * Record a piggyback test result from a real customer execution.
@@ -34,6 +34,15 @@ export async function recordPiggybackResult(
     failureReason: schemaValid ? null : "Output does not match output_schema",
     responseTimeMs: Math.min(responseTimeMs, 30_000),
   });
+
+  // A successful piggyback result resets the test schedule clock —
+  // real user traffic is a stronger signal than a scheduled test.
+  if (schemaValid) {
+    await db
+      .update(capabilities)
+      .set({ lastTestedAt: new Date() })
+      .where(eq(capabilities.slug, capabilitySlug));
+  }
 }
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
