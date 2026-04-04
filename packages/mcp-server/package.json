@@ -1,7 +1,7 @@
 {
   "name": "strale-mcp",
   "mcpName": "io.github.strale-io/strale",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "MCP server for Strale — pre-flight check any paid API before your agent pays, plus 250+ business data, compliance, and validation tools for Claude, Cursor, Windsurf, and any MCP client",
   "type": "module",
   "main": "./dist/server.js",
