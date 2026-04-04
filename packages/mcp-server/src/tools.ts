@@ -466,7 +466,7 @@ export function registerStraleTools(
     "strale_ping",
     {
       description:
-        "Health check. Returns server status, tool count, capability count, and response time. Verifies the connection is working.",
+        "Checks that the Strale API is reachable and the MCP server is running. Call this before a series of capability executions to verify connectivity, or when troubleshooting connection issues. Returns server status, version, tool count, capability count, solution count, and a timestamp. No API key required.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -494,7 +494,7 @@ export function registerStraleTools(
     "strale_getting_started",
     {
       description:
-        "Returns free capabilities you can use immediately without an API key: email-validate (verify email deliverability), dns-lookup (DNS records for any domain), json-repair (fix malformed JSON), url-to-markdown (convert any URL to clean markdown), iban-validate (validate international bank account numbers). Also returns setup steps for full access to 250+ paid capabilities.",
+        "Lists the free capabilities available without an API key and explains how to get started. Call this on first connection to see what you can do immediately. Returns 5 free capability slugs (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) with descriptions, example inputs, and instructions for accessing the full registry of 271 paid capabilities. No API key required.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -526,7 +526,7 @@ export function registerStraleTools(
     "strale_execute",
     {
       description:
-        "Run a Strale capability by slug — validate an IBAN, look up a company in 27 countries, screen against sanctions/PEP lists, extract data from a URL or PDF, check VAT numbers, verify email deliverability, assess wallet risk, check token contract safety, resolve ENS names, look up DeFi protocol TVL, and 270+ more. Returns structured JSON output with SQS quality score, latency, and data provenance. Free capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) work without an API key. Use strale_search first to find the right slug and required inputs.",
+        "Executes a Strale capability by slug and returns the result. Use this when you need to perform any verification, validation, lookup, or data extraction from the 271-capability registry. Call strale_search first to find the right slug and required input fields. Returns a result object with the capability output, quality score (SQS), latency, price charged, and data provenance. Five free capabilities work without an API key (10/day limit). Paid capabilities debit from the wallet — check strale_balance first for high-value calls.",
       inputSchema: z.object({
         slug: z
           .string()
@@ -561,7 +561,7 @@ export function registerStraleTools(
     "strale_search",
     {
       description:
-        "Search Strale's 270+ API capabilities and bundled solutions. Covers: KYC & compliance (company verification, VAT validation, sanctions screening), data validation (IBAN, email, phone numbers), company registries (Nordic countries, US SEC EDGAR), domain & website intelligence (WHOIS, DNS, SSL certificates, trust scores, security headers, PageSpeed, tech stack detection), Web3 & DeFi (wallet risk scoring, token contract safety, honeypot detection, ENS resolution, DeFi protocol TVL/fees, gas prices, VASP/MiCA compliance, stablecoin flows, market sentiment, approval security, phishing detection), and more (translation, invoice extraction, lead enrichment, AI Act assessment). Most under €0.10. Free to search.",
+        "Searches the Strale capability registry by keyword, category, or natural language query. Use this when you need to find the right capability for a task but don't know the exact slug. Returns matching capabilities and solutions ranked by relevance, each with slug, name, description, category, price in EUR cents, and current SQS quality score. The registry contains 271 capabilities across compliance, finance, web intelligence, developer tools, and more. No API key required to search.",
       inputSchema: z.object({
         query: z
           .string()
@@ -787,7 +787,7 @@ export function registerStraleTools(
     "strale_balance",
     {
       description:
-        "Returns the current Strale wallet balance in EUR cents and EUR. Requires an API key.",
+        "Returns the current Strale wallet balance. Call this before executing paid capabilities to verify sufficient funds, or after a series of calls to reconcile spend. Returns balance in EUR cents (integer) and formatted EUR string. Requires an API key — returns an auth instruction if none is configured.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -842,7 +842,7 @@ export function registerStraleTools(
     "strale_methodology",
     {
       description:
-        `Get Strale's quality and trust methodology. Explains the dual-profile scoring model: Quality Profile (code quality, 4 factors) and Reliability Profile (operational dependability, 4 factors weighted by capability type), combined via a published 5×5 matrix into the SQS confidence score. Covers execution guidance, test infrastructure (~${capabilities.length * 5} test suites with tiered scheduling), provenance tracking, audit trails, badge system, and honest disclosure of current limitations.`,
+        "Returns the Strale Quality Score (SQS) methodology as a full reference document. Call this when you need to understand how capability quality scores are computed, or when a user asks how trust is evaluated. Returns a markdown document covering the dual-profile scoring model (Quality Profile + Reliability Profile), the 5x5 SQS matrix, execution guidance strategies, test infrastructure, provenance tracking, audit trails, badge system, and current limitations. No API key required.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -964,7 +964,7 @@ ACCESSING TRUST DATA
     "strale_trust_profile",
     {
       description:
-        "Check if a capability is reliable before calling it. Returns SQS quality score (0-100), Quality grade (A-F for code correctness), Reliability grade (A-F for uptime and latency), and execution guidance: whether to call directly, retry with backoff, queue for later, or use a fallback. Also returns 30-day test pass rate, known limitations, and cost envelope. Use this to decide whether a capability is safe for production use right now.",
+        "Returns the trust profile for a capability or solution. Call this before relying on a capability for high-stakes decisions, or when a user asks how reliable a specific check is. Returns SQS score (0-100), Quality grade (A-F), Reliability grade (A-F), execution guidance (direct, retry, queue, or fallback), 30-day test history, known limitations, and cost envelope. No API key required.",
       inputSchema: z.object({
         slug: z
           .string()
