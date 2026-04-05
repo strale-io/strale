@@ -7,10 +7,11 @@
  * Handles: step iteration, parallel group execution via Promise.all,
  * cross-step input mapping, partial failure handling, result aggregation.
  *
- * NOTE: The input mapping logic at sourceExpr.startsWith("steps.") has a
- * known bug — it does not match the seed data format which uses "$steps[0]."
- * and "$input." prefixes. This bug is preserved intentionally in this
- * extraction and will be fixed in a subsequent commit (P1.2).
+ * Input mapping syntax (defined in solution_steps.input_map JSONB):
+ *   $input.<field>      — resolves to caller's inputs[<field>]
+ *   $steps[N].<field>   — resolves to step N's output[<field>] (0-indexed by execution order)
+ *   $all_results        — resolves to an object of ALL prior step outputs keyed by slug
+ *   anything else       — passed through as a literal value
  */
 
 import { eq } from "drizzle-orm";
@@ -18,6 +19,58 @@ import { getDb } from "../db/index.js";
 import { solutionSteps } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import { sanitizeFailureReason } from "./sanitize.js";
+
+// ─── Input reference resolution ─────────────────────────────────────────────
+
+const INPUT_REF = /^\$input\.(.+)$/;
+const STEP_REF = /^\$steps\[(\d+)\]\.(.+)$/;
+const ALL_RESULTS_REF = "$all_results";
+
+/**
+ * Resolve a single input_map reference to a concrete value.
+ *
+ * Patterns:
+ *   $input.<field>      → inputs[<field>]
+ *   $steps[N].<field>   → completedSteps[N][<field>]
+ *   $all_results        → all prior step outputs keyed by slug
+ *   anything else       → literal pass-through
+ */
+export function resolveInputRef(
+  sourceExpr: string,
+  inputs: Record<string, unknown>,
+  completedSteps: Array<Record<string, unknown>>,
+  stepResults: Record<string, unknown>,
+): unknown {
+  // $input.<field>
+  const inputMatch = INPUT_REF.exec(sourceExpr);
+  if (inputMatch) {
+    const field = inputMatch[1];
+    if (!(field in inputs)) {
+      throw new Error(`Input mapping error: $input.${field} — field '${field}' not found in solution inputs. Available: ${Object.keys(inputs).join(", ") || "(none)"}`);
+    }
+    return inputs[field];
+  }
+
+  // $steps[N].<field>
+  const stepMatch = STEP_REF.exec(sourceExpr);
+  if (stepMatch) {
+    const idx = parseInt(stepMatch[1], 10);
+    const field = stepMatch[2];
+    if (idx < 0 || idx >= completedSteps.length) {
+      throw new Error(`Input mapping error: $steps[${idx}].${field} — step ${idx} has not completed yet (${completedSteps.length} steps completed so far)`);
+    }
+    const stepOutput = completedSteps[idx];
+    return stepOutput?.[field] ?? null;
+  }
+
+  // $all_results — aggregate all prior step outputs
+  if (sourceExpr === ALL_RESULTS_REF) {
+    return { ...stepResults };
+  }
+
+  // Literal value — pass through unchanged
+  return sourceExpr;
+}
 
 export interface SolutionExecutionResult {
   steps: Record<string, unknown>;
@@ -57,6 +110,8 @@ export async function executeSolution(
   const startMs = Date.now();
   const stepResults: Record<string, unknown> = {};
   const stepErrors: string[] = [];
+  // Track outputs in execution order for $steps[N] references
+  const completedSteps: Array<Record<string, unknown>> = [];
 
   // Group steps by parallelGroup for concurrent execution
   const groups = new Map<number, typeof steps>();
@@ -75,26 +130,18 @@ export async function executeSolution(
         return;
       }
 
-      // Map solution inputs to step inputs
+      // Map solution inputs to step inputs using seed-data syntax
       const stepInput: Record<string, unknown> = {};
       const inputMap = step.inputMap as Record<string, string>;
       for (const [stepField, sourceExpr] of Object.entries(inputMap)) {
-        // sourceExpr is either a direct field name from solution input
-        // or a "steps.<slug>.<field>" reference to a previous step's output
-        if (sourceExpr.startsWith("steps.")) {
-          const parts = sourceExpr.split(".");
-          const refSlug = parts[1];
-          const refField = parts.slice(2).join(".");
-          const refResult = stepResults[refSlug] as Record<string, unknown> | undefined;
-          stepInput[stepField] = refResult?.[refField] ?? null;
-        } else {
-          stepInput[stepField] = (inputs as any)[sourceExpr] ?? null;
-        }
+        stepInput[stepField] = resolveInputRef(sourceExpr, inputs, completedSteps, stepResults);
       }
 
       try {
         const result = await executor(stepInput);
-        stepResults[step.capabilitySlug] = result.output;
+        const output = result.output as Record<string, unknown>;
+        stepResults[step.capabilitySlug] = output;
+        completedSteps.push(output);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         stepErrors.push(`${step.capabilitySlug}: ${msg.slice(0, 200)}`);
