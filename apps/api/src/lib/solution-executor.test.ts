@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveInputRef } from "./solution-executor.js";
+import { resolveInputRef, parsePath, walkPath } from "./solution-executor.js";
 
 describe("resolveInputRef", () => {
   // ── $input.<field> pattern ──────────────────────────────────────────────
@@ -133,5 +133,61 @@ describe("resolveInputRef", () => {
     // Step 3: lei-lookup receives $steps[0].company_name
     const step3Input = resolveInputRef("$steps[0].company_name", inputs, completedSteps, stepResults);
     expect(step3Input).toBe("Spotify AB");
+  });
+
+  // ── Nested path resolution ────────────────────────────────────────────
+
+  it("resolves two-level nested: $steps[0].license.spdx", () => {
+    const steps = [{ license: { spdx: "MIT" } }];
+    expect(resolveInputRef("$steps[0].license.spdx", {}, steps, {})).toBe("MIT");
+  });
+
+  it("resolves four-level nested: $steps[0].a.b.c.d", () => {
+    const steps = [{ a: { b: { c: { d: 42 } } } }];
+    expect(resolveInputRef("$steps[0].a.b.c.d", {}, steps, {})).toBe(42);
+  });
+
+  it("resolves array index: $steps[0].items[0]", () => {
+    const steps = [{ items: ["first", "second"] }];
+    expect(resolveInputRef("$steps[0].items[0]", {}, steps, {})).toBe("first");
+  });
+
+  it("resolves mixed dot and bracket: $steps[0].items[2].name", () => {
+    const steps = [{ items: [{ name: "a" }, { name: "b" }, { name: "c" }] }];
+    expect(resolveInputRef("$steps[0].items[2].name", {}, steps, {})).toBe("c");
+  });
+
+  it("resolves $input nested: $input.company.name", () => {
+    expect(resolveInputRef("$input.company.name", { company: { name: "Stripe" } }, [], {})).toBe("Stripe");
+  });
+
+  it("throws on missing key at depth 2: $steps[0].foo.bar when foo is null", () => {
+    expect(() => resolveInputRef("$steps[0].foo.bar", {}, [{ foo: null }], {}))
+      .toThrow("value is null");
+  });
+
+  it("throws on array index out of bounds: $steps[0].items[99]", () => {
+    expect(() => resolveInputRef("$steps[0].items[99]", {}, [{ items: [1, 2, 3] }], {}))
+      .toThrow("index 99 out of bounds");
+  });
+
+  it("throws on type mismatch: $steps[0].items.name when items is array", () => {
+    expect(() => resolveInputRef("$steps[0].items.name", {}, [{ items: [1, 2] }], {}))
+      .toThrow("expected object");
+  });
+
+  it("throws on wildcards: $steps[0].items[*]", () => {
+    expect(() => resolveInputRef("$steps[0].items[*]", {}, [{ items: [1] }], {}))
+      .toThrow("wildcards not supported");
+  });
+
+  it("resolves the dependency-risk-check pattern: $steps[0].license.spdx", () => {
+    const steps = [{
+      name: "express",
+      version: "4.18.2",
+      license: { spdx: "MIT", is_osi_approved: true, is_copyleft: false },
+      risk_score: 94,
+    }];
+    expect(resolveInputRef("$steps[0].license.spdx", {}, steps, {})).toBe("MIT");
   });
 });
