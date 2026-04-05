@@ -1,9 +1,17 @@
+export interface SolutionExecution {
+  slug: string;
+  count: number;
+  succeeded: number;
+  failed: number;
+}
+
 export interface PlatformActivity {
   signups: { count: number; delta: number; emails: string[]; internalEmails: string[] };
   apiCalls: { total: number; delta: number; byCapability: Array<{ slug: string; count: number }> };
   uniqueUsers: { count: number; delta: number };
   transactions: { count: number; delta: number };
   revenue: { cents: number; delta: number };
+  solutionExecutions: SolutionExecution[];
   zeroActivity: boolean;
 }
 

@@ -60,6 +60,25 @@ export async function getPlatformActivity(
     `),
   ]);
 
+  // Solution executions (last 24h)
+  const solExecRaw = await db.execute(sql`
+    SELECT solution_slug AS slug,
+           COUNT(*)::int AS cnt,
+           COUNT(*) FILTER (WHERE status = 'completed')::int AS succeeded,
+           COUNT(*) FILTER (WHERE status = 'failed')::int AS failed
+    FROM transactions
+    WHERE solution_slug IS NOT NULL
+      AND created_at >= NOW() - INTERVAL '24 hours'
+      AND (user_id IS NULL OR user_id != ${systemUserId})
+    GROUP BY solution_slug ORDER BY cnt DESC LIMIT 5
+  `);
+  const solutionExecutions = toRows(solExecRaw).map((r: any) => ({
+    slug: r.slug as string,
+    count: r.cnt as number,
+    succeeded: r.succeeded as number,
+    failed: r.failed as number,
+  }));
+
   // New signup emails — split into external and internal
   const newSignupsRaw = await db.execute(sql`
     SELECT email FROM users WHERE created_at >= NOW() - INTERVAL '24 hours' ORDER BY created_at DESC
@@ -83,6 +102,7 @@ export async function getPlatformActivity(
     uniqueUsers: { count: uniqueCount, delta: 0 },
     transactions: { count: txnCount, delta: 0 },
     revenue: { cents: revCents, delta: 0 },
+    solutionExecutions,
     zeroActivity: signups.last_24h === 0 && txnCount === 0,
   };
 }

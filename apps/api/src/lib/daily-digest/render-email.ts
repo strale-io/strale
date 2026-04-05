@@ -143,6 +143,7 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
       </table>
     </td></tr>
     ${topCaps ? `<tr><td style="padding: 8px 0 0 0; font-size: 13px; color: ${MUTED};">Top: ${topCaps}</td></tr>` : ""}
+    ${pa.solutionExecutions.length > 0 ? `<tr><td style="padding: 6px 0 0 0; font-size: 13px; color: ${MUTED};">Solutions: ${pa.solutionExecutions.map((s) => `<span style="font-family: monospace; font-size: 12px; background: #f3f4f6; padding: 2px 6px; border-radius: 3px;">${escHtml(s.slug)}</span> (${s.count}× — ${s.succeeded} ok, ${s.failed} fail)`).join(", ")}</td></tr>` : ""}
     ${pa.signups.emails.length > 0 ? `<tr><td style="padding: 6px 0 0 0; font-size: 12px; color: ${MUTED};">New: ${pa.signups.emails.map(escHtml).join(", ")}</td></tr>` : ""}
     ${pa.signups.internalEmails.length > 0 ? `<tr><td style="padding: 2px 0 0 0; font-size: 11px; color: ${NEUTRAL};">Internal: ${pa.signups.internalEmails.map(escHtml).join(", ")}</td></tr>` : ""}`;
 

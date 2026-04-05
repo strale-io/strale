@@ -27,6 +27,7 @@ const defaultPlatformActivity: PlatformActivity = {
   uniqueUsers: { count: 0, delta: 0 },
   transactions: { count: 0, delta: 0 },
   revenue: { cents: 0, delta: 0 },
+  solutionExecutions: [],
   zeroActivity: true,
 };
 
