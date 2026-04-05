@@ -13,7 +13,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, solutionSteps, transactions } from "../db/schema.js";
+import { capabilities, solutions, transactions } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import {
   isX402Configured,
@@ -23,6 +23,7 @@ import {
   eurCentsToUsdString,
 } from "../lib/x402-gateway.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
+import { executeSolution } from "../lib/solution-executor.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -529,85 +530,21 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
     }
   }
 
-  // Execute solution steps sequentially (respecting parallel groups)
-  const db = getDb();
-  const steps = await db
-    .select({
-      capabilitySlug: solutionSteps.capabilitySlug,
-      stepOrder: solutionSteps.stepOrder,
-      inputMap: solutionSteps.inputMap,
-      canParallel: solutionSteps.canParallel,
-      parallelGroup: solutionSteps.parallelGroup,
-    })
-    .from(solutionSteps)
-    .where(eq(solutionSteps.solutionId, sol.id))
-    .orderBy(solutionSteps.stepOrder);
+  // Execute solution steps via shared orchestration module
+  const result = await executeSolution(sol.id, inputs);
 
-  if (steps.length === 0) {
+  if (!result) {
     return c.json({ error: "Solution has no steps configured." }, 503);
   }
 
-  const startMs = Date.now();
-  const stepResults: Record<string, unknown> = {};
-  const stepErrors: string[] = [];
-
-  // Group steps by parallelGroup for concurrent execution
-  const groups = new Map<number, typeof steps>();
-  for (const step of steps) {
-    const group = step.parallelGroup ?? step.stepOrder;
-    const list = groups.get(group) ?? [];
-    list.push(step);
-    groups.set(group, list);
-  }
-
-  for (const [, groupSteps] of [...groups.entries()].sort((a, b) => a[0] - b[0])) {
-    const executions = groupSteps.map(async (step) => {
-      const executor = getExecutor(step.capabilitySlug);
-      if (!executor) {
-        stepErrors.push(`${step.capabilitySlug}: executor unavailable`);
-        return;
-      }
-
-      // Map solution inputs to step inputs
-      const stepInput: Record<string, unknown> = {};
-      const inputMap = step.inputMap as Record<string, string>;
-      for (const [stepField, sourceExpr] of Object.entries(inputMap)) {
-        // sourceExpr is either a direct field name from solution input
-        // or a "steps.<slug>.<field>" reference to a previous step's output
-        if (sourceExpr.startsWith("steps.")) {
-          const parts = sourceExpr.split(".");
-          const refSlug = parts[1];
-          const refField = parts.slice(2).join(".");
-          const refResult = stepResults[refSlug] as Record<string, unknown> | undefined;
-          stepInput[stepField] = refResult?.[refField] ?? null;
-        } else {
-          stepInput[stepField] = (inputs as any)[sourceExpr] ?? null;
-        }
-      }
-
-      try {
-        const result = await executor(stepInput);
-        stepResults[step.capabilitySlug] = result.output;
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        stepErrors.push(`${step.capabilitySlug}: ${msg.slice(0, 200)}`);
-        stepResults[step.capabilitySlug] = { error: sanitizeFailureReason(msg) };
-      }
-    });
-
-    await Promise.all(executions);
-  }
-
-  const latencyMs = Date.now() - startMs;
-
   return c.json({
     solution: sol.slug,
-    steps: stepResults,
-    errors: stepErrors.length > 0 ? stepErrors : undefined,
+    steps: result.steps,
+    errors: result.errors.length > 0 ? result.errors : undefined,
     _meta: {
       solution: sol.slug,
-      step_count: steps.length,
-      latency_ms: latencyMs,
+      step_count: result.step_count,
+      latency_ms: result.latency_ms,
       payment: { method: "x402", price_usd: sol.x402PriceUsd },
     },
   });
