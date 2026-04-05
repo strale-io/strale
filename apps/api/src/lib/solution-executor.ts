@@ -72,11 +72,17 @@ export function resolveInputRef(
   return sourceExpr;
 }
 
+export interface StepTiming {
+  capabilitySlug: string;
+  latencyMs: number;
+}
+
 export interface SolutionExecutionResult {
   steps: Record<string, unknown>;
   errors: string[];
   latency_ms: number;
   step_count: number;
+  stepTimings: StepTiming[];
 }
 
 /**
@@ -112,6 +118,7 @@ export async function executeSolution(
   const stepErrors: string[] = [];
   // Track outputs in execution order for $steps[N] references
   const completedSteps: Array<Record<string, unknown>> = [];
+  const stepTimings: StepTiming[] = [];
 
   // Group steps for execution ordering:
   // - Steps with parallelGroup != null share a group and run concurrently
@@ -144,6 +151,7 @@ export async function executeSolution(
         return;
       }
 
+      const stepStartMs = Date.now();
       try {
         // Map solution inputs to step inputs using seed-data syntax
         const stepInput: Record<string, unknown> = {};
@@ -156,10 +164,12 @@ export async function executeSolution(
         const output = result.output as Record<string, unknown>;
         stepResults[step.capabilitySlug] = output;
         completedSteps.push(output);
+        stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: Date.now() - stepStartMs });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         stepErrors.push(`${step.capabilitySlug}: ${msg.slice(0, 200)}`);
         stepResults[step.capabilitySlug] = { error: sanitizeFailureReason(msg) };
+        stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: Date.now() - stepStartMs });
       }
     });
 
@@ -173,5 +183,6 @@ export async function executeSolution(
     errors: stepErrors,
     latency_ms: latencyMs,
     step_count: steps.length,
+    stepTimings,
   };
 }

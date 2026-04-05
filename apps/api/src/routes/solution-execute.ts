@@ -256,13 +256,15 @@ solutionExecuteRoute.post(
 
     const finalBalance = allFailed ? walletBalanceBefore : balanceAfter;
 
-    // Build per-step audit breakdown
+    // Build per-step audit breakdown with per-step latency
     const stepAuditEntries = Object.entries(execResult.steps).map(([capSlug, output], index) => {
       const isError = execResult.errors.some((e) => e.startsWith(`${capSlug}:`));
+      const timing = execResult.stepTimings.find((t) => t.capabilitySlug === capSlug);
       return {
         index,
         capabilitySlug: capSlug,
         status: isError ? "failed" : "completed",
+        latencyMs: timing?.latencyMs ?? 0,
         error: isError
           ? sanitizeFailureReason(execResult.errors.find((e) => e.startsWith(`${capSlug}:`))?.split(": ").slice(1).join(": ") ?? null)
           : null,
@@ -349,7 +351,7 @@ async function refundWallet(
 
 function buildInlineAudit(
   solutionSlug: string,
-  steps: Array<{ index: number; capabilitySlug: string; status: string; error: string | null }>,
+  steps: Array<{ index: number; capabilitySlug: string; status: string; latencyMs: number; error: string | null }>,
   stepsSucceeded: number,
   stepsFailed: number,
   totalLatencyMs: number,

@@ -136,6 +136,7 @@ try {
   if (Array.isArray(audit?.steps)) {
     for (const step of audit.steps) {
       assert(`audit step ${step.capabilitySlug} status is completed`, step.status === "completed", step.status, "completed");
+      assert(`audit step ${step.capabilitySlug} latencyMs > 0`, typeof step.latencyMs === "number" && step.latencyMs > 0, step.latencyMs, "> 0");
     }
   }
 
