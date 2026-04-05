@@ -144,14 +144,14 @@ export async function executeSolution(
         return;
       }
 
-      // Map solution inputs to step inputs using seed-data syntax
-      const stepInput: Record<string, unknown> = {};
-      const inputMap = step.inputMap as Record<string, string>;
-      for (const [stepField, sourceExpr] of Object.entries(inputMap)) {
-        stepInput[stepField] = resolveInputRef(sourceExpr, inputs, completedSteps, stepResults);
-      }
-
       try {
+        // Map solution inputs to step inputs using seed-data syntax
+        const stepInput: Record<string, unknown> = {};
+        const inputMap = step.inputMap as Record<string, string>;
+        for (const [stepField, sourceExpr] of Object.entries(inputMap)) {
+          stepInput[stepField] = resolveInputRef(sourceExpr, inputs, completedSteps, stepResults);
+        }
+
         const result = await executor(stepInput);
         const output = result.output as Record<string, unknown>;
         stepResults[step.capabilitySlug] = output;
