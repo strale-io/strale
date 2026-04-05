@@ -63,7 +63,7 @@ auditRoute.get("/:transactionId", async (c) => {
       transparencyTag: capabilities.transparencyTag,
     })
     .from(capabilities)
-    .where(eq(capabilities.id, txn.capabilityId))
+    .where(eq(capabilities.id, txn.capabilityId!))
     .limit(1);
 
   // Return the stored audit trail (which should be the full audit object)
