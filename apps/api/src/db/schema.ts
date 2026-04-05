@@ -168,8 +168,8 @@ export const transactions = pgTable(
     userId: uuid("user_id")
       .references(() => users.id), // nullable: free-tier unauthenticated calls have no user
     capabilityId: uuid("capability_id")
-      .notNull()
-      .references(() => capabilities.id),
+      .references(() => capabilities.id), // nullable: solution executions have no single capability
+    solutionSlug: text("solution_slug"), // set for solution executions, null for capability executions
     idempotencyKey: varchar("idempotency_key", { length: 255 }),
     status: varchar("status", { length: 20 }).notNull().default("pending"),
     // 'pending' | 'executing' | 'completed' | 'failed'

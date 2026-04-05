@@ -1,25 +1,28 @@
 /**
  * POST /v1/solutions/:slug/execute — Execute a bundled solution.
  *
- * Authenticates the caller, looks up the solution, checks wallet balance,
- * debits the solution price, runs all steps via the shared solution executor,
- * and returns a two-tier {result, meta} response.
+ * Two-phase transaction write matching /v1/do pattern:
+ * 1. Insert transaction row at "executing" inside same DB transaction as wallet debit
+ * 2. Update to "completed" or "failed" after executeSolution() returns
  *
- * Partial success (some steps failed) returns HTTP 200 with result.status = "partial".
- * Full failure (all steps failed) returns HTTP 200 with result.status = "failed"
- * and refunds the solution price to the caller's wallet.
+ * Status vocabulary matches /v1/do: "completed" or "failed".
+ * Partial successes (some steps failed, caller received value) map to "completed"
+ * with per-step detail in audit_trail JSONB.
  *
- * Part of DEC-20260405-A fix plan, phase 1.3.
+ * Full failure refunds the wallet. Partial success does NOT refund.
+ *
+ * Part of DEC-20260405-A fix plan, phase 1.4.
  */
 
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { solutions, wallets, walletTransactions } from "../db/schema.js";
+import { solutions, wallets, walletTransactions, transactions } from "../db/schema.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import { executeSolution } from "../lib/solution-executor.js";
+import { sanitizeFailureReason } from "../lib/sanitize.js";
 import type { AppEnv } from "../types.js";
 
 export const solutionExecuteRoute = new Hono<AppEnv>();
@@ -32,6 +35,8 @@ solutionExecuteRoute.post(
     const slug = c.req.param("slug")!;
     const user = c.get("user");
     const db = getDb();
+
+    console.log("[solutions] execute start:", { solutionSlug: slug, userId: user.id });
 
     // ── 1. Parse request body ─────────────────────────────────────────
     const body = await c.req.json().catch(() => null);
@@ -60,6 +65,7 @@ solutionExecuteRoute.post(
         name: solutions.name,
         priceCents: solutions.priceCents,
         isActive: solutions.isActive,
+        transparencyTag: solutions.transparencyTag,
       })
       .from(solutions)
       .where(eq(solutions.slug, slug))
@@ -72,7 +78,7 @@ solutionExecuteRoute.post(
       );
     }
 
-    // ── 3. Price check ────────────────────────────────────────────────
+    // ── 3. Price check (before wallet debit) ──────────────────────────
     if (maxPriceCents !== undefined && sol.priceCents > maxPriceCents) {
       return c.json(
         apiError("budget_exceeded", `Solution '${slug}' costs €${(sol.priceCents / 100).toFixed(2)} which exceeds your max_price_cents of ${maxPriceCents}.`, {
@@ -84,145 +90,286 @@ solutionExecuteRoute.post(
       );
     }
 
-    // ── 4. Wallet balance check + debit ───────────────────────────────
-    const [wallet] = await db
-      .select()
-      .from(wallets)
-      .where(eq(wallets.userId, user.id))
-      .for("update");
+    // ── 4. Wallet debit + transaction insert (single DB transaction) ──
+    const startTime = Date.now();
+    let transactionId: string;
+    let balanceAfter: number;
+    let walletId: string;
+    let walletBalanceBefore: number;
 
-    if (!wallet || wallet.balanceCents < sol.priceCents) {
+    try {
+      const txResult = await db.transaction(async (tx) => {
+        // Lock wallet row
+        const [wallet] = await tx
+          .select()
+          .from(wallets)
+          .where(eq(wallets.userId, user.id))
+          .for("update");
+
+        if (!wallet || wallet.balanceCents < sol.priceCents) {
+          return {
+            ok: false as const,
+            balance: wallet?.balanceCents ?? 0,
+          };
+        }
+
+        // Debit wallet
+        const newBalance = wallet.balanceCents - sol.priceCents;
+        await tx
+          .update(wallets)
+          .set({ balanceCents: newBalance, updatedAt: new Date() })
+          .where(eq(wallets.id, wallet.id));
+
+        // Log wallet transaction
+        await tx.insert(walletTransactions).values({
+          walletId: wallet.id,
+          amountCents: -sol.priceCents,
+          type: "purchase",
+          description: `Solution: ${sol.slug}`,
+        });
+
+        // Insert transaction row at "executing" — two-phase write per /v1/do pattern
+        const [txnRecord] = await tx
+          .insert(transactions)
+          .values({
+            userId: user.id,
+            capabilityId: null,
+            solutionSlug: sol.slug,
+            status: "executing",
+            input: inputs as Record<string, unknown>,
+            priceCents: sol.priceCents,
+            transparencyMarker: sol.transparencyTag ?? "mixed",
+            dataJurisdiction: "EU",
+            paymentMethod: "wallet",
+          })
+          .returning({ id: transactions.id });
+
+        return {
+          ok: true as const,
+          transactionId: txnRecord.id,
+          balanceAfter: newBalance,
+          walletId: wallet.id,
+          walletBalanceBefore: wallet.balanceCents,
+        };
+      });
+
+      if (!txResult.ok) {
+        return c.json(
+          apiError("insufficient_balance", `Your wallet has €${(txResult.balance / 100).toFixed(2)} but this solution costs €${(sol.priceCents / 100).toFixed(2)}.`, {
+            wallet_balance_cents: txResult.balance,
+            required_cents: sol.priceCents,
+            topup_url: "/v1/wallet/topup",
+          }),
+          402,
+        );
+      }
+
+      transactionId = txResult.transactionId;
+      balanceAfter = txResult.balanceAfter;
+      walletId = txResult.walletId;
+      walletBalanceBefore = txResult.walletBalanceBefore;
+    } catch (err) {
+      console.error("[solutions] transaction insert failed:", err, { solutionSlug: slug, userId: user.id });
       return c.json(
-        apiError("insufficient_balance", `Your wallet has €${((wallet?.balanceCents ?? 0) / 100).toFixed(2)} but this solution costs €${(sol.priceCents / 100).toFixed(2)}.`, {
-          wallet_balance_cents: wallet?.balanceCents ?? 0,
-          required_cents: sol.priceCents,
-          topup_url: "/v1/wallet/topup",
-        }),
-        402,
+        apiError("execution_failed", "Failed to process payment."),
+        500,
       );
     }
 
-    // Debit upfront
-    const balanceAfter = wallet.balanceCents - sol.priceCents;
-    await db
-      .update(wallets)
-      .set({ balanceCents: balanceAfter, updatedAt: new Date() })
-      .where(eq(wallets.id, wallet.id));
-
-    await db.insert(walletTransactions).values({
-      walletId: wallet.id,
-      amountCents: -sol.priceCents,
-      type: "purchase",
-      description: `Solution: ${sol.slug}`,
-    });
-
-    // ── 5. Execute ────────────────────────────────────────────────────
-    const startTime = Date.now();
+    // ── 5. Execute solution steps ─────────────────────────────────────
     let execResult;
     try {
       execResult = await executeSolution(sol.id, inputs as Record<string, unknown>);
     } catch (err) {
-      // Full failure — refund
-      await db
-        .update(wallets)
-        .set({ balanceCents: wallet.balanceCents, updatedAt: new Date() })
-        .where(eq(wallets.id, wallet.id));
-      await db.insert(walletTransactions).values({
-        walletId: wallet.id,
-        amountCents: sol.priceCents,
-        type: "refund",
-        description: `Refund: ${sol.slug} (execution error)`,
-      });
+      const latencyMs = Date.now() - startTime;
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error("[solutions] execute error:", err, { solutionSlug: slug, userId: user.id });
 
-      const msg = err instanceof Error ? err.message : String(err);
+      // Update transaction to failed
+      db.update(transactions)
+        .set({
+          status: "failed",
+          error: sanitizeFailureReason(errorMessage),
+          latencyMs,
+          completedAt: new Date(),
+          auditTrail: buildInlineAudit(slug, [], 0, 0, latencyMs, true, c),
+        })
+        .where(eq(transactions.id, transactionId))
+        .catch((e) => console.error("[solutions] transaction update failed:", e, { transactionId, solutionSlug: slug }));
+
+      // Refund
+      await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "execution error");
+
       return c.json(
         apiError("execution_failed", "Solution execution failed. You were not charged.", {
+          transaction_id: transactionId,
           solution_slug: slug,
-          error: msg.slice(0, 200),
-          wallet_balance_cents: wallet.balanceCents,
+          error: sanitizeFailureReason(errorMessage),
+          wallet_balance_cents: walletBalanceBefore,
         }),
         500,
       );
     }
 
     if (!execResult) {
-      // No steps — refund
-      await db
-        .update(wallets)
-        .set({ balanceCents: wallet.balanceCents, updatedAt: new Date() })
-        .where(eq(wallets.id, wallet.id));
-      await db.insert(walletTransactions).values({
-        walletId: wallet.id,
-        amountCents: sol.priceCents,
-        type: "refund",
-        description: `Refund: ${sol.slug} (no steps configured)`,
-      });
+      const latencyMs = Date.now() - startTime;
+
+      db.update(transactions)
+        .set({
+          status: "failed",
+          error: "Solution has no steps configured",
+          latencyMs,
+          completedAt: new Date(),
+          auditTrail: buildInlineAudit(slug, [], 0, 0, latencyMs, true, c),
+        })
+        .where(eq(transactions.id, transactionId))
+        .catch((e) => console.error("[solutions] transaction update failed:", e, { transactionId, solutionSlug: slug }));
+
+      await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "no steps configured");
 
       return c.json(
         apiError("execution_failed", "Solution has no steps configured. You were not charged.", {
+          transaction_id: transactionId,
           solution_slug: slug,
-          wallet_balance_cents: wallet.balanceCents,
+          wallet_balance_cents: walletBalanceBefore,
         }),
         503,
       );
     }
 
-    // ── 6. Determine status ───────────────────────────────────────────
+    // ── 6. Determine status (matches /v1/do vocabulary) ───────────────
+    const latencyMs = Date.now() - startTime;
     const totalSteps = execResult.step_count;
     const errorCount = execResult.errors.length;
-    const successCount = totalSteps - errorCount;
+    const stepsSucceeded = totalSteps - errorCount;
+    const allFailed = stepsSucceeded === 0;
 
-    let status: "completed" | "partial" | "failed";
-    if (errorCount === 0) {
-      status = "completed";
-    } else if (successCount > 0) {
-      status = "partial";
-    } else {
-      status = "failed";
-    }
+    // /v1/do vocabulary: "completed" or "failed". Partial success maps to "completed"
+    // with per-step detail in audit_trail.
+    const txStatus = allFailed ? "failed" : "completed";
+    const chargedPrice = allFailed ? 0 : sol.priceCents;
 
     // Full failure — refund
-    if (status === "failed") {
-      await db
-        .update(wallets)
-        .set({ balanceCents: wallet.balanceCents, updatedAt: new Date() })
-        .where(eq(wallets.id, wallet.id));
-      await db.insert(walletTransactions).values({
-        walletId: wallet.id,
-        amountCents: sol.priceCents,
-        type: "refund",
-        description: `Refund: ${sol.slug} (all steps failed)`,
-      });
+    if (allFailed) {
+      await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "all steps failed");
     }
 
-    const finalBalance = status === "failed" ? wallet.balanceCents : balanceAfter;
+    const finalBalance = allFailed ? walletBalanceBefore : balanceAfter;
 
-    // ── 7. Build response ─────────────────────────────────────────────
+    // Build per-step audit breakdown
+    const stepAuditEntries = Object.entries(execResult.steps).map(([capSlug, output], index) => {
+      const isError = execResult.errors.some((e) => e.startsWith(`${capSlug}:`));
+      return {
+        index,
+        capabilitySlug: capSlug,
+        status: isError ? "failed" : "completed",
+        error: isError
+          ? sanitizeFailureReason(execResult.errors.find((e) => e.startsWith(`${capSlug}:`))?.split(": ").slice(1).join(": ") ?? null)
+          : null,
+      };
+    });
+
+    // TODO: extract to buildFullSolutionAudit() once the shape stabilizes
+    // across multiple solution executions in production. See DEC-20260405-B.
+    const auditTrail = buildInlineAudit(
+      slug, stepAuditEntries, stepsSucceeded, errorCount, latencyMs, allFailed, c,
+    );
+
+    // ── 7. Update transaction row (phase 2 of two-phase write) ────────
+    db.update(transactions)
+      .set({
+        status: txStatus,
+        output: execResult.steps,
+        latencyMs,
+        completedAt: new Date(),
+        priceCents: chargedPrice,
+        auditTrail,
+      })
+      .where(eq(transactions.id, transactionId))
+      .catch((e) => console.error("[solutions] transaction update failed:", e, { transactionId, solutionSlug: slug }));
+
+    console.log("[solutions] execute done:", {
+      solutionSlug: slug, status: txStatus, latencyMs,
+      stepsSucceeded, stepsFailed: errorCount, transactionId,
+    });
+
+    // ── 8. Build response ─────────────────────────────────────────────
+    // result.status uses the richer vocabulary for the caller:
+    // "completed" (all ok), "partial" (some failed), "failed" (all failed)
+    const responseStatus = allFailed ? "failed" : (errorCount > 0 ? "partial" : "completed");
+
     return c.json({
       result: {
+        transaction_id: transactionId,
         solution_slug: sol.slug,
-        status,
+        status: responseStatus,
         steps: execResult.steps,
         errors: execResult.errors.length > 0 ? execResult.errors : undefined,
         step_count: totalSteps,
-        latency_ms: execResult.latency_ms,
-        price_cents: status === "failed" ? 0 : sol.priceCents,
+        latency_ms: latencyMs,
+        price_cents: chargedPrice,
         wallet_balance_cents: finalBalance,
       },
       meta: {
         solution_used: sol.slug,
-        price_cents: status === "failed" ? 0 : sol.priceCents,
-        latency_ms: execResult.latency_ms,
+        price_cents: chargedPrice,
+        latency_ms: latencyMs,
         wallet_balance_cents: finalBalance,
-        audit: {
-          timestamp: new Date().toISOString(),
-          solution: sol.slug,
-          step_count: totalSteps,
-          errors: errorCount,
-          execution_mode: "sync",
-          refunded: status === "failed",
-        },
+        audit: auditTrail,
       },
     });
   },
 );
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+async function refundWallet(
+  db: ReturnType<typeof getDb>,
+  walletId: string,
+  originalBalance: number,
+  priceCents: number,
+  solutionSlug: string,
+  reason: string,
+): Promise<void> {
+  try {
+    await db
+      .update(wallets)
+      .set({ balanceCents: originalBalance, updatedAt: new Date() })
+      .where(eq(wallets.id, walletId));
+    await db.insert(walletTransactions).values({
+      walletId,
+      amountCents: priceCents,
+      type: "refund",
+      description: `Refund: ${solutionSlug} (${reason})`,
+    });
+  } catch (err) {
+    console.error("[solutions] refund failed:", err, { solutionSlug, walletId });
+  }
+}
+
+function buildInlineAudit(
+  solutionSlug: string,
+  steps: Array<{ index: number; capabilitySlug: string; status: string; error: string | null }>,
+  stepsSucceeded: number,
+  stepsFailed: number,
+  totalLatencyMs: number,
+  refunded: boolean,
+  c: any,
+): Record<string, unknown> {
+  // TODO: extract to buildFullSolutionAudit() once the shape stabilizes
+  // across multiple solution executions in production. See DEC-20260405-B.
+  return {
+    requestContext: {
+      userAgent: c.req.header("user-agent") ?? null,
+      referer: c.req.header("referer") ?? c.req.header("referrer") ?? null,
+      origin: c.req.header("origin") ?? null,
+      timestamp: new Date().toISOString(),
+    },
+    solutionSlug,
+    steps,
+    stepsSucceeded,
+    stepsFailed,
+    totalLatencyMs,
+    refunded,
+  };
+}
