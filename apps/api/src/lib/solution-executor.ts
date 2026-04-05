@@ -113,16 +113,30 @@ export async function executeSolution(
   // Track outputs in execution order for $steps[N] references
   const completedSteps: Array<Record<string, unknown>> = [];
 
-  // Group steps by parallelGroup for concurrent execution
-  const groups = new Map<number, typeof steps>();
+  // Group steps for execution ordering:
+  // - Steps with parallelGroup != null share a group and run concurrently
+  // - Steps with parallelGroup == null are sequential (each in its own group)
+  // Groups execute in order of their earliest member's stepOrder.
+  type StepGroup = { minStepOrder: number; steps: typeof steps };
+  const groupMap = new Map<string, StepGroup>();
   for (const step of steps) {
-    const group = step.parallelGroup ?? step.stepOrder;
-    const list = groups.get(group) ?? [];
-    list.push(step);
-    groups.set(group, list);
+    // Use a unique key: "parallel:<N>" for parallel groups, "seq:<stepOrder>" for sequential
+    const key = step.parallelGroup != null
+      ? `parallel:${step.parallelGroup}`
+      : `seq:${step.stepOrder}`;
+    const existing = groupMap.get(key);
+    if (existing) {
+      existing.steps.push(step);
+      existing.minStepOrder = Math.min(existing.minStepOrder, step.stepOrder);
+    } else {
+      groupMap.set(key, { minStepOrder: step.stepOrder, steps: [step] });
+    }
   }
 
-  for (const [, groupSteps] of [...groups.entries()].sort((a, b) => a[0] - b[0])) {
+  // Sort groups by the earliest stepOrder in each group
+  const sortedGroups = [...groupMap.values()].sort((a, b) => a.minStepOrder - b.minStepOrder);
+
+  for (const { steps: groupSteps } of sortedGroups) {
     const executions = groupSteps.map(async (step) => {
       const executor = getExecutor(step.capabilitySlug);
       if (!executor) {
