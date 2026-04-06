@@ -99,7 +99,7 @@ export function rateLimitByKey(maxRequests: number, windowMs: number) {
     const user = c.get("user") as { id: string } | undefined;
     if (!user) {
       // No user set — expected for unauthenticated free-tier requests.
-      // IP-based rate limiting handles this path (rateLimitFreeTierByIp or rateLimitByIp).
+      // Free-tier daily limit is enforced in the handler (DB-based counter in do.ts).
       return next();
     }
 
@@ -112,100 +112,6 @@ export function rateLimitByKey(maxRequests: number, windowMs: number) {
         apiError("rate_limited", `Rate limit exceeded. Try again in ${result.retryAfterSeconds} seconds.`, {
           retry_after_seconds: result.retryAfterSeconds,
         }),
-        429,
-      );
-    }
-
-    return next();
-  };
-}
-
-// ─── Daily IP-based rate limiter (free-tier) ──────────────────────────────────
-// Resets at midnight UTC. Separate from the sliding-window limiter above because
-// the daily window is too large for the timestamp-array approach.
-
-const dailyStore = new Map<string, { count: number; resetAt: number }>();
-
-// Clean up stale daily entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of dailyStore) {
-    if (now > entry.resetAt) dailyStore.delete(key);
-  }
-}, 5 * 60_000).unref();
-
-function getNextMidnightUTC(): number {
-  const now = new Date();
-  const tomorrow = new Date(Date.UTC(
-    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1,
-  ));
-  return tomorrow.getTime();
-}
-
-function checkDailyRate(
-  identifier: string,
-  maxPerDay: number,
-): { allowed: boolean; remaining: number; resetAt: number } {
-  const now = Date.now();
-  let entry = dailyStore.get(identifier);
-
-  if (!entry || now >= entry.resetAt) {
-    entry = { count: 0, resetAt: getNextMidnightUTC() };
-    dailyStore.set(identifier, entry);
-  }
-
-  if (entry.count >= maxPerDay) {
-    return { allowed: false, remaining: 0, resetAt: entry.resetAt };
-  }
-
-  entry.count++;
-  return { allowed: true, remaining: maxPerDay - entry.count, resetAt: entry.resetAt };
-}
-
-/**
- * Rate limit free-tier unauthenticated requests by IP: N calls per day.
- * Only applied when no authenticated user is present.
- */
-export function rateLimitFreeTierByIp(maxPerDay: number) {
-  return async (c: Context, next: Next) => {
-    // Skip if user is authenticated (they get normal rate limits)
-    const user = c.get("user") as { id: string } | undefined;
-    if (user) return next();
-
-    const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
-    const realIp = c.req.header("x-real-ip")?.trim();
-
-    let ip = "unknown";
-    if (forwarded && isPlausibleIp(forwarded)) {
-      ip = forwarded;
-    } else if (realIp && isPlausibleIp(realIp)) {
-      ip = realIp;
-    }
-
-    // If IP can't be detected, skip rate limiting rather than blocking
-    // all unidentified users under a shared "unknown" bucket. This
-    // prevents Railway proxy edge cases from locking out legitimate users.
-    if (ip === "unknown") {
-      console.warn("[rate-limit] Free-tier request with undetectable IP — skipping daily limit");
-      return next();
-    }
-
-    const key = `free:${ip}`;
-    const result = checkDailyRate(key, maxPerDay);
-
-    // Set rate limit headers for daily free-tier limiter
-    c.header("X-RateLimit-Limit", String(maxPerDay));
-    c.header("X-RateLimit-Remaining", String(result.remaining));
-    c.header("X-RateLimit-Reset", String(Math.ceil(result.resetAt / 1000)));
-
-    if (!result.allowed) {
-      const retryAfterSeconds = Math.ceil((result.resetAt - Date.now()) / 1000);
-      c.header("Retry-After", String(retryAfterSeconds));
-      return c.json(
-        apiError("rate_limited",
-          `Free-tier daily limit reached (${maxPerDay} calls/day). Sign up at strale.dev/signup for unlimited access.`,
-          { retry_after_seconds: retryAfterSeconds, limit: maxPerDay },
-        ),
         429,
       );
     }
@@ -232,11 +138,14 @@ export function rateLimitByIp(maxRequests: number, windowMs: number) {
     // Extract IP from proxy headers, validating format to prevent
     // header spoofing from creating arbitrary rate-limit buckets.
     const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
+    const cfIp = c.req.header("cf-connecting-ip")?.trim();
     const realIp = c.req.header("x-real-ip")?.trim();
 
     let ip = "unknown";
     if (forwarded && isPlausibleIp(forwarded)) {
       ip = forwarded;
+    } else if (cfIp && isPlausibleIp(cfIp)) {
+      ip = cfIp;
     } else if (realIp && isPlausibleIp(realIp)) {
       ip = realIp;
     }

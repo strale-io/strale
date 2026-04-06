@@ -10,7 +10,7 @@ import {
 } from "../db/schema.js";
 import { checkMilestone } from "../lib/milestones.js";
 import { optionalAuthMiddleware, getClientIp, hashIp } from "../lib/middleware.js";
-import { rateLimitByKey, rateLimitFreeTierByIp, rateLimitByIp } from "../lib/rate-limit.js";
+import { rateLimitByKey, rateLimitByIp } from "../lib/rate-limit.js";
 import { matchCapability } from "../lib/matching.js";
 import { getExecutor } from "../capabilities/index.js";
 import { apiError } from "../lib/errors.js";
@@ -339,7 +339,7 @@ doRoute.post(
   rateLimitByIp(60, 60_000),         // IP rate limit BEFORE auth — catches invalid Bearer token bypass (S-5)
   optionalAuthMiddleware,
   rateLimitByKey(10, 1000),         // applies only if user is set
-  rateLimitFreeTierByIp(100),       // 100 free calls/day per IP (was 10 — too restrictive for demos)
+  // Free-tier daily cap (10/day) enforced in-handler via DB counter — restart-safe
   async (c) => {
   const user = c.get("user") as any | undefined;
   const db = getDb();
@@ -359,6 +359,17 @@ doRoute.post(
       return ip ? createHash("sha256").update(ip).digest("hex").slice(0, 16) : null;
     })(),
     acceptLanguage: c.req.header("accept-language")?.split(",")[0]?.trim() ?? null,
+    // Fingerprint fallback for rate limiting when IP is undetectable.
+    // Hash of UA + Accept-Language + Origin/Referer — not unique but
+    // stable enough for conservative rate limiting (3/day cap).
+    fingerprintHash: (() => {
+      const ua = c.req.header("user-agent") ?? "";
+      const lang = c.req.header("accept-language") ?? "";
+      const origin = c.req.header("origin") ?? c.req.header("referer") ?? "";
+      const raw = `${ua}|${lang}|${origin}`;
+      // Only generate a fingerprint if we have at least some signal
+      return raw.length > 4 ? createHash("sha256").update(raw).digest("hex").slice(0, 16) : null;
+    })(),
     // Parse known MCP/SDK clients from User-Agent
     mcpClient: parseMcpClient(userAgent),
   };
@@ -841,8 +852,31 @@ doRoute.post(
     return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, sqs, freshness, dual);
   }
 
-  // Free-tier without auth: persisted execution (no wallet, no user — but transaction record stored for audit)
+  // Free-tier without auth: enforce daily cap (DB-based, restart-safe)
   if (!user && isFreeTier) {
+    const reqCtx = c.get("requestContext" as any) as { ipHash?: string | null; fingerprintHash?: string | null } | undefined;
+    const ipHash = reqCtx?.ipHash ?? null;
+    const fpHash = reqCtx?.fingerprintHash ?? null;
+    const { count: callsToday, identifiedBy } = await getFreeTierUsageToday(db, ipHash, fpHash);
+    const cap = identifiedBy === "fingerprint" ? FREE_TIER_FINGERPRINT_LIMIT : FREE_TIER_DAILY_LIMIT;
+
+    if (callsToday >= cap) {
+      const nextMidnight = new Date();
+      nextMidnight.setUTCHours(24, 0, 0, 0);
+      const retryAfterSeconds = Math.ceil((nextMidnight.getTime() - Date.now()) / 1000);
+      c.header("X-RateLimit-Limit", String(cap));
+      c.header("X-RateLimit-Remaining", "0");
+      c.header("X-RateLimit-Reset", String(Math.ceil(nextMidnight.getTime() / 1000)));
+      c.header("Retry-After", String(retryAfterSeconds));
+      return c.json(
+        apiError("rate_limited",
+          `Free-tier daily limit reached (${cap} calls/day). Sign up at strale.dev/signup for unlimited access.`,
+          { retry_after_seconds: retryAfterSeconds, limit: cap },
+        ),
+        429,
+      );
+    }
+
     return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, sqs, freshness, dual);
   }
 
@@ -860,37 +894,63 @@ doRoute.post(
   }
 });
 
-// ─── Free-tier usage counter ────────────────────────────────────────────────
+// ─── Free-tier daily limit (DB-based, restart-safe) ───────────────────────────
+// Single source of truth for the daily cap. The DB counter survives Railway
+// redeploys — no in-memory state to lose.
 
-const FREE_TIER_DAILY_LIMIT = 100;
+const FREE_TIER_DAILY_LIMIT = 10;       // 10 calls/day per identified IP
+const FREE_TIER_FINGERPRINT_LIMIT = 3;  // 3 calls/day per fingerprint (conservative — may collide)
+
+interface FreeTierUsage {
+  count: number;
+  identifiedBy: "ip" | "fingerprint" | "none";
+}
 
 async function getFreeTierUsageToday(
   db: ReturnType<typeof getDb>,
   ipHash: string | null,
-): Promise<number> {
-  if (!ipHash) return 0;
-  try {
-    const [row] = await db.execute(sql`
-      SELECT COUNT(*)::int AS cnt FROM transactions
-      WHERE created_at >= CURRENT_DATE
-        AND user_id IS NULL
-        AND is_free_tier = true
-        AND audit_trail->'request_context'->>'ipHash' = ${ipHash}
-    `);
-    return (row as any)?.cnt ?? 0;
-  } catch {
-    return 0; // Don't fail the request if the counter query errors
+  fingerprintHash: string | null,
+): Promise<FreeTierUsage> {
+  // Prefer IP identification; fall back to fingerprint
+  if (ipHash) {
+    try {
+      const [row] = await db.execute(sql`
+        SELECT COUNT(*)::int AS cnt FROM transactions
+        WHERE created_at >= CURRENT_DATE
+          AND user_id IS NULL
+          AND is_free_tier = true
+          AND audit_trail->'request_context'->>'ipHash' = ${ipHash}
+      `);
+      return { count: (row as any)?.cnt ?? 0, identifiedBy: "ip" };
+    } catch {
+      return { count: 0, identifiedBy: "ip" };
+    }
   }
+  if (fingerprintHash) {
+    try {
+      const [row] = await db.execute(sql`
+        SELECT COUNT(*)::int AS cnt FROM transactions
+        WHERE created_at >= CURRENT_DATE
+          AND user_id IS NULL
+          AND is_free_tier = true
+          AND audit_trail->'request_context'->>'fingerprintHash' = ${fingerprintHash}
+      `);
+      return { count: (row as any)?.cnt ?? 0, identifiedBy: "fingerprint" };
+    } catch {
+      return { count: 0, identifiedBy: "fingerprint" };
+    }
+  }
+  return { count: 0, identifiedBy: "none" };
 }
 
-function buildUsageBlock(callsToday: number): Record<string, unknown> {
+function buildUsageBlock(callsToday: number, cap: number): Record<string, unknown> {
   const nextMidnight = new Date();
   nextMidnight.setUTCHours(24, 0, 0, 0);
 
-  const exceeded = callsToday > FREE_TIER_DAILY_LIMIT;
+  const exceeded = callsToday >= cap;
   return {
     calls_today: callsToday,
-    daily_limit: FREE_TIER_DAILY_LIMIT,
+    daily_limit: cap,
     resets_at: nextMidnight.toISOString(),
     ...(exceeded ? {
       limit_exceeded: true,
@@ -898,9 +958,6 @@ function buildUsageBlock(callsToday: number): Record<string, unknown> {
     } : {}),
   };
 }
-
-// TODO: Enforce FREE_TIER_DAILY_LIMIT once we understand usage patterns
-// For now, just report the counter — don't block requests over the limit
 
 // ─── Free-tier execution: unauthenticated, no wallet, persisted for audit ───
 
@@ -980,9 +1037,10 @@ async function executeFreeTier(
 
     const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
 
-    // Usage counter for free-tier calls (non-blocking, informational)
-    const reqCtx = c.get("requestContext" as any) as { ipHash?: string | null } | undefined;
-    const callsToday = await getFreeTierUsageToday(db, reqCtx?.ipHash ?? null);
+    // Usage counter for free-tier calls (informational block in response)
+    const reqCtx = c.get("requestContext" as any) as { ipHash?: string | null; fingerprintHash?: string | null } | undefined;
+    const { count: callsToday, identifiedBy } = await getFreeTierUsageToday(db, reqCtx?.ipHash ?? null, reqCtx?.fingerprintHash ?? null);
+    const usageCap = identifiedBy === "fingerprint" ? FREE_TIER_FINGERPRINT_LIMIT : FREE_TIER_DAILY_LIMIT;
 
     return c.json({
       result: {
@@ -999,7 +1057,7 @@ async function executeFreeTier(
         audit,
       },
       free_tier: true,
-      usage: buildUsageBlock(callsToday),
+      usage: buildUsageBlock(callsToday, usageCap),
       upgrade: buildUpgradeBlock(capability.slug, executionInput, capResult.output as Record<string, unknown>),
     });
   } catch (err) {
@@ -1009,6 +1067,7 @@ async function executeFreeTier(
     const failAudit = buildFailureAudit({
       transactionId: txnRecord.id, startTime, capability, executionInput,
       errorMessage, executionMode: "sync",
+      requestContext: c.get("requestContext" as any),
     });
     const failProvenance = buildFailureProvenance(
       capability.dataSource, capability.capabilityType, capability.transparencyTag, "execution_error",
@@ -1919,8 +1978,17 @@ function buildFailureAudit(params: {
   executionInput: Record<string, unknown>;
   errorMessage: string;
   executionMode: "sync" | "async";
+  requestContext?: {
+    referer: string | null;
+    origin: string | null;
+    userAgent: string | null;
+    ipHash?: string | null;
+    fingerprintHash?: string | null;
+    acceptLanguage?: string | null;
+    mcpClient?: string | null;
+  };
 }) {
-  const { transactionId, startTime, capability, executionInput, errorMessage, executionMode } = params;
+  const { transactionId, startTime, capability, executionInput, errorMessage, executionMode, requestContext } = params;
   const marker = getTransparencyMarker(capability.transparencyTag);
   return {
     transaction_id: transactionId,
@@ -1935,6 +2003,7 @@ function buildFailureAudit(params: {
     execution_mode: executionMode,
     latency_ms: Date.now() - startTime,
     input_hash: hashInput(executionInput),
+    request_context: requestContext ?? null,
     error_message: errorMessage.substring(0, 500),
     compliance: {
       ai_involvement: getAiDescription(capability.slug, marker),
