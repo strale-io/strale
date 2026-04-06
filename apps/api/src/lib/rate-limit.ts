@@ -182,6 +182,14 @@ export function rateLimitFreeTierByIp(maxPerDay: number) {
       ip = realIp;
     }
 
+    // If IP can't be detected, skip rate limiting rather than blocking
+    // all unidentified users under a shared "unknown" bucket. This
+    // prevents Railway proxy edge cases from locking out legitimate users.
+    if (ip === "unknown") {
+      console.warn("[rate-limit] Free-tier request with undetectable IP — skipping daily limit");
+      return next();
+    }
+
     const key = `free:${ip}`;
     const result = checkDailyRate(key, maxPerDay);
 
@@ -235,6 +243,10 @@ export function rateLimitByIp(maxRequests: number, windowMs: number) {
     // NOTE: When running behind Railway's proxy, x-forwarded-for is set by
     // the load balancer and cannot be spoofed by clients. If deployed
     // behind a different proxy, configure trusted proxy headers accordingly.
+
+    // Skip rate limiting if IP can't be detected — don't share a single
+    // "unknown" bucket across all unidentified users.
+    if (ip === "unknown") return next();
 
     const key = `ip:${ip}`;
     const result = checkRate(key, maxRequests, windowMs);
