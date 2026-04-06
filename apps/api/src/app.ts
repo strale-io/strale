@@ -93,7 +93,7 @@ const restrictedCors = cors({
     return "";
   },
   allowMethods: ["GET", "POST", "OPTIONS"],
-  allowHeaders: ["Authorization", "Content-Type", "Idempotency-Key", "Strale-Version"],
+  allowHeaders: ["Authorization", "Content-Type", "Idempotency-Key", "Strale-Version", "X-Source", "X-Capability"],
 });
 
 const publicCors = cors({
