@@ -339,7 +339,7 @@ doRoute.post(
   rateLimitByIp(60, 60_000),         // IP rate limit BEFORE auth — catches invalid Bearer token bypass (S-5)
   optionalAuthMiddleware,
   rateLimitByKey(10, 1000),         // applies only if user is set
-  rateLimitFreeTierByIp(10),        // applies only if user is NOT set
+  rateLimitFreeTierByIp(100),       // 100 free calls/day per IP (was 10 — too restrictive for demos)
   async (c) => {
   const user = c.get("user") as any | undefined;
   const db = getDb();
@@ -862,7 +862,7 @@ doRoute.post(
 
 // ─── Free-tier usage counter ────────────────────────────────────────────────
 
-const FREE_TIER_DAILY_LIMIT = 10;
+const FREE_TIER_DAILY_LIMIT = 100;
 
 async function getFreeTierUsageToday(
   db: ReturnType<typeof getDb>,
