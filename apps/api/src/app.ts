@@ -260,3 +260,11 @@ app.get("/.well-known/402index-verify.txt", (c) => {
   return c.text("17d2659be9455122b7f464fa3c960a165f7d9dc6d828c90bdc96f33129b626d8");
 });
 
+// Glama MCP connector claim — proves domain ownership for glama.ai/mcp/connectors
+app.get("/.well-known/glama.json", (c) => {
+  return c.json({
+    $schema: "https://glama.ai/mcp/schemas/connector.json",
+    maintainers: [{ email: "petter@strale.io" }],
+  });
+});
+
