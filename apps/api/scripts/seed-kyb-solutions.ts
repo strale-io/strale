@@ -148,7 +148,7 @@ function buildKybEssentials(c: Country): SolutionDef {
     stepOrder: stepOrder++,
     canParallel: true,
     parallelGroup: 1,
-    inputMap: { name: "$steps[0].company_name" },
+    inputMap: { company_name: "$steps[0].company_name" },
   });
 
   steps.push(...group2);
@@ -215,7 +215,7 @@ function buildKybComplete(c: Country): SolutionDef {
     stepOrder: stepOrder++,
     canParallel: true,
     parallelGroup: 1,
-    inputMap: { name: "$steps[0].company_name" },
+    inputMap: { company_name: "$steps[0].company_name" },
   });
 
   // Group 3: Sanctions + PEP + Adverse media (parallel)

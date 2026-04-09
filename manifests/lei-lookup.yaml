@@ -11,12 +11,14 @@ price_cents: 10
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - lei
+  required: []
   properties:
     lei:
       type: string
-      description: 20-character LEI code or company name
+      description: 20-character LEI code (e.g. 549300MLUDYVRQOOXS22)
+    company_name:
+      type: string
+      description: Company name to search for in GLEIF (alternative to LEI code)
 output_schema:
   type: object
   example:

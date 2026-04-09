@@ -116,9 +116,12 @@ export function resolveInputRef(
   if (inputMatch) {
     const pathStr = inputMatch[1];
     const segments = parsePath(pathStr);
-    // Check first segment exists in inputs (required field validation)
+    // If the top-level field isn't in the user's inputs, resolve to null.
+    // This handles optional solution fields (e.g. domain, contact_name)
+    // that the user didn't provide. The downstream capability decides
+    // whether a null input is acceptable.
     if (segments.length > 0 && segments[0].kind === "key" && !(segments[0].name in inputs)) {
-      throw new Error(`Input mapping error: $input.${pathStr} — field '${segments[0].name}' not found in solution inputs. Available: ${Object.keys(inputs).join(", ") || "(none)"}`);
+      return null;
     }
     return walkPath(inputs, segments, sourceExpr);
   }
@@ -230,6 +233,24 @@ export async function executeSolution(
         const inputMap = step.inputMap as Record<string, string>;
         for (const [stepField, sourceExpr] of Object.entries(inputMap)) {
           stepInput[stepField] = resolveInputRef(sourceExpr, inputs, completedSteps, stepResults);
+        }
+
+        // Skip steps where ALL mapped inputs resolved to null (optional
+        // fields the caller didn't provide). No point calling a capability
+        // with entirely empty inputs — it would just error.
+        const allNull = Object.values(stepInput).every((v) => v === null || v === undefined);
+        if (allNull && Object.keys(stepInput).length > 0) {
+          stepResults[step.capabilitySlug] = { skipped: true, reason: "All required inputs were not provided" };
+          completedSteps.push({});
+          stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: 0 });
+          return;
+        }
+
+        // Remove null entries so capabilities only see fields the user
+        // actually provided (avoids "field X is required" errors from
+        // capabilities that validate their own inputs).
+        for (const [k, v] of Object.entries(stepInput)) {
+          if (v === null || v === undefined) delete stepInput[k];
         }
 
         const result = await executor(stepInput);
