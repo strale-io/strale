@@ -126,7 +126,7 @@ export function resolveInputRef(
     return walkPath(inputs, segments, sourceExpr);
   }
 
-  // $steps[N].<path>
+  // $steps[N].<path> — with fallback to $input.<field> when step output is empty
   const stepMatch = STEP_REF.exec(sourceExpr);
   if (stepMatch) {
     const idx = parseInt(stepMatch[1], 10);
@@ -135,7 +135,22 @@ export function resolveInputRef(
       throw new Error(`Input mapping error: ${sourceExpr} — step ${idx} has not completed yet (${completedSteps.length} steps completed so far)`);
     }
     const segments = parsePath(pathStr);
-    return walkPath(completedSteps[idx], segments, sourceExpr);
+    try {
+      const value = walkPath(completedSteps[idx], segments, sourceExpr);
+      // If step output resolved to a non-null value, use it
+      if (value !== null && value !== undefined) return value;
+    } catch {
+      // walkPath threw — step output was null/undefined at some segment
+    }
+    // Fallback: if the field name matches an $input field, use that instead.
+    // This handles the cascade where step 0 returns empty output but the
+    // user provided the same data via $input (e.g., company_name).
+    const topField = segments.length > 0 && segments[0].kind === "key" ? segments[0].name : null;
+    if (topField && topField in inputs) {
+      console.warn(`[solution-executor] Fallback: ${sourceExpr} resolved to null, using $input.${topField} instead`);
+      return walkPath(inputs, segments, sourceExpr);
+    }
+    return null;
   }
 
   // $all_results — aggregate all prior step outputs
