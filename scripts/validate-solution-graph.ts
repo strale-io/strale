@@ -65,13 +65,33 @@ interface CapSchema {
   outputSchema: { properties?: Record<string, { type?: string }> } | null;
 }
 
+function parseSchema(raw: unknown): Record<string, unknown> | null {
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+  if (typeof raw === "object" && raw !== null) {
+    // Double-check: postgres sometimes returns JSONB as auto-parsed objects,
+    // but the 'postgres' driver may leave them as strings for some column types.
+    // Force a round-trip parse to be safe.
+    try {
+      const str = JSON.stringify(raw);
+      return JSON.parse(str);
+    } catch {
+      return raw as Record<string, unknown>;
+    }
+  }
+  return null;
+}
+
 async function loadCapabilitySchemas(): Promise<Map<string, CapSchema>> {
-  const caps = await sql`SELECT slug, input_schema, output_schema FROM capabilities WHERE is_active = true`;
+  // Load ALL capabilities (including inactive) since solutions may reference them
+  const caps = await sql`SELECT slug, input_schema, output_schema FROM capabilities`;
   const map = new Map<string, CapSchema>();
   for (const c of caps) {
     map.set(c.slug, {
-      inputSchema: c.input_schema as CapSchema["inputSchema"],
-      outputSchema: c.output_schema as CapSchema["outputSchema"],
+      inputSchema: parseSchema(c.input_schema) as CapSchema["inputSchema"],
+      outputSchema: parseSchema(c.output_schema) as CapSchema["outputSchema"],
     });
   }
   return map;
@@ -122,7 +142,15 @@ async function validate(slugFilter?: string): Promise<Violation[]> {
     const stepOutputFields = new Map<number, Set<string>>();
     for (let i = 0; i < steps.length; i++) {
       const cap = capSchemas.get(steps[i].capabilitySlug);
-      const fields = cap?.outputSchema?.properties ? new Set(Object.keys(cap.outputSchema.properties)) : new Set<string>();
+      let outputProps = cap?.outputSchema?.properties;
+      // Handle double-serialized schemas (string inside object)
+      if (!outputProps && cap?.outputSchema && typeof cap.outputSchema === "object") {
+        const raw = cap.outputSchema as unknown;
+        if (typeof raw === "string") {
+          try { outputProps = JSON.parse(raw).properties; } catch {}
+        }
+      }
+      const fields = outputProps ? new Set(Object.keys(outputProps as Record<string, unknown>)) : new Set<string>();
       stepOutputFields.set(i, fields);
     }
 
@@ -262,13 +290,9 @@ async function main() {
 
   for (const [check, items] of byCheck) {
     console.log(`── ${check} (${items.length}) ──`);
-    // Show up to 10 per category
-    for (const v of items.slice(0, 10)) {
+    for (const v of items) {
       const icon = v.severity === "error" ? "✗" : "⚠";
       console.log(`  ${icon} ${v.solution} step ${v.step} (${v.capability}): ${v.detail}`);
-    }
-    if (items.length > 10) {
-      console.log(`  ... and ${items.length - 10} more`);
     }
     console.log();
   }
