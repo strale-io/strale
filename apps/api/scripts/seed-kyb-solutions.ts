@@ -327,13 +327,14 @@ function buildKybComplete(c: Country): SolutionDef {
       type: "object",
       properties: {
         [c.inputField]: { type: "string", description: c.inputLabel },
+        vat_number: { type: "string", description: "EU VAT number with country prefix (e.g. DE811128135). Auto-derived from registry data when possible." },
         domain: { type: "string", description: "Company website domain (e.g., example.com)" },
         contact_name: { type: "string", description: "Name of contact person for PEP screening" },
         contact_email: { type: "string", description: "Contact email for validation" },
       },
       required: [c.inputField],
     },
-    exampleInput: { [c.inputField]: c.exampleId, domain: "example.com", contact_name: "John Doe", contact_email: "john@example.com" },
+    exampleInput: { [c.inputField]: c.exampleId, vat_number: "SE556059030801", domain: "example.com", contact_name: "John Doe", contact_email: "john@example.com" },
     exampleOutput: {
       checks: { company_exists: true, sanctions_clear: true, pep_clear: true, adverse_media_clear: true },
       narrative: { risk_level: "low", summary: "No risk indicators found in the sources consulted." },

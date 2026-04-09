@@ -19,6 +19,7 @@ import { getDb } from "../db/index.js";
 import { solutionSteps } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import { sanitizeFailureReason } from "./sanitize.js";
+import { enrichCompanyOutput } from "../capabilities/lib/enrich-company-output.js";
 
 // ─── Input reference resolution ─────────────────────────────────────────────
 
@@ -269,7 +270,11 @@ export async function executeSolution(
         }
 
         const result = await executor(stepInput);
-        const output = result.output as Record<string, unknown>;
+        // Enrich company data outputs with derived fields (e.g., vat_number)
+        const output = enrichCompanyOutput(
+          step.capabilitySlug,
+          result.output as Record<string, unknown>,
+        );
         stepResults[step.capabilitySlug] = output;
         completedSteps.push(output);
         stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: Date.now() - stepStartMs });
