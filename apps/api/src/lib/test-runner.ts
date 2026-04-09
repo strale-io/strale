@@ -33,6 +33,7 @@ import type { CapabilityType } from "./reliability-profile.js";
 import { computeFreshnessDecay, applyFreshnessDecay, shouldOverrideTrend } from "./freshness-decay.js";
 import { withRetry } from "./retry.js";
 import { createHash } from "node:crypto";
+import { calculateNullFieldRatio } from "./null-field-ratio.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -130,7 +131,7 @@ export async function runTests(
   // Suspended caps are intentionally offline — testing them wastes resources.
   // Draft and validating caps ARE tested (they need runs for auto-promotion).
   const suitesRaw = await db
-    .select({ suite: testSuites, fieldReliability: capabilities.outputFieldReliability, capabilityType: capabilities.capabilityType })
+    .select({ suite: testSuites, fieldReliability: capabilities.outputFieldReliability, capabilityType: capabilities.capabilityType, outputSchema: capabilities.outputSchema })
     .from(testSuites)
     .innerJoin(capabilities, eq(testSuites.capabilitySlug, capabilities.slug))
     .where(and(
@@ -144,6 +145,8 @@ export async function runTests(
   const fieldReliabilityMap = new Map<string, Record<string, string>>();
   // Build capability type map for failure classification
   const capabilityTypeMap = new Map<string, string>();
+  // Build output schema map for null-ratio check (Gate 2)
+  const outputSchemaMap = new Map<string, Record<string, unknown>>();
   for (const row of suitesRaw) {
     if (row.fieldReliability && !fieldReliabilityMap.has(row.suite.capabilitySlug)) {
       fieldReliabilityMap.set(
@@ -153,6 +156,9 @@ export async function runTests(
     }
     if (row.capabilityType && !capabilityTypeMap.has(row.suite.capabilitySlug)) {
       capabilityTypeMap.set(row.suite.capabilitySlug, row.capabilityType);
+    }
+    if (row.outputSchema && !outputSchemaMap.has(row.suite.capabilitySlug)) {
+      outputSchemaMap.set(row.suite.capabilitySlug, row.outputSchema as Record<string, unknown>);
     }
   }
 
@@ -188,7 +194,7 @@ export async function runTests(
       continue;
     }
 
-    const result = await runSingleTest(suite, fieldReliabilityMap, capabilityTypeMap);
+    const result = await runSingleTest(suite, fieldReliabilityMap, capabilityTypeMap, outputSchemaMap);
 
     // ── Self-healing: attempt remediation on failures ──────────────────
     if (!result.passed && result.failureReason) {
@@ -388,6 +394,7 @@ async function runSingleTest(
   suite: typeof testSuites.$inferSelect,
   fieldReliabilityMap?: Map<string, Record<string, string>>,
   capabilityTypeMap?: Map<string, string>,
+  outputSchemaMap?: Map<string, Record<string, unknown>>,
 ): Promise<SingleTestResult> {
   const db = getDb();
   const startTime = Date.now();
@@ -408,7 +415,7 @@ async function runSingleTest(
   // For deterministic capabilities where the output never changes.
   // Zero cost — just validates baseline_output against validation_rules.
   if (suite.testMode === "fixture" && suite.baselineOutput) {
-    return runFixtureTest(suite, fieldReliabilityMap);
+    return runFixtureTest(suite, fieldReliabilityMap, outputSchemaMap);
   }
 
   // ── Real execution for other test types (negative, edge_case, known_answer)
@@ -469,11 +476,13 @@ async function runSingleTest(
 
   // Validate the result
   const reliability = fieldReliabilityMap?.get(suite.capabilitySlug) ?? null;
+  const outputSchema = outputSchemaMap?.get(suite.capabilitySlug) ?? null;
   const { passed, failureReason } = validateResult(
     suite,
     capResult,
     executionError,
     reliability,
+    outputSchema,
   );
 
   // Classify failure if test didn't pass
@@ -709,6 +718,7 @@ function validateOutputSchemaStructure(
 async function runFixtureTest(
   suite: typeof testSuites.$inferSelect,
   fieldReliabilityMap?: Map<string, Record<string, string>>,
+  outputSchemaMap?: Map<string, Record<string, unknown>>,
 ): Promise<SingleTestResult> {
   const db = getDb();
   const baselineOutput = suite.baselineOutput as Record<string, unknown>;
@@ -719,7 +729,8 @@ async function runFixtureTest(
     output: baselineOutput,
     provenance: { source: "fixture", fetched_at: new Date().toISOString() },
   };
-  const { passed, failureReason } = validateResult(suite, mockResult, null, reliability);
+  const fixtureOutputSchema = outputSchemaMap?.get(suite.capabilitySlug) ?? null;
+  const { passed, failureReason } = validateResult(suite, mockResult, null, reliability, fixtureOutputSchema);
 
   // Record the fixture test result (responseTimeMs = 0 since no external call)
   await db.insert(testResults).values({
@@ -905,11 +916,16 @@ async function captureBaseline(
 
 // ─── Validation logic ───────────────────────────────────────────────────────
 
+// Gate 2: Null-output correctness tier (DEC-20260409-A)
+// Feature flag — defaults to disabled; enable with NULL_RATIO_RULE_ENABLED=true
+const NULL_RATIO_RULE_ENABLED = process.env.NULL_RATIO_RULE_ENABLED === "true";
+
 function validateResult(
   suite: typeof testSuites.$inferSelect,
   capResult: CapabilityResult | null,
   executionError: string | null,
   fieldReliability?: Record<string, string> | null,
+  outputSchema?: Record<string, unknown> | null,
 ): { passed: boolean; failureReason: string | null } {
   const rules = suite.validationRules as ValidationRules;
 
@@ -986,6 +1002,32 @@ function validateResult(
         // 'guaranteed' or unknown field → enforce the check (fall through to fail)
       }
       return { passed: false, failureReason: checkResult.reason };
+    }
+  }
+
+  // Gate 2: Null-ratio check (DEC-20260409-A)
+  // After structural checks pass, verify that the output isn't mostly empty.
+  // Only applies to known_answer tests (correctness tier) with 3+ declared fields.
+  if (
+    (suite.testType === "known_answer" || suite.testType === "schema_check") &&
+    capResult &&
+    outputSchema
+  ) {
+    const nullRatio = calculateNullFieldRatio(
+      capResult.output as Record<string, unknown>,
+      outputSchema as { properties?: Record<string, unknown> },
+      fieldReliability,
+    );
+
+    if (nullRatio.wouldFail) {
+      const pct = Math.round(nullRatio.ratio * 100);
+      const reason = `high_null_ratio: ${pct}% of declared fields returned null (${nullRatio.nullCount}/${nullRatio.totalFields}). Null fields: ${nullRatio.nullFields.join(", ")}`;
+
+      if (NULL_RATIO_RULE_ENABLED) {
+        return { passed: false, failureReason: reason };
+      }
+      // Shadow mode: log but don't fail
+      console.warn(`[null-ratio-shadow] ${suite.capabilitySlug}: WOULD FAIL — ${reason}`);
     }
   }
 
