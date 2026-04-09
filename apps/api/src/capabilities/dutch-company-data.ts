@@ -1,36 +1,13 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import {
-  fetchRenderedHtml,
-  htmlToText,
-  extractCompanyFromText,
-  extractCompanyName,
-} from "./lib/browserless-extract.js";
+import { searchNorthdata } from "./lib/northdata.js";
 
-// Netherlands — KVK (Kamer van Koophandel)
-// KVK number: 8 digits
-const KVK_RE = /^\d{8}$/;
-
-function findKvk(input: string): string | null {
-  const cleaned = input.replace(/[\s.-]/g, "");
-  if (KVK_RE.test(cleaned)) return cleaned;
-  const match = input.match(/\d{8}/);
-  return match && KVK_RE.test(match[0]) ? match[0] : null;
-}
-
-async function lookupCompany(query: string, isKvk: boolean): Promise<Record<string, unknown>> {
-  const searchUrl = isKvk
-    ? `https://www.kvk.nl/zoeken/handelsregister/?kvknummer=${query}`
-    : `https://www.kvk.nl/zoeken/handelsregister/?handelsnaam=${encodeURIComponent(query)}`;
-
-  const html = await fetchRenderedHtml(searchUrl);
-  const text = htmlToText(html);
-
-  if (text.includes("geen resultaten") || text.includes("Geen resultaten")) {
-    throw new Error(`No Dutch company found matching "${query}".`);
-  }
-
-  return extractCompanyFromText(text, "Dutch", query);
-}
+/**
+ * Dutch Company Data — northdata.com JSON-LD extraction
+ *
+ * northdata.com has comprehensive coverage of Dutch companies via KVK
+ * (Kamer van Koophandel) data. Replaces the previous Browserless+LLM
+ * scraper that was failing to extract data from kvk.nl.
+ */
 
 registerCapability("dutch-company-data", async (input: CapabilityInput) => {
   const raw = (input.kvk_number as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
@@ -38,21 +15,12 @@ registerCapability("dutch-company-data", async (input: CapabilityInput) => {
     throw new Error("'kvk_number' or 'company_name' is required. Provide a KVK number (8 digits) or company name.");
   }
 
-  const trimmed = raw.trim();
-  const kvk = findKvk(trimmed);
-
-  let output: Record<string, unknown>;
-  if (kvk) {
-    output = await lookupCompany(kvk, true);
-  } else {
-    const name = await extractCompanyName(trimmed, "Dutch");
-    output = await lookupCompany(name, false);
-  }
+  const output = await searchNorthdata(raw.trim(), "Netherlands") as unknown as Record<string, unknown>;
 
   return {
     output,
     provenance: {
-      source: "kvk.nl",
+      source: "northdata.com (KVK data)",
       fetched_at: new Date().toISOString(),
     },
   };
