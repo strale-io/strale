@@ -90,8 +90,18 @@ export function extractJsonLd(html: string): NorthdataCompany {
   }
 
   // Extract registration number from common patterns in the HTML
-  const regMatch = html.match(/(?:Amtsgericht|District Court|KVK|KBO|CRO|NIPC|Company Code|Įmonės kodas|CHE-|UID)[^<]*?([A-Z0-9][\w\s\-.]{3,25})/i);
-  if (regMatch) result.registration_number = regMatch[1].trim();
+  // Try specific patterns first (most reliable), then generic
+  const hrbMatch = html.match(/(?:HRB|HRA|GnR|PR|VR)\s*\d+/i);
+  const kvkMatch = html.match(/KVK\s*(\d{8})/i);
+  const cheMatch = html.match(/(CHE-[\d.]+)/i);
+  const sirenMatch = html.match(/Siren\s*(\d{9,14})/i);
+  const kboMatch = html.match(/KBO\s*([\d.]+)/i);
+
+  if (hrbMatch) result.registration_number = hrbMatch[0].trim();
+  else if (kvkMatch) result.registration_number = kvkMatch[0].trim();
+  else if (cheMatch) result.registration_number = cheMatch[1].trim();
+  else if (sirenMatch) result.registration_number = sirenMatch[0].trim();
+  else if (kboMatch) result.registration_number = kboMatch[0].trim();
 
   if (result.company_name) {
     const typeMatch = result.company_name.match(BUSINESS_TYPES);
