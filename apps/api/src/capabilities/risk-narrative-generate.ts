@@ -54,14 +54,67 @@ function algorithmicAssessment(
   const flags: Array<{ severity: string; finding: string; recommendation: string }> = [];
 
   for (const [checkName, result] of checks) {
-    if (result?.pass === true) {
-      passed.push(checkName.replace(/_/g, " "));
-    } else {
-      failed.push(checkName.replace(/_/g, " "));
+    // Determine pass/fail from the step result shape:
+    // - Explicit error or skipped → failed
+    // - is_sanctioned: true → failed (sanctions hit)
+    // - is_pep: true → flagged (PEP match)
+    // - valid: false → failed (validation failure)
+    // - risk_level: "high" or "critical" → flagged
+    // - Has real data (company_name, etc.) → passed
+    // - Empty/null result → failed
+    const isError = result?.error || result?.skipped;
+    const isSanctioned = result?.is_sanctioned === true;
+    const isPep = result?.is_pep === true;
+    const isInvalid = result?.valid === false;
+    const isHighRisk = result?.risk_level === "high" || result?.risk_level === "critical";
+    const hasData = result && typeof result === "object" && !isError && Object.keys(result).length > 0;
+
+    if (isError) {
+      failed.push(checkName.replace(/-/g, " "));
       flags.push({
         severity: "medium",
-        finding: `${checkName.replace(/_/g, " ")} did not pass`,
-        recommendation: "Review this finding manually before proceeding",
+        finding: `${checkName.replace(/-/g, " ")} could not be completed`,
+        recommendation: result?.skipped
+          ? "This check was skipped because required inputs were not available. Provide additional data to enable this check."
+          : "Review the error and retry. Manual verification may be needed.",
+      });
+    } else if (isSanctioned) {
+      failed.push(checkName.replace(/-/g, " "));
+      flags.push({
+        severity: "critical",
+        finding: `Sanctions screening returned a positive match`,
+        recommendation: "Do not proceed without compliance review. Verify the match against official sanctions lists.",
+      });
+    } else if (isPep) {
+      // PEP is a flag, not necessarily a failure
+      passed.push(checkName.replace(/-/g, " "));
+      flags.push({
+        severity: "medium",
+        finding: `Politically Exposed Person (PEP) match detected`,
+        recommendation: "Enhanced due diligence may be required under AML regulations.",
+      });
+    } else if (isInvalid) {
+      failed.push(checkName.replace(/-/g, " "));
+      flags.push({
+        severity: "high",
+        finding: `${checkName.replace(/-/g, " ")} validation failed`,
+        recommendation: "Verify the input data is correct and retry.",
+      });
+    } else if (isHighRisk) {
+      passed.push(checkName.replace(/-/g, " "));
+      flags.push({
+        severity: result?.risk_level === "critical" ? "high" : "medium",
+        finding: `${checkName.replace(/-/g, " ")} flagged elevated risk`,
+        recommendation: "Review the detailed findings before proceeding.",
+      });
+    } else if (hasData) {
+      passed.push(checkName.replace(/-/g, " "));
+    } else {
+      failed.push(checkName.replace(/-/g, " "));
+      flags.push({
+        severity: "low",
+        finding: `${checkName.replace(/-/g, " ")} returned no data`,
+        recommendation: "This may indicate a data gap. Consider manual verification.",
       });
     }
   }
