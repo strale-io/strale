@@ -35,7 +35,7 @@ registerCapability("landing-page-roast", async (input: CapabilityInput) => {
 
   const client = new Anthropic({ apiKey });
   const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: "claude-sonnet-4-6-20250514",
     max_tokens: 1500,
     messages: [
       {
