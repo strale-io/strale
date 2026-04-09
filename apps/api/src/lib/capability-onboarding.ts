@@ -12,6 +12,7 @@ import { getExecutor } from "../capabilities/index.js";
 import { classifyFieldVolatility, makeVolatilityAwareCheck } from "./field-volatility.js";
 import { getOutputChecks } from "./test-generation.js";
 import { checkReadiness, clearReadinessCache } from "./capability-readiness.js";
+import { validateCapabilitySchema, enforceGates } from "./onboarding-gates.js";
 
 /**
  * Call after a capability is inserted or updated in the database.
@@ -27,6 +28,10 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
     .limit(1);
 
   if (!cap) return;
+
+  // Gate 3: Validate schema coherence before proceeding
+  const schemaViolations = validateCapabilitySchema(capabilitySlug, cap.inputSchema);
+  enforceGates(schemaViolations);
 
   // 1. Generate test suites if none exist
   const existingSuites = await db

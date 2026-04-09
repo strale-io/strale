@@ -6,6 +6,7 @@ config({ path: resolve(import.meta.dirname, "../../../../.env") });
 import { getDb } from "./index.js";
 import { capabilities, solutions, solutionSteps, type ComplianceCoverageItem } from "./schema.js";
 import { eq, inArray } from "drizzle-orm";
+import { validateSolution, enforceGates } from "../lib/onboarding-gates.js";
 
 // ─── Solution definitions ───────────────────────────────────────────────────
 
@@ -2717,6 +2718,14 @@ async function seed() {
     }
 
     const complianceCoverage = buildComplianceCoverage(sol);
+
+    // Gate checks: validate solution before writing
+    const gateViolations = await validateSolution(
+      sol.slug,
+      sol.inputSchema,
+      sol.steps.map((s) => ({ capabilitySlug: s.capabilitySlug, stepOrder: s.stepOrder, inputMap: s.inputMap })),
+    );
+    enforceGates(gateViolations);
 
     await db.transaction(async (tx) => {
       // Upsert solution
