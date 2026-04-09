@@ -1,8 +1,18 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
 
+/**
+ * PEP (Politically Exposed Person) screening via OpenSanctions API.
+ *
+ * Checks against PEP databases including government positions,
+ * family members, and close associates (RCA).
+ *
+ * Fallback: Dilisense API. No LLM fallback.
+ */
+
+const OPENSANCTIONS_API = "https://api.opensanctions.org/match/default";
 const DILISENSE_API = "https://api.dilisense.com/v1/checkIndividual";
-const DILISENSE_FALLBACK_KEY = "eKYn3FpyoYQaQvRWd83Q2P3XzNi0n7ifblts8kHK";
+
+const PEP_TOPICS = new Set(["role.pep", "role.pol", "role.rca"]);
 
 registerCapability("pep-check", async (input: CapabilityInput) => {
   const name = ((input.name as string) ?? (input.full_name as string) ?? "").trim();
@@ -13,127 +23,115 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
     throw new Error("Name must be at least 2 characters for PEP screening.");
   }
 
-  const birthDate = ((input.date_of_birth as string) ?? (input.birth_date as string) ?? "").trim() || undefined;
   const country = ((input.country as string) ?? "").trim().toUpperCase() || undefined;
+  const birthDate = ((input.date_of_birth as string) ?? (input.birth_date as string) ?? "").trim() || undefined;
 
-  const apiKey = process.env.DILISENSE_API_KEY || DILISENSE_FALLBACK_KEY;
+  // Primary: OpenSanctions API
+  const osKey = process.env.OPENSANCTIONS_API_KEY;
+  if (osKey) {
+    try {
+      const properties: Record<string, unknown> = { name: [name] };
+      if (country) properties.country = [country.toLowerCase()];
+      if (birthDate) properties.birthDate = [birthDate];
 
-  // Try Dilisense API first
-  try {
-    const params = new URLSearchParams({ names: name, fuzzy_search: "1" });
-
-    if (birthDate) {
-      const parts = birthDate.match(/(\d{4})-(\d{2})-(\d{2})/);
-      if (parts) {
-        params.set("dob", `${parts[3]}/${parts[2]}/${parts[1]}`);
-      }
-    }
-
-    const res = await fetch(`${DILISENSE_API}?${params.toString()}`, {
-      method: "GET",
-      headers: { "x-api-key": apiKey },
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (res.ok) {
-      const data = (await res.json()) as {
-        timestamp: string;
-        total_hits: number;
-        found_records: Array<{
-          id: string;
-          entity_type: string;
-          name: string;
-          source_type: string;
-          source_id: string;
-          pep_type?: string;
-          positions?: string[];
-          political_parties?: string[];
-          citizenship?: string[];
-          description?: string[];
-          alias_names?: string[];
-          date_of_birth?: string[];
-        }>;
-      };
-
-      // Filter to PEP records only (SANCTION handled by sanctions-check)
-      let pepRecords = data.found_records.filter(
-        (r) => r.source_type === "PEP",
-      );
-
-      // Post-filter by country if provided
-      if (country && pepRecords.length > 0) {
-        const countryFiltered = pepRecords.filter(
-          (r) => r.citizenship?.some((c) => c.toUpperCase() === country),
-        );
-        if (countryFiltered.length > 0) {
-          pepRecords = countryFiltered;
-        }
-      }
-
-      const matches = pepRecords.slice(0, 10).map((r) => ({
-        name: r.name,
-        pep_type: r.pep_type ?? "UNKNOWN",
-        positions: r.positions ?? [],
-        political_parties: r.political_parties ?? [],
-        countries: r.citizenship ?? [],
-        description: r.description ?? [],
-        source_id: r.source_id,
-      }));
-
-      const now = new Date().toISOString();
-      return {
-        output: {
-          query: name,
-          is_pep: pepRecords.length > 0,
-          match_count: pepRecords.length,
-          matches,
-          screened_at: now,
+      const resp = await fetch(OPENSANCTIONS_API, {
+        method: "POST",
+        headers: {
+          "Authorization": `ApiKey ${osKey}`,
+          "Content-Type": "application/json",
         },
-        provenance: { source: "dilisense.com", fetched_at: now },
-      };
-    }
+        body: JSON.stringify({ queries: { q: { schema: "Person", properties } } }),
+        signal: AbortSignal.timeout(15000),
+      });
 
-    console.error(`[pep-check] dilisense: HTTP ${res.status} ${res.statusText}`);
-  } catch (err) {
-    console.error("[pep-check] dilisense:", err instanceof Error ? err.message : err);
+      if (resp.ok) {
+        const data = (await resp.json()) as Record<string, unknown>;
+        const responses = data.responses as Record<string, { results: Array<Record<string, unknown>> }>;
+        const results = responses?.q?.results ?? [];
+
+        const pepResults = results.filter((r) => {
+          const topics = ((r.properties as Record<string, unknown>)?.topics ?? []) as string[];
+          return topics.some((t) => PEP_TOPICS.has(t));
+        });
+
+        const matches = pepResults.slice(0, 10).map((r) => {
+          const props = r.properties as Record<string, unknown>;
+          return {
+            name: r.caption,
+            entity_id: r.id,
+            score: r.score,
+            pep_type: (props.topics as string[] ?? []).find((t) => PEP_TOPICS.has(t)) ?? "role.pep",
+            positions: (props.position ?? []) as string[],
+            countries: (props.country ?? props.citizenship ?? []) as string[],
+            classification: (props.classification ?? []) as string[],
+            datasets: ((r.datasets ?? []) as string[]).slice(0, 5),
+          };
+        });
+
+        return {
+          output: {
+            query: name,
+            country_filter: country ?? null,
+            is_pep: pepResults.length > 0,
+            match_count: pepResults.length,
+            total_results: results.length,
+            matches,
+            source: "opensanctions",
+            screened_at: new Date().toISOString(),
+          },
+          provenance: { source: "opensanctions.org", fetched_at: new Date().toISOString() },
+        };
+      }
+      console.error(`[pep-check] OpenSanctions: HTTP ${resp.status}`);
+    } catch (err) {
+      console.error("[pep-check] OpenSanctions:", err instanceof Error ? err.message : err);
+    }
   }
 
-  // Fallback: use Claude to do a knowledge-based check
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY is required.");
+  // Fallback: Dilisense API
+  const dilisenseKey = process.env.DILISENSE_API_KEY;
+  if (dilisenseKey) {
+    try {
+      const params = new URLSearchParams({ names: name, fuzzy_search: "1" });
+      if (birthDate) {
+        const parts = birthDate.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (parts) params.set("dob", `${parts[3]}/${parts[2]}/${parts[1]}`);
+      }
 
-  const client = new Anthropic({ apiKey: anthropicKey });
-  const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 600,
-    messages: [
-      {
-        role: "user",
-        content: `Check if this person is a Politically Exposed Person (PEP) — a current or former senior political figure, their family member, or close associate. Return ONLY valid JSON.
+      const res = await fetch(`${DILISENSE_API}?${params}`, {
+        headers: { "x-api-key": dilisenseKey },
+        signal: AbortSignal.timeout(15000),
+      });
 
-Person: "${name}"${country ? `\nCountry: ${country}` : ""}
+      if (res.ok) {
+        const data = (await res.json()) as {
+          found_records: Array<{
+            name: string; source_type: string; source_id: string;
+            pep_type?: string; positions?: string[]; citizenship?: string[];
+          }>;
+        };
 
-Return:
-{
-  "query": "${name}",
-  "is_pep": true/false,
-  "confidence": "high/medium/low",
-  "reason": "brief explanation",
-  "positions": ["known positions if PEP"],
-  "note": "This is a knowledge-based check, not a real-time database query."
-}`,
-      },
-    ],
-  });
+        const pepRecords = data.found_records.filter((r) => r.source_type === "PEP");
+        return {
+          output: {
+            query: name,
+            country_filter: country ?? null,
+            is_pep: pepRecords.length > 0,
+            match_count: pepRecords.length,
+            matches: pepRecords.slice(0, 10).map((r) => ({
+              name: r.name, pep_type: r.pep_type ?? "UNKNOWN",
+              positions: r.positions ?? [], countries: r.citizenship ?? [],
+            })),
+            source: "dilisense",
+            screened_at: new Date().toISOString(),
+          },
+          provenance: { source: "dilisense.com", fetched_at: new Date().toISOString() },
+        };
+      }
+    } catch (err) {
+      console.error("[pep-check] Dilisense:", err instanceof Error ? err.message : err);
+    }
+  }
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to perform PEP check.");
-
-  const output = JSON.parse(jsonMatch[0]);
-
-  return {
-    output,
-    provenance: { source: "llm-knowledge", fetched_at: new Date().toISOString() },
-  };
+  throw new Error("PEP screening unavailable: no working API connection. Configure OPENSANCTIONS_API_KEY or DILISENSE_API_KEY.");
 });

@@ -1,14 +1,25 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
 
+/**
+ * Sanctions screening via OpenSanctions API (real-time, production-grade).
+ *
+ * Checks against consolidated sanctions lists: OFAC SDN, EU FSF, UN,
+ * UK FCDO, AU DFAT, CH SECO, CA DFATD, JP MOF, and 20+ more.
+ *
+ * Fallback: Dilisense API (if OpenSanctions is unavailable).
+ * No LLM fallback — sanctions checks must always hit a real database.
+ */
+
+const OPENSANCTIONS_API = "https://api.opensanctions.org/match/default";
 const DILISENSE_API = "https://api.dilisense.com/v1";
-const DILISENSE_FALLBACK_KEY = "eKYn3FpyoYQaQvRWd83Q2P3XzNi0n7ifblts8kHK";
 
 const COMPANY_SUFFIXES = /\b(AB|AS|Ltd|LLC|Inc|GmbH|SA|BV|NV|Oy|Oyj|PLC|Corp|AG|SE|SRL|Srl|KG|ApS|HB|KB|ANS|DA|ehf|hf|Tbk|Bhd|Pte|Pty|Co|SAS|SARL|SpA|EIRL|OÜ|SIA|UAB|d\.o\.o|s\.r\.o|a\.s)\b\.?/i;
 
 function looksLikeCompany(name: string): boolean {
   return COMPANY_SUFFIXES.test(name);
 }
+
+const SANCTION_TOPICS = new Set(["sanction", "sanction.linked", "debarment", "export.control", "crime.fin"]);
 
 registerCapability("sanctions-check", async (input: CapabilityInput) => {
   const name = ((input.name as string) ?? (input.entity as string) ?? (input.entity_name as string) ?? "").trim();
@@ -20,134 +31,123 @@ registerCapability("sanctions-check", async (input: CapabilityInput) => {
   }
 
   const country = ((input.country as string) ?? "").trim().toUpperCase() || undefined;
-  const birthDate = (input.birth_date as string) ?? undefined;
-  const entityTypeOverride = (input.entity_type as string) ?? undefined;
+  const entityType = (input.entity_type as string) ?? undefined;
+  const isCompany = entityType === "company" || (entityType !== "person" && looksLikeCompany(name));
+  const schema = isCompany ? "Company" : "Person";
 
-  const apiKey = process.env.DILISENSE_API_KEY || DILISENSE_FALLBACK_KEY;
-
-  // Determine endpoint: person or entity
-  const isCompany = entityTypeOverride === "company" ||
-    (entityTypeOverride !== "person" && looksLikeCompany(name));
-  const endpoint = isCompany ? "checkEntity" : "checkIndividual";
-
-  // Try Dilisense API first
-  try {
-    const params = new URLSearchParams({ names: name, fuzzy_search: "1" });
-
-    // Add date of birth for individual checks
-    if (!isCompany && birthDate) {
-      // Convert YYYY-MM-DD or similar to dd/mm/yyyy
-      const parts = birthDate.match(/(\d{4})-(\d{2})-(\d{2})/);
-      if (parts) {
-        params.set("dob", `${parts[3]}/${parts[2]}/${parts[1]}`);
-      }
-    }
-
-    const url = `${DILISENSE_API}/${endpoint}?${params.toString()}`;
-    const res = await fetch(url, {
-      method: "GET",
-      headers: { "x-api-key": apiKey },
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (res.ok) {
-      const data = (await res.json()) as {
-        timestamp: string;
-        total_hits: number;
-        found_records: Array<{
-          id: string;
-          entity_type: string;
-          name: string;
-          source_type: string;
-          source_id: string;
-          alias_names?: string[];
-          citizenship?: string[];
-          sanction_details?: string[];
-          description?: string[];
-          positions?: string[];
-          date_of_birth?: string[];
-          pep_type?: string;
-        }>;
-      };
-
-      // Filter to SANCTION records only (PEP handled by pep-check capability)
-      let sanctionRecords = data.found_records.filter(
-        (r) => r.source_type === "SANCTION",
-      );
-
-      // Post-filter by country if provided
-      if (country && sanctionRecords.length > 0) {
-        const countryFiltered = sanctionRecords.filter(
-          (r) => r.citizenship?.some((c) => c.toUpperCase() === country),
-        );
-        // Only apply country filter if it doesn't eliminate all results
-        if (countryFiltered.length > 0) {
-          sanctionRecords = countryFiltered;
-        }
-      }
-
-      const matches = sanctionRecords.slice(0, 10).map((r) => ({
-        name: r.name,
-        source_id: r.source_id,
-        sanction_details: r.sanction_details ?? [],
-        countries: r.citizenship ?? [],
-        description: r.description ?? [],
-      }));
-
-      return {
-        output: {
-          query: name,
-          country_filter: country ?? null,
-          is_sanctioned: sanctionRecords.length > 0,
-          match_count: sanctionRecords.length,
-          matches,
-          checked_lists: ["dilisense (consolidated: OFAC, EU, UN, UK OFSI, etc.)"],
+  // Primary: OpenSanctions API
+  const osKey = process.env.OPENSANCTIONS_API_KEY;
+  if (osKey) {
+    try {
+      const query: Record<string, unknown> = {
+        schema,
+        properties: {
+          name: [name],
+          ...(country ? { country: [country.toLowerCase()] } : {}),
         },
-        provenance: { source: "dilisense.com", fetched_at: new Date().toISOString() },
       };
-    }
 
-    console.error(`[sanctions-check] dilisense: HTTP ${res.status} ${res.statusText}`);
-  } catch (err) {
-    console.error("[sanctions-check] dilisense:", err instanceof Error ? err.message : err);
+      const resp = await fetch(OPENSANCTIONS_API, {
+        method: "POST",
+        headers: {
+          "Authorization": `ApiKey ${osKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ queries: { q: query } }),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (resp.ok) {
+        const data = (await resp.json()) as Record<string, unknown>;
+        const responses = data.responses as Record<string, { results: Array<Record<string, unknown>> }>;
+        const results = responses?.q?.results ?? [];
+
+        const sanctioned = results.filter((r) => {
+          const topics = ((r.properties as Record<string, unknown>)?.topics ?? []) as string[];
+          return topics.some((t) => SANCTION_TOPICS.has(t));
+        });
+
+        const matches = sanctioned.slice(0, 10).map((r) => {
+          const props = r.properties as Record<string, unknown>;
+          return {
+            name: r.caption,
+            entity_id: r.id,
+            score: r.score,
+            topics: (props.topics ?? []) as string[],
+            datasets: ((r.datasets ?? []) as string[]).slice(0, 10),
+            countries: (props.country ?? props.citizenship ?? []) as string[],
+          };
+        });
+
+        const listsChecked = new Set<string>();
+        for (const m of matches) for (const d of m.datasets) listsChecked.add(d);
+
+        return {
+          output: {
+            query: name,
+            schema,
+            country_filter: country ?? null,
+            is_sanctioned: sanctioned.length > 0,
+            match_count: sanctioned.length,
+            total_results: results.length,
+            matches,
+            lists_checked: listsChecked.size > 0
+              ? [...listsChecked]
+              : ["OFAC SDN", "EU FSF", "UN Security Council", "UK FCDO", "AU DFAT", "CH SECO"],
+            source: "opensanctions",
+            queried_at: new Date().toISOString(),
+          },
+          provenance: { source: "opensanctions.org", fetched_at: new Date().toISOString() },
+        };
+      }
+      console.error(`[sanctions-check] OpenSanctions: HTTP ${resp.status}`);
+    } catch (err) {
+      console.error("[sanctions-check] OpenSanctions:", err instanceof Error ? err.message : err);
+    }
   }
 
-  // Fallback: use Claude to do a knowledge-based check
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY is required.");
+  // Fallback: Dilisense API
+  const dilisenseKey = process.env.DILISENSE_API_KEY;
+  if (dilisenseKey) {
+    try {
+      const endpoint = isCompany ? "checkEntity" : "checkIndividual";
+      const params = new URLSearchParams({ names: name, fuzzy_search: "1" });
+      const res = await fetch(`${DILISENSE_API}/${endpoint}?${params}`, {
+        headers: { "x-api-key": dilisenseKey },
+        signal: AbortSignal.timeout(15000),
+      });
 
-  const client = new Anthropic({ apiKey: anthropicKey });
-  const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 600,
-    messages: [
-      {
-        role: "user",
-        content: `Check if this entity is on any known sanctions lists (EU, US OFAC, UN, UK). Return ONLY valid JSON.
+      if (res.ok) {
+        const data = (await res.json()) as {
+          found_records: Array<{
+            name: string; source_id: string; source_type: string;
+            sanction_details?: string[]; citizenship?: string[];
+          }>;
+        };
 
-Entity: "${name}"${country ? `\nCountry: ${country}` : ""}
+        const sanctionRecords = data.found_records.filter((r) => r.source_type === "SANCTION");
+        return {
+          output: {
+            query: name,
+            schema,
+            country_filter: country ?? null,
+            is_sanctioned: sanctionRecords.length > 0,
+            match_count: sanctionRecords.length,
+            matches: sanctionRecords.slice(0, 10).map((r) => ({
+              name: r.name, entity_id: r.source_id,
+              sanction_details: r.sanction_details ?? [], countries: r.citizenship ?? [],
+            })),
+            lists_checked: ["dilisense (consolidated: OFAC, EU, UN, UK OFSI)"],
+            source: "dilisense",
+            queried_at: new Date().toISOString(),
+          },
+          provenance: { source: "dilisense.com", fetched_at: new Date().toISOString() },
+        };
+      }
+    } catch (err) {
+      console.error("[sanctions-check] Dilisense:", err instanceof Error ? err.message : err);
+    }
+  }
 
-Return:
-{
-  "query": "${name}",
-  "is_sanctioned": true/false,
-  "confidence": "high/medium/low",
-  "reason": "brief explanation",
-  "likely_lists": ["list names if sanctioned"],
-  "note": "This is a knowledge-based check, not a real-time database query. For definitive results, check official sources directly."
-}`,
-      },
-    ],
-  });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to perform sanctions check.");
-
-  const output = JSON.parse(jsonMatch[0]);
-
-  return {
-    output,
-    provenance: { source: "llm-knowledge", fetched_at: new Date().toISOString() },
-  };
+  throw new Error("Sanctions screening unavailable: no working API connection. Configure OPENSANCTIONS_API_KEY or DILISENSE_API_KEY.");
 });
