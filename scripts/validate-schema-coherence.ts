@@ -51,11 +51,18 @@ async function validate(slugFilter?: string): Promise<Issue[]> {
     : await sql`SELECT slug, input_schema FROM capabilities WHERE is_active = true`;
 
   for (const cap of caps) {
-    const schema = cap.input_schema as {
+    let schema: {
       type?: string;
       required?: string[];
       properties?: Record<string, unknown>;
-    } | null;
+    } | null = null;
+
+    const raw = cap.input_schema;
+    if (typeof raw === "string") {
+      try { schema = JSON.parse(raw); } catch { schema = null; }
+    } else if (raw && typeof raw === "object") {
+      schema = raw as typeof schema;
+    }
 
     if (!schema || typeof schema !== "object") {
       issues.push({ slug: cap.slug, type: "malformed_schema", detail: "input_schema is null or not an object" });

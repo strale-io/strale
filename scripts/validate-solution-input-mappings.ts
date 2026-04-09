@@ -56,7 +56,10 @@ async function validate(slugFilter?: string): Promise<Mismatch[]> {
     : await sql`SELECT id, slug, input_schema FROM solutions WHERE is_active = true`;
 
   for (const sol of solutions) {
-    const inputSchema = sol.input_schema as { properties?: Record<string, unknown> } | null;
+    const rawSchema = sol.input_schema;
+    const inputSchema: { properties?: Record<string, unknown> } | null =
+      typeof rawSchema === "string" ? (() => { try { return JSON.parse(rawSchema); } catch { return null; } })()
+      : (rawSchema as { properties?: Record<string, unknown> } | null);
     const declaredFields = inputSchema?.properties ? Object.keys(inputSchema.properties) : [];
 
     const steps = await sql`
