@@ -27,27 +27,93 @@ async function lookupByLei(lei: string): Promise<Record<string, unknown>> {
   return parseGleifRecord(data.data);
 }
 
-async function searchByName(
-  name: string,
-  jurisdiction?: string,
-): Promise<Record<string, unknown>> {
-  // Fetch up to 10 candidates for disambiguation
+// Legal form abbreviation → full name expansion for GLEIF search.
+// GLEIF stores the full legal form in legalName (e.g., "Gesellschaft mit
+// beschränkter Haftung" not "GmbH"), so abbreviations miss exact matches.
+const LEGAL_FORM_EXPANSIONS: Record<string, string> = {
+  // German
+  "GmbH": "Gesellschaft mit beschränkter Haftung",
+  "AG": "Aktiengesellschaft",
+  "KG": "Kommanditgesellschaft",
+  "OHG": "Offene Handelsgesellschaft",
+  "KGaA": "Kommanditgesellschaft auf Aktien",
+  "eG": "eingetragene Genossenschaft",
+  "UG": "Unternehmergesellschaft",
+  // Dutch
+  "B.V.": "Besloten Vennootschap",
+  "BV": "Besloten Vennootschap",
+  "N.V.": "Naamloze Vennootschap",
+  "NV": "Naamloze Vennootschap",
+  // French
+  "SAS": "Société par Actions Simplifiée",
+  "SARL": "Société à Responsabilité Limitée",
+  // Italian
+  "SpA": "Società per Azioni",
+  "S.p.A.": "Società per Azioni",
+  "Srl": "Società a responsabilità limitata",
+  "S.r.l.": "Società a responsabilità limitata",
+  // Spanish
+  "SL": "Sociedad Limitada",
+  "S.L.": "Sociedad Limitada",
+  // Swedish
+  "AB": "Aktiebolag",
+};
+
+// SA is ambiguous (French, Spanish, Portuguese) — skip expansion, rely on disambiguation
+// SE (Societas Europaea) is already the full form
+
+function expandLegalForm(name: string): string | null {
+  for (const [abbrev, full] of Object.entries(LEGAL_FORM_EXPANSIONS)) {
+    // Match abbreviation at end of name, with or without trailing dot
+    const pattern = new RegExp(`\\b${abbrev.replace(/\./g, "\\.")}\\s*$`, "i");
+    if (pattern.test(name.trim())) {
+      return name.trim().replace(pattern, full);
+    }
+  }
+  return null;
+}
+
+async function gleifSearch(name: string, jurisdiction?: string): Promise<any[]> {
   let url = `${GLEIF_API}/lei-records?filter[entity.legalName]=${encodeURIComponent(name)}&page[size]=10`;
-  // Add jurisdiction filter if available (ISO 3166-1 alpha-2)
   if (jurisdiction) {
     url += `&filter[entity.legalAddress.country]=${encodeURIComponent(jurisdiction)}`;
   }
-
   const response = await fetch(url, {
     headers: { Accept: "application/vnd.api+json" },
     signal: AbortSignal.timeout(10000),
   });
   if (!response.ok) throw new Error(`GLEIF API search returned HTTP ${response.status}`);
-
   const data = (await response.json()) as any;
-  const records = data?.data;
-  if (!records || records.length === 0) {
-    // If jurisdiction-filtered search found nothing, try without filter
+  return data?.data ?? [];
+}
+
+async function searchByName(
+  name: string,
+  jurisdiction?: string,
+): Promise<Record<string, unknown>> {
+  // Try original name first
+  let records = await gleifSearch(name, jurisdiction);
+
+  // Always try expanded legal form if an expansion exists.
+  // GLEIF stores full legal forms (e.g., "Gesellschaft mit beschränkter Haftung")
+  // but users query with abbreviations ("GmbH"). The original query may return
+  // subsidiaries that happen to use the abbreviated form in their legal name,
+  // while the parent entity uses the full form.
+  const expanded = expandLegalForm(name);
+  if (expanded) {
+    const expandedRecords = await gleifSearch(expanded, jurisdiction);
+    // Merge: expanded results first (more likely to be the exact parent entity)
+    const seen = new Set(records.map((r: any) => r?.attributes?.lei));
+    for (const r of expandedRecords) {
+      if (!seen.has(r?.attributes?.lei)) {
+        records.unshift(r);
+        seen.add(r?.attributes?.lei);
+      }
+    }
+  }
+
+  if (records.length === 0) {
+    // Try without jurisdiction filter
     if (jurisdiction) {
       return searchByName(name);
     }
@@ -60,14 +126,16 @@ async function searchByName(
 
   // Disambiguate: score each candidate
   const nameNorm = name.toLowerCase().trim();
+  const expandedForScoring = expandLegalForm(name);
+  const expandedNorm = expandedForScoring?.toLowerCase().trim();
   const candidates = records.map((record: any) => {
     const parsed = parseGleifRecord(record);
     let score = 0;
 
-    // Exact name match (highest signal)
+    // Exact name match — check both original and expanded forms
     const legalName = ((parsed.legal_name as string) ?? "").toLowerCase().trim();
-    if (legalName === nameNorm) score += 100;
-    else if (legalName.startsWith(nameNorm)) score += 50;
+    if (legalName === nameNorm || (expandedNorm && legalName === expandedNorm)) score += 100;
+    else if (legalName.startsWith(nameNorm) || (expandedNorm && legalName.startsWith(expandedNorm))) score += 50;
 
     // Jurisdiction match
     if (jurisdiction && (parsed.jurisdiction as string)?.toUpperCase() === jurisdiction.toUpperCase()) {
