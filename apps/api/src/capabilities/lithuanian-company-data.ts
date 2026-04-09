@@ -14,7 +14,9 @@ registerCapability("lithuanian-company-data", async (input: CapabilityInput) => 
     throw new Error("'company_code' or 'company_name' is required. Provide a Lithuanian company code or company name.");
   }
 
-  const output = await searchNorthdata(raw.trim(), "Lithuania") as unknown as Record<string, unknown>;
+  const companyName = (input.company_name as string) ?? null;
+  const companyCode = (input.company_code as string) ?? null;
+  const output = await searchNorthdata(raw.trim(), "Lithuania", { company_name: companyName, registration_number: companyCode }) as unknown as Record<string, unknown>;
 
   return {
     output,

@@ -15,7 +15,9 @@ registerCapability("german-company-data", async (input: CapabilityInput) => {
     throw new Error("'hrb_number' or 'company_name' is required. Provide a Handelsregister number (e.g. HRB 86891) or company name.");
   }
 
-  const output = await searchNorthdata(raw.trim(), "Germany") as unknown as Record<string, unknown>;
+  const companyName = (input.company_name as string) ?? null;
+  const regNumber = (input.hrb_number as string) ?? null;
+  const output = await searchNorthdata(raw.trim(), "Germany", { company_name: companyName, registration_number: regNumber }) as unknown as Record<string, unknown>;
 
   return {
     output,

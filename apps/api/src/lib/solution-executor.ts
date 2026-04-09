@@ -234,6 +234,12 @@ export async function executeSolution(
   // Sort groups by the earliest stepOrder in each group
   const sortedGroups = [...groupMap.values()].sort((a, b) => a.minStepOrder - b.minStepOrder);
 
+  // Context propagation: after first group, extract registration_number + jurisdiction
+  // from step 0 and inject into inputs as optional context for downstream steps.
+  // This enables downstream capabilities to use the entity's code without explicit
+  // $steps[0].registration_number mappings in every solution definition.
+  let entityContext: Record<string, unknown> = {};
+
   for (const { steps: groupSteps } of sortedGroups) {
     const executions = groupSteps.map(async (step) => {
       const executor = getExecutor(step.capabilitySlug);
@@ -262,6 +268,17 @@ export async function executeSolution(
           return;
         }
 
+        // Inject entity context from step 0 as low-priority defaults.
+        // Only adds fields that aren't already in the step input and
+        // that the capability could use (e.g., jurisdiction, registration_number).
+        if (Object.keys(entityContext).length > 0) {
+          for (const [ctxKey, ctxVal] of Object.entries(entityContext)) {
+            if (!(ctxKey in stepInput) && ctxVal != null) {
+              stepInput[ctxKey] = ctxVal;
+            }
+          }
+        }
+
         // Remove null entries so capabilities only see fields the user
         // actually provided (avoids "field X is required" errors from
         // capabilities that validate their own inputs).
@@ -287,6 +304,19 @@ export async function executeSolution(
     });
 
     await Promise.all(executions);
+
+    // After first group completes, extract entity context for downstream propagation
+    if (entityContext && Object.keys(entityContext).length === 0 && completedSteps.length > 0) {
+      const step0 = completedSteps[0];
+      if (step0 && typeof step0 === "object") {
+        const regNum = (step0 as Record<string, unknown>).registration_number;
+        const jurisdiction = (step0 as Record<string, unknown>).jurisdiction;
+        const companyName = (step0 as Record<string, unknown>).company_name;
+        if (regNum) entityContext.registration_number = regNum;
+        if (jurisdiction) entityContext.jurisdiction = jurisdiction;
+        if (companyName) entityContext.entity_name = companyName;
+      }
+    }
   }
 
   const latencyMs = Date.now() - startMs;

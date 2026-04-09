@@ -8,9 +8,11 @@
  * - Country-specific registration number patterns
  * - Search result disambiguation by country
  *
- * Used by: german, dutch, portuguese, lithuanian, and potentially
+ * Used by: german, dutch, portuguese, lithuanian, swiss, and potentially
  * other European company data capabilities.
  */
+
+import { validateCompanyResult, type ValidationBlock } from "../../lib/entity-validation.js";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
@@ -23,6 +25,8 @@ export interface NorthdataCompany {
   status: string;
   industry: string | null;
   directors: string | null;
+  jurisdiction: string | null;
+  validation: ValidationBlock | null;
 }
 
 /** European business type suffixes for extraction */
@@ -39,6 +43,8 @@ export function extractJsonLd(html: string): NorthdataCompany {
     status: "unknown",
     industry: null,
     directors: null,
+    jurisdiction: null,
+    validation: null,
   };
 
   const blocks = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g) || [];
@@ -55,6 +61,9 @@ export function extractJsonLd(html: string): NorthdataCompany {
           const addr = data.address;
           const parts = [addr.streetAddress, addr.postalCode, addr.addressLocality, addr.addressCountry].filter(Boolean);
           result.address = parts.join(", ") || null;
+          if (addr.addressCountry) {
+            result.jurisdiction = addr.addressCountry.toUpperCase();
+          }
         }
 
         if (Array.isArray(data.member) && data.member.length > 0) {
@@ -93,16 +102,28 @@ export function extractJsonLd(html: string): NorthdataCompany {
   return result;
 }
 
+/** Country name → ISO code mapping for jurisdiction */
+const COUNTRY_TO_ISO: Record<string, string> = {
+  "Germany": "DE", "Netherlands": "NL", "Portugal": "PT",
+  "Switzerland": "CH", "Lithuania": "LT", "Belgium": "BE",
+  "France": "FR", "Spain": "ES", "Italy": "IT", "Austria": "AT",
+  "Poland": "PL", "Ireland": "IE", "Estonia": "EE", "Latvia": "LV",
+  "Denmark": "DK", "Sweden": "SE", "Norway": "NO", "Finland": "FI",
+  "United Kingdom": "GB",
+};
+
 /**
  * Search northdata.com for a company and extract structured data.
  *
  * @param query - Company name or registration ID to search
- * @param countryFilter - ISO 3166-1 country name to prefer (e.g., "Germany", "Netherlands")
- * @returns Extracted company data or throws if not found
+ * @param countryFilter - Country name to prefer (e.g., "Germany", "Netherlands")
+ * @param userInput - Optional user input for cross-validation
+ * @returns Extracted company data with validation block
  */
 export async function searchNorthdata(
   query: string,
   countryFilter?: string,
+  userInput?: { company_name?: string | null; registration_number?: string | null },
 ): Promise<NorthdataCompany> {
   // Path-style search (not ?q= which returns broken results)
   const searchUrl = `https://www.northdata.com/${encodeURIComponent(query)}`;
@@ -148,6 +169,31 @@ export async function searchNorthdata(
 
   if (!data.company_name) {
     throw new Error(`Could not extract company data for "${query}" from northdata.com.`);
+  }
+
+  // Run validation if user input is available
+  const expectedJurisdiction = countryFilter ? (COUNTRY_TO_ISO[countryFilter] ?? "") : (data.jurisdiction ?? "");
+  if (userInput || expectedJurisdiction) {
+    data.validation = validateCompanyResult(
+      {
+        company_name: data.company_name,
+        registration_number: data.registration_number,
+        address: data.address,
+      },
+      {
+        company_name: userInput?.company_name ?? query,
+        registration_number: userInput?.registration_number ?? null,
+      },
+      expectedJurisdiction,
+    );
+
+    // Hard fail on code mismatch (user provided a specific code and it doesn't match)
+    if (data.validation.failures.length > 0 && userInput?.registration_number) {
+      const codeFailure = data.validation.failures.find((f) => f.includes("code mismatch"));
+      if (codeFailure) {
+        throw new Error(`Entity validation failed: ${codeFailure}`);
+      }
+    }
   }
 
   return data;

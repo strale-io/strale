@@ -15,7 +15,9 @@ registerCapability("dutch-company-data", async (input: CapabilityInput) => {
     throw new Error("'kvk_number' or 'company_name' is required. Provide a KVK number (8 digits) or company name.");
   }
 
-  const output = await searchNorthdata(raw.trim(), "Netherlands") as unknown as Record<string, unknown>;
+  const companyName = (input.company_name as string) ?? null;
+  const kvkNumber = (input.kvk_number as string) ?? null;
+  const output = await searchNorthdata(raw.trim(), "Netherlands", { company_name: companyName, registration_number: kvkNumber }) as unknown as Record<string, unknown>;
 
   return {
     output,

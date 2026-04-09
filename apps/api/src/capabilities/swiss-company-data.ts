@@ -14,7 +14,9 @@ registerCapability("swiss-company-data", async (input: CapabilityInput) => {
     throw new Error("'uid' or 'company_name' is required. Provide a Swiss UID (CHE-xxx.xxx.xxx) or company name.");
   }
 
-  const output = await searchNorthdata(raw.trim(), "Switzerland") as unknown as Record<string, unknown>;
+  const companyName = (input.company_name as string) ?? null;
+  const uid = (input.uid as string) ?? null;
+  const output = await searchNorthdata(raw.trim(), "Switzerland", { company_name: companyName, registration_number: uid }) as unknown as Record<string, unknown>;
 
   return {
     output,

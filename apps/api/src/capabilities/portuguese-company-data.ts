@@ -14,7 +14,9 @@ registerCapability("portuguese-company-data", async (input: CapabilityInput) => 
     throw new Error("'nipc' or 'company_name' is required. Provide a Portuguese NIPC number or company name.");
   }
 
-  const output = await searchNorthdata(raw.trim(), "Portugal") as unknown as Record<string, unknown>;
+  const companyName = (input.company_name as string) ?? null;
+  const nipc = (input.nipc as string) ?? null;
+  const output = await searchNorthdata(raw.trim(), "Portugal", { company_name: companyName, registration_number: nipc }) as unknown as Record<string, unknown>;
 
   return {
     output,
