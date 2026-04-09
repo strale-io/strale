@@ -1,5 +1,4 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import Anthropic from "@anthropic-ai/sdk";
 
 const CH_API = "https://api.company-information.service.gov.uk";
 
@@ -52,8 +51,7 @@ registerCapability("beneficial-ownership-lookup", async (input: CapabilityInput)
 
   const apiKey = process.env.COMPANIES_HOUSE_API_KEY;
   if (!apiKey) {
-    // Fall back to LLM knowledge for well-known companies
-    return fallbackToLLM(companyName || companyNumber!);
+    throw new Error("COMPANIES_HOUSE_API_KEY is required for beneficial ownership lookup. Configure the environment variable.");
   }
 
   const authHeader = getAuthHeader(apiKey);
@@ -189,44 +187,7 @@ registerCapability("beneficial-ownership-lookup", async (input: CapabilityInput)
       throw err;
     }
 
-    // API failure — fall back to LLM
-    return fallbackToLLM(companyName || companyNumber!);
+    // API failure — throw, don't fall back to LLM
+    throw err;
   }
 });
-
-async function fallbackToLLM(query: string) {
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (!anthropicKey) throw new Error("COMPANIES_HOUSE_API_KEY is required for beneficial ownership lookup. ANTHROPIC_API_KEY not available for fallback.");
-
-  const client = new Anthropic({ apiKey: anthropicKey });
-  const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 800,
-    messages: [
-      {
-        role: "user",
-        content: `Who are the beneficial owners (persons with significant control) of "${query}" (UK company)? Return ONLY valid JSON.
-
-Return:
-{
-  "company_name": "...",
-  "beneficial_owners": [{ "name": "...", "type": "individual or corporate", "ownership_level": "approximate %", "source": "public knowledge" }],
-  "total_beneficial_owners": 0,
-  "has_psc_data": false,
-  "note": "This is based on public knowledge, not official Companies House data. Register for a Companies House API key for authoritative results.",
-  "data_source": "llm-knowledge"
-}`,
-      },
-    ],
-  });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to perform beneficial ownership lookup.");
-
-  const output = JSON.parse(jsonMatch[0]);
-  return {
-    output,
-    provenance: { source: "llm-knowledge", fetched_at: new Date().toISOString() },
-  };
-}

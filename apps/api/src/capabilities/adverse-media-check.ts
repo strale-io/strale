@@ -1,7 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 const DILISENSE_MEDIA_API = "https://api.dilisense.com/v1/media";
-const DILISENSE_FALLBACK_KEY = "eKYn3FpyoYQaQvRWd83Q2P3XzNi0n7ifblts8kHK";
 
 const COMPANY_SUFFIXES = /\b(AB|AS|Ltd|LLC|Inc|GmbH|SA|BV|NV|Oy|Oyj|PLC|Corp|AG|SE|SRL|Srl|KG|ApS|HB|KB|ANS|DA|ehf|hf|Tbk|Bhd|Pte|Pty|Co|SAS|SARL|SpA|EIRL|OÜ|SIA|UAB|d\.o\.o|s\.r\.o|a\.s)\b\.?/i;
 
@@ -92,7 +91,10 @@ registerCapability("adverse-media-check", async (input: CapabilityInput) => {
   }
 
   const entityTypeOverride = (input.entity_type as string) ?? undefined;
-  const apiKey = process.env.DILISENSE_API_KEY || DILISENSE_FALLBACK_KEY;
+  const apiKey = process.env.DILISENSE_API_KEY;
+  if (!apiKey) {
+    throw new Error("DILISENSE_API_KEY is required for adverse media screening.");
+  }
 
   const isCompany = entityTypeOverride === "company" ||
     (entityTypeOverride !== "person" && looksLikeCompany(name));
