@@ -2450,7 +2450,7 @@ const seedCapabilities = [
     category: "compliance",
     inputSchema: { type: "object", properties: { name: { type: "string", description: "Full name of person to screen" }, birth_date: { type: "string", description: "Date of birth (YYYY-MM-DD) for disambiguation (optional)" }, country: { type: "string", description: "Country code for narrowing results (optional)" } }, required: ["name"] },
     outputSchema: { type: "object", properties: { query: { type: "string" }, is_pep: { type: "boolean" }, total_matches: { type: "integer" }, matches: { type: "array" }, screened_at: { type: "string" } } },
-    priceCents: 15,
+    priceCents: 5, // was 15, reduced after migration to OpenSanctions (same source as sanctions-check at €0.02)
   },
   {
     name: "Adverse Media Check",
