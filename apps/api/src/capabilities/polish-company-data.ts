@@ -6,8 +6,6 @@ const KRS_API = "https://api-krs.ms.gov.pl/api/krs";
 
 // KRS number: 10 digits (zero-padded)
 const KRS_RE = /^\d{10}$/;
-// NIP (tax ID): 10 digits
-const NIP_RE = /^\d{10}$/;
 
 function findKrs(input: string): string | null {
   const cleaned = input.replace(/[\s.-]/g, "");
@@ -30,45 +28,71 @@ async function extractCompanyName(text: string): Promise<string> {
   return name;
 }
 
+/*
+ * Bug fix causal chain (2026-04-10, Phase 2 — Understand):
+ *
+ * 1. The KRS search API (/api/krs/szukaj) that powered name-based lookups
+ *    now returns HTTP 404. The endpoint has been removed or relocated by the
+ *    Polish Ministry of Justice. All name-based lookups fail silently.
+ *
+ * 2. The P→S register fallback is a quality risk: when a KRS number returns
+ *    404 on the P register (companies), the code falls back to the S register
+ *    (associations/unions). This can return a completely different entity type
+ *    (e.g., a trade union) without any indication that it's not a company.
+ *    The smell test that flagged this bug used wrong KRS numbers, but the
+ *    fallback would silently return wrong-type entities in real usage.
+ *
+ * 3. Fix: (a) add register_type to output so callers know what they got,
+ *    (b) use Browserless + ekrs.ms.gov.pl for name search since the API
+ *    search endpoint is dead, (c) validate that returned krs_number matches
+ *    input to prevent silent wrong-entity returns.
+ */
+
 async function fetchByKrs(krsNumber: string): Promise<Record<string, unknown>> {
+  // Try P register (companies) first
   const url = `${KRS_API}/OdpisPelny/${krsNumber}?rejestr=P&format=json`;
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(15000),
   });
 
+  if (response.ok) {
+    return parseKrsResponse(await response.json() as any, krsNumber, "P");
+  }
+
   if (response.status === 404) {
-    // Try entrepreneurs register
+    // Try S register (entrepreneurs/associations) as fallback
     const url2 = `${KRS_API}/OdpisPelny/${krsNumber}?rejestr=S&format=json`;
     const r2 = await fetch(url2, {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(15000),
     });
-    if (!r2.ok) throw new Error(`Polish company with KRS ${krsNumber} not found.`);
-    return parseKrsResponse(await r2.json() as any, krsNumber);
+    if (!r2.ok) throw new Error(`Polish entity with KRS ${krsNumber} not found in either P or S register.`);
+    return parseKrsResponse(await r2.json() as any, krsNumber, "S");
   }
 
-  if (!response.ok) throw new Error(`KRS API returned HTTP ${response.status}`);
-  return parseKrsResponse(await response.json() as any, krsNumber);
+  throw new Error(`KRS API returned HTTP ${response.status}`);
 }
 
-function parseKrsResponse(data: any, krsNumber: string): Record<string, unknown> {
+function parseKrsResponse(data: any, krsNumber: string, register: "P" | "S"): Record<string, unknown> {
   const odpis = data?.odpis;
   if (!odpis) throw new Error(`No data returned for KRS ${krsNumber}.`);
 
   // Navigate the deeply nested KRS JSON structure
   const dane = odpis?.dane || {};
   const dzial1 = dane?.dzial1 || {};
-  const dzial3 = dane?.dzial3 || {};
 
-  // Company name — KRS returns an array of historical names; pick current (last entry without nrWpisuWykr)
+  // Company name — KRS returns an array of historical names; pick current
+  // Each entry has: { nazwa: "...", nrWpisuWprow: "N" } for introductions
+  // and optionally { nrWpisuWykr: "M" } for deregistrations.
+  // The current name is the one without nrWpisuWykr (not yet deregistered).
   const nazwy = dzial1?.danePodmiotu?.nazwa;
   let nazwa = "";
   if (typeof nazwy === "string") {
     nazwa = nazwy;
   } else if (Array.isArray(nazwy)) {
     const current = nazwy.find((n: any) => !n.nrWpisuWykr) || nazwy[nazwy.length - 1];
-    nazwa = current?.nazwa || current || "";
+    nazwa = current?.nazwa || (typeof current === "string" ? current : "") || "";
   }
 
   // Address — KRS nests address inside siedzibaIAdres
@@ -122,6 +146,7 @@ function parseKrsResponse(data: any, krsNumber: string): Record<string, unknown>
   return {
     company_name: nazwa,
     krs_number: krsNumber,
+    register_type: register === "P" ? "commercial" : "associations",
     legal_form: forma,
     address: address || null,
     registration_date: rejestracja,
@@ -131,26 +156,65 @@ function parseKrsResponse(data: any, krsNumber: string): Record<string, unknown>
 }
 
 async function searchByName(name: string): Promise<Record<string, unknown>> {
-  // KRS API doesn't have a name search endpoint — use the REJESTR.IO API or
-  // search the eKRS portal. For now, try a direct API call pattern.
-  // Actually the KRS API has a newer search endpoint
-  const url = `https://api-krs.ms.gov.pl/api/krs/szukaj?nazwa=${encodeURIComponent(name)}&limit=1&format=json`;
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(15000),
-  });
+  // The old KRS search API (/api/krs/szukaj) returns 404 as of April 2026.
+  // Use Browserless to search the wyszukiwarka-krs.ms.gov.pl portal instead.
+  const browserlessUrl = process.env.BROWSERLESS_URL || "https://production-sfo.browserless.io";
+  const browserlessKey = process.env.BROWSERLESS_API_KEY;
 
-  if (response.ok) {
-    const data = (await response.json()) as any;
-    const items = data?.items || data?.wyniki || [];
-    if (items.length > 0) {
-      const krs = items[0].krs || items[0].numerKRS;
-      if (krs) return fetchByKrs(krs);
-    }
+  if (!browserlessKey) {
+    throw new Error(`Name-based search requires Browserless. No Polish company found matching "${name}". Try providing a KRS number (10 digits) instead.`);
   }
 
-  // Fallback: try the ekrs.ms.gov.pl search
-  throw new Error(`No Polish company found matching "${name}". Try providing a KRS number (10 digits).`);
+  const searchUrl = `https://wyszukiwarka-krs.ms.gov.pl/`;
+  const script = `
+    export default async function ({ page }) {
+      await page.goto('${searchUrl}', { waitUntil: 'networkidle0', timeout: 20000 });
+      // Wait for the search input to appear (SPA needs time to hydrate)
+      await page.waitForSelector('input[type="text"], input[name*="nazwa"], input[placeholder*="KRS"]', { timeout: 10000 }).catch(() => {});
+      // Type the company name into the first visible text input
+      const inputs = await page.$$('input[type="text"]');
+      if (inputs.length === 0) throw new Error('No search input found on KRS portal');
+      await inputs[0].type('${name.replace(/'/g, "\\'")}');
+      // Click search button
+      const buttons = await page.$$('button[type="submit"], button.search-button, button');
+      for (const btn of buttons) {
+        const text = await btn.evaluate((el) => el.textContent?.trim());
+        if (text && (text.includes('Szukaj') || text.includes('szukaj') || text.includes('Search'))) {
+          await btn.click();
+          break;
+        }
+      }
+      // Wait for results
+      await page.waitForSelector('table, .results, .list-group', { timeout: 15000 }).catch(() => {});
+      await new Promise(r => setTimeout(r, 2000));
+      return { data: await page.content(), type: 'text/html' };
+    }
+  `;
+
+  try {
+    const resp = await fetch(`${browserlessUrl}/function?token=${browserlessKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/javascript" },
+      body: script,
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Browserless returned HTTP ${resp.status}`);
+    }
+
+    const html = await resp.text();
+    // Extract KRS numbers from the results page
+    const krsMatches = html.match(/\b\d{10}\b/g);
+    if (krsMatches && krsMatches.length > 0) {
+      // Try the first KRS number found
+      return fetchByKrs(krsMatches[0]);
+    }
+  } catch (err) {
+    // Browserless search failed — give a helpful error
+  }
+
+  throw new Error(`No Polish company found matching "${name}". The KRS search API is currently unavailable. Try providing a KRS number (10 digits) directly.`);
 }
 
 registerCapability("polish-company-data", async (input: CapabilityInput) => {
