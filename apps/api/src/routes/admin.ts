@@ -660,3 +660,54 @@ adminRoute.patch("/capability-schema", async (c) => {
 
   return c.json({ updated: rows2[0] });
 });
+
+// ─── Circuit breaker reset (admin-only) ─────────────────────────────────────
+// POST /v1/admin/reset-circuit-breaker — reset a capability's circuit breaker
+// to closed state. Used when VIES or other external services recover.
+
+adminRoute.post("/reset-circuit-breaker", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body?.slug || typeof body.slug !== "string") {
+    return c.json(apiError("invalid_request", "slug is required"), 400);
+  }
+
+  const db = getDb();
+  const result = await db.execute(sql`
+    UPDATE capability_health
+    SET state = 'closed', consecutive_failures = 0, updated_at = NOW()
+    WHERE capability_slug = ${body.slug}
+    RETURNING capability_slug, state, consecutive_failures
+  `);
+
+  const rows2 = toRows(result);
+  if (rows2.length === 0) {
+    return c.json(apiError("not_found", `No circuit breaker found for '${body.slug}'`), 404);
+  }
+
+  return c.json({ reset: rows2[0] });
+});
+
+// ─── Capability reprice (admin-only) ────────────────────────────────────────
+// POST /v1/admin/reprice — update a capability's price_cents
+
+adminRoute.post("/reprice", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body?.slug || typeof body.slug !== "string" || typeof body.price_cents !== "number") {
+    return c.json(apiError("invalid_request", "slug and price_cents are required"), 400);
+  }
+
+  const db = getDb();
+  const result = await db.execute(sql`
+    UPDATE capabilities
+    SET price_cents = ${body.price_cents}
+    WHERE slug = ${body.slug}
+    RETURNING slug, price_cents
+  `);
+
+  const rows2 = toRows(result);
+  if (rows2.length === 0) {
+    return c.json(apiError("not_found", `Capability '${body.slug}' not found`), 404);
+  }
+
+  return c.json({ updated: rows2[0] });
+});
