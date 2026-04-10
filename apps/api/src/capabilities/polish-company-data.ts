@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { deriveVatPL } from "../lib/vat-derivation.js";
 
 // Polish company data via KRS API — FREE, no auth
 const KRS_API = "https://api-krs.ms.gov.pl/api/krs";
@@ -143,9 +144,19 @@ function parseKrsResponse(data: any, krsNumber: string, register: "P" | "S"): Re
     waluta = last?.waluta || "PLN";
   }
 
+  // NIP (tax ID) — extract from identyfikatory array, pick current entry
+  const idsRaw = dzial1?.danePodmiotu?.identyfikatory;
+  let nip: string | null = null;
+  if (Array.isArray(idsRaw)) {
+    const current = idsRaw.find((i: any) => !i.nrWpisuWykr) || idsRaw[idsRaw.length - 1];
+    nip = current?.identyfikatory?.nip || null;
+  }
+
   return {
     company_name: nazwa,
     krs_number: krsNumber,
+    nip: nip,
+    vat_number: nip ? deriveVatPL(nip) : null,
     register_type: register === "P" ? "commercial" : "associations",
     legal_form: forma,
     address: address || null,

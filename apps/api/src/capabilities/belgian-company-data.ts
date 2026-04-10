@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { deriveVatBE } from "../lib/vat-derivation.js";
 import {
   fetchRenderedHtml,
   htmlToText,
@@ -60,6 +61,11 @@ registerCapability("belgian-company-data", async (input: CapabilityInput) => {
     const name = await extractCompanyName(trimmed, "Belgian");
     output = await lookupCompany(name, false);
   }
+
+  // Derive VAT from enterprise number (KBO/BCE)
+  const regNum = (output.registration_number as string) ?? kbo ?? "";
+  const vat = deriveVatBE(regNum);
+  if (vat) output.vat_number = vat;
 
   return {
     output,

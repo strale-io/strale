@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchCompanyPage } from "./lib/web-provider.js";
 import { htmlToText } from "./lib/browserless-extract.js";
+import { deriveVatSE } from "../lib/vat-derivation.js";
 
 // ─── Org number detection ──────────────────────────────────────────────────────
 // Swedish org numbers: 10 digits, optionally with hyphen after 6th digit
@@ -360,6 +361,7 @@ registerCapability(
       output: {
         company_name: data.company_name,
         org_number: data.org_number,
+        vat_number: deriveVatSE(data.org_number || orgNumber),
         revenue_sek: data.revenue_sek,
         employees: data.employees,
         profit_sek: data.profit_sek,

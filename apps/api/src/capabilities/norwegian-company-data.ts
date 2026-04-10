@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { deriveVatNO } from "../lib/vat-derivation.js";
 
 // Brønnøysundregistrene public API (data.brreg.no)
 const BRREG_API = "https://data.brreg.no/enhetsregisteret/api";
@@ -88,6 +89,7 @@ async function fetchCompany(orgNumber: string): Promise<Record<string, unknown>>
     registration_date: data.registreringsdatoEnhetsregisteret || null,
     employee_count: data.antallAnsatte ?? null,
     status: data.konkurs ? "bankrupt" : data.underAvvikling ? "dissolving" : "active",
+    vat_number: deriveVatNO(String(data.organisasjonsnummer)),
   };
 }
 

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { deriveVatIT } from "../lib/vat-derivation.js";
 import {
   fetchRenderedHtml,
   htmlToText,
@@ -48,6 +49,11 @@ registerCapability("italian-company-data", async (input: CapabilityInput) => {
     const name = await extractCompanyName(trimmed, "Italian");
     output = await lookupCompany(name, false);
   }
+
+  // Derive VAT from Partita IVA / Codice Fiscale
+  const regNum = (output.registration_number as string) ?? piva ?? "";
+  const vat = deriveVatIT(regNum);
+  if (vat) output.vat_number = vat;
 
   return {
     output,

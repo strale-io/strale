@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { deriveVatDK } from "../lib/vat-derivation.js";
 
 // CVR API — Danish Central Business Register
 const CVR_API = "https://cvrapi.dk/api";
@@ -82,6 +83,7 @@ async function fetchCompany(
     start_date: data.startdate || null,
     employee_range: data.employees || null,
     status: data.enddate ? "ceased" : "active",
+    vat_number: deriveVatDK(String(data.vat || "")),
   };
 }
 

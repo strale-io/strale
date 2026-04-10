@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { deriveVatFI } from "../lib/vat-derivation.js";
 
 // PRH (Finnish Patent and Registration Office) open data API — new v3 endpoint
 const PRH_API = "https://avoindata.prh.fi/opendata-ytj-api/v3/companies";
@@ -128,6 +129,7 @@ async function fetchCompany(businessId: string): Promise<Record<string, unknown>
     registration_date: company.registrationDate || company.businessId?.registrationDate || null,
     website: company.website?.url || null,
     status: hasLiquidation ? "liquidation" : trStatus === "1" ? "active" : "inactive",
+    vat_number: deriveVatFI(company.businessId?.value || businessId),
   };
 }
 

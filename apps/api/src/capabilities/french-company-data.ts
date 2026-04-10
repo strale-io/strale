@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { deriveVatFR } from "../lib/vat-derivation.js";
 
 // French company data via recherche-entreprises.api.gouv.fr — FREE, no auth
 const API = "https://recherche-entreprises.api.gouv.fr";
@@ -58,6 +59,7 @@ async function searchCompany(query: string): Promise<Record<string, unknown>> {
     creation_date: c.date_creation || null,
     employee_range: c.tranche_effectif_salarie || null,
     status: c.etat_administratif === "A" ? "active" : c.etat_administratif === "C" ? "closed" : c.etat_administratif || "unknown",
+    vat_number: deriveVatFR(c.siren || ""),
     directors: (c.dirigeants || []).slice(0, 3).map((d: any) =>
       `${d.prenoms || ""} ${d.nom || ""}`.trim() + (d.qualite ? ` (${d.qualite})` : ""),
     ),

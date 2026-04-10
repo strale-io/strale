@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { deriveVatES } from "../lib/vat-derivation.js";
 import {
   fetchRenderedHtml,
   htmlToText,
@@ -74,9 +75,17 @@ registerCapability("spanish-company-data", async (input: CapabilityInput) => {
   const query = cif ?? await extractCompanyName(trimmed, "Spanish");
   const isCif = !!cif;
 
+  // Helper: add VAT derivation from CIF/NIF
+  const addVat = (output: Record<string, unknown>) => {
+    const regNum = (output.registration_number as string) ?? cif ?? "";
+    const vat = deriveVatES(regNum);
+    if (vat) output.vat_number = vat;
+    return output;
+  };
+
   // Primary: empresia.es
   try {
-    const output = await lookupViaEmpresia(query, isCif);
+    const output = addVat(await lookupViaEmpresia(query, isCif));
     return {
       output,
       provenance: { source: "empresia.es", fetched_at: new Date().toISOString() },
@@ -84,7 +93,7 @@ registerCapability("spanish-company-data", async (input: CapabilityInput) => {
   } catch (primaryErr) {
     // Fallback: infocif.es
     try {
-      const output = await lookupViaInfocif(query, isCif);
+      const output = addVat(await lookupViaInfocif(query, isCif));
       return {
         output,
         provenance: { source: "infocif.es", fetched_at: new Date().toISOString() },
