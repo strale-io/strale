@@ -449,8 +449,11 @@ doRoute.post(
     }
   }
 
-  // For unauthenticated requests, default to 0 (free-tier only)
-  const effectiveMaxPrice = maxPriceCents ?? 0;
+  // For unauthenticated requests, default to 0 (free-tier only).
+  // If the capability is progressively unlocked for this IP, allow its price through.
+  const preAuthIpHash = (c.get("requestContext" as any) as { ipHash?: string | null } | undefined)?.ipHash;
+  const isPreUnlocked = !user && capabilitySlug && preAuthIpHash && isUnlocked(preAuthIpHash, capabilitySlug);
+  const effectiveMaxPrice = maxPriceCents ?? (isPreUnlocked ? 10000 : 0);
 
   // ── 2. Idempotency check (authenticated only) ─────────────────────────
   const idempotencyKey = c.req.header("Idempotency-Key") || null;
