@@ -8,11 +8,16 @@ import { validateUrl } from "../lib/url-validator.js";
 const BLOCKED_SITE_HINTS: Record<string, string> = {
   "npmjs.com": "npmjs.com blocks automated access. Use the 'npm-package-info' capability instead to get package metadata.",
   "pypi.org": "pypi.org blocks automated scraping. Use the 'pypi-package-info' capability instead.",
-  "linkedin.com": "LinkedIn blocks all automated access. No workaround available.",
+  "linkedin.com": "LinkedIn blocks all automated access. Try 'linkedin-url-validate' to verify a LinkedIn profile URL exists.",
   "twitter.com": "Twitter/X blocks automated access. No workaround available.",
   "x.com": "Twitter/X blocks automated access. No workaround available.",
   "instagram.com": "Instagram blocks automated access. No workaround available.",
   "facebook.com": "Facebook blocks automated access. No workaround available.",
+  "coindesk.com": "CoinDesk blocks automated scraping. Try searching for the article title via 'google-search' instead.",
+  "bloomberg.com": "Bloomberg blocks automated access. Financial data may be available via other capabilities.",
+  "wsj.com": "Wall Street Journal blocks automated access (paywall + bot protection).",
+  "ft.com": "Financial Times blocks automated access (paywall + bot protection).",
+  "nytimes.com": "New York Times blocks automated access (paywall + bot protection).",
 };
 
 function getBlockedSiteHint(url: string): string | null {
@@ -53,11 +58,35 @@ async function tryPlainFetch(url: string): Promise<string | null> {
         }
         if (resp.status === 403) {
           throw new Error(
-            "This site exists but blocks automated access (HTTP 403). Many sites use bot protection that prevents content extraction. Try 'whois-lookup' or 'domain-reputation' for structured data about this domain instead.",
+            "This site blocks automated access (HTTP 403 Forbidden). " +
+            "This is bot protection on the target site, not a Strale issue. " +
+            "Alternatives: try 'dns-lookup' or 'domain-reputation' for structured data about this domain, " +
+            "or try a different page on the same site (e.g. /about, /blog).",
+          );
+        }
+        if (resp.status === 404) {
+          let hostname = "";
+          try { hostname = new URL(url).hostname; } catch { /* ignore */ }
+          throw new Error(
+            `This page does not exist (HTTP 404). The server at ${hostname || "this domain"} is reachable, ` +
+            "but this specific URL returned 'not found'. Check for typos in the path, or try the site's homepage instead.",
+          );
+        }
+        if (resp.status === 401 || resp.status === 407) {
+          throw new Error(
+            `This page requires authentication (HTTP ${resp.status}). ` +
+            "url-to-markdown can only access publicly available pages.",
+          );
+        }
+        if (resp.status === 429) {
+          throw new Error(
+            "This site is rate-limiting requests (HTTP 429). " +
+            "The target site has throttled access. Try again in a few minutes.",
           );
         }
         throw new Error(
-          `URL returned HTTP ${resp.status}. Check the URL is correct and publicly accessible.`,
+          `URL returned HTTP ${resp.status}. The server is reachable but returned an error. ` +
+          "Check the URL is correct and publicly accessible.",
         );
       }
       return null;
@@ -110,32 +139,66 @@ async function tryPlainFetch(url: string): Promise<string | null> {
   }
 }
 
-function mapBrowserlessError(msg: string): Error {
+function mapBrowserlessError(msg: string, url?: string): Error {
+  let hostname = "";
+  try { if (url) hostname = new URL(url).hostname; } catch { /* ignore */ }
+  const domainNote = hostname ? ` (${hostname})` : "";
+
   if (msg.includes("408") || msg.includes("timed out") || msg.includes("timeout")) {
     return new Error(
-      "This page took too long to load. It may use heavy JavaScript that prevents rendering. " +
-      "Try a simpler page, or try a static/blog page on the same site.",
+      `This page${domainNote} took too long to render (>30s). ` +
+      "Common causes: heavy JavaScript framework, server-side rendering delay, or the site is slow. " +
+      "Try a simpler page on the same site (e.g. /about or /blog), or try 'dns-lookup' to verify the domain is responsive.",
     );
   }
   if (msg.includes("403") || msg.includes("Forbidden")) {
+    const hint = url ? getBlockedSiteHint(url) : null;
     return new Error(
-      "This site blocks automated access (HTTP 403). " +
-      "Many sites use bot protection that prevents content extraction. Try a different URL.",
+      hint ?? (
+        `This site${domainNote} blocks automated access (HTTP 403 Forbidden). ` +
+        "This is bot protection on the target site, not a Strale issue. " +
+        "Alternatives: 'dns-lookup' or 'domain-reputation' for structured data about this domain."
+      ),
     );
   }
-  if (msg.includes("Could not reach") || msg.includes("ENOTFOUND") || msg.includes("getaddrinfo")) {
+  if (msg.includes("ERR_NAME_NOT_RESOLVED") || msg.includes("ENOTFOUND") || msg.includes("getaddrinfo")) {
     return new Error(
-      "Could not reach this URL. The domain may not exist or may be temporarily down. " +
-      "Check the URL and try again.",
+      `The domain${domainNote} does not exist or has no DNS records. ` +
+      "Check the spelling. Use 'dns-lookup' to verify whether the domain resolves.",
+    );
+  }
+  if (msg.includes("Could not reach") || msg.includes("ECONNREFUSED") || msg.includes("ECONNRESET")) {
+    return new Error(
+      `Could not connect to${domainNote}. The domain exists but the server is not responding. ` +
+      "It may be temporarily down or blocking connections. Try again later.",
     );
   }
   if (msg.includes("empty or too-short")) {
     return new Error(
-      "This page returned no readable content. It may require authentication or " +
-      "use client-side rendering that we cannot process.",
+      `This page${domainNote} returned no readable content. ` +
+      "Possible causes: the page requires login, uses a JavaScript framework that blocks extraction, " +
+      "or the content is behind a cookie consent wall.",
     );
   }
-  return new Error(`Failed to fetch page content: ${msg.slice(0, 200)}`);
+  if (msg.includes("Failed to launch") || msg.includes("EAGAIN") || msg.includes("spawn")) {
+    // Browserless infrastructure issue — don't expose internals
+    return new Error(
+      `Could not render this page${domainNote}. Our rendering service is temporarily at capacity. ` +
+      "This is a Strale infrastructure issue, not a problem with the target site. Try again in a few seconds.",
+    );
+  }
+  if (msg.includes("net::ERR_")) {
+    // Chrome network errors
+    const errCode = msg.match(/net::(ERR_[A-Z_]+)/)?.[1] ?? "ERR_UNKNOWN";
+    return new Error(
+      `Network error loading${domainNote}: ${errCode}. ` +
+      "The page could not be loaded by our rendering engine. " +
+      "Check that the URL is correct and the site is publicly accessible.",
+    );
+  }
+  return new Error(
+    `Could not extract content from this page${domainNote}. ${msg.slice(0, 150)}`,
+  );
 }
 
 /** Post-process markdown to strip links/images if requested. */
@@ -201,7 +264,7 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   try {
     browserlessHtml = await fetchRenderedHtml(fullUrl);
   } catch (err) {
-    throw mapBrowserlessError(err instanceof Error ? err.message : String(err));
+    throw mapBrowserlessError(err instanceof Error ? err.message : String(err), fullUrl);
   }
 
   const result = htmlToCleanMarkdown(browserlessHtml, fullUrl);
