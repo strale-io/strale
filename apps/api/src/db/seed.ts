@@ -400,10 +400,10 @@ const seedCapabilities = [
   {
     name: "German Company Data",
     slug: "german-company-data",
-    description: "Look up German company data from the Handelsregister. Accepts HRB/HRA number or fuzzy company name.",
+    description: "Look up German company data from the Handelsregister. Accepts HRB/HRA number with court (Registergericht), or a fuzzy company name.",
     category: "data-extraction",
-    inputSchema: { type: "object", properties: { hrb_number: { type: "string", description: "Handelsregister number (e.g. HRB 86891) or company name" } }, required: ["hrb_number"] },
-    outputSchema: { type: "object", properties: { company_name: { type: "string" }, registration_number: { type: "string" }, business_type: { type: "string" }, address: { type: "string" }, status: { type: "string" } } },
+    inputSchema: { type: "object", properties: { hrb_number: { type: "string", description: "Handelsregister number (e.g. HRB 2001). Requires 'court' field." }, court: { type: "string", description: "Registergericht (e.g. Amtsgericht Landsberg a. Lech). Required with hrb_number — HRB/HRA are per-court, not globally unique." }, company_name: { type: "string", description: "Company name for fuzzy search (alternative to hrb_number)" } }, required: [] },
+    outputSchema: { type: "object", properties: { company_name: { type: "string" }, registration_number: { type: "string" }, business_type: { type: "string" }, address: { type: "string" }, status: { type: "string" }, court_used: { type: "string" } } },
     priceCents: 80,
   },
   {
