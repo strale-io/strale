@@ -10,17 +10,7 @@ const resolveMx = promisify(dnsResolve).bind(null) as unknown as (
 // Comprehensive email regex (RFC 5322 simplified)
 const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
-// Common disposable email domains
-const DISPOSABLE_DOMAINS = new Set([
-  "mailinator.com", "guerrillamail.com", "guerrillamail.de", "grr.la",
-  "guerrillamail.net", "guerrillamail.org", "sharklasers.com", "guerrilla.ml",
-  "tempmail.com", "throwaway.email", "temp-mail.org", "yopmail.com",
-  "yopmail.fr", "cool.fr.nf", "jetable.fr.nf", "nospam.ze.tc",
-  "trashmail.com", "trashmail.me", "trashmail.net", "maildrop.cc",
-  "dispostable.com", "mailnesia.com", "mintemail.com", "tempail.com",
-  "tempr.email", "10minutemail.com", "mohmal.com", "burnermail.io",
-  "guerrillamailblock.com",
-]);
+import { DISPOSABLE_DOMAINS } from "../lib/disposable-domains.js";
 
 // Common role-based prefixes
 const ROLE_PREFIXES = new Set([

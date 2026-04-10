@@ -7,6 +7,7 @@ import {
   transactions,
   failedRequests,
   capabilities,
+  users,
 } from "../db/schema.js";
 import { checkMilestone } from "../lib/milestones.js";
 import { optionalAuthMiddleware, getClientIp, hashIp } from "../lib/middleware.js";
@@ -41,6 +42,7 @@ import {
   verifyX402Payment,
   extractPaymentHeader,
 } from "../lib/x402-gateway.js";
+import { recordUnlock, isUnlocked, getUnlockedSlugs } from "../lib/progressive-unlock.js";
 import type { AppEnv } from "../types.js";
 
 // Usage/cost headers for Beacon transactability
@@ -96,6 +98,12 @@ function buildUpgradeBlock(capabilitySlug: string, input?: Record<string, unknow
   return {
     message: nudge?.message ?? "You're using a free capability. Sign up for €2 free credits to access 270+ paid capabilities — company data, compliance checks, Web3 security, and more.",
     signup_url: "https://strale.dev/signup",
+    self_signup: {
+      url: "https://api.strale.io/v1/signup",
+      method: "POST",
+      body: { email: "your-agent@yourdomain.com" },
+      description: "Create an account programmatically and get €2 free credits.",
+    },
     paid_examples: nudge?.examples ?? FALLBACK_EXAMPLES[capabilitySlug] ?? DEFAULT_EXAMPLES,
     x402_note: "Or pay per call with USDC on Base — no signup needed. Try: GET https://api.strale.io/x402/catalog",
   };
@@ -493,6 +501,11 @@ doRoute.post(
       .limit(1);
 
     if (lookedUp && lookedUp.isActive && !lookedUp.isFreeTier) {
+      // Check progressive unlock before rejecting (DEC-20260410-A)
+      const reqIpHash = (c.get("requestContext" as any) as { ipHash?: string | null } | undefined)?.ipHash;
+      if (reqIpHash && isUnlocked(reqIpHash, capabilitySlug)) {
+        // Treat as free-tier — fall through to matching + execution
+      } else {
       // Check for x402 payment header
       const paymentHeader = extractPaymentHeader(c.req.raw.headers);
 
@@ -527,8 +540,15 @@ doRoute.post(
           message: "This capability requires an API key. Sign up at strale.dev/signup for full access with €2 free credits.",
           free_capabilities: freeSlugs,
           hint: `These ${freeSlugs.length} capabilities are free with no signup — try them without an API key.`,
+          self_signup: {
+            url: "https://api.strale.io/v1/signup",
+            method: "POST",
+            body: { email: "your-agent@yourdomain.com" },
+            description: "Create an account programmatically and get €2 free credits. Requires at least one prior free-tier call from this IP.",
+          },
         }, 401);
       }
+      } // close progressive unlock else
     }
   }
 
@@ -852,8 +872,13 @@ doRoute.post(
     return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, sqs, freshness, dual);
   }
 
-  // Free-tier without auth: enforce daily cap (DB-based, restart-safe)
-  if (!user && isFreeTier) {
+  // Free-tier or progressively unlocked: enforce daily cap (DB-based, restart-safe)
+  const reqCtxForUnlock = c.get("requestContext" as any) as { ipHash?: string | null } | undefined;
+  const isUnlockedForIp = !user && !isFreeTier && reqCtxForUnlock?.ipHash
+    ? isUnlocked(reqCtxForUnlock.ipHash, capability.slug)
+    : false;
+
+  if (!user && (isFreeTier || isUnlockedForIp)) {
     const reqCtx = c.get("requestContext" as any) as { ipHash?: string | null; fingerprintHash?: string | null } | undefined;
     const ipHash = reqCtx?.ipHash ?? null;
     const fpHash = reqCtx?.fingerprintHash ?? null;
@@ -941,6 +966,42 @@ async function getFreeTierUsageToday(
     }
   }
   return { count: 0, identifiedBy: "none" };
+}
+
+// Build usage summary for conversion emails (DEC-20260410-A)
+async function buildUsageSummaryForUser(db: ReturnType<typeof getDb>, userId: string) {
+  const [userRow] = await db
+    .select({ createdAt: users.createdAt })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  const daysSinceSignup = userRow
+    ? Math.max(1, Math.ceil((Date.now() - new Date(userRow.createdAt).getTime()) / 86_400_000))
+    : 1;
+
+  const rows = await db.execute(
+    sql`SELECT capability_slug, COUNT(*)::int AS count
+        FROM transactions
+        WHERE user_id = ${userId} AND status = 'completed'
+        GROUP BY capability_slug
+        ORDER BY count DESC
+        LIMIT 10`,
+  );
+  const capRows = Array.isArray(rows) ? rows : (rows as any)?.rows ?? [];
+
+  const totalCalls = capRows.reduce((sum: number, r: any) => sum + (r.count ?? 0), 0);
+  const [spentRow] = await db
+    .select({ total: sql<number>`COALESCE(SUM(${transactions.priceCents}), 0)::int` })
+    .from(transactions)
+    .where(and(eq(transactions.userId, userId), eq(transactions.status, "completed")));
+
+  return {
+    totalCalls,
+    daysSinceSignup,
+    topCapabilities: capRows.map((r: any) => ({ slug: r.capability_slug, count: r.count })),
+    totalSpentCents: spentRow?.total ?? 0,
+  };
 }
 
 function buildUsageBlock(callsToday: number, cap: number): Record<string, unknown> {
@@ -1042,6 +1103,11 @@ async function executeFreeTier(
     const { count: callsToday, identifiedBy } = await getFreeTierUsageToday(db, reqCtx?.ipHash ?? null, reqCtx?.fingerprintHash ?? null);
     const usageCap = identifiedBy === "fingerprint" ? FREE_TIER_FINGERPRINT_LIMIT : FREE_TIER_DAILY_LIMIT;
 
+    // Progressive unlock: record + include in response (DEC-20260410-A)
+    const ipHashForUnlock = reqCtx?.ipHash ?? null;
+    const newlyUnlocked = ipHashForUnlock ? recordUnlock(ipHashForUnlock, capability.slug) : [];
+    const allUnlocked = ipHashForUnlock ? getUnlockedSlugs(ipHashForUnlock) : [];
+
     return c.json({
       result: {
         transaction_id: txnRecord.id,
@@ -1058,6 +1124,13 @@ async function executeFreeTier(
       },
       free_tier: true,
       usage: buildUsageBlock(callsToday, usageCap),
+      ...(allUnlocked.length > 0 ? {
+        unlocked: {
+          capabilities: allUnlocked,
+          message: `${newlyUnlocked.length > 0 ? newlyUnlocked.length + " new capabilities unlocked. " : ""}These capabilities are free for you for 24 hours — no signup needed.`,
+          ttl_hours: 24,
+        },
+      } : {}),
       upgrade: buildUpgradeBlock(capability.slug, executionInput, capResult.output as Record<string, unknown>),
     });
   } catch (err) {
@@ -1479,6 +1552,7 @@ async function executeSync(
           wallet_balance_cents: result.balance,
           required_cents: result.required,
           topup_url: "/v1/wallet/topup",
+          x402_fallback: `This capability is also available via x402 pay-per-call (USDC on Base). GET https://api.strale.io/x402/${capability.slug}`,
         },
       ),
       402,
@@ -1530,6 +1604,26 @@ async function executeSync(
     .catch(() => {});
 
   const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
+
+  // Low-balance / zero-balance conversion emails (DEC-20260410-A, fire-and-forget)
+  const LOW_BALANCE_THRESHOLD = 50; // €0.50
+  const balanceBefore = result.balanceAfter + capability.priceCents;
+  const userEmail = (user as any).email as string | undefined;
+  if (userEmail && result.balanceAfter <= 0 && balanceBefore > 0) {
+    // Just crossed zero
+    import("../lib/conversion-emails.js").then(({ sendZeroBalanceEmail }) =>
+      buildUsageSummaryForUser(db, user.id).then((usage) =>
+        sendZeroBalanceEmail(userEmail, usage),
+      ),
+    ).catch(() => {});
+  } else if (userEmail && result.balanceAfter <= LOW_BALANCE_THRESHOLD && balanceBefore > LOW_BALANCE_THRESHOLD) {
+    // Just crossed low-balance threshold
+    import("../lib/conversion-emails.js").then(({ sendLowBalanceEmail }) =>
+      buildUsageSummaryForUser(db, user.id).then((usage) =>
+        sendLowBalanceEmail(userEmail, result.balanceAfter, usage),
+      ),
+    ).catch(() => {});
+  }
 
   setCreditsHeaders(c, result.balanceAfter, capability.priceCents);
   return c.json({

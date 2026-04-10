@@ -1,14 +1,16 @@
 import { Hono } from "hono";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, gte } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { users, wallets, walletTransactions } from "../db/schema.js";
+import { users, wallets, walletTransactions, transactions } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { apiError } from "../lib/errors.js";
 import { authMiddleware, getClientIp, hashIp } from "../lib/middleware.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sendWebhook } from "../lib/webhook.js";
 import { sendWelcomeEmail, sendRecoveryEmail } from "../lib/welcome-email.js";
+import { DISPOSABLE_DOMAINS } from "../lib/disposable-domains.js";
 import type { AppEnv } from "../types.js";
+import type { Context } from "hono";
 
 const TRIAL_CREDITS_CENTS = 200; // €2.00 per DEC-10
 
@@ -202,3 +204,146 @@ authRoute.post("/api-key", authMiddleware, async (c) => {
     key_prefix: newPrefix,
   });
 });
+
+// ── Agent self-signup (DEC-20260410-A) ────────────────────────────────────────
+// POST /v1/signup — autonomous agent signup. Returns API key + €2 instantly.
+// Mounted at /v1/signup in app.ts (not under /v1/auth).
+
+export async function agentSignupHandler(c: Context) {
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body.email !== "string" || !body.email.includes("@")) {
+    return c.json(
+      apiError("invalid_request", "A valid email address is required. Use your operator's real email — this is where usage reports and low-balance alerts are sent.", {
+        field: "email",
+      }),
+      400,
+    );
+  }
+
+  const email = body.email.trim().toLowerCase();
+  const domain = email.split("@")[1] ?? "";
+
+  // Reject disposable email domains
+  if (DISPOSABLE_DOMAINS.has(domain)) {
+    return c.json(
+      apiError("invalid_request", "Disposable email addresses are not accepted. Use your operator's real email address."),
+      400,
+    );
+  }
+
+  // MX validation — ensure the email domain can receive mail
+  try {
+    const dns = await import("node:dns/promises");
+    const mx = await dns.resolveMx(domain).catch(() => []);
+    if (mx.length === 0) {
+      return c.json(
+        apiError("invalid_request", `No mail server found for ${domain}. Use an email address that can receive mail.`),
+        400,
+      );
+    }
+  } catch {
+    // DNS failure is non-fatal — allow signup to proceed
+  }
+
+  const db = getDb();
+  const clientIp = getClientIp(c);
+  const ipHash = clientIp !== "unknown" ? hashIp(clientIp) : null;
+
+  // Require at least 1 successful free-tier call from this IP
+  if (ipHash) {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const [usage] = await db
+      .select({ cnt: sql<number>`COUNT(*)::int` })
+      .from(transactions)
+      .where(and(
+        sql`${transactions.userId} IS NULL`,
+        eq(transactions.isFreeTier, true),
+        eq(transactions.status, "completed"),
+        sql`${transactions.auditTrail}->'request_context'->>'ipHash' = ${ipHash}`,
+        gte(transactions.createdAt, sevenDaysAgo),
+      ));
+
+    if ((usage?.cnt ?? 0) === 0) {
+      return c.json(
+        apiError("unauthorized", "Make at least one free-tier API call before signing up. Try: POST /v1/do with capability_slug 'email-validate'.", {
+          free_capabilities: ["email-validate", "dns-lookup", "iban-validate", "url-to-markdown", "json-repair"],
+        }),
+        403,
+      );
+    }
+  }
+
+  // Check if email already registered
+  const existing = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return c.json(
+      apiError("invalid_request", "An account with this email already exists. Use POST /v1/auth/recover to get a new API key."),
+      409,
+    );
+  }
+
+  // Flag for review if 3+ signups from same IP this week
+  let flaggedForReview = false;
+  if (ipHash) {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const [ipSignups] = await db
+      .select({ cnt: sql<number>`COUNT(*)::int` })
+      .from(users)
+      .where(and(
+        eq(users.signupIpHash, ipHash),
+        gte(users.createdAt, sevenDaysAgo),
+      ));
+    if ((ipSignups?.cnt ?? 0) >= 2) {
+      flaggedForReview = true;
+    }
+  }
+
+  // Create account (same as register)
+  const apiKey = generateApiKey();
+  const apiKeyHash = hashApiKey(apiKey);
+  const keyPrefix = getKeyPrefix(apiKey);
+
+  const [user] = await db
+    .insert(users)
+    .values({ email, apiKeyHash, keyPrefix, signupIpHash: ipHash })
+    .returning({ id: users.id, email: users.email });
+
+  const [wallet] = await db
+    .insert(wallets)
+    .values({ userId: user.id, balanceCents: TRIAL_CREDITS_CENTS })
+    .returning({ id: wallets.id });
+
+  await db.insert(walletTransactions).values({
+    walletId: wallet.id,
+    amountCents: TRIAL_CREDITS_CENTS,
+    type: "trial_credit",
+    description: "Welcome trial credits (agent self-signup)",
+  });
+
+  // Fire-and-forget webhook
+  sendWebhook({
+    event: "user.signup",
+    user: { email: user.email, created_at: new Date().toISOString() },
+    source: "agent_self_signup",
+    flagged_for_review: flaggedForReview,
+    ...(flaggedForReview ? { flag_reason: "3+ signups from same IP this week" } : {}),
+  }).catch(() => {});
+
+  // Fire-and-forget welcome email
+  sendWelcomeEmail(user.email, apiKey).catch(() => {});
+
+  console.log(`[agent-signup] email=${email} ip=${clientIp} flagged=${flaggedForReview} timestamp=${new Date().toISOString()}`);
+
+  return c.json({
+    api_key: apiKey,
+    balance_cents: TRIAL_CREDITS_CENTS,
+    message: `Account created. You have €${(TRIAL_CREDITS_CENTS / 100).toFixed(2)} in credits.`,
+    next_step: `Add "Authorization: Bearer ${apiKey}" to your requests to access 270+ paid capabilities.`,
+    top_up: "POST /v1/wallet/topup with amount_cents (min 1000) to add more credits.",
+  }, 201);
+}

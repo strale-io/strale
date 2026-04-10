@@ -10,16 +10,26 @@ See .claude/PROTOCOL.md for full criteria and protocol definitions.
 
 ### Notion Access (REQUIRED)
 - Project Home: https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
-- Roadmap (SINGLE task list): https://www.notion.so/31c67c87-082c-819c-a238-c0ae01957a69
-- Decisions DB: 5e1a81ee-7b9f-4d3c-b58d-c8d97ae6386c
-- Notion Governance Protocol: https://www.notion.so/31c67c87-082c-8173-9ca7-dcbe054f940e
+- To-do & Build Plan: https://www.notion.so/33c67c87-082c-81c3-a72b-cc59b10ff4ac
+- Decisions DB: ea57671f-7167-44e4-a254-c0a1de79e7f9
+- Governance: How we work > How this workspace works (33c67c87-082c-81ea-8417-c4a701d68611)
+
+### Notion Workspace Structure (8 sections under Project Home)
+1. 🏠 Start Here — overview + navigation
+2. 🎯 Strategy — what Strale is, the problem, opportunity, competitive landscape, business model
+3. 🛠️ Products — SQS, Audit Trail, Discovery, Capabilities & solutions, Feature Registry DB
+4. ✅ To-do & Build Plan — THE ONLY task list (To-do DB + Deferred DB)
+5. 📣 Go-to-market — distribution surfaces, activation funnel, brand & voice, social media, Social Media Posts DB
+6. 🔧 Internals — testing system, testing rules, onboarding pipeline, bug fix framework, tech stack
+7. 📓 Journal — session logs, brainstorms, analyses (Journal DB)
+8. ⚙️ How we work — working rules, governance, Decisions DB, Glossary DB
 
 ### Notion Governance Rules (enforced)
-- ONE canonical page per topic — never create v2, update existing
-- Research pages go directly to Research Archive, not Project Home
-- Roadmap is THE ONLY task list — no priorities in other pages
-- Handoffs archived after absorbed into Roadmap
-- Superseded pages archived same session
+- **Check before creating** — look at the page directory before creating any new page
+- ONE page per topic — never create v2, update existing subpage
+- Brainstorms go to Journal DB, not as standalone pages
+- To-do DB is THE ONLY task list — action items never live in prose
+- Superseded pages archived same session (prefix + move to archive)
 - Search existing pages before creating new ones
 
 ### GitHub Access (REQUIRED)
@@ -134,7 +144,7 @@ Free-tier: 5 capabilities (email-validate, dns-lookup, json-repair, url-to-markd
 
 Testing: test_suites table has `test_mode` column: `live` (calls real API), `fixture` (uses saved data, €0 external cost), `canary` (periodic live check at reduced frequency). `external_cost_cents` tracks estimated external API cost per test execution.
 
-Stripe is in SANDBOX mode — live key activation pending.
+Stripe is LIVE in production (sk_live_ key on Railway). Local .env uses sk_test_ for development.
 
 ### Adding New Capabilities (MANDATORY PIPELINE)
 

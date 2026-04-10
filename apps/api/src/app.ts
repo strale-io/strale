@@ -8,7 +8,7 @@ import { doRoute } from "./routes/do.js";
 import { capabilitiesRoute } from "./routes/capabilities.js";
 import { walletRoute } from "./routes/wallet.js";
 import { transactionsRoute } from "./routes/transactions.js";
-import { authRoute } from "./routes/auth.js";
+import { authRoute, agentSignupHandler } from "./routes/auth.js";
 import { webhookRoute } from "./routes/webhook.js";
 import { demandSignalsRoute } from "./routes/demand-signals.js";
 import { mcpRoute } from "./routes/mcp.js";
@@ -194,6 +194,7 @@ app.route("/v1/capabilities", capabilitiesRoute);
 app.route("/v1/wallet", walletRoute);
 app.route("/v1/transactions", transactionsRoute);
 app.route("/v1/auth", authRoute);
+app.post("/v1/signup", rateLimitByIp(1, 86_400_000), agentSignupHandler); // DEC-20260410-A: 1/day per IP
 app.route("/v1/demand-signals", demandSignalsRoute);
 app.route("/v1/admin", adminRoute);
 app.route("/v1/solutions", solutionsRoute);
