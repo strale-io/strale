@@ -3,6 +3,25 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 const VIES_URL =
   "https://ec.europa.eu/taxation_customs/vies/services/checkVatService";
 
+// 24h cache for successful VIES responses. VIES is slow (~2-3s) and
+// unreliable. Cached results are served when VIES is down or slow,
+// marked with cache_hit: true so callers know the data age.
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+interface CachedResult {
+  output: Record<string, unknown>;
+  cachedAt: number;
+}
+
+const viesCache = new Map<string, CachedResult>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of viesCache) {
+    if (now - entry.cachedAt > CACHE_TTL_MS) viesCache.delete(key);
+  }
+}, 60_000).unref();
+
 /**
  * Parse a VAT number into country code + number.
  * Accepts: "SE556703748501", "SE 556703748501", "se556703748501"
@@ -61,42 +80,86 @@ registerCapability("vat-validate", async (input: CapabilityInput) => {
     );
   }
 
+  const cacheKey = `${parsed.countryCode}:${parsed.number}`;
+  const cached = viesCache.get(cacheKey);
+
+  // Serve fresh cache hit immediately (< 24h old)
+  if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+    return {
+      output: { ...cached.output, cache_hit: true, cached_at: new Date(cached.cachedAt).toISOString() },
+      provenance: {
+        source: "ec.europa.eu/taxation_customs/vies (cached)",
+        fetched_at: new Date(cached.cachedAt).toISOString(),
+      },
+    };
+  }
+
   const soapBody = buildSoapRequest(parsed.countryCode, parsed.number);
 
   // VIES is unreliable — retry once on transient errors (MS_MAX_CONCURRENT_REQ, timeouts)
   let xml = "";
+  let viesError: Error | null = null;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const response = await fetch(VIES_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/xml; charset=utf-8",
-        SOAPAction: "",
-      },
-      body: soapBody,
-      signal: AbortSignal.timeout(15000),
-    });
+    try {
+      const response = await fetch(VIES_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/xml; charset=utf-8",
+          SOAPAction: "",
+        },
+        body: soapBody,
+        signal: AbortSignal.timeout(15000),
+      });
 
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      const faultString = extractTag(text, "faultstring");
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        const faultString = extractTag(text, "faultstring");
+        if (faultString) {
+          if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
+          viesError = new Error(`VIES error: ${faultString}`);
+          break;
+        }
+        if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
+        viesError = new Error(`VIES API returned HTTP ${response.status}`);
+        break;
+      }
+
+      xml = await response.text();
+
+      // Check for SOAP fault in 200 response (e.g. MS_MAX_CONCURRENT_REQ)
+      const faultString = extractTag(xml, "faultstring");
       if (faultString) {
         if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
-        throw new Error(`VIES error: ${faultString}`);
+        viesError = new Error(`VIES error: ${faultString}`);
+        break;
       }
+
+      break; // success
+    } catch (err) {
       if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
-      throw new Error(`VIES API returned HTTP ${response.status}`);
+      viesError = err instanceof Error ? err : new Error(String(err));
+      break;
     }
+  }
 
-    xml = await response.text();
-
-    // Check for SOAP fault in 200 response (e.g. MS_MAX_CONCURRENT_REQ)
-    const faultString = extractTag(xml, "faultstring");
-    if (faultString) {
-      if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
-      throw new Error(`VIES error: ${faultString}`);
+  // If VIES failed but we have a stale cache entry, serve it rather than erroring
+  if (viesError || !xml) {
+    if (cached) {
+      return {
+        output: {
+          ...cached.output,
+          cache_hit: true,
+          cached_at: new Date(cached.cachedAt).toISOString(),
+          stale: true,
+          stale_reason: viesError?.message ?? "VIES unavailable",
+        },
+        provenance: {
+          source: "ec.europa.eu/taxation_customs/vies (stale cache, VIES unavailable)",
+          fetched_at: new Date(cached.cachedAt).toISOString(),
+        },
+      };
     }
-
-    break; // success
+    throw viesError ?? new Error("VIES did not return a response.");
   }
 
   const valid = extractTag(xml, "valid") === "true";
@@ -104,15 +167,20 @@ registerCapability("vat-validate", async (input: CapabilityInput) => {
   const address = extractTag(xml, "address") || "";
   const requestDate = extractTag(xml, "requestDate") || "";
 
+  const output = {
+    valid,
+    country_code: parsed.countryCode,
+    vat_number: `${parsed.countryCode}${parsed.number}`,
+    company_name: name === "---" ? "" : name,
+    company_address: address === "---" ? "" : address,
+    request_date: requestDate,
+  };
+
+  // Cache successful responses
+  viesCache.set(cacheKey, { output, cachedAt: Date.now() });
+
   return {
-    output: {
-      valid,
-      country_code: parsed.countryCode,
-      vat_number: `${parsed.countryCode}${parsed.number}`,
-      company_name: name === "---" ? "" : name,
-      company_address: address === "---" ? "" : address,
-      request_date: requestDate,
-    },
+    output,
     provenance: {
       source: "ec.europa.eu/taxation_customs/vies",
       fetched_at: new Date().toISOString(),
