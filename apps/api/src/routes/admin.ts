@@ -624,3 +624,39 @@ adminRoute.get("/platform-status", async (c) => {
     },
   });
 });
+
+// ─── Capability schema patch (admin-only) ───────────────────────────────────
+// PATCH /v1/admin/capability-schema — update input_schema and/or description
+// for a capability. Used when the handler changes input requirements but the
+// DB schema needs a manual patch (e.g., adding court to german-company-data).
+
+adminRoute.patch("/capability-schema", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body?.slug || typeof body.slug !== "string") {
+    return c.json(apiError("invalid_request", "slug is required"), 400);
+  }
+  if (!body.input_schema && !body.description) {
+    return c.json(apiError("invalid_request", "Provide input_schema and/or description"), 400);
+  }
+
+  const db = getDb();
+  const slug = body.slug;
+  const inputSchema = body.input_schema ? JSON.stringify(body.input_schema) : null;
+  const description = body.description ?? null;
+
+  const result = await db.execute(sql`
+    UPDATE capabilities
+    SET
+      input_schema = COALESCE(${inputSchema}::jsonb, input_schema),
+      description = COALESCE(${description}, description)
+    WHERE slug = ${slug}
+    RETURNING slug, input_schema, description
+  `);
+
+  const rows2 = toRows(result);
+  if (rows2.length === 0) {
+    return c.json(apiError("not_found", `Capability '${slug}' not found`), 404);
+  }
+
+  return c.json({ updated: rows2[0] });
+});
