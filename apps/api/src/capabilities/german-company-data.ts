@@ -51,15 +51,20 @@ registerCapability("german-company-data", async (input: CapabilityInput) => {
     );
   }
 
-  // Build search query: include court for disambiguation
-  const searchQuery = isRegNumber && court
-    ? `${raw} ${court}`
-    : raw;
+  // Search northdata — append court city to query for better ranking.
+  // Northdata's path search uses the full query for matching, so
+  // "HRB 2001 Landsberg" will rank a Landsberg company higher than
+  // just "HRB 2001" which picks arbitrarily.
+  let searchQuery = raw;
+  if (isRegNumber && court) {
+    const courtCity = court.replace(/^Amtsgericht\s+/i, "").trim();
+    searchQuery = `${raw} ${courtCity}`;
+  }
 
   const output = await searchNorthdata(searchQuery, "Germany", {
     company_name: companyName || null,
     registration_number: isRegNumber ? (hrbNumber || raw) : null,
-  }) as unknown as Record<string, unknown>;
+  }, court || undefined) as unknown as Record<string, unknown>;
 
   // Add court_used to output for transparency
   if (court) {

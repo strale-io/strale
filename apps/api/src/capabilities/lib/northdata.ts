@@ -134,6 +134,7 @@ export async function searchNorthdata(
   query: string,
   countryFilter?: string,
   userInput?: { company_name?: string | null; registration_number?: string | null },
+  courtFilter?: string,
 ): Promise<NorthdataCompany> {
   // Path-style search (not ?q= which returns broken results)
   const searchUrl = `https://www.northdata.com/${encodeURIComponent(query)}`;
@@ -158,9 +159,18 @@ export async function searchNorthdata(
     throw new Error(`No company found matching "${query}" on northdata.com.`);
   }
 
-  // Prefer country-specific result
+  // Prefer court-specific result (German HRB disambiguation), then country
   let bestMatch = results[0];
-  if (countryFilter) {
+  if (courtFilter) {
+    // Extract city from court name: "Amtsgericht München" → "München"
+    const courtCity = courtFilter.replace(/^Amtsgericht\s+/i, "").trim();
+    // Check both the result title and URL for court/city match
+    const courtMatch = results.find(([, url, title]) =>
+      title.includes(courtCity) || url.includes(encodeURIComponent(courtCity)) ||
+      url.toLowerCase().includes(courtFilter.toLowerCase().replace(/\s+/g, "%20")),
+    );
+    if (courtMatch) bestMatch = courtMatch;
+  } else if (countryFilter) {
     const countryMatch = results.find(([, , title]) => title.includes(countryFilter));
     if (countryMatch) bestMatch = countryMatch;
   }
