@@ -1,15 +1,15 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 /**
- * Dutch energy performance label lookup via EP-Online.
+ * Dutch energy performance label lookup via EP-Online REST API v5.
  * Requires EP_ONLINE_API_KEY env var (free registration at apikey.ep-online.nl).
- * Returns energy label grade (A++++–G), registration number, and validity.
+ * Returns energy class (A–G), energy index, CO2 emissions, and building details.
  */
 
 registerCapability("nl-energy-label", async (input: CapabilityInput) => {
   const postcode = ((input.postcode as string) ?? "").trim().replace(/\s+/g, "").toUpperCase();
   const huisnummer = String(input.huisnummer ?? input.house_number ?? "").trim();
-  const huisletter = ((input.huisletter as string) ?? "").trim().toUpperCase();
+  const huisletter = ((input.huisletter as string) ?? "").trim().toLowerCase();
   const toevoeging = ((input.toevoeging ?? input.huisnummertoevoeging) as string ?? "").trim();
   const bagId = ((input.bag_id ?? input.pand_id) as string ?? "").trim();
 
@@ -30,20 +30,20 @@ registerCapability("nl-energy-label", async (input: CapabilityInput) => {
     );
   }
 
-  // EP-Online API v2: search by postcode + huisnummer or BAG ID
+  // EP-Online REST API v5
   let url: string;
   if (bagId) {
-    url = `https://public.ep-online.nl/api/v2/PandEnergielabel/Adres/${encodeURIComponent(bagId)}`;
+    url = `https://public.ep-online.nl/api/v5/PandEnergielabel/AdresseerbaarObject/${encodeURIComponent(bagId)}`;
   } else {
-    const params = new URLSearchParams({ Postcode: postcode, Huisnummer: huisnummer });
-    if (huisletter) params.set("Huisletter", huisletter);
-    if (toevoeging) params.set("HuisnummerToevoeging", toevoeging);
-    url = `https://public.ep-online.nl/api/v2/PandEnergielabel/Adres?${params}`;
+    const params = new URLSearchParams({ postcode, huisnummer });
+    if (huisletter) params.set("huisletter", huisletter);
+    if (toevoeging) params.set("huisnummertoevoeging", toevoeging);
+    url = `https://public.ep-online.nl/api/v5/PandEnergielabel/Adres?${params}`;
   }
 
   const resp = await fetch(url, {
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: apiKey,
       Accept: "application/json",
     },
     signal: AbortSignal.timeout(10000),
@@ -75,21 +75,26 @@ registerCapability("nl-energy-label", async (input: CapabilityInput) => {
 
   return {
     output: {
-      postcode: postcode || null,
-      huisnummer: huisnummer || null,
-      energy_label: label.Energielabel ?? label.labelLetter ?? label.energieprestatieIndicator,
-      energy_index: label.EnergieIndex ?? label.energieIndex ?? null,
-      registration_number: label.RegistratieNummer ?? label.opnameNummer ?? null,
-      registration_date: label.RegistratieDatum ?? label.afmelddatum ?? null,
-      valid_until: label.GeldigTot ?? label.geldigTot ?? null,
-      building_type: label.GebouwType ?? label.gebouwtype ?? null,
-      building_subtype: label.GebouwSubtype ?? label.gebouwsubtype ?? null,
-      method: label.BerekeningsMethode ?? label.berekeningstype ?? null,
-      address: label.Adres ?? label.adres ?? null,
-      bag_verblijfsobject_id: label.BagVerblijfsobjectId ?? label.bagVerblijfsobjectId ?? null,
-      is_provisional: label.IsVoorlopig ?? label.isVoorlopig ?? false,
+      postcode: (label.Postcode as string) ?? postcode ?? null,
+      huisnummer: label.Huisnummer ?? huisnummer ?? null,
+      energy_class: label.Energieklasse ?? null,
+      energy_index: label.EnergieIndex != null ? Number(label.EnergieIndex) : null,
+      energy_index_emg: label.EnergieIndex_EMG_forfaitair != null ? Number(label.EnergieIndex_EMG_forfaitair) : null,
+      co2_emission_kg: label.BerekendeCO2Emissie != null ? Number(label.BerekendeCO2Emissie) : null,
+      energy_consumption_kwh: label.BerekendeEnergieverbruik != null ? Number(label.BerekendeEnergieverbruik) : null,
+      building_class: label.Gebouwklasse ?? null,
+      sbi_code: label.SBIcode ?? null,
+      construction_year: label.Bouwjaar != null ? Number(label.Bouwjaar) : null,
+      registration_date: label.Registratiedatum ?? null,
+      assessment_date: label.Opnamedatum ?? null,
+      valid_until: label.Geldig_tot ?? null,
+      certificate_holder: label.Certificaathouder ?? null,
+      calculation_method: label.Berekeningstype ?? null,
+      is_simplified_label: label.IsVereenvoudigdLabel ?? false,
+      based_on_reference_building: label.Op_basis_van_referentiegebouw ?? false,
+      bag_verblijfsobject_id: label.BAGVerblijfsobjectID ?? null,
       total_results: labels.length,
     },
-    provenance: { source: "public.ep-online.nl", fetched_at: new Date().toISOString() },
+    provenance: { source: "public.ep-online.nl/api/v5", fetched_at: new Date().toISOString() },
   };
 });
