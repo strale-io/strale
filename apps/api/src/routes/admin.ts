@@ -776,5 +776,20 @@ adminRoute.post("/reprice", async (c) => {
     return c.json(apiError("not_found", `Capability '${body.slug}' not found`), 404);
   }
 
-  return c.json({ updated: rows2[0] });
+  // Recompute prices for all solutions that include this capability
+  let solutionUpdates: Array<{ slug: string; oldPrice: number; newPrice: number }> = [];
+  try {
+    const { recomputeAffectedSolutions } = await import("../lib/solution-pricing.js");
+    const updates = await recomputeAffectedSolutions(body.slug);
+    solutionUpdates = updates.filter((u) => u.changed).map((u) => ({
+      slug: u.slug, oldPrice: u.oldPrice, newPrice: u.newPrice,
+    }));
+    if (solutionUpdates.length > 0) {
+      console.log(`[admin] Repriced ${body.slug} → recomputed ${solutionUpdates.length} solution(s)`);
+    }
+  } catch (err) {
+    console.error("[admin] Solution recomputation failed:", err instanceof Error ? err.message : err);
+  }
+
+  return c.json({ updated: rows2[0], solutions_recomputed: solutionUpdates });
 });
