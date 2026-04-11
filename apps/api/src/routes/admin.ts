@@ -690,6 +690,35 @@ adminRoute.post("/reset-circuit-breaker", async (c) => {
 // ─── Capability reprice (admin-only) ────────────────────────────────────────
 // POST /v1/admin/reprice — update a capability's price_cents
 
+// ─── Test fixture insertion (admin-only) ────────────────────────────────────
+// POST /v1/admin/add-fixture — insert a test suite row directly
+
+adminRoute.post("/add-fixture", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body?.capability_slug || !body?.test_name || !body?.input || !body?.checks) {
+    return c.json(apiError("invalid_request", "capability_slug, test_name, input, and checks are required"), 400);
+  }
+
+  const db = getDb();
+  const result = await db.execute(sql`
+    INSERT INTO test_suites (capability_slug, test_name, test_type, input, validation_rules, active, schedule_tier, estimated_cost_cents, test_mode)
+    VALUES (
+      ${body.capability_slug},
+      ${body.test_name},
+      ${body.test_type ?? "known_answer"},
+      ${JSON.stringify(body.input)}::jsonb,
+      ${JSON.stringify({ checks: body.checks })}::jsonb,
+      true,
+      ${body.schedule_tier ?? "B"},
+      ${body.cost_cents ?? 0},
+      'live'
+    )
+    RETURNING id, capability_slug, test_name
+  `);
+
+  return c.json({ inserted: toRows(result)[0] });
+});
+
 adminRoute.post("/reprice", async (c) => {
   const body = await c.req.json().catch(() => null);
   if (!body?.slug || typeof body.slug !== "string" || typeof body.price_cents !== "number") {
