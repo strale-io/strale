@@ -690,6 +690,44 @@ adminRoute.post("/reset-circuit-breaker", async (c) => {
 // ─── Capability reprice (admin-only) ────────────────────────────────────────
 // POST /v1/admin/reprice — update a capability's price_cents
 
+// ─── Capability creation (admin-only) ───────────────────────────────────────
+// POST /v1/admin/create-capability — insert a new capability row
+
+adminRoute.post("/create-capability", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body?.slug || !body?.name || !body?.description || !body?.input_schema || !body?.output_schema) {
+    return c.json(apiError("invalid_request", "slug, name, description, input_schema, and output_schema are required"), 400);
+  }
+
+  const db = getDb();
+  const result = await db.execute(sql`
+    INSERT INTO capabilities (slug, name, description, category, price_cents, is_free_tier, input_schema, output_schema, data_source, transparency_tag, is_active, visible, lifecycle_state)
+    VALUES (
+      ${body.slug},
+      ${body.name},
+      ${body.description},
+      ${body.category ?? "company-data"},
+      ${body.price_cents ?? 80},
+      ${body.is_free_tier ?? false},
+      ${JSON.stringify(body.input_schema)}::jsonb,
+      ${JSON.stringify(body.output_schema)}::jsonb,
+      ${body.data_source ?? ""},
+      ${body.transparency_tag ?? "ai_generated"},
+      true,
+      true,
+      'active'
+    )
+    ON CONFLICT (slug) DO NOTHING
+    RETURNING slug, name
+  `);
+
+  const rows2 = toRows(result);
+  if (rows2.length === 0) {
+    return c.json({ message: `Capability '${body.slug}' already exists` });
+  }
+  return c.json({ created: rows2[0] }, 201);
+});
+
 // ─── Test fixture insertion (admin-only) ────────────────────────────────────
 // POST /v1/admin/add-fixture — insert a test suite row directly
 

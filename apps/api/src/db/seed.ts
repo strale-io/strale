@@ -651,6 +651,15 @@ const seedCapabilities = [
     outputSchema: { type: "object", properties: { company_name: { type: "string" }, corporate_number: { type: "string" }, business_type: { type: "string" }, status: { type: "string" } } },
     priceCents: 80,
   },
+  {
+    name: "Website to Company",
+    slug: "website-to-company",
+    description: "Identify the company behind a website. Extracts company name from website metadata, detects country from TLD, and looks up the company in the appropriate national registry. Returns registry data for 24 supported countries.",
+    category: "company-data",
+    inputSchema: { type: "object", properties: { url: { type: "string", description: "Website URL or domain name (e.g. spotify.com or https://bmw.de)" } }, required: ["url"] },
+    outputSchema: { type: "object", properties: { domain: { type: "string" }, company_name_extracted: { type: "string" }, country_detected: { type: "string" }, company: { type: "object" }, resolution_method: { type: "string" }, registry_used: { type: "string" }, confidence: { type: "string" }, whois: { type: "object" } } },
+    priceCents: 80,
+  },
   // ─── Financial & Credit (3) ─────────────────────────────────────────────────
   {
     name: "Exchange Rate",
