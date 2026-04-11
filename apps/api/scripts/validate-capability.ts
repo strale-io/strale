@@ -254,6 +254,19 @@ async function validateCapability(slug: string, apply = false): Promise<{
         : "output_field_reliability is null — run backfill-field-reliability.ts",
   });
 
+  // 16. Gate 5: Path coverage for multi-path capabilities (DEC-20260411-B)
+  const { runGate5 } = await import("../src/lib/gate5-path-coverage.js");
+  const gate5 = await runGate5(slug);
+  if (gate5.isMultiPath) {
+    checks.push({
+      name: "Gate 5: All entry points have fixture coverage",
+      passed: gate5.passed,
+      detail: gate5.passed
+        ? `${gate5.entryPoints.length} entry points, all covered`
+        : `${gate5.issues.length} uncovered: ${gate5.issues.map((i) => i.split("'")[1] || i.slice(0, 50)).join(", ")}`,
+    });
+  }
+
   const allPassed = checks.every((c) => c.passed);
 
   // Apply lifecycle transition for capabilities in 'validating' state (requires --apply flag)

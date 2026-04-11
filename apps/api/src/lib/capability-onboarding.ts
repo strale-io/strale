@@ -12,7 +12,7 @@ import { getExecutor } from "../capabilities/index.js";
 import { classifyFieldVolatility, makeVolatilityAwareCheck } from "./field-volatility.js";
 import { getOutputChecks } from "./test-generation.js";
 import { checkReadiness, clearReadinessCache } from "./capability-readiness.js";
-import { validateCapabilitySchema, enforceGates } from "./onboarding-gates.js";
+import { validateCapabilitySchema, enforceGates, runGate5 } from "./onboarding-gates.js";
 
 /**
  * Call after a capability is inserted or updated in the database.
@@ -143,7 +143,20 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
     console.log(`[onboarding] ${capabilitySlug} is fully onboarded`);
   }
 
-  // 5. Visibility gate — verify capability is externally visible
+  // 5. Gate 5: Path coverage (DEC-20260411-B)
+  // Runs after fixtures exist. Warns but does not block — existing capabilities
+  // may have uncovered paths that need fixtures added separately.
+  const gate5 = await runGate5(capabilitySlug);
+  if (gate5.isMultiPath && !gate5.passed) {
+    console.warn(`[onboarding] Gate 5 FAILED for ${capabilitySlug}: ${gate5.issues.length} uncovered entry point(s)`);
+    for (const issue of gate5.issues) {
+      console.warn(`  - ${issue}`);
+    }
+  } else if (gate5.isMultiPath) {
+    console.log(`[onboarding] Gate 5 passed for ${capabilitySlug}: all ${gate5.entryPoints.length} entry points covered`);
+  }
+
+  // 6. Visibility gate — verify capability is externally visible
   // Catches silent exclusion issues like visible=false that leave
   // a capability internally healthy but invisible to users for days.
   await verifyCapabilityVisibility(capabilitySlug);

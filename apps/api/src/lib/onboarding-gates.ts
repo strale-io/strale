@@ -194,6 +194,13 @@ export function enforceGates(violations: GateViolation[]): void {
   );
 }
 
+/**
+ * Gate 5: Path coverage enforcement (DEC-20260411-B).
+ * Checks that multi-path capabilities have fixtures for all entry points.
+ * Called after fixture generation, since it requires fixtures to exist.
+ */
+export { runGate5, retrospectiveCheck } from "./gate5-path-coverage.js";
+
 function parseInputMap(raw: unknown): Record<string, string> {
   if (!raw) return {};
   if (typeof raw === "string") {
