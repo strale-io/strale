@@ -1,0 +1,113 @@
+slug: nl-bag-address
+name: NL BAG Address Lookup
+description: >-
+  Look up Dutch address and building data from the BAG (Basisregistratie Adressen en Gebouwen) via Kadaster API.
+  Returns street, city, municipality, construction year, floor area, usage purpose, and coordinates.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - postcode
+    - huisnummer
+  properties:
+    postcode:
+      type: string
+      description: Dutch postcode (format 1234AB)
+    huisnummer:
+      type: string
+      description: House number
+    huisletter:
+      type: string
+      description: House letter (optional)
+    toevoeging:
+      type: string
+      description: House number addition (optional)
+output_schema:
+  type: object
+  example:
+    postcode: "2514JK"
+    huisnummer: 1
+    street: Plein
+    city: "'s-Gravenhage"
+    municipality: "'s-Gravenhage"
+    full_address: "Plein 1, 2514JK 's-Gravenhage"
+    construction_year: 1900
+    floor_area_m2: 250
+    building_type: Verblijfsobject
+    usage_purpose: woonfunctie
+  properties:
+    postcode:
+      type: string
+    huisnummer:
+      type: number
+    street:
+      type: string
+    city:
+      type: string
+    full_address:
+      type: string
+    construction_year:
+      type: number
+    floor_area_m2:
+      type: number
+data_source: Kadaster BAG API
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: commercial-stable-api
+
+test_fixtures:
+  known_answer:
+    input:
+      postcode: "2514JK"
+      huisnummer: "1"
+    expected_fields:
+      - field: city
+        operator: not_null
+        reliability: guaranteed
+      - field: street
+        operator: not_null
+        reliability: guaranteed
+      - field: full_address
+        operator: not_null
+        reliability: guaranteed
+      - field: postcode
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    postcode: "2514JK"
+    huisnummer: "1"
+
+output_field_reliability:
+  postcode: guaranteed
+  huisnummer: guaranteed
+  street: guaranteed
+  city: guaranteed
+  full_address: guaranteed
+  municipality: common
+  province: common
+  nummeraanduiding_id: guaranteed
+  adresseerbaar_object_id: common
+  building_type: common
+  construction_year: common
+  floor_area_m2: common
+  usage_purpose: common
+  status: common
+  coordinates: common
+  huisletter: rare
+  huisnummertoevoeging: rare
+  total_results: guaranteed
+
+limitations:
+  - title: Requires BAG API key
+    text: >-
+      A free API key from Kadaster is required. Register at
+      https://formulieren.kadaster.nl/aanvraag_bag_api_individuele_bevragingen_productie
+    category: access
+    severity: info
+  - title: Dutch addresses only
+    text: Only covers addresses registered in the Dutch BAG (Netherlands).
+    category: coverage
+    severity: info

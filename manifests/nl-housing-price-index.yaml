@@ -1,0 +1,113 @@
+slug: nl-housing-price-index
+name: NL Housing Price Index
+description: >-
+  Dutch national housing price index and average sale prices from CBS/Kadaster. Returns monthly price index (2020=100),
+  year-over-year trends, homes sold, and average sale price.
+category: data-extraction
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    year:
+      type: number
+      description: Filter by specific year (optional)
+    months:
+      type: number
+      description: Number of months to return (1-60, default 12)
+output_schema:
+  type: object
+  example:
+    latest_period: 2024-10
+    price_index: 138.2
+    price_index_base: 2020 = 100
+    year_over_year_pct: 9.2
+    month_over_month_pct: 0.8
+    homes_sold: 18200
+    average_sale_price_eur: 438000
+    currency: EUR
+    data_points: 12
+    time_series:
+      - period: 2024-10
+        price_index: 138.2
+  properties:
+    latest_period:
+      type: string
+    price_index:
+      type: number
+    price_index_base:
+      type: string
+    year_over_year_pct:
+      type: number
+    homes_sold:
+      type: number
+    average_sale_price_eur:
+      type: number
+    time_series:
+      type: array
+data_source: CBS OpenData (85773NED)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: reference-data
+maintenance_class: free-stable-api
+test_fixtures:
+  known_answer:
+    input: {}
+    expected_fields:
+      - field: latest_period
+        operator: equals
+        reliability: guaranteed
+        value: 2026-02
+      - field: price_index
+        operator: not_null
+        reliability: guaranteed
+      - field: price_index_base
+        operator: not_null
+        reliability: guaranteed
+      - field: year_over_year_pct
+        operator: not_null
+        reliability: guaranteed
+      - field: month_over_month_pct
+        operator: not_null
+        reliability: guaranteed
+      - field: homes_sold
+        operator: not_null
+        reliability: guaranteed
+      - field: average_sale_price_eur
+        operator: not_null
+        reliability: guaranteed
+      - field: currency
+        operator: equals
+        reliability: guaranteed
+        value: EUR
+      - field: data_points
+        operator: not_null
+        reliability: guaranteed
+      - field: time_series
+        operator: not_null
+        reliability: guaranteed
+      - field: note
+        operator: not_null
+        reliability: guaranteed
+  health_check_input: {}
+output_field_reliability:
+  latest_period: guaranteed
+  price_index: guaranteed
+  price_index_base: guaranteed
+  year_over_year_pct: common
+  month_over_month_pct: common
+  homes_sold: common
+  average_sale_price_eur: common
+  currency: guaranteed
+  data_points: guaranteed
+  time_series: guaranteed
+  note: guaranteed
+limitations:
+  - title: National-level data only
+    text: Housing price index is national (Netherlands-wide). For regional data, use nl-housing-stats or nl-woz-value.
+    category: coverage
+    severity: info
+  - title: Monthly publication lag
+    text: CBS publishes housing price data with approximately 1-2 month delay.
+    category: freshness
+    severity: info

@@ -2624,6 +2624,81 @@ const SOLUTIONS: SolutionDef[] = [
 
   // ── Dependency Risk Check ──
   {
+    slug: "nl-property-check",
+    name: "Netherlands Property Check",
+    marketingName: "Netherlands Property Intelligence",
+    description:
+      "Comprehensive Dutch property market intelligence. Combines BAG address data, WOZ tax assessments, energy labels, housing prices, and regional statistics into one call.",
+    longDescription:
+      "Full Netherlands property analysis: official BAG address/building data from Kadaster, municipality-level WOZ tax values and trends from CBS, energy performance labels from EP-Online, national housing price index, and detailed housing statistics. Covers construction year, floor area, ownership patterns, and market trends. Three CBS data sources require no API key; BAG and EP-Online use free registered keys.",
+    agentDescription:
+      "netherlands property check, dutch real estate data, BAG address lookup, WOZ waarde, energielabel, housing price index, CBS housing statistics, kadaster, nl property",
+    category: "data-lookup",
+    priceCents: 19,
+    componentSumCents: 19,
+    valueTier: "data-lookup",
+    maintenanceLevel: "near-zero",
+    geography: "eu",
+    targetAudience:
+      "Real estate agents, property investors, mortgage brokers, proptech companies operating in the Netherlands",
+    transparencyTag: null,
+    extendsWith: ["dutch-company-data"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        postcode: { type: "string", description: "Dutch postcode (format 1234AB)" },
+        huisnummer: { type: "string", description: "House number" },
+        city: { type: "string", description: "Municipality name (e.g. 'Amsterdam') — used for CBS stats" },
+      },
+      required: ["city"],
+    },
+    exampleInput: { postcode: "1012JS", huisnummer: "1", city: "Amsterdam" },
+    exampleOutput: {
+      bag_address: { street: "Dam", city: "Amsterdam", construction_year: 1900 },
+      woz_value: { average_woz_value_eur: 516000, latest_year: 2023 },
+      energy_label: { energy_label: "C" },
+      housing_prices: { price_index: 138.2, average_sale_price_eur: 438000 },
+      housing_stats: { sale_prices: { average_sale_price_eur: 520000 } },
+    },
+    steps: [
+      {
+        capabilitySlug: "nl-bag-address",
+        stepOrder: 1,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { postcode: "$input.postcode", huisnummer: "$input.huisnummer" },
+      },
+      {
+        capabilitySlug: "nl-woz-value",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { city: "$input.city" },
+      },
+      {
+        capabilitySlug: "nl-energy-label",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { postcode: "$input.postcode", huisnummer: "$input.huisnummer" },
+      },
+      {
+        capabilitySlug: "nl-housing-price-index",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { months: "12" },
+      },
+      {
+        capabilitySlug: "nl-housing-stats",
+        stepOrder: 5,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { city: "$input.city" },
+      },
+    ],
+  },
+  {
     slug: "dependency-risk-check",
     name: "Dependency Risk Check",
     marketingName: "Dependency Risk Assessment",

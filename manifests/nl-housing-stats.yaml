@@ -1,0 +1,103 @@
+slug: nl-housing-stats
+name: NL Housing Statistics
+description: >-
+  Dutch housing statistics by municipality from CBS OpenData. Returns average sale prices, number of homes sold, housing
+  stock breakdown (owner-occupied vs rental), and historical trends.
+category: data-extraction
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    city:
+      type: string
+      description: Dutch municipality name (e.g. 'Amsterdam')
+    gm_code:
+      type: string
+      description: CBS municipality code (e.g. 'GM0363')
+output_schema:
+  type: object
+  example:
+    municipality: amsterdam
+    municipality_code: GM0363
+    sale_prices:
+      latest_year: 2023
+      average_sale_price_eur: 520000
+      homes_sold: 12500
+      history: []
+    housing_stock:
+      year: 2023
+      total_dwellings: 470000
+      owner_occupied: 140000
+      rental: 330000
+    currency: EUR
+    data_level: municipality
+  properties:
+    municipality:
+      type: string
+    municipality_code:
+      type: string
+    sale_prices:
+      type: object
+    housing_stock:
+      type: object
+    currency:
+      type: string
+data_source: CBS OpenData (83625NED + 82900NED)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: reference-data
+maintenance_class: free-stable-api
+test_fixtures:
+  known_answer:
+    input:
+      city: Amsterdam
+    expected_fields:
+      - field: municipality
+        operator: equals
+        reliability: guaranteed
+        value: amsterdam
+      - field: municipality_code
+        operator: equals
+        reliability: guaranteed
+        value: GM0363
+      - field: sale_prices
+        operator: not_null
+        reliability: guaranteed
+      - field: housing_stock
+        operator: not_null
+        reliability: guaranteed
+      - field: currency
+        operator: equals
+        reliability: guaranteed
+        value: EUR
+      - field: data_level
+        operator: equals
+        reliability: guaranteed
+        value: municipality
+      - field: note
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    city: Amsterdam
+output_field_reliability:
+  municipality: guaranteed
+  municipality_code: guaranteed
+  sale_prices: guaranteed
+  housing_stock: common
+  currency: guaranteed
+  data_level: guaranteed
+  note: guaranteed
+limitations:
+  - title: Municipality-level aggregates
+    text: Statistics are aggregated at municipality level, not individual property or neighborhood.
+    category: coverage
+    severity: info
+  - title: Annual publication cycle
+    text: Sale price data is published annually by CBS. Most recent data may be 6-12 months old.
+    category: freshness
+    severity: info
+  - title: Limited municipality lookup
+    text: City name lookup covers ~30 major Dutch municipalities. Use gm_code for smaller ones.
+    category: coverage
+    severity: info

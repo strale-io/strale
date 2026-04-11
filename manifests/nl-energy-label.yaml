@@ -1,0 +1,88 @@
+slug: nl-energy-label
+name: NL Energy Label
+description: >-
+  Look up Dutch energy performance labels (energielabel) from EP-Online.
+  Returns energy label grade (A++++–G), energy index, registration details, and validity.
+category: data-extraction
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    postcode:
+      type: string
+      description: Dutch postcode (format 1234AB)
+    huisnummer:
+      type: string
+      description: House number
+    bag_id:
+      type: string
+      description: BAG verblijfsobject ID (alternative to postcode+huisnummer)
+output_schema:
+  type: object
+  example:
+    postcode: "2514JK"
+    huisnummer: "1"
+    energy_label: A
+    energy_index: 0.85
+    registration_number: "123456789"
+    registration_date: "2022-01-15"
+    valid_until: "2032-01-15"
+    building_type: Woning
+    is_provisional: false
+  properties:
+    energy_label:
+      type: string
+    energy_index:
+      type: number
+    registration_number:
+      type: string
+    building_type:
+      type: string
+data_source: EP-Online (RVO)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: commercial-stable-api
+
+test_fixtures:
+  known_answer:
+    input:
+      postcode: "2514JK"
+      huisnummer: "1"
+    expected_fields:
+      - field: energy_label
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    postcode: "2514JK"
+    huisnummer: "1"
+
+output_field_reliability:
+  postcode: guaranteed
+  huisnummer: guaranteed
+  energy_label: guaranteed
+  energy_index: common
+  registration_number: common
+  registration_date: common
+  valid_until: common
+  building_type: common
+  building_subtype: rare
+  method: common
+  address: common
+  bag_verblijfsobject_id: common
+  is_provisional: common
+  total_results: guaranteed
+
+limitations:
+  - title: Requires EP-Online API key
+    text: >-
+      A free API key from RVO is required. Register at https://apikey.ep-online.nl
+    category: access
+    severity: info
+  - title: Not all buildings have labels
+    text: >-
+      Energy labels are mandatory for sale/rental but older buildings may not have one registered.
+      Coverage is estimated at ~60-70% of Dutch housing stock.
+    category: coverage
+    severity: info

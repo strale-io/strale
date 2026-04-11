@@ -11,7 +11,7 @@
 import { sql as sqlTag } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 const SKIP_GATES = process.env.SKIP_ONBOARDING_GATES === "true";
 
@@ -64,7 +64,7 @@ export async function validateSolution(
   const capSlugs = [...new Set(steps.map((s) => s.capabilitySlug))];
   const capRows = capSlugs.length > 0
     ? await db.select({ slug: capabilities.slug, inputSchema: capabilities.inputSchema, outputSchema: capabilities.outputSchema })
-        .from(capabilities).where(sqlTag`slug = ANY(${capSlugs})`)
+        .from(capabilities).where(inArray(capabilities.slug, capSlugs))
     : [];
   const capSchemas = new Map<string, { input: Record<string, unknown> | null; output: Record<string, unknown> | null }>();
   for (const c of capRows) {

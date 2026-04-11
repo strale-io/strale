@@ -1,0 +1,119 @@
+slug: nl-woz-value
+name: NL WOZ Property Value
+description: >-
+  Dutch WOZ (Waardering Onroerende Zaken) property tax assessment averages by municipality. Returns average property
+  values and year-over-year trends from CBS OpenData.
+category: data-extraction
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    city:
+      type: string
+      description: Dutch municipality name (e.g. 'Amsterdam')
+    gm_code:
+      type: string
+      description: CBS municipality code (e.g. 'GM0363')
+output_schema:
+  type: object
+  example:
+    municipality: amsterdam
+    municipality_code: GM0363
+    latest_year: 2023
+    average_woz_value_eur: 516000
+    previous_year: 2022
+    previous_woz_value_eur: 433000
+    year_over_year_change_pct: 19.2
+    trend:
+      - year: 2023
+        average_woz_eur: 516000
+    currency: EUR
+    data_level: municipality_average
+  properties:
+    municipality:
+      type: string
+    municipality_code:
+      type: string
+    latest_year:
+      type: number
+    average_woz_value_eur:
+      type: number
+    year_over_year_change_pct:
+      type: number
+    trend:
+      type: array
+data_source: CBS OpenData (85036NED)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: reference-data
+maintenance_class: free-stable-api
+test_fixtures:
+  known_answer:
+    input:
+      city: Amsterdam
+    expected_fields:
+      - field: municipality
+        operator: equals
+        reliability: guaranteed
+        value: amsterdam
+      - field: municipality_code
+        operator: equals
+        reliability: guaranteed
+        value: GM0363
+      - field: latest_year
+        operator: not_null
+        reliability: guaranteed
+      - field: average_woz_value_eur
+        operator: not_null
+        reliability: guaranteed
+      - field: previous_year
+        operator: not_null
+        reliability: guaranteed
+      - field: previous_woz_value_eur
+        operator: not_null
+        reliability: guaranteed
+      - field: year_over_year_change_pct
+        operator: not_null
+        reliability: guaranteed
+      - field: trend
+        operator: not_null
+        reliability: guaranteed
+      - field: currency
+        operator: equals
+        reliability: guaranteed
+        value: EUR
+      - field: data_level
+        operator: equals
+        reliability: guaranteed
+        value: municipality_average
+      - field: note
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    city: Amsterdam
+output_field_reliability:
+  municipality: guaranteed
+  municipality_code: guaranteed
+  latest_year: guaranteed
+  average_woz_value_eur: guaranteed
+  previous_year: common
+  previous_woz_value_eur: common
+  year_over_year_change_pct: common
+  trend: guaranteed
+  currency: guaranteed
+  data_level: guaranteed
+  note: guaranteed
+limitations:
+  - title: Municipality-level averages only
+    text: >-
+      WOZ values are municipality-level averages from CBS, not individual property assessments. Individual property WOZ
+      values are not available via public API.
+    category: coverage
+    severity: warning
+  - title: Limited municipality lookup
+    text: >-
+      City name lookup covers ~30 major Dutch municipalities. Use gm_code for smaller municipalities (CBS municipality
+      codes).
+    category: coverage
+    severity: info
