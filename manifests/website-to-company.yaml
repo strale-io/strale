@@ -1,0 +1,90 @@
+slug: website-to-company
+name: Website to Company
+description: >-
+  Identify the company behind a website. Extracts company name from website
+  metadata, detects country from TLD, and looks up the company in the
+  appropriate national registry. Returns registry data for 24 supported
+  countries.
+category: company-data
+price_cents: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: Website URL or domain name (e.g. spotify.com or https://bmw.de)
+output_schema:
+  type: object
+  properties:
+    domain:
+      type: string
+    company_name_extracted:
+      type: string
+    country_detected:
+      type: string
+    company:
+      type: object
+    resolution_method:
+      type: string
+    registry_used:
+      type: string
+    confidence:
+      type: string
+    whois:
+      type: object
+data_source: Website metadata + national company registries
+data_source_type: computed
+transparency_tag: ai_generated
+freshness_category: live-fetch
+
+test_fixtures:
+  known_answer:
+    input:
+      url: "https://equinor.com"
+    expected_fields:
+      - field: domain
+        operator: equals
+        value: "equinor.com"
+        reliability: guaranteed
+      - field: resolution_method
+        operator: not_null
+        reliability: guaranteed
+      - field: confidence
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    url: "https://spotify.com"
+
+output_field_reliability:
+  domain: guaranteed
+  company_name_extracted: common
+  country_detected: common
+  company: rare
+  resolution_method: guaranteed
+  registry_used: rare
+  confidence: guaranteed
+  whois: common
+
+limitations:
+  - title: Company name extraction depends on website metadata quality
+    text: >-
+      The company name is extracted from website title/meta tags using LLM.
+      Websites with generic titles or no metadata may not yield a usable
+      company name.
+    category: accuracy
+    severity: info
+  - title: Country detection only works for ccTLDs
+    text: >-
+      .com, .org, .net and other gTLDs do not indicate a country.
+      Country detection works for ccTLDs like .se, .de, .dk, .fi, .no, .uk.
+    category: coverage
+    severity: warning
+  - title: WHOIS registrant data is redacted post-GDPR
+    text: >-
+      Since 2018, WHOIS registrant data is redacted for most TLDs.
+      The capability extracts company names from website content instead.
+    category: coverage
+    severity: info
