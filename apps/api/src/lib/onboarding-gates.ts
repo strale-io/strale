@@ -195,6 +195,91 @@ export function enforceGates(violations: GateViolation[]): void {
 }
 
 /**
+ * Gate 1: Structural validation (blocking at insert time).
+ * Checks 1-12 from validate-capability.ts — the subset that can run
+ * before fixtures/limitations exist. Checks 13-16 (test suites,
+ * limitations, field reliability, Gate 5) remain post-insert.
+ */
+
+const VALID_CATEGORIES = [
+  "company-data", "compliance", "developer-tools", "finance",
+  "data-processing", "web-scraping", "monitoring", "validation",
+  "data-extraction", "legal-regulatory", "file-conversion",
+  "agent-tooling", "competitive-intelligence", "content-writing",
+  "document-extraction", "financial", "security", "text-processing",
+  "trade", "utility", "web-intelligence",
+];
+
+const VALID_TRANSPARENCY_TAGS = ["algorithmic", "ai_generated", "mixed", null];
+
+export function validateCapabilityStructure(cap: {
+  slug: string;
+  name: string | null;
+  description: string | null;
+  category: string;
+  priceCents: number;
+  isFreeTier: boolean | null;
+  inputSchema: unknown;
+  outputSchema: unknown;
+  dataSource: string | null;
+  dataClassification: string | null;
+  transparencyTag: string | null;
+}): GateViolation[] {
+  if (SKIP_GATES) return [];
+  const violations: GateViolation[] = [];
+
+  // Check 3: Name is not empty
+  if (!cap.name || cap.name.trim().length === 0) {
+    violations.push({ gate: "gate1_structure", severity: "error", detail: `${cap.slug}: name is null or empty` });
+  }
+
+  // Check 4: Slug matches URL-safe pattern
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(cap.slug)) {
+    violations.push({ gate: "gate1_structure", severity: "error", detail: `${cap.slug}: slug is not URL-safe (expected lowercase, hyphens, no spaces)` });
+  }
+
+  // Check 5: Description >= 20 chars
+  if (!cap.description || cap.description.trim().length < 20) {
+    violations.push({ gate: "gate1_structure", severity: "error", detail: `${cap.slug}: description is ${cap.description?.length ?? 0} chars (minimum 20)` });
+  }
+
+  // Check 6: Category is valid
+  if (!VALID_CATEGORIES.includes(cap.category)) {
+    violations.push({ gate: "gate1_structure", severity: "error", detail: `${cap.slug}: category '${cap.category}' not valid. Options: ${VALID_CATEGORIES.join(", ")}` });
+  }
+
+  // Check 7: Price is valid
+  const priceOk = cap.isFreeTier ? cap.priceCents >= 0 : cap.priceCents > 0;
+  if (!priceOk) {
+    violations.push({ gate: "gate1_structure", severity: "error", detail: `${cap.slug}: priceCents is ${cap.priceCents} (must be > 0 for non-free-tier)` });
+  }
+
+  // Check 8: Input schema is valid
+  const inputParsed = parseSchema(cap.inputSchema);
+  if (!inputParsed || (inputParsed as any).type !== "object") {
+    violations.push({ gate: "gate1_structure", severity: "error", detail: `${cap.slug}: inputSchema missing type:object or not parseable` });
+  }
+
+  // Check 9: Output schema is valid
+  const outputParsed = parseSchema(cap.outputSchema);
+  if (!outputParsed || (outputParsed as any).type !== "object") {
+    violations.push({ gate: "gate1_structure", severity: "error", detail: `${cap.slug}: outputSchema missing type:object or not parseable` });
+  }
+
+  // Check 10: Data source is not empty
+  if (!cap.dataSource || cap.dataSource.trim().length === 0) {
+    violations.push({ gate: "gate1_structure", severity: "error", detail: `${cap.slug}: dataSource is null or empty` });
+  }
+
+  // Check 12: Transparency tag is valid
+  if (!VALID_TRANSPARENCY_TAGS.includes(cap.transparencyTag)) {
+    violations.push({ gate: "gate1_structure", severity: "error", detail: `${cap.slug}: transparencyTag '${cap.transparencyTag}' not valid. Options: algorithmic, ai_generated, mixed, null` });
+  }
+
+  return violations;
+}
+
+/**
  * Gate 4b: Solution dry-run composition check (DEC-20260409-D Layer B).
  * Threads mock outputs through the step chain to catch composition failures.
  */

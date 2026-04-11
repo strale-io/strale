@@ -12,7 +12,7 @@ import { getExecutor } from "../capabilities/index.js";
 import { classifyFieldVolatility, makeVolatilityAwareCheck } from "./field-volatility.js";
 import { getOutputChecks } from "./test-generation.js";
 import { checkReadiness, clearReadinessCache } from "./capability-readiness.js";
-import { validateCapabilitySchema, enforceGates, runGate5 } from "./onboarding-gates.js";
+import { validateCapabilitySchema, validateCapabilityStructure, enforceGates, runGate5 } from "./onboarding-gates.js";
 
 /**
  * Call after a capability is inserted or updated in the database.
@@ -29,7 +29,11 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
 
   if (!cap) return;
 
-  // Gate 3: Validate schema coherence before proceeding
+  // Gate 1: Structural validation (blocking)
+  const structuralViolations = validateCapabilityStructure(cap as any);
+  enforceGates(structuralViolations);
+
+  // Gate 3: Validate schema coherence (blocking)
   const schemaViolations = validateCapabilitySchema(capabilitySlug, cap.inputSchema);
   enforceGates(schemaViolations);
 
