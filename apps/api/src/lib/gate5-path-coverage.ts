@@ -83,6 +83,13 @@ function classifyField(fieldName: string, fieldDescription?: string): PathType |
 
   const desc = (fieldDescription ?? "").toLowerCase();
 
+  // Fields described as "optional" are supplementary filters, not entry points.
+  // They don't drive dispatch logic — the handler requires a primary field
+  // and uses these as additional filters.
+  if (/\boptional\b/.test(desc)) {
+    return null;
+  }
+
   // Check field name against ID patterns first
   if (ID_FIELD_PATTERNS.some((p) => p.test(fieldName))) {
     return "PRIMARY";
