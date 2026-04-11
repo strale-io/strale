@@ -2,9 +2,13 @@
  * Web provider abstraction layer — retry, caching, and resilience for all
  * Browserless-dependent capabilities.
  *
- * Today this wraps Browserless.io's /content endpoint. The design leaves room
- * for alternative providers (Notte, Firecrawl, Stagehand) later without
- * touching the 47+ capability files that call fetchRenderedHtml().
+ * Three-tier fallback chain:
+ *   1. Plain HTTP fetch (free, ~100ms, works for server-rendered pages)
+ *   2. Jina Reader (free tier 200 RPM, handles JS rendering)
+ *   3. Browserless.io (paid, full headless Chrome — last resort)
+ *
+ * All 47+ capability files call fetchRenderedHtml() and get the resilience
+ * upgrade without any code changes.
  */
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -191,7 +195,42 @@ export async function fetchPage(
     }
   }
 
-  // ── Browserless path ──────────────────────────────────────────────────────
+  // ── Jina Reader path (free tier, handles JS rendering) ────────────────────
+  // Jina converts URLs to clean text/HTML. Free at 200 RPM with API key.
+  // Skip Jina for non-default waitUntil (caller needs specific rendering behavior)
+  // and for URLs that need full browser features (screenshot, PDF, cookie analysis).
+  if (!options?.waitUntil || options.waitUntil === "networkidle0") {
+    try {
+      const start = Date.now();
+      const jinaUrl = `https://r.jina.ai/${targetUrl}`;
+      const jinaHeaders: Record<string, string> = {
+        Accept: "text/html",
+        "X-Return-Format": "html",
+        "X-No-Cache": "true",
+      };
+      const jinaKey = process.env.JINA_API_KEY;
+      if (jinaKey) jinaHeaders.Authorization = `Bearer ${jinaKey}`;
+
+      const jinaResp = await fetch(jinaUrl, {
+        headers: jinaHeaders,
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (jinaResp.ok) {
+        const html = await jinaResp.text();
+        if (html.length > 500) {
+          const fetchTimeMs = Date.now() - start;
+          if (!skipCache) setCache(targetUrl, html);
+          return { html, cached: false, fetchTimeMs, attempt: 0 };
+        }
+      }
+      // Jina returned empty/short content or error — fall through to Browserless
+    } catch {
+      // Jina timeout or network error — fall through to Browserless
+    }
+  }
+
+  // ── Browserless path (paid, full headless Chrome — last resort) ──────────
   // Acquire a browser concurrency slot to prevent OOM on Railway (1GB limit)
   return withBrowserLimit(async () => {
     const { url, key } = getBrowserlessConfig();
