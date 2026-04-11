@@ -1,0 +1,87 @@
+slug: workflow-security-audit
+name: Workflow Security Audit
+description: >-
+  Audit GitHub Actions workflow YAML for supply chain security risks. Checks action pinning (SHA vs mutable tags),
+  permission scopes, secret exposure, trusted publishers, and dangerous trigger patterns like pull_request_target. Pure
+  static analysis, no external API calls.
+category: security
+price_cents: 3
+is_free_tier: false
+maintenance_class: pure-computation
+input_schema:
+  type: object
+  required:
+    - workflow
+  properties:
+    workflow:
+      type: string
+      description: GitHub Actions workflow YAML content
+output_schema:
+  type: object
+  properties:
+    risk_level:
+      type: string
+    findings_count:
+      type: number
+    findings:
+      type: array
+    summary:
+      type: object
+    checks_performed:
+      type: array
+data_source: Static analysis (YAML parsing + pattern matching)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+test_fixtures:
+  known_answer:
+    input:
+      workflow: |
+        name: test
+        on: [push]
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+            steps:
+              - run: echo hello
+    expected_fields:
+      - field: risk_level
+        operator: equals
+        reliability: guaranteed
+        value: medium
+      - field: findings_count
+        operator: not_null
+        reliability: guaranteed
+      - field: findings
+        operator: not_null
+        reliability: guaranteed
+      - field: summary
+        operator: not_null
+        reliability: guaranteed
+      - field: checks_performed
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    workflow: |
+      name: test
+      on: [push]
+      jobs:
+        build:
+          runs-on: ubuntu-latest
+          steps:
+            - run: echo hello
+output_field_reliability:
+  risk_level: guaranteed
+  findings_count: guaranteed
+  findings: guaranteed
+  summary: guaranteed
+  checks_performed: guaranteed
+limitations:
+  - title: GitHub Actions only
+    text: Only supports GitHub Actions workflow YAML. Does not audit GitLab CI, CircleCI, or other CI systems.
+    category: coverage
+    severity: info
+  - title: Static analysis only
+    text: Checks YAML structure and patterns. Cannot verify whether a pinned SHA actually corresponds to a trusted release.
+    category: accuracy
+    severity: info
