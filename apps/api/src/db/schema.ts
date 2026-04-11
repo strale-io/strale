@@ -148,6 +148,12 @@ export const capabilities = pgTable("capabilities", {
   onboardingManifest: jsonb("onboarding_manifest"),
   degradedRecoveryCount: integer("degraded_recovery_count").notNull().default(0),
   searchTags: text("search_tags").array().default([]),
+  // Maintenance classification (operational overhead for Strale to maintain)
+  maintenanceClass: varchar("maintenance_class", { length: 40 })
+    .notNull()
+    .default("scraping-fragile-target"),
+  // 'free-stable-api' | 'commercial-stable-api' | 'pure-computation' |
+  // 'scraping-stable-target' | 'scraping-fragile-target' | 'requires-domain-expertise'
   // x402 payment gateway (DB-driven, no-deploy exposure)
   x402Enabled: boolean("x402_enabled").notNull().default(false),
   x402PriceUsd: decimal("x402_price_usd", { precision: 10, scale: 4 }),

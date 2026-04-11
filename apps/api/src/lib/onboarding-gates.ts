@@ -212,6 +212,15 @@ const VALID_CATEGORIES = [
 
 const VALID_TRANSPARENCY_TAGS = ["algorithmic", "ai_generated", "mixed", null];
 
+const VALID_MAINTENANCE_CLASSES = [
+  "free-stable-api",
+  "commercial-stable-api",
+  "pure-computation",
+  "scraping-stable-target",
+  "scraping-fragile-target",
+  "requires-domain-expertise",
+];
+
 export function validateCapabilityStructure(cap: {
   slug: string;
   name: string | null;
@@ -224,6 +233,7 @@ export function validateCapabilityStructure(cap: {
   dataSource: string | null;
   dataClassification: string | null;
   transparencyTag: string | null;
+  maintenanceClass: string | null;
 }): GateViolation[] {
   if (SKIP_GATES) return [];
   const violations: GateViolation[] = [];
@@ -274,6 +284,15 @@ export function validateCapabilityStructure(cap: {
   // Check 12: Transparency tag is valid
   if (!VALID_TRANSPARENCY_TAGS.includes(cap.transparencyTag)) {
     violations.push({ gate: "gate1_structure", severity: "error", detail: `${cap.slug}: transparencyTag '${cap.transparencyTag}' not valid. Options: algorithmic, ai_generated, mixed, null` });
+  }
+
+  // Check 13: maintenance_class is required and valid
+  if (!cap.maintenanceClass || !VALID_MAINTENANCE_CLASSES.includes(cap.maintenanceClass)) {
+    violations.push({
+      gate: "gate1_structure",
+      severity: "error",
+      detail: `${cap.slug}: maintenance_class is required. Choose from: ${VALID_MAINTENANCE_CLASSES.join(", ")}`,
+    });
   }
 
   return violations;

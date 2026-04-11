@@ -82,6 +82,7 @@ interface Manifest {
   };
   output_field_reliability: Record<string, string>;
   limitations: ManifestLimitation[];
+  maintenance_class?: string;
 }
 
 interface FixtureMismatch {
@@ -122,6 +123,15 @@ function validateManifest(m: Manifest, discover: boolean): string[] {
   if (!m.output_schema || typeof m.output_schema !== "object") errors.push("output_schema is required");
   if (!m.data_source) errors.push("data_source is required");
   if (!m.data_source_type) errors.push("data_source_type is required");
+
+  // maintenance_class is required for new capabilities
+  const VALID_MAINTENANCE_CLASSES = [
+    "free-stable-api", "commercial-stable-api", "pure-computation",
+    "scraping-stable-target", "scraping-fragile-target", "requires-domain-expertise",
+  ];
+  if (!m.maintenance_class || !VALID_MAINTENANCE_CLASSES.includes(m.maintenance_class)) {
+    errors.push(`maintenance_class is required. Choose from: ${VALID_MAINTENANCE_CLASSES.join(", ")}`);
+  }
 
   // Slug pattern
   if (m.slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(m.slug)) {
@@ -706,6 +716,7 @@ async function onboard(
     transparencyTag: manifest.transparency_tag ?? null,
     capabilityType: capType,
     outputFieldReliability: manifest.output_field_reliability,
+    maintenanceClass: manifest.maintenance_class ?? "scraping-fragile-target",
     lifecycleState: "validating",
     visible: false,
     isActive: true,

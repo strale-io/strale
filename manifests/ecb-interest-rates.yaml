@@ -1,71 +1,80 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: ecb-interest-rates
 name: ECB Interest Rates
-description: "Get current ECB key interest rates: main refinancing rate, deposit facility rate, and marginal lending rate."
-category: data-extraction
-price_cents: 3
+description: >-
+  Fetch current ECB key interest rates (main refinancing, deposit facility, marginal lending) from the European Central
+  Bank Statistical Data Warehouse.
+category: finance
+price_cents: 2
 is_free_tier: false
+maintenance_class: free-stable-api
 input_schema:
   type: object
   properties:
-    date:
+    task:
       type: string
-      description: "Optional date (default: latest)"
+      description: Optional description (capability requires no specific input)
 output_schema:
   type: object
-  example:
-    currency: EUR
-    source_url: https://sdw-wsrest.ecb.europa.eu
-    effective_date: "2025-06-11"
-    main_refinancing_rate: 2.15
   properties:
-    effective_date:
-      type: string
-    deposit_facility_rate:
-      type: number
     main_refinancing_rate:
+      type: number
+    deposit_facility_rate:
       type: number
     marginal_lending_rate:
       type: number
-data_source: ECB Data API (data-api.ecb.europa.eu)
+    effective_date:
+      type: string
+    currency:
+      type: string
+    source_url:
+      type: string
+data_source: European Central Bank Statistical Data Warehouse (ECB SDW)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
 test_fixtures:
   known_answer:
-    input:
-      date: "2025-01-15"
+    input: {}
     expected_fields:
-      - field: effective_date
-        operator: not_null
-        reliability: guaranteed
-      - field: effective_date
-        operator: type
-        reliability: guaranteed
-        value: string
       - field: main_refinancing_rate
         operator: not_null
         reliability: guaranteed
-      - field: main_refinancing_rate
-        operator: type
+      - field: deposit_facility_rate
+        operator: not_null
         reliability: guaranteed
-        value: number
-      - field: main_refinancing_rate
-        operator: gt
+      - field: marginal_lending_rate
+        operator: not_null
         reliability: guaranteed
-        value: -1
-  health_check_input:
-    date: "2025-01-15"
+      - field: effective_date
+        operator: equals
+        reliability: guaranteed
+        value: "2025-06-11"
+      - field: currency
+        operator: equals
+        reliability: guaranteed
+        value: EUR
+      - field: source_url
+        operator: equals
+        reliability: guaranteed
+        value: https://data-api.ecb.europa.eu
+  health_check_input: {}
 output_field_reliability:
-  effective_date: guaranteed
-  deposit_facility_rate: guaranteed
   main_refinancing_rate: guaranteed
+  deposit_facility_rate: guaranteed
   marginal_lending_rate: guaranteed
+  effective_date: guaranteed
+  currency: guaranteed
+  source_url: guaranteed
 limitations:
-  - title: ECB SDW API is geo-restricted and may block requests originating from non-EU servers
-    text: ECB SDW API is geo-restricted — requests from non-EU servers may be blocked
-    category: availability
+  - title: Geo-restricted API
+    text: >-
+      The ECB SDW API may be unreachable from non-EU server locations. Railway US East deployment may experience
+      intermittent failures.
+    category: dependency
     severity: warning
-    workaround: If the request fails, check the ECB's statistical data warehouse (sdw.ecb.europa.eu) directly for current rates
+  - title: Data freshness tied to ECB publication schedule
+    text: >-
+      Rates update only when the ECB Governing Council changes them, typically every 6 weeks. The effective_date
+      reflects the last change.
+    category: freshness
+    severity: info
