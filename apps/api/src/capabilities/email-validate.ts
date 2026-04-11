@@ -17,7 +17,54 @@ const ROLE_PREFIXES = new Set([
   "admin", "administrator", "hostmaster", "info", "noc", "noreply",
   "no-reply", "postmaster", "support", "webmaster", "abuse", "sales",
   "contact", "help", "office", "billing", "security", "feedback",
+  "marketing", "hr", "legal", "compliance", "operations", "team",
+  "hello", "enquiries", "enquiry", "jobs", "careers", "press",
+  "media", "newsletter", "alerts", "notifications", "system",
+  "mailer-daemon", "root", "devops",
 ]);
+
+// Common email providers for typo detection
+const KNOWN_PROVIDERS = [
+  "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com",
+  "icloud.com", "mail.com", "protonmail.com", "proton.me", "zoho.com",
+  "gmx.com", "gmx.de", "live.com", "msn.com", "yandex.com",
+  "fastmail.com", "tutanota.com", "pm.me", "hey.com", "me.com",
+  "mac.com", "comcast.net", "verizon.net", "att.net", "sbcglobal.net",
+  "cox.net", "charter.net", "earthlink.net", "optonline.net",
+  "yahoo.co.uk", "hotmail.co.uk", "outlook.co.uk",
+];
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+  }
+  return dp[m][n];
+}
+
+function suggestDomain(domain: string): string | null {
+  if (KNOWN_PROVIDERS.includes(domain)) return null;
+  let bestMatch: string | null = null;
+  let bestDistance = Infinity;
+  for (const provider of KNOWN_PROVIDERS) {
+    const dist = levenshtein(domain, provider);
+    if (dist > 0 && dist <= 2 && dist < bestDistance) {
+      bestDistance = dist;
+      bestMatch = provider;
+    }
+  }
+  return bestMatch;
+}
 
 async function checkMx(domain: string): Promise<{ has_mx: boolean; mx_records: string[] }> {
   try {
@@ -83,6 +130,9 @@ registerCapability("email-validate", async (input: CapabilityInput) => {
   // MX record check
   const mx = await checkMx(domain);
 
+  // Typo suggestion for common provider misspellings
+  const suggestion = !mx.has_mx ? suggestDomain(domain) : null;
+
   return {
     output: {
       valid: formatValid && mx.has_mx && !isDisposable,
@@ -94,6 +144,7 @@ registerCapability("email-validate", async (input: CapabilityInput) => {
       is_disposable: isDisposable,
       is_role_address: isRole,
       is_free_provider: isFree,
+      ...(suggestion ? { did_you_mean: `${localPart}@${suggestion}` } : {}),
     },
     provenance: {
       source: "algorithmic+dns",
