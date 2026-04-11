@@ -10,7 +10,7 @@ import { capabilities, solutions, solutionSteps, testSuites } from "../db/schema
 import { generateTestInput } from "./test-input-generator.js";
 import { getExecutor } from "../capabilities/index.js";
 import { classifyFieldVolatility, makeVolatilityAwareCheck } from "./field-volatility.js";
-import { getOutputChecks } from "./test-generation.js";
+import { getOutputChecks, assignTier } from "./test-generation.js";
 import { checkReadiness, clearReadinessCache } from "./capability-readiness.js";
 import { validateCapabilitySchema, validateCapabilityStructure, enforceGates, runGate5 } from "./onboarding-gates.js";
 
@@ -71,6 +71,8 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
       baselineOutputs,
     });
 
+    const tier = assignTier(cap.transparencyTag, cap.maintenanceClass);
+
     // Schema check test (dry_run — FREE)
     await db.insert(testSuites).values({
       capabilitySlug,
@@ -78,7 +80,7 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
       testType: "schema_check",
       input: testInput,
       validationRules: outputChecks,
-      scheduleTier: "B",
+      scheduleTier: tier,
       estimatedCostCents: 0, // dry-run, no external calls
     });
 
@@ -89,7 +91,7 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
       testType: "negative",
       input: {},
       validationRules: { checks: [] },
-      scheduleTier: "B",
+      scheduleTier: tier,
       estimatedCostCents: 0,
     });
 

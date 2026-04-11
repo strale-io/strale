@@ -51,7 +51,7 @@ async function generateTests() {
 
     const testInput = generateTestInput(inputSchema, "schema_check");
     const outputChecks = getOutputChecks(outputSchema, { existingReliability });
-    const tier = assignTier(cap.transparencyTag);
+    const tier = assignTier(cap.transparencyTag, cap.maintenanceClass);
     const costCents = estimateCostCents(cap.priceCents, cap.transparencyTag);
 
     try {

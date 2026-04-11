@@ -187,9 +187,19 @@ function estimateCost(priceCents: number, tag: string | null): number {
   return priceCents; // AI/mixed capabilities cost their price per call
 }
 
-function assignTier(tag: string | null): string {
-  if (tag === "algorithmic") return "A"; // cheap, test every 6h
-  return "C"; // AI calls are expensive, test every 72h
+function assignTier(tag: string | null, maintenanceClass?: string | null): string {
+  if (maintenanceClass) {
+    switch (maintenanceClass) {
+      case "pure-computation": return "A";
+      case "free-stable-api": return "B";
+      case "commercial-stable-api": return "B";
+      case "requires-domain-expertise": return "B";
+      case "scraping-stable-target": return "C";
+      case "scraping-fragile-target": return "C";
+    }
+  }
+  if (tag === "algorithmic") return "A";
+  return "C";
 }
 
 // ─── Main ───────────────────────────────────────────────────────────────────
@@ -228,7 +238,7 @@ async function generate() {
 
     const testInput = generateTestInput(inputSchema);
     const validationRules = getCorrectnessChecks(outputSchema);
-    const tier = assignTier(cap.transparencyTag);
+    const tier = assignTier(cap.transparencyTag, cap.maintenanceClass);
     const cost = estimateCost(cap.priceCents, cap.transparencyTag);
 
     try {

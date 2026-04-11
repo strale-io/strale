@@ -6,6 +6,7 @@ config({ path: resolve(import.meta.dirname, "../../../../.env") });
 import { getDb } from "./index.js";
 import { capabilities, testSuites } from "./schema.js";
 import { eq, and } from "drizzle-orm";
+import { assignTier } from "../lib/test-generation.js";
 
 // ─── Validation helpers ─────────────────────────────────────────────────────
 
@@ -133,7 +134,7 @@ async function generate() {
         input: testInput,
         expectedOutput: null,
         validationRules: checks(), // pass = any response received (no crash/timeout)
-        scheduleTier: "B", // check every 24h
+        scheduleTier: assignTier(cap.transparencyTag, cap.maintenanceClass),
         estimatedCostCents: 0, // availability checks should be cheap
       });
 

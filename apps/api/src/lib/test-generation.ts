@@ -154,9 +154,19 @@ export function estimateCostCents(
   return 0;
 }
 
-export function assignTier(transparencyTag: string | null): string {
-  // Algorithmic capabilities have zero external cost — test every 6h (tier A)
+export function assignTier(transparencyTag: string | null, maintenanceClass?: string | null): string {
+  // Maintenance-class-aware tier assignment (preferred signal)
+  if (maintenanceClass) {
+    switch (maintenanceClass) {
+      case "pure-computation": return "A";           // zero cost → 6h
+      case "free-stable-api": return "B";            // free APIs → 24h
+      case "commercial-stable-api": return "B";      // paid APIs → 24h
+      case "requires-domain-expertise": return "B";  // moderate cost → 24h
+      case "scraping-stable-target": return "C";     // expensive → 72h
+      case "scraping-fragile-target": return "C";    // expensive → 72h
+    }
+  }
+  // Fallback: transparency tag (for backwards compatibility)
   if (transparencyTag === "algorithmic") return "A";
-  // AI/mixed/external API capabilities — daily (tier B)
   return "B";
 }
