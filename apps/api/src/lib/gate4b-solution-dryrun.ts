@@ -44,14 +44,27 @@ export interface Gate4bResult {
 
 /**
  * Generate a mock output object from a JSON Schema.
- * Produces placeholder values that satisfy type checking.
+ * Prefers the schema's `example` field when available (preserves nested
+ * object structure). Falls back to placeholder values for type checking.
  */
 function generateMockFromSchema(schema: Record<string, unknown>): Record<string, unknown> {
   const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
-  if (!properties) return {};
+  const example = schema.example as Record<string, unknown> | undefined;
 
+  // Start with the example (preserves nested structures), then fill in
+  // any properties that exist in the schema but are missing from the example.
   const mock: Record<string, unknown> = {};
+  if (example && typeof example === "object" && !Array.isArray(example)) {
+    // Copy non-null example values. Null values in examples mean "field exists
+    // but wasn't populated in this example" — we'll generate a mock value below.
+    for (const [k, v] of Object.entries(example)) {
+      if (v !== null && v !== undefined) mock[k] = v;
+    }
+  }
+  if (!properties) return mock;
+
   for (const [field, propSchema] of Object.entries(properties)) {
+    if (field in mock) continue; // already populated from example
     const type = propSchema.type as string | undefined;
     switch (type) {
       case "string":
@@ -68,7 +81,14 @@ function generateMockFromSchema(schema: Record<string, unknown>): Record<string,
         mock[field] = [generateMockFromSchema((propSchema.items as Record<string, unknown>) ?? {})];
         break;
       case "object":
-        mock[field] = generateMockFromSchema(propSchema);
+        // Use the field-level example if available
+        if (propSchema.example && typeof propSchema.example === "object") {
+          mock[field] = propSchema.example;
+        } else if (propSchema.properties) {
+          mock[field] = generateMockFromSchema(propSchema);
+        } else {
+          mock[field] = { mock_key: `mock_${field}_value` };
+        }
         break;
       default:
         mock[field] = `mock_${field}`;
@@ -189,16 +209,23 @@ export async function runSolutionDryRun(solutionSlug: string): Promise<Gate4bRes
         resolvedInput[destField] = value;
 
         if (value === null || value === undefined) {
-          // Check if this field is required by looking at the source expression
-          // $steps[N].field that resolves to null is a potential composition failure
+          // $steps[N].field resolved to null. This is only a composition failure
+          // if there's no $input fallback available. The solution executor falls
+          // back to $input.field when $steps[N].field is null, so if the field
+          // exists in the solution's input schema, it's not a real failure.
           if (sourceExpr.startsWith("$steps[")) {
-            stepResult.failures.push({
-              stepIndex: i,
-              stepSlug: slug,
-              type: "MISSING_FIELD",
-              field: destField,
-              detail: `${sourceExpr} resolved to null — step output may not contain this field`,
-            });
+            const stepRefMatch = /^\$steps\[\d+\]\.(.+)$/.exec(sourceExpr);
+            const topField = stepRefMatch ? stepRefMatch[1].split(/[.\[]/)[0] : null;
+            const hasInputFallback = topField && topField in mockSolutionInput;
+            if (!hasInputFallback) {
+              stepResult.failures.push({
+                stepIndex: i,
+                stepSlug: slug,
+                type: "MISSING_FIELD",
+                field: destField,
+                detail: `${sourceExpr} resolved to null and no $input.${topField} fallback available`,
+              });
+            }
           }
         }
       } catch (err) {
