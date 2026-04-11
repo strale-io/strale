@@ -195,6 +195,12 @@ export function enforceGates(violations: GateViolation[]): void {
 }
 
 /**
+ * Gate 4b: Solution dry-run composition check (DEC-20260409-D Layer B).
+ * Threads mock outputs through the step chain to catch composition failures.
+ */
+export { runSolutionDryRun, retrospectiveSolutionDryRun } from "./gate4b-solution-dryrun.js";
+
+/**
  * Gate 5: Path coverage enforcement (DEC-20260411-B).
  * Checks that multi-path capabilities have fixtures for all entry points.
  * Called after fixture generation, since it requires fixtures to exist.
