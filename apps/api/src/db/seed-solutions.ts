@@ -1643,14 +1643,14 @@ const SOLUTIONS: SolutionDef[] = [
         stepOrder: 7,
         canParallel: true,
         parallelGroup: 3,
-        inputMap: { company_name: "$input.company_name" },
+        inputMap: { query: "$input.company_name" },
       },
       {
         capabilitySlug: "social-profile-check",
         stepOrder: 8,
         canParallel: true,
         parallelGroup: 3,
-        inputMap: { company_name: "$input.company_name", domain: "$input.domain" },
+        inputMap: { username: "$input.company_name" },
       },
       {
         capabilitySlug: "whois-lookup",
