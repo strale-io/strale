@@ -1549,9 +1549,9 @@ const SOLUTIONS: SolutionDef[] = [
     name: "Company Intelligence for SDR",
     marketingName: "Company Intelligence for SDR Agents",
     description:
-      "Everything your SDR agent needs to decide whether to pursue a company: registry data, filing events, news sentiment, hiring signals, tech stack, officers, and email patterns. One call.",
+      "Everything your SDR agent needs to decide whether to pursue a company: filing events, news sentiment, officers, tech stack, email patterns, social presence, domain age, and hiring signals. One call, 9 steps.",
     longDescription:
-      "The complete company research package for AI SDR agents. Given a company name and domain, returns: official registry data (identity, status, incorporation), recent SEC/Companies House filing events (leadership changes, funding, M&A), news sentiment from global media, technology stack detection, company officers and directors from public records, and email pattern discovery. Replaces the manual process of querying 6+ APIs separately. Every data point is quality-scored and sourced.",
+      "The complete company research package for AI SDR agents. Given a company name and domain, returns: recent filing events (SEC/Companies House), news sentiment from global media, company officers and directors from public records, technology stack detection, email pattern discovery, social media presence across 11 platforms, domain registration age and registrar (WHOIS), and hiring activity from job boards. Replaces the manual process of querying 9+ APIs separately. Every data point is quality-scored and sourced.",
     agentDescription:
       "research this company for outreach, SDR company intelligence, should I pursue this company, company research for sales, prospect company analysis, pre-outreach research, is this company worth targeting",
     category: "sales-outreach",
@@ -1637,13 +1637,27 @@ const SOLUTIONS: SolutionDef[] = [
         parallelGroup: 2,
         inputMap: { domain: "$input.domain" },
       },
-      // Parallel group 3: Hiring signals
+      // Parallel group 3: Hiring + social + domain age
       {
         capabilitySlug: "job-board-search",
         stepOrder: 7,
         canParallel: true,
         parallelGroup: 3,
         inputMap: { company_name: "$input.company_name" },
+      },
+      {
+        capabilitySlug: "social-profile-check",
+        stepOrder: 8,
+        canParallel: true,
+        parallelGroup: 3,
+        inputMap: { company_name: "$input.company_name", domain: "$input.domain" },
+      },
+      {
+        capabilitySlug: "whois-lookup",
+        stepOrder: 9,
+        canParallel: true,
+        parallelGroup: 3,
+        inputMap: { domain: "$input.domain" },
       },
     ],
   },
