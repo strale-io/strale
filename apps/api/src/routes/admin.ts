@@ -851,19 +851,21 @@ adminRoute.post("/create-solution", async (c) => {
   await db.execute(sql`DELETE FROM solution_steps WHERE solution_id = ${solutionId}`);
 
   // Insert steps
+  let stepsInserted = 0;
   for (const step of body.steps) {
-    // Resolve capability slug to ID
-    const capResult = await db.execute(sql`SELECT id FROM capabilities WHERE slug = ${step.capability_slug}`);
+    // Verify capability exists
+    const capResult = await db.execute(sql`SELECT slug FROM capabilities WHERE slug = ${step.capability_slug}`);
     const capRows = toRows(capResult);
     if (capRows.length === 0) {
       console.warn(`[create-solution] Capability '${step.capability_slug}' not found — skipping step`);
       continue;
     }
     await db.execute(sql`
-      INSERT INTO solution_steps (solution_id, capability_id, step_order, can_parallel, parallel_group, input_map)
-      VALUES (${solutionId}, ${capRows[0].id}, ${step.step_order}, ${step.can_parallel ?? false}, ${step.parallel_group ?? null}, ${JSON.stringify(step.input_map ?? {})}::jsonb)
+      INSERT INTO solution_steps (solution_id, capability_slug, step_order, can_parallel, parallel_group, input_map)
+      VALUES (${solutionId}, ${step.capability_slug}, ${step.step_order}, ${step.can_parallel ?? false}, ${step.parallel_group ?? null}, ${JSON.stringify(step.input_map ?? {})}::jsonb)
     `);
+    stepsInserted++;
   }
 
-  return c.json({ created: solRows[0], steps_inserted: body.steps.length }, 201);
+  return c.json({ created: solRows[0], steps_inserted: stepsInserted }, 201);
 });
