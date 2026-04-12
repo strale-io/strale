@@ -813,7 +813,7 @@ adminRoute.post("/create-solution", async (c) => {
 
   // Insert solution
   const solResult = await db.execute(sql`
-    INSERT INTO solutions (slug, name, marketing_name, description, long_description, agent_description, category, price_cents, is_active, input_schema, transparency_tag)
+    INSERT INTO solutions (slug, name, marketing_name, description, long_description, agent_description, category, price_cents, component_sum_cents, value_tier, maintenance_level, geography, is_active, input_schema, transparency_tag)
     VALUES (
       ${body.slug},
       ${body.name},
@@ -823,6 +823,10 @@ adminRoute.post("/create-solution", async (c) => {
       ${body.agent_description ?? ""},
       ${body.category ?? "sales-outreach"},
       ${body.price_cents ?? 250},
+      ${body.component_sum_cents ?? body.price_cents ?? 200},
+      ${body.value_tier ?? "data-lookup"},
+      ${body.maintenance_level ?? "low"},
+      ${body.geography ?? "global"},
       true,
       ${JSON.stringify(body.input_schema ?? {})}::jsonb,
       ${body.transparency_tag ?? "mixed"}
