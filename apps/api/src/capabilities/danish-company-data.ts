@@ -3,6 +3,10 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatDK } from "../lib/vat-derivation.js";
 
 // CVR API — Danish Central Business Register
+// NOTE: cvrapi.dk free tier has aggressive quota limits that trigger QUOTA_EXCEEDED
+// on moderate usage. Long-term fix: apply for official datacvr.virk.dk API access
+// via https://datacvr.virk.dk/artikel/system-til-system-adgang-til-cvr-data
+// Contact: cvrselvbetjening@erst.dk
 const CVR_API = "https://cvrapi.dk/api";
 
 // Danish CVR numbers: 8 digits
