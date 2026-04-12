@@ -799,3 +799,67 @@ adminRoute.post("/reprice", async (c) => {
 
   return c.json({ updated: rows2[0], solutions_recomputed: solutionUpdates });
 });
+
+// ─── Solution creation (admin-only) ─────────────────────────────────────────
+// POST /v1/admin/create-solution — insert a new solution with steps
+
+adminRoute.post("/create-solution", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body?.slug || !body?.name || !body?.description || !Array.isArray(body?.steps)) {
+    return c.json(apiError("invalid_request", "slug, name, description, and steps[] are required"), 400);
+  }
+
+  const db = getDb();
+
+  // Insert solution
+  const solResult = await db.execute(sql`
+    INSERT INTO solutions (slug, name, marketing_name, description, long_description, agent_description, category, price_cents, is_active, input_schema, transparency_tag)
+    VALUES (
+      ${body.slug},
+      ${body.name},
+      ${body.marketing_name ?? body.name},
+      ${body.description},
+      ${body.long_description ?? body.description},
+      ${body.agent_description ?? ""},
+      ${body.category ?? "sales-outreach"},
+      ${body.price_cents ?? 250},
+      true,
+      ${JSON.stringify(body.input_schema ?? {})}::jsonb,
+      ${body.transparency_tag ?? "mixed"}
+    )
+    ON CONFLICT (slug) DO UPDATE SET
+      name = EXCLUDED.name,
+      description = EXCLUDED.description,
+      price_cents = EXCLUDED.price_cents,
+      is_active = true,
+      input_schema = EXCLUDED.input_schema
+    RETURNING id, slug, name
+  `);
+
+  const solRows = toRows(solResult);
+  if (solRows.length === 0) {
+    return c.json(apiError("invalid_request", "Failed to create solution"), 400);
+  }
+
+  const solutionId = solRows[0].id;
+
+  // Delete existing steps and re-insert
+  await db.execute(sql`DELETE FROM solution_steps WHERE solution_id = ${solutionId}`);
+
+  // Insert steps
+  for (const step of body.steps) {
+    // Resolve capability slug to ID
+    const capResult = await db.execute(sql`SELECT id FROM capabilities WHERE slug = ${step.capability_slug}`);
+    const capRows = toRows(capResult);
+    if (capRows.length === 0) {
+      console.warn(`[create-solution] Capability '${step.capability_slug}' not found — skipping step`);
+      continue;
+    }
+    await db.execute(sql`
+      INSERT INTO solution_steps (solution_id, capability_id, step_order, can_parallel, parallel_group, input_map)
+      VALUES (${solutionId}, ${capRows[0].id}, ${step.step_order}, ${step.can_parallel ?? false}, ${step.parallel_group ?? null}, ${JSON.stringify(step.input_map ?? {})}::jsonb)
+    `);
+  }
+
+  return c.json({ created: solRows[0], steps_inserted: body.steps.length }, 201);
+});
