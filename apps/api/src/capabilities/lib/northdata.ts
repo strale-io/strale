@@ -19,6 +19,7 @@ const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 export interface NorthdataCompany {
   company_name: string | null;
   registration_number: string | null;
+  court: string | null;
   business_type: string | null;
   address: string | null;
   registration_date: string | null;
@@ -37,6 +38,7 @@ export function extractJsonLd(html: string): NorthdataCompany {
   const result: NorthdataCompany = {
     company_name: null,
     registration_number: null,
+    court: null,
     business_type: null,
     address: null,
     registration_date: null,
@@ -102,6 +104,13 @@ export function extractJsonLd(html: string): NorthdataCompany {
   else if (cheMatch) result.registration_number = cheMatch[1].trim();
   else if (sirenMatch) result.registration_number = sirenMatch[0].trim();
   else if (kboMatch) result.registration_number = kboMatch[0].trim();
+
+  // Extract German court (Amtsgericht/Registergericht) from HTML
+  // Pattern: "Amtsgericht München HRB 42243" or "Amtsgericht Charlottenburg (Berlin) HRB 327"
+  const courtMatch = html.match(/(?:Amtsgericht|Registergericht)\s+([^<,"]+?)(?:\s+(?:HRB|HRA|GnR|PR|VR)\s)/i);
+  if (courtMatch) {
+    result.court = `Amtsgericht ${courtMatch[1].trim()}`;
+  }
 
   if (result.company_name) {
     const typeMatch = result.company_name.match(BUSINESS_TYPES);

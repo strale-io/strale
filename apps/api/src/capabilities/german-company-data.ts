@@ -79,8 +79,11 @@ registerCapability("german-company-data", async (input: CapabilityInput) => {
     registration_number: isRegNumber ? (hrbNumber || raw) : null,
   }, court || undefined) as unknown as Record<string, unknown>;
 
+  // Include court in output — either user-provided or auto-extracted from northdata
   if (court) {
-    output.court_used = court;
+    output.court = court;
+  } else if (output.court) {
+    // Court was auto-extracted from northdata HTML — keep it
   }
 
   return {
