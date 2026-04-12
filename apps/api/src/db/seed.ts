@@ -176,6 +176,34 @@ const seedCapabilities = [
     },
     priceCents: 100,
   },
+  // ─── SDR Intelligence (April 2026) ─────────────────────────────────────
+  {
+    name: "Tech Stack Detect",
+    slug: "tech-stack-detect",
+    description: "Detect technologies used by a website. Identifies CMS, frameworks, analytics, CDN, payment providers, marketing tools, and more from HTTP headers and HTML patterns.",
+    category: "company-data",
+    inputSchema: { type: "object", properties: { url: { type: "string", description: "Website URL (e.g. https://stripe.com)" }, domain: { type: "string", description: "Domain name (e.g. stripe.com)" } }, required: [] },
+    outputSchema: { type: "object", properties: { url: { type: "string" }, technologies_detected: { type: "number" }, technologies: { type: "array" }, by_category: { type: "object" }, signals: { type: "object" } } },
+    priceCents: 3,
+  },
+  {
+    name: "Officer Search",
+    slug: "officer-search",
+    description: "Find company directors and officers from public registries. Covers UK (Companies House), US (SEC EDGAR), and EU (northdata.com). Returns names, roles, and appointment dates.",
+    category: "company-data",
+    inputSchema: { type: "object", properties: { company_name: { type: "string", description: "Company name to search for" }, country: { type: "string", description: "Country code (GB, US, DE, etc.)" }, company_number: { type: "string", description: "Registry number (UK Companies House)" } }, required: [] },
+    outputSchema: { type: "object", properties: { company_name: { type: "string" }, officers: { type: "array" }, active_officers: { type: "number" }, total_officers: { type: "number" } } },
+    priceCents: 5,
+  },
+  {
+    name: "Email Pattern Discover",
+    slug: "email-pattern-discover",
+    description: "Discover the email address pattern used by a company. Checks MX records, detects email provider (Google Workspace, Microsoft 365, etc.), and finds publicly listed email addresses on the website.",
+    category: "company-data",
+    inputSchema: { type: "object", properties: { domain: { type: "string", description: "Domain name (e.g. stripe.com)" }, url: { type: "string", description: "Website URL" } }, required: [] },
+    outputSchema: { type: "object", properties: { domain: { type: "string" }, accepts_email: { type: "boolean" }, email_provider: { type: "string" }, patterns: { type: "array" }, public_emails_found: { type: "array" } } },
+    priceCents: 3,
+  },
   // ─── Company Intelligence (April 2026) ──────────────────────────────────
   {
     name: "SEC Filing Events",
