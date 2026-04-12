@@ -59,19 +59,53 @@ function categorizeItems(items: string[]): string[] {
   return Array.from(new Set(categories));
 }
 
-async function resolveCompanyToCik(query: string): Promise<{ cik: string; name: string } | null> {
-  // Try the company search/tickers endpoint
-  const searchUrl = `https://efts.sec.gov/LATEST/search-index?q=%22${encodeURIComponent(query)}%22&forms=8-K&dateRange=custom&startdt=2025-01-01&enddt=2026-12-31`;
-  const resp = await fetch(searchUrl, {
+// Cache the tickers list (updates rarely, ~700KB)
+let tickersCache: Record<string, { cik_str: string; ticker: string; title: string }> | null = null;
+let tickersCacheAt = 0;
+const TICKERS_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+async function loadTickers(): Promise<Record<string, { cik_str: string; ticker: string; title: string }>> {
+  if (tickersCache && Date.now() - tickersCacheAt < TICKERS_TTL_MS) return tickersCache;
+  const resp = await fetch("https://www.sec.gov/files/company_tickers.json", {
     headers: { "User-Agent": UA },
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(15000),
   });
-  if (!resp.ok) return null;
-  const data = await resp.json() as any;
-  const hit = data?.hits?.hits?.[0]?._source;
-  if (hit?.ciks?.[0] && hit?.display_names?.[0]) {
-    return { cik: hit.ciks[0], name: hit.display_names[0].split("  (")[0].trim() };
+  if (!resp.ok) throw new Error("Could not load SEC company tickers list.");
+  tickersCache = await resp.json() as any;
+  tickersCacheAt = Date.now();
+  return tickersCache!;
+}
+
+async function resolveCompanyToCik(query: string): Promise<{ cik: string; name: string; ticker: string } | null> {
+  const tickers = await loadTickers();
+  const queryLower = query.toLowerCase().trim();
+
+  // Try exact ticker match first
+  for (const v of Object.values(tickers)) {
+    if (v.ticker.toLowerCase() === queryLower) {
+      return { cik: String(v.cik_str), name: v.title, ticker: v.ticker };
+    }
   }
+
+  // Try exact company name match
+  for (const v of Object.values(tickers)) {
+    if (v.title.toLowerCase() === queryLower) {
+      return { cik: String(v.cik_str), name: v.title, ticker: v.ticker };
+    }
+  }
+
+  // Try prefix/contains match
+  for (const v of Object.values(tickers)) {
+    if (v.title.toLowerCase().startsWith(queryLower)) {
+      return { cik: String(v.cik_str), name: v.title, ticker: v.ticker };
+    }
+  }
+  for (const v of Object.values(tickers)) {
+    if (v.title.toLowerCase().includes(queryLower)) {
+      return { cik: String(v.cik_str), name: v.title, ticker: v.ticker };
+    }
+  }
+
   return null;
 }
 
