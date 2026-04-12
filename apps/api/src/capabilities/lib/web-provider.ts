@@ -266,9 +266,12 @@ export async function fetchPage(
             );
             continue;
           }
-          throw new Error(
-            `Browserless returned HTTP ${response.status}: ${errText.slice(0, 200)}`,
-          );
+          const humanMsg = response.status === 408
+            ? "The web page took too long to load. This capability uses web scraping which can be slow for some sites. Please try again."
+            : response.status === 429
+            ? "The web scraping service is temporarily rate-limited. Please try again in a few minutes."
+            : `The web page could not be loaded (HTTP ${response.status}). Please try again later.`;
+          throw new Error(humanMsg);
         }
 
         const html = await response.text();

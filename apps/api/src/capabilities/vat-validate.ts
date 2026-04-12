@@ -3,6 +3,22 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 const VIES_URL =
   "https://ec.europa.eu/taxation_customs/vies/services/checkVatService";
 
+/** Convert cryptic VIES SOAP fault strings to human-readable errors. */
+function humanizeViesError(faultString: string): string {
+  const upper = faultString.toUpperCase();
+  if (upper.includes("MS_UNAVAILABLE"))
+    return "The EU VAT validation service (VIES) reports that this country's tax authority is temporarily unavailable. This is an upstream issue — please try again later.";
+  if (upper.includes("MS_MAX_CONCURRENT_REQ"))
+    return "The EU VAT validation service (VIES) is overloaded with requests. Please try again in a few seconds.";
+  if (upper.includes("TIMEOUT"))
+    return "The EU VAT validation service (VIES) timed out. Please try again.";
+  if (upper.includes("SERVER_BUSY"))
+    return "The EU VAT validation service (VIES) is busy. Please try again in a few seconds.";
+  if (upper.includes("INVALID_INPUT"))
+    return "The VAT number format is not valid for this country. Check the country prefix and number format.";
+  return `The EU VAT validation service (VIES) returned an error: ${faultString}. This is usually a temporary issue — please try again.`;
+}
+
 // 24h cache for successful VIES responses. VIES is slow (~2-3s) and
 // unreliable. Cached results are served when VIES is down or slow,
 // marked with cache_hit: true so callers know the data age.
@@ -116,7 +132,7 @@ registerCapability("vat-validate", async (input: CapabilityInput) => {
         const faultString = extractTag(text, "faultstring");
         if (faultString) {
           if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
-          viesError = new Error(`VIES error: ${faultString}`);
+          viesError = new Error(humanizeViesError(faultString));
           break;
         }
         if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
@@ -130,7 +146,7 @@ registerCapability("vat-validate", async (input: CapabilityInput) => {
       const faultString = extractTag(xml, "faultstring");
       if (faultString) {
         if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
-        viesError = new Error(`VIES error: ${faultString}`);
+        viesError = new Error(humanizeViesError(faultString));
         break;
       }
 

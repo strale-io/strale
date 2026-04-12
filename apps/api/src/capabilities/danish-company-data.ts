@@ -62,11 +62,20 @@ async function fetchCompany(
   if (response.status === 404) {
     throw new Error(`No Danish company found for query: ${JSON.stringify(query)}.`);
   }
-  if (!response.ok) throw new Error(`CVR API returned HTTP ${response.status}`);
+  if (response.status === 429) {
+    throw new Error("The Danish business registry (cvrapi.dk) is temporarily rate-limiting requests. Please try again in a few minutes.");
+  }
+  if (!response.ok) {
+    throw new Error(`The Danish business registry returned an error (HTTP ${response.status}). Please try again later.`);
+  }
 
   const data = await response.json() as any;
   if (!data || data.error) {
-    throw new Error(data?.error || "No results from CVR API.");
+    const rawErr = data?.error || "";
+    if (/quota/i.test(rawErr) || /limit/i.test(rawErr)) {
+      throw new Error("The Danish business registry API quota has been temporarily exceeded. Please try again in a few hours.");
+    }
+    throw new Error(rawErr || `No Danish company found for query: ${JSON.stringify(query)}.`);
   }
 
   const address = [data.address, [data.zipcode, data.city].filter(Boolean).join(" ")]
