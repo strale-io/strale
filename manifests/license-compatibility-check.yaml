@@ -1,0 +1,84 @@
+slug: license-compatibility-check
+name: License Compatibility Check
+description: Check software license compatibility for a given use case
+category: security
+price_cents: 5
+data_source: SPDX License List
+data_source_type: reference
+transparency_tag: algorithmic
+freshness_category: computed
+input_schema:
+  type: object
+  properties:
+    licenses:
+      type: array
+      items:
+        type: string
+      description: SPDX license identifiers
+    use_case:
+      type: string
+      description: commercial, open-source, saas, internal
+  required:
+    - licenses
+output_schema:
+  type: object
+  properties:
+    compatible:
+      type: boolean
+    use_case:
+      type: string
+    license_count:
+      type: integer
+    conflicts:
+      type: array
+    warnings:
+      type: array
+    summary:
+      type: string
+test_fixtures:
+  known_answer:
+    input:
+      licenses:
+        - MIT
+      use_case: commercial
+    expected_fields:
+      - field: compatible
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: use_case
+        operator: equals
+        reliability: guaranteed
+        value: commercial
+      - field: license_count
+        operator: not_null
+        reliability: guaranteed
+      - field: licenses_analyzed
+        operator: not_null
+        reliability: guaranteed
+      - field: conflicts
+        operator: not_null
+        reliability: guaranteed
+      - field: warnings
+        operator: not_null
+        reliability: guaranteed
+      - field: summary
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    licenses:
+      - MIT
+    use_case: commercial
+output_field_reliability:
+  compatible: guaranteed
+  use_case: guaranteed
+  license_count: guaranteed
+  licenses_analyzed: guaranteed
+  conflicts: guaranteed
+  warnings: guaranteed
+  summary: guaranteed
+limitations:
+  - title: Covers 30+ common licenses
+    text: Unknown SPDX identifiers are flagged as 'unknown' and treated conservatively.
+    category: coverage
+    severity: info

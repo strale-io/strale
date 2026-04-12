@@ -1,39 +1,79 @@
-slug: "company-news"
-name: "Company News"
-description: "Search global news for a company. Returns recent articles with source, date, and sentiment analysis. Covers 100+ languages via GDELT, updating every 15 minutes."
-category: "company-data"
+slug: company-news
+name: Company News
+description: >-
+  Search global news for a company. Returns recent articles with source, date, and sentiment analysis. Covers 100+
+  languages via GDELT, updating every 15 minutes.
+category: company-data
 price_cents: 5
-data_source: "GDELT Project"
-data_source_type: "api"
-transparency_tag: "algorithmic"
-freshness_category: "live-fetch"
+data_source: GDELT Project
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
 avg_latency_ms: 800
-
+maintenance_class: free-stable-api
+input_schema:
+  type: object
+  properties:
+    company_name:
+      type: string
+      description: Company name to search for
+    country:
+      type: string
+      description: Filter by source country (ISO 2-letter code)
+    timespan:
+      type: string
+      description: "Time window: 1d, 3d, 7d, 14d, or 30d (default 7d)"
+    max_articles:
+      type: number
+      description: Maximum articles to return (default 10, max 25)
+  required: []
+output_schema:
+  type: object
+  properties:
+    company_name:
+      type: string
+    articles_found:
+      type: number
+    sentiment_summary:
+      type: object
+    articles:
+      type: array
 test_fixtures:
   known_answer:
     input:
-      company_name: "Apple Inc"
-      timespan: "7d"
+      company_name: Apple Inc
     expected_fields:
-      - { field: "company_name", operator: "not_null", reliability: "guaranteed" }
-      - { field: "articles_found", operator: "not_null", reliability: "guaranteed" }
-      - { field: "articles", operator: "not_null", reliability: "guaranteed" }
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: timespan
+        operator: equals
+        reliability: guaranteed
+        value: 7d
+      - field: articles_found
+        operator: not_null
+        reliability: guaranteed
+      - field: articles
+        operator: not_null
+        reliability: guaranteed
   health_check_input:
-    company_name: "Apple Inc"
-
+    company_name: Apple Inc
 output_field_reliability:
-  company_name: "guaranteed"
-  timespan: "guaranteed"
-  articles_found: "guaranteed"
-  sentiment_summary: "common"
-  articles: "guaranteed"
-
+  company_name: guaranteed
+  timespan: guaranteed
+  articles_found: guaranteed
+  sentiment_summary: common
+  articles: guaranteed
 limitations:
-  - title: "Rolling time window"
-    text: "GDELT provides news from the last 30 days maximum. Historical news beyond this window is not available through this capability."
-    category: "coverage"
-    severity: "info"
-  - title: "Company name matching"
-    text: "Uses exact phrase matching on the company name. Short or generic names (e.g. 'Apple') may return unrelated articles. Use the full legal name for best results."
-    category: "accuracy"
-    severity: "info"
+  - title: Rolling time window
+    text: >-
+      GDELT provides news from the last 30 days maximum. Historical news beyond this window is not available through
+      this capability.
+    category: coverage
+    severity: info
+  - title: Company name matching
+    text: >-
+      Uses exact phrase matching on the company name. Short or generic names (e.g. 'Apple') may return unrelated
+      articles. Use the full legal name for best results.
+    category: accuracy
+    severity: info

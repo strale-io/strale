@@ -8,6 +8,35 @@ data_source_type: "api"
 transparency_tag: "algorithmic"
 freshness_category: "live-fetch"
 avg_latency_ms: 600
+maintenance_class: "free-stable-api"
+
+input_schema:
+  type: "object"
+  properties:
+    company_number:
+      type: "string"
+      description: "Companies House number (e.g. 00445790)"
+    company_name:
+      type: "string"
+      description: "Company name for search (e.g. Rolls-Royce Holdings)"
+    max_events:
+      type: "number"
+      description: "Maximum filings to return (default 15, max 30)"
+  required: []
+
+output_schema:
+  type: "object"
+  properties:
+    company_name:
+      type: "string"
+    company_number:
+      type: "string"
+    company_status:
+      type: "string"
+    filings:
+      type: "array"
+    events_returned:
+      type: "number"
 
 test_fixtures:
   known_answer:
