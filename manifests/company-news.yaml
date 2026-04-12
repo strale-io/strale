@@ -1,0 +1,39 @@
+slug: "company-news"
+name: "Company News"
+description: "Search global news for a company. Returns recent articles with source, date, and sentiment analysis. Covers 100+ languages via GDELT, updating every 15 minutes."
+category: "company-data"
+price_cents: 5
+data_source: "GDELT Project"
+data_source_type: "api"
+transparency_tag: "algorithmic"
+freshness_category: "live-fetch"
+avg_latency_ms: 800
+
+test_fixtures:
+  known_answer:
+    input:
+      company_name: "Apple Inc"
+      timespan: "7d"
+    expected_fields:
+      - { field: "company_name", operator: "not_null", reliability: "guaranteed" }
+      - { field: "articles_found", operator: "not_null", reliability: "guaranteed" }
+      - { field: "articles", operator: "not_null", reliability: "guaranteed" }
+  health_check_input:
+    company_name: "Apple Inc"
+
+output_field_reliability:
+  company_name: "guaranteed"
+  timespan: "guaranteed"
+  articles_found: "guaranteed"
+  sentiment_summary: "common"
+  articles: "guaranteed"
+
+limitations:
+  - title: "Rolling time window"
+    text: "GDELT provides news from the last 30 days maximum. Historical news beyond this window is not available through this capability."
+    category: "coverage"
+    severity: "info"
+  - title: "Company name matching"
+    text: "Uses exact phrase matching on the company name. Short or generic names (e.g. 'Apple') may return unrelated articles. Use the full legal name for best results."
+    category: "accuracy"
+    severity: "info"

@@ -1,0 +1,44 @@
+slug: "sec-filing-events"
+name: "SEC Filing Events"
+description: "Get recent 8-K filing events for US public companies from SEC EDGAR. Returns leadership changes, funding events, acquisitions, material agreements, and financial results."
+category: "company-data"
+price_cents: 5
+data_source: "SEC EDGAR"
+data_source_type: "api"
+transparency_tag: "algorithmic"
+freshness_category: "live-fetch"
+avg_latency_ms: 500
+
+test_fixtures:
+  known_answer:
+    input:
+      company_name: "Apple Inc"
+    expected_fields:
+      - { field: "company_name", operator: "not_null", reliability: "guaranteed" }
+      - { field: "cik", operator: "not_null", reliability: "guaranteed" }
+      - { field: "events", operator: "not_null", reliability: "guaranteed" }
+      - { field: "events_returned", operator: "not_null", reliability: "guaranteed" }
+  health_check_input:
+    company_name: "Apple Inc"
+
+output_field_reliability:
+  company_name: "guaranteed"
+  cik: "guaranteed"
+  ticker: "common"
+  exchange: "common"
+  sic: "common"
+  sic_description: "common"
+  state: "common"
+  total_filings_available: "guaranteed"
+  events_returned: "guaranteed"
+  events: "guaranteed"
+
+limitations:
+  - title: "US public companies only"
+    text: "Only covers companies that file with the US Securities and Exchange Commission. Private companies and non-US companies are not included."
+    category: "coverage"
+    severity: "info"
+  - title: "8-K filings only"
+    text: "Returns current reports (8-K) which cover material events. Does not include 10-K annual reports or 10-Q quarterly reports."
+    category: "coverage"
+    severity: "info"

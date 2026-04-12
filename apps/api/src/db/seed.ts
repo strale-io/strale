@@ -176,6 +176,34 @@ const seedCapabilities = [
     },
     priceCents: 100,
   },
+  // ─── Company Intelligence (April 2026) ──────────────────────────────────
+  {
+    name: "SEC Filing Events",
+    slug: "sec-filing-events",
+    description: "Get recent 8-K filing events for US public companies from SEC EDGAR. Returns leadership changes, funding events, acquisitions, material agreements, and financial results.",
+    category: "company-data",
+    inputSchema: { type: "object", properties: { company_name: { type: "string", description: "Company name (e.g. Apple Inc, Tesla)" }, ticker: { type: "string", description: "Stock ticker (e.g. AAPL, TSLA)" }, cik: { type: "string", description: "SEC CIK number (10 digits)" }, max_events: { type: "number", description: "Maximum events to return (default 10, max 25)" } }, required: [] },
+    outputSchema: { type: "object", properties: { company_name: { type: "string" }, cik: { type: "string" }, ticker: { type: "string" }, events: { type: "array" }, events_returned: { type: "number" } } },
+    priceCents: 5,
+  },
+  {
+    name: "Company News",
+    slug: "company-news",
+    description: "Search global news for a company. Returns recent articles with source, date, and sentiment analysis. Covers 100+ languages via GDELT, updating every 15 minutes.",
+    category: "company-data",
+    inputSchema: { type: "object", properties: { company_name: { type: "string", description: "Company name to search for" }, country: { type: "string", description: "Filter by source country (ISO 2-letter code, e.g. US, GB, DE)" }, timespan: { type: "string", description: "Time window: 1d, 3d, 7d, 14d, or 30d (default 7d)" }, max_articles: { type: "number", description: "Maximum articles to return (default 10, max 25)" } }, required: [] },
+    outputSchema: { type: "object", properties: { company_name: { type: "string" }, articles_found: { type: "number" }, sentiment_summary: { type: "object" }, articles: { type: "array" } } },
+    priceCents: 5,
+  },
+  {
+    name: "UK Filing Events",
+    slug: "uk-filing-events",
+    description: "Get recent filing history for a UK company from Companies House. Returns accounts, officer changes, confirmation statements, charges, and other corporate filings.",
+    category: "company-data",
+    inputSchema: { type: "object", properties: { company_number: { type: "string", description: "Companies House number (e.g. 00445790)" }, company_name: { type: "string", description: "Company name for search (e.g. Rolls-Royce Holdings)" }, max_events: { type: "number", description: "Maximum filings to return (default 15, max 30)" } }, required: [] },
+    outputSchema: { type: "object", properties: { company_name: { type: "string" }, company_number: { type: "string" }, company_status: { type: "string" }, filings: { type: "array" }, events_returned: { type: "number" } } },
+    priceCents: 5,
+  },
   // ─── New capabilities (DEC-20260226-P-s3t4) ─────────────────────────────
   {
     name: "Norwegian Company Data",

@@ -1,0 +1,44 @@
+slug: "uk-filing-events"
+name: "UK Filing Events"
+description: "Get recent filing history for a UK company from Companies House. Returns accounts, officer changes, confirmation statements, charges, and other corporate filings."
+category: "company-data"
+price_cents: 5
+data_source: "UK Companies House"
+data_source_type: "api"
+transparency_tag: "algorithmic"
+freshness_category: "live-fetch"
+avg_latency_ms: 600
+
+test_fixtures:
+  known_answer:
+    input:
+      company_name: "Rolls-Royce Holdings"
+    expected_fields:
+      - { field: "company_name", operator: "not_null", reliability: "guaranteed" }
+      - { field: "company_number", operator: "not_null", reliability: "guaranteed" }
+      - { field: "filings", operator: "not_null", reliability: "guaranteed" }
+      - { field: "events_returned", operator: "not_null", reliability: "guaranteed" }
+  health_check_input:
+    company_name: "Rolls-Royce Holdings"
+
+output_field_reliability:
+  company_name: "guaranteed"
+  company_number: "guaranteed"
+  company_status: "common"
+  company_type: "common"
+  incorporated: "common"
+  sic_codes: "common"
+  registered_address: "common"
+  total_filings: "guaranteed"
+  events_returned: "guaranteed"
+  filings: "guaranteed"
+
+limitations:
+  - title: "UK companies only"
+    text: "Only covers companies registered with UK Companies House. Does not include companies registered in other jurisdictions."
+    category: "coverage"
+    severity: "info"
+  - title: "Requires API key"
+    text: "Requires COMPANIES_HOUSE_API_KEY environment variable. Free registration at developer.company-information.service.gov.uk."
+    category: "dependency"
+    severity: "info"
