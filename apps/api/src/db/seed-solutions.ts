@@ -1543,6 +1543,111 @@ const SOLUTIONS: SolutionDef[] = [
     ],
   },
 
+  // ── 20b. Company Intelligence for SDR ──
+  {
+    slug: "company-intelligence-sdr",
+    name: "Company Intelligence for SDR",
+    marketingName: "Company Intelligence for SDR Agents",
+    description:
+      "Everything your SDR agent needs to decide whether to pursue a company: registry data, filing events, news sentiment, hiring signals, tech stack, officers, and email patterns. One call.",
+    longDescription:
+      "The complete company research package for AI SDR agents. Given a company name and domain, returns: official registry data (identity, status, incorporation), recent SEC/Companies House filing events (leadership changes, funding, M&A), news sentiment from global media, technology stack detection, company officers and directors from public records, and email pattern discovery. Replaces the manual process of querying 6+ APIs separately. Every data point is quality-scored and sourced.",
+    agentDescription:
+      "research this company for outreach, SDR company intelligence, should I pursue this company, company research for sales, prospect company analysis, pre-outreach research, is this company worth targeting",
+    category: "sales-outreach",
+    priceCents: 250,
+    componentSumCents: 200,
+    valueTier: "verification",
+    maintenanceLevel: "low",
+    geography: "us-uk-eu",
+    targetAudience:
+      "Developers building AI SDR agents, outbound sales automation, or account research tools",
+    transparencyTag: "mixed",
+    extendsWith: ["sanctions-check", "vat-validate", "beneficial-ownership-lookup"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        company_name: {
+          type: "string",
+          description: "Company name (e.g. Stripe, BMW, Novo Nordisk)",
+        },
+        domain: {
+          type: "string",
+          description: "Company website domain (e.g. stripe.com)",
+        },
+        country: {
+          type: "string",
+          description: "Country code (US, GB, DE, etc.) — improves accuracy for registry lookups",
+        },
+      },
+      required: ["company_name"],
+    },
+    exampleInput: { company_name: "Stripe", domain: "stripe.com", country: "US" },
+    exampleOutput: {
+      company_name: "Stripe, Inc.",
+      registry: { status: "active", cik: "0001779474" },
+      filing_events: [{ date: "2026-03-15", type: "financial_results" }],
+      news: { articles: 5, sentiment: "positive" },
+      tech_stack: ["Next.js", "Nginx", "Google Analytics"],
+      officers: [{ name: "John Collison", role: "President" }],
+      email_pattern: "first.last@stripe.com",
+    },
+    steps: [
+      // Parallel group 1: Company identity + filing events
+      {
+        capabilitySlug: "sec-filing-events",
+        stepOrder: 1,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { company_name: "$input.company_name" },
+      },
+      {
+        capabilitySlug: "company-news",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { company_name: "$input.company_name", timespan: "14d" },
+      },
+      {
+        capabilitySlug: "officer-search",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { company_name: "$input.company_name", country: "$input.country" },
+      },
+      // Parallel group 2: Domain-based signals (need domain input)
+      {
+        capabilitySlug: "tech-stack-detect",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 2,
+        inputMap: { domain: "$input.domain" },
+      },
+      {
+        capabilitySlug: "email-pattern-discover",
+        stepOrder: 5,
+        canParallel: true,
+        parallelGroup: 2,
+        inputMap: { domain: "$input.domain" },
+      },
+      {
+        capabilitySlug: "domain-reputation",
+        stepOrder: 6,
+        canParallel: true,
+        parallelGroup: 2,
+        inputMap: { domain: "$input.domain" },
+      },
+      // Parallel group 3: Hiring signals
+      {
+        capabilitySlug: "job-board-search",
+        stepOrder: 7,
+        canParallel: true,
+        parallelGroup: 3,
+        inputMap: { company_name: "$input.company_name" },
+      },
+    ],
+  },
+
   // ── 20. Domain Trust Check ──
   {
     slug: "domain-trust",
