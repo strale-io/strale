@@ -167,65 +167,50 @@ function parseKrsResponse(data: any, krsNumber: string, register: "P" | "S"): Re
 }
 
 async function searchByName(name: string): Promise<Record<string, unknown>> {
-  // The old KRS search API (/api/krs/szukaj) returns 404 as of April 2026.
-  // Use Browserless to search the wyszukiwarka-krs.ms.gov.pl portal instead.
-  const browserlessUrl = process.env.BROWSERLESS_URL || "https://production-sfo.browserless.io";
-  const browserlessKey = process.env.BROWSERLESS_API_KEY;
-
-  if (!browserlessKey) {
-    throw new Error(`Name-based search requires Browserless. No Polish company found matching "${name}". Try providing a KRS number (10 digits) instead.`);
-  }
-
-  const searchUrl = `https://wyszukiwarka-krs.ms.gov.pl/`;
-  const script = `
-    export default async function ({ page }) {
-      await page.goto('${searchUrl}', { waitUntil: 'networkidle0', timeout: 20000 });
-      // Wait for the search input to appear (SPA needs time to hydrate)
-      await page.waitForSelector('input[type="text"], input[name*="nazwa"], input[placeholder*="KRS"]', { timeout: 10000 }).catch(() => {});
-      // Type the company name into the first visible text input
-      const inputs = await page.$$('input[type="text"]');
-      if (inputs.length === 0) throw new Error('No search input found on KRS portal');
-      await inputs[0].type('${name.replace(/'/g, "\\'")}');
-      // Click search button
-      const buttons = await page.$$('button[type="submit"], button.search-button, button');
-      for (const btn of buttons) {
-        const text = await btn.evaluate((el) => el.textContent?.trim());
-        if (text && (text.includes('Szukaj') || text.includes('szukaj') || text.includes('Search'))) {
-          await btn.click();
-          break;
-        }
-      }
-      // Wait for results
-      await page.waitForSelector('table, .results, .list-group', { timeout: 15000 }).catch(() => {});
-      await new Promise(r => setTimeout(r, 2000));
-      return { data: await page.content(), type: 'text/html' };
-    }
-  `;
+  // Primary: use northdata.com which covers Polish companies and returns KRS numbers.
+  // The old KRS search API (/api/krs/szukaj) returns 404 as of April 2026,
+  // and the Browserless portal scraping was unreliable.
+  const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+  const searchUrl = `https://www.northdata.com/${encodeURIComponent(name)}`;
 
   try {
-    const resp = await fetch(`${browserlessUrl}/function?token=${browserlessKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/javascript" },
-      body: script,
-      signal: AbortSignal.timeout(30000),
+    const resp = await fetch(searchUrl, {
+      headers: { "User-Agent": UA, Accept: "text/html" },
+      signal: AbortSignal.timeout(10000),
+      redirect: "follow",
     });
 
-    if (!resp.ok) {
-      throw new Error(`Browserless returned HTTP ${resp.status}`);
+    if (resp.ok) {
+      const html = await resp.text();
+      // Find Polish results in search page
+      const titleRe = /class="title" href="([^"]+)">([^<]+)/g;
+      const results: RegExpExecArray[] = [];
+      let m: RegExpExecArray | null;
+      while ((m = titleRe.exec(html)) !== null) results.push(m);
+      const polishResult = results.find(([, , title]) => title.includes("Poland"));
+      if (polishResult) {
+        // Extract KRS number from the URL (format: /Company%20Name/KRS0000001764)
+        const krsMatch = polishResult[1].match(/KRS(\d{10})/);
+        if (krsMatch) {
+          return fetchByKrs(krsMatch[1]);
+        }
+      }
+      // If no Polish-specific result, try first result that mentions KRS
+      for (const [, url] of results) {
+        const krsMatch = url.match(/KRS(\d{10})/);
+        if (krsMatch) {
+          return fetchByKrs(krsMatch[1]);
+        }
+      }
     }
-
-    const html = await resp.text();
-    // Extract KRS numbers from the results page
-    const krsMatches = html.match(/\b\d{10}\b/g);
-    if (krsMatches && krsMatches.length > 0) {
-      // Try the first KRS number found
-      return fetchByKrs(krsMatches[0]);
-    }
-  } catch (err) {
-    // Browserless search failed — give a helpful error
+  } catch {
+    // northdata search failed — fall through to error
   }
 
-  throw new Error(`No Polish company found matching "${name}". The KRS search API is currently unavailable. Try providing a KRS number (10 digits) directly.`);
+  throw new Error(
+    `No Polish company found matching "${name}". ` +
+    `Try providing a KRS number (10 digits) instead, or use a more specific company name.`,
+  );
 }
 
 registerCapability("polish-company-data", async (input: CapabilityInput) => {

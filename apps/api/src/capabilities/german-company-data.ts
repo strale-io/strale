@@ -1,33 +1,44 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { searchNorthdata } from "./lib/northdata.js";
 
 /*
  * German Company Data — northdata.com JSON-LD extraction
  *
- * Bug fix causal chain (2026-04-10, Phase 2 — Understand):
+ * Accepts company name (e.g. "BMW", "Siemens"), HRB number + court,
+ * or any natural-language input. Abbreviations are expanded to full
+ * legal names via LLM before searching northdata.com.
  *
- * 1. German HRB/HRA registration numbers are per-court (Amtsgericht)
- *    namespaces, not globally unique. "HRB 44998" exists at 8+ different
- *    courts. Without specifying the court, a lookup is ambiguous and
- *    northdata returns an arbitrary match.
- *
- * 2. The original implementation missed this because test fixtures used
- *    HRB numbers that happened to return the expected company (either
- *    because the company dominated search results, or by chance of
- *    northdata's ranking). The fixture for HRB 6684 works because there
- *    is likely only one prominent match.
- *
- * 3. This is a silent failure: the capability returned a valid-looking
- *    result with company_name, address, status — all correct data, just
- *    for the wrong company. No error, no warning. The caller has no way
- *    to detect the mismatch unless they independently verify.
- *
- * Fix: require `court` (Registergericht) when `hrb_number` contains a
- * registration number pattern. Include court in the northdata search
- * query for disambiguation.
+ * Bug fix causal chain (2026-04-10):
+ * - HRB/HRA numbers are per-court, not globally unique.
+ * - northdata needs legal names, not abbreviations ("BMW" fails,
+ *   "Bayerische Motoren Werke" succeeds).
+ * - Fix (2026-04-12): LLM expands abbreviations before search.
  */
 
 const HRB_RE = /^(HRB|HRA|GnR|PR|VR)\s*\d+$/i;
+
+async function expandCompanyName(input: string): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return input; // fallback: use input as-is
+  const client = new Anthropic({ apiKey });
+  const r = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 150,
+    messages: [{
+      role: "user",
+      content: `You are looking up a German company. The user provided: "${input}"
+
+If this is an abbreviation or short name (like "BMW", "VW", "SAP"), expand it to the full legal company name as registered in the German Handelsregister. Include the legal form suffix (AG, GmbH, SE, etc.).
+
+If it's already a full legal name, return it as-is.
+
+Return ONLY the company name, nothing else. No explanation.`,
+    }],
+  });
+  const name = r.content[0].type === "text" ? r.content[0].text.trim().replace(/^["']|["']$/g, "") : "";
+  return name || input;
+}
 
 registerCapability("german-company-data", async (input: CapabilityInput) => {
   const hrbNumber = (input.hrb_number as string)?.trim() ?? "";
@@ -41,8 +52,10 @@ registerCapability("german-company-data", async (input: CapabilityInput) => {
     throw new Error("'hrb_number' or 'company_name' is required. Provide a Handelsregister number (e.g. HRB 86891) with court, or a company name.");
   }
 
-  // Phase 1 containment: require court when a registration number is provided
+  // Detect if someone put a company name in the hrb_number field
   const isRegNumber = HRB_RE.test(hrbNumber || raw);
+  const isNameInHrbField = hrbNumber && !isRegNumber && !companyName;
+
   if (isRegNumber && !court) {
     throw new Error(
       "German HRB/HRA numbers are not unique across courts. " +
@@ -51,22 +64,21 @@ registerCapability("german-company-data", async (input: CapabilityInput) => {
     );
   }
 
-  // Search northdata — append court city to query for better ranking.
-  // Northdata's path search uses the full query for matching, so
-  // "HRB 2001 Landsberg" will rank a Landsberg company higher than
-  // just "HRB 2001" which picks arbitrarily.
+  // For name searches, expand abbreviations to full legal names
   let searchQuery = raw;
-  if (isRegNumber && court) {
+  if (!isRegNumber) {
+    const nameInput = isNameInHrbField ? hrbNumber : (companyName || task);
+    searchQuery = await expandCompanyName(nameInput);
+  } else if (court) {
     const courtCity = court.replace(/^Amtsgericht\s+/i, "").trim();
     searchQuery = `${raw} ${courtCity}`;
   }
 
   const output = await searchNorthdata(searchQuery, "Germany", {
-    company_name: companyName || null,
+    company_name: companyName || (isNameInHrbField ? hrbNumber : null),
     registration_number: isRegNumber ? (hrbNumber || raw) : null,
   }, court || undefined) as unknown as Record<string, unknown>;
 
-  // Add court_used to output for transparency
   if (court) {
     output.court_used = court;
   }

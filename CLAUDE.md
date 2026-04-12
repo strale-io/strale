@@ -120,10 +120,10 @@ strale/
 
 ### Capabilities & Quality
 <!-- Reminder: changes to capabilities, SDKs, or integrations require updating public/llms.txt in strale-frontend -->
-256 capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 88 bundled solutions across 6 categories. Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions.
+290+ capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 100+ bundled solutions across 6 categories. Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions. Counts grow frequently — check seed.ts and recent git log for exact current numbers.
 
 **x402 Payment Gateway (March 2026):**
-All 256 capabilities and 88 solutions available via x402 pay-per-use USDC payments on Base mainnet. No signup or API key needed — payment IS the auth. DB-driven: adding capabilities to x402 requires only `UPDATE capabilities SET x402_enabled = true`. Catalog: GET /x402/catalog. Discovery: GET /.well-known/x402.json. Wildcard handler: GET/POST /x402/:slug.
+All capabilities and solutions available via x402 pay-per-use USDC payments on Base mainnet. No signup or API key needed — payment IS the auth. DB-driven: adding capabilities to x402 requires only `UPDATE capabilities SET x402_enabled = true`. Catalog: GET /x402/catalog. Discovery: GET /.well-known/x402.json. Wildcard handler: GET/POST /x402/:slug.
 
 **New capabilities (March 2026):**
 - `pep-check` — Screens individuals against OpenSanctions PEP dataset. Category: compliance. Price: €0.15. Transparency: mixed. Uses OPENSANCTIONS_API_KEY.
@@ -138,9 +138,9 @@ All 256 capabilities and 88 solutions available via x402 pay-per-use USDC paymen
 - Countries: SE, NO, DK, FI, UK, DE, FR, NL, BE, AT, IE, ES, IT, CH, PL, PT, US, CA, AU, SG
 - Deprecated: kyc-sweden, kyc-norway, kyc-denmark, kyc-finland, verify-us-company (isActive: false)
 
-SQS engine live (Constitution v1): 5-factor scoring (correctness 40%, schema 25%, availability 20%, error handling 10%, edge cases 5%), recency-weighted rolling 10-run window, missing-factor re-weighting, circuit breaker score penalties (3 consecutive failures → −30, 5 correctness failures → −20, schema break → −15), trend computation (improving/stable/declining), floor-aware solution SQS (lowest step + 20 cap), min_sqs quality gate on POST /v1/do, platform floor SQS 25. 1,348 test suites with tiered scheduling (A: 6h, B: 24h, C: 72h) plus fixture and canary test modes. Public quality endpoint: GET /v1/quality/:slug.
+SQS engine live (dual-profile model): Quality Profile (QP) with 4 factors (correctness 50%, schema 31%, error handling 13%, edge cases 6%) excludes upstream failures. Reliability Profile (RP) with 4 factors (current availability, rolling success, upstream health, latency) includes upstream failures, type-specific weights. QP and RP letter grades (A-E) combine via 5×5 matrix into SQS (0-100). Legacy 5-factor model (40/25/20/10/5) retained for regression comparison only. Circuit breaker penalties (3 consecutive failures → −30, 5 correctness failures → −20, schema break → −15). Recovery: immediate after 3 consecutive passes (no time gate). Recency-weighted rolling 10-run window. Floor-aware solution SQS (lowest step + 20 cap), min_sqs quality gate on POST /v1/do, platform floor SQS 25. Tiered test scheduling (A: 6h = pure-computation, B: 24h = stable APIs, C: 72h = scraping). SQS < 50 triggers intensification to min(6h, tier). Fixture and canary test modes. Public quality endpoint: GET /v1/quality/:slug.
 
-Free-tier: 5 capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) require no auth/signup. IP-based daily rate limit (10/day). Authenticated users calling free-tier capabilities get normal rate limits and no wallet debit.
+Free-tier: 5 capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) require no auth/signup. IP-based daily rate limit (10/day, enforced via DB counter in do.ts using `rateLimitByIp`). Authenticated users calling free-tier capabilities get normal rate limits and no wallet debit.
 
 Testing: test_suites table has `test_mode` column: `live` (calls real API), `fixture` (uses saved data, €0 external cost), `canary` (periodic live check at reduced frequency). `external_cost_cents` tracks estimated external API cost per test execution.
 
@@ -312,8 +312,9 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 2. Connectivity check (Git + handoff; Notion if needed). Log failures.
 3. Read handoff/from-chat/ for pending items (if empty, proceed)
 4. Do the work
-5. Write handoff file to `handoff/_general/from-code/`. Even one-liner, starts with Intent:
-6. Create Journal entry in Notion (even one line)
+5. Move completed To-do items to Archive > Completed To-dos (page ID: 34067c87-082c-814e-a45c-fa8d851c8f12)
+6. Write handoff file to `handoff/_general/from-code/`. Even one-liner, starts with Intent:
+7. Create Journal entry in Notion (even one line)
 
 ### Full Session Checklist
 1. Declare session intent
@@ -323,10 +324,11 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 5. Read active Decisions — global always, feature-scope when relevant
 6. Read handoff/from-chat/ for pending specs or feedback
 7. Do the work
-8. Create Journal entry (full format)
-9. Log decisions made (respect authority thresholds)
-10. Save session summary to `handoff/_general/from-code/`
-11. Contradiction check if decisions were made
+8. Move completed To-do items to Archive > Completed To-dos (page ID: 34067c87-082c-814e-a45c-fa8d851c8f12)
+9. Create Journal entry (full format)
+10. Log decisions made (respect authority thresholds)
+11. Save session summary to `handoff/_general/from-code/`
+12. Contradiction check if decisions were made
 
 ### Workflow Invariants (Non-Negotiable)
 - NEVER edit Journal entries, Decision content, or Deferred content

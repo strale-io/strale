@@ -1,18 +1,18 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.strale-io/strale",
-  "title": "Strale - 270+ API capabilities for AI agents",
-  "description": "270+ quality-scored API capabilities for AI agents across 27 countries via MCP.",
+  "title": "Strale - 290+ API capabilities for AI agents",
+  "description": "290+ quality-scored API capabilities for AI agents across 27 countries via MCP.",
   "repository": {
     "url": "https://github.com/strale-io/strale",
     "source": "github"
   },
-  "version": "0.2.3",
+  "version": "0.2.4",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "strale-mcp",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "transport": {
         "type": "stdio"
       },

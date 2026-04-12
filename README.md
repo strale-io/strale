@@ -12,7 +12,7 @@ Trust and quality infrastructure for AI agents.
 
 ## What is Strale
 
-Strale is a capability marketplace for AI agents. Agents call `strale.do()` at runtime to access 270+ verified capabilities — company lookups, compliance checks, financial validation, Web3 security, and more — plus 100 bundled solutions for multi-step workflows like full KYB checks or company due diligence. No hardcoded integrations or credential management.
+Strale is a capability marketplace for AI agents. Agents call `strale.do()` at runtime to access 290+ verified capabilities — company lookups, compliance checks, financial validation, Web3 security, and more — plus 100 bundled solutions for multi-step workflows like full KYB checks or company due diligence. No hardcoded integrations or credential management.
 
 Every capability is continuously tested and assigned a Strale Quality Score (SQS): a 0-100 confidence score derived from two independent profiles — a Quality Profile (code correctness, schema compliance, error handling, edge cases) and a Reliability Profile (current availability, rolling success, upstream health, latency) — combined via a published matrix. Agents get reliable, scored tools. You get observability into what your agent is actually doing.
 
@@ -86,7 +86,7 @@ result = strale.do("eu-vat-validate", {"vat_number": "SE556000000001"})
 
 | Package | Registry | Description |
 |---|---|---|
-| [`strale-mcp`](https://www.npmjs.com/package/strale-mcp) | npm | MCP server — 270+ capabilities via Claude, Cursor, any MCP host |
+| [`strale-mcp`](https://www.npmjs.com/package/strale-mcp) | npm | MCP server — 290+ capabilities via Claude, Cursor, any MCP host |
 | [`straleio`](https://www.npmjs.com/package/straleio) | npm | TypeScript/JavaScript SDK |
 | [`straleio`](https://pypi.org/project/straleio/) | PyPI | Python SDK |
 | [`langchain-strale`](https://pypi.org/project/langchain-strale/) | PyPI | LangChain toolkit — 250+ tools via `StraleToolkit` |
