@@ -635,22 +635,28 @@ adminRoute.patch("/capability-schema", async (c) => {
   if (!body?.slug || typeof body.slug !== "string") {
     return c.json(apiError("invalid_request", "slug is required"), 400);
   }
-  if (!body.input_schema && !body.description) {
-    return c.json(apiError("invalid_request", "Provide input_schema and/or description"), 400);
+  if (!body.input_schema && !body.description && !body.lifecycle_state && body.visible == null && body.is_active == null) {
+    return c.json(apiError("invalid_request", "Provide input_schema, description, lifecycle_state, visible, or is_active"), 400);
   }
 
   const db = getDb();
   const slug = body.slug;
   const inputSchema = body.input_schema ? JSON.stringify(body.input_schema) : null;
   const description = body.description ?? null;
+  const lifecycleState = body.lifecycle_state ?? null;
+  const visible = body.visible ?? null;
+  const isActive = body.is_active ?? null;
 
   const result = await db.execute(sql`
     UPDATE capabilities
     SET
       input_schema = COALESCE(${inputSchema}::jsonb, input_schema),
-      description = COALESCE(${description}, description)
+      description = COALESCE(${description}, description),
+      lifecycle_state = COALESCE(${lifecycleState}, lifecycle_state),
+      visible = COALESCE(${visible}, visible),
+      is_active = COALESCE(${isActive}, is_active)
     WHERE slug = ${slug}
-    RETURNING slug, input_schema, description
+    RETURNING slug, input_schema, description, lifecycle_state, visible, is_active
   `);
 
   const rows2 = toRows(result);
