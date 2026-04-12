@@ -44,7 +44,7 @@ registerCapability("company-news", async (input: CapabilityInput) => {
 
   const url = `${GDELT_API}?${params}`;
   const resp = await fetch(url, {
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(25000),
   });
 
   if (!resp.ok) {
