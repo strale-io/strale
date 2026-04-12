@@ -59,12 +59,44 @@ All three: manifests created, onboarded via pipeline, activated via admin PATCH.
 - Focus: silent data degradation, the missing data verification layer
 - No product mention, following brand voice guidelines
 
+## Phase 3: SDR Intelligence (same session, continued)
+
+### 3 more capabilities built and live
+- **tech-stack-detect**: Lightweight HTTP header + HTML pattern matching (replaces old Browserless+LLM version). Zero external cost. €0.03.
+- **officer-search**: Company directors from UK Companies House, US SEC EDGAR, and EU northdata. Routes by country. €0.05.
+- **email-pattern-discover**: DNS MX records + website scraping for public emails. Detects provider (Google Workspace, Microsoft 365). €0.03.
+
+### Bundled solution live
+- **company-intelligence-sdr**: 9-step solution, €2.50/call, global coverage
+- Steps: SEC filings, company news, officers, tech stack, email patterns, domain reputation, job board search, social profile check, WHOIS
+- Tested on production: 7/9 passing (SEC fails for private companies, GDELT rate-limited)
+- Country-specific variants (US, UK, EU) added to Notion To-do as P1
+
+### Admin infrastructure
+- Extended PATCH /v1/admin/capability-schema to accept lifecycle_state, visible, is_active
+- Added POST /v1/admin/create-solution endpoint (with step insertion)
+
+### Reddit engagement
+- Posted in r/AI_Agents "Where are your agents breaking in production?" — silent data degradation angle
+- Posted in r/SaaS "APIs you secretly hate" — email validation free-tier angle
+
+## Session totals
+- **19 commits** pushed to main
+- **6 new capabilities** built and live (sec-filing-events, company-news, uk-filing-events, tech-stack-detect, officer-search, email-pattern-discover)
+- **1 new solution** built and live (company-intelligence-sdr)
+- **18 company-data schemas** updated on production
+- **7 factual errors** fixed across Notion + CLAUDE.md + memory
+- **51 to-do items** cleared from Notion
+- **MCP Registry** published
+- **Langchain PR** lint fix pushed
+
 ## Outstanding
-- datacvr.virk.dk API access: application email sent to cvrselvbetjening@erst.dk
+- datacvr.virk.dk API access: application email sent, waiting for response
 - Claude Chat memory: needs manual sync (message provided in session)
-- MCP security wedge: identified as best activation channel, Reddit reply posted
-- Allegro (Polish): northdata doesn't have it with a Polish KRS — edge case
-- GDELT latency: works but 15-20s response times. Monitor after timeout fix deploys.
-- Tier 2 capabilities not yet built: French BODACC events, USPTO patents, EPO patents
-- Reddit reply: monitor for responses, follow up if asked about the quality signal approach
-- KnowThat.ai + Dominion Observatory: added as watch items, not competitors
+- Country-specific SDR variants: US, UK, EU (Notion To-do P1)
+- GDELT reliability: rate-limited today, monitor
+- test-solution-delete-me: orphaned DB row, needs manual cleanup
+- Tier 2 capabilities not yet built: French BODACC, USPTO patents, EPO patents
+- Kshitij: waiting for Reddit DM reply, offer EUR 10 credit if he responds
+- Reddit: monitor both threads for engagement
+- Allegro (Polish): northdata doesn't have it — edge case
