@@ -527,7 +527,7 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
       return c.json({ error: "x402 payments not configured." }, 503);
     }
 
-    const verification = await verifyX402Payment(paymentHeader, sol.priceCents);
+    const verification = await verifyX402Payment(paymentHeader, sol.priceCents, sol.x402PriceUsd);
     if (!verification.valid) {
       return c.json({ error: "Payment verification failed", detail: verification.error }, 402);
     }
@@ -624,8 +624,10 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
       return c.json({ error: "x402 payments not configured." }, 503);
     }
 
-    // Verify payment using the shared library (same as /v1/do)
-    const verification = await verifyX402Payment(paymentHeader, cap.priceCents);
+    // Verify payment using the shared library (same as /v1/do).
+    // Pass x402PriceUsd as override so the verification amount matches what the
+    // 402 response's maxAmountRequired quoted to the client (which signed for that exact value).
+    const verification = await verifyX402Payment(paymentHeader, cap.priceCents, cap.x402PriceUsd);
     if (!verification.valid) {
       return c.json(
         { error: "Payment verification failed", detail: verification.error },

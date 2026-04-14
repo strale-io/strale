@@ -133,10 +133,19 @@ export interface X402VerificationResult {
 
 /**
  * Verify an x402 payment header using the facilitator.
+ *
+ * @param paymentHeader - Base64-encoded X-PAYMENT header from the request
+ * @param priceCentsEur - EUR price of the capability (for fallback conversion)
+ * @param priceUsdOverride - USD price the 402 response quoted to the client.
+ *   MUST match what the client signed against. If provided, this wins over
+ *   priceCentsEur. The x402 gateway-v2 passes this from cap.x402PriceUsd so the
+ *   verification amount exactly matches what was in the 402 response's
+ *   maxAmountRequired field.
  */
 export async function verifyX402Payment(
   paymentHeader: string,
   priceCentsEur: number,
+  priceUsdOverride?: number,
 ): Promise<X402VerificationResult> {
   if (!isX402Configured()) {
     return { valid: false, error: "x402 not configured (no wallet address)" };
@@ -151,7 +160,13 @@ export async function verifyX402Payment(
     }
     const payload = parsed.data;
 
-    const priceAtomic = eurCentsToUsdcAtomic(priceCentsEur);
+    // Use USD override if provided (matches what the 402 response quoted to the client).
+    // Otherwise fall back to EUR→USD conversion. The two must match exactly or the
+    // facilitator returns "authorization value mismatch".
+    const priceAtomic =
+      priceUsdOverride !== undefined
+        ? Math.ceil(priceUsdOverride * 1_000_000).toString()
+        : eurCentsToUsdcAtomic(priceCentsEur);
     const requirements = {
       scheme: "exact" as const,
       network: NETWORK,
