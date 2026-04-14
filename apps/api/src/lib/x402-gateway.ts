@@ -16,7 +16,7 @@
  */
 
 import { HTTPFacilitatorClient } from "@x402/core/server";
-import { parsePaymentPayload } from "@x402/core";
+import { parsePaymentPayload } from "@x402/core/schemas";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -153,12 +153,12 @@ export async function verifyX402Payment(
     const facilitator = getFacilitator();
 
     // Verify first (non-destructive check), then settle (broadcasts the tx)
-    const verifyResult = await facilitator.verify(payload, requirements as any);
+    const verifyResult = await facilitator.verify(payload as any, requirements as any);
     if (!verifyResult.isValid) {
       return { valid: false, error: verifyResult.invalidReason ?? "Payment invalid" };
     }
 
-    const settleResult = await facilitator.settle(payload, requirements as any);
+    const settleResult = await facilitator.settle(payload as any, requirements as any);
     if (!settleResult.success) {
       return { valid: false, error: settleResult.errorReason ?? "Settlement failed" };
     }
