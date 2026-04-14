@@ -15,8 +15,8 @@
  * Mainnet (Base): Coinbase CDP facilitator with API keys
  */
 
-import { x402ResourceServer, HTTPFacilitatorClient } from "@x402/core/server";
-import { ExactEvmScheme } from "@x402/evm/exact/server";
+import { HTTPFacilitatorClient } from "@x402/core/server";
+import { parsePaymentPayload } from "@x402/core";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -40,17 +40,15 @@ export function isX402Configured(): boolean {
   return WALLET_ADDRESS.length > 0;
 }
 
-// ─── Resource server (lazy init) ────────────────────────────────────────────
+// ─── Facilitator client (lazy init) ─────────────────────────────────────────
 
-let _resourceServer: InstanceType<typeof x402ResourceServer> | null = null;
+let _facilitator: HTTPFacilitatorClient | null = null;
 
-function getResourceServer(): InstanceType<typeof x402ResourceServer> {
-  if (!_resourceServer) {
-    const facilitator = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
-    _resourceServer = new x402ResourceServer(facilitator)
-      .register(NETWORK as `${string}:${string}`, new ExactEvmScheme());
+function getFacilitator(): HTTPFacilitatorClient {
+  if (!_facilitator) {
+    _facilitator = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
   }
-  return _resourceServer;
+  return _facilitator;
 }
 
 // ─── Price conversion ───────────────────────────────────────────────────────
@@ -130,25 +128,44 @@ export async function verifyX402Payment(
   }
 
   try {
-    const resourceServer = getResourceServer();
-    const priceAtomic = eurCentsToUsdcAtomic(priceCentsEur);
+    // Decode the base64-encoded X-PAYMENT header into a PaymentPayload
+    const decoded = Buffer.from(paymentHeader, "base64").toString("utf-8");
+    const parsed = parsePaymentPayload(JSON.parse(decoded));
+    if (!parsed.success) {
+      return { valid: false, error: `Invalid payment payload: ${parsed.error.message}` };
+    }
+    const payload = parsed.data;
 
-    // The resource server's settle method verifies the payment with the facilitator
-    // and returns settlement details
-    const result = await (resourceServer as any).settle(paymentHeader, {
-      payTo: WALLET_ADDRESS,
-      maxAmountRequired: priceAtomic,
-      asset: USDC_ADDRESS,
+    const priceAtomic = eurCentsToUsdcAtomic(priceCentsEur);
+    const requirements = {
+      scheme: "exact" as const,
       network: NETWORK,
-      scheme: "exact",
+      maxAmountRequired: priceAtomic,
       resource: "/v1/do",
+      description: "Strale capability call",
+      mimeType: "application/json",
+      payTo: WALLET_ADDRESS,
       maxTimeoutSeconds: 300,
+      asset: USDC_ADDRESS,
       extra: { name: "USDC", version: "2" },
-    });
+    };
+
+    const facilitator = getFacilitator();
+
+    // Verify first (non-destructive check), then settle (broadcasts the tx)
+    const verifyResult = await facilitator.verify(payload, requirements as any);
+    if (!verifyResult.isValid) {
+      return { valid: false, error: verifyResult.invalidReason ?? "Payment invalid" };
+    }
+
+    const settleResult = await facilitator.settle(payload, requirements as any);
+    if (!settleResult.success) {
+      return { valid: false, error: settleResult.errorReason ?? "Settlement failed" };
+    }
 
     return {
       valid: true,
-      settlementId: result?.txHash ?? result?.transactionHash ?? "settled",
+      settlementId: settleResult.transaction ?? "settled",
     };
   } catch (err) {
     console.error("[x402] Payment verification failed:", err instanceof Error ? err.message : err);
