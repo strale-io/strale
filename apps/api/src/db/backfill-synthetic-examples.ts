@@ -5,6 +5,7 @@ config({ path: resolve(import.meta.dirname, "../../../../.env") });
 import { getDb } from "./index.js";
 import { capabilities } from "./schema.js";
 import { eq, sql } from "drizzle-orm";
+import { readJsonbObject } from "./lib/jsonb-value.js";
 
 const db = getDb();
 
@@ -229,7 +230,7 @@ for (const [slug, example] of Object.entries(SYNTHETIC_EXAMPLES)) {
     continue;
   }
 
-  const schema = r[0].output_schema as Record<string, unknown>;
+  const schema = readJsonbObject(r[0].output_schema);
   if (schema.example) {
     console.log(`  ${slug}: already has example — skipping`);
     continue;

@@ -5,6 +5,7 @@ config({ path: resolve(import.meta.dirname, "../../../../.env") });
 import { getDb } from "./index.js";
 import { capabilities, transactions } from "./schema.js";
 import { eq, sql, and, isNotNull, desc } from "drizzle-orm";
+import { readJsonbObject } from "./lib/jsonb-value.js";
 
 const db = getDb();
 
@@ -26,7 +27,7 @@ const skippedSlugs: string[] = [];
 
 for (const row of missingList) {
   const slug = row.slug as string;
-  const schema = row.output_schema as Record<string, unknown>;
+  const schema = readJsonbObject(row.output_schema);
 
   // Strategy: find the most recent successful transaction for this capability
   // and use its output as the example
