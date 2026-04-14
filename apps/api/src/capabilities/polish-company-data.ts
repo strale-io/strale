@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatPL } from "../lib/vat-derivation.js";
+import { resolveCandidate, type Candidate } from "./lib/name-resolver.js";
 
 // Polish company data via KRS API — FREE, no auth
 const KRS_API = "https://api-krs.ms.gov.pl/api/krs";
@@ -22,7 +23,7 @@ async function extractCompanyName(text: string): Promise<string> {
   const r = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 100,
-    messages: [{ role: "user", content: `Extract the Polish company name from this request. Return ONLY the company name, nothing else.\n\nRequest: "${text}"` }],
+    messages: [{ role: "user", content: `Extract the Polish company name from this request. If the query uses a well-known trade name, historical name, or informal abbreviation, return the current official legal name instead (e.g. "PKN Orlen" → "ORLEN S.A.", "LOT" → "Polskie Linie Lotnicze LOT S.A."). Return ONLY the company name, nothing else.\n\nRequest: "${text}"` }],
   });
   const name = r.content[0].type === "text" ? r.content[0].text.trim().replace(/^["']|["']$/g, "") : "";
   if (!name) throw new Error(`Could not identify a company name from: "${text}".`);
@@ -167,55 +168,87 @@ function parseKrsResponse(data: any, krsNumber: string, register: "P" | "S"): Re
 }
 
 async function searchByName(name: string): Promise<Record<string, unknown>> {
-  // Primary: use northdata.com which covers Polish companies and returns KRS numbers.
-  // The old KRS search API (/api/krs/szukaj) returns 404 as of April 2026,
-  // and the Browserless portal scraping was unreliable.
+  // Primary: northdata.com for KRS-number discovery. The old KRS search API
+  // (/api/krs/szukaj) returns 404 as of April 2026 and Browserless portal
+  // scraping was unreliable.
+  //
+  // northdata returns many tangential matches (unions, subsidiaries, entities
+  // that merely contain the query as a substring in their name). A naive
+  // "first prefix match" picker returns the wrong entity — e.g. "PKN Orlen"
+  // → "PKN Orlik sp. z o.o." (KRS0000612379) instead of "ORLEN S.A."
+  // (KRS0000028860). We use the shared LLM resolver to pick the best
+  // candidate or fail loudly.
   const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
-  // northdata's direct-slug URL pattern (e.g. /Budimex%20SA) returns 404 as of April 2026.
-  // Use the search endpoint instead. Result links still embed KRS numbers in the href.
   const searchUrl = `https://www.northdata.com/?query=${encodeURIComponent(name)}`;
 
-  try {
-    const resp = await fetch(searchUrl, {
-      headers: { "User-Agent": UA, Accept: "text/html" },
-      signal: AbortSignal.timeout(10000),
-      redirect: "follow",
-    });
+  const resp = await fetch(searchUrl, {
+    headers: { "User-Agent": UA, Accept: "text/html" },
+    signal: AbortSignal.timeout(10000),
+    redirect: "follow",
+  });
 
-    if (resp.ok) {
-      const html = await resp.text();
-      // When northdata recognizes the query as a specific company, the page's
-      // <link rel="canonical"> points to the primary entity's detail page,
-      // e.g. https://www.northdata.com/Budimex%20SA,%20Warszawa/KRS0000001764
-      // This is far more reliable than scraping result-list hrefs (the page
-      // contains many unrelated KRS links in sidebars / related companies).
-      const canonicalTag = html.match(/<link[^>]*rel="canonical"[^>]*>/);
-      if (canonicalTag) {
-        const krsMatch = canonicalTag[0].match(/KRS(\d{10})/);
-        if (krsMatch) {
-          return fetchByKrs(krsMatch[1]);
-        }
-      }
-
-      // Fallback: find result links that match the search term in their path.
-      const firstWord = name.split(/\s+/)[0].toLowerCase();
-      const hrefRe = /href="(\/[^"]*KRS(\d{10})[^"]*)"/g;
-      let m: RegExpExecArray | null;
-      while ((m = hrefRe.exec(html)) !== null) {
-        const href = decodeURIComponent(m[1]).toLowerCase();
-        if (href.includes(`/${firstWord}`)) {
-          return fetchByKrs(m[2]);
-        }
-      }
-    }
-  } catch {
-    // northdata search failed — fall through to error
+  if (!resp.ok) {
+    throw new Error(
+      `No Polish company found matching "${name}" (northdata HTTP ${resp.status}). ` +
+      `Try providing a KRS number (10 digits) instead.`,
+    );
   }
 
-  throw new Error(
-    `No Polish company found matching "${name}". ` +
-    `Try providing a KRS number (10 digits) instead, or use a more specific company name.`,
-  );
+  const html = await resp.text();
+
+  // Fast path: canonical link points directly to a company when northdata
+  // recognizes the query as a specific entity.
+  const canonicalTag = html.match(/<link[^>]*rel="canonical"[^>]*>/);
+  if (canonicalTag) {
+    const krsMatch = canonicalTag[0].match(/KRS(\d{10})/);
+    if (krsMatch) return fetchByKrs(krsMatch[1]);
+  }
+
+  // Collect all candidate result links with their readable names for LLM ranking.
+  const linkRe = /href="(\/[^"]*KRS(\d{10})[^"]*)"/g;
+  const seen = new Set<string>();
+  const candidates: Candidate[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = linkRe.exec(html)) !== null) {
+    const krs = m[2];
+    if (seen.has(krs)) continue;
+    seen.add(krs);
+    const decoded = decodeURIComponent(m[1]);
+    // Path shape: /<Name>,%20<City>/KRS0000012345
+    const parts = decoded.replace(/^\//, "").split("/");
+    const namePart = parts[0] || decoded;
+    const [namePiece, cityPiece] = namePart.split(",").map((s) => s.trim());
+    candidates.push({
+      id: krs,
+      name: namePiece,
+      extra: cityPiece || undefined,
+    });
+    if (candidates.length >= 20) break;
+  }
+
+  if (candidates.length === 0) {
+    throw new Error(
+      `No Polish company found matching "${name}". ` +
+      `Try providing a KRS number (10 digits) instead, or use a more specific company name.`,
+    );
+  }
+
+  const pick = await resolveCandidate({
+    query: name,
+    candidates,
+    entityType: "company",
+    hint: "Polish KRS registry. Prefer the parent commercial company (Spółka Akcyjna / Sp. z o.o.) over unions, associations, or subsidiaries that contain the query as a substring.",
+  });
+
+  if (!pick.id) {
+    throw new Error(
+      `Could not confidently match "${name}" to a Polish company. ` +
+      `Candidates found: ${candidates.slice(0, 5).map((c) => c.name).join("; ")}. ` +
+      `Provide the KRS number (10 digits) for an exact lookup.`,
+    );
+  }
+
+  return fetchByKrs(pick.id);
 }
 
 registerCapability("polish-company-data", async (input: CapabilityInput) => {
