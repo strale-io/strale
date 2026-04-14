@@ -336,7 +336,11 @@ function build402(
     outputSchema ?? null,
   );
 
-  const paymentRequirement = {
+  // chainId in EIP-712 domain extra — observed on all recently-indexed Bazaar
+  // entries; the indexer may use it for canonical chain attribution.
+  const chainId = NETWORK === "base" ? 8453 : NETWORK === "base-sepolia" ? 84532 : undefined;
+
+  const paymentRequirement: Record<string, unknown> = {
     scheme: "exact",
     network: NETWORK,
     maxAmountRequired: maxAmount,
@@ -346,10 +350,27 @@ function build402(
     payTo: WALLET_ADDRESS || "0x0000000000000000000000000000000000000001",
     maxTimeoutSeconds: 300,
     asset: USDC_ADDRESS,
-    extra: { name: "USD Coin", version: "2" },
-    // Bazaar indexer reads outputSchema at this exact path. Moving it here from
-    // extensions.bazaar is what gets us into the Bazaar discovery index.
+    extra: chainId
+      ? { name: "USD Coin", version: "2", chainId }
+      : { name: "USD Coin", version: "2" },
+    // outputSchema is the structural discovery field the Bazaar indexer reads.
     outputSchema: discoverySchema,
+    // extensions.bazaar is the legacy richer metadata format; recently-indexed
+    // providers include it alongside outputSchema, so we do too for parity.
+    extensions: {
+      bazaar: {
+        info: discoverySchema,
+        schema: {
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          type: "object",
+          properties: {
+            input: { type: "object" },
+            output: { type: "object" },
+          },
+          required: ["input"],
+        },
+      },
+    },
   };
 
   const body = {
