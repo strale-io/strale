@@ -60,6 +60,7 @@ export type ScheduleTier = "A" | "B" | "C";
 export interface TestRunOptions {
   capabilitySlug?: string;
   tier?: ScheduleTier;
+  testType?: string;
 }
 
 export interface TestRunSummary {
@@ -125,6 +126,9 @@ export async function runTests(
   }
   if (opts.tier) {
     conditions.push(eq(testSuites.scheduleTier, opts.tier));
+  }
+  if (opts.testType) {
+    conditions.push(eq(testSuites.testType, opts.testType));
   }
 
   // T-1: Inner join with capabilities to skip deactivated/suspended capabilities.
