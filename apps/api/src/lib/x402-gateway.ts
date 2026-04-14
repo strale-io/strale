@@ -17,6 +17,7 @@
 
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { parsePaymentPayload } from "@x402/core/schemas";
+import { createFacilitatorConfig } from "@coinbase/x402";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -42,10 +43,24 @@ export function isX402Configured(): boolean {
 
 // ─── Facilitator client (lazy init) ─────────────────────────────────────────
 
+// Base mainnet requires Coinbase's CDP facilitator (JWT-auth, paid).
+// Base Sepolia (and other testnets) work with the free x402.org facilitator.
+// Selection is network-based: any "base" network with CDP keys → CDP; else → X402_FACILITATOR_URL.
 let _facilitator: HTTPFacilitatorClient | null = null;
 
 function getFacilitator(): HTTPFacilitatorClient {
-  if (!_facilitator) {
+  if (_facilitator) return _facilitator;
+
+  const cdpKeyId = process.env.CDP_API_KEY_ID;
+  const cdpKeySecret = process.env.CDP_API_KEY_SECRET;
+  const isMainnet = NETWORK === "base" || NETWORK === "eip155:8453";
+
+  if (isMainnet && cdpKeyId && cdpKeySecret) {
+    // Use CDP facilitator for Base mainnet
+    const config = createFacilitatorConfig(cdpKeyId, cdpKeySecret);
+    _facilitator = new HTTPFacilitatorClient(config);
+  } else {
+    // Testnet or missing CDP keys → free x402.org facilitator
     _facilitator = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
   }
   return _facilitator;

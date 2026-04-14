@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
+    "@coinbase/x402": "^2.1.0",
     "@hono/node-server": "^1.13.8",
     "@modelcontextprotocol/sdk": "^1.27.0",
     "@mozilla/readability": "^0.6.0",
