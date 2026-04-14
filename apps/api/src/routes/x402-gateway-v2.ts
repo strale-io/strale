@@ -141,15 +141,18 @@ async function ensureCache(): Promise<void> {
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
-const NETWORK = process.env.X402_NETWORK ?? "eip155:84532";
+// Network uses x402 v1 simple names ("base", "base-sepolia") for compatibility
+// with the canonical x402-fetch client. CAIP-2 format ("eip155:8453") is v2 and
+// not yet supported by the reference client as of 2026-04.
+const NETWORK = process.env.X402_NETWORK ?? "base-sepolia";
 const WALLET_ADDRESS = process.env.X402_WALLET_ADDRESS ?? "";
 const BASE_URL = process.env.API_BASE_URL ?? "https://api.strale.io";
 
 const USDC_CONTRACTS: Record<string, string> = {
-  "eip155:8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-  "eip155:84532": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  "base": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "base-sepolia": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
 };
-const USDC_ADDRESS = USDC_CONTRACTS[NETWORK] ?? USDC_CONTRACTS["eip155:84532"];
+const USDC_ADDRESS = USDC_CONTRACTS[NETWORK] ?? USDC_CONTRACTS["base-sepolia"];
 
 function usdToUsdcAtomic(usd: number): string {
   return Math.ceil(usd * 1_000_000).toString();
@@ -358,7 +361,7 @@ function build402(
   const bazaar = buildBazaarExtension(httpMethod, inputSchema ?? null);
 
   const body = {
-    x402Version: 2,
+    x402Version: 1,
     error: `Payment required. ${name} costs $${priceUsd.toFixed(4)} USDC per call.`,
     resource: {
       url: resourceUrl,
@@ -367,7 +370,7 @@ function build402(
     },
     accepts: [paymentRequirement],
     extensions: { bazaar },
-    // v1 backward-compat: keep paymentRequirements for older clients
+    // Legacy field name some older clients looked for — safe to keep
     paymentRequirements: [paymentRequirement],
   };
 

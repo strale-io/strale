@@ -21,17 +21,19 @@ import { ExactEvmScheme } from "@x402/evm/exact/server";
 // ─── Configuration ──────────────────────────────────────────────────────────
 
 const WALLET_ADDRESS = process.env.X402_WALLET_ADDRESS ?? "";
-const NETWORK = process.env.X402_NETWORK ?? "eip155:84532"; // Default: Base Sepolia
+// x402 v1 simple network names ("base", "base-sepolia") for compatibility
+// with the canonical x402-fetch client. See x402-gateway-v2.ts for rationale.
+const NETWORK = process.env.X402_NETWORK ?? "base-sepolia";
 const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://x402.org/facilitator";
 const EUR_USD_RATE = parseFloat(process.env.EUR_USD_RATE ?? "1.08");
 
 // USDC contract addresses
 const USDC_CONTRACTS: Record<string, string> = {
-  "eip155:8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",   // Base mainnet
-  "eip155:84532": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",  // Base Sepolia
+  "base": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",   // Base mainnet
+  "base-sepolia": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",  // Base Sepolia
 };
 
-const USDC_ADDRESS = USDC_CONTRACTS[NETWORK] ?? USDC_CONTRACTS["eip155:84532"];
+const USDC_ADDRESS = USDC_CONTRACTS[NETWORK] ?? USDC_CONTRACTS["base-sepolia"];
 
 /** Whether x402 is configured (wallet address set). */
 export function isX402Configured(): boolean {
