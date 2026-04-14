@@ -8,7 +8,9 @@ function toRows(result: unknown): any[] {
   return (result as any)?.rows ?? [];
 }
 
-const INTERNAL_EMAIL_SUFFIXES = ["@strale.io", "@strale.internal", "@example.com"];
+const INTERNAL_EMAIL_SUFFIXES = ["@strale.io", "@strale.dev", "@strale.internal", "@example.com"];
+// Extra per-address exclusions for the "external API calls" metric (personal accounts etc.)
+const EXTRA_EXCLUDED_EMAILS = ["petterlindstrom@hotmail.com"];
 
 export async function getPlatformActivity(
   yesterday: Partial<Scoreboard> | null,
@@ -20,6 +22,24 @@ export async function getPlatformActivity(
     SELECT id FROM users WHERE email = 'system@strale.internal' LIMIT 1
   `);
   const systemUserId = toRows(sysRows)[0]?.id ?? "00000000-0000-0000-0000-000000000000";
+
+  // Build the "internal users" exclusion set for the external-API-calls metric:
+  // all @strale.* / @example.com accounts + EXTRA_EXCLUDED_EMAILS.
+  const internalLikeClauses = INTERNAL_EMAIL_SUFFIXES
+    .map((s) => `email LIKE '%${s.replace(/'/g, "''")}'`)
+    .join(" OR ");
+  const extraClause = EXTRA_EXCLUDED_EMAILS.length
+    ? `OR email IN (${EXTRA_EXCLUDED_EMAILS.map((e) => `'${e.replace(/'/g, "''")}'`).join(",")})`
+    : "";
+  const internalUsersRows = await db.execute(
+    sql.raw(`SELECT id FROM users WHERE ${internalLikeClauses} ${extraClause}`),
+  );
+  const internalUserIds: string[] = toRows(internalUsersRows).map((r: any) => r.id);
+  // Drizzle-safe: materialise as a SQL array literal for NOT IN filters.
+  const internalUserIdList =
+    internalUserIds.length > 0
+      ? sql.raw(`ARRAY[${internalUserIds.map((id) => `'${id}'::uuid`).join(",")}]::uuid[]`)
+      : sql.raw(`ARRAY[]::uuid[]`);
 
   const [signupsRaw, txnRaw, revenueRaw, uniqueRaw, topCapsRaw] = await Promise.all([
     db.execute(sql`
@@ -94,6 +114,58 @@ export async function getPlatformActivity(
   const externalEmails = allNewEmails.filter((e) => !INTERNAL_EMAIL_SUFFIXES.some((s) => e.endsWith(s)));
   const internalEmails = allNewEmails.filter((e) => INTERNAL_EMAIL_SUFFIXES.some((s) => e.endsWith(s)));
 
+  // ─── External API calls (last 24h) ─────────────────────────────────────────
+  // Counts only transactions that actually hit an upstream service
+  // (transparency_marker != 'algorithmic'), excluding all internal users and
+  // EXTRA_EXCLUDED_EMAILS. Free-tier (user_id IS NULL) calls ARE included —
+  // those come from anonymous external traffic, which is real usage.
+  const [extAuthRaw, extFreeRaw, extFailedRaw, extByCapRaw] = await Promise.all([
+    db.execute(sql`
+      SELECT COUNT(*)::int AS cnt
+      FROM transactions
+      WHERE status = 'completed'
+        AND created_at >= NOW() - INTERVAL '24 hours'
+        AND transparency_marker != 'algorithmic'
+        AND user_id IS NOT NULL
+        AND user_id != ${systemUserId}
+        AND NOT (user_id = ANY(${internalUserIdList}))
+    `),
+    db.execute(sql`
+      SELECT COUNT(*)::int AS cnt
+      FROM transactions
+      WHERE status = 'completed'
+        AND created_at >= NOW() - INTERVAL '24 hours'
+        AND transparency_marker != 'algorithmic'
+        AND user_id IS NULL
+    `),
+    db.execute(sql`
+      SELECT COUNT(*)::int AS cnt
+      FROM transactions
+      WHERE status = 'failed'
+        AND created_at >= NOW() - INTERVAL '24 hours'
+        AND transparency_marker != 'algorithmic'
+        AND (user_id IS NULL
+             OR (user_id != ${systemUserId}
+                 AND NOT (user_id = ANY(${internalUserIdList}))))
+    `),
+    db.execute(sql`
+      SELECT c.slug, COUNT(*)::int AS cnt
+      FROM transactions t
+      JOIN capabilities c ON c.id = t.capability_id
+      WHERE t.status = 'completed'
+        AND t.created_at >= NOW() - INTERVAL '24 hours'
+        AND t.transparency_marker != 'algorithmic'
+        AND (t.user_id IS NULL
+             OR (t.user_id != ${systemUserId}
+                 AND NOT (t.user_id = ANY(${internalUserIdList}))))
+      GROUP BY c.slug ORDER BY cnt DESC LIMIT 10
+    `),
+  ]);
+  const extAuth = toRows(extAuthRaw)[0]?.cnt ?? 0;
+  const extFree = toRows(extFreeRaw)[0]?.cnt ?? 0;
+  const extFailed = toRows(extFailedRaw)[0]?.cnt ?? 0;
+  const extByCap = toRows(extByCapRaw).map((r: any) => ({ slug: r.slug as string, count: r.cnt as number }));
+
   const ySignups = yesterday?.totalUsers ?? signups.total;
 
   return {
@@ -103,6 +175,13 @@ export async function getPlatformActivity(
     transactions: { count: txnCount, delta: 0 },
     revenue: { cents: revCents, delta: 0 },
     solutionExecutions,
+    externalApiCalls: {
+      total: extAuth + extFree,
+      authenticated: extAuth,
+      freeTier: extFree,
+      failed: extFailed,
+      byCapability: extByCap,
+    },
     zeroActivity: signups.last_24h === 0 && txnCount === 0,
   };
 }

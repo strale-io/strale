@@ -147,6 +147,26 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
     ${pa.signups.emails.length > 0 ? `<tr><td style="padding: 6px 0 0 0; font-size: 12px; color: ${MUTED};">New: ${pa.signups.emails.map(escHtml).join(", ")}</td></tr>` : ""}
     ${pa.signups.internalEmails.length > 0 ? `<tr><td style="padding: 2px 0 0 0; font-size: 11px; color: ${NEUTRAL};">Internal: ${pa.signups.internalEmails.map(escHtml).join(", ")}</td></tr>` : ""}`;
 
+  // External API calls — real outside traffic only
+  const ext = pa.externalApiCalls;
+  const extTopCaps = ext.byCapability.slice(0, 5)
+    .map((c) => `<span style="font-family: monospace; font-size: 12px; background: #f3f4f6; padding: 2px 6px; border-radius: 3px;">${escHtml(c.slug)}</span> (${fmt(c.count)})`)
+    .join(", ");
+  const externalHtml = `
+    ${sectionHeader("🌍", "External API calls (last 24h)")}
+    <tr><td style="padding: 0 0 6px 0; font-size: 12px; color: ${MUTED};">
+      Excludes @strale.io/@strale.dev, petterlindstrom@hotmail.com, system test user, and algorithmic-only capabilities.
+    </td></tr>
+    <tr><td style="padding: 4px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 14px;">
+        ${metricRow("Total external calls", ext.total, 0)}
+        ${metricRow("&nbsp;&nbsp;Authenticated", ext.authenticated, 0)}
+        ${metricRow("&nbsp;&nbsp;Free-tier (anon)", ext.freeTier, 0)}
+        ${metricRow("Failed", ext.failed, 0)}
+      </table>
+    </td></tr>
+    ${extTopCaps ? `<tr><td style="padding: 8px 0 0 0; font-size: 13px; color: ${MUTED};">Top: ${extTopCaps}</td></tr>` : ""}`;
+
   // Platform health
   const breakerHtml = ph.circuitBreakers.length > 0
     ? ph.circuitBreakers.map((b) => `<span style="color:${RED};">${escHtml(b.slug)} (${b.state}, ${b.consecutiveFailures} failures)</span>`).join("<br>")
@@ -314,6 +334,7 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
       ${strategicHtml}
       ${shipLogHtml}
       ${activityHtml}
+      ${externalHtml}
       ${healthHtml}
       ${beaconHtml}
       ${trafficHtml}
