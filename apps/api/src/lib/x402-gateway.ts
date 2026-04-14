@@ -115,7 +115,7 @@ export function build402Response(capability: {
           mimeType: "application/json",
           asset: USDC_ADDRESS,
           maxTimeoutSeconds: 300,
-          extra: { name: "USDC", version: "2" },
+          extra: { name: "USD Coin", version: "2" },
         },
       ],
       error: `Payment required. ${capability.name} costs ${priceUsd} USDC per call.`,
@@ -177,7 +177,7 @@ export async function verifyX402Payment(
       payTo: WALLET_ADDRESS,
       maxTimeoutSeconds: 300,
       asset: USDC_ADDRESS,
-      extra: { name: "USDC", version: "2" },
+      extra: { name: "USD Coin", version: "2" },
     };
 
     const facilitator = getFacilitator();

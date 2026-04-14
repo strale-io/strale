@@ -354,7 +354,7 @@ function build402(
     payTo: WALLET_ADDRESS || "0x0000000000000000000000000000000000000001",
     maxTimeoutSeconds: 300,
     asset: USDC_ADDRESS,
-    extra: { name: "USDC", version: "2" },
+    extra: { name: "USD Coin", version: "2" },
   };
 
   const httpMethod = (method ?? "POST").toUpperCase();
