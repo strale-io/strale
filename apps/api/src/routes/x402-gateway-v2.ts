@@ -35,6 +35,7 @@ interface X402Capability {
   x402PriceUsd: number;
   x402Method: string;
   inputSchema: Record<string, unknown> | null;
+  outputSchema: Record<string, unknown> | null;
   priceCents: number;
   matrixSqs: string | null;
   transparencyTag: string | null;
@@ -49,6 +50,7 @@ interface X402Solution {
   x402PriceUsd: number;
   priceCents: number;
   inputSchema: Record<string, unknown> | null;
+  outputSchema: Record<string, unknown> | null;
 }
 
 // ─── Cache ──────────────────────────────────────────────────────────────────
@@ -73,6 +75,7 @@ async function ensureCache(): Promise<void> {
         x402PriceUsd: capabilities.x402PriceUsd,
         x402Method: capabilities.x402Method,
         inputSchema: capabilities.inputSchema,
+        outputSchema: capabilities.outputSchema,
         priceCents: capabilities.priceCents,
         matrixSqs: capabilities.matrixSqs,
         transparencyTag: capabilities.transparencyTag,
@@ -97,6 +100,7 @@ async function ensureCache(): Promise<void> {
         x402PriceUsd: parseFloat(row.x402PriceUsd ?? "0"),
         x402Method: row.x402Method ?? "POST",
         inputSchema: row.inputSchema as Record<string, unknown> | null,
+        outputSchema: row.outputSchema as Record<string, unknown> | null,
         priceCents: row.priceCents,
         matrixSqs: row.matrixSqs ?? null,
         transparencyTag: row.transparencyTag ?? null,
@@ -128,6 +132,7 @@ async function ensureCache(): Promise<void> {
         x402PriceUsd: parseFloat(row.x402PriceUsd ?? "0"),
         priceCents: row.priceCents,
         inputSchema: row.inputSchema as Record<string, unknown> | null,
+        outputSchema: null, // solutions table has no output_schema column
       });
     }
 
@@ -241,92 +246,71 @@ function generateExampleFromSchema(
 }
 
 /**
- * Build the bazaar discovery extension for inclusion in 402 responses.
- * Follows the x402 bazaar extension spec (specs/extensions/bazaar.md).
+ * Convert a JSON Schema "properties" map into Bazaar's bodyFields/queryParams shape.
  *
- * Each capability gets its own bazaar entry keyed by its concrete URL.
- * Facilitators catalog these when they process payments, making the
- * endpoints discoverable via GET /discovery/resources.
+ * JSON Schema format:
+ *   { properties: { vat_number: { type: "string", description: "..." } }, required: ["vat_number"] }
+ *
+ * Bazaar format (each field carries its own required flag):
+ *   { vat_number: { type: "string", description: "...", required: true } }
  */
-function buildBazaarExtension(
+function toBazaarFields(
+  schema: Record<string, unknown> | null,
+): Record<string, unknown> {
+  if (!schema) return {};
+  const props = (schema as any).properties ?? {};
+  const required = new Set<string>((schema as any).required ?? []);
+  const out: Record<string, unknown> = {};
+  for (const [name, prop] of Object.entries(props)) {
+    const p = prop as any;
+    const field: Record<string, unknown> = { type: p.type ?? "string" };
+    if (p.description) field.description = p.description;
+    if (p.default !== undefined) field.default = p.default;
+    if (p.enum) field.enum = p.enum;
+    if (required.has(name)) field.required = true;
+    out[name] = field;
+  }
+  return out;
+}
+
+/**
+ * Build the outputSchema field for a paymentRequirement. This is the shape
+ * Coinbase's Bazaar indexer reads when cataloging resources — observed from
+ * live indexed entries at api.cdp.coinbase.com/platform/v2/x402/discovery/resources.
+ *
+ * IMPORTANT: Despite the name "outputSchema", this field describes BOTH the
+ * request input (method, bodyFields/queryParams) AND the response output.
+ * It has to sit on each paymentRequirement directly, NOT under a separate
+ * top-level `extensions.bazaar` field — the indexer ignores extensions.
+ */
+function buildOutputSchemaForBazaar(
   method: string,
   inputSchema: Record<string, unknown> | null,
-): { info: Record<string, unknown>; schema: Record<string, unknown> } {
+  outputSchema: Record<string, unknown> | null,
+): Record<string, unknown> {
   const httpMethod = method.toUpperCase();
   const isBodyMethod = ["POST", "PUT", "PATCH"].includes(httpMethod);
+  const fields = toBazaarFields(inputSchema);
 
+  const input: Record<string, unknown> = {
+    type: "http",
+    method: httpMethod,
+    discoverable: true,
+  };
   if (isBodyMethod) {
-    const exampleBody = generateExampleFromSchema(inputSchema);
-    return {
-      info: {
-        input: {
-          type: "http",
-          method: httpMethod,
-          bodyType: "json",
-          body: exampleBody,
-        },
-        output: { type: "json" },
-      },
-      schema: {
-        $schema: "https://json-schema.org/draft/2020-12/schema",
-        type: "object",
-        properties: {
-          input: {
-            type: "object",
-            properties: {
-              type: { type: "string", const: "http" },
-              method: { type: "string", enum: [httpMethod] },
-              bodyType: { type: "string", enum: ["json", "form-data", "text"] },
-              body: inputSchema ?? { type: "object" },
-            },
-            required: ["type", "method", "bodyType", "body"],
-            additionalProperties: false,
-          },
-          output: {
-            type: "object",
-            properties: { type: { type: "string" }, example: { type: "object" } },
-            required: ["type"],
-          },
-        },
-        required: ["input"],
-      },
-    };
+    input.bodyType = "json";
+    input.bodyFields = fields;
+  } else {
+    input.queryParams = fields;
   }
 
-  // GET / HEAD / DELETE — query param methods
-  const exampleParams = generateExampleFromSchema(inputSchema);
-  return {
-    info: {
-      input: {
-        type: "http",
-        method: httpMethod,
-        queryParams: exampleParams,
-      },
-      output: { type: "json" },
-    },
-    schema: {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      type: "object",
-      properties: {
-        input: {
-          type: "object",
-          properties: {
-            type: { type: "string", const: "http" },
-            method: { type: "string", enum: [httpMethod] },
-            queryParams: inputSchema ?? { type: "object" },
-          },
-          required: ["type", "method"],
-          additionalProperties: false,
-        },
-        output: {
-          type: "object",
-          properties: { type: { type: "string" }, example: { type: "object" } },
-          required: ["type"],
-        },
-      },
-      required: ["input"],
-    },
-  };
+  // Output shape: use the capability's actual output schema properties if available,
+  // otherwise just signal JSON. The Bazaar indexer uses this to rank by output richness.
+  const output: Record<string, unknown> = outputSchema
+    ? toBazaarFields(outputSchema)
+    : { type: "json" };
+
+  return { input, output };
 }
 
 // ─── 402 Response builder ───────────────────────────────────────────────────
@@ -339,10 +323,18 @@ function build402(
   matrixSqs?: string | null,
   inputSchema?: Record<string, unknown> | null,
   method?: string,
+  outputSchema?: Record<string, unknown> | null,
 ) {
   const maxAmount = usdToUsdcAtomic(priceUsd);
   const sqs = matrixSqs ? parseFloat(String(matrixSqs)) : null;
   const sqsStr = sqs != null && sqs > 0 ? ` SQS: ${Math.round(sqs)}/100.` : "";
+
+  const httpMethod = (method ?? "POST").toUpperCase();
+  const discoverySchema = buildOutputSchemaForBazaar(
+    httpMethod,
+    inputSchema ?? null,
+    outputSchema ?? null,
+  );
 
   const paymentRequirement = {
     scheme: "exact",
@@ -355,10 +347,10 @@ function build402(
     maxTimeoutSeconds: 300,
     asset: USDC_ADDRESS,
     extra: { name: "USD Coin", version: "2" },
+    // Bazaar indexer reads outputSchema at this exact path. Moving it here from
+    // extensions.bazaar is what gets us into the Bazaar discovery index.
+    outputSchema: discoverySchema,
   };
-
-  const httpMethod = (method ?? "POST").toUpperCase();
-  const bazaar = buildBazaarExtension(httpMethod, inputSchema ?? null);
 
   const body = {
     x402Version: 1,
@@ -369,7 +361,6 @@ function build402(
       mimeType: "application/json",
     },
     accepts: [paymentRequirement],
-    extensions: { bazaar },
     // Legacy field name some older clients looked for — safe to keep
     paymentRequirements: [paymentRequirement],
   };
@@ -517,7 +508,7 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
       const { body, headerPayload } = build402(
         sol.name, sol.description, sol.x402PriceUsd,
         `${BASE_URL}/x402/solutions/${slug}`,
-        null, sol.inputSchema, "POST",
+        null, sol.inputSchema, "POST", sol.outputSchema,
       );
       c.header("Payment-Required", headerPayload);
       return c.json(body, 402);
@@ -614,7 +605,7 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
       const { body, headerPayload } = build402(
         cap.name, cap.description, cap.x402PriceUsd,
         `${BASE_URL}/x402/${slug}`, cap.matrixSqs,
-        cap.inputSchema, cap.x402Method,
+        cap.inputSchema, cap.x402Method, cap.outputSchema,
       );
       c.header("Payment-Required", headerPayload);
       return c.json(body, 402);
