@@ -171,7 +171,9 @@ async function searchByName(name: string): Promise<Record<string, unknown>> {
   // The old KRS search API (/api/krs/szukaj) returns 404 as of April 2026,
   // and the Browserless portal scraping was unreliable.
   const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
-  const searchUrl = `https://www.northdata.com/${encodeURIComponent(name)}`;
+  // northdata's direct-slug URL pattern (e.g. /Budimex%20SA) returns 404 as of April 2026.
+  // Use the search endpoint instead. Result links still embed KRS numbers in the href.
+  const searchUrl = `https://www.northdata.com/?query=${encodeURIComponent(name)}`;
 
   try {
     const resp = await fetch(searchUrl, {
@@ -182,24 +184,27 @@ async function searchByName(name: string): Promise<Record<string, unknown>> {
 
     if (resp.ok) {
       const html = await resp.text();
-      // Find Polish results in search page
-      const titleRe = /class="title" href="([^"]+)">([^<]+)/g;
-      const results: RegExpExecArray[] = [];
-      let m: RegExpExecArray | null;
-      while ((m = titleRe.exec(html)) !== null) results.push(m);
-      const polishResult = results.find(([, , title]) => title.includes("Poland"));
-      if (polishResult) {
-        // Extract KRS number from the URL (format: /Company%20Name/KRS0000001764)
-        const krsMatch = polishResult[1].match(/KRS(\d{10})/);
+      // When northdata recognizes the query as a specific company, the page's
+      // <link rel="canonical"> points to the primary entity's detail page,
+      // e.g. https://www.northdata.com/Budimex%20SA,%20Warszawa/KRS0000001764
+      // This is far more reliable than scraping result-list hrefs (the page
+      // contains many unrelated KRS links in sidebars / related companies).
+      const canonicalTag = html.match(/<link[^>]*rel="canonical"[^>]*>/);
+      if (canonicalTag) {
+        const krsMatch = canonicalTag[0].match(/KRS(\d{10})/);
         if (krsMatch) {
           return fetchByKrs(krsMatch[1]);
         }
       }
-      // If no Polish-specific result, try first result that mentions KRS
-      for (const [, url] of results) {
-        const krsMatch = url.match(/KRS(\d{10})/);
-        if (krsMatch) {
-          return fetchByKrs(krsMatch[1]);
+
+      // Fallback: find result links that match the search term in their path.
+      const firstWord = name.split(/\s+/)[0].toLowerCase();
+      const hrefRe = /href="(\/[^"]*KRS(\d{10})[^"]*)"/g;
+      let m: RegExpExecArray | null;
+      while ((m = hrefRe.exec(html)) !== null) {
+        const href = decodeURIComponent(m[1]).toLowerCase();
+        if (href.includes(`/${firstWord}`)) {
+          return fetchByKrs(m[2]);
         }
       }
     }
