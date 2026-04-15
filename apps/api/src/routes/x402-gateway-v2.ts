@@ -320,12 +320,29 @@ function buildBazaarDiscovery(
   };
   const enrichedExtension = { ...extension, info: enrichedInfo };
 
-  // v1 outputSchema mirrors the v2 info but must include `discoverable` and
-  // use v1-native field names. The v1 extractor recognizes `body` as a
-  // fallback alongside `bodyFields`, so we reuse info.input directly.
+  // v1 outputSchema: match the shape of working indexed entries in the live
+  // CDP catalog (e.g. Heurist, Questflow) — field-descriptor maps keyed by
+  // `bodyFields`/`queryParams`, not the SDK's `body: { field: "example" }`
+  // form. The v1 extractor accepts both, but observed entries that actually
+  // survive CDP's indexing pipeline on Base mainnet all use the descriptor
+  // shape. Cheap hedge while #1982 (CDP drops v2 extensions on mainnet) is
+  // unresolved upstream.
+  const fieldDescriptors = toBazaarFields(inputSchema);
+  const v1Input: Record<string, unknown> = {
+    type: "http",
+    method: httpMethod,
+    discoverable: true,
+  };
+  if (isBodyMethod) {
+    v1Input.bodyType = "json";
+    v1Input.bodyFields = fieldDescriptors;
+  } else {
+    v1Input.queryParams = fieldDescriptors;
+  }
+  const v1Output = outputSchema ? toBazaarFields(outputSchema) : undefined;
   const v1OutputSchema: Record<string, unknown> = {
-    input: { ...enrichedInfo.input, discoverable: true },
-    ...(enrichedInfo.output ? { output: enrichedInfo.output } : {}),
+    input: v1Input,
+    ...(v1Output ? { output: v1Output } : {}),
   };
 
   return {
