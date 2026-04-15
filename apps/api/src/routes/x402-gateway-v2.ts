@@ -22,6 +22,7 @@ import {
   eurCentsToUsdcAtomic,
   eurCentsToUsdString,
 } from "../lib/x402-gateway.js";
+import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { executeSolution } from "../lib/solution-executor.js";
 
@@ -274,43 +275,63 @@ function toBazaarFields(
 }
 
 /**
- * Build the outputSchema field for a paymentRequirement. This is the shape
- * Coinbase's Bazaar indexer reads when cataloging resources — observed from
- * live indexed entries at api.cdp.coinbase.com/platform/v2/x402/discovery/resources.
+ * Build the Bazaar discovery extension for a capability route.
  *
- * IMPORTANT: Despite the name "outputSchema", this field describes BOTH the
- * request input (method, bodyFields/queryParams) AND the response output.
- * It has to sit on each paymentRequirement directly, NOT under a separate
- * top-level `extensions.bazaar` field — the indexer ignores extensions.
+ * Uses `declareDiscoveryExtension` from `@x402/extensions/bazaar` to produce
+ * the canonical extension (schema + info). We then emit two shapes so the
+ * facilitator indexes regardless of the client's protocol version:
+ *
+ *  - `v2Extensions`: Goes on `PaymentRequired.extensions` at the 402 top
+ *    level. x402-fetch v2 clients relay this into `paymentPayload.extensions`
+ *    and the facilitator reads it at settle time.
+ *  - `v1OutputSchema`: Goes on each `paymentRequirement.outputSchema`.
+ *    The facilitator's `extractDiscoveryInfoV1` reads this when the payment
+ *    is x402Version=1.
+ *
+ * Note: `declareDiscoveryExtension` deliberately omits `method` from the
+ * input — it's normally enriched by `bazaarResourceServerExtension` at
+ * request time when running inside an `x402ResourceServer`. Because we run
+ * the facilitator client directly from a DB-driven wildcard route, we fill
+ * method in ourselves.
  */
-function buildOutputSchemaForBazaar(
+function buildBazaarDiscovery(
   method: string,
   inputSchema: Record<string, unknown> | null,
   outputSchema: Record<string, unknown> | null,
-): Record<string, unknown> {
+): { v2Extensions: Record<string, unknown>; v1OutputSchema: Record<string, unknown> } {
   const httpMethod = method.toUpperCase();
   const isBodyMethod = ["POST", "PUT", "PATCH"].includes(httpMethod);
-  const fields = toBazaarFields(inputSchema);
+  const example = generateExampleFromSchema(inputSchema);
 
-  const input: Record<string, unknown> = {
-    type: "http",
-    method: httpMethod,
-    discoverable: true,
+  const config: Record<string, unknown> = {
+    input: example,
+    ...(inputSchema ? { inputSchema } : {}),
+    ...(outputSchema ? { output: { schema: outputSchema } } : {}),
   };
-  if (isBodyMethod) {
-    input.bodyType = "json";
-    input.bodyFields = fields;
-  } else {
-    input.queryParams = fields;
-  }
+  if (isBodyMethod) config.bodyType = "json";
 
-  // Output shape: use the capability's actual output schema properties if available,
-  // otherwise just signal JSON. The Bazaar indexer uses this to rank by output richness.
-  const output: Record<string, unknown> = outputSchema
-    ? toBazaarFields(outputSchema)
-    : { type: "json" };
+  const extensionRecord = declareDiscoveryExtension(config as any) as Record<string, any>;
+  const extension = extensionRecord.bazaar;
 
-  return { input, output };
+  // Patch in method (enrichDeclaration would do this inside an x402 server).
+  const enrichedInfo = {
+    ...extension.info,
+    input: { ...extension.info.input, method: httpMethod },
+  };
+  const enrichedExtension = { ...extension, info: enrichedInfo };
+
+  // v1 outputSchema mirrors the v2 info but must include `discoverable` and
+  // use v1-native field names. The v1 extractor recognizes `body` as a
+  // fallback alongside `bodyFields`, so we reuse info.input directly.
+  const v1OutputSchema: Record<string, unknown> = {
+    input: { ...enrichedInfo.input, discoverable: true },
+    ...(enrichedInfo.output ? { output: enrichedInfo.output } : {}),
+  };
+
+  return {
+    v2Extensions: { bazaar: enrichedExtension },
+    v1OutputSchema,
+  };
 }
 
 // ─── 402 Response builder ───────────────────────────────────────────────────
@@ -330,47 +351,27 @@ function build402(
   const sqsStr = sqs != null && sqs > 0 ? ` SQS: ${Math.round(sqs)}/100.` : "";
 
   const httpMethod = (method ?? "POST").toUpperCase();
-  const discoverySchema = buildOutputSchemaForBazaar(
+  const { v2Extensions, v1OutputSchema } = buildBazaarDiscovery(
     httpMethod,
     inputSchema ?? null,
     outputSchema ?? null,
   );
 
-  // chainId in EIP-712 domain extra — observed on all recently-indexed Bazaar
-  // entries; the indexer may use it for canonical chain attribution.
-  const chainId = NETWORK === "base" ? 8453 : NETWORK === "base-sepolia" ? 84532 : undefined;
+  const finalDescription = `${description}${sqsStr}`;
 
   const paymentRequirement: Record<string, unknown> = {
     scheme: "exact",
     network: NETWORK,
     maxAmountRequired: maxAmount,
     resource: resourceUrl,
-    description: `${description}${sqsStr}`,
+    description: finalDescription,
     mimeType: "application/json",
     payTo: WALLET_ADDRESS || "0x0000000000000000000000000000000000000001",
     maxTimeoutSeconds: 300,
     asset: USDC_ADDRESS,
-    extra: chainId
-      ? { name: "USD Coin", version: "2", chainId }
-      : { name: "USD Coin", version: "2" },
-    // outputSchema is the structural discovery field the Bazaar indexer reads.
-    outputSchema: discoverySchema,
-    // extensions.bazaar is the legacy richer metadata format; recently-indexed
-    // providers include it alongside outputSchema, so we do too for parity.
-    extensions: {
-      bazaar: {
-        info: discoverySchema,
-        schema: {
-          $schema: "https://json-schema.org/draft/2020-12/schema",
-          type: "object",
-          properties: {
-            input: { type: "object" },
-            output: { type: "object" },
-          },
-          required: ["input"],
-        },
-      },
-    },
+    extra: { name: "USD Coin", version: "2" },
+    // v1 discovery path: facilitator's extractDiscoveryInfoV1 reads this at settle.
+    outputSchema: v1OutputSchema,
   };
 
   const body = {
@@ -378,12 +379,16 @@ function build402(
     error: `Payment required. ${name} costs $${priceUsd.toFixed(4)} USDC per call.`,
     resource: {
       url: resourceUrl,
-      description: `${description}${sqsStr}`,
+      description: finalDescription,
       mimeType: "application/json",
     },
     accepts: [paymentRequirement],
     // Legacy field name some older clients looked for — safe to keep
     paymentRequirements: [paymentRequirement],
+    // v2 discovery path: top-level `extensions` per PaymentRequired schema.
+    // v2 clients relay this into paymentPayload.extensions; the facilitator's
+    // extractDiscoveryInfo reads paymentPayload.extensions.bazaar at settle.
+    extensions: v2Extensions,
   };
 
   // v1 backward-compat header
@@ -391,7 +396,7 @@ function build402(
     JSON.stringify({ x402Version: 1, accepts: [paymentRequirement] }),
   ).toString("base64");
 
-  return { body, headerPayload };
+  return { body, headerPayload, paymentRequirement };
 }
 
 // ─── Transaction recording ──────────────────────────────────────────────────
@@ -539,7 +544,23 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
       return c.json({ error: "x402 payments not configured." }, 503);
     }
 
-    const verification = await verifyX402Payment(paymentHeader, sol.priceCents, sol.x402PriceUsd);
+    // Build the requirement again (cheap) so verify+settle carry the same
+    // resource URL + discovery outputSchema the client signed against.
+    const solRebuild = build402(
+      sol.name, sol.description, sol.x402PriceUsd,
+      `${BASE_URL}/x402/solutions/${slug}`,
+      null, sol.inputSchema, "POST", sol.outputSchema,
+    );
+    const verification = await verifyX402Payment(
+      paymentHeader,
+      sol.priceCents,
+      sol.x402PriceUsd,
+      {
+        resource: solRebuild.paymentRequirement.resource as string,
+        description: solRebuild.paymentRequirement.description as string,
+        outputSchema: solRebuild.paymentRequirement.outputSchema as Record<string, unknown>,
+      },
+    );
     if (!verification.valid) {
       return c.json({ error: "Payment verification failed", detail: verification.error }, 402);
     }
@@ -636,10 +657,23 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
       return c.json({ error: "x402 payments not configured." }, 503);
     }
 
-    // Verify payment using the shared library (same as /v1/do).
-    // Pass x402PriceUsd as override so the verification amount matches what the
-    // 402 response's maxAmountRequired quoted to the client (which signed for that exact value).
-    const verification = await verifyX402Payment(paymentHeader, cap.priceCents, cap.x402PriceUsd);
+    // Rebuild the same requirement so verify+settle carry the discovery
+    // outputSchema (v1 Bazaar indexing path) and the canonical resource URL.
+    const capRebuild = build402(
+      cap.name, cap.description, cap.x402PriceUsd,
+      `${BASE_URL}/x402/${slug}`, cap.matrixSqs,
+      cap.inputSchema, cap.x402Method, cap.outputSchema,
+    );
+    const verification = await verifyX402Payment(
+      paymentHeader,
+      cap.priceCents,
+      cap.x402PriceUsd,
+      {
+        resource: capRebuild.paymentRequirement.resource as string,
+        description: capRebuild.paymentRequirement.description as string,
+        outputSchema: capRebuild.paymentRequirement.outputSchema as Record<string, unknown>,
+      },
+    );
     if (!verification.valid) {
       return c.json(
         { error: "Payment verification failed", detail: verification.error },

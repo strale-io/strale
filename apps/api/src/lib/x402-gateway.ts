@@ -142,10 +142,17 @@ export interface X402VerificationResult {
  *   verification amount exactly matches what was in the 402 response's
  *   maxAmountRequired field.
  */
+export interface X402PaymentRequirement {
+  resource?: string;
+  description?: string;
+  outputSchema?: Record<string, unknown>;
+}
+
 export async function verifyX402Payment(
   paymentHeader: string,
   priceCentsEur: number,
   priceUsdOverride?: number,
+  requirementOverrides?: X402PaymentRequirement,
 ): Promise<X402VerificationResult> {
   if (!isX402Configured()) {
     return { valid: false, error: "x402 not configured (no wallet address)" };
@@ -167,18 +174,25 @@ export async function verifyX402Payment(
       priceUsdOverride !== undefined
         ? Math.ceil(priceUsdOverride * 1_000_000).toString()
         : eurCentsToUsdcAtomic(priceCentsEur);
-    const requirements = {
-      scheme: "exact" as const,
+    // Requirements passed to the facilitator must carry the discovery outputSchema
+    // (v1 path) so the Bazaar indexer catalogs the resource at settle time.
+    // `resource` and `description` must match what the 402 response quoted so the
+    // indexed URL is canonical.
+    const requirements: Record<string, unknown> = {
+      scheme: "exact",
       network: NETWORK,
       maxAmountRequired: priceAtomic,
-      resource: "/v1/do",
-      description: "Strale capability call",
+      resource: requirementOverrides?.resource ?? "/v1/do",
+      description: requirementOverrides?.description ?? "Strale capability call",
       mimeType: "application/json",
       payTo: WALLET_ADDRESS,
       maxTimeoutSeconds: 300,
       asset: USDC_ADDRESS,
       extra: { name: "USD Coin", version: "2" },
     };
+    if (requirementOverrides?.outputSchema) {
+      requirements.outputSchema = requirementOverrides.outputSchema;
+    }
 
     const facilitator = getFacilitator();
 
