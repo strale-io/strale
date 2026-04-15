@@ -375,7 +375,17 @@ function build402(
     outputSchema ?? null,
   );
 
-  const finalDescription = `${description}${sqsStr}`;
+  // CDP facilitator rejects PaymentRequirements whose description is too long
+  // ("'paymentRequirements' is invalid: must match one of [x402Version 1/2
+  // schemas]"). Observed limit is somewhere below 512 chars; capping at 256 is
+  // safely under it and preserves the usable prefix. Keeps long descriptions
+  // in the capability's input/output metadata without blocking settlement.
+  const DESCRIPTION_MAX = 256;
+  const combined = `${description}${sqsStr}`;
+  const finalDescription =
+    combined.length > DESCRIPTION_MAX
+      ? `${combined.slice(0, DESCRIPTION_MAX - 1).trimEnd()}…`
+      : combined;
 
   const paymentRequirement: Record<string, unknown> = {
     scheme: "exact",
