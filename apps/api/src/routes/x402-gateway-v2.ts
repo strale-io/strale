@@ -532,15 +532,8 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
     );
   }
 
-  // Extract inputs
-  let inputs: Record<string, unknown>;
-  try {
-    inputs = await extractInputs(c, sol.inputSchema);
-  } catch {
-    return c.json({ error: "Invalid request body. Expected JSON." }, 400);
-  }
-
-  // Free solutions skip payment
+  // Payment check FIRST — so Bazaar's empty-body discovery crawl gets a 402
+  // (not a 400 from failed JSON parse). See capability handler for detail.
   if (sol.x402PriceUsd > 0) {
     const paymentHeader = extractPaymentHeader(c.req.raw.headers);
 
@@ -583,6 +576,14 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
     }
   }
 
+  // Extract inputs (after payment clears)
+  let inputs: Record<string, unknown>;
+  try {
+    inputs = await extractInputs(c, sol.inputSchema);
+  } catch {
+    return c.json({ error: "Invalid request body. Expected JSON." }, 400);
+  }
+
   // Execute solution steps via shared orchestration module
   const result = await executeSolution(sol.id, inputs);
 
@@ -620,40 +621,16 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
     );
   }
 
-  // Method check for complex schemas
-  if (c.req.method === "GET" && !isSimpleSchema(cap.inputSchema)) {
-    return c.json(
-      { error: "This capability requires POST with JSON body.", input_schema: cap.inputSchema },
-      405,
-    );
-  }
-
-  // Extract and validate inputs BEFORE payment
-  let inputs: Record<string, unknown>;
-  try {
-    inputs = await extractInputs(c, cap.inputSchema);
-  } catch {
-    return c.json({ error: "Invalid request body. Expected JSON." }, 400);
-  }
-
-  // Basic input validation — check required fields from schema
-  const schema = cap.inputSchema as any;
-  if (schema?.required) {
-    const missing = (schema.required as string[]).filter(
-      (f: string) => inputs[f] === undefined || inputs[f] === null || inputs[f] === "",
-    );
-    if (missing.length > 0) {
-      return c.json(
-        { error: `Missing required fields: ${missing.join(", ")}`, input_schema: cap.inputSchema },
-        400,
-      );
-    }
-  }
-
   // Free capabilities ($0.00) skip payment
   const isFree = cap.x402PriceUsd === 0;
   let settlementId: string | undefined;
 
+  // Payment check FIRST — before any input validation. CDP's Bazaar crawler
+  // sends an empty request to discover endpoints and requires HTTP 402 back.
+  // Returning 400 (missing required fields) on empty bodies prevents indexing:
+  // https://docs.cdp.coinbase.com/x402/quickstart-for-sellers — "If your
+  // server returns any other status code (e.g. 400 Bad Request), the resource
+  // will not be indexed."
   if (!isFree) {
     const paymentHeader = extractPaymentHeader(c.req.raw.headers);
 
@@ -698,6 +675,35 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
       );
     }
     settlementId = verification.settlementId;
+  }
+
+  // Method check (after payment — crawler hits with any method)
+  if (c.req.method === "GET" && !isSimpleSchema(cap.inputSchema)) {
+    return c.json(
+      { error: "This capability requires POST with JSON body.", input_schema: cap.inputSchema },
+      405,
+    );
+  }
+
+  // Extract inputs (after payment clears)
+  let inputs: Record<string, unknown>;
+  try {
+    inputs = await extractInputs(c, cap.inputSchema);
+  } catch {
+    return c.json({ error: "Invalid request body. Expected JSON." }, 400);
+  }
+
+  const schema = cap.inputSchema as any;
+  if (schema?.required) {
+    const missing = (schema.required as string[]).filter(
+      (f: string) => inputs[f] === undefined || inputs[f] === null || inputs[f] === "",
+    );
+    if (missing.length > 0) {
+      return c.json(
+        { error: `Missing required fields: ${missing.join(", ")}`, input_schema: cap.inputSchema },
+        400,
+      );
+    }
   }
 
   // Execute capability
