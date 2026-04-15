@@ -227,3 +227,13 @@ export async function verifyX402Payment(
 export function extractPaymentHeader(headers: Headers): string | null {
   return headers.get("x-payment") ?? headers.get("payment") ?? null;
 }
+
+/**
+ * Encode an x402 settlement response for the X-PAYMENT-RESPONSE header.
+ * Clients inspect this to learn the on-chain tx hash of a settled payment,
+ * even on executions that subsequently returned 4xx.
+ */
+export function encodePaymentResponseHeader(settlementId: string): string {
+  const payload = { success: true, transaction: settlementId, network: NETWORK };
+  return Buffer.from(JSON.stringify(payload)).toString("base64");
+}

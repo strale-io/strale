@@ -21,6 +21,7 @@ import {
   extractPaymentHeader,
   eurCentsToUsdcAtomic,
   eurCentsToUsdString,
+  encodePaymentResponseHeader,
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
@@ -534,6 +535,7 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
 
   // Payment check FIRST — so Bazaar's empty-body discovery crawl gets a 402
   // (not a 400 from failed JSON parse). See capability handler for detail.
+  let solSettlementId: string | undefined;
   if (sol.x402PriceUsd > 0) {
     const paymentHeader = extractPaymentHeader(c.req.raw.headers);
 
@@ -574,6 +576,11 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
     if (!verification.valid) {
       return c.json({ error: "Payment verification failed", detail: verification.error }, 402);
     }
+    solSettlementId = verification.settlementId;
+  }
+
+  if (solSettlementId) {
+    c.header("X-Payment-Response", encodePaymentResponseHeader(solSettlementId));
   }
 
   // Extract inputs (after payment clears)
@@ -675,6 +682,13 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
       );
     }
     settlementId = verification.settlementId;
+  }
+
+  // From this point on, payment may already be settled. Surface the tx hash
+  // via X-PAYMENT-RESPONSE on every response — including 4xx — so clients can
+  // reconcile failed executions against on-chain settlements.
+  if (settlementId) {
+    c.header("X-Payment-Response", encodePaymentResponseHeader(settlementId));
   }
 
   // Method check (after payment — crawler hits with any method)
