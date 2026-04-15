@@ -57,6 +57,9 @@ async function main() {
   const { startActivationDrip } = await import("./jobs/activation-drip.js");
   startActivationDrip();
 
+  const { startDbRetention } = await import("./jobs/db-retention.js");
+  startDbRetention();
+
   const port = parseInt(process.env.PORT || "3000", 10);
 
   serve({ fetch: app.fetch, port }, (info) => {
