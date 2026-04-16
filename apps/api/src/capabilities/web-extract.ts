@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("web-extract", async (input: CapabilityInput) => {
   const url = input.url as string | undefined;
@@ -11,17 +12,13 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
     );
   }
 
-  // Validate URL
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(url);
-  } catch {
-    throw new Error(`Invalid URL: "${url}". Provide a full URL including https://.`);
-  }
-
-  if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-    throw new Error("Only http and https URLs are supported.");
-  }
+  // F-0-006: the URL is forwarded to Browserless, which does the fetch
+  // from its own network. Our `safeFetch` dispatcher cannot protect that
+  // outbound call. The only layer we control is THIS validator: if it
+  // rejects the URL we never pass it along. Private IP / carrier-grade
+  // NAT / cloud metadata / non-http schemes are refused here before
+  // Browserless is even contacted.
+  await validateUrl(url);
 
   const browserlessUrl = process.env.BROWSERLESS_URL;
   const browserlessKey = process.env.BROWSERLESS_API_KEY;
