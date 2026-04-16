@@ -3,13 +3,17 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 // F-0-001: fail-fast on a missing secret instead of falling back to a
 // committed default. A hardcoded default lets anyone forge `/audit/:id?token=...`
 // URLs, undermining the EU AI Act / GDPR compliance story those URLs anchor.
-const AUDIT_SECRET = process.env.AUDIT_HMAC_SECRET;
-if (!AUDIT_SECRET || AUDIT_SECRET.length < 32) {
-  throw new Error(
-    "AUDIT_HMAC_SECRET is required and must be at least 32 characters. " +
-      "Generate with: openssl rand -hex 32",
-  );
+function requireAuditSecret(): string {
+  const v = process.env.AUDIT_HMAC_SECRET;
+  if (!v || v.length < 32) {
+    throw new Error(
+      "AUDIT_HMAC_SECRET is required and must be at least 32 characters. " +
+        "Generate with: openssl rand -hex 32",
+    );
+  }
+  return v;
 }
+const AUDIT_SECRET: string = requireAuditSecret();
 
 export function generateAuditToken(transactionId: string): string {
   return createHmac("sha256", AUDIT_SECRET)

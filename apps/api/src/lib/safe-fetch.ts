@@ -25,17 +25,11 @@
 import { Agent as UndiciAgent } from "undici";
 import { Agent as HttpsAgent } from "node:https";
 import { Agent as HttpAgent } from "node:http";
-import { lookup as dnsLookup, type LookupAddress } from "node:dns";
+import { lookup as dnsLookup, type LookupOptions } from "node:dns";
 import { isBlockedIp, validateUrl } from "./url-validator.js";
 import { logWarn } from "./log.js";
 
 // ─── Custom lookup that re-applies isBlockedIp ────────────────────────────────
-
-type LookupCallback = (
-  err: NodeJS.ErrnoException | null,
-  address?: string | LookupAddress[],
-  family?: number,
-) => void;
 
 function ssrfBlocked(hostname: string, address: string): NodeJS.ErrnoException {
   logWarn("ssrf-blocked-resolution", "Resolved IP is in a blocked range", {
@@ -54,19 +48,33 @@ function ssrfBlocked(hostname: string, address: string): NodeJS.ErrnoException {
  * falls in a blocked range. Called right before the socket is opened, so
  * it plugs the DNS-rebinding window between `validateUrl`'s own lookup
  * and the real connection.
+ *
+ * Uses Node's LookupFunction shape, which is
+ *   (hostname, options: LookupOptions, callback): void
+ * and supports both `all: true` (returns LookupAddress[]) and default
+ * (returns a single string). We forward to `dnsLookup` unchanged and
+ * post-filter the result.
  */
-function safeLookup(
-  hostname: string,
-  options: Parameters<typeof dnsLookup>[1],
-  callback: LookupCallback,
-): void {
-  dnsLookup(hostname, options as never, (err, address, family) => {
+// Cast via `any` at the call-site below rather than re-typing Node's
+// overload union here — the two overloads are hard to express in a
+// single signature without double-declaring.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function safeLookup(hostname: string, options: LookupOptions, callback: any): void {
+  // Forward options to dnsLookup with a post-filter callback.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (dnsLookup as any)(hostname, options, (err: NodeJS.ErrnoException | null, address: unknown, family?: number) => {
     if (err) return callback(err);
 
     if (Array.isArray(address)) {
-      const safe = address.filter((a) => !isBlockedIp(a.address));
-      if (safe.length === 0) return callback(ssrfBlocked(hostname, address.map((a) => a.address).join(",")));
-      return callback(null, safe, family);
+      // `all: true` path — array of { address, family }.
+      const arr = address as Array<{ address: string; family: number }>;
+      const safe = arr.filter((a) => !isBlockedIp(a.address));
+      if (safe.length === 0) {
+        return callback(
+          ssrfBlocked(hostname, arr.map((a) => a.address).join(",")),
+        );
+      }
+      return callback(null, safe);
     }
 
     if (typeof address === "string" && isBlockedIp(address)) {

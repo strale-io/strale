@@ -146,7 +146,7 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences. Just the JS
       source_url: url,
     },
     provenance: {
-      source: `web-extract:${parsedUrl.hostname}`,
+      source: `web-extract:${new URL(url).hostname}`,
       fetched_at: new Date().toISOString(),
     },
   };
