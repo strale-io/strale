@@ -198,6 +198,11 @@ export const transactions = pgTable(
     // Compliance infrastructure
     integrityHash: varchar("integrity_hash", { length: 128 }),
     previousHash: varchar("previous_hash", { length: 128 }),
+    // F-0-009 Stage 2: 'pending' | 'complete' | 'failed'.
+    // Hashing moved off the hot path; jobs/integrity-hash-retry.ts fills it in.
+    integrityHashStatus: varchar("integrity_hash_status", { length: 16 })
+      .notNull()
+      .default("pending"),
     legalHold: boolean("legal_hold").notNull().default(false),
     // x402 payment tracking
     paymentMethod: varchar("payment_method", { length: 20 }).notNull().default("wallet"),

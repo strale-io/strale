@@ -37,6 +37,14 @@ const REQUIRED_COLUMNS: Array<{
     column: "bucket_key",
     migration: "0045_rate_limit_counters",
   },
+  // F-0-009 Stage 2: retry worker needs this column. Missing column
+  // means the worker would fail on every poll and pending transactions
+  // would never get hashed.
+  {
+    table: "transactions",
+    column: "integrity_hash_status",
+    migration: "0046_integrity_hash_status",
+  },
   // Add future migration columns here as they are added
   // { table: 'table_name', column: 'column_name', migration: '0036_...' },
 ];

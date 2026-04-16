@@ -38,6 +38,7 @@ auditRoute.get("/:transactionId", async (c) => {
       auditTrail: transactions.auditTrail,
       transparencyMarker: transactions.transparencyMarker,
       dataJurisdiction: transactions.dataJurisdiction,
+      integrityHashStatus: transactions.integrityHashStatus,
       createdAt: transactions.createdAt,
       completedAt: transactions.completedAt,
       capabilityId: transactions.capabilityId,
@@ -50,6 +51,32 @@ auditRoute.get("/:transactionId", async (c) => {
     return c.json(
       apiError("not_found", "Transaction not found or audit token invalid."),
       404,
+    );
+  }
+
+  // F-0-009 Stage 2: the integrity hash is filled in by a background
+  // worker. While it's pending, refuse to serve — a compliance URL
+  // that returns content without a chained hash is worse than one
+  // that asks the caller to retry.
+  if (txn.integrityHashStatus === "pending") {
+    c.header("Retry-After", "30");
+    return c.json(
+      {
+        status: "pending",
+        message: "Integrity hash is still being computed. Retry in 30 seconds.",
+        transaction_id: txn.id,
+      },
+      202,
+    );
+  }
+  if (txn.integrityHashStatus === "failed") {
+    return c.json(
+      apiError(
+        "capability_unavailable",
+        "Integrity hash generation failed for this transaction. Contact compliance@strale.io.",
+        { transaction_id: txn.id },
+      ),
+      503,
     );
   }
 

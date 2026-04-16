@@ -54,13 +54,18 @@ const offenders = [];
 for (const file of walk(ROOT)) {
   const rel = file.replace(/\\/g, "/");
   if ([...ALLOWLIST_FILES].some((p) => rel.endsWith(p))) continue;
-  const text = readFileSync(file, "utf-8");
-  const lines = text.split(/\r?\n/);
+  const raw = readFileSync(file, "utf-8");
+  // Preserve line numbers: strip comments in-place so offsets still match.
+  const cleaned = raw
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/(^|[^:])\/\/[^\n]*/g, (_, p) => p + " ");
+  const lines = cleaned.split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!PATTERN.test(line)) continue;
-    if (line.startsWith(STORE_INTEGRITY_ALLOWED_PREFIX)) continue;
-    offenders.push({ file: rel, line: i + 1, text: line.trim() });
+    const rawLine = raw.split(/\r?\n/)[i];
+    if (rawLine.startsWith(STORE_INTEGRITY_ALLOWED_PREFIX)) continue;
+    offenders.push({ file: rel, line: i + 1, text: rawLine.trim() });
   }
 }
 

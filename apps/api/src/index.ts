@@ -60,6 +60,11 @@ async function main() {
   const { startDbRetention } = await import("./jobs/db-retention.js");
   startDbRetention();
 
+  // F-0-009 Stage 2: integrity hashing is now two-phase. The worker
+  // picks up pending transactions and fills in the hash chain.
+  const { startIntegrityHashRetry } = await import("./jobs/integrity-hash-retry.js");
+  startIntegrityHashRetry();
+
   const port = parseInt(process.env.PORT || "3000", 10);
 
   serve({ fetch: app.fetch, port }, (info) => {

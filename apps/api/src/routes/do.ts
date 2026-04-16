@@ -37,7 +37,7 @@ import {
 } from "../lib/trust-grade.js";
 import { withRetry } from "../lib/retry.js";
 import { buildFailureProvenance, getProcessingJurisdictions } from "../lib/provenance-builder.js";
-import { computeIntegrityHash, getPreviousHash } from "../lib/integrity-hash.js";
+// F-0-009 Stage 2: integrity hashing moved to jobs/integrity-hash-retry.ts.
 import {
   isX402Configured,
   build402Response,
@@ -1151,7 +1151,8 @@ async function executeFreeTier(
         { label: "piggyback-record", context: { slug: capability.slug } },
       );
     }
-    storeIntegrityHash(txnRecord.id).catch(() => {});
+    // F-0-009 Stage 2: the row lands with integrity_hash_status = 'pending'
+    // by column default; jobs/integrity-hash-retry.ts will fill it in.
 
     const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
 
@@ -1224,7 +1225,8 @@ async function executeFreeTier(
       })
       .where(eq(transactions.id, txnRecord.id));
 
-    storeIntegrityHash(txnRecord.id).catch(() => {});
+    // F-0-009 Stage 2: the row lands with integrity_hash_status = 'pending'
+    // by column default; jobs/integrity-hash-retry.ts will fill it in.
     fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
     fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
     recordQuality({
@@ -1324,7 +1326,8 @@ async function executeFreeTierAuthenticated(
         { label: "piggyback-record", context: { slug: capability.slug } },
       );
     }
-    storeIntegrityHash(txnRecord.id).catch(() => {});
+    // F-0-009 Stage 2: the row lands with integrity_hash_status = 'pending'
+    // by column default; jobs/integrity-hash-retry.ts will fill it in.
     // Activation hook: detect first successful call
     if (user) {
       fireAndForget(
@@ -1385,7 +1388,8 @@ async function executeFreeTierAuthenticated(
       })
       .where(eq(transactions.id, txnRecord.id));
 
-    storeIntegrityHash(txnRecord.id).catch(() => {});
+    // F-0-009 Stage 2: the row lands with integrity_hash_status = 'pending'
+    // by column default; jobs/integrity-hash-retry.ts will fill it in.
     fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
     fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
     recordQuality({
@@ -1675,18 +1679,16 @@ async function executeSync(
     requestContext: c.get("requestContext" as any),
   });
 
-  // Store full audit in DB (fire-and-forget, non-blocking).
-  // TODO(F-0-009 Stage 2): audit + integrity hash are compliance-critical;
-  // move to synchronous or two-phase-with-retry. Leaving as fireAndForget
-  // until Stage 2's measurement decides the path.
+  // Store full audit in DB (fire-and-forget, non-blocking). The retry
+  // worker (jobs/integrity-hash-retry.ts) picks up the row once the
+  // audit trail is persisted — by the time the worker's GRACE_MS window
+  // elapses, this UPDATE will have committed.
   fireAndForget(
-    async () => {
-      await db
+    () =>
+      db
         .update(transactions)
         .set({ auditTrail: audit })
-        .where(eq(transactions.id, result.transactionId));
-      return storeIntegrityHash(result.transactionId);
-    },
+        .where(eq(transactions.id, result.transactionId)),
     { label: "audit-trail-store", context: { transactionId: result.transactionId, slug: capability.slug } },
   );
 
@@ -1945,7 +1947,8 @@ async function executeInBackground(
         { label: "piggyback-record", context: { slug: capability.slug } },
       );
     }
-    storeIntegrityHash(transactionId).catch(() => {});
+    // F-0-009 Stage 2: row already has integrity_hash_status = 'pending'
+    // by column default; retry worker fills it in.
 
     // Check transaction milestones (fire-and-forget)
     fireAndForget(
@@ -2014,7 +2017,8 @@ async function executeInBackground(
         .where(eq(transactions.id, transactionId));
     });
 
-    storeIntegrityHash(transactionId).catch(() => {});
+    // F-0-009 Stage 2: row already has integrity_hash_status = 'pending'
+    // by column default; retry worker fills it in.
     // Record failure for circuit breaker + quality
     fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
     fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
@@ -2201,45 +2205,10 @@ function buildFailureAudit(params: {
   };
 }
 
-/**
- * Compute and store integrity hash on a completed/failed transaction.
- * Fire-and-forget — never blocks the response.
- */
-async function storeIntegrityHash(transactionId: string): Promise<void> {
-  try {
-    const db = getDb();
-    const [txn] = await db
-      .select()
-      .from(transactions)
-      .where(eq(transactions.id, transactionId))
-      .limit(1);
-    if (!txn) return;
-
-    const previousHash = await getPreviousHash();
-    const hash = computeIntegrityHash({
-      id: txn.id,
-      userId: txn.userId,
-      status: txn.status,
-      input: txn.input,
-      output: txn.output,
-      error: txn.error,
-      priceCents: txn.priceCents,
-      latencyMs: txn.latencyMs,
-      provenance: txn.provenance,
-      auditTrail: txn.auditTrail,
-      transparencyMarker: txn.transparencyMarker,
-      dataJurisdiction: txn.dataJurisdiction,
-      createdAt: txn.createdAt,
-      completedAt: txn.completedAt,
-    }, previousHash);
-
-    await db.update(transactions)
-      .set({ integrityHash: hash, previousHash })
-      .where(eq(transactions.id, transactionId));
-  } catch (err) {
-    console.error(`[integrity] Hash computation failed for ${transactionId}:`, err instanceof Error ? err.message : err);
-  }
-}
+// F-0-009 Stage 2: the former `storeIntegrityHash` helper that lived
+// here has moved to jobs/integrity-hash-retry.ts. Transactions are
+// inserted with integrity_hash_status = 'pending' via the column
+// default; the worker fills in the hash.
 
 // ─── EU AI Act transparency markers (DEC-20260226-P-s3t4) ─────────────────────
 // Derived from the capabilities table's transparency_tag column.
