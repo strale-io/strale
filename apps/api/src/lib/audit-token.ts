@@ -1,6 +1,15 @@
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
-const AUDIT_SECRET = process.env.AUDIT_HMAC_SECRET || "strale-audit-default-secret";
+// F-0-001: fail-fast on a missing secret instead of falling back to a
+// committed default. A hardcoded default lets anyone forge `/audit/:id?token=...`
+// URLs, undermining the EU AI Act / GDPR compliance story those URLs anchor.
+const AUDIT_SECRET = process.env.AUDIT_HMAC_SECRET;
+if (!AUDIT_SECRET || AUDIT_SECRET.length < 32) {
+  throw new Error(
+    "AUDIT_HMAC_SECRET is required and must be at least 32 characters. " +
+      "Generate with: openssl rand -hex 32",
+  );
+}
 
 export function generateAuditToken(transactionId: string): string {
   return createHmac("sha256", AUDIT_SECRET)
@@ -11,7 +20,19 @@ export function generateAuditToken(transactionId: string): string {
 
 export function verifyAuditToken(transactionId: string, token: string): boolean {
   const expected = generateAuditToken(transactionId);
-  return token === expected;
+  // F-0-001: constant-time comparison to prevent timing-oracle leaks of the
+  // HMAC secret via byte-by-byte inequality. `timingSafeEqual` throws on
+  // length mismatch so we length-check first.
+  let expectedBuf: Buffer;
+  let tokenBuf: Buffer;
+  try {
+    expectedBuf = Buffer.from(expected, "hex");
+    tokenBuf = Buffer.from(token, "hex");
+  } catch {
+    return false;
+  }
+  if (tokenBuf.length === 0 || tokenBuf.length !== expectedBuf.length) return false;
+  return timingSafeEqual(tokenBuf, expectedBuf);
 }
 
 export function getShareableUrl(transactionId: string): string {
