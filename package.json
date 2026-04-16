@@ -12,7 +12,9 @@
     "db:migrate": "npm run db:migrate --workspace=apps/api",
     "db:push": "npm run db:push --workspace=apps/api",
     "mcp:build": "npm run build --workspace=packages/mcp-server",
-    "mcp:dev": "npm run dev --workspace=packages/mcp-server"
+    "mcp:dev": "npm run dev --workspace=packages/mcp-server",
+    "test": "npm run test --workspace=apps/api",
+    "typecheck": "npm run typecheck --workspace=apps/api"
   },
   "license": "MIT",
   "engines": {

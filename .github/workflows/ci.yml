@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # Required by apps/api/src/lib/audit-token.ts (F-0-001). Not secret —
+      # just a 32+ char placeholder so the module-load assertion passes
+      # under test. Production secret is set in Railway (Phase A Q1).
+      AUDIT_HMAC_SECRET: ci-placeholder-secret-at-least-32-chars-long-0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
