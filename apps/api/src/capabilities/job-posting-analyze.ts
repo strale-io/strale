@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 registerCapability("job-posting-analyze", async (input: CapabilityInput) => {
   const url = (input.url as string)?.trim();
@@ -11,9 +12,10 @@ registerCapability("job-posting-analyze", async (input: CapabilityInput) => {
   if (url && !text) {
     const fullUrl = url.startsWith("http") ? url : `https://${url}`;
     try {
-      const res = await fetch(fullUrl, {
+      // F-0-006: safeFetch handles redirect re-validation; the old
+      // `redirect: "follow"` was the classic SSRF bypass.
+      const res = await safeFetch(fullUrl, {
         headers: { "User-Agent": "Strale/1.0", Accept: "text/html,*/*" },
-        redirect: "follow",
         signal: AbortSignal.timeout(10000),
       });
       if (res.ok) {

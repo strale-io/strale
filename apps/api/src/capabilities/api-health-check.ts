@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { validateUrl } from "../lib/url-validator.js";
+import { safeFetch, type SafeFetchOptions } from "../lib/safe-fetch.js";
 
 registerCapability("api-health-check", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? "").trim();
@@ -13,15 +13,16 @@ registerCapability("api-health-check", async (input: CapabilityInput) => {
   const timeout = Math.min((input.timeout as number) ?? 10000, 30000);
 
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
-  await validateUrl(fullUrl);
 
-  const fetchOptions: RequestInit = {
+  // F-0-006: safeFetch validates + re-validates redirects + refuses
+  // DNS-rebinding. The old `redirect: "follow"` path was the classic
+  // SSRF bypass (validateUrl on the first URL, then follow to private IP).
+  const fetchOptions: SafeFetchOptions & { body?: BodyInit; headers: Record<string, string> } = {
     method,
     headers: {
       "User-Agent": "Strale/1.0 (api-health-check; admin@strale.io)",
       ...headers,
     },
-    redirect: "follow",
     signal: AbortSignal.timeout(timeout),
   };
 
@@ -39,7 +40,7 @@ registerCapability("api-health-check", async (input: CapabilityInput) => {
   let responseHeaders: Record<string, string> = {};
 
   try {
-    const response = await fetch(fullUrl, fetchOptions);
+    const response = await safeFetch(fullUrl, fetchOptions);
     statusCode = response.status;
     contentType = response.headers.get("content-type");
     responseHeaders = Object.fromEntries(response.headers.entries());

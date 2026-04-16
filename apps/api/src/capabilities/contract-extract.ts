@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 registerCapability("contract-extract", async (input: CapabilityInput) => {
   const pdfUrl = (input.pdf_url as string)?.trim() ?? (input.url as string)?.trim();
@@ -36,7 +37,8 @@ registerCapability("contract-extract", async (input: CapabilityInput) => {
       });
     }
   } else if (pdfUrl) {
-    const res = await fetch(pdfUrl, { signal: AbortSignal.timeout(15000) });
+    // F-0-006: safeFetch validates + refuses DNS-rebinding and redirect-to-private.
+    const res = await safeFetch(pdfUrl, { signal: AbortSignal.timeout(15000) });
     if (!res.ok) throw new Error(`Failed to fetch document: HTTP ${res.status}`);
     const buf = Buffer.from(await res.arrayBuffer());
     const contentType = res.headers.get("content-type") ?? "";

@@ -1,6 +1,16 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
+/**
+ * F-0-006 special case: redirect-trace exists to FOLLOW and REPORT ON
+ * redirects, which means the Bucket-A recipe (auto-follow via safeFetch)
+ * would destroy the feature. Instead we call safeFetch with
+ * maxRedirects: 0 — we still get validateUrl + the undici dispatcher's
+ * DNS-rebinding refusal, but the 3xx response is returned to us so we
+ * can record the hop and advance the chain ourselves. validateUrl is
+ * also called on every next-hop URL before we fetch it.
+ */
 registerCapability("redirect-trace", async (input: CapabilityInput) => {
   let url = ((input.url as string) ?? (input.task as string) ?? "").trim();
   if (!url) throw new Error("'url' (URL to trace) is required.");
@@ -15,12 +25,12 @@ registerCapability("redirect-trace", async (input: CapabilityInput) => {
 
   let currentUrl = url;
   for (let step = 1; step <= maxRedirects; step++) {
-    // Validate each redirect target to prevent SSRF via redirect chain
-    await validateUrl(currentUrl);
+    // safeFetch with maxRedirects: 0 validates + refuses connection-time
+    // DNS rebinding but returns the 3xx to us so we can walk the chain.
     const start = Date.now();
-    const response = await fetch(currentUrl, {
+    const response = await safeFetch(currentUrl, {
       method: "GET",
-      redirect: "manual",
+      maxRedirects: 0,
       signal: AbortSignal.timeout(10000),
     });
     const latency = Date.now() - start;

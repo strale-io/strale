@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import sharp from "sharp";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 registerCapability("image-resize", async (input: CapabilityInput) => {
   const imageUrl = (input.image_url as string) ?? (input.url as string) ?? undefined;
@@ -27,7 +28,8 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
       : base64Input;
     imageBuffer = Buffer.from(data, "base64");
   } else {
-    const response = await fetch(imageUrl!, {
+    // F-0-006: safeFetch validates + refuses DNS-rebinding / private-IP redirects.
+    const response = await safeFetch(imageUrl!, {
       signal: AbortSignal.timeout(15000),
       headers: { "User-Agent": "Strale/1.0 (image processor; admin@strale.io)" },
     });
