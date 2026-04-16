@@ -11,6 +11,7 @@ import {
   decimal,
   uniqueIndex,
   index,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -536,6 +537,26 @@ export const sqsDailySnapshot = pgTable(
       table.capabilitySlug,
       table.snapshotDate,
     ),
+  ],
+);
+
+// ─── rate_limit_counters (F-0-002) ──────────────────────────────────────────
+// DB-backed, restart-safe counters for abuse-class endpoints (signup,
+// register, recover). Composite PK (bucket_key, window_start) + atomic
+// INSERT ... ON CONFLICT DO UPDATE increment. See lib/db-rate-limit.ts.
+export const rateLimitCounters = pgTable(
+  "rate_limit_counters",
+  {
+    bucketKey: text("bucket_key").notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    count: integer("count").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.bucketKey, table.windowStart] }),
+    index("rate_limit_counters_window_idx").on(table.windowStart),
   ],
 );
 

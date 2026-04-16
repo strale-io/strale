@@ -29,6 +29,14 @@ const REQUIRED_COLUMNS: Array<{
     column: "ground_truth_verified_at",
     migration: "0035_test_suites_generation_metadata",
   },
+  // F-0-002: DB-backed rate limits depend on this table. If the migration
+  // has not been applied, /v1/signup and /v1/auth/* return 503 (fail closed).
+  // Fail fast at startup so the operator sees the real cause.
+  {
+    table: "rate_limit_counters",
+    column: "bucket_key",
+    migration: "0045_rate_limit_counters",
+  },
   // Add future migration columns here as they are added
   // { table: 'table_name', column: 'column_name', migration: '0036_...' },
 ];

@@ -4,6 +4,7 @@ import { logger } from "hono/logger";
 import { bodyLimit } from "hono/body-limit";
 import { versionMiddleware } from "./lib/versioning.js";
 import { rateLimitByIp } from "./lib/rate-limit.js";
+import { rateLimitByIpDb } from "./lib/db-rate-limit.js";
 import { doRoute } from "./routes/do.js";
 import { capabilitiesRoute } from "./routes/capabilities.js";
 import { walletRoute } from "./routes/wallet.js";
@@ -194,7 +195,14 @@ app.route("/v1/capabilities", capabilitiesRoute);
 app.route("/v1/wallet", walletRoute);
 app.route("/v1/transactions", transactionsRoute);
 app.route("/v1/auth", authRoute);
-app.post("/v1/signup", rateLimitByIp(1, 86_400_000), agentSignupHandler); // DEC-20260410-A: 1/day per IP
+// F-0-002: DB-backed 1/day limit (survives Railway restarts; in-memory
+// would reset on every redeploy, letting an attacker re-signup by timing
+// their burst around a deploy).
+app.post(
+  "/v1/signup",
+  rateLimitByIpDb({ windowSeconds: 86_400, max: 1, scope: "signup" }),
+  agentSignupHandler,
+);
 app.route("/v1/demand-signals", demandSignalsRoute);
 app.route("/v1/admin", adminRoute);
 app.route("/v1/solutions", solutionsRoute);

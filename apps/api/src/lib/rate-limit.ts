@@ -5,13 +5,27 @@ import { apiError } from "./errors.js";
 // In-memory store keyed by identifier. Each entry tracks request timestamps
 // within the window. Stale entries are cleaned up periodically.
 //
+// ⚠ EXPLICITLY A CHEAP HEDGE, NOT A SAFETY CONTROL (F-0-002).
+// This module is only suitable for SHORT-WINDOW, LOW-RISK limits where a
+// Railway restart resetting the window is acceptable. Day-scale or
+// abuse-class limits (signup, auth) MUST use lib/db-rate-limit.ts instead.
+//
+// Legitimate current users (sub-minute, burst-level):
+//   - POST /v1/do                        rateLimitByIp(60, 60_000)
+//   - POST /v1/do                        rateLimitByKey(10, 1000)
+//   - /mcp all methods                   rateLimitByIp(60, 60_000)
+//   - /v1/wallet/*                       rateLimitByKey(5, 1000)
+//   - /v1/internal/*                     rateLimitByIp(120, 60_000)
+//
+// Do NOT add this middleware to new abuse-class endpoints. If you need
+// day-scale protection, import `rateLimitByIpDb` from `./db-rate-limit.js`.
+//
 // LIMITATIONS:
-// - In-memory: state is NOT shared across multiple Railway replicas. If the
-//   service is scaled horizontally, each instance has its own counter, so
-//   effective limits are multiplied by the number of instances.
-// - Non-durable: all state is lost on restart, allowing a brief burst window.
-// - For production multi-instance deployments, consider Redis-based rate
-//   limiting (e.g., @hono-rate-limiter/redis or a sliding-window-log in Redis).
+// - In-memory: state is NOT shared across multiple Railway replicas. Today
+//   the service runs as 1 replica (FIX_PHASE_A_verification.md Q2); if
+//   that changes, effective limits multiply by the replica count.
+// - Non-durable: all state is lost on restart, allowing a full-quota burst
+//   immediately after every deploy.
 
 interface WindowEntry {
   timestamps: number[];

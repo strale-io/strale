@@ -29,6 +29,7 @@ import { getShareableUrl } from "../lib/audit-token.js";
 import { getAiDescription, getDataSourceUrl, detectPersonalData } from "../lib/audit-helpers.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
+import { logError } from "../lib/log.js";
 import {
   computeFreshnessGrade,
   type FreshnessInfo,
@@ -885,7 +886,30 @@ doRoute.post(
     const reqCtx = c.get("requestContext" as any) as { ipHash?: string | null; fingerprintHash?: string | null } | undefined;
     const ipHash = reqCtx?.ipHash ?? null;
     const fpHash = reqCtx?.fingerprintHash ?? null;
-    const { count: callsToday, identifiedBy } = await getFreeTierUsageToday(db, ipHash, fpHash);
+    // F-0-020: getFreeTierUsageToday used to catch DB errors and return
+    // count=0 — silently disabling the cap on any hiccup. It now throws
+    // FreeTierCheckUnavailable; we translate that into 503 so the request
+    // is refused, not allowed.
+    let callsToday: number;
+    let identifiedBy: "ip" | "fingerprint" | "none";
+    try {
+      const usage = await getFreeTierUsageToday(db, ipHash, fpHash);
+      callsToday = usage.count;
+      identifiedBy = usage.identifiedBy;
+    } catch (err) {
+      if (err instanceof FreeTierCheckUnavailable) {
+        c.header("Retry-After", "30");
+        return c.json(
+          apiError(
+            "rate_limited",
+            "Free-tier usage counter is temporarily unavailable. Retry in a few seconds, or sign up for an API key to bypass.",
+            { retry_after_seconds: 30 },
+          ),
+          503,
+        );
+      }
+      throw err;
+    }
     const cap = identifiedBy === "fingerprint" ? FREE_TIER_FINGERPRINT_LIMIT : FREE_TIER_DAILY_LIMIT;
 
     if (callsToday >= cap) {
@@ -934,12 +958,26 @@ interface FreeTierUsage {
   identifiedBy: "ip" | "fingerprint" | "none";
 }
 
+/**
+ * F-0-020: thrown when the counter query fails. The caller must translate
+ * this into 503 (fail closed). Returning `count: 0` here would silently
+ * disable the free-tier cap — exactly the bypass the finding flagged.
+ */
+export class FreeTierCheckUnavailable extends Error {
+  constructor(cause?: unknown) {
+    super("Free-tier usage counter is temporarily unavailable");
+    this.name = "FreeTierCheckUnavailable";
+    if (cause !== undefined) (this as { cause?: unknown }).cause = cause;
+  }
+}
+
 async function getFreeTierUsageToday(
   db: ReturnType<typeof getDb>,
   ipHash: string | null,
   fingerprintHash: string | null,
 ): Promise<FreeTierUsage> {
-  // Prefer IP identification; fall back to fingerprint
+  // Prefer IP identification; fall back to fingerprint.
+  // F-0-020: any DB error now throws FreeTierCheckUnavailable — fail CLOSED.
   if (ipHash) {
     try {
       const [row] = await db.execute(sql`
@@ -950,8 +988,9 @@ async function getFreeTierUsageToday(
           AND audit_trail->'request_context'->>'ipHash' = ${ipHash}
       `);
       return { count: (row as any)?.cnt ?? 0, identifiedBy: "ip" };
-    } catch {
-      return { count: 0, identifiedBy: "ip" };
+    } catch (err) {
+      logError("free-tier-counter-read-failed", err, { identifiedBy: "ip" });
+      throw new FreeTierCheckUnavailable(err);
     }
   }
   if (fingerprintHash) {
@@ -964,8 +1003,9 @@ async function getFreeTierUsageToday(
           AND audit_trail->'request_context'->>'fingerprintHash' = ${fingerprintHash}
       `);
       return { count: (row as any)?.cnt ?? 0, identifiedBy: "fingerprint" };
-    } catch {
-      return { count: 0, identifiedBy: "fingerprint" };
+    } catch (err) {
+      logError("free-tier-counter-read-failed", err, { identifiedBy: "fingerprint" });
+      throw new FreeTierCheckUnavailable(err);
     }
   }
   return { count: 0, identifiedBy: "none" };
@@ -1101,9 +1141,22 @@ async function executeFreeTier(
 
     const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
 
-    // Usage counter for free-tier calls (informational block in response)
+    // Usage counter for free-tier calls (informational block in response).
+    // F-0-020: enforcement above is fail-closed. This call site only builds
+    // the informational `usage` block shown in a successful response, so a
+    // counter read error here should NOT 500 the already-successful
+    // execution — fall back to reporting the cap with count=0.
     const reqCtx = c.get("requestContext" as any) as { ipHash?: string | null; fingerprintHash?: string | null } | undefined;
-    const { count: callsToday, identifiedBy } = await getFreeTierUsageToday(db, reqCtx?.ipHash ?? null, reqCtx?.fingerprintHash ?? null);
+    let callsToday = 0;
+    let identifiedBy: "ip" | "fingerprint" | "none" = reqCtx?.ipHash ? "ip" : reqCtx?.fingerprintHash ? "fingerprint" : "none";
+    try {
+      const usage = await getFreeTierUsageToday(db, reqCtx?.ipHash ?? null, reqCtx?.fingerprintHash ?? null);
+      callsToday = usage.count;
+      identifiedBy = usage.identifiedBy;
+    } catch (err) {
+      if (!(err instanceof FreeTierCheckUnavailable)) throw err;
+      // already logged inside getFreeTierUsageToday; carry the identifiedBy default
+    }
     const usageCap = identifiedBy === "fingerprint" ? FREE_TIER_FINGERPRINT_LIMIT : FREE_TIER_DAILY_LIMIT;
 
     // Progressive unlock: record + include in response (DEC-20260410-A)

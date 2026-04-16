@@ -5,7 +5,7 @@ import { users, wallets, walletTransactions, transactions } from "../db/schema.j
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { apiError } from "../lib/errors.js";
 import { authMiddleware, getClientIp, hashIp } from "../lib/middleware.js";
-import { rateLimitByIp } from "../lib/rate-limit.js";
+import { rateLimitByIpDb } from "../lib/db-rate-limit.js";
 import { sendWebhook } from "../lib/webhook.js";
 import { sendWelcomeEmail, sendRecoveryEmail } from "../lib/welcome-email.js";
 import { DISPOSABLE_DOMAINS } from "../lib/disposable-domains.js";
@@ -17,8 +17,12 @@ const TRIAL_CREDITS_CENTS = 200; // €2.00 per DEC-10
 export const authRoute = new Hono<AppEnv>();
 
 // POST /v1/auth/register — Register new account
-// No auth required. DEC-21: 3 req/min per IP (prevent account spam)
-authRoute.post("/register", rateLimitByIp(3, 60_000), async (c) => {
+// No auth required. DEC-21: 3 req/min per IP (prevent account spam).
+// F-0-002: DB-backed — survives Railway restart.
+authRoute.post(
+  "/register",
+  rateLimitByIpDb({ windowSeconds: 60, max: 3, scope: "auth-register" }),
+  async (c) => {
   const body = await c.req.json().catch(() => null);
   if (!body || typeof body.email !== "string" || !body.email.includes("@")) {
     return c.json(
@@ -125,7 +129,12 @@ authRoute.post("/register", rateLimitByIp(3, 60_000), async (c) => {
 
 // POST /v1/auth/recover — Email-based API key recovery
 // No auth required. Strict rate limit: 2 per 5 minutes per IP.
-authRoute.post("/recover", rateLimitByIp(2, 300_000), async (c) => {
+// F-0-002: DB-backed — the 5-minute window must persist through redeploys,
+// otherwise an attacker can time key-recovery bursts against deploys.
+authRoute.post(
+  "/recover",
+  rateLimitByIpDb({ windowSeconds: 300, max: 2, scope: "auth-recover" }),
+  async (c) => {
   const body = await c.req.json().catch(() => null);
   if (!body || typeof body.email !== "string" || !body.email.includes("@")) {
     return c.json(
