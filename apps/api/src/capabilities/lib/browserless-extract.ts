@@ -7,6 +7,11 @@ import Anthropic from "@anthropic-ai/sdk";
  * fetchRenderedHtml and getBrowserlessConfig are re-exported from web-provider.ts
  * which adds retry, caching, and resilience. All 47+ consumers get the upgrade
  * without changing their imports.
+ *
+ * F-0-006: web-provider.ts validates the URL at the top of fetchPage (and
+ * runs plain fetches through safeFetch), so every caller of this file
+ * inherits SSRF protection automatically. No call site here needs to
+ * call validateUrl explicitly.
  */
 
 export {

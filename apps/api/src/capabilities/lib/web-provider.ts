@@ -9,7 +9,18 @@
  *
  * All 47+ capability files call fetchRenderedHtml() and get the resilience
  * upgrade without any code changes.
+ *
+ * F-0-006: tier 1 (plain fetch of the user URL) goes through `safeFetch`
+ * so DNS rebinding and redirect-to-private-IP attacks are blocked.
+ * Tier 2 (Jina r.jina.ai) is a hardcoded public prefix so raw `fetch`
+ * is safe — `targetUrl` is embedded in the path and Jina fetches it
+ * from its own network. Tier 3 (Browserless) goes to our internal
+ * Railway URL; the user URL is forwarded in the body but Browserless
+ * fetches it from its own network. `validateUrl` at the top of
+ * `fetchPage` is the only layer we own for tiers 2 and 3.
  */
+
+import { safeFetch } from "../../lib/safe-fetch.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -147,12 +158,14 @@ export async function fetchPage(
   if (!options?.waitUntil || options.waitUntil === "networkidle0") {
     try {
       const start = Date.now();
-      const plainResp = await fetch(targetUrl, {
+      // F-0-006: safeFetch validates, re-validates every redirect, and
+      // refuses connection-time DNS rebinding. Redirects still follow
+      // transparently (maxRedirects defaults to 3).
+      const plainResp = await safeFetch(targetUrl, {
         headers: {
           "User-Agent": "Mozilla/5.0 (compatible; StraleBot/1.0; +https://strale.dev)",
           "Accept": "text/html,application/xhtml+xml",
         },
-        redirect: "follow",
         signal: AbortSignal.timeout(8000),
       });
 
