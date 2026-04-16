@@ -2,10 +2,12 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { bodyLimit } from "hono/body-limit";
+import { randomUUID } from "node:crypto";
 import { versionMiddleware } from "./lib/versioning.js";
 import { rateLimitByIp } from "./lib/rate-limit.js";
 import { rateLimitByIpDb } from "./lib/db-rate-limit.js";
 import { adminOnly } from "./lib/admin-auth.js";
+import { log } from "./lib/log.js";
 import { doRoute } from "./routes/do.js";
 import { capabilitiesRoute } from "./routes/capabilities.js";
 import { walletRoute } from "./routes/wallet.js";
@@ -38,7 +40,24 @@ import { welcomeRoute } from "./routes/welcome.js";
 // Capability executors + DataProvider chains are registered by
 // autoRegisterCapabilities() in index.ts before the server starts.
 
-export const app = new Hono();
+export const app = new Hono<{ Variables: { log: import("pino").Logger } }>();
+
+// F-0-014: attach a child logger with a fresh request_id to every request
+// so downstream code can `c.get("log").error({...})` with the id inherited
+// automatically. Client-provided `x-request-id` is echoed when present so
+// requests can be traced across the proxy boundary.
+app.use("*", async (c, next) => {
+  const clientId = c.req.header("x-request-id");
+  const requestId = clientId && /^[A-Za-z0-9_-]{1,128}$/.test(clientId) ? clientId : randomUUID();
+  const reqLog = log.child({
+    request_id: requestId,
+    method: c.req.method,
+    path: c.req.path,
+  });
+  c.set("log", reqLog);
+  c.header("x-request-id", requestId);
+  await next();
+});
 
 // Global error handler — never leak internals to client
 app.onError((err, c) => {
