@@ -30,6 +30,7 @@ import { getAiDescription, getDataSourceUrl, detectPersonalData } from "../lib/a
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { logError } from "../lib/log.js";
+import { fireAndForget } from "../lib/fire-and-forget.js";
 import {
   computeFreshnessGrade,
   type FreshnessInfo,
@@ -584,15 +585,19 @@ doRoute.post(
     // Log the failed request for demand analysis (DEC-20260225-P-c5d6)
     // Now captures both authenticated and unauthenticated failures
     const clientIp = getClientIp(c);
-    db.insert(failedRequests).values({
-      userId: user?.id ?? null,
-      ipHash: clientIp !== "unknown" ? hashIp(clientIp) : null,
-      task: task ?? capabilitySlug ?? "",
-      category: body.category ?? null,
-      maxPriceCents: effectiveMaxPrice ?? null,
-      failureType: "no_match",
-      userAgent: (c.req.header("user-agent") ?? "").slice(0, 255) || null,
-    }).catch(() => {}); // fire-and-forget
+    fireAndForget(
+      () =>
+        db.insert(failedRequests).values({
+          userId: user?.id ?? null,
+          ipHash: clientIp !== "unknown" ? hashIp(clientIp) : null,
+          task: task ?? capabilitySlug ?? "",
+          category: body.category ?? null,
+          maxPriceCents: effectiveMaxPrice ?? null,
+          failureType: "no_match",
+          userAgent: (c.req.header("user-agent") ?? "").slice(0, 255) || null,
+        }),
+      { label: "failed-request-log", context: { failureType: "no_match", userId: user?.id ?? null } },
+    );
 
     // Unauthenticated task-based requests that found no free-tier match
     if (!user) {
@@ -812,14 +817,18 @@ doRoute.post(
   if (confusedKeys.length > 0 && inputSchema?.properties) {
     const expectedFields = Object.keys(inputSchema.properties);
     const cIp = getClientIp(c);
-    db.insert(failedRequests).values({
-      userId: user?.id ?? null,
-      ipHash: cIp !== "unknown" ? hashIp(cIp) : null,
-      task: capabilitySlug ?? task ?? "",
-      failureType: "input_confusion",
-      errorDetail: `Confused keys: ${confusedKeys.join(", ")}. Expected: ${expectedFields.join(", ")}`,
-      userAgent: (c.req.header("user-agent") ?? "").slice(0, 255) || null,
-    }).catch(() => {});
+    fireAndForget(
+      () =>
+        db.insert(failedRequests).values({
+          userId: user?.id ?? null,
+          ipHash: cIp !== "unknown" ? hashIp(cIp) : null,
+          task: capabilitySlug ?? task ?? "",
+          failureType: "input_confusion",
+          errorDetail: `Confused keys: ${confusedKeys.join(", ")}. Expected: ${expectedFields.join(", ")}`,
+          userAgent: (c.req.header("user-agent") ?? "").slice(0, 255) || null,
+        }),
+      { label: "failed-request-log", context: { failureType: "input_confusion", userId: user?.id ?? null } },
+    );
     return c.json(
       apiError(
         "invalid_request",
@@ -848,14 +857,18 @@ doRoute.post(
         : undefined;
       const fType = topLevelMatches.length > 0 ? "input_misplaced" : "missing_fields";
       const mIp = getClientIp(c);
-      db.insert(failedRequests).values({
-        userId: user?.id ?? null,
-        ipHash: mIp !== "unknown" ? hashIp(mIp) : null,
-        task: capabilitySlug ?? task ?? "",
-        failureType: fType,
-        errorDetail: `Missing: ${missingFields.join(", ")}`,
-        userAgent: (c.req.header("user-agent") ?? "").slice(0, 255) || null,
-      }).catch(() => {});
+      fireAndForget(
+        () =>
+          db.insert(failedRequests).values({
+            userId: user?.id ?? null,
+            ipHash: mIp !== "unknown" ? hashIp(mIp) : null,
+            task: capabilitySlug ?? task ?? "",
+            failureType: fType,
+            errorDetail: `Missing: ${missingFields.join(", ")}`,
+            userAgent: (c.req.header("user-agent") ?? "").slice(0, 255) || null,
+          }),
+        { label: "failed-request-log", context: { failureType: fType, userId: user?.id ?? null } },
+      );
       return c.json(
         apiError(
           "invalid_request",
@@ -1125,7 +1138,7 @@ async function executeFreeTier(
       .where(eq(transactions.id, txnRecord.id));
 
     // Record circuit breaker + quality (fire-and-forget)
-    recordSuccess(capability.slug).catch(() => {});
+    fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
     recordQuality({
       transactionId: txnRecord.id,
       responseTimeMs: latencyMs,
@@ -1133,9 +1146,10 @@ async function executeFreeTier(
       outputSchema,
     });
     if (capResult.output) {
-      recordPiggybackResult(
-        capability.slug, capResult.output, outputSchema, latencyMs,
-      ).catch(() => {});
+      fireAndForget(
+        () => recordPiggybackResult(capability.slug, capResult.output, outputSchema, latencyMs),
+        { label: "piggyback-record", context: { slug: capability.slug } },
+      );
     }
     storeIntegrityHash(txnRecord.id).catch(() => {});
 
@@ -1211,8 +1225,8 @@ async function executeFreeTier(
       .where(eq(transactions.id, txnRecord.id));
 
     storeIntegrityHash(txnRecord.id).catch(() => {});
-    recordFailure(capability.slug, errorMessage).catch(() => {});
-    triggerOnFailure(capability.slug).catch(() => {});
+    fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
+    fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
     recordQuality({
       transactionId: txnRecord.id,
       responseTimeMs: latencyMs,
@@ -1297,7 +1311,7 @@ async function executeFreeTierAuthenticated(
       .where(eq(transactions.id, txnRecord.id));
 
     // Record circuit breaker + quality (fire-and-forget)
-    recordSuccess(capability.slug).catch(() => {});
+    fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
     recordQuality({
       transactionId: txnRecord.id,
       responseTimeMs: latencyMs,
@@ -1305,16 +1319,21 @@ async function executeFreeTierAuthenticated(
       outputSchema,
     });
     if (capResult.output) {
-      recordPiggybackResult(
-        capability.slug, capResult.output, outputSchema, latencyMs,
-      ).catch(() => {});
+      fireAndForget(
+        () => recordPiggybackResult(capability.slug, capResult.output, outputSchema, latencyMs),
+        { label: "piggyback-record", context: { slug: capability.slug } },
+      );
     }
     storeIntegrityHash(txnRecord.id).catch(() => {});
     // Activation hook: detect first successful call
     if (user) {
-      import("../lib/activation-hook.js").then(({ onFirstTransaction }) =>
-        onFirstTransaction(user.id, capability.slug),
-      ).catch(() => {});
+      fireAndForget(
+        async () => {
+          const { onFirstTransaction } = await import("../lib/activation-hook.js");
+          return onFirstTransaction(user.id, capability.slug);
+        },
+        { label: "activation-hook", context: { userId: user.id, slug: capability.slug } },
+      );
     }
 
     // Get wallet balance for response
@@ -1367,8 +1386,8 @@ async function executeFreeTierAuthenticated(
       .where(eq(transactions.id, txnRecord.id));
 
     storeIntegrityHash(txnRecord.id).catch(() => {});
-    recordFailure(capability.slug, errorMessage).catch(() => {});
-    triggerOnFailure(capability.slug).catch(() => {});
+    fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
+    fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
     recordQuality({
       transactionId: txnRecord.id,
       responseTimeMs: latencyMs,
@@ -1557,7 +1576,7 @@ async function executeSync(
 
   // ── Record circuit breaker + quality + piggyback (fire-and-forget) ───
   if (result.ok) {
-    recordSuccess(capability.slug).catch(() => {});
+    fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
     recordQuality({
       transactionId: result.transactionId,
       responseTimeMs: result.latencyMs,
@@ -1566,29 +1585,33 @@ async function executeSync(
     });
     // Piggyback monitoring: validate output and record as test data point
     if (result.output) {
-      recordPiggybackResult(
-        capability.slug,
-        result.output,
-        outputSchema,
-        result.latencyMs,
-      ).catch(() => {});
+      fireAndForget(
+        () => recordPiggybackResult(capability.slug, result.output, outputSchema, result.latencyMs),
+        { label: "piggyback-record", context: { slug: capability.slug } },
+      );
     }
     // Check transaction milestones (fire-and-forget)
-    db.execute(
-      sql`SELECT COUNT(*)::text AS count FROM transactions WHERE status = 'completed' AND created_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC')`,
-    )
-      .then((res: any) => {
+    fireAndForget(
+      async () => {
+        const res: any = await db.execute(
+          sql`SELECT COUNT(*)::text AS count FROM transactions WHERE status = 'completed' AND created_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC')`,
+        );
         const rows = Array.isArray(res) ? res : res?.rows ?? [];
         checkMilestone(Number(rows[0]?.count ?? 0));
-      })
-      .catch(() => {});
+      },
+      { label: "milestone-check" },
+    );
     // Activation hook: detect first successful call (sync paid)
-    import("../lib/activation-hook.js").then(({ onFirstTransaction }) =>
-      onFirstTransaction(user.id, capability.slug),
-    ).catch(() => {});
+    fireAndForget(
+      async () => {
+        const { onFirstTransaction } = await import("../lib/activation-hook.js");
+        return onFirstTransaction(user.id, capability.slug);
+      },
+      { label: "activation-hook", context: { userId: user.id, slug: capability.slug } },
+    );
   } else if (result.errorCode === "execution_failed") {
-    recordFailure(capability.slug, result.error).catch(() => {});
-    triggerOnFailure(capability.slug).catch(() => {});
+    fireAndForget(() => recordFailure(capability.slug, result.error), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
+    fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
     recordQuality({
       transactionId: result.transactionId,
       responseTimeMs: Date.now() - startTime,
@@ -1652,12 +1675,20 @@ async function executeSync(
     requestContext: c.get("requestContext" as any),
   });
 
-  // Store full audit in DB (fire-and-forget, non-blocking)
-  db.update(transactions)
-    .set({ auditTrail: audit })
-    .where(eq(transactions.id, result.transactionId))
-    .then(() => storeIntegrityHash(result.transactionId))
-    .catch(() => {});
+  // Store full audit in DB (fire-and-forget, non-blocking).
+  // TODO(F-0-009 Stage 2): audit + integrity hash are compliance-critical;
+  // move to synchronous or two-phase-with-retry. Leaving as fireAndForget
+  // until Stage 2's measurement decides the path.
+  fireAndForget(
+    async () => {
+      await db
+        .update(transactions)
+        .set({ auditTrail: audit })
+        .where(eq(transactions.id, result.transactionId));
+      return storeIntegrityHash(result.transactionId);
+    },
+    { label: "audit-trail-store", context: { transactionId: result.transactionId, slug: capability.slug } },
+  );
 
   const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
 
@@ -1667,18 +1698,24 @@ async function executeSync(
   const userEmail = (user as any).email as string | undefined;
   if (userEmail && result.balanceAfter <= 0 && balanceBefore > 0) {
     // Just crossed zero
-    import("../lib/conversion-emails.js").then(({ sendZeroBalanceEmail }) =>
-      buildUsageSummaryForUser(db, user.id).then((usage) =>
-        sendZeroBalanceEmail(userEmail, usage),
-      ),
-    ).catch(() => {});
+    fireAndForget(
+      async () => {
+        const { sendZeroBalanceEmail } = await import("../lib/conversion-emails.js");
+        const usage = await buildUsageSummaryForUser(db, user.id);
+        return sendZeroBalanceEmail(userEmail, usage);
+      },
+      { label: "conversion-email-zero-balance", context: { userId: user.id } },
+    );
   } else if (userEmail && result.balanceAfter <= LOW_BALANCE_THRESHOLD && balanceBefore > LOW_BALANCE_THRESHOLD) {
     // Just crossed low-balance threshold
-    import("../lib/conversion-emails.js").then(({ sendLowBalanceEmail }) =>
-      buildUsageSummaryForUser(db, user.id).then((usage) =>
-        sendLowBalanceEmail(userEmail, result.balanceAfter, usage),
-      ),
-    ).catch(() => {});
+    fireAndForget(
+      async () => {
+        const { sendLowBalanceEmail } = await import("../lib/conversion-emails.js");
+        const usage = await buildUsageSummaryForUser(db, user.id);
+        return sendLowBalanceEmail(userEmail, result.balanceAfter, usage);
+      },
+      { label: "conversion-email-low-balance", context: { userId: user.id } },
+    );
   }
 
   setCreditsHeaders(c, result.balanceAfter, capability.priceCents);
@@ -1894,7 +1931,7 @@ async function executeInBackground(
       .where(eq(transactions.id, transactionId));
 
     // Record success for circuit breaker + quality + piggyback
-    await recordSuccess(capability.slug).catch(() => {});
+    fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
     recordQuality({
       transactionId,
       responseTimeMs: latencyMs,
@@ -1903,24 +1940,24 @@ async function executeInBackground(
     });
     // Piggyback monitoring
     if (capResult.output) {
-      recordPiggybackResult(
-        capability.slug,
-        capResult.output,
-        outputSchema,
-        latencyMs,
-      ).catch(() => {});
+      fireAndForget(
+        () => recordPiggybackResult(capability.slug, capResult.output, outputSchema, latencyMs),
+        { label: "piggyback-record", context: { slug: capability.slug } },
+      );
     }
     storeIntegrityHash(transactionId).catch(() => {});
 
     // Check transaction milestones (fire-and-forget)
-    db.execute(
-      sql`SELECT COUNT(*)::text AS count FROM transactions WHERE status = 'completed' AND created_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC')`,
-    )
-      .then((res: any) => {
+    fireAndForget(
+      async () => {
+        const res: any = await db.execute(
+          sql`SELECT COUNT(*)::text AS count FROM transactions WHERE status = 'completed' AND created_at >= DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC')`,
+        );
         const rows = Array.isArray(res) ? res : res?.rows ?? [];
         checkMilestone(Number(rows[0]?.count ?? 0));
-      })
-      .catch(() => {});
+      },
+      { label: "milestone-check" },
+    );
   } catch (err) {
     const latencyMs = Date.now() - startTime;
     const errorMessage =
@@ -1979,8 +2016,8 @@ async function executeInBackground(
 
     storeIntegrityHash(transactionId).catch(() => {});
     // Record failure for circuit breaker + quality
-    await recordFailure(capability.slug, errorMessage).catch(() => {});
-    triggerOnFailure(capability.slug).catch(() => {});
+    fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
+    fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
     recordQuality({
       transactionId,
       responseTimeMs: latencyMs,

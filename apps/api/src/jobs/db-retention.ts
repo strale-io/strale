@@ -17,6 +17,7 @@
 
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { logError } from "../lib/log.js";
 
 const RETENTION_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const STARTUP_DELAY_MS = 5 * 60 * 1000;
@@ -66,7 +67,9 @@ async function runRetention(): Promise<void> {
       `[db-retention] Pruned ${total} rows in ${elapsed}s: ${results.map((r) => `${r.table}=${r.deleted}`).join(", ")}`,
     );
   } finally {
-    await db.execute(sql`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`).catch(() => {});
+    await db
+      .execute(sql`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`)
+      .catch((err) => logError("advisory-unlock-failed", err, { job: "db-retention" }));
   }
 }
 

@@ -15,6 +15,7 @@
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
+import { fireAndForget } from "./fire-and-forget.js";
 
 // ─── Upstream health state ──────────────────────────────────────────────────
 
@@ -136,4 +137,6 @@ export function isCacheExpired(): boolean {
 }
 
 // Pre-warm cache 5s after module load
-setTimeout(() => refreshUpstreamMapping().catch(() => {}), 5_000);
+setTimeout(() => {
+  fireAndForget(() => refreshUpstreamMapping(), { label: "upstream-mapping-prewarm" });
+}, 5_000);

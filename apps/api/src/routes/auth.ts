@@ -9,6 +9,7 @@ import { rateLimitByIpDb } from "../lib/db-rate-limit.js";
 import { sendWebhook } from "../lib/webhook.js";
 import { sendWelcomeEmail, sendRecoveryEmail } from "../lib/welcome-email.js";
 import { DISPOSABLE_DOMAINS } from "../lib/disposable-domains.js";
+import { fireAndForget } from "../lib/fire-and-forget.js";
 import type { AppEnv } from "../types.js";
 import type { Context } from "hono";
 
@@ -83,19 +84,26 @@ authRoute.post(
   const totalUsers = await db
     .select({ count: sql<string>`COUNT(*)` })
     .from(users);
-  sendWebhook({
-    event: "user.signup",
-    user: {
-      email: user.email,
-      created_at: new Date().toISOString(),
-    },
-    stats: {
-      total_users: Number(totalUsers[0]?.count ?? 0),
-    },
-  }).catch(() => {});
+  fireAndForget(
+    () =>
+      sendWebhook({
+        event: "user.signup",
+        user: {
+          email: user.email,
+          created_at: new Date().toISOString(),
+        },
+        stats: {
+          total_users: Number(totalUsers[0]?.count ?? 0),
+        },
+      }),
+    { label: "webhook-user-signup", context: { userId: user.id } },
+  );
 
   // Fire-and-forget welcome email with API key
-  sendWelcomeEmail(user.email, apiKey).catch(() => {});
+  fireAndForget(
+    () => sendWelcomeEmail(user.email, apiKey),
+    { label: "welcome-email-send", context: { userId: user.id } },
+  );
 
   return c.json(
     {
@@ -184,7 +192,10 @@ authRoute.post(
   );
 
   // Fire-and-forget recovery email
-  sendRecoveryEmail(user.email, newApiKey).catch(() => {});
+  fireAndForget(
+    () => sendRecoveryEmail(user.email, newApiKey),
+    { label: "recovery-email-send", context: { userId: user.id } },
+  );
 
   return c.json(genericResponse);
 });
@@ -335,16 +346,23 @@ export async function agentSignupHandler(c: Context) {
   });
 
   // Fire-and-forget webhook
-  sendWebhook({
-    event: "user.signup",
-    user: { email: user.email, created_at: new Date().toISOString() },
-    source: "agent_self_signup",
-    flagged_for_review: flaggedForReview,
-    ...(flaggedForReview ? { flag_reason: "3+ signups from same IP this week" } : {}),
-  }).catch(() => {});
+  fireAndForget(
+    () =>
+      sendWebhook({
+        event: "user.signup",
+        user: { email: user.email, created_at: new Date().toISOString() },
+        source: "agent_self_signup",
+        flagged_for_review: flaggedForReview,
+        ...(flaggedForReview ? { flag_reason: "3+ signups from same IP this week" } : {}),
+      }),
+    { label: "webhook-user-signup", context: { userId: user.id, source: "agent_self_signup" } },
+  );
 
   // Fire-and-forget welcome email
-  sendWelcomeEmail(user.email, apiKey).catch(() => {});
+  fireAndForget(
+    () => sendWelcomeEmail(user.email, apiKey),
+    { label: "welcome-email-send", context: { userId: user.id } },
+  );
 
   console.log(`[agent-signup] email=${email} ip=${clientIp} flagged=${flaggedForReview} timestamp=${new Date().toISOString()}`);
 

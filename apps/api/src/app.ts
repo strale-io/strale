@@ -8,6 +8,7 @@ import { rateLimitByIp } from "./lib/rate-limit.js";
 import { rateLimitByIpDb } from "./lib/db-rate-limit.js";
 import { adminOnly } from "./lib/admin-auth.js";
 import { log } from "./lib/log.js";
+import { fireAndForget } from "./lib/fire-and-forget.js";
 import { doRoute } from "./routes/do.js";
 import { capabilitiesRoute } from "./routes/capabilities.js";
 import { walletRoute } from "./routes/wallet.js";
@@ -314,9 +315,13 @@ import { verifyRoute } from "./routes/verify.js";
 app.route("/v1/verify", verifyRoute);
 
 // Post-deploy verification (30s delay, tests unstable/recovering capabilities)
-import("./lib/event-triggers.js")
-  .then(({ triggerOnDeploy }) => triggerOnDeploy().catch(() => {}))
-  .catch(() => {});
+fireAndForget(
+  async () => {
+    const { triggerOnDeploy } = await import("./lib/event-triggers.js");
+    return triggerOnDeploy();
+  },
+  { label: "post-deploy-verification" },
+);
 
 // Pre-warm the suggest catalog (called after env is loaded, see index.ts)
 export { warmCatalog } from "./lib/suggest.js";

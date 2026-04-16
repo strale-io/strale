@@ -15,6 +15,7 @@
 
 import { Hono } from "hono";
 import { rateLimitByIp } from "../lib/rate-limit.js";
+import { logError } from "../lib/log.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import {
@@ -150,8 +151,8 @@ async function handleStatelessRequest(
   if (response.body) {
     const { readable, writable } = new TransformStream();
     response.body.pipeTo(writable).finally(() => {
-      transport.close().catch(() => {});
-      server.close().catch(() => {});
+      transport.close().catch((err: unknown) => logError("mcp-transport-close-failed", err));
+      server.close().catch((err: unknown) => logError("mcp-server-close-failed", err));
     });
     return new Response(readable, {
       status: response.status,
@@ -161,8 +162,8 @@ async function handleStatelessRequest(
   }
 
   // No body (e.g., notification-only responses) — clean up immediately.
-  transport.close().catch(() => {});
-  server.close().catch(() => {});
+  transport.close().catch((err: unknown) => logError("mcp-transport-close-failed", err));
+  server.close().catch((err: unknown) => logError("mcp-server-close-failed", err));
   return response;
 }
 

@@ -3,6 +3,7 @@ import { getDb } from "../db/index.js";
 import { capabilityHealth } from "../db/schema.js";
 import { logHealthEvent } from "./health-monitor.js";
 import { categorizeFailureReason, isRetryableFailure } from "./trust-helpers.js";
+import { fireAndForget } from "./fire-and-forget.js";
 
 // Circuit breaker states
 type CircuitState = "closed" | "open" | "half_open";
@@ -105,13 +106,17 @@ export async function recordSuccess(slug: string): Promise<void> {
 
   // Log recovery if previously open or half_open
   if (health.state === "open" || health.state === "half_open") {
-    logHealthEvent({
-      eventType: "circuit_breaker",
-      capabilitySlug: slug,
-      tier: 1,
-      actionTaken: "Circuit breaker recovered",
-      details: { previous_state: health.state },
-    }).catch(() => {});
+    fireAndForget(
+      () =>
+        logHealthEvent({
+          eventType: "circuit_breaker",
+          capabilitySlug: slug,
+          tier: 1,
+          actionTaken: "Circuit breaker recovered",
+          details: { previous_state: health.state },
+        }),
+      { label: "health-event-log", context: { slug, event: "recovered" } },
+    );
   }
 
   // Reset to closed on any success
@@ -198,13 +203,17 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
         updatedAt: now,
       });
 
-      logHealthEvent({
-        eventType: "circuit_breaker",
-        capabilitySlug: slug,
-        tier: 1,
-        actionTaken: `Circuit breaker tripped immediately: ${category} failure`,
-        details: { state: "open", category, backoff_minutes: MAX_BACKOFF_MINUTES },
-      }).catch(() => {});
+      fireAndForget(
+        () =>
+          logHealthEvent({
+            eventType: "circuit_breaker",
+            capabilitySlug: slug,
+            tier: 1,
+            actionTaken: `Circuit breaker tripped immediately: ${category} failure`,
+            details: { state: "open", category, backoff_minutes: MAX_BACKOFF_MINUTES },
+          }),
+        { label: "health-event-log", context: { slug, event: "tripped-immediate", category } },
+      );
     } else {
       await db.insert(capabilityHealth).values({
         capabilitySlug: slug,
@@ -255,13 +264,17 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
       ? `non-retryable ${category} failure`
       : `${newConsecutive} consecutive failures`;
 
-    logHealthEvent({
-      eventType: "circuit_breaker",
-      capabilitySlug: slug,
-      tier: 1,
-      actionTaken: `Circuit breaker tripped: ${tripReason}`,
-      details: { state: "open", category, consecutive_failures: newConsecutive, backoff_minutes: backoff },
-    }).catch(() => {});
+    fireAndForget(
+      () =>
+        logHealthEvent({
+          eventType: "circuit_breaker",
+          capabilitySlug: slug,
+          tier: 1,
+          actionTaken: `Circuit breaker tripped: ${tripReason}`,
+          details: { state: "open", category, consecutive_failures: newConsecutive, backoff_minutes: backoff },
+        }),
+      { label: "health-event-log", context: { slug, event: "tripped", category } },
+    );
 
     return;
   }
@@ -317,13 +330,17 @@ export async function recordTestEvidence(slug: string): Promise<void> {
       .where(eq(capabilityHealth.id, health.id));
 
     console.log(`[circuit-breaker] ${slug} recovered via test evidence (was ${state})`);
-    logHealthEvent({
-      eventType: "circuit_breaker",
-      capabilitySlug: slug,
-      tier: 1,
-      actionTaken: "Circuit breaker recovered via test evidence",
-      details: { previous_state: state, recovery_source: "test_evidence" },
-    }).catch(() => {});
+    fireAndForget(
+      () =>
+        logHealthEvent({
+          eventType: "circuit_breaker",
+          capabilitySlug: slug,
+          tier: 1,
+          actionTaken: "Circuit breaker recovered via test evidence",
+          details: { previous_state: state, recovery_source: "test_evidence" },
+        }),
+      { label: "health-event-log", context: { slug, event: "recovered-test-evidence" } },
+    );
     return;
   }
 

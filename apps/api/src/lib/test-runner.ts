@@ -32,6 +32,8 @@ import { checkNewFailures, checkInfrastructureHealth } from "./meta-monitoring.j
 import type { CapabilityType } from "./reliability-profile.js";
 import { computeFreshnessDecay, applyFreshnessDecay, shouldOverrideTrend } from "./freshness-decay.js";
 import { withRetry } from "./retry.js";
+import { fireAndForget } from "./fire-and-forget.js";
+import { logError } from "./log.js";
 import { createHash } from "node:crypto";
 import { calculateNullFieldRatio } from "./null-field-ratio.js";
 
@@ -257,18 +259,22 @@ export async function runTests(
 
             for (const action of applied) {
               console.log(`[auto-remediation] ${suite.capabilitySlug}: ${action.description}`);
-              logHealthEvent({
-                eventType: "auto_remediation",
-                capabilitySlug: suite.capabilitySlug,
-                tier: 1,
-                actionTaken: action.description,
-                details: {
-                  rule: action.rule,
-                  confidence: action.confidence,
-                  test_name: suite.testName,
-                  changes: action.changes,
-                },
-              }).catch(() => {});
+              fireAndForget(
+                () =>
+                  logHealthEvent({
+                    eventType: "auto_remediation",
+                    capabilitySlug: suite.capabilitySlug,
+                    tier: 1,
+                    actionTaken: action.description,
+                    details: {
+                      rule: action.rule,
+                      confidence: action.confidence,
+                      test_name: suite.testName,
+                      changes: action.changes,
+                    },
+                  }),
+                { label: "health-event-log", context: { slug: suite.capabilitySlug, event: "auto_remediation" } },
+              );
             }
           }
         }
@@ -517,23 +523,31 @@ async function runSingleTest(
   if (classification) {
     await updateLastClassification(suite.id, classification);
     // Log classification event to health monitor (fire-and-forget)
-    logHealthEvent({
-      eventType: "classification",
-      capabilitySlug: suite.capabilitySlug,
-      tier: classification.verdict === "capability_bug" ? 2 : 1,
-      actionTaken: `Test classified as ${classification.verdict}`,
-      details: {
-        verdict: classification.verdict,
-        test_name: suite.testName,
-        test_type: suite.testType,
-        error_snippet: (failureReason ?? "").substring(0, 200),
-      },
-    }).catch(() => {});
+    fireAndForget(
+      () =>
+        logHealthEvent({
+          eventType: "classification",
+          capabilitySlug: suite.capabilitySlug,
+          tier: classification.verdict === "capability_bug" ? 2 : 1,
+          actionTaken: `Test classified as ${classification.verdict}`,
+          details: {
+            verdict: classification.verdict,
+            test_name: suite.testName,
+            test_type: suite.testType,
+            error_snippet: (failureReason ?? "").substring(0, 200),
+          },
+        }),
+      { label: "health-event-log", context: { slug: suite.capabilitySlug, event: "classification" } },
+    );
   } else if (passed && (suite.testType === "known_answer" || suite.testType === "edge_case")) {
     // Test passed with real execution — feed evidence to circuit breaker
-    import("./circuit-breaker.js").then(({ recordTestEvidence }) =>
-      recordTestEvidence(suite.capabilitySlug),
-    ).catch(() => {});
+    fireAndForget(
+      async () => {
+        const { recordTestEvidence } = await import("./circuit-breaker.js");
+        return recordTestEvidence(suite.capabilitySlug);
+      },
+      { label: "circuit-breaker-test-evidence", context: { slug: suite.capabilitySlug } },
+    );
   }
 
   if (!classification && suite.lastClassification) {
@@ -545,17 +559,21 @@ async function runSingleTest(
   }
 
   // Record quality data for this test execution (fire-and-forget)
-  recordTestQuality(
-    suite.capabilitySlug,
-    capResult,
-    executionError,
-    responseTimeMs,
-  ).catch(() => {});
+  fireAndForget(
+    () => recordTestQuality(suite.capabilitySlug, capResult, executionError, responseTimeMs),
+    { label: "test-quality-record", context: { slug: suite.capabilitySlug } },
+  );
 
   // Auto-capture example output + baseline from first successful test
   if (passed && capResult?.output) {
-    captureExampleOutput(suite.capabilitySlug, capResult.output).catch(() => {});
-    captureBaseline(suite, capResult.output).catch(() => {});
+    fireAndForget(
+      () => captureExampleOutput(suite.capabilitySlug, capResult.output),
+      { label: "example-output-capture", context: { slug: suite.capabilitySlug } },
+    );
+    fireAndForget(
+      () => captureBaseline(suite, capResult.output),
+      { label: "baseline-capture", context: { slug: suite.capabilitySlug } },
+    );
   }
 
   return {
@@ -1464,7 +1482,9 @@ async function runAdaptiveScheduler(): Promise<void> {
 
   // Refresh upstream health mapping if stale
   if (isCacheExpired()) {
-    await refreshUpstreamMapping().catch(() => {});
+    await refreshUpstreamMapping().catch((err) =>
+      logError("upstream-mapping-refresh-failed", err, { where: "test-runner" }),
+    );
   }
 
   // Get unique capabilities with their schedule tier, excluding quarantined/infra_limited
@@ -1559,16 +1579,20 @@ async function runAdaptiveScheduler(): Promise<void> {
   console.log(`[scheduler] Sweep done: ${passed} passed, ${failed} failed across ${dueSlugs.length} capabilities`);
 
   // Write scheduler heartbeat for watchdog monitoring
-  logHealthEvent({
-    eventType: "scheduler_heartbeat",
-    tier: 1,
-    actionTaken: `Scheduler sweep completed: ${dueSlugs.length} capabilities tested`,
-    details: {
-      tested: dueSlugs.length,
-      passed,
-      failed,
-    },
-  }).catch(() => {});
+  fireAndForget(
+    () =>
+      logHealthEvent({
+        eventType: "scheduler_heartbeat",
+        tier: 1,
+        actionTaken: `Scheduler sweep completed: ${dueSlugs.length} capabilities tested`,
+        details: {
+          tested: dueSlugs.length,
+          passed,
+          failed,
+        },
+      }),
+    { label: "health-event-log", context: { event: "scheduler_heartbeat_sweep" } },
+  );
 }
 
 /**
@@ -2018,13 +2042,17 @@ export async function persistDualProfileScores(slugs: string[]): Promise<void> {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[dual-profile] PERSIST FAILED for ${slug}: ${msg}`);
       // Log to health events for visibility (do not swallow silently)
-      logHealthEvent({
-        eventType: "persist_failure",
-        capabilitySlug: slug,
-        tier: 1,
-        actionTaken: `persistDualProfileScores failed: ${msg}`,
-        details: { slug, error: msg },
-      }).catch(() => {});
+      fireAndForget(
+        () =>
+          logHealthEvent({
+            eventType: "persist_failure",
+            capabilitySlug: slug,
+            tier: 1,
+            actionTaken: `persistDualProfileScores failed: ${msg}`,
+            details: { slug, error: msg },
+          }),
+        { label: "health-event-log", context: { slug, event: "persist_failure" } },
+      );
     }
   }
 

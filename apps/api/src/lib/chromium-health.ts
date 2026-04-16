@@ -15,6 +15,8 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
+import { fireAndForget } from "./fire-and-forget.js";
+import { logError } from "./log.js";
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -31,7 +33,9 @@ let _browserlessSlugs: Set<string> = new Set();
 let _browserlessCacheExpiry = 0;
 
 // Pre-warm cache on module load (fire-and-forget, non-blocking)
-setTimeout(() => refreshBrowserlessCache().catch(() => {}), 5_000);
+setTimeout(() => {
+  fireAndForget(() => refreshBrowserlessCache(), { label: "browserless-cache-prewarm" });
+}, 5_000);
 
 async function refreshBrowserlessCache(): Promise<Set<string>> {
   try {
@@ -158,7 +162,7 @@ function handleFailure(reason: string): boolean {
       `[chromium-health] DOWN: ${reason} (was healthy for ${Math.round((Date.now() - _lastHealthyAt) / 60_000)}min)`,
     );
     // Fire interrupt email (async, fire-and-forget)
-    fireAlert(reason).catch(() => {});
+    fireAndForget(() => fireAlert(reason), { label: "chromium-down-alert", context: { reason } });
   } else {
     // Still down — log at lower frequency (every 3rd failure)
     if (_consecutiveFailures % 3 === 0) {
