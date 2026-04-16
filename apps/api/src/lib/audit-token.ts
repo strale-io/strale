@@ -3,17 +3,20 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 // F-0-001: fail-fast on a missing secret instead of falling back to a
 // committed default. A hardcoded default lets anyone forge `/audit/:id?token=...`
 // URLs, undermining the EU AI Act / GDPR compliance story those URLs anchor.
-function requireAuditSecret(): string {
-  const v = process.env.AUDIT_HMAC_SECRET;
-  if (!v || v.length < 32) {
+// Exported so tests can cover the assertion without having to dynamically
+// re-import the module (Vite's dynamic-import literal restriction makes
+// cache-busting imports impractical). The parameter is required — callers
+// must decide what env value to pass.
+export function requireAuditSecret(env: string | undefined): string {
+  if (!env || env.length < 32) {
     throw new Error(
       "AUDIT_HMAC_SECRET is required and must be at least 32 characters. " +
         "Generate with: openssl rand -hex 32",
     );
   }
-  return v;
+  return env;
 }
-const AUDIT_SECRET: string = requireAuditSecret();
+const AUDIT_SECRET: string = requireAuditSecret(process.env.AUDIT_HMAC_SECRET);
 
 export function generateAuditToken(transactionId: string): string {
   return createHmac("sha256", AUDIT_SECRET)

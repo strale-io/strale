@@ -62,9 +62,9 @@ function hashIp(ip: string): string {
 /**
  * Round the current time down to the start of a window. All concurrent
  * requests within the same window land on the same row, so the atomic
- * increment actually works.
+ * increment actually works. Exported for tests.
  */
-function windowStart(windowSeconds: number, now = Date.now()): Date {
+export function windowStart(windowSeconds: number, now = Date.now()): Date {
   const ms = windowSeconds * 1000;
   return new Date(Math.floor(now / ms) * ms);
 }

@@ -56,11 +56,25 @@ export function isBlockedIp(addr: string): boolean {
   if (a.startsWith("fe80:")) return true;
 
   // ── IPv4-mapped IPv6 (F-0-006) ──
-  // `::ffff:10.0.0.1` is the dual-stack form of 10.0.0.1. Without this
-  // check, an attacker can bypass the IPv4 ranges above by prefixing.
+  // `::ffff:10.0.0.1` is the dotted-quad form; `::ffff:a00:1` is the
+  // URL/WHATWG-normalized hex-compact form of the same address. Both
+  // must map through the IPv4 blocklist, or an attacker trivially
+  // bypasses the IPv4 ranges above by switching representations.
   if (a.startsWith("::ffff:")) {
-    const v4 = a.slice(7); // strip prefix; leaves dotted-quad
-    return isBlockedIp(v4);
+    const mapped = a.slice(7);
+    // Already dotted-quad? (contains a `.`)
+    if (mapped.includes(".")) return isBlockedIp(mapped);
+    // Hex-compact form: two 16-bit groups like `a00:1` (= 0x0a00 0x0001
+    // = 10.0.0.1). Convert to dotted-quad then re-apply the IPv4 check.
+    const groups = mapped.split(":");
+    if (groups.length === 2 && groups.every((g) => /^[0-9a-f]{1,4}$/.test(g))) {
+      const hi = parseInt(groups[0], 16);
+      const lo = parseInt(groups[1], 16);
+      const quad = `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+      return isBlockedIp(quad);
+    }
+    // Unrecognised ::ffff: shape — be conservative and block.
+    return true;
   }
 
   // ── Cloud metadata IPv6 (F-0-006) ──
@@ -101,7 +115,13 @@ export async function validateUrl(urlString: string): Promise<void> {
     );
   }
 
-  const hostname = parsed.hostname.toLowerCase();
+  // F-0-006: WHATWG URL leaves literal IPv6 hostnames wrapped in
+  // brackets, which defeats `net.isIP`. Strip them before the IP check
+  // so `http://[::ffff:10.0.0.1]/` and `http://[::1]/` are caught.
+  const rawHost = parsed.hostname.toLowerCase();
+  const hostname = rawHost.startsWith("[") && rawHost.endsWith("]")
+    ? rawHost.slice(1, -1)
+    : rawHost;
 
   // Block known dangerous hosts
   if (BLOCKED_HOSTS.has(hostname)) {

@@ -132,11 +132,35 @@ export async function safeFetch(
   opts: SafeFetchOptions = {},
 ): Promise<Response> {
   const { maxRedirects = DEFAULT_MAX_REDIRECTS, ...init } = opts;
-  let current = typeof url === "string" ? url : url.toString();
+  return followRedirects(
+    typeof url === "string" ? url : url.toString(),
+    init,
+    maxRedirects,
+    validateUrl,
+  );
+}
+
+/**
+ * Exported for test coverage (F-0-006). Runs the redirect-follow loop with
+ * an injectable `validate` function so tests can exercise loop mechanics
+ * (cap, Location parsing, per-hop re-validation) against loopback servers
+ * without fighting the real `validateUrl`'s private-IP refusal.
+ *
+ * Production callers use `safeFetch`, which always passes the real
+ * `validateUrl`. Don't call `followRedirects` directly from application
+ * code — its `validate` parameter is a test seam, not a policy hook.
+ */
+export async function followRedirects(
+  url: string,
+  init: Omit<RequestInit, "redirect">,
+  maxRedirects: number,
+  validate: (u: string) => Promise<void>,
+): Promise<Response> {
+  let current = url;
   let hop = 0;
 
   while (true) {
-    await validateUrl(current);
+    await validate(current);
 
     // `dispatcher` is the undici-native way to pass a custom connector to
     // Node's built-in fetch. Passing `agent` is ignored by undici so we
