@@ -5,6 +5,7 @@ import { bodyLimit } from "hono/body-limit";
 import { versionMiddleware } from "./lib/versioning.js";
 import { rateLimitByIp } from "./lib/rate-limit.js";
 import { rateLimitByIpDb } from "./lib/db-rate-limit.js";
+import { adminOnly } from "./lib/admin-auth.js";
 import { doRoute } from "./routes/do.js";
 import { capabilitiesRoute } from "./routes/capabilities.js";
 import { walletRoute } from "./routes/wallet.js";
@@ -111,8 +112,27 @@ app.use("/v1/capabilities/*", publicCors);
 app.use("/v1/capabilities", publicCors);
 app.use("/v1/solutions/*", publicCors);
 app.use("/v1/solutions", publicCors);
-app.use("/v1/internal/*", publicCors);
-app.use("/v1/internal/*", rateLimitByIp(120, 60_000));  // S-7: rate limit public internal endpoints
+// F-0-003: split of the former /v1/internal/* mount.
+//
+//   /v1/public/ops/*   — read-only dashboard data for strale.dev.
+//                         Public CORS, no auth. Path allowlist (PUBLIC_OPS_ALLOWLIST
+//                         below) rejects everything that isn't a known dashboard
+//                         route so new admin handlers can't accidentally land here.
+//
+//   /v1/internal/*     — admin-only. `adminOnly` middleware mounted right before
+//                         the route registrations; deny-by-default. Any handler
+//                         added under /v1/internal/* now requires admin auth
+//                         by construction, not by per-handler convention.
+//
+// During the migration window both mounts point at the same route objects so
+// the frontend can move from /v1/internal/<x> to /v1/public/ops/<x> without
+// a forced-deploy order. The admin-auth wall at /v1/internal/* is live from
+// commit time. When strale.dev has fully migrated, the /v1/internal/* public
+// routes will naturally stop answering anonymously — no further change needed.
+app.use("/v1/public/ops/*", publicCors);
+app.use("/v1/public/ops/*", rateLimitByIp(120, 60_000));
+app.use("/v1/internal/*", restrictedCors);
+app.use("/v1/internal/*", rateLimitByIp(120, 60_000));
 app.use("/v1/audit/*", publicCors);
 app.use("/.well-known/*", publicCors);
 app.use("/llms.txt", publicCors);
@@ -209,6 +229,59 @@ app.route("/v1/solutions", solutionsRoute);
 app.route("/v1/solutions", solutionExecuteRoute);
 app.route("/v1/quality", qualityRoute);
 app.route("/v1", suggestRoute);
+// F-0-003 allowlist — the only paths /v1/public/ops/* will serve
+// anonymously. Everything else returns 404. Derived from the route
+// handlers that had no per-handler admin check on the day F-0-003 was
+// cut; adding a new admin handler under /v1/public/ops/* is impossible
+// because this gate rejects it before the router sees the request.
+//
+// Any change to this list needs a security review. New public dashboard
+// routes go here; nothing else. If you find yourself wanting to add a
+// POST/PUT/DELETE here, you're adding an admin action and you want
+// /v1/internal/* instead.
+const PUBLIC_OPS_ALLOWLIST: RegExp[] = [
+  // tests/: quality-dashboard reads
+  /^\/v1\/public\/ops\/tests\/capabilities\/[^/]+$/,
+  /^\/v1\/public\/ops\/tests\/capabilities\/[^/]+\/history$/,
+  /^\/v1\/public\/ops\/tests\/capabilities\/[^/]+\/runs$/,
+  /^\/v1\/public\/ops\/tests\/capabilities\/[^/]+\/example-output$/,
+  /^\/v1\/public\/ops\/tests\/solutions\/[^/]+$/,
+  /^\/v1\/public\/ops\/tests\/solutions\/[^/]+\/runs$/,
+  /^\/v1\/public\/ops\/tests\/dependency-health\/(?:summary|history)$/,
+  /^\/v1\/public\/ops\/tests\/situations$/,
+  // quality/, limitations/, trust/ — all GETs already public today
+  /^\/v1\/public\/ops\/quality\/[^/]+$/,
+  /^\/v1\/public\/ops\/quality\/[^/]+\/[^/]+$/,
+  /^\/v1\/public\/ops\/limitations\/[^/]+$/,
+  /^\/v1\/public\/ops\/limitations\/[^/]+\/[^/]+$/,
+  /^\/v1\/public\/ops\/trust\/capabilities(?:\/[^/]+(?:\/[^/]+)?)?$/,
+  /^\/v1\/public\/ops\/trust\/solutions(?:\/[^/]+(?:\/[^/]+)?)?$/,
+  // health-monitor/events, onboarding/readiness — anonymous reads today
+  /^\/v1\/public\/ops\/events$/,
+  /^\/v1\/public\/ops\/onboarding\/readiness$/,
+];
+
+app.use("/v1/public/ops/*", async (c, next) => {
+  if (c.req.method !== "GET") return c.notFound();
+  if (!PUBLIC_OPS_ALLOWLIST.some((re) => re.test(c.req.path))) return c.notFound();
+  return next();
+});
+
+// Mount the public-ops dashboards. Same routers as /v1/internal/* — the
+// allowlist above, not the router, is the access boundary.
+app.route("/v1/public/ops/quality", internalQualityRoute);
+app.route("/v1/public/ops/tests", internalTestsRoute);
+app.route("/v1/public/ops/limitations", internalLimitationsRoute);
+app.route("/v1/public/ops/trust", internalTrustRoute);
+app.route("/v1/public/ops", internalHealthMonitorRoute);
+app.route("/v1/public/ops/onboarding", internalOnboardingRoute);
+
+// F-0-003: admin-only wall. Any handler under /v1/internal/* now requires
+// `Authorization: Bearer $ADMIN_SECRET` — enforced at the mount, not by
+// each handler. The per-handler isValidAdminAuth checks inside the route
+// files are kept as defence-in-depth but are no longer load-bearing.
+app.use("/v1/internal/*", adminOnly);
+
 app.route("/v1/internal/quality", internalQualityRoute);
 app.route("/v1/internal/tests", internalTestsRoute);
 app.route("/v1/internal/limitations", internalLimitationsRoute);
