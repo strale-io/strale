@@ -22,4 +22,5 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm --workspace=apps/api run lint:no-bare-catch
+      - run: npm --workspace=apps/api run lint:ssrf-inventory
       - run: npm test

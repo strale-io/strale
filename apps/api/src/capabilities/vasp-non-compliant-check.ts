@@ -1,6 +1,9 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { getNonCompliantData, searchNonCompliant, getCASPCacheAge } from "./lib/vasp-data.js";
 
+// F-0-006 Bucket D: reads from a local CASP dataset (lib/vasp-data.ts);
+// no outbound network call uses the user input as a destination.
+
 registerCapability("vasp-non-compliant-check", async (input: CapabilityInput) => {
   const entityName = (
     (input.entity_name as string) ??

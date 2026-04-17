@@ -1,6 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 
+// F-0-006 Bucket D: user input is an owner/repo pair; requests go to
+// hardcoded api.github.com and raw.githubusercontent.com. The user
+// value is embedded in the path, never the hostname.
+
 registerCapability("github-repo-analyze", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.repo as string) ?? (input.task as string) ?? "").trim();
   if (!url) throw new Error("'url' is required. Provide a GitHub repo URL (e.g. https://github.com/owner/repo).");

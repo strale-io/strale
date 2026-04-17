@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint:no-bare-catch": "node scripts/check-no-bare-catch.mjs src",
+    "lint:ssrf-inventory": "node scripts/check-ssrf-inventory.mjs",
     "digest": "tsx src/jobs/daily-digest.ts",
     "digest:preview": "tsx src/jobs/digest-preview.ts",
     "db:generate": "drizzle-kit generate",

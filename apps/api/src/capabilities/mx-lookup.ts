@@ -1,6 +1,9 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import dns from "node:dns/promises";
 
+// F-0-006 Bucket C: pure DNS resolution on the user domain. No socket
+// to the resolved IP. validateHost not required.
+
 registerCapability("mx-lookup", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.task as string) ?? "").trim().toLowerCase();
   if (!domain) throw new Error("'domain' (domain name) is required.");

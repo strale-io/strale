@@ -1,5 +1,9 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
+// F-0-006 Bucket D: the user URL is encoded into a query string and
+// sent to the HARDCODED api.gopluslabs.io endpoint. We never fetch the
+// user's URL directly.
+
 // GoPlus Security — Phishing Site Detection API (free, no key required)
 const API = "https://api.gopluslabs.io/api/v1/phishing_site";
 

@@ -1,6 +1,9 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { createConnection } from "node:net";
 
+// F-0-006 Bucket D: opens a WHOIS TCP connection to a HARDCODED server
+// below (TLD_SERVERS map). The user domain is the query payload only.
+// No SSRF surface — the connection target is never user-controlled.
 const TLD_SERVERS: Record<string, string> = {
   com: "whois.verisign-grs.com", net: "whois.verisign-grs.com",
   org: "whois.pir.org", io: "whois.nic.io", dev: "whois.nic.google",

@@ -1,5 +1,9 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
+// F-0-006 Bucket D: the user URL is filtered by regex to ensure it
+// matches linkedin.com before any fetch. A non-LinkedIn URL is rejected
+// at parse time. The effective fetch hostname is hardcoded to LinkedIn.
+
 // ─── LinkedIn URL validation — algorithmic format check + HTTP accessibility ──
 
 interface LinkedInUrlInfo {

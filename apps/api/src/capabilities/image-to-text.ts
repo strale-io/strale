@@ -1,6 +1,11 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 
+// F-0-006 Bucket D: the image URL is passed to Anthropic's vision API
+// as a 'type: url' source. Anthropic fetches it from their network, not
+// ours. We do not have a way to constrain that — accept the residual
+// risk (Anthropic has their own policies).
+
 registerCapability("image-to-text", async (input: CapabilityInput) => {
   const imageUrl = (input.image_url as string) ?? (input.url as string) ?? undefined;
   const base64Input = (input.base64 as string) ?? undefined;

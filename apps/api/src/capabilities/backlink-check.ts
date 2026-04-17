@@ -1,5 +1,8 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
+// F-0-006 Bucket D: user domain is embedded in query strings to hardcoded
+// third-party APIs (index.commoncrawl.org, google.serper.dev). We never
+// fetch a user-controllable host — no SSRF surface.
 registerCapability("backlink-check", async (input: CapabilityInput) => {
   const raw = (
     (input.domain as string) ??
