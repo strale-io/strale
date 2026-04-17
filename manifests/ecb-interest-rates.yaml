@@ -1,8 +1,8 @@
 slug: ecb-interest-rates
 name: ECB Interest Rates
 description: >-
-  Fetch current ECB key interest rates (main refinancing, deposit facility, marginal lending) from the European Central
-  Bank Statistical Data Warehouse.
+  Fetch current ECB key interest rates (main refinancing, deposit facility, marginal lending). Sourced from FRED
+  (Federal Reserve Economic Data), which mirrors the ECB Statistical Data Warehouse.
 category: finance
 price_cents: 2
 is_free_tier: false
@@ -28,7 +28,7 @@ output_schema:
       type: string
     source_url:
       type: string
-data_source: European Central Bank Statistical Data Warehouse (ECB SDW)
+data_source: FRED (fred.stlouisfed.org), mirroring ECB Statistical Data Warehouse
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -46,9 +46,8 @@ test_fixtures:
         operator: not_null
         reliability: guaranteed
       - field: effective_date
-        operator: equals
+        operator: not_null
         reliability: guaranteed
-        value: "2025-06-11"
       - field: currency
         operator: equals
         reliability: guaranteed
@@ -56,7 +55,7 @@ test_fixtures:
       - field: source_url
         operator: equals
         reliability: guaranteed
-        value: https://data-api.ecb.europa.eu
+        value: https://fred.stlouisfed.org
   health_check_input: {}
 output_field_reliability:
   main_refinancing_rate: guaranteed
@@ -66,15 +65,15 @@ output_field_reliability:
   currency: guaranteed
   source_url: guaranteed
 limitations:
-  - title: Geo-restricted API
+  - title: Data routed through FRED mirror
     text: >-
-      The ECB SDW API may be unreachable from non-EU server locations. Railway US East deployment may experience
-      intermittent failures.
+      Values come from FRED, which mirrors ECB publications. FRED's update cadence (typically same-day) introduces
+      a small lag versus fetching directly from ECB. Authoritative source remains the European Central Bank.
     category: dependency
-    severity: warning
+    severity: info
   - title: Data freshness tied to ECB publication schedule
     text: >-
       Rates update only when the ECB Governing Council changes them, typically every 6 weeks. The effective_date
-      reflects the last change.
+      reflects the most recent observation date, which advances daily even when rates are unchanged.
     category: freshness
     severity: info
