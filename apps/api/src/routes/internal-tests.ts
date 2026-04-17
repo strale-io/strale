@@ -635,6 +635,10 @@ internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
   if (cached) return c.json(cached);
 
   const db = getDb();
+  // Freshness guard: tr.executed_at >= ts.updated_at ensures we don't serve a
+  // passing result captured BEFORE the fixture was updated. When a fixture is
+  // edited (manifest backfill, DB correction), the previous passing output is
+  // stale relative to the new input — hide the example until a fresh run lands.
   const rows = await db.execute(sql`
     SELECT tr.actual_output, tr.executed_at, ts.input, ts.test_type
     FROM test_results tr
@@ -642,6 +646,7 @@ internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
     WHERE tr.capability_slug = ${slug}
       AND tr.passed = true
       AND tr.actual_output IS NOT NULL
+      AND tr.executed_at >= ts.updated_at
     ORDER BY (ts.test_type = 'known_answer') DESC, tr.executed_at DESC
     LIMIT 1
   `);

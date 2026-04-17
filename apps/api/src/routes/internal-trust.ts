@@ -31,6 +31,7 @@ import { computeFreshnessGrade } from "../lib/trust-grade.js";
 import { computeFreshnessDecay, applyFreshnessDecay, shouldOverrideTrend, type FreshnessResult } from "../lib/freshness-decay.js";
 import type { CapabilityType } from "../lib/reliability-profile.js";
 import { apiError } from "../lib/errors.js";
+import { getCapabilityProfile, getSolutionProfile } from "../lib/compliance-profile.js";
 import { sqsLabel, gradeFromScore, computeSolutionScore, computeSolutionTrend, worstFreshnessLevel, oldestTestedAt } from "../lib/trust-labels.js";
 import type { AppEnv } from "../types.js";
 
@@ -1015,4 +1016,38 @@ internalTrustRoute.get("/solutions/:slug/related", async (c) => {
   return c.json(related, 200, {
     "Cache-Control": "public, max-age=300",
   });
+});
+
+// ─── Compliance profile (derived, no drift) ─────────────────────────────────
+// Describes what a capability/solution *would* produce — data sources,
+// AI involvement, regulatory mapping, jurisdiction. Distinct from runtime
+// audit records (which describe an actual transaction). See
+// src/lib/compliance-profile.ts for the field contract and rationale.
+
+internalTrustRoute.get("/capabilities/:slug/compliance-profile", async (c) => {
+  const slug = c.req.param("slug");
+  const cacheKey = `compliance-profile:cap:${slug}`;
+  const cached = getCached<unknown>(cacheKey);
+  if (cached) return c.json(cached, 200, { "Cache-Control": "public, max-age=300" });
+
+  const profile = await getCapabilityProfile(slug);
+  if (!profile) {
+    return c.json(apiError("not_found", `Capability '${slug}' not found or inactive.`), 404);
+  }
+  setCache(cacheKey, profile);
+  return c.json(profile, 200, { "Cache-Control": "public, max-age=300" });
+});
+
+internalTrustRoute.get("/solutions/:slug/compliance-profile", async (c) => {
+  const slug = c.req.param("slug");
+  const cacheKey = `compliance-profile:sol:${slug}`;
+  const cached = getCached<unknown>(cacheKey);
+  if (cached) return c.json(cached, 200, { "Cache-Control": "public, max-age=300" });
+
+  const profile = await getSolutionProfile(slug);
+  if (!profile) {
+    return c.json(apiError("not_found", `Solution '${slug}' not found or inactive.`), 404);
+  }
+  setCache(cacheKey, profile);
+  return c.json(profile, 200, { "Cache-Control": "public, max-age=300" });
 });
