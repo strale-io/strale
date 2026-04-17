@@ -14,7 +14,7 @@ async function main() {
     LEFT JOIN capabilities c ON c.id = t.capability_id
     LEFT JOIN users u ON u.id = t.user_id
     WHERE t.created_at >= (NOW() AT TIME ZONE 'Europe/Berlin')::date - INTERVAL '3 days'
-      AND (u.email IS NULL OR u.email NOT IN ('petter@strale.io', 'test@strale.io', 'test2@strale.io', 'system@strale.internal'))
+      AND (u.email IS NULL OR u.email NOT IN ('petter@strale.io', 'test@strale.io', 'test2@strale.io', 'system@strale.internal', 'test@example.com'))
       AND t.solution_slug IS NULL
     GROUP BY DATE(t.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Berlin')
     ORDER BY date_cet DESC
@@ -37,7 +37,7 @@ async function main() {
     LEFT JOIN capabilities c ON c.id = t.capability_id
     LEFT JOIN users u ON u.id = t.user_id
     WHERE t.created_at >= (NOW() AT TIME ZONE 'Europe/Berlin')::date - INTERVAL '3 days'
-      AND (u.email IS NULL OR u.email NOT IN ('petter@strale.io', 'test@strale.io', 'test2@strale.io', 'system@strale.internal'))
+      AND (u.email IS NULL OR u.email NOT IN ('petter@strale.io', 'test@strale.io', 'test2@strale.io', 'system@strale.internal', 'test@example.com'))
       AND t.solution_slug IS NULL
     GROUP BY date_cet, c.slug, t.is_free_tier, t.payment_method, t.status
     ORDER BY date_cet DESC, count DESC

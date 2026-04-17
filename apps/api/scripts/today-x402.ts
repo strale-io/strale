@@ -8,7 +8,7 @@ async function main() {
     LEFT JOIN users u ON u.id = t.user_id
     WHERE t.created_at >= (NOW() AT TIME ZONE 'Europe/Berlin')::date
       AND t.payment_method = 'x402'
-      AND (u.email IS NULL OR u.email NOT IN ('petter@strale.io','test@strale.io','test2@strale.io','system@strale.internal'))
+      AND (u.email IS NULL OR u.email NOT IN ('petter@strale.io','test@strale.io','test2@strale.io','system@strale.internal','test@example.com'))
     ORDER BY t.created_at DESC
   `;
   console.log(`x402 calls today: ${rows.length}`);

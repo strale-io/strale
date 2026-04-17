@@ -5,7 +5,7 @@ if (!from || !to) {
   process.exit(1);
 }
 
-const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", "system@strale.internal"];
+const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", "system@strale.internal", "test@example.com"];
 
 const postgres = (await import("postgres")).default;
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });

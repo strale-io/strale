@@ -6,7 +6,7 @@ async function main() {
     FROM users u
     LEFT JOIN wallets w ON w.user_id = u.id
     WHERE u.created_at >= (NOW() AT TIME ZONE 'Europe/Berlin')::date
-      AND u.email NOT IN ('petter@strale.io','test@strale.io','test2@strale.io','system@strale.internal')
+      AND u.email NOT IN ('petter@strale.io','test@strale.io','test2@strale.io','system@strale.internal','test@example.com')
     ORDER BY u.created_at DESC
   `;
   console.log(`Signups today (CET): ${rows.length}`);

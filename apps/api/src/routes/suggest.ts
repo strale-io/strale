@@ -52,9 +52,10 @@ suggestRoute.get("/suggest/typeahead", rateLimitByIp(30, 1000), async (c) => {
   try {
     const result = await typeahead(q, limit, geo, typeFilter);
     const clientIp = getClientIp(c);
+    const resultCount = Array.isArray(result?.results) ? result.results.length : 0;
     logSearch({
       query: q,
-      resultCount: Array.isArray(result) ? result.length : 0,
+      resultCount,
       searchType: "typeahead",
       typeFilter: typeFilter ?? null,
       geo: geo ?? null,

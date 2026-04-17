@@ -2,7 +2,7 @@ async function main() {
   const postgres = (await import("postgres")).default;
   const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
 
-  const INTERNAL_EMAILS = ['petter@strale.io', 'test@strale.io', 'test2@strale.io', 'system@strale.internal'];
+  const INTERNAL_EMAILS = ['petter@strale.io', 'test@strale.io', 'test2@strale.io', 'system@strale.internal', 'test@example.com'];
   const all = await sql`
     SELECT COUNT(*)::int AS total,
            COUNT(*) FILTER (WHERE t.payment_method = 'x402')::int AS x402,
