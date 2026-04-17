@@ -26,9 +26,29 @@ All onboarded via `scripts/onboard.ts --discover --manifest ...`. All pass smoke
 ### Strategy note (Notion)
 Journal brainstorm entry raised: [SQS as a source-routing primitive](https://www.notion.so/34567c87082c813bafcec03c06c06a39) — whether Strale should promote **overlapping data sources** and let SQS rank them per call, vs current "one unique source per capability" posture. Action Required=yes. Tagged for a dedicated strategy session.
 
-## Not shipped / deferred
+## Batch 1.5 (shipped later same session — ADDENDUM)
 
-- **Batch 1.5 (spike required):** `cz-unreliable-vat-payer` (MF ČR) and `cz-insolvency-check` (ISIR) — both require SOAP/WSDL investigation. MF ČR HTML portal returns 500 without cookies; ISIR public WS was down during probe. Needs a dedicated investigation session.
+Spike ran after Batch 1 was committed.
+
+**Shipped:** `cz-unreliable-vat-payer` (€0.05, compliance). MF ČR SOAP endpoint at
+`https://adisrws.mfcr.cz/dpr/axis2/services/rozhraniCRPDPH.rozhraniCRPDPHSOAP` works cleanly with
+raw fetch + XML body. Uses `getStatusNespolehlivyPlatceRozsireny` operation which returns both the
+unreliable-payer flag AND the published-bank-accounts list (both needed for §109 joint-liability
+protection on Czech invoices). Response XML parsed via regex — schema has been stable since 2013.
+No auth, no rate limit observed. Test fixture verified live against Škoda Auto (DIČ CZ00177041) →
+not-unreliable, 16 published accounts (mix of standard CZ and foreign IBANs).
+
+**Deferred:** `cz-insolvency-check` (ISIR). Spike revealed:
+1. ISIR public SOAP service (`IsirWsPublicService`) is an **event-stream** API
+   (`getIsirWsPublicPodnetId`), not a lookup-by-debtor API. Designed for mirror-sync, wrong shape
+   for on-demand queries.
+2. Public HTML search page (`/isir/public/seznam.do`) returns HTTP 500 from direct POST —
+   may require additional session setup or is temporarily broken.
+3. Options for a proper ISIR capability (none cheap):
+   - (a) Build an ETL pipeline mirroring the event stream into our DB, query locally
+   - (b) Debug the 500s and build a Browserless scrape
+   - (c) Evaluate a third-party wrapper (e.g. isir.info) — introduces dependency risk
+4. Needs a dedicated session with an explicit scope decision on (a/b/c) before implementation.
 - **Batch 2:** `cz-trade-license-check` (RŽP via ARES umbrella), `cz-court-decisions-search` (rozhodnuti.justice.cz opendata).
 - **Batch 3:** `cz-public-contracts-search` (smlouvy.gov.cz), `cz-procurement-search` (NEN/ISVZ).
 - **Batch 4:** `cz-address-verify` (RÚIAN — spike first, SOAP vs VDP), `cz-law-lookup` (eSbírka — MV ČR registration needed).

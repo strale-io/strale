@@ -1,0 +1,122 @@
+slug: cz-unreliable-vat-payer
+name: Czech Unreliable VAT Payer Check
+description: >-
+  Check whether a Czech DIČ is flagged as unreliable VAT payer (nespolehlivý plátce) and return the payer's list of
+  published bank accounts. Critical for §109 CZ VAT Act joint-liability protection.
+category: compliance
+price_cents: 5
+is_free_tier: false
+data_source: MF ČR — rozhraniCRPDPH SOAP web service
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+input_schema:
+  type: object
+  required:
+    - dic
+  properties:
+    dic:
+      type: string
+      description: Czech DIČ (CZ + 8-10 digits) or bare IČO (8 digits)
+output_schema:
+  type: object
+  properties:
+    input_dic:
+      type: string
+    dic:
+      type: string
+    is_registered_vat_payer:
+      type: boolean
+    is_unreliable_payer:
+      type: boolean
+    financial_office_code:
+      type: string
+    published_accounts:
+      type: array
+      items:
+        type: object
+        properties:
+          published_at:
+            type: string
+          account_number:
+            type: string
+          bank_code:
+            type: string
+          is_standard:
+            type: boolean
+    published_account_count:
+      type: integer
+    response_generated_at:
+      type: string
+    joint_liability_risk:
+      type: string
+test_fixtures:
+  known_answer:
+    input:
+      dic: CZ00177041
+    expected_fields:
+      - field: input_dic
+        operator: equals
+        reliability: guaranteed
+        value: "00177041"
+      - field: dic
+        operator: equals
+        reliability: guaranteed
+        value: "00177041"
+      - field: is_registered_vat_payer
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: is_unreliable_payer
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: financial_office_code
+        operator: equals
+        reliability: guaranteed
+        value: "13"
+      - field: published_accounts
+        operator: not_null
+        reliability: guaranteed
+      - field: published_account_count
+        operator: not_null
+        reliability: guaranteed
+      - field: response_generated_at
+        operator: not_null
+        reliability: guaranteed
+      - field: joint_liability_risk
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    dic: CZ00177041
+limitations:
+  - title: DIČ must be syntactically valid — does not resolve IČO→DIČ automatically
+    text: >-
+      Input is treated as DIČ (with or without CZ prefix). Natural-person DIČs may be 9-10 digits (based on rodné číslo)
+      and are not derivable from IČO alone.
+    category: coverage
+    severity: info
+    workaround: For legal entities, use the 8-digit IČO; the service accepts bare digits.
+  - title: Not a liveness check on the bank account
+    text: >-
+      Published accounts are what the VAT payer registered with MF ČR. The service does not confirm the account is
+      currently open or held by the named bank.
+    category: accuracy
+    severity: info
+  - title: Status snapshot only — history not returned
+    text: >-
+      The check returns the current unreliable-payer flag as of the response_generated_at date. Historical changes (when
+      the flag was set/cleared) are not exposed.
+    category: coverage
+    severity: info
+output_field_reliability:
+  input_dic: guaranteed
+  dic: guaranteed
+  is_registered_vat_payer: guaranteed
+  is_unreliable_payer: guaranteed
+  financial_office_code: guaranteed
+  published_accounts: guaranteed
+  published_account_count: guaranteed
+  response_generated_at: guaranteed
+  joint_liability_risk: guaranteed
