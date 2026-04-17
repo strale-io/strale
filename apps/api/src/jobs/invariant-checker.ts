@@ -145,6 +145,14 @@ export async function runInvariantChecks(): Promise<void> {
     console.error("[invariant-checker] CHECK 10 (suspended TTL) failed:", err);
   }
 
+  try {
+    const r11 = await checkFixtureQuality();
+    alerts += r11.alerts;
+    checked += r11.checked;
+  } catch (err) {
+    console.error("[invariant-checker] CHECK 11 (fixture quality) failed:", err);
+  }
+
   // Log provider outage summary if any capabilities were skipped
   if (unhealthyCapabilities.size > 0) {
     try {
@@ -1062,4 +1070,61 @@ async function checkSuspendedCapabilityTTL(): Promise<{ healed: number; alerts: 
   }
 
   return { healed, alerts, checked: suspended.length };
+}
+
+// ─── CHECK 11: Fixture quality (Tier 2 — ALERT ONLY) ────────────────────────
+// Guards the public capability detail page: the `/v1/internal/capabilities/:slug
+// /example-output` endpoint serves the known_answer fixture verbatim, so any
+// regression here becomes visible on strale.dev. Same shared helper as the
+// onboarding gate (src/lib/fixture-quality.ts) so entry-time and runtime checks
+// cannot drift apart.
+
+async function checkFixtureQuality(): Promise<{ alerts: number; checked: number }> {
+  const db = getDb();
+  const { validateFixture } = await import("../lib/fixture-quality.js");
+
+  const rows = await db
+    .select({
+      slug: testSuites.capabilitySlug,
+      testType: testSuites.testType,
+      input: testSuites.input,
+      inputSchema: capabilities.inputSchema,
+    })
+    .from(testSuites)
+    .innerJoin(capabilities, eq(capabilities.slug, testSuites.capabilitySlug))
+    .where(
+      and(
+        eq(testSuites.active, true),
+        eq(capabilities.isActive, true),
+        eq(testSuites.testType, "known_answer"),
+      ),
+    );
+
+  const bad: { slug: string; reasons: string[] }[] = [];
+  for (const r of rows) {
+    const q = validateFixture(r.input, r.inputSchema);
+    if (!q.ok) bad.push({ slug: r.slug, reasons: q.reasons });
+  }
+
+  if (bad.length === 0) {
+    return { alerts: 0, checked: rows.length };
+  }
+
+  const slugList = bad.map((b) => b.slug).join(", ");
+  console.warn(
+    `[invariant-checker] CHECK 11: ${bad.length} capability(s) have bad known_answer fixtures: ${slugList}`,
+  );
+
+  await logHealthEvent({
+    eventType: "invariant_alert",
+    tier: 2,
+    actionTaken: `${bad.length} capability(s) have bad known_answer fixtures (rendered on public detail pages): ${slugList}`,
+    details: {
+      check: "fixture_quality",
+      badCount: bad.length,
+      bad: bad.map((b) => ({ slug: b.slug, reasons: b.reasons })),
+    },
+  });
+
+  return { alerts: 1, checked: rows.length };
 }

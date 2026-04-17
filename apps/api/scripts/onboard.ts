@@ -38,6 +38,7 @@ import {
   capabilityLimitations,
 } from "../src/db/schema.js";
 import * as yaml from "js-yaml";
+import { validateFixture } from "../src/lib/fixture-quality.js";
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { getExecutor } from "../src/capabilities/index.js";
@@ -432,6 +433,21 @@ async function verifyFixtures(
   }
 
   console.log("\n─── Fixture Verification ─────────────────────────────────────");
+
+  // Fixture-quality gate: reject placeholder / schema-invalid fixtures before
+  // they're written to test_suites and leak out to the public capability page.
+  // Placeholders can "pass" because schema-shape assertions are satisfied even
+  // when the input is meaningless. That's how invoice-validate ended up serving
+  // {"invoice": {"key": "value"}} as its official example.
+  const quality = validateFixture(input, manifest.input_schema);
+  if (!quality.ok) {
+    console.log("  ✗ known_answer fixture failed quality gate:");
+    for (const r of quality.reasons) console.log(`      - ${r}`);
+    console.log("  Supply a real input in test_fixtures.known_answer.input that a");
+    console.log("  third-party dev could copy-paste and see a meaningful response.");
+    return { passed: false, manifest };
+  }
+
   console.log(`  Executing ${manifest.slug} with known_answer input...`);
 
   const { output, error } = await executeCapability(manifest.slug, input);
