@@ -22,5 +22,11 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm --workspace=apps/api run lint:no-bare-catch
-      - run: npm --workspace=apps/api run lint:ssrf-inventory
+      # The SSRF inventory guard hardcodes its walk root relative to the
+      # repo root (`apps/api/src/capabilities`); invoking it via the
+      # workspace wrapper sets cwd to `apps/api/` and ENOENTs. Call it
+      # directly from the repo root (GitHub Actions default cwd) instead.
+      # The sibling `lint:no-bare-catch` script accepts its walk root as
+      # argv ("src"), so the workspace wrapper still works for that one.
+      - run: node apps/api/scripts/check-ssrf-inventory.mjs
       - run: npm test
