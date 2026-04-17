@@ -355,18 +355,52 @@ production schema" is an architectural finding for Session 5.
 
 ## First-hour observation (T+1h)
 
-### 2026-04-17T~19:55Z — PENDING — will be appended inline
+### 2026-04-17T21:23Z — T+~2h30 — CLEAN
 
-Query batch run ~60 minutes after deploy. Expected shape:
+> Observation taken ~2h30 after deploy rather than exactly T+1h. The close-out
+> brief landed after the exact T+1h window had passed; this first post-deploy
+> checkpoint is the combined "first-hour" and "pre-T+6h" measurement. Subsequent
+> checkpoints hit their scheduled marks.
+
+**Query batch** (`verify-locks.mjs` + `verify-phase-c-state.mjs` + Railway log scan + `/health`):
 
 ```
-compliance_hash_state:  complete = 40,xxx   pending = 0 (or <= 2 rows < 2min old)
-integrity_hash_status:  unchanged distribution
 advisory locks on {20260417, 20260402, 20260415, 314159}: 0 rows
-oldest pending: < 2 min old or absent
+compliance_hash_state:  complete = 40,138   pending = 0   failed = 0
+oldest pending: none
+integrity_hash_status (other workflow): complete 39,510, pending 423,
+                                         customer 150, test 55
+  ↳ customer & test counts UNCHANGED from T+0h baseline (150 / 55)
+  ↳ pending grew 287→423 — other workflow's accumulation, not Phase C
+/health: 200
 ```
 
-_(To be filled in at the checkpoint.)_
+**Log tail scan** (Railway, last ~15KB of logs):
+
+```
+integrity-hash-stale-rows:          0
+integrity-hash-retry-row-failed:    0
+free-tier-counter-read-failed:      0
+db-rate-limit-failed:               0
+integrity-hash-retry-lock-busy:     0
+"you don't own a lock" warnings:    0
+```
+
+**Recent batch-done ticks** (every 30s as designed, no stalling):
+
+```
+21:21:10Z  completed=4 failed=0 stale=0 batch_size=4
+21:21:40Z  completed=6 failed=0 stale=0 batch_size=6
+21:22:40Z  completed=1 failed=0 stale=0 batch_size=1
+21:23:15Z  completed=4 failed=0 stale=0 batch_size=4
+```
+
+**Growth since T+0h**: `compliance_hash_state = 'complete'` grew 40,002 →
+40,138, i.e. 136 new transactions processed in ~2h30. All drained through
+`pending → complete` inside GRACE_MS + one tick. Zero stale accumulation.
+
+**Conclusion**: all six bake monitors (M1–M6) clean at this checkpoint.
+Continue bake.
 
 ---
 
@@ -379,7 +413,10 @@ checkpoint.
 
 See "Hotfix verified in prod → GO" above. Clean.
 
-### T+1h (2026-04-17T~19:55Z) — PENDING
+### T+1h (2026-04-17T21:23Z; actual window T+~2h30) — CLEAN
+
+See "First-hour observation" above. Zero alerts on any of M1–M6, pending
+drain healthy, other-workflow column stable.
 
 ### T+6h (2026-04-18T00:55Z) — PENDING
 
