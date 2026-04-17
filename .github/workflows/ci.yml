@@ -20,6 +20,12 @@ jobs:
           node-version: "20"
           cache: npm
       - run: npm ci
+      # apps/api imports from `strale-mcp/tools`, which resolves to
+      # packages/mcp-server/dist/tools.js(+.d.ts). The Dockerfile builds
+      # the MCP server before the API for exactly this reason; CI must
+      # do the same or typecheck can't find the module. See the seed CI
+      # in #9 + the Phase B+C merge in #8.
+      - run: npm --workspace=packages/mcp-server run build
       - run: npm run typecheck
       - run: npm --workspace=apps/api run lint:no-bare-catch
       # The SSRF inventory guard hardcodes its walk root relative to the
