@@ -1,0 +1,104 @@
+slug: cz-bank-account-validate
+name: Czech Bank Account Validator
+description: >-
+  Validate Czech bank account in domestic BBAN format '[prefix-]account/bank_code' using mod-11 weighted checksums on
+  prefix and account parts.
+category: validation
+price_cents: 2
+is_free_tier: false
+data_source: Algorithmic (Czech National Bank specification)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+maintenance_class: pure-computation
+input_schema:
+  type: object
+  required:
+    - account
+  properties:
+    account:
+      type: string
+      description: Czech bank account in format '[prefix-]account/bank_code' (e.g. '19-2000145399/0800' or '123456/0100')
+output_schema:
+  type: object
+  properties:
+    input:
+      type: string
+    is_valid:
+      type: boolean
+    prefix:
+      type: string
+    account:
+      type: string
+    bank_code:
+      type: string
+    prefix_checksum_ok:
+      type: boolean
+    account_checksum_ok:
+      type: boolean
+    checksum_algorithm:
+      type: string
+    reason:
+      type: string
+test_fixtures:
+  known_answer:
+    input:
+      account: 19-2000145399/0800
+    expected_fields:
+      - field: input
+        operator: equals
+        reliability: guaranteed
+        value: 19-2000145399/0800
+      - field: is_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: prefix
+        operator: equals
+        reliability: guaranteed
+        value: "19"
+      - field: account
+        operator: equals
+        reliability: guaranteed
+        value: "2000145399"
+      - field: bank_code
+        operator: equals
+        reliability: guaranteed
+        value: "0800"
+      - field: prefix_checksum_ok
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: account_checksum_ok
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: checksum_algorithm
+        operator: not_null
+        reliability: guaranteed
+      - field: reason
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    account: 19-2000145399/0800
+limitations:
+  - title: Checksum does not prove account exists
+    text: Validates domestic BBAN checksum only. Does not confirm the account is open, active, or held at the named bank.
+    category: accuracy
+    severity: info
+  - title: Bank code is not validated against registered banks
+    text: >-
+      The 4-digit bank code is format-checked only. Not cross-referenced against the Czech National Bank's list of
+      registered institution codes.
+    category: coverage
+    severity: info
+output_field_reliability:
+  input: guaranteed
+  is_valid: guaranteed
+  prefix: guaranteed
+  account: guaranteed
+  bank_code: guaranteed
+  prefix_checksum_ok: guaranteed
+  account_checksum_ok: guaranteed
+  checksum_algorithm: guaranteed
+  reason: guaranteed

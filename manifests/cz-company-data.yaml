@@ -1,0 +1,114 @@
+slug: cz-company-data
+name: Czech Company Data
+description: >-
+  Look up Czech company data from ARES (Czech Ministry of Finance registry). Accepts IČO (8-digit identifier) or fuzzy
+  company name via LLM name-resolution.
+category: company-data
+price_cents: 5
+is_free_tier: false
+data_source: ARES (Czech Ministry of Finance)
+data_source_type: api
+transparency_tag: mixed
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+input_schema:
+  type: object
+  required:
+    - ico
+  properties:
+    ico:
+      type: string
+      description: Czech IČO (8 digits) or company name for fuzzy lookup
+output_schema:
+  type: object
+  properties:
+    ico:
+      type: string
+    company_name:
+      type: string
+    address:
+      type: string
+    legal_form_code:
+      type: string
+    vat_number:
+      type: string
+    nace_codes:
+      type: array
+      items:
+        type: string
+    registration_date:
+      type: string
+    last_updated:
+      type: string
+    status:
+      type: string
+    primary_source:
+      type: string
+test_fixtures:
+  known_answer:
+    input:
+      ico: "00177041"
+    expected_fields:
+      - field: ico
+        operator: not_null
+        reliability: guaranteed
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: address
+        operator: not_null
+        reliability: guaranteed
+      - field: legal_form_code
+        operator: not_null
+        reliability: guaranteed
+      - field: vat_number
+        operator: not_null
+        reliability: guaranteed
+      - field: nace_codes
+        operator: not_null
+        reliability: guaranteed
+      - field: registration_date
+        operator: not_null
+        reliability: guaranteed
+      - field: last_updated
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: not_null
+        reliability: guaranteed
+      - field: primary_source
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    ico: "00177041"
+limitations:
+  - title: Natural persons' DIČ not derivable
+    text: >-
+      DIČ is returned verbatim when ARES has it. For natural persons registered as entrepreneurs, the DIČ may be CZ +
+      rodné číslo and cannot be derived from IČO alone.
+    category: coverage
+    severity: info
+  - title: Fuzzy name search returns first match only
+    text: >-
+      When resolving a company name via LLM, only the top ARES search hit is returned. Ambiguous names may resolve to
+      the wrong entity.
+    category: accuracy
+    severity: info
+    workaround: Pass IČO directly when known.
+  - title: Sole proprietors with only trade license may be outside ROS
+    text: >-
+      Entities registered solely in RŽP (Živnostenský rejstřík) without ROS record may return limited data. ARES still
+      returns basic identification.
+    category: coverage
+    severity: info
+output_field_reliability:
+  ico: guaranteed
+  company_name: guaranteed
+  address: guaranteed
+  legal_form_code: guaranteed
+  vat_number: guaranteed
+  nace_codes: guaranteed
+  registration_date: guaranteed
+  last_updated: guaranteed
+  status: guaranteed
+  primary_source: guaranteed

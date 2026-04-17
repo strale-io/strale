@@ -95,3 +95,14 @@ export function deriveVatPL(nip: string): string | null {
   if (!/^\d{10}$/.test(cleaned)) return null;
   return `PL${cleaned}`;
 }
+
+/**
+ * Czech Republic: CZ + IČO (8 digits) for most legal entities.
+ * Natural persons' DIČ may be CZ + rodné číslo (9 or 10 digits); we don't
+ * derive those here. ARES returns the authoritative DIČ directly when known.
+ */
+export function deriveVatCZ(ico: string): string | null {
+  const cleaned = ico.replace(/[\s.-]/g, "");
+  if (!/^\d{8}$/.test(cleaned)) return null;
+  return `CZ${cleaned}`;
+}

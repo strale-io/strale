@@ -1,0 +1,71 @@
+slug: cz-ico-validate
+name: Czech IČO Validator
+description: Validate Czech IČO (company identifier) format and mod-11 checksum. Pure algorithmic — no external calls.
+category: validation
+price_cents: 2
+is_free_tier: false
+data_source: Algorithmic (Czech Statistical Office specification)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+maintenance_class: pure-computation
+input_schema:
+  type: object
+  required:
+    - ico
+  properties:
+    ico:
+      type: string
+      description: Czech IČO (1-8 digits; will be left-padded to 8)
+output_schema:
+  type: object
+  properties:
+    input:
+      type: string
+    normalized:
+      type: string
+    is_valid:
+      type: boolean
+    checksum_algorithm:
+      type: string
+    reason:
+      type: string
+test_fixtures:
+  known_answer:
+    input:
+      ico: "00177041"
+    expected_fields:
+      - field: input
+        operator: equals
+        reliability: guaranteed
+        value: "00177041"
+      - field: normalized
+        operator: equals
+        reliability: guaranteed
+        value: "00177041"
+      - field: is_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: checksum_algorithm
+        operator: not_null
+        reliability: guaranteed
+      - field: reason
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    ico: "00177041"
+limitations:
+  - title: Format and checksum only — does not confirm registration
+    text: >-
+      Validates mathematical format only. A valid checksum does not mean the IČO is registered — use cz-company-data for
+      that.
+    category: accuracy
+    severity: info
+    workaround: Chain with cz-company-data for registration check.
+output_field_reliability:
+  input: guaranteed
+  normalized: guaranteed
+  is_valid: guaranteed
+  checksum_algorithm: guaranteed
+  reason: guaranteed

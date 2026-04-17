@@ -1,0 +1,118 @@
+slug: cz-birth-number-validate
+name: Czech Birth Number Validator
+description: >-
+  Validate Czech rodné číslo (birth number) — format, embedded birth date, gender encoding, and mod-11 checksum on
+  10-digit post-1954 numbers.
+category: validation
+price_cents: 2
+is_free_tier: false
+data_source: Algorithmic (Czech Ministry of Interior specification)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+maintenance_class: pure-computation
+input_schema:
+  type: object
+  required:
+    - birth_number
+  properties:
+    birth_number:
+      type: string
+      description: Czech rodné číslo (9 digits pre-1954 or 10 digits post-1954, optional slash/hyphen)
+output_schema:
+  type: object
+  properties:
+    input:
+      type: string
+    normalized:
+      type: string
+    is_valid:
+      type: boolean
+    birth_year:
+      type: integer
+    birth_month:
+      type: integer
+    birth_day:
+      type: integer
+    gender:
+      type: string
+    date_valid:
+      type: boolean
+    has_check_digit:
+      type: boolean
+    checksum_ok:
+      type: boolean
+    reason:
+      type: string
+test_fixtures:
+  known_answer:
+    input:
+      birth_number: 750519/0110
+    expected_fields:
+      - field: input
+        operator: equals
+        reliability: guaranteed
+        value: 750519/0110
+      - field: normalized
+        operator: equals
+        reliability: guaranteed
+        value: "7505190110"
+      - field: is_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: birth_year
+        operator: not_null
+        reliability: guaranteed
+      - field: birth_month
+        operator: not_null
+        reliability: guaranteed
+      - field: birth_day
+        operator: not_null
+        reliability: guaranteed
+      - field: gender
+        operator: equals
+        reliability: guaranteed
+        value: male
+      - field: date_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: has_check_digit
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: checksum_ok
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: reason
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    birth_number: 750519/0110
+limitations:
+  - title: Pre-1954 numbers have no checksum
+    text: >-
+      9-digit birth numbers issued before 1954 have no mod-11 check digit. Format and date are validated but checksum_ok
+      is always true.
+    category: coverage
+    severity: info
+  - title: Personal data handling — treat as sensitive
+    text: >-
+      Rodné číslo is a Czech national identifier subject to GDPR. Callers should not log or persist these values beyond
+      the immediate validation use case.
+    category: privacy
+    severity: warning
+output_field_reliability:
+  input: guaranteed
+  normalized: guaranteed
+  is_valid: guaranteed
+  birth_year: guaranteed
+  birth_month: guaranteed
+  birth_day: guaranteed
+  gender: guaranteed
+  date_valid: guaranteed
+  has_check_digit: guaranteed
+  checksum_ok: guaranteed
+  reason: guaranteed

@@ -1,0 +1,73 @@
+slug: cz-datova-schranka-id-validate
+name: Czech Data Box ID Validator
+description: >-
+  Validate the 7-character format of a Czech data box (datová schránka) ID. Pure format check — there is no public
+  checksum.
+category: validation
+price_cents: 2
+is_free_tier: false
+data_source: Algorithmic (Czech Data Box specification)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+maintenance_class: pure-computation
+input_schema:
+  type: object
+  required:
+    - data_box_id
+  properties:
+    data_box_id:
+      type: string
+      description: 7-character Czech data box ID (letters A-Z excluding I/O, digits 2-9)
+output_schema:
+  type: object
+  properties:
+    input:
+      type: string
+    normalized:
+      type: string
+    is_valid:
+      type: boolean
+    reason:
+      type: string
+    format_spec:
+      type: string
+test_fixtures:
+  known_answer:
+    input:
+      data_box_id: abc2def
+    expected_fields:
+      - field: input
+        operator: equals
+        reliability: guaranteed
+        value: abc2def
+      - field: normalized
+        operator: equals
+        reliability: guaranteed
+        value: ABC2DEF
+      - field: is_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: reason
+        operator: not_null
+        reliability: guaranteed
+      - field: format_spec
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    data_box_id: abc2def
+limitations:
+  - title: Format-only — does not confirm data box exists
+    text: >-
+      Validates the 7-character format specification. Does not confirm the data box is registered in the Czech ISDS
+      system or held by any specific entity.
+    category: accuracy
+    severity: info
+    workaround: ISDS lookup requires authenticated access not available via public APIs.
+output_field_reliability:
+  input: guaranteed
+  normalized: guaranteed
+  is_valid: guaranteed
+  reason: guaranteed
+  format_spec: guaranteed
