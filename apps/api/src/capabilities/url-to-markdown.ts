@@ -4,6 +4,14 @@ import { htmlToCleanMarkdown } from "./lib/readability-convert.js";
 import { fetchViaJina } from "./lib/jina-reader.js";
 import { validateUrl } from "../lib/url-validator.js";
 
+/** Thrown when the target responded definitively — no point trying Jina/Browserless. */
+class DefinitiveFetchError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DefinitiveFetchError";
+  }
+}
+
 /** Sites known to block server-side fetches with specific guidance. */
 const BLOCKED_SITE_HINTS: Record<string, string> = {
   "npmjs.com": "npmjs.com blocks automated access. Use the 'npm-package-info' capability instead to get package metadata.",
@@ -54,10 +62,10 @@ async function tryPlainFetch(url: string): Promise<string | null> {
       if (resp.status >= 400 && resp.status < 500) {
         const hint = getBlockedSiteHint(url);
         if (hint) {
-          throw new Error(hint);
+          throw new DefinitiveFetchError(hint);
         }
         if (resp.status === 403) {
-          throw new Error(
+          throw new DefinitiveFetchError(
             "This site blocks automated access (HTTP 403 Forbidden). " +
             "This is bot protection on the target site, not a Strale issue. " +
             "Alternatives: try 'dns-lookup' or 'domain-reputation' for structured data about this domain, " +
@@ -66,25 +74,30 @@ async function tryPlainFetch(url: string): Promise<string | null> {
         }
         if (resp.status === 404) {
           let hostname = "";
-          try { hostname = new URL(url).hostname; } catch { /* ignore */ }
-          throw new Error(
+          try { hostname = new URL(resp.url || url).hostname; } catch { /* ignore */ }
+          const originalHost = (() => { try { return new URL(url).hostname; } catch { return ""; } })();
+          const redirectNote = hostname && originalHost && hostname !== originalHost
+            ? ` The original URL redirected to ${resp.url}, which returned 404.`
+            : "";
+          throw new DefinitiveFetchError(
             `This page does not exist (HTTP 404). The server at ${hostname || "this domain"} is reachable, ` +
-            "but this specific URL returned 'not found'. Check for typos in the path, or try the site's homepage instead.",
+            "but this specific URL returned 'not found'." + redirectNote + " " +
+            "Check for typos in the path, or try the site's homepage instead.",
           );
         }
         if (resp.status === 401 || resp.status === 407) {
-          throw new Error(
+          throw new DefinitiveFetchError(
             `This page requires authentication (HTTP ${resp.status}). ` +
             "url-to-markdown can only access publicly available pages.",
           );
         }
         if (resp.status === 429) {
-          throw new Error(
+          throw new DefinitiveFetchError(
             "This site is rate-limiting requests (HTTP 429). " +
             "The target site has throttled access. Try again in a few minutes.",
           );
         }
-        throw new Error(
+        throw new DefinitiveFetchError(
           `URL returned HTTP ${resp.status}. The server is reachable but returned an error. ` +
           "Check the URL is correct and publicly accessible.",
         );
@@ -96,13 +109,13 @@ async function tryPlainFetch(url: string): Promise<string | null> {
 
     if (!contentType.includes("text/html") && !contentType.includes("xhtml")) {
       if (contentType.includes("application/pdf")) {
-        throw new Error("This URL points to a PDF file, not a web page. Use the 'pdf-extract' capability instead.");
+        throw new DefinitiveFetchError("This URL points to a PDF file, not a web page. Use the 'pdf-extract' capability instead.");
       }
       if (contentType.includes("image/")) {
-        throw new Error("This URL points to an image, not a web page.");
+        throw new DefinitiveFetchError("This URL points to an image, not a web page.");
       }
       if (contentType.includes("application/json")) {
-        throw new Error("This URL returns JSON data, not a web page. The content is already structured.");
+        throw new DefinitiveFetchError("This URL returns JSON data, not a web page. The content is already structured.");
       }
       return null;
     }
@@ -122,18 +135,9 @@ async function tryPlainFetch(url: string): Promise<string | null> {
 
     return null;
   } catch (err) {
-    if (err instanceof Error && !err.message.includes("abort") && !err.message.includes("timeout") && !err.message.includes("ECONNREFUSED")) {
-      if (
-        err.message.includes("URL returned HTTP") ||
-        err.message.includes("PDF file") ||
-        err.message.includes("image") ||
-        err.message.includes("JSON data") ||
-        err.message.includes("SSRF") ||
-        err.message.includes("private") ||
-        err.message.includes("blocked")
-      ) {
-        throw err;
-      }
+    if (err instanceof DefinitiveFetchError) throw err;
+    if (err instanceof Error && (err.message.includes("SSRF") || err.message.includes("private"))) {
+      throw err;
     }
     return null;
   }
@@ -144,6 +148,23 @@ function mapBrowserlessError(msg: string, url?: string): Error {
   try { if (url) hostname = new URL(url).hostname; } catch { /* ignore */ }
   const domainNote = hostname ? ` (${hostname})` : "";
 
+  if (msg.includes("HTTP 404") || msg.includes("(404)")) {
+    return new Error(
+      `This page does not exist (HTTP 404)${domainNote}. The server is reachable, but this specific URL returned 'not found'. ` +
+      "This often happens when a site migrates and old URLs redirect to pages that have been removed. " +
+      "Check the path, or try the site's homepage.",
+    );
+  }
+  if (msg.includes("HTTP 401") || msg.includes("HTTP 407")) {
+    return new Error(
+      `This page requires authentication${domainNote}. url-to-markdown can only access publicly available pages.`,
+    );
+  }
+  if (msg.includes("HTTP 410")) {
+    return new Error(
+      `This page has been permanently removed (HTTP 410)${domainNote}. The URL is gone and will not return.`,
+    );
+  }
   if (msg.includes("408") || msg.includes("timed out") || msg.includes("timeout")) {
     return new Error(
       `This page${domainNote} took too long to render (>30s). ` +

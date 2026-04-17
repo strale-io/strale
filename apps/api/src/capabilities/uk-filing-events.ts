@@ -81,8 +81,17 @@ registerCapability("uk-filing-events", async (input: CapabilityInput) => {
   if (filingsResp.status === 404) {
     throw new Error(`UK company ${resolvedNumber} not found in Companies House.`);
   }
+  if (filingsResp.status === 401 || filingsResp.status === 403) {
+    throw new Error(`Companies House API denied the request (HTTP ${filingsResp.status}). The COMPANIES_HOUSE_API_KEY may be invalid or rate-limited.`);
+  }
+  if (filingsResp.status === 429) {
+    throw new Error(`Companies House API is rate-limiting requests (HTTP 429). Please try again in a few minutes.`);
+  }
+  if (filingsResp.status >= 500) {
+    throw new Error(`Companies House API returned a server error (HTTP ${filingsResp.status}). This is usually transient — please try again in a few minutes.`);
+  }
   if (!filingsResp.ok) {
-    throw new Error(`Companies House API returned HTTP ${filingsResp.status}. Please try again later.`);
+    throw new Error(`Companies House API returned an unexpected response (HTTP ${filingsResp.status}).`);
   }
 
   const filingsData = await filingsResp.json() as any;
