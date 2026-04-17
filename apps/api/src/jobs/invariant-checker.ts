@@ -153,6 +153,14 @@ export async function runInvariantChecks(): Promise<void> {
     console.error("[invariant-checker] CHECK 11 (fixture quality) failed:", err);
   }
 
+  try {
+    const r12 = await checkComplianceProfileCompleteness();
+    alerts += r12.alerts;
+    checked += r12.checked;
+  } catch (err) {
+    console.error("[invariant-checker] CHECK 12 (compliance profile completeness) failed:", err);
+  }
+
   // Log provider outage summary if any capabilities were skipped
   if (unhealthyCapabilities.size > 0) {
     try {
@@ -1128,3 +1136,49 @@ async function checkFixtureQuality(): Promise<{ alerts: number; checked: number 
 
   return { alerts: 1, checked: rows.length };
 }
+
+// ─── CHECK 12: Compliance profile completeness (Tier 2 — ALERT ONLY) ────────
+// Guards the public capability/solution detail pages: the compliance profile
+// endpoint serves fields derived from capabilities.data_source, .transparencyTag,
+// .geography. If any active capability has nulls in these, the public profile
+// will render 'unknown' / missing fields — a trust-narrative hole. This check
+// fires an alert so they can be filled in.
+
+async function checkComplianceProfileCompleteness(): Promise<{ alerts: number; checked: number }> {
+  const db = getDb();
+  const caps = await db
+    .select({
+      slug: capabilities.slug,
+      dataSource: capabilities.dataSource,
+      transparencyTag: capabilities.transparencyTag,
+      geography: capabilities.geography,
+      capabilityType: capabilities.capabilityType,
+    })
+    .from(capabilities)
+    .where(eq(capabilities.isActive, true));
+
+  const incomplete: { slug: string; missing: string[] }[] = [];
+  for (const c of caps) {
+    const missing: string[] = [];
+    if (!c.dataSource) missing.push('data_source');
+    if (!c.geography) missing.push('geography');
+    if (!c.capabilityType) missing.push('capability_type');
+    // transparency_tag null is valid (means 'algorithmic'), so don't flag
+    if (missing.length > 0) incomplete.push({ slug: c.slug, missing });
+  }
+
+  if (incomplete.length === 0) return { alerts: 0, checked: caps.length };
+
+  const slugList = incomplete.map((x) => x.slug).join(', ');
+  console.warn(
+    `[invariant-checker] CHECK 12: ${incomplete.length} capability(s) have incomplete compliance profiles: ${slugList}`,
+  );
+  await logHealthEvent({
+    eventType: 'invariant_alert',
+    tier: 2,
+    actionTaken: `${incomplete.length} capability(s) have null profile fields (rendered on public detail pages): ${slugList}`,
+    details: { check: 'compliance_profile_completeness', incomplete },
+  });
+  return { alerts: 1, checked: caps.length };
+}
+

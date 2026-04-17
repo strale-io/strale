@@ -209,6 +209,23 @@ async function validateCapability(slug: string, apply = false): Promise<{
       : `transparencyTag '${cap.transparencyTag}' not in: algorithmic, ai_generated, mixed, null`,
   });
 
+  // 12b. Geography is set — required for compliance profile jurisdiction derivation.
+  // Paired with invariant-checker CHECK 12 (compliance_profile_completeness).
+  const geoOk = !!cap.geography && cap.geography.trim().length > 0;
+  checks.push({
+    name: "Geography is set",
+    passed: geoOk,
+    detail: geoOk ? undefined : "geography is null — compliance profile can't derive jurisdiction",
+  });
+
+  // 12c. Capability type is set — required for compliance profile data-source type.
+  const typeOk = !!cap.capabilityType && cap.capabilityType.trim().length > 0;
+  checks.push({
+    name: "Capability type is set",
+    passed: typeOk,
+    detail: typeOk ? undefined : "capabilityType is null — compliance profile can't classify source",
+  });
+
   // 13. At least 1 limitation
   const lims = await db
     .select({ id: capabilityLimitations.id })
