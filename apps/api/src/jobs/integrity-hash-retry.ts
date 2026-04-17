@@ -22,8 +22,12 @@
  * workflow on prod that tags 'customer' / 'test' for analytics.
  * See PHASE_C_COLUMN_INVESTIGATION.md.
  *
- * Uses pg_try_advisory_lock to cooperate with multi-instance deploys
- * (even though today is 1 replica per Phase A Q2).
+ * Uses pg_try_advisory_xact_lock inside a db.transaction to cooperate
+ * with multi-instance deploys (even though today is 1 replica per
+ * Phase A Q2). Xact-scoped locks auto-release at transaction end and
+ * are guaranteed to sit on the same connection as the work — avoiding
+ * the stuck-lock pool-reuse bug that crippled this worker on the first
+ * Phase C deploy.
  */
 
 import { sql, eq, and, lt } from "drizzle-orm";
@@ -45,107 +49,113 @@ let _running = false;
 async function runOnce(): Promise<void> {
   const db = getDb();
 
-  const [lock] = await db.execute(
-    sql`SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID}) AS acquired`,
-  );
-  if (!(lock as { acquired?: boolean })?.acquired) {
-    // Another instance has it. Not an error.
-    return;
-  }
-
+  // Advisory-lock + all work runs inside a single transaction so the
+  // xact-scoped lock sits on the same connection as every subsequent
+  // statement. Lock auto-releases at commit/rollback — no explicit
+  // pg_advisory_unlock needed (which is what broke the session-scoped
+  // pattern on a pooled connection).
   try {
-    const pendingCutoff = new Date(Date.now() - GRACE_MS);
-    const pending = await db
-      .select()
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.complianceHashState, "pending"),
-          lt(transactions.createdAt, pendingCutoff),
-        ),
-      )
-      .limit(BATCH_SIZE);
-
-    if (pending.length === 0) return;
-
-    let staleCount = 0;
-    let completed = 0;
-    let failed = 0;
-    const staleCutoff = Date.now() - STALE_WARN_MS;
-
-    for (const txn of pending) {
-      if (txn.createdAt.getTime() < staleCutoff) {
-        staleCount++;
+    await db.transaction(async (tx) => {
+      const [lock] = await tx.execute(
+        sql`SELECT pg_try_advisory_xact_lock(${ADVISORY_LOCK_ID}) AS acquired`,
+      );
+      if (!(lock as { acquired?: boolean })?.acquired) {
+        logWarn(
+          "integrity-hash-retry-lock-busy",
+          "another holder; skipping tick",
+        );
+        return;
       }
 
-      try {
-        const previousHash = await getPreviousHash();
-        const hash = computeIntegrityHash(
-          {
-            id: txn.id,
-            userId: txn.userId,
-            status: txn.status,
-            input: txn.input,
-            output: txn.output,
-            error: txn.error,
-            priceCents: txn.priceCents,
-            latencyMs: txn.latencyMs,
-            provenance: txn.provenance,
-            auditTrail: txn.auditTrail,
-            transparencyMarker: txn.transparencyMarker,
-            dataJurisdiction: txn.dataJurisdiction,
-            createdAt: txn.createdAt,
-            completedAt: txn.completedAt,
-          },
-          previousHash,
-        );
+      const pendingCutoff = new Date(Date.now() - GRACE_MS);
+      const pending = await tx
+        .select()
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.complianceHashState, "pending"),
+            lt(transactions.createdAt, pendingCutoff),
+          ),
+        )
+        .limit(BATCH_SIZE);
 
-        await db
-          .update(transactions)
-          .set({
-            integrityHash: hash,
+      if (pending.length === 0) return;
+
+      let staleCount = 0;
+      let completed = 0;
+      let failed = 0;
+      const staleCutoff = Date.now() - STALE_WARN_MS;
+
+      for (const txn of pending) {
+        if (txn.createdAt.getTime() < staleCutoff) {
+          staleCount++;
+        }
+
+        try {
+          const previousHash = await getPreviousHash();
+          const hash = computeIntegrityHash(
+            {
+              id: txn.id,
+              userId: txn.userId,
+              status: txn.status,
+              input: txn.input,
+              output: txn.output,
+              error: txn.error,
+              priceCents: txn.priceCents,
+              latencyMs: txn.latencyMs,
+              provenance: txn.provenance,
+              auditTrail: txn.auditTrail,
+              transparencyMarker: txn.transparencyMarker,
+              dataJurisdiction: txn.dataJurisdiction,
+              createdAt: txn.createdAt,
+              completedAt: txn.completedAt,
+            },
             previousHash,
-            complianceHashState: "complete",
-          })
-          .where(eq(transactions.id, txn.id));
-        completed++;
-      } catch (err) {
-        // One row failing shouldn't take down the whole batch. Log and move on.
-        logError("integrity-hash-retry-row-failed", err, { transactionId: txn.id });
-        failed++;
+          );
 
-        // If this row has been pending for well past STALE_WARN_MS, flip to
-        // 'failed' so it stops clogging the queue and operators get a ping.
-        if (Date.now() - txn.createdAt.getTime() > STALE_WARN_MS * MAX_HASH_ATTEMPTS) {
-          await db
+          await tx
             .update(transactions)
-            .set({ complianceHashState: "failed" })
-            .where(eq(transactions.id, txn.id))
-            .catch((err2) =>
-              logError("integrity-hash-mark-failed-failed", err2, { transactionId: txn.id }),
-            );
+            .set({
+              integrityHash: hash,
+              previousHash,
+              complianceHashState: "complete",
+            })
+            .where(eq(transactions.id, txn.id));
+          completed++;
+        } catch (err) {
+          // One row failing shouldn't take down the whole batch. Log and move on.
+          logError("integrity-hash-retry-row-failed", err, { transactionId: txn.id });
+          failed++;
+
+          // If this row has been pending for well past STALE_WARN_MS, flip to
+          // 'failed' so it stops clogging the queue and operators get a ping.
+          if (Date.now() - txn.createdAt.getTime() > STALE_WARN_MS * MAX_HASH_ATTEMPTS) {
+            await tx
+              .update(transactions)
+              .set({ complianceHashState: "failed" })
+              .where(eq(transactions.id, txn.id))
+              .catch((err2) =>
+                logError("integrity-hash-mark-failed-failed", err2, { transactionId: txn.id }),
+              );
+          }
         }
       }
-    }
 
-    if (staleCount > 0) {
-      logWarn(
-        "integrity-hash-stale-rows",
-        `${staleCount} transactions pending > 5 min; compliance chain falling behind`,
-        { staleCount, batchSize: pending.length },
+      if (staleCount > 0) {
+        logWarn(
+          "integrity-hash-stale-rows",
+          `${staleCount} transactions pending > 5 min; compliance chain falling behind`,
+          { staleCount, batchSize: pending.length },
+        );
+      }
+
+      log.info(
+        { completed, failed, stale: staleCount, batch_size: pending.length },
+        "integrity-hash-batch-done",
       );
-    }
-
-    log.info(
-      { completed, failed, stale: staleCount, batch_size: pending.length },
-      "integrity-hash-batch-done",
-    );
+    });
   } catch (err) {
     logError("integrity-hash-retry-batch-failed", err);
-  } finally {
-    await db
-      .execute(sql`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`)
-      .catch((err) => logError("advisory-unlock-failed", err, { job: "integrity-hash-retry" }));
   }
 }
 

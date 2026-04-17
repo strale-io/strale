@@ -2,7 +2,9 @@
  * DB Retention — daily job that prunes old rows from high-volume internal tables.
  *
  * Schedule: every 24 hours, with a 5-minute delay after startup.
- * Uses pg_try_advisory_lock to prevent duplicate runs across instances.
+ * Uses pg_try_advisory_xact_lock inside a db.transaction to prevent duplicate
+ * runs across instances (xact-scoped so the lock sits on the same connection
+ * as the work and auto-releases on commit/rollback).
  *
  * Retention windows:
  *   test_results              > 30 days   (SQS uses rolling 10-run window; 30d is ample history)
@@ -17,7 +19,7 @@
 
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { logError } from "../lib/log.js";
+import { logWarn } from "../lib/log.js";
 
 const RETENTION_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const STARTUP_DELAY_MS = 5 * 60 * 1000;
@@ -38,20 +40,26 @@ let _running = false;
 async function runRetention(): Promise<void> {
   const db = getDb();
 
-  const [lock] = await db.execute(sql`SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID}) AS acquired`);
-  if (!(lock as { acquired?: boolean })?.acquired) {
-    console.log("[db-retention] Another instance holds the lock — skipping");
-    return;
-  }
+  // Advisory lock + all work runs inside a single transaction so the
+  // xact-scoped lock sits on the same connection as every statement.
+  // Auto-releases at commit/rollback. Session-scoped variant broke on
+  // pool reuse (see Phase C deploy notes).
+  await db.transaction(async (tx) => {
+    const [lock] = await tx.execute(
+      sql`SELECT pg_try_advisory_xact_lock(${ADVISORY_LOCK_ID}) AS acquired`,
+    );
+    if (!(lock as { acquired?: boolean })?.acquired) {
+      logWarn("db-retention-lock-busy", "another holder; skipping tick");
+      return;
+    }
 
-  try {
     const started = Date.now();
     const results: Array<{ table: string; deleted: number }> = [];
 
     for (const rule of RULES) {
       const cutoff = new Date(Date.now() - rule.days * 86_400_000);
       try {
-        const res = await db.execute(
+        const res = await tx.execute(
           sql`DELETE FROM ${sql.raw(rule.table)} WHERE ${sql.raw(rule.column)} < ${cutoff}`,
         );
         const deleted = (res as { count?: number }).count ?? 0;
@@ -66,11 +74,7 @@ async function runRetention(): Promise<void> {
     console.log(
       `[db-retention] Pruned ${total} rows in ${elapsed}s: ${results.map((r) => `${r.table}=${r.deleted}`).join(", ")}`,
     );
-  } finally {
-    await db
-      .execute(sql`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`)
-      .catch((err) => logError("advisory-unlock-failed", err, { job: "db-retention" }));
-  }
+  });
 }
 
 export function startDbRetention(): void {

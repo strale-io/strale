@@ -16,6 +16,7 @@
  */
 
 import { sql, eq, and, inArray, asc, desc } from "drizzle-orm";
+import postgres from "postgres";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps, testSuites, testResults } from "../db/schema.js";
 import { runTests, persistDualProfileScores } from "../lib/test-runner.js";
@@ -23,7 +24,7 @@ import { logHealthEvent } from "../lib/health-monitor.js";
 import { isCacheExpired, refreshUpstreamMapping } from "../lib/upstream-health-gate.js";
 import { probeChromiumHealth } from "../lib/chromium-health.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
-import { logError } from "../lib/log.js";
+import { logError, logWarn } from "../lib/log.js";
 
 // ─── Solution quality gate (auto-activate when all steps are scored) ────────
 
@@ -98,27 +99,65 @@ function shouldRun(taskName: string, intervalMs: number): boolean {
   return false;
 }
 
-// ─── Advisory lock helpers ──────────────────────────────────────────────────
+// ─── Advisory lock helper ───────────────────────────────────────────────────
+//
+// Why a dedicated connection instead of the sibling jobs' xact-scoped pattern:
+// a poll cycle iterates up to BATCH_SIZE (20) capabilities with ~2s delay
+// between each and each capability makes live HTTP calls (Browserless, paid
+// APIs, registries) — a single cycle runs 5–10 minutes. Wrapping the whole
+// thing in `db.transaction(async (tx) => {...})` would (a) hold one pooled
+// connection for the entire cycle, starving the live API, and (b) rollback
+// every test_result write on any single failure, poisoning the SQS window.
+//
+// Instead we carve out a single dedicated `postgres` client (max: 1) whose
+// sole job is to hold the session-scoped lock. All test work runs through
+// the regular pool and commits independently. The lock lives on a connection
+// we own — `pg_advisory_unlock` is guaranteed to hit the same session, so
+// the pool-reuse bug that bit the Phase C deploy (session-scoped lock on a
+// shared pool connection) cannot happen here.
 
 const LOCK_ID = 314159; // arbitrary unique lock ID for test scheduler
 
-async function tryAcquireLock(): Promise<boolean> {
-  try {
-    const db = getDb();
-    const result = await db.execute(sql`SELECT pg_try_advisory_lock(${LOCK_ID}) AS acquired`);
-    const rows = Array.isArray(result) ? result : (result as any)?.rows ?? [];
-    return rows[0]?.acquired === true;
-  } catch {
-    return true; // If lock query fails, proceed anyway (single-instance fallback)
+async function withAdvisoryLock<T>(
+  id: number,
+  fn: () => Promise<T>,
+): Promise<{ acquired: true; value: T } | { acquired: false }> {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    // No DB configured (local dev without env) — fall through without locking.
+    return { acquired: true, value: await fn() };
   }
-}
 
-async function releaseLock(): Promise<void> {
+  const client = postgres(dbUrl, { max: 1 });
   try {
-    const db = getDb();
-    await db.execute(sql`SELECT pg_advisory_unlock(${LOCK_ID})`);
-  } catch {
-    // Best-effort release
+    let acquired = false;
+    try {
+      const rows = await client<{ acquired: boolean }[]>`
+        SELECT pg_try_advisory_lock(${id}) AS acquired
+      `;
+      acquired = rows[0]?.acquired === true;
+    } catch (err) {
+      // If the lock query itself fails, log and proceed unlocked (single-
+      // instance fallback). Better to run unlocked than to silently skip.
+      logWarn("test-scheduler-lock-query-failed", "proceeding without lock", {
+        err: err instanceof Error ? err.message : String(err),
+      });
+      return { acquired: true, value: await fn() };
+    }
+
+    if (!acquired) {
+      return { acquired: false };
+    }
+
+    try {
+      return { acquired: true, value: await fn() };
+    } finally {
+      // Best-effort release on the same dedicated connection that took the
+      // lock — pool reuse cannot steal this unlock.
+      await client`SELECT pg_advisory_unlock(${id})`.catch(() => {});
+    }
+  } finally {
+    await client.end({ timeout: 5 }).catch(() => {});
   }
 }
 
@@ -267,151 +306,149 @@ async function pollCycle(): Promise<void> {
   }
 
   _isRunning = true;
-  let lockAcquired = false;
 
   try {
-    // Advisory lock — prevents duplicate runs if Railway scales to 2 instances
-    lockAcquired = await tryAcquireLock();
-    if (!lockAcquired) {
-      console.log("[test-scheduler] Another instance holds the lock, skipping");
-      return;
-    }
+    // Advisory lock on a dedicated connection. Prevents duplicate runs when
+    // Railway scales to 2+ instances; the helper's own connection guarantees
+    // the lock and the unlock hit the same session (no pool-reuse gap).
+    const outcome = await withAdvisoryLock(LOCK_ID, async () => {
+      // Refresh upstream health mapping if stale
+      if (isCacheExpired()) {
+        await refreshUpstreamMapping().catch((err) =>
+          logError("upstream-mapping-refresh-failed", err, { job: "test-scheduler" }),
+        );
+      }
 
-    // Refresh upstream health mapping if stale
-    if (isCacheExpired()) {
-      await refreshUpstreamMapping().catch((err) =>
-        logError("upstream-mapping-refresh-failed", err, { job: "test-scheduler" }),
-      );
-    }
+      // Run auxiliary tasks (health checks, probes, etc.)
+      await runAuxiliaryTasks();
 
-    // Run auxiliary tasks (health checks, probes, etc.)
-    await runAuxiliaryTasks();
+      // Find overdue capabilities
+      const overdue = await findOverdueCapabilities();
 
-    // Find overdue capabilities
-    const overdue = await findOverdueCapabilities();
+      if (overdue.length === 0) {
+        console.log("[test-scheduler] Poll: all capabilities fresh, nothing to test");
+        return;
+      }
 
-    if (overdue.length === 0) {
-      console.log("[test-scheduler] Poll: all capabilities fresh, nothing to test");
-      return;
-    }
-
-    // Check provider health — skip capabilities whose provider is unhealthy
-    // to prevent SQS score pollution during outages
-    let runnableCaps = overdue;
-    try {
-      const { runDependencyHealthChecks } = await import("../lib/dependency-health.js");
-      const { getActiveProviders } = await import("../lib/dependency-manifest.js");
-      const providerHealth = await runDependencyHealthChecks();
-      const unhealthySlugs = new Set<string>();
-      for (const provider of getActiveProviders()) {
-        const health = providerHealth[provider.name];
-        if (health && !health.healthy) {
-          for (const cap of provider.capabilities) {
-            unhealthySlugs.add(cap);
+      // Check provider health — skip capabilities whose provider is unhealthy
+      // to prevent SQS score pollution during outages
+      let runnableCaps = overdue;
+      try {
+        const { runDependencyHealthChecks } = await import("../lib/dependency-health.js");
+        const { getActiveProviders } = await import("../lib/dependency-manifest.js");
+        const providerHealth = await runDependencyHealthChecks();
+        const unhealthySlugs = new Set<string>();
+        for (const provider of getActiveProviders()) {
+          const health = providerHealth[provider.name];
+          if (health && !health.healthy) {
+            for (const cap of provider.capabilities) {
+              unhealthySlugs.add(cap);
+            }
           }
         }
-      }
-      if (unhealthySlugs.size > 0) {
-        const before = runnableCaps.length;
-        runnableCaps = overdue.filter((cap) => !unhealthySlugs.has(cap.slug));
-        const skipped = before - runnableCaps.length;
-        if (skipped > 0) {
-          console.log(
-            `[test-scheduler] Skipping ${skipped} capabilities with unhealthy providers`,
-          );
-        }
-      }
-    } catch {
-      // If health check fails, run all tests (graceful degradation)
-    }
-
-    if (runnableCaps.length === 0) {
-      console.log("[test-scheduler] Poll: all overdue capabilities have unhealthy providers, skipping");
-      return;
-    }
-
-    // Summarize by tier
-    const tierCounts: Record<string, number> = {};
-    for (const cap of runnableCaps) {
-      tierCounts[cap.scheduleTier] = (tierCounts[cap.scheduleTier] ?? 0) + 1;
-    }
-    const tierSummary = Object.entries(tierCounts)
-      .map(([tier, count]) => `${count} tier-${tier}`)
-      .join(", ");
-    console.log(`[test-scheduler] Poll: ${runnableCaps.length} overdue capabilities (${tierSummary})`);
-
-    let totalPassed = 0;
-    let totalFailed = 0;
-
-    for (const cap of runnableCaps) {
-      const agoMs = cap.lastTestedAt ? Date.now() - cap.lastTestedAt.getTime() : null;
-      const agoLabel = agoMs != null ? `${Math.round(agoMs / 3600_000)}h ago` : "never tested";
-
-      try {
-        console.log(`[test-scheduler] Testing ${cap.slug} (tier ${cap.scheduleTier}, last tested ${agoLabel})...`);
-
-        const summary = await runTests({ capabilitySlug: cap.slug });
-        totalPassed += summary.passed;
-        totalFailed += summary.failed;
-
-        // runTests() already calls persistDualProfileScores() internally (line 294),
-        // so DB columns are updated immediately after each capability's tests.
-
-        console.log(
-          `[test-scheduler] ${cap.slug}: ${summary.passed}/${summary.total} passed`,
-        );
-
-        // Auto-activate gated solutions when all steps become qualified
-        try {
-          await checkSolutionGates(cap.slug);
-        } catch (gateErr) {
-          // Non-critical — don't block the scheduler
-        }
-
-        // Log individual failures for Railway log monitoring
-        for (const r of summary.results) {
-          if (!r.passed) {
-            const tag = r.remediation
-              ? `[${r.remediation.outcome}]`
-              : "[escalate]";
-            console.warn(
-              `[test-scheduler] FAIL ${tag} [${r.capabilitySlug}] ${r.testName} — ${r.failureReason}`,
+        if (unhealthySlugs.size > 0) {
+          const before = runnableCaps.length;
+          runnableCaps = overdue.filter((cap) => !unhealthySlugs.has(cap.slug));
+          const skipped = before - runnableCaps.length;
+          if (skipped > 0) {
+            console.log(
+              `[test-scheduler] Skipping ${skipped} capabilities with unhealthy providers`,
             );
           }
         }
-      } catch (err) {
-        console.error(`[test-scheduler] ${cap.slug} threw:`, err instanceof Error ? err.message : err);
+      } catch {
+        // If health check fails, run all tests (graceful degradation)
       }
 
-      await delay(DELAY_BETWEEN_CAPABILITIES_MS);
+      if (runnableCaps.length === 0) {
+        console.log("[test-scheduler] Poll: all overdue capabilities have unhealthy providers, skipping");
+        return;
+      }
+
+      // Summarize by tier
+      const tierCounts: Record<string, number> = {};
+      for (const cap of runnableCaps) {
+        tierCounts[cap.scheduleTier] = (tierCounts[cap.scheduleTier] ?? 0) + 1;
+      }
+      const tierSummary = Object.entries(tierCounts)
+        .map(([tier, count]) => `${count} tier-${tier}`)
+        .join(", ");
+      console.log(`[test-scheduler] Poll: ${runnableCaps.length} overdue capabilities (${tierSummary})`);
+
+      let totalPassed = 0;
+      let totalFailed = 0;
+
+      for (const cap of runnableCaps) {
+        const agoMs = cap.lastTestedAt ? Date.now() - cap.lastTestedAt.getTime() : null;
+        const agoLabel = agoMs != null ? `${Math.round(agoMs / 3600_000)}h ago` : "never tested";
+
+        try {
+          console.log(`[test-scheduler] Testing ${cap.slug} (tier ${cap.scheduleTier}, last tested ${agoLabel})...`);
+
+          const summary = await runTests({ capabilitySlug: cap.slug });
+          totalPassed += summary.passed;
+          totalFailed += summary.failed;
+
+          // runTests() already calls persistDualProfileScores() internally (line 294),
+          // so DB columns are updated immediately after each capability's tests.
+
+          console.log(
+            `[test-scheduler] ${cap.slug}: ${summary.passed}/${summary.total} passed`,
+          );
+
+          // Auto-activate gated solutions when all steps become qualified
+          try {
+            await checkSolutionGates(cap.slug);
+          } catch (gateErr) {
+            // Non-critical — don't block the scheduler
+          }
+
+          // Log individual failures for Railway log monitoring
+          for (const r of summary.results) {
+            if (!r.passed) {
+              const tag = r.remediation
+                ? `[${r.remediation.outcome}]`
+                : "[escalate]";
+              console.warn(
+                `[test-scheduler] FAIL ${tag} [${r.capabilitySlug}] ${r.testName} — ${r.failureReason}`,
+              );
+            }
+          }
+        } catch (err) {
+          console.error(`[test-scheduler] ${cap.slug} threw:`, err instanceof Error ? err.message : err);
+        }
+
+        await delay(DELAY_BETWEEN_CAPABILITIES_MS);
+      }
+
+      console.log(
+        `[test-scheduler] Poll complete: ${runnableCaps.length} capabilities tested, ${totalPassed} passed, ${totalFailed} failed`,
+      );
+
+      // Write scheduler heartbeat for watchdog monitoring
+      fireAndForget(
+        () =>
+          logHealthEvent({
+            eventType: "scheduler_heartbeat",
+            tier: 1,
+            actionTaken: `DB-driven poll: ${runnableCaps.length} capabilities tested`,
+            details: {
+              tested: runnableCaps.length,
+              passed: totalPassed,
+              failed: totalFailed,
+              tierCounts,
+            },
+          }),
+        { label: "health-event-log", context: { event: "scheduler_heartbeat" } },
+      );
+    });
+
+    if (!outcome.acquired) {
+      logWarn("test-scheduler-lock-busy", "another holder; skipping tick");
     }
-
-    console.log(
-      `[test-scheduler] Poll complete: ${runnableCaps.length} capabilities tested, ${totalPassed} passed, ${totalFailed} failed`,
-    );
-
-    // Write scheduler heartbeat for watchdog monitoring
-    fireAndForget(
-      () =>
-        logHealthEvent({
-          eventType: "scheduler_heartbeat",
-          tier: 1,
-          actionTaken: `DB-driven poll: ${runnableCaps.length} capabilities tested`,
-          details: {
-            tested: runnableCaps.length,
-            passed: totalPassed,
-            failed: totalFailed,
-            tierCounts,
-          },
-        }),
-      { label: "health-event-log", context: { event: "scheduler_heartbeat" } },
-    );
   } catch (err) {
     console.error("[test-scheduler] Poll cycle error:", err);
   } finally {
-    if (lockAcquired) {
-      await releaseLock();
-    }
     _isRunning = false;
   }
 }
