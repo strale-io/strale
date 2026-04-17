@@ -131,8 +131,22 @@ export interface X402VerificationResult {
   error?: string;
 }
 
+export interface X402PaymentRequirement {
+  resource?: string;
+  description?: string;
+  outputSchema?: Record<string, unknown>;
+}
+
 /**
- * Verify an x402 payment header using the facilitator.
+ * Verify AND settle an x402 payment header using the facilitator.
+ *
+ * This is the legacy one-shot flow — the on-chain transaction is broadcast
+ * before the capability runs, so a validation/execution failure still charges
+ * the caller. Kept for the /v1/do x402 path which hasn't yet been refactored.
+ *
+ * For new code (e.g. /x402/:slug), prefer `verifyX402PaymentOnly` +
+ * `settleX402Payment` so the USDC is only moved after the capability produces
+ * output (DEC-14: don't charge before execution succeeds).
  *
  * @param paymentHeader - Base64-encoded X-PAYMENT header from the request
  * @param priceCentsEur - EUR price of the capability (for fallback conversion)
@@ -142,24 +156,68 @@ export interface X402VerificationResult {
  *   verification amount exactly matches what was in the 402 response's
  *   maxAmountRequired field.
  */
-export interface X402PaymentRequirement {
-  resource?: string;
-  description?: string;
-  outputSchema?: Record<string, unknown>;
-}
-
 export async function verifyX402Payment(
   paymentHeader: string,
   priceCentsEur: number,
   priceUsdOverride?: number,
   requirementOverrides?: X402PaymentRequirement,
 ): Promise<X402VerificationResult> {
+  const verifyOnly = await verifyX402PaymentOnly(
+    paymentHeader, priceCentsEur, priceUsdOverride, requirementOverrides,
+  );
+  if (!verifyOnly.valid || !verifyOnly.verified) {
+    return { valid: false, error: verifyOnly.error };
+  }
+  const settle = await settleX402Payment(verifyOnly.verified);
+  return { valid: settle.valid, settlementId: settle.settlementId, error: settle.error };
+}
+
+/**
+ * Opaque handle returned by a successful verify. Pass it to
+ * `settleX402Payment` once execution has succeeded to move the USDC on-chain.
+ * Not serializable across process boundaries — discard if unused (the
+ * on-chain authorization expires via `maxTimeoutSeconds`).
+ */
+export interface X402VerifiedPayment {
+  payload: unknown;
+  requirements: unknown;
+}
+
+export interface X402VerifyOnlyResult {
+  valid: boolean;
+  /** Only present when `valid === true`. Hand to `settleX402Payment` to finalize. */
+  verified?: X402VerifiedPayment;
+  error?: string;
+}
+
+export interface X402SettlementResult {
+  valid: boolean;
+  settlementId?: string;
+  error?: string;
+}
+
+/**
+ * Verify an x402 payment header without broadcasting the transaction.
+ *
+ * Non-destructive — checks the signed authorization is valid and covers the
+ * quoted price, but does NOT settle on-chain. Hand the returned `verified`
+ * handle to `settleX402Payment` after execution succeeds.
+ *
+ * Rationale: matches DEC-14 ("don't charge before execution succeeds"). Input
+ * validation errors and capability failures no longer charge the caller —
+ * their signed authorization simply expires unused.
+ */
+export async function verifyX402PaymentOnly(
+  paymentHeader: string,
+  priceCentsEur: number,
+  priceUsdOverride?: number,
+  requirementOverrides?: X402PaymentRequirement,
+): Promise<X402VerifyOnlyResult> {
   if (!isX402Configured()) {
     return { valid: false, error: "x402 not configured (no wallet address)" };
   }
 
   try {
-    // Decode the base64-encoded X-PAYMENT header into a PaymentPayload
     const decoded = Buffer.from(paymentHeader, "base64").toString("utf-8");
     const parsed = parsePaymentPayload(JSON.parse(decoded));
     if (!parsed.success) {
@@ -167,17 +225,10 @@ export async function verifyX402Payment(
     }
     const payload = parsed.data;
 
-    // Use USD override if provided (matches what the 402 response quoted to the client).
-    // Otherwise fall back to EUR→USD conversion. The two must match exactly or the
-    // facilitator returns "authorization value mismatch".
     const priceAtomic =
       priceUsdOverride !== undefined
         ? Math.ceil(priceUsdOverride * 1_000_000).toString()
         : eurCentsToUsdcAtomic(priceCentsEur);
-    // Requirements passed to the facilitator must carry the discovery outputSchema
-    // (v1 path) so the Bazaar indexer catalogs the resource at settle time.
-    // `resource` and `description` must match what the 402 response quoted so the
-    // indexed URL is canonical.
     const requirements: Record<string, unknown> = {
       scheme: "exact",
       network: NETWORK,
@@ -195,27 +246,46 @@ export async function verifyX402Payment(
     }
 
     const facilitator = getFacilitator();
-
-    // Verify first (non-destructive check), then settle (broadcasts the tx)
     const verifyResult = await facilitator.verify(payload as any, requirements as any);
     if (!verifyResult.isValid) {
       return { valid: false, error: verifyResult.invalidReason ?? "Payment invalid" };
     }
 
-    const settleResult = await facilitator.settle(payload as any, requirements as any);
-    if (!settleResult.success) {
-      return { valid: false, error: settleResult.errorReason ?? "Settlement failed" };
-    }
-
-    return {
-      valid: true,
-      settlementId: settleResult.transaction ?? "settled",
-    };
+    return { valid: true, verified: { payload, requirements } };
   } catch (err) {
     console.error("[x402] Payment verification failed:", err instanceof Error ? err.message : err);
     return {
       valid: false,
       error: err instanceof Error ? err.message : "Payment verification failed",
+    };
+  }
+}
+
+/**
+ * Broadcast the settlement for a previously verified payment.
+ *
+ * Call only after the capability has successfully produced output. Errors here
+ * are rare (verify already passed) but the facilitator can still reject if the
+ * authorization has meanwhile been used or expired.
+ */
+export async function settleX402Payment(
+  verified: X402VerifiedPayment,
+): Promise<X402SettlementResult> {
+  try {
+    const facilitator = getFacilitator();
+    const settleResult = await facilitator.settle(
+      verified.payload as any,
+      verified.requirements as any,
+    );
+    if (!settleResult.success) {
+      return { valid: false, error: settleResult.errorReason ?? "Settlement failed" };
+    }
+    return { valid: true, settlementId: settleResult.transaction ?? "settled" };
+  } catch (err) {
+    console.error("[x402] Settlement failed:", err instanceof Error ? err.message : err);
+    return {
+      valid: false,
+      error: err instanceof Error ? err.message : "Settlement failed",
     };
   }
 }

@@ -17,11 +17,13 @@ import { capabilities, solutions, transactions } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import {
   isX402Configured,
-  verifyX402Payment,
+  verifyX402PaymentOnly,
+  settleX402Payment,
   extractPaymentHeader,
   eurCentsToUsdcAtomic,
   eurCentsToUsdString,
   encodePaymentResponseHeader,
+  type X402VerifiedPayment,
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
@@ -545,7 +547,11 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
 
   // Payment check FIRST — so Bazaar's empty-body discovery crawl gets a 402
   // (not a 400 from failed JSON parse). See capability handler for detail.
-  let solSettlementId: string | undefined;
+  //
+  // Verify only; defer settlement until the solution has produced at least one
+  // successful step (DEC-14). If the solution produces no output the caller is
+  // not charged.
+  let verified: X402VerifiedPayment | undefined;
   if (sol.x402PriceUsd > 0) {
     const paymentHeader = extractPaymentHeader(c.req.raw.headers);
 
@@ -566,14 +572,12 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
       return c.json({ error: "x402 payments not configured." }, 503);
     }
 
-    // Build the requirement again (cheap) so verify+settle carry the same
-    // resource URL + discovery outputSchema the client signed against.
     const solRebuild = build402(
       sol.name, sol.description, sol.x402PriceUsd,
       `${BASE_URL}/x402/solutions/${slug}`,
       null, sol.inputSchema, "POST", sol.outputSchema,
     );
-    const verification = await verifyX402Payment(
+    const verification = await verifyX402PaymentOnly(
       paymentHeader,
       sol.priceCents,
       sol.x402PriceUsd,
@@ -583,17 +587,13 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
         outputSchema: solRebuild.paymentRequirement.outputSchema as Record<string, unknown>,
       },
     );
-    if (!verification.valid) {
+    if (!verification.valid || !verification.verified) {
       return c.json({ error: "Payment verification failed", detail: verification.error }, 402);
     }
-    solSettlementId = verification.settlementId;
+    verified = verification.verified;
   }
 
-  if (solSettlementId) {
-    c.header("X-Payment-Response", encodePaymentResponseHeader(solSettlementId));
-  }
-
-  // Extract inputs (after payment clears)
+  // Extract inputs (after verify, before settle — bad input returns 4xx without charging)
   let inputs: Record<string, unknown>;
   try {
     inputs = await extractInputs(c, sol.inputSchema);
@@ -608,6 +608,43 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
     return c.json({ error: "Solution has no steps configured." }, 503);
   }
 
+  // Settle only if at least one step produced output. All-steps-failed returns
+  // a 4xx-shaped response and the caller keeps their USDC authorization.
+  // `result.steps` is a Record<slug, output | {error} | {skipped}>. A step
+  // counts as successful when its value is an object with neither `error` nor
+  // `skipped` set.
+  const anyStepSucceeded = Object.values(result.steps).some((v) => {
+    if (!v || typeof v !== "object") return false;
+    const obj = v as Record<string, unknown>;
+    return !("error" in obj) && !("skipped" in obj);
+  });
+  if (!anyStepSucceeded) {
+    return c.json(
+      {
+        error: "Solution failed — no steps produced output. No payment was taken.",
+        solution: sol.slug,
+        steps: result.steps,
+        errors: result.errors,
+      },
+      502,
+    );
+  }
+
+  let settlementId: string | undefined;
+  if (verified) {
+    const settled = await settleX402Payment(verified);
+    if (!settled.valid) {
+      return c.json(
+        { error: "Payment settlement failed", detail: settled.error },
+        402,
+      );
+    }
+    settlementId = settled.settlementId;
+    if (settlementId) {
+      c.header("X-Payment-Response", encodePaymentResponseHeader(settlementId));
+    }
+  }
+
   return c.json({
     solution: sol.slug,
     steps: result.steps,
@@ -616,7 +653,9 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
       solution: sol.slug,
       step_count: result.step_count,
       latency_ms: result.latency_ms,
-      payment: { method: "x402", price_usd: sol.x402PriceUsd },
+      payment: settlementId
+        ? { method: "x402", settlement_id: settlementId, price_usd: sol.x402PriceUsd }
+        : { method: "x402", price_usd: sol.x402PriceUsd },
     },
   });
 });
@@ -640,7 +679,7 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
 
   // Free capabilities ($0.00) skip payment
   const isFree = cap.x402PriceUsd === 0;
-  let settlementId: string | undefined;
+  let verified: X402VerifiedPayment | undefined;
 
   // Payment check FIRST — before any input validation. CDP's Bazaar crawler
   // sends an empty request to discover endpoints and requires HTTP 402 back.
@@ -648,6 +687,11 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
   // https://docs.cdp.coinbase.com/x402/quickstart-for-sellers — "If your
   // server returns any other status code (e.g. 400 Bad Request), the resource
   // will not be indexed."
+  //
+  // We VERIFY the signed authorization here but defer SETTLE until after the
+  // capability has successfully produced output (DEC-14). Input validation and
+  // capability failures no longer charge the caller; the signed authorization
+  // simply expires via maxTimeoutSeconds.
   if (!isFree) {
     const paymentHeader = extractPaymentHeader(c.req.raw.headers);
 
@@ -668,14 +712,15 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
       return c.json({ error: "x402 payments not configured." }, 503);
     }
 
-    // Rebuild the same requirement so verify+settle carry the discovery
+    // Rebuild the same requirement so verify carries the discovery
     // outputSchema (v1 Bazaar indexing path) and the canonical resource URL.
+    // The same handle is reused at settle time below.
     const capRebuild = build402(
       cap.name, cap.description, cap.x402PriceUsd,
       `${BASE_URL}/x402/${slug}`, cap.matrixSqs,
       cap.inputSchema, cap.x402Method, cap.outputSchema,
     );
-    const verification = await verifyX402Payment(
+    const verification = await verifyX402PaymentOnly(
       paymentHeader,
       cap.priceCents,
       cap.x402PriceUsd,
@@ -685,23 +730,16 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
         outputSchema: capRebuild.paymentRequirement.outputSchema as Record<string, unknown>,
       },
     );
-    if (!verification.valid) {
+    if (!verification.valid || !verification.verified) {
       return c.json(
         { error: "Payment verification failed", detail: verification.error },
         402,
       );
     }
-    settlementId = verification.settlementId;
+    verified = verification.verified;
   }
 
-  // From this point on, payment may already be settled. Surface the tx hash
-  // via X-PAYMENT-RESPONSE on every response — including 4xx — so clients can
-  // reconcile failed executions against on-chain settlements.
-  if (settlementId) {
-    c.header("X-Payment-Response", encodePaymentResponseHeader(settlementId));
-  }
-
-  // Method check (after payment — crawler hits with any method)
+  // Method check (after verify — crawler hits with any method)
   if (c.req.method === "GET" && !isSimpleSchema(cap.inputSchema)) {
     return c.json(
       { error: "This capability requires POST with JSON body.", input_schema: cap.inputSchema },
@@ -709,7 +747,7 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
     );
   }
 
-  // Extract inputs (after payment clears)
+  // Extract inputs (after verify, before settle — bad input returns 4xx without charging)
   let inputs: Record<string, unknown>;
   try {
     inputs = await extractInputs(c, cap.inputSchema);
@@ -737,43 +775,53 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
   }
 
   const startMs = Date.now();
+  let result: Awaited<ReturnType<typeof executor>>;
   try {
-    const result = await executor(inputs);
-    const latencyMs = Date.now() - startMs;
-
-    // Record transaction (fire-and-forget)
-    const txnId = recordX402Transaction(
-      cap.id, cap.slug, inputs, result.output, latencyMs,
-      cap.priceCents, cap.x402PriceUsd,
-      cap.transparencyTag, cap.dataJurisdiction,
-      settlementId,
-    );
-
-    return c.json({
-      ...result.output,
-      _meta: {
-        capability: cap.slug,
-        latency_ms: latencyMs,
-        provenance: result.provenance,
-        payment: settlementId
-          ? { method: "x402", settlement_id: settlementId, price_usd: cap.x402PriceUsd }
-          : { method: "free" },
-      },
-    });
+    result = await executor(inputs);
   } catch (err) {
-    const latencyMs = Date.now() - startMs;
+    // Execution failed — do NOT settle. The signed authorization expires unused.
     const message = err instanceof Error ? err.message : String(err);
-
-    // Record failed transaction for audit trail
-    recordX402Transaction(
-      cap.id, cap.slug, inputs, null, latencyMs,
-      cap.priceCents, cap.x402PriceUsd,
-      cap.transparencyTag, cap.dataJurisdiction,
-      settlementId, message,
-    );
-
     return c.json({ error: sanitizeFailureReason(message) }, 400);
   }
+
+  const latencyMs = Date.now() - startMs;
+
+  // Settle now that we have a real result. If settlement fails (rare — verify
+  // already passed) surface a clear error; the client can retry the paid call.
+  let settlementId: string | undefined;
+  if (verified) {
+    const settled = await settleX402Payment(verified);
+    if (!settled.valid) {
+      return c.json(
+        { error: "Payment settlement failed", detail: settled.error },
+        402,
+      );
+    }
+    settlementId = settled.settlementId;
+    if (settlementId) {
+      c.header("X-Payment-Response", encodePaymentResponseHeader(settlementId));
+    }
+  }
+
+  // Record transaction (fire-and-forget)
+  recordX402Transaction(
+    cap.id, cap.slug, inputs, result.output, latencyMs,
+    cap.priceCents, cap.x402PriceUsd,
+    cap.transparencyTag, cap.dataJurisdiction,
+    settlementId,
+  );
+
+  return c.json({
+    ...result.output,
+    _meta: {
+      capability: cap.slug,
+      latency_ms: latencyMs,
+      provenance: result.provenance,
+      payment: settlementId
+        ? { method: "x402", settlement_id: settlementId, price_usd: cap.x402PriceUsd }
+        : { method: "free" },
+    },
+  });
 });
 
 // ─── Exported for .well-known/x402.json ─────────────────────────────────────

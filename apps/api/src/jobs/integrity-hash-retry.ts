@@ -8,7 +8,7 @@
  *
  * After: every new transaction row lands with
  * `integrity_hash_status = 'pending'` via the column default (migration
- * 0046). This job wakes every INTERVAL_MS, fetches pending rows older
+ * 0047). This job wakes every INTERVAL_MS, fetches pending rows older
  * than GRACE_MS (so we don't race the insertion commit), computes the
  * hash, and sets status = 'complete'. Rows still pending after
  * STALE_MS trigger a structured warn log so operators see the drift

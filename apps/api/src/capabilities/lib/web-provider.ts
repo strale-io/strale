@@ -84,6 +84,36 @@ function isTransient(status: number): boolean {
   return status === 429 || status >= 500;
 }
 
+/** Map a non-OK Browserless response status into an honest, actionable message. */
+function humanizeBrowserlessStatus(status: number, targetUrl: string): string {
+  let hostname = "";
+  try { hostname = new URL(targetUrl).hostname; } catch { /* ignore */ }
+  const domain = hostname ? ` (${hostname})` : "";
+
+  if (status === 408) {
+    return `The web page${domain} took too long to load. The target site is slow or heavy; try again, or try a simpler page on the same site.`;
+  }
+  if (status === 429) {
+    return `The web scraping service is temporarily rate-limited. Please try again in a few minutes.`;
+  }
+  if (status === 404) {
+    return `This page does not exist (HTTP 404)${domain}. The server is reachable, but this specific URL returned 'not found'. This often happens when a site migrates and old URLs redirect to pages that have been removed. Check the path, or try the site's homepage.`;
+  }
+  if (status === 410) {
+    return `This page has been permanently removed (HTTP 410)${domain}. The URL is gone and will not return.`;
+  }
+  if (status === 401 || status === 407) {
+    return `This page requires authentication (HTTP ${status})${domain}. Only publicly available pages can be scraped.`;
+  }
+  if (status === 403) {
+    return `The site${domain} blocks automated access (HTTP 403 Forbidden). This is bot protection on the target site, not a Strale issue.`;
+  }
+  if (status >= 500) {
+    return `The target site${domain} returned a server error (HTTP ${status}). This is usually transient — try again in a few minutes.`;
+  }
+  return `The web page${domain} could not be loaded (HTTP ${status}).`;
+}
+
 function backoffMs(attempt: number): number {
   const base = Math.min(1000 * 2 ** attempt, 8000);
   const jitter = Math.random() * 500;
@@ -184,20 +214,24 @@ export async function fetchPage(
         }
         // HTTP response received but not usable HTML — fall through to Browserless
       } else if (plainResp.status >= 400 && plainResp.status < 500) {
-        // 4xx errors (404, 403, etc.) are permanent — don't retry via Browserless
-        throw new Error(`URL returned HTTP ${plainResp.status}. Check the URL is correct.`);
+        // 4xx errors (404, 403, etc.) are permanent — don't retry via Browserless.
+        // Prefix with "URL returned HTTP" so the catch block below recognizes it as fatal.
+        throw new Error(`URL returned HTTP ${plainResp.status}. ${humanizeBrowserlessStatus(plainResp.status, targetUrl)}`);
       }
       // 5xx errors: fall through to Browserless (server might render differently)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      // Helpful 4xx message already constructed upstream — propagate as-is.
+      if (msg.includes("URL returned HTTP 4")) {
+        throw err;
+      }
       // DNS failures, connection refused, and SSL errors are fatal — no point
       // sending to Browserless, the domain simply doesn't resolve.
       if (
         msg.includes("ENOTFOUND") ||
         msg.includes("ECONNREFUSED") ||
         msg.includes("ERR_TLS") ||
-        msg.includes("getaddrinfo") ||
-        msg.includes("URL returned HTTP 4")
+        msg.includes("getaddrinfo")
       ) {
         const hostname = new URL(targetUrl).hostname;
         throw new Error(
@@ -279,11 +313,7 @@ export async function fetchPage(
             );
             continue;
           }
-          const humanMsg = response.status === 408
-            ? "The web page took too long to load. This capability uses web scraping which can be slow for some sites. Please try again."
-            : response.status === 429
-            ? "The web scraping service is temporarily rate-limited. Please try again in a few minutes."
-            : `The web page could not be loaded (HTTP ${response.status}). Please try again later.`;
+          const humanMsg = humanizeBrowserlessStatus(response.status, targetUrl);
           throw new Error(humanMsg);
         }
 

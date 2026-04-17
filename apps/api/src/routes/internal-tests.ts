@@ -624,7 +624,9 @@ internalTestsRoute.get("/solutions/:slug/runs", async (c) => {
   return c.json(result);
 });
 
-// GET /v1/internal/capabilities/:slug/example-output — latest successful test output
+// GET /v1/internal/capabilities/:slug/example-output — latest successful test input + output
+// Joins test_results with test_suites so the returned (input, output) pair is a real,
+// passing example. Prefers known_answer tests as the most representative pairing.
 internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
   const slug = c.req.param("slug");
 
@@ -633,13 +635,19 @@ internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
   if (cached) return c.json(cached);
 
   const db = getDb();
+  // Freshness guard: tr.executed_at >= ts.updated_at ensures we don't serve a
+  // passing result captured BEFORE the fixture was updated. When a fixture is
+  // edited (manifest backfill, DB correction), the previous passing output is
+  // stale relative to the new input — hide the example until a fresh run lands.
   const rows = await db.execute(sql`
-    SELECT actual_output, executed_at
-    FROM test_results
-    WHERE capability_slug = ${slug}
-      AND passed = true
-      AND actual_output IS NOT NULL
-    ORDER BY executed_at DESC
+    SELECT tr.actual_output, tr.executed_at, ts.input, ts.test_type
+    FROM test_results tr
+    JOIN test_suites ts ON ts.id = tr.test_suite_id
+    WHERE tr.capability_slug = ${slug}
+      AND tr.passed = true
+      AND tr.actual_output IS NOT NULL
+      AND tr.executed_at >= ts.updated_at
+    ORDER BY (ts.test_type = 'known_answer') DESC, tr.executed_at DESC
     LIMIT 1
   `);
 
@@ -651,7 +659,9 @@ internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
   const row = data[0];
   const result = {
     capability_slug: slug,
+    example_input: row.input,
     example_output: row.actual_output,
+    source_test_type: row.test_type,
     captured_at: row.executed_at instanceof Date ? row.executed_at.toISOString() : String(row.executed_at),
   };
   setCache(cacheKey, result);

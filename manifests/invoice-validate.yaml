@@ -72,7 +72,30 @@ test_fixtures:
   known_answer:
     input:
       invoice:
-        key: value
+        invoice_number: "2026-0042"
+        invoice_date: "2026-03-01"
+        due_date: "2026-03-31"
+        vendor_vat: "SE556036079301"
+        vendor_name: "Ericsson AB"
+        vendor_address: "Torshamnsgatan 21, 164 40 Kista, Sweden"
+        buyer_vat: "SE556703096301"
+        buyer_name: "Spotify AB"
+        buyer_address: "Regeringsgatan 19, 111 53 Stockholm, Sweden"
+        currency: EUR
+        line_items:
+          - description: Consulting services
+            quantity: 10
+            unit_price: 150.00
+            line_total: 1500.00
+          - description: Travel expenses
+            quantity: 1
+            unit_price: 350.00
+            line_total: 350.00
+        amounts:
+          subtotal: 1850.00
+          tax_rate: 0.25
+          tax_amount: 462.50
+          total: 2312.50
     expected_fields:
       - field: valid
         operator: not_null
@@ -104,7 +127,30 @@ test_fixtures:
         value: boolean
   health_check_input:
     invoice:
-      key: value
+      invoice_number: "2026-0042"
+      invoice_date: "2026-03-01"
+      due_date: "2026-03-31"
+      vendor_vat: "SE556036079301"
+      vendor_name: "Ericsson AB"
+      vendor_address: "Torshamnsgatan 21, 164 40 Kista, Sweden"
+      buyer_vat: "SE556703096301"
+      buyer_name: "Spotify AB"
+      buyer_address: "Regeringsgatan 19, 111 53 Stockholm, Sweden"
+      currency: EUR
+      line_items:
+        - description: Consulting services
+          quantity: 10
+          unit_price: 150.00
+          line_total: 1500.00
+        - description: Travel expenses
+          quantity: 1
+          unit_price: 350.00
+          line_total: 350.00
+      amounts:
+        subtotal: 1850.00
+        tax_rate: 0.25
+        tax_amount: 462.50
+        total: 2312.50
 output_field_reliability:
   valid: guaranteed
   errors: guaranteed

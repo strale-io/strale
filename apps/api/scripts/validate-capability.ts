@@ -22,6 +22,7 @@ import {
 } from "../src/db/schema.js";
 import { getExecutor } from "../src/capabilities/index.js";
 import { transitionCapability } from "../src/lib/lifecycle.js";
+import { validateFixture } from "../src/lib/fixture-quality.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -208,6 +209,23 @@ async function validateCapability(slug: string, apply = false): Promise<{
       : `transparencyTag '${cap.transparencyTag}' not in: algorithmic, ai_generated, mixed, null`,
   });
 
+  // 12b. Geography is set — required for compliance profile jurisdiction derivation.
+  // Paired with invariant-checker CHECK 12 (compliance_profile_completeness).
+  const geoOk = !!cap.geography && cap.geography.trim().length > 0;
+  checks.push({
+    name: "Geography is set",
+    passed: geoOk,
+    detail: geoOk ? undefined : "geography is null — compliance profile can't derive jurisdiction",
+  });
+
+  // 12c. Capability type is set — required for compliance profile data-source type.
+  const typeOk = !!cap.capabilityType && cap.capabilityType.trim().length > 0;
+  checks.push({
+    name: "Capability type is set",
+    passed: typeOk,
+    detail: typeOk ? undefined : "capabilityType is null — compliance profile can't classify source",
+  });
+
   // 13. At least 1 limitation
   const lims = await db
     .select({ id: capabilityLimitations.id })
@@ -221,7 +239,7 @@ async function validateCapability(slug: string, apply = false): Promise<{
 
   // 14. At least 5 test suites covering all required types
   const suites = await db
-    .select({ testType: testSuites.testType })
+    .select({ testType: testSuites.testType, input: testSuites.input })
     .from(testSuites)
     .where(eq(testSuites.capabilitySlug, slug));
   const typesCovered = new Set(suites.map((s) => s.testType));
@@ -234,6 +252,21 @@ async function validateCapability(slug: string, apply = false): Promise<{
         ? `${suites.length} suites, all types covered`
         : `${suites.length} suites, missing types: ${missingTypes.join(", ") || "none"} (need ${5 - suites.length > 0 ? `${5 - suites.length} more suites` : "all types"})`,
   });
+
+  // 14b. known_answer fixture quality — rejects placeholder / schema-invalid inputs.
+  // Mirrors the onboarding gate in scripts/onboard.ts so readiness cannot pass
+  // for capabilities whose public example input would be meaningless.
+  const knownAnswer = suites.find((s) => s.testType === "known_answer");
+  if (knownAnswer) {
+    const quality = validateFixture(knownAnswer.input, cap.inputSchema);
+    checks.push({
+      name: "known_answer fixture quality",
+      passed: quality.ok,
+      detail: quality.ok
+        ? "fixture looks like a real example"
+        : quality.reasons.join("; "),
+    });
+  }
 
   // 15. output_field_reliability is populated (non-empty annotation map)
   // Note: we require annotations exist but do NOT mandate guaranteed fields —

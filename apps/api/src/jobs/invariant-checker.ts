@@ -145,6 +145,22 @@ export async function runInvariantChecks(): Promise<void> {
     console.error("[invariant-checker] CHECK 10 (suspended TTL) failed:", err);
   }
 
+  try {
+    const r11 = await checkFixtureQuality();
+    alerts += r11.alerts;
+    checked += r11.checked;
+  } catch (err) {
+    console.error("[invariant-checker] CHECK 11 (fixture quality) failed:", err);
+  }
+
+  try {
+    const r12 = await checkComplianceProfileCompleteness();
+    alerts += r12.alerts;
+    checked += r12.checked;
+  } catch (err) {
+    console.error("[invariant-checker] CHECK 12 (compliance profile completeness) failed:", err);
+  }
+
   // Log provider outage summary if any capabilities were skipped
   if (unhealthyCapabilities.size > 0) {
     try {
@@ -1063,3 +1079,106 @@ async function checkSuspendedCapabilityTTL(): Promise<{ healed: number; alerts: 
 
   return { healed, alerts, checked: suspended.length };
 }
+
+// ─── CHECK 11: Fixture quality (Tier 2 — ALERT ONLY) ────────────────────────
+// Guards the public capability detail page: the `/v1/internal/capabilities/:slug
+// /example-output` endpoint serves the known_answer fixture verbatim, so any
+// regression here becomes visible on strale.dev. Same shared helper as the
+// onboarding gate (src/lib/fixture-quality.ts) so entry-time and runtime checks
+// cannot drift apart.
+
+async function checkFixtureQuality(): Promise<{ alerts: number; checked: number }> {
+  const db = getDb();
+  const { validateFixture } = await import("../lib/fixture-quality.js");
+
+  const rows = await db
+    .select({
+      slug: testSuites.capabilitySlug,
+      testType: testSuites.testType,
+      input: testSuites.input,
+      inputSchema: capabilities.inputSchema,
+    })
+    .from(testSuites)
+    .innerJoin(capabilities, eq(capabilities.slug, testSuites.capabilitySlug))
+    .where(
+      and(
+        eq(testSuites.active, true),
+        eq(capabilities.isActive, true),
+        eq(testSuites.testType, "known_answer"),
+      ),
+    );
+
+  const bad: { slug: string; reasons: string[] }[] = [];
+  for (const r of rows) {
+    const q = validateFixture(r.input, r.inputSchema);
+    if (!q.ok) bad.push({ slug: r.slug, reasons: q.reasons });
+  }
+
+  if (bad.length === 0) {
+    return { alerts: 0, checked: rows.length };
+  }
+
+  const slugList = bad.map((b) => b.slug).join(", ");
+  console.warn(
+    `[invariant-checker] CHECK 11: ${bad.length} capability(s) have bad known_answer fixtures: ${slugList}`,
+  );
+
+  await logHealthEvent({
+    eventType: "invariant_alert",
+    tier: 2,
+    actionTaken: `${bad.length} capability(s) have bad known_answer fixtures (rendered on public detail pages): ${slugList}`,
+    details: {
+      check: "fixture_quality",
+      badCount: bad.length,
+      bad: bad.map((b) => ({ slug: b.slug, reasons: b.reasons })),
+    },
+  });
+
+  return { alerts: 1, checked: rows.length };
+}
+
+// ─── CHECK 12: Compliance profile completeness (Tier 2 — ALERT ONLY) ────────
+// Guards the public capability/solution detail pages: the compliance profile
+// endpoint serves fields derived from capabilities.data_source, .transparencyTag,
+// .geography. If any active capability has nulls in these, the public profile
+// will render 'unknown' / missing fields — a trust-narrative hole. This check
+// fires an alert so they can be filled in.
+
+async function checkComplianceProfileCompleteness(): Promise<{ alerts: number; checked: number }> {
+  const db = getDb();
+  const caps = await db
+    .select({
+      slug: capabilities.slug,
+      dataSource: capabilities.dataSource,
+      transparencyTag: capabilities.transparencyTag,
+      geography: capabilities.geography,
+      capabilityType: capabilities.capabilityType,
+    })
+    .from(capabilities)
+    .where(eq(capabilities.isActive, true));
+
+  const incomplete: { slug: string; missing: string[] }[] = [];
+  for (const c of caps) {
+    const missing: string[] = [];
+    if (!c.dataSource) missing.push('data_source');
+    if (!c.geography) missing.push('geography');
+    if (!c.capabilityType) missing.push('capability_type');
+    // transparency_tag null is valid (means 'algorithmic'), so don't flag
+    if (missing.length > 0) incomplete.push({ slug: c.slug, missing });
+  }
+
+  if (incomplete.length === 0) return { alerts: 0, checked: caps.length };
+
+  const slugList = incomplete.map((x) => x.slug).join(', ');
+  console.warn(
+    `[invariant-checker] CHECK 12: ${incomplete.length} capability(s) have incomplete compliance profiles: ${slugList}`,
+  );
+  await logHealthEvent({
+    eventType: 'invariant_alert',
+    tier: 2,
+    actionTaken: `${incomplete.length} capability(s) have null profile fields (rendered on public detail pages): ${slugList}`,
+    details: { check: 'compliance_profile_completeness', incomplete },
+  });
+  return { alerts: 1, checked: caps.length };
+}
+

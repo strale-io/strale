@@ -41,8 +41,10 @@ import { buildFailureProvenance, getProcessingJurisdictions } from "../lib/prove
 import {
   isX402Configured,
   build402Response,
-  verifyX402Payment,
+  verifyX402PaymentOnly,
+  settleX402Payment,
   extractPaymentHeader,
+  type X402VerifiedPayment,
 } from "../lib/x402-gateway.js";
 import { recordUnlock, isUnlocked, getUnlockedSlugs } from "../lib/progressive-unlock.js";
 import type { AppEnv } from "../types.js";
@@ -515,16 +517,17 @@ doRoute.post(
       const paymentHeader = extractPaymentHeader(c.req.raw.headers);
 
       if (paymentHeader && isX402Configured()) {
-        // Verify x402 payment → if valid, proceed with execution
-        const verification = await verifyX402Payment(paymentHeader, lookedUp.priceCents);
-        if (!verification.valid) {
+        // Verify x402 payment WITHOUT broadcasting settlement — the settle
+        // step runs only after the capability has produced output (DEC-14).
+        const verification = await verifyX402PaymentOnly(paymentHeader, lookedUp.priceCents);
+        if (!verification.valid || !verification.verified) {
           return c.json({
             error_code: "payment_failed",
             message: verification.error ?? "x402 payment verification failed",
           }, 402);
         }
-        // Payment verified — store settlement ID in request context for audit trail
-        c.set("x402_settlement" as any, verification.settlementId);
+        // Stash the verified handle for executeFreeTier to settle post-success.
+        c.set("x402_verified" as any, verification.verified);
         c.set("x402_paid" as any, true);
         // Fall through to normal execution — the capability will execute
         // and the transaction will be logged with payment_method: "x402"
@@ -1125,6 +1128,35 @@ async function executeFreeTier(
       requestContext: c.get("requestContext" as any),
     });
 
+    // If this call was x402-paid, settle NOW (after success). If settle
+    // fails — rare, since verify already passed — mark the transaction
+    // failed and surface a 402 so the caller knows the payment didn't land.
+    const x402Verified = c.get("x402_verified" as any) as X402VerifiedPayment | undefined;
+    let x402SettlementId: string | null = null;
+    if (x402Verified) {
+      const settled = await settleX402Payment(x402Verified);
+      if (!settled.valid) {
+        await db
+          .update(transactions)
+          .set({
+            status: "failed",
+            error: `Payment settlement failed: ${settled.error ?? "unknown"}`,
+            latencyMs,
+            completedAt: new Date(),
+          })
+          .where(eq(transactions.id, txnRecord.id));
+        return c.json(
+          {
+            error_code: "payment_failed",
+            message: "x402 settlement failed after successful execution.",
+            detail: settled.error,
+          },
+          402,
+        );
+      }
+      x402SettlementId = settled.settlementId ?? null;
+    }
+
     await db
       .update(transactions)
       .set({
@@ -1134,6 +1166,9 @@ async function executeFreeTier(
         auditTrail: audit,
         latencyMs,
         completedAt: new Date(),
+        ...(x402SettlementId
+          ? { paymentMethod: "x402", x402SettlementId, isFreeTier: false }
+          : {}),
       })
       .where(eq(transactions.id, txnRecord.id));
 

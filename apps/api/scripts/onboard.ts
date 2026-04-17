@@ -38,6 +38,7 @@ import {
   capabilityLimitations,
 } from "../src/db/schema.js";
 import * as yaml from "js-yaml";
+import { validateFixture } from "../src/lib/fixture-quality.js";
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { getExecutor } from "../src/capabilities/index.js";
@@ -432,6 +433,21 @@ async function verifyFixtures(
   }
 
   console.log("\n─── Fixture Verification ─────────────────────────────────────");
+
+  // Fixture-quality gate: reject placeholder / schema-invalid fixtures before
+  // they're written to test_suites and leak out to the public capability page.
+  // Placeholders can "pass" because schema-shape assertions are satisfied even
+  // when the input is meaningless. That's how invoice-validate ended up serving
+  // {"invoice": {"key": "value"}} as its official example.
+  const quality = validateFixture(input, manifest.input_schema);
+  if (!quality.ok) {
+    console.log("  ✗ known_answer fixture failed quality gate:");
+    for (const r of quality.reasons) console.log(`      - ${r}`);
+    console.log("  Supply a real input in test_fixtures.known_answer.input that a");
+    console.log("  third-party dev could copy-paste and see a meaningful response.");
+    return { passed: false, manifest };
+  }
+
   console.log(`  Executing ${manifest.slug} with known_answer input...`);
 
   const { output, error } = await executeCapability(manifest.slug, input);
@@ -932,7 +948,14 @@ async function backfill(
     console.log(`  + Added ${ts.testType}: ${ts.testName}`);
   }
 
-  // Update existing known_answer if fixtures were corrected
+  // Update existing known_answer if fixtures were corrected.
+  // CRITICAL: any change to .input invalidates baseline_output. Fixture-mode
+  // tests replay baseline_output verbatim, so leaving a stale baseline means
+  // the test keeps "passing" by matching its own stale self even when the
+  // real input would produce different output. Clear baseline + force
+  // test_mode='live' so the next run executes and recaptures fresh baseline.
+  // Also applies to schema_check and dependency_health which share input
+  // derivation with known_answer via buildTestSuites.
   if (hasKnownAnswerUpdate && existingKnownAnswer) {
     const knownAnswerSuite = allSuites.find((s) => s.testType === "known_answer");
     if (knownAnswerSuite) {
@@ -941,6 +964,9 @@ async function backfill(
         .set({
           input: knownAnswerSuite.input as any,
           validationRules: knownAnswerSuite.validationRules as any,
+          baselineOutput: null,
+          baselineCapturedAt: null,
+          testMode: "live",
           updatedAt: new Date(),
         })
         .where(
@@ -950,6 +976,7 @@ async function backfill(
           ),
         );
       console.log(`  ✓ Updated known_answer test suite with corrected fixtures`);
+      console.log(`    (baseline cleared — next test run will recapture)`);
     }
   }
 
