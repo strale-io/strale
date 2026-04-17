@@ -153,11 +153,17 @@ async function withAdvisoryLock<T>(
       return { acquired: true, value: await fn() };
     } finally {
       // Best-effort release on the same dedicated connection that took the
-      // lock — pool reuse cannot steal this unlock.
-      await client`SELECT pg_advisory_unlock(${id})`.catch(() => {});
+      // lock — pool reuse cannot steal this unlock. A failure here is
+      // harmless (the session ends below and PG releases the lock
+      // implicitly) but we log it so operators see if it ever happens.
+      await client`SELECT pg_advisory_unlock(${id})`.catch((err) =>
+        logError("test-scheduler-lock-release-failed", err, { lockId: id }),
+      );
     }
   } finally {
-    await client.end({ timeout: 5 }).catch(() => {});
+    await client.end({ timeout: 5 }).catch((err) =>
+      logError("test-scheduler-lock-client-end-failed", err, { lockId: id }),
+    );
   }
 }
 
