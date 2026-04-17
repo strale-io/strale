@@ -69,8 +69,14 @@ async function fetchCompany(
   if (response.status === 429) {
     throw new Error("The Danish business registry (cvrapi.dk) is temporarily rate-limiting requests. Please try again in a few minutes.");
   }
+  if (response.status === 401 || response.status === 403) {
+    throw new Error(`The Danish business registry (cvrapi.dk) denied the request (HTTP ${response.status}). This is an authentication or access-control issue, not a transient error.`);
+  }
+  if (response.status >= 500) {
+    throw new Error(`The Danish business registry (cvrapi.dk) returned a server error (HTTP ${response.status}). This is usually transient — please try again in a few minutes.`);
+  }
   if (!response.ok) {
-    throw new Error(`The Danish business registry returned an error (HTTP ${response.status}). Please try again later.`);
+    throw new Error(`The Danish business registry (cvrapi.dk) returned an unexpected response (HTTP ${response.status}).`);
   }
 
   const data = await response.json() as any;
