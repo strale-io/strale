@@ -20,6 +20,7 @@ import {
   verifyX402PaymentOnly,
   settleX402Payment,
   extractPaymentHeader,
+  extractPayerAddress,
   eurCentsToUsdcAtomic,
   eurCentsToUsdString,
   encodePaymentResponseHeader,
@@ -442,6 +443,7 @@ async function recordX402Transaction(
   transparencyTag: string | null,
   dataJurisdiction: string | null,
   settlementId?: string,
+  payerAddress?: string | null,
   error?: string,
 ): Promise<string | null> {
   try {
@@ -459,6 +461,7 @@ async function recordX402Transaction(
       auditTrail: {
         payment_method: "x402",
         settlement_id: settlementId ?? null,
+        payer_address: payerAddress ?? null,
         price_usd: priceUsd,
         capability: slug,
         latency_ms: latencyMs,
@@ -804,11 +807,13 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
   }
 
   // Record transaction (fire-and-forget)
+  const payerAddress = verified ? extractPayerAddress(verified) : null;
   recordX402Transaction(
     cap.id, cap.slug, inputs, result.output, latencyMs,
     cap.priceCents, cap.x402PriceUsd,
     cap.transparencyTag, cap.dataJurisdiction,
     settlementId,
+    payerAddress,
   );
 
   return c.json({

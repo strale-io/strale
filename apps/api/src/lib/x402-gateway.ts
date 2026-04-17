@@ -291,6 +291,19 @@ export async function settleX402Payment(
 }
 
 /**
+ * Extract the payer address (USDC `From`) from a verified payment.
+ * For the "exact" scheme this is payload.authorization.from — the wallet that
+ * signed the TransferWithAuthorization. Returns null if the shape doesn't match.
+ */
+export function extractPayerAddress(verified: X402VerifiedPayment): string | null {
+  const outer = verified?.payload as Record<string, unknown> | undefined;
+  const inner = outer?.payload as Record<string, unknown> | undefined;
+  const auth = inner?.authorization as Record<string, unknown> | undefined;
+  const from = auth?.from;
+  return typeof from === "string" && from.startsWith("0x") ? from : null;
+}
+
+/**
  * Extract the x402 payment header from a request.
  * Checks both X-PAYMENT (standard) and Payment (legacy) headers.
  */
