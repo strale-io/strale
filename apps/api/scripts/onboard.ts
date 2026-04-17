@@ -948,7 +948,14 @@ async function backfill(
     console.log(`  + Added ${ts.testType}: ${ts.testName}`);
   }
 
-  // Update existing known_answer if fixtures were corrected
+  // Update existing known_answer if fixtures were corrected.
+  // CRITICAL: any change to .input invalidates baseline_output. Fixture-mode
+  // tests replay baseline_output verbatim, so leaving a stale baseline means
+  // the test keeps "passing" by matching its own stale self even when the
+  // real input would produce different output. Clear baseline + force
+  // test_mode='live' so the next run executes and recaptures fresh baseline.
+  // Also applies to schema_check and dependency_health which share input
+  // derivation with known_answer via buildTestSuites.
   if (hasKnownAnswerUpdate && existingKnownAnswer) {
     const knownAnswerSuite = allSuites.find((s) => s.testType === "known_answer");
     if (knownAnswerSuite) {
@@ -957,6 +964,9 @@ async function backfill(
         .set({
           input: knownAnswerSuite.input as any,
           validationRules: knownAnswerSuite.validationRules as any,
+          baselineOutput: null,
+          baselineCapturedAt: null,
+          testMode: "live",
           updatedAt: new Date(),
         })
         .where(
@@ -966,6 +976,7 @@ async function backfill(
           ),
         );
       console.log(`  ✓ Updated known_answer test suite with corrected fixtures`);
+      console.log(`    (baseline cleared — next test run will recapture)`);
     }
   }
 
