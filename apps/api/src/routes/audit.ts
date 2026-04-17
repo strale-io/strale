@@ -17,7 +17,7 @@
 // F-0-009 Stage 2 gate: the integrity hash is computed asynchronously by
 // jobs/integrity-hash-retry.ts, so this endpoint refuses to serve a
 // composed audit until the row's hash is committed to the chain.
-// Transactions in `integrity_hash_status = 'pending'` return 202 +
+// Transactions in `compliance_hash_state = 'pending'` return 202 +
 // Retry-After; transactions in `'failed'` return 503. Only `'complete'`
 // falls through to profile composition below.
 
@@ -187,7 +187,7 @@ auditRoute.get("/:transactionId", async (c) => {
       completedAt: transactions.completedAt,
       capabilityId: transactions.capabilityId,
       solutionSlug: transactions.solutionSlug,
-      integrityHashStatus: transactions.integrityHashStatus,
+      complianceHashState: transactions.complianceHashState,
     })
     .from(transactions)
     .where(eq(transactions.id, transactionId))
@@ -202,7 +202,7 @@ auditRoute.get("/:transactionId", async (c) => {
   // until the underlying row's hash is committed to the chain — a
   // compliance response without a chained hash is worse than one that
   // asks the caller to retry.
-  if (txn.integrityHashStatus === "pending") {
+  if (txn.complianceHashState === "pending") {
     c.header("Retry-After", "30");
     return c.json(
       {
@@ -213,7 +213,7 @@ auditRoute.get("/:transactionId", async (c) => {
       202,
     );
   }
-  if (txn.integrityHashStatus === "failed") {
+  if (txn.complianceHashState === "failed") {
     return c.json(
       apiError(
         "capability_unavailable",
@@ -246,9 +246,9 @@ auditRoute.get("/:transactionId", async (c) => {
 
   // NOTE: `status` here is the execution status (`completed` / `failed` /
   // `executing`) stored on the transactions row. It is NOT the
-  // integrity_hash_status — those are two separate fields. The pending /
-  // failed integrity-hash cases were already handled above; by this
-  // point integrityHashStatus is 'complete'.
+  // complianceHashState — those are two separate fields. The pending /
+  // failed compliance-hash cases were already handled above; by this
+  // point complianceHashState is 'complete'.
   const audit = composeAuditRecord({
     transactionId: txn.id,
     createdAt: txn.createdAt,

@@ -1186,7 +1186,7 @@ async function executeFreeTier(
         { label: "piggyback-record", context: { slug: capability.slug } },
       );
     }
-    // F-0-009 Stage 2: the row lands with integrity_hash_status = 'pending'
+    // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
     // by column default; jobs/integrity-hash-retry.ts will fill it in.
 
     const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
@@ -1260,7 +1260,7 @@ async function executeFreeTier(
       })
       .where(eq(transactions.id, txnRecord.id));
 
-    // F-0-009 Stage 2: the row lands with integrity_hash_status = 'pending'
+    // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
     // by column default; jobs/integrity-hash-retry.ts will fill it in.
     fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
     fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
@@ -1361,7 +1361,7 @@ async function executeFreeTierAuthenticated(
         { label: "piggyback-record", context: { slug: capability.slug } },
       );
     }
-    // F-0-009 Stage 2: the row lands with integrity_hash_status = 'pending'
+    // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
     // by column default; jobs/integrity-hash-retry.ts will fill it in.
     // Activation hook: detect first successful call
     if (user) {
@@ -1423,7 +1423,7 @@ async function executeFreeTierAuthenticated(
       })
       .where(eq(transactions.id, txnRecord.id));
 
-    // F-0-009 Stage 2: the row lands with integrity_hash_status = 'pending'
+    // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
     // by column default; jobs/integrity-hash-retry.ts will fill it in.
     fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
     fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
@@ -1982,7 +1982,7 @@ async function executeInBackground(
         { label: "piggyback-record", context: { slug: capability.slug } },
       );
     }
-    // F-0-009 Stage 2: row already has integrity_hash_status = 'pending'
+    // F-0-009 Stage 2: row already has compliance_hash_state = 'pending'
     // by column default; retry worker fills it in.
 
     // Check transaction milestones (fire-and-forget)
@@ -2052,7 +2052,7 @@ async function executeInBackground(
         .where(eq(transactions.id, transactionId));
     });
 
-    // F-0-009 Stage 2: row already has integrity_hash_status = 'pending'
+    // F-0-009 Stage 2: row already has compliance_hash_state = 'pending'
     // by column default; retry worker fills it in.
     // Record failure for circuit breaker + quality
     fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
@@ -2242,7 +2242,7 @@ function buildFailureAudit(params: {
 
 // F-0-009 Stage 2: the former `storeIntegrityHash` helper that lived
 // here has moved to jobs/integrity-hash-retry.ts. Transactions are
-// inserted with integrity_hash_status = 'pending' via the column
+// inserted with compliance_hash_state = 'pending' via the column
 // default; the worker fills in the hash.
 
 // ─── EU AI Act transparency markers (DEC-20260226-P-s3t4) ─────────────────────

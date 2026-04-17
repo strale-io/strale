@@ -200,7 +200,10 @@ export const transactions = pgTable(
     previousHash: varchar("previous_hash", { length: 128 }),
     // F-0-009 Stage 2: 'pending' | 'complete' | 'failed'.
     // Hashing moved off the hot path; jobs/integrity-hash-retry.ts fills it in.
-    integrityHashStatus: varchar("integrity_hash_status", { length: 16 })
+    // NOT called integrity_hash_status — that column exists on prod and is
+    // owned by a separate, untracked workflow that tags 'customer' / 'test'.
+    // See PHASE_C_COLUMN_INVESTIGATION.md.
+    complianceHashState: varchar("compliance_hash_state", { length: 16 })
       .notNull()
       .default("pending"),
     legalHold: boolean("legal_hold").notNull().default(false),

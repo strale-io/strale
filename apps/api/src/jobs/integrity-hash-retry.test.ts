@@ -38,7 +38,7 @@ type DbRow = {
   dataJurisdiction: string;
   integrityHash: string | null;
   previousHash: string | null;
-  integrityHashStatus: string;
+  complianceHashState: string;
   createdAt: Date;
   completedAt: Date | null;
 };
@@ -63,7 +63,7 @@ vi.mock("../db/index.js", () => ({
     select: () => ({
       from: () => ({
         where: () => ({
-          limit: async () => state.rows.filter((r) => r.integrityHashStatus === "pending"),
+          limit: async () => state.rows.filter((r) => r.complianceHashState === "pending"),
           orderBy: () => ({ limit: async () => [{ integrityHash: "prev-hash" }] }),
         }),
       }),
@@ -74,7 +74,7 @@ vi.mock("../db/index.js", () => ({
           // Drizzle builds an `eq` expression; we can't inspect it here,
           // but every test only calls update with a single row at a time.
           const target = state.rows.find(
-            (r) => r.integrityHashStatus === "pending" || r.integrityHashStatus === "failed" || r.integrityHashStatus === "complete",
+            (r) => r.complianceHashState === "pending" || r.complianceHashState === "failed" || r.complianceHashState === "complete",
           );
           state.updates.push({ id: target?.id ?? "?", set: patch });
           if (target) Object.assign(target, patch);

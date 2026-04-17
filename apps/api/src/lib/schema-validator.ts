@@ -39,11 +39,12 @@ const REQUIRED_COLUMNS: Array<{
   },
   // F-0-009 Stage 2: retry worker needs this column. Missing column
   // means the worker would fail on every poll and pending transactions
-  // would never get hashed.
+  // would never get hashed. Column name is compliance_hash_state, not
+  // integrity_hash_status — see PHASE_C_COLUMN_INVESTIGATION.md.
   {
     table: "transactions",
-    column: "integrity_hash_status",
-    migration: "0047_integrity_hash_status",
+    column: "compliance_hash_state",
+    migration: "0047_compliance_hash_state",
   },
   // Add future migration columns here as they are added
   // { table: 'table_name', column: 'column_name', migration: '0036_...' },

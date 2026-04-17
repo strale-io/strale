@@ -7,15 +7,20 @@
  * ISO/IEC 24970), silence in failure was the worst possible mode.
  *
  * After: every new transaction row lands with
- * `integrity_hash_status = 'pending'` via the column default (migration
+ * `compliance_hash_state = 'pending'` via the column default (migration
  * 0047). This job wakes every INTERVAL_MS, fetches pending rows older
  * than GRACE_MS (so we don't race the insertion commit), computes the
- * hash, and sets status = 'complete'. Rows still pending after
+ * hash, and sets state = 'complete'. Rows still pending after
  * STALE_MS trigger a structured warn log so operators see the drift
  * before a regulator does.
  *
- * The /v1/audit/:id endpoint refuses to serve a row whose status is
+ * The /v1/audit/:id endpoint refuses to serve a row whose state is
  * still 'pending' — clients receive 202 + Retry-After: 30.
+ *
+ * Column naming: this worker queries `compliance_hash_state`, not
+ * `integrity_hash_status`. The latter is owned by a separate, untracked
+ * workflow on prod that tags 'customer' / 'test' for analytics.
+ * See PHASE_C_COLUMN_INVESTIGATION.md.
  *
  * Uses pg_try_advisory_lock to cooperate with multi-instance deploys
  * (even though today is 1 replica per Phase A Q2).
@@ -55,7 +60,7 @@ async function runOnce(): Promise<void> {
       .from(transactions)
       .where(
         and(
-          eq(transactions.integrityHashStatus, "pending"),
+          eq(transactions.complianceHashState, "pending"),
           lt(transactions.createdAt, pendingCutoff),
         ),
       )
@@ -100,7 +105,7 @@ async function runOnce(): Promise<void> {
           .set({
             integrityHash: hash,
             previousHash,
-            integrityHashStatus: "complete",
+            complianceHashState: "complete",
           })
           .where(eq(transactions.id, txn.id));
         completed++;
@@ -114,7 +119,7 @@ async function runOnce(): Promise<void> {
         if (Date.now() - txn.createdAt.getTime() > STALE_WARN_MS * MAX_HASH_ATTEMPTS) {
           await db
             .update(transactions)
-            .set({ integrityHashStatus: "failed" })
+            .set({ complianceHashState: "failed" })
             .where(eq(transactions.id, txn.id))
             .catch((err2) =>
               logError("integrity-hash-mark-failed-failed", err2, { transactionId: txn.id }),

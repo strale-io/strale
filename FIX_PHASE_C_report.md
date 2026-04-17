@@ -80,10 +80,10 @@ The only remaining `.catch(() => {})` sites as of Stage 1 were the six `storeInt
 
 ### Stage 2 implementation
 
-- [apps/api/drizzle/0046_integrity_hash_status.sql](apps/api/drizzle/0046_integrity_hash_status.sql) — new column `integrity_hash_status varchar(16) NOT NULL DEFAULT 'pending'` on `transactions`, backfilled to `'complete'` for rows older than 1 hour so the worker doesn't churn over history. Partial index on `WHERE status = 'pending'` for cheap retry-worker scans.
+- [apps/api/drizzle/0047_compliance_hash_state.sql](apps/api/drizzle/0047_compliance_hash_state.sql) — new column `compliance_hash_state varchar(16) NOT NULL DEFAULT 'pending'` on `transactions`, backfilled to `'complete'` for rows older than 1 hour so the worker doesn't churn over history. Partial index on `WHERE compliance_hash_state = 'pending'` for cheap retry-worker scans. (Originally named `integrity_hash_status`; renamed post-merge-conflict to avoid a collision with an untracked tagging workflow — see "Post-PR adjustment" below.)
 - [apps/api/src/db/schema.ts](apps/api/src/db/schema.ts) — Drizzle column added.
-- [apps/api/src/lib/schema-validator.ts](apps/api/src/lib/schema-validator.ts) — new column registered; API refuses to boot if migration 0046 hasn't run.
-- [apps/api/src/jobs/integrity-hash-retry.ts](apps/api/src/jobs/integrity-hash-retry.ts) — wakes every 30 s, picks pending rows older than 10 s (GRACE_MS), computes the hash chain, and sets `status = 'complete'`. Rows pending > 5 min log a structured warn; rows pending > 15 min flip to `'failed'` so the queue doesn't clog. Advisory-lock-cooperative for multi-instance deploys. Started from `index.ts`.
+- [apps/api/src/lib/schema-validator.ts](apps/api/src/lib/schema-validator.ts) — new column registered; API refuses to boot if migration 0047 hasn't run.
+- [apps/api/src/jobs/integrity-hash-retry.ts](apps/api/src/jobs/integrity-hash-retry.ts) — wakes every 30 s, picks pending rows older than 10 s (GRACE_MS), computes the hash chain, and sets `compliance_hash_state = 'complete'`. Rows pending > 5 min log a structured warn; rows pending > 15 min flip to `'failed'` so the queue doesn't clog. Advisory-lock-cooperative for multi-instance deploys. Started from `index.ts`.
 - [apps/api/src/routes/audit.ts](apps/api/src/routes/audit.ts) — refuses to serve a `'pending'` transaction. Returns 202 + `Retry-After: 30`. `'failed'` returns 503 pointing at `compliance@strale.io`. No 200 response is ever served without a valid hash.
 - [apps/api/src/routes/do.ts](apps/api/src/routes/do.ts) — removed all six `storeIntegrityHash(...).catch(() => {})` sites. Removed the standalone `storeIntegrityHash` helper (moved to the retry worker). Removed the `computeIntegrityHash` / `getPreviousHash` imports.
 - [apps/api/src/jobs/integrity-hash-retry.test.ts](apps/api/src/jobs/integrity-hash-retry.test.ts) — unit test placeholder (factory + idempotency). Full retry-loop coverage needs a real Postgres — flagged for Phase D integration-test harness.
@@ -191,7 +191,7 @@ Captured here rather than expanded into scope; each is a candidate for a future 
    ```
    cd apps/api && npx drizzle-kit migrate
    ```
-   Needed for 0045 (Phase B `rate_limit_counters`) and 0046 (Phase C `integrity_hash_status`). Schema validator fails boot if either is missing.
+   Needed for 0046 (Phase B `rate_limit_counters`) and 0047 (Phase C `compliance_hash_state`). Schema validator fails boot if either is missing.
 
 2. Set `BETTER_STACK_SOURCE_TOKEN` in Railway Variables (optional but recommended for EU log shipping per Phase A Q4). Without it, Pino still writes JSON to stdout and Railway captures it.
 
@@ -203,3 +203,24 @@ Captured here rather than expanded into scope; each is a candidate for a future 
    - `integrity-hash-retry: started` — confirms the new worker picked up.
    - `integrity-hash-stale-rows` — would indicate the worker is falling behind; alert.
    - `ssrf-blocked-resolution` — normal when someone probes with a private URL; counts the deterrent.
+
+---
+
+## Post-PR adjustment — column rename `integrity_hash_status` → `compliance_hash_state`
+
+**When**: Phase C's original migration 0046 (renumbered to 0047 during the main-merge conflict resolution) originally added a column called `integrity_hash_status`. After the migration was applied to prod (pre-merge-to-main, per the Option B "apply migrations first" instruction), a read-only investigation revealed that `transactions.integrity_hash_status` was already being overwritten on prod by an untracked, off-repo workflow using the column to tag transactions as `'customer'` / `'test'` for analytics. The Phase C retry worker would race that workflow and create gaps in the hash chain.
+
+**What changed**:
+- Deleted `apps/api/drizzle/0047_integrity_hash_status.sql`.
+- Created `apps/api/drizzle/0047_compliance_hash_state.sql` — same shape, but adds a brand new column called `compliance_hash_state`.
+- Renamed `integrityHashStatus` → `complianceHashState` in schema.ts, schema-validator.ts, routes/audit.ts, jobs/integrity-hash-retry.ts, jobs/integrity-hash-retry.test.ts.
+- Renamed comment references in routes/do.ts.
+- Left three intentional "NOT called integrity_hash_status because …" comments in the code for future maintainers.
+
+**Data state on prod after the rename**:
+- `integrity_hash_status` column (the one owned by the untracked workflow): untouched. The 205 `customer` / `test` rows remain intact. The 39,504 rows my first migration had set to `'complete'` remain at `'complete'` — that's effectively a permanent no-op from the workflow's perspective (the workflow can re-tag at its leisure). Phase C's code **never reads or writes this column**.
+- `compliance_hash_state` column (Phase C's own): to be created by migration 0047 when re-applied. Every historical row gets `'pending'` on column add; backfill sweeps rows > 1h old to `'complete'`. No collision.
+
+**Full investigation**: [PHASE_C_COLUMN_INVESTIGATION.md](PHASE_C_COLUMN_INVESTIGATION.md).
+
+**Why this is a net improvement**: the column name `compliance_hash_state` is more descriptive of what Phase C actually does (it's the state of the tamper-evidence chain, not a status flag), and the two workflows now cleanly coexist with their own columns.
