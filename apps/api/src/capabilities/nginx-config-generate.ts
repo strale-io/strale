@@ -1,6 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 
+// F-0-006 Bucket D: user inputs (including URL-like strings) are passed
+// to Claude as prose for config generation. No network I/O touches the
+// user-supplied values.
+
 registerCapability("nginx-config-generate", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.task as string) ?? "").trim();
   if (!domain) throw new Error("'domain' is required.");

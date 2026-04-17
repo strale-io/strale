@@ -29,6 +29,23 @@ const REQUIRED_COLUMNS: Array<{
     column: "ground_truth_verified_at",
     migration: "0035_test_suites_generation_metadata",
   },
+  // F-0-002: DB-backed rate limits depend on this table. If the migration
+  // has not been applied, /v1/signup and /v1/auth/* return 503 (fail closed).
+  // Fail fast at startup so the operator sees the real cause.
+  {
+    table: "rate_limit_counters",
+    column: "bucket_key",
+    migration: "0046_rate_limit_counters",
+  },
+  // F-0-009 Stage 2: retry worker needs this column. Missing column
+  // means the worker would fail on every poll and pending transactions
+  // would never get hashed. Column name is compliance_hash_state, not
+  // integrity_hash_status — see PHASE_C_COLUMN_INVESTIGATION.md.
+  {
+    table: "transactions",
+    column: "compliance_hash_state",
+    migration: "0047_compliance_hash_state",
+  },
   // Add future migration columns here as they are added
   // { table: 'table_name', column: 'column_name', migration: '0036_...' },
 ];

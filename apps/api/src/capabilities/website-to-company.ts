@@ -1,6 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput, getExecutor } from "./index.js";
 
+// F-0-006 Bucket D: delegates to other capabilities (meta-extract,
+// url-to-markdown) that are themselves migrated. No direct fetch here.
+
 /*
  * website-to-company: URL → company behind the domain (DEC-20260411-C)
  *

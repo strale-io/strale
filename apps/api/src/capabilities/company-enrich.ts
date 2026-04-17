@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 const EXTRACTION_PROMPT = `You are a company intelligence extraction system.
 
@@ -23,6 +24,11 @@ From the provided web page content, extract as much of the following as possible
 Return ONLY valid JSON. If a field cannot be determined, use null.`;
 
 async function scrapeUrl(url: string): Promise<string> {
+  // F-0-006: Browserless fetches the URL from its own network, so our
+  // undici Dispatcher can't protect that hop. The only layer we own is
+  // refusing to forward — validateUrl throws on private IPs / bad schemes.
+  await validateUrl(url);
+
   const browserlessUrl = process.env.BROWSERLESS_URL;
   const browserlessKey = process.env.BROWSERLESS_API_KEY;
 

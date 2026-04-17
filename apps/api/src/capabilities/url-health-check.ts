@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 registerCapability("url-health-check", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -25,9 +26,12 @@ registerCapability("url-health-check", async (input: CapabilityInput) => {
     // Manual redirect following to capture chain
     let maxRedirects = 10;
     while (maxRedirects > 0) {
-      const response = await fetch(currentUrl, {
+      // F-0-006: re-validate every hop. safeFetch with maxRedirects: 0
+      // returns the 3xx so we can walk the chain ourselves.
+      await validateUrl(currentUrl);
+      const response = await safeFetch(currentUrl, {
         method: "HEAD",
-        redirect: "manual",
+        maxRedirects: 0,
         signal: AbortSignal.timeout(timeout),
         headers: { "User-Agent": "Strale/1.0 (health-check; admin@strale.io)" },
       });
@@ -54,9 +58,9 @@ registerCapability("url-health-check", async (input: CapabilityInput) => {
     }
     responseTimeMs = Date.now() - start;
   } else {
-    const response = await fetch(fullUrl, {
+    const response = await safeFetch(fullUrl, {
       method: "HEAD",
-      redirect: "manual",
+      maxRedirects: 0,
       signal: AbortSignal.timeout(timeout),
       headers: { "User-Agent": "Strale/1.0 (health-check; admin@strale.io)" },
     });

@@ -22,6 +22,8 @@ import { runTests, persistDualProfileScores } from "../lib/test-runner.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { isCacheExpired, refreshUpstreamMapping } from "../lib/upstream-health-gate.js";
 import { probeChromiumHealth } from "../lib/chromium-health.js";
+import { fireAndForget } from "../lib/fire-and-forget.js";
+import { logError } from "../lib/log.js";
 
 // ─── Solution quality gate (auto-activate when all steps are scored) ────────
 
@@ -277,7 +279,9 @@ async function pollCycle(): Promise<void> {
 
     // Refresh upstream health mapping if stale
     if (isCacheExpired()) {
-      await refreshUpstreamMapping().catch(() => {});
+      await refreshUpstreamMapping().catch((err) =>
+        logError("upstream-mapping-refresh-failed", err, { job: "test-scheduler" }),
+      );
     }
 
     // Run auxiliary tasks (health checks, probes, etc.)
@@ -387,17 +391,21 @@ async function pollCycle(): Promise<void> {
     );
 
     // Write scheduler heartbeat for watchdog monitoring
-    logHealthEvent({
-      eventType: "scheduler_heartbeat",
-      tier: 1,
-      actionTaken: `DB-driven poll: ${runnableCaps.length} capabilities tested`,
-      details: {
-        tested: runnableCaps.length,
-        passed: totalPassed,
-        failed: totalFailed,
-        tierCounts,
-      },
-    }).catch(() => {});
+    fireAndForget(
+      () =>
+        logHealthEvent({
+          eventType: "scheduler_heartbeat",
+          tier: 1,
+          actionTaken: `DB-driven poll: ${runnableCaps.length} capabilities tested`,
+          details: {
+            tested: runnableCaps.length,
+            passed: totalPassed,
+            failed: totalFailed,
+            tierCounts,
+          },
+        }),
+      { label: "health-event-log", context: { event: "scheduler_heartbeat" } },
+    );
   } catch (err) {
     console.error("[test-scheduler] Poll cycle error:", err);
   } finally {

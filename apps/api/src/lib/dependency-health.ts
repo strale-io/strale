@@ -11,6 +11,7 @@
  */
 
 import { getActiveProviders, type DependencyProvider } from "./dependency-manifest.js";
+import { fireAndForget } from "./fire-and-forget.js";
 
 export interface HealthCheckResult {
   healthy: boolean;
@@ -141,22 +142,26 @@ export async function runDependencyHealthChecks(): Promise<
   );
 
   // Update shared upstream health state (used by test runner to skip tests)
-  import("./upstream-health-gate.js")
-    .then(({ updateUpstreamHealth }) => {
+  fireAndForget(
+    async () => {
+      const { updateUpstreamHealth } = await import("./upstream-health-gate.js");
       for (const [name, result] of Object.entries(results)) {
         updateUpstreamHealth(name, result.healthy);
       }
-    })
-    .catch(() => {});
+    },
+    { label: "upstream-health-update" },
+  );
 
   // Fire-and-forget: notify event triggers of any state changes
-  import("./event-triggers.js")
-    .then(({ triggerOnDependencyChange }) => {
+  fireAndForget(
+    async () => {
+      const { triggerOnDependencyChange } = await import("./event-triggers.js");
       for (const [name, result] of Object.entries(results)) {
-        triggerOnDependencyChange(name, result.healthy).catch(() => {});
+        await triggerOnDependencyChange(name, result.healthy);
       }
-    })
-    .catch(() => {});
+    },
+    { label: "dependency-change-trigger" },
+  );
 
   // Fire-and-forget: persist probe results to health_monitor_events
   persistProbeResults(results).catch((err) => {
@@ -164,8 +169,9 @@ export async function runDependencyHealthChecks(): Promise<
   });
 
   // Fire-and-forget: run situation assessment for unhealthy probes
-  import("./situation-assessment.js")
-    .then(async ({ assessDependencyProbeFailure }) => {
+  fireAndForget(
+    async () => {
+      const { assessDependencyProbeFailure } = await import("./situation-assessment.js");
       const { handleDependencyProbeResult } = await import("./intelligent-alerts.js");
       for (const [name, result] of Object.entries(results)) {
         try {
@@ -175,8 +181,9 @@ export async function runDependencyHealthChecks(): Promise<
           console.error(`[situation] Assessment failed for ${name}:`, err instanceof Error ? err.message : err);
         }
       }
-    })
-    .catch(() => {});
+    },
+    { label: "situation-assessment" },
+  );
 
   return results;
 }

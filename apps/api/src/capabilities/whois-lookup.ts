@@ -1,6 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { createConnection } from "node:net";
 
+// F-0-006 Bucket D: opens a WHOIS TCP connection to a HARDCODED server
+// (TLD map elsewhere in the file). The user domain is the query payload
+// only; the TCP target is never user-controlled.
+
 // IANA root WHOIS server — redirects to the correct TLD server
 const IANA_WHOIS = "whois.iana.org";
 

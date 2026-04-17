@@ -7,6 +7,11 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint:no-bare-catch": "node scripts/check-no-bare-catch.mjs src",
+    "lint:ssrf-inventory": "node scripts/check-ssrf-inventory.mjs",
     "digest": "tsx src/jobs/daily-digest.ts",
     "digest:preview": "tsx src/jobs/digest-preview.ts",
     "db:generate": "drizzle-kit generate",
@@ -17,6 +22,7 @@
     "@anthropic-ai/sdk": "^0.78.0",
     "@coinbase/x402": "^2.1.0",
     "@hono/node-server": "^1.13.8",
+    "@logtail/pino": "^0.5.8",
     "@modelcontextprotocol/sdk": "^1.27.0",
     "@mozilla/readability": "^0.6.0",
     "@x402/core": "^2.10.0",
@@ -30,12 +36,14 @@
     "jsdom": "^29.0.1",
     "libphonenumber-js": "^1.12.38",
     "p-limit": "^7.3.0",
+    "pino": "^10.3.1",
     "postgres": "^3.4.5",
     "resend": "^6.9.4",
     "sharp": "^0.34.5",
     "strale-mcp": "*",
     "stripe": "^17.5.0",
     "turndown": "^7.2.2",
+    "undici": "^7.0.0",
     "viem": "^2.47.6",
     "zod": "^3.25.0"
   },
@@ -47,6 +55,7 @@
     "drizzle-kit": "^0.30.4",
     "js-yaml": "^4.1.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.4"
   }
 }

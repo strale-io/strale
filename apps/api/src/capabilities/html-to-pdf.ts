@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("html-to-pdf", async (input: CapabilityInput) => {
   const html = (input.html as string) ?? undefined;
@@ -24,7 +25,11 @@ registerCapability("html-to-pdf", async (input: CapabilityInput) => {
   };
 
   if (url) {
-    bodyObj.url = url.startsWith("http") ? url : `https://${url}`;
+    const fullUrl = url.startsWith("http") ? url : `https://${url}`;
+    // F-0-006: Browserless fetches the URL from its own network; validateUrl
+    // refuses private-IP / bad-scheme URLs before the forward.
+    await validateUrl(fullUrl);
+    bodyObj.url = fullUrl;
     bodyObj.gotoOptions = { waitUntil: "networkidle0", timeout: 25000 };
   } else {
     bodyObj.html = html;

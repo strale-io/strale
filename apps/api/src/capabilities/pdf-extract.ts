@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 registerCapability("pdf-extract", async (input: CapabilityInput) => {
   const url = input.url as string | undefined;
@@ -20,18 +21,17 @@ registerCapability("pdf-extract", async (input: CapabilityInput) => {
   let sourceInfo: string;
 
   if (url) {
-    // Validate URL
+    // F-0-006: safeFetch validates scheme + IP (including redirect hops)
+    // and refuses DNS rebinding. The old local URL/scheme check was
+    // redundant with safeFetch's own validation.
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(url);
     } catch {
       throw new Error(`Invalid URL: "${url}".`);
     }
-    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-      throw new Error("Only http and https URLs are supported.");
-    }
 
-    const response = await fetch(url, {
+    const response = await safeFetch(url, {
       signal: AbortSignal.timeout(20000),
       headers: { "User-Agent": "Strale/1.0 pdf-extract" },
     });

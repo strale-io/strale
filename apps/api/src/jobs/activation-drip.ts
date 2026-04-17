@@ -14,6 +14,7 @@ import { sql, eq, and, lt, isNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { users } from "../db/schema.js";
 import { sendDay2NudgeEmail, sendDay5ReminderEmail } from "../lib/activation-emails.js";
+import { logError } from "../lib/log.js";
 
 const DRIP_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 const STARTUP_DELAY_MS = 90_000; // 90 seconds
@@ -86,7 +87,9 @@ async function runActivationDrip(): Promise<void> {
     }
   } finally {
     // Release advisory lock
-    await db.execute(sql`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`).catch(() => {});
+    await db
+      .execute(sql`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`)
+      .catch((err) => logError("advisory-unlock-failed", err, { job: "activation-drip" }));
   }
 }
 

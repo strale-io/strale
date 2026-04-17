@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 const EXTRACTION_PROMPT = `You are an expert invoice data extraction system specializing in European invoices.
 
@@ -48,7 +49,8 @@ Rules:
 - Confidence: "high" = clearly readable, "medium" = partially readable/inferred, "low" = guessed`;
 
 async function extractFromUrl(url: string): Promise<Anthropic.ImageBlockParam> {
-  const response = await fetch(url, {
+  // F-0-006: safeFetch validates + refuses DNS-rebinding / private-IP redirects.
+  const response = await safeFetch(url, {
     signal: AbortSignal.timeout(15000),
     headers: {
       "User-Agent": "Strale/1.0 invoice-extract",

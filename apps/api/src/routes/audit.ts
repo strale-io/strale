@@ -13,13 +13,20 @@
 //
 // Both paths share the ComplianceProfile fields so the UI doesn't have to
 // rebuild them twice.
+//
+// F-0-009 Stage 2 gate: the integrity hash is computed asynchronously by
+// jobs/integrity-hash-retry.ts, so this endpoint refuses to serve a
+// composed audit until the row's hash is committed to the chain.
+// Transactions in `compliance_hash_state = 'pending'` return 202 +
+// Retry-After; transactions in `'failed'` return 503. Only `'complete'`
+// falls through to profile composition below.
 
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { transactions, capabilities } from "../db/schema.js";
-import { verifyAuditToken, generateAuditToken } from "../lib/audit-token.js";
+import { verifyAuditToken } from "../lib/audit-token.js";
 import { apiError } from "../lib/errors.js";
 import {
   getCapabilityProfile,
@@ -180,6 +187,7 @@ auditRoute.get("/:transactionId", async (c) => {
       completedAt: transactions.completedAt,
       capabilityId: transactions.capabilityId,
       solutionSlug: transactions.solutionSlug,
+      complianceHashState: transactions.complianceHashState,
     })
     .from(transactions)
     .where(eq(transactions.id, transactionId))
@@ -187,6 +195,33 @@ auditRoute.get("/:transactionId", async (c) => {
 
   if (!txn) {
     return c.json(apiError("not_found", "Transaction not found."), 404);
+  }
+
+  // F-0-009 Stage 2: the integrity hash is filled in by a background
+  // worker (jobs/integrity-hash-retry.ts). Refuse to compose the audit
+  // until the underlying row's hash is committed to the chain — a
+  // compliance response without a chained hash is worse than one that
+  // asks the caller to retry.
+  if (txn.complianceHashState === "pending") {
+    c.header("Retry-After", "30");
+    return c.json(
+      {
+        status: "pending",
+        message: "Integrity hash is still being computed. Retry in 30 seconds.",
+        transaction_id: txn.id,
+      },
+      202,
+    );
+  }
+  if (txn.complianceHashState === "failed") {
+    return c.json(
+      apiError(
+        "capability_unavailable",
+        "Integrity hash generation failed for this transaction. Contact compliance@strale.io.",
+        { transaction_id: txn.id },
+      ),
+      503,
+    );
   }
 
   // Resolve entity → fetch its compliance profile.
@@ -209,6 +244,11 @@ auditRoute.get("/:transactionId", async (c) => {
     );
   }
 
+  // NOTE: `status` here is the execution status (`completed` / `failed` /
+  // `executing`) stored on the transactions row. It is NOT the
+  // complianceHashState — those are two separate fields. The pending /
+  // failed compliance-hash cases were already handled above; by this
+  // point complianceHashState is 'complete'.
   const audit = composeAuditRecord({
     transactionId: txn.id,
     createdAt: txn.createdAt,

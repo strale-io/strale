@@ -2,7 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import { htmlToCleanMarkdown } from "./lib/readability-convert.js";
 import { fetchViaJina } from "./lib/jina-reader.js";
-import { validateUrl } from "../lib/url-validator.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 /** Thrown when the target responded definitively — no point trying Jina/Browserless. */
 class DefinitiveFetchError extends Error {
@@ -47,14 +47,14 @@ function getBlockedSiteHint(url: string): string | null {
  */
 async function tryPlainFetch(url: string): Promise<string | null> {
   try {
-    await validateUrl(url);
-
-    const resp = await fetch(url, {
+    // F-0-006: safeFetch re-validates on every redirect and refuses
+    // DNS-rebinding at connection time. The old `redirect: "follow"` +
+    // `validateUrl` pattern was the classic SSRF bypass.
+    const resp = await safeFetch(url, {
       headers: {
         "User-Agent": "Strale/1.0 (url-to-markdown; https://strale.dev)",
         Accept: "text/html,application/xhtml+xml",
       },
-      redirect: "follow",
       signal: AbortSignal.timeout(5000),
     });
 

@@ -16,6 +16,7 @@ import { getDb } from "../db/index.js";
 import { capabilityHealth, capabilities } from "../db/schema.js";
 import { runTests } from "./test-runner.js";
 import { getCapabilityUpstreams, refreshUpstreamMapping, isCacheExpired } from "./upstream-health-gate.js";
+import { logError } from "./log.js";
 
 // ─── Rate limiter ────────────────────────────────────────────────────────────
 
@@ -52,7 +53,9 @@ function isRateLimited(slug: string): boolean {
 async function getDependencyCapabilities(dependencyName: string): Promise<string[]> {
   // Ensure cache is fresh
   if (isCacheExpired()) {
-    await refreshUpstreamMapping().catch(() => {});
+    await refreshUpstreamMapping().catch((err) =>
+      logError("upstream-mapping-refresh-failed", err),
+    );
   }
 
   // Build inverted index from the gate's capability → upstream mapping

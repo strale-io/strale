@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 // Extract metadata via HTTP GET — no Browserless needed
 registerCapability("meta-extract", async (input: CapabilityInput) => {
@@ -7,12 +8,12 @@ registerCapability("meta-extract", async (input: CapabilityInput) => {
 
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
 
-  const response = await fetch(fullUrl, {
+  // F-0-006: safeFetch validates + re-validates on redirect hops.
+  const response = await safeFetch(fullUrl, {
     headers: {
       "User-Agent": "Strale/1.0 (meta extractor; admin@strale.io)",
       Accept: "text/html,*/*",
     },
-    redirect: "follow",
     signal: AbortSignal.timeout(15000),
   });
 

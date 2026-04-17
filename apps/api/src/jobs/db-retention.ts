@@ -17,6 +17,7 @@
 
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { logError } from "../lib/log.js";
 
 const RETENTION_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const STARTUP_DELAY_MS = 5 * 60 * 1000;
@@ -27,6 +28,9 @@ const RULES = [
   { table: "health_monitor_events", column: "created_at", days: 30 },
   { table: "failed_requests", column: "created_at", days: 90 },
   { table: "test_run_log", column: "started_at", days: 180 },
+  // F-0-002: prune old rate-limit windows. 7 days is well beyond the
+  // longest window we use (1 day for signup), so no live counter is lost.
+  { table: "rate_limit_counters", column: "window_start", days: 7 },
 ] as const;
 
 let _running = false;
@@ -63,7 +67,9 @@ async function runRetention(): Promise<void> {
       `[db-retention] Pruned ${total} rows in ${elapsed}s: ${results.map((r) => `${r.table}=${r.deleted}`).join(", ")}`,
     );
   } finally {
-    await db.execute(sql`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`).catch(() => {});
+    await db
+      .execute(sql`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`)
+      .catch((err) => logError("advisory-unlock-failed", err, { job: "db-retention" }));
   }
 }
 

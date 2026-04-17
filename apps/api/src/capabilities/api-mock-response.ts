@@ -1,6 +1,9 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 
+// F-0-006 Bucket D: user URL is passed to Claude as prose for mock
+// generation. Claude does not fetch the URL. No network egress from our
+// side — validateUrl not required.
 registerCapability("api-mock-response", async (input: CapabilityInput) => {
   const method = ((input.method as string) ?? "GET").trim().toUpperCase();
   const url = ((input.url as string) ?? (input.endpoint as string) ?? "").trim();

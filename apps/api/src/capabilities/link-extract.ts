@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 // Extract links via HTTP GET (no Browserless — fast and cheap)
 registerCapability("link-extract", async (input: CapabilityInput) => {
@@ -10,12 +11,12 @@ registerCapability("link-extract", async (input: CapabilityInput) => {
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
   const baseUrl = new URL(fullUrl);
 
-  const response = await fetch(fullUrl, {
+  // F-0-006: safeFetch validates + re-validates on each redirect hop.
+  const response = await safeFetch(fullUrl, {
     headers: {
       "User-Agent": "Strale/1.0 (link extractor; admin@strale.io)",
       Accept: "text/html,*/*",
     },
-    redirect: "follow",
     signal: AbortSignal.timeout(15000),
   });
 

@@ -3,6 +3,10 @@ import { createPublicClient, http, namehash, type Hex } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
 
+// F-0-006 Bucket D: ENS resolution via viem's RPC to a hardcoded
+// Ethereum mainnet endpoint. User input is the ENS name, not the
+// network target. No SSRF surface.
+
 // Public Ethereum RPC endpoints (free, no key)
 const PRIMARY_RPC = "https://ethereum-rpc.publicnode.com";
 const FALLBACK_RPC = "https://eth.llamarpc.com";

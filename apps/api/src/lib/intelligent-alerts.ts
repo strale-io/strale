@@ -15,6 +15,7 @@
 import type { SituationAssessment, DependencyMeta } from "./situation-assessment.js";
 import { DEPENDENCY_CONTEXT } from "./situation-assessment.js";
 import { logHealthEvent } from "./health-monitor.js";
+import { logError } from "./log.js";
 
 // ─── Pending alert buffer ───────────────────────────────────────────────────
 
@@ -382,5 +383,7 @@ async function logSituationAssessment(
       suppression_reason: suppressionReason,
       signals_count: assessment.correlatedSignals.length,
     },
-  }).catch(() => {});
+  }).catch((err) =>
+    logError("health-event-log-failed", err, { context: "situation_assessment" }),
+  );
 }

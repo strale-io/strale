@@ -1,5 +1,9 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
+// F-0-006 Bucket D: generates a curl/fetch code snippet as a STRING.
+// This capability performs NO network I/O itself. The 'fetch(' occurrences
+// below are literals in the generated output, not runtime calls.
+
 registerCapability("http-to-curl", async (input: CapabilityInput) => {
   const method = ((input.method as string) ?? "GET").trim().toUpperCase();
   const url = ((input.url as string) ?? "").trim();

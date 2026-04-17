@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 registerCapability("social-post-generate", async (input: CapabilityInput) => {
   const content = ((input.content as string) ?? (input.topic as string) ?? (input.task as string) ?? "").trim();
@@ -15,7 +16,8 @@ registerCapability("social-post-generate", async (input: CapabilityInput) => {
   if (url && !content) {
     const fullUrl = url.startsWith("http") ? url : `https://${url}`;
     try {
-      const res = await fetch(fullUrl, {
+      // F-0-006: safeFetch guards SSRF + DNS-rebinding.
+      const res = await safeFetch(fullUrl, {
         headers: { "User-Agent": "Strale/1.0", Accept: "text/html,*/*" },
         signal: AbortSignal.timeout(10000),
       });

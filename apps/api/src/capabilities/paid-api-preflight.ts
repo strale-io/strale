@@ -35,8 +35,10 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
     responseHeaders = Object.fromEntries(res.headers.entries());
     server = res.headers.get("server");
 
-    // Consume body to release connection
-    await res.text().catch(() => {});
+    // Consume body to release the socket. Errors here are benign —
+    // the only recoverable state is that the body was never materialized,
+    // which is exactly the outcome we want for a preflight probe.
+    await res.text().catch(() => undefined);
   } catch (err) {
     const responseTimeMs = Date.now() - start;
     const msg = err instanceof Error ? err.message : String(err);

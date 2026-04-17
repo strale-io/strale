@@ -5,6 +5,7 @@
  */
 
 import { sendWebhook } from "./webhook.js";
+import { fireAndForget } from "./fire-and-forget.js";
 
 const MILESTONES = [10, 50, 100, 500, 1000];
 
@@ -30,12 +31,16 @@ export function checkMilestone(todayTransactionCount: number): void {
   for (const milestone of MILESTONES) {
     if (todayTransactionCount >= milestone && !notifiedToday.has(milestone)) {
       notifiedToday.add(milestone);
-      sendWebhook({
-        event: "milestone.transactions",
-        milestone,
-        date: today,
-        total_transactions_today: todayTransactionCount,
-      }).catch(() => {});
+      fireAndForget(
+        () =>
+          sendWebhook({
+            event: "milestone.transactions",
+            milestone,
+            date: today,
+            total_transactions_today: todayTransactionCount,
+          }),
+        { label: "milestone-webhook", context: { milestone, date: today } },
+      );
     }
   }
 }

@@ -1,6 +1,12 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { resolve4, resolve6, resolveMx, resolveNs, resolveTxt, resolveCname } from "node:dns/promises";
 
+// F-0-006 Bucket C: pure DNS resolution on a user-supplied hostname. No
+// HTTP fetch; no socket open to the resolved IP. `node:dns` does not
+// follow URLs, so there is no private-IP exfiltration surface beyond the
+// resolver's own traffic (outside our threat model). validateHost is
+// unnecessary here.
+
 registerCapability("dns-lookup", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.hostname as string) ?? "").trim().toLowerCase();
   if (!domain) {

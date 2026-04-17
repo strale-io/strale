@@ -1,6 +1,11 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import dns from "node:dns/promises";
 
+// F-0-006 Bucket C: pure DNS resolution (MX, SPF, DMARC records) on the
+// user's email domain. No HTTP fetch, no socket to the resolved IP.
+// validateHost not required.
+
+
 // Common DKIM selectors to probe
 const DKIM_SELECTORS = [
   "google",

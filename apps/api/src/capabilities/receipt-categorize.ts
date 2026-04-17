@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 registerCapability("receipt-categorize", async (input: CapabilityInput) => {
   const imageUrl = (input.image_url as string)?.trim() ?? (input.url as string)?.trim();
@@ -26,7 +27,8 @@ registerCapability("receipt-categorize", async (input: CapabilityInput) => {
       ],
     });
   } else if (imageUrl) {
-    const res = await fetch(imageUrl, { signal: AbortSignal.timeout(10000) });
+    // F-0-006: safeFetch guards SSRF when fetching a user-supplied image URL.
+    const res = await safeFetch(imageUrl, { signal: AbortSignal.timeout(10000) });
     if (!res.ok) throw new Error(`Failed to fetch image: HTTP ${res.status}`);
     const buf = Buffer.from(await res.arrayBuffer());
     const contentType = res.headers.get("content-type") ?? "";

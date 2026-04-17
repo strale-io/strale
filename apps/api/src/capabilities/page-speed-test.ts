@@ -1,5 +1,8 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
+// F-0-006 Bucket D: user URL is url-encoded and sent to the HARDCODED
+// Google PageSpeed API endpoint. We never fetch the user's URL directly —
+// Google does, from their network.
 registerCapability("page-speed-test", async (input: CapabilityInput) => {
   const rawUrl = ((input.url as string) ?? (input.task as string) ?? "").trim();
   if (!rawUrl) throw new Error("'url' is required. Provide a URL to test page speed.");

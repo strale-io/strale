@@ -11,6 +11,7 @@ import {
   decimal,
   uniqueIndex,
   index,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -197,6 +198,14 @@ export const transactions = pgTable(
     // Compliance infrastructure
     integrityHash: varchar("integrity_hash", { length: 128 }),
     previousHash: varchar("previous_hash", { length: 128 }),
+    // F-0-009 Stage 2: 'pending' | 'complete' | 'failed'.
+    // Hashing moved off the hot path; jobs/integrity-hash-retry.ts fills it in.
+    // NOT called integrity_hash_status — that column exists on prod and is
+    // owned by a separate, untracked workflow that tags 'customer' / 'test'.
+    // See PHASE_C_COLUMN_INVESTIGATION.md.
+    complianceHashState: varchar("compliance_hash_state", { length: 16 })
+      .notNull()
+      .default("pending"),
     legalHold: boolean("legal_hold").notNull().default(false),
     // x402 payment tracking
     paymentMethod: varchar("payment_method", { length: 20 }).notNull().default("wallet"),
@@ -561,6 +570,26 @@ export const sqsDailySnapshot = pgTable(
       table.capabilitySlug,
       table.snapshotDate,
     ),
+  ],
+);
+
+// ─── rate_limit_counters (F-0-002) ──────────────────────────────────────────
+// DB-backed, restart-safe counters for abuse-class endpoints (signup,
+// register, recover). Composite PK (bucket_key, window_start) + atomic
+// INSERT ... ON CONFLICT DO UPDATE increment. See lib/db-rate-limit.ts.
+export const rateLimitCounters = pgTable(
+  "rate_limit_counters",
+  {
+    bucketKey: text("bucket_key").notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    count: integer("count").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.bucketKey, table.windowStart] }),
+    index("rate_limit_counters_window_idx").on(table.windowStart),
   ],
 );
 
