@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 registerCapability("og-image-check", async (input: CapabilityInput) => {
   const rawUrl = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -6,13 +7,12 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
 
   const url = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;
 
-  // Fetch page HTML
-  const resp = await fetch(url, {
+  // F-0-006: safeFetch validates + re-validates redirects.
+  const resp = await safeFetch(url, {
     headers: {
       "User-Agent": "Strale-Bot/1.0",
       Accept: "text/html,*/*",
     },
-    redirect: "follow",
     signal: AbortSignal.timeout(15000),
   });
 
@@ -46,10 +46,10 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
   const imageToCheck = resolvedOgImage ?? resolvedTwitterImage;
   if (imageToCheck) {
     try {
-      const imgResp = await fetch(imageToCheck, {
+      // F-0-006: the OG image URL came from the fetched page; treat as untrusted.
+      const imgResp = await safeFetch(imageToCheck, {
         method: "HEAD",
         headers: { "User-Agent": "Strale-Bot/1.0" },
-        redirect: "follow",
         signal: AbortSignal.timeout(10000),
       });
 

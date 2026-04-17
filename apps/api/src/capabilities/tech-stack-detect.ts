@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 /**
  * Tech Stack Detection — identify technologies used by a website.
@@ -90,13 +91,13 @@ registerCapability("tech-stack-detect", async (input: CapabilityInput) => {
   }
   const target = rawTarget.startsWith("http") ? rawTarget : `https://${rawTarget}`;
 
-  const resp = await fetch(target, {
+  // F-0-006: safeFetch validates + re-validates redirects.
+  const resp = await safeFetch(target, {
     headers: {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       Accept: "text/html,application/xhtml+xml",
     },
     signal: AbortSignal.timeout(15000),
-    redirect: "follow",
   });
 
   if (!resp.ok) {

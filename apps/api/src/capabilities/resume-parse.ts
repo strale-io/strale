@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 registerCapability("resume-parse", async (input: CapabilityInput) => {
   const pdfUrl = (input.pdf_url as string)?.trim() ?? (input.url as string)?.trim();
@@ -27,8 +28,8 @@ registerCapability("resume-parse", async (input: CapabilityInput) => {
       ],
     });
   } else if (pdfUrl) {
-    // Fetch PDF and convert to base64 for vision
-    const res = await fetch(pdfUrl, { signal: AbortSignal.timeout(15000) });
+    // F-0-006: safeFetch guards SSRF when fetching a user-supplied PDF URL.
+    const res = await safeFetch(pdfUrl, { signal: AbortSignal.timeout(15000) });
     if (!res.ok) throw new Error(`Failed to fetch PDF: HTTP ${res.status}`);
     const buf = Buffer.from(await res.arrayBuffer());
     const contentType = res.headers.get("content-type") ?? "";

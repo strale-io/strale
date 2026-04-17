@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { promises as dns } from "dns";
 import { validateHost } from "../lib/url-validator.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 registerCapability("domain-reputation", async (input: CapabilityInput) => {
   let domain = ((input.domain as string) ?? (input.url as string) ?? (input.task as string) ?? "").trim().toLowerCase();
@@ -54,10 +55,10 @@ registerCapability("domain-reputation", async (input: CapabilityInput) => {
 
   // 4. HTTPS check
   try {
-    const resp = await fetch(`https://${domain}/`, {
+    // F-0-006: user-supplied domain → safeFetch validates + re-checks redirects.
+    const resp = await safeFetch(`https://${domain}/`, {
       method: "HEAD",
       signal: AbortSignal.timeout(8000),
-      redirect: "follow",
     });
     checks.https_works = true;
     checks.https_status = resp.status;

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 // Constants from the Sustainable Web Design model / Website Carbon methodology
 const ENERGY_PER_GB_KWH = 0.81; // kWh per GB transferred
@@ -15,13 +16,12 @@ registerCapability("website-carbon-estimate", async (input: CapabilityInput) => 
 
   const url = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;
 
-  // Fetch the page and measure transfer size
-  const resp = await fetch(url, {
+  // F-0-006: safeFetch validates + re-validates redirects.
+  const resp = await safeFetch(url, {
     headers: {
       "User-Agent": "Strale-Bot/1.0",
       Accept: "text/html,application/xhtml+xml,*/*",
     },
-    redirect: "follow",
     signal: AbortSignal.timeout(30000),
   });
 

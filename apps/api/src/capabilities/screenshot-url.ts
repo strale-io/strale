@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
+import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("screenshot-url", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -10,13 +11,18 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
   const viewportHeight = (input.viewport_height as number) ?? 800;
   const waitFor = (input.wait_for as string | number) ?? undefined;
 
+  // F-0-006: Browserless fetches the URL from its own network. validateUrl
+  // is the only layer we own — refuse private-IP / bad-scheme before forwarding.
+  const fullUrl = url.startsWith("http") ? url : `https://${url}`;
+  await validateUrl(fullUrl);
+
   const { url: blessUrl, key } = getBrowserlessConfig();
   const endpoint = `${blessUrl}/screenshot?token=${key}`;
 
   const gotoOptions: Record<string, unknown> = { waitUntil: "networkidle0", timeout: 25000 };
 
   const bodyObj: Record<string, unknown> = {
-    url: url.startsWith("http") ? url : `https://${url}`,
+    url: fullUrl,
     gotoOptions,
     options: {
       fullPage,
