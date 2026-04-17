@@ -1,0 +1,28 @@
+name: CI
+
+# Minimal seed workflow. Its only job is to get a working Actions pipeline
+# into main's history so future PRs trigger CI reliably. The Phase B+C PR
+# (which ships F-0-001..F-0-020) adds the real check steps — typecheck,
+# vitest, the lint:no-bare-catch guard, and the SSRF inventory guard —
+# once those scripts exist on main.
+#
+# Until then this workflow runs only `npm ci` + `npm run build --workspace=apps/api`
+# which is what main currently has the infrastructure to do.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm --workspace=packages/mcp-server run build
+      - run: npm --workspace=apps/api run build
