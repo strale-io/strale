@@ -264,6 +264,31 @@ export const failedRequests = pgTable(
   (table) => [index("failed_requests_user_id_idx").on(table.userId)],
 );
 
+// ─── suggest_log ────────────────────────────────────────────────────────────
+// Logs every query against /v1/suggest and /v1/suggest/typeahead so we can
+// see what prospects search for — including zero-result queries that indicate
+// capability/solution gaps. Non-PII: only the query string + result count.
+export const suggestLog = pgTable(
+  "suggest_log",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    query: text("query").notNull(),
+    queryLength: integer("query_length").notNull(),
+    resultCount: integer("result_count").notNull(),
+    searchType: varchar("search_type", { length: 20 }).notNull(), // 'typeahead' | 'suggest'
+    typeFilter: varchar("type_filter", { length: 20 }),           // null | 'solution' | 'capability'
+    geo: varchar("geo", { length: 10 }),
+    ipHash: varchar("ip_hash", { length: 16 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("suggest_log_created_at_idx").on(table.createdAt),
+    index("suggest_log_result_count_idx").on(table.resultCount),
+  ],
+);
+
 // ─── solutions ──────────────────────────────────────────────────────────────
 // Bundled multi-capability workflows with outcome-level pricing
 export const solutions = pgTable("solutions", {

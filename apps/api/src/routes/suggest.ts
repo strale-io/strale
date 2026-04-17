@@ -2,9 +2,36 @@ import { Hono } from "hono";
 import { suggest, typeahead } from "../lib/suggest.js";
 import { apiError } from "../lib/errors.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
+import { getClientIp, hashIp } from "../lib/middleware.js";
+import { getDb } from "../db/index.js";
+import { suggestLog } from "../db/schema.js";
 import type { AppEnv } from "../types.js";
 
 export const suggestRoute = new Hono<AppEnv>();
+
+function logSearch(row: {
+  query: string;
+  resultCount: number;
+  searchType: "typeahead" | "suggest";
+  typeFilter?: string | null;
+  geo?: string | null;
+  ipHash?: string | null;
+}): void {
+  void getDb()
+    .insert(suggestLog)
+    .values({
+      query: row.query.slice(0, 500),
+      queryLength: row.query.length,
+      resultCount: row.resultCount,
+      searchType: row.searchType,
+      typeFilter: row.typeFilter ?? null,
+      geo: row.geo ?? null,
+      ipHash: row.ipHash ?? null,
+    })
+    .catch((err: unknown) => {
+      console.error("[suggest_log] insert failed:", err instanceof Error ? err.message : err);
+    });
+}
 
 // GET /v1/suggest/typeahead — Public, no auth, fast in-memory matching
 suggestRoute.get("/suggest/typeahead", rateLimitByIp(30, 1000), async (c) => {
@@ -24,6 +51,15 @@ suggestRoute.get("/suggest/typeahead", rateLimitByIp(30, 1000), async (c) => {
 
   try {
     const result = await typeahead(q, limit, geo, typeFilter);
+    const clientIp = getClientIp(c);
+    logSearch({
+      query: q,
+      resultCount: Array.isArray(result) ? result.length : 0,
+      searchType: "typeahead",
+      typeFilter: typeFilter ?? null,
+      geo: geo ?? null,
+      ipHash: clientIp !== "unknown" ? hashIp(clientIp) : null,
+    });
     return c.json(result, 200, {
       "Cache-Control": "public, max-age=30",
     });
@@ -62,6 +98,17 @@ suggestRoute.post("/suggest", rateLimitByIp(20, 1000), async (c) => {
 
   try {
     const result = await suggest({ query, limit });
+    const clientIp = getClientIp(c);
+    const resultCount =
+      (result?.recommendation ? 1 : 0) + (Array.isArray(result?.alternatives) ? result.alternatives.length : 0);
+    logSearch({
+      query,
+      resultCount,
+      searchType: "suggest",
+      typeFilter: null,
+      geo: null,
+      ipHash: clientIp !== "unknown" ? hashIp(clientIp) : null,
+    });
 
     return c.json(result, 200, {
       "Cache-Control": "public, max-age=60",
