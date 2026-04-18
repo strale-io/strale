@@ -22,7 +22,10 @@ walletRoute.post("/topup", async (c) => {
   const user = c.get("user");
   const body = await c.req.json().catch(() => null);
 
-  console.log(`[topup-attempt] user=${user.id} email=${user.email} amount_cents=${body?.amount_cents ?? 'unknown'} timestamp=${new Date().toISOString()}`);
+  // F-0-013: don't log user email (PII). user.id is sufficient for
+  // operational tracing; email can be recovered via the users table
+  // by anyone with admin DB access.
+  console.log(`[topup-attempt] user=${user.id} amount_cents=${body?.amount_cents ?? 'unknown'} timestamp=${new Date().toISOString()}`);
 
   const amountCents = body?.amount_cents;
   if (
@@ -66,7 +69,9 @@ walletRoute.post("/topup", async (c) => {
     cancel_url: `${c.req.url.split("/v1")[0]}/v1/wallet/balance`,
   });
 
-  console.log(`[topup-session-created] user=${user.id} email=${user.email} amount_cents=${amountCents} session_id=${session.id} timestamp=${new Date().toISOString()}`);
+  // F-0-013: drop email from the log. user.id + session.id are the
+  // searchable keys operators need.
+  console.log(`[topup-session-created] user=${user.id} amount_cents=${amountCents} session_id=${session.id} timestamp=${new Date().toISOString()}`);
 
   return c.json({
     checkout_url: session.url,

@@ -167,8 +167,12 @@ authRoute.post(
     .limit(1);
 
   if (!user) {
+    // F-0-013: do not log the email. Logging `email=<addr> user_found=false`
+    // is both PII and a user-enumeration oracle — anyone with Railway log
+    // access can trivially see which emails are registered. Log only that a
+    // lookup happened.
     console.log(
-      `[key-recovery] email=${email} user_found=false timestamp=${new Date().toISOString()}`,
+      `[key-recovery] user_found=false timestamp=${new Date().toISOString()}`,
     );
     return c.json(genericResponse);
   }
@@ -187,8 +191,10 @@ authRoute.post(
     })
     .where(eq(users.id, user.id));
 
+  // F-0-013: drop email from the log. user.id is enough for operational
+  // tracing and doesn't leak PII or act as an enumeration oracle.
   console.log(
-    `[key-recovery] email=${email} user_found=true timestamp=${new Date().toISOString()}`,
+    `[key-recovery] user=${user.id} user_found=true timestamp=${new Date().toISOString()}`,
   );
 
   // Fire-and-forget recovery email
@@ -364,7 +370,12 @@ export async function agentSignupHandler(c: Context) {
     { label: "welcome-email-send", context: { userId: user.id } },
   );
 
-  console.log(`[agent-signup] email=${email} ip=${clientIp} flagged=${flaggedForReview} timestamp=${new Date().toISOString()}`);
+  // F-0-013: drop email + raw IP. user.id is already allocated at this point
+  // and is the operational join key. Raw client IP is separately used for
+  // abuse-detection via `signupIpHash`; logging the cleartext IP alongside
+  // an email on the same line is a tidy little dossier for anyone with log
+  // read access.
+  console.log(`[agent-signup] user=${user.id} flagged=${flaggedForReview} timestamp=${new Date().toISOString()}`);
 
   return c.json({
     api_key: apiKey,

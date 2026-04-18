@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, desc, sql, asc } from "drizzle-orm";
+import { eq, and, desc, sql, asc, inArray } from "drizzle-orm";
 import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import {
@@ -114,25 +114,48 @@ internalTestsRoute.get("/capabilities/:slug", async (c) => {
   // All suites for a capability share the same tier
   const scheduleTier = suites[0].scheduleTier;
 
-  const tests = await Promise.all(
-    suites.map(async (suite) => {
-      const [latest] = await db
-        .select()
-        .from(testResults)
-        .where(eq(testResults.testSuiteId, suite.id))
-        .orderBy(desc(testResults.executedAt))
-        .limit(1);
+  // F-0-010: replace per-suite Promise.all fan-out (N+1) with a single
+  // DISTINCT ON query that fetches the latest result per suite in one round
+  // trip. Previously ~7 suites = 7 extra queries; this is 1.
+  const suiteIds = suites.map((s) => s.id);
+  const latestRows = suiteIds.length > 0
+    ? await db.execute<{
+        test_suite_id: string;
+        passed: boolean;
+        failure_reason: string | null;
+        response_time_ms: number | null;
+        executed_at: string | Date;
+      }>(sql`
+        SELECT DISTINCT ON (test_suite_id)
+          test_suite_id, passed, failure_reason, response_time_ms, executed_at
+        FROM test_results
+        WHERE test_suite_id IN (${sql.join(suiteIds.map((id) => sql`${id}`), sql`, `)})
+        ORDER BY test_suite_id, executed_at DESC
+      `)
+    : [];
+  const latestRowList = (Array.isArray(latestRows) ? latestRows : (latestRows as any)?.rows ?? []) as Array<{
+    test_suite_id: string;
+    passed: boolean;
+    failure_reason: string | null;
+    response_time_ms: number | null;
+    executed_at: string | Date;
+  }>;
+  const latestBySuiteId = new Map(latestRowList.map((r) => [r.test_suite_id, r]));
 
-      return {
-        test_name: suite.testName,
-        test_type: suite.testType,
-        passed: latest?.passed ?? null,
-        failure_reason: latest?.failureReason ? sanitizeFailureReason(latest.failureReason) : null,
-        response_time_ms: latest?.responseTimeMs ?? null,
-        executed_at: latest?.executedAt?.toISOString() ?? null,
-      };
-    }),
-  );
+  const tests = suites.map((suite) => {
+    const latest = latestBySuiteId.get(suite.id);
+    const executedAt = latest?.executed_at;
+    return {
+      test_name: suite.testName,
+      test_type: suite.testType,
+      passed: latest?.passed ?? null,
+      failure_reason: latest?.failure_reason ? sanitizeFailureReason(latest.failure_reason) : null,
+      response_time_ms: latest?.response_time_ms ?? null,
+      executed_at: executedAt
+        ? (executedAt instanceof Date ? executedAt.toISOString() : new Date(executedAt).toISOString())
+        : null,
+    };
+  });
 
   const withResults = tests.filter((t) => t.passed !== null);
   const passed = withResults.filter((t) => t.passed === true).length;
@@ -380,62 +403,101 @@ internalTestsRoute.get("/solutions/:slug", async (c) => {
     );
   }
 
-  const stepResults = await Promise.all(
-    steps.map(async (step) => {
-      const suites = await db
+  // F-0-010: collapse 1 + N + N×M queries into 2 bulk queries.
+  //
+  // Before: for a 12-step solution with ~7 suites per step, this ran
+  //   1 steps + 12 testSuites + (12 × 7) testResults = 97 DB queries.
+  // Every /internal/tests/solutions/:slug call could drive ~11,600 DB
+  // queries/min per IP on the 120 req/min budget, saturating the pool
+  // that /v1/do shares.
+  //
+  // After: one testSuites query (inArray on capability_slug) + one
+  // DISTINCT ON aggregation over test_results keyed by test_suite_id.
+  const capSlugs = steps.map((s) => s.capabilitySlug);
+  const allSuites = capSlugs.length > 0
+    ? await db
         .select()
         .from(testSuites)
         .where(
           and(
-            eq(testSuites.capabilitySlug, step.capabilitySlug),
+            inArray(testSuites.capabilitySlug, capSlugs),
             eq(testSuites.active, true),
           ),
-        );
+        )
+    : [];
 
-      const scheduleTier = suites[0]?.scheduleTier ?? "B";
-      let passed = 0;
-      let failed = 0;
-      let totalResponseTime = 0;
-      let withResults = 0;
-      let lastRun: string | null = null;
+  const suiteIds = allSuites.map((s) => s.id);
+  const latestRows = suiteIds.length > 0
+    ? await db.execute<{
+        test_suite_id: string;
+        passed: boolean;
+        response_time_ms: number | null;
+        executed_at: string | Date;
+      }>(sql`
+        SELECT DISTINCT ON (test_suite_id)
+          test_suite_id, passed, response_time_ms, executed_at
+        FROM test_results
+        WHERE test_suite_id IN (${sql.join(suiteIds.map((id) => sql`${id}`), sql`, `)})
+        ORDER BY test_suite_id, executed_at DESC
+      `)
+    : [];
+  const latestRowList = (Array.isArray(latestRows) ? latestRows : (latestRows as any)?.rows ?? []) as Array<{
+    test_suite_id: string;
+    passed: boolean;
+    response_time_ms: number | null;
+    executed_at: string | Date;
+  }>;
+  const latestBySuiteId = new Map(latestRowList.map((r) => [r.test_suite_id, r]));
 
-      for (const suite of suites) {
-        const [latest] = await db
-          .select()
-          .from(testResults)
-          .where(eq(testResults.testSuiteId, suite.id))
-          .orderBy(desc(testResults.executedAt))
-          .limit(1);
+  // Bucket suites by capability_slug so per-step aggregation stays cheap.
+  const suitesByCapSlug = new Map<string, typeof allSuites>();
+  for (const suite of allSuites) {
+    const bucket = suitesByCapSlug.get(suite.capabilitySlug) ?? [];
+    bucket.push(suite);
+    suitesByCapSlug.set(suite.capabilitySlug, bucket);
+  }
 
-        if (latest) {
-          withResults++;
-          if (latest.passed) passed++;
-          else failed++;
-          totalResponseTime += latest.responseTimeMs;
-          if (!lastRun || latest.executedAt.toISOString() > lastRun) {
-            lastRun = latest.executedAt.toISOString();
-          }
-        }
+  const stepResults = steps.map((step) => {
+    const suites = suitesByCapSlug.get(step.capabilitySlug) ?? [];
+    const scheduleTier = suites[0]?.scheduleTier ?? "B";
+    let passed = 0;
+    let failed = 0;
+    let totalResponseTime = 0;
+    let withResults = 0;
+    let lastRun: string | null = null;
+
+    for (const suite of suites) {
+      const latest = latestBySuiteId.get(suite.id);
+      if (!latest) continue;
+      withResults++;
+      if (latest.passed) passed++;
+      else failed++;
+      totalResponseTime += latest.response_time_ms ?? 0;
+      const executedAtStr = latest.executed_at instanceof Date
+        ? latest.executed_at.toISOString()
+        : new Date(latest.executed_at).toISOString();
+      if (!lastRun || executedAtStr > lastRun) {
+        lastRun = executedAtStr;
       }
+    }
 
-      return {
-        capability_slug: step.capabilitySlug,
-        schedule_tier: scheduleTier,
-        total_tests: suites.length,
-        passed,
-        failed,
-        pass_rate:
-          withResults > 0
-            ? parseFloat(((passed / withResults) * 100).toFixed(1))
-            : null,
-        avg_response_time_ms:
-          withResults > 0
-            ? Math.round(totalResponseTime / withResults)
-            : null,
-        last_run: lastRun,
-      };
-    }),
-  );
+    return {
+      capability_slug: step.capabilitySlug,
+      schedule_tier: scheduleTier,
+      total_tests: suites.length,
+      passed,
+      failed,
+      pass_rate:
+        withResults > 0
+          ? parseFloat(((passed / withResults) * 100).toFixed(1))
+          : null,
+      avg_response_time_ms:
+        withResults > 0
+          ? Math.round(totalResponseTime / withResults)
+          : null,
+      last_run: lastRun,
+    };
+  });
 
   // Aggregate across all steps
   const allPassed = stepResults.reduce((s, r) => s + r.passed, 0);

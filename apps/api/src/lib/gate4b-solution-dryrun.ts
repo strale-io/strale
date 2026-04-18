@@ -12,7 +12,7 @@
  * references ($steps[N].field) resolve to non-null values.
  */
 
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { resolveInputRef } from "./solution-executor.js";
@@ -138,7 +138,10 @@ export async function runSolutionDryRun(solutionSlug: string): Promise<Gate4bRes
     ? await db
         .select({ slug: capabilities.slug, outputSchema: capabilities.outputSchema })
         .from(capabilities)
-        .where(sql`slug = ANY(${sql.raw(`ARRAY[${capSlugs.map((s) => `'${s}'`).join(",")}]`)}::text[])`)
+        // F-0-007: use parameter-bound inArray instead of raw SQL interpolation.
+        // An apostrophe in a capability slug would previously break out of
+        // the array literal. Drizzle's `inArray` binds each value safely.
+        .where(inArray(capabilities.slug, capSlugs))
     : [];
 
   const outputSchemas = new Map<string, Record<string, unknown>>();
