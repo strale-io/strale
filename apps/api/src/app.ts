@@ -37,6 +37,8 @@ import { aiCatalogRoute } from "./routes/ai-catalog.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
 import { openApiSpec } from "./openapi.js";
 import { welcomeRoute } from "./routes/welcome.js";
+import { getDb } from "./db/index.js";
+import { sql } from "drizzle-orm";
 
 // Capability executors + DataProvider chains are registered by
 // autoRegisterCapabilities() in index.ts before the server starts.
@@ -191,8 +193,32 @@ app.use("*", async (c, next) => {
   );
 });
 
-// Health check
+// Health check — shallow (app is running)
 app.get("/health", (c) => c.json({ status: "ok" }));
+
+// Health check — deep (DB write path works, including indexes on transactions table)
+// Use this for Railway health checks to catch index corruption, disk full, connection pool exhaustion, etc.
+app.get("/health/deep", async (c) => {
+  const start = Date.now();
+  try {
+    const db = getDb();
+    // Test the write path on the transactions table (touches all indexes).
+    // CTE inserts a probe row and immediately deletes it — atomic, no data left behind.
+    // Uses solution_slug (not capability_id) to satisfy the XOR check constraint.
+    await db.execute(sql`
+      WITH probe AS (
+        INSERT INTO transactions (solution_slug, status, input, price_cents, transparency_marker, data_jurisdiction, is_free_tier)
+        VALUES ('_health_probe', 'health_probe', '{}', 0, 'algorithmic', 'EU', true)
+        RETURNING id
+      )
+      DELETE FROM transactions WHERE id IN (SELECT id FROM probe)
+    `);
+    return c.json({ status: "ok", write_path: "ok", latency_ms: Date.now() - start });
+  } catch (err) {
+    console.error("[health/deep] Write-path probe failed:", err instanceof Error ? err.message : err);
+    return c.json({ status: "degraded", write_path: "failed", error: err instanceof Error ? err.message : "unknown", latency_ms: Date.now() - start }, 503);
+  }
+});
 
 // OpenAPI specification (with content negotiation)
 let _openApiMd: string | null = null;
