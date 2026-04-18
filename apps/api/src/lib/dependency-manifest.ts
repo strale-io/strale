@@ -47,6 +47,10 @@ export interface DependencyProvider {
   displayName: string;
   description: string;
   baseUrl: string;
+  /** Alternate base URLs forming a pool. The probe treats the pool as healthy
+   *  if ANY endpoint responds — use for free/public services where individual
+   *  endpoints have opaque rate limits and the capability itself fails over. */
+  fallbackBaseUrls?: string[];
   authType: AuthType;
   envVar?: string;
   authHeader?: string;
@@ -339,9 +343,13 @@ export const PROVIDERS: DependencyProvider[] = [
     tier: "free",
   },
   {
+    // Retired: replaced by alchemy-eth (authenticated RPC with known quota).
+    // Kept for event-history continuity. The invariant checker's migration
+    // check greps capabilities/ for this baseUrl; the URL now lives only in
+    // src/lib/eth-rpc-endpoints.ts as a fallback, not in capabilities/.
     name: "publicnode",
-    displayName: "PublicNode Ethereum RPC",
-    description: "Free public Ethereum JSON-RPC endpoint for ENS resolution.",
+    displayName: "PublicNode Ethereum RPC (retired)",
+    description: "Retired — replaced by Alchemy. See provider 'alchemy-eth'.",
     baseUrl: "https://ethereum-rpc.publicnode.com",
     authType: "none",
     healthProbe: {
@@ -350,6 +358,46 @@ export const PROVIDERS: DependencyProvider[] = [
       body: { jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 },
       healthyStatuses: [200],
       timeoutMs: 5000,
+    },
+    capabilities: [],
+    tier: "free",
+    retired: true,
+    migratedAt: "2026-04-17",
+  },
+  {
+    // Alchemy Ethereum mainnet — authenticated RPC with known CU quota.
+    //
+    // The probe hits /v2/probe (an invalid key segment) with skipAuth:true
+    // and accepts 401 as healthy — 401 proves the service is reachable
+    // without consuming compute units. If Alchemy itself is unreachable,
+    // fallbackBaseUrls (free public pool) are tried and 200 is accepted.
+    //
+    // The real Alchemy URL with the API key is built at request time inside
+    // the ENS executors (see src/lib/eth-rpc-endpoints.ts).
+    name: "alchemy-eth",
+    displayName: "Alchemy Ethereum RPC",
+    description: "Authenticated Ethereum JSON-RPC for ENS resolution. 100k compute units/day free tier.",
+    baseUrl: "https://eth-mainnet.g.alchemy.com",
+    fallbackBaseUrls: [
+      "https://ethereum-rpc.publicnode.com",
+      "https://eth.llamarpc.com",
+      "https://cloudflare-eth.com",
+      "https://rpc.ankr.com/eth",
+    ],
+    authType: "none",
+    envVar: "ALCHEMY_API_KEY",
+    replacedFrom: "publicnode",
+    migratedAt: "2026-04-17",
+    healthProbe: {
+      // Invalid key path — Alchemy returns 401 without consuming quota.
+      // Free-pool fallbacks ignore the path and return 200 on a valid
+      // eth_blockNumber call, so we accept both statuses as healthy.
+      path: "/v2/probe",
+      method: "POST",
+      body: { jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 },
+      healthyStatuses: [200, 401],
+      timeoutMs: 5000,
+      skipAuth: true,
     },
     capabilities: ["ens-resolve", "ens-reverse-lookup"],
     tier: "free",

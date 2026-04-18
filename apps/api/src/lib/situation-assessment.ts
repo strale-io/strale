@@ -15,6 +15,7 @@ import { getDb } from "../db/index.js";
 import { healthMonitorEvents, testResults, capabilityHealth, capabilities } from "../db/schema.js";
 import { getAllUpstreamHealth, getCapabilityUpstreams } from "./upstream-health-gate.js";
 import { getBrowserlessCapabilityCount } from "./chromium-health.js";
+import { getProvider } from "./dependency-manifest.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -237,10 +238,17 @@ async function getRecentRailwayEvents(hours: number): Promise<string[]> {
 }
 
 function getAffectedCapabilityCount(dependency: string): number {
+  // browserless is special-cased — its capability list is derived dynamically
+  // from caps using Browserless-backed executors, not the manifest.
   if (dependency === "browserless") return getBrowserlessCapabilityCount();
-  if (dependency === "anthropic") return 68; // Known count of ai_assisted caps
-  const fixed: Record<string, number> = { vies: 3, dilisense: 4, gleif: 1, brreg: 1 };
-  return fixed[dependency] ?? 0;
+  // anthropic likewise — used by every ai_assisted capability, tracked
+  // separately from the manifest's explicit list.
+  if (dependency === "anthropic") return 68;
+  // Every other provider: read from the dependency manifest directly.
+  // Hardcoding counts here historically caused alerts to report "0
+  // capabilities affected" whenever a new provider was added.
+  const provider = getProvider(dependency);
+  return provider?.capabilities.length ?? 0;
 }
 
 // ─── Assessment functions ───────────────────────────────────────────────────

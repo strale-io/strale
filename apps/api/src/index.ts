@@ -41,6 +41,23 @@ async function main() {
     console.log("[startup] All provider env vars present.");
   }
 
+  // Manifest hygiene: unauthenticated providers must either declare a pool of
+  // fallback base URLs (so one throttled endpoint doesn't trip the probe) or
+  // explicitly accept the risk. This enforces the lesson from the publicnode
+  // 429 incident — a single free endpoint is not a production dependency.
+  const risky = getActiveProviders().filter(
+    (p) =>
+      p.authType === "none" &&
+      (!p.fallbackBaseUrls || p.fallbackBaseUrls.length === 0) &&
+      p.tier === "free",
+  );
+  if (risky.length > 0) {
+    console.warn(
+      "[startup] Unauthenticated providers with no fallback pool — add `fallbackBaseUrls` or document the opaque rate limit:\n" +
+        risky.map((p) => `  - ${p.name} (${p.displayName})`).join("\n"),
+    );
+  }
+
   // Schema validation: fail fast if DB is missing columns the code expects
   const { validateSchema } = await import("./lib/schema-validator.js");
   await validateSchema();

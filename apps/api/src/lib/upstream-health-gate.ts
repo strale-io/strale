@@ -48,6 +48,7 @@ const FIXED_UPSTREAM_SLUGS: Record<string, string[]> = {
   dilisense: ["sanctions-check", "pep-check", "adverse-media-check"],
   gleif: ["lei-lookup"],
   brreg: ["norwegian-company-data"],
+  "alchemy-eth": ["ens-resolve", "ens-reverse-lookup"],
 };
 
 /**

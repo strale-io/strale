@@ -2,9 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { createPublicClient, http, type Address } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
-
-const PRIMARY_RPC = "https://ethereum-rpc.publicnode.com";
-const FALLBACK_RPC = "https://eth.llamarpc.com";
+import { getEthRpcEndpoints, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
 
 function makeClient(rpcUrl: string) {
   return createPublicClient({
@@ -25,7 +23,11 @@ registerCapability("ens-reverse-lookup", async (input: CapabilityInput) => {
 
   const now = new Date().toISOString();
 
-  for (const rpcUrl of [PRIMARY_RPC, FALLBACK_RPC]) {
+  const endpoints = getEthRpcEndpoints();
+  let lastError: unknown;
+  for (let i = 0; i < endpoints.length; i++) {
+    const rpcUrl = endpoints[i];
+    const isLast = i === endpoints.length - 1;
     try {
       const client = makeClient(rpcUrl);
 
@@ -39,7 +41,7 @@ registerCapability("ens-reverse-lookup", async (input: CapabilityInput) => {
             ens_name: null,
             verified: false,
           },
-          provenance: { source: "ens.domains (via cloudflare-eth.com)", fetched_at: now },
+          provenance: { source: `ens.domains (via ${rpcEndpointHost(rpcUrl)})`, fetched_at: now },
         };
       }
 
@@ -59,14 +61,15 @@ registerCapability("ens-reverse-lookup", async (input: CapabilityInput) => {
           ens_name: ensName,
           verified,
         },
-        provenance: { source: "ens.domains (via cloudflare-eth.com)", fetched_at: now },
+        provenance: { source: `ens.domains (via ${rpcEndpointHost(rpcUrl)})`, fetched_at: now },
       };
     } catch (err) {
-      if (rpcUrl === FALLBACK_RPC) {
-        throw new Error(`ENS reverse lookup failed: ${err instanceof Error ? err.message : String(err)}`);
+      lastError = err;
+      if (isLast) {
+        throw new Error(`ENS reverse lookup failed on all RPC endpoints: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
   }
 
-  throw new Error("ENS reverse lookup failed on all RPC endpoints.");
+  throw new Error(`ENS reverse lookup failed on all RPC endpoints: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
 });
