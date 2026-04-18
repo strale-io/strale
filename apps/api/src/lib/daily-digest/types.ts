@@ -12,6 +12,16 @@ export interface PlatformActivity {
   transactions: { count: number; delta: number };
   revenue: { cents: number; delta: number };
   solutionExecutions: SolutionExecution[];
+  // External API calls (last 24h) — excludes internal users (@strale.*, petterlindstrom@hotmail.com,
+  // system user) and excludes purely-algorithmic capabilities (transparency_marker = 'algorithmic').
+  // This is the "real outside-world usage" metric.
+  externalApiCalls: {
+    total: number;
+    authenticated: number;
+    freeTier: number;
+    failed: number;
+    byCapability: Array<{ slug: string; count: number }>;
+  };
   zeroActivity: boolean;
 }
 

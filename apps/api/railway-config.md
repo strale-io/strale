@@ -65,6 +65,52 @@ Key vars:
 
 ---
 
+## strale-digest-cron (daily digest email)
+
+Runs the daily digest job once per day and exits. Uses the same Docker image
+as the `strale` service — only the start command and schedule differ.
+
+### Service setup (one-time, in Railway UI)
+
+1. In the same Railway project as `strale`, click **+ New → GitHub Repo** and
+   select the same `strale` repo. This creates a second service from the same
+   image build.
+2. In the new service → **Settings**:
+   - **Service name**: `strale-digest-cron`
+   - **Build**: Dockerfile (same root `Dockerfile`, no changes needed — both
+     `apps/api/dist/index.js` and `apps/api/dist/jobs/daily-digest.js` are
+     produced by `npm run build --workspace=apps/api`).
+   - **Custom start command**: `node apps/api/dist/jobs/daily-digest.js`
+   - **Cron Schedule**: `30 5 * * *` (UTC, = 07:30 CEST summer / 06:30 CET
+     winter — GitHub-style cron, Railway UI field under Settings → Deploy)
+   - **Restart policy**: `Never` (it's a one-shot; exiting is success)
+3. **Variables** tab → link to the shared project variables so it inherits:
+   - `DATABASE_URL`
+   - `RESEND_API_KEY`
+   - `ANTHROPIC_API_KEY` (used by `analyzeDigest`)
+   - `NOTION_TOKEN` (for ship-log / Notion activity)
+   - `GITHUB_TOKEN` (for shiplog commit fetching, if configured)
+   Any missing variable causes that section to fall back to its default;
+   the email still sends.
+
+### Notes
+
+- No `ADMIN_SECRET` is needed — this service runs the digest directly, it
+  does not call `POST /v1/admin/digest`.
+- DST drift: the email arrives at 07:30 CEST in summer and 06:30 CET in
+  winter. Railway cron is UTC-only; a ±1h shift twice a year is acceptable
+  for an informational email.
+- To trigger manually, either redeploy the service or click **Deploy** in
+  the Railway UI — it will run the job once and exit.
+- Logs: each run's stdout/stderr appears in the Railway logs tab for this
+  service.
+- Excludes from "External API calls" metric: `@strale.io`, `@strale.dev`,
+  `@strale.internal`, `@example.com`, `petterlindstrom@hotmail.com`, the
+  `system@strale.internal` user, and all `transparency_marker = 'algorithmic'`
+  transactions (pure-computation capabilities).
+
+---
+
 ## postgres (PostgreSQL)
 
 ### Notes

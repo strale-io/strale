@@ -28,6 +28,7 @@ const defaultPlatformActivity: PlatformActivity = {
   transactions: { count: 0, delta: 0 },
   revenue: { cents: 0, delta: 0 },
   solutionExecutions: [],
+  externalApiCalls: { total: 0, authenticated: 0, freeTier: 0, failed: 0, byCapability: [] },
   zeroActivity: true,
 };
 
