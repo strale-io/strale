@@ -418,7 +418,23 @@ See "Hotfix verified in prod → GO" above. Clean.
 See "First-hour observation" above. Zero alerts on any of M1–M6, pending
 drain healthy, other-workflow column stable.
 
-### T+6h (2026-04-18T00:55Z) — PENDING
+### T+6h (2026-04-18T00:55Z; observed 07:38Z) — CLEAN
+
+> Scheduled checkpoint fired late (~T+12h38m actual offset). Data current as of
+> 2026-04-18T07:38Z. No anomaly held; proceeding.
+
+M1 advisory locks: 0 rows, no idle PID > 2 min
+M2 stuck pending: 0
+M3 failed rows (last 24h): 0
+M4 lock-busy counts: 0 (no lock-busy events in Railway log tail)
+M5 free-tier 503s: 0
+M6 audit cadence: batch-done stale=0 failed=0 (last 3 ticks: completed=1,3,1; 30s cadence healthy)
+Cross-check 1: customer 150, test 55 (baseline 150/55) — UNCHANGED ✅
+Cross-check 2: rate_limit_counters recent row count: 0 (no rate-limit traffic)
+Cross-check 3: /health 200
+Growth since T+1h: 40,138 → 40,734 (+596 complete rows, all drained through pending→complete cleanly)
+
+All six bake monitors clean. Continue bake.
 
 ### T+24h (2026-04-18T18:55Z) — PENDING
 
