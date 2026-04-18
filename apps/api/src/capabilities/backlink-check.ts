@@ -1,8 +1,12 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
-// F-0-006 Bucket D: user domain is embedded in query strings to hardcoded
-// third-party APIs (index.commoncrawl.org, google.serper.dev). We never
-// fetch a user-controllable host — no SSRF surface.
+// F-0-006 Bucket D (preemptive migration): user domain is embedded in the
+// query string to hardcoded third-party APIs (index.commoncrawl.org,
+// google.serper.dev). Today the hostname is fixed and there is no SSRF
+// surface. Migrated defensively to `safeFetch` per Phase C Observation #4:
+// if either hostname is ever swapped to a user-provided value, the guard
+// is already in place.
 registerCapability("backlink-check", async (input: CapabilityInput) => {
   const raw = (
     (input.domain as string) ??
@@ -31,7 +35,7 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
   // Attempt 1: CommonCrawl Index API
   try {
     const ccUrl = `https://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*.${encodeURIComponent(domain)}&output=json&limit=50`;
-    const ccResp = await fetch(ccUrl, {
+    const ccResp = await safeFetch(ccUrl, {
       headers: { "User-Agent": "Strale/1.0" },
       signal: AbortSignal.timeout(15000),
     });
@@ -68,7 +72,7 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
     if (serperKey) {
       try {
         const query = `"${domain}" -site:${domain}`;
-        const resp = await fetch("https://google.serper.dev/search", {
+        const resp = await safeFetch("https://google.serper.dev/search", {
           method: "POST",
           headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
           body: JSON.stringify({ q: query, num: 10 }),
