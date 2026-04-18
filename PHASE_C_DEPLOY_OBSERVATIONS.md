@@ -436,7 +436,22 @@ Growth since T+1h: 40,138 → 40,734 (+596 complete rows, all drained through pe
 
 All six bake monitors clean. Continue bake.
 
-### T+24h (2026-04-18T18:55Z) — PENDING
+### T+24h (2026-04-18T18:55Z) — CLEAN
+
+M1 advisory locks: 0 rows, no idle PID > 2 min
+M2 stuck pending: 0
+M3 failed rows (last 24h): 0
+M4 lock-busy counts: 0 (no lock-busy events in Railway log tail)
+M5 free-tier 503s: 0
+M6 audit cadence: batch-done stale=0 failed=0 (last 2 ticks: completed=5,5; 30s cadence healthy)
+Cross-check 1: customer 150, test 55 (baseline 150/55) — UNCHANGED ✅
+Cross-check 2: rate_limit_counters recent row count: 0 (no rate-limit traffic)
+Cross-check 3: /health 200
+Growth since T+6h: 40,734 → 41,605 (+871 complete rows, all drained cleanly)
+Total growth since T+0h: 40,002 → 41,605 (+1,603)
+Phase D status: complete — PR #12 "Phase D: P2 medium fixes (F-0-007, F-0-010, F-0-013 + backlink-check)" merged 2026-04-18T13:05Z
+
+All six bake monitors clean. Continue bake.
 
 ### T+48h (2026-04-19T18:55Z) — PENDING — final green-light check
 
