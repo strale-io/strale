@@ -250,3 +250,170 @@ Special case: the physical directory at `C:/Users/pette/Projects/strale/.claude/
 - Decide on Step 8 items: secrets/binary deletion, diagnostic-script promotion or deletion.
 
 No code changes were made outside the scope of each step. No state changes to upstream (Flowise / LangFlow / Windmill) repos or to Notion. Only files written during this session are the four PRs, their per-fix commits, and `RESOLUTION_REPORT.md`.
+
+---
+
+# Follow-up session — 2026-04-18 (later) — Step 8 close-out
+
+Three batches executed after the initial resolution run. Removed the Step 8 "flagged for review" queue by executing Petter's triage decision, cleared the stash, and verified Railway ops follow-ups.
+
+## Batch 1 — Script cleanup — ✅ SHIPPED
+
+- **Branch**: `chore/script-cleanup`
+- **PR**: #18
+- **Merge SHA**: `33ee499` (2026-04-18T18:01Z)
+
+### Deleted (6 one-off diagnostics)
+
+| File | Why |
+|---|---|
+| `apps/api/scripts/check-suggest-log.ts` | Single-line `SELECT COUNT FROM suggest_log` — easier to re-type than keep around |
+| `apps/api/scripts/check-uk-all.ts` | UK-rollout diag; rollout done |
+| `apps/api/scripts/check-uk-suites.ts` | Same vintage |
+| `apps/api/scripts/check-uk-suspend.ts` | Same vintage |
+| `apps/api/scripts/count-x402.ts` | Trivial `x402_enabled` counter |
+| `apps/api/scripts/diag-cz-state.ts` | CZ-rollout diag; rollout done |
+
+### Promoted to tracked (5 operational tools)
+
+Each gets a one-line header comment explaining what it does and usage. Contents otherwise preserved exactly.
+
+| File | Purpose |
+|---|---|
+| `apps/api/scripts/window-users.ts` | External (non-internal) user activity in a time window |
+| `apps/api/scripts/window-x402.ts` | x402 transactions in a time window |
+| `apps/api/scripts/x402-audit-inspect.ts` | Audit-trail JSON for the 5 most-recent x402 completions |
+| `apps/api/scripts/x402-detail.ts` | One-line summary of x402 txns since a hardcoded date |
+| `apps/api/scripts/x402-payer-history.ts` | Find x402 txns by payer-address fragment (KYC / abuse investigation) |
+
+Narrow slice of F-0-012 (dead-code Session 0 finding) — specifically the scripts that appeared during the Phase B/C/D sprint.
+
+## Batch 2 — Stash cleanup — ✅ SHIPPED + STASH DROPPED
+
+- **Branch**: `chore/stash-cleanup`
+- **PR**: #19
+- **Merge SHA**: `57fa894` (2026-04-18T18:18Z)
+- **Stash state after merge**: `git stash list` → empty. `stash@{0}` dropped as `eb70b6b`.
+
+### Inventory
+
+76 files total in `stash@{0}^3` (the untracked tree). Classified into 7 categories per the brief; counts:
+
+| Category | Count | Action | Landing point |
+|---|---|---|---|
+| Credentials / secrets | 4 | DELETE via stash drop | — |
+| Binary (mcp-publisher.exe ~19 MB) | 1 | DELETE via stash drop | — |
+| Scratch scripts (13 stale + 1 dup of just-promoted `window-users.ts`) | 14 | DELETE via stash drop | — |
+| Submission packages (4 platforms) | 12 | EXTRACT | `archive/submissions/<platform>/` |
+| Growth-ops materials (5 text + 18 PNGs) | 23 | EXTRACT | `archive/growth-ops/` |
+| Audit docs + handoffs + bosch-kyb PoCs + digest-preview + x402-gateway-design + capability-source research | 22 | EXTRACT | `archive/sessions/` (handoffs under `archive/sessions/handoff-from-code/`) |
+| **Totals** | **76** | **19 deleted, 57 extracted** | |
+
+Plus 1 `archive/README.md` authored at commit time explaining the tree.
+
+### Specific items in each category
+
+**Deleted (via stash drop)**:
+- Secrets: `.mcpregistry_github_token`, `.mcpregistry_registry_token`, duplicates at `packages/mcp-server/.mcpregistry_github_token`, `packages/mcp-server/.mcpregistry_registry_token`. None were production credentials — all dev-machine MCP-registry publish artifacts that regenerate on next login.
+- Binary: `mcp-publisher.exe` (19,797,504 bytes). Reinstallable via `npm -g` or scoop.
+- Scratch scripts: `daily-ext`, `diag-filter-check`, `diag-null-context`, `diag-url-to-markdown`, `inspect-free-tier`, `last24h-ext`, `retest-polish`, `since-last-ext`, `spike-browserless`, `today-signups`, `today-users`, `today-x402`, `who-called`, `window-users` (stale pre-promotion version — the promoted copy is on main at the same path).
+
+**Preserved under `archive/submissions/`** (12 files, 4 platforms):
+- `agentic-community-submission/` × 3 (docs/strale.md + 2 JSON agent configs) — corresponds to `agentic-community/mcp-gateway-registry#723`.
+- `bedrock-agentcore-submission/` × 3 (README, agent-example.py, gateway-config.json) — corresponds to `awslabs/agentcore-samples#1232`.
+- `docker-mcp-submission/` × 3 (readme.md, server.yaml, tools.json) — corresponds to `docker/mcp-registry#2202`.
+- `ibm-contextforge-submission/` × 3 (mcp-catalog-entry.yml, register-strale.sh, strale-integration.md) — corresponds to `IBM/mcp-context-forge#3974`.
+
+These are separate from the three plugin worktrees discarded on 2026-04-18 in Step 6 (Flowise, LangFlow, Windmill Hub — all live upstream per `PRE_RESOLUTION_INVESTIGATION.md`).
+
+**Preserved under `archive/growth-ops/`** (23 files):
+- Text: `devto-sqs-methodology.md` (dev.to article), `fact-check-audit.md`, `tweets-v2.md`, `typefully_drafts.txt`, `upload-graphics.sh`.
+- Graphics: `current-og-image.png` + `graphics/` subdirectory with 18 promotional PNGs (dev.to covers, SQS distribution charts, 10 Twitter post visuals dated by apr, 2 OG images).
+
+**Preserved under `archive/sessions/`** (22 files):
+- Audits: `AUDIT-SOLUTION-GRADES.md`, `DIAGNOSTIC-SQS-INCONSISTENCY.md`, `STRATEGIC-ANALYSIS.md`, `REVIEW_TEMPLATE.md`, `capability-inventory.md`.
+- The Apr-08 audit cluster: `strale-capability-inventory-audit-2026-04-08.md`, `strale-spike-correlation-analysis-2026-04-08.md`, `strale-usage-and-conversion-audit-2026-04-08.md`, `strale-usage-audit-real-users-only-2026-04-08.md`.
+- Rollout retros: `gate4b-retrospective-report.md`, `gate5-retrospective-report.md`.
+- Design: `x402-gateway-design.md` (738 LOC).
+- PoC response snapshots: `bosch-kyb-response-final.json`, `bosch-kyb-response-final-v2.json`, `bosch-kyb-response-final-v3.json`.
+- Other: `digest-preview.html` (sample digest render), `01-eu-company-data.md` (capability-source research note).
+- Session handoffs (under `handoff-from-code/`): `2026-04-15-pr-audit-session.md`, `2026-04-15-session.md`, `2026-04-15-x402-bazaar-indexing.md`, `2026-04-16-frontend-redesign-session1.md`, `2026-04-16-growth-session.md`.
+
+### Nothing was surprising
+
+Every file matched cleanly to a category. No ambiguous classifications; no secrets that looked in-use; no binaries that looked load-bearing. The "Other" bucket didn't get used — every file fell into one of the six defined categories. No stop-and-flag events during Batch 2.
+
+## Batch 3 — Railway ops follow-ups
+
+Three items, all requiring the Railway dashboard — the Railway CLI (v4.30.5) has no commands for any of these.
+
+### 3a. `healthcheckPath` → `/health/deep` — ⚠ FLAGGED FOR PETTER
+
+- **Current state** (from `railway status --json`): every service in the project has `"healthcheckPath": null` and `"healthcheckTimeout": null`. Railway is using its default probe behavior, not checking the new deep endpoint.
+- **CLI limitation**: `railway service` has `status`, `logs`, `redeploy`, `restart`, `scale` subcommands — no deploy-config subcommand. This setting is dashboard-only in CLI 4.30.5.
+- **For Petter to do**:
+  1. Railway dashboard → project `desirable-serenity` → service `strale` → **Settings** → **Deploy**.
+  2. Set **Healthcheck Path** to `/health/deep`.
+  3. Set **Healthcheck Timeout** to `10` (seconds). The CTE probe is fast (~5 ms against a healthy DB per the prod smoke test), so 10 s is generous but won't let a stalled write delay rollback decisions.
+  4. No need to redeploy for the setting to take effect — next deploy will pick it up.
+- **Smoke test confirms endpoint works**: `curl https://strale-production.up.railway.app/health/deep` → `200 {"status":"ok","write_path":"ok","latency_ms":5}`.
+
+### 3b. `strale-digest-cron` Railway service — ⚠ FLAGGED FOR PETTER
+
+- **CLI limitation**: `railway add` exists but it's for adding a service *template* (Postgres, Redis, etc.), not creating a service from the same repo with a custom start command. Creating this service from the existing `strale` Dockerfile with a different start command is a dashboard workflow.
+- **For Petter to do** (full config from `railway-config.md` which shipped in PR #16):
+  1. Railway dashboard → same project → **+ New → GitHub Repo** → select the `strale` repo.
+  2. Settings:
+     - **Service name**: `strale-digest-cron`
+     - **Build**: Dockerfile (no Dockerfile path override — same root Dockerfile)
+     - **Custom start command**: `node apps/api/dist/jobs/daily-digest.js`
+     - **Cron Schedule**: `30 5 * * *` (UTC, = 07:30 CEST summer / 06:30 CET winter)
+     - **Restart policy**: `Never` (it's a one-shot; exiting cleanly is success)
+  3. **Variables** tab → link to shared project variables so it inherits:
+     `DATABASE_URL`, `RESEND_API_KEY`, `ANTHROPIC_API_KEY`, `NOTION_TOKEN`, `GITHUB_TOKEN`.
+     No `ADMIN_SECRET` needed — this service runs the digest directly, not over HTTP.
+- **Verification after creation**: next run at 05:30 UTC should deliver a digest email to Petter's inbox. The "External API calls (last 24h)" section added in PR #16 will be in it.
+
+### 3c. `ALCHEMY_API_KEY` — ✅ NO ACTION NEEDED
+
+- **Code check**: `apps/api/src/lib/eth-rpc-endpoints.ts:getEthRpcEndpoints()` reads `process.env.ALCHEMY_API_KEY` at call time. If set, Alchemy is prepended to the endpoint list; if unset, the function returns the 4-endpoint free pool (`publicnode.com`, `llamarpc.com`, `cloudflare-eth.com`, `ankr.com`). **There is a fallback.**
+- **Recommendation**: skip per the brief. The free pool works today; setting Alchemy is a quota/latency upgrade (Alchemy 100 k CU/day vs. unauthenticated free-tier limits on the public endpoints), not a correctness requirement.
+- **If Petter wants Alchemy primary later**: just set `ALCHEMY_API_KEY` as a Railway env var on `strale`. No deploy needed — the endpoint list is re-read on every ENS request. Provenance output will automatically read `eth-mainnet.g.alchemy.com` once the key is set.
+
+### 3d. Orphan worktree — ⚠ FLAGGED FOR PETTER
+
+Previously flagged in the initial resolution report. Still pending — no change possible remotely.
+
+- **Path**: `C:/Users/pette/Projects/strale/.claude/worktrees/recursing-gauss-fb67a1`
+- **State**: git worktree metadata was removed (doesn't show in `git worktree list`); branch `claude/recursing-gauss-fb67a1` was deleted. Directory is orphaned on disk only.
+- **Cause**: Windows file lock on something inside the directory. CC can't close another process's file handles remotely.
+- **For Petter to do**:
+  1. Close any editor / terminal / IDE window pointed at `.claude/worktrees/recursing-gauss-fb67a1`.
+  2. `rm -rf .claude/worktrees/recursing-gauss-fb67a1`.
+  3. Takes 30 seconds.
+
+---
+
+## Close-out state after this follow-up session
+
+- **Main SHA**: `57fa894` (merge of #19) — this is the final SHA of Batch 2. The report commit on top will bump this again.
+- **Stash**: `git stash list` → empty. The pre-Phase-C-closeout-session stash is gone; tracked changes shipped via #13 + #14, preserved untracked files live under `archive/`, delete-category items were destroyed by the drop.
+- **PRs merged in this session**: #18 (script cleanup), #19 (archive extraction).
+- **Branches deleted**: `chore/script-cleanup`, `chore/stash-cleanup` (both fully merged, local prune will pick them up on next `git fetch --prune`).
+- **Archive tree count**: 58 files under `archive/` (57 extracted + 1 README).
+- **Live smoke**: `/health/deep` still returning 200 in 5 ms.
+
+## Updated ops punch-list for Petter
+
+From this follow-up only — initial items 3a / 3b / 3d are restated here with new state context:
+
+| Item | Status | Action |
+|---|---|---|
+| `healthcheckPath` → `/health/deep` | pending, dashboard-only | Railway dashboard → strale → Settings → Deploy → set path + 10s timeout |
+| `strale-digest-cron` service | pending, dashboard-only | Follow recipe in `archive/submissions/...` or `apps/api/railway-config.md` (shipped in PR #16) |
+| `ALCHEMY_API_KEY` | optional | Only if wanting Alchemy primary; fallback already working |
+| Orphan worktree dir at `recursing-gauss-fb67a1` | pending, OS lock | Close editor → `rm -rf` |
+| `claude/practical-maxwell` `source` column decision | deferred to Session 5 | Design call on overlap with `integrity_hash_status` before any schema change |
+| `claude/infallible-murdock-8d0bc1` reference branch | preserved indefinitely | Keep as Phase B+C history |
+
+Everything else from the original inventory has either been shipped, archived, or discarded.
