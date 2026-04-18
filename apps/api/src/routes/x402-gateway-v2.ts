@@ -432,47 +432,51 @@ function build402(
 
 // ─── Transaction recording ──────────────────────────────────────────────────
 
-async function recordX402Transaction(
-  capabilityId: string,
-  slug: string,
-  inputs: Record<string, unknown>,
-  output: Record<string, unknown> | null,
-  latencyMs: number,
-  priceCents: number,
-  priceUsd: number,
-  transparencyTag: string | null,
-  dataJurisdiction: string | null,
-  settlementId?: string,
-  payerAddress?: string | null,
-  error?: string,
-): Promise<string | null> {
+interface RecordX402Args {
+  // Exactly one of capabilityId / solutionSlug is set.
+  capabilityId: string | null;
+  solutionSlug: string | null;
+  slug: string; // surfaced in audit_trail for both kinds
+  inputs: Record<string, unknown>;
+  output: Record<string, unknown> | null;
+  latencyMs: number;
+  priceCents: number;
+  priceUsd: number;
+  transparencyTag: string | null;
+  dataJurisdiction: string | null;
+  settlementId?: string;
+  payerAddress?: string | null;
+  error?: string;
+}
+
+async function recordX402Transaction(args: RecordX402Args): Promise<string | null> {
   try {
     const db = getDb();
     const [row] = await db.insert(transactions).values({
       userId: null,
-      capabilityId,
-      status: error ? "failed" : "completed",
-      input: inputs,
-      output: output ?? undefined,
-      error: error ?? null,
-      priceCents,
-      latencyMs,
-      provenance: output ? undefined : undefined,
+      capabilityId: args.capabilityId,
+      solutionSlug: args.solutionSlug,
+      status: args.error ? "failed" : "completed",
+      input: args.inputs,
+      output: args.output ?? undefined,
+      error: args.error ?? null,
+      priceCents: args.priceCents,
+      latencyMs: args.latencyMs,
       auditTrail: {
         payment_method: "x402",
-        settlement_id: settlementId ?? null,
-        payer_address: payerAddress ?? null,
-        price_usd: priceUsd,
-        capability: slug,
-        latency_ms: latencyMs,
+        settlement_id: args.settlementId ?? null,
+        payer_address: args.payerAddress ?? null,
+        price_usd: args.priceUsd,
+        capability: args.slug,
+        latency_ms: args.latencyMs,
         timestamp: new Date().toISOString(),
       },
-      transparencyMarker: transparencyTag ?? "algorithmic",
-      dataJurisdiction: dataJurisdiction ?? "EU",
+      transparencyMarker: args.transparencyTag ?? "algorithmic",
+      dataJurisdiction: args.dataJurisdiction ?? "EU",
       isFreeTier: false,
       paymentMethod: "x402",
-      x402SettlementId: settlementId ?? null,
-      priceUsd: priceUsd.toFixed(4),
+      x402SettlementId: args.settlementId ?? null,
+      priceUsd: args.priceUsd.toFixed(4),
       completedAt: new Date(),
     }).returning({ id: transactions.id });
     return row?.id ?? null;
@@ -648,6 +652,24 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
     }
   }
 
+  // Record transaction (fire-and-forget) — mirrors capability path so x402
+  // solution calls show up in activity scripts and audit logs.
+  const solPayerAddress = verified ? extractPayerAddress(verified) : null;
+  recordX402Transaction({
+    capabilityId: null,
+    solutionSlug: sol.slug,
+    slug: sol.slug,
+    inputs,
+    output: { steps: result.steps, errors: result.errors },
+    latencyMs: result.latency_ms,
+    priceCents: sol.priceCents,
+    priceUsd: sol.x402PriceUsd,
+    transparencyTag: "mixed",
+    dataJurisdiction: "EU",
+    settlementId,
+    payerAddress: solPayerAddress,
+  });
+
   return c.json({
     solution: sol.slug,
     steps: result.steps,
@@ -808,13 +830,20 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
 
   // Record transaction (fire-and-forget)
   const payerAddress = verified ? extractPayerAddress(verified) : null;
-  recordX402Transaction(
-    cap.id, cap.slug, inputs, result.output, latencyMs,
-    cap.priceCents, cap.x402PriceUsd,
-    cap.transparencyTag, cap.dataJurisdiction,
+  recordX402Transaction({
+    capabilityId: cap.id,
+    solutionSlug: null,
+    slug: cap.slug,
+    inputs,
+    output: result.output,
+    latencyMs,
+    priceCents: cap.priceCents,
+    priceUsd: cap.x402PriceUsd,
+    transparencyTag: cap.transparencyTag,
+    dataJurisdiction: cap.dataJurisdiction,
     settlementId,
     payerAddress,
-  );
+  });
 
   return c.json({
     ...result.output,
