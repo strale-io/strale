@@ -65,6 +65,13 @@ async function main() {
   const { startIntegrityHashRetry } = await import("./jobs/integrity-hash-retry.js");
   startIntegrityHashRetry();
 
+  // Monthly REINDEX CONCURRENTLY on `transactions` — prevents B-tree
+  // bloat drift that caused the 2026-04-16 outage. Uses the dedicated-
+  // connection advisory-lock pattern because REINDEX CONCURRENTLY can't
+  // run inside a transaction.
+  const { startReindexTransactions } = await import("./jobs/reindex-transactions.js");
+  startReindexTransactions();
+
   const port = parseInt(process.env.PORT || "3000", 10);
 
   serve({ fetch: app.fetch, port }, (info) => {
