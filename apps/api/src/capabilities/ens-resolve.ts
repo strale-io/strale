@@ -2,14 +2,11 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { createPublicClient, http, namehash, type Hex } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
+import { getEthRpcEndpoints, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
 
-// F-0-006 Bucket D: ENS resolution via viem's RPC to a hardcoded
-// Ethereum mainnet endpoint. User input is the ENS name, not the
-// network target. No SSRF surface.
-
-// Public Ethereum RPC endpoints (free, no key)
-const PRIMARY_RPC = "https://ethereum-rpc.publicnode.com";
-const FALLBACK_RPC = "https://eth.llamarpc.com";
+// F-0-006 Bucket D: ENS resolution uses viem's RPC against the hardcoded
+// Ethereum mainnet endpoint pool in lib/eth-rpc-endpoints.ts. User input
+// is the ENS name, not the network target. No SSRF surface.
 
 // ENS Registry and Public Resolver addresses on mainnet
 const ENS_REGISTRY = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e" as const;
@@ -54,7 +51,11 @@ registerCapability("ens-resolve", async (input: CapabilityInput) => {
   const node = namehash(normalizedName);
   const now = new Date().toISOString();
 
-  for (const rpcUrl of [PRIMARY_RPC, FALLBACK_RPC]) {
+  const endpoints = getEthRpcEndpoints();
+  let lastError: unknown;
+  for (let i = 0; i < endpoints.length; i++) {
+    const rpcUrl = endpoints[i];
+    const isLast = i === endpoints.length - 1;
     try {
       const client = makeClient(rpcUrl);
 
@@ -75,7 +76,7 @@ registerCapability("ens-resolve", async (input: CapabilityInput) => {
             avatar_url: null,
             resolver: null,
           },
-          provenance: { source: "ens.domains (via eth RPC)", fetched_at: now },
+          provenance: { source: `ens.domains (via ${rpcEndpointHost(rpcUrl)})`, fetched_at: now },
         };
       }
 
@@ -96,7 +97,7 @@ registerCapability("ens-resolve", async (input: CapabilityInput) => {
             avatar_url: null,
             resolver: resolverAddr,
           },
-          provenance: { source: "ens.domains (via eth RPC)", fetched_at: now },
+          provenance: { source: `ens.domains (via ${rpcEndpointHost(rpcUrl)})`, fetched_at: now },
         };
       }
 
@@ -125,12 +126,13 @@ registerCapability("ens-resolve", async (input: CapabilityInput) => {
         provenance: { source: "ens.domains (via eth RPC)", fetched_at: now },
       };
     } catch (err) {
-      if (rpcUrl === FALLBACK_RPC) {
-        throw new Error(`ENS resolution failed: ${err instanceof Error ? err.message : String(err)}`);
+      lastError = err;
+      if (isLast) {
+        throw new Error(`ENS resolution failed on all RPC endpoints: ${err instanceof Error ? err.message : String(err)}`);
       }
-      // Try fallback
+      // Try next endpoint
     }
   }
 
-  throw new Error("ENS resolution failed on all RPC endpoints.");
+  throw new Error(`ENS resolution failed on all RPC endpoints: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
 });

@@ -19,6 +19,47 @@ export interface HealthCheckResult {
   error?: string;
 }
 
+interface SingleAttemptResult {
+  healthy: boolean;
+  latency_ms: number;
+  /** True if the response proves the endpoint is reachable but intentionally
+   *  refused (auth rejection, rate limit). Don't retry on these. */
+  fatal?: boolean;
+  error?: string;
+}
+
+async function probeSingleUrl(
+  url: string,
+  provider: DependencyProvider,
+  headers: Record<string, string>,
+): Promise<SingleAttemptResult> {
+  const probe = provider.healthProbe;
+  const start = Date.now();
+  try {
+    const res = await fetch(url, {
+      method: probe.method,
+      headers,
+      body: probe.body ? JSON.stringify(probe.body) : undefined,
+      signal: AbortSignal.timeout(probe.timeoutMs),
+    });
+    const latency_ms = Date.now() - start;
+    if (probe.healthyStatuses.includes(res.status)) {
+      return { healthy: true, latency_ms };
+    }
+    if (res.status === 401 || res.status === 403) {
+      return {
+        healthy: false,
+        latency_ms,
+        fatal: true,
+        error: `${provider.envVar ?? "API key"} is invalid (HTTP ${res.status})`,
+      };
+    }
+    return { healthy: false, latency_ms, error: `Unexpected HTTP ${res.status}` };
+  } catch (e: any) {
+    return { healthy: false, latency_ms: Date.now() - start, error: e.message };
+  }
+}
+
 async function probeProvider(
   provider: DependencyProvider,
 ): Promise<HealthCheckResult> {
@@ -37,8 +78,11 @@ async function probeProvider(
     };
   }
 
-  // Check required env var
-  if (provider.envVar) {
+  // Check required env var. If skipAuth is set, the probe doesn't send the
+  // key — it relies on the server returning 401 to prove reachability — so
+  // a missing env var shouldn't hard-fail the probe. Capabilities that need
+  // the key at execution time handle absence separately.
+  if (provider.envVar && !provider.healthProbe.skipAuth) {
     const key = process.env[provider.envVar];
     if (!key) {
       return {
@@ -51,7 +95,6 @@ async function probeProvider(
 
   const apiKey = provider.envVar ? process.env[provider.envVar]! : undefined;
   const probe = provider.healthProbe;
-  const url = `${baseUrl}${probe.path}`;
 
   // Build auth headers
   const headers: Record<string, string> = {
@@ -72,57 +115,56 @@ async function probeProvider(
     }
   }
 
-  // Add any extra probe headers (e.g. anthropic-version)
   if (provider.extraProbeHeaders) {
     for (const [k, v] of Object.entries(provider.extraProbeHeaders)) {
       headers[k] = v;
     }
   }
 
-  // Probe with one retry — filters out transient network blips
+  // Pool of endpoints to try. For providers with fallbackBaseUrls, the pool
+  // is healthy if ANY endpoint returns healthy — this matches how capabilities
+  // fail over across the same pool and avoids false alerts when a single free
+  // endpoint is rate-limiting us.
+  const poolBaseUrls = [baseUrl, ...(provider.fallbackBaseUrls ?? [])];
+
+  // Run the pool up to 2 times — filters out transient network blips across
+  // the whole pool. Retry only if every endpoint failed on the previous pass.
+  let lastAttempt: SingleAttemptResult | null = null;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const start = Date.now();
-    try {
-      const res = await fetch(url, {
-        method: probe.method,
-        headers,
-        body: probe.body ? JSON.stringify(probe.body) : undefined,
-        signal: AbortSignal.timeout(probe.timeoutMs),
-      });
-
-      const latency_ms = Date.now() - start;
-      const healthy = probe.healthyStatuses.includes(res.status);
-
-      if (!healthy) {
-        if (res.status === 401 || res.status === 403) {
-          // Auth errors don't improve on retry
-          return {
-            healthy: false,
-            latency_ms,
-            error: `${provider.envVar ?? "API key"} is invalid (HTTP ${res.status})`,
-          };
-        }
-        if (attempt === 0) {
-          // First attempt failed with non-auth error — retry after 5s
-          await new Promise((r) => setTimeout(r, 5000));
-          continue;
-        }
-        return { healthy: false, latency_ms, error: `Unexpected HTTP ${res.status}` };
+    const errors: string[] = [];
+    let bestLatency = 0;
+    for (const b of poolBaseUrls) {
+      const res = await probeSingleUrl(`${b}${probe.path}`, provider, headers);
+      if (res.healthy) {
+        return { healthy: true, latency_ms: res.latency_ms };
       }
-
-      return { healthy: true, latency_ms };
-    } catch (e: any) {
-      if (attempt === 0) {
-        // Network error on first attempt — retry after 5s
-        await new Promise((r) => setTimeout(r, 5000));
-        continue;
+      lastAttempt = res;
+      errors.push(`${b}: ${res.error ?? "unknown"}`);
+      bestLatency = Math.max(bestLatency, res.latency_ms);
+      // Auth failure on the primary applies to the whole provider — no point
+      // hammering fallbacks that share no auth.
+      if (res.fatal && b === baseUrl) {
+        return { healthy: false, latency_ms: res.latency_ms, error: res.error };
       }
-      return { healthy: false, latency_ms: Date.now() - start, error: e.message };
     }
+    // Entire pool failed.
+    if (attempt === 0 && poolBaseUrls.length === 1) {
+      await new Promise((r) => setTimeout(r, 5000));
+      continue;
+    }
+    // For pooled providers, trying the whole pool already cost real calls —
+    // a 5s retry of the full pool is expensive. Skip it; the next scheduled
+    // probe cycle is the retry.
+    return {
+      healthy: false,
+      latency_ms: bestLatency,
+      error: poolBaseUrls.length > 1
+        ? `All ${poolBaseUrls.length} endpoints failed: ${errors.join("; ")}`
+        : (lastAttempt?.error ?? "unknown"),
+    };
   }
 
-  // Shouldn't reach here, but TypeScript needs it
-  return { healthy: false, latency_ms: 0, error: "probe exhausted retries" };
+  return { healthy: false, latency_ms: 0, error: lastAttempt?.error ?? "probe exhausted retries" };
 }
 
 export async function runDependencyHealthChecks(): Promise<
