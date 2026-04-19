@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { logError } from "../lib/log.js";
 
 /**
  * Sanctions screening via OpenSanctions API (real-time, production-grade).
@@ -100,9 +101,9 @@ registerCapability("sanctions-check", async (input: CapabilityInput) => {
           provenance: { source: "opensanctions.org", fetched_at: new Date().toISOString() },
         };
       }
-      console.error(`[sanctions-check] OpenSanctions: HTTP ${resp.status}`);
+      logError("sanctions-check-opensanctions-http", new Error(`OpenSanctions HTTP ${resp.status}`), { status: resp.status });
     } catch (err) {
-      console.error("[sanctions-check] OpenSanctions:", err instanceof Error ? err.message : err);
+      logError("sanctions-check-opensanctions-threw", err);
     }
   }
 
@@ -145,7 +146,7 @@ registerCapability("sanctions-check", async (input: CapabilityInput) => {
         };
       }
     } catch (err) {
-      console.error("[sanctions-check] Dilisense:", err instanceof Error ? err.message : err);
+      logError("sanctions-check-dilisense-failed", err);
     }
   }
 
