@@ -215,6 +215,10 @@ export const transactions = pgTable(
       .notNull()
       .defaultNow(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
+    // F-A-001: soft-delete marker for GDPR Article 17. When non-null, the
+    // row's input/output/audit_trail are redacted; integrity_hash and
+    // previous_hash are preserved so the chain stays intact.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("transactions_idempotency_key_unique")
