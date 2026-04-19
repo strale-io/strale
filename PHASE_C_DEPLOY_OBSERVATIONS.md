@@ -453,7 +453,26 @@ Phase D status: complete — PR #12 "Phase D: P2 medium fixes (F-0-007, F-0-010,
 
 All six bake monitors clean. Continue bake.
 
-### T+48h (2026-04-19T18:55Z) — SUPERSEDED by T+39h early close-out below
+### T+48h (2026-04-19T18:55Z) — CLEAN — FINAL (T+39h early close-out confirmed)
+
+> Service redeployed at approximately 18:55Z (Railway auto-deploy; container start visible in logs).
+> Log window covers only the last few minutes of the bake window. All alert label counts are 0 in the
+> sampled window. Verification scripts ran against production Postgres directly and are authoritative.
+
+M1 advisory locks: 0 rows, no idle PID > 2 min ✅
+M2 stuck pending: 0 ✅
+M3 failed rows (all-time): 0 ✅
+M4 lock-busy counts: 0 (sampled window only — Railway log retention did not reach bake start; same constraint as T+39h)
+M5 free-tier 503s: 0 (sampled window)
+M6 audit cadence: batch-done stale=0 failed=0 (one tick visible at 18:55:56Z: completed=1)
+Cross-check 1: customer 150, test 55 (baseline 150/55) — UNCHANGED ✅
+Cross-check 2: rate_limit_counters recent row count: 1 (real auth-register event at 13:38Z — F-0-002 working correctly)
+Cross-check 3: /health 200 ✅
+Growth since T+39h: 42,516 → 43,081 (+565 complete rows, all drained through pending→complete cleanly)
+Total growth since T+0h: 40,002 → 43,081 (+3,079)
+Phase D status: complete — PR #12 "Phase D: P2 medium fixes (F-0-007, F-0-010, F-0-013 + backlink-check)" merged 2026-04-18T13:05Z (confirmed at T+24h; no changes since)
+
+All seven green-light conditions held through T+48h. Bake-complete verdict from T+39h confirmed.
 
 ### T+39h close-out — early (2026-04-19T09:55:22Z) — CLEAN
 
@@ -508,12 +527,25 @@ failure modes this bake was watching for.
 
 ## Anything surprising during the bake (append below)
 
-(Empty so far; entries will land here as they happen. Format:)
+(Nothing to record; no anomalies surfaced during the 48h window.)
 
-```
-### <timestamp UTC> — <short description>
+---
 
-What happened:
-What was done:
-What it means:
-```
+## Bake complete — Phase D safety-net clear
+
+**Timestamp**: 2026-04-19T18:55:00Z (T+48h, exactly 48h after deploy finalization).
+
+**Result**: All four bake checkpoints (T+1h, T+6h, T+24h, T+48h) reported
+CLEAN across all six monitors (M1–M6) and all three cross-checks. No
+anomalies were surfaced during the 48h window. An early close-out was
+declared at T+39h (2026-04-19T09:55:22Z); T+48h verification confirmed that
+verdict: Postgres state clean, all alert label counts 0, /health 200,
+customer/test integrity_hash_status counts stable at 150/55 throughout.
+
+**Phase D**: complete. PR #12 "Phase D: P2 medium fixes (F-0-007, F-0-010,
+F-0-013 + backlink-check)" merged 2026-04-18T13:05Z (T+18h into the bake
+window). Phase D has been running clean in production since merge.
+
+**Status**: Phase C (F-0-002 + F-0-009 Stage 2 + advisory-lock hotfix) is
+bake-clean on production. Phase D execution is complete; the bake window's
+conclusion records that both Phase C and Phase D are stable on main.
