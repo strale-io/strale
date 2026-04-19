@@ -23,6 +23,7 @@ import { capabilities, testSuites, testResults, healthMonitorEvents } from "../d
 import { computeDualProfileSQS } from "./sqs.js";
 import { logHealthEvent } from "./health-monitor.js";
 import { getExecutor } from "../capabilities/index.js";
+import { log, logError, logWarn } from "./log.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -173,7 +174,17 @@ export async function transitionCapability(
     },
   });
 
-  console.log(`[lifecycle] ${slug}: ${fromState} → ${toState} (${triggeredBy}: ${reason})`);
+  log.info(
+    {
+      label: "lifecycle-transition",
+      capability_slug: slug,
+      from_state: fromState,
+      to_state: toState,
+      triggered_by: triggeredBy,
+      reason,
+    },
+    "lifecycle-transition",
+  );
 }
 
 // ─── Evaluate auto-transitions for a single capability ──────────────────────
@@ -284,9 +295,11 @@ export async function evaluateLifecycle(
       // Production smoke test: execute once from this environment before activating
       const smokeResult = await smokeTest(slug);
       if (!smokeResult.passed) {
-        console.warn(
-          `[lifecycle] ${slug}: SQS qualifies (${dual.score.toFixed(1)}) but smoke test failed: ${smokeResult.error}`,
-        );
+        logWarn("lifecycle-smoke-failed", "SQS qualifies but smoke test failed", {
+          capability_slug: slug,
+          sqs: Number(dual.score.toFixed(1)),
+          err: smokeResult.error,
+        });
         await logHealthEvent({
           eventType: "lifecycle_transition",
           capabilitySlug: slug,
@@ -338,7 +351,16 @@ export async function evaluateLifecycle(
         .update(capabilities)
         .set({ degradedRecoveryCount: newCount, updatedAt: new Date() })
         .where(eq(capabilities.slug, slug));
-      console.log(`[lifecycle] ${slug}: degraded recovery ${newCount}/${DEGRADED_RECOVERY_RUNS} (SQS ${dual.score.toFixed(1)})`);
+      log.info(
+        {
+          label: "lifecycle-degraded-recovery",
+          capability_slug: slug,
+          recovery_count: newCount,
+          required: DEGRADED_RECOVERY_RUNS,
+          sqs: Number(dual.score.toFixed(1)),
+        },
+        "lifecycle-degraded-recovery",
+      );
       return null;
     }
 
@@ -369,7 +391,7 @@ export async function evaluateLifecycle(
           },
         })
       ).catch((err) => {
-        console.error(`[interrupt] Suspension warning failed for ${slug}:`, err instanceof Error ? err.message : err);
+        logError("interrupt-suspension-warning-failed", err, { capability_slug: slug });
       });
     }
 
@@ -439,12 +461,18 @@ export async function runLifecycleSweep(): Promise<TransitionResult[]> {
         transitions.push(result);
       }
     } catch (err) {
-      console.warn(`[lifecycle] Sweep failed for ${cap.slug}:`, err);
+      logWarn("lifecycle-sweep-capability-failed", "sweep failed for capability", {
+        capability_slug: cap.slug,
+        err: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
   if (transitions.length > 0) {
-    console.log(`[lifecycle] Sweep complete: ${transitions.length} transition(s)`);
+    log.info(
+      { label: "lifecycle-sweep-complete", transitions: transitions.length },
+      "lifecycle-sweep-complete",
+    );
   }
 
   return transitions;

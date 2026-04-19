@@ -7,6 +7,7 @@
  */
 
 import { Resend } from "resend";
+import { log, logError } from "./log.js";
 
 let _resend: Resend | null = null;
 
@@ -72,7 +73,7 @@ export async function sendLowBalanceEmail(
 
   const resend = getResend();
   if (!resend) {
-    console.log(`[low-balance-email-skip] No RESEND_API_KEY`);
+    log.info({ label: "low-balance-email-skip", reason: "no-api-key" }, "low-balance-email-skip");
     return;
   }
 
@@ -107,12 +108,12 @@ Founder, Strale`;
       from: FROM, to: email, subject: `Your agent has ${balanceStr} remaining on Strale`, text, html, replyTo: REPLY_TO,
     });
     if (error) {
-      console.error(`[low-balance-email-error] ${error.message}`);
+      logError("low-balance-email-error", new Error(error.message));
       return;
     }
-    console.log(`[low-balance-email-sent] ${email} balance=${balanceCents}`);
+    log.info({ label: "low-balance-email-sent", balance_cents: balanceCents }, "low-balance-email-sent");
   } catch (err) {
-    console.error(`[low-balance-email-error] ${err instanceof Error ? err.message : err}`);
+    logError("low-balance-email-error", err);
   }
 }
 
@@ -127,7 +128,7 @@ export async function sendZeroBalanceEmail(
 
   const resend = getResend();
   if (!resend) {
-    console.log(`[zero-balance-email-skip] No RESEND_API_KEY`);
+    log.info({ label: "zero-balance-email-skip", reason: "no-api-key" }, "zero-balance-email-skip");
     return;
   }
 
@@ -160,11 +161,11 @@ Founder, Strale`;
       from: FROM, to: email, subject: "Your agent ran out of credits on Strale", text, html, replyTo: REPLY_TO,
     });
     if (error) {
-      console.error(`[zero-balance-email-error] ${error.message}`);
+      logError("zero-balance-email-error", new Error(error.message));
       return;
     }
-    console.log(`[zero-balance-email-sent] ${email}`);
+    log.info({ label: "zero-balance-email-sent" }, "zero-balance-email-sent");
   } catch (err) {
-    console.error(`[zero-balance-email-error] ${err instanceof Error ? err.message : err}`);
+    logError("zero-balance-email-error", err);
   }
 }

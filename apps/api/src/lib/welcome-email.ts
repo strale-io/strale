@@ -4,6 +4,7 @@
  */
 
 import { Resend } from "resend";
+import { log, logError } from "./log.js";
 
 let _resend: Resend | null = null;
 
@@ -20,13 +21,14 @@ const INTERNAL_DOMAINS = ["@strale.io", "@strale.internal", "@example.com"];
 
 export async function sendRecoveryEmail(email: string, apiKey: string): Promise<void> {
   if (INTERNAL_DOMAINS.some((d) => email.endsWith(d))) {
-    console.log(`[key-recovery-email-skip] internal email: ${email}`);
+    // F-0-013: skip logging email; reason is enough for diagnostics.
+    log.info({ label: "key-recovery-email-skip", reason: "internal-email" }, "key-recovery-email-skip");
     return;
   }
 
   const resend = getResend();
   if (!resend) {
-    console.log("[key-recovery-email-skip] RESEND_API_KEY not set");
+    log.info({ label: "key-recovery-email-skip", reason: "no-api-key" }, "key-recovery-email-skip");
     return;
   }
 
@@ -66,25 +68,26 @@ Founder, Strale
     });
 
     if (error) {
-      console.error(`[key-recovery-email-error] email=${email} error=${error.message}`);
+      // F-0-013: don't log email. user.id is captured by the caller's request context.
+      logError("key-recovery-email-error", new Error(error.message));
       return;
     }
 
-    console.log(`[key-recovery-email-sent] ${email}`);
+    log.info({ label: "key-recovery-email-sent" }, "key-recovery-email-sent");
   } catch (err) {
-    console.error(`[key-recovery-email-error] email=${email} error=${err instanceof Error ? err.message : err}`);
+    logError("key-recovery-email-error", err);
   }
 }
 
 export async function sendWelcomeEmail(email: string, apiKey: string): Promise<void> {
   if (INTERNAL_DOMAINS.some((d) => email.endsWith(d))) {
-    console.log(`[welcome-email-skip] internal email: ${email}`);
+    log.info({ label: "welcome-email-skip", reason: "internal-email" }, "welcome-email-skip");
     return;
   }
 
   const resend = getResend();
   if (!resend) {
-    console.log("[welcome-email-skip] RESEND_API_KEY not set");
+    log.info({ label: "welcome-email-skip", reason: "no-api-key" }, "welcome-email-skip");
     return;
   }
 
@@ -214,12 +217,12 @@ https://strale.dev
     });
 
     if (error) {
-      console.error(`[welcome-email-error] ${error.message}`);
+      logError("welcome-email-error", new Error(error.message));
       return;
     }
 
-    console.log(`[welcome-email-sent] ${email}`);
+    log.info({ label: "welcome-email-sent" }, "welcome-email-sent");
   } catch (err) {
-    console.error(`[welcome-email-error] ${err instanceof Error ? err.message : err}`);
+    logError("welcome-email-error", err);
   }
 }

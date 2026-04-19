@@ -16,7 +16,7 @@ import { getDb } from "../db/index.js";
 import { capabilityHealth, capabilities } from "../db/schema.js";
 import { runTests } from "./test-runner.js";
 import { getCapabilityUpstreams, refreshUpstreamMapping, isCacheExpired } from "./upstream-health-gate.js";
-import { logError } from "./log.js";
+import { log, logError } from "./log.js";
 
 // ─── Rate limiter ────────────────────────────────────────────────────────────
 
@@ -34,8 +34,9 @@ function isRateLimited(slug: string): boolean {
   const lastTriggered = triggerTimestamps.get(slug);
   if (lastTriggered && now - lastTriggered < COOLDOWN_MS) {
     const minutesAgo = Math.round((now - lastTriggered) / 60_000);
-    console.log(
-      `[event-trigger] Rate-limited: ${slug} already tested ${minutesAgo}m ago, skipping`,
+    log.info(
+      { label: "event-trigger-rate-limited", capability_slug: slug, minutes_ago: minutesAgo },
+      "event-trigger-rate-limited",
     );
     return true;
   }
@@ -121,17 +122,19 @@ export async function triggerOnFailure(slug: string): Promise<void> {
     return; // Already known-broken, skip
   }
 
-  console.log(
-    `[event-trigger] First failure for ${slug} — running verification tests`,
+  log.info(
+    { label: "event-trigger-first-failure", capability_slug: slug },
+    "event-trigger-first-failure",
   );
 
   try {
     const result = await runTests({ capabilitySlug: slug });
-    console.log(
-      `[event-trigger] Verification complete for ${slug}: ${result.passed}/${result.total} passed`,
+    log.info(
+      { label: "event-trigger-verification-done", capability_slug: slug, passed: result.passed, total: result.total },
+      "event-trigger-verification-done",
     );
   } catch (err) {
-    console.error(`[event-trigger] Verification failed for ${slug}:`, err);
+    logError("event-trigger-verification-failed", err, { capability_slug: slug });
   }
 }
 
@@ -161,25 +164,38 @@ export async function triggerOnDependencyChange(
   const slugsToTest = affectedSlugs.filter((s) => !isRateLimited(s));
 
   if (slugsToTest.length === 0) {
-    console.log(
-      `[event-trigger] Dependency ${dependencyName} changed to ${newHealthy ? "healthy" : "unhealthy"} — all ${affectedSlugs.length} capabilities rate-limited`,
+    log.info(
+      {
+        label: "event-trigger-dep-all-rate-limited",
+        dependency: dependencyName,
+        new_healthy: newHealthy,
+        affected: affectedSlugs.length,
+      },
+      "event-trigger-dep-all-rate-limited",
     );
     return;
   }
 
   const limited = slugsToTest.slice(0, MAX_PER_CHANGE);
-  console.log(
-    `[event-trigger] Dependency ${dependencyName} changed to ${newHealthy ? "healthy" : "unhealthy"} — testing ${limited.length} affected capabilities`,
+  log.info(
+    {
+      label: "event-trigger-dep-change",
+      dependency: dependencyName,
+      new_healthy: newHealthy,
+      testing_count: limited.length,
+    },
+    "event-trigger-dep-change",
   );
 
   for (const slug of limited) {
     try {
       const result = await runTests({ capabilitySlug: slug });
-      console.log(
-        `[event-trigger] ${slug}: ${result.passed}/${result.total} passed`,
+      log.info(
+        { label: "event-trigger-dep-test-done", capability_slug: slug, passed: result.passed, total: result.total },
+        "event-trigger-dep-test-done",
       );
     } catch (err) {
-      console.error(`[event-trigger] Test failed for ${slug}:`, err);
+      logError("event-trigger-dep-test-failed", err, { capability_slug: slug });
     }
     // Stagger to avoid test storms
     if (limited.indexOf(slug) < limited.length - 1) {
@@ -218,8 +234,9 @@ export async function triggerOnDeploy(): Promise<void> {
 
     if (unstable.length > 0) {
       slugsToTest = unstable.map((r) => r.slug);
-      console.log(
-        `[event-trigger] Post-deploy verification — testing ${slugsToTest.length} degraded/suspended capabilities`,
+      log.info(
+        { label: "event-trigger-deploy-verify", mode: "degraded-or-suspended", count: slugsToTest.length },
+        "event-trigger-deploy-verify",
       );
     } else {
       // All healthy — pick a random sample of 10 active capabilities
@@ -235,28 +252,28 @@ export async function triggerOnDeploy(): Promise<void> {
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
       slugsToTest = shuffled.slice(0, 10);
-      console.log(
-        `[event-trigger] Post-deploy verification — testing ${slugsToTest.length} random capabilities (all healthy)`,
+      log.info(
+        { label: "event-trigger-deploy-verify", mode: "random-sample", count: slugsToTest.length },
+        "event-trigger-deploy-verify",
       );
     }
 
     for (const slug of slugsToTest) {
       try {
         const result = await runTests({ capabilitySlug: slug });
-        console.log(
-          `[event-trigger] ${slug}: ${result.passed}/${result.total} passed`,
+        log.info(
+          { label: "event-trigger-deploy-test-done", capability_slug: slug, passed: result.passed, total: result.total },
+          "event-trigger-deploy-test-done",
         );
       } catch (err) {
-        console.error(`[event-trigger] Deploy test failed for ${slug}:`, err);
+        logError("event-trigger-deploy-test-failed", err, { capability_slug: slug });
       }
       // Stagger between capabilities
       await delay(2000);
     }
 
-    console.log(
-      `[event-trigger] Post-deploy verification complete`,
-    );
+    log.info({ label: "event-trigger-deploy-verify-complete" }, "event-trigger-deploy-verify-complete");
   } catch (err) {
-    console.error("[event-trigger] Post-deploy verification failed:", err);
+    logError("event-trigger-deploy-verify-failed", err);
   }
 }

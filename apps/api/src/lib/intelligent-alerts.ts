@@ -15,7 +15,7 @@
 import type { SituationAssessment, DependencyMeta } from "./situation-assessment.js";
 import { DEPENDENCY_CONTEXT } from "./situation-assessment.js";
 import { logHealthEvent } from "./health-monitor.js";
-import { logError } from "./log.js";
+import { log, logError, logWarn } from "./log.js";
 
 // ─── Pending alert buffer ───────────────────────────────────────────────────
 
@@ -42,7 +42,16 @@ function isInCooldown(key: string, newState: "healthy" | "unhealthy"): boolean {
   if (cooldown.lastState === newState) return true; // Same state, suppress
   // Different state but within cooldown — still suppress
   const minutesAgo = Math.round(elapsed / 60_000);
-  console.log(`[situation] Alert suppressed for ${key} — cooldown active (last alert ${minutesAgo}m ago, state change ${cooldown.lastState}→${newState})`);
+  log.info(
+    {
+      label: "situation-alert-suppressed",
+      alert_key: key,
+      minutes_ago: minutesAgo,
+      prev_state: cooldown.lastState,
+      new_state: newState,
+    },
+    "situation-alert-suppressed",
+  );
   return true;
 }
 
@@ -152,7 +161,7 @@ export async function handleDependencyProbeResult(
         probeCount: 1,
         alerted: false,
       });
-      console.log(`[situation] ${dependency}: first probe failure, buffering`);
+      log.info({ label: "situation-probe-buffering", dependency }, "situation-probe-buffering");
       await logSituationAssessment(assessment, false, true, "First probe failure — buffering for confirmation");
     } else {
       // Second+ failure — confirmed
@@ -183,11 +192,14 @@ export async function handleDependencyProbeResult(
           await sendRecoveryEmail(dependency, pending);
           recordCooldown(key, "healthy");
         } else {
-          console.log(`[situation] Recovery alert suppressed for ${dependency} — cooldown active`);
+          log.info({ label: "situation-recovery-suppressed", dependency }, "situation-recovery-suppressed");
         }
       } else {
         // Was a single blip — silently clear
-        console.log(`[situation] ${dependency}: recovered after single probe failure (transient, no alert sent)`);
+        log.info(
+          { label: "situation-transient-recovery", dependency },
+          "situation-transient-recovery",
+        );
         await logSituationAssessment(
           { ...pending.assessment, trigger: `${dependency}_recovered` },
           false, true, "Recovered after single probe failure — transient blip",
@@ -223,9 +235,9 @@ async function sendRecoveryEmail(dependency: string, pending: PendingAlert): Pro
     const { sendDigestEmail, isEmailConfigured } = await import("./digest-sender.js");
     if (!isEmailConfigured()) return;
     await sendDigestEmail(formatPlainTextEmail(subject, body), subject);
-    console.log(`[situation] Recovery email sent for ${dependency}`);
+    log.info({ label: "situation-recovery-email-sent", dependency }, "situation-recovery-email-sent");
   } catch (err) {
-    console.error(`[situation] Failed to send recovery email:`, err instanceof Error ? err.message : err);
+    logError("situation-recovery-email-failed", err, { dependency });
   }
 
   await logHealthEvent({
@@ -344,13 +356,13 @@ async function sendAssessmentEmail(assessment: SituationAssessment): Promise<voi
   try {
     const { sendDigestEmail, isEmailConfigured } = await import("./digest-sender.js");
     if (!isEmailConfigured()) {
-      console.warn("[situation] Email not configured — alert suppressed");
+      logWarn("situation-email-not-configured", "email not configured; alert suppressed");
       return;
     }
     await sendDigestEmail(formatPlainTextEmail(subject, body), subject);
-    console.log(`[situation] Alert email sent: ${assessment.trigger}`);
+    log.info({ label: "situation-alert-email-sent", trigger: assessment.trigger }, "situation-alert-email-sent");
   } catch (err) {
-    console.error(`[situation] Failed to send alert email:`, err instanceof Error ? err.message : err);
+    logError("situation-alert-email-failed", err, { trigger: assessment.trigger });
   }
 }
 

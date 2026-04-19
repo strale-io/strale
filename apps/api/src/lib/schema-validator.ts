@@ -13,6 +13,7 @@
 
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { log } from "./log.js";
 
 const REQUIRED_COLUMNS: Array<{
   table: string;
@@ -77,7 +78,7 @@ export async function validateSchema(): Promise<void> {
   }
 
   if (missing.length === 0) {
-    console.log("[startup] Schema validation passed — all required columns present.");
+    log.info({ label: "startup-schema-ok" }, "Schema validation passed — all required columns present");
     return;
   }
 
@@ -88,20 +89,14 @@ export async function validateSchema(): Promise<void> {
     byMigration.get(migration)!.push(`${table}.${column}`);
   }
 
-  console.error("[startup] ════════════════════════════════════════════");
-  console.error("[startup] SCHEMA MISMATCH — DB is missing required columns");
-  console.error("[startup] The following migrations have not been applied:");
-  console.error("[startup]");
-
-  for (const [migration, columns] of byMigration) {
-    console.error(`[startup]   Migration: ${migration}`);
-    console.error(`[startup]   Missing:   ${columns.join(", ")}`);
-    console.error("[startup]");
-  }
-
-  console.error("[startup] To fix, run:");
-  console.error("[startup]   cd apps/api && npx drizzle-kit migrate");
-  console.error("[startup] ════════════════════════════════════════════");
+  log.error(
+    {
+      label: "startup-schema-mismatch",
+      missing_by_migration: Object.fromEntries(byMigration),
+      fix: "cd apps/api && npx drizzle-kit migrate",
+    },
+    "SCHEMA MISMATCH — DB is missing required columns. See missing_by_migration.",
+  );
 
   process.exit(1);
 }

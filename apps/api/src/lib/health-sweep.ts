@@ -19,6 +19,7 @@ import { analyzeAndRemediate, applyRemediation } from "./auto-remediation.js";
 import { runUpstreamEscalationSweep } from "./upstream-tracker.js";
 import { runLifecycleSweep } from "./lifecycle.js";
 import { runWeeklyChecks } from "./meta-monitoring.js";
+import { log, logWarn } from "./log.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -38,7 +39,7 @@ interface SweepReport {
 
 export async function runWeeklyHealthSweep(): Promise<SweepReport> {
   const db = getDb();
-  console.log("[health-sweep] Starting weekly health sweep");
+  log.info({ label: "health-sweep-start" }, "health-sweep-start");
 
   const report: SweepReport = {
     timestamp: new Date().toISOString(),
@@ -91,7 +92,10 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
       // Apply remediations (only HIGH/MEDIUM confidence auto-apply)
       await applyRemediation(suite.id, actions);
     } catch (err) {
-      console.warn(`[health-sweep] Remediation failed for ${suite.capabilitySlug}:`, err);
+      logWarn("health-sweep-remediation-failed", "remediation failed", {
+        capability_slug: suite.capabilitySlug,
+        err: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
@@ -113,7 +117,10 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
         updatedAt: new Date(),
       }).where(eq(testSuites.id, suite.id));
       report.quarantineReleased.push(suite.capabilitySlug);
-      console.log(`[health-sweep] Released ${suite.capabilitySlug} from quarantine`);
+      log.info(
+        { label: "health-sweep-quarantine-released", capability_slug: suite.capabilitySlug },
+        "health-sweep-quarantine-released",
+      );
     }
   }
 
@@ -135,7 +142,10 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
         updatedAt: new Date(),
       }).where(eq(testSuites.id, suite.id));
       report.upstreamRecovered.push(suite.capabilitySlug);
-      console.log(`[health-sweep] Upstream recovered: ${suite.capabilitySlug}`);
+      log.info(
+        { label: "health-sweep-upstream-recovered", capability_slug: suite.capabilitySlug },
+        "health-sweep-upstream-recovered",
+      );
     }
   }
 
@@ -144,21 +154,37 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
     const escalations = await runUpstreamEscalationSweep();
     for (const esc of escalations) {
       if (esc.suitesEscalated > 0) {
-        console.log(`[health-sweep] Upstream escalation: ${esc.slug} → ${esc.suitesEscalated} suite(s) broken`);
+        log.info(
+          { label: "health-sweep-upstream-escalated", capability_slug: esc.slug, suites_escalated: esc.suitesEscalated },
+          "health-sweep-upstream-escalated",
+        );
       }
     }
   } catch (err) {
-    console.warn("[health-sweep] Upstream escalation sweep failed:", err);
+    logWarn("health-sweep-upstream-escalation-failed", "upstream escalation sweep failed", {
+      err: err instanceof Error ? err.message : String(err),
+    });
   }
 
   // ── 7. Lifecycle sweep ────────────────────────────────────────────────
   try {
     const transitions = await runLifecycleSweep();
     for (const t of transitions) {
-      console.log(`[health-sweep] Lifecycle: ${t.slug} ${t.from} → ${t.to} (${t.reason})`);
+      log.info(
+        {
+          label: "health-sweep-lifecycle-transition",
+          capability_slug: t.slug,
+          from_state: t.from,
+          to_state: t.to,
+          reason: t.reason,
+        },
+        "health-sweep-lifecycle-transition",
+      );
     }
   } catch (err) {
-    console.warn("[health-sweep] Lifecycle sweep failed:", err);
+    logWarn("health-sweep-lifecycle-failed", "lifecycle sweep failed", {
+      err: err instanceof Error ? err.message : String(err),
+    });
   }
 
   // ── 8. Meta-monitoring weekly checks (8B + 8C) ────────────────────────
@@ -169,15 +195,25 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
     const metaResults = await runWeeklyChecks();
     const failures = metaResults.filter((r) => !r.passed);
     if (failures.length > 0) {
-      console.warn(`[health-sweep] Meta-monitoring: ${failures.length} check(s) failed`);
+      logWarn("health-sweep-meta-failures", "meta-monitoring checks failed", {
+        failure_count: failures.length,
+      });
       for (const f of failures) {
-        console.warn(`[health-sweep]   [${f.severity.toUpperCase()}] ${f.check}: ${f.details}`);
+        logWarn("health-sweep-meta-check-failed", f.details, {
+          severity: f.severity,
+          check: f.check,
+        });
       }
     } else {
-      console.log(`[health-sweep] Meta-monitoring: all ${metaResults.length} weekly checks passed`);
+      log.info(
+        { label: "health-sweep-meta-all-passed", checks_passed: metaResults.length },
+        "health-sweep-meta-all-passed",
+      );
     }
   } catch (err) {
-    console.warn("[health-sweep] Meta-monitoring weekly checks failed:", err);
+    logWarn("health-sweep-meta-failed", "meta-monitoring weekly checks failed", {
+      err: err instanceof Error ? err.message : String(err),
+    });
   }
 
   // ── 9. Log health report ──────────────────────────────────────────────
@@ -248,33 +284,18 @@ async function checkUpstreamRecovery(
 // ─── Report logging ─────────────────────────────────────────────────────────
 
 function logSweepReport(report: SweepReport): void {
-  const lines = [
-    `[health-sweep] ══════ Weekly Health Report ══════`,
-    `[health-sweep] Suites scanned: ${report.totalSuitesScanned}`,
-    `[health-sweep] Remediations applied: ${report.remediationsApplied}`,
-    `[health-sweep] Remediations proposed: ${report.remediationsProposed}`,
-    `[health-sweep] Stale date fixes: ${report.staleDateFixes}`,
-    `[health-sweep] Dead URLs found: ${report.deadUrlsFound}`,
-  ];
-
-  if (report.quarantineReleased.length > 0) {
-    lines.push(`[health-sweep] Quarantine released: ${report.quarantineReleased.join(", ")}`);
-  }
-
-  if (report.upstreamRecovered.length > 0) {
-    lines.push(`[health-sweep] Upstream recovered: ${report.upstreamRecovered.join(", ")}`);
-  }
-
-  if (Object.keys(report.classificationSummary).length > 0) {
-    lines.push(`[health-sweep] Classification distribution:`);
-    for (const [verdict, count] of Object.entries(report.classificationSummary)) {
-      lines.push(`[health-sweep]   ${verdict}: ${count}`);
-    }
-  }
-
-  lines.push(`[health-sweep] ══════════════════════════════`);
-
-  for (const line of lines) {
-    console.log(line);
-  }
+  log.info(
+    {
+      label: "health-sweep-report",
+      suites_scanned: report.totalSuitesScanned,
+      remediations_applied: report.remediationsApplied,
+      remediations_proposed: report.remediationsProposed,
+      stale_date_fixes: report.staleDateFixes,
+      dead_urls_found: report.deadUrlsFound,
+      quarantine_released: report.quarantineReleased,
+      upstream_recovered: report.upstreamRecovered,
+      classification_summary: report.classificationSummary,
+    },
+    "health-sweep-report",
+  );
 }

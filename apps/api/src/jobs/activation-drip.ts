@@ -15,8 +15,9 @@
 import { sql, eq, and, lt, isNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { users } from "../db/schema.js";
+import { randomUUID } from "node:crypto";
 import { sendDay2NudgeEmail, sendDay5ReminderEmail } from "../lib/activation-emails.js";
-import { logWarn } from "../lib/log.js";
+import { log, logError, logWarn } from "../lib/log.js";
 
 const DRIP_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 const STARTUP_DELAY_MS = 90_000; // 90 seconds
@@ -26,6 +27,8 @@ let _running = false;
 
 async function runActivationDrip(): Promise<void> {
   const db = getDb();
+  const runId = randomUUID();
+  const jobLog = log.child({ job: "activation-drip", job_run_id: runId });
 
   // Advisory lock + all work runs inside a single transaction so the
   // xact-scoped lock sits on the same connection as every statement
@@ -37,7 +40,7 @@ async function runActivationDrip(): Promise<void> {
       sql`SELECT pg_try_advisory_xact_lock(${ADVISORY_LOCK_ID}) AS acquired`,
     );
     if (!(lock as { acquired?: boolean })?.acquired) {
-      logWarn("activation-drip-lock-busy", "another holder; skipping tick");
+      logWarn("activation-drip-lock-busy", "another holder; skipping tick", { job_run_id: runId });
       return;
     }
 
@@ -61,9 +64,13 @@ async function runActivationDrip(): Promise<void> {
       try {
         await sendDay2NudgeEmail(user.email);
         await tx.update(users).set({ activationEmailStage: 1, updatedAt: now }).where(eq(users.id, user.id));
-        console.log(`[activation-drip] Day-2 nudge sent to ${user.email}`);
+        // F-0-013: log user.id, not email.
+        jobLog.info({ label: "activation-drip-day2-sent", user_id: user.id }, "activation-drip-day2-sent");
       } catch (err) {
-        console.warn(`[activation-drip] Day-2 failed for ${user.email}:`, err instanceof Error ? err.message : err);
+        jobLog.warn(
+          { label: "activation-drip-day2-failed", user_id: user.id, err: err instanceof Error ? err.message : String(err) },
+          "activation-drip-day2-failed",
+        );
       }
     }
 
@@ -83,15 +90,21 @@ async function runActivationDrip(): Promise<void> {
       try {
         await sendDay5ReminderEmail(user.email);
         await tx.update(users).set({ activationEmailStage: 2, updatedAt: now }).where(eq(users.id, user.id));
-        console.log(`[activation-drip] Day-5 reminder sent to ${user.email}`);
+        jobLog.info({ label: "activation-drip-day5-sent", user_id: user.id }, "activation-drip-day5-sent");
       } catch (err) {
-        console.warn(`[activation-drip] Day-5 failed for ${user.email}:`, err instanceof Error ? err.message : err);
+        jobLog.warn(
+          { label: "activation-drip-day5-failed", user_id: user.id, err: err instanceof Error ? err.message : String(err) },
+          "activation-drip-day5-failed",
+        );
       }
     }
 
     const total = day2Users.length + day5Users.length;
     if (total > 0) {
-      console.log(`[activation-drip] Sent ${day2Users.length} day-2 + ${day5Users.length} day-5 emails`);
+      jobLog.info(
+        { label: "activation-drip-summary", day2: day2Users.length, day5: day5Users.length },
+        "activation-drip-summary",
+      );
     }
   });
 }
@@ -100,17 +113,16 @@ export function startActivationDrip(): void {
   if (_running) return;
   _running = true;
 
-  console.log("[activation-drip] Started (6h interval, 90s initial delay)");
+  log.info(
+    { label: "activation-drip-started", interval_ms: DRIP_INTERVAL_MS, startup_delay_ms: STARTUP_DELAY_MS },
+    "activation-drip-started",
+  );
 
   setTimeout(() => {
-    runActivationDrip().catch((err) =>
-      console.error("[activation-drip] Startup run failed:", err),
-    );
+    runActivationDrip().catch((err) => logError("activation-drip-startup-run-failed", err));
   }, STARTUP_DELAY_MS);
 
   setInterval(() => {
-    runActivationDrip().catch((err) =>
-      console.error("[activation-drip] Scheduled run failed:", err),
-    );
+    runActivationDrip().catch((err) => logError("activation-drip-scheduled-run-failed", err));
   }, DRIP_INTERVAL_MS);
 }

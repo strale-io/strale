@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
 import { fireAndForget } from "./fire-and-forget.js";
-import { logError } from "./log.js";
+import { log, logError, logWarn } from "./log.js";
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -48,10 +48,7 @@ async function refreshBrowserlessCache(): Promise<Set<string>> {
     _browserlessCacheExpiry = Date.now() + CACHE_TTL_MS;
   } catch (err) {
     // On DB error, keep the stale cache rather than clearing it
-    console.error(
-      "[chromium-health] Failed to refresh Browserless capability cache:",
-      err instanceof Error ? err.message : err,
-    );
+    logError("chromium-health-cache-refresh-failed", err);
   }
   return _browserlessSlugs;
 }
@@ -97,7 +94,7 @@ export async function probeChromiumHealth(): Promise<boolean> {
 
   if (!url || !key) {
     if (_healthy) {
-      console.warn("[chromium-health] BROWSERLESS_URL/API_KEY not configured");
+      logWarn("chromium-health-not-configured", "BROWSERLESS_URL/API_KEY not configured");
     }
     _healthy = false;
     return false;
@@ -124,8 +121,9 @@ export async function probeChromiumHealth(): Promise<boolean> {
       if (nowHealthy && !_healthy) {
         // Recovery detected
         const downtime = Math.round((now - _lastHealthyAt) / 60_000);
-        console.log(
-          `[chromium-health] RECOVERED after ${downtime}min downtime (${_consecutiveFailures} consecutive failures)`,
+        log.info(
+          { label: "chromium-health-recovered", downtime_min: downtime, consecutive_failures: _consecutiveFailures },
+          "chromium-health-recovered",
         );
         _consecutiveFailures = 0;
       }
@@ -137,7 +135,7 @@ export async function probeChromiumHealth(): Promise<boolean> {
 
       _healthy = nowHealthy;
       if (_healthy) {
-        console.log("[chromium-health] OK");
+        log.info({ label: "chromium-health-ok" }, "chromium-health-ok");
       }
       return _healthy;
     }
@@ -158,17 +156,20 @@ function handleFailure(reason: string): boolean {
 
   if (wasHealthy) {
     // First failure after healthy period — log prominently
-    console.error(
-      `[chromium-health] DOWN: ${reason} (was healthy for ${Math.round((Date.now() - _lastHealthyAt) / 60_000)}min)`,
+    logError(
+      "chromium-health-down",
+      new Error(reason),
+      { was_healthy_for_min: Math.round((Date.now() - _lastHealthyAt) / 60_000) },
     );
     // Fire interrupt email (async, fire-and-forget)
     fireAndForget(() => fireAlert(reason), { label: "chromium-down-alert", context: { reason } });
   } else {
     // Still down — log at lower frequency (every 3rd failure)
     if (_consecutiveFailures % 3 === 0) {
-      console.warn(
-        `[chromium-health] Still down (${_consecutiveFailures} consecutive failures): ${reason}`,
-      );
+      logWarn("chromium-health-still-down", "still down", {
+        consecutive_failures: _consecutiveFailures,
+        reason,
+      });
     }
   }
 
@@ -186,9 +187,6 @@ async function fireAlert(reason: string): Promise<void> {
     });
     await handleDependencyProbeResult("browserless", false, assessment);
   } catch (err) {
-    console.error(
-      "[chromium-health] Failed to assess situation:",
-      err instanceof Error ? err.message : err,
-    );
+    logError("chromium-health-assess-failed", err);
   }
 }

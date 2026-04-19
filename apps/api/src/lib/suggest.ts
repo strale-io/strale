@@ -10,6 +10,7 @@ import { embedQuery, embedDocuments, cosineSimilarity } from "./embeddings.js";
 import { tokenize } from "./tokenize.js";
 import { determineBadge } from "./trust-helpers.js";
 import { sqsLabel as sharedSqsLabel, computeSolutionScore } from "./trust-labels.js";
+import { log, logError, logWarn } from "./log.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -425,7 +426,10 @@ async function loadCatalog(): Promise<CatalogItem[]> {
             };
           }
         } catch (err) {
-          console.warn(`[suggest] Failed to load trust data for ${item.slug}:`, err);
+          logWarn("suggest-trust-load-failed", "failed to load trust data", {
+            slug: item.slug,
+            err: err instanceof Error ? err.message : String(err),
+          });
         }
       }
 
@@ -438,21 +442,22 @@ async function loadCatalog(): Promise<CatalogItem[]> {
             allItems[i].embedding = vectors[i];
           }
           useEmbeddings = true;
-          console.log(
-            `[suggest] Catalog loaded: ${solItems.length} solutions + ${capItems.length} capabilities, embeddings computed`,
+          log.info(
+            {
+              label: "suggest-catalog-loaded",
+              solutions: solItems.length,
+              capabilities: capItems.length,
+              use_embeddings: true,
+            },
+            "suggest-catalog-loaded",
           );
         } catch (embErr) {
           useEmbeddings = false;
-          console.error(
-            `[suggest] Embedding failed, using keyword fallback:`,
-            embErr instanceof Error ? embErr.message : embErr,
-          );
+          logError("suggest-embedding-failed", embErr);
         }
       } else {
         useEmbeddings = false;
-        console.warn(
-          "[suggest] VOYAGE_API_KEY not set — using keyword fallback",
-        );
+        logWarn("suggest-no-voyage-key", "VOYAGE_API_KEY not set; using keyword fallback");
       }
 
       // Clear query cache when catalog refreshes (embeddings changed)
@@ -462,7 +467,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
       catalogCachedAt = Date.now();
       return allItems;
     } catch (err) {
-      console.error("[suggest] Catalog load failed:", err instanceof Error ? err.stack : err);
+      logError("suggest-catalog-load-failed", err);
       throw err;
     } finally {
       catalogLoading = null;
@@ -791,9 +796,7 @@ Return ONLY valid JSON:
         : "";
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.warn(
-        "[suggest] Claude re-ranking returned invalid JSON, falling back",
-      );
+      logWarn("suggest-rerank-invalid-json", "Claude re-ranking returned invalid JSON, falling back");
       return fallbackRanking(query, candidates, limit);
     }
 
@@ -840,7 +843,9 @@ Return ONLY valid JSON:
       query_understood_as: parsed.query_understood_as ?? query.trim(),
     };
   } catch (err) {
-    console.warn("[suggest] Claude re-ranking failed, falling back:", err);
+    logWarn("suggest-rerank-failed", "Claude re-ranking failed, falling back", {
+      err: err instanceof Error ? err.message : String(err),
+    });
     return fallbackRanking(query, candidates, limit);
   }
 }
