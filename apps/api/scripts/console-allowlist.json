@@ -1,6 +1,5 @@
 {
   "apps/api/src/app.ts": 4,
-  "apps/api/src/capabilities/adverse-media-check.ts": 2,
   "apps/api/src/capabilities/auto-register.ts": 4,
   "apps/api/src/capabilities/pep-check.ts": 3,
   "apps/api/src/capabilities/sanctions-check.ts": 3,

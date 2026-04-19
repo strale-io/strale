@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { logError } from "../lib/log.js";
 
 /**
  * Adverse media screening via Dilisense (primary) + Serper Google search (fallback).
@@ -236,7 +237,7 @@ registerCapability("adverse-media-check", async (input: CapabilityInput) => {
     } catch (err) {
       // Validation errors propagate; other errors fall through
       if (err instanceof Error && err.message.includes("validation error")) throw err;
-      console.error("[adverse-media-check] Dilisense failed:", err instanceof Error ? err.message : err);
+      logError("adverse-media-check-dilisense-failed", err);
     }
   }
 
@@ -247,7 +248,7 @@ registerCapability("adverse-media-check", async (input: CapabilityInput) => {
       const reason = !dilisenseKey ? "dilisense_key_missing" : "dilisense_unavailable";
       return await querySerper(name, serperKey, reason);
     } catch (err) {
-      console.error("[adverse-media-check] Serper fallback failed:", err instanceof Error ? err.message : err);
+      logError("adverse-media-check-serper-failed", err);
     }
   }
 
