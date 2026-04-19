@@ -1,6 +1,5 @@
 {
   "apps/api/src/app.ts": 4,
-  "apps/api/src/capabilities/auto-register.ts": 4,
   "apps/api/src/db/audit-capabilities.ts": 16,
   "apps/api/src/db/audit-onboarding.ts": 31,
   "apps/api/src/db/audit-tests.ts": 5,

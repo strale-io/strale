@@ -8,6 +8,7 @@
 
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { log, logError } from "../lib/log.js";
 
 const DEACTIVATED = new Map<string, string>([
   ["amazon-price", "Amazon CAPTCHA blocks datacenter IPs"],
@@ -47,8 +48,9 @@ export async function autoRegisterCapabilities(): Promise<void> {
     if (seen.has(slug)) continue;
     seen.add(slug);
     if (DEACTIVATED.has(slug)) {
-      console.log(
-        `[auto-register] Skipping deactivated: ${slug} (${DEACTIVATED.get(slug)})`,
+      log.info(
+        { label: "auto-register-skip-deactivated", capability_slug: slug, reason: DEACTIVATED.get(slug) },
+        "auto-register-skip-deactivated",
       );
       skipped++;
       continue;
@@ -57,8 +59,7 @@ export async function autoRegisterCapabilities(): Promise<void> {
       await import(`./${slug}.js`);
       registered++;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[auto-register] Failed to import ${slug}: ${msg}`);
+      logError("auto-register-import-failed", err, { capability_slug: slug });
       errors++;
     }
   }
@@ -85,10 +86,7 @@ export async function autoRegisterCapabilities(): Promise<void> {
         await import(`./providers/${name}.js`);
         providerCount++;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(
-          `[auto-register] Failed to import provider ${name}: ${msg}`,
-        );
+        logError("auto-register-provider-import-failed", err, { provider: name });
         errors++;
       }
     }
@@ -96,7 +94,14 @@ export async function autoRegisterCapabilities(): Promise<void> {
     // providers/ directory doesn't exist — that's fine
   }
 
-  console.log(
-    `[auto-register] Registered ${registered} executors + ${providerCount} providers, skipped ${skipped} deactivated, ${errors} errors`,
+  log.info(
+    {
+      label: "auto-register-done",
+      executors_registered: registered,
+      providers_registered: providerCount,
+      skipped_deactivated: skipped,
+      errors,
+    },
+    "auto-register-done",
   );
 }
