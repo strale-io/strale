@@ -188,6 +188,7 @@ auditRoute.get("/:transactionId", async (c) => {
       capabilityId: transactions.capabilityId,
       solutionSlug: transactions.solutionSlug,
       complianceHashState: transactions.complianceHashState,
+      deletedAt: transactions.deletedAt,
     })
     .from(transactions)
     .where(eq(transactions.id, transactionId))
@@ -195,6 +196,22 @@ auditRoute.get("/:transactionId", async (c) => {
 
   if (!txn) {
     return c.json(apiError("not_found", "Transaction not found."), 404);
+  }
+
+  // F-A-001: deleted rows return 410 Gone (not a redacted profile).
+  // A redacted compliance block would be misleading; 410 makes the
+  // state explicit while preserving enough metadata for external
+  // auditors to confirm the deletion happened on a specific timestamp.
+  if (txn.deletedAt) {
+    return c.json(
+      {
+        error_code: "gone" as const,
+        message: "Transaction was deleted by the user exercising GDPR Article 17.",
+        transaction_id: txn.id,
+        deleted_at: txn.deletedAt.toISOString(),
+      },
+      410,
+    );
   }
 
   // F-0-009 Stage 2: the integrity hash is filled in by a background

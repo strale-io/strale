@@ -47,26 +47,33 @@ verifyRoute.get("/:transactionId", async (c) => {
     });
   }
 
-  // Recompute hash for this transaction
-  const recomputed = computeIntegrityHash(
-    {
-      id: txn.id,
-      userId: txn.userId,
-      status: txn.status,
-      input: txn.input,
-      output: txn.output,
-      error: txn.error,
-      priceCents: txn.priceCents,
-      latencyMs: txn.latencyMs,
-      provenance: txn.provenance,
-      auditTrail: txn.auditTrail,
-      transparencyMarker: txn.transparencyMarker,
-      dataJurisdiction: txn.dataJurisdiction,
-      createdAt: txn.createdAt,
-      completedAt: txn.completedAt,
-    },
-    txn.previousHash ?? GENESIS_HASH,
-  );
+  // F-A-001: deleted rows can't be recomputed — their hash inputs (input,
+  // output, audit_trail, provenance) were redacted when the user
+  // exercised Article 17. Trust the stored hash for chain continuity;
+  // the hash itself was computed correctly at the time, and the
+  // successor row's previous_hash still points at it unchanged.
+  const isDeleted = txn.deletedAt != null;
+  const recomputed = isDeleted
+    ? txn.integrityHash
+    : computeIntegrityHash(
+        {
+          id: txn.id,
+          userId: txn.userId,
+          status: txn.status,
+          input: txn.input,
+          output: txn.output,
+          error: txn.error,
+          priceCents: txn.priceCents,
+          latencyMs: txn.latencyMs,
+          provenance: txn.provenance,
+          auditTrail: txn.auditTrail,
+          transparencyMarker: txn.transparencyMarker,
+          dataJurisdiction: txn.dataJurisdiction,
+          createdAt: txn.createdAt,
+          completedAt: txn.completedAt,
+        },
+        txn.previousHash ?? GENESIS_HASH,
+      );
 
   const hashValid = recomputed === txn.integrityHash;
 
@@ -153,26 +160,33 @@ async function walkChain(
 
     length++;
 
-    // Same field mapping as storeIntegrityHash() in do.ts
-    const recomputed = computeIntegrityHash(
-      {
-        id: prev.id,
-        userId: prev.userId,
-        status: prev.status,
-        input: prev.input,
-        output: prev.output,
-        error: prev.error,
-        priceCents: prev.priceCents,
-        latencyMs: prev.latencyMs,
-        provenance: prev.provenance,
-        auditTrail: prev.auditTrail,
-        transparencyMarker: prev.transparencyMarker,
-        dataJurisdiction: prev.dataJurisdiction,
-        createdAt: prev.createdAt,
-        completedAt: prev.completedAt,
-      },
-      prev.previousHash ?? GENESIS_HASH,
-    );
+    // F-A-001: deleted rows trust the stored integrity_hash for chain
+    // continuity. The original hash inputs were redacted when the user
+    // exercised Article 17, so recomputation is impossible by design.
+    // The chain link forward (next row's previousHash → this row's
+    // integrityHash) is still verifiable from the next row's side.
+    const isDeleted = prev.deletedAt != null;
+    const recomputed = isDeleted
+      ? prev.integrityHash
+      : computeIntegrityHash(
+          {
+            id: prev.id,
+            userId: prev.userId,
+            status: prev.status,
+            input: prev.input,
+            output: prev.output,
+            error: prev.error,
+            priceCents: prev.priceCents,
+            latencyMs: prev.latencyMs,
+            provenance: prev.provenance,
+            auditTrail: prev.auditTrail,
+            transparencyMarker: prev.transparencyMarker,
+            dataJurisdiction: prev.dataJurisdiction,
+            createdAt: prev.createdAt,
+            completedAt: prev.completedAt,
+          },
+          prev.previousHash ?? GENESIS_HASH,
+        );
 
     if (recomputed === prev.integrityHash) {
       verifiedLinks++;
