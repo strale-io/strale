@@ -13,6 +13,7 @@ import { classifyFieldVolatility, makeVolatilityAwareCheck } from "./field-volat
 import { getOutputChecks, assignTier } from "./test-generation.js";
 import { checkReadiness, clearReadinessCache } from "./capability-readiness.js";
 import { validateCapabilitySchema, validateCapabilityStructure, enforceGates, runGate5 } from "./onboarding-gates.js";
+import { log, logWarn } from "./log.js";
 
 /**
  * Call after a capability is inserted or updated in the database.
@@ -100,18 +101,27 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
     // Algorithmic caps are free to test — no external cost — so this is safe.
     if (cap.transparencyTag === "algorithmic") {
       await generateAlgorithmicRegressionTest(cap, testInput).catch((err) => {
-        console.warn(`[onboarding] Regression test generation failed for ${capabilitySlug}: ${err.message}`);
+        logWarn("onboarding-regression-gen-failed", "regression test generation failed", {
+          capability_slug: capabilitySlug,
+          err: err instanceof Error ? err.message : String(err),
+        });
       });
     }
 
-    console.log(`[onboarding] Created test suites for ${capabilitySlug}`);
+    log.info(
+      { label: "onboarding-test-suites-created", capability_slug: capabilitySlug },
+      "onboarding-test-suites-created",
+    );
 
     // Validate fixtures against real execution (fire-and-forget).
     // NOTE: getExecutor may return null during seed.ts if the capability file
     // hasn't been imported yet. In that case, validation is skipped — it will
     // happen on the first scheduled test run via the self-heal system.
     validateTestFixtures(capabilitySlug).catch((err) => {
-      console.warn(`[onboarding] Fixture validation failed for ${capabilitySlug}: ${err.message}`);
+      logWarn("onboarding-fixture-validation-failed", "fixture validation failed", {
+        capability_slug: capabilitySlug,
+        err: err instanceof Error ? err.message : String(err),
+      });
     });
   }
 
@@ -123,30 +133,40 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
         .update(capabilities)
         .set({ transparencyTag: tag, updatedAt: new Date() })
         .where(eq(capabilities.id, cap.id));
-      console.log(`[onboarding] Set transparency tag for ${capabilitySlug}: ${tag}`);
+      log.info(
+        { label: "onboarding-transparency-tag-set", capability_slug: capabilitySlug, tag },
+        "onboarding-transparency-tag-set",
+      );
     }
   }
 
   // 3. Validate metadata completeness (warnings only — does not block creation)
   const metadataWarnings = validateMetadataCompleteness(cap);
   if (metadataWarnings.length > 0) {
-    console.log(`[onboarding] Metadata warnings for ${capabilitySlug}:`);
-    for (const w of metadataWarnings) {
-      const icon = w.severity === "warning" ? "⚠️" : "ℹ️";
-      console.log(`  ${icon} ${w.field}: ${w.message}`);
-    }
+    log.info(
+      {
+        label: "onboarding-metadata-warnings",
+        capability_slug: capabilitySlug,
+        warnings: metadataWarnings.map((w) => ({ field: w.field, severity: w.severity, message: w.message })),
+      },
+      "onboarding-metadata-warnings",
+    );
   }
 
   // 4. Readiness gate — single source of truth for onboarding completeness
   clearReadinessCache();
   const readiness = await checkReadiness(capabilitySlug);
   if (!readiness.ready) {
-    console.warn(`[onboarding] ${capabilitySlug} is NOT fully onboarded. Issues:`);
-    for (const issue of readiness.issues) {
-      console.warn(`  - ${issue}`);
-    }
+    logWarn(
+      "onboarding-not-ready",
+      "capability is NOT fully onboarded",
+      { capability_slug: capabilitySlug, issues: readiness.issues },
+    );
   } else {
-    console.log(`[onboarding] ${capabilitySlug} is fully onboarded`);
+    log.info(
+      { label: "onboarding-ready", capability_slug: capabilitySlug },
+      "onboarding-ready",
+    );
   }
 
   // 5. Gate 5: Path coverage (DEC-20260411-B)
@@ -154,12 +174,24 @@ export async function onCapabilityCreated(capabilitySlug: string): Promise<void>
   // may have uncovered paths that need fixtures added separately.
   const gate5 = await runGate5(capabilitySlug);
   if (gate5.isMultiPath && !gate5.passed) {
-    console.warn(`[onboarding] Gate 5 FAILED for ${capabilitySlug}: ${gate5.issues.length} uncovered entry point(s)`);
-    for (const issue of gate5.issues) {
-      console.warn(`  - ${issue}`);
-    }
+    logWarn(
+      "onboarding-gate5-failed",
+      "Gate 5 FAILED: uncovered entry points",
+      {
+        capability_slug: capabilitySlug,
+        uncovered_count: gate5.issues.length,
+        issues: gate5.issues,
+      },
+    );
   } else if (gate5.isMultiPath) {
-    console.log(`[onboarding] Gate 5 passed for ${capabilitySlug}: all ${gate5.entryPoints.length} entry points covered`);
+    log.info(
+      {
+        label: "onboarding-gate5-passed",
+        capability_slug: capabilitySlug,
+        entry_points: gate5.entryPoints.length,
+      },
+      "onboarding-gate5-passed",
+    );
   }
 
   // 6. Visibility gate — verify capability is externally visible
@@ -192,7 +224,7 @@ async function verifyCapabilityVisibility(slug: string): Promise<void> {
     .limit(1);
 
   if (!cap) {
-    console.warn(`[onboarding] Visibility check: '${slug}' not found in DB`);
+    logWarn("onboarding-visibility-not-found", "capability not found in DB", { capability_slug: slug });
     return;
   }
 
@@ -212,14 +244,20 @@ async function verifyCapabilityVisibility(slug: string): Promise<void> {
   }
 
   if (issues.length > 0) {
-    console.warn(
-      `[onboarding] VISIBILITY WARNING: '${slug}' is onboarded but NOT visible to users.\n` +
-        `  Issues:\n` +
-        issues.map((i) => `  - ${i}`).join("\n") + "\n" +
-        `  Fix: UPDATE capabilities SET visible = true, is_active = true, lifecycle_state = 'active' WHERE slug = '${slug}';`,
+    logWarn(
+      "onboarding-visibility-warning",
+      "capability is onboarded but NOT visible to users",
+      {
+        capability_slug: slug,
+        issues,
+        fix: `UPDATE capabilities SET visible = true, is_active = true, lifecycle_state = 'active' WHERE slug = '${slug}';`,
+      },
     );
   } else {
-    console.log(`[onboarding] Visibility check passed: '${slug}' is active and visible`);
+    log.info(
+      { label: "onboarding-visibility-ok", capability_slug: slug },
+      "onboarding-visibility-ok",
+    );
   }
 }
 
@@ -339,7 +377,11 @@ export async function validateTestFixtures(
 ): Promise<void> {
   const executor = getExecutor(capabilitySlug);
   if (!executor) {
-    console.warn(`[onboarding] No executor for ${capabilitySlug} — skipping fixture validation`);
+    logWarn(
+      "onboarding-no-executor-fixture-skip",
+      "no executor — skipping fixture validation",
+      { capability_slug: capabilitySlug },
+    );
     return;
   }
 
@@ -381,13 +423,21 @@ export async function validateTestFixtures(
   try {
     const result = await executor(execInput);
     if (!result?.output || Object.keys(result.output).length === 0) {
-      console.warn(`[onboarding] ${capabilitySlug} returned no output — skipping calibration`);
+      logWarn(
+        "onboarding-no-output-skip",
+        "capability returned no output — skipping calibration",
+        { capability_slug: capabilitySlug },
+      );
       return;
     }
     realOutput = result.output;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`[onboarding] Fixture validation execution failed for ${capabilitySlug}: ${msg}`);
+    logWarn(
+      "onboarding-fixture-exec-failed",
+      "fixture validation execution failed",
+      { capability_slug: capabilitySlug, err: msg },
+    );
     return;
   }
 
@@ -451,16 +501,19 @@ export async function validateTestFixtures(
       .where(eq(testSuites.id, suite.id));
 
     if (shouldVerify) {
-      console.log(
-        `[onboarding] Ground truth verified for ${capabilitySlug} ` +
-          `test "${suite.testName}" — first clean run after generation`,
+      log.info(
+        { label: "onboarding-ground-truth-verified", capability_slug: capabilitySlug, test_name: suite.testName },
+        "onboarding-ground-truth-verified",
       );
     }
 
     calibrated++;
   }
 
-  console.log(`[onboarding] Validated and calibrated ${calibrated} test fixtures for ${capabilitySlug}`);
+  log.info(
+    { label: "onboarding-fixtures-calibrated", capability_slug: capabilitySlug, count: calibrated },
+    "onboarding-fixtures-calibrated",
+  );
 }
 
 // ─── Algorithmic regression test generation ──────────────────────────────────
@@ -479,7 +532,11 @@ async function generateAlgorithmicRegressionTest(
   const executor = getExecutor(cap.slug);
 
   if (!executor) {
-    console.warn(`[onboarding] No executor for ${cap.slug} — skipping regression test`);
+    logWarn(
+      "onboarding-regression-no-executor",
+      "no executor — skipping regression test",
+      { capability_slug: cap.slug },
+    );
     return;
   }
 
@@ -487,14 +544,20 @@ async function generateAlgorithmicRegressionTest(
   try {
     result = await executor(testInput);
   } catch (err) {
-    console.warn(
-      `[onboarding] Regression test execution failed for ${cap.slug}: ${err instanceof Error ? err.message : String(err)}`,
+    logWarn(
+      "onboarding-regression-exec-failed",
+      "regression test execution failed",
+      { capability_slug: cap.slug, err: err instanceof Error ? err.message : String(err) },
     );
     return;
   }
 
   if (!result?.output || typeof result.output !== "object") {
-    console.warn(`[onboarding] No usable output for ${cap.slug} — skipping regression test`);
+    logWarn(
+      "onboarding-regression-no-output",
+      "no usable output — skipping regression test",
+      { capability_slug: cap.slug },
+    );
     return;
   }
 
@@ -539,8 +602,9 @@ async function generateAlgorithmicRegressionTest(
     groundTruthVerifiedAt: null, // unverified until a clean run confirms it
   });
 
-  console.log(
-    `[onboarding] Created regression test for ${cap.slug} with ${validationChecks.length} checks`,
+  log.info(
+    { label: "onboarding-regression-created", capability_slug: cap.slug, check_count: validationChecks.length },
+    "onboarding-regression-created",
   );
 }
 
@@ -619,8 +683,9 @@ export async function onCapabilityDeactivated(
   }>;
 
   if (rows.length === 0) {
-    console.log(
-      `[capability-lifecycle] Deactivating ${capabilitySlug} — no active solutions affected`,
+    log.info(
+      { label: "capability-lifecycle-deactivate-no-solutions", capability_slug: capabilitySlug },
+      "capability-lifecycle-deactivate-no-solutions",
     );
     return { deactivatedSolutions: [] };
   }
@@ -633,16 +698,25 @@ export async function onCapabilityDeactivated(
 
     deactivatedSolutions.push(sol.slug);
 
-    console.warn(
-      `[capability-lifecycle] Deactivated solution '${sol.slug}' (${sol.name}) ` +
-        `because capability '${capabilitySlug}' was deactivated` +
-        (reason ? ` — reason: ${reason}` : ""),
+    logWarn(
+      "capability-lifecycle-solution-deactivated",
+      "solution deactivated due to capability deactivation",
+      {
+        solution_slug: sol.slug,
+        solution_name: sol.name,
+        capability_slug: capabilitySlug,
+        reason: reason ?? null,
+      },
     );
   }
 
-  console.warn(
-    `[capability-lifecycle] Capability '${capabilitySlug}' deactivated. ` +
-      `${deactivatedSolutions.length} solution(s) also deactivated: ${deactivatedSolutions.join(", ")}`,
+  logWarn(
+    "capability-lifecycle-deactivated",
+    "capability deactivated",
+    {
+      capability_slug: capabilitySlug,
+      deactivated_solutions: deactivatedSolutions,
+    },
   );
 
   return { deactivatedSolutions };
@@ -698,8 +772,9 @@ export async function onCapabilityReactivated(
         .where(eq(solutions.id, sol.id));
 
       reactivatedSolutions.push(sol.slug);
-      console.log(
-        `[capability-lifecycle] Reactivated solution '${sol.slug}' — all steps now active`,
+      log.info(
+        { label: "capability-lifecycle-solution-reactivated", solution_slug: sol.slug },
+        "capability-lifecycle-solution-reactivated",
       );
     }
   }
