@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { logError } from "../lib/log.js";
 
 const CH_API = "https://api.company-information.service.gov.uk";
 
@@ -180,7 +181,7 @@ registerCapability("beneficial-ownership-lookup", async (input: CapabilityInput)
       provenance: { source: "company-information.service.gov.uk", fetched_at: new Date().toISOString() },
     };
   } catch (err) {
-    console.error("[beneficial-ownership-lookup] Companies House:", err instanceof Error ? err.message : err);
+    logError("beneficial-ownership-lookup-companies-house-failed", err);
 
     // If it's a validation error (not found, bad jurisdiction), rethrow
     if (err instanceof Error && (err.message.includes("No UK company found") || err.message.includes("currently available"))) {
