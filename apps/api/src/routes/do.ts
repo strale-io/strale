@@ -15,6 +15,7 @@ import { rateLimitByKey, rateLimitByIp } from "../lib/rate-limit.js";
 import { matchCapability } from "../lib/matching.js";
 import { getExecutor } from "../capabilities/index.js";
 import { apiError } from "../lib/errors.js";
+import { TRANSACTION_RETENTION_DAYS } from "../lib/data-retention.js";
 import {
   checkCircuitBreaker,
   recordSuccess,
@@ -2171,7 +2172,11 @@ function buildFullAudit(params: {
       personal_data_categories: [] as string[],
       human_oversight: "autonomous",
       human_oversight_description: "Automated execution with schema validation. No human review required for this capability.",
-      data_retention_days: 90,
+      // F-A-004: derived from TRANSACTION_RETENTION_DAYS in data-retention.ts
+      // so the claim here can't drift from the actual purge window.
+      // legal_hold=true rows are retained indefinitely — see note below.
+      data_retention_days: TRANSACTION_RETENTION_DAYS,
+      data_retention_note: "Transactions are retained for compliance. Rows under legal hold are retained indefinitely until the hold is released.",
       deletion_endpoint: `DELETE /v1/transactions/${transactionId}`,
       access_endpoint: `GET /v1/transactions/${transactionId}`,
       shareable_url: getShareableUrl(transactionId),
@@ -2183,9 +2188,10 @@ function buildFullAudit(params: {
           article_50: "AI-generated content marked via transparency_marker field",
         },
         gdpr: {
+          article_5: `Retention: ${TRANSACTION_RETENTION_DAYS} days (3 years) after completion, or indefinitely under legal hold.`,
           article_30: "Complete processing record with data sources, classifications, and jurisdiction",
           article_15: `Transaction data accessible via GET /v1/transactions/${transactionId}`,
-          article_17: `Transaction data deletable via DELETE /v1/transactions/${transactionId}`,
+          article_17: `Transaction data deletable via authenticated DELETE /v1/transactions/${transactionId} (soft-delete redacts input/output; integrity chain preserved).`,
         },
         notes: personalDataDetected
           ? "Personal data detected in this transaction. DPIA may be required."

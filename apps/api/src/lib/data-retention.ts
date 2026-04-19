@@ -14,6 +14,12 @@ const BATCH_DELAY_MS = 100;
  * Transactions with legal_hold = true are NEVER deleted regardless of age.
  */
 
+// F-A-004: single source of truth for the retention claim in audit
+// payloads. buildFullAudit (routes/do.ts) and any future audit builder
+// should import this rather than hardcoding days — prevents the claim
+// from drifting out of sync with the actual purge window.
+export const TRANSACTION_RETENTION_DAYS = 1095; // 3 years
+
 async function purgeTestResults(cutoff: Date): Promise<number> {
   const db = getDb();
   let deleted = 0;
@@ -144,9 +150,8 @@ export async function cleanupOldTestData(): Promise<void> {
   const oneYearAgo = new Date(now);
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-  // Compliance data — 3 year retention
-  const threeYearsAgo = new Date(now);
-  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+  // Compliance data — 3 year retention (TRANSACTION_RETENTION_DAYS)
+  const threeYearsAgo = new Date(now.getTime() - TRANSACTION_RETENTION_DAYS * 86_400_000);
 
   const testResultsDeleted = await purgeTestResults(ninetyDaysAgo);
   const txQualityDeleted = await purgeTransactionQuality(threeYearsAgo);
