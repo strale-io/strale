@@ -4,6 +4,8 @@
  * CSV is refreshed every 6 hours; stale cache used if ESMA is down.
  */
 
+import { logWarn } from "../../lib/log.js";
+
 export interface CASPRecord {
   nca: string;
   country: string;
@@ -110,7 +112,7 @@ export async function getCASPData(): Promise<CASPRecord[]> {
   const csv = await fetchCSV(getCASPUrls());
   if (!csv) {
     if (_caspCache.length > 0) {
-      console.warn("[vasp-data] ESMA CSV unavailable, using stale cache");
+      logWarn("vasp-data-stale-cache", "ESMA CSV unavailable, using stale cache");
       return _caspCache;
     }
     return [];
