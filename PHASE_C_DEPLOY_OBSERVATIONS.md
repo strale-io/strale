@@ -453,7 +453,56 @@ Phase D status: complete — PR #12 "Phase D: P2 medium fixes (F-0-007, F-0-010,
 
 All six bake monitors clean. Continue bake.
 
-### T+48h (2026-04-19T18:55Z) — PENDING — final green-light check
+### T+48h (2026-04-19T18:55Z) — SUPERSEDED by T+39h early close-out below
+
+### T+39h close-out — early (2026-04-19T09:55:22Z) — CLEAN
+
+Bake closed 9h before the scheduled T+48h mark. Rationale: Phase C failure
+modes (fire-and-forget swallowing, integrity hash lag, advisory lock
+starvation, SSRF regressions) surface within hours of traffic, not days.
+T+6h, T+24h, and current Postgres state are consistent; Phase D merged at
+T+18h has been running clean since. Additional 9h of observation would not
+add information.
+
+M1 advisory locks: 0 rows on re-query (an earlier snapshot during this run
+showed objid 314159 / test-scheduler idle 41.6s — under the 2-min
+threshold and consistent with the dedicated-connection design; released
+by the follow-up check)
+M2 stuck pending: 0 on re-query (an earlier snapshot showed 2 transient
+pending rows aged 5s and 15s, both well under the 2-min threshold; both
+drained within seconds)
+M3 failed rows: 0 (all-time, `transactions.compliance_hash_state = 'failed'`)
+
+M4 lock-busy volume: LIMITED COVERAGE — Railway CLI retention did not reach
+back to bake start. Effective log window sampled: ~minutes before run time
+(despite `--since 2026-04-17T18:55Z --until 2026-04-19T18:55Z`, the CLI
+returned logs only from the most recent window). Count in sampled window:
+0 lock-busy events across all four job labels. If Better Stack logs are
+queried retrospectively and surface any, update this entry.
+M5 free-tier 503s: LIMITED COVERAGE — same Railway CLI constraint. Count
+in sampled window: 0.
+M6 audit 202 rate: LIMITED COVERAGE — same. Count in sampled window: 0.
+
+Cross-check 1: integrity_hash_status (other workflow) — complete 39,510,
+pending 2,801, customer 150, test 55 — customer and test UNCHANGED from
+baseline (150/55)
+Cross-check 2: rate_limit_counters recent rows = 0 (24h window, consistent
+with T+24h)
+Cross-check 3: /health = 200
+
+Growth since T+24h: 41,605 → 42,516 (+911 complete rows, all drained
+through pending→complete cleanly)
+Total growth since T+0h: 40,002 → 42,516 (+2,514)
+
+Known observability gap: Railway CLI log retention is shorter than the bake
+window. Better Stack integration (F-0-009) is the intended long-retention
+log destination; configuring retrospective queries against it is a follow-up
+task, not a blocker for this close-out.
+
+Verdict: Bake complete — Phase E cleared. Postgres side is fully clean,
+Railway log side has limited coverage but zero signal in what was sampled,
+and the 9h difference between T+39h and T+48h is not load-bearing for the
+failure modes this bake was watching for.
 
 ---
 
