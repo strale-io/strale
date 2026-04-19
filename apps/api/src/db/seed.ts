@@ -6,6 +6,7 @@ config({ path: resolve(import.meta.dirname, "../../../../.env") });
 import { getDb } from "./index.js";
 import { capabilities } from "./schema.js";
 import { onCapabilityCreated } from "../lib/capability-onboarding.js";
+import { log, logError, logWarn } from "../lib/log.js";
 
 /** Estimate default latency for capabilities missing avgLatencyMs. */
 function estimateDefaultLatency(cap: { category: string; description?: string }): number {
@@ -2803,7 +2804,7 @@ const seedCapabilities = [
 async function seed() {
   const db = getDb();
 
-  console.log("Seeding capabilities...");
+  log.info({ label: "seed-start" }, "Seeding capabilities");
 
   for (const cap of seedCapabilities) {
     await db
@@ -2831,15 +2832,24 @@ async function seed() {
       });
     // Auto-generate test suites for new capabilities (fire-and-forget)
     await onCapabilityCreated(cap.slug).catch((err) => {
-      console.warn(`  [onboarding] Failed for ${cap.slug}: ${err.message}`);
+      logWarn("seed-onboarding-failed", "onboarding failed for capability", {
+        capability_slug: cap.slug,
+        err: err instanceof Error ? err.message : String(err),
+      });
     });
-    console.log(`  ✓ ${cap.slug} (€${(cap.priceCents / 100).toFixed(2)})`);
+    log.info(
+      { label: "seed-capability-added", capability_slug: cap.slug, price_cents: cap.priceCents },
+      "seed-capability-added",
+    );
   }
 
-  console.log(`Done. ${seedCapabilities.length} capabilities seeded.`);
+  log.info(
+    { label: "seed-done", count: seedCapabilities.length },
+    "seed-done",
+  );
 
   // Onboarding readiness check
-  console.log("\n--- Running onboarding readiness check ---");
+  log.info({ label: "seed-readiness-check-start" }, "seed-readiness-check-start");
   const { checkAllReadiness } = await import("../lib/capability-readiness.js");
   const readiness = await checkAllReadiness();
 
@@ -2852,17 +2862,19 @@ async function seed() {
   }
 
   if (onboardingIssues.length > 0) {
-    console.warn(`\n${onboardingIssues.length} capabilities have onboarding issues:`);
-    for (const issue of onboardingIssues) console.warn(issue);
-    console.warn("\nRun: npx tsx src/db/audit-onboarding.ts --issues-only  for full details\n");
+    logWarn("seed-onboarding-issues", "capabilities have onboarding issues", {
+      count: onboardingIssues.length,
+      issues: onboardingIssues,
+      fix: "npx tsx src/db/audit-onboarding.ts --issues-only",
+    });
   } else {
-    console.log("All seeded capabilities are fully onboarded");
+    log.info({ label: "seed-all-onboarded" }, "All seeded capabilities are fully onboarded");
   }
 
   process.exit(0);
 }
 
 seed().catch((err) => {
-  console.error("Seed failed:", err);
+  logError("seed-failed", err);
   process.exit(1);
 });
