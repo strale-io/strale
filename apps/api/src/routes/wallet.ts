@@ -9,7 +9,17 @@ import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
 const MIN_TOPUP_CENTS = 1000; // €10
+const MAX_TOPUP_CENTS = 1_000_000; // €10,000 — F-0-016: cap single-session top-ups
 const SUGGESTED_AMOUNTS = [1000, 2500, 5000, 10000]; // €10, €25, €50, €100
+
+// F-0-015: Stripe redirect URLs must be derived from FRONTEND_URL, not from
+// the inbound request path. Fail fast at module load if the var is missing.
+const FRONTEND_URL = process.env.FRONTEND_URL;
+if (!FRONTEND_URL) {
+  throw new Error(
+    "FRONTEND_URL environment variable is required (used for Stripe top-up redirects)",
+  );
+}
 
 export const walletRoute = new Hono<AppEnv>();
 
@@ -31,13 +41,18 @@ walletRoute.post("/topup", async (c) => {
   if (
     typeof amountCents !== "number" ||
     !Number.isInteger(amountCents) ||
-    amountCents < MIN_TOPUP_CENTS
+    amountCents < MIN_TOPUP_CENTS ||
+    amountCents > MAX_TOPUP_CENTS
   ) {
     return c.json(
       apiError(
         "invalid_request",
-        `'amount_cents' must be an integer >= ${MIN_TOPUP_CENTS} (€${MIN_TOPUP_CENTS / 100}).`,
-        { min_amount_cents: MIN_TOPUP_CENTS, suggested_amounts: SUGGESTED_AMOUNTS },
+        `'amount_cents' must be an integer between ${MIN_TOPUP_CENTS} (€${MIN_TOPUP_CENTS / 100}) and ${MAX_TOPUP_CENTS} (€${MAX_TOPUP_CENTS / 100}).`,
+        {
+          min_amount_cents: MIN_TOPUP_CENTS,
+          max_amount_cents: MAX_TOPUP_CENTS,
+          suggested_amounts: SUGGESTED_AMOUNTS,
+        },
       ),
       400,
     );
@@ -64,9 +79,8 @@ walletRoute.post("/topup", async (c) => {
       user_id: user.id,
       amount_cents: String(amountCents),
     },
-    // success_url and cancel_url would point to the dashboard in production
-    success_url: `${c.req.url.split("/v1")[0]}/v1/wallet/balance`,
-    cancel_url: `${c.req.url.split("/v1")[0]}/v1/wallet/balance`,
+    success_url: `${FRONTEND_URL}/?topup=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${FRONTEND_URL}/?topup=cancelled`,
   });
 
   // F-0-013: drop email from the log. user.id + session.id are the

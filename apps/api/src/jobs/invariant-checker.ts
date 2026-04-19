@@ -817,41 +817,73 @@ async function checkMigrationCompleteness(): Promise<{ alerts: number; checked: 
 
   if (retired.length === 0) return { alerts: 0, checked: 0 };
 
+  // F-0-008: walk capability files via fs instead of shelling out to grep.
+  // The retired-provider manifest is trusted (hardcoded), so the old
+  // `execSync("grep -rl ${provider.baseUrl} ...")` had no live injection
+  // surface today, but the shape invited one the moment the manifest ever
+  // becomes DB-driven. Node-native walk eliminates it structurally.
+  const { readdir, readFile } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+
+  async function walkTsFiles(dir: string): Promise<string[]> {
+    const out: string[] = [];
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        out.push(...(await walkTsFiles(full)));
+      } else if (entry.isFile() && entry.name.endsWith(".ts")) {
+        out.push(full);
+      }
+    }
+    return out;
+  }
+
+  const capabilitiesDir = join(process.cwd(), "apps/api/src/capabilities");
+  let tsFiles: string[];
+  try {
+    tsFiles = await walkTsFiles(capabilitiesDir);
+  } catch {
+    // capabilities dir unavailable (e.g. packaged deploy) — skip silently
+    return { alerts: 0, checked: retired.length };
+  }
+
   let alerts = 0;
 
   for (const provider of retired) {
     if (!provider.baseUrl) continue;
 
-    try {
-      const { execSync } = await import("child_process");
-      const result = execSync(
-        `grep -rl "${provider.baseUrl}" apps/api/src/capabilities/ --include="*.ts" 2>/dev/null || true`,
-        { encoding: "utf-8", cwd: process.cwd() },
-      ).trim();
-
-      if (result) {
-        const files = result.split("\n").filter(Boolean);
-        alerts++;
-
-        await logHealthEvent({
-          eventType: "invariant_alert",
-          tier: 2,
-          actionTaken: `INCOMPLETE MIGRATION: Retired provider '${provider.name}' (${provider.baseUrl}) still referenced in ${files.length} file(s): ${files.join(", ")}`,
-          details: {
-            check: "migration_completeness",
-            retiredProvider: provider.name,
-            retiredBaseUrl: provider.baseUrl,
-            replacedBy: provider.replacedFrom ? undefined : provider.name,
-            filesWithReferences: files,
-          },
-        });
-
-        console.error(
-          `[invariant-checker] CHECK 7: Retired provider '${provider.name}' still referenced in: ${files.join(", ")}`,
-        );
+    const files: string[] = [];
+    for (const filePath of tsFiles) {
+      try {
+        const content = await readFile(filePath, "utf-8");
+        if (content.includes(provider.baseUrl)) {
+          files.push(filePath);
+        }
+      } catch {
+        // unreadable file — skip
       }
-    } catch {
-      // grep not available or cwd issue — skip silently
+    }
+
+    if (files.length > 0) {
+      alerts++;
+
+      await logHealthEvent({
+        eventType: "invariant_alert",
+        tier: 2,
+        actionTaken: `INCOMPLETE MIGRATION: Retired provider '${provider.name}' (${provider.baseUrl}) still referenced in ${files.length} file(s): ${files.join(", ")}`,
+        details: {
+          check: "migration_completeness",
+          retiredProvider: provider.name,
+          retiredBaseUrl: provider.baseUrl,
+          replacedBy: provider.replacedFrom ? undefined : provider.name,
+          filesWithReferences: files,
+        },
+      });
+
+      console.error(
+        `[invariant-checker] CHECK 7: Retired provider '${provider.name}' still referenced in: ${files.join(", ")}`,
+      );
     }
   }
 
