@@ -8,6 +8,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { users } from "../db/schema.js";
+import { log, logWarn } from "./log.js";
 
 export async function onFirstTransaction(userId: string, capabilitySlug: string): Promise<void> {
   const db = getDb();
@@ -31,13 +32,19 @@ export async function onFirstTransaction(userId: string, capabilitySlug: string)
     })
     .where(eq(users.id, userId));
 
-  console.log(`[activation] User ${user.email} made first API call (${capabilitySlug})`);
+  log.info(
+    { label: "activation-first-transaction", user_id: userId, capability_slug: capabilitySlug },
+    "activation-first-transaction",
+  );
 
   // Send activation success email (fire-and-forget)
   try {
     const { sendActivationSuccessEmail } = await import("./activation-emails.js");
     await sendActivationSuccessEmail(user.email, capabilitySlug);
   } catch (err) {
-    console.warn("[activation] Success email failed:", err instanceof Error ? err.message : err);
+    logWarn("activation-success-email-failed", "activation success email failed", {
+      user_id: userId,
+      err: err instanceof Error ? err.message : String(err),
+    });
   }
 }

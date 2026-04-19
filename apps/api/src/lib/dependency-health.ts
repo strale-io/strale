@@ -12,6 +12,7 @@
 
 import { getActiveProviders, type DependencyProvider } from "./dependency-manifest.js";
 import { fireAndForget } from "./fire-and-forget.js";
+import { logError } from "./log.js";
 
 export interface HealthCheckResult {
   healthy: boolean;
@@ -207,7 +208,7 @@ export async function runDependencyHealthChecks(): Promise<
 
   // Fire-and-forget: persist probe results to health_monitor_events
   persistProbeResults(results).catch((err) => {
-    console.error("[dependency-health] Failed to persist probe results:", err instanceof Error ? err.message : err);
+    logError("dependency-health-persist-failed", err);
   });
 
   // Fire-and-forget: run situation assessment for unhealthy probes
@@ -220,7 +221,7 @@ export async function runDependencyHealthChecks(): Promise<
           const assessment = await assessDependencyProbeFailure(name, result);
           await handleDependencyProbeResult(name, result.healthy, assessment);
         } catch (err) {
-          console.error(`[situation] Assessment failed for ${name}:`, err instanceof Error ? err.message : err);
+          logError("situation-assessment-failed", err, { provider: name });
         }
       }
     },
@@ -252,10 +253,7 @@ async function persistProbeResults(results: Record<string, HealthCheckResult>): 
         },
       });
     } catch (err) {
-      console.error(
-        `[dependency-health] Failed to persist probe for ${name}:`,
-        err instanceof Error ? err.message : err,
-      );
+      logError("dependency-health-persist-probe-failed", err, { provider: name });
     }
   }
 }

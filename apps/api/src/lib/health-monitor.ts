@@ -10,6 +10,7 @@
 
 import { getDb } from "../db/index.js";
 import { healthMonitorEvents } from "../db/schema.js";
+import { logError } from "./log.js";
 
 export interface HealthEventInput {
   eventType: string;
@@ -36,9 +37,6 @@ export async function logHealthEvent(event: HealthEventInput): Promise<void> {
       humanOverride: event.humanOverride ?? false,
     });
   } catch (err) {
-    console.error(
-      "[health-monitor] Failed to log event:",
-      err instanceof Error ? err.message : err,
-    );
+    logError("health-monitor-log-event-failed", err);
   }
 }

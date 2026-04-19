@@ -12,11 +12,15 @@ import { sql as sqlTag } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { eq, inArray } from "drizzle-orm";
+import { logWarn } from "./log.js";
 
 const SKIP_GATES = process.env.SKIP_ONBOARDING_GATES === "true";
 
 if (SKIP_GATES) {
-  console.warn("[onboarding-gates] ⚠ SKIP_ONBOARDING_GATES=true — all gate checks bypassed. This should only be used for emergency fixes.");
+  logWarn(
+    "onboarding-gates-bypassed",
+    "SKIP_ONBOARDING_GATES=true — all gate checks bypassed. Emergency-only.",
+  );
 }
 
 const INPUT_REF = /^\$input\.(.+)$/;

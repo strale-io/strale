@@ -20,6 +20,7 @@ import { solutionSteps } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import { sanitizeFailureReason } from "./sanitize.js";
 import { enrichCompanyOutput } from "../capabilities/lib/enrich-company-output.js";
+import { logWarn } from "./log.js";
 
 // ─── Input reference resolution ─────────────────────────────────────────────
 
@@ -148,7 +149,10 @@ export function resolveInputRef(
     // user provided the same data via $input (e.g., company_name).
     const topField = segments.length > 0 && segments[0].kind === "key" ? segments[0].name : null;
     if (topField && topField in inputs) {
-      console.warn(`[solution-executor] Fallback: ${sourceExpr} resolved to null, using $input.${topField} instead`);
+      logWarn("solution-executor-input-fallback", "input reference resolved to null; falling back", {
+        source_expr: sourceExpr,
+        fallback_field: topField,
+      });
       return walkPath(inputs, segments, sourceExpr);
     }
     return null;

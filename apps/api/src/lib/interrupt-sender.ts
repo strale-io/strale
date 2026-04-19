@@ -18,6 +18,7 @@
 import { and, gte, eq, desc, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { healthMonitorEvents } from "../db/schema.js";
+import { log, logError, logWarn } from "./log.js";
 import { logHealthEvent } from "./health-monitor.js";
 import { sendDigestEmail, isEmailConfigured } from "./digest-sender.js";
 import {
@@ -170,13 +171,16 @@ export interface InterruptPayload {
  */
 export async function sendInterruptEmail(payload: InterruptPayload): Promise<void> {
   if (!isEmailConfigured()) {
-    console.warn(`[interrupt] RESEND_API_KEY not set — skipping interrupt: ${payload.type}`);
+    logWarn("interrupt-no-api-key", "RESEND_API_KEY not set; skipping interrupt", { type: payload.type });
     return;
   }
 
   const alreadySent = await checkAlreadySent(payload.type, payload.capabilitySlug);
   if (alreadySent) {
-    console.log(`[interrupt] Dedup: ${payload.type}${payload.capabilitySlug ? ` (${payload.capabilitySlug})` : ""} already sent in last 24h`);
+    log.info(
+      { label: "interrupt-dedup", type: payload.type, capability_slug: payload.capabilitySlug ?? null },
+      "interrupt-dedup",
+    );
     return;
   }
 
@@ -184,15 +188,15 @@ export async function sendInterruptEmail(payload: InterruptPayload): Promise<voi
   try {
     result = await buildInterruptEmail(payload);
   } catch (err) {
-    console.error(`[interrupt] Template build failed for ${payload.type}:`, err instanceof Error ? err.message : err);
+    logError("interrupt-template-build-failed", err, { type: payload.type });
     return;
   }
 
   try {
     await sendDigestEmail(result.html, result.subject);
-    console.log(`[interrupt] Sent: ${result.subject}`);
+    log.info({ label: "interrupt-sent", subject: result.subject, type: payload.type }, "interrupt-sent");
   } catch (err) {
-    console.error(`[interrupt] Send failed for ${payload.type}:`, err instanceof Error ? err.message : err);
+    logError("interrupt-send-failed", err, { type: payload.type });
     return;
   }
 

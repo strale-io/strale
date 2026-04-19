@@ -13,6 +13,7 @@
  */
 
 import { eq, and, sql, inArray } from "drizzle-orm";
+import { logError } from "./log.js";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
 import { fireAndForget } from "./fire-and-forget.js";
@@ -104,10 +105,7 @@ export async function refreshUpstreamMapping(): Promise<void> {
     _capabilityUpstreamMap = newMap;
     _cacheExpiry = Date.now() + CACHE_TTL_MS;
   } catch (err) {
-    console.error(
-      "[upstream-gate] Failed to refresh mapping:",
-      err instanceof Error ? err.message : err,
-    );
+    logError("upstream-gate-refresh-failed", err);
   }
 }
 

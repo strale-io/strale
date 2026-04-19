@@ -1,5 +1,6 @@
 import { getDb } from "../db/index.js";
 import { transactionQuality } from "../db/schema.js";
+import { logError } from "./log.js";
 
 /**
  * Quality signal data collected during capability execution.
@@ -19,10 +20,7 @@ export interface QualityData {
  */
 export function recordQuality(data: QualityData): void {
   captureQuality(data).catch((err) => {
-    console.error(
-      `[quality-capture] Failed to record quality for txn ${data.transactionId}:`,
-      err,
-    );
+    logError("quality-capture-failed", err, { transaction_id: data.transactionId });
   });
 }
 

@@ -13,6 +13,7 @@
 
 import { eq, and, sql, gte, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { log } from "./log.js";
 import { testSuites, testResults } from "../db/schema.js";
 import { logHealthEvent } from "./health-monitor.js";
 
@@ -88,7 +89,10 @@ export async function checkUpstreamEscalation(slug: string): Promise<EscalationR
         suites_affected: transientHits.map((r: any) => r.suite_id),
       },
     });
-    console.log(`[upstream-tracker] ${slug}: ${result.suitesEscalated} suite(s) → upstream_broken`);
+    log.info(
+      { label: "upstream-tracker-escalated", capability_slug: slug, suites_escalated: result.suitesEscalated },
+      "upstream-tracker-escalated",
+    );
   }
 
   // ── Count upstream_changed failures in the last 7 days ──────────────────
@@ -129,7 +133,10 @@ export async function checkUpstreamEscalation(slug: string): Promise<EscalationR
         },
       });
       result.changedFlagged = true;
-      console.log(`[upstream-tracker] ${slug}: flagged for upstream_changed review (${changedCount} suites)`);
+      log.info(
+        { label: "upstream-tracker-changed-flagged", capability_slug: slug, changed_count: changedCount },
+        "upstream-tracker-changed-flagged",
+      );
     }
   }
 

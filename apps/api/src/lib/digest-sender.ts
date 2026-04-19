@@ -6,6 +6,7 @@
  */
 
 import { Resend } from "resend";
+import { log } from "./log.js";
 
 let _resend: Resend | null = null;
 
@@ -47,7 +48,7 @@ export async function sendDigestEmail(html: string, subject: string, toOverride?
     throw new Error(`Resend send failed: ${error.message}`);
   }
 
-  console.log(`[digest-sender] Sent "${subject}" to ${to}`);
+  log.info({ label: "digest-sender-sent", subject, to }, "digest-sender-sent");
 }
 
 /**

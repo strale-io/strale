@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { log } from "./log.js";
 
 const BATCH_SIZE = 1000;
 const BATCH_DELAY_MS = 100;
@@ -153,9 +154,15 @@ export async function cleanupOldTestData(): Promise<void> {
   const eventsDeleted = await purgeHealthMonitorEvents(oneEightyDaysAgo);
   const snapshotsDeleted = await purgeSqsSnapshots(oneYearAgo);
 
-  console.log(
-    `[retention] Cleanup: deleted ${testResultsDeleted} test_results, ` +
-    `${txQualityDeleted} transaction_quality, ${txDeleted} transactions, ` +
-    `${eventsDeleted} health_monitor_events, ${snapshotsDeleted} sqs_daily_snapshot`,
+  log.info(
+    {
+      label: "retention-cleanup-done",
+      test_results_deleted: testResultsDeleted,
+      transaction_quality_deleted: txQualityDeleted,
+      transactions_deleted: txDeleted,
+      health_monitor_events_deleted: eventsDeleted,
+      sqs_daily_snapshot_deleted: snapshotsDeleted,
+    },
+    "retention-cleanup-done",
   );
 }

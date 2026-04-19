@@ -17,9 +17,10 @@
  * Plain VACUUM runs implicitly via autovacuum.
  */
 
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { logWarn } from "../lib/log.js";
+import { log, logError, logWarn } from "../lib/log.js";
 
 const RETENTION_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const STARTUP_DELAY_MS = 5 * 60 * 1000;
@@ -39,6 +40,8 @@ let _running = false;
 
 async function runRetention(): Promise<void> {
   const db = getDb();
+  const runId = randomUUID();
+  const jobLog = log.child({ job: "db-retention", job_run_id: runId });
 
   // Advisory lock + all work runs inside a single transaction so the
   // xact-scoped lock sits on the same connection as every statement.
@@ -49,7 +52,7 @@ async function runRetention(): Promise<void> {
       sql`SELECT pg_try_advisory_xact_lock(${ADVISORY_LOCK_ID}) AS acquired`,
     );
     if (!(lock as { acquired?: boolean })?.acquired) {
-      logWarn("db-retention-lock-busy", "another holder; skipping tick");
+      logWarn("db-retention-lock-busy", "another holder; skipping tick", { job_run_id: runId });
       return;
     }
 
@@ -65,14 +68,23 @@ async function runRetention(): Promise<void> {
         const deleted = (res as { count?: number }).count ?? 0;
         results.push({ table: rule.table, deleted });
       } catch (err) {
-        console.error(`[db-retention] DELETE from ${rule.table} failed:`, err instanceof Error ? err.message : err);
+        jobLog.error(
+          { label: "db-retention-delete-failed", table: rule.table, err: err instanceof Error ? { message: err.message } : err },
+          "db-retention-delete-failed",
+        );
       }
     }
 
     const total = results.reduce((s, r) => s + r.deleted, 0);
-    const elapsed = ((Date.now() - started) / 1000).toFixed(1);
-    console.log(
-      `[db-retention] Pruned ${total} rows in ${elapsed}s: ${results.map((r) => `${r.table}=${r.deleted}`).join(", ")}`,
+    const elapsed_ms = Date.now() - started;
+    jobLog.info(
+      {
+        label: "db-retention-pruned",
+        total_deleted: total,
+        elapsed_ms,
+        per_table: Object.fromEntries(results.map((r) => [r.table, r.deleted])),
+      },
+      "db-retention-pruned",
     );
   });
 }
@@ -81,17 +93,13 @@ export function startDbRetention(): void {
   if (_running) return;
   _running = true;
 
-  console.log("[db-retention] Started (24h interval, 5min initial delay)");
+  log.info({ label: "db-retention-started", interval_ms: RETENTION_INTERVAL_MS, startup_delay_ms: STARTUP_DELAY_MS }, "db-retention-started");
 
   setTimeout(() => {
-    runRetention().catch((err) =>
-      console.error("[db-retention] Startup run failed:", err),
-    );
+    runRetention().catch((err) => logError("db-retention-startup-run-failed", err));
   }, STARTUP_DELAY_MS);
 
   setInterval(() => {
-    runRetention().catch((err) =>
-      console.error("[db-retention] Scheduled run failed:", err),
-    );
+    runRetention().catch((err) => logError("db-retention-scheduled-run-failed", err));
   }, RETENTION_INTERVAL_MS);
 }

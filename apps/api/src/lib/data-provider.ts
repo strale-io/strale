@@ -11,6 +11,7 @@
  */
 
 import type { CapabilityResult } from "../capabilities/index.js";
+import { log, logWarn } from "./log.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -111,8 +112,14 @@ export async function executeWithFallback(
       };
 
       if (errors.length > 0) {
-        console.log(
-          `[data-provider] ${chain.capabilitySlug}: ${provider.id} succeeded (fallback after ${errors.length} skip(s))`,
+        log.info(
+          {
+            label: "data-provider-fallback-success",
+            capability_slug: chain.capabilitySlug,
+            provider_id: provider.id,
+            skipped_count: errors.length,
+          },
+          "data-provider-fallback-success",
         );
       }
 
@@ -120,9 +127,11 @@ export async function executeWithFallback(
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ providerId: provider.id, error: msg });
-      console.warn(
-        `[data-provider] ${chain.capabilitySlug}: ${provider.id} failed: ${msg.slice(0, 120)}`,
-      );
+      logWarn("data-provider-failed", "data provider attempt failed", {
+        capability_slug: chain.capabilitySlug,
+        provider_id: provider.id,
+        err: msg.slice(0, 120),
+      });
       continue;
     }
   }

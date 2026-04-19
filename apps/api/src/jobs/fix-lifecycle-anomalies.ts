@@ -18,6 +18,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
 import { transitionCapability } from "../lib/lifecycle.js";
+import { log, logError } from "../lib/log.js";
 
 const ANOMALOUS = [
   "amazon-price",
@@ -37,11 +38,20 @@ async function main() {
       .limit(1);
 
     if (!cap) {
-      console.log(`[skip] ${slug} — not found`);
+      log.info({ label: "fix-lifecycle-skip", capability_slug: slug, reason: "not-found" }, "fix-lifecycle-skip");
       continue;
     }
 
-    console.log(`[fix] ${slug}: active=${cap.isActive} visible=${cap.visible} state=${cap.lifecycleState}`);
+    log.info(
+      {
+        label: "fix-lifecycle-fixing",
+        capability_slug: slug,
+        is_active: cap.isActive,
+        visible: cap.visible,
+        lifecycle_state: cap.lifecycleState,
+      },
+      "fix-lifecycle-fixing",
+    );
 
     // Transition to deactivated via lifecycle system
     await transitionCapability(slug, "deactivated", "Manual cleanup — lifecycle state alignment", "admin");
@@ -53,14 +63,14 @@ async function main() {
       updatedAt: new Date(),
     }).where(eq(capabilities.slug, slug));
 
-    console.log(`[done] ${slug} → deactivated, is_active=false, visible=false`);
+    log.info({ label: "fix-lifecycle-done", capability_slug: slug }, "fix-lifecycle-done");
   }
 
-  console.log("\nAll anomalies fixed.");
+  log.info({ label: "fix-lifecycle-all-done" }, "fix-lifecycle-all-done");
   process.exit(0);
 }
 
 main().catch((err) => {
-  console.error("Fatal:", err);
+  logError("fix-lifecycle-fatal", err);
   process.exit(1);
 });

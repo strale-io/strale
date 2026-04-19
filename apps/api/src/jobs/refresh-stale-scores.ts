@@ -10,6 +10,7 @@
  * The raw QP/RP/matrix scores are NOT changed — only the decay applied on top.
  */
 
+import { randomUUID } from "node:crypto";
 import { eq, and, isNotNull, lt, inArray, asc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, testSuites } from "../db/schema.js";
@@ -18,11 +19,14 @@ import {
   applyFreshnessDecay,
   shouldOverrideTrend,
 } from "../lib/freshness-decay.js";
+import { log } from "../lib/log.js";
 
 const TIER_HOURS: Record<string, number> = { A: 6, B: 24, C: 72 };
 
 export async function refreshStaleScores(): Promise<number> {
   const db = getDb();
+  const runId = randomUUID();
+  const jobLog = log.child({ job: "refresh-stale-scores", job_run_id: runId });
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60_000);
 
   // Find active capabilities whose freshness was last computed more than 2h ago
@@ -98,15 +102,16 @@ export async function refreshStaleScores(): Promise<number> {
 
       refreshed++;
     } catch (err) {
-      console.error(
-        `[stale-refresh] Failed for ${cap.slug}:`,
-        err instanceof Error ? err.message : err,
+      jobLog.error(
+        { label: "stale-refresh-failed", capability_slug: cap.slug, err: err instanceof Error ? { message: err.message } : err },
+        "stale-refresh-failed",
       );
     }
   }
 
-  console.log(
-    `[stale-refresh] Refreshed ${refreshed}/${stale.length} capabilities`,
+  jobLog.info(
+    { label: "stale-refresh-done", refreshed, total: stale.length },
+    "stale-refresh-done",
   );
   return refreshed;
 }

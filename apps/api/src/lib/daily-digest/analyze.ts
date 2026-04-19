@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { DigestData } from "./types.js";
+import { logError, logWarn } from "../log.js";
 
 export interface DigestAnalysis {
   situationAssessment: string;
@@ -117,7 +118,7 @@ Return ONLY valid JSON, no markdown fences.`;
 export async function analyzeDigest(data: DigestData): Promise<DigestAnalysis> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    console.warn("[digest-analyze] ANTHROPIC_API_KEY not set — skipping analysis");
+    logWarn("digest-analyze-no-api-key", "ANTHROPIC_API_KEY not set; skipping analysis");
     return FALLBACK;
   }
 
@@ -149,7 +150,7 @@ export async function analyzeDigest(data: DigestData): Promise<DigestAnalysis> {
       bottleneck: (parsed.bottleneck as string) ?? null,
     };
   } catch (err) {
-    console.error("[digest-analyze] Failed:", err instanceof Error ? err.message : err);
+    logError("digest-analyze-failed", err);
     return FALLBACK;
   }
 }

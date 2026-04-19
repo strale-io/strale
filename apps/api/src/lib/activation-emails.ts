@@ -4,6 +4,7 @@
  */
 
 import { Resend } from "resend";
+import { log, logError } from "./log.js";
 
 let _resend: Resend | null = null;
 
@@ -29,7 +30,7 @@ async function send(to: string, subject: string, text: string, html: string): Pr
 
   const resend = getResend();
   if (!resend) {
-    console.log(`[activation-email-skip] No RESEND_API_KEY — would send "${subject}" to ${to}`);
+    log.info({ label: "activation-email-skip", subject, to }, "activation-email-skip");
     return;
   }
 
@@ -43,12 +44,12 @@ async function send(to: string, subject: string, text: string, html: string): Pr
       replyTo: REPLY_TO,
     });
     if (error) {
-      console.error(`[activation-email-error] ${subject}: ${error.message}`);
+      logError("activation-email-error", new Error(error.message), { subject, to });
       return;
     }
-    console.log(`[activation-email-sent] "${subject}" to ${to}`);
+    log.info({ label: "activation-email-sent", subject, to }, "activation-email-sent");
   } catch (err) {
-    console.error(`[activation-email-error] ${err instanceof Error ? err.message : err}`);
+    logError("activation-email-error", err, { subject, to });
   }
 }
 

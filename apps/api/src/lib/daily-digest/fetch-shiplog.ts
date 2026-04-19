@@ -1,4 +1,5 @@
 import type { ShipLog, NotionActivity } from "./types.js";
+import { logWarn } from "../log.js";
 
 const GITHUB_REPOS = ["strale", "strale-frontend", "strale-beacon", "strale-examples"];
 
@@ -95,7 +96,7 @@ async function fetchNotionWorkspaceActivity(): Promise<NotionActivity[]> {
       });
 
       if (!resp.ok) {
-        console.warn(`[digest] Notion search failed: ${resp.status}`);
+        logWarn("digest-notion-search-failed", "Notion search returned non-ok", { status: resp.status });
         break;
       }
 
@@ -137,7 +138,9 @@ async function fetchNotionWorkspaceActivity(): Promise<NotionActivity[]> {
       }
     }
   } catch (err) {
-    console.warn("[digest] Notion workspace search failed:", err instanceof Error ? err.message : err);
+    logWarn("digest-notion-search-threw", "Notion workspace search threw", {
+      err: err instanceof Error ? err.message : String(err),
+    });
   }
 
   return activities;

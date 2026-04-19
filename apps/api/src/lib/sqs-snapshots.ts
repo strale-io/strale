@@ -4,6 +4,7 @@ import { capabilities, sqsDailySnapshot } from "../db/schema.js";
 import { computeDualProfileSQS } from "./sqs.js";
 import { computeHealthState } from "./health-state.js";
 import { getTestResultsForSlug } from "./trust-helpers.js";
+import { log, logError } from "./log.js";
 
 /**
  * Capture daily SQS snapshots for all active capabilities.
@@ -66,12 +67,12 @@ export async function captureDailySnapshots(): Promise<void> {
 
       captured++;
     } catch (err) {
-      console.error(
-        `[sqs-snapshot] Failed to capture snapshot for ${cap.slug}:`,
-        err instanceof Error ? err.message : err,
-      );
+      logError("sqs-snapshot-capture-failed", err, { capability_slug: cap.slug });
     }
   }
 
-  console.log(`[sqs-snapshot] Captured SQS snapshots for ${captured} capabilities`);
+  log.info(
+    { label: "sqs-snapshot-captured", captured_count: captured },
+    "sqs-snapshot-captured",
+  );
 }

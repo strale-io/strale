@@ -1,4 +1,5 @@
 import type { BeaconActivity } from "./types.js";
+import { logWarn } from "../log.js";
 
 export async function getBeaconActivity(): Promise<BeaconActivity> {
   const baseUrl = process.env.BEACON_SUPABASE_URL;
@@ -61,7 +62,9 @@ export async function getBeaconActivity(): Promise<BeaconActivity> {
       totalScans,
     };
   } catch (err) {
-    console.warn("[digest] Beacon Supabase unreachable:", err instanceof Error ? err.message : err);
+    logWarn("digest-beacon-unreachable", "beacon Supabase unreachable", {
+      err: err instanceof Error ? err.message : String(err),
+    });
     return { scansLast24h: 0, scanDomains: [], newSubscribers: 0, totalScans: 0 };
   }
 }

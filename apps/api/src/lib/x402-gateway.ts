@@ -18,6 +18,7 @@
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { parsePaymentPayload } from "@x402/core/schemas";
 import { createFacilitatorConfig } from "@coinbase/x402";
+import { logError } from "./log.js";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -253,7 +254,7 @@ export async function verifyX402PaymentOnly(
 
     return { valid: true, verified: { payload, requirements } };
   } catch (err) {
-    console.error("[x402] Payment verification failed:", err instanceof Error ? err.message : err);
+    logError("x402-verification-failed", err);
     return {
       valid: false,
       error: err instanceof Error ? err.message : "Payment verification failed",
@@ -282,7 +283,7 @@ export async function settleX402Payment(
     }
     return { valid: true, settlementId: settleResult.transaction ?? "settled" };
   } catch (err) {
-    console.error("[x402] Settlement failed:", err instanceof Error ? err.message : err);
+    logError("x402-settlement-failed", err);
     return {
       valid: false,
       error: err instanceof Error ? err.message : "Settlement failed",

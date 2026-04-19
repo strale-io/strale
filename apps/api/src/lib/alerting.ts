@@ -4,6 +4,7 @@
  */
 
 import { Resend } from "resend";
+import { log, logError, logWarn } from "./log.js";
 
 let _resend: Resend | null = null;
 
@@ -25,7 +26,7 @@ export async function sendAlert(opts: {
 
   const resend = getResend();
   if (!resend) {
-    console.warn(`[alerting] No RESEND_API_KEY — would have sent ${severity}: ${subject}`);
+    logWarn("alerting-no-api-key", "RESEND_API_KEY missing; would have sent alert", { severity, subject });
     return;
   }
 
@@ -36,8 +37,8 @@ export async function sendAlert(opts: {
       subject: `[Strale ${severity.toUpperCase()}] ${subject}`,
       text: body,
     });
-    console.log(`[alerting] Sent ${severity} alert: ${subject}`);
+    log.info({ label: "alerting-sent", severity, subject }, "alerting-sent");
   } catch (err) {
-    console.error(`[alerting] Failed to send alert: ${err instanceof Error ? err.message : err}`);
+    logError("alerting-send-failed", err, { severity, subject });
   }
 }

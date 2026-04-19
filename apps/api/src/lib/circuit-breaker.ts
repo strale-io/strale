@@ -4,6 +4,7 @@ import { capabilityHealth } from "../db/schema.js";
 import { logHealthEvent } from "./health-monitor.js";
 import { categorizeFailureReason, isRetryableFailure } from "./trust-helpers.js";
 import { fireAndForget } from "./fire-and-forget.js";
+import { log } from "./log.js";
 
 // Circuit breaker states
 type CircuitState = "closed" | "open" | "half_open";
@@ -332,7 +333,10 @@ export async function recordTestEvidence(slug: string): Promise<void> {
       })
       .where(eq(capabilityHealth.id, health.id));
 
-    console.log(`[circuit-breaker] ${slug} recovered via test evidence (was ${state})`);
+    log.info(
+      { label: "circuit-breaker-recovered-via-test", capability_slug: slug, previous_state: state },
+      "circuit-breaker-recovered-via-test",
+    );
     fireAndForget(
       () =>
         logHealthEvent({
@@ -354,7 +358,10 @@ export async function recordTestEvidence(slug: string): Promise<void> {
       .set({ state: "half_open", updatedAt: now })
       .where(eq(capabilityHealth.id, health.id));
 
-    console.log(`[circuit-breaker] ${slug} half_open via test evidence (retry window not yet passed)`);
+    log.info(
+      { label: "circuit-breaker-half-open-via-test", capability_slug: slug },
+      "circuit-breaker-half-open-via-test",
+    );
   }
 }
 

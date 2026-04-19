@@ -3,6 +3,8 @@
  * Used for signup notifications and transaction milestone alerts.
  */
 
+import { logWarn } from "./log.js";
+
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 
 /** Mask a URL for safe logging — shows host but hides path/query/auth details */
@@ -28,14 +30,12 @@ export async function sendWebhook(payload: Record<string, unknown>): Promise<voi
       signal: AbortSignal.timeout(5000),
     });
     if (!resp.ok) {
-      console.warn(
-        `[webhook] POST ${masked} returned ${resp.status}`,
-      );
+      logWarn("webhook-non-ok", "webhook returned non-2xx", { url: masked, status: resp.status });
     }
   } catch (err) {
-    console.warn(
-      `[webhook] Failed to deliver to ${masked}:`,
-      err instanceof Error ? err.message : err,
-    );
+    logWarn("webhook-delivery-failed", "webhook delivery failed", {
+      url: masked,
+      err: err instanceof Error ? err.message : String(err),
+    });
   }
 }

@@ -13,6 +13,7 @@ import type {
 import { getPlatformActivity, getPlatformHealth } from "./fetch-platform.js";
 import { getShipLog } from "./fetch-shiplog.js";
 import { getBeaconActivity } from "./fetch-beacon.js";
+import { logWarn } from "../log.js";
 import { getEcosystemMetrics } from "./fetch-ecosystem.js";
 import { getWebsiteTraffic } from "./fetch-traffic.js";
 import { getDistributionSurfaces, getPriorities } from "./fetch-notion.js";
@@ -82,7 +83,10 @@ const defaultScoreboard: Scoreboard = {
 
 function unwrap<T>(result: PromiseSettledResult<T>, fallback: T, label: string): T {
   if (result.status === "fulfilled") return result.value;
-  console.warn(`[digest] ${label} failed:`, result.reason);
+  logWarn("digest-subtask-failed", "digest subtask failed", {
+    task: label,
+    err: result.reason instanceof Error ? result.reason.message : String(result.reason),
+  });
   return fallback;
 }
 
@@ -93,7 +97,9 @@ export async function gatherDigestData(): Promise<DigestData> {
 
   // Fetch beacon first (needed for scoreboard)
   const beaconResult = await getBeaconActivity().catch((err) => {
-    console.warn("[digest] beacon failed:", err);
+    logWarn("digest-beacon-failed", "beacon fetch failed", {
+      err: err instanceof Error ? err.message : String(err),
+    });
     return defaultBeacon;
   });
 
@@ -133,7 +139,9 @@ export async function gatherDigestData(): Promise<DigestData> {
 
   // Save snapshot for tomorrow's delta computation
   await saveSnapshot(data).catch((err) =>
-    console.warn("[digest] Failed to save snapshot:", err),
+    logWarn("digest-snapshot-save-failed", "failed to save digest snapshot", {
+      err: err instanceof Error ? err.message : String(err),
+    }),
   );
 
   return data;

@@ -6,6 +6,8 @@
  * On retry failure, throws the ORIGINAL error (more informative).
  */
 
+import { logWarn } from "./log.js";
+
 export interface RetryOptions {
   /** Max number of retries after the first attempt. Default: 1 */
   maxRetries?: number;
@@ -92,9 +94,12 @@ export async function withRetry<T>(
       const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
       const jitteredDelay = delay + Math.random() * delay * 0.2;
 
-      console.warn(
-        `[retry] ${slug}: attempt ${attempt + 1} failed (${error.message}), retrying in ${Math.round(jitteredDelay)}ms`,
-      );
+      logWarn("retry-attempt", "retry attempt failed, waiting", {
+        slug,
+        attempt: attempt + 1,
+        err: error.message,
+        delay_ms: Math.round(jitteredDelay),
+      });
 
       await new Promise((r) => setTimeout(r, jitteredDelay));
     }

@@ -1,5 +1,7 @@
 // Direct HTTP calls to Voyage AI REST API (SDK has broken ESM exports)
 
+import { logWarn } from "./log.js";
+
 const MODEL = "voyage-3.5-lite";
 const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
 
@@ -13,9 +15,11 @@ async function fetchWithRetry(
     if (response.status === 429 && attempt < retries - 1) {
       // Rate limited — wait and retry with exponential backoff
       const wait = Math.min(2000 * Math.pow(2, attempt), 30000);
-      console.warn(
-        `[voyage] Rate limited, retrying in ${wait}ms (attempt ${attempt + 1}/${retries})`,
-      );
+      logWarn("voyage-rate-limited", "voyage rate limited, retrying", {
+        wait_ms: wait,
+        attempt: attempt + 1,
+        retries,
+      });
       await new Promise((r) => setTimeout(r, wait));
       continue;
     }
