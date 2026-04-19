@@ -33,7 +33,7 @@ import type { CapabilityType } from "./reliability-profile.js";
 import { computeFreshnessDecay, applyFreshnessDecay, shouldOverrideTrend } from "./freshness-decay.js";
 import { withRetry } from "./retry.js";
 import { fireAndForget } from "./fire-and-forget.js";
-import { logError } from "./log.js";
+import { log, logError, logWarn } from "./log.js";
 import { createHash } from "node:crypto";
 import { calculateNullFieldRatio } from "./null-field-ratio.js";
 
@@ -184,8 +184,9 @@ export async function runTests(
 
     // Skip capabilities whose required credentials are missing
     if (unconfiguredSlugs.has(suite.capabilitySlug)) {
-      console.log(
-        `[test-runner] Skipping ${suite.capabilitySlug}: required credential not configured`,
+      log.info(
+        { label: "test-runner-skip-unconfigured", capability_slug: suite.capabilitySlug },
+        "test-runner-skip-unconfigured",
       );
       continue;
     }
@@ -194,8 +195,9 @@ export async function runTests(
     // (prevents timeout failures from polluting the SQS window)
     const unhealthyUpstream = findUnhealthyUpstream(suite.capabilitySlug);
     if (unhealthyUpstream) {
-      console.log(
-        `[test-runner] Skipping ${suite.capabilitySlug}: upstream '${unhealthyUpstream}' unhealthy`,
+      log.info(
+        { label: "test-runner-skip-unhealthy-upstream", capability_slug: suite.capabilitySlug, upstream: unhealthyUpstream },
+        "test-runner-skip-unhealthy-upstream",
       );
       continue;
     }
@@ -217,23 +219,23 @@ export async function runTests(
         if (remediation.outcome === "auto_resolved" && remediation.verificationPassed) {
           result.passed = true;
           result.failureReason = null;
-          console.log(
-            `[self-heal] ✅ Auto-resolved: ${suite.capabilitySlug} — ${remediation.action}`,
+          log.info(
+            { label: "self-heal-auto-resolved", capability_slug: suite.capabilitySlug, action: remediation.action },
+            "self-heal-auto-resolved",
           );
         } else if (remediation.outcome === "monitoring") {
-          console.log(
-            `[self-heal] 🟡 Monitoring: ${suite.capabilitySlug} — ${remediation.action}`,
+          log.info(
+            { label: "self-heal-monitoring", capability_slug: suite.capabilitySlug, action: remediation.action },
+            "self-heal-monitoring",
           );
         } else {
-          console.warn(
-            `[self-heal] 🔴 Escalate: ${suite.capabilitySlug} — ${remediation.action}`,
-          );
+          logWarn("self-heal-escalate", "self-heal outcome requires escalation", {
+            capability_slug: suite.capabilitySlug,
+            action: remediation.action,
+          });
         }
       } catch (healErr) {
-        console.error(
-          `[self-heal] Remediation threw for ${suite.capabilitySlug}:`,
-          healErr,
-        );
+        logError("self-heal-threw", healErr, { capability_slug: suite.capabilitySlug });
       }
 
       // Auto-remediation: structural fixes (field reliability, volatile values)
@@ -258,7 +260,10 @@ export async function runTests(
             }
 
             for (const action of applied) {
-              console.log(`[auto-remediation] ${suite.capabilitySlug}: ${action.description}`);
+              log.info(
+                { label: "auto-remediation-applied", capability_slug: suite.capabilitySlug, description: action.description, rule: action.rule },
+                "auto-remediation-applied",
+              );
               fireAndForget(
                 () =>
                   logHealthEvent({
@@ -279,10 +284,7 @@ export async function runTests(
           }
         }
       } catch (autoErr) {
-        console.error(
-          `[auto-remediation] Analysis threw for ${suite.capabilitySlug}:`,
-          autoErr instanceof Error ? autoErr.message : autoErr,
-        );
+        logError("auto-remediation-analysis-threw", autoErr, { capability_slug: suite.capabilitySlug });
       }
     }
 
@@ -327,14 +329,17 @@ export async function runTests(
     try {
       await checkUpstreamEscalation(slug);
     } catch (err) {
-      console.warn(`[test-runner] Upstream escalation check failed for ${slug}:`, err);
+      logWarn("test-runner-upstream-escalation-failed", "upstream escalation check failed", {
+        capability_slug: slug,
+        err: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
   // ── Evaluate lifecycle transitions for all capabilities in this batch ──
   for (const slug of affectedSlugs) {
     evaluateLifecycle(slug).catch((err) => {
-      console.error(`[lifecycle] Failed to evaluate ${slug}:`, err instanceof Error ? err.message : err);
+      logError("lifecycle-evaluate-failed", err, { capability_slug: slug });
     });
   }
 
@@ -355,7 +360,7 @@ export async function runTests(
       const assessment = await assessMassTestFailure(failedSlugs, results.length, commonClassification);
       await evaluateAndAlert(assessment);
     }).catch((err) => {
-      console.error("[situation] Mass failure assessment failed:", err instanceof Error ? err.message : err);
+      logError("situation-mass-failure-assessment-failed", err);
     });
   }
 
@@ -370,19 +375,19 @@ export async function runTests(
     // Check 1: New failure alert (regressions)
     checkNewFailures(batchForMeta).then((check) => {
       if (!check.passed) {
-        console.warn(`[META] ${check.details}`);
+        logWarn("meta-new-failures", check.details);
       }
     }).catch((err) => {
-      console.error("[meta-monitoring] checkNewFailures failed:", err instanceof Error ? err.message : err);
+      logError("meta-check-new-failures-failed", err);
     });
 
     // Check 2: Infrastructure health (systemic failures)
     checkInfrastructureHealth(batchForMeta).then((check) => {
       if (!check.passed) {
-        console.error(`[META] CRITICAL: ${check.details}`);
+        logError("meta-infrastructure-critical", new Error(check.details));
       }
     }).catch((err) => {
-      console.error("[meta-monitoring] checkInfrastructureHealth failed:", err instanceof Error ? err.message : err);
+      logError("meta-check-infrastructure-failed", err);
     });
   }
 
@@ -1049,7 +1054,7 @@ function validateResult(
         return { passed: false, failureReason: reason };
       }
       // Shadow mode: log but don't fail
-      console.warn(`[null-ratio-shadow] ${suite.capabilitySlug}: WOULD FAIL — ${reason}`);
+      logWarn("null-ratio-shadow-would-fail", reason, { capability_slug: suite.capabilitySlug });
     }
   }
 
@@ -1524,13 +1529,19 @@ async function runAdaptiveScheduler(): Promise<void> {
         dueSlugs.push(slug);
       }
     } catch (err) {
-      console.warn(`[scheduler] Skipping ${slug}: interval computation failed:`, err instanceof Error ? err.message : err);
+      logWarn("scheduler-interval-compute-failed", "interval computation failed; skipping", {
+        capability_slug: slug,
+        err: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
   // Log scheduler diagnostics
   const totalEligible = tierBySlug.size;
-  console.log(`[scheduler] ${totalEligible} eligible capabilities, ${dueSlugs.length} due for testing`);
+  log.info(
+    { label: "scheduler-sweep-start", eligible: totalEligible, due: dueSlugs.length },
+    "scheduler-sweep-start",
+  );
 
   if (dueSlugs.length === 0) {
     return;
@@ -1556,27 +1567,33 @@ async function runAdaptiveScheduler(): Promise<void> {
             summary.total,
             remediations,
           );
-          console.log(`[self-heal] Run summary:\n${formatRunSummary(runSummary)}`);
+          log.info(
+            { label: "self-heal-run-summary", summary: formatRunSummary(runSummary) },
+            "self-heal-run-summary",
+          );
         }
 
         // Still log individual failures for Railway log monitoring
         for (const r of summary.results) {
           if (!r.passed) {
-            const tag = r.remediation
-              ? `[${r.remediation.outcome}]`
-              : "[escalate]";
-            console.warn(
-              `[test-runner] FAIL ${tag} [${r.capabilitySlug}] ${r.testName} — ${r.failureReason}`,
-            );
+            const outcome = r.remediation?.outcome ?? "escalate";
+            logWarn("test-runner-fail", r.failureReason ?? "test failed", {
+              capability_slug: r.capabilitySlug,
+              test_name: r.testName,
+              remediation_outcome: outcome,
+            });
           }
         }
     } catch (err) {
-      console.error(`[scheduler] ${slug} threw:`, err);
+      logError("scheduler-slug-threw", err, { capability_slug: slug });
     }
     await delay(500);
   }
 
-  console.log(`[scheduler] Sweep done: ${passed} passed, ${failed} failed across ${dueSlugs.length} capabilities`);
+  log.info(
+    { label: "scheduler-sweep-done", passed, failed, total: dueSlugs.length },
+    "scheduler-sweep-done",
+  );
 
   // Write scheduler heartbeat for watchdog monitoring
   fireAndForget(
@@ -1604,29 +1621,23 @@ export function startScheduledTests(): void {
   if (_schedulerRunning) return;
   _schedulerRunning = true;
 
-  console.log("[scheduler] Adaptive scheduler started (hourly checks, health-state-driven frequency)");
+  log.info({ label: "scheduler-adaptive-started" }, "Adaptive scheduler started (hourly, health-driven)");
 
   // Repair stale scores 15s after startup — re-persist for capabilities where
   // test_results are newer than capabilities.last_tested_at (indicates a prior
   // persist failure that left scores stale despite successful test runs).
   setTimeout(() => {
-    repairStaleScores().catch((err) =>
-      console.error("[scheduler] Stale score repair failed:", err),
-    );
+    repairStaleScores().catch((err) => logError("scheduler-stale-repair-failed", err));
   }, 15_000);
 
   // Initial sweep 30s after startup to avoid competing with server init
   setTimeout(() => {
-    runAdaptiveScheduler().catch((err) =>
-      console.error("[scheduler] Initial sweep failed:", err),
-    );
+    runAdaptiveScheduler().catch((err) => logError("scheduler-initial-sweep-failed", err));
   }, 30_000);
 
   // Recurring hourly check
   setInterval(() => {
-    runAdaptiveScheduler().catch((err) =>
-      console.error("[scheduler] Sweep failed:", err),
-    );
+    runAdaptiveScheduler().catch((err) => logError("scheduler-sweep-failed", err));
   }, SCHEDULER_CHECK_INTERVAL_MS);
 
   // Dependency health checks remain on independent 6h schedule
@@ -1636,21 +1647,25 @@ export function startScheduledTests(): void {
       const results = await runDependencyHealthChecks();
       const unhealthy = Object.entries(results).filter(([, r]) => !r.healthy);
       if (unhealthy.length > 0) {
-        console.warn(
-          `[health-check] Unhealthy dependencies: ${unhealthy.map(([name, r]) => `${name} (${r.error ?? "down"})`).join(", ")}`,
-        );
+        logWarn("health-check-unhealthy", "some dependencies unhealthy", {
+          unhealthy: unhealthy.map(([name, r]) => ({ name, error: r.error ?? "down" })),
+        });
 
         // Note: alerting for critical service failures is handled by the
         // situation assessment pipeline in dependency-health.ts. No direct
         // interrupt email here — the assessment correlates probe history,
         // test results, and customer impact before deciding to alert.
       } else {
-        console.log(
-          `[health-check] All dependencies healthy: ${Object.entries(results).map(([name, r]) => `${name}=${r.latency_ms}ms`).join(", ")}`,
+        log.info(
+          {
+            label: "health-check-all-healthy",
+            deps: Object.entries(results).map(([name, r]) => ({ name, latency_ms: r.latency_ms })),
+          },
+          "health-check-all-healthy",
         );
       }
     } catch (err) {
-      console.error("[health-check] Failed:", err);
+      logError("health-check-failed", err);
     }
   };
 
@@ -1662,9 +1677,7 @@ export function startScheduledTests(): void {
   // Browserless capabilities to prevent SQS pollution from timeout failures.
   const CHROMIUM_CHECK_INTERVAL_MS = 30 * 60 * 1000;
   const runChromiumProbe = () => {
-    probeChromiumHealth().catch((err) =>
-      console.error("[chromium-health] Probe error:", err instanceof Error ? err.message : err),
-    );
+    probeChromiumHealth().catch((err) => logError("chromium-health-probe-error", err));
   };
   setTimeout(runChromiumProbe, 45_000); // 45s after startup
   setInterval(runChromiumProbe, CHROMIUM_CHECK_INTERVAL_MS);
@@ -1675,7 +1688,7 @@ export function startScheduledTests(): void {
       const { runWeeklyHealthSweep } = await import("./health-sweep.js");
       await runWeeklyHealthSweep();
     } catch (err) {
-      console.error("[health-sweep] Weekly sweep failed:", err);
+      logError("health-sweep-weekly-failed", err);
     }
   };
 
@@ -1690,23 +1703,30 @@ export function startScheduledTests(): void {
       const report = await runDiagnostic();
 
       if (report.failed > 0) {
-        console.error(
-          `[diagnostic] ${report.passed}/${report.checksRun} passed — ${report.criticalFindings.length} critical finding(s):`,
+        logError(
+          "diagnostic-findings",
+          new Error(`${report.failed} checks failed`),
+          {
+            passed: report.passed,
+            checks_run: report.checksRun,
+            critical_findings: report.criticalFindings,
+          },
         );
-        for (const f of report.criticalFindings) {
-          console.error(`[diagnostic]   ${f}`);
-        }
       } else {
-        console.log(
-          `[diagnostic] ${report.passed}/${report.checksRun} checks passed`,
+        log.info(
+          { label: "diagnostic-all-passed", passed: report.passed, checks_run: report.checksRun },
+          "diagnostic-all-passed",
         );
       }
 
       if (report.warnings.length > 0) {
-        console.warn(`[diagnostic] ${report.warnings.length} warning(s)`);
+        logWarn("diagnostic-warnings", "diagnostic warnings", {
+          count: report.warnings.length,
+          warnings: report.warnings,
+        });
       }
     } catch (err) {
-      console.error("[diagnostic] Failed to run:", err instanceof Error ? err.message : err);
+      logError("diagnostic-run-failed", err);
     }
   };
 
@@ -1721,7 +1741,7 @@ export function startScheduledTests(): void {
       const { captureDailySnapshots } = await import("./sqs-snapshots.js");
       await captureDailySnapshots();
     } catch (err) {
-      console.error("[sqs-snapshot] Daily snapshot failed:", err instanceof Error ? err.message : err);
+      logError("sqs-snapshot-daily-failed", err);
     }
   };
   setTimeout(runDailySnapshot, 2 * 60 * 60_000); // 2h after startup
@@ -1735,7 +1755,7 @@ export function startScheduledTests(): void {
       const { cleanupOldTestData } = await import("./data-retention.js");
       await cleanupOldTestData();
     } catch (err) {
-      console.error("[retention] Cleanup failed:", err instanceof Error ? err.message : err);
+      logError("retention-cleanup-failed", err);
     }
   };
   setTimeout(runRetentionCleanup, 3 * 60 * 60_000); // 3h after startup
@@ -1748,7 +1768,7 @@ export function startScheduledTests(): void {
       const { refreshStaleScores } = await import("../jobs/refresh-stale-scores.js");
       await refreshStaleScores();
     } catch (err) {
-      console.error("[stale-refresh] Failed:", err instanceof Error ? err.message : err);
+      logError("stale-refresh-failed", err);
     }
   };
   setTimeout(runStaleRefresh, 90 * 60_000); // 1.5h after startup
@@ -1766,8 +1786,9 @@ export function startScheduledTests(): void {
 export function scheduleWeeklyDigest(): void {
   const msUntilNextMonday0800CET = computeMsUntilNextMonday0800CET();
 
-  console.log(
-    `[digest-scheduler] First digest in ${Math.round(msUntilNextMonday0800CET / 3600_000)}h`,
+  log.info(
+    { label: "digest-scheduler-first", first_in_hours: Math.round(msUntilNextMonday0800CET / 3600_000) },
+    "digest-scheduler-first",
   );
 
   setTimeout(async () => {
@@ -1784,7 +1805,7 @@ async function runWeeklyDigest(): Promise<void> {
     const { sendDigestEmail, isEmailConfigured } = await import("./digest-sender.js");
 
     if (!isEmailConfigured()) {
-      console.warn("[digest-scheduler] RESEND_API_KEY not set — skipping digest send");
+      logWarn("digest-scheduler-no-api-key", "RESEND_API_KEY not set; skipping digest send");
       return;
     }
 
@@ -1792,9 +1813,9 @@ async function runWeeklyDigest(): Promise<void> {
     const { html, subject } = formatDigestEmail(data);
     await sendDigestEmail(html, subject);
 
-    console.log(`[digest-scheduler] Weekly digest sent: "${subject}"`);
+    log.info({ label: "digest-scheduler-sent", subject }, "digest-scheduler-sent");
   } catch (err) {
-    console.error("[digest-scheduler] Digest send failed:", err);
+    logError("digest-scheduler-send-failed", err);
   }
 }
 
@@ -1898,16 +1919,19 @@ export async function repairStaleScores(): Promise<void> {
   }>;
 
   if (rows.length === 0) {
-    console.log("[stale-repair] No stale scores detected — all capabilities up to date");
+    log.info({ label: "stale-repair-none" }, "No stale scores detected — all capabilities up to date");
     return;
   }
 
   const slugs = rows.map((r) => r.slug);
-  console.log(`[stale-repair] Found ${slugs.length} capabilities with stale scores — re-persisting: ${slugs.join(", ")}`);
+  log.info(
+    { label: "stale-repair-found", count: slugs.length, slugs },
+    "stale-repair-found",
+  );
 
   await persistDualProfileScores(slugs);
 
-  console.log("[stale-repair] Repair complete");
+  log.info({ label: "stale-repair-complete" }, "stale-repair-complete");
 }
 
 // ─── Dual-profile score persistence ──────────────────────────────────────────
@@ -2040,7 +2064,7 @@ export async function persistDualProfileScores(slugs: string[]): Promise<void> {
     } catch (err) {
       failed++;
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[dual-profile] PERSIST FAILED for ${slug}: ${msg}`);
+      logError("dual-profile-persist-failed", err, { capability_slug: slug });
       // Log to health events for visibility (do not swallow silently)
       fireAndForget(
         () =>
@@ -2057,6 +2081,15 @@ export async function persistDualProfileScores(slugs: string[]): Promise<void> {
   }
 
   if (slugs.length > 0) {
-    console.log(`[dual-profile] Persist complete: ${persisted} updated, ${skippedPending} pending, ${failed} failed (of ${slugs.length} total)`);
+    log.info(
+      {
+        label: "dual-profile-persist-complete",
+        persisted,
+        skipped_pending: skippedPending,
+        failed,
+        total: slugs.length,
+      },
+      "dual-profile-persist-complete",
+    );
   }
 }
