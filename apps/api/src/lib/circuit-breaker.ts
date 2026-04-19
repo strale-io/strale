@@ -31,49 +31,55 @@ export async function checkCircuitBreaker(
 ): Promise<CircuitBreakerCheck> {
   const db = getDb();
 
-  const [health] = await db
-    .select()
-    .from(capabilityHealth)
-    .where(eq(capabilityHealth.capabilitySlug, slug))
-    .limit(1);
+  // F-0-011: SELECT FOR UPDATE + conditional write in a single tx prevents
+  // two concurrent callers from both transitioning open → half_open past
+  // nextRetryAt. Only the state check and the write sit inside the lock.
+  return db.transaction(async (tx) => {
+    const [health] = await tx
+      .select()
+      .from(capabilityHealth)
+      .where(eq(capabilityHealth.capabilitySlug, slug))
+      .limit(1)
+      .for("update");
 
-  // No health record yet — capability is healthy (never failed)
-  if (!health) {
-    return { allowed: true, state: "closed" };
-  }
-
-  const state = health.state as CircuitState;
-
-  if (state === "closed") {
-    return { allowed: true, state: "closed" };
-  }
-
-  if (state === "open") {
-    const now = new Date();
-    const nextRetry = health.nextRetryAt;
-
-    // Check if it's time to transition to half_open
-    if (nextRetry && now >= nextRetry) {
-      // Transition to half_open — allow one test request
-      await db
-        .update(capabilityHealth)
-        .set({ state: "half_open", updatedAt: now })
-        .where(eq(capabilityHealth.id, health.id));
-
-      return { allowed: true, state: "half_open" };
+    // No health record yet — capability is healthy (never failed)
+    if (!health) {
+      return { allowed: true, state: "closed" };
     }
 
-    // Still in backoff period
-    return {
-      allowed: false,
-      state: "open",
-      reason: `Capability '${slug}' is temporarily suspended due to repeated failures.`,
-      next_retry_at: nextRetry?.toISOString(),
-    };
-  }
+    const state = health.state as CircuitState;
 
-  // half_open — allow the test request through
-  return { allowed: true, state: "half_open" };
+    if (state === "closed") {
+      return { allowed: true, state: "closed" };
+    }
+
+    if (state === "open") {
+      const now = new Date();
+      const nextRetry = health.nextRetryAt;
+
+      // Check if it's time to transition to half_open
+      if (nextRetry && now >= nextRetry) {
+        // Transition to half_open — allow one test request
+        await tx
+          .update(capabilityHealth)
+          .set({ state: "half_open", updatedAt: now })
+          .where(eq(capabilityHealth.id, health.id));
+
+        return { allowed: true, state: "half_open" };
+      }
+
+      // Still in backoff period
+      return {
+        allowed: false,
+        state: "open",
+        reason: `Capability '${slug}' is temporarily suspended due to repeated failures.`,
+        next_retry_at: nextRetry?.toISOString(),
+      };
+    }
+
+    // half_open — allow the test request through
+    return { allowed: true, state: "half_open" };
+  });
 }
 
 /**
@@ -81,32 +87,54 @@ export async function checkCircuitBreaker(
  */
 export async function recordSuccess(slug: string): Promise<void> {
   const db = getDb();
-
-  const [health] = await db
-    .select()
-    .from(capabilityHealth)
-    .where(eq(capabilityHealth.capabilitySlug, slug))
-    .limit(1);
-
   const now = new Date();
 
-  if (!health) {
-    // First success — create record in closed state
-    await db.insert(capabilityHealth).values({
-      capabilitySlug: slug,
-      state: "closed",
-      consecutiveFailures: 0,
-      totalSuccesses: 1,
-      totalFailures: 0,
-      lastSuccessAt: now,
-      backoffMinutes: INITIAL_BACKOFF_MINUTES,
-      updatedAt: now,
-    });
-    return;
-  }
+  // F-0-011: SELECT FOR UPDATE + conditional INSERT/UPDATE in a single tx.
+  // Log emission lives outside the critical section — it's fire-and-forget
+  // and would only block the lock for no benefit.
+  const previousState = await db.transaction(async (tx) => {
+    const [health] = await tx
+      .select()
+      .from(capabilityHealth)
+      .where(eq(capabilityHealth.capabilitySlug, slug))
+      .limit(1)
+      .for("update");
 
-  // Log recovery if previously open or half_open
-  if (health.state === "open" || health.state === "half_open") {
+    if (!health) {
+      // First success — create record in closed state
+      await tx.insert(capabilityHealth).values({
+        capabilitySlug: slug,
+        state: "closed",
+        consecutiveFailures: 0,
+        totalSuccesses: 1,
+        totalFailures: 0,
+        lastSuccessAt: now,
+        backoffMinutes: INITIAL_BACKOFF_MINUTES,
+        updatedAt: now,
+      });
+      return null;
+    }
+
+    // Reset to closed on any success
+    await tx
+      .update(capabilityHealth)
+      .set({
+        state: "closed",
+        consecutiveFailures: 0,
+        totalSuccesses: health.totalSuccesses + 1,
+        lastSuccessAt: now,
+        backoffMinutes: INITIAL_BACKOFF_MINUTES, // Reset backoff
+        openedAt: null,
+        nextRetryAt: null,
+        updatedAt: now,
+      })
+      .where(eq(capabilityHealth.id, health.id));
+
+    return health.state;
+  });
+
+  // Log recovery if previously open or half_open (after tx commits)
+  if (previousState === "open" || previousState === "half_open") {
     fireAndForget(
       () =>
         logHealthEvent({
@@ -114,26 +142,11 @@ export async function recordSuccess(slug: string): Promise<void> {
           capabilitySlug: slug,
           tier: 1,
           actionTaken: "Circuit breaker recovered",
-          details: { previous_state: health.state },
+          details: { previous_state: previousState },
         }),
       { label: "health-event-log", context: { slug, event: "recovered" } },
     );
   }
-
-  // Reset to closed on any success
-  await db
-    .update(capabilityHealth)
-    .set({
-      state: "closed",
-      consecutiveFailures: 0,
-      totalSuccesses: health.totalSuccesses + 1,
-      lastSuccessAt: now,
-      backoffMinutes: INITIAL_BACKOFF_MINUTES, // Reset backoff
-      openedAt: null,
-      nextRetryAt: null,
-      updatedAt: now,
-    })
-    .where(eq(capabilityHealth.id, health.id));
 }
 
 /**
@@ -181,45 +194,39 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
   const db = getDb();
   const category = categorizeFailureReason(failureReason ?? null);
   const retryable = isRetryableFailure(category);
-
-  const [health] = await db
-    .select()
-    .from(capabilityHealth)
-    .where(eq(capabilityHealth.capabilitySlug, slug))
-    .limit(1);
-
   const now = new Date();
 
-  if (!health) {
-    // First failure — non-retryable trips immediately, transient stays closed
-    if (!retryable) {
-      const nextRetry = new Date(now.getTime() + MAX_BACKOFF_MINUTES * 60_000);
-      await db.insert(capabilityHealth).values({
-        capabilitySlug: slug,
-        state: "open",
-        consecutiveFailures: 1,
-        totalFailures: 1,
-        totalSuccesses: 0,
-        lastFailureAt: now,
-        openedAt: now,
-        nextRetryAt: nextRetry,
-        backoffMinutes: MAX_BACKOFF_MINUTES,
-        updatedAt: now,
-      });
+  // F-0-011: SELECT FOR UPDATE + conditional write inside a single tx.
+  // Returns a discriminated action so the post-tx log emission knows which
+  // health-event payload to emit without re-reading the row.
+  const result = await db.transaction(async (tx) => {
+    const [health] = await tx
+      .select()
+      .from(capabilityHealth)
+      .where(eq(capabilityHealth.capabilitySlug, slug))
+      .limit(1)
+      .for("update");
 
-      fireAndForget(
-        () =>
-          logHealthEvent({
-            eventType: "circuit_breaker",
-            capabilitySlug: slug,
-            tier: 1,
-            actionTaken: `Circuit breaker tripped immediately: ${category} failure`,
-            details: { state: "open", category, backoff_minutes: MAX_BACKOFF_MINUTES },
-          }),
-        { label: "health-event-log", context: { slug, event: "tripped-immediate", category } },
-      );
-    } else {
-      await db.insert(capabilityHealth).values({
+    if (!health) {
+      // First failure — non-retryable trips immediately, transient stays closed
+      if (!retryable) {
+        const nextRetry = new Date(now.getTime() + MAX_BACKOFF_MINUTES * 60_000);
+        await tx.insert(capabilityHealth).values({
+          capabilitySlug: slug,
+          state: "open",
+          consecutiveFailures: 1,
+          totalFailures: 1,
+          totalSuccesses: 0,
+          lastFailureAt: now,
+          openedAt: now,
+          nextRetryAt: nextRetry,
+          backoffMinutes: MAX_BACKOFF_MINUTES,
+          updatedAt: now,
+        });
+        return { action: "first-tripped-immediate" as const };
+      }
+
+      await tx.insert(capabilityHealth).values({
         capabilitySlug: slug,
         state: "closed",
         consecutiveFailures: 1,
@@ -229,44 +236,74 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
         backoffMinutes: INITIAL_BACKOFF_MINUTES,
         updatedAt: now,
       });
+      return { action: "first-closed" as const };
     }
-    return;
-  }
 
-  const newConsecutive = health.consecutiveFailures + 1;
-  const newTotalFailures = health.totalFailures + 1;
+    const newConsecutive = health.consecutiveFailures + 1;
+    const newTotalFailures = health.totalFailures + 1;
 
-  // Non-retryable failures trip immediately; transient failures use threshold
-  const shouldTrip = !retryable
-    || health.state === "half_open"
-    || newConsecutive >= CONSECUTIVE_FAILURE_THRESHOLD;
+    // Non-retryable failures trip immediately; transient failures use threshold
+    const shouldTrip = !retryable
+      || health.state === "half_open"
+      || newConsecutive >= CONSECUTIVE_FAILURE_THRESHOLD;
 
-  if (shouldTrip) {
-    const backoff = !retryable
-      ? MAX_BACKOFF_MINUTES
-      : health.state === "half_open"
-        ? Math.min(health.backoffMinutes * 2, MAX_BACKOFF_MINUTES)
-        : INITIAL_BACKOFF_MINUTES;
+    if (shouldTrip) {
+      const backoff = !retryable
+        ? MAX_BACKOFF_MINUTES
+        : health.state === "half_open"
+          ? Math.min(health.backoffMinutes * 2, MAX_BACKOFF_MINUTES)
+          : INITIAL_BACKOFF_MINUTES;
 
-    const nextRetry = new Date(now.getTime() + backoff * 60_000);
+      const nextRetry = new Date(now.getTime() + backoff * 60_000);
 
-    await db
+      await tx
+        .update(capabilityHealth)
+        .set({
+          state: "open",
+          consecutiveFailures: newConsecutive,
+          totalFailures: newTotalFailures,
+          lastFailureAt: now,
+          openedAt: now,
+          nextRetryAt: nextRetry,
+          backoffMinutes: backoff,
+          updatedAt: now,
+        })
+        .where(eq(capabilityHealth.id, health.id));
+
+      return { action: "tripped" as const, newConsecutive, backoff };
+    }
+
+    // Increment failure count but stay closed (transient failure, below threshold)
+    await tx
       .update(capabilityHealth)
       .set({
-        state: "open",
         consecutiveFailures: newConsecutive,
         totalFailures: newTotalFailures,
         lastFailureAt: now,
-        openedAt: now,
-        nextRetryAt: nextRetry,
-        backoffMinutes: backoff,
         updatedAt: now,
       })
       .where(eq(capabilityHealth.id, health.id));
 
+    return { action: "incremented" as const };
+  });
+
+  // Emit logs after the tx commits
+  if (result.action === "first-tripped-immediate") {
+    fireAndForget(
+      () =>
+        logHealthEvent({
+          eventType: "circuit_breaker",
+          capabilitySlug: slug,
+          tier: 1,
+          actionTaken: `Circuit breaker tripped immediately: ${category} failure`,
+          details: { state: "open", category, backoff_minutes: MAX_BACKOFF_MINUTES },
+        }),
+      { label: "health-event-log", context: { slug, event: "tripped-immediate", category } },
+    );
+  } else if (result.action === "tripped") {
     const tripReason = !retryable
       ? `non-retryable ${category} failure`
-      : `${newConsecutive} consecutive failures`;
+      : `${result.newConsecutive} consecutive failures`;
 
     fireAndForget(
       () =>
@@ -275,24 +312,11 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
           capabilitySlug: slug,
           tier: 1,
           actionTaken: `Circuit breaker tripped: ${tripReason}`,
-          details: { state: "open", category, consecutive_failures: newConsecutive, backoff_minutes: backoff },
+          details: { state: "open", category, consecutive_failures: result.newConsecutive, backoff_minutes: result.backoff },
         }),
       { label: "health-event-log", context: { slug, event: "tripped", category } },
     );
-
-    return;
   }
-
-  // Increment failure count but stay closed (transient failure, below threshold)
-  await db
-    .update(capabilityHealth)
-    .set({
-      consecutiveFailures: newConsecutive,
-      totalFailures: newTotalFailures,
-      lastFailureAt: now,
-      updatedAt: now,
-    })
-    .where(eq(capabilityHealth.id, health.id));
 }
 
 /**
@@ -305,36 +329,57 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
  */
 export async function recordTestEvidence(slug: string): Promise<void> {
   const db = getDb();
-
-  const [health] = await db
-    .select()
-    .from(capabilityHealth)
-    .where(eq(capabilityHealth.capabilitySlug, slug))
-    .limit(1);
-
-  if (!health) return; // No breaker record — nothing to recover
-  const state = health.state as CircuitState;
-  if (state === "closed") return; // Already healthy
-
   const now = new Date();
 
-  if (state === "half_open" || (state === "open" && health.nextRetryAt && now >= health.nextRetryAt)) {
-    // Retry window passed or already half_open — close immediately
-    await db
-      .update(capabilityHealth)
-      .set({
-        state: "closed",
-        consecutiveFailures: 0,
-        lastSuccessAt: now,
-        backoffMinutes: INITIAL_BACKOFF_MINUTES,
-        openedAt: null,
-        nextRetryAt: null,
-        updatedAt: now,
-      })
-      .where(eq(capabilityHealth.id, health.id));
+  // F-0-011: SELECT FOR UPDATE + conditional write inside a single tx.
+  // Log emission lives outside the critical section.
+  const result = await db.transaction(async (tx) => {
+    const [health] = await tx
+      .select()
+      .from(capabilityHealth)
+      .where(eq(capabilityHealth.capabilitySlug, slug))
+      .limit(1)
+      .for("update");
 
+    if (!health) return { action: "none" as const }; // No breaker record — nothing to recover
+    const state = health.state as CircuitState;
+    if (state === "closed") return { action: "none" as const }; // Already healthy
+
+    if (state === "half_open" || (state === "open" && health.nextRetryAt && now >= health.nextRetryAt)) {
+      // Retry window passed or already half_open — close immediately
+      await tx
+        .update(capabilityHealth)
+        .set({
+          state: "closed",
+          consecutiveFailures: 0,
+          lastSuccessAt: now,
+          backoffMinutes: INITIAL_BACKOFF_MINUTES,
+          openedAt: null,
+          nextRetryAt: null,
+          updatedAt: now,
+        })
+        .where(eq(capabilityHealth.id, health.id));
+
+      return { action: "recovered" as const, previousState: state };
+    }
+
+    // Open but still in backoff — move to half_open so next call goes through
+    if (state === "open") {
+      await tx
+        .update(capabilityHealth)
+        .set({ state: "half_open", updatedAt: now })
+        .where(eq(capabilityHealth.id, health.id));
+
+      return { action: "half-opened" as const };
+    }
+
+    return { action: "none" as const };
+  });
+
+  // Emit logs after the tx commits
+  if (result.action === "recovered") {
     log.info(
-      { label: "circuit-breaker-recovered-via-test", capability_slug: slug, previous_state: state },
+      { label: "circuit-breaker-recovered-via-test", capability_slug: slug, previous_state: result.previousState },
       "circuit-breaker-recovered-via-test",
     );
     fireAndForget(
@@ -344,20 +389,11 @@ export async function recordTestEvidence(slug: string): Promise<void> {
           capabilitySlug: slug,
           tier: 1,
           actionTaken: "Circuit breaker recovered via test evidence",
-          details: { previous_state: state, recovery_source: "test_evidence" },
+          details: { previous_state: result.previousState, recovery_source: "test_evidence" },
         }),
       { label: "health-event-log", context: { slug, event: "recovered-test-evidence" } },
     );
-    return;
-  }
-
-  // Open but still in backoff — move to half_open so next call goes through
-  if (state === "open") {
-    await db
-      .update(capabilityHealth)
-      .set({ state: "half_open", updatedAt: now })
-      .where(eq(capabilityHealth.id, health.id));
-
+  } else if (result.action === "half-opened") {
     log.info(
       { label: "circuit-breaker-half-open-via-test", capability_slug: slug },
       "circuit-breaker-half-open-via-test",
