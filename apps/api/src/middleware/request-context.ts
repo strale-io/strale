@@ -36,7 +36,17 @@ export const requestContext = (): MiddlewareHandler<AppEnv> => async (c, next) =
   });
   c.set("log", reqLog);
   c.header("x-request-id", requestId);
+
+  // Replaces hono/logger's colorized text request line (F-0-018) with a
+  // structured JSON record. Inherits request_id/method/path/user_id from
+  // the child logger; adds status_code and duration_ms at completion.
+  const start = Date.now();
   await next();
+  const duration_ms = Date.now() - start;
+  c.get("log").info(
+    { label: "request-complete", status_code: c.res.status, duration_ms },
+    "request-complete",
+  );
 };
 
 export const logUserContext = (): MiddlewareHandler<AppEnv> => async (c, next) => {
