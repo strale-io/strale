@@ -24,7 +24,8 @@ import { logHealthEvent } from "../lib/health-monitor.js";
 import { isCacheExpired, refreshUpstreamMapping } from "../lib/upstream-health-gate.js";
 import { probeChromiumHealth } from "../lib/chromium-health.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
-import { logError, logWarn } from "../lib/log.js";
+import { randomUUID } from "node:crypto";
+import { log, logError, logWarn } from "../lib/log.js";
 
 // ─── Solution quality gate (auto-activate when all steps are scored) ────────
 
@@ -58,7 +59,10 @@ async function checkSolutionGates(capabilitySlug: string): Promise<void> {
       await db.update(solutions)
         .set({ isActive: true, updatedAt: new Date() })
         .where(eq(solutions.id, solId));
-      console.log(`[solution-gate] AUTO-ACTIVATED: ${sol.slug} — all steps now qualified`);
+      log.info(
+        { label: "solution-gate-auto-activated", solution_slug: sol.slug },
+        "solution-gate-auto-activated",
+      );
     }
   }
 }
@@ -223,7 +227,7 @@ async function runAuxiliaryTasks(): Promise<void> {
     try {
       await probeChromiumHealth();
     } catch (err) {
-      console.error("[test-scheduler] Chromium probe error:", err instanceof Error ? err.message : err);
+      logError("test-scheduler-chromium-probe-error", err);
     }
   }
 
@@ -234,16 +238,20 @@ async function runAuxiliaryTasks(): Promise<void> {
       const results = await runDependencyHealthChecks();
       const unhealthy = Object.entries(results).filter(([, r]) => !(r as any).healthy);
       if (unhealthy.length > 0) {
-        console.warn(
-          `[test-scheduler] Unhealthy dependencies: ${unhealthy.map(([name, r]) => `${name} (${(r as any).error ?? "down"})`).join(", ")}`,
-        );
+        logWarn("test-scheduler-unhealthy-deps", "some dependencies unhealthy", {
+          unhealthy: unhealthy.map(([name, r]) => ({ name, error: (r as any).error ?? "down" })),
+        });
       } else {
-        console.log(
-          `[test-scheduler] All dependencies healthy: ${Object.entries(results).map(([name, r]) => `${name}=${(r as any).latency_ms}ms`).join(", ")}`,
+        log.info(
+          {
+            label: "test-scheduler-all-healthy",
+            deps: Object.entries(results).map(([name, r]) => ({ name, latency_ms: (r as any).latency_ms })),
+          },
+          "test-scheduler-all-healthy",
         );
       }
     } catch (err) {
-      console.error("[test-scheduler] Health check failed:", err);
+      logError("test-scheduler-health-check-failed", err);
     }
   }
 
@@ -253,7 +261,7 @@ async function runAuxiliaryTasks(): Promise<void> {
       const { refreshStaleScores } = await import("./refresh-stale-scores.js");
       await refreshStaleScores();
     } catch (err) {
-      console.error("[test-scheduler] Stale refresh failed:", err instanceof Error ? err.message : err);
+      logError("test-scheduler-stale-refresh-failed", err);
     }
   }
 
@@ -263,12 +271,19 @@ async function runAuxiliaryTasks(): Promise<void> {
       const { runDiagnostic } = await import("../diagnostics/self-heal-check.js");
       const report = await runDiagnostic();
       if (report.failed > 0) {
-        console.error(`[test-scheduler] Diagnostic: ${report.passed}/${report.checksRun} passed — ${report.criticalFindings.length} critical`);
+        logError(
+          "test-scheduler-diagnostic-findings",
+          new Error(`${report.failed} critical findings`),
+          { passed: report.passed, checks_run: report.checksRun, critical_count: report.criticalFindings.length },
+        );
       } else {
-        console.log(`[test-scheduler] Diagnostic: ${report.passed}/${report.checksRun} checks passed`);
+        log.info(
+          { label: "test-scheduler-diagnostic-passed", passed: report.passed, checks_run: report.checksRun },
+          "test-scheduler-diagnostic-passed",
+        );
       }
     } catch (err) {
-      console.error("[test-scheduler] Diagnostic failed:", err instanceof Error ? err.message : err);
+      logError("test-scheduler-diagnostic-failed", err);
     }
   }
 
@@ -278,7 +293,7 @@ async function runAuxiliaryTasks(): Promise<void> {
       const { captureDailySnapshots } = await import("../lib/sqs-snapshots.js");
       await captureDailySnapshots();
     } catch (err) {
-      console.error("[test-scheduler] SQS snapshot failed:", err instanceof Error ? err.message : err);
+      logError("test-scheduler-sqs-snapshot-failed", err);
     }
   }
 
@@ -288,7 +303,7 @@ async function runAuxiliaryTasks(): Promise<void> {
       const { runWeeklyHealthSweep } = await import("../lib/health-sweep.js");
       await runWeeklyHealthSweep();
     } catch (err) {
-      console.error("[test-scheduler] Weekly sweep failed:", err);
+      logError("test-scheduler-weekly-sweep-failed", err);
     }
   }
 
@@ -298,7 +313,7 @@ async function runAuxiliaryTasks(): Promise<void> {
       const { cleanupOldTestData } = await import("../lib/data-retention.js");
       await cleanupOldTestData();
     } catch (err) {
-      console.error("[test-scheduler] Retention cleanup failed:", err instanceof Error ? err.message : err);
+      logError("test-scheduler-retention-cleanup-failed", err);
     }
   }
 }
@@ -307,11 +322,13 @@ async function runAuxiliaryTasks(): Promise<void> {
 
 async function pollCycle(): Promise<void> {
   if (_isRunning) {
-    console.log("[test-scheduler] Previous cycle still running, skipping");
+    log.info({ label: "test-scheduler-cycle-overlap-skip" }, "previous cycle still running, skipping");
     return;
   }
 
   _isRunning = true;
+  const runId = randomUUID();
+  const jobLog = log.child({ job: "test-scheduler", job_run_id: runId });
 
   try {
     // Advisory lock on a dedicated connection. Prevents duplicate runs when
@@ -332,7 +349,7 @@ async function pollCycle(): Promise<void> {
       const overdue = await findOverdueCapabilities();
 
       if (overdue.length === 0) {
-        console.log("[test-scheduler] Poll: all capabilities fresh, nothing to test");
+        jobLog.info({ label: "test-scheduler-poll-all-fresh" }, "all capabilities fresh, nothing to test");
         return;
       }
 
@@ -357,8 +374,9 @@ async function pollCycle(): Promise<void> {
           runnableCaps = overdue.filter((cap) => !unhealthySlugs.has(cap.slug));
           const skipped = before - runnableCaps.length;
           if (skipped > 0) {
-            console.log(
-              `[test-scheduler] Skipping ${skipped} capabilities with unhealthy providers`,
+            jobLog.info(
+              { label: "test-scheduler-skip-unhealthy", skipped_count: skipped },
+              "test-scheduler-skip-unhealthy",
             );
           }
         }
@@ -367,7 +385,7 @@ async function pollCycle(): Promise<void> {
       }
 
       if (runnableCaps.length === 0) {
-        console.log("[test-scheduler] Poll: all overdue capabilities have unhealthy providers, skipping");
+        jobLog.info({ label: "test-scheduler-poll-all-unhealthy" }, "all overdue capabilities have unhealthy providers, skipping");
         return;
       }
 
@@ -379,7 +397,10 @@ async function pollCycle(): Promise<void> {
       const tierSummary = Object.entries(tierCounts)
         .map(([tier, count]) => `${count} tier-${tier}`)
         .join(", ");
-      console.log(`[test-scheduler] Poll: ${runnableCaps.length} overdue capabilities (${tierSummary})`);
+      jobLog.info(
+        { label: "test-scheduler-poll-start", runnable: runnableCaps.length, tier_counts: tierCounts },
+        "test-scheduler-poll-start",
+      );
 
       let totalPassed = 0;
       let totalFailed = 0;
@@ -389,7 +410,10 @@ async function pollCycle(): Promise<void> {
         const agoLabel = agoMs != null ? `${Math.round(agoMs / 3600_000)}h ago` : "never tested";
 
         try {
-          console.log(`[test-scheduler] Testing ${cap.slug} (tier ${cap.scheduleTier}, last tested ${agoLabel})...`);
+          jobLog.info(
+            { label: "test-scheduler-testing", capability_slug: cap.slug, tier: cap.scheduleTier, last_tested: agoLabel },
+            "test-scheduler-testing",
+          );
 
           const summary = await runTests({ capabilitySlug: cap.slug });
           totalPassed += summary.passed;
@@ -398,8 +422,9 @@ async function pollCycle(): Promise<void> {
           // runTests() already calls persistDualProfileScores() internally (line 294),
           // so DB columns are updated immediately after each capability's tests.
 
-          console.log(
-            `[test-scheduler] ${cap.slug}: ${summary.passed}/${summary.total} passed`,
+          jobLog.info(
+            { label: "test-scheduler-tested", capability_slug: cap.slug, passed: summary.passed, total: summary.total },
+            "test-scheduler-tested",
           );
 
           // Auto-activate gated solutions when all steps become qualified
@@ -412,23 +437,37 @@ async function pollCycle(): Promise<void> {
           // Log individual failures for Railway log monitoring
           for (const r of summary.results) {
             if (!r.passed) {
-              const tag = r.remediation
-                ? `[${r.remediation.outcome}]`
-                : "[escalate]";
-              console.warn(
-                `[test-scheduler] FAIL ${tag} [${r.capabilitySlug}] ${r.testName} — ${r.failureReason}`,
+              const outcome = r.remediation?.outcome ?? "escalate";
+              jobLog.warn(
+                {
+                  label: "test-scheduler-test-fail",
+                  capability_slug: r.capabilitySlug,
+                  test_name: r.testName,
+                  remediation_outcome: outcome,
+                  err: r.failureReason,
+                },
+                "test-scheduler-test-fail",
               );
             }
           }
         } catch (err) {
-          console.error(`[test-scheduler] ${cap.slug} threw:`, err instanceof Error ? err.message : err);
+          jobLog.error(
+            { label: "test-scheduler-cap-threw", capability_slug: cap.slug, err: err instanceof Error ? { message: err.message } : err },
+            "test-scheduler-cap-threw",
+          );
         }
 
         await delay(DELAY_BETWEEN_CAPABILITIES_MS);
       }
 
-      console.log(
-        `[test-scheduler] Poll complete: ${runnableCaps.length} capabilities tested, ${totalPassed} passed, ${totalFailed} failed`,
+      jobLog.info(
+        {
+          label: "test-scheduler-poll-complete",
+          tested: runnableCaps.length,
+          passed: totalPassed,
+          failed: totalFailed,
+        },
+        "test-scheduler-poll-complete",
       );
 
       // Write scheduler heartbeat for watchdog monitoring
@@ -450,10 +489,10 @@ async function pollCycle(): Promise<void> {
     });
 
     if (!outcome.acquired) {
-      logWarn("test-scheduler-lock-busy", "another holder; skipping tick");
+      logWarn("test-scheduler-lock-busy", "another holder; skipping tick", { job_run_id: runId });
     }
   } catch (err) {
-    console.error("[test-scheduler] Poll cycle error:", err);
+    logError("test-scheduler-poll-cycle-error", err, { job_run_id: runId });
   } finally {
     _isRunning = false;
   }
@@ -465,8 +504,14 @@ export function startTestScheduler(): void {
   if (_started) return;
   _started = true;
 
-  console.log(
-    `[test-scheduler] DB-driven scheduler started (${STARTUP_DELAY_MS / 1000}s startup delay, ${POLL_INTERVAL_MS / 60_000}min poll interval, batch size ${BATCH_SIZE})`,
+  log.info(
+    {
+      label: "test-scheduler-started",
+      startup_delay_s: STARTUP_DELAY_MS / 1000,
+      poll_interval_min: POLL_INTERVAL_MS / 60_000,
+      batch_size: BATCH_SIZE,
+    },
+    "test-scheduler-started",
   );
 
   // Stale score repair 15s after startup (carried over from old scheduler)
@@ -475,7 +520,7 @@ export function startTestScheduler(): void {
       const { repairStaleScores } = await import("../lib/test-runner.js");
       await repairStaleScores();
     } catch (err) {
-      console.error("[test-scheduler] Stale score repair failed:", err);
+      logError("test-scheduler-stale-repair-failed", err);
     }
   }, 15_000);
 
@@ -485,21 +530,17 @@ export function startTestScheduler(): void {
       const { scheduleWeeklyDigest } = await import("../lib/test-runner.js");
       scheduleWeeklyDigest();
     } catch (err) {
-      console.error("[test-scheduler] Weekly digest scheduling failed:", err);
+      logError("test-scheduler-digest-schedule-failed", err);
     }
   }, 5_000);
 
   // First poll after startup delay
   setTimeout(() => {
-    pollCycle().catch((err) =>
-      console.error("[test-scheduler] Initial poll failed:", err),
-    );
+    pollCycle().catch((err) => logError("test-scheduler-initial-poll-failed", err));
 
     // Recurring poll
     _pollTimer = setInterval(() => {
-      pollCycle().catch((err) =>
-        console.error("[test-scheduler] Poll failed:", err),
-      );
+      pollCycle().catch((err) => logError("test-scheduler-poll-failed", err));
     }, POLL_INTERVAL_MS);
   }, STARTUP_DELAY_MS);
 }
