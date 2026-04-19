@@ -15,41 +15,76 @@ config({ path: resolve(process.cwd(), ".env") });
 const { gatherDigestData } = await import("../lib/daily-digest/index.js");
 const { analyzeDigest } = await import("../lib/daily-digest/analyze.js");
 const { renderDigestEmail } = await import("../lib/daily-digest/render-email.js");
+const { log } = await import("../lib/log.js");
 
-console.log("\n[preview] Gathering data...");
+log.info({ label: "digest-preview-gather-start" }, "digest-preview-gather-start");
 const data = await gatherDigestData();
 
-console.log("\n=== DATA SUMMARY ===");
-console.log(`Platform: ${data.platformActivity.apiCalls.total} calls, ${data.platformActivity.signups.count} signups, ${data.platformActivity.revenue.cents}c revenue`);
-console.log(`Health: ${data.platformHealth.testPassRate.rate}% pass rate, ${data.platformHealth.circuitBreakers.length} open breakers`);
-console.log(`Ship log: ${data.shipLog.journalEntries.length} journal, ${data.shipLog.githubCommits.length} commits, ${data.shipLog.socialPosts.length} posts`);
-console.log(`Beacon: ${data.beaconActivity.scansLast24h} scans (24h), ${data.beaconActivity.totalScans} total, ${data.beaconActivity.newSubscribers} new subscribers`);
-console.log(`Ecosystem: ${data.ecosystem.repos.length} repos, ${data.ecosystem.npmDownloads.length} npm pkgs, ${data.ecosystem.pypiDownloads.length} pypi pkgs`);
-console.log(`Surfaces: ${data.distributionSurfaces.length} tracked`);
-console.log(`Priorities: ${data.priorities.unreviewedDecisions.length} unreviewed, ${data.priorities.actionRequired.length} action required`);
-console.log(`Scoreboard: ${data.scoreboard.totalUsers} users, ${data.scoreboard.totalCapabilities} caps, ${data.scoreboard.totalSolutions} sols`);
+log.info(
+  {
+    label: "digest-preview-data-summary",
+    platform: {
+      api_calls: data.platformActivity.apiCalls.total,
+      signups: data.platformActivity.signups.count,
+      revenue_cents: data.platformActivity.revenue.cents,
+    },
+    health: {
+      test_pass_rate_pct: data.platformHealth.testPassRate.rate,
+      open_breakers: data.platformHealth.circuitBreakers.length,
+    },
+    ship_log: {
+      journal_entries: data.shipLog.journalEntries.length,
+      github_commits: data.shipLog.githubCommits.length,
+      social_posts: data.shipLog.socialPosts.length,
+    },
+    beacon: {
+      scans_last_24h: data.beaconActivity.scansLast24h,
+      total_scans: data.beaconActivity.totalScans,
+      new_subscribers: data.beaconActivity.newSubscribers,
+    },
+    ecosystem: {
+      repos: data.ecosystem.repos.length,
+      npm_packages: data.ecosystem.npmDownloads.length,
+      pypi_packages: data.ecosystem.pypiDownloads.length,
+    },
+    surfaces_tracked: data.distributionSurfaces.length,
+    priorities: {
+      unreviewed_decisions: data.priorities.unreviewedDecisions.length,
+      action_required: data.priorities.actionRequired.length,
+    },
+    scoreboard: {
+      users: data.scoreboard.totalUsers,
+      capabilities: data.scoreboard.totalCapabilities,
+      solutions: data.scoreboard.totalSolutions,
+    },
+  },
+  "digest-preview-data-summary",
+);
 
-console.log("\n[preview] Running AI analysis...");
+log.info({ label: "digest-preview-analyze-start" }, "digest-preview-analyze-start");
 const analysis = await analyzeDigest(data);
 
-console.log("\n=== AI ANALYSIS ===");
-console.log(`Assessment: ${analysis.situationAssessment}`);
-console.log(`Ship log: ${analysis.shipLogSummary || "(empty)"}`);
-console.log(`Bottleneck: ${analysis.bottleneck ?? "None identified"}`);
-console.log(`Actions: ${analysis.recommendedActions.length}`);
-analysis.recommendedActions.forEach((a, i) => console.log(`  ${i + 1}. [${a.impact}] ${a.action}`));
-if (analysis.anomalies.length > 0) {
-  console.log(`Anomalies:`);
-  analysis.anomalies.forEach((a) => console.log(`  - ${a}`));
-}
+log.info(
+  {
+    label: "digest-preview-analysis",
+    situation_assessment: analysis.situationAssessment,
+    ship_log_summary: analysis.shipLogSummary || null,
+    bottleneck: analysis.bottleneck ?? null,
+    recommended_actions: analysis.recommendedActions.map((a) => ({ impact: a.impact, action: a.action })),
+    anomalies: analysis.anomalies,
+  },
+  "digest-preview-analysis",
+);
 
-console.log("\n[preview] Rendering email...");
+log.info({ label: "digest-preview-render-start" }, "digest-preview-render-start");
 const html = renderDigestEmail(data, analysis);
 
 const outPath = resolve(process.cwd(), "../../digest-preview.html");
 writeFileSync(outPath, html, "utf-8");
 
-console.log(`\n  Preview saved to ${outPath}`);
-console.log("  Open in browser to inspect.\n");
+log.info(
+  { label: "digest-preview-saved", out_path: outPath },
+  "digest-preview-saved — open in browser to inspect",
+);
 
 process.exit(0);
