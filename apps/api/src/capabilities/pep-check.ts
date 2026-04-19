@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { logError } from "../lib/log.js";
 
 /**
  * PEP (Politically Exposed Person) screening via OpenSanctions API.
@@ -82,9 +83,9 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
           provenance: { source: "opensanctions.org", fetched_at: new Date().toISOString() },
         };
       }
-      console.error(`[pep-check] OpenSanctions: HTTP ${resp.status}`);
+      logError("pep-check-opensanctions-http", new Error(`OpenSanctions HTTP ${resp.status}`), { status: resp.status });
     } catch (err) {
-      console.error("[pep-check] OpenSanctions:", err instanceof Error ? err.message : err);
+      logError("pep-check-opensanctions-threw", err);
     }
   }
 
@@ -129,7 +130,7 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
         };
       }
     } catch (err) {
-      console.error("[pep-check] Dilisense:", err instanceof Error ? err.message : err);
+      logError("pep-check-dilisense-failed", err);
     }
   }
 
