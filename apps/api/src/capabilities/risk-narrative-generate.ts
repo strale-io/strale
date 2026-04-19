@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { logError } from "../lib/log.js";
 
 const SYSTEM_PROMPT = `You are providing factual observations about data found in public registries and screening databases. You are not providing legal advice, compliance advice, or making risk decisions.
 
@@ -229,7 +230,7 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
       provenance: { source: "claude-haiku", fetched_at: new Date().toISOString() },
     };
   } catch (err) {
-    console.error("[risk-narrative-generate] Haiku failed:", err);
+    logError("risk-narrative-generate-haiku-failed", err);
     const output = algorithmicAssessment(checkResults, context);
     return {
       output: { ...output, raw_checks: checkResults },
