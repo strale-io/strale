@@ -47,14 +47,6 @@ const REQUIRED_COLUMNS: Array<{
     column: "compliance_hash_state",
     migration: "0047_compliance_hash_state",
   },
-  // F-A-001: GDPR Article 17 soft-delete. Column is queried by the
-  // DELETE handler (for idempotency), the GET handler (to gate redacted
-  // response), and the chain walker (to skip hash recomputation).
-  {
-    table: "transactions",
-    column: "deleted_at",
-    migration: "0048_add_transactions_deleted_at",
-  },
   // Add future migration columns here as they are added
   // { table: 'table_name', column: 'column_name', migration: '0036_...' },
 ];
