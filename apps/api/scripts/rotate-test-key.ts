@@ -1,11 +1,11 @@
 import { config } from "dotenv";
 import { resolve } from "node:path";
-config({ path: resolve(import.meta.dirname, "../../../../.env") });
+config({ path: resolve(import.meta.dirname, "../../../.env") });
 
-import { getDb } from "./index.js";
-import { users } from "./schema.js";
+import { getDb } from "../src/db/index.js";
+import { users } from "../src/db/schema.js";
 import { eq } from "drizzle-orm";
-import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/auth.js";
+import { generateApiKey, hashApiKey, getKeyPrefix } from "../src/lib/auth.js";
 
 const db = getDb();
 const userId = "2e3d9f92-2301-48f8-96cf-cab285451c70";

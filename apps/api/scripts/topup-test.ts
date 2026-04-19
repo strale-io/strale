@@ -1,9 +1,9 @@
 import { config } from "dotenv";
 import { resolve } from "node:path";
-config({ path: resolve(import.meta.dirname, "../../../../.env") });
+config({ path: resolve(import.meta.dirname, "../../../.env") });
 
-import { getDb } from "./index.js";
-import { wallets } from "./schema.js";
+import { getDb } from "../src/db/index.js";
+import { wallets } from "../src/db/schema.js";
 import { eq } from "drizzle-orm";
 
 const db = getDb();
