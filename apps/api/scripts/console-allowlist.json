@@ -29,7 +29,6 @@
   "apps/api/src/diagnostics/self-heal-check.ts": 2,
   "apps/api/src/index.ts": 10,
   "apps/api/src/jobs/digest-preview.ts": 22,
-  "apps/api/src/jobs/invariant-checker.ts": 37,
   "apps/api/src/jobs/test-scheduler.ts": 28,
   "apps/api/src/lib/capability-onboarding.ts": 28
 }

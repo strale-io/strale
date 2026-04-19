@@ -19,6 +19,8 @@ import { logHealthEvent } from "../lib/health-monitor.js";
 import { persistDualProfileScores } from "../lib/test-runner.js";
 import { computeSolutionScore } from "../lib/trust-labels.js";
 import { sendAlert } from "../lib/alerting.js";
+import { randomUUID } from "node:crypto";
+import { log, logError, logWarn } from "../lib/log.js";
 
 const CHECK_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
 const STARTUP_DELAY_MS = 60_000; // 60 seconds
@@ -30,6 +32,8 @@ let _running = false;
 
 export async function runInvariantChecks(): Promise<void> {
   const start = Date.now();
+  const runId = randomUUID();
+  const jobLog = log.child({ job: "invariant-checker", job_run_id: runId });
   let healed = 0;
   let alerts = 0;
   let checked = 0;
@@ -51,7 +55,10 @@ export async function runInvariantChecks(): Promise<void> {
       }
     }
   } catch (err) {
-    console.warn("[invariant-checker] Provider health fetch failed — Check 5 will run without provider context");
+    jobLog.warn(
+      { label: "invariant-provider-health-fetch-failed", err: err instanceof Error ? err.message : String(err) },
+      "invariant-provider-health-fetch-failed",
+    );
   }
 
   try {
@@ -60,7 +67,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r1.alerts;
     checked += r1.checked;
   } catch (err) {
-    console.error("[invariant-checker] CHECK 1 (score persistence) failed:", err);
+    jobLog.error({ label: "invariant-check-1-failed", check: "score-persistence", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-1-failed");
   }
 
   try {
@@ -68,7 +75,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r2.alerts;
     checked += r2.checked;
   } catch (err) {
-    console.error("[invariant-checker] CHECK 2 (solution sanity) failed:", err);
+    jobLog.error({ label: "invariant-check-2-failed", check: "solution-sanity", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-2-failed");
   }
 
   try {
@@ -76,7 +83,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r3.alerts;
     checked += r3.checked;
   } catch (err) {
-    console.error("[invariant-checker] CHECK 3 (orphaned steps) failed:", err);
+    jobLog.error({ label: "invariant-check-3-failed", check: "orphaned-steps", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-3-failed");
   }
 
   try {
@@ -85,7 +92,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r4.alerts;
     checked += r4.checked;
   } catch (err) {
-    console.error("[invariant-checker] CHECK 4 (freshness drift) failed:", err);
+    jobLog.error({ label: "invariant-check-4-failed", check: "freshness-drift", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-4-failed");
   }
 
   // Correlated failure detection — fires ONE provider-level alert instead of N
@@ -93,7 +100,7 @@ export async function runInvariantChecks(): Promise<void> {
   try {
     await detectCorrelatedFailures(unhealthyCapabilities);
   } catch (err) {
-    console.error("[invariant-checker] Correlated failure detection threw:", err);
+    jobLog.error({ label: "invariant-correlated-failure-threw", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-correlated-failure-threw");
   }
 
   try {
@@ -101,7 +108,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r5.alerts;
     checked += r5.checked;
   } catch (err) {
-    console.error("[invariant-checker] CHECK 5 (algorithmic correctness floor) failed:", err);
+    jobLog.error({ label: "invariant-check-5-failed", check: "algorithmic-correctness-floor", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-5-failed");
   }
 
   try {
@@ -109,7 +116,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r6.alerts;
     checked += r6.checked;
   } catch (err) {
-    console.error("[invariant-checker] CHECK 6 (broken solution integrity) failed:", err);
+    jobLog.error({ label: "invariant-check-6-failed", check: "broken-solution-integrity", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-6-failed");
   }
 
   try {
@@ -117,7 +124,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r7.alerts;
     checked += r7.checked;
   } catch (err) {
-    console.error("[invariant-checker] CHECK 7 (migration completeness) failed:", err);
+    jobLog.error({ label: "invariant-check-7-failed", check: "migration-completeness", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-7-failed");
   }
 
   try {
@@ -125,7 +132,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r8.alerts;
     checked += r8.checked;
   } catch (err) {
-    console.error("[invariant-checker] CHECK 8 (data_source completeness) failed:", err);
+    jobLog.error({ label: "invariant-check-8-failed", check: "data-source-completeness", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-8-failed");
   }
 
   try {
@@ -133,7 +140,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r9.alerts;
     checked += r9.checked;
   } catch (err) {
-    console.error("[invariant-checker] CHECK 9 (free-tier breakers) failed:", err);
+    jobLog.error({ label: "invariant-check-9-failed", check: "free-tier-breakers", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-9-failed");
   }
 
   try {
@@ -142,7 +149,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r10.alerts;
     checked += r10.checked;
   } catch (err) {
-    console.error("[invariant-checker] CHECK 10 (suspended TTL) failed:", err);
+    jobLog.error({ label: "invariant-check-10-failed", check: "suspended-ttl", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-10-failed");
   }
 
   try {
@@ -150,7 +157,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r11.alerts;
     checked += r11.checked;
   } catch (err) {
-    console.error("[invariant-checker] CHECK 11 (fixture quality) failed:", err);
+    jobLog.error({ label: "invariant-check-11-failed", check: "fixture-quality", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-11-failed");
   }
 
   try {
@@ -158,7 +165,7 @@ export async function runInvariantChecks(): Promise<void> {
     alerts += r12.alerts;
     checked += r12.checked;
   } catch (err) {
-    console.error("[invariant-checker] CHECK 12 (compliance profile completeness) failed:", err);
+    jobLog.error({ label: "invariant-check-12-failed", check: "compliance-profile-completeness", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-12-failed");
   }
 
   // Log provider outage summary if any capabilities were skipped
@@ -170,39 +177,38 @@ export async function runInvariantChecks(): Promise<void> {
         .filter((p) => p.capabilities.some((c) => unhealthyCapabilities.has(c)))
         .map((p) => `${p.displayName} (${p.capabilities.length} capabilities)`)
         .join(", ");
-      console.warn(
-        `[invariant-checker] Check 5 skipped ${unhealthyCapabilities.size} capabilities due to provider outages: ${affectedProviders}`,
+      jobLog.warn(
+        { label: "invariant-check-5-skipped", skipped_count: unhealthyCapabilities.size, affected_providers: affectedProviders },
+        "invariant-check-5-skipped",
       );
     } catch {}
   }
 
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
 
-  if (healed === 0 && alerts === 0) {
-    console.log(`[invariant-checker] Run complete: all clear, ${checked} items checked (${elapsed}s)`);
-  } else {
-    console.log(`[invariant-checker] Run complete: ${healed} healed, ${alerts} alert${alerts !== 1 ? "s" : ""}, ${checked} checked (${elapsed}s)`);
-  }
+  jobLog.info(
+    { label: "invariant-run-complete", healed, alerts, checked, elapsed_sec: Number(elapsed) },
+    "invariant-run-complete",
+  );
 }
 
 export function startInvariantChecker(): void {
   if (_running) return;
   _running = true;
 
-  console.log("[invariant-checker] Started (2h interval, 60s initial delay)");
+  log.info(
+    { label: "invariant-started", interval_ms: CHECK_INTERVAL_MS, startup_delay_ms: STARTUP_DELAY_MS },
+    "invariant-started",
+  );
 
   // Run once on startup after DB warms up
   setTimeout(() => {
-    runInvariantChecks().catch((err) =>
-      console.error("[invariant-checker] Startup run failed:", err),
-    );
+    runInvariantChecks().catch((err) => logError("invariant-startup-run-failed", err));
   }, STARTUP_DELAY_MS);
 
   // Recurring 2-hour check
   setInterval(() => {
-    runInvariantChecks().catch((err) =>
-      console.error("[invariant-checker] Scheduled run failed:", err),
-    );
+    runInvariantChecks().catch((err) => logError("invariant-scheduled-run-failed", err));
   }, CHECK_INTERVAL_MS);
 }
 
@@ -241,7 +247,10 @@ async function checkScorePersistenceDrift(): Promise<{ healed: number; alerts: n
   let alerts = 0;
 
   const slugs = rows.map((r) => r.slug);
-  console.log(`[invariant-checker] CHECK 1: ${slugs.length} capabilities with score persistence drift`);
+  log.info(
+    { label: "invariant-check-1-drift", count: slugs.length },
+    "invariant-check-1-drift",
+  );
 
   try {
     await persistDualProfileScores(slugs);
@@ -256,7 +265,7 @@ async function checkScorePersistenceDrift(): Promise<{ healed: number; alerts: n
   } catch (err) {
     alerts = slugs.length;
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[invariant-checker] CHECK 1 heal failed: ${msg}`);
+    logError("invariant-check-1-heal-failed", err);
 
     await logHealthEvent({
       eventType: "invariant_alert",
@@ -415,8 +424,9 @@ async function checkOrphanedSolutionSteps(): Promise<{ alerts: number; checked: 
 
   if (reactivationRows.length > 0) {
     const slugs = reactivationRows.map((r) => r.slug);
-    console.log(
-      `[invariant-checker] CHECK 3: ${slugs.length} inactive solution(s) could be reactivated (all steps active): ${slugs.join(", ")}`,
+    log.info(
+      { label: "invariant-check-3-reactivation-candidates", count: slugs.length, slugs },
+      "invariant-check-3-reactivation-candidates",
     );
     await logHealthEvent({
       eventType: "invariant_alert",
@@ -461,7 +471,10 @@ async function checkFreshnessDecayDrift(): Promise<{ healed: number; alerts: num
   if (rows.length === 0) return { healed: 0, alerts: 0, checked: 0 };
 
   const slugs = rows.map((r) => r.slug);
-  console.log(`[invariant-checker] CHECK 4: ${slugs.length} capabilities with freshness decay drift`);
+  log.info(
+    { label: "invariant-check-4-drift", count: slugs.length },
+    "invariant-check-4-drift",
+  );
 
   let healed = 0;
   let alerts = 0;
@@ -483,7 +496,7 @@ async function checkFreshnessDecayDrift(): Promise<{ healed: number; alerts: num
   } catch (err) {
     alerts = slugs.length;
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[invariant-checker] CHECK 4 heal failed: ${msg}`);
+    logError("invariant-check-4-heal-failed", err);
 
     await logHealthEvent({
       eventType: "invariant_alert",
@@ -545,15 +558,18 @@ async function detectCorrelatedFailures(
     if (rows.length < MIN_CORRELATED) continue;
 
     const affectedSlugs = rows.map((r) => r.capability_slug);
-    const message = [
-      `PROVIDER OUTAGE DETECTED: ${provider.displayName}`,
-      `${rows.length} of ${provider.capabilities.length} capabilities have recent failures`,
-      `Provider health probe: ${health.error ?? "unhealthy"}`,
-      `Affected capabilities: ${affectedSlugs.slice(0, 10).join(", ")}${affectedSlugs.length > 10 ? ` (+${affectedSlugs.length - 10} more)` : ""}`,
-      `Individual capability alerts are suppressed while provider is unhealthy.`,
-    ].join("\n");
-
-    console.error(`[invariant-checker] ${message}`);
+    const message = `PROVIDER OUTAGE DETECTED: ${provider.displayName}`;
+    logError(
+      "invariant-provider-outage",
+      new Error(message),
+      {
+        provider: provider.displayName,
+        affected_count: rows.length,
+        total_capabilities: provider.capabilities.length,
+        probe_error: health.error ?? "unhealthy",
+        affected_slugs: affectedSlugs,
+      },
+    );
 
     await logHealthEvent({
       eventType: "provider_outage",
@@ -631,9 +647,13 @@ async function checkAlgorithmicCorrectnessFloor(
     if (correctnessRate < CORRECTNESS_FLOOR) {
       // Check if failures are explained by a known provider outage
       if (unhealthyCapabilities.has(cap.slug)) {
-        console.log(
-          `[invariant-checker] Check 5: ${cap.slug} correctness ${correctnessRate}% — ` +
-            `SKIPPED (provider unhealthy, failures are upstream not code bugs)`,
+        log.info(
+          {
+            label: "invariant-check-5-skipped-unhealthy",
+            capability_slug: cap.slug,
+            correctness_rate_pct: correctnessRate,
+          },
+          "invariant-check-5-skipped-unhealthy",
         );
         continue;
       }
@@ -658,11 +678,14 @@ async function checkAlgorithmicCorrectnessFloor(
 
       if (contamRows.length > 0) {
         const testNames = contamRows.map((r) => r.test_name).join(", ");
-        console.warn(
-          `[invariant-checker] Check 5: ${cap.slug} has ${contamRows.length} ` +
-            `auto-generated test(s) with unverified ground truth: ${testNames}. ` +
-            `Capability was modified after test generation. ` +
-            `Suppressing CODE BUG alert — run tests manually to re-verify.`,
+        logWarn(
+          "invariant-check-5-contamination-risk",
+          "Auto-generated tests may have contaminated ground truth; suppressing CODE BUG alert",
+          {
+            capability_slug: cap.slug,
+            contaminated_count: contamRows.length,
+            test_names: contamRows.map((r) => r.test_name),
+          },
         );
 
         await logHealthEvent({
@@ -685,24 +708,26 @@ async function checkAlgorithmicCorrectnessFloor(
         .map((r) => `"${r.test_name}": ${r.failure_reason ?? "no reason recorded"}`)
         .slice(0, 5);
 
-      const message = [
-        `ALGORITHMIC CORRECTNESS VIOLATION: ${cap.slug}`,
-        `Correctness rate: ${correctnessRate}% (floor: ${CORRECTNESS_FLOOR}%)`,
-        `Provider health: verified healthy — this is a CODE BUG, not a provider issue`,
-        `Tests checked: ${rows.length} | Passed: ${passed} | Failed: ${rows.length - passed}`,
-        `Failing tests:`,
-        ...failingTests.map((t) => `  - ${t}`),
-        `Investigate the capability code immediately.`,
-      ].join("\n");
-
-      console.error(`[invariant-checker] ${message}`);
+      logError(
+        "invariant-algorithmic-correctness-violation",
+        new Error(`Correctness rate ${correctnessRate}% < floor ${CORRECTNESS_FLOOR}%`),
+        {
+          capability_slug: cap.slug,
+          correctness_rate_pct: correctnessRate,
+          floor_pct: CORRECTNESS_FLOOR,
+          tests_checked: rows.length,
+          tests_passed: passed,
+          tests_failed: rows.length - passed,
+          failing_tests: failingTests,
+        },
+      );
       alerts++;
 
       await logHealthEvent({
         eventType: "invariant_violation",
         capabilitySlug: cap.slug,
         tier: 1,
-        actionTaken: message,
+        actionTaken: `ALGORITHMIC CORRECTNESS VIOLATION: ${cap.slug} — correctness ${correctnessRate}% < floor ${CORRECTNESS_FLOOR}%`,
         details: {
           check: "algorithmic_correctness_floor",
           capability_slug: cap.slug,
@@ -799,8 +824,10 @@ async function checkBrokenSolutions(): Promise<{ alerts: number; checked: number
       },
     });
 
-    console.error(
-      `[invariant-checker] CHECK 6: Active solution '${solutionSlug}' has broken steps: ${stepDescriptions}`,
+    logError(
+      "invariant-check-6-broken-solution",
+      new Error(`Active solution '${solutionSlug}' has broken steps`),
+      { solution_slug: solutionSlug, broken_steps: stepDescriptions },
     );
   }
 
@@ -881,8 +908,10 @@ async function checkMigrationCompleteness(): Promise<{ alerts: number; checked: 
         },
       });
 
-      console.error(
-        `[invariant-checker] CHECK 7: Retired provider '${provider.name}' still referenced in: ${files.join(", ")}`,
+      logError(
+        "invariant-check-7-retired-provider-referenced",
+        new Error(`Retired provider '${provider.name}' still referenced`),
+        { provider: provider.name, base_url: provider.baseUrl, files },
       );
     }
   }
@@ -914,8 +943,10 @@ async function checkDataSourceCompleteness(): Promise<{ alerts: number; checked:
 
   if (capsWithoutSource.length > 0) {
     const slugList = capsWithoutSource.map((c) => c.slug).join(", ");
-    console.warn(
-      `[invariant-checker] CHECK 8: ${capsWithoutSource.length} active capabilities missing data_source: ${slugList}`,
+    logWarn(
+      "invariant-check-8-missing-data-source",
+      "capabilities missing data_source",
+      { count: capsWithoutSource.length, slugs: capsWithoutSource.map((c) => c.slug) },
     );
 
     await logHealthEvent({
@@ -962,7 +993,11 @@ async function checkFreeTierCircuitBreakers(): Promise<{ alerts: number; checked
   if (degraded.length === 0) return { alerts: 0, checked: 1 };
 
   const slugs = degraded.map((d) => d.slug);
-  console.warn(`[invariant-checker] CHECK 9: ${degraded.length} free-tier capability(s) have open circuit breakers: ${slugs.join(", ")}`);
+  logWarn(
+    "invariant-check-9-free-tier-breakers",
+    "free-tier capabilities have open circuit breakers",
+    { count: degraded.length, slugs },
+  );
 
   await logHealthEvent({
     eventType: "invariant_alert",
@@ -1048,10 +1083,14 @@ async function checkSuspendedCapabilityTTL(): Promise<{ healed: number; alerts: 
         const { onCapabilityDeactivated } = await import("../lib/capability-onboarding.js");
         await onCapabilityDeactivated(cap.slug, reason);
 
-        console.warn(`[invariant-checker] CHECK 10: Auto-deactivated ${cap.slug} (${Math.floor(daysSuspended)}d suspended)`);
+        logWarn(
+          "invariant-check-10-auto-deactivated",
+          "auto-deactivated suspended capability",
+          { capability_slug: cap.slug, days_suspended: Math.floor(daysSuspended) },
+        );
         healed++;
       } catch (err) {
-        console.error(`[invariant-checker] CHECK 10 deactivation failed for ${cap.slug}:`, err);
+        logError("invariant-check-10-deactivation-failed", err, { capability_slug: cap.slug });
       }
 
       await logHealthEvent({
@@ -1150,15 +1189,16 @@ async function checkFixtureQuality(): Promise<{ alerts: number; checked: number 
     return { alerts: 0, checked: rows.length };
   }
 
-  const slugList = bad.map((b) => b.slug).join(", ");
-  console.warn(
-    `[invariant-checker] CHECK 11: ${bad.length} capability(s) have bad known_answer fixtures: ${slugList}`,
+  logWarn(
+    "invariant-check-11-bad-fixtures",
+    "capabilities have bad known_answer fixtures",
+    { count: bad.length, slugs: bad.map((b) => b.slug) },
   );
 
   await logHealthEvent({
     eventType: "invariant_alert",
     tier: 2,
-    actionTaken: `${bad.length} capability(s) have bad known_answer fixtures (rendered on public detail pages): ${slugList}`,
+    actionTaken: `${bad.length} capability(s) have bad known_answer fixtures (rendered on public detail pages): ${bad.map((b) => b.slug).join(", ")}`,
     details: {
       check: "fixture_quality",
       badCount: bad.length,
@@ -1201,14 +1241,15 @@ async function checkComplianceProfileCompleteness(): Promise<{ alerts: number; c
 
   if (incomplete.length === 0) return { alerts: 0, checked: caps.length };
 
-  const slugList = incomplete.map((x) => x.slug).join(', ');
-  console.warn(
-    `[invariant-checker] CHECK 12: ${incomplete.length} capability(s) have incomplete compliance profiles: ${slugList}`,
+  logWarn(
+    "invariant-check-12-incomplete-compliance",
+    "capabilities have incomplete compliance profiles",
+    { count: incomplete.length, incomplete },
   );
   await logHealthEvent({
     eventType: 'invariant_alert',
     tier: 2,
-    actionTaken: `${incomplete.length} capability(s) have null profile fields (rendered on public detail pages): ${slugList}`,
+    actionTaken: `${incomplete.length} capability(s) have null profile fields (rendered on public detail pages): ${incomplete.map((x) => x.slug).join(', ')}`,
     details: { check: 'compliance_profile_completeness', incomplete },
   });
   return { alerts: 1, checked: caps.length };
