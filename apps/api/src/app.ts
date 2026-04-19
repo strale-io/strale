@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 import { bodyLimit } from "hono/body-limit";
 import { versionMiddleware } from "./lib/versioning.js";
 import { rateLimitByIp } from "./lib/rate-limit.js";
@@ -73,7 +72,10 @@ app.notFound((c) => {
   );
 });
 
-app.use("*", logger());
+// F-0-018: hono/logger removed. The structured logger in
+// middleware/request-context.ts emits a `request-complete` log with
+// status_code + duration_ms at the end of every request, inheriting
+// request_id/method/path from the child logger.
 
 // Security headers — defence-in-depth for all responses
 app.use("*", async (c, next) => {
