@@ -41,6 +41,7 @@ import { capabilities, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { parseReplyAction } from "../lib/reply-parser.js";
 import { sendDigestEmail, isEmailConfigured } from "../lib/digest-sender.js";
+import { logError } from "../lib/log.js";
 import type { AppEnv } from "../types.js";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -80,7 +81,10 @@ replyWebhookRoute.post("/health-monitor/reply", async (c) => {
   // ── Sender verification (security-critical) ───────────────────────────────
   const authorizedSender = (process.env.HEALTH_DIGEST_EMAIL ?? "admin@strale.io").toLowerCase().trim();
   if (from !== authorizedSender) {
-    console.warn(`[reply-webhook] Rejected email from unauthorized sender: ${from}`);
+    c.get("log").warn(
+      { label: "reply-webhook-unauthorized", from },
+      "reply-webhook-unauthorized",
+    );
     // Return 200 to prevent email service retries — we just silently reject
     return c.json({ received: true, processed: false, reason: "sender not authorized" });
   }
@@ -100,7 +104,7 @@ replyWebhookRoute.post("/health-monitor/reply", async (c) => {
     .limit(RATE_LIMIT_PER_HOUR + 1);
 
   if (recentActions.length >= RATE_LIMIT_PER_HOUR) {
-    console.warn("[reply-webhook] Rate limit exceeded");
+    c.get("log").warn({ label: "reply-webhook-rate-limited" }, "reply-webhook-rate-limited");
     await sendConfirmation(
       "⚠️ Rate limit exceeded",
       `More than ${RATE_LIMIT_PER_HOUR} reply actions were received in the last hour. This one was ignored. Wait 1 hour and try again.`,
@@ -111,7 +115,10 @@ replyWebhookRoute.post("/health-monitor/reply", async (c) => {
   // ── Parse action ──────────────────────────────────────────────────────────
   const parsed = parseReplyAction(text);
 
-  console.log(`[reply-webhook] From: ${from} | Action: ${parsed.action}${parsed.identifier ? `-${parsed.identifier}` : ""}${parsed.slug ? ` ${parsed.slug}` : ""}`);
+  c.get("log").info(
+    { label: "reply-webhook-received", from, action: parsed.action, identifier: parsed.identifier, slug: parsed.slug },
+    "reply-webhook-received",
+  );
 
   // Log the raw reply for audit / debugging
   await logHealthEvent({
@@ -501,7 +508,7 @@ async function executeRemoveFieldAssertion(
     return `✅ Executed: removed field '${field}' from test assertions. Coverage reduced from ${requiredFields.length} to ${updatedFields.length} fields.`;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[reply-webhook] executeRemoveFieldAssertion error:", msg);
+    logError("reply-webhook-remove-field-failed", err);
     return `⚠️ Execution failed: ${msg}. Manual fix needed.`;
   }
 }
@@ -551,6 +558,6 @@ async function sendConfirmation(subject: string, body: string): Promise<void> {
   try {
     await sendDigestEmail(html, subject, to);
   } catch (err) {
-    console.error("[reply-webhook] Failed to send confirmation:", err instanceof Error ? err.message : err);
+    logError("reply-webhook-confirmation-failed", err, { subject });
   }
 }

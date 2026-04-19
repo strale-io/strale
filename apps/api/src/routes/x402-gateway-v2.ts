@@ -29,6 +29,7 @@ import {
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { executeSolution } from "../lib/solution-executor.js";
+import { logError } from "../lib/log.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -145,7 +146,7 @@ async function ensureCache(): Promise<void> {
     _solCache = newSolCache;
     _cacheExpiry = Date.now() + CACHE_TTL_MS;
   } catch (err) {
-    console.error("[x402] Cache refresh failed:", err instanceof Error ? err.message : err);
+    logError("x402-cache-refresh-failed", err);
   }
 }
 
@@ -481,7 +482,7 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
     }).returning({ id: transactions.id });
     return row?.id ?? null;
   } catch (err) {
-    console.error("[x402] Transaction recording failed:", err instanceof Error ? err.message : err);
+    logError("x402-transaction-recording-failed", err);
     return null;
   }
 }

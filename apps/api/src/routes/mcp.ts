@@ -15,7 +15,7 @@
 
 import { Hono } from "hono";
 import { rateLimitByIp } from "../lib/rate-limit.js";
-import { logError } from "../lib/log.js";
+import { log, logError } from "../lib/log.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import {
@@ -86,13 +86,18 @@ async function getCatalog(): Promise<{
     cachedTrustData = trust;
     cachedSolutionTrustData = solTrust;
     catalogLoadedAt = now;
-    console.log(
-      `[mcp-http] Loaded ${caps.length} capabilities, ${sols.length} solutions, ${trust.size} cap trust, ${solTrust.size} sol trust`,
+    log.info(
+      {
+        label: "mcp-http-catalog-loaded",
+        capabilities: caps.length,
+        solutions: sols.length,
+        cap_trust: trust.size,
+        sol_trust: solTrust.size,
+      },
+      "mcp-http-catalog-loaded",
     );
   } catch (err) {
-    console.error(
-      `[mcp-http] Failed to load catalog: ${err instanceof Error ? err.message : err}`,
-    );
+    logError("mcp-http-catalog-load-failed", err);
     if (cachedCapabilities && cachedSolutions && cachedTrustData && cachedSolutionTrustData) {
       return { capabilities: cachedCapabilities, solutions: cachedSolutions, trustData: cachedTrustData, solutionTrustData: cachedSolutionTrustData };
     }
@@ -110,9 +115,9 @@ async function getCatalog(): Promise<{
 
 // Pre-warm cache on server start so first MCP session is instant
 getCatalog().then(() => {
-  console.log("[mcp-http] Cache pre-warmed");
+  log.info({ label: "mcp-http-prewarm-done" }, "mcp-http-prewarm-done");
 }).catch((err) => {
-  console.error(`[mcp-http] Pre-warm failed: ${err instanceof Error ? err.message : err}`);
+  logError("mcp-http-prewarm-failed", err);
 });
 
 // ─── Create a stateless MCP handler ─────────────────────────────────────────

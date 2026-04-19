@@ -51,6 +51,9 @@ export async function authMiddleware(
   }
 
   c.set("user", user);
+  // F-0-014: re-child the request logger with user_id once auth resolves.
+  const reqLog = c.get("log");
+  if (reqLog) c.set("log", reqLog.child({ user_id: user.id }));
   await next();
 }
 
@@ -97,6 +100,9 @@ export async function optionalAuthMiddleware(
   }
 
   c.set("user", user);
+  // F-0-014: re-child the request logger with user_id once auth resolves.
+  const reqLog = c.get("log");
+  if (reqLog) c.set("log", reqLog.child({ user_id: user.id }));
   await next();
 }
 

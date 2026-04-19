@@ -35,4 +35,7 @@ jobs:
       # The sibling `lint:no-bare-catch` script accepts its walk root as
       # argv ("src"), so the workspace wrapper still works for that one.
       - run: node apps/api/scripts/check-ssrf-inventory.mjs
+      # F-0-014 guard: no new `console.*` calls. Script is cwd-independent
+      # (resolves paths from import.meta.url), so the workspace wrapper works.
+      - run: npm --workspace=apps/api run lint:no-new-console
       - run: npm test

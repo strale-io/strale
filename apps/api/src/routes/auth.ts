@@ -171,9 +171,7 @@ authRoute.post(
     // is both PII and a user-enumeration oracle — anyone with Railway log
     // access can trivially see which emails are registered. Log only that a
     // lookup happened.
-    console.log(
-      `[key-recovery] user_found=false timestamp=${new Date().toISOString()}`,
-    );
+    c.get("log").info({ label: "key-recovery", user_found: false }, "key-recovery");
     return c.json(genericResponse);
   }
 
@@ -193,8 +191,9 @@ authRoute.post(
 
   // F-0-013: drop email from the log. user.id is enough for operational
   // tracing and doesn't leak PII or act as an enumeration oracle.
-  console.log(
-    `[key-recovery] user=${user.id} user_found=true timestamp=${new Date().toISOString()}`,
+  c.get("log").info(
+    { label: "key-recovery", user_found: true, user_id: user.id },
+    "key-recovery",
   );
 
   // Fire-and-forget recovery email
@@ -375,7 +374,10 @@ export async function agentSignupHandler(c: Context) {
   // abuse-detection via `signupIpHash`; logging the cleartext IP alongside
   // an email on the same line is a tidy little dossier for anyone with log
   // read access.
-  console.log(`[agent-signup] user=${user.id} flagged=${flaggedForReview} timestamp=${new Date().toISOString()}`);
+  c.get("log").info(
+    { label: "agent-signup", user_id: user.id, flagged: flaggedForReview },
+    "agent-signup",
+  );
 
   return c.json({
     api_key: apiKey,

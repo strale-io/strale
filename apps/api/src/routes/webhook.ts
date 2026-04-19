@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { wallets, walletTransactions } from "../db/schema.js";
 import { getStripe } from "../lib/stripe.js";
+import { logError } from "../lib/log.js";
 
 export const webhookRoute = new Hono();
 
@@ -17,7 +18,7 @@ webhookRoute.post("/stripe", async (c) => {
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    console.error("STRIPE_WEBHOOK_SECRET not configured");
+    logError("stripe-webhook-secret-missing", new Error("STRIPE_WEBHOOK_SECRET not configured"));
     return c.json({ error: "Webhook not configured" }, 500);
   }
 
@@ -28,8 +29,7 @@ webhookRoute.post("/stripe", async (c) => {
   try {
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error(`Webhook signature verification failed: ${message}`);
+    logError("stripe-webhook-signature-invalid", err);
     return c.json({ error: "Invalid signature" }, 400);
   }
 
@@ -41,7 +41,11 @@ webhookRoute.post("/stripe", async (c) => {
     const sessionId = session.id;
 
     if (!userId || !amountCents) {
-      console.error("Webhook missing metadata:", { userId, amountCents });
+      logError(
+        "stripe-webhook-metadata-missing",
+        new Error("Webhook missing metadata"),
+        { user_id: userId, amount_cents: amountCents },
+      );
       return c.json({ received: true });
     }
 
@@ -69,7 +73,11 @@ webhookRoute.post("/stripe", async (c) => {
         .limit(1);
 
       if (!wallet) {
-        console.error(`Wallet not found for user ${userId}`);
+        logError(
+          "stripe-webhook-wallet-missing",
+          new Error("Wallet not found for user"),
+          { user_id: userId },
+        );
         return;
       }
 

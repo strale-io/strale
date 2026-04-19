@@ -5,6 +5,7 @@ import { rateLimitByIp } from "../lib/rate-limit.js";
 import { getClientIp, hashIp } from "../lib/middleware.js";
 import { getDb } from "../db/index.js";
 import { suggestLog } from "../db/schema.js";
+import { logError } from "../lib/log.js";
 import type { AppEnv } from "../types.js";
 
 export const suggestRoute = new Hono<AppEnv>();
@@ -29,7 +30,7 @@ function logSearch(row: {
       ipHash: row.ipHash ?? null,
     })
     .catch((err: unknown) => {
-      console.error("[suggest_log] insert failed:", err instanceof Error ? err.message : err);
+      logError("suggest-log-insert-failed", err);
     });
 }
 
@@ -65,7 +66,10 @@ suggestRoute.get("/suggest/typeahead", rateLimitByIp(30, 1000), async (c) => {
       "Cache-Control": "public, max-age=30",
     });
   } catch (err) {
-    console.error("[typeahead] Error:", err instanceof Error ? err.stack : err);
+    c.get("log").error(
+      { label: "typeahead-error", err: err instanceof Error ? { message: err.message, stack: err.stack } : err },
+      "typeahead-error",
+    );
     return c.json(apiError("execution_failed", "Typeahead search temporarily unavailable."), 500);
   }
 });
@@ -122,7 +126,7 @@ suggestRoute.post("/suggest", rateLimitByIp(20, 1000), async (c) => {
       message.includes("voyageai") ||
       message.includes("anthropic")
     ) {
-      console.error("[suggest] Service error:", message);
+      c.get("log").error({ label: "suggest-service-error", message }, "suggest-service-error");
       return c.json(
         apiError(
           "capability_unavailable",

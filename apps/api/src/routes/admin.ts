@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { apiError } from "../lib/errors.js";
+import { log, logError } from "../lib/log.js";
 import type { AppEnv } from "../types.js";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
@@ -377,15 +378,15 @@ adminRoute.post("/digest", async (c) => {
   // Fire and forget — respond immediately
   (async () => {
     try {
-      console.log("[admin/digest] Generating digest...");
+      log.info({ label: "admin-digest-start" }, "admin-digest-start");
       const data = await gatherDigestData();
       const analysis = await analyzeDigest(data);
       const html = renderDigestEmail(data, analysis);
       await sendDigestEmail(html, new Date());
       await saveSnapshot(data);
-      console.log("[admin/digest] Digest sent successfully");
+      log.info({ label: "admin-digest-sent" }, "admin-digest-sent");
     } catch (err) {
-      console.error("[admin/digest] Failed:", err);
+      logError("admin-digest-failed", err);
     }
   })();
 
@@ -791,10 +792,16 @@ adminRoute.post("/reprice", async (c) => {
       slug: u.slug, oldPrice: u.oldPrice, newPrice: u.newPrice,
     }));
     if (solutionUpdates.length > 0) {
-      console.log(`[admin] Repriced ${body.slug} → recomputed ${solutionUpdates.length} solution(s)`);
+      c.get("log").info(
+        { label: "admin-reprice-done", capability_slug: body.slug, solutions_recomputed: solutionUpdates.length },
+        "admin-reprice-done",
+      );
     }
   } catch (err) {
-    console.error("[admin] Solution recomputation failed:", err instanceof Error ? err.message : err);
+    c.get("log").error(
+      { label: "admin-solution-recompute-failed", err: err instanceof Error ? { message: err.message, stack: err.stack } : err },
+      "admin-solution-recompute-failed",
+    );
   }
 
   return c.json({ updated: rows2[0], solutions_recomputed: solutionUpdates });
@@ -857,7 +864,10 @@ adminRoute.post("/create-solution", async (c) => {
     const capResult = await db.execute(sql`SELECT slug FROM capabilities WHERE slug = ${step.capability_slug}`);
     const capRows = toRows(capResult);
     if (capRows.length === 0) {
-      console.warn(`[create-solution] Capability '${step.capability_slug}' not found — skipping step`);
+      c.get("log").warn(
+        { label: "create-solution-missing-capability", capability_slug: step.capability_slug },
+        "create-solution-missing-capability",
+      );
       continue;
     }
     await db.execute(sql`

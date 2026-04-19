@@ -2,13 +2,13 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { bodyLimit } from "hono/body-limit";
-import { randomUUID } from "node:crypto";
 import { versionMiddleware } from "./lib/versioning.js";
 import { rateLimitByIp } from "./lib/rate-limit.js";
 import { rateLimitByIpDb } from "./lib/db-rate-limit.js";
 import { adminOnly } from "./lib/admin-auth.js";
-import { log } from "./lib/log.js";
 import { fireAndForget } from "./lib/fire-and-forget.js";
+import { requestContext } from "./middleware/request-context.js";
+import type { AppEnv } from "./types.js";
 import { doRoute } from "./routes/do.js";
 import { capabilitiesRoute } from "./routes/capabilities.js";
 import { walletRoute } from "./routes/wallet.js";
@@ -43,24 +43,12 @@ import { sql } from "drizzle-orm";
 // Capability executors + DataProvider chains are registered by
 // autoRegisterCapabilities() in index.ts before the server starts.
 
-export const app = new Hono<{ Variables: { log: import("pino").Logger } }>();
+export const app = new Hono<AppEnv>();
 
-// F-0-014: attach a child logger with a fresh request_id to every request
-// so downstream code can `c.get("log").error({...})` with the id inherited
-// automatically. Client-provided `x-request-id` is echoed when present so
-// requests can be traced across the proxy boundary.
-app.use("*", async (c, next) => {
-  const clientId = c.req.header("x-request-id");
-  const requestId = clientId && /^[A-Za-z0-9_-]{1,128}$/.test(clientId) ? clientId : randomUUID();
-  const reqLog = log.child({
-    request_id: requestId,
-    method: c.req.method,
-    path: c.req.path,
-  });
-  c.set("log", reqLog);
-  c.header("x-request-id", requestId);
-  await next();
-});
+// F-0-014: request-scoped child logger (request_id, method, path). See
+// middleware/request-context.ts. Mounted first so every subsequent handler
+// has a populated `c.get("log")`.
+app.use("*", requestContext());
 
 // Global error handler — never leak internals to client
 app.onError((err, c) => {

@@ -13,6 +13,7 @@
 import { Hono } from "hono";
 import { eq, and, asc, desc, sql, inArray, gte } from "drizzle-orm";
 import pLimit from "p-limit";
+import { logWarn } from "../lib/log.js";
 import { getDb } from "../db/index.js";
 import { getRelatedCapabilities, getRelatedSolutions } from "../lib/related-items.js";
 import {
@@ -65,7 +66,7 @@ function getCachedWithRevalidate<T>(key: string, compute: () => Promise<T>): T |
     revalidating.add(key);
     compute()
       .then((data) => setCache(key, data))
-      .catch((err) => console.warn(`[cache] Background revalidation failed for ${key}:`, err))
+      .catch((err) => logWarn("cache-revalidation-failed", "Background revalidation failed", { key, err: err instanceof Error ? err.message : String(err) }))
       .finally(() => revalidating.delete(key));
   }
   return entry.data as T;

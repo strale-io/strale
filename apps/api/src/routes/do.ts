@@ -29,7 +29,7 @@ import { getShareableUrl } from "../lib/audit-token.js";
 import { getAiDescription, getDataSourceUrl, detectPersonalData } from "../lib/audit-helpers.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
-import { logError } from "../lib/log.js";
+import { logError, logWarn } from "../lib/log.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
 import {
   computeFreshnessGrade,
@@ -732,7 +732,10 @@ doRoute.post(
   // ── 5c. SQS quality gate (uses dual-profile matrix score) ───────────
   const PLATFORM_FLOOR_SQS = 25;
   const dual = await computeDualProfileSQS(capability.slug).catch((err) => {
-    console.warn("[do] dual-profile SQS failed:", capability.slug, err instanceof Error ? err.message : err);
+    logWarn("do-dual-profile-sqs-failed", "dual-profile SQS computation failed", {
+      capability_slug: capability.slug,
+      err: err instanceof Error ? err.message : String(err),
+    });
     return null;
   });
   // If dual-profile fails, treat as pending so the gate is skipped (fail open)
@@ -1900,10 +1903,7 @@ async function executeAsync(
     outputSchema,
   ).catch((err) => {
     // Last-resort error logging — should not normally reach here
-    console.error(
-      `[async-exec] Unhandled error for txn ${transactionId}:`,
-      err,
-    );
+    logError("async-exec-unhandled", err, { transaction_id: transactionId });
   });
 
   // Return 202 immediately — client polls GET /v1/transactions/:id

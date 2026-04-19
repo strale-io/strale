@@ -454,7 +454,10 @@ async function handleMessageSend(
       id,
     });
   } catch (err) {
-    console.error("[a2a] message/send error:", err instanceof Error ? err.message : err);
+    c.get("log").error(
+      { label: "a2a-message-send-error", err: err instanceof Error ? { message: err.message, stack: err.stack } : err },
+      "a2a-message-send-error",
+    );
     return c.json({
       jsonrpc: "2.0",
       error: { code: -32603, message: "Internal error processing request." },
@@ -601,7 +604,10 @@ async function handleTasksGet(
 
     return c.json({ jsonrpc: "2.0", result, id });
   } catch (err) {
-    console.error("[a2a] tasks/get error:", err instanceof Error ? err.message : err);
+    c.get("log").error(
+      { label: "a2a-tasks-get-error", err: err instanceof Error ? { message: err.message, stack: err.stack } : err },
+      "a2a-tasks-get-error",
+    );
     return c.json({
       jsonrpc: "2.0",
       error: {

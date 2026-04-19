@@ -23,6 +23,7 @@ import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import { executeSolution } from "../lib/solution-executor.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
+import { logError } from "../lib/log.js";
 import type { AppEnv } from "../types.js";
 
 export const solutionExecuteRoute = new Hono<AppEnv>();
@@ -36,7 +37,10 @@ solutionExecuteRoute.post(
     const user = c.get("user");
     const db = getDb();
 
-    console.log("[solutions] execute start:", { solutionSlug: slug, userId: user.id });
+    c.get("log").info(
+      { label: "solutions-execute-start", solution_slug: slug },
+      "solutions-execute-start",
+    );
 
     // ── 1. Parse request body ─────────────────────────────────────────
     const body = await c.req.json().catch(() => null);
@@ -169,7 +173,10 @@ solutionExecuteRoute.post(
       walletId = txResult.walletId;
       walletBalanceBefore = txResult.walletBalanceBefore;
     } catch (err) {
-      console.error("[solutions] transaction insert failed:", err, { solutionSlug: slug, userId: user.id });
+      c.get("log").error(
+        { label: "solutions-tx-insert-failed", solution_slug: slug, err: err instanceof Error ? { message: err.message, stack: err.stack } : err },
+        "solutions-tx-insert-failed",
+      );
       return c.json(
         apiError("execution_failed", "Failed to process payment."),
         500,
@@ -183,7 +190,10 @@ solutionExecuteRoute.post(
     } catch (err) {
       const latencyMs = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error("[solutions] execute error:", err, { solutionSlug: slug, userId: user.id });
+      c.get("log").error(
+        { label: "solutions-execute-error", solution_slug: slug, err: err instanceof Error ? { message: err.message, stack: err.stack } : err },
+        "solutions-execute-error",
+      );
 
       // Update transaction to failed
       db.update(transactions)
@@ -195,7 +205,10 @@ solutionExecuteRoute.post(
           auditTrail: buildInlineAudit(slug, [], 0, 0, latencyMs, true, c),
         })
         .where(eq(transactions.id, transactionId))
-        .catch((e) => console.error("[solutions] transaction update failed:", e, { transactionId, solutionSlug: slug }));
+        .catch((e) => c.get("log").error(
+          { label: "solutions-tx-update-failed", transaction_id: transactionId, solution_slug: slug, err: e instanceof Error ? { message: e.message } : e },
+          "solutions-tx-update-failed",
+        ));
 
       // Refund
       await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "execution error");
@@ -223,7 +236,10 @@ solutionExecuteRoute.post(
           auditTrail: buildInlineAudit(slug, [], 0, 0, latencyMs, true, c),
         })
         .where(eq(transactions.id, transactionId))
-        .catch((e) => console.error("[solutions] transaction update failed:", e, { transactionId, solutionSlug: slug }));
+        .catch((e) => c.get("log").error(
+          { label: "solutions-tx-update-failed", transaction_id: transactionId, solution_slug: slug, err: e instanceof Error ? { message: e.message } : e },
+          "solutions-tx-update-failed",
+        ));
 
       await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "no steps configured");
 
@@ -288,12 +304,23 @@ solutionExecuteRoute.post(
         auditTrail,
       })
       .where(eq(transactions.id, transactionId))
-      .catch((e) => console.error("[solutions] transaction update failed:", e, { transactionId, solutionSlug: slug }));
+      .catch((e) => c.get("log").error(
+        { label: "solutions-tx-update-failed", transaction_id: transactionId, solution_slug: slug, err: e instanceof Error ? { message: e.message } : e },
+        "solutions-tx-update-failed",
+      ));
 
-    console.log("[solutions] execute done:", {
-      solutionSlug: slug, status: txStatus, latencyMs,
-      stepsSucceeded, stepsFailed: errorCount, transactionId,
-    });
+    c.get("log").info(
+      {
+        label: "solutions-execute-done",
+        solution_slug: slug,
+        status: txStatus,
+        latency_ms: latencyMs,
+        steps_succeeded: stepsSucceeded,
+        steps_failed: errorCount,
+        transaction_id: transactionId,
+      },
+      "solutions-execute-done",
+    );
 
     // ── 8. Build response ─────────────────────────────────────────────
     // result.status uses the richer vocabulary for the caller:
@@ -345,7 +372,7 @@ async function refundWallet(
       description: `Refund: ${solutionSlug} (${reason})`,
     });
   } catch (err) {
-    console.error("[solutions] refund failed:", err, { solutionSlug, walletId });
+    logError("solutions-refund-failed", err, { solution_slug: solutionSlug, wallet_id: walletId });
   }
 }
 
