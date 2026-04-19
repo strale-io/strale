@@ -16,7 +16,11 @@ import { sql, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { transactions } from "../db/schema.js";
 
-const GENESIS_HASH = createHash("sha256").update("strale-genesis-v1").digest("hex");
+// F-A-010: exported as the single source of truth for the chain's anchor.
+// Any chain-walking consumer (verify.ts, audit.ts) imports this constant
+// rather than re-deriving — a divergent reseed in one file would silently
+// break `reaches_genesis` checks in the other.
+export const GENESIS_HASH = createHash("sha256").update("strale-genesis-v1").digest("hex");
 
 /**
  * Compute the integrity hash for a transaction record.
@@ -72,7 +76,11 @@ export async function getPreviousHash(): Promise<string> {
       .select({ integrityHash: transactions.integrityHash })
       .from(transactions)
       .where(sql`${transactions.integrityHash} IS NOT NULL`)
-      .orderBy(desc(transactions.completedAt))
+      // F-A-008: stable sort via `id DESC` as tiebreaker — same-ms
+      // `completedAt` rows would otherwise be returned in storage-layer
+      // order (non-deterministic). `id` is uuid().defaultRandom(), so
+      // the secondary sort is deterministic without being time-ordered.
+      .orderBy(desc(transactions.completedAt), desc(transactions.id))
       .limit(1);
     return latest?.integrityHash ?? GENESIS_HASH;
   } catch {

@@ -86,13 +86,25 @@ async function runOnce(): Promise<void> {
       let failed = 0;
       const staleCutoff = Date.now() - STALE_WARN_MS;
 
+      // F-A-002: read the chain tip ONCE before the loop, then advance
+      // `currentPrevious` on each successful row. `getPreviousHash()` uses a
+      // pooled connection that can't see this tx's uncommitted writes, so
+      // per-iteration queries would return the same predecessor for every
+      // row in the batch — the chain would branch into a star instead of
+      // linearising. Threading the hash manually restores linearity.
+      //
+      // Fault tolerance preserved: if a row's compute/update throws,
+      // `currentPrevious` is NOT advanced, so the next row still chains
+      // from the last good hash. The failed row flips to 'failed' via the
+      // existing STALE_WARN_MS guard below.
+      let currentPrevious = await getPreviousHash();
+
       for (const txn of pending) {
         if (txn.createdAt.getTime() < staleCutoff) {
           staleCount++;
         }
 
         try {
-          const previousHash = await getPreviousHash();
           const hash = computeIntegrityHash(
             {
               id: txn.id,
@@ -110,17 +122,18 @@ async function runOnce(): Promise<void> {
               createdAt: txn.createdAt,
               completedAt: txn.completedAt,
             },
-            previousHash,
+            currentPrevious,
           );
 
           await tx
             .update(transactions)
             .set({
               integrityHash: hash,
-              previousHash,
+              previousHash: currentPrevious,
               complianceHashState: "complete",
             })
             .where(eq(transactions.id, txn.id));
+          currentPrevious = hash;
           completed++;
         } catch (err) {
           // One row failing shouldn't take down the whole batch. Log and move on.

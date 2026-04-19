@@ -7,13 +7,11 @@ import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { transactions, capabilities } from "../db/schema.js";
-import { computeIntegrityHash } from "../lib/integrity-hash.js";
+import { computeIntegrityHash, GENESIS_HASH } from "../lib/integrity-hash.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
-import { createHash } from "node:crypto";
-const GENESIS_HASH = createHash("sha256").update("strale-genesis-v1").digest("hex");
 const MAX_DEPTH = 200;
 const DEFAULT_DEPTH = 50;
 
