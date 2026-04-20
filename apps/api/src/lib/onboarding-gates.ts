@@ -225,6 +225,27 @@ const VALID_MAINTENANCE_CLASSES = [
   "requires-domain-expertise",
 ];
 
+// SA.2b (F-A-003, F-A-009): canonical PII category taxonomy. Declared
+// per-capability in manifest as `personal_data_categories: string[]`.
+// Enforced by validateCapabilityStructure (DB-row re-validation) and by
+// validateManifest() in scripts/onboard.ts (pre-insert authoring gate).
+export const PII_CATEGORY_ENUM = [
+  "name",
+  "email",
+  "phone",
+  "address",
+  "date_of_birth",
+  "government_id",
+  "financial",
+  "professional",
+  "behavioral",
+  "biometric",
+  "health",
+  "sensitive_special",
+] as const;
+
+export type PiiCategory = typeof PII_CATEGORY_ENUM[number];
+
 export function validateCapabilityStructure(cap: {
   slug: string;
   name: string | null;

@@ -108,6 +108,10 @@ export const capabilities = pgTable("capabilities", {
   // 'global' | 'eu' | 'nordic' | 'us' | 'uk' | etc.
   dataSource: text("data_source"),
   dataClassification: text("data_classification"),
+  // SA.2b (F-A-003, F-A-009, migration 0049): per-capability PII
+  // classification. Nullable during backfill; target is NOT NULL post-backfill.
+  processesPersonalData: boolean("processes_personal_data"),
+  personalDataCategories: text("personal_data_categories").array().default([]),
   freshnessCategory: text("freshness_category"),
   // 'live-fetch' | 'reference-data' | 'computed'
   dataUpdateCycleDays: integer("data_update_cycle_days"),

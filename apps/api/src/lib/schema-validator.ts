@@ -71,6 +71,20 @@ const REQUIRED_COLUMNS: Array<{
     column: "deleted_at",
     migration: "0048_soft_delete_transactions",
   },
+  // SA.2b (F-A-003, F-A-009): per-capability PII classification.
+  // buildFullAudit reads these to emit accurate GDPR Art. 30 claims.
+  // Missing columns mean audit payloads fall back to the fragile
+  // detectPersonalData heuristic on every call.
+  {
+    table: "capabilities",
+    column: "processes_personal_data",
+    migration: "0049_capability_pii_classification",
+  },
+  {
+    table: "capabilities",
+    column: "personal_data_categories",
+    migration: "0049_capability_pii_classification",
+  },
   // Add future migration columns here as they are added
   // { table: 'table_name', column: 'column_name', migration: '0036_...' },
 ];

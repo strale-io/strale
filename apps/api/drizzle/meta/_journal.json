@@ -351,6 +351,13 @@
       "when": 1776665875131,
       "tag": "0048_soft_delete_transactions",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1777284000000,
+      "tag": "0049_capability_pii_classification",
+      "breakpoints": true
     }
   ]
 }
