@@ -1,0 +1,10 @@
+import { config } from "dotenv";
+import { resolve } from "node:path";
+config({ path: resolve(import.meta.dirname, "../../../../.env") });
+import postgres from "postgres";
+const sql = postgres(process.env.DATABASE_URL);
+const rows = await sql`SELECT slug, lifecycle_state, updated_at FROM capabilities WHERE lifecycle_state = 'hook_failed'`;
+console.log(`Gate 4 post-test: ${rows.length} hook_failed rows`);
+for (const r of rows) console.log(`  - ${r.slug} updated_at=${r.updated_at}`);
+await sql.end();
+process.exit(rows.length === 0 ? 0 : 1);
