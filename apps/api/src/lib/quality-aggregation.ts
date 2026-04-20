@@ -103,6 +103,7 @@ async function computeCapabilityQuality(
       JOIN capabilities c ON c.id = t.capability_id
       WHERE c.slug = ${capabilitySlug}
         AND tq.created_at >= NOW() - INTERVAL '30 days'
+        AND tq.deleted_at IS NULL
     ),
     all_count AS (
       SELECT COUNT(*)::text AS total
@@ -110,6 +111,7 @@ async function computeCapabilityQuality(
       JOIN transactions t ON t.id = tq.transaction_id
       JOIN capabilities c ON c.id = t.capability_id
       WHERE c.slug = ${capabilitySlug}
+        AND tq.deleted_at IS NULL
     ),
     aggregated AS (
       SELECT
@@ -134,6 +136,7 @@ async function computeCapabilityQuality(
       JOIN transactions t ON t.id = tq.transaction_id
       JOIN capabilities c ON c.id = t.capability_id
       WHERE c.slug = ${capabilitySlug}
+        AND tq.deleted_at IS NULL
       ORDER BY tq.created_at DESC
       LIMIT 50
     ),
