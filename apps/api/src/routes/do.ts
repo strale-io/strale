@@ -23,6 +23,7 @@ import {
 import { recordQuality } from "../lib/quality-capture.js";
 import { triggerOnFailure } from "../lib/event-triggers.js";
 import { recordPiggybackResult } from "../lib/piggyback-monitor.js";
+import { TRANSACTION_RETENTION_DAYS } from "../lib/data-retention.js";
 import { computeDualProfileSQS } from "../lib/sqs.js";
 import { createHash } from "node:crypto";
 import { getShareableUrl } from "../lib/audit-token.js";
@@ -2171,7 +2172,7 @@ function buildFullAudit(params: {
       personal_data_categories: [] as string[],
       human_oversight: "autonomous",
       human_oversight_description: "Automated execution with schema validation. No human review required for this capability.",
-      data_retention_days: 90,
+      data_retention_days: TRANSACTION_RETENTION_DAYS,
       deletion_endpoint: `DELETE /v1/transactions/${transactionId}`,
       access_endpoint: `GET /v1/transactions/${transactionId}`,
       shareable_url: getShareableUrl(transactionId),

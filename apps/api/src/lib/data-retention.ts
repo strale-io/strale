@@ -6,6 +6,16 @@ const BATCH_SIZE = 1000;
 const BATCH_DELAY_MS = 100;
 
 /**
+ * Transaction retention window for GDPR Art. 30 record-of-processing
+ * compliance (Colorado AI Act SB 24-205). Rows with `legal_hold = false`
+ * and `created_at < now - TRANSACTION_RETENTION_DAYS` are hard-deleted
+ * by the weekly retention sweep. SA.2a.3a: also surfaced in the
+ * compliance payload returned from POST /v1/do — changes here propagate
+ * to the public claim without additional edits.
+ */
+export const TRANSACTION_RETENTION_DAYS = 1095; // 3 years
+
+/**
  * Retention policies aligned with regulatory requirements:
  * - Compliance data (transactions, quality): 3 years (Colorado AI Act SB 24-205)
  * - Operational data (test results, events): 90-180 days
@@ -146,7 +156,7 @@ export async function cleanupOldTestData(): Promise<void> {
 
   // Compliance data — 3 year retention
   const threeYearsAgo = new Date(now);
-  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+  threeYearsAgo.setDate(threeYearsAgo.getDate() - TRANSACTION_RETENTION_DAYS);
 
   const testResultsDeleted = await purgeTestResults(ninetyDaysAgo);
   const txQualityDeleted = await purgeTransactionQuality(threeYearsAgo);
