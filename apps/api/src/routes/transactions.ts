@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { transactions, capabilities } from "../db/schema.js";
 import { authMiddleware, optionalAuthMiddleware } from "../lib/middleware.js";
@@ -35,7 +35,7 @@ transactionsRoute.get(
       })
       .from(transactions)
       .leftJoin(capabilities, eq(transactions.capabilityId, capabilities.id))
-      .where(eq(transactions.userId, user.id))
+      .where(and(eq(transactions.userId, user.id), isNull(transactions.deletedAt)))
       .orderBy(desc(transactions.createdAt))
       .limit(100);
 
@@ -144,7 +144,7 @@ transactionsRoute.get(
         .select(selectFields)
         .from(transactions)
         .leftJoin(capabilities, eq(transactions.capabilityId, capabilities.id))
-        .where(and(eq(transactions.id, id), eq(transactions.userId, user.id)))
+        .where(and(eq(transactions.id, id), eq(transactions.userId, user.id), isNull(transactions.deletedAt)))
         .limit(1);
 
       if (!row) {
@@ -159,7 +159,7 @@ transactionsRoute.get(
       .select(selectFields)
       .from(transactions)
       .leftJoin(capabilities, eq(transactions.capabilityId, capabilities.id))
-      .where(and(eq(transactions.id, id), eq(transactions.isFreeTier, true)))
+      .where(and(eq(transactions.id, id), eq(transactions.isFreeTier, true), isNull(transactions.deletedAt)))
       .limit(1);
 
     if (!row) {
@@ -189,8 +189,8 @@ transactionsRoute.get(
 
     // Look up transaction — same auth rules as /:id above
     const condition = user
-      ? and(eq(transactions.id, id), eq(transactions.userId, user.id))
-      : and(eq(transactions.id, id), eq(transactions.isFreeTier, true));
+      ? and(eq(transactions.id, id), eq(transactions.userId, user.id), isNull(transactions.deletedAt))
+      : and(eq(transactions.id, id), eq(transactions.isFreeTier, true), isNull(transactions.deletedAt));
 
     const [txn] = await db
       .select()
