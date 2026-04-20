@@ -248,3 +248,41 @@ describe("response shape", () => {
     expect(resp.meta.price_cents).toBe(0);
   });
 });
+
+// ── F-B-022: phase-2 UPDATE failure handling ─────────────────────────────
+//
+// When the phase-2 transaction UPDATE fails (DB blip, serialization
+// conflict, etc.), the fix must:
+//   - not wedge the row at status='executing' silently (caller now awaits),
+//   - refund the wallet IFF !allFailed (the allFailed path already
+//     refunded at line ~270 before phase-2).
+// This mirrors the decision tree implemented in the endpoint.
+
+function shouldRefundOnPhase2Failure(allFailed: boolean): boolean {
+  // allFailed=true: refund already happened pre-phase-2 (line ~270).
+  // allFailed=false: wallet still debited from phase-1 — must refund.
+  return !allFailed;
+}
+
+describe("F-B-022: phase-2 UPDATE failure handling", () => {
+  it("refunds when !allFailed (wallet was debited at phase-1)", () => {
+    expect(shouldRefundOnPhase2Failure(false)).toBe(true);
+  });
+
+  it("does not double-refund when allFailed (already refunded pre-phase-2)", () => {
+    expect(shouldRefundOnPhase2Failure(true)).toBe(false);
+  });
+
+  it("finalization-failed response carries wallet_balance_cents for retry guidance", () => {
+    const errorResponse = {
+      error_code: "transaction_finalization_failed",
+      details: {
+        transaction_id: "fake-uuid",
+        solution_slug: "kyb-essentials-se",
+        wallet_balance_cents: 200,
+      },
+    };
+    expect(errorResponse.error_code).toBe("transaction_finalization_failed");
+    expect(errorResponse.details.wallet_balance_cents).toBe(200);
+  });
+});

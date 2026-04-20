@@ -195,20 +195,26 @@ solutionExecuteRoute.post(
         "solutions-execute-error",
       );
 
-      // Update transaction to failed
-      db.update(transactions)
-        .set({
-          status: "failed",
-          error: sanitizeFailureReason(errorMessage),
-          latencyMs,
-          completedAt: new Date(),
-          auditTrail: buildInlineAudit(slug, [], 0, 0, latencyMs, true, c),
-        })
-        .where(eq(transactions.id, transactionId))
-        .catch((e) => c.get("log").error(
+      // F-B-022: Update transaction to failed. AWAIT so the row reaches a
+      // terminal state before we respond — a fire-and-forget UPDATE on a DB
+      // blip would wedge the row at status='executing'. Refund runs
+      // regardless; the caller is already receiving a failure response.
+      try {
+        await db.update(transactions)
+          .set({
+            status: "failed",
+            error: sanitizeFailureReason(errorMessage),
+            latencyMs,
+            completedAt: new Date(),
+            auditTrail: buildInlineAudit(slug, [], 0, 0, latencyMs, true, c),
+          })
+          .where(eq(transactions.id, transactionId));
+      } catch (e) {
+        c.get("log").error(
           { label: "solutions-tx-update-failed", transaction_id: transactionId, solution_slug: slug, err: e instanceof Error ? { message: e.message } : e },
           "solutions-tx-update-failed",
-        ));
+        );
+      }
 
       // Refund
       await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "execution error");
@@ -227,19 +233,24 @@ solutionExecuteRoute.post(
     if (!execResult) {
       const latencyMs = Date.now() - startTime;
 
-      db.update(transactions)
-        .set({
-          status: "failed",
-          error: "Solution has no steps configured",
-          latencyMs,
-          completedAt: new Date(),
-          auditTrail: buildInlineAudit(slug, [], 0, 0, latencyMs, true, c),
-        })
-        .where(eq(transactions.id, transactionId))
-        .catch((e) => c.get("log").error(
+      // F-B-022: await the UPDATE so the row isn't wedged at 'executing'
+      // if the DB briefly flakes. Refund runs regardless.
+      try {
+        await db.update(transactions)
+          .set({
+            status: "failed",
+            error: "Solution has no steps configured",
+            latencyMs,
+            completedAt: new Date(),
+            auditTrail: buildInlineAudit(slug, [], 0, 0, latencyMs, true, c),
+          })
+          .where(eq(transactions.id, transactionId));
+      } catch (e) {
+        c.get("log").error(
           { label: "solutions-tx-update-failed", transaction_id: transactionId, solution_slug: slug, err: e instanceof Error ? { message: e.message } : e },
           "solutions-tx-update-failed",
-        ));
+        );
+      }
 
       await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "no steps configured");
 
@@ -294,20 +305,50 @@ solutionExecuteRoute.post(
     );
 
     // ── 7. Update transaction row (phase 2 of two-phase write) ────────
-    db.update(transactions)
-      .set({
-        status: txStatus,
-        output: execResult.steps,
-        latencyMs,
-        completedAt: new Date(),
-        priceCents: chargedPrice,
-        auditTrail,
-      })
-      .where(eq(transactions.id, transactionId))
-      .catch((e) => c.get("log").error(
-        { label: "solutions-tx-update-failed", transaction_id: transactionId, solution_slug: slug, err: e instanceof Error ? { message: e.message } : e },
+    // F-B-022: AWAIT the phase-2 UPDATE. If it fails, the wallet was debited
+    // in phase-1 (unless allFailed, in which case we already refunded at
+    // line ~270). A wedged 'executing' row with a debited wallet is the
+    // worst outcome — customer paid, no record. Refund on the non-allFailed
+    // path and return 500 so the caller can retry.
+    try {
+      await db.update(transactions)
+        .set({
+          status: txStatus,
+          output: execResult.steps,
+          latencyMs,
+          completedAt: new Date(),
+          priceCents: chargedPrice,
+          auditTrail,
+        })
+        .where(eq(transactions.id, transactionId));
+    } catch (e) {
+      c.get("log").error(
+        {
+          label: "solutions-tx-update-failed",
+          transaction_id: transactionId,
+          solution_slug: slug,
+          all_failed: allFailed,
+          err: e instanceof Error ? { message: e.message, stack: e.stack } : e,
+        },
         "solutions-tx-update-failed",
-      ));
+      );
+
+      // allFailed path already refunded at line ~270. Non-allFailed means
+      // wallet is still debited; refund now so the customer isn't left
+      // paying for a transaction we can't confirm.
+      if (!allFailed) {
+        await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "phase2 update failed");
+      }
+
+      return c.json(
+        apiError("transaction_finalization_failed", "Solution executed but the transaction record could not be finalized. You were not charged.", {
+          transaction_id: transactionId,
+          solution_slug: slug,
+          wallet_balance_cents: walletBalanceBefore,
+        }),
+        500,
+      );
+    }
 
     c.get("log").info(
       {
