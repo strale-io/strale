@@ -37,29 +37,7 @@ export function getDataSourceUrl(slug: string): string | null {
   return urls[slug] ?? null;
 }
 
-/**
- * Heuristic PII detector — deprecated fallback.
- *
- * Prefer `capability.processesPersonalData` from the DB (declared in manifest
- * per SA.2b F-A-003 / F-A-009). This function is only invoked when the
- * manifest-declared value is NULL (grandfathered pre-backfill capability).
- *
- * F-A-003 fix: now scans both input AND output field names. An input-PII
- * capability (pep-check, email-validate) whose output is a verdict boolean
- * was previously misclassified as "no PII processed."
- *
- * F-A-009 gap acknowledged: field-name keyword matching still produces
- * false positives (e.g. `entity_name`, `brand_name`) and false negatives
- * (e.g. `beneficial_owner`, `signatory`). The manifest declaration is the
- * authoritative path. Heuristic stays as a floor until SA.2b.c flips
- * `processes_personal_data` to NOT NULL and this function is deleted.
- */
-export function detectPersonalData(input: unknown, output: unknown): boolean {
-  const piiFields = ["name", "email", "phone", "address", "ssn", "date_of_birth", "person"];
-  const scanBag = (bag: unknown): boolean => {
-    if (!bag || typeof bag !== "object") return false;
-    const keys = Object.keys(bag as Record<string, unknown>).map((k) => k.toLowerCase());
-    return keys.some((k) => piiFields.some((p) => k.includes(p)));
-  };
-  return scanBag(input) || scanBag(output);
-}
+// SA.2b.d: heuristic `detectPersonalData` was removed after migration 0050
+// flipped `capabilities.processes_personal_data` to NOT NULL. All 307 rows
+// have a manifest-declared value; the runtime reads the column directly
+// in buildFullAudit / buildFreeTierAudit. F-A-003 + F-A-009 closed.

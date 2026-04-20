@@ -27,7 +27,7 @@ import { TRANSACTION_RETENTION_DAYS } from "../lib/data-retention.js";
 import { computeDualProfileSQS } from "../lib/sqs.js";
 import { createHash } from "node:crypto";
 import { getShareableUrl } from "../lib/audit-token.js";
-import { getAiDescription, getDataSourceUrl, detectPersonalData } from "../lib/audit-helpers.js";
+import { getAiDescription, getDataSourceUrl } from "../lib/audit-helpers.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { logError, logWarn } from "../lib/log.js";
@@ -303,7 +303,8 @@ type CapabilityInfo = {
   dataUpdateCycleDays: number | null;
   datasetLastUpdated: Date | null;
   // SA.2b (F-A-003, F-A-009): manifest-declared PII classification.
-  processesPersonalData: boolean | null;
+  // SA.2b.d: NOT NULL post migration 0050.
+  processesPersonalData: boolean;
   personalDataCategories: string[] | null;
 };
 
@@ -2110,10 +2111,10 @@ function buildFreeTierAudit(capability: CapabilityInfo, latencyMs: number) {
     schema_validated: true,
     compliance: {
       ai_involvement: getAiDescription(capability.slug, marker),
-      // F-A-003: free-tier call still processes PII (email-validate processes an
-      // email, iban-validate processes a financial identifier). Prefer manifest
-      // declaration; heuristic gets called with empty bags so it won't overfire.
-      personal_data_processed: capability.processesPersonalData ?? false,
+      // F-A-003 + SA.2b.d: manifest-declared classification is authoritative.
+      // Heuristic fallback was deleted after migration 0050 made the column
+      // NOT NULL across all 307 capabilities.
+      personal_data_processed: capability.processesPersonalData,
       personal_data_categories: capability.personalDataCategories ?? [],
       applicable_regulations: ["EU AI Act (Articles 12, 13, 50)"],
       notes: "Free-tier call — no transaction record stored. Upgrade for full audit trail with shareable compliance URLs.",
@@ -2148,11 +2149,10 @@ function buildFullAudit(params: {
     requestContext,
   } = params;
 
-  // F-A-003 + F-A-009: prefer manifest-declared classification over heuristic.
-  // Heuristic is the fallback for unclassified capabilities during the
-  // backfill window. Post-backfill (SA.2b.c), heuristic should never fire.
-  const personalDataDetected = capability.processesPersonalData
-    ?? detectPersonalData(executionInput, output);
+  // F-A-003 + F-A-009 + SA.2b.d: manifest-declared classification is
+  // the authoritative source. Heuristic fallback was deleted after
+  // migration 0050 made processes_personal_data NOT NULL.
+  const personalDataDetected = capability.processesPersonalData;
   const personalDataCategories = capability.personalDataCategories ?? [];
 
   // F-A-006: issue shareable URL + expiry once so both fields reference
