@@ -41,6 +41,8 @@ import type { Manifest, ManifestExpectedField, ManifestLimitation } from "../src
 import { getDb as getDbForValidation } from "../src/db/index.js";
 import { capabilities as capabilitiesTable } from "../src/db/schema.js";
 import { logWarn } from "../src/lib/log.js";
+// Cluster 2 Phase 3 C1: transactional persist + hook wiring.
+import { persistCapability } from "../src/lib/capability-persistence.js";
 
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../src/db/index.js";
@@ -697,51 +699,56 @@ async function onboard(
 
   if (existing) return; // Already exists, don't insert
 
-  // Insert capability
-  await db.insert(capabilities).values({
-    slug: manifest.slug,
-    name: manifest.name,
-    description: manifest.description,
-    category: manifest.category,
-    priceCents: manifest.price_cents,
-    isFreeTier: manifest.is_free_tier ?? false,
-    inputSchema: manifest.input_schema,
-    outputSchema: manifest.output_schema,
-    dataSource: manifest.data_source,
-    dataClassification: (manifest as any).data_classification ?? "public",
-    transparencyTag: manifest.transparency_tag ?? null,
-    capabilityType: capType,
-    outputFieldReliability: manifest.output_field_reliability,
-    maintenanceClass: manifest.maintenance_class ?? "scraping-fragile-target",
-    // SA.2b (F-A-003, F-A-009): persist manifest-declared PII classification.
-    processesPersonalData: manifest.processes_personal_data ?? null,
-    personalDataCategories: manifest.personal_data_categories ?? [],
-    lifecycleState: "validating",
-    visible: false,
-    isActive: true,
-  });
+  // Cluster 2 Phase 3 C1: transactional persist + hook wiring (F-B-001,
+  // F-B-002, F-B-008, F-B-024). persistCapability wraps the three inserts
+  // in one tx, calls onCapabilityCreated, and marks lifecycle_state as
+  // 'hook_failed' if the hook throws (without rolling back the INSERT).
+  const persistResult = await persistCapability(
+    {
+      capability: {
+        slug: manifest.slug,
+        name: manifest.name,
+        description: manifest.description,
+        category: manifest.category,
+        priceCents: manifest.price_cents,
+        isFreeTier: manifest.is_free_tier ?? false,
+        inputSchema: manifest.input_schema,
+        outputSchema: manifest.output_schema,
+        dataSource: manifest.data_source,
+        dataClassification: (manifest as any).data_classification ?? "public",
+        transparencyTag: manifest.transparency_tag ?? null,
+        capabilityType: capType,
+        outputFieldReliability: manifest.output_field_reliability,
+        maintenanceClass: manifest.maintenance_class ?? "scraping-fragile-target",
+        // F-B-008: if the manifest was authored with `null`, persistCapability
+        // strips the field so the DB default (false) applies — gates already
+        // reject this case but defense-in-depth keeps the write safe.
+        processesPersonalData: manifest.processes_personal_data,
+        personalDataCategories: manifest.personal_data_categories ?? [],
+        lifecycleState: "validating",
+        visible: false,
+        isActive: true,
+      },
+      testSuites: testSuiteRecords,
+      limitations: manifest.limitations.map((lim, i) => ({
+        title: lim.title ?? null,
+        limitationText: lim.text,
+        category: lim.category,
+        severity: lim.severity ?? "info",
+        workaround: lim.workaround ?? null,
+        sortOrder: i,
+      })),
+    },
+    { mode: "create" },
+  );
 
-  // Insert test suites
-  for (const ts of testSuiteRecords) {
-    await db.insert(testSuites).values(ts);
+  if (persistResult.hookFailed) {
+    console.log(`\n⚠️  Onboarded '${manifest.slug}' — post-insert hook FAILED, lifecycle_state=hook_failed`);
+    console.log(`   Check logs for details. Phase 6 retry scheduler will re-run the hook.`);
+  } else {
+    console.log(`\n✅ Onboarded '${manifest.slug}' → lifecycle_state=validating, visible=false`);
+    console.log(`   Next: npx tsx scripts/validate-capability.ts --slug ${manifest.slug} --apply`);
   }
-
-  // Insert limitations
-  for (let i = 0; i < manifest.limitations.length; i++) {
-    const lim = manifest.limitations[i];
-    await db.insert(capabilityLimitations).values({
-      capabilitySlug: manifest.slug,
-      title: lim.title ?? null,
-      limitationText: lim.text,
-      category: lim.category,
-      severity: lim.severity ?? "info",
-      workaround: lim.workaround ?? null,
-      sortOrder: i,
-    });
-  }
-
-  console.log(`\n✅ Onboarded '${manifest.slug}' → lifecycle_state=validating, visible=false`);
-  console.log(`   Next: npx tsx scripts/validate-capability.ts --slug ${manifest.slug} --apply`);
 }
 
 // ─── Build test suite records ────────────────────────────────────────────────

@@ -453,7 +453,14 @@ export function validateManifest(m: Manifest, discover: boolean): string[] {
   // SA.2b (F-A-003, F-A-009): PII classification required for authoring-time
   // validation. Gate mirrored in validateCapabilityStructure for DB-row
   // re-validation.
-  if (m.processes_personal_data === undefined) {
+  //
+  // F-B-008 (Cluster 2 Phase 3 C1): treat `null` the same as `undefined`.
+  // YAML `processes_personal_data: null` previously slipped through this
+  // `=== undefined` check and hit the INSERT as explicit NULL, violating
+  // the schema's NOT NULL constraint with an opaque Drizzle/Postgres error.
+  // Now blocks at the gate with a clear message; persistence layer also
+  // omits null from the INSERT values as defense-in-depth.
+  if (m.processes_personal_data === undefined || m.processes_personal_data === null) {
     errors.push(
       "processes_personal_data is required (boolean). Declare 'false' for pure-algorithmic or infrastructure capabilities; 'true' with populated personal_data_categories for anything processing user-identifiable data at any stage.",
     );
