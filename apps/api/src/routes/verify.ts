@@ -12,13 +12,18 @@ import { rateLimitByIp } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
-const MAX_DEPTH = 200;
-const DEFAULT_DEPTH = 50;
+// F-A-012: tighter caps than the original 200/50 (30 req/min). Prod chain
+// lengths have p95 ~1,308 hops per day — any cap truncates p95-day walks,
+// so "reaches_genesis" is effectively a same-day signal. Lower cap +
+// tighter rate limit cut worst-case memory cost per IP/minute from
+// ~300MB to ~25MB (12× reduction).
+const MAX_DEPTH = 50;
+const DEFAULT_DEPTH = 20;
 
 export const verifyRoute = new Hono<AppEnv>();
 
-// Rate limit: 30 req/min per IP
-verifyRoute.use("*", rateLimitByIp(30, 60_000));
+// F-A-012: 10 req/min per IP (was 30). See audit-reports/F_A_012_a_audit.md.
+verifyRoute.use("*", rateLimitByIp(10, 60_000));
 
 verifyRoute.get("/:transactionId", async (c) => {
   const transactionId = c.req.param("transactionId");
@@ -99,6 +104,8 @@ verifyRoute.get("/:transactionId", async (c) => {
         : String(txn.createdAt).slice(0, 10),
       ...(chain.firstBrokenLinkId ? { first_broken_link_id: chain.firstBrokenLinkId } : {}),
       max_depth: maxDepth,
+      truncated: chain.truncated,
+      truncated_reason: chain.truncated ? `max_depth_reached (N=${maxDepth})` : null,
     },
     transaction_metadata: {
       created_at: txn.createdAt instanceof Date ? txn.createdAt.toISOString() : txn.createdAt,
@@ -120,6 +127,10 @@ interface ChainWalkResult {
   reachesGenesis: boolean;
   startDate: string | null;
   firstBrokenLinkId: string | null;
+  // F-A-012: true when the walk stopped at maxDepth before reaching
+  // genesis. Surfaces to the response as chain.truncated so callers
+  // distinguish "chain is short" from "chain is longer than we walked."
+  truncated: boolean;
 }
 
 async function walkChain(
@@ -135,6 +146,7 @@ async function walkChain(
   let startDate: string | null = null;
   let firstBrokenLinkId: string | null = null;
 
+  let truncated = false;
   while (currentHash && length < maxDepth) {
     // Check for genesis
     if (currentHash === GENESIS_HASH) {
@@ -193,5 +205,12 @@ async function walkChain(
     reachesGenesis = true;
   }
 
-  return { length, verifiedLinks, brokenLinks, reachesGenesis, startDate, firstBrokenLinkId };
+  // F-A-012: loop exited due to the depth cap (rather than genesis,
+  // a missing link, or a null pointer). Caller needs this to know the
+  // chain continues past what we returned.
+  if (length >= maxDepth && currentHash && currentHash !== GENESIS_HASH) {
+    truncated = true;
+  }
+
+  return { length, verifiedLinks, brokenLinks, reachesGenesis, startDate, firstBrokenLinkId, truncated };
 }

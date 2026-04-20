@@ -620,7 +620,7 @@ export const openApiSpec = {
         description: "Verify the integrity of a transaction's audit trail by recomputing its SHA-256 hash and walking the hash chain backward to genesis. Public, no auth required.",
         parameters: [
           { name: "transactionId", in: "path" as const, required: true, schema: { type: "string" as const, format: "uuid" } },
-          { name: "depth", in: "query" as const, required: false, schema: { type: "integer" as const, minimum: 1, maximum: 200, default: 50 }, description: "Max chain depth to verify (default 50, max 200)" },
+          { name: "depth", in: "query" as const, required: false, schema: { type: "integer" as const, minimum: 1, maximum: 50, default: 20 }, description: "Max chain depth to verify (default 20, max 50). F-A-012: values >50 are clamped to 50." },
         ],
         responses: {
           "200": {
@@ -643,6 +643,8 @@ export const openApiSpec = {
                         chain_start_date: { type: "string" as const, format: "date", nullable: true },
                         chain_end_date: { type: "string" as const, format: "date" },
                         max_depth: { type: "integer" as const },
+                        truncated: { type: "boolean" as const, description: "F-A-012: true when the chain walk stopped at max_depth before reaching genesis. False when the walk completed (reached genesis, hit a missing link, or the chain was shorter than max_depth)." },
+                        truncated_reason: { type: "string" as const, nullable: true, description: "Human-readable reason string (e.g. 'max_depth_reached (N=50)') when truncated=true, otherwise null." },
                       },
                     },
                     transaction_metadata: {
@@ -662,6 +664,7 @@ export const openApiSpec = {
             },
           },
           "404": errorResponse("not_found", "Transaction not found."),
+          "429": errorResponse("rate_limited", "Rate limit exceeded (F-A-012: 10 req/min per IP). Retry after the window resets."),
         },
       },
     },
