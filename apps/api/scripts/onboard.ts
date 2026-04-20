@@ -84,6 +84,10 @@ interface Manifest {
   output_field_reliability: Record<string, string>;
   limitations: ManifestLimitation[];
   maintenance_class?: string;
+  // SA.2b (F-A-003, F-A-009): per-capability PII classification.
+  // Required for all new capabilities onboarded post-SA.2b.b.
+  processes_personal_data?: boolean;
+  personal_data_categories?: string[];
 }
 
 interface FixtureMismatch {
@@ -172,6 +176,28 @@ function validateManifest(m: Manifest, discover: boolean): string[] {
   // Limitations
   if (!m.limitations || m.limitations.length === 0) {
     errors.push("at least 1 limitation is required");
+  }
+
+  // SA.2b (F-A-003, F-A-009): PII classification required for authoring-time
+  // validation. Gate mirrored in onboarding-gates.ts for DB-row re-validation.
+  const PII_CATEGORIES = [
+    "name", "email", "phone", "address", "date_of_birth", "government_id",
+    "financial", "professional", "behavioral", "biometric", "health", "sensitive_special",
+  ];
+  if (m.processes_personal_data === undefined) {
+    errors.push(
+      "processes_personal_data is required (boolean). Declare 'false' for pure-algorithmic or infrastructure capabilities; 'true' with populated personal_data_categories for anything processing user-identifiable data at any stage.",
+    );
+  }
+  if (Array.isArray(m.personal_data_categories)) {
+    for (const cat of m.personal_data_categories) {
+      if (!PII_CATEGORIES.includes(cat)) {
+        errors.push(`personal_data_categories entry '${cat}' is not in the canonical taxonomy. Allowed: ${PII_CATEGORIES.join(", ")}`);
+      }
+    }
+    if (m.processes_personal_data === false && m.personal_data_categories.length > 0) {
+      errors.push("personal_data_categories is populated but processes_personal_data is false. Either set processes_personal_data: true, or clear the categories.");
+    }
   }
 
   return errors;
@@ -733,6 +759,9 @@ async function onboard(
     capabilityType: capType,
     outputFieldReliability: manifest.output_field_reliability,
     maintenanceClass: manifest.maintenance_class ?? "scraping-fragile-target",
+    // SA.2b (F-A-003, F-A-009): persist manifest-declared PII classification.
+    processesPersonalData: manifest.processes_personal_data ?? null,
+    personalDataCategories: manifest.personal_data_categories ?? [],
     lifecycleState: "validating",
     visible: false,
     isActive: true,
@@ -990,6 +1019,21 @@ async function backfill(
       })
       .where(eq(capabilities.slug, manifest.slug));
     console.log(`  ✓ Updated output_field_reliability (${fields.length} fields)`);
+  }
+
+  // SA.2b (F-A-003, F-A-009): update PII classification from manifest.
+  if (manifest.processes_personal_data !== undefined) {
+    await db
+      .update(capabilities)
+      .set({
+        processesPersonalData: manifest.processes_personal_data,
+        personalDataCategories: manifest.personal_data_categories ?? [],
+        updatedAt: new Date(),
+      })
+      .where(eq(capabilities.slug, manifest.slug));
+    console.log(
+      `  ✓ Updated PII classification: processes_personal_data=${manifest.processes_personal_data}, categories=[${(manifest.personal_data_categories ?? []).join(", ")}]`,
+    );
   }
 
   // Insert limitations if none exist

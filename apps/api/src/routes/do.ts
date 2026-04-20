@@ -302,6 +302,9 @@ type CapabilityInfo = {
   freshnessCategory: string | null;
   dataUpdateCycleDays: number | null;
   datasetLastUpdated: Date | null;
+  // SA.2b (F-A-003, F-A-009): manifest-declared PII classification.
+  processesPersonalData: boolean | null;
+  personalDataCategories: string[] | null;
 };
 
 /** Execute with retry for non-deterministic capabilities. */
@@ -2107,7 +2110,11 @@ function buildFreeTierAudit(capability: CapabilityInfo, latencyMs: number) {
     schema_validated: true,
     compliance: {
       ai_involvement: getAiDescription(capability.slug, marker),
-      personal_data_processed: false,
+      // F-A-003: free-tier call still processes PII (email-validate processes an
+      // email, iban-validate processes a financial identifier). Prefer manifest
+      // declaration; heuristic gets called with empty bags so it won't overfire.
+      personal_data_processed: capability.processesPersonalData ?? false,
+      personal_data_categories: capability.personalDataCategories ?? [],
       applicable_regulations: ["EU AI Act (Articles 12, 13, 50)"],
       notes: "Free-tier call — no transaction record stored. Upgrade for full audit trail with shareable compliance URLs.",
     },
@@ -2141,7 +2148,12 @@ function buildFullAudit(params: {
     requestContext,
   } = params;
 
-  const personalDataDetected = detectPersonalData(output);
+  // F-A-003 + F-A-009: prefer manifest-declared classification over heuristic.
+  // Heuristic is the fallback for unclassified capabilities during the
+  // backfill window. Post-backfill (SA.2b.c), heuristic should never fire.
+  const personalDataDetected = capability.processesPersonalData
+    ?? detectPersonalData(executionInput, output);
+  const personalDataCategories = capability.personalDataCategories ?? [];
 
   return {
     transaction_id: transactionId,
@@ -2169,7 +2181,7 @@ function buildFullAudit(params: {
     compliance: {
       ai_involvement: getAiDescription(capability.slug, marker),
       personal_data_processed: personalDataDetected,
-      personal_data_categories: [] as string[],
+      personal_data_categories: personalDataCategories,
       human_oversight: "autonomous",
       human_oversight_description: "Automated execution with schema validation. No human review required for this capability.",
       data_retention_days: TRANSACTION_RETENTION_DAYS,

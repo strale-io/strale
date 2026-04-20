@@ -259,6 +259,8 @@ export function validateCapabilityStructure(cap: {
   dataClassification: string | null;
   transparencyTag: string | null;
   maintenanceClass: string | null;
+  processesPersonalData?: boolean | null;
+  personalDataCategories?: string[] | null;
 }): GateViolation[] {
   if (SKIP_GATES) return [];
   const violations: GateViolation[] = [];
@@ -318,6 +320,38 @@ export function validateCapabilityStructure(cap: {
       severity: "error",
       detail: `${cap.slug}: maintenance_class is required. Choose from: ${VALID_MAINTENANCE_CLASSES.join(", ")}`,
     });
+  }
+
+  // Check 14 (SA.2b F-A-003, F-A-009): PII classification required.
+  // Blocking for capabilities onboarded post-SA.2b.b. Pre-existing rows
+  // with NULL values are grandfathered via runtime fallback until SA.2b.c.
+  // This gate fires on re-validation (e.g. manifest re-application); the
+  // authoring-time gate lives in scripts/onboard.ts:validateManifest().
+  if (cap.processesPersonalData === undefined) {
+    violations.push({
+      gate: "gate1_structure",
+      severity: "error",
+      detail: `${cap.slug}: processes_personal_data is required. Declare 'false' for pure-algorithmic or infrastructure capabilities; 'true' with populated personal_data_categories for anything processing user-identifiable data at any stage.`,
+    });
+  }
+
+  if (cap.personalDataCategories && cap.personalDataCategories.length > 0) {
+    for (const cat of cap.personalDataCategories) {
+      if (!(PII_CATEGORY_ENUM as readonly string[]).includes(cat)) {
+        violations.push({
+          gate: "gate1_structure",
+          severity: "error",
+          detail: `${cap.slug}: personal_data_categories entry '${cat}' is not in the canonical taxonomy. Allowed: ${PII_CATEGORY_ENUM.join(", ")}`,
+        });
+      }
+    }
+    if (cap.processesPersonalData === false) {
+      violations.push({
+        gate: "gate1_structure",
+        severity: "error",
+        detail: `${cap.slug}: personal_data_categories is populated but processes_personal_data is false. Either set processes_personal_data: true, or clear the categories.`,
+      });
+    }
   }
 
   return violations;

@@ -37,9 +37,29 @@ export function getDataSourceUrl(slug: string): string | null {
   return urls[slug] ?? null;
 }
 
-export function detectPersonalData(output: unknown): boolean {
-  if (!output || typeof output !== "object") return false;
-  const keys = Object.keys(output as Record<string, unknown>).map(k => k.toLowerCase());
+/**
+ * Heuristic PII detector — deprecated fallback.
+ *
+ * Prefer `capability.processesPersonalData` from the DB (declared in manifest
+ * per SA.2b F-A-003 / F-A-009). This function is only invoked when the
+ * manifest-declared value is NULL (grandfathered pre-backfill capability).
+ *
+ * F-A-003 fix: now scans both input AND output field names. An input-PII
+ * capability (pep-check, email-validate) whose output is a verdict boolean
+ * was previously misclassified as "no PII processed."
+ *
+ * F-A-009 gap acknowledged: field-name keyword matching still produces
+ * false positives (e.g. `entity_name`, `brand_name`) and false negatives
+ * (e.g. `beneficial_owner`, `signatory`). The manifest declaration is the
+ * authoritative path. Heuristic stays as a floor until SA.2b.c flips
+ * `processes_personal_data` to NOT NULL and this function is deleted.
+ */
+export function detectPersonalData(input: unknown, output: unknown): boolean {
   const piiFields = ["name", "email", "phone", "address", "ssn", "date_of_birth", "person"];
-  return keys.some(k => piiFields.some(p => k.includes(p)));
+  const scanBag = (bag: unknown): boolean => {
+    if (!bag || typeof bag !== "object") return false;
+    const keys = Object.keys(bag as Record<string, unknown>).map((k) => k.toLowerCase());
+    return keys.some((k) => piiFields.some((p) => k.includes(p)));
+  };
+  return scanBag(input) || scanBag(output);
 }
