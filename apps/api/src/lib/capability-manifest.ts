@@ -23,6 +23,12 @@
 
 import type { Manifest } from "./capability-manifest-types.js";
 import type { CapabilityRowInsert } from "./capability-persistence.js";
+import {
+  decideFieldAuthority,
+  AuthorityViolationError,
+  FIELD_CATEGORIES,
+} from "./capability-field-authority.js";
+import { log } from "./log.js";
 
 // Re-exported so onboard.ts can drop its local copy in a future phase.
 /**
@@ -52,6 +58,17 @@ export interface NormalizeOptions {
    *  UPDATEs don't clobber DB-canonical columns with null. Default false
    *  (create path writes all fields, letting DB defaults apply). */
   partial?: boolean;
+  /** Phase 4a: existing DB row (camelCase shape) for authority decisions.
+   *  Required for hybrid-field resolution (manifest-default overridable
+   *  by DB): when DB has a non-null value, manifest value is stripped.
+   *  Also used for manifest-canonical drift detection. Safe to omit in
+   *  partial mode if the caller guarantees the row doesn't exist yet
+   *  (rare). */
+  existingRow?: Record<string, unknown> | null;
+  /** Phase 4a: --force-override-authority CLI flag threaded through.
+   *  When true, db and hybrid fields are KEPT (operator reset-to-manifest).
+   *  Does NOT bypass manifest-canonical drift (those are real bugs). */
+  bypassAuthority?: boolean;
 }
 
 /**
@@ -118,7 +135,95 @@ export function normalizeManifestToRow(
     for (const k of Object.keys(row)) {
       if (row[k] === undefined) delete row[k];
     }
+    // Cluster 2 Phase 4a: authority enforcement. For each remaining field,
+    // consult FIELD_CATEGORIES + existing DB row. Strip db-canonical and
+    // hybrid-with-DB-set; throw on manifest-canonical drift.
+    applyAuthorityEnforcement(row, opts);
   }
 
   return row as CapabilityRowInsert;
+}
+
+// ─── Phase 4a authority enforcement ─────────────────────────────────────────
+
+const AUTHORITY_STRIP_LABEL = "[authority-strip]";
+
+function camelToSnake(camel: string): string {
+  return camel.replace(/([a-z])([A-Z])/g, "$1_$2").replace(/([A-Z])([A-Z][a-z])/g, "$1_$2").toLowerCase();
+}
+
+/**
+ * Phase 4a (partial mode only): consume FIELD_CATEGORIES, strip fields
+ * the operator shouldn't overwrite on backfill, throw on manifest drift.
+ *
+ * - `db`: strip (operator-owned; DEBUG log the strip so ops can grep)
+ * - `hybrid` with DB value: strip (DB wins, fills gaps only)
+ * - `hybrid` with DB null: keep (fills the gap)
+ * - `manifest` drift (manifest value differs from DB): throw
+ *    AuthorityViolationError. --force-override-authority does NOT bypass.
+ * - `unknown`: strip + log (defensive; new DB column without taxonomy entry)
+ */
+function applyAuthorityEnforcement(
+  row: Record<string, unknown>,
+  opts: NormalizeOptions,
+): void {
+  const existingRow = opts.existingRow ?? null;
+  const bypass = opts.bypassAuthority === true;
+
+  const manifestDrifts: Array<{ field: string; manifestValue: unknown; dbValue: unknown; reason: string }> = [];
+
+  // Iterate a snapshot of keys so we can delete during iteration safely.
+  for (const camelKey of Object.keys(row)) {
+    const snakeKey = camelToSnake(camelKey);
+    const decision = decideFieldAuthority(snakeKey, row[camelKey], existingRow, { bypassAuthority: bypass });
+
+    switch (decision.action) {
+      case "keep":
+      case "keep-hybrid-dbnull":
+        // pass through
+        break;
+      case "strip-db":
+        log.debug({
+          label: "authority-strip",
+          field: snakeKey,
+          category: "db",
+          slug: row.slug,
+          manifest_value: row[camelKey],
+        }, `${AUTHORITY_STRIP_LABEL} ${snakeKey} (db-canonical)`);
+        delete row[camelKey];
+        break;
+      case "strip-hybrid-dbset":
+        log.debug({
+          label: "authority-strip",
+          field: snakeKey,
+          category: "hybrid",
+          slug: row.slug,
+          manifest_value: row[camelKey],
+          db_value: existingRow ? existingRow[camelKey] : undefined,
+        }, `${AUTHORITY_STRIP_LABEL} ${snakeKey} (hybrid, DB has value)`);
+        delete row[camelKey];
+        break;
+      case "violation-manifest":
+        manifestDrifts.push({
+          field: snakeKey,
+          manifestValue: decision.manifestValue,
+          dbValue: decision.dbValue,
+          reason: FIELD_CATEGORIES[snakeKey]?.reason ?? "(no reason registered)",
+        });
+        break;
+      case "unknown":
+        log.debug({
+          label: "authority-strip",
+          field: snakeKey,
+          category: "unknown",
+          slug: row.slug,
+        }, `${AUTHORITY_STRIP_LABEL} ${snakeKey} (unknown; add to FIELD_CATEGORIES)`);
+        delete row[camelKey];
+        break;
+    }
+  }
+
+  if (manifestDrifts.length > 0) {
+    throw new AuthorityViolationError(manifestDrifts);
+  }
 }

@@ -17,6 +17,12 @@ import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { eq, inArray } from "drizzle-orm";
 import { logWarn } from "./log.js";
 import type { Manifest } from "./capability-manifest-types.js";
+// Cluster 2 Phase 4a: canonical FIELD_CATEGORIES lives in its own module.
+import {
+  FIELD_CATEGORIES as AUTHORITY_FIELDS,
+  decideFieldAuthority,
+  AuthorityViolationError,
+} from "./capability-field-authority.js";
 
 const INPUT_REF = /^\$input\.(.+)$/;
 const STEP_REF = /^\$steps\[(\d+)\]\.(.+)$/;
@@ -525,47 +531,9 @@ export class GateViolationError extends Error {
   }
 }
 
-// FIELD_CATEGORIES — single source of truth for the hybrid authority model
-// (DEC-20260420-K OQ-1). Used by checkAuthorityDrift to emit warnings when a
-// backfill manifest declares a value for a DB-canonical field that differs
-// from the existing DB row. Phase 2 emits warnings; Phase 4 hardens to
-// preservation enforcement.
-//
-// Derived from audit-reports/cluster_2_design.md Section 2.
-const FIELD_CATEGORIES: Record<string, "manifest-canonical" | "DB-canonical" | "system-managed"> = {
-  // manifest-canonical — overwritten on backfill
-  slug: "manifest-canonical",
-  name: "manifest-canonical",
-  description: "manifest-canonical",
-  category: "manifest-canonical",
-  input_schema: "manifest-canonical",
-  output_schema: "manifest-canonical",
-  maintenance_class: "manifest-canonical",
-  processes_personal_data: "manifest-canonical",
-  personal_data_categories: "manifest-canonical",
-  data_source: "manifest-canonical",
-  data_source_type: "manifest-canonical",
-  output_field_reliability: "manifest-canonical",
-  // DB-canonical — preserved on backfill (manifest value ignored post-Phase-4)
-  price_cents: "DB-canonical",
-  is_free_tier: "DB-canonical",
-  freshness_category: "DB-canonical",
-  transparency_tag: "DB-canonical",
-  geography: "DB-canonical",
-  data_classification: "DB-canonical",
-  lifecycle_state: "DB-canonical",
-  visible: "DB-canonical",
-  is_active: "DB-canonical",
-  // system-managed — runtime jobs (SQS, trust columns)
-  matrix_sqs: "system-managed",
-  qp_score: "system-managed",
-  rp_score: "system-managed",
-};
-
-/**
- * Convert a Manifest field name (snake_case) to the corresponding DB-row
- * field name (camelCase). DB-row comes from Drizzle's select().
- */
+// FIELD_CATEGORIES moved to capability-field-authority.ts (Phase 4a).
+// Imported above as AUTHORITY_FIELDS. manifestFieldToDbField kept local —
+// still used by the checkAuthorityDrift warning path below.
 function manifestFieldToDbField(field: string): string {
   return field.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
 }
@@ -581,32 +549,57 @@ function valuesEqual(a: unknown, b: unknown): boolean {
 }
 
 /**
- * Authority-drift check (Phase 2: warnings only; Phase 4: preservation
- * enforcement at persist time). Returns a warning per DB-canonical field
- * where the manifest declares a value that differs from the existing
- * DB row.
+ * Phase 4a (DEC-20260421-E): authority-drift check upgraded to use the
+ * canonical FIELD_CATEGORIES from capability-field-authority.ts.
+ *
+ * Returns warnings for db + hybrid-with-DB-set drifts (informational —
+ * the normalizer's strip logic prevents the actual overwrite). Throws
+ * AuthorityViolationError for manifest-canonical drifts (real bug —
+ * manifest should be authoritative but DB drifted).
  */
 function checkAuthorityDrift(
   manifest: Manifest,
   existing: CapabilityRow,
 ): GateWarning[] {
   const warnings: GateWarning[] = [];
+  const manifestDrifts: Array<{ field: string; manifestValue: unknown; dbValue: unknown; reason: string }> = [];
 
-  for (const [field, category] of Object.entries(FIELD_CATEGORIES)) {
-    if (category !== "DB-canonical") continue;
-
+  for (const field of Object.keys(AUTHORITY_FIELDS)) {
     const manifestVal = (manifest as unknown as Record<string, unknown>)[field];
-    if (manifestVal === undefined) continue; // not declared, no drift
+    if (manifestVal === undefined) continue; // not declared
 
-    const dbField = manifestFieldToDbField(field);
-    const dbVal = existing[dbField];
+    const decision = decideFieldAuthority(field, manifestVal, existing);
+    const entry = AUTHORITY_FIELDS[field];
 
-    if (valuesEqual(manifestVal, dbVal)) continue;
+    switch (decision.action) {
+      case "strip-db":
+      case "strip-hybrid-dbset": {
+        const dbField = manifestFieldToDbField(field);
+        const dbVal = existing[dbField];
+        if (!valuesEqual(manifestVal, dbVal)) {
+          warnings.push({
+            gate: "authority",
+            detail: `${field} is ${entry?.category ?? "?"}-canonical; manifest value ${JSON.stringify(manifestVal)} differs from DB value ${JSON.stringify(dbVal)} — DB value preserved (slug=${manifest.slug}). Manifest value will be stripped from the backfill payload.`,
+          });
+        }
+        break;
+      }
+      case "violation-manifest":
+        manifestDrifts.push({
+          field,
+          manifestValue: decision.manifestValue,
+          dbValue: decision.dbValue,
+          reason: entry?.reason ?? "(no reason registered)",
+        });
+        break;
+      default:
+        // keep / keep-hybrid-dbnull / unknown: no warning needed here
+        break;
+    }
+  }
 
-    warnings.push({
-      gate: "authority",
-      detail: `${field} is DB-canonical; manifest value ${JSON.stringify(manifestVal)} differs from DB value ${JSON.stringify(dbVal)} — DB value preserved (slug=${manifest.slug}). Phase 4 will enforce preservation at write time.`,
-    });
+  if (manifestDrifts.length > 0) {
+    throw new AuthorityViolationError(manifestDrifts);
   }
 
   return warnings;

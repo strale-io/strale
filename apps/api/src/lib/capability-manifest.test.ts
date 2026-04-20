@@ -100,7 +100,10 @@ describe("normalizeManifestToRow (Cluster 2 Phase 3 C2)", () => {
 
   // ── Partial mode (backfill path) ─────────────────────────────────────────
 
-  it("partial mode: omits fields that are undefined (backfill doesn't clobber DB-canonical defaults)", () => {
+  it("partial mode: omits fields that are undefined (backfill doesn't clobber with nulls)", () => {
+    // Phase 4a update: price_cents is now db-canonical and gets stripped
+    // regardless of whether the manifest declared it. Testing here that
+    // undefined fields ARE stripped and manifest-canonical fields survive.
     const m = fullManifest();
     delete m.maintenance_class;
     delete m.is_free_tier;
@@ -109,9 +112,10 @@ describe("normalizeManifestToRow (Cluster 2 Phase 3 C2)", () => {
     expect(Object.prototype.hasOwnProperty.call(row, "maintenanceClass")).toBe(false);
     expect(Object.prototype.hasOwnProperty.call(row, "isFreeTier")).toBe(false);
     expect(Object.prototype.hasOwnProperty.call(row, "transparencyTag")).toBe(false);
-    // Still has what was declared
+    // slug is manifest-canonical → still present
     expect(row.slug).toBe("test-cap");
-    expect(row.priceCents).toBe(5);
+    // Phase 4a: price_cents is db-canonical → stripped in partial mode
+    expect(Object.prototype.hasOwnProperty.call(row, "priceCents")).toBe(false);
   });
 
   it("partial mode: does NOT stamp lifecycleState/visible/isActive", () => {
@@ -168,5 +172,92 @@ describe("normalizeManifestToRow (Cluster 2 Phase 3 C2)", () => {
       fullManifest({ processes_personal_data: true, personal_data_categories: ["name", "email"] }),
     );
     expect(row.personalDataCategories).toEqual(["name", "email"]);
+  });
+});
+
+// ─── Phase 4a: FIELD_CATEGORIES enforcement ─────────────────────────────────
+
+describe("Phase 4a authority enforcement in partial mode", () => {
+  it("partial mode: ignores FIELD_CATEGORIES when not partial (create mode passes everything)", () => {
+    // Create mode writes everything including db-canonical fields as seeds
+    const row = normalizeManifestToRow(fullManifest());
+    expect(row.priceCents).toBe(5);
+    expect(row.isFreeTier).toBe(false);
+    expect(row.transparencyTag).toBe("algorithmic");
+  });
+
+  it("partial mode: db-canonical price_cents is STRIPPED (Gate 2 footgun regression)", () => {
+    // This is the regression gate for Phase 3 Gate 2: manifest price_cents
+    // must not overwrite an operator-tuned DB value.
+    const m = fullManifest({ price_cents: 10 });
+    const existingRow = { priceCents: 5, name: "Test Capability" };
+    const row = normalizeManifestToRow(m, { partial: true, existingRow });
+    expect(Object.prototype.hasOwnProperty.call(row, "priceCents")).toBe(false);
+  });
+
+  it("partial mode: manifest-canonical slug/name passes through when DB matches", () => {
+    const m = fullManifest();
+    const existingRow = { slug: "test-cap", name: "Test Capability" };
+    const row = normalizeManifestToRow(m, { partial: true, existingRow });
+    expect(row.slug).toBe("test-cap");
+    expect(row.name).toBe("Test Capability");
+  });
+
+  it("partial mode: manifest-canonical name drift THROWS AuthorityViolationError", () => {
+    const m = fullManifest({ name: "Manifest Name" });
+    const existingRow = { slug: "test-cap", name: "DB Drifted Name" };
+    expect(() => normalizeManifestToRow(m, { partial: true, existingRow }))
+      .toThrow(/Authority violation/);
+    expect(() => normalizeManifestToRow(m, { partial: true, existingRow }))
+      .toThrow(/\[name\]/);
+  });
+
+  it("partial mode: hybrid freshness_category with DB null → kept (fills gap)", () => {
+    const m = fullManifest({ freshness_category: "live-fetch" });
+    const existingRow = { slug: "test-cap", freshnessCategory: null };
+    const row = normalizeManifestToRow(m, { partial: true, existingRow });
+    expect(row.freshnessCategory).toBe("live-fetch");
+  });
+
+  it("partial mode: hybrid freshness_category with DB set → stripped (preserve operator)", () => {
+    const m = fullManifest({ freshness_category: "live-fetch" });
+    const existingRow = { slug: "test-cap", freshnessCategory: "reference-data" };
+    const row = normalizeManifestToRow(m, { partial: true, existingRow });
+    expect(Object.prototype.hasOwnProperty.call(row, "freshnessCategory")).toBe(false);
+  });
+
+  it("partial mode: hybrid geography with DB null → kept", () => {
+    const m = fullManifest({ geography: "nordic" });
+    const existingRow = { slug: "test-cap", geography: null };
+    const row = normalizeManifestToRow(m, { partial: true, existingRow });
+    expect(row.geography).toBe("nordic");
+  });
+
+  it("partial mode: hybrid geography with DB set → stripped", () => {
+    const m = fullManifest({ geography: "nordic" });
+    const existingRow = { slug: "test-cap", geography: "global" };
+    const row = normalizeManifestToRow(m, { partial: true, existingRow });
+    expect(Object.prototype.hasOwnProperty.call(row, "geography")).toBe(false);
+  });
+
+  it("partial mode: --force-override-authority keeps db fields (operator reset-to-manifest)", () => {
+    const m = fullManifest({ price_cents: 10 });
+    const existingRow = { priceCents: 5, name: "Test Capability" };
+    const row = normalizeManifestToRow(m, {
+      partial: true,
+      existingRow,
+      bypassAuthority: true,
+    });
+    expect(row.priceCents).toBe(10);
+  });
+
+  it("partial mode: --force-override-authority does NOT bypass manifest-canonical drift", () => {
+    const m = fullManifest({ name: "Manifest Name" });
+    const existingRow = { slug: "test-cap", name: "DB Drifted Name" };
+    expect(() => normalizeManifestToRow(m, {
+      partial: true,
+      existingRow,
+      bypassAuthority: true,
+    })).toThrow(/Authority violation/);
   });
 });

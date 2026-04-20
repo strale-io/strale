@@ -120,6 +120,58 @@ export function parseSkipGates(raw: string | undefined): Array<{ gate: string; r
 }
 
 /**
+ * Cluster 2 Phase 4a: --force-override-authority interactive guard.
+ *
+ * Reads exactly `OVERRIDE AUTHORITY` from stdin before letting the
+ * backfill proceed. The flag alone is not enough — this prevents
+ * reflexive / tab-completed overrides. In batch mode or when stdin is
+ * not a TTY (CI runs), the override is refused unconditionally: if you
+ * want to bypass authority in CI, you have to build a different flow.
+ */
+const AUTHORITY_CONFIRM_PHRASE = "OVERRIDE AUTHORITY";
+
+async function confirmAuthorityOverride(isBatch: boolean): Promise<boolean> {
+  if (isBatch) {
+    console.error("\n--force-override-authority is not allowed in --batch mode. Run single-manifest to override.");
+    return false;
+  }
+  if (!process.stdin.isTTY) {
+    console.error("\n--force-override-authority requires interactive stdin. Refusing in non-TTY context.");
+    return false;
+  }
+
+  console.warn(
+    "\n" +
+    "═══════════════════════════════════════════════════════════════════\n" +
+    "⚠  --force-override-authority\n" +
+    "═══════════════════════════════════════════════════════════════════\n" +
+    "You are about to OVERWRITE DB-canonical and hybrid fields with\n" +
+    "manifest values. Operator tunings (e.g., admin-repriced price_cents,\n" +
+    "admin-set freshness_category) will be reset.\n" +
+    "\n" +
+    "Use this only when intentionally resetting a capability to manifest\n" +
+    "defaults. This does NOT bypass manifest-canonical drift errors — if\n" +
+    "DB drifted on a manifest-canonical field, fix the manifest instead.\n" +
+    "═══════════════════════════════════════════════════════════════════\n",
+  );
+  process.stdout.write(`Type exactly "${AUTHORITY_CONFIRM_PHRASE}" to continue: `);
+
+  const answer = await new Promise<string>((resolve) => {
+    let buf = "";
+    const onData = (chunk: Buffer) => {
+      buf += chunk.toString("utf-8");
+      if (buf.includes("\n")) {
+        process.stdin.removeListener("data", onData);
+        resolve(buf.split("\n")[0].trim());
+      }
+    };
+    process.stdin.on("data", onData);
+  });
+
+  return answer === AUTHORITY_CONFIRM_PHRASE;
+}
+
+/**
  * Run the validateCapability orchestrator from the CLI context. Returns the
  * aggregated error-message array (preserves the pre-Phase-2 string[] shape
  * so existing caller code paths can print and process the same way).
@@ -840,14 +892,15 @@ function buildTestSuites(manifest: Manifest) {
 async function backfill(
   manifest: Manifest,
   dryRun: boolean,
-  flags: { strict: boolean; fix: boolean; discover: boolean; force: boolean },
+  flags: { strict: boolean; fix: boolean; discover: boolean; force: boolean; bypassAuthority?: boolean },
   manifestPath: string,
 ): Promise<void> {
   const db = getDb();
 
-  // Verify the capability exists
+  // Verify the capability exists AND load the full row for Phase 4a
+  // authority decisions (hybrid: fill-null-only; manifest-drift: throw).
   const [existing] = await db
-    .select({ slug: capabilities.slug, id: capabilities.id })
+    .select()
     .from(capabilities)
     .where(eq(capabilities.slug, manifest.slug))
     .limit(1);
@@ -994,8 +1047,18 @@ async function backfill(
   const hasReliabilityUpdate = fields.length > 0;
   const hasPiiUpdate = manifest.processes_personal_data !== undefined;
   if (hasReliabilityUpdate || hasPiiUpdate) {
+    // Phase 4a: pass existing DB row for authority decisions (hybrid
+    // fill-null, manifest-canonical drift-throw) and the bypass flag for
+    // --force-override-authority. The normalizer strips db + hybrid-set
+    // fields; throws AuthorityViolationError on manifest-canonical drift.
     await persistCapability(
-      { capability: normalizeManifestToRow(manifest, { partial: true }) },
+      {
+        capability: normalizeManifestToRow(manifest, {
+          partial: true,
+          existingRow: existing as unknown as Record<string, unknown>,
+          bypassAuthority: flags.bypassAuthority === true,
+        }),
+      },
       { mode: "update" },
     );
     if (hasReliabilityUpdate) {
@@ -1248,7 +1311,22 @@ async function main() {
     process.exit(1);
   }
 
-  const flags = { strict, fix, discover, force, skipGates };
+  // Cluster 2 Phase 4a (DEC-20260421-D, DEC-20260421-E):
+  // --force-override-authority lets operator overwrite db/hybrid fields
+  // from manifest (the "reset to manifest defaults" workflow). Requires
+  // interactive stdin confirmation — the flag alone is not enough. Does
+  // NOT bypass manifest-canonical drift errors (those indicate a real
+  // bug, not an override case).
+  const bypassAuthority = args.includes("--force-override-authority");
+  if (bypassAuthority) {
+    const confirmed = await confirmAuthorityOverride(isBatch);
+    if (!confirmed) {
+      console.error("--force-override-authority aborted by operator.");
+      process.exit(1);
+    }
+  }
+
+  const flags = { strict, fix, discover, force, skipGates, bypassAuthority };
 
   // F-B-005: refuse --discover under --dry-run. Applies to single- and
   // batch-mode, onboard- and backfill-paths uniformly because both call
