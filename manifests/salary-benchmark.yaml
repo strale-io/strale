@@ -45,12 +45,29 @@ data_source: Headless browser (salary comparison aggregators)
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch
+maintenance_class: scraping-fragile-target
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: global
 test_fixtures:
   known_answer:
     input:
       city: San Francisco
       job_title: Software Engineer
-    expected_fields: []
+    expected_fields:
+      - field: p25
+        operator: not_null
+        reliability: guaranteed
+      - field: p75
+        operator: not_null
+        reliability: guaranteed
+      - field: median_salary
+        operator: not_null
+        reliability: guaranteed
+      - field: currency
+        operator: type
+        value: string
+        reliability: guaranteed
   health_check_input:
     city: San Francisco
     job_title: Software Engineer

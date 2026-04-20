@@ -47,6 +47,7 @@ maintenance_class: pure-computation
 processes_personal_data: true
 personal_data_categories:
   - financial
+geography: global
 test_fixtures:
   known_answer:
     input:

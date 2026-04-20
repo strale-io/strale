@@ -50,6 +50,7 @@ maintenance_class: free-stable-api
 processes_personal_data: true
 personal_data_categories:
   - email
+geography: global
 test_fixtures:
   known_answer:
     input:

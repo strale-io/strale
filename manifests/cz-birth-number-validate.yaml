@@ -44,6 +44,11 @@ output_schema:
       type: boolean
     reason:
       type: string
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - government_id
+  - date_of_birth
 test_fixtures:
   known_answer:
     input:

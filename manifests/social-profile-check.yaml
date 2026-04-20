@@ -77,6 +77,13 @@ data_source: HTTP fetch (public social media profile pages)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
+maintenance_class: free-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - professional
+geography: global
 test_fixtures:
   known_answer:
     input:

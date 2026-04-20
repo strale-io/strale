@@ -32,6 +32,9 @@ data_source: FRED (fred.stlouisfed.org), mirroring ECB Statistical Data Warehous
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: eu
 test_fixtures:
   known_answer:
     input: {}

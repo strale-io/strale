@@ -72,6 +72,14 @@ data_source: Claude API (email draft generation)
 data_source_type: api
 transparency_tag: ai_generated
 freshness_category: live-fetch
+maintenance_class: commercial-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - email
+  - name
+  - professional
+geography: global
 test_fixtures:
   known_answer:
     input:

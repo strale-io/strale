@@ -58,11 +58,29 @@ data_source: Claude API (document analysis and data extraction)
 data_source_type: api
 transparency_tag: ai_generated
 freshness_category: live-fetch
+maintenance_class: commercial-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - address
+  - financial
+geography: global
 test_fixtures:
   known_answer:
     input:
       url: https://httpbin.org/image/jpeg
-    expected_fields: []
+    expected_fields:
+      # Invoice-extract tested with a non-invoice image (smoke fixture).
+      # Assert structural type only — AI extraction may return nulls on non-invoice input.
+      - field: date
+        operator: type
+        value: string
+        reliability: common
+      - field: vendor
+        operator: type
+        value: string
+        reliability: common
   health_check_input:
     url: https://httpbin.org/image/jpeg
 output_field_reliability:

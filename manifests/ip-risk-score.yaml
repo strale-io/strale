@@ -37,6 +37,12 @@ data_source: ip-api.com + Strale risk engine (ASN lists, datacenter detection)
 data_source_type: computed
 transparency_tag: mixed
 freshness_category: live-fetch
+maintenance_class: free-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - behavioral
+geography: global
 test_fixtures:
   known_answer:
     input:

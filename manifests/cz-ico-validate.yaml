@@ -30,6 +30,8 @@ output_schema:
       type: string
     reason:
       type: string
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
 test_fixtures:
   known_answer:
     input:

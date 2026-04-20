@@ -60,6 +60,7 @@ personal_data_categories:
   - name
   - address
   - professional
+geography: eu
 test_fixtures:
   known_answer:
     input:

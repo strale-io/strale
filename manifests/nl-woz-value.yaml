@@ -48,6 +48,11 @@ data_source_type: api
 transparency_tag: algorithmic
 freshness_category: reference-data
 maintenance_class: free-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - address
+geography: nl
 test_fixtures:
   known_answer:
     input:

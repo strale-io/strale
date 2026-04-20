@@ -31,6 +31,12 @@ data_source: Strale email reputation engine (MX lookup + disposable domain list 
 data_source_type: computed
 transparency_tag: mixed
 freshness_category: computed
+maintenance_class: free-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - email
+geography: global
 test_fixtures:
   known_answer:
     input:

@@ -51,6 +51,12 @@ output_schema:
       type: string
     joint_liability_risk:
       type: string
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - financial
+  - professional
 test_fixtures:
   known_answer:
     input:

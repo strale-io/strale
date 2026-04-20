@@ -59,6 +59,14 @@ data_source: Claude API (financial document analysis)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
+maintenance_class: scraping-fragile-target
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - financial
+  - professional
+geography: global
 test_fixtures:
   known_answer:
     input:

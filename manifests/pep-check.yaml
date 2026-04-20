@@ -41,6 +41,7 @@ processes_personal_data: true
 personal_data_categories:
   - name
   - date_of_birth
+geography: global
 test_fixtures:
   known_answer:
     input:

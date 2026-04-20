@@ -52,6 +52,10 @@ data_source: Algorithmic (rule-based classification against EU AI Act Annex III,
 data_source_type: computed
 transparency_tag: algorithmic
 freshness_category: computed
+maintenance_class: pure-computation
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: eu
 test_fixtures:
   known_answer:
     input:

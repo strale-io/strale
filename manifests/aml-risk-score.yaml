@@ -50,6 +50,13 @@ data_source: Strale AML scoring engine (FATF grey/black lists, EU high-risk list
 data_source_type: computed
 transparency_tag: algorithmic
 freshness_category: reference-data
+maintenance_class: pure-computation
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - sensitive_special
+geography: global
 test_fixtures:
   known_answer:
     input:

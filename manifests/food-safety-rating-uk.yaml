@@ -153,6 +153,10 @@ data_source: Food Standards Agency (FSA) Ratings API (UK Government)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: reference-data
+maintenance_class: free-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: uk
 test_fixtures:
   known_answer:
     input:

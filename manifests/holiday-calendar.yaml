@@ -30,8 +30,12 @@ output_schema:
       type: array
 data_source: Nager.Date API (date.nager.at)
 data_source_type: api
-transparency_tag: external_api
+transparency_tag: algorithmic
 freshness_category: reference-data
+maintenance_class: free-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: global
 test_fixtures:
   known_answer:
     input:

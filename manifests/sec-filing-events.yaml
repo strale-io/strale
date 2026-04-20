@@ -40,6 +40,9 @@ output_schema:
       type: array
     events_returned:
       type: number
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: us
 test_fixtures:
   known_answer:
     input:

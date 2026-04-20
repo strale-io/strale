@@ -73,6 +73,7 @@ processes_personal_data: true
 personal_data_categories:
   - name
   - financial
+geography: global
 test_fixtures:
   known_answer:
     input:

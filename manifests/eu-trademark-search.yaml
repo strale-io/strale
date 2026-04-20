@@ -34,6 +34,10 @@ data_source: EUIPO (European Union Intellectual Property Office)
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch
+maintenance_class: scraping-stable-target
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: eu
 test_fixtures:
   known_answer:
     input:

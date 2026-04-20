@@ -35,8 +35,12 @@ output_schema:
       type: string
 data_source: WHOIS protocol (direct queries to TLD registrars)
 data_source_type: api
-transparency_tag: external_api
+transparency_tag: algorithmic
 freshness_category: live-fetch
+maintenance_class: free-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: global
 test_fixtures:
   known_answer:
     input:
