@@ -110,7 +110,10 @@ export function walkPath(root: unknown, segments: PathSegment[], fullRef: string
 export function resolveInputRef(
   sourceExpr: string,
   inputs: Record<string, unknown>,
-  completedSteps: Array<Record<string, unknown>>,
+  // F-B-016: null entries mean "this step index hasn't completed yet".
+  // Preallocation to steps.length lets $steps[N] resolve by authoring
+  // order (= stepOrder) regardless of parallel-group completion order.
+  completedSteps: Array<Record<string, unknown> | null>,
   stepResults: Record<string, unknown>,
 ): unknown {
   // $input.<path>
@@ -134,15 +137,22 @@ export function resolveInputRef(
     const idx = parseInt(stepMatch[1], 10);
     const pathStr = stepMatch[2];
     if (idx < 0 || idx >= completedSteps.length) {
-      throw new Error(`Input mapping error: ${sourceExpr} — step ${idx} has not completed yet (${completedSteps.length} steps completed so far)`);
+      throw new Error(`Input mapping error: ${sourceExpr} — step ${idx} is out of range (solution has ${completedSteps.length} steps)`);
     }
+    // F-B-016: null means the step with that sorted index hasn't completed
+    // yet — treated the same as "walkPath got null" so the $input fallback
+    // below still runs. Gate 4a catches literal forward references at
+    // onboarding; this is the runtime-defensive branch.
+    const stepOutput = completedSteps[idx];
     const segments = parsePath(pathStr);
-    try {
-      const value = walkPath(completedSteps[idx], segments, sourceExpr);
-      // If step output resolved to a non-null value, use it
-      if (value !== null && value !== undefined) return value;
-    } catch {
-      // walkPath threw — step output was null/undefined at some segment
+    if (stepOutput !== null) {
+      try {
+        const value = walkPath(stepOutput, segments, sourceExpr);
+        // If step output resolved to a non-null value, use it
+        if (value !== null && value !== undefined) return value;
+      } catch {
+        // walkPath threw — step output was null/undefined at some segment
+      }
     }
     // Fallback: if the field name matches an $input field, use that instead.
     // This handles the cascade where step 0 returns empty output but the
@@ -211,8 +221,15 @@ export async function executeSolution(
   const startMs = Date.now();
   const stepResults: Record<string, unknown> = {};
   const stepErrors: string[] = [];
-  // Track outputs in execution order for $steps[N] references
-  const completedSteps: Array<Record<string, unknown>> = [];
+  // F-B-016: Preallocate by sorted-steps length and assign by each step's
+  // index in the sorted array (stepOrder-sorted, see `orderBy` above).
+  // Previously this was `.push(output)` inside a Promise.all map callback,
+  // so parallel-group completion order — not authoring order — determined
+  // which output $steps[N] resolved to. Preallocation + indexed assignment
+  // makes $steps[N] deterministic: always the N-th step in stepOrder.
+  const completedSteps: Array<Record<string, unknown> | null> = new Array(steps.length).fill(null);
+  const stepIndex = new Map<typeof steps[number], number>();
+  for (let i = 0; i < steps.length; i++) stepIndex.set(steps[i], i);
   const stepTimings: StepTiming[] = [];
 
   // Group steps for execution ordering:
@@ -267,7 +284,8 @@ export async function executeSolution(
         const allNull = Object.values(stepInput).every((v) => v === null || v === undefined);
         if (allNull && Object.keys(stepInput).length > 0) {
           stepResults[step.capabilitySlug] = { skipped: true, reason: "All required inputs were not provided" };
-          completedSteps.push({});
+          // F-B-016: index by step position, not append order.
+          completedSteps[stepIndex.get(step)!] = {};
           stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: 0 });
           return;
         }
@@ -297,12 +315,18 @@ export async function executeSolution(
           result.output as Record<string, unknown>,
         );
         stepResults[step.capabilitySlug] = output;
-        completedSteps.push(output);
+        // F-B-016: index by step position, not completion order.
+        completedSteps[stepIndex.get(step)!] = output;
         stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: Date.now() - stepStartMs });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         stepErrors.push(`${step.capabilitySlug}: ${msg.slice(0, 200)}`);
         stepResults[step.capabilitySlug] = { error: sanitizeFailureReason(msg) };
+        // F-B-016: on error, still mark the slot with an error marker so
+        // downstream $steps[N] references see "completed with error" (the
+        // walkPath fallback then falls through to $input). Previously the
+        // array wasn't advanced on error, shifting later step indices.
+        completedSteps[stepIndex.get(step)!] = { error: sanitizeFailureReason(msg) };
         stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: Date.now() - stepStartMs });
       }
     });
@@ -310,7 +334,7 @@ export async function executeSolution(
     await Promise.all(executions);
 
     // After first group completes, extract entity context for downstream propagation
-    if (entityContext && Object.keys(entityContext).length === 0 && completedSteps.length > 0) {
+    if (entityContext && Object.keys(entityContext).length === 0 && completedSteps[0] != null) {
       const step0 = completedSteps[0];
       if (step0 && typeof step0 === "object") {
         const regNum = (step0 as Record<string, unknown>).registration_number;

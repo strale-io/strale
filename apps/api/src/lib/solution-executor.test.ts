@@ -71,16 +71,24 @@ describe("resolveInputRef", () => {
   });
 
   it("throws when $steps[N] references an out-of-range step", () => {
+    // F-B-016: preallocation means this error is now phrased as "out of
+    // range" — completedSteps.length equals steps.length from the start,
+    // so the idx-bounds check only fires for indices beyond the solution's
+    // authored step count, not for "authored but not yet completed" (which
+    // falls through to the $input fallback via the null-slot branch).
     expect(() =>
       resolveInputRef("$steps[5].field", {}, [], {}),
-    ).toThrow("step 5 has not completed yet");
+    ).toThrow("step 5 is out of range");
   });
 
-  it("throws when $steps[N] references a step that hasn't run yet", () => {
-    const completedSteps = [{ a: 1 }];
-    expect(() =>
-      resolveInputRef("$steps[1].field", {}, completedSteps, {}),
-    ).toThrow("step 1 has not completed yet (1 steps completed so far)");
+  it("treats not-yet-completed slots (null) as 'fall through to $input'", () => {
+    // Previously this case threw. Post-F-B-016, a null slot at an in-range
+    // index means "that authored step hasn't completed yet" — resolution
+    // falls through to the $input fallback path. Out-of-range still throws.
+    const completedSteps = [{ a: 1 }, null];
+    expect(
+      resolveInputRef("$steps[1].field", { field: "fallback" }, completedSteps, {}),
+    ).toBe("fallback");
   });
 
   // ── $all_results pattern ────────────────────────────────────────────────
@@ -200,5 +208,57 @@ describe("resolveInputRef", () => {
       risk_score: 94,
     }];
     expect(resolveInputRef("$steps[0].license.spdx", {}, steps, {})).toBe("MIT");
+  });
+
+  // ── F-B-016: deterministic $steps[N] resolution ──────────────────────────
+
+  describe("F-B-016: $steps[N] resolution with preallocated completedSteps", () => {
+    it("resolves $steps[N] by sorted position when earlier slots are null (not-yet-completed)", () => {
+      // Simulates: step 0 (sequential) has finished; parallel group [1,2] hasn't started.
+      // completedSteps = [output_0, null, null]. $steps[0] must still resolve to output_0.
+      const completedSteps = [
+        { company_name: "Spotify AB", vat_number: "SE556703748501" },
+        null,
+        null,
+      ];
+      expect(
+        resolveInputRef("$steps[0].company_name", {}, completedSteps, {}),
+      ).toBe("Spotify AB");
+    });
+
+    it("falls back to $input when referenced $steps[N] slot is null (not completed yet)", () => {
+      // A defensive runtime path: if an authoring mistake slipped past Gate 4a,
+      // resolution against a null slot falls through to $input instead of
+      // silently grabbing the wrong step's output.
+      const completedSteps = [{ company_name: "Spotify" }, null];
+      const result = resolveInputRef(
+        "$steps[1].company_name",
+        { company_name: "Fallback Co" },
+        completedSteps,
+        {},
+      );
+      expect(result).toBe("Fallback Co");
+    });
+
+    it("throws when the index is actually out of range (past steps.length)", () => {
+      const completedSteps = [{ a: 1 }, { b: 2 }];
+      expect(() =>
+        resolveInputRef("$steps[5].x", {}, completedSteps, {}),
+      ).toThrow(/step 5 is out of range/);
+    });
+
+    it("$steps[N] is insensitive to parallel-group completion order", () => {
+      // Simulates the fix: three parallel steps [A, B, C] at sorted
+      // indices [0, 1, 2]. Regardless of which finished first, each
+      // slot holds the output of the step at its authored position.
+      const completedSteps = [
+        { from: "A" }, // stepOrder-0 slot, possibly finished 3rd
+        { from: "B" }, // stepOrder-1 slot, possibly finished 1st
+        { from: "C" }, // stepOrder-2 slot, possibly finished 2nd
+      ];
+      expect(resolveInputRef("$steps[0].from", {}, completedSteps, {})).toBe("A");
+      expect(resolveInputRef("$steps[1].from", {}, completedSteps, {})).toBe("B");
+      expect(resolveInputRef("$steps[2].from", {}, completedSteps, {})).toBe("C");
+    });
   });
 });
