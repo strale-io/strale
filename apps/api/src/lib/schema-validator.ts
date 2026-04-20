@@ -47,6 +47,30 @@ const REQUIRED_COLUMNS: Array<{
     column: "compliance_hash_state",
     migration: "0047_compliance_hash_state",
   },
+  // SA.2a (DEC-20260420-A): soft-delete infrastructure. SA.2a.2 handlers
+  // read/write these columns; missing columns mean the DELETE endpoint
+  // returns 500 and retention-redaction paths silently no-op. Fail fast
+  // at boot instead.
+  {
+    table: "transactions",
+    column: "deleted_at",
+    migration: "0048_soft_delete_transactions",
+  },
+  {
+    table: "transactions",
+    column: "redacted_at",
+    migration: "0048_soft_delete_transactions",
+  },
+  {
+    table: "transactions",
+    column: "deletion_reason",
+    migration: "0048_soft_delete_transactions",
+  },
+  {
+    table: "transaction_quality",
+    column: "deleted_at",
+    migration: "0048_soft_delete_transactions",
+  },
   // Add future migration columns here as they are added
   // { table: 'table_name', column: 'column_name', migration: '0036_...' },
 ];
