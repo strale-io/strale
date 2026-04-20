@@ -38,4 +38,7 @@ jobs:
       # F-0-014 guard: no new `console.*` calls. Script is cwd-independent
       # (resolves paths from import.meta.url), so the workspace wrapper works.
       - run: npm --workspace=apps/api run lint:no-new-console
+      # SCF-3 guard: no API code access to transactions.integrity_hash_status
+      # (owned by an untracked external workflow — see schema.ts comment).
+      - run: node apps/api/scripts/check-no-external-column-access.mjs
       - run: npm test
