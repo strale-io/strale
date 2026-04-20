@@ -358,6 +358,13 @@
       "when": 1777284000000,
       "tag": "0049_capability_pii_classification",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1777370400000,
+      "tag": "0050_pii_not_null",
+      "breakpoints": true
     }
   ]
 }

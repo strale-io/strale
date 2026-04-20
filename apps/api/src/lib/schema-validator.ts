@@ -73,8 +73,10 @@ const REQUIRED_COLUMNS: Array<{
   },
   // SA.2b (F-A-003, F-A-009): per-capability PII classification.
   // buildFullAudit reads these to emit accurate GDPR Art. 30 claims.
-  // Missing columns mean audit payloads fall back to the fragile
-  // detectPersonalData heuristic on every call.
+  // Post SA.2b.d (migration 0050), processes_personal_data is NOT NULL
+  // and the heuristic fallback has been deleted — runtime reads the
+  // column directly. A missing column would mean buildFullAudit errors
+  // out, not a silent fallback.
   {
     table: "capabilities",
     column: "processes_personal_data",

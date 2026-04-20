@@ -108,9 +108,11 @@ export const capabilities = pgTable("capabilities", {
   // 'global' | 'eu' | 'nordic' | 'us' | 'uk' | etc.
   dataSource: text("data_source"),
   dataClassification: text("data_classification"),
-  // SA.2b (F-A-003, F-A-009, migration 0049): per-capability PII
-  // classification. Nullable during backfill; target is NOT NULL post-backfill.
-  processesPersonalData: boolean("processes_personal_data"),
+  // SA.2b (F-A-003, F-A-009, migrations 0049 + 0050): per-capability PII
+  // classification. NOT NULL after SA.2b.d backfill (all 307 rows have
+  // a non-NULL value). Heuristic fallback in audit-helpers.ts was deleted
+  // in the paired commit; runtime reads this column directly.
+  processesPersonalData: boolean("processes_personal_data").notNull().default(false),
   personalDataCategories: text("personal_data_categories").array().default([]),
   freshnessCategory: text("freshness_category"),
   // 'live-fetch' | 'reference-data' | 'computed'
