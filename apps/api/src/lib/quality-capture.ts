@@ -1,5 +1,5 @@
+import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { transactionQuality } from "../db/schema.js";
 import { logError } from "./log.js";
 
 /**
@@ -36,17 +36,23 @@ async function captureQuality(data: QualityData): Promise<void> {
   // Cap at timeout threshold to prevent outliers from skewing quality aggregation (DEC-20260304-C)
   const cappedResponseTimeMs = Math.min(data.responseTimeMs, 30_000);
 
-  await db.insert(transactionQuality).values({
-    transactionId: data.transactionId,
-    responseTimeMs: cappedResponseTimeMs,
-    upstreamLatencyMs: data.upstreamLatencyMs ?? null,
-    schemaConformant,
-    fieldsReturned,
-    fieldsExpected,
-    fieldCompletenessPct: fieldCompletenessPct.toFixed(2),
-    errorType,
-    qualityFlags: buildFlags(data),
-  });
+  // Atomic insert: skip if the parent transaction has been soft-deleted
+  // since the capture was scheduled. Closes the read-then-insert race
+  // against user DELETE (SA.2a.3a Sub-report D).
+  await db.execute(sql`
+    INSERT INTO transaction_quality (
+      transaction_id, response_time_ms, upstream_latency_ms,
+      schema_conformant, fields_returned, fields_expected,
+      field_completeness_pct, error_type, quality_flags
+    )
+    SELECT ${data.transactionId}::uuid, ${cappedResponseTimeMs}, ${data.upstreamLatencyMs ?? null},
+           ${schemaConformant}, ${fieldsReturned}, ${fieldsExpected},
+           ${fieldCompletenessPct.toFixed(2)}, ${errorType}, ${JSON.stringify(buildFlags(data))}::jsonb
+    WHERE EXISTS (
+      SELECT 1 FROM transactions
+      WHERE id = ${data.transactionId}::uuid AND deleted_at IS NULL
+    )
+  `);
 }
 
 /**
