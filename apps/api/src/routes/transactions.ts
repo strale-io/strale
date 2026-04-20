@@ -6,6 +6,7 @@ import { authMiddleware, optionalAuthMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import { computeIntegrityHash } from "../lib/integrity-hash.js";
+import { generateAuditToken } from "../lib/audit-token.js";
 import { sqsLabel, gradeFromScore } from "../lib/trust-labels.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import type { AppEnv } from "../types.js";
@@ -359,6 +360,72 @@ transactionsRoute.delete(
         redacted_at: now.toISOString(),
         deletion_reason: "user_request",
       });
+    });
+  },
+);
+
+// POST /v1/transactions/:id/audit-token — Re-issue a shareable audit URL.
+// F-A-006: audit tokens expire (default 90d). Owners refresh via this
+// endpoint. Auth required, ownership enforced, deleted rows return 404
+// (SA.2a.2a A-filter pattern). Free-tier rows (userId NULL) fall through
+// ownership check naturally and return 404.
+transactionsRoute.post(
+  "/:id/audit-token",
+  authMiddleware,
+  rateLimitByKey(5, 1000),
+  async (c) => {
+    const id = c.req.param("id") as string;
+    const user = c.get("user");
+    const db = getDb();
+
+    const body = (await c.req.json().catch(() => ({}))) as {
+      expires_in_days?: unknown;
+    };
+
+    // Validate expires_in_days: integer, 1-365, default 90.
+    let expiresInDays = 90;
+    if (body.expires_in_days !== undefined) {
+      if (
+        typeof body.expires_in_days !== "number" ||
+        !Number.isInteger(body.expires_in_days) ||
+        body.expires_in_days < 1 ||
+        body.expires_in_days > 365
+      ) {
+        return c.json(
+          apiError(
+            "invalid_request",
+            "expires_in_days must be an integer between 1 and 365.",
+          ),
+          400,
+        );
+      }
+      expiresInDays = body.expires_in_days;
+    }
+
+    const [row] = await db
+      .select({ id: transactions.id })
+      .from(transactions)
+      .where(and(
+        eq(transactions.id, id),
+        eq(transactions.userId, user.id),
+        isNull(transactions.deletedAt),
+      ))
+      .limit(1);
+
+    if (!row) {
+      // No-existence-leak: same 404 whether the row doesn't exist, belongs
+      // to someone else, or was soft-deleted.
+      return c.json(apiError("not_found", "Transaction not found."), 404);
+    }
+
+    const { token, expiresAt } = generateAuditToken(id, expiresInDays * 24 * 60 * 60);
+
+    return c.json({
+      transaction_id: id,
+      token,
+      expires_at: expiresAt,
+      expires_at_iso: new Date(expiresAt * 1000).toISOString(),
+      audit_url: `https://strale.dev/audit/${id}?token=${token}&expires_at=${expiresAt}`,
     });
   },
 );

@@ -516,6 +516,59 @@ export const openApiSpec = {
         },
       },
     },
+    "/v1/transactions/{id}/audit-token": {
+      post: {
+        tags: ["transactions"],
+        summary: "Re-issue audit token",
+        description:
+          "Issue a new HMAC-signed audit URL for a transaction you own. " +
+          "Replaces the previous token for the caller's convenience; previous tokens remain valid until their own expires_at (stateless). " +
+          "Default TTL 90 days (F-A-006). Caller must own the transaction (same 404 for unknown / cross-user / deleted).",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path" as const, required: true, schema: { type: "string" as const, format: "uuid" } }],
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object" as const,
+                properties: {
+                  expires_in_days: {
+                    type: "integer" as const,
+                    minimum: 1,
+                    maximum: 365,
+                    default: 90,
+                    description: "TTL for the new token in days. Integer 1-365. Default 90.",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Audit token re-issued.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object" as const,
+                  properties: {
+                    transaction_id: { type: "string" as const, format: "uuid" },
+                    token: { type: "string" as const, description: "32-char HMAC-SHA256 substring." },
+                    expires_at: { type: "integer" as const, description: "Unix seconds." },
+                    expires_at_iso: { type: "string" as const, format: "date-time" },
+                    audit_url: { type: "string" as const, description: "Full shareable URL with token + expires_at query params." },
+                  },
+                },
+              },
+            },
+          },
+          "400": errorResponse("invalid_request", "expires_in_days must be an integer between 1 and 365."),
+          "401": errorResponse("unauthorized", "Missing or invalid API key."),
+          "404": errorResponse("not_found", "Transaction not found."),
+        },
+      },
+    },
     "/v1/transactions/{id}": {
       get: {
         tags: ["transactions"],

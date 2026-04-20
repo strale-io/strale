@@ -9,6 +9,7 @@ import type {
   BalanceResponse,
   Transaction,
   TransactionDetail,
+  AuditTokenReissueResponse,
   ApiErrorResponse,
 } from "./types.js";
 import { createError, StraleError } from "./errors.js";
@@ -143,6 +144,30 @@ export class Strale {
   /** Get details for a specific transaction */
   async transaction(id: string): Promise<TransactionDetail> {
     return this.request<TransactionDetail>("GET", `/v1/transactions/${id}`);
+  }
+
+  /**
+   * Re-issue a shareable audit URL for a transaction you own.
+   *
+   * F-A-006: audit tokens expire (default 90 days). When `shareable_url`
+   * from the original POST /v1/do response is approaching expiry, call
+   * this to get a fresh URL. The previous URL remains valid until its
+   * own `expires_at` — re-issuing does not invalidate it.
+   *
+   * @param id - Transaction UUID (you must own the transaction)
+   * @param options.expiresInDays - Override TTL. Integer 1-365. Default 90.
+   */
+  async reissueAuditToken(
+    id: string,
+    options?: { expiresInDays?: number },
+  ): Promise<AuditTokenReissueResponse> {
+    const body =
+      options?.expiresInDays != null ? { expires_in_days: options.expiresInDays } : undefined;
+    return this.request<AuditTokenReissueResponse>(
+      "POST",
+      `/v1/transactions/${id}/audit-token`,
+      body,
+    );
   }
 
   // ─── Auto-poll for async responses ─────────────────────────────────────────

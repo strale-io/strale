@@ -114,6 +114,26 @@ export interface Transaction {
   completed_at: string | null;
 }
 
+/**
+ * Response from POST /v1/transactions/:id/audit-token.
+ *
+ * F-A-006: audit tokens expire (default 90 days). Re-issue via this
+ * endpoint when the old URL is expiring. Re-issuing does NOT invalidate
+ * the previous token — each is independently valid until its own
+ * `expires_at`. If you want the previous URL to stop working sooner,
+ * shorter initial TTLs or secret rotation are the mechanisms.
+ */
+export interface AuditTokenReissueResponse {
+  transaction_id: string;
+  token: string;
+  /** Unix seconds. */
+  expires_at: number;
+  /** ISO-8601 of expires_at for display convenience. */
+  expires_at_iso: string;
+  /** Fully-constructed shareable URL with token + expires_at embedded. */
+  audit_url: string;
+}
+
 export interface TransactionDetail {
   id: string;
   status: string;

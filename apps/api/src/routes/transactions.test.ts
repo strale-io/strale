@@ -119,3 +119,34 @@ describe("GET /v1/transactions/:id — F-A-005 redaction", () => {
     expect(typeof body.quality.sqs).toBe("number");
   });
 });
+
+describe("POST /v1/transactions/:id/audit-token — F-A-006 re-issue", () => {
+  // The re-issue endpoint requires authMiddleware. Testing the ownership /
+  // happy-path cases requires mocking the users table lookup with a valid
+  // API key row, which diverges from the shared getDb mock. Those cases
+  // are covered by deploy-time spot-checks F/G/H per F-A-006/007.b
+  // verification. What's unit-tested here: the pre-auth 401 path (no
+  // Authorization header → rejected before any handler logic runs).
+  it("returns 401 when Authorization header is absent", async () => {
+    const app = await loadApp();
+    const res = await app.request(
+      `/v1/transactions/${MOCK_FREE_TIER_ROW.id}/audit-token`,
+      { method: "POST" },
+    );
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error_code).toBe("unauthorized");
+  });
+
+  it("returns 401 for malformed Authorization (not 500, not 400)", async () => {
+    const app = await loadApp();
+    const res = await app.request(
+      `/v1/transactions/${MOCK_FREE_TIER_ROW.id}/audit-token`,
+      {
+        method: "POST",
+        headers: { Authorization: "NotBearer something" },
+      },
+    );
+    expect(res.status).toBe(401);
+  });
+});
