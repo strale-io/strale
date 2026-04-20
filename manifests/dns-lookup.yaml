@@ -68,6 +68,7 @@ data_source: DNS protocol (authoritative nameservers)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
+maintenance_class: free-stable-api
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: false
 personal_data_categories: []

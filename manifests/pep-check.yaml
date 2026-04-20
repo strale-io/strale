@@ -35,6 +35,7 @@ data_source: OpenSanctions API (opensanctions.org)
 data_source_type: api
 transparency_tag: mixed
 freshness_category: live-fetch
+maintenance_class: commercial-stable-api
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: true
 personal_data_categories:

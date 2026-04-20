@@ -42,6 +42,7 @@ data_source: Algorithmic validation (ISO 13616 IBAN standard + bank registry)
 data_source_type: computed
 transparency_tag: algorithmic
 freshness_category: computed
+maintenance_class: pure-computation
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: true
 personal_data_categories:
