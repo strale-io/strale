@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, gte, sql } from "drizzle-orm";
+import { eq, and, gte, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   wallets,
@@ -466,7 +466,7 @@ doRoute.post(
     const [existing] = await db
       .select()
       .from(transactions)
-      .where(and(eq(transactions.idempotencyKey, idempotencyKey), eq(transactions.userId, user.id)))
+      .where(and(eq(transactions.idempotencyKey, idempotencyKey), eq(transactions.userId, user.id), isNull(transactions.deletedAt)))
       .limit(1);
 
     if (existing) {

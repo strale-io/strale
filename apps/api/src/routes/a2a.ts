@@ -10,7 +10,7 @@
  */
 
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, transactions, users } from "../db/schema.js";
@@ -535,7 +535,7 @@ async function handleTasksGet(
     const [txn] = await db
       .select()
       .from(transactions)
-      .where(and(eq(transactions.id, taskId), eq(transactions.userId, user.id)))
+      .where(and(eq(transactions.id, taskId), eq(transactions.userId, user.id), isNull(transactions.deletedAt)))
       .limit(1);
 
     if (!txn) {

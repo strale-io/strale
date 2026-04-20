@@ -22,7 +22,7 @@
 // falls through to profile composition below.
 
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { transactions, capabilities } from "../db/schema.js";
@@ -190,7 +190,7 @@ auditRoute.get("/:transactionId", async (c) => {
       complianceHashState: transactions.complianceHashState,
     })
     .from(transactions)
-    .where(eq(transactions.id, transactionId))
+    .where(and(eq(transactions.id, transactionId), isNull(transactions.deletedAt)))
     .limit(1);
 
   if (!txn) {
