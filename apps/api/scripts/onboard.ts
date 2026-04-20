@@ -101,6 +101,14 @@ interface FixtureMismatch {
 
 // ─── Type mappings ───────────────────────────────────────────────────────────
 
+// YAML `data_source_type` → DB `capability_type`.
+//
+// The manifest-drift audit (2026-04-20) found the DB holds at least 4
+// distinct capability_type values (stable_api, ai_assisted, deterministic,
+// scraping) while this mapping only produced 3. New authors who wanted
+// to declare a capability as ai_assisted had no path through the pipeline
+// — this case plugs that gap. Existing ai_assisted rows in DB still have
+// data_source_type=api in their manifests (Class 4 drift, SA.2b.c scope).
 function dataSourceTypeToCapType(dsType: string): string {
   switch (dsType) {
     case "computed":
@@ -109,6 +117,8 @@ function dataSourceTypeToCapType(dsType: string): string {
       return "scraping";
     case "api":
       return "stable_api";
+    case "ai_assisted":
+      return "ai_assisted";
     default:
       return "stable_api";
   }
@@ -897,7 +907,7 @@ function buildTestSuites(manifest: Manifest) {
 async function backfill(
   manifest: Manifest,
   dryRun: boolean,
-  flags: { strict: boolean; fix: boolean; discover: boolean },
+  flags: { strict: boolean; fix: boolean; discover: boolean; force: boolean },
   manifestPath: string,
 ): Promise<void> {
   const db = getDb();
@@ -911,6 +921,38 @@ async function backfill(
 
   if (!existing) {
     console.error(`Capability '${manifest.slug}' not found. Use onboard (without --backfill) to create it.`);
+    process.exit(1);
+  }
+
+  // Backfill safety banner (manifest drift audit, 2026-04-20).
+  // 238 capabilities have YAML fields (price_cents, freshness_category,
+  // transparency_tag, data_source) that diverge from DB-canonical values.
+  // Backfill currently only UPDATEs a narrow set of columns (tests, PII,
+  // limitations, reliability) — not the Class 4 fields — but future edits
+  // to this script could widen that UPDATE and silently overwrite correct
+  // DB state with stale YAML. This gate forces the operator to acknowledge
+  // the risk every time.
+  if (!dryRun && !flags.force) {
+    console.warn(
+      "\n" +
+      "═══════════════════════════════════════════════════════════════════\n" +
+      `⚠  WARNING: --backfill on existing capability '${manifest.slug}'\n` +
+      "═══════════════════════════════════════════════════════════════════\n" +
+      "The manifest drift audit (2026-04-20) identified 238 capabilities\n" +
+      "where YAML values diverge from DB-canonical values (price_cents,\n" +
+      "freshness_category, transparency_tag, data_source, data_source_type).\n" +
+      "\n" +
+      "Today the backfill path writes only test suites, PII classification,\n" +
+      "field reliability, and limitations — so Class 4 fields are safe.\n" +
+      "But: verify this slug's YAML is consistent with DB before proceeding,\n" +
+      "and re-check if this script is widened in the future.\n" +
+      "\n" +
+      "See audit-reports/manifest_drift_inventory.md Class 4 for full list.\n" +
+      "\n" +
+      "Re-run with --force to proceed.\n" +
+      "═══════════════════════════════════════════════════════════════════\n"
+    );
+    console.error("Aborted. Add --force to proceed.");
     process.exit(1);
   }
 
@@ -1250,7 +1292,9 @@ async function main() {
   const fix = args.includes("--fix");
   const discover = args.includes("--discover");
   const isBatch = args.includes("--batch");
-  const flags = { strict, fix, discover };
+  // --force bypasses the backfill safety banner (manifest drift audit, 2026-04-20).
+  const force = args.includes("--force");
+  const flags = { strict, fix, discover, force };
 
   // Batch mode
   if (isBatch) {
