@@ -17,7 +17,12 @@ export type ErrorCode =
   | "budget_exceeded"
   | "locked"
   | "token_expired"
-  | "legacy_token_sunset";
+  | "legacy_token_sunset"
+  // F-B-022: solution executed successfully but the phase-2 transaction
+  // UPDATE failed. Wallet has been refunded. Distinct from execution_failed
+  // so callers can retry the same inputs safely (execution happened; only
+  // the record did not).
+  | "transaction_finalization_failed";
 
 export interface ApiError {
   error_code: ErrorCode;
