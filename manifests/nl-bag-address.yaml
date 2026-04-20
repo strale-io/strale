@@ -2,7 +2,7 @@ slug: nl-bag-address
 name: NL BAG Address Lookup
 description: >-
   Look up Dutch address and building data from the BAG (Basisregistratie Adressen en Gebouwen) via Kadaster API.
-  Returns street, city, municipality, construction year, floor area, usage purpose, and coordinates.
+  Returns street, city, construction year, floor area, usage purposes, and RD coordinates (EPSG:28992).
 category: data-extraction
 price_cents: 5
 is_free_tier: false
@@ -31,12 +31,16 @@ output_schema:
     huisnummer: 1
     street: Plein
     city: "'s-Gravenhage"
-    municipality: "'s-Gravenhage"
     full_address: "Plein 1, 2514JK 's-Gravenhage"
-    construction_year: 1900
+    construction_year: "1900"
     floor_area_m2: 250
     building_type: Verblijfsobject
-    usage_purpose: woonfunctie
+    usage_purposes:
+      - woonfunctie
+    coordinates_rd:
+      x: 81491.2
+      y: 455032.6
+      crs: "EPSG:28992"
   properties:
     postcode:
       type: string
@@ -49,7 +53,7 @@ output_schema:
     full_address:
       type: string
     construction_year:
-      type: number
+      type: string
     floor_area_m2:
       type: number
 data_source: Kadaster BAG API
@@ -86,16 +90,15 @@ output_field_reliability:
   street: guaranteed
   city: guaranteed
   full_address: guaranteed
-  municipality: common
-  province: common
   nummeraanduiding_id: guaranteed
   adresseerbaar_object_id: common
+  woonplaats_id: common
   building_type: common
   construction_year: common
   floor_area_m2: common
-  usage_purpose: common
+  usage_purposes: common
   status: common
-  coordinates: common
+  coordinates_rd: common
   huisletter: rare
   huisnummertoevoeging: rare
   total_results: guaranteed

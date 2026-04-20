@@ -68,6 +68,13 @@ registerCapability("nl-bag-address", async (input: CapabilityInput) => {
   const addr = addresses[0];
 
   // Extract key fields from extended address response
+  // /adressenuitgebreid does not include gemeente/provincie — they require
+  // a follow-up call to /woonplaatsen/:id. Not fetched here.
+  const geometry = addr.adresseerbaarObjectGeometrie as
+    | { punt?: { type?: string; coordinates?: number[] } }
+    | undefined;
+  const punt = geometry?.punt;
+
   const output: Record<string, unknown> = {
     postcode: addr.postcode,
     huisnummer: addr.huisnummer,
@@ -75,21 +82,21 @@ registerCapability("nl-bag-address", async (input: CapabilityInput) => {
     huisnummertoevoeging: addr.huisnummertoevoeging ?? null,
     street: addr.openbareRuimteNaam ?? addr.korteNaam,
     city: addr.woonplaatsNaam,
-    municipality: addr.gemeenteNaam ?? null,
-    province: addr.provincieNaam ?? null,
     full_address: `${addr.openbareRuimteNaam ?? addr.korteNaam} ${addr.huisnummer}${addr.huisletter ?? ""}${addr.huisnummertoevoeging ? `-${addr.huisnummertoevoeging}` : ""}, ${addr.postcode} ${addr.woonplaatsNaam}`,
     nummeraanduiding_id: addr.nummeraanduidingIdentificatie ?? null,
     adresseerbaar_object_id: addr.adresseerbaarObjectIdentificatie ?? null,
+    woonplaats_id: addr.woonplaatsIdentificatie ?? null,
     building_type: addr.typeAdresseerbaarObject ?? null,
-    construction_year: addr.oorspronkelijkBouwjaar ?? null,
+    construction_year: Array.isArray(addr.oorspronkelijkBouwjaar)
+      ? (addr.oorspronkelijkBouwjaar as string[])[0] ?? null
+      : addr.oorspronkelijkBouwjaar ?? null,
     floor_area_m2: addr.oppervlakte ?? null,
-    usage_purpose: addr.gebruiksdoel ?? null,
-    status: addr.pandStatus ?? addr.adresseerbaarObjectStatus ?? null,
-    coordinates: addr.adresseerbaarObjectGeometrie
-      ? {
-          type: (addr.adresseerbaarObjectGeometrie as Record<string, unknown>).type,
-          coordinates: (addr.adresseerbaarObjectGeometrie as Record<string, unknown>).coordinates,
-        }
+    usage_purposes: Array.isArray(addr.gebruiksdoelen) ? addr.gebruiksdoelen : [],
+    status: addr.adresseerbaarObjectStatus
+      ?? (Array.isArray(addr.pandStatussen) ? (addr.pandStatussen as string[])[0] : null)
+      ?? null,
+    coordinates_rd: punt && Array.isArray(punt.coordinates)
+      ? { x: punt.coordinates[0], y: punt.coordinates[1], crs: "EPSG:28992" }
       : null,
     total_results: addresses.length,
   };
