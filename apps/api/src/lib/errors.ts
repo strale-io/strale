@@ -15,7 +15,9 @@ export type ErrorCode =
   | "freshness_check_failed"
   | "latency_threshold_exceeded"
   | "budget_exceeded"
-  | "locked";
+  | "locked"
+  | "token_expired"
+  | "legacy_token_sunset";
 
 export interface ApiError {
   error_code: ErrorCode;

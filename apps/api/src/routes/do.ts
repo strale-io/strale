@@ -2155,6 +2155,11 @@ function buildFullAudit(params: {
     ?? detectPersonalData(executionInput, output);
   const personalDataCategories = capability.personalDataCategories ?? [];
 
+  // F-A-006: issue shareable URL + expiry once so both fields reference
+  // the same token (two calls would produce two tokens with drifting
+  // expires_at values — same-second or off-by-one).
+  const shareable = getShareableUrl(transactionId);
+
   return {
     transaction_id: transactionId,
     timestamp: new Date(startTime).toISOString(),
@@ -2187,7 +2192,8 @@ function buildFullAudit(params: {
       data_retention_days: TRANSACTION_RETENTION_DAYS,
       deletion_endpoint: `DELETE /v1/transactions/${transactionId}`,
       access_endpoint: `GET /v1/transactions/${transactionId}`,
-      shareable_url: getShareableUrl(transactionId),
+      shareable_url: shareable.url,
+      shareable_url_expires_at: shareable.expiresAt,
       regulations_addressed: {
         eu_ai_act: {
           article_12: "Full execution logging with timestamps, data sources, and latency",

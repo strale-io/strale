@@ -27,6 +27,13 @@ Key vars:
 - `ADMIN_SECRET` — Admin endpoint auth
 - `AUDIT_HMAC_SECRET` — Transaction integrity hashing
 
+### Optional / Rotation env vars
+
+- `AUDIT_HMAC_SECRET_PREVIOUS` — Set during `AUDIT_HMAC_SECRET` rotation
+  to keep pre-rotation audit URLs verifiable. Must be ≥32 chars. Unset
+  after the grace window (typically 60 days). Runbook:
+  `docs/operations/hmac-rotation.md`.
+
 ### Retired env vars (safe to remove from Railway)
 
 - `OPENSANCTIONS_API_KEY` — Replaced by `DILISENSE_API_KEY` on 2026-03-25.

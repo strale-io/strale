@@ -168,11 +168,47 @@ function composeAuditRecord(args: {
 auditRoute.get("/:transactionId", async (c) => {
   const transactionId = c.req.param("transactionId");
   const token = c.req.query("token");
+  const expiresAtRaw = c.req.query("expires_at");
 
   if (!token) {
     return c.json(apiError("unauthorized", "Audit token required. Include ?token=<hmac> in the URL."), 401);
   }
-  if (!verifyAuditToken(transactionId, token)) {
+
+  // F-A-006: expires_at is the new-format discriminator. Absent = legacy
+  // token (pre-F-A-006 deploy), accepted during sunset window. Present
+  // but non-integer = malformed URL.
+  let expiresAt: number | null = null;
+  if (expiresAtRaw != null) {
+    const parsed = parseInt(expiresAtRaw, 10);
+    if (!Number.isFinite(parsed) || String(parsed) !== expiresAtRaw) {
+      return c.json(apiError("invalid_request", "expires_at must be an integer (unix seconds)."), 400);
+    }
+    expiresAt = parsed;
+  }
+
+  const result = verifyAuditToken(transactionId, token, expiresAt);
+  if (!result.valid) {
+    if (result.reason === "expired") {
+      return c.json(
+        apiError(
+          "token_expired",
+          "Audit token has expired. Re-issue via POST /v1/transactions/:id/audit-token.",
+        ),
+        410,
+      );
+    }
+    if (result.reason === "legacy_token_sunset") {
+      return c.json(
+        apiError(
+          "legacy_token_sunset",
+          "This audit URL was issued under a pre-F-A-006 format that has been sunset. Re-issue via POST /v1/transactions/:id/audit-token.",
+        ),
+        410,
+      );
+    }
+    if (result.reason === "malformed") {
+      return c.json(apiError("invalid_request", "Malformed audit token."), 400);
+    }
     return c.json(apiError("unauthorized", "Invalid audit token."), 401);
   }
 
