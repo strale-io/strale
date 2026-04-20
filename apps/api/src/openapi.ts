@@ -520,12 +520,16 @@ export const openApiSpec = {
       get: {
         tags: ["transactions"],
         summary: "Get transaction detail",
-        description: "Returns full transaction detail including output, provenance, and audit trail. Used for polling async executions.",
+        description:
+          "Returns transaction detail. Authenticated callers receive the full body (output, provenance, audit trail). " +
+          "Unauthenticated callers looking up a free-tier transaction by UUID receive a redacted envelope with " +
+          "`body_redacted: true` and the body fields (input/output/error/provenance/audit_trail) absent. " +
+          "See F-A-005.",
         security: [{ BearerAuth: [] }, {}],
         parameters: [{ name: "id", in: "path" as const, required: true, schema: { type: "string" as const, format: "uuid" } }],
         responses: {
           "200": {
-            description: "Transaction detail",
+            description: "Transaction detail (full body if authenticated, redacted envelope if unauthenticated free-tier lookup).",
             content: {
               "application/json": {
                 schema: {
@@ -538,11 +542,13 @@ export const openApiSpec = {
                     error: { type: "string" as const, nullable: true },
                     price_cents: { type: "integer" as const },
                     latency_ms: { type: "integer" as const },
-                    provenance: { type: "object" as const },
+                    provenance: { type: "object" as const, nullable: true },
                     transparency_marker: { type: "string" as const },
                     data_jurisdiction: { type: "string" as const },
                     created_at: { type: "string" as const, format: "date-time" },
                     completed_at: { type: "string" as const, format: "date-time", nullable: true },
+                    body_redacted: { type: "boolean" as const, description: "Present and true on unauth free-tier lookups; indicates body fields are redacted." },
+                    body_redacted_reason: { type: "string" as const, description: "Human-readable explanation of why the body is redacted." },
                   },
                 },
               },

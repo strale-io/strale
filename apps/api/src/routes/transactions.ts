@@ -138,6 +138,52 @@ transactionsRoute.get(
       };
     }
 
+    function formatRedactedRow(row: typeof selectFields extends infer T ? { [K in keyof T]: any } : never) {
+      const isSolution = row.solution_slug != null;
+
+      // Same quality construction as formatRow — operator-domain metric, no PII.
+      const quality = isSolution
+        ? {
+            sqs: null,
+            sqs_label: null,
+            quality_grade: null,
+            reliability_grade: null,
+            usable: null,
+            strategy: null,
+          }
+        : {
+            sqs: row._matrix_sqs != null ? parseFloat(row._matrix_sqs) : null,
+            sqs_label: sqsLabel(row._matrix_sqs != null ? parseFloat(row._matrix_sqs) : null),
+            quality_grade: gradeFromScore(row._qp_score != null ? parseFloat(row._qp_score) : null),
+            reliability_grade: gradeFromScore(row._rp_score != null ? parseFloat(row._rp_score) : null),
+            usable: row._guidance_usable ?? true,
+            strategy: row._guidance_strategy ?? "direct",
+          };
+
+      return {
+        id: row.id,
+        type: isSolution ? "solution" as const : "capability" as const,
+        status: row.status,
+        capability_slug: row.capability_slug ?? null,
+        solution_slug: row.solution_slug ?? null,
+        price_cents: row.price_cents,
+        latency_ms: row.latency_ms,
+        transparency_marker: row.transparency_marker,
+        data_jurisdiction: row.data_jurisdiction,
+        is_free_tier: row.is_free_tier,
+        created_at: row.created_at,
+        completed_at: row.completed_at,
+        quality,
+        // F-A-005: explicit body redaction marker. input, output, error,
+        // provenance, audit_trail are not returned to unauthenticated callers.
+        body_redacted: true as const,
+        body_redacted_reason:
+          "Free-tier public lookup. input, output, error, provenance, and audit_trail " +
+          "are redacted for unauthenticated callers. Authenticate with an API key to " +
+          "access the full body.",
+      };
+    }
+
     if (user) {
       // Authenticated: look up by ID + user ownership
       const [row] = await db
@@ -154,7 +200,9 @@ transactionsRoute.get(
       return c.json(formatRow(row));
     }
 
-    // Unauthenticated: only free-tier transactions are publicly accessible by ID
+    // F-A-005: Unauthenticated lookups return a redacted envelope — body fields
+    // (input/output/error/provenance/audit_trail) are NOT returned. The sibling
+    // GET /:id/verify is unaffected because its response is hash-only (no PII).
     const [row] = await db
       .select(selectFields)
       .from(transactions)
@@ -173,7 +221,7 @@ transactionsRoute.get(
       );
     }
 
-    return c.json(formatRow(row));
+    return c.json(formatRedactedRow(row));
   },
 );
 

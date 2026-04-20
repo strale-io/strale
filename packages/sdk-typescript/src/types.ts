@@ -118,7 +118,9 @@ export interface TransactionDetail {
   id: string;
   status: string;
   capability_slug: string;
-  input: Record<string, unknown>;
+  // F-A-005: `input` is null on unauthenticated free-tier lookups (redacted
+  // envelope). Authenticated callers always receive a populated object.
+  input: Record<string, unknown> | null;
   output: Record<string, unknown> | null;
   error: string | null;
   price_cents: number;
@@ -126,6 +128,11 @@ export interface TransactionDetail {
   provenance: Provenance | null;
   created_at: string;
   completed_at: string | null;
+  // F-A-005: present and true only on unauthenticated free-tier lookups.
+  // When true, body fields (input/output/error/provenance/audit_trail) are
+  // absent or null. Authenticate with an API key for the full body.
+  body_redacted?: boolean;
+  body_redacted_reason?: string;
 }
 
 // ─── Error response shape ──────────────────────────────────────────────────────
