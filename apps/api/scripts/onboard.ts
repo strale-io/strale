@@ -43,6 +43,8 @@ import { capabilities as capabilitiesTable } from "../src/db/schema.js";
 import { logWarn } from "../src/lib/log.js";
 // Cluster 2 Phase 3 C1: transactional persist + hook wiring.
 import { persistCapability } from "../src/lib/capability-persistence.js";
+// Cluster 2 Phase 3 C2: Manifest → DB-row normalizer.
+import { normalizeManifestToRow } from "../src/lib/capability-manifest.js";
 
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../src/db/index.js";
@@ -699,36 +701,16 @@ async function onboard(
 
   if (existing) return; // Already exists, don't insert
 
-  // Cluster 2 Phase 3 C1: transactional persist + hook wiring (F-B-001,
-  // F-B-002, F-B-008, F-B-024). persistCapability wraps the three inserts
-  // in one tx, calls onCapabilityCreated, and marks lifecycle_state as
-  // 'hook_failed' if the hook throws (without rolling back the INSERT).
+  // Cluster 2 Phase 3 C1 + C2: transactional persist + post-commit hook
+  // (F-B-001, F-B-002, F-B-008, F-B-024). persistCapability wraps the three
+  // inserts in one tx, then calls onCapabilityCreated OUTSIDE the tx
+  // (design doc §4.3). Hook failure → separate UPDATE setting
+  // lifecycle_state='hook_failed' without rolling back the INSERT.
+  // normalizeManifestToRow (C2) does the Manifest→DB-row mapping that was
+  // previously inline here.
   const persistResult = await persistCapability(
     {
-      capability: {
-        slug: manifest.slug,
-        name: manifest.name,
-        description: manifest.description,
-        category: manifest.category,
-        priceCents: manifest.price_cents,
-        isFreeTier: manifest.is_free_tier ?? false,
-        inputSchema: manifest.input_schema,
-        outputSchema: manifest.output_schema,
-        dataSource: manifest.data_source,
-        dataClassification: (manifest as any).data_classification ?? "public",
-        transparencyTag: manifest.transparency_tag ?? null,
-        capabilityType: capType,
-        outputFieldReliability: manifest.output_field_reliability,
-        maintenanceClass: manifest.maintenance_class ?? "scraping-fragile-target",
-        // F-B-008: if the manifest was authored with `null`, persistCapability
-        // strips the field so the DB default (false) applies — gates already
-        // reject this case but defense-in-depth keeps the write safe.
-        processesPersonalData: manifest.processes_personal_data,
-        personalDataCategories: manifest.personal_data_categories ?? [],
-        lifecycleState: "validating",
-        visible: false,
-        isActive: true,
-      },
+      capability: normalizeManifestToRow(manifest),
       testSuites: testSuiteRecords,
       limitations: manifest.limitations.map((lim, i) => ({
         title: lim.title ?? null,
@@ -1002,31 +984,28 @@ async function backfill(
     }
   }
 
-  // Update field reliability on the capability record
-  if (fields.length > 0) {
-    await db
-      .update(capabilities)
-      .set({
-        outputFieldReliability: manifest.output_field_reliability,
-        updatedAt: new Date(),
-      })
-      .where(eq(capabilities.slug, manifest.slug));
-    console.log(`  ✓ Updated output_field_reliability (${fields.length} fields)`);
-  }
-
-  // SA.2b (F-A-003, F-A-009): update PII classification from manifest.
-  if (manifest.processes_personal_data !== undefined) {
-    await db
-      .update(capabilities)
-      .set({
-        processesPersonalData: manifest.processes_personal_data,
-        personalDataCategories: manifest.personal_data_categories ?? [],
-        updatedAt: new Date(),
-      })
-      .where(eq(capabilities.slug, manifest.slug));
-    console.log(
-      `  ✓ Updated PII classification: processes_personal_data=${manifest.processes_personal_data}, categories=[${(manifest.personal_data_categories ?? []).join(", ")}]`,
+  // Cluster 2 Phase 3 C2: consolidate the backfill UPDATE fragments
+  // (field reliability + PII) into one persistCapability({mode:'update'})
+  // call via the partial normalizer. Partial mode omits undefined fields
+  // so DB-canonical columns (price_cents, freshness_category, etc.) are
+  // NOT clobbered — only the fields the manifest actually declares get
+  // updated. The post-commit hook runs once (outside the tx), regardless
+  // of which sub-fields changed.
+  const hasReliabilityUpdate = fields.length > 0;
+  const hasPiiUpdate = manifest.processes_personal_data !== undefined;
+  if (hasReliabilityUpdate || hasPiiUpdate) {
+    await persistCapability(
+      { capability: normalizeManifestToRow(manifest, { partial: true }) },
+      { mode: "update" },
     );
+    if (hasReliabilityUpdate) {
+      console.log(`  ✓ Updated output_field_reliability (${fields.length} fields)`);
+    }
+    if (hasPiiUpdate) {
+      console.log(
+        `  ✓ Updated PII classification: processes_personal_data=${manifest.processes_personal_data}, categories=[${(manifest.personal_data_categories ?? []).join(", ")}]`,
+      );
+    }
   }
 
   // Insert limitations if none exist

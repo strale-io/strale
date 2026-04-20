@@ -5,7 +5,10 @@ config({ path: resolve(import.meta.dirname, "../../../../.env") });
 
 import { getDb } from "./index.js";
 import { capabilities } from "./schema.js";
-import { onCapabilityCreated } from "../lib/capability-onboarding.js";
+// Cluster 2 Phase 3 C2: migrate from direct insert+hook to persistCapability
+// with mode='upsert'. onCapabilityCreated is now invoked inside
+// persistCapability post-commit — the seed loop no longer calls it directly.
+import { persistCapability } from "../lib/capability-persistence.js";
 import { log, logError, logWarn } from "../lib/log.js";
 
 /** Estimate default latency for capabilities missing avgLatencyMs. */
@@ -2807,20 +2810,31 @@ async function seed() {
   log.info({ label: "seed-start" }, "Seeding capabilities");
 
   for (const cap of seedCapabilities) {
-    await db
-      .insert(capabilities)
-      .values({
-        ...cap,
-        lifecycleState: "active",
-        visible: true,
-        avgLatencyMs: estimateDefaultLatency(cap),
-        x402Enabled: true,
-        x402PriceUsd: eurToX402Price(cap.priceCents).toFixed(4),
-        x402Method: "GET",
-      })
-      .onConflictDoUpdate({
-        target: capabilities.slug,
-        set: {
+    // Cluster 2 Phase 3 C2: persistCapability({mode:'upsert'}) preserves
+    // the prior onConflictDoUpdate semantics + fires onCapabilityCreated
+    // post-commit. upsertRefreshColumns narrows the on-conflict update to
+    // the same columns the old code refreshed (intentional — seed is
+    // idempotent, not a full re-write of DB-canonical operational fields).
+    //
+    // Hook-failure (e.g., Gate 5 path-coverage failure) no longer aborts
+    // the loop: persistCapability catches and marks lifecycle_state=
+    // 'hook_failed'. We still log it so seed-time onboarding issues are
+    // visible in the output.
+    const result = await persistCapability(
+      {
+        capability: {
+          ...cap,
+          lifecycleState: "active",
+          visible: true,
+          avgLatencyMs: estimateDefaultLatency(cap),
+          x402Enabled: true,
+          x402PriceUsd: eurToX402Price(cap.priceCents).toFixed(4),
+          x402Method: "GET",
+        } as never,
+      },
+      {
+        mode: "upsert",
+        upsertRefreshColumns: {
           name: cap.name,
           description: cap.description,
           category: cap.category,
@@ -2829,14 +2843,13 @@ async function seed() {
           priceCents: cap.priceCents,
           updatedAt: new Date(),
         },
-      });
-    // Auto-generate test suites for new capabilities (fire-and-forget)
-    await onCapabilityCreated(cap.slug).catch((err) => {
-      logWarn("seed-onboarding-failed", "onboarding failed for capability", {
+      },
+    );
+    if (result.hookFailed) {
+      logWarn("seed-onboarding-hook-failed", "post-insert hook failed for capability", {
         capability_slug: cap.slug,
-        err: err instanceof Error ? err.message : String(err),
       });
-    });
+    }
     log.info(
       { label: "seed-capability-added", capability_slug: cap.slug, price_cents: cap.priceCents },
       "seed-capability-added",
