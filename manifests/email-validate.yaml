@@ -45,6 +45,10 @@ data_source: Algorithmic (syntax) + DNS protocol (MX record verification)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: computed
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - email
 test_fixtures:
   known_answer:
     input:

@@ -53,6 +53,12 @@ data_source: Handelsregister (German Commercial Register) via northdata.com
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - address
+  - professional
 test_fixtures:
   known_answer:
     input:

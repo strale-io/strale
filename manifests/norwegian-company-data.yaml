@@ -50,6 +50,12 @@ data_source: Brønnøysund Register Centre (Norway)
 data_source_type: api
 transparency_tag: mixed
 freshness_category: live-fetch
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - address
+  - professional
 test_fixtures:
   known_answer:
     input:
