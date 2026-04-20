@@ -51,7 +51,7 @@ personal_data_categories:
 test_fixtures:
   known_answer:
     input:
-      company_name: Heineken
+      kvk_number: "69599084"
     expected_fields:
       - field: status
         operator: not_null
