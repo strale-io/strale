@@ -43,6 +43,7 @@ registerCapability("nl-bag-address", async (input: CapabilityInput) => {
       headers: {
         "X-Api-Key": apiKey,
         Accept: "application/hal+json",
+        "Accept-Crs": "epsg:4326",
       },
       signal: AbortSignal.timeout(10000),
     },
