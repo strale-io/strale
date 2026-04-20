@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { transactions, capabilities } from "../db/schema.js";
+import { transactions, capabilities, transactionQuality } from "../db/schema.js";
 import { authMiddleware, optionalAuthMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
@@ -234,6 +234,83 @@ transactionsRoute.get(
       verified,
       chain_length: chain.length,
       chain,
+    });
+  },
+);
+
+// DELETE /v1/transactions/:id — Soft-delete with in-place PII redaction.
+// GDPR Art. 17 right-to-erasure. Caller must own the transaction.
+// legal_hold = true → 423 Locked. Deletion is represented by the
+// deleted_at / redacted_at / deletion_reason columns on the row itself
+// (no separate audit-event row — see SA.2a.3a Sub-report C).
+//
+// Per-row content-hash verifiability is sacrificed on redaction; chain-link
+// continuity is preserved via the original `integrityHash` and `previousHash`.
+transactionsRoute.delete(
+  "/:id",
+  authMiddleware,
+  rateLimitByKey(5, 1000),
+  async (c) => {
+    const id = c.req.param("id") as string;
+    const user = c.get("user");
+    const db = getDb();
+
+    return await db.transaction(async (tx) => {
+      const [row] = await tx
+        .select({
+          id: transactions.id,
+          legalHold: transactions.legalHold,
+        })
+        .from(transactions)
+        .where(and(
+          eq(transactions.id, id),
+          eq(transactions.userId, user.id),
+          isNull(transactions.deletedAt),
+        ))
+        .limit(1);
+
+      if (!row) {
+        return c.json(apiError("not_found", "Transaction not found."), 404);
+      }
+
+      if (row.legalHold) {
+        return c.json(
+          apiError(
+            "locked",
+            "This transaction is under legal hold and cannot be deleted. Contact compliance@strale.io.",
+          ),
+          423,
+        );
+      }
+
+      const now = new Date();
+
+      await tx
+        .update(transactions)
+        .set({
+          deletedAt: now,
+          redactedAt: now,
+          deletionReason: "user_request",
+          input: {},
+          output: null,
+          error: null,
+          auditTrail: null,
+          provenance: null,
+          idempotencyKey: null,
+        })
+        .where(eq(transactions.id, id));
+
+      await tx
+        .update(transactionQuality)
+        .set({ deletedAt: now })
+        .where(eq(transactionQuality.transactionId, id));
+
+      return c.json({
+        id,
+        deleted_at: now.toISOString(),
+        redacted_at: now.toISOString(),
+        deletion_reason: "user_request",
+      });
     });
   },
 );
