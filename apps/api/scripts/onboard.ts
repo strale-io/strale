@@ -31,10 +31,16 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { autoRegisterCapabilities } from "../src/capabilities/auto-register.js";
 import { assertDiscoverNotDryRun } from "../src/lib/onboard-guards.js";
 // Cluster 2 Phase 1 (F-B-007): enum single-source imports, previously duplicated.
+// Cluster 2 Phase 2: orchestrator + types + skipGates, replaces local validateManifest.
 import {
-  VALID_MAINTENANCE_CLASSES,
-  PII_CATEGORY_ENUM,
+  validateCapability,
+  GateViolationError,
+  type ValidationContext,
 } from "../src/lib/onboarding-gates.js";
+import type { Manifest, ManifestExpectedField, ManifestLimitation } from "../src/lib/capability-manifest-types.js";
+import { getDb as getDbForValidation } from "../src/db/index.js";
+import { capabilities as capabilitiesTable } from "../src/db/schema.js";
+import { logWarn } from "../src/lib/log.js";
 
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../src/db/index.js";
@@ -50,51 +56,8 @@ import { join } from "node:path";
 import { getExecutor } from "../src/capabilities/index.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-interface ManifestExpectedField {
-  field: string;
-  operator: string;
-  value?: unknown;
-  values?: unknown[];
-  reliability?: string;
-}
-
-interface ManifestLimitation {
-  title?: string | null;
-  text: string;
-  category: string;
-  severity?: string;
-  workaround?: string | null;
-}
-
-interface Manifest {
-  slug: string;
-  name: string;
-  description: string;
-  category: string;
-  price_cents: number;
-  is_free_tier?: boolean;
-  input_schema: Record<string, unknown>;
-  output_schema: Record<string, unknown>;
-  data_source: string;
-  data_source_type: string;
-  transparency_tag?: string | null;
-  freshness_category?: string;
-  test_fixtures: {
-    known_answer?: {
-      input: Record<string, unknown>;
-      expected_fields: ManifestExpectedField[];
-    };
-    health_check_input?: Record<string, unknown>;
-  };
-  output_field_reliability: Record<string, string>;
-  limitations: ManifestLimitation[];
-  maintenance_class?: string;
-  // SA.2b (F-A-003, F-A-009): per-capability PII classification.
-  // Required for all new capabilities onboarded post-SA.2b.b.
-  processes_personal_data?: boolean;
-  personal_data_categories?: string[];
-}
+// Manifest / ManifestExpectedField / ManifestLimitation moved to
+// src/lib/capability-manifest-types.ts (Cluster 2 Phase 2, F-B-006).
 
 interface FixtureMismatch {
   field: string;
@@ -131,85 +94,67 @@ function dataSourceTypeToCapType(dsType: string): string {
 }
 
 // ─── Validation ──────────────────────────────────────────────────────────────
+// validateManifest moved to src/lib/onboarding-gates.ts (Cluster 2 Phase 2,
+// F-B-006). Called here via the `validateCapability` orchestrator.
 
-function validateManifest(m: Manifest, discover: boolean): string[] {
-  const errors: string[] = [];
-
-  if (!m.slug || typeof m.slug !== "string") errors.push("slug is required");
-  if (!m.name || typeof m.name !== "string") errors.push("name is required");
-  if (!m.description || m.description.length < 20) errors.push("description must be >= 20 chars");
-  if (!m.category) errors.push("category is required");
-  if (m.price_cents == null || (m.price_cents < 0)) errors.push("price_cents must be >= 0");
-  if (!m.input_schema || typeof m.input_schema !== "object") errors.push("input_schema is required");
-  if (!m.output_schema || typeof m.output_schema !== "object") errors.push("output_schema is required");
-  if (!m.data_source) errors.push("data_source is required");
-  if (!m.data_source_type) errors.push("data_source_type is required");
-
-  // maintenance_class is required for new capabilities
-  if (!m.maintenance_class || !VALID_MAINTENANCE_CLASSES.includes(m.maintenance_class)) {
-    errors.push(`maintenance_class is required. Choose from: ${VALID_MAINTENANCE_CLASSES.join(", ")}`);
-  }
-
-  // Slug pattern
-  if (m.slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(m.slug)) {
-    errors.push("slug must be lowercase alphanumeric with hyphens");
-  }
-
-  // Schema structure
-  if (m.input_schema && ((m.input_schema as any).type !== "object" || !m.input_schema.properties)) {
-    errors.push("input_schema must have type:'object' and properties");
-  }
-  if (m.output_schema && ((m.output_schema as any).type !== "object" || !m.output_schema.properties)) {
-    errors.push("output_schema must have type:'object' and properties");
-  }
-
-  // Test fixtures — in --discover mode, expected_fields can be empty
-  if (!discover) {
-    if (!m.test_fixtures?.known_answer?.input) {
-      errors.push("test_fixtures.known_answer.input is required");
+/**
+ * Parse `--skip-gates="gate_name:reason_text,gate_name2:reason2"` into the
+ * ctx.skipGates array consumed by validateCapability. Replaces the
+ * SKIP_ONBOARDING_GATES env var (DEC-20260420-K OQ-5).
+ */
+export function parseSkipGates(raw: string | undefined): Array<{ gate: string; reason: string }> {
+  if (!raw) return [];
+  return raw.split(",").map((entry) => {
+    const [gate, ...reasonParts] = entry.split(":");
+    const reason = reasonParts.join(":").trim();
+    const trimmedGate = gate?.trim() ?? "";
+    if (!trimmedGate || !reason) {
+      throw new Error(`Invalid --skip-gates entry "${entry}". Format: gate:reason (comma-separated for multiple)`);
     }
-    if (!m.test_fixtures?.known_answer?.expected_fields?.length) {
-      errors.push("test_fixtures.known_answer.expected_fields must have at least 1 entry");
-    }
-  } else {
-    // In discover mode, we need at least health_check_input or known_answer.input
-    if (!m.test_fixtures?.health_check_input && !m.test_fixtures?.known_answer?.input) {
-      errors.push("--discover requires test_fixtures.health_check_input or test_fixtures.known_answer.input");
-    }
-  }
+    return { gate: trimmedGate, reason };
+  });
+}
 
-  // Field reliability — in --discover mode, can be empty (will be generated)
-  if (!discover) {
-    if (!m.output_field_reliability || Object.keys(m.output_field_reliability).length === 0) {
-      errors.push("output_field_reliability must have at least 1 field");
+/**
+ * Run the validateCapability orchestrator from the CLI context. Returns the
+ * aggregated error-message array (preserves the pre-Phase-2 string[] shape
+ * so existing caller code paths can print and process the same way).
+ */
+async function runOrchestrator(
+  manifest: Manifest,
+  ctx: ValidationContext,
+): Promise<string[]> {
+  // Load existing DB row for authority-drift detection in backfill mode.
+  let existingRow: Record<string, unknown> & { slug: string } | null = null;
+  if (ctx.mode === "backfill") {
+    try {
+      const [row] = await getDbForValidation()
+        .select()
+        .from(capabilitiesTable)
+        .where(eq(capabilitiesTable.slug, manifest.slug))
+        .limit(1);
+      existingRow = row ? (row as Record<string, unknown> & { slug: string }) : null;
+    } catch (err) {
+      // DB unreachable from the CLI (rare) — proceed without authority check.
+      logWarn(
+        "orchestrator-db-unreachable",
+        "could not load existing row for authority drift check",
+        { slug: manifest.slug, err: err instanceof Error ? err.message : String(err) },
+      );
     }
   }
 
-  // Limitations
-  if (!m.limitations || m.limitations.length === 0) {
-    errors.push("at least 1 limitation is required");
-  }
+  const { violations, warnings } = await validateCapability(manifest, existingRow, ctx);
 
-  // SA.2b (F-A-003, F-A-009): PII classification required for authoring-time
-  // validation. Gate mirrored in onboarding-gates.ts for DB-row re-validation;
-  // PII_CATEGORY_ENUM is imported from there (Cluster 2 Phase 1, F-B-007).
-  if (m.processes_personal_data === undefined) {
-    errors.push(
-      "processes_personal_data is required (boolean). Declare 'false' for pure-algorithmic or infrastructure capabilities; 'true' with populated personal_data_categories for anything processing user-identifiable data at any stage.",
+  for (const w of warnings) {
+    logWarn(
+      "authority-drift",
+      w.detail,
+      { slug: manifest.slug, gate: w.gate, source: ctx.source, mode: ctx.mode },
     );
   }
-  if (Array.isArray(m.personal_data_categories)) {
-    for (const cat of m.personal_data_categories) {
-      if (!(PII_CATEGORY_ENUM as readonly string[]).includes(cat)) {
-        errors.push(`personal_data_categories entry '${cat}' is not in the canonical taxonomy. Allowed: ${PII_CATEGORY_ENUM.join(", ")}`);
-      }
-    }
-    if (m.processes_personal_data === false && m.personal_data_categories.length > 0) {
-      errors.push("personal_data_categories is populated but processes_personal_data is false. Either set processes_personal_data: true, or clear the categories.");
-    }
-  }
 
-  return errors;
+  return violations.map((v) => `[${v.gate}] ${v.detail}`);
 }
 
 // ─── Execute-and-Verify (Enhancement 1) ─────────────────────────────────────
@@ -1118,7 +1063,7 @@ async function processSingleManifest(
   manifestPath: string,
   dryRun: boolean,
   isBackfill: boolean,
-  flags: { strict: boolean; fix: boolean; discover: boolean },
+  flags: { strict: boolean; fix: boolean; discover: boolean; skipGates: Array<{ gate: string; reason: string }> },
 ): Promise<OnboardResult> {
   const start = Date.now();
   let raw: string;
@@ -1135,7 +1080,12 @@ async function processSingleManifest(
     return { slug: manifestPath, status: "failed", timeMs: 0, error: `YAML parse: ${err instanceof Error ? err.message : err}` };
   }
 
-  const errors = validateManifest(manifest, flags.discover);
+  const errors = await runOrchestrator(manifest, {
+    mode: isBackfill ? "backfill" : "insert",
+    source: "manifest",
+    skipGates: flags.skipGates,
+    discover: flags.discover,
+  });
   if (errors.length > 0) {
     return { slug: manifest.slug ?? manifestPath, status: "failed", timeMs: 0, error: errors.join("; ") };
   }
@@ -1158,7 +1108,7 @@ async function runBatch(
   manifestDir: string,
   dryRun: boolean,
   isBackfill: boolean,
-  flags: { strict: boolean; fix: boolean; discover: boolean },
+  flags: { strict: boolean; fix: boolean; discover: boolean; skipGates: Array<{ gate: string; reason: string }> },
   delayMs: number,
 ): Promise<void> {
   if (!existsSync(manifestDir)) {
@@ -1185,7 +1135,12 @@ async function runBatch(
     try {
       const raw = readFileSync(file, "utf-8");
       const manifest = yaml.load(raw) as Manifest;
-      const errors = validateManifest(manifest, flags.discover);
+      const errors = await runOrchestrator(manifest, {
+        mode: isBackfill ? "backfill" : "insert",
+        source: "manifest",
+        skipGates: flags.skipGates,
+        discover: flags.discover,
+      });
       manifests.push({ path: file, manifest, errors });
     } catch (err) {
       manifests.push({
@@ -1293,7 +1248,21 @@ async function main() {
   const isBatch = args.includes("--batch");
   // --force bypasses the backfill safety banner (manifest drift audit, 2026-04-20).
   const force = args.includes("--force");
-  const flags = { strict, fix, discover, force };
+
+  // Cluster 2 Phase 2 (OQ-5 / DEC-20260420-K): --skip-gates replaces the
+  // old SKIP_ONBOARDING_GATES env var. Format:
+  //   --skip-gates="gate1_manifest:reason,gate3_schema:other reason"
+  const skipGatesIdx = args.indexOf("--skip-gates");
+  const skipGatesRaw = skipGatesIdx !== -1 ? args[skipGatesIdx + 1] : undefined;
+  let skipGates: Array<{ gate: string; reason: string }>;
+  try {
+    skipGates = parseSkipGates(skipGatesRaw);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+
+  const flags = { strict, fix, discover, force, skipGates };
 
   // F-B-005: refuse --discover under --dry-run. Applies to single- and
   // batch-mode, onboard- and backfill-paths uniformly because both call
@@ -1342,8 +1311,13 @@ async function main() {
     process.exit(1);
   }
 
-  // Validate
-  const errors = validateManifest(manifest, discover);
+  // Validate via orchestrator (Cluster 2 Phase 2)
+  const errors = await runOrchestrator(manifest, {
+    mode: isBackfill ? "backfill" : "insert",
+    source: "manifest",
+    skipGates,
+    discover,
+  });
   if (errors.length > 0) {
     console.error("\nManifest validation failed:");
     for (const e of errors) {
