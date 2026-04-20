@@ -205,7 +205,11 @@ export function enforceGates(violations: GateViolation[]): void {
  * limitations, field reliability, Gate 5) remain post-insert.
  */
 
-const VALID_CATEGORIES = [
+// Cluster 2 Phase 1 (F-B-007): these three enums were previously duplicated
+// between scripts/onboard.ts (pre-insert validateManifest) and this module
+// (post-insert validateCapabilityStructure). Exported now as the single
+// canonical source; onboard.ts imports rather than redeclaring.
+export const VALID_CATEGORIES = [
   "company-data", "compliance", "developer-tools", "finance",
   "data-processing", "web-scraping", "monitoring", "validation",
   "data-extraction", "legal-regulatory", "file-conversion",
@@ -214,9 +218,12 @@ const VALID_CATEGORIES = [
   "trade", "utility", "web-intelligence",
 ];
 
-const VALID_TRANSPARENCY_TAGS = ["algorithmic", "ai_generated", "mixed", null];
+// Includes `null` to accept capabilities that haven't declared a tag yet.
+// Phase 5 (Cluster 2 design) removes the null option once detectTransparencyTag
+// heuristic is deleted and transparency_tag becomes required at authoring time.
+export const VALID_TRANSPARENCY_TAGS = ["algorithmic", "ai_generated", "mixed", null];
 
-const VALID_MAINTENANCE_CLASSES = [
+export const VALID_MAINTENANCE_CLASSES = [
   "free-stable-api",
   "commercial-stable-api",
   "pure-computation",

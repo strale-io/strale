@@ -30,6 +30,11 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 // Register all capability executors so --discover and --verify can execute them
 import { autoRegisterCapabilities } from "../src/capabilities/auto-register.js";
 import { assertDiscoverNotDryRun } from "../src/lib/onboard-guards.js";
+// Cluster 2 Phase 1 (F-B-007): enum single-source imports, previously duplicated.
+import {
+  VALID_MAINTENANCE_CLASSES,
+  PII_CATEGORY_ENUM,
+} from "../src/lib/onboarding-gates.js";
 
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../src/db/index.js";
@@ -141,10 +146,6 @@ function validateManifest(m: Manifest, discover: boolean): string[] {
   if (!m.data_source_type) errors.push("data_source_type is required");
 
   // maintenance_class is required for new capabilities
-  const VALID_MAINTENANCE_CLASSES = [
-    "free-stable-api", "commercial-stable-api", "pure-computation",
-    "scraping-stable-target", "scraping-fragile-target", "requires-domain-expertise",
-  ];
   if (!m.maintenance_class || !VALID_MAINTENANCE_CLASSES.includes(m.maintenance_class)) {
     errors.push(`maintenance_class is required. Choose from: ${VALID_MAINTENANCE_CLASSES.join(", ")}`);
   }
@@ -190,11 +191,8 @@ function validateManifest(m: Manifest, discover: boolean): string[] {
   }
 
   // SA.2b (F-A-003, F-A-009): PII classification required for authoring-time
-  // validation. Gate mirrored in onboarding-gates.ts for DB-row re-validation.
-  const PII_CATEGORIES = [
-    "name", "email", "phone", "address", "date_of_birth", "government_id",
-    "financial", "professional", "behavioral", "biometric", "health", "sensitive_special",
-  ];
+  // validation. Gate mirrored in onboarding-gates.ts for DB-row re-validation;
+  // PII_CATEGORY_ENUM is imported from there (Cluster 2 Phase 1, F-B-007).
   if (m.processes_personal_data === undefined) {
     errors.push(
       "processes_personal_data is required (boolean). Declare 'false' for pure-algorithmic or infrastructure capabilities; 'true' with populated personal_data_categories for anything processing user-identifiable data at any stage.",
@@ -202,8 +200,8 @@ function validateManifest(m: Manifest, discover: boolean): string[] {
   }
   if (Array.isArray(m.personal_data_categories)) {
     for (const cat of m.personal_data_categories) {
-      if (!PII_CATEGORIES.includes(cat)) {
-        errors.push(`personal_data_categories entry '${cat}' is not in the canonical taxonomy. Allowed: ${PII_CATEGORIES.join(", ")}`);
+      if (!(PII_CATEGORY_ENUM as readonly string[]).includes(cat)) {
+        errors.push(`personal_data_categories entry '${cat}' is not in the canonical taxonomy. Allowed: ${PII_CATEGORY_ENUM.join(", ")}`);
       }
     }
     if (m.processes_personal_data === false && m.personal_data_categories.length > 0) {
