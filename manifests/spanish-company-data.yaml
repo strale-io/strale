@@ -44,7 +44,7 @@ freshness_category: live-fetch
 test_fixtures:
   known_answer:
     input:
-      company_name: Inditex
+      cif: "A15075062"
     expected_fields:
       - field: status
         operator: not_null

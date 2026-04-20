@@ -44,7 +44,7 @@ freshness_category: live-fetch
 test_fixtures:
   known_answer:
     input:
-      company_name: Pipedrive
+      registry_code: "17449106"
     expected_fields:
       - field: status
         operator: not_null
