@@ -4,8 +4,22 @@ config({ path: resolve(import.meta.dirname, "../../../../.env") });
 
 import { getDb } from "./index.js";
 import { capabilities, transactions } from "./schema.js";
-import { eq, sql, and, isNotNull, desc } from "drizzle-orm";
+import { eq, sql, and, isNotNull, isNull, desc } from "drizzle-orm";
 import { readJsonbObject } from "./lib/jsonb-value.js";
+
+// UNSAFE TO RE-RUN WITHOUT MANUAL REVIEW
+//
+// This script sources public capability schema examples from live user-submitted
+// transaction output. Even with the `deleted_at IS NULL` filter below, a row that
+// was never soft-deleted but contains unusual or PII-adjacent content can still
+// surface as a public example.
+//
+// Schema examples should be authored in capability manifests, not extracted at
+// runtime. Retirement is tracked at:
+//   Notion To-do: https://www.notion.so/34867c87082c81739ee3f7c741579a3e
+//
+// Do not re-run this script without reviewing the target capability slugs and
+// the specific transactions that would seed their examples.
 
 const db = getDb();
 
@@ -40,6 +54,7 @@ for (const row of missingList) {
         eq(capabilities.slug, slug),
         eq(transactions.status, "completed"),
         isNotNull(transactions.output),
+        isNull(transactions.deletedAt),
       ),
     )
     .orderBy(desc(transactions.createdAt))
