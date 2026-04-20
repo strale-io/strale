@@ -216,6 +216,12 @@ export const transactions = pgTable(
       .notNull()
       .default("pending"),
     legalHold: boolean("legal_hold").notNull().default(false),
+    // SA.2a soft-delete (migration 0048). deletedAt marks the row logically
+    // gone; redactedAt marks input/output/audit_trail zeroed. Two-step so
+    // the chain-walk can still traverse deleted rows until retention purges.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    redactedAt: timestamp("redacted_at", { withTimezone: true }),
+    deletionReason: text("deletion_reason"),
     // x402 payment tracking
     paymentMethod: varchar("payment_method", { length: 20 }).notNull().default("wallet"),
     x402SettlementId: text("x402_settlement_id"),
@@ -255,6 +261,8 @@ export const transactionQuality = pgTable("transaction_quality", {
   // null = success, otherwise: 'upstream_timeout', 'upstream_error',
   // 'schema_mismatch', 'internal_error', 'rate_limited'
   qualityFlags: jsonb("quality_flags").notNull().default({}),
+  // SA.2a soft-delete cascade marker (migration 0048).
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
