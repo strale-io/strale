@@ -4,6 +4,7 @@ import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { apiError } from "../lib/errors.js";
 import { log, logError } from "../lib/log.js";
+import { persistCapability } from "../lib/capability-persistence.js";
 import type { AppEnv } from "../types.js";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
@@ -699,6 +700,17 @@ adminRoute.post("/reset-circuit-breaker", async (c) => {
 
 // ─── Capability creation (admin-only) ───────────────────────────────────────
 // POST /v1/admin/create-capability — insert a new capability row
+//
+// DEC-20260423-B (Stage B.1): this route previously used raw SQL INSERT which
+// bypassed `persistCapability`, `onCapabilityCreated` hook, validation gates,
+// and test-suite generation. Now routes through the canonical path so all 5
+// DEC-20260320-B pipeline steps run (manifest validation, hook-driven test
+// suite generation, structural validation, readiness check, and — once
+// Stage D flips BLOCKING_GATE_FIELDS — reliability/limitations gates).
+//
+// Optional body fields `output_field_reliability` and `limitations` are
+// forwarded to persistCapability so callers can supply them at create time
+// (a rare but valid pattern for admin-authored onboarding).
 
 adminRoute.post("/create-capability", async (c) => {
   const body = await c.req.json().catch(() => null);
@@ -706,33 +718,63 @@ adminRoute.post("/create-capability", async (c) => {
     return c.json(apiError("invalid_request", "slug, name, description, input_schema, and output_schema are required"), 400);
   }
 
-  const db = getDb();
-  const result = await db.execute(sql`
-    INSERT INTO capabilities (slug, name, description, category, price_cents, is_free_tier, input_schema, output_schema, data_source, transparency_tag, is_active, visible, lifecycle_state)
-    VALUES (
-      ${body.slug},
-      ${body.name},
-      ${body.description},
-      ${body.category ?? "company-data"},
-      ${body.price_cents ?? 80},
-      ${body.is_free_tier ?? false},
-      ${JSON.stringify(body.input_schema)}::jsonb,
-      ${JSON.stringify(body.output_schema)}::jsonb,
-      ${body.data_source ?? ""},
-      ${body.transparency_tag ?? "ai_generated"},
-      true,
-      true,
-      'active'
-    )
-    ON CONFLICT (slug) DO NOTHING
-    RETURNING slug, name
-  `);
+  // Map the route's JSON payload to persistCapability's DB-row shape (camelCase).
+  // Field parity with the prior raw SQL INSERT is preserved; persistCapability
+  // writes the same 13 columns plus any extras (maintenance_class etc.) when
+  // supplied. Defaults match the prior behavior.
+  const capabilityRow = {
+    slug: body.slug,
+    name: body.name,
+    description: body.description,
+    category: body.category ?? "company-data",
+    priceCents: body.price_cents ?? 80,
+    isFreeTier: body.is_free_tier ?? false,
+    inputSchema: body.input_schema,
+    outputSchema: body.output_schema,
+    dataSource: body.data_source ?? "",
+    transparencyTag: body.transparency_tag ?? "ai_generated",
+    isActive: true,
+    visible: true,
+    lifecycleState: "active",
+    // Optional pass-throughs; persistCapability stores them if present.
+    ...(body.maintenance_class ? { maintenanceClass: body.maintenance_class } : {}),
+    ...(body.processes_personal_data !== undefined ? { processesPersonalData: body.processes_personal_data } : {}),
+    ...(body.personal_data_categories !== undefined ? { personalDataCategories: body.personal_data_categories } : {}),
+    ...(body.freshness_category ? { freshnessCategory: body.freshness_category } : {}),
+    ...(body.geography ? { geography: body.geography } : {}),
+    ...(body.output_field_reliability ? { outputFieldReliability: body.output_field_reliability } : {}),
+  };
 
-  const rows2 = toRows(result);
-  if (rows2.length === 0) {
-    return c.json({ message: `Capability '${body.slug}' already exists` });
+  // Limitations are a child table; persistCapability writes them in the same tx.
+  const limitations = Array.isArray(body.limitations)
+    ? body.limitations.map((l: Record<string, unknown>, i: number) => ({
+        title: (l.title as string | null) ?? null,
+        limitationText: (l.text as string | undefined) ?? (l.limitation_text as string | undefined) ?? "",
+        category: (l.category as string | undefined) ?? "coverage",
+        severity: (l.severity as string | undefined) ?? "info",
+        workaround: (l.workaround as string | null | undefined) ?? null,
+        sortOrder: (l.sort_order as number | undefined) ?? i,
+      }))
+    : undefined;
+
+  try {
+    const result = await persistCapability(
+      { capability: capabilityRow, limitations },
+      { mode: "upsert" }, // ON CONFLICT DO UPDATE matches prior ON CONFLICT DO NOTHING-ish UX
+    );
+    return c.json(
+      {
+        created: { slug: result.slug, name: body.name },
+        mode: result.mode,
+        hook_failed: result.hookFailed,
+      },
+      201,
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logError("admin-create-capability-failed", err, { slug: body.slug });
+    return c.json(apiError("invalid_request", `persistCapability rejected input: ${msg}`), 400);
   }
-  return c.json({ created: rows2[0] }, 201);
 });
 
 // ─── Test fixture insertion (admin-only) ────────────────────────────────────
