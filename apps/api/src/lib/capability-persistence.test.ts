@@ -112,6 +112,11 @@ vi.mock("../db/index.js", () => {
           const tx = {
             insert: makeTxOrDbInsert(true, tableOf),
             update: makeTxOrDbUpdate(true, tableOf),
+            // DEC-20260423-B Stage B.2: persistCapability runs
+            // `SELECT set_config('strale.capability_insert_token', ...)`
+            // at the top of its tx to satisfy the new INSERT trigger.
+            // Mock as no-op for unit tests (no real DB, no trigger).
+            execute: async (_stmt: unknown) => { void _stmt; return []; },
           };
           await cb(tx);
         } catch (err) {

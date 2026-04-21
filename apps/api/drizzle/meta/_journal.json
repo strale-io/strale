@@ -365,6 +365,13 @@
       "when": 1777370400000,
       "tag": "0050_pii_not_null",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1777672800000,
+      "tag": "0051_capability_insert_guard",
+      "breakpoints": true
     }
   ]
 }

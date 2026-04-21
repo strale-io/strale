@@ -21,7 +21,7 @@
  * hook.
  */
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   capabilities,
@@ -128,6 +128,15 @@ export async function persistCapability(
 
   // ── Phase 1: transactional write ────────────────────────────────────────
   await db.transaction(async (tx) => {
+    // DEC-20260423-B Stage B.2: set the transaction-local GUC so the
+    // BEFORE INSERT trigger (migration 0051) allows this write. Any path
+    // that bypasses persistCapability and runs a raw INSERT fails the
+    // trigger check. `is_local = true` scopes the setting to this tx —
+    // it auto-clears at COMMIT/ROLLBACK and cannot leak across connections.
+    await tx.execute(
+      sql`SELECT set_config('strale.capability_insert_token', 'persistCapability', true)`,
+    );
+
     if (opts.mode === "create") {
       await tx.insert(capabilities).values(normalized);
 
