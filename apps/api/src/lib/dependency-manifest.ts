@@ -269,6 +269,24 @@ export const PROVIDERS: DependencyProvider[] = [
     capabilities: ["norwegian-company-data"],
     tier: "free",
   },
+  {
+    name: "sudreg",
+    displayName: "Sudski registar (Croatia)",
+    description: "Croatian Court Register public API — OAuth2 client credentials.",
+    baseUrl: "https://sudreg-data.gov.hr/api/javni",
+    authType: "bearer",
+    envVar: "SUDREG_CLIENT_ID",
+    healthProbe: {
+      // Unauthenticated GET returns 401 without consuming OAuth quota.
+      path: "/sudovi",
+      method: "GET",
+      healthyStatuses: [200, 401],
+      timeoutMs: 5000,
+      skipAuth: true,
+    },
+    capabilities: ["croatian-company-data"],
+    tier: "free",
+  },
 
   // ─── Web3 providers (free, no key) ────────────────────────────────────────
   {

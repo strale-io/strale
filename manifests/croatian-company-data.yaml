@@ -1,0 +1,162 @@
+slug: croatian-company-data
+name: Croatian Company Data
+description: >-
+  Look up Croatian company data from the Sudski registar (Ministry of Justice Court Register). Accepts OIB (11 digits)
+  or MBS (court registry number). Returns company name, status, address, legal form, VAT.
+category: data-extraction
+price_cents: 80
+is_free_tier: false
+avg_latency_ms: 500
+input_schema:
+  type: object
+  required:
+    - oib
+  properties:
+    oib:
+      type: string
+      description: Croatian OIB (11 digits) or MBS (court registry number)
+output_schema:
+  type: object
+  example:
+    oib: "81793146560"
+    mbs: "80266256"
+    mb: "1414887"
+    potpuni_mbs: "080266256"
+    status: active
+    status_code: 1
+    address: Radnička cesta 21, Zagreb, HR
+    company_name: Hrvatski Telekom d.d.
+    short_name: HT d.d.
+    legal_form: dioničko društvo
+    legal_form_abbr: d.d.
+    main_activity_code: "6110"
+    email: ir@t.ht.hr
+    country_code: HR
+    registered_date: "1999-01-27"
+    vat_number: HR81793146560
+  properties:
+    oib:
+      type: string
+    mbs:
+      type: string
+    status:
+      type: string
+    address:
+      type: string
+    company_name:
+      type: string
+    legal_form:
+      type: string
+    vat_number:
+      type: string
+data_source: Sudski registar REST API — Ministarstvo pravosuđa i uprave (Croatian Court Register)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - address
+  - professional
+geography: eu
+test_fixtures:
+  known_answer:
+    input:
+      oib: "81793146560"
+    expected_fields:
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: short_name
+        operator: not_null
+        reliability: guaranteed
+      - field: oib
+        operator: equals
+        reliability: guaranteed
+        value: "81793146560"
+      - field: mbs
+        operator: equals
+        reliability: guaranteed
+        value: "80266256"
+      - field: mb
+        operator: equals
+        reliability: guaranteed
+        value: "1414887"
+      - field: potpuni_mbs
+        operator: equals
+        reliability: guaranteed
+        value: "080266256"
+      - field: status
+        operator: equals
+        reliability: guaranteed
+        value: active
+      - field: status_code
+        operator: not_null
+        reliability: guaranteed
+      - field: registered_date
+        operator: equals
+        reliability: guaranteed
+        value: "1999-01-27"
+      - field: legal_form
+        operator: not_null
+        reliability: guaranteed
+      - field: legal_form_abbr
+        operator: equals
+        reliability: guaranteed
+        value: d.d.
+      - field: address
+        operator: not_null
+        reliability: guaranteed
+      - field: country_code
+        operator: equals
+        reliability: guaranteed
+        value: HR
+      - field: main_activity_code
+        operator: equals
+        reliability: guaranteed
+        value: "6110"
+      - field: email
+        operator: equals
+        reliability: guaranteed
+        value: ir@t.ht.hr
+      - field: vat_number
+        operator: equals
+        reliability: guaranteed
+        value: HR81793146560
+  health_check_input:
+    oib: "81793146560"
+output_field_reliability:
+  oib: guaranteed
+  mbs: guaranteed
+  status: guaranteed
+  status_code: guaranteed
+  company_name: guaranteed
+  legal_form: guaranteed
+  legal_form_abbr: guaranteed
+  vat_number: guaranteed
+  country_code: guaranteed
+  mb: common
+  potpuni_mbs: common
+  address: common
+  main_activity_code: common
+  registered_date: common
+  short_name: common
+  email: rare
+limitations:
+  - title: Board members and ownership require paid extract from Sudski registar
+    text: >-
+      Public OAuth2 API returns entity profile, addresses, legal form, activity codes, and registered capital, but does
+      not expose board members (uprava) or shareholders. Board composition and beneficial ownership require the paid
+      certified extract (izvadak) from the court registry.
+    category: coverage
+    severity: info
+    workaround: Use the MBS/OIB to order a certified extract from sudreg.pravosudje.hr
+  - title: Lookup requires OIB or MBS (no name search)
+    text: >-
+      The capability dispatches on OIB (11 digits) or MBS (numeric court registry number). Name-based search is not
+      offered because the upstream /subjekti endpoint is a case-sensitive SQL LIKE match — unsuitable for production
+      fuzzy lookup.
+    category: coverage
+    severity: info
+    workaround: Resolve the company to an OIB via an upstream name-resolver, then pass the OIB.

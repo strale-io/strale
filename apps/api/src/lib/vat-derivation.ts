@@ -97,6 +97,17 @@ export function deriveVatPL(nip: string): string | null {
 }
 
 /**
+ * Croatia: HR + OIB (11 digits). OIB is the Personal/Corporate Identification
+ * Number used as both tax ID and VAT ID base. Sudski registar publishes OIB
+ * directly in /detalji_subjekta responses.
+ */
+export function deriveVatHR(oib: string): string | null {
+  const cleaned = oib.replace(/[\s.-]/g, "");
+  if (!/^\d{11}$/.test(cleaned)) return null;
+  return `HR${cleaned}`;
+}
+
+/**
  * Czech Republic: CZ + IČO (8 digits) for most legal entities.
  * Natural persons' DIČ may be CZ + rodné číslo (9 or 10 digits); we don't
  * derive those here. ARES returns the authoritative DIČ directly when known.
