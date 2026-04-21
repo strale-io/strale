@@ -289,13 +289,6 @@ function buildKybComplete(c: Country): SolutionDef {
       parallelGroup: 4,
       inputMap: { org_number: "$input.org_number" },
     });
-    steps.push({
-      capabilitySlug: "annual-report-extract",
-      stepOrder: stepOrder++,
-      canParallel: true,
-      parallelGroup: 4,
-      inputMap: { org_number: "$input.org_number" },
-    });
   }
 
   // Group 5: Risk narrative (sequential, final)
@@ -314,7 +307,7 @@ function buildKybComplete(c: Country): SolutionDef {
     name: `KYB Complete — ${c.name}`,
     marketingName: `KYB Complete — ${c.name}`,
     description: `Comprehensive company verification for ${c.name}. Full compliance check including registry verification, sanctions screening, PEP screening, adverse media search, digital presence analysis, and a plain-language risk narrative.`,
-    longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup, ${c.isEU ? "VAT validation, " : ""}LEI check, sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation${c.code === "se" ? " plus credit report and annual report extraction" : ""}. Produces a dual-output response with structured checks and a human-readable risk narrative.`,
+    longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup, ${c.isEU ? "VAT validation, " : ""}LEI check, sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation${c.code === "se" ? " plus credit report summary" : ""}. Produces a dual-output response with structured checks and a human-readable risk narrative.`,
     agentDescription: `comprehensive ${c.name.toLowerCase()} company check, full kyb ${c.code}, deep ${c.name.toLowerCase()} verification, compliance check ${c.code}, due diligence ${c.name.toLowerCase()}`,
     category: "compliance-verification",
     priceCents: 250,
@@ -324,7 +317,7 @@ function buildKybComplete(c: Country): SolutionDef {
     geography: c.geography,
     targetAudience: "Compliance teams, fintech platforms, and AI agents performing KYB due diligence",
     transparencyTag: "mixed",
-    extendsWith: c.code === "se" ? [] : ["credit-report-summary", "annual-report-extract"],
+    extendsWith: c.code === "se" ? [] : ["credit-report-summary"],
     inputSchema: {
       type: "object",
       properties: {

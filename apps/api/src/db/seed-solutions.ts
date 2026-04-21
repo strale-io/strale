@@ -195,7 +195,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "nordic",
     targetAudience: "Developers building fintech tools, onboarding flows, or any agent that verifies Nordic businesses",
     transparencyTag: "mixed",
-    extendsWith: ["credit-report-summary", "annual-report-extract", "company-enrich"],
+    extendsWith: ["credit-report-summary", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -276,7 +276,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "nordic",
     targetAudience: "Developers building fintech tools or agents that verify Norwegian businesses",
     transparencyTag: "mixed",
-    extendsWith: ["domain-reputation", "annual-report-extract", "company-enrich"],
+    extendsWith: ["domain-reputation", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -357,7 +357,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "nordic",
     targetAudience: "Developers building fintech tools or agents that verify Danish businesses",
     transparencyTag: "mixed",
-    extendsWith: ["domain-reputation", "annual-report-extract", "company-enrich"],
+    extendsWith: ["domain-reputation", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {
@@ -435,7 +435,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "nordic",
     targetAudience: "Developers building fintech tools or agents that verify Finnish businesses",
     transparencyTag: "mixed",
-    extendsWith: ["domain-reputation", "annual-report-extract", "company-enrich"],
+    extendsWith: ["domain-reputation", "company-enrich"],
     inputSchema: {
       type: "object",
       properties: {

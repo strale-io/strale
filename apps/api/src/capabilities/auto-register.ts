@@ -16,6 +16,20 @@ const DEACTIVATED = new Map<string, string>([
   ["indian-company-data", "No viable data source identified"],
   ["singapore-company-data", "No viable data source identified"],
   [
+    "annual-report-extract",
+    // DEC-20260421-SE-B: Previous runtime fetched allabolag.se/{orgnr}/arsredovisning and
+    // extracted financial fields from linked PDFs via Claude Haiku — banned by
+    // DEC-20260420-H (Payee Assurance v1 forbids scraping). Bolagsverket's HVD API
+    // exposes annual-report filing events but PDF content sits behind the paid
+    // årsredovisning-ordering service (~50–200 SEK/report), breaking the €1.00 price point.
+    // Only consumer was KYB Complete SE's step 4b (SE-only bonus, output fed
+    // risk-narrative-generate via $all_results, no named field reads). Solution degrades
+    // gracefully — credit-report-summary remains in group 4.
+    // Reactivation trigger: licensed commercial aggregator contract that includes Swedish
+    // annual reports, OR Bolagsverket extends free HVD access to PDF content.
+    "No compliant free source for Swedish annual-report PDFs (see DEC-20260421-SE-B)",
+  ],
+  [
     "business-license-check-se",
     // DEC-20260421-SE-C: F-skatt/moms/employer flags have no free machine-readable source in 2026.
     // Skatteverket's F-skatt API is "under investigation" (no public API); Bolagsverket does not
