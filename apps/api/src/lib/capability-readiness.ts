@@ -2,15 +2,41 @@
  * Capability readiness checker — single source of truth for
  * "is this capability fully onboarded and ready for production traffic?"
  *
- * Checks 6 dimensions: executor, DB row, test suites, latency estimate,
- * transparency tag, and schema completeness.
+ * Checks 8 dimensions: executor, DB row, test suites, latency estimate,
+ * transparency tag, schema completeness, output_field_reliability coverage,
+ * and capability_limitations presence.
+ *
+ * The last two dimensions were added per DEC-20260423-B (Stage A, warning
+ * mode): DEC-20260320-B claims the onboarding pipeline populates these two
+ * fields, but until 2026-04-23 the hook `onCapabilityCreated` did not, and
+ * `checkReadiness` did not gate on them. 34 caps shipped to prod with NULL
+ * reliability (see audit-reports/... or C:\tmp\dec-20260320-b-audit.md).
+ *
+ * BLOCKING_GATE_FIELDS controls whether missing reliability/limitations
+ * affects `ready` (Stage D = true) or is warn-only (Stage A = false).
  */
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, testSuites } from "../db/schema.js";
+import { capabilities, capabilityLimitations, testSuites } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import { getDeactivatedCapabilities } from "../capabilities/auto-register.js";
+
+/**
+ * Controls whether the DEC-20260423-B reliability + limitations checks
+ * affect the `ready` verdict, or are warn-only.
+ *
+ * Stage A (2026-04-23 initial): false — warn-only; DB-gap caps still
+ *   `ready: true`, but surface warnings in `issues` for visibility.
+ * Stage D (2026-04-23 later, after 21-cap backfill): true — gaps fail
+ *   `ready`; new onboarding halts if reliability/limitations not populated.
+ *
+ * The flip from false → true is the Stage D commit.
+ */
+export const BLOCKING_GATE_FIELDS = {
+  reliability: false as boolean,
+  limitations: false as boolean,
+};
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,6 +56,13 @@ export interface ReadinessCheck {
     transparency_tag: string | null;
     has_input_schema: boolean;
     has_output_schema: boolean;
+    /** DEC-20260423-B: output_field_reliability column non-NULL and covers
+     *  every property in output_schema. */
+    has_reliability: boolean;
+    reliability_missing_fields: string[];
+    /** DEC-20260423-B: at least one active row in capability_limitations. */
+    has_limitations: boolean;
+    limitation_count: number;
   };
   issues: string[];
 }
@@ -66,6 +99,14 @@ function hasProperties(schema: unknown): boolean {
   return Object.keys(props).length > 0;
 }
 
+function getOutputSchemaProperties(schema: unknown): string[] {
+  if (!schema || typeof schema !== "object") return [];
+  const s = schema as Record<string, unknown>;
+  const props = s.properties;
+  if (!props || typeof props !== "object") return [];
+  return Object.keys(props as Record<string, unknown>);
+}
+
 // ─── Core ──────────────────────────────────────────────────────────────────────
 
 export async function checkReadiness(slug: string): Promise<ReadinessCheck> {
@@ -86,6 +127,7 @@ export async function checkReadiness(slug: string): Promise<ReadinessCheck> {
       transparencyTag: capabilities.transparencyTag,
       inputSchema: capabilities.inputSchema,
       outputSchema: capabilities.outputSchema,
+      outputFieldReliability: capabilities.outputFieldReliability,
     })
     .from(capabilities)
     .where(eq(capabilities.slug, slug))
@@ -107,6 +149,34 @@ export async function checkReadiness(slug: string): Promise<ReadinessCheck> {
     testSuiteCount = suites.length;
   }
 
+  // DEC-20260423-B: reliability coverage + limitations presence
+  const reliabilityRaw = row?.outputFieldReliability as Record<string, string> | null | undefined;
+  const reliabilityKeys = reliabilityRaw && typeof reliabilityRaw === "object"
+    ? Object.keys(reliabilityRaw)
+    : [];
+  const outputSchemaProps = getOutputSchemaProperties(row?.outputSchema);
+  const reliabilityMissingFields = outputSchemaProps.filter(
+    (p) => !reliabilityKeys.includes(p),
+  );
+  const hasReliability = hasDbRow
+    && reliabilityKeys.length > 0
+    && reliabilityMissingFields.length === 0;
+
+  let limitationCount = 0;
+  if (hasDbRow) {
+    const lims = await db
+      .select({ id: capabilityLimitations.id })
+      .from(capabilityLimitations)
+      .where(
+        and(
+          eq(capabilityLimitations.capabilitySlug, slug),
+          eq(capabilityLimitations.active, true),
+        ),
+      );
+    limitationCount = lims.length;
+  }
+  const hasLimitations = limitationCount > 0;
+
   const issues: string[] = [];
   if (isDeactivated) issues.push(`Deactivated: ${deactivated.get(slug)}`);
   if (!hasExecutor) issues.push("No executor registered");
@@ -117,6 +187,21 @@ export async function checkReadiness(slug: string): Promise<ReadinessCheck> {
   if (hasDbRow && !hasTransparency) issues.push("Missing transparency_tag");
   if (hasDbRow && !hasInputSchema) issues.push("Input schema has no properties — agents cannot discover parameters");
   if (hasDbRow && !hasOutputSchema) issues.push("Output schema has no properties — agents cannot validate responses");
+  // DEC-20260423-B — warn (Stage A) or block (Stage D, controlled by BLOCKING_GATE_FIELDS):
+  if (hasDbRow && !hasReliability) {
+    const mode = BLOCKING_GATE_FIELDS.reliability ? "blocks ready" : "warn-only (pre-Stage-D)";
+    if (reliabilityKeys.length === 0) {
+      issues.push(`Missing output_field_reliability — NULL or empty [${mode}]`);
+    } else {
+      issues.push(
+        `Missing output_field_reliability for fields: ${reliabilityMissingFields.join(", ")} [${mode}]`,
+      );
+    }
+  }
+  if (hasDbRow && !hasLimitations) {
+    const mode = BLOCKING_GATE_FIELDS.limitations ? "blocks ready" : "warn-only (pre-Stage-D)";
+    issues.push(`No active capability_limitations rows [${mode}]`);
+  }
 
   const ready =
     hasExecutor &&
@@ -127,6 +212,8 @@ export async function checkReadiness(slug: string): Promise<ReadinessCheck> {
     hasTransparency &&
     hasInputSchema &&
     hasOutputSchema &&
+    (BLOCKING_GATE_FIELDS.reliability ? hasReliability : true) &&
+    (BLOCKING_GATE_FIELDS.limitations ? hasLimitations : true) &&
     !isDeactivated;
 
   const result: ReadinessCheck = {
@@ -145,6 +232,10 @@ export async function checkReadiness(slug: string): Promise<ReadinessCheck> {
       transparency_tag: row?.transparencyTag ?? null,
       has_input_schema: hasInputSchema,
       has_output_schema: hasOutputSchema,
+      has_reliability: hasReliability,
+      reliability_missing_fields: reliabilityMissingFields,
+      has_limitations: hasLimitations,
+      limitation_count: limitationCount,
     },
     issues,
   };
