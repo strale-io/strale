@@ -117,6 +117,19 @@ vi.mock("../db/index.js", () => {
             // at the top of its tx to satisfy the new INSERT trigger.
             // Mock as no-op for unit tests (no real DB, no trigger).
             execute: async (_stmt: unknown) => { void _stmt; return []; },
+            // F-B-012: diffAndUpdateLimitations selects existing
+            // limitations + deletes orphans. Mock returns empty
+            // existing-rows (fresh capability, nothing to diff against),
+            // so the helper's insert loop fires the expected inserts
+            // the existing tests assert against. Delete mock is a no-op.
+            select: (_cols: unknown) => ({
+              from: (_tbl: unknown) => ({
+                where: async (_w: unknown) => [],
+              }),
+            }),
+            delete: (_tbl: unknown) => ({
+              where: async (_w: unknown) => { /* no-op */ },
+            }),
           };
           await cb(tx);
         } catch (err) {

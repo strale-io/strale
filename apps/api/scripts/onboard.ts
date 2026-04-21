@@ -42,7 +42,7 @@ import { getDb as getDbForValidation } from "../src/db/index.js";
 import { capabilities as capabilitiesTable } from "../src/db/schema.js";
 import { logWarn } from "../src/lib/log.js";
 // Cluster 2 Phase 3 C1: transactional persist + hook wiring.
-import { persistCapability } from "../src/lib/capability-persistence.js";
+import { persistCapability, diffAndUpdateLimitations } from "../src/lib/capability-persistence.js";
 // Cluster 2 Phase 3 C2: Manifest → DB-row normalizer.
 import { normalizeManifestToRow } from "../src/lib/capability-manifest.js";
 
@@ -1071,27 +1071,23 @@ async function backfill(
     }
   }
 
-  // Insert limitations if none exist
-  const existingLimitations = await db
-    .select({ id: capabilityLimitations.id })
-    .from(capabilityLimitations)
-    .where(eq(capabilityLimitations.capabilitySlug, manifest.slug))
-    .limit(1);
-
-  if (existingLimitations.length === 0 && manifest.limitations?.length > 0) {
-    for (let i = 0; i < manifest.limitations.length; i++) {
-      const lim = manifest.limitations[i];
-      await db.insert(capabilityLimitations).values({
-        capabilitySlug: manifest.slug,
-        title: lim.title ?? null,
-        limitationText: lim.text,
-        category: lim.category,
-        severity: lim.severity ?? "info",
-        workaround: lim.workaround ?? null,
-        sortOrder: i,
-      });
-    }
-    console.log(`  ✓ Added ${manifest.limitations.length} limitation(s)`);
+  // F-B-012: diff-by-hash backfill. Previously the block at this location
+  // only INSERTed when existingLimitations.length === 0 — so any manifest
+  // edits (add/remove/edit/reorder) silently no-opped once ≥1 row existed.
+  // diffAndUpdateLimitations DELETEs orphans, INSERTs new, UPDATEs
+  // sort_order on moves — called regardless of existing-row count.
+  const manifestLimRows = (manifest.limitations ?? []).map((lim) => ({
+    title: lim.title ?? null,
+    limitationText: lim.text,
+    category: lim.category,
+    severity: lim.severity ?? "info",
+    workaround: lim.workaround ?? null,
+  }));
+  const limResult = await diffAndUpdateLimitations(db, manifest.slug, manifestLimRows);
+  if (limResult.deleted + limResult.inserted + limResult.reordered > 0) {
+    console.log(
+      `  ✓ Limitations synced: deleted=${limResult.deleted} inserted=${limResult.inserted} reordered=${limResult.reordered}`,
+    );
   }
 
   console.log(`  ✅ Backfill complete for '${manifest.slug}'`);

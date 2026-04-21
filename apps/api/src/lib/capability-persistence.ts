@@ -21,7 +21,8 @@
  * hook.
  */
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { createHash } from "node:crypto";
 import { getDb } from "../db/index.js";
 import {
   capabilities,
@@ -75,6 +76,160 @@ export interface PersistCapabilityResult {
  * this persistence-layer guard handles direct-API writes and is
  * defense-in-depth.
  */
+// ─── F-B-012 diff-by-hash limitations helper (DEC-20260424-A / cluster_2_design §4.2) ──
+// Closes the last piece of Cluster 2 Phase 4. Before this helper, three
+// sites wrote to capability_limitations incorrectly:
+//   1. onboard.ts:1081 backfill — "INSERT only if none exist", so manifest
+//      changes silently no-opped whenever any rows already existed.
+//   2. persistCapability upsert mode — per-row INSERT without existence
+//      check, creating duplicates on re-seed (latent, no seed declares
+//      limitations today).
+//   3. persistCapability create mode — same per-row INSERT; duplicates if
+//      create is called on a capability that already has limitations rows
+//      from a prior aborted attempt.
+// All three are replaced with a content-addressed diff: sha256 hash of
+// (title | limitation_text | category | severity | workaround) with
+// trim-normalized null handling. DELETE orphans, INSERT new, UPDATE
+// sort_order for position moves. No-op when manifest and DB hashes
+// match and positions align.
+//
+// Fields NOT hashed: `affected_percentage` (not on `ManifestLimitation`;
+// only the manual `seed-limitations.ts` path sets it). A manifest-path
+// re-seed of content-identical rows is therefore a no-op and preserves
+// the existing `affected_percentage` value on the row. If
+// `affected_percentage` is ever added to `ManifestLimitation`, add it to
+// `limitationHash` and this comment.
+
+type LimitationHashInput = {
+  title?: string | null;
+  limitationText: string;
+  category: string;
+  severity?: string | null;
+  workaround?: string | null;
+};
+
+/** Hash the 5 content fields. Null/undefined normalize to empty string;
+ *  leading/trailing whitespace is trimmed before hashing. */
+export function limitationHash(l: LimitationHashInput): string {
+  const norm = (s: string | null | undefined): string => (s ?? "").trim();
+  const parts = [
+    norm(l.title),
+    norm(l.limitationText),
+    norm(l.category),
+    norm(l.severity),
+    norm(l.workaround),
+  ];
+  return createHash("sha256").update(parts.join("|")).digest("hex");
+}
+
+/** Drizzle's tx and db share the query-builder interface used here; accept
+ *  either so callers inside a transaction and callers without one both
+ *  work. Typed loosely on purpose — the helper only uses `.select`,
+ *  `.insert`, `.update`, `.delete` from the interface. */
+type DrizzleQueryable = {
+  select: typeof getDb extends () => infer D ? (D extends { select: infer S } ? S : never) : never;
+  insert: typeof getDb extends () => infer D ? (D extends { insert: infer I } ? I : never) : never;
+  update: typeof getDb extends () => infer D ? (D extends { update: infer U } ? U : never) : never;
+  delete: typeof getDb extends () => infer D ? (D extends { delete: infer X } ? X : never) : never;
+};
+
+export interface DiffLimitationsResult {
+  deleted: number;
+  inserted: number;
+  reordered: number;
+}
+
+/**
+ * Diff-by-hash upsert for capability_limitations for one capability.
+ *
+ * Runs inside the caller's transaction if `queryable` is a tx; otherwise
+ * runs on the top-level db. Either way, aborts on any error (tx rolls
+ * back; db propagates).
+ *
+ * `manifestLimitations` uses the persistence-layer row shape (Omit<
+ * CapabilityLimitationInsert, "capabilitySlug">). The caller is
+ * responsible for the Manifest→row mapping (defaults on severity, etc.).
+ * The helper hashes only the 5 content fields; other fields like
+ * `sortOrder` drive position and don't affect the hash.
+ */
+export async function diffAndUpdateLimitations(
+  queryable: DrizzleQueryable,
+  capabilitySlug: string,
+  manifestLimitations: ReadonlyArray<Omit<CapabilityLimitationInsert, "capabilitySlug">>,
+): Promise<DiffLimitationsResult> {
+  // 1. Build manifestByHash with positional index (drives sort_order).
+  const manifestByHash = new Map<string, { lim: Omit<CapabilityLimitationInsert, "capabilitySlug">; index: number }>();
+  for (let i = 0; i < manifestLimitations.length; i++) {
+    const lim = manifestLimitations[i];
+    const h = limitationHash(lim);
+    // If two manifest rows hash-collide (rare but possible — identical
+    // content duplicated in the manifest), later wins. The caller
+    // authored duplicates; we dedupe silently.
+    manifestByHash.set(h, { lim, index: i });
+  }
+
+  // 2. Load existing active rows for this capability.
+  const existing = await (queryable as ReturnType<typeof getDb>)
+    .select({
+      id: capabilityLimitations.id,
+      title: capabilityLimitations.title,
+      limitationText: capabilityLimitations.limitationText,
+      category: capabilityLimitations.category,
+      severity: capabilityLimitations.severity,
+      workaround: capabilityLimitations.workaround,
+      sortOrder: capabilityLimitations.sortOrder,
+    })
+    .from(capabilityLimitations)
+    .where(
+      and(
+        eq(capabilityLimitations.capabilitySlug, capabilitySlug),
+        eq(capabilityLimitations.active, true),
+      ),
+    );
+
+  const dbByHash = new Map<string, { id: string; sortOrder: number }>();
+  for (const row of existing) {
+    const h = limitationHash(row);
+    dbByHash.set(h, { id: row.id as string, sortOrder: row.sortOrder });
+  }
+
+  // 3. DELETE orphans: rows in DB whose hash is NOT in manifest.
+  const orphanIds: string[] = [];
+  for (const [h, row] of dbByHash) {
+    if (!manifestByHash.has(h)) orphanIds.push(row.id);
+  }
+  if (orphanIds.length > 0) {
+    await (queryable as ReturnType<typeof getDb>)
+      .delete(capabilityLimitations)
+      .where(inArray(capabilityLimitations.id, orphanIds));
+  }
+
+  // 4. INSERT new + UPDATE sort_order on moved rows.
+  let inserted = 0;
+  let reordered = 0;
+  for (const [h, { lim, index }] of manifestByHash) {
+    const existingRow = dbByHash.get(h);
+    if (!existingRow) {
+      await (queryable as ReturnType<typeof getDb>)
+        .insert(capabilityLimitations)
+        .values({
+          ...lim,
+          capabilitySlug,
+          sortOrder: index,
+        });
+      inserted++;
+    } else if (existingRow.sortOrder !== index) {
+      await (queryable as ReturnType<typeof getDb>)
+        .update(capabilityLimitations)
+        .set({ sortOrder: index, updatedAt: new Date() })
+        .where(eq(capabilityLimitations.id, existingRow.id));
+      reordered++;
+    }
+  }
+
+  return { deleted: orphanIds.length, inserted, reordered };
+}
+
 function normalizePiiFields(row: CapabilityRowInsert): CapabilityRowInsert {
   const out = { ...row };
   if (out.processesPersonalData === null || out.processesPersonalData === undefined) {
@@ -146,15 +301,11 @@ export async function persistCapability(
         }
       }
 
-      if (input.limitations?.length) {
-        for (let i = 0; i < input.limitations.length; i++) {
-          const lim = input.limitations[i];
-          await tx.insert(capabilityLimitations).values({
-            ...lim,
-            capabilitySlug: slug,
-            sortOrder: lim.sortOrder ?? i,
-          });
-        }
+      // F-B-012: route limitations through diffAndUpdateLimitations for
+      // idempotency parity. If the capability row already has limitations
+      // (e.g. prior aborted create), the diff handles orphan cleanup.
+      if (input.limitations) {
+        await diffAndUpdateLimitations(tx as unknown as DrizzleQueryable, slug, input.limitations);
       }
     } else if (opts.mode === "update") {
       await tx
@@ -184,15 +335,11 @@ export async function persistCapability(
         }
       }
 
-      if (input.limitations?.length) {
-        for (let i = 0; i < input.limitations.length; i++) {
-          const lim = input.limitations[i];
-          await tx.insert(capabilityLimitations).values({
-            ...lim,
-            capabilitySlug: slug,
-            sortOrder: lim.sortOrder ?? i,
-          });
-        }
+      // F-B-012: upsert mode also routes through diffAndUpdateLimitations.
+      // Previously INSERTed each row without an existence check, creating
+      // duplicates on re-seed. Diff helper no-ops when content matches.
+      if (input.limitations) {
+        await diffAndUpdateLimitations(tx as unknown as DrizzleQueryable, slug, input.limitations);
       }
     }
   });
