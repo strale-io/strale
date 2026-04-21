@@ -55,6 +55,7 @@ const VALID_CATEGORIES = [
   "trade",
   "utility",
   "web-intelligence",
+  "web3",
 ];
 
 const VALID_TRANSPARENCY_TAGS = ["algorithmic", "ai_generated", "mixed", null];
