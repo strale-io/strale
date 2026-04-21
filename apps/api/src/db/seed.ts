@@ -2798,56 +2798,126 @@ const seedCapabilities = [
   },
 ];
 
+/**
+ * DEC-20260423-B Stage B.3: wrapper around `persistCapability` that
+ * centralizes the DEC-20260320-B onboarding contract for seed entries.
+ *
+ * Rationale: seed entries historically omit `outputFieldReliability` and
+ * `limitations`. `persistCapability` accepts both but does not derive
+ * them — so seeded capabilities silently inherit NULL/empty for those
+ * fields. This wrapper:
+ *
+ *  1. Calls `persistCapability` with the seed entry shaped as a DB row.
+ *  2. Post-persist, flags whether reliability/limitations are missing.
+ *  3. If `runDiscovery: true`, logs a queueable manual-action line:
+ *     "run `npx tsx scripts/onboard.ts --backfill --discover
+ *     --manifest manifests/<slug>.yaml` to populate reliability."
+ *     (Inline discovery is not run from seed — it would require the
+ *     auto-registered executor at seed time and make live paid API
+ *     calls. Keeping the discovery pass out-of-band matches CLI semantics.)
+ *  4. Returns the persistCapability result verbatim.
+ *
+ * Default behaviour mirrors the prior seed loop so no existing entry
+ * changes semantics. New seed entries that add `runDiscovery: true`
+ * get an explicit queue line post-seed.
+ */
+interface SeedCapability {
+  slug: string;
+  name: string;
+  description: string;
+  category: string;
+  inputSchema: unknown;
+  outputSchema: unknown;
+  priceCents: number;
+  [key: string]: unknown;
+}
+
+async function seedCapabilityWithDiscovery(
+  cap: SeedCapability,
+  opts: { runDiscovery?: boolean } = {},
+): Promise<void> {
+  // Cluster 2 Phase 3 C2: persistCapability({mode:'upsert'}) preserves
+  // the prior onConflictDoUpdate semantics + fires onCapabilityCreated
+  // post-commit. upsertRefreshColumns narrows the on-conflict update to
+  // the same columns the old code refreshed (intentional — seed is
+  // idempotent, not a full re-write of DB-canonical operational fields).
+  //
+  // Hook-failure (e.g., Gate 5 path-coverage failure) no longer aborts
+  // the loop: persistCapability catches and marks lifecycle_state=
+  // 'hook_failed'. We still log it so seed-time onboarding issues are
+  // visible in the output.
+  const result = await persistCapability(
+    {
+      capability: {
+        ...cap,
+        lifecycleState: "active",
+        visible: true,
+        avgLatencyMs: estimateDefaultLatency(cap),
+        x402Enabled: true,
+        x402PriceUsd: eurToX402Price(cap.priceCents).toFixed(4),
+        x402Method: "GET",
+      } as never,
+    },
+    {
+      mode: "upsert",
+      upsertRefreshColumns: {
+        name: cap.name,
+        description: cap.description,
+        category: cap.category,
+        inputSchema: cap.inputSchema,
+        outputSchema: cap.outputSchema,
+        priceCents: cap.priceCents,
+        updatedAt: new Date(),
+      },
+    },
+  );
+  if (result.hookFailed) {
+    logWarn("seed-onboarding-hook-failed", "post-insert hook failed for capability", {
+      capability_slug: cap.slug,
+    });
+  }
+
+  // DEC-20260423-B: flag reliability/limitations gaps in seed entries.
+  // These fields are DEC-20260320-B requirements enforced (warn Stage A,
+  // block Stage D) by checkReadiness. Seed entries that omit them should
+  // either include them inline OR queue a --discover pass.
+  const hasInlineReliability =
+    cap.outputFieldReliability !== undefined
+    && cap.outputFieldReliability !== null
+    && typeof cap.outputFieldReliability === "object"
+    && Object.keys(cap.outputFieldReliability as Record<string, unknown>).length > 0;
+  const hasInlineLimitations = Array.isArray(cap.limitations) && cap.limitations.length > 0;
+  if (!hasInlineReliability || !hasInlineLimitations) {
+    if (opts.runDiscovery) {
+      log.info(
+        {
+          label: "seed-manual-discovery-queued",
+          capability_slug: cap.slug,
+          missing_reliability: !hasInlineReliability,
+          missing_limitations: !hasInlineLimitations,
+          action: `npx tsx scripts/onboard.ts --backfill --discover --manifest manifests/${cap.slug}.yaml`,
+        },
+        "seed-manual-discovery-queued",
+      );
+    } else {
+      // Silent pass-through unless runDiscovery opts-in. Pre-existing seed
+      // entries inherit current behavior without forced logging spam.
+    }
+  }
+
+  log.info(
+    { label: "seed-capability-added", capability_slug: cap.slug, price_cents: cap.priceCents },
+    "seed-capability-added",
+  );
+}
+
 async function seed() {
   const db = getDb();
 
   log.info({ label: "seed-start" }, "Seeding capabilities");
 
   for (const cap of seedCapabilities) {
-    // Cluster 2 Phase 3 C2: persistCapability({mode:'upsert'}) preserves
-    // the prior onConflictDoUpdate semantics + fires onCapabilityCreated
-    // post-commit. upsertRefreshColumns narrows the on-conflict update to
-    // the same columns the old code refreshed (intentional — seed is
-    // idempotent, not a full re-write of DB-canonical operational fields).
-    //
-    // Hook-failure (e.g., Gate 5 path-coverage failure) no longer aborts
-    // the loop: persistCapability catches and marks lifecycle_state=
-    // 'hook_failed'. We still log it so seed-time onboarding issues are
-    // visible in the output.
-    const result = await persistCapability(
-      {
-        capability: {
-          ...cap,
-          lifecycleState: "active",
-          visible: true,
-          avgLatencyMs: estimateDefaultLatency(cap),
-          x402Enabled: true,
-          x402PriceUsd: eurToX402Price(cap.priceCents).toFixed(4),
-          x402Method: "GET",
-        } as never,
-      },
-      {
-        mode: "upsert",
-        upsertRefreshColumns: {
-          name: cap.name,
-          description: cap.description,
-          category: cap.category,
-          inputSchema: cap.inputSchema,
-          outputSchema: cap.outputSchema,
-          priceCents: cap.priceCents,
-          updatedAt: new Date(),
-        },
-      },
-    );
-    if (result.hookFailed) {
-      logWarn("seed-onboarding-hook-failed", "post-insert hook failed for capability", {
-        capability_slug: cap.slug,
-      });
-    }
-    log.info(
-      { label: "seed-capability-added", capability_slug: cap.slug, price_cents: cap.priceCents },
-      "seed-capability-added",
-    );
+    await seedCapabilityWithDiscovery(cap);
   }
 
   log.info(
