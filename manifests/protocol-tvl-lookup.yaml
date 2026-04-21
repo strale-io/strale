@@ -1,0 +1,152 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: protocol-tvl-lookup
+name: Protocol TVL Lookup
+description: >-
+  Get the current Total Value Locked (TVL), chain distribution, category, audit status, and metadata for any DeFi
+  protocol. Covers 7,000+ protocols across 500+ chains via DeFi Llama.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - protocol
+  properties:
+    protocol:
+      type: string
+      description: Protocol name or DeFi Llama slug (e.g., 'aave', 'uniswap', 'compound')
+output_schema:
+  type: object
+  example:
+    url: https://aave.com
+    name: Aave V3
+    slug: aave-v3
+    audits: 2
+    chains:
+      - Fantom
+      - Harmony
+      - Base
+      - Avalanche
+      - Soneium
+      - Scroll
+      - Ethereum
+      - Metis
+      - Arbitrum
+      - Binance
+      - MegaETH
+      - Sonic
+      - Plasma
+      - Optimism
+      - Celo
+      - Mantle
+      - Linea
+      - xDai
+      - zkSync Era
+      - Polygon
+      - X Layer
+    github: []
+    symbol: AAVE
+    tvl_usd: 23352261394
+    twitter: aave
+    category: Lending
+    chain_tvls:
+      Base: 707862049
+      Celo: 10691092
+      xDai: 63524255
+      Linea: 45262753
+      Metis: 542728
+      Sonic: 11482126
+      Fantom: 3646
+      Mantle: 547803793
+      Plasma: 1429883904
+      Scroll: 6733463
+      Binance: 179301495
+      Harmony: 0
+      MegaETH: 22645982
+      Polygon: 142978163
+      Soneium: 462151
+      X Layer: 88377
+      Arbitrum: 733702906
+      Ethereum: 19017359023
+      Optimism: 53605103
+      Avalanche: 376136796
+      zkSync Era: 2191578
+    audit_links:
+      - https://aave.com/security
+    description: Earn interest, borrow assets, and build applications
+    listed_since: "2022-04-01T01:34:37.000Z"
+    is_open_source: false
+    tvl_change_1d_pct: null
+    tvl_change_7d_pct: null
+  properties:
+    url:
+      type: string
+    name:
+      type: string
+    slug:
+      type: string
+    audits:
+      type: number
+    chains:
+      type: array
+    tvl_usd:
+      type: number
+    twitter:
+      type: string
+    category:
+      type: string
+    audit_links:
+      type: array
+    listed_since:
+      type: string
+    is_open_source:
+      type: boolean
+    tvl_change_1d_pct:
+      type: number
+    tvl_change_7d_pct:
+      type: number
+data_source: DefiLlama (Protocol TVL API)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: false
+personal_data_categories: []
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      protocol: aave-v3
+    expected_fields:
+      - field: name
+        operator: not_null
+        reliability: common
+      - field: tvl_usd
+        operator: not_null
+        reliability: common
+output_field_reliability:
+  url: common
+  name: common
+  slug: common
+  audits: common
+  chains: common
+  tvl_usd: common
+  twitter: common
+  category: common
+  audit_links: common
+  listed_since: common
+  is_open_source: common
+  tvl_change_1d_pct: common
+  tvl_change_7d_pct: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects DefiLlama (Protocol TVL API) at query time. Dependent on upstream API availability; may degrade if
+      the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

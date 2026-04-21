@@ -1,0 +1,62 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: phishing-site-check
+name: Phishing Site Check
+description: >-
+  Check if a URL is a known phishing site targeting Web3 users. Detects cloned dApp frontends, fake token claim pages,
+  and wallet drainer sites. Uses GoPlus Security's phishing database.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: URL to check for phishing (e.g., 'https://uniswap-claim.xyz')
+output_schema:
+  type: object
+  example:
+    url: https://google.com
+    confidence: safe
+    is_phishing: false
+  properties:
+    url:
+      type: string
+    confidence:
+      type: string
+    is_phishing:
+      type: boolean
+data_source: GoPlus Labs (Phishing Site Detection API)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: false
+personal_data_categories: []
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      url: https://google.com
+    expected_fields:
+      - field: is_phishing
+        operator: is_false
+        reliability: common
+output_field_reliability:
+  url: common
+  confidence: common
+  is_phishing: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects GoPlus Labs (Phishing Site Detection API) at query time. Dependent on upstream API availability;
+      may degrade if the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

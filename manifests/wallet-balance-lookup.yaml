@@ -1,0 +1,140 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: wallet-balance-lookup
+name: Wallet Balance Lookup
+description: >-
+  Get the native token balance for any wallet address and a list of recently interacted ERC-20 tokens. Supports Ethereum
+  and other EVM chains via Etherscan V2.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: Wallet address (0x...)
+    chain_id:
+      type: string
+      description: "Chain ID (1=Ethereum). Default: 1"
+output_schema:
+  type: object
+  example:
+    note: recent_tokens is derived from the last 100 token transfers, not actual balances.
+    address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
+    chain_id: "1"
+    recent_tokens:
+      - name: HEX
+        symbol: HEX
+        address: "0x2b591e99afe9f32eaa6214f7b7629768c40eeb39"
+      - name: PointZ
+        symbol: PTZ
+        address: "0xb9e9f8de030be4585c65cb4b14af3a3acf1f92b1"
+      - name: Strait of Hormuz
+        symbol: HORMUZ
+        address: "0x9a145c5ef4e045008e3e56566ef80a9739dd5981"
+      - name: Yee Token
+        symbol: Yee
+        address: "0x9ac9468e7e3e1d194080827226b45d0b892c77fd"
+      - name: QAI
+        symbol: QAI
+        address: "0xafc628ae96e4d964222a3c7c4fad92bac72c26cd"
+      - name: AIG
+        symbol: AIG
+        address: "0xbfb5d3e6d835bef660fee47877ad07ff780c88f3"
+      - name: Orbitshield
+        symbol: OBS
+        address: "0x5a52b7c9ee14a6740f6a3563013054b3de4c6f65"
+      - name: 星火通证
+        symbol: SPARK
+        address: "0xe92ec83d8ea27f802393f084004491e463209acb"
+      - name: DubAI
+        symbol: DubAI
+        address: "0x60b69a1dfc78a67c72a616f213b3e256e1ecce5b"
+      - name: B Zero X
+        symbol: B0x
+        address: "0x1f8f212540b31b37f40d8c57b5c7d8b55bf25919"
+      - name: Malamute.Finance
+        symbol: MALLY
+        address: "0xa3e7833775a9cc022db2c72eb900378f90ce89b4"
+      - name: Tether USD
+        symbol: USDT
+        address: "0x4c592e723e5adf7ab9227043824d25fc77d6980e"
+      - name: AILife
+        symbol: AILife
+        address: "0xc26cdfca6999d2aa45ab09ae2e4e9458b2fa18a2"
+      - name: Tether USD
+        symbol: USDT
+        address: "0xdac17f958d2ee523a2206206994597c13d831ec7"
+      - name: GLOBAL RESERVE SYSTEM
+        symbol: GLOB
+        address: "0x45f2ab0ca2116b2e1a70bf5e13293947b25d0272"
+      - name: Ethereum Hyper
+        symbol: eHYPER
+        address: "0x6396b6eede0af69d8371a7520aee72bd979c3e6d"
+      - name: Nicolas Maduro
+        symbol: MADURO
+        address: "0xf9b09a5f1b34b42a484050ddcf052bec00c5acec"
+      - name: Nexo
+        symbol: NEXO
+        address: "0xb62132e35a6c13ee1ee0f84dc5d40bad8d815206"
+      - name: Binance Wrapped BTC
+        symbol: BBTC
+        address: "0x9be89d2a4cd102d8fecc6bf9da793be995c22541"
+      - name: Life USD
+        symbol: LUSD
+        address: "0xdc53cc918c925beb02ef5eca4d83449913bb7f5a"
+    native_balance_eth: 10774.450568
+    native_balance_wei: "10774450567588229957307"
+    token_transfer_count: 100
+  properties:
+    address:
+      type: string
+    chain_id:
+      type: string
+    recent_tokens:
+      type: array
+    native_balance_eth:
+      type: number
+    native_balance_wei:
+      type: string
+    token_transfer_count:
+      type: number
+data_source: Etherscan (Account Balance + Token API)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - financial
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
+      chain_id: "1"
+    expected_fields:
+      - field: native_balance_eth
+        operator: not_null
+        reliability: common
+output_field_reliability:
+  address: common
+  chain_id: common
+  recent_tokens: common
+  native_balance_eth: common
+  native_balance_wei: common
+  token_transfer_count: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects Etherscan (Account Balance + Token API) at query time. Dependent on upstream API availability; may
+      degrade if the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

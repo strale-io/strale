@@ -1,0 +1,72 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: gas-price-check
+name: Gas Price Check
+description: >-
+  Get current gas prices for an EVM chain. Returns safe, proposed, and fast gas prices in Gwei plus the base fee. Useful
+  for agents deciding whether to execute a transaction now or wait.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    chain_id:
+      type: string
+      description: "Chain ID (1=Ethereum, 8453=Base). Default: 1"
+output_schema:
+  type: object
+  example:
+    chain_id: "1"
+    base_fee_gwei: 0.111812277
+    fast_gas_gwei: 0.122993504
+    safe_gas_gwei: 0.111812277
+    gas_used_ratio: 0.79543645,0.18742179029228,0.0750681879814453,0.97324925,0.586948583333333
+    proposed_gas_gwei: 0.112812277
+  properties:
+    chain_id:
+      type: string
+    base_fee_gwei:
+      type: number
+    fast_gas_gwei:
+      type: number
+    safe_gas_gwei:
+      type: number
+    proposed_gas_gwei:
+      type: number
+data_source: Etherscan (Gas Oracle API)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: false
+personal_data_categories: []
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      chain_id: "1"
+    expected_fields:
+      - field: safe_gas_gwei
+        operator: not_null
+        reliability: common
+      - field: fast_gas_gwei
+        operator: not_null
+        reliability: common
+output_field_reliability:
+  chain_id: common
+  base_fee_gwei: common
+  fast_gas_gwei: common
+  safe_gas_gwei: common
+  proposed_gas_gwei: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects Etherscan (Gas Oracle API) at query time. Dependent on upstream API availability; may degrade if
+      the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

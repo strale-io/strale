@@ -1,0 +1,91 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: wallet-risk-score
+name: Wallet Risk Score
+description: >-
+  Check if a wallet address is associated with malicious activity: phishing, money laundering, darknet, blackmail, or
+  other fraud. Uses GoPlus Security's malicious address database covering 30+ blockchains.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: Wallet address to check (0x...)
+    chain_id:
+      type: string
+      description: "Chain ID (1=Ethereum, 56=BSC, 8453=Base, 137=Polygon). Default: 1"
+output_schema:
+  type: object
+  example:
+    address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    details:
+      fake_kyc: false
+      cybercrime: false
+      blacklist_doubt: false
+      financial_crime: false
+      stealing_attack: false
+      money_laundering: false
+      phishing_activities: false
+      blackmail_activities: false
+      darkweb_transactions: false
+      honeypot_related_address: false
+      malicious_mining_activities: false
+    chain_id: "1"
+    risk_level: low
+    risk_labels: []
+    is_malicious: false
+  properties:
+    address:
+      type: string
+    details:
+      type: object
+    chain_id:
+      type: string
+    risk_level:
+      type: string
+    risk_labels:
+      type: array
+      items:
+        type: string
+    is_malicious:
+      type: boolean
+data_source: GoPlus Labs (Address Security API)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - financial
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    expected_fields:
+      - field: is_malicious
+        operator: is_false
+        reliability: common
+output_field_reliability:
+  address: common
+  details: common
+  chain_id: common
+  risk_level: common
+  risk_labels: common
+  is_malicious: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects GoPlus Labs (Address Security API) at query time. Dependent on upstream API availability; may
+      degrade if the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

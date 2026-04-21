@@ -1,0 +1,89 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: stablecoin-flow-check
+name: Stablecoin Flow Check
+description: >-
+  Check stablecoin supply and flows. Query by chain (stablecoin supply on Ethereum, Base, etc.), by stablecoin (USDC
+  market cap and circulation), or get the overall market summary. Data from DeFi Llama.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    chain:
+      type: string
+      description: Chain name (e.g., 'Ethereum', 'Base', 'Solana')
+    stablecoin:
+      type: string
+      description: Stablecoin name (e.g., 'USDC', 'USDT')
+output_schema:
+  type: object
+  example:
+    chain: Ethereum
+    details:
+      circulating_usd:
+        peggedAUD: 5092703.500965833
+        peggedCAD: 615086.3225666233
+        peggedCHF: 34620655.305106424
+        peggedCNY: 0
+        peggedEUR: 486302260.82651424
+        peggedGBP: 13854479.533489645
+        peggedJPY: 11742272.97466769
+        peggedMXN: 0
+        peggedPHP: 2772089.1568532633
+        peggedRUB: 6706111.115847108
+        peggedSGD: 12579869.697182218
+        peggedTRY: 1107277.1805110988
+        peggedUSD: 165183059225.56757
+        peggedVAR: 99046873.35275263
+        peggedREAL: 2702546.125115636
+      circulating_prev_day: null
+      circulating_prev_week: null
+      circulating_prev_month: null
+    query_type: chain
+    total_supply_usd: 165183059225.56757
+  properties:
+    chain:
+      type: string
+    details:
+      type: object
+    query_type:
+      type: string
+    stablecoin:
+      type: string
+    total_supply_usd:
+      type: number
+data_source: DefiLlama (Stablecoins API)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: false
+personal_data_categories: []
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      chain: Ethereum
+    expected_fields:
+      - field: total_supply_usd
+        operator: not_null
+        reliability: common
+output_field_reliability:
+  chain: common
+  details: common
+  query_type: common
+  stablecoin: common
+  total_supply_usd: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects DefiLlama (Stablecoins API) at query time. Dependent on upstream API availability; may degrade if
+      the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

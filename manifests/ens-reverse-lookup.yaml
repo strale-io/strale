@@ -1,0 +1,71 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: ens-reverse-lookup
+name: ENS Reverse Lookup
+description: >-
+  Look up the primary ENS name for a wallet address. Includes forward verification to confirm the name actually points
+  back to the address. Returns null if no ENS name is set.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: Ethereum wallet address (0x...)
+output_schema:
+  type: object
+  example:
+    address: "0x0000000000000000000000000000000000000001"
+    has_ens: false
+    ens_name: null
+    verified: false
+  properties:
+    address:
+      type: string
+    has_ens:
+      type: boolean
+    ens_name:
+      type: string
+    verified:
+      type: boolean
+data_source: Public Ethereum RPC (publicnode.com, llamarpc.com)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - financial
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    expected_fields:
+      - field: has_ens
+        operator: is_true
+        reliability: common
+      - field: ens_name
+        operator: not_null
+        reliability: common
+output_field_reliability:
+  address: common
+  has_ens: common
+  ens_name: common
+  verified: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects Public Ethereum RPC (publicnode.com, llamarpc.com) at query time. Dependent on upstream API
+      availability; may degrade if the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

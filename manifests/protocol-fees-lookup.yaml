@@ -1,0 +1,85 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: protocol-fees-lookup
+name: Protocol Fees Lookup
+description: >-
+  Get fees and revenue data for any DeFi protocol. Returns 24h, 7d, 30d, and all-time fees plus revenue breakdown.
+  Covers 7,000+ protocols via DeFi Llama.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - protocol
+  properties:
+    protocol:
+      type: string
+      description: Protocol name or DeFi Llama slug (e.g., 'aave-v3', 'uniswap')
+output_schema:
+  type: object
+  example:
+    slug: parent#uniswap
+    protocol: Uniswap
+    fees_7d_usd: 7424515
+    fees_24h_usd: 1100432
+    fees_30d_usd: 39302873
+    revenue_7d_usd: null
+    revenue_24h_usd: null
+    revenue_30d_usd: null
+    fees_all_time_usd: 5497395571
+    fees_48h_to_24h_usd: 1417183
+    revenue_all_time_usd: null
+  properties:
+    protocol:
+      type: string
+    fees_7d_usd:
+      type: number
+    fees_24h_usd:
+      type: number
+    fees_30d_usd:
+      type: number
+    revenue_7d_usd:
+      type: number
+    revenue_24h_usd:
+      type: number
+    revenue_30d_usd:
+      type: number
+    fees_all_time_usd:
+      type: number
+data_source: DefiLlama (Protocol Fees API)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: false
+personal_data_categories: []
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      protocol: uniswap
+    expected_fields:
+      - field: fees_24h_usd
+        operator: not_null
+        reliability: common
+output_field_reliability:
+  protocol: common
+  fees_7d_usd: common
+  fees_24h_usd: common
+  fees_30d_usd: common
+  revenue_7d_usd: common
+  revenue_24h_usd: common
+  revenue_30d_usd: common
+  fees_all_time_usd: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects DefiLlama (Protocol Fees API) at query time. Dependent on upstream API availability; may degrade
+      if the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

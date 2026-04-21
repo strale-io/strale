@@ -1,0 +1,82 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: approval-security-check
+name: Approval Security Check
+description: >-
+  Check a wallet's token approvals for security risks. Identifies unlimited or risky approvals that could allow funds to
+  be drained. Covers Ethereum, BSC, Base, and other EVM chains via GoPlus Security.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: Wallet address to check approvals for (0x...)
+    chain_id:
+      type: string
+      description: "Chain ID (1=Ethereum, 56=BSC, 8453=Base). Default: 1"
+output_schema:
+  type: object
+  example:
+    address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    chain_id: "1"
+    approvals: []
+    risk_level: none
+    risky_approvals: 0
+    total_approvals: 0
+  properties:
+    address:
+      type: string
+    chain_id:
+      type: string
+    approvals:
+      type: array
+    risk_level:
+      type: string
+    risky_approvals:
+      type: number
+    total_approvals:
+      type: number
+data_source: GoPlus Labs (Token Approval Security API)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - financial
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+      chain_id: "1"
+    expected_fields:
+      - field: total_approvals
+        operator: not_null
+        reliability: common
+      - field: risk_level
+        operator: not_null
+        reliability: common
+output_field_reliability:
+  address: common
+  chain_id: common
+  approvals: common
+  risk_level: common
+  risky_approvals: common
+  total_approvals: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects GoPlus Labs (Token Approval Security API) at query time. Dependent on upstream API availability;
+      may degrade if the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

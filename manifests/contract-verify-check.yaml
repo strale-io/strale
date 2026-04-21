@@ -1,0 +1,94 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: contract-verify-check
+name: Contract Verification Check
+description: >-
+  Check if a smart contract's source code is verified on Etherscan. Returns compiler version, license type, proxy
+  status, and contract name. Unverified contracts are a red flag for token safety. Supports 60+ EVM chains.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - contract_address
+  properties:
+    chain_id:
+      type: string
+      description: "Chain ID. Default: 1"
+    contract_address:
+      type: string
+      description: Smart contract address (0x...)
+output_schema:
+  type: object
+  example:
+    chain_id: "1"
+    is_proxy: true
+    evm_version: Default
+    is_verified: true
+    license_type: null
+    contract_name: FiatTokenProxy
+    compiler_version: v0.4.24+commit.e67f0147
+    contract_address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    optimization_used: false
+    implementation_address: "0x43506849d7c04f9138d1a2050bbf3a0c054402dd"
+  properties:
+    chain_id:
+      type: string
+    is_proxy:
+      type: boolean
+    is_verified:
+      type: boolean
+    license_type:
+      type: string
+    contract_name:
+      type: string
+    compiler_version:
+      type: string
+    contract_address:
+      type: string
+    optimization_used:
+      type: boolean
+    implementation_address:
+      type: string
+data_source: Etherscan (Smart Contract Verification API)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: pure-computation
+processes_personal_data: false
+personal_data_categories: []
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      chain_id: "1"
+      contract_address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    expected_fields:
+      - field: is_verified
+        operator: is_true
+        reliability: common
+      - field: contract_name
+        operator: not_null
+        reliability: common
+output_field_reliability:
+  chain_id: common
+  is_proxy: common
+  is_verified: common
+  license_type: common
+  contract_name: common
+  compiler_version: common
+  contract_address: common
+  optimization_used: common
+  implementation_address: common
+limitations:
+  - title: null
+    text: >-
+      Computed from on-chain/reference data at query time. Freshness reflects the underlying source snapshot — not a
+      predictor of future state.
+    category: freshness
+    severity: info
+    workaround: null

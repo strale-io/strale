@@ -1,0 +1,78 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: vasp-verify
+name: VASP Verification
+description: >-
+  Check if a crypto-asset service provider (CASP/VASP) is authorized under the EU MiCA regulation. Searches ESMA's
+  official register of authorized CASPs. Returns authorization status, licensed services, home country, and passporting
+  rights.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - entity_name
+  properties:
+    lei:
+      type: string
+      description: Legal Entity Identifier (optional)
+    website:
+      type: string
+      description: Entity website domain (optional)
+    entity_name:
+      type: string
+      description: Company or entity name to search for
+output_schema:
+  type: object
+  example:
+    note: ESMA CASP register data is currently unavailable. This does not mean the entity is unauthorized — retry later.
+    matches: []
+    authorized: false
+    match_found: false
+    entity_name_searched: Coinbase
+    register_last_updated: null
+  properties:
+    matches:
+      type: array
+    authorized:
+      type: boolean
+    match_found:
+      type: boolean
+    entity_name_searched:
+      type: string
+    register_last_updated:
+      type: string
+data_source: ESMA Crypto-Asset Service Providers (CASP) Register
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: false
+personal_data_categories: []
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      entity_name: Coinbase
+    expected_fields:
+      - field: match_found
+        operator: not_null
+        reliability: common
+output_field_reliability:
+  matches: common
+  authorized: common
+  match_found: common
+  entity_name_searched: common
+  register_last_updated: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects ESMA Crypto-Asset Service Providers (CASP) Register at query time. Dependent on upstream API
+      availability; may degrade if the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

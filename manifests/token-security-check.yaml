@@ -1,0 +1,112 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: token-security-check
+name: Token Security Check
+description: >-
+  Analyze a token contract for security risks: honeypot detection, sell tax, hidden ownership, mint functions, proxy
+  status, and holder distribution. Uses GoPlus Security covering 30+ blockchains and 10M+ tokens.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - contract_address
+  properties:
+    chain_id:
+      type: string
+      description: "Chain ID (1=Ethereum, 56=BSC, 8453=Base). Default: 1"
+    contract_address:
+      type: string
+      description: Token contract address (0x...)
+output_schema:
+  type: object
+  example:
+    buy_tax: "0"
+    chain_id: "1"
+    is_proxy: true
+    sell_tax: "0"
+    is_in_dex: true
+    risk_level: low
+    token_name: USD Coin
+    is_honeypot: false
+    is_mintable: false
+    hidden_owner: false
+    holder_count: 6706060
+    token_symbol: USDC
+    total_supply: "54455999208.025586"
+    is_anti_whale: false
+    owner_address: ""
+    is_blacklisted: false
+    is_open_source: true
+    creator_address: "0x95ba4cf87d6723ad9c0db21737d862be80e93911"
+    contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    can_take_back_ownership: false
+  properties:
+    buy_tax:
+      type: string
+    chain_id:
+      type: string
+    is_proxy:
+      type: boolean
+    sell_tax:
+      type: string
+    risk_level:
+      type: string
+    is_honeypot:
+      type: boolean
+    is_mintable:
+      type: boolean
+    hidden_owner:
+      type: boolean
+    holder_count:
+      type: number
+    owner_address:
+      type: string
+    is_open_source:
+      type: boolean
+    creator_address:
+      type: string
+    contract_address:
+      type: string
+data_source: GoPlus Labs (Token Security API)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: false
+personal_data_categories: []
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    expected_fields:
+      - field: is_honeypot
+        operator: is_false
+        reliability: common
+output_field_reliability:
+  buy_tax: common
+  chain_id: common
+  is_proxy: common
+  sell_tax: common
+  risk_level: common
+  is_honeypot: common
+  is_mintable: common
+  hidden_owner: common
+  holder_count: common
+  owner_address: common
+  is_open_source: common
+  creator_address: common
+  contract_address: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects GoPlus Labs (Token Security API) at query time. Dependent on upstream API availability; may
+      degrade if the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

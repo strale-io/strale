@@ -1,0 +1,82 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: wallet-age-check
+name: Wallet Age Check
+description: >-
+  Check when a wallet address made its first transaction. Returns the wallet's age in days. A new wallet transacting
+  large amounts is a red flag. Supports Ethereum, Base, and other EVM chains via Etherscan V2.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: Wallet address (0x...)
+    chain_id:
+      type: string
+      description: "Chain ID (1=Ethereum, 8453=Base). Default: 1"
+output_schema:
+  type: object
+  example:
+    address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
+    age_days: 3890
+    chain_id: "1"
+    has_activity: true
+    first_tx_date: "2015-08-08T15:44:00.000Z"
+    first_tx_hash: "0x9c81f44c29ff0226f835cd0a8a2f2a7eca6db52a711f8211b566fd15d3e0e8d4"
+  properties:
+    address:
+      type: string
+    age_days:
+      type: number
+    chain_id:
+      type: string
+    has_activity:
+      type: boolean
+    first_tx_date:
+      type: string
+    first_tx_hash:
+      type: string
+data_source: Etherscan (Account History API)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - financial
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
+      chain_id: "1"
+    expected_fields:
+      - field: has_activity
+        operator: is_true
+        reliability: common
+      - field: first_tx_date
+        operator: not_null
+        reliability: common
+output_field_reliability:
+  address: common
+  age_days: common
+  chain_id: common
+  has_activity: common
+  first_tx_date: common
+  first_tx_hash: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects Etherscan (Account History API) at query time. Dependent on upstream API availability; may degrade
+      if the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

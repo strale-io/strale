@@ -1,0 +1,71 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: fear-greed-index
+name: Fear & Greed Index
+description: >-
+  Get the Crypto Fear & Greed Index — a market sentiment indicator from 0 (Extreme Fear) to 100 (Extreme Greed).
+  Includes current value, classification, and optional historical data up to 30 days. Powered by Alternative.me.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    days:
+      type: number
+      description: "Number of days of history (1-30). Default: 1"
+output_schema:
+  type: object
+  example:
+    timestamp: "2026-04-03T00:00:00.000Z"
+    current_value: 9
+    classification: Extreme Fear
+  properties:
+    trend:
+      type: string
+    average:
+      type: number
+    history:
+      type: array
+    timestamp:
+      type: string
+    current_value:
+      type: number
+    classification:
+      type: string
+data_source: Alternative.me (Crypto Fear & Greed Index)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: false
+personal_data_categories: []
+geography: global
+test_fixtures:
+  known_answer:
+    input: {}
+    expected_fields:
+      - field: current_value
+        operator: not_null
+        reliability: common
+      - field: classification
+        operator: not_null
+        reliability: common
+output_field_reliability:
+  trend: common
+  average: common
+  history: common
+  timestamp: common
+  current_value: common
+  classification: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects Alternative.me (Crypto Fear & Greed Index) at query time. Dependent on upstream API availability;
+      may degrade if the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

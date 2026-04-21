@@ -1,0 +1,131 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: wallet-transactions-lookup
+name: Wallet Transactions Lookup
+description: >-
+  Get recent transactions for any wallet address. Returns up to 50 transactions with hash, value, timestamp, and gas
+  details. Supports Ethereum and other EVM chains via Etherscan V2.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    limit:
+      type: number
+      description: "Number of transactions (1-50). Default: 20"
+    address:
+      type: string
+      description: Wallet address (0x...)
+    chain_id:
+      type: string
+      description: "Chain ID (1=Ethereum). Default: 1"
+output_schema:
+  type: object
+  example:
+    address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
+    chain_id: "1"
+    sent_count: 0
+    transactions:
+      - to: "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+        from: "0xfb36ee1e268b1b4307c33bc05b210884270db149"
+        hash: "0x48d68cc412bf00b4a37eccd55ac642245f1db423d2557d8b322f2af44d7e4ec6"
+        gas_used: 24259
+        is_error: false
+        direction: received
+        timestamp: "2026-03-27T20:40:35.000Z"
+        value_eth: 0
+        block_number: 24751345
+      - to: "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+        from: "0x134c0a639ced2168e3b96ccaaa8a425c462ad171"
+        hash: "0x3cc3dd27c74f5033e2829db9d2401f6fb918941eae9d92d8e84d98cbc935683d"
+        gas_used: 24259
+        is_error: false
+        direction: received
+        timestamp: "2026-03-27T20:34:35.000Z"
+        value_eth: 0
+        block_number: 24751315
+      - to: "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+        from: "0x651f3a9a59b69e284f834f4914a6ed206a516371"
+        hash: "0xedc0180c7a4720bcea8c88d998cfe16a54a04f05718163c2687f062db566a689"
+        gas_used: 24320
+        is_error: false
+        direction: received
+        timestamp: "2026-03-27T20:14:11.000Z"
+        value_eth: 0
+        block_number: 24751213
+      - to: "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+        from: "0x651f3a9a59b69e284f834f4914a6ed206a516371"
+        hash: "0x664ea2ee718538654e745b687869e46756053779a80c00e1462d88a1223344ad"
+        gas_used: 24636
+        is_error: false
+        direction: received
+        timestamp: "2026-03-27T20:11:59.000Z"
+        value_eth: 0
+        block_number: 24751202
+      - to: "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+        from: "0x651f3a9a59b69e284f834f4914a6ed206a516371"
+        hash: "0x23ba0d00f2660004f749cc30c570edde8f346a0b37d3bceb364f3c65a091c3fd"
+        gas_used: 23913
+        is_error: false
+        direction: received
+        timestamp: "2026-03-27T20:00:23.000Z"
+        value_eth: 0
+        block_number: 24751144
+    received_count: 5
+    total_returned: 5
+  properties:
+    address:
+      type: string
+    chain_id:
+      type: string
+    sent_count:
+      type: number
+    transactions:
+      type: array
+    received_count:
+      type: number
+    total_returned:
+      type: number
+data_source: Etherscan (Account Transactions API)
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - financial
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      limit: 5
+      address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
+      chain_id: "1"
+    expected_fields:
+      - field: total_returned
+        operator: not_null
+        reliability: common
+      - field: transactions
+        operator: not_null
+        reliability: common
+output_field_reliability:
+  address: common
+  chain_id: common
+  sent_count: common
+  transactions: common
+  received_count: common
+  total_returned: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects Etherscan (Account Transactions API) at query time. Dependent on upstream API availability; may
+      degrade if the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null

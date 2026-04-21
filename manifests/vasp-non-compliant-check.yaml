@@ -1,0 +1,76 @@
+# Auto-generated from database on 2026-04-21 (Phase 4b.2 orphan resolution).
+# Source: DEC-20260422-A + audit-reports/2026-04-21-phase-4b2-orphan-decisions.csv.
+# output_field_reliability fallback-derived from output_schema.properties (DB column was NULL).
+# limitations auto-synthesized from maintenance_class (0 active capability_limitations in DB).
+# Review and tighten: reliability markers (common → guaranteed/rare) + slug-specific limitations.
+
+slug: vasp-non-compliant-check
+name: VASP Non-Compliant Check
+description: >-
+  Check if a crypto-asset service provider is on ESMA's non-compliant entities list under MiCA regulation. Flags
+  entities that have been identified for regulatory infringement.
+category: web3
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - entity_name
+  properties:
+    website:
+      type: string
+      description: Entity website (optional)
+    entity_name:
+      type: string
+      description: Company or entity name to check
+output_schema:
+  type: object
+  example:
+    note: >-
+      ESMA's non-compliant CASP register is not currently available or may not yet be published. This does not confirm
+      compliance.
+    matches: []
+    data_available: false
+    entity_name_searched: Google
+    on_non_compliant_list: false
+    register_last_updated: null
+  properties:
+    matches:
+      type: array
+    data_available:
+      type: boolean
+    entity_name_searched:
+      type: string
+    on_non_compliant_list:
+      type: boolean
+    register_last_updated:
+      type: string
+data_source: ESMA Crypto-Asset Service Providers (CASP) Register
+data_source_type: api
+transparency_tag: algorithmic
+maintenance_class: free-stable-api
+processes_personal_data: false
+personal_data_categories: []
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      entity_name: Google
+    expected_fields:
+      - field: on_non_compliant_list
+        operator: is_false
+        reliability: common
+output_field_reliability:
+  matches: common
+  data_available: common
+  entity_name_searched: common
+  on_non_compliant_list: common
+  register_last_updated: common
+limitations:
+  - title: null
+    text: >-
+      Output reflects ESMA Crypto-Asset Service Providers (CASP) Register at query time. Dependent on upstream API
+      availability; may degrade if the provider rate-limits or is temporarily unavailable.
+    category: availability
+    severity: info
+    workaround: null
