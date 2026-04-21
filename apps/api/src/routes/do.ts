@@ -38,6 +38,7 @@ import {
 } from "../lib/trust-grade.js";
 import { withRetry } from "../lib/retry.js";
 import { buildFailureProvenance, getProcessingJurisdictions } from "../lib/provenance-builder.js";
+import { getProcessingLocation } from "../lib/processing-location.js";
 // F-0-009 Stage 2: integrity hashing moved to jobs/integrity-hash-retry.ts.
 import {
   isX402Configured,
@@ -2105,7 +2106,7 @@ function buildFreeTierAudit(capability: CapabilityInfo, latencyMs: number) {
     transparency_marker: marker,
     ai_description: getAiDescription(capability.slug, marker),
     data_jurisdiction: "EU",
-    processing_location: "eu-west (Railway EU)",
+    processing_location: getProcessingLocation(),
     execution_mode: "sync",
     latency_ms: latencyMs,
     schema_validated: true,
@@ -2171,7 +2172,7 @@ function buildFullAudit(params: {
     transparency_marker: marker,
     ai_description: getAiDescription(capability.slug, marker),
     data_jurisdiction: "EU",
-    processing_location: "eu-west (Railway EU)",
+    processing_location: getProcessingLocation(),
     execution_mode: executionMode,
     latency_ms: latencyMs,
     input_hash: hashInput(executionInput),
@@ -2244,7 +2245,7 @@ function buildFailureAudit(params: {
     data_source: capability.dataSource ?? capability.name,
     transparency_marker: marker,
     data_jurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
-    processing_location: "eu-west (Railway EU)",
+    processing_location: getProcessingLocation(),
     execution_mode: executionMode,
     latency_ms: Date.now() - startTime,
     input_hash: hashInput(executionInput),

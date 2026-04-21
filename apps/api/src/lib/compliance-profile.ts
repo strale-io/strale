@@ -22,6 +22,7 @@ import {
   solutionSteps,
   testResults,
 } from "../db/schema.js";
+import { getProcessingLocation } from "./processing-location.js";
 
 export type AiInvolvement = "none" | "mixed" | "fully_ai";
 
@@ -76,11 +77,9 @@ export interface ComplianceProfile {
   last_verified_at: string | null;
 }
 
-function processingLocation(): string {
-  // Derived from deploy region env. Keep honest — don't claim EU-west when
-  // prod runs in us-east. Strale prod currently runs on Railway us-east-4.
-  return process.env.STRALE_PROCESSING_REGION ?? "us-east";
-}
+// F-AUDIT-02: unified with audit builders. See lib/processing-location.ts for
+// resolution order (RAILWAY_REPLICA_REGION → STRALE_PROCESSING_REGION → "unknown").
+const processingLocation = getProcessingLocation;
 
 function inferAiInvolvement(
   transparencies: Array<"algorithmic" | "ai_generated" | "mixed">,
