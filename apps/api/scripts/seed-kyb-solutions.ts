@@ -62,7 +62,8 @@ const COUNTRIES: Country[] = [
   { code: "us", name: "United States", companyDataSlug: "us-company-data", isEU: false, geography: "us", inputField: "company_name", inputLabel: "US company name or EIN", exampleId: "Apple Inc" },
   { code: "ca", name: "Canada", companyDataSlug: "canadian-company-data", isEU: false, geography: "us", inputField: "company_name", inputLabel: "Canadian company name or corporation number", exampleId: "Shopify Inc" },
   { code: "au", name: "Australia", companyDataSlug: "au-company-data", isEU: false, geography: "us-global", inputField: "abn", inputLabel: "Australian Business Number (11 digits)", exampleId: "51824753556" },
-  { code: "sg", name: "Singapore", companyDataSlug: "singapore-company-data", isEU: false, geography: "us-global", inputField: "company_name", inputLabel: "Singapore company name or UEN", exampleId: "DBS Group" },
+  // Singapore retired 2026-04-21 (DEC-20260421-I). Country count now 19.
+  // See audit-reports/2026-04-21-singapore-kyb-investigation.md.
 ];
 
 // ─── Disclaimer (reused across solutions) ──────────────────────────────────

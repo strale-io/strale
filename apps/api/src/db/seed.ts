@@ -682,15 +682,9 @@ const seedCapabilities = [
     outputSchema: { type: "object", properties: { company_name: { type: "string" }, cin: { type: "string" }, business_type: { type: "string" }, status: { type: "string" } } },
     priceCents: 80,
   },
-  {
-    name: "Singapore Company Data",
-    slug: "singapore-company-data",
-    description: "Look up Singaporean company data from ACRA. Accepts UEN (9-10 alphanumeric) or fuzzy company name.",
-    category: "data-extraction",
-    inputSchema: { type: "object", properties: { uen: { type: "string", description: "UEN (e.g. 200401141R) or company name" } }, required: ["uen"] },
-    outputSchema: { type: "object", properties: { company_name: { type: "string" }, uen: { type: "string" }, business_type: { type: "string" }, status: { type: "string" } } },
-    priceCents: 80,
-  },
+  // Singapore Company Data: retired 2026-04-21 (DEC-20260421-I, commit TBD).
+  // Type 3 classification (no viable data source at price point). See
+  // audit-reports/2026-04-21-singapore-kyb-investigation.md.
   {
     name: "Hong Kong Company Data",
     slug: "hong-kong-company-data",

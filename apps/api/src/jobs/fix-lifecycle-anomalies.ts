@@ -24,7 +24,8 @@ const ANOMALOUS = [
   "amazon-price",
   "hong-kong-company-data",
   "indian-company-data",
-  "singapore-company-data",
+  // singapore-company-data retired 2026-04-21 (DEC-20260421-I). State is
+  // now intentional per retirement, not an ongoing anomaly.
 ];
 
 async function main() {
