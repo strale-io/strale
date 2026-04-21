@@ -15,6 +15,16 @@ const DEACTIVATED = new Map<string, string>([
   ["hong-kong-company-data", "No viable data source identified"],
   ["indian-company-data", "No viable data source identified"],
   ["singapore-company-data", "No viable data source identified"],
+  [
+    "business-license-check-se",
+    // DEC-20260421-SE-C: F-skatt/moms/employer flags have no free machine-readable source in 2026.
+    // Skatteverket's F-skatt API is "under investigation" (no public API); Bolagsverket does not
+    // expose tax-registration status. Previous runtime scraped allabolag.se, which surfaced
+    // Skatteverket data via a KYB-competitor-owned aggregator — banned by DEC-20260420-H.
+    // Reactivation trigger: Skatteverket ships a public F-skatt/moms/arbetsgivare lookup API,
+    // OR a licensed commercial aggregator contract covers these fields.
+    "No compliant source for F-skatt/moms/employer flags (see DEC-20260421-SE-C)",
+  ],
 ]);
 
 export function getDeactivatedCapabilities(): ReadonlyMap<string, string> {
