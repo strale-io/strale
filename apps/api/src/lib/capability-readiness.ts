@@ -28,14 +28,19 @@ import { getDeactivatedCapabilities } from "../capabilities/auto-register.js";
  *
  * Stage A (2026-04-23 initial): false — warn-only; DB-gap caps still
  *   `ready: true`, but surface warnings in `issues` for visibility.
- * Stage D (2026-04-23 later, after 21-cap backfill): true — gaps fail
- *   `ready`; new onboarding halts if reliability/limitations not populated.
+ * Stage D (2026-04-23 post-backfill): true — gaps fail `ready`; new
+ *   onboarding halts if reliability/limitations not populated. FLIPPED
+ *   after 18 of 21 active gap-caps backfilled via live discovery and
+ *   12 remaining caps (9 UK-property + 3 blocked-backfill) tombstoned
+ *   with `deactivation_reason = 'park_permanent_...'`.
  *
- * The flip from false → true is the Stage D commit.
+ * Parked caps still fail these gates but that's expected — they're
+ * parked, not onboarded. `ready` is only meaningful for caps intended
+ * for production traffic.
  */
 export const BLOCKING_GATE_FIELDS = {
-  reliability: false as boolean,
-  limitations: false as boolean,
+  reliability: true as boolean,
+  limitations: true as boolean,
 };
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
