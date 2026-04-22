@@ -20,5 +20,6 @@
   "apps/api/src/db/seed-tests.ts": 8,
   "apps/api/src/db/verify-dual-profile.ts": 15,
   "apps/api/src/diagnostics/self-heal-check.ts": 2,
-  "apps/api/src/index.ts": 10
+  "apps/api/src/index.ts": 10,
+  "apps/api/src/lib/processing-location.ts": 1
 }
