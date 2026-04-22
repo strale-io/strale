@@ -75,6 +75,17 @@ const CREDENTIAL_REGISTRY: CredentialEntry[] = [
     // Too many capabilities (97+). Claude is critical infra — if it's missing,
     // failures will be caught by the normal test flow. No need to pre-filter.
   },
+  {
+    provider: "sdda",
+    envVar: "SDDA_API_CLIENT_ID",
+    capabilities: ["latvian-company-data"],
+    // SDDA UR-API-LegalEntity via api.viss.gov.lv (WSO2 API Manager).
+    // OAuth2 client_credentials — also needs SDDA_API_CLIENT_SECRET, but
+    // CLIENT_ID is the sentinel (both are always paired at provisioning).
+    // The stub provider is scaffolded but NOT primary: Browserless scraping
+    // remains the active path for latvian-company-data until credentials
+    // land and a follow-up session wires registerChain() for SDDA.
+  },
 ];
 
 // ─── Public API ─────────────────────────────────────────────────────────────
