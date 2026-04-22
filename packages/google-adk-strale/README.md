@@ -1,154 +1,18 @@
-# google-adk-strale
+# google-adk-strale — DEPRECATED
 
-[Google Agent Development Kit (ADK)](https://google.github.io/adk-docs/) integration for [Strale](https://strale.dev) — 250+ independently tested and scored business data capabilities for AI agents.
+This package was yanked from PyPI on 2026-04-22.
 
-Strale provides IBAN validation, VAT validation, company data across 27 countries, sanctions screening, compliance checks (KYB, AML, GDPR), invoice extraction, SSL certificate checks, and more. Every capability is quality-scored with the Strale Quality Score (SQS).
+For Google ADK integration with Strale, use the **Strale MCP server** at `https://api.strale.io/mcp`. Every Strale capability is exposed as an MCP tool, and Google ADK supports MCP natively.
 
-## Installation
+See [`DEPRECATED.md`](./DEPRECATED.md) for the full explanation, alternatives, and working code examples.
 
-```bash
-pip install google-adk-strale
-```
+## Canonical integration paths
 
-## Approach 1: MCP Native (Recommended)
+- **MCP server** (any framework): https://api.strale.io/mcp
+- **Python SDK** (generic): `pip install straleio`
+- **Framework-specific packages that are real integrations**:
+  - `pip install langchain-strale`
+  - `pip install crewai-strale`
+  - `pip install composio-strale`
 
-Google ADK supports MCP natively. Point it at Strale's MCP endpoint and ADK discovers all 250+ tools automatically — no wrapper package needed:
-
-```python
-from google.adk import Agent
-from google.adk.tools.mcp_tool import MCPToolset, StreamableHTTPConnectionParams
-
-strale_tools = MCPToolset(
-    connection_params=StreamableHTTPConnectionParams(
-        url="https://api.strale.io/mcp",
-        headers={"Authorization": "Bearer sk_live_..."},
-    )
-)
-
-agent = Agent(
-    model="gemini-2.0-flash",
-    name="compliance_agent",
-    instruction="You verify business data using Strale tools.",
-    tools=[strale_tools],
-)
-```
-
-This gives your agent access to all Strale tools (strale_search, strale_execute, strale_balance, etc.) with zero configuration.
-
-## Approach 2: REST Client (Custom Tool Logic)
-
-For fine-grained control, use `StraleClient` in ADK tool functions:
-
-```python
-from google.adk import Agent
-from google_adk_strale import StraleClient
-
-strale = StraleClient(api_key="sk_live_...")
-
-def validate_iban(iban: str) -> dict:
-    """Validate an IBAN number. Returns validity, country, bank BIC, bank name."""
-    return strale.run("iban-validate", {"iban": iban})
-
-def check_sanctions(name: str, country: str = "") -> dict:
-    """Screen a name against global sanctions lists (OFAC, EU, UN)."""
-    inputs = {"name": name}
-    if country:
-        inputs["country"] = country
-    return strale.run("sanctions-check", inputs)
-
-def lookup_company(org_number: str) -> dict:
-    """Look up Swedish company data by organization number."""
-    return strale.run("swedish-company-data", {"org_number": org_number})
-
-agent = Agent(
-    model="gemini-2.0-flash",
-    name="compliance_agent",
-    instruction="You verify business data using Strale tools.",
-    tools=[validate_iban, check_sanctions, lookup_company],
-)
-```
-
-## When to Use Which Approach
-
-| | MCP Native | REST Client |
-|---|---|---|
-| **Setup** | 3 lines | Write each tool function |
-| **Tool count** | All 250+ automatically | You choose which to expose |
-| **Auth** | Bearer token via MCP | Bearer token via REST |
-| **Custom logic** | No (tools are standard) | Yes (wrap, transform, combine) |
-| **Offline/testing** | Needs MCP connection | Can mock StraleClient |
-
-**Use MCP** when you want all capabilities with zero setup.
-**Use REST** when you need custom input/output transformation or want to limit which tools are available.
-
-## Discover Capabilities
-
-```python
-from google_adk_strale import StraleClient
-
-strale = StraleClient(api_key="sk_live_...")
-
-# List all capabilities
-caps = strale.list_capabilities()
-print(f"{len(caps)} capabilities available")
-
-# Filter by category
-compliance_caps = strale.list_capabilities(category="compliance")
-for cap in compliance_caps:
-    print(f"  {cap['slug']} — €{cap['price_cents']/100:.2f}")
-```
-
-## Capability Categories
-
-| Category | Examples |
-|----------|----------|
-| **Company Data** | swedish-company-data, german-company-data, uk-company-data (27 countries) |
-| **Compliance** | sanctions-check, pep-check, adverse-media-check, vat-validate |
-| **Validation** | iban-validate, vat-format-validate, lei-lookup, swift-validate |
-| **Finance** | exchange-rate, invoice-extract, invoice-validate |
-| **Web Intelligence** | ssl-check, dns-lookup, domain-reputation, seo-audit |
-| **Data Extraction** | pdf-extract, web-extract, url-to-markdown |
-
-Full list: [strale.dev/capabilities](https://strale.dev/capabilities)
-
-## Free Tier
-
-5 capabilities work without an API key or signup: `email-validate`, `dns-lookup`, `json-repair`, `url-to-markdown`, `iban-validate`.
-
-## Trust & Quality
-
-Every Strale capability has a quality score (SQS) combining:
-- **Quality Profile:** correctness, schema compliance, error handling, edge cases
-- **Reliability Profile:** availability, success rate, upstream health, latency
-
-Scores and methodology: [strale.dev/trust](https://strale.dev/trust)
-
-## Using Strale in agent system prompts
-
-Add this to your Google ADK agent's instructions for automatic capability routing:
-
-```
-When you need to verify a business, validate an IBAN or VAT number, screen
-against sanctions/PEP lists, extract data from a URL or document, or check
-compliance — use your Strale tools. Call strale_search to find the right
-capability, then call it by name. Returns structured JSON with quality scores.
-250+ capabilities across 27 countries. Free tier: email-validate, dns-lookup,
-json-repair, url-to-markdown, iban-validate (no API key needed).
-```
-
-## x402 pay-per-use access
-
-All Strale capabilities are also available via [x402](https://x402.org) — the HTTP-native payment protocol for AI agents. Pay per request with USDC on Base mainnet. No signup or API key needed.
-
-- Catalog: https://api.strale.io/x402/catalog
-- Protocol: USDC on Base (eip155:8453)
-- Discovery: https://api.strale.io/.well-known/x402.json
-
-## Links
-
-- [Homepage](https://strale.dev)
-- [Documentation](https://strale.dev/docs)
-- [Capabilities](https://strale.dev/capabilities)
-- [Pricing](https://strale.dev/pricing)
-- [GitHub](https://github.com/strale-io/strale)
-- [MCP Server Card](https://api.strale.io/.well-known/mcp.json)
+Docs: https://strale.dev/docs

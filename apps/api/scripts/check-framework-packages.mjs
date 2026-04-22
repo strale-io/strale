@@ -23,16 +23,15 @@ import { join } from "node:path";
 
 const ROOT = "packages";
 
-// Interim allowlist: packages known to be hollow pending Petter's disposition
-// choice (yank / rename / deprecate) per YANK_LIST.md. Remove from this list
-// as each is resolved. Hard expiry: 2026-05-06 — after which this script
-// will fail CI regardless of allowlist membership.
-const ALLOWLIST_UNTIL = "2026-05-06";
-const KNOWN_HOLLOW_ALLOWLIST = new Set([
-  "pydantic-ai-strale",
-  "google-adk-strale",
-  "openai-agents-strale",
-]);
+// Packages with a DEPRECATED.md at their root are skipped entirely — the
+// source has been yanked upstream (PyPI / npm) and the directory is
+// kept only as a forwarding address. See YANK_LIST.md for the 2026-04-22
+// deprecation of pydantic-ai-strale, google-adk-strale, openai-agents-strale.
+import { existsSync } from "node:fs";
+
+function isDeprecated(pkgDir) {
+  return existsSync(join(pkgDir, "DEPRECATED.md"));
+}
 
 // Each entry: { packagePrefix, frameworkImportPatterns }
 // packagePrefix — directory name prefix that implies a framework
@@ -141,11 +140,20 @@ try {
   process.exit(2);
 }
 
+let skippedDeprecated = 0;
 for (const pkg of packages) {
   const rule = FRAMEWORK_RULES.find((r) => r.dirMatch.test(pkg));
   if (!rule) continue;
-  checked++;
   const pkgDir = join(ROOT, pkg);
+  // Deprecated packages are exempt from the import check — their source
+  // has been yanked upstream and the directory survives only as a
+  // forwarding note (DEPRECATED.md).
+  if (isDeprecated(pkgDir)) {
+    skippedDeprecated++;
+    console.log(`skip  ${pkg}  (DEPRECATED.md present — yanked, forwarding only)`);
+    continue;
+  }
+  checked++;
   const sources = collectSources(pkgDir);
   let matched = false;
   let matchedFile = null;
@@ -171,48 +179,27 @@ for (const pkg of packages) {
   }
 }
 
-if (checked === 0) {
+if (checked === 0 && skippedDeprecated === 0) {
   console.log(
     "framework-packages check: no packages matched any framework rule — nothing to verify.",
   );
   process.exit(0);
 }
 
-// Partition failures into allowlisted (warn) vs hard-fail (exit 1).
-const now = new Date().toISOString().slice(0, 10);
-const allowlistExpired = now >= ALLOWLIST_UNTIL;
-const allowlistedFailures = allowlistExpired
-  ? []
-  : failures.filter((f) => KNOWN_HOLLOW_ALLOWLIST.has(f.pkg));
-const hardFailures = failures.filter(
-  (f) => !KNOWN_HOLLOW_ALLOWLIST.has(f.pkg) || allowlistExpired,
-);
-
-if (allowlistedFailures.length > 0) {
-  console.warn(
-    `\nframework-packages check: ${allowlistedFailures.length} known-hollow package(s) on allowlist until ${ALLOWLIST_UNTIL}. See YANK_LIST.md — these must be yanked / renamed / deprecated by that date or CI will start failing.`,
+if (failures.length === 0) {
+  console.log(
+    `\nframework-packages check: ${checked} package(s) verified, ${skippedDeprecated} deprecated (skipped) — every active framework-named package imports from the framework it claims.`,
   );
-  for (const f of allowlistedFailures) {
-    console.warn(`  warn  ${f.pkg}  (hollow — allowlisted pending yank)`);
-  }
-}
-
-if (hardFailures.length === 0) {
-  if (failures.length === 0) {
-    console.log(
-      `\nframework-packages check: ${checked} package(s) verified — every framework-named package imports from the framework it claims.`,
-    );
-  }
   process.exit(0);
 }
 
 console.error(
-  `\nframework-packages check FAILED: ${hardFailures.length} of ${checked} package(s) do not import from the framework implied by their name (allowlist ${allowlistExpired ? "EXPIRED" : "excluded"}).\n\n` +
+  `\nframework-packages check FAILED: ${failures.length} of ${checked} active package(s) do not import from the framework implied by their name.\n\n` +
     `A package named 'X-strale' must contain at least one 'from X import ...' (or equivalent) in its source tree.\n` +
     `Packages that don't satisfy this are misleading: their name promises framework integration that the code doesn't deliver.\n` +
     `See the 2026-04-21 pydantic-ai incident in CONTAINMENT_REPORT.md for why this rule exists.\n\nOffenders:`,
 );
-for (const f of hardFailures) {
+for (const f of failures) {
   console.error(`  ${f.pkg}`);
   console.error(`    expected: ${f.label}`);
   console.error(`    scanned ${f.sources} source file(s); no matching import found.`);
