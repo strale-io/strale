@@ -14,6 +14,17 @@ export interface RichProvenance {
   source_url?: string;
   fetched_at: string;
 
+  // Attribution / licensing. Required for data served under CC BY 4.0 (or
+  // equivalent) — notably EU High-Value Datasets under Reg. (EU) 2023/138
+  // such as Bolagsverket HVD, KVK HVDS, Brreg, CVR, PRH, ARES, Ariregister.
+  // Capabilities sourcing from open-data APIs should set all four.
+  // Hash-anchored via integrity-hash.ts (the full provenance object is
+  // included in the tamper-evident payload).
+  attribution?: string;
+  license?: string;
+  license_url?: string;
+  source_note?: string;
+
   // AI-specific fields
   ai_model?: string;
   ai_prompt_hash?: string;

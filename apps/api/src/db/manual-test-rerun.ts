@@ -48,7 +48,7 @@ const fixedSlugs = [
   "image-to-text",
   "customs-duty-lookup",
   "schema-migration-generate",
-  "credit-report-summary",
+  // credit-report-summary deactivated DEC-20260405-B
   "return-policy-extract",
   // Remaining 5 (from fix-low-sqs-remaining.ts)
   "annual-report-extract",

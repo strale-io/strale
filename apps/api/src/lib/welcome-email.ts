@@ -113,7 +113,7 @@ THREE MORE THINGS TO TRY (each uses a few cents from your €2.00 trial credits)
 1. Screen a name against sanctions lists (€0.02):
 curl -X POST https://api.strale.io/v1/do -H "Authorization: Bearer ${apiKey}" -H "Content-Type: application/json" -d '{"capability_slug": "sanctions-check", "inputs": {"name": "John Smith"}, "max_price_cents": 100}'
 
-2. Look up a Swedish company (€0.80):
+2. Look up a Swedish company (€0.05):
 curl -X POST https://api.strale.io/v1/do -H "Authorization: Bearer ${apiKey}" -H "Content-Type: application/json" -d '{"capability_slug": "swedish-company-data", "inputs": {"query": "Spotify"}, "max_price_cents": 100}'
 
 3. Audit an npm package for vulnerabilities (€0.15):
@@ -155,7 +155,7 @@ https://strale.dev
     },
     {
       label: "Look up a Swedish company",
-      price: "€0.80",
+      price: "€0.05",
       curl: `curl -X POST https://api.strale.io/v1/do -H "Authorization: Bearer ${apiKey}" -H "Content-Type: application/json" -d '{"capability_slug": "swedish-company-data", "inputs": {"query": "Spotify"}, "max_price_cents": 100}'`,
     },
     {
