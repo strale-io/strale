@@ -1,14 +1,12 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: swedish-company-data
 name: Swedish Company Data
 description: >-
-  Extract company data (revenue, employees, profit, fiscal year) for a Swedish organization number. Accepts natural
-  language descriptions — resolves to org number automatically.
-category: data-extraction
-price_cents: 80
+  Look up Swedish company registry data via Bolagsverket's Värdefulla datamängder API. Returns name, legal form, status,
+  registered address, SNI industry codes, registration date, and ongoing insolvency/liquidation procedures.
+category: company-data
+price_cents: 5
 is_free_tier: false
+avg_latency_ms: 400
 input_schema:
   type: object
   required:
@@ -16,35 +14,97 @@ input_schema:
   properties:
     org_number:
       type: string
-      description: Swedish org number (e.g. 559106-8089) or company name
+      description: Swedish organisationsnummer (10 digits, e.g. 556703-7485)
 output_schema:
   type: object
   example:
-    employees: 1397
+    status: active
+    is_active: true
+    sni_codes:
+      - code: "60100"
+        description: Radiosändning och distribution av ljudinspelningar
+    legal_form: Övriga aktiebolag
     org_number: 556703-7485
-    profit_sek: 9153051000
-    fiscal_year: 2024-12
-    revenue_sek: 108131545000
+    vat_number: SE556703748501
     company_name: Spotify AB
+    company_type: Aktiebolag
+    country_code: SE
+    legal_form_code: "49"
+    registered_date: "2006-05-10"
+    alternative_names: []
+    company_type_code: AB
+    deregistered_date: null
+    ongoing_procedures: []
+    registered_address:
+      city: STOCKHOLM
+      street: Regeringsgatan 19
+      country: Sverige
+      co_address: null
+      postal_code: "11153"
+    business_description: Bolaget har till föremål för sin verksamhet att bedriva Internetrelaterade tjänster...
+    deregistration_reason: null
   properties:
-    employees:
-      type: integer
+    status:
+      enum:
+        - active
+        - deregistered
+        - unknown
+      type: string
+    is_active:
+      type:
+        - boolean
+        - "null"
+    sni_codes:
+      type: array
+    legal_form:
+      type:
+        - string
+        - "null"
     org_number:
       type: string
-    profit_sek:
-      type: number
-    fiscal_year:
+    vat_number:
       type: string
-    revenue_sek:
-      type: number
     company_name:
       type: string
-data_source: Bolagsverket (Swedish Companies Registration Office)
-data_source_type: scrape
-transparency_tag: ai_generated
+    company_type:
+      type: string
+    country_code:
+      type: string
+    legal_form_code:
+      type:
+        - string
+        - "null"
+    registered_date:
+      type:
+        - string
+        - "null"
+    alternative_names:
+      type: array
+    company_type_code:
+      type: string
+    deregistered_date:
+      type:
+        - string
+        - "null"
+    ongoing_procedures:
+      type: array
+    registered_address:
+      type:
+        - object
+        - "null"
+    business_description:
+      type:
+        - string
+        - "null"
+    deregistration_reason:
+      type:
+        - string
+        - "null"
+data_source: Bolagsverket Värdefulla datamängder API (Swedish Companies Registration Office, EU Open Data Directive HVD)
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: scraping-stable-target
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+maintenance_class: free-stable-api
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -60,30 +120,111 @@ test_fixtures:
         operator: not_null
         reliability: guaranteed
       - field: org_number
+        operator: equals
+        reliability: guaranteed
+        value: 556703-7485
+      - field: vat_number
+        operator: equals
+        reliability: guaranteed
+        value: SE556703748501
+      - field: country_code
+        operator: equals
+        reliability: guaranteed
+        value: SE
+      - field: company_type
+        operator: equals
+        reliability: guaranteed
+        value: Aktiebolag
+      - field: company_type_code
+        operator: equals
+        reliability: guaranteed
+        value: AB
+      - field: legal_form
+        operator: not_null
+        reliability: guaranteed
+      - field: legal_form_code
+        operator: equals
+        reliability: guaranteed
+        value: "49"
+      - field: status
+        operator: equals
+        reliability: guaranteed
+        value: active
+      - field: is_active
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: registered_date
+        operator: equals
+        reliability: guaranteed
+        value: "2006-05-10"
+      - field: registered_address
+        operator: not_null
+        reliability: guaranteed
+      - field: sni_codes
+        operator: not_null
+        reliability: guaranteed
+      - field: business_description
+        operator: not_null
+        reliability: guaranteed
+      - field: ongoing_procedures
+        operator: not_null
+        reliability: guaranteed
+      - field: alternative_names
         operator: not_null
         reliability: guaranteed
   health_check_input:
     org_number: 556703-7485
 output_field_reliability:
-  employees: guaranteed
+  status: guaranteed
+  is_active: guaranteed
+  sni_codes: guaranteed
+  legal_form: common
   org_number: guaranteed
-  profit_sek: guaranteed
-  fiscal_year: guaranteed
-  revenue_sek: guaranteed
+  vat_number: guaranteed
   company_name: guaranteed
+  company_type: guaranteed
+  country_code: guaranteed
+  legal_form_code: common
+  registered_date: guaranteed
+  alternative_names: guaranteed
+  company_type_code: guaranteed
+  deregistered_date: rare
+  ongoing_procedures: guaranteed
+  registered_address: common
+  business_description: common
+  deregistration_reason: rare
 limitations:
-  - title: Bolagsverket maintenance windows may cause 2-4 hour quarterly outages
-    text: Bolagsverket maintenance windows may cause temporary unavailability (typically 2-4 hours quarterly)
-    category: availability
-    severity: info
-    workaround: Implement a retry with exponential backoff; maintenance windows are announced at bolagsverket.se/driftinformation
-  - title: Financial data comes from annual reports and can be up to 12 months old
-    text: Financial data from annual reports — can be up to 12 months old
-    category: freshness
-    severity: info
-    workaround: Check the report_date field in the response and fetch directly from Bolagsverket for time-sensitive decisions
-  - title: Does not cover sole proprietorships — about 15% of Swedish businesses
-    text: Does not cover sole proprietorships (enskild firma) — approximately 15% of Swedish businesses
+  - title: Registry data only — no financials
+    text: >-
+      HVD is the EU Open Data Directive subset of Bolagsverket's data. It covers registry identity (name, legal form,
+      status, address, SNI, registration date, insolvency flags) but NOT annual-report financials (revenue, profit,
+      employees, equity). Financial fields were available in earlier Allabolag-backed versions of this capability but
+      have been dropped; they require Bolagsverket's paid Årsredovisningsinformation API or a licensed aggregator.
     category: coverage
     severity: info
-    workaround: Use the company name to search Skatteverket's public registry directly for enskild firma entities
+    workaround: Use a licensed credit-bureau capability (roadmap) or order an annual-report extract manually.
+  - title: Lookup requires organisationsnummer (no name search)
+    text: >-
+      The HVD API accepts only `identitetsbeteckning` (organisationsnummer/personnummer). Name-based resolution is not
+      offered — earlier LLM-based name-to-orgnr resolution was removed because it relied on scraping Allabolag.se, which
+      is prohibited by DEC-20260420-H.
+    category: coverage
+    severity: info
+    workaround: >-
+      Resolve the company name to an orgnr via an upstream name-resolver or via the VIES VAT validator, then pass the
+      orgnr.
+  - title: Enskild näringsidkare may return multiple entries
+    text: >-
+      Sole traders (enskild näringsidkare) can have multiple registered companies on the same personnummer. The executor
+      returns the first entry. If a personnummer is passed, only the primary entry is surfaced.
+    category: coverage
+    severity: info
+    workaround: Prefer aktiebolag organisationsnummer (10 digits starting 2–9) for unambiguous single-entry lookups.
+  - title: Deregistered company data may be historical only
+    text: >-
+      Deregistered companies (avregistrerad) still return registry data, but the data reflects the state at
+      deregistration. `is_active` is false and `deregistered_date` is populated.
+    category: freshness
+    severity: info
+    workaround: Always check the `is_active` and `deregistered_date` fields before using returned data for live decisions.
