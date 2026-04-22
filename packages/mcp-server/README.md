@@ -133,7 +133,7 @@ Before your agent pays for any external API call, use `paid-api-preflight` to ve
 |------|-------------|-------|
 | `paid-api-preflight` | Verify any paid API endpoint before your agent spends money (L402, x402, MPP) | €0.02 |
 | `vat-validate` | Validate EU VAT number via VIES | €0.10 |
-| `swedish-company-data` | Extract Swedish company data | €0.80 |
+| `swedish-company-data` | Extract Swedish company data | €0.05 |
 | `email-validate` | Verify email deliverability | Free |
 | `iban-validate` | Validate international bank account numbers | Free |
 

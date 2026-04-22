@@ -90,7 +90,7 @@ const FALLBACK_EXAMPLES: Record<string, Array<{ slug: string; description: strin
 
 const DEFAULT_EXAMPLES = [
   { slug: "sanctions-check", description: "Screen against global sanctions lists", price: "€0.02" },
-  { slug: "swedish-company-data", description: "Company data from Bolagsverket", price: "€0.80" },
+  { slug: "swedish-company-data", description: "Company data from Bolagsverket", price: "€0.05" },
   { slug: "package-security-audit", description: "CVE + license + scorecard audit for npm/PyPI", price: "€0.15" },
 ];
 
