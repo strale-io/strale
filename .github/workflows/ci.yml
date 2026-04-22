@@ -41,4 +41,9 @@ jobs:
       # SCF-3 guard: no API code access to transactions.integrity_hash_status
       # (owned by an untracked external workflow — see schema.ts comment).
       - run: node apps/api/scripts/check-no-external-column-access.mjs
+      # DEC-20260422-A: every framework-named *-strale package must contain
+      # at least one real import from the framework it claims to integrate
+      # with. Blocks the "hollow package" class of incident that surfaced
+      # with pydantic-ai on 2026-04-21. See CONTAINMENT_REPORT.md.
+      - run: node apps/api/scripts/check-framework-packages.mjs
       - run: npm test
