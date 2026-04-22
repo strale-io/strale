@@ -281,6 +281,10 @@ registerCapability(
         source: "Bolagsverket Värdefulla datamängder API",
         source_url: `${API}/organisationer`,
         fetched_at: new Date().toISOString(),
+        attribution: "Källa: Bolagsverket",
+        license: "CC BY 4.0",
+        license_url: "https://creativecommons.org/licenses/by/4.0/",
+        source_note: "EU Commission Implementing Regulation (EU) 2023/138",
       },
     };
   },
