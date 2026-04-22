@@ -195,7 +195,7 @@ const SOLUTIONS: SolutionDef[] = [
     geography: "nordic",
     targetAudience: "Developers building fintech tools, onboarding flows, or any agent that verifies Nordic businesses",
     transparencyTag: "mixed",
-    extendsWith: ["credit-report-summary", "company-enrich"],
+    extendsWith: ["company-enrich"],
     inputSchema: {
       type: "object",
       properties: {

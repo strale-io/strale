@@ -39,6 +39,19 @@ const DEACTIVATED = new Map<string, string>([
     // OR a licensed commercial aggregator contract covers these fields.
     "No compliant source for F-skatt/moms/employer flags (see DEC-20260421-SE-C)",
   ],
+  [
+    "credit-report-summary",
+    // DEC-20260405-B / DEC-20260422-SE-D: Swedish credit ratings, credit limits, and risk indicators
+    // are proprietary products of commercial bureaus (UC/Enento, Bisnode/D&B, Allabolag). No free
+    // government source exists — Bolagsverket is a registry, not a credit bureau. Previous runtime
+    // scraped allabolag.se for rating + financial summary, which is banned by DEC-20260420-H.
+    // The HVD API unlocked 2026-04-22 does not cover credit data (registry data only).
+    // Reactivation trigger: licensed credit-bureau contract (UC, Bisnode, Creditsafe), or a Strale
+    // solution that synthesises a risk score from Bolagsverket HVD + annual-report iXBRL financials
+    // once Årsredovisningsinformation API access is in place (not a 1:1 replacement — a different
+    // product, and must be named differently to avoid implying bureau-grade credit data).
+    "No compliant source for Swedish credit ratings (see DEC-20260405-B / DEC-20260422-SE-D)",
+  ],
 ]);
 
 export function getDeactivatedCapabilities(): ReadonlyMap<string, string> {

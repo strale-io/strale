@@ -78,7 +78,7 @@ import "../capabilities/brazilian-company-data.js";
 import "../capabilities/japanese-company-data.js";
 import "../capabilities/exchange-rate.js";
 import "../capabilities/stock-quote.js";
-import "../capabilities/credit-report-summary.js";
+// credit-report-summary deactivated DEC-20260405-B
 import "../capabilities/dns-lookup.js";
 import "../capabilities/whois-lookup.js";
 import "../capabilities/ssl-check.js";
