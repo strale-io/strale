@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "openai-agents-strale"
 version = "0.1.1"
-description = "OpenAI Agents SDK integration for Strale — 250+ business capabilities as agent tools"
+description = "DEPRECATED — yanked 2026-04-22. Use the Strale MCP server (https://api.strale.io/mcp) or pip install straleio."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -16,7 +16,7 @@ keywords = [
     "business-data", "sanctions", "company-data", "kyb", "aml",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 7 - Inactive",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",

@@ -2,7 +2,11 @@ import type { EcosystemMetrics, Scoreboard } from "./types.js";
 
 const GITHUB_REPOS = ["strale", "strale-frontend", "strale-beacon", "strale-examples"];
 const NPM_PACKAGES = ["strale-mcp", "straleio", "strale-semantic-kernel"];
-const PYPI_PACKAGES = ["straleio", "langchain-strale", "crewai-strale", "composio-strale", "pydantic-ai-strale", "openai-agents-strale", "google-adk-strale"];
+// Only packages with real framework integration (or the generic straleio SDK).
+// The framework-named packages that were deprecated on 2026-04-22 (pydantic-
+// ai-strale, google-adk-strale, openai-agents-strale) are intentionally
+// excluded — tracking yanked packages only produces noise in the digest.
+const PYPI_PACKAGES = ["straleio", "langchain-strale", "crewai-strale", "composio-strale"];
 
 export async function getEcosystemMetrics(
   yesterday: Partial<Scoreboard> | null,
