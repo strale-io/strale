@@ -13,6 +13,11 @@ jobs:
       # just a 32+ char placeholder so the module-load assertion passes
       # under test. Production secret is set in Railway (Phase A Q1).
       AUDIT_HMAC_SECRET: ci-placeholder-secret-at-least-32-chars-long-0123456789
+      # Required by apps/api/src/routes/wallet.ts for Stripe top-up redirect
+      # URLs. Any HTTPS string works for test — the real value lives on
+      # Railway. Without this, any test that imports app.ts (i.e. every
+      # request-level test) fails at module load.
+      FRONTEND_URL: https://strale.dev
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
