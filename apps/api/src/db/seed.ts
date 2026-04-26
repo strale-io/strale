@@ -236,6 +236,39 @@ const seedCapabilities = [
     outputSchema: { type: "object", properties: { company_name: { type: "string" }, company_number: { type: "string" }, company_status: { type: "string" }, filings: { type: "array" }, events_returned: { type: "number" } } },
     priceCents: 5,
   },
+  {
+    name: "Greek Company Data",
+    slug: "greek-company-data",
+    description:
+      "Look up Greek company data from the GEMI Open Data API (Γενικό Εμπορικό Μητρώο). Accepts a GEMI registry number or Greek tax ID (AFM, 9 digits).",
+    category: "data-extraction",
+    inputSchema: {
+      type: "object",
+      properties: {
+        gemi_number: { type: "string", description: "Greek GEMI registry number (6-14 digits)" },
+        afm: { type: "string", description: "Greek tax ID (AFM, 9 digits)" },
+      },
+      required: [],
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        company_name: { type: "string" },
+        org_number: { type: "string" },
+        vat_number: { type: "string" },
+        afm: { type: "string" },
+        business_type: { type: "string" },
+        address: { type: "string" },
+        registration_date: { type: "string" },
+        industry_code: { type: "string" },
+        industry_description: { type: "string" },
+        status: { type: "string" },
+        directors: { type: "array" },
+        is_branch: { type: "boolean" },
+      },
+    },
+    priceCents: 5,
+  },
   // ─── New capabilities (DEC-20260226-P-s3t4) ─────────────────────────────
   {
     name: "Norwegian Company Data",
