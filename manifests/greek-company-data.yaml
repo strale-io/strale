@@ -2,8 +2,8 @@ slug: greek-company-data
 name: Greek Company Data
 description: >-
   Look up Greek company data from the GEMI Open Data API (Γενικό Εμπορικό Μητρώο). Accepts a GEMI registry number or
-  Greek tax ID (AFM, 9 digits). Returns name, legal form, address, status, primary activity, directors, and the
-  derived VAT number (EL + AFM).
+  Greek tax ID (AFM, 9 digits). Returns name, legal form, address, status, primary activity, directors, and the derived
+  VAT number (EL + AFM).
 category: data-extraction
 price_cents: 5
 is_free_tier: false
@@ -68,8 +68,39 @@ test_fixtures:
         operator: not_null
         reliability: guaranteed
       - field: org_number
+        operator: equals
+        reliability: guaranteed
+        value: "237954001"
+      - field: vat_number
+        operator: equals
+        reliability: guaranteed
+        value: EL094014201
+      - field: afm
+        operator: equals
+        reliability: guaranteed
+        value: "094014201"
+      - field: business_type
+        operator: equals
+        reliability: guaranteed
+        value: ΑΕ
+      - field: address
         operator: not_null
         reliability: guaranteed
+      - field: registration_date
+        operator: equals
+        reliability: guaranteed
+        value: "1941-01-01"
+      - field: status
+        operator: equals
+        reliability: guaranteed
+        value: active
+      - field: directors
+        operator: not_null
+        reliability: guaranteed
+      - field: is_branch
+        operator: equals
+        reliability: guaranteed
+        value: true
   health_check_input:
     gemi_number: "000237954001"
 output_field_reliability:
@@ -87,17 +118,23 @@ output_field_reliability:
   is_branch: guaranteed
 limitations:
   - title: GEMI rate limit is 8 requests per minute
-    text: The GEMI Open Data API enforces a maximum of 8 requests per minute per API key. Requests exceeding this limit return HTTP 429.
+    text: >-
+      The GEMI Open Data API enforces a maximum of 8 requests per minute per API key. Requests exceeding this limit
+      return HTTP 429.
     category: rate-limit
     severity: info
     workaround: Request a higher rate limit from support@uhc.gr describing the use case and expected volume.
   - title: AFM (tax ID) field is occasionally absent for older or special-status entities
-    text: When AFM is missing the derived vat_number is null; vat-validate downstream steps will soft-fail for those entities.
+    text: >-
+      When AFM is missing the derived vat_number is null; vat-validate downstream steps will soft-fail for those
+      entities.
     category: coverage
     severity: info
     workaround: Provide the AFM as input directly when known, or use a separate VAT validation source.
   - title: Branches and main entities are both returned by GEMI
-    text: GEMI includes branch records (is_branch=true) alongside main-entity records. Some KYB use cases want the parent only.
+    text: >-
+      GEMI includes branch records (is_branch=true) alongside main-entity records. Some KYB use cases want the parent
+      only.
     category: coverage
     severity: info
     workaround: Check the is_branch field before using the record as the principal counterparty.
