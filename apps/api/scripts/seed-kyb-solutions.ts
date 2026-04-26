@@ -60,6 +60,7 @@ const COUNTRIES: Country[] = [
   { code: "pl", name: "Poland", companyDataSlug: "polish-company-data", isEU: true, geography: "eu", inputField: "krs_number", inputLabel: "Polish KRS number", exampleId: "0000019193" },
   { code: "pt", name: "Portugal", companyDataSlug: "portuguese-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Portuguese company name or NIPC", exampleId: "EDP" },
   { code: "hr", name: "Croatia", companyDataSlug: "croatian-company-data", isEU: true, geography: "eu", inputField: "oib", inputLabel: "Croatian OIB (11 digits), MBS, or company name", exampleId: "81793146560" },
+  { code: "gr", name: "Greece", companyDataSlug: "greek-company-data", isEU: true, geography: "eu", inputField: "gemi_number", inputLabel: "Greek GEMI registry number", exampleId: "000237954001" },
   { code: "us", name: "United States", companyDataSlug: "us-company-data", isEU: false, geography: "us", inputField: "company_name", inputLabel: "US company name or EIN", exampleId: "Apple Inc" },
   { code: "ca", name: "Canada", companyDataSlug: "canadian-company-data", isEU: false, geography: "us", inputField: "company_name", inputLabel: "Canadian company name or corporation number", exampleId: "Shopify Inc" },
   { code: "au", name: "Australia", companyDataSlug: "au-company-data", isEU: false, geography: "us-global", inputField: "abn", inputLabel: "Australian Business Number (11 digits)", exampleId: "51824753556" },

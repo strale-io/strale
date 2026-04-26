@@ -287,6 +287,24 @@ export const PROVIDERS: DependencyProvider[] = [
     capabilities: ["croatian-company-data"],
     tier: "free",
   },
+  {
+    name: "gemi",
+    displayName: "GEMI Open Data (Greece)",
+    description: "Greek Business Registry (Γενικό Εμπορικό Μητρώο) Open Data API — api_key header.",
+    baseUrl: "https://opendata-api.businessportal.gr/api/opendata/v1",
+    authType: "api-key-header",
+    envVar: "GEMI_API_KEY",
+    healthProbe: {
+      // Unauthenticated GET returns 401 without consuming the 8 req/min quota.
+      path: "/companies/000237954001",
+      method: "GET",
+      healthyStatuses: [200, 401],
+      timeoutMs: 5000,
+      skipAuth: true,
+    },
+    capabilities: ["greek-company-data"],
+    tier: "free",
+  },
 
   // ─── Web3 providers (free, no key) ────────────────────────────────────────
   {
