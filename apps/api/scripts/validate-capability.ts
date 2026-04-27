@@ -50,6 +50,7 @@ const VALID_CATEGORIES = [
   "content-writing",
   "document-extraction",
   "financial",
+  "media",
   "security",
   "text-processing",
   "trade",

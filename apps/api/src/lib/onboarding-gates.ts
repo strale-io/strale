@@ -211,8 +211,8 @@ export const VALID_CATEGORIES = [
   "data-processing", "web-scraping", "monitoring", "validation",
   "data-extraction", "legal-regulatory", "file-conversion",
   "agent-tooling", "competitive-intelligence", "content-writing",
-  "document-extraction", "financial", "security", "text-processing",
-  "trade", "utility", "web-intelligence", "web3",
+  "document-extraction", "financial", "media", "security",
+  "text-processing", "trade", "utility", "web-intelligence", "web3",
 ];
 
 // Includes `null` to accept capabilities that haven't declared a tag yet.

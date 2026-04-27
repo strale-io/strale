@@ -1,0 +1,143 @@
+slug: c2pa-inspect
+name: C2PA Content Credentials Inspect
+description: >-
+  Inspect a media URL for C2PA Content Credentials. Parses the embedded manifest, verifies the cryptographic signature,
+  and extracts claim generator, signer, edit assertions, and AI-generation flags. Pure parsing — no external API.
+category: media
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      format: uri
+      description: HTTP(S) URL of an image (JPEG, PNG, WebP, AVIF, HEIF, TIFF, DNG) to inspect for C2PA manifests
+output_schema:
+  type: object
+  example:
+    source_url: "https://example.com/photo.jpg"
+    media_type: "image/jpeg"
+    bytes_size: 184320
+    has_c2pa: true
+    manifest_count: 1
+    active_manifest:
+      label: "urn:uuid:1234..."
+      claim_generator: "Adobe Photoshop 25.0"
+      title: "photo.jpg"
+      vendor: "Adobe"
+      format: "image/jpeg"
+      signer:
+        issuer: "C=US, O=Adobe Inc., CN=Adobe Photoshop CS Test Cert"
+        time: "2024-06-15T10:30:00Z"
+      signature_valid: true
+      assertions:
+        - label: "c2pa.actions"
+          kind: "Json"
+        - label: "c2pa.hash.data"
+          kind: "Json"
+      assertions_count: 4
+      ingredients_count: 0
+      ai_generated: false
+    validation_status: []
+  properties:
+    source_url:
+      type: string
+    media_type:
+      type: string
+    bytes_size:
+      type: integer
+    has_c2pa:
+      type: boolean
+    manifest_count:
+      type: integer
+    active_manifest:
+      type: ["object", "null"]
+    validation_status:
+      type: array
+data_source: c2pa-rs (Adobe Content Authenticity Initiative reference implementation)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: pure-computation
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      url: "https://raw.githubusercontent.com/contentauth/c2pa-rs/main/sdk/tests/fixtures/CA.jpg"
+    expected_fields:
+      - field: source_url
+        operator: not_null
+        reliability: guaranteed
+      - field: media_type
+        operator: equals
+        reliability: guaranteed
+        value: "image/jpeg"
+      - field: bytes_size
+        operator: not_null
+        reliability: guaranteed
+      - field: has_c2pa
+        operator: is_true
+        reliability: guaranteed
+      - field: manifest_count
+        operator: not_null
+        reliability: guaranteed
+      - field: active_manifest
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    url: "https://raw.githubusercontent.com/contentauth/c2pa-rs/main/sdk/tests/fixtures/CA.jpg"
+output_field_reliability:
+  source_url: guaranteed
+  media_type: guaranteed
+  bytes_size: guaranteed
+  has_c2pa: guaranteed
+  manifest_count: guaranteed
+  active_manifest: common
+  validation_status: guaranteed
+limitations:
+  - title: Image formats only in v1
+    text: >-
+      v1 supports JPEG, PNG, WebP, AVIF, HEIF, TIFF, DNG, and GIF. Video and audio formats (MP4, M4A, MP3, WAV) are
+      not yet enabled even though c2pa-rs supports them. Adding video raises the byte budget significantly; v2 will
+      address this.
+    category: coverage
+    severity: info
+    workaround: Convert the relevant frame to a still image before inspection, or wait for v2 video support.
+  - title: 15 MB per-fetch size cap
+    text: >-
+      The capability fetches the media server-side. To prevent abuse and DoS, fetched media is capped at 15 MB.
+      Larger originals must be downsampled or referenced via a smaller derivative.
+    category: coverage
+    severity: info
+    workaround: Provide a downsampled URL or upload a base64-encoded payload (planned for v2).
+  - title: URL input only — no direct upload in v1
+    text: >-
+      v1 accepts only an HTTP(S) URL. Direct upload of base64-encoded media bytes is planned for v2 to support agents
+      that already hold the media in memory. URL must be publicly fetchable.
+    category: coverage
+    severity: info
+    workaround: Host the media on a publicly accessible URL (e.g. S3 public object, CDN) before calling.
+  - title: Signature trust depends on c2pa-rs trust list
+    text: >-
+      signature_valid reflects cryptographic verification against c2pa-rs's bundled trust list. A valid signature from
+      an unknown signer (not in the trust list) may surface as "untrusted" in validation_status even if the bytes are
+      authentic. Treat signer.issuer + signature_valid jointly when assessing trust.
+    category: accuracy
+    severity: warning
+    workaround: >-
+      Inspect validation_status for codes ending in ".untrusted" and decide whether to trust the signer organization
+      separately.
+  - title: AI-generation flag is heuristic, not authoritative
+    text: >-
+      ai_generated returns true if any manifest assertion label matches a known generative-AI marker
+      (c2pa.training-mining, com.adobe.generative-ai, etc.). C2PA does not yet have a single canonical "this content
+      is AI" assertion, so absence of the flag does not prove the content is human-made.
+    category: accuracy
+    severity: warning
+    workaround: >-
+      For high-stakes decisions, also inspect the assertions array for vendor-specific generative-AI labels not in the
+      built-in list.
