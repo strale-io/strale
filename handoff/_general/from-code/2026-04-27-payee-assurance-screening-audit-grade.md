@@ -45,12 +45,19 @@ Ran a live coverage battery to convert "asserted but unverified" coverage claims
 | pep-check | ✅ ready (100% hit rate today) | ✅ ready |
 | adverse-media-check | ⚠️ functional but native-language gap requires product decision | ✅ ready (English-language press well-covered) |
 
-## Pre-v1 must-do (2 items remaining — was 4 at session start)
+## Pre-v1 must-do
 
 1. ~~Set `OPENSANCTIONS_API_KEY` on Railway~~ — **CLOSED.** OS dropped from v1 entirely (commit `16ca790`).
 2. **Upgrade Dilisense to Basic** — Q1 quota for v1 traffic + DPA + Service Agreement.
 3. ~~Make the adverse-media language-coverage decision~~ — **CLOSED.** Accept-and-disclose chosen, logged as DEC-20260427-A.
 4. **Investigate the 3 zero-hits** — entity-naming variants for IT/BPVi, GR/Folli Follie, EE/Danske Bank Estonia. ~30 min of code/test work.
+5. **HMRC production credentials** — applied 2026-04-28; 3-10 working days. Once landed, set `HMRC_CLIENT_ID` + `HMRC_CLIENT_SECRET` on Railway and UK VAT validation activates immediately.
+6. ~~Swiss UID SOAP fault~~ — **CLOSED.** Fixed in commit `21545f5` (corrected namespace + action header). Verified live against Nestlé's UID.
+7. **Confirm catalog-staleness recovery** — re-run `apps/api/scripts/staleness-distribution.ts` 2026-04-28 morning to confirm the ECB deactivation + persistDualProfileScores fix drained the unverified bucket.
+
+## Pre-v1.1 must-do
+
+1. **EIN-based US business-verification capability.** US Payee Assurance v1.1 has no functional analog to `vat-validate` today. `us-company-data` covers SEC EDGAR (public companies only — ~13k entities) but misses the 33M+ private US LLCs/corporations that make up most AP-shop payee bases. IRS has no public EIN lookup; commercial provider required (Middesk, Cobalt Intelligence, Persona, Socure, etc.). Decision pending vendor evaluation — research prompt drafted 2026-04-28 to be run in a separate chat. Until this ships, US Payee Assurance v1.1 is functionally identity-incomplete: sanctions/PEP/adverse media work, registry doesn't.
 
 ## Late-late-session bonus: catalog-wide test-staleness incident
 
