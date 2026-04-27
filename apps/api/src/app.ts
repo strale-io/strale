@@ -30,7 +30,7 @@ import { internalHealthMonitorRoute } from "./routes/internal-health-monitor.js"
 import { replyWebhookRoute } from "./routes/reply-webhook.js";
 import { auditRoute } from "./routes/audit.js";
 import { internalOnboardingRoute } from "./routes/internal-onboarding.js";
-import { x402GatewayV2, getX402Manifest } from "./routes/x402-gateway-v2.js";
+import { x402GatewayV2, getX402Manifest, getX402WellKnownResources } from "./routes/x402-gateway-v2.js";
 import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
@@ -375,6 +375,14 @@ app.get("/.well-known/x402.json", async (c) => {
   c.header("Cache-Control", "public, max-age=300");
   const manifest = await getX402Manifest();
   return c.json(manifest);
+});
+
+// Spec-compliant fan-out for x402scan / awesome-x402 indexers
+// (DISCOVERY.md: GET /.well-known/x402 → { version: 1, resources: [absolute URL...] })
+app.get("/.well-known/x402", async (c) => {
+  c.header("Cache-Control", "public, max-age=300");
+  const payload = await getX402WellKnownResources();
+  return c.json(payload);
 });
 
 // 402 Index domain verification token

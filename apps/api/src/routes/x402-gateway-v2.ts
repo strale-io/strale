@@ -897,3 +897,14 @@ export async function getX402Manifest(): Promise<{
     endpoints,
   };
 }
+
+// Spec-compliant fan-out per x402scan's DISCOVERY.md: minimal { version, resources }
+// shape consumed by x402scan, awesome-x402 indexers, and similar discovery tools.
+export async function getX402WellKnownResources(): Promise<{ version: number; resources: string[] }> {
+  await ensureCache();
+  const resources = [
+    ...[..._capCache.values()].map((cap) => `${BASE_URL}/x402/${cap.slug}`),
+    ...[..._solCache.values()].map((sol) => `${BASE_URL}/x402/solutions/${sol.slug}`),
+  ];
+  return { version: 1, resources };
+}
