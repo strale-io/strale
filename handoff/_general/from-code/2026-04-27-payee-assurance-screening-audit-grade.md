@@ -45,12 +45,12 @@ Ran a live coverage battery to convert "asserted but unverified" coverage claims
 | pep-check | ✅ ready (100% hit rate today) | ✅ ready |
 | adverse-media-check | ⚠️ functional but native-language gap requires product decision | ✅ ready (English-language press well-covered) |
 
-## Pre-v1 must-do (3 items, all blocking — was 4 before OS-drop)
+## Pre-v1 must-do (2 items remaining — was 4 at session start)
 
-1. ~~Set `OPENSANCTIONS_API_KEY` on Railway~~ — **CLOSED.** OS dropped from v1 entirely.
+1. ~~Set `OPENSANCTIONS_API_KEY` on Railway~~ — **CLOSED.** OS dropped from v1 entirely (commit `16ca790`).
 2. **Upgrade Dilisense to Basic** — Q1 quota for v1 traffic + DPA + Service Agreement.
-3. **Make the adverse-media language-coverage decision** — accept-and-disclose / supplement / scope-cut.
-4. **Investigate the 3 zero-hits** — entity-naming variants, ~30 min of code/test work.
+3. ~~Make the adverse-media language-coverage decision~~ — **CLOSED.** Accept-and-disclose chosen, logged as DEC-20260427-A.
+4. **Investigate the 3 zero-hits** — entity-naming variants for IT/BPVi, GR/Folli Follie, EE/Danske Bank Estonia. ~30 min of code/test work.
 
 ## What still needs to happen (pre-existing items, post-launch)
 
