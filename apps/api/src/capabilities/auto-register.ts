@@ -12,6 +12,21 @@ import { log, logError } from "../lib/log.js";
 
 const DEACTIVATED = new Map<string, string>([
   ["amazon-price", "Amazon CAPTCHA blocks datacenter IPs"],
+  [
+    "ecb-interest-rates",
+    // ECB SDW API is geo-restricted: Railway US East egress IPs receive
+    // empty responses while EU-based servers get real data. The cap was
+    // running but its correctness suite always failed, and a regression in
+    // the test-runner (around 2026-04-20) stopped advancing
+    // capabilities.last_tested_at when an infra_limited correctness test
+    // failed. ECB stayed at the front of the scheduler queue with
+    // last_tested_at frozen at 2026-03-23, consuming ~89% of test_results
+    // bandwidth (12,132 of 13,650 inserts in the 7 days before deactivation)
+    // and starving 155 other caps to unverified status.
+    // Reactivation trigger: Railway EU-based runtime, OR migration to a
+    // sanctioned ECB data feed that allows non-EU egress.
+    "ECB SDW geo-restricted from Railway US East; was starving scheduler queue (see 2026-04-27 staleness investigation)",
+  ],
   ["hong-kong-company-data", "No viable data source identified"],
   ["indian-company-data", "No viable data source identified"],
   ["singapore-company-data", "No viable data source identified"],
