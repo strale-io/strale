@@ -1,14 +1,25 @@
-# Multi-provider VAT validation: EU27 + XI via VIES, GB via HMRC, NO via Brreg, CH/LI via Swiss UID.
-# Router lives in apps/api/src/capabilities/vat-validate.ts; per-country providers in
-# apps/api/src/capabilities/lib/vat-providers/.
+# NOTE — manifest-canonical metadata is intentionally stale relative to the
+# multi-provider executor. The router at src/capabilities/vat-validate.ts
+# now dispatches to VIES (EU27 + XI), HMRC (GB), Brønnøysundregistrene (NO),
+# and the Swiss UID register (CH/LI), but the capability's name, description,
+# input_schema, output_schema, data_source, and output_field_reliability
+# below are kept matching the DB (single-provider VIES era) because the
+# onboarding pipeline does not currently support updating manifest-canonical
+# fields on existing capabilities.
+#
+# Per-call audit-trail provenance IS honest — each provider module records
+# its own `provenance.source` so audit records reflect the actual upstream.
+# Only the catalog-level metadata is temporarily stale.
+#
+# Tracked fix: Notion To-do "Multi-provider capabilities as first-class
+# shape" (page 34f67c87-082c-8166-aaf6-dcaa53bfd8ec). When that ships, this
+# manifest's metadata + the DB row will be updated together properly.
 
 slug: vat-validate
-name: VAT Validation (EU27 + UK + NO + CH/LI)
+name: EU VAT Validation + VIES Enrichment
 description: >-
-  Validate a VAT number against the relevant national authority — VIES for the EU27 + Northern Ireland, HMRC for the UK,
-  Brønnøysundregistrene for Norway, and the Swiss UID register for Switzerland and Liechtenstein. Returns registration
-  status plus the registered company name and address where the upstream source provides them. 48h substrate cache with
-  stale-fallback on upstream outages.
+  Validate a European VAT number against the VIES database. Returns company name, address, and validity. Caches results
+  for 24 hours for instant responses on repeated lookups. Serves cached data when VIES is down.
 category: validation
 price_cents: 10
 is_free_tier: false
@@ -19,16 +30,16 @@ input_schema:
   properties:
     vat_number:
       type: string
-      description: VAT number including country prefix (e.g. SE556703748501, GB123456789, NO123456789MVA, CHE-123.456.789)
+      description: EU VAT number including country prefix (e.g. SE556703748501)
 output_schema:
   type: object
   example:
     valid: true
-    vat_number: DE811128135
-    company_name: ""
-    country_code: DE
-    request_date: 2026-03-06+01:00
-    company_address: ""
+    vat_number: SE556703748501
+    company_name: Spotify AB
+    country_code: SE
+    request_date: 2026-04-03+02:00
+    company_address: "REGERINGSGATAN 19 \n111 53 STOCKHOLM"
   properties:
     valid:
       type: boolean
@@ -40,9 +51,7 @@ output_schema:
       type: string
     company_address:
       type: string
-    request_date:
-      type: string
-data_source: VIES (EU27 + XI), HMRC (GB), Brønnøysundregistrene (NO), Swiss UID register (CH/LI)
+data_source: VIES (EU VAT Information Exchange System, European Commission)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -62,13 +71,9 @@ test_fixtures:
 output_field_reliability:
   valid: guaranteed
   vat_number: guaranteed
+  company_name: guaranteed
   country_code: guaranteed
-  request_date: guaranteed
-  # Company name + address are returned by VIES (most member states) and HMRC,
-  # left blank by Brreg-NO when not in MVA register, and intentionally blank
-  # by the Swiss UID public ValidateVatNumber endpoint (boolean-only).
-  company_name: common
-  company_address: common
+  company_address: guaranteed
 limitations:
   - title: VIES has periodic outages and an undocumented per-member-state concurrency limit
     text: >-
