@@ -1953,6 +1953,28 @@ export async function persistDualProfileScores(slugs: string[]): Promise<void> {
       const dual = await computeDualProfileSQS(slug);
       if (dual.matrix.pending) {
         skippedPending++;
+        // Still advance last_tested_at — without this, caps with permanently-
+        // pending SQS (e.g. correctness suite that always fails due to
+        // geo-restriction, infra outage, or upstream API change) stay at
+        // last_tested_at = "first time it was scoreable" forever, parking
+        // them at the front of the scheduler's ORDER BY last_tested_at ASC
+        // NULLS FIRST queue and starving every other cap.
+        // See 2026-04-27 staleness investigation: ecb-interest-rates was
+        // stuck at last_tested_at=2026-03-23 while writing 12,132 test_result
+        // rows in 7 days, consuming ~89% of scheduler bandwidth and pushing
+        // 155 of 278 active caps into unverified state.
+        const [lastTest] = await db
+          .select({ executedAt: testResults.executedAt })
+          .from(testResults)
+          .where(eq(testResults.capabilitySlug, slug))
+          .orderBy(desc(testResults.executedAt))
+          .limit(1);
+        if (lastTest?.executedAt) {
+          await db
+            .update(capabilities)
+            .set({ lastTestedAt: lastTest.executedAt, updatedAt: new Date() })
+            .where(eq(capabilities.slug, slug));
+        }
         continue;
       }
 

@@ -5,6 +5,7 @@
  *
  * Usage: cd apps/api && npx tsx scripts/gleif-coverage-by-country.ts
  */
+import { writeFile } from "node:fs/promises";
 
 const COUNTRIES: Array<{ cc: string; name: string; group: "v1" | "v1.1" }> = [
   { cc: "SE", name: "Sweden", group: "v1" },
@@ -99,8 +100,7 @@ out.push(`| United States | US | ${us?.total !== null && us?.total !== undefined
 out.push("");
 
 const reportPath = `${process.cwd()}/../../docs/research/2026-04-27-gleif-coverage-by-country.md`;
-const fs = await import("node:fs/promises");
-await fs.writeFile(reportPath, out.join("\n"));
+await writeFile(reportPath, out.join("\n"));
 console.log(`\nReport written: ${reportPath}\n`);
 
 process.exit(0);

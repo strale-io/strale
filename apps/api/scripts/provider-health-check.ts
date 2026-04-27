@@ -37,7 +37,7 @@ for (const p of providers) {
   if (h && !h.healthy) {
     unhealthy.push({
       provider: p.name,
-      reason: h.reason ?? "no reason given",
+      reason: h.error ?? "no reason given",
       capCount: p.capabilities.length,
       sample: p.capabilities.slice(0, 5),
     });
