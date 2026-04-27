@@ -1,11 +1,14 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
+# Multi-provider VAT validation: EU27 + XI via VIES, GB via HMRC, NO via Brreg, CH/LI via Swiss UID.
+# Router lives in apps/api/src/capabilities/vat-validate.ts; per-country providers in
+# apps/api/src/capabilities/lib/vat-providers/.
 
 slug: vat-validate
-name: EU VAT Validation + VIES Enrichment
+name: VAT Validation (EU27 + UK + NO + CH/LI)
 description: >-
-  Validate a European VAT number against the VIES database and return enriched company data. Handles VIES downtime and
-  rate limiting reliably.
+  Validate a VAT number against the relevant national authority — VIES for the EU27 + Northern Ireland, HMRC for the UK,
+  Brønnøysundregistrene for Norway, and the Swiss UID register for Switzerland and Liechtenstein. Returns registration
+  status plus the registered company name and address where the upstream source provides them. 48h substrate cache with
+  stale-fallback on upstream outages.
 category: validation
 price_cents: 10
 is_free_tier: false
@@ -16,7 +19,7 @@ input_schema:
   properties:
     vat_number:
       type: string
-      description: EU VAT number including country prefix (e.g. SE556703748501)
+      description: VAT number including country prefix (e.g. SE556703748501, GB123456789, NO123456789MVA, CHE-123.456.789)
 output_schema:
   type: object
   example:
@@ -37,12 +40,13 @@ output_schema:
       type: string
     company_address:
       type: string
-data_source: VIES (EU VAT Information Exchange System, European Commission)
+    request_date:
+      type: string
+data_source: VIES (EU27 + XI), HMRC (GB), Brønnøysundregistrene (NO), Swiss UID register (CH/LI)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
 maintenance_class: free-stable-api
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: false
 geography: eu
 test_fixtures:
@@ -58,24 +62,42 @@ test_fixtures:
 output_field_reliability:
   valid: guaranteed
   vat_number: guaranteed
-  company_name: guaranteed
   country_code: guaranteed
-  company_address: guaranteed
+  request_date: guaranteed
+  # Company name + address are returned by VIES (most member states) and HMRC,
+  # left blank by Brreg-NO when not in MVA register, and intentionally blank
+  # by the Swiss UID public ValidateVatNumber endpoint (boolean-only).
+  company_name: common
+  company_address: common
 limitations:
-  - title: EU VIES validation service has periodic outages that may increase response times
+  - title: VIES has periodic outages and an undocumented per-member-state concurrency limit
     text: >-
-      VIES (EU VAT validation service) experiences periodic outages — Strale retries automatically but response times
-      may increase
+      VIES (EU VAT validation service) experiences periodic outages and throttles requests per member state with limits
+      that are not publicly disclosed. Strale retries on transient SOAP faults; the 48h substrate cache plus stale-fallback
+      keeps responses available when VIES is down.
     category: availability
     severity: warning
-    workaround: Cache successful validation results with a TTL matching your business requirements (e.g., 24h for invoicing)
-  - title: VAT registration status may lag up to 24 hours behind national registry changes
-    text: VAT registration status reflects latest VIES database — typically within 24 hours of national registry changes
+    workaround: Same-VAT lookups within 48h are served from cache. On VIES outage with no cache, the call fails with a
+      structured error.
+  - title: VAT registration status may lag national registry changes by up to 48h
+    text: >-
+      Strale's substrate cache is 48h. National registries themselves typically lag VIES by a further 24h. For same-day
+      verification (especially deregistration), bypass the cache by querying the national authority directly.
     category: freshness
     severity: info
-    workaround: For same-day registration verification, contact the national tax authority directly or use their local e-service
-  - title: Covers EU member states only — Norwegian and Swiss VAT numbers have reduced detail
-    text: Covers EU member states only. Norwegian and Swiss VAT numbers use separate validation and may have reduced detail
+    workaround: For real-time same-day verification, contact the national tax authority directly.
+  - title: Swiss UID public-tier VAT lookup is boolean only
+    text: >-
+      The free Swiss UID register endpoint returns valid/invalid only — no company name or address. Full enrichment for
+      Swiss entities requires a separate UID register call (counted against a tight 20 req/min public-tier limit) which
+      Strale does not call from this capability today.
     category: coverage
     severity: info
-    workaround: For Norwegian MVA numbers, verify directly via Brønnøysundregistrene; for Swiss UID numbers, use uid.admin.ch
+    workaround: For Swiss company name + address, call the swiss-company-data capability.
+  - title: UK VAT validation requires HMRC credentials to be configured
+    text: >-
+      The HMRC Check a UK VAT Number API v2 is registration-gated and uses OAuth2. Until production credentials land,
+      GB VAT numbers return a structured "credentials pending" error.
+    category: availability
+    severity: info
+    workaround: Use vat-format-validate for GB structural validation while HMRC credentials are pending.

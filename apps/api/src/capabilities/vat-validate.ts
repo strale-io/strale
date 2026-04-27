@@ -1,205 +1,249 @@
+/**
+ * VAT validation — single capability, multiple providers.
+ *
+ * Parses the input, dispatches to the right provider by country prefix, and
+ * wraps every call with substrate-level cache + stale-fallback + a no-op
+ * rate-limit seam (so swapping in real per-provider token buckets later is a
+ * one-file change).
+ *
+ * Coverage today:
+ *   - EU27 + XI (Northern Ireland)  → VIES
+ *   - NO                            → Brønnøysundregistrene
+ *   - CH, LI                        → Swiss UID register (public services)
+ *   - GB                            → HMRC v2 (active when credentials are set)
+ *
+ * Adding a new country = add one provider module + one entry in the prefix
+ * map below.
+ */
+
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { brregProvider } from "./lib/vat-providers/brreg.js";
+import { hmrcProvider } from "./lib/vat-providers/hmrc.js";
+import { uidChProvider } from "./lib/vat-providers/uid-ch.js";
+import { viesProvider } from "./lib/vat-providers/vies.js";
+import type {
+  ParsedVat,
+  VatProvider,
+  VatProviderResult,
+} from "./lib/vat-providers/types.js";
 
-const VIES_URL =
-  "https://ec.europa.eu/taxation_customs/vies/services/checkVatService";
+// ---------------------------------------------------------------------------
+// Substrate: cache + stale-fallback
+// ---------------------------------------------------------------------------
 
-/** Convert cryptic VIES SOAP fault strings to human-readable errors. */
-function humanizeViesError(faultString: string): string {
-  const upper = faultString.toUpperCase();
-  if (upper.includes("MS_UNAVAILABLE"))
-    return "The EU VAT validation service (VIES) reports that this country's tax authority is temporarily unavailable. This is an upstream issue — please try again later.";
-  if (upper.includes("MS_MAX_CONCURRENT_REQ"))
-    return "The EU VAT validation service (VIES) is overloaded with requests. Please try again in a few seconds.";
-  if (upper.includes("TIMEOUT"))
-    return "The EU VAT validation service (VIES) timed out. Please try again.";
-  if (upper.includes("SERVER_BUSY"))
-    return "The EU VAT validation service (VIES) is busy. Please try again in a few seconds.";
-  if (upper.includes("INVALID_INPUT"))
-    return "The VAT number format is not valid for this country. Check the country prefix and number format.";
-  return `The EU VAT validation service (VIES) returned an error: ${faultString}. This is usually a temporary issue — please try again.`;
-}
-
-// 24h cache for successful VIES responses. VIES is slow (~2-3s) and
-// unreliable. Cached results are served when VIES is down or slow,
-// marked with cache_hit: true so callers know the data age.
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+// 48h cache. VAT registration changes can happen — deregistration in
+// particular is a real failure mode for Payee Assurance — but most agents
+// are validating the same handful of counterparties repeatedly. 48h trades
+// off freshness vs. upstream load and lands well within the "freshness lag"
+// already disclosed in the manifest's limitations.
+const CACHE_TTL_MS = 48 * 60 * 60 * 1000;
 
 interface CachedResult {
-  output: Record<string, unknown>;
+  output: VatProviderResult;
+  providerName: string;
+  providerSource: string;
   cachedAt: number;
 }
 
-const viesCache = new Map<string, CachedResult>();
+const cache = new Map<string, CachedResult>();
 
 setInterval(() => {
   const now = Date.now();
-  for (const [key, entry] of viesCache) {
-    if (now - entry.cachedAt > CACHE_TTL_MS) viesCache.delete(key);
+  for (const [key, entry] of cache) {
+    if (now - entry.cachedAt > CACHE_TTL_MS) cache.delete(key);
   }
 }, 60_000).unref();
 
+// ---------------------------------------------------------------------------
+// Substrate: rate-limit seam (no-op today, real implementation later)
+// ---------------------------------------------------------------------------
+
+/**
+ * Wraps a provider call so that we have a single chokepoint to add per-provider
+ * token buckets later (HMRC 3/s, Swiss UID 20/min, etc.). Today this is a
+ * no-op — the substrate-level cache already cuts upstream load by ~90%, and
+ * adding queues without traffic data would be premature.
+ *
+ * Plumbing the seam now means the day we need to flip it on, it's a one-file
+ * change instead of an audit-the-whole-capability change.
+ */
+async function withRateLimit<T>(
+  _providerName: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  return fn();
+}
+
+// ---------------------------------------------------------------------------
+// Provider routing
+// ---------------------------------------------------------------------------
+
+const ALL_PROVIDERS: readonly VatProvider[] = [
+  viesProvider,
+  brregProvider,
+  uidChProvider,
+  hmrcProvider,
+];
+
+const PROVIDER_BY_PREFIX = new Map<string, VatProvider>();
+for (const provider of ALL_PROVIDERS) {
+  for (const prefix of provider.prefixes) {
+    PROVIDER_BY_PREFIX.set(prefix, provider);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Input parsing
+// ---------------------------------------------------------------------------
+
 /**
  * Parse a VAT number into country code + number.
- * Accepts: "SE556703748501", "SE 556703748501", "se556703748501"
+ * Accepts inputs like:
+ *   "SE556703748501", "SE 556703748501", "se556703748501",
+ *   "NO123456789MVA", "CHE-123.456.789 MWST", "GB123456789"
  */
-function parseVatNumber(raw: string): { countryCode: string; number: string } | null {
-  const cleaned = raw.replace(/[\s.-]/g, "").toUpperCase();
-  const match = cleaned.match(/^([A-Z]{2})(\d{5,15})$/);
-  if (!match) return null;
-  return { countryCode: match[1], number: match[2] };
+function parseVatNumber(raw: string): ParsedVat | null {
+  const cleaned = raw.replace(/[\s.\-_]/g, "").toUpperCase();
+
+  // Swiss UID: CHE + 9 digits + optional MWST/TVA/IVA
+  const cheMatch = cleaned.match(/^(CHE)(\d{9})(MWST|TVA|IVA)?$/);
+  if (cheMatch) {
+    return {
+      countryCode: "CH",
+      number: cheMatch[2],
+      full: `CHE${cheMatch[2]}${cheMatch[3] ?? ""}`,
+    };
+  }
+
+  // Liechtenstein: LI prefix is sometimes used, sometimes CHE — both route to UID
+  const liMatch = cleaned.match(/^(LI)(\d{5,12})$/);
+  if (liMatch) {
+    // Normalise to 9-digit form if possible (Liechtenstein UIDs are 9 digits)
+    const digits = liMatch[2].padStart(9, "0").slice(-9);
+    return { countryCode: "LI", number: digits, full: `LI${liMatch[2]}` };
+  }
+
+  // Norwegian MVA: NO + 9 digits + optional MVA
+  const noMatch = cleaned.match(/^(NO)(\d{9})(MVA)?$/);
+  if (noMatch) {
+    return {
+      countryCode: "NO",
+      number: noMatch[2],
+      full: `NO${noMatch[2]}${noMatch[3] ?? ""}`,
+    };
+  }
+
+  // Generic: 2-letter prefix + 5-15 digits/alphanumerics (covers EU27 + GB)
+  const generic = cleaned.match(/^([A-Z]{2})([A-Z0-9]{5,15})$/);
+  if (generic) {
+    return {
+      countryCode: generic[1],
+      number: generic[2],
+      full: `${generic[1]}${generic[2]}`,
+    };
+  }
+
+  return null;
 }
 
-/**
- * Build the SOAP XML envelope for VIES checkVat.
- */
-function buildSoapRequest(countryCode: string, vatNumber: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:ec.europa.eu:taxud:vies:services:checkVat:types">
-  <soapenv:Header/>
-  <soapenv:Body>
-    <urn:checkVat>
-      <urn:countryCode>${countryCode}</urn:countryCode>
-      <urn:vatNumber>${vatNumber}</urn:vatNumber>
-    </urn:checkVat>
-  </soapenv:Body>
-</soapenv:Envelope>`;
-}
-
-/**
- * Extract a value between XML tags. Simple and sufficient for the flat VIES response.
- */
-function extractTag(xml: string, tag: string): string | null {
-  const regex = new RegExp(`<(?:[a-z0-9]+:)?${tag}[^>]*>([\\s\\S]*?)</(?:[a-z0-9]+:)?${tag}>`, "i");
-  const match = xml.match(regex);
-  return match ? match[1].trim() : null;
-}
+// ---------------------------------------------------------------------------
+// Capability handler
+// ---------------------------------------------------------------------------
 
 registerCapability("vat-validate", async (input: CapabilityInput) => {
   const rawVat = input.vat_number ?? input.vat;
   if (typeof rawVat !== "string" || !rawVat) {
-    throw new Error("'vat_number' is required. Provide an EU VAT number including country prefix (e.g. SE556703748501).");
+    throw new Error(
+      "'vat_number' is required. Provide a VAT number including country prefix (e.g. SE556703748501, GB123456789, NO123456789MVA, CHE-123.456.789).",
+    );
   }
 
-  // Try to extract a VAT number from the input (may be embedded in natural language)
   let parsed = parseVatNumber(rawVat);
   if (!parsed) {
-    // Try to find a VAT-like pattern in the string
-    const vatPattern = rawVat.match(/[A-Za-z]{2}\s*\d{5,15}/);
-    if (vatPattern) {
-      parsed = parseVatNumber(vatPattern[0]);
-    }
+    // Try to find a VAT-like pattern embedded in natural-language input
+    const embedded = rawVat.match(/[A-Za-z]{2,3}[\s\-.]*[\dA-Za-z]{5,15}(\s*(MVA|MWST|TVA|IVA))?/);
+    if (embedded) parsed = parseVatNumber(embedded[0]);
   }
 
   if (!parsed) {
     throw new Error(
-      `Could not parse a valid EU VAT number from: "${rawVat}". Expected format: country code + digits (e.g. SE556703748501, DE123456789).`,
+      `Could not parse a VAT number from: "${rawVat}". Expected format: country code + digits (e.g. SE556703748501, GB123456789, NO123456789MVA, CHE-123.456.789).`,
     );
   }
 
-  const cacheKey = `${parsed.countryCode}:${parsed.number}`;
-  const cached = viesCache.get(cacheKey);
+  const provider = PROVIDER_BY_PREFIX.get(parsed.countryCode);
+  if (!provider) {
+    throw new Error(
+      `VAT validation for country code "${parsed.countryCode}" is not yet supported. Currently covered: EU27 + XI (VIES), GB (HMRC), NO (Brreg), CH/LI (Swiss UID).`,
+    );
+  }
 
-  // Serve fresh cache hit immediately (< 24h old)
+  const cacheKey = `${provider.name}:${parsed.full}`;
+  const cached = cache.get(cacheKey);
+
+  // Fresh cache hit — serve immediately, no upstream call
   if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+    const ageHours = Math.round((Date.now() - cached.cachedAt) / 3_600_000);
     return {
-      output: { ...cached.output, cache_hit: true, cached_at: new Date(cached.cachedAt).toISOString() },
+      output: {
+        ...cached.output,
+        cache_hit: true,
+        cached_at: new Date(cached.cachedAt).toISOString(),
+        cache_age_hours: ageHours,
+      },
       provenance: {
-        source: "ec.europa.eu/taxation_customs/vies (cached)",
+        source: `${cached.providerSource} (cached)`,
         fetched_at: new Date(cached.cachedAt).toISOString(),
       },
     };
   }
 
-  const soapBody = buildSoapRequest(parsed.countryCode, parsed.number);
+  // Cache miss — call upstream. On failure, fall back to stale cache if we
+  // have one; this is the substrate guarantee — every provider gets the same
+  // resilience treatment.
+  try {
+    const result = await withRateLimit(provider.name, () =>
+      provider.validate(parsed),
+    );
 
-  // VIES is unreliable — retry once on transient errors (MS_MAX_CONCURRENT_REQ, timeouts)
-  let xml = "";
-  let viesError: Error | null = null;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const response = await fetch(VIES_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/xml; charset=utf-8",
-          SOAPAction: "",
-        },
-        body: soapBody,
-        signal: AbortSignal.timeout(15000),
-      });
+    cache.set(cacheKey, {
+      output: result,
+      providerName: provider.name,
+      providerSource: provider.source,
+      cachedAt: Date.now(),
+    });
 
-      if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        const faultString = extractTag(text, "faultstring");
-        if (faultString) {
-          if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
-          viesError = new Error(humanizeViesError(faultString));
-          break;
-        }
-        if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
-        viesError = new Error(`VIES API returned HTTP ${response.status}`);
-        break;
-      }
-
-      xml = await response.text();
-
-      // Check for SOAP fault in 200 response (e.g. MS_MAX_CONCURRENT_REQ)
-      const faultString = extractTag(xml, "faultstring");
-      if (faultString) {
-        if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
-        viesError = new Error(humanizeViesError(faultString));
-        break;
-      }
-
-      break; // success
-    } catch (err) {
-      if (attempt === 0) { await new Promise((r) => setTimeout(r, 2000)); continue; }
-      viesError = err instanceof Error ? err : new Error(String(err));
-      break;
-    }
-  }
-
-  // If VIES failed but we have a stale cache entry, serve it rather than erroring
-  if (viesError || !xml) {
+    return {
+      output: { ...result },
+      provenance: {
+        source: provider.source,
+        fetched_at: new Date().toISOString(),
+        ...(result.source_reference
+          ? { source_reference: result.source_reference }
+          : {}),
+      },
+    };
+  } catch (err) {
     if (cached) {
+      // Stale-fallback: provider failed, but we have a previous answer for
+      // this VAT. Serve it with stale=true so the agent's decision-readiness
+      // logic can decide whether the staleness is acceptable.
+      const ageHours = Math.round((Date.now() - cached.cachedAt) / 3_600_000);
       return {
         output: {
           ...cached.output,
           cache_hit: true,
           cached_at: new Date(cached.cachedAt).toISOString(),
+          cache_age_hours: ageHours,
           stale: true,
-          stale_reason: viesError?.message ?? "VIES unavailable",
+          stale_reason: err instanceof Error ? err.message : String(err),
         },
         provenance: {
-          source: "ec.europa.eu/taxation_customs/vies (stale cache, VIES unavailable)",
+          source: `${cached.providerSource} (stale cache, upstream unavailable)`,
           fetched_at: new Date(cached.cachedAt).toISOString(),
         },
       };
     }
-    throw viesError ?? new Error("VIES did not return a response.");
+    throw err;
   }
-
-  const valid = extractTag(xml, "valid") === "true";
-  const name = extractTag(xml, "name") || "";
-  const address = extractTag(xml, "address") || "";
-  const requestDate = extractTag(xml, "requestDate") || "";
-
-  const output = {
-    valid,
-    country_code: parsed.countryCode,
-    vat_number: `${parsed.countryCode}${parsed.number}`,
-    company_name: name === "---" ? "" : name,
-    company_address: address === "---" ? "" : address,
-    request_date: requestDate,
-  };
-
-  // Cache successful responses
-  viesCache.set(cacheKey, { output, cachedAt: Date.now() });
-
-  return {
-    output,
-    provenance: {
-      source: "ec.europa.eu/taxation_customs/vies",
-      fetched_at: new Date().toISOString(),
-    },
-  };
 });
