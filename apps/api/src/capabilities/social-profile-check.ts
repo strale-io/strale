@@ -7,16 +7,14 @@ interface PlatformResult {
   status_code: number | null;
 }
 
+// LinkedIn, Twitter/X, Instagram, Facebook removed per DEC-20260420-H — those platforms
+// forbid automated access (incl. HEAD-style existence probes) in their ToS.
 const PLATFORMS = [
   { name: "GitHub", urlTemplate: (u: string) => `https://github.com/${u}` },
-  { name: "Twitter/X", urlTemplate: (u: string) => `https://x.com/${u}` },
-  { name: "Instagram", urlTemplate: (u: string) => `https://www.instagram.com/${u}/` },
   { name: "YouTube", urlTemplate: (u: string) => `https://www.youtube.com/@${u}` },
   { name: "TikTok", urlTemplate: (u: string) => `https://www.tiktok.com/@${u}` },
-  { name: "LinkedIn", urlTemplate: (u: string) => `https://www.linkedin.com/company/${u}/` },
   { name: "Reddit", urlTemplate: (u: string) => `https://www.reddit.com/user/${u}/` },
   { name: "Pinterest", urlTemplate: (u: string) => `https://www.pinterest.com/${u}/` },
-  { name: "Facebook", urlTemplate: (u: string) => `https://www.facebook.com/${u}` },
   { name: "npm", urlTemplate: (u: string) => `https://www.npmjs.com/~${u}` },
   { name: "PyPI", urlTemplate: (u: string) => `https://pypi.org/user/${u}/` },
 ];

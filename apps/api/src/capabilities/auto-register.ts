@@ -52,6 +52,51 @@ const DEACTIVATED = new Map<string, string>([
     // product, and must be named differently to avoid implying bureau-grade credit data).
     "No compliant source for Swedish credit ratings (see DEC-20260405-B / DEC-20260422-SE-D)",
   ],
+  [
+    "patent-search",
+    // DEC-20260427-H-1: Runtime fetched patents.google.com via Browserless + Claude extraction.
+    // Google's ToS forbids automated access to its services, and Google Patents is no exception.
+    // PatentsView (USPTO) is HTTP 410. Free machine-readable alternatives exist but require
+    // migration: EPO OPS (free with registration), USPTO PEDS (free), Lens.org (commercial tiers).
+    // Reactivation trigger: migrate to EPO OPS / USPTO PEDS / Lens.org.
+    "Google Patents scraping prohibited by Google ToS (see DEC-20260420-H)",
+  ],
+  [
+    "trustpilot-score",
+    // DEC-20260427-H-2: Runtime fetched trustpilot.com/review/{domain} via Browserless + Claude.
+    // Trustpilot's ToS forbids automated access to public review pages; Trustpilot Business
+    // exposes a paid Reviews API for licensed access.
+    // Reactivation trigger: Trustpilot Business API contract, OR migrate to a licensed
+    // alternative (Reviews.io, Feefo, Yotpo).
+    "Trustpilot scraping prohibited by ToS (see DEC-20260420-H)",
+  ],
+  [
+    "salary-benchmark",
+    // DEC-20260427-H-3: Runtime fetched glassdoor.com/Salaries/know/* via Browserless + Claude.
+    // Glassdoor's ToS forbids automated access. No free licensed alternative covers global
+    // salary benchmarks at the €0.05–0.20 price point.
+    // Reactivation trigger: Glassdoor Partner Program API, OR migrate to a hybrid of Adzuna
+    // (multi-country aggregate salaries), US BLS (US occupations), Eurostat (EU averages).
+    "Glassdoor scraping prohibited by ToS (see DEC-20260420-H)",
+  ],
+  [
+    "employer-review-summary",
+    // DEC-20260427-H-4: Primary runtime fetched glassdoor.com/Reviews/* via Browserless + Claude;
+    // fallback hit google.com/search. Both are ToS-prohibited (Glassdoor automation ban + Google
+    // Search ToS forbids scraping). No compliant fallback exists.
+    // Reactivation trigger: Glassdoor Partner Program API, OR licensed reviews aggregator
+    // (Comparably, Indeed Reviews via partner channel).
+    "Glassdoor + Google scraping prohibited by ToS (see DEC-20260420-H)",
+  ],
+  [
+    "linkedin-url-validate",
+    // DEC-20260427-H-5: Runtime sent HEAD/GET probes to linkedin.com to verify URL accessibility.
+    // LinkedIn's User Agreement forbids any automated access, including status probes — the
+    // hiQ Labs v. LinkedIn injunction does not bind Strale, and LinkedIn has continued sending
+    // cease-and-desist letters to non-party scrapers.
+    // Reactivation trigger: LinkedIn Marketing Developer Program / Sales Navigator API contract.
+    "LinkedIn forbids all automated access incl. accessibility probes (see DEC-20260420-H)",
+  ],
 ]);
 
 export function getDeactivatedCapabilities(): ReadonlyMap<string, string> {
