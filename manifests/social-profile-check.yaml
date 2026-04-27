@@ -14,6 +14,7 @@ input_schema:
   properties:
     username:
       type: string
+      description: "Username/handle to check across platforms (e.g. 'google', 'octocat'). Same string is used for every platform — no per-platform overrides."
 output_schema:
   type: object
   example:
