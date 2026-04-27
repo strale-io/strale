@@ -26,7 +26,33 @@ A compliance reviewer auditing a Payee Assurance call can now see, per screen:
 
 This is the evidence shape that survives a compliance review — and the gap that was blocking Payee Assurance v1 from being defensibly shippable.
 
-## What still needs to happen
+## Empirical coverage test (added late-session)
+
+Ran a live coverage battery to convert "asserted but unverified" coverage claims into measured per-country/per-language data. Full report: [`docs/research/2026-04-27-screening-coverage-empirical.md`](../../../docs/research/2026-04-27-screening-coverage-empirical.md). Test runner: [`apps/api/scripts/empirical-screening-coverage.ts`](../../../apps/api/scripts/empirical-screening-coverage.ts) (read keys from `STRALE_TEST_API_KEY` + `DILISENSE_API_KEY` env vars; idempotent for monthly re-runs). Cost: €6.90 wallet + ~50 Dilisense calls.
+
+**Headline:**
+- **PEP 65/65 = 100% hit rate** across EU27 + UK + NO + CH + US heads of state and central bank governors. v1 + v1.1 ready.
+- **Sanctions/PEP fall through to Dilisense on every call** because `OPENSANCTIONS_API_KEY` is not configured on Railway. The audit-grade `lists_queried` shape we shipped this morning returns `version: null, last_updated_at: null` on every production call as a result. **v1 blocker, easy fix** — set the env var.
+- **Adverse media native-language surfacing: 1/24** in top-10 articles. Even subjects with thousands of total_hits return English in the surfaced articles. The "EN/FR/DE only" marketing claim is the actual API behavior. **Product decision required** before v1: accept-and-disclose / supplement with second source / scope-cut.
+- **Three zero-hit cases** (IT/Banca Popolare di Vicenza, GR/Folli Follie, EE/Danske Bank Estonia) likely entity-naming issues — try BPVi, Folli Follie SA, Danske Bank w/o suffix.
+- **Dilisense Starter quota exhausted mid-test** at ~50 calls. 8 adverse-media countries (FR, CZ, HU, RO, BG, SK, SI, HR) untested. Confirms Mirko's Basic-tier nudge is operationally urgent, not just legal.
+
+## v1 readiness verdict (post-empirical)
+
+| Capability | v1 (EU27+UK+NO+CH) | v1.1 (+US) |
+|---|---|---|
+| sanctions-check | ✅ ready (after OS key set) | ✅ ready (after OS key set) |
+| pep-check | ✅ ready (100% hit rate today) | ✅ ready |
+| adverse-media-check | ⚠️ functional but native-language gap requires product decision | ✅ ready (English-language press well-covered) |
+
+## Pre-v1 must-do (4 items, all blocking)
+
+1. **Set `OPENSANCTIONS_API_KEY` on Railway** (5 min) — restores the advertised audit shape.
+2. **Upgrade Dilisense to Basic** — Q1 quota for v1 traffic + DPA + Service Agreement.
+3. **Make the adverse-media language-coverage decision** — accept-and-disclose / supplement / scope-cut.
+4. **Investigate the 3 zero-hits** — entity-naming variants, ~30 min of code/test work.
+
+## What still needs to happen (pre-existing items, post-launch)
 
 1. **Watch the next test-runner cycle.** All three caps have updated `known_answer` fixtures asserting on real fields. Tier B (24h) cadence — confirm SQS recovery for adverse-media-check (its previous fixtures asserted on fields that didn't exist; SQS may have been artificially low or high).
 
@@ -50,4 +76,7 @@ This is the evidence shape that survives a compliance review — and the gap tha
 - `manifests/adverse-media-check.yaml`
 - `docs/x402-listing.md` (example output)
 
-Two commits: `c1100f8` (sanctions + pep) already pushed; this commit adds adverse-media + handoff.
+Three commits this session, all pushed:
+- `c1100f8` — sanctions-check + pep-check audit-grade hardening
+- `f00c088` — adverse-media-check audit-grade hardening + Notion canonical update + handoff
+- `b7ccd6a` — empirical coverage test runner + report
