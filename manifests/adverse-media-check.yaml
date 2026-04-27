@@ -1,43 +1,143 @@
 slug: adverse-media-check
 name: Adverse Media Check
 description: >-
-  Searches public news sources for adverse media about a company or individual, with AI-powered risk
-  assessment. Returns risk level, categorized findings, and sources.
+  Screens a person or company for adverse news coverage across 235,000+ sources via Dilisense
+  (primary) with Serper Google search fallback. Returns audit-grade evidence: risk level with
+  documented thresholds, FATF-aligned category counts, top article headlines with source URLs and
+  dates, and the rule used to classify severe vs non-severe coverage.
 category: compliance
 price_cents: 20
 is_free_tier: false
 input_schema:
   type: object
   required:
-    - entity_name
+    - name
   properties:
-    entity_name:
+    name:
       type: string
       description: Person or company name to screen
+    entity_name:
+      type: string
+      description: Alias for name (optional)
     country:
       type: string
-      description: Country to narrow search results (optional)
+      description: Additional context like industry or country (optional)
+    entity_type:
+      type: string
+      enum:
+        - person
+        - company
+      description: Override auto-detection of entity type (optional)
 output_schema:
   type: object
+  example:
+    query: Wirecard AG
+    risk_level: high
+    risk_level_thresholds:
+      none: "total_hits == 0"
+      low: "total_hits > 0 AND no hits in severe categories (financial_crime, organized_crime, terrorism, violent_crime)"
+      medium: "1+ hits in any severe category"
+      high: "10+ hits in any single severe category"
+    total_hits: 312
+    categories:
+      financial_crime: 187
+      regulatory: 94
+      organized_crime: 12
+      political: 19
+    categories_found:
+      - financial_crime
+      - regulatory
+      - organized_crime
+      - political
+    severe_categories:
+      - financial_crime
+      - organized_crime
+      - terrorism
+      - violent_crime
+    top_articles:
+      - headline: "Wirecard scandal: how the German fintech collapsed"
+        source_link: "https://example.com/wirecard-scandal"
+        timestamp: "2026-04-20T10:00:00"
+        language: "en"
+        category: "financial_crime"
+    lists_queried:
+      collection: "dilisense/adverse-media"
+      source_count: 235000
+      version: null
+      last_updated_at: null
+    screened_at: "2026-04-27T13:00:00.000Z"
+    period: "last 12 months"
+    source: "dilisense"
   properties:
     query:
-      type: object
-    risk_detected:
-      type: boolean
+      type: string
     risk_level:
       type: string
-    findings:
+      enum:
+        - none
+        - low
+        - medium
+        - high
+    risk_level_thresholds:
+      type: object
+    total_hits:
+      type: integer
+    categories:
+      type: object
+    categories_found:
       type: array
-    searches_performed:
+    severe_categories:
       type: array
-    disclaimer:
+    top_articles:
+      type: array
+      items:
+        type: object
+        properties:
+          headline:
+            type: string
+          source_link:
+            type: string
+          timestamp:
+            type: string
+          language:
+            type: string
+          category:
+            type: string
+    lists_queried:
+      type: object
+      properties:
+        collection:
+          type: string
+        source_count:
+          type:
+            - integer
+            - "null"
+        version:
+          type:
+            - string
+            - "null"
+        last_updated_at:
+          type:
+            - string
+            - "null"
+    screened_at:
       type: string
-data_source: Google (Serper.dev) + Claude Haiku classification
+    period:
+      type: string
+    source:
+      type: string
+      enum:
+        - dilisense
+        - serper
+    fallback_reason:
+      type:
+        - string
+        - "null"
+data_source: Dilisense Adverse Media (235k+ news sources, FATF-categorized) primary; Serper.dev (Google search) fallback
 data_source_type: api
-transparency_tag: ai_generated
+transparency_tag: algorithmic
 freshness_category: live-fetch
 maintenance_class: commercial-stable-api
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -45,49 +145,71 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      entity_name: "Wirecard AG"
+      name: Wirecard AG
+      entity_type: company
     expected_fields:
-      - field: risk_detected
-        operator: not_null
-        reliability: guaranteed
       - field: risk_level
         operator: not_null
         reliability: guaranteed
-      - field: findings
+      - field: total_hits
         operator: not_null
         reliability: guaranteed
-      - field: searches_performed
+      - field: categories
         operator: not_null
         reliability: guaranteed
-      - field: disclaimer
+      - field: lists_queried
+        operator: not_null
+        reliability: guaranteed
+      - field: source
         operator: not_null
         reliability: guaranteed
       - field: query
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    entity_name: "Wirecard AG"
+    name: Wirecard AG
+    entity_type: company
 output_field_reliability:
   query: guaranteed
-  risk_detected: guaranteed
   risk_level: guaranteed
-  findings: guaranteed
-  searches_performed: guaranteed
-  disclaimer: guaranteed
+  risk_level_thresholds: guaranteed
+  total_hits: guaranteed
+  categories: guaranteed
+  categories_found: guaranteed
+  severe_categories: guaranteed
+  top_articles: guaranteed
+  lists_queried: guaranteed
+  source: guaranteed
+  screened_at: guaranteed
+  period: guaranteed
+  fallback_reason: rare
 limitations:
-  - title: AI-classified results may miss subtle risk signals
-    text: AI-classified results — may miss subtle risk signals or produce false positives
+  - title: Adverse-media language coverage on Dilisense path is not publicly documented per language
+    text: >-
+      Dilisense aggregates 235k+ sources globally but does not publish a per-language source breakdown.
+      Marketing materials name English, French, and German explicitly; native-language coverage for other
+      EU27 + UK + NO + CH languages (Polish, Italian, Spanish, Dutch, Swedish, etc.) is not verified
+      from public docs. For non-DE/FR/EN counterparties, treat results as a floor, not a ceiling.
+    category: coverage
+    severity: warning
+    workaround: For high-stakes screening of a non-DE/FR/EN payee, supplement with a native-language source check or accept residual risk explicitly.
+  - title: Risk-level rule is heuristic, not regulatory
+    text: >-
+      The risk_level field is computed from total hits and severe-category counts (see risk_level_thresholds in
+      output). It is a defensible heuristic, not a regulatory definition. A "high" output means dense severe-category
+      coverage in the last 12 months — interpretation requires human review of the underlying articles.
     category: accuracy
     severity: warning
-  - title: Limited to publicly indexed web content
-    text: Limited to publicly indexed web content — paywalled news sources not covered
+    workaround: Always review top_articles for context before deciding to block a payment or onboard a counterparty.
+  - title: Fallback path uses Google index and keyword classification, not Dilisense data
+    text: >-
+      When Dilisense is unavailable (quota exhausted, 5xx, or no API key), the fallback uses Serper.dev
+      (Google search) with hardcoded keyword-based categorization. Output sets source="serper" and includes
+      fallback_reason. Coverage breadth and category accuracy are materially lower on the fallback path.
     category: coverage
     severity: info
-  - title: English-language bias
-    text: English-language bias — non-English media coverage may be underrepresented
-    category: coverage
-    severity: info
-  - title: Recency depends on search index freshness
-    text: Recency depends on search index freshness (typically 24-48h delay)
+    workaround: Treat serper-sourced calls as adequate but lower-evidence for audit purposes.
+  - title: Recency window is fixed at last 12 months
+    text: Both paths filter to the last 12 months of articles. Older adverse coverage is not surfaced.
     category: freshness
     severity: info

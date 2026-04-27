@@ -20,6 +20,29 @@ function looksLikeCompany(name: string): boolean {
   return COMPANY_SUFFIXES.test(name);
 }
 
+// Documented thresholds — kept in sync with computeRiskLevel(). Surfaced in output
+// so a compliance reviewer can see the rule used to assign a risk_level to a payee.
+const RISK_LEVEL_THRESHOLDS = {
+  none: "total_hits == 0",
+  low: "total_hits > 0 AND no hits in severe categories (financial_crime, organized_crime, terrorism, violent_crime)",
+  medium: "1+ hits in any severe category",
+  high: "10+ hits in any single severe category",
+} as const;
+
+const DILISENSE_LISTS_QUERIED = {
+  collection: "dilisense/adverse-media",
+  source_count: 235000,
+  version: null as string | null,
+  last_updated_at: null as string | null,
+} as const;
+
+const SERPER_LISTS_QUERIED = {
+  collection: "google-serper",
+  source_count: null as number | null,
+  version: null as string | null,
+  last_updated_at: null as string | null,
+} as const;
+
 // ─── Dilisense types ────────────────────────────────────────────────────────
 
 interface MediaArticle {
@@ -130,10 +153,13 @@ async function queryDilisense(
     output: {
       query: name,
       risk_level: computeRiskLevel(categories, data.total_hits),
+      risk_level_thresholds: RISK_LEVEL_THRESHOLDS,
       total_hits: data.total_hits,
       categories,
       categories_found: categoriesFound,
+      severe_categories: SEVERE_CATEGORIES,
       top_articles: allArticles.slice(0, 10),
+      lists_queried: DILISENSE_LISTS_QUERIED,
       screened_at: now,
       period: "last 12 months",
       source: "dilisense",
@@ -193,10 +219,13 @@ async function querySerper(
     output: {
       query: name,
       risk_level: computeRiskLevel(categories, totalHits),
+      risk_level_thresholds: RISK_LEVEL_THRESHOLDS,
       total_hits: totalHits,
       categories,
       categories_found: categoriesFound,
+      severe_categories: SEVERE_CATEGORIES,
       top_articles: topArticles.slice(0, 10),
+      lists_queried: SERPER_LISTS_QUERIED,
       screened_at: now,
       period: "last 12 months",
       source: "serper",
