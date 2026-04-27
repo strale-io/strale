@@ -902,24 +902,29 @@ export async function getX402Manifest(): Promise<{
 
 // Spec-compliant fan-out per x402scan's DISCOVERY.md: minimal { version, resources }
 // shape consumed by x402scan, awesome-x402 indexers, and similar discovery tools.
+// Free-tier ($0) capabilities are excluded — they never return 402, so any probe
+// against them fails. They remain reachable via /v1/capabilities and /x402/catalog.
 export async function getX402WellKnownResources(): Promise<{ version: number; resources: string[] }> {
   await ensureCache();
   const resources = [
-    ...[..._capCache.values()].map((cap) => `${BASE_URL}/x402/${cap.slug}`),
-    ...[..._solCache.values()].map((sol) => `${BASE_URL}/x402/solutions/${sol.slug}`),
+    ...[..._capCache.values()].filter((cap) => cap.x402PriceUsd > 0).map((cap) => `${BASE_URL}/x402/${cap.slug}`),
+    ...[..._solCache.values()].filter((sol) => sol.x402PriceUsd > 0).map((sol) => `${BASE_URL}/x402/solutions/${sol.slug}`),
   ];
   return { version: 1, resources };
 }
 
-// OpenAPI 3.1 path items for every x402-enabled capability and solution, with
-// `x-payment-info` annotations per the x402scan/agentcash discovery spec. Driven
-// by the same _capCache/_solCache used by /.well-known/x402, so a new capability
-// becomes visible in /openapi.json automatically once x402_enabled = true in DB.
+// OpenAPI 3.1 path items for every paid x402-enabled capability and solution,
+// with `x-payment-info` annotations per the x402scan/agentcash discovery spec.
+// Driven by the same _capCache/_solCache used by /.well-known/x402, so a new
+// paid capability becomes visible in /openapi.json automatically once
+// x402_enabled = true in DB. Free-tier ($0) entries are excluded for the same
+// reason as the well-known fan-out — they don't return 402.
 export async function getX402OpenApiPaths(): Promise<Record<string, unknown>> {
   await ensureCache();
   const paths: Record<string, unknown> = {};
 
   for (const cap of _capCache.values()) {
+    if (cap.x402PriceUsd <= 0) continue;
     const method = (cap.x402Method || "GET").toLowerCase();
     paths[`/x402/${cap.slug}`] = {
       [method]: buildX402Operation({
@@ -934,6 +939,7 @@ export async function getX402OpenApiPaths(): Promise<Record<string, unknown>> {
   }
 
   for (const sol of _solCache.values()) {
+    if (sol.x402PriceUsd <= 0) continue;
     paths[`/x402/solutions/${sol.slug}`] = {
       post: buildX402Operation({
         summary: `${sol.name} (x402 solution)`,
