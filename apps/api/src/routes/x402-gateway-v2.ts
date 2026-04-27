@@ -567,12 +567,14 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
       if (!isX402Configured()) {
         return c.json({ error: "x402 payments not configured on this server." }, 503);
       }
-      const { body, headerPayload } = build402(
+      const { body } = build402(
         sol.name, sol.description, sol.x402PriceUsd,
         `${BASE_URL}/x402/solutions/${slug}`,
         null, sol.inputSchema, "POST", sol.outputSchema,
       );
-      c.header("Payment-Required", headerPayload);
+      // No Payment-Required header: v1 body is the canonical source. Emitting a
+      // v1-encoded header trips v2-only header decoders (e.g. @agentcash/discovery)
+      // which never fall back to body parsing once any header is present.
       return c.json(body, 402);
     }
 
@@ -725,12 +727,12 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
       if (!isX402Configured()) {
         return c.json({ error: "x402 payments not configured on this server." }, 503);
       }
-      const { body, headerPayload } = build402(
+      const { body } = build402(
         cap.name, cap.description, cap.x402PriceUsd,
         `${BASE_URL}/x402/${slug}`, cap.matrixSqs,
         cap.inputSchema, cap.x402Method, cap.outputSchema,
       );
-      c.header("Payment-Required", headerPayload);
+      // See note on the solutions handler above — no Payment-Required header.
       return c.json(body, 402);
     }
 
