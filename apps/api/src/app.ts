@@ -30,7 +30,7 @@ import { internalHealthMonitorRoute } from "./routes/internal-health-monitor.js"
 import { replyWebhookRoute } from "./routes/reply-webhook.js";
 import { auditRoute } from "./routes/audit.js";
 import { internalOnboardingRoute } from "./routes/internal-onboarding.js";
-import { x402GatewayV2, getX402Manifest, getX402WellKnownResources } from "./routes/x402-gateway-v2.js";
+import { x402GatewayV2, getX402Manifest, getX402WellKnownResources, getX402OpenApiPaths } from "./routes/x402-gateway-v2.js";
 import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
@@ -211,10 +211,12 @@ app.get("/health/deep", async (c) => {
 });
 
 // OpenAPI specification (with content negotiation)
-let _openApiMd: string | null = null;
-function getOpenApiMarkdown(): string {
-  if (_openApiMd) return _openApiMd;
-  const spec = openApiSpec as { info?: { title?: string; version?: string; description?: string }; servers?: { url: string }[]; paths?: Record<string, Record<string, { summary?: string; description?: string }>> };
+// The static `openApiSpec` covers the /v1/* surface. Paid x402 routes are
+// merged in at request time from getX402OpenApiPaths(), which reads the same
+// DB-backed cache that drives /.well-known/x402. New capabilities flipping
+// x402_enabled = true appear in /openapi.json on the next 60s cache refresh.
+
+function buildOpenApiMarkdown(spec: { info?: { title?: string; version?: string; description?: string }; servers?: { url: string }[]; paths?: Record<string, Record<string, { summary?: string; description?: string }>> }): string {
   let md = `# ${spec.info?.title ?? "Strale API"} \u2014 OpenAPI ${spec.info?.version ?? "3.1.0"}\n\n`;
   md += `${spec.info?.description ?? ""}\n\n`;
   md += `Base URL: ${spec.servers?.[0]?.url ?? "https://api.strale.io"}\n\n`;
@@ -226,19 +228,28 @@ function getOpenApiMarkdown(): string {
     }
   }
   md += "## Full Spec\n\nThe complete OpenAPI 3.1.0 JSON specification is available at:\nhttps://api.strale.io/openapi.json (request with Accept: application/json)\n";
-  _openApiMd = md;
   return md;
 }
 
-app.get("/openapi.json", (c) => {
+app.get("/openapi.json", async (c) => {
   c.header("Vary", "Accept");
+  const x402Paths = await getX402OpenApiPaths();
+  const merged = {
+    ...openApiSpec,
+    tags: [
+      ...(openApiSpec.tags ?? []),
+      { name: "x402", description: "Pay-per-call endpoints (USDC on Base, no API key)" },
+    ],
+    paths: { ...(openApiSpec.paths ?? {}), ...x402Paths },
+  };
   const accept = c.req.header("Accept") || "";
   if (accept.includes("text/markdown")) {
     c.header("Content-Type", "text/markdown; charset=utf-8");
-    c.header("Cache-Control", "public, max-age=3600");
-    return c.text(getOpenApiMarkdown());
+    c.header("Cache-Control", "public, max-age=300");
+    return c.text(buildOpenApiMarkdown(merged));
   }
-  return c.json(openApiSpec);
+  c.header("Cache-Control", "public, max-age=300");
+  return c.json(merged);
 });
 
 // Stripe webhook — must be before any body-parsing middleware

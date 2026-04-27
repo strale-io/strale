@@ -908,3 +908,97 @@ export async function getX402WellKnownResources(): Promise<{ version: number; re
   ];
   return { version: 1, resources };
 }
+
+// OpenAPI 3.1 path items for every x402-enabled capability and solution, with
+// `x-payment-info` annotations per the x402scan/agentcash discovery spec. Driven
+// by the same _capCache/_solCache used by /.well-known/x402, so a new capability
+// becomes visible in /openapi.json automatically once x402_enabled = true in DB.
+export async function getX402OpenApiPaths(): Promise<Record<string, unknown>> {
+  await ensureCache();
+  const paths: Record<string, unknown> = {};
+
+  for (const cap of _capCache.values()) {
+    const method = (cap.x402Method || "GET").toLowerCase();
+    paths[`/x402/${cap.slug}`] = {
+      [method]: buildX402Operation({
+        summary: `${cap.name} (x402)`,
+        description: cap.description,
+        method,
+        priceUsd: cap.x402PriceUsd,
+        inputSchema: cap.inputSchema,
+        outputSchema: cap.outputSchema,
+      }),
+    };
+  }
+
+  for (const sol of _solCache.values()) {
+    paths[`/x402/solutions/${sol.slug}`] = {
+      post: buildX402Operation({
+        summary: `${sol.name} (x402 solution)`,
+        description: sol.description,
+        method: "post",
+        priceUsd: sol.x402PriceUsd,
+        inputSchema: sol.inputSchema,
+        outputSchema: sol.outputSchema,
+      }),
+    };
+  }
+
+  return paths;
+}
+
+function buildX402Operation(opts: {
+  summary: string;
+  description: string;
+  method: string;
+  priceUsd: number;
+  inputSchema: Record<string, unknown> | null;
+  outputSchema: Record<string, unknown> | null;
+}): Record<string, unknown> {
+  const op: Record<string, unknown> = {
+    tags: ["x402"],
+    summary: opts.summary,
+    description: opts.description,
+    "x-payment-info": {
+      protocols: ["x402"],
+      price: { mode: "fixed", currency: "USD", amount: opts.priceUsd.toFixed(3) },
+    },
+    security: [], // payment is the auth — no traditional auth scheme applies
+    responses: {
+      "402": { description: "Payment required (x402 — pay with USDC on Base)" },
+      "200": {
+        description: "Success",
+        ...(opts.outputSchema
+          ? { content: { "application/json": { schema: opts.outputSchema } } }
+          : {}),
+      },
+    },
+  };
+
+  const schema = opts.inputSchema;
+  const props = schema && typeof schema === "object"
+    ? (schema as { properties?: Record<string, Record<string, unknown>> }).properties
+    : undefined;
+  const required = schema && typeof schema === "object"
+    ? ((schema as { required?: string[] }).required ?? [])
+    : [];
+
+  if (props && Object.keys(props).length > 0) {
+    if (opts.method === "get") {
+      op.parameters = Object.entries(props).map(([name, prop]) => ({
+        name,
+        in: "query",
+        required: required.includes(name),
+        ...(prop.description ? { description: prop.description } : {}),
+        schema: prop,
+      }));
+    } else {
+      op.requestBody = {
+        required: required.length > 0,
+        content: { "application/json": { schema } },
+      };
+    }
+  }
+
+  return op;
+}
