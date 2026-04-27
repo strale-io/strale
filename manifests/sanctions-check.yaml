@@ -1,11 +1,9 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: sanctions-check
 name: Sanctions Check
 description: >-
-  Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK). Uses OpenSanctions consolidated database.
-  Returns match results with confidence scores.
+  Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK OFSI, and 300+ other sources).
+  Uses OpenSanctions consolidated database. Returns audit-grade evidence: match results with
+  classification (primary/sectoral/linked/debarment), confidence scores, and list-source version metadata.
 category: compliance
 price_cents: 20
 is_free_tier: false
@@ -20,38 +18,146 @@ input_schema:
     country:
       type: string
       description: ISO country code filter (optional)
+    entity_type:
+      type: string
+      enum:
+        - person
+        - company
+      description: Override auto-detection of entity type (optional)
+    birth_date:
+      type: string
+      format: date
+      description: ISO date of birth (YYYY-MM-DD) for person disambiguation, reduces false positives on common names (optional)
+    min_score:
+      type: number
+      minimum: 0
+      maximum: 1
+      description: "Match-score threshold (0-1). Defaults to 0.7 — lower widens recall at the cost of false positives (optional)"
 output_schema:
   type: object
   example:
-    note: >-
-      This is a knowledge-based check, not a real-time database query. For definitive results, check official sources
-      directly: OFAC (treasury.gov), EU (ec.europa.eu/growth), UN (un.org), and UK (gov.uk/sanctions) databases.
-    query: Spotify AB
-    reason: >-
-      Spotify AB is a legitimate Swedish music streaming company listed on the New York Stock Exchange. No records
-      indicate it appears on EU, US OFAC, UN, or UK sanctions lists.
-    confidence: high
-    likely_lists: []
-    is_sanctioned: false
+    query: Vladimir Putin
+    schema: Person
+    country_filter: null
+    birth_date_filter: "1952-10-07"
+    score_threshold: 0.7
+    is_sanctioned: true
+    match_count: 1
+    total_results: 1
+    matches:
+      - name: Vladimir Vladimirovich Putin
+        entity_id: Q7747
+        score: 0.95
+        classification: primary_sanction
+        topics:
+          - sanction
+          - role.pep
+        datasets:
+          - us_ofac_sdn
+          - eu_fsf
+          - gb_hmt_sanctions
+        countries:
+          - ru
+        last_updated_at: "2026-04-26T18:00:00"
+    lists_queried:
+      collection: opensanctions/default
+      list_count: 347
+      version: 20260427125425-hms
+      last_updated_at: "2026-04-27T12:54:25"
+    source: opensanctions
+    queried_at: "2026-04-27T13:00:00.000Z"
   properties:
     query:
       type: string
-    matches:
-      type: array
-    match_count:
-      type: integer
+    schema:
+      type: string
+      enum:
+        - Person
+        - Company
+    country_filter:
+      type:
+        - string
+        - "null"
+    birth_date_filter:
+      type:
+        - string
+        - "null"
+    score_threshold:
+      type:
+        - number
+        - "null"
     is_sanctioned:
       type: boolean
-data_source: OFAC SDN List (US Treasury), EU Consolidated Sanctions List, UN Security Council Sanctions
+    match_count:
+      type: integer
+    total_results:
+      type: integer
+    matches:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          entity_id:
+            type: string
+          score:
+            type:
+              - number
+              - "null"
+          classification:
+            type: string
+            enum:
+              - primary_sanction
+              - sectoral_sanction
+              - linked_to_sanctioned
+              - debarment
+              - financial_crime
+              - other_risk
+          topics:
+            type: array
+          datasets:
+            type: array
+          countries:
+            type: array
+          last_updated_at:
+            type:
+              - string
+              - "null"
+    lists_queried:
+      type: object
+      properties:
+        collection:
+          type: string
+        list_count:
+          type:
+            - integer
+            - "null"
+        version:
+          type:
+            - string
+            - "null"
+        last_updated_at:
+          type:
+            - string
+            - "null"
+    source:
+      type: string
+      enum:
+        - opensanctions
+        - dilisense
+    queried_at:
+      type: string
+data_source: OpenSanctions consolidated (OFAC SDN, EU FSF, UN SC, UK OFSI, CH SECO, AU DFAT, CA DFATD, JP MOF + 300 more); Dilisense fallback
 data_source_type: api
-transparency_tag: ai_generated
+transparency_tag: algorithmic
 freshness_category: live-fetch
 maintenance_class: commercial-stable-api
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: true
 personal_data_categories:
   - name
   - date_of_birth
+  - nationality
 geography: global
 test_fixtures:
   known_answer:
@@ -61,26 +167,49 @@ test_fixtures:
       - field: is_sanctioned
         operator: not_null
         reliability: guaranteed
-      # NOTE: No is_false assertion — OpenSanctions fuzzy matching can return false
-      # positives for common company names. Schema validation only.
+      - field: lists_queried
+        operator: not_null
+        reliability: guaranteed
+      - field: score_threshold
+        operator: not_null
+        reliability: guaranteed
+      # NOTE: No is_false assertion — fuzzy matching can return false positives for common names.
   health_check_input:
     name: Google
     country: US
 output_field_reliability:
   query: guaranteed
-  matches: common
-  match_count: common
+  schema: guaranteed
   is_sanctioned: guaranteed
+  match_count: guaranteed
+  total_results: guaranteed
+  matches: guaranteed
+  lists_queried: guaranteed
+  score_threshold: common
+  source: guaranteed
+  queried_at: guaranteed
+  country_filter: common
+  birth_date_filter: common
 limitations:
-  - title: Sanctions lists update daily from OFAC, EU, and UN — newly sanctioned entities may lag up to 24 hours
+  - title: Sanctions lists update at most every few hours — newly designated entities may lag
     text: >-
-      Sanctions lists updated daily from OFAC, EU, and UN sources — newly sanctioned entities may take up to 24 hours to
-      appear
+      OpenSanctions refreshes the consolidated default collection multiple times daily. The output's
+      lists_queried.last_updated_at reflects the actual list freshness for each call. Newly designated entities
+      may take up to a few hours to appear.
     category: freshness
     severity: info
-    workaround: For same-day compliance, subscribe to OFAC's RSS feed and cross-reference against today's additions
-  - title: Name matching uses fuzzy logic and may produce false positives for common names
-    text: Name matching uses fuzzy logic — common names may produce false positives. Always verify flagged results
+    workaround: For same-day compliance against fresh designations, cross-reference primary sources (OFAC RSS, EU OJ).
+  - title: Fuzzy name matching can produce false positives for common names
+    text: >-
+      Default match threshold is 0.7. Common names (e.g. "Mohammad", "John Smith") may produce false-positive
+      matches. Use birth_date for person disambiguation; tune min_score upward (e.g. 0.85) for stricter recall.
     category: accuracy
     severity: warning
-    workaround: Filter results by match confidence score and verify flagged entities against the primary sanctions list PDF
+    workaround: Provide birth_date for individuals and an ISO country code for companies; raise min_score for high-stakes use.
+  - title: Match score and list-version metadata only available on OpenSanctions path
+    text: >-
+      The Dilisense fallback (used when OpenSanctions is unavailable) does not expose per-list versioning or
+      match scores. Output sets score_threshold=null and lists_queried.version=null when source="dilisense".
+    category: coverage
+    severity: info
+    workaround: Treat dilisense-sourced calls as adequate but lower-evidence for audit purposes.

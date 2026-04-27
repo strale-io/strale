@@ -32,7 +32,7 @@ Compliance & Verification / Data Services
 GET https://api.strale.io/x402/sanctions-check?name=John+Doe
 -> HTTP 402 { paymentRequirements: [{ amount: "$0.02", network: "eip155:8453", asset: "USDC" }] }
 -> Retry with X-Payment header (signed USDC transfer)
--> HTTP 200 { is_sanctioned: false, match_count: 0, lists_checked: ["OFAC", "EU", "UN"] }
+-> HTTP 200 { is_sanctioned: false, match_count: 0, lists_queried: { collection: "opensanctions/default", list_count: 347, version: "20260427125425-hms", last_updated_at: "2026-04-27T12:54:25" } }
 ```
 
 ## Awesome-x402 entry (for README.md lists)

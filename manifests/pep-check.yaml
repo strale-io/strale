@@ -2,7 +2,8 @@ slug: pep-check
 name: PEP Check
 description: >-
   Screens an individual against the Politically Exposed Persons (PEP) database via OpenSanctions.
-  Returns match results with position, jurisdiction, and confidence score.
+  Returns audit-grade evidence: match results with classification (pep / political role / relative or
+  associate), confidence scores, jurisdictions, positions held, and list-source version metadata.
 category: compliance
 price_cents: 15
 is_free_tier: false
@@ -16,63 +17,197 @@ input_schema:
       description: Full name of person to screen
     date_of_birth:
       type: string
-      description: Date of birth (YYYY-MM-DD) for disambiguation (optional)
+      format: date
+      description: ISO date of birth (YYYY-MM-DD) for disambiguation, reduces false positives on common names (optional)
+    birth_date:
+      type: string
+      format: date
+      description: Alias for date_of_birth (optional)
     country:
       type: string
-      description: Country code for narrowing results (optional)
+      description: ISO country code filter (optional)
+    min_score:
+      type: number
+      minimum: 0
+      maximum: 1
+      description: "Match-score threshold (0-1). Defaults to 0.7 — lower widens recall at the cost of false positives (optional)"
 output_schema:
   type: object
+  example:
+    query: Angela Merkel
+    country_filter: DE
+    birth_date_filter: "1954-07-17"
+    score_threshold: 0.7
+    is_pep: true
+    match_count: 1
+    total_results: 1
+    matches:
+      - name: Angela Dorothea Merkel
+        entity_id: Q567
+        score: 0.96
+        classification: pep
+        topics:
+          - role.pep
+          - role.pol
+        positions:
+          - Chancellor of Germany
+          - Member of the Bundestag
+        countries:
+          - de
+        datasets:
+          - eu_cor_members
+          - de_pep
+        last_updated_at: "2026-04-26T18:00:00"
+    lists_queried:
+      collection: opensanctions/default
+      list_count: 347
+      version: 20260427125425-hms
+      last_updated_at: "2026-04-27T12:54:25"
+    source: opensanctions
+    screened_at: "2026-04-27T13:00:00.000Z"
   properties:
     query:
-      type: object
+      type: string
+    country_filter:
+      type:
+        - string
+        - "null"
+    birth_date_filter:
+      type:
+        - string
+        - "null"
+    score_threshold:
+      type:
+        - number
+        - "null"
     is_pep:
       type: boolean
-    pep_matches:
+    match_count:
+      type: integer
+    total_results:
+      type: integer
+    matches:
       type: array
-    checked_sources:
-      type: array
-data_source: OpenSanctions API (opensanctions.org)
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          entity_id:
+            type: string
+          score:
+            type:
+              - number
+              - "null"
+          classification:
+            type: string
+            enum:
+              - pep
+              - political_role
+              - relative_or_associate
+              - other_political
+          topics:
+            type: array
+          positions:
+            type: array
+          countries:
+            type: array
+          datasets:
+            type: array
+          last_updated_at:
+            type:
+              - string
+              - "null"
+    lists_queried:
+      type: object
+      properties:
+        collection:
+          type: string
+        list_count:
+          type:
+            - integer
+            - "null"
+        version:
+          type:
+            - string
+            - "null"
+        last_updated_at:
+          type:
+            - string
+            - "null"
+    source:
+      type: string
+      enum:
+        - opensanctions
+        - dilisense
+    screened_at:
+      type: string
+data_source: OpenSanctions consolidated PEP database (international + national PEP lists, RCAs); Dilisense fallback
 data_source_type: api
-transparency_tag: mixed
+transparency_tag: algorithmic
 freshness_category: live-fetch
 maintenance_class: commercial-stable-api
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: true
 personal_data_categories:
   - name
   - date_of_birth
+  - nationality
+  - political_affiliation
 geography: global
 test_fixtures:
   known_answer:
     input:
-      name: "Angela Merkel"
+      name: Angela Merkel
     expected_fields:
       - field: is_pep
         operator: not_null
         reliability: guaranteed
-      - field: pep_matches
+      - field: matches
         operator: not_null
         reliability: guaranteed
-      - field: checked_sources
+      - field: lists_queried
         operator: not_null
         reliability: guaranteed
       - field: query
         operator: not_null
         reliability: guaranteed
+      - field: score_threshold
+        operator: not_null
+        reliability: guaranteed
   health_check_input:
-    name: "Angela Merkel"
+    name: Angela Merkel
 output_field_reliability:
   query: guaranteed
   is_pep: guaranteed
-  pep_matches: guaranteed
-  checked_sources: guaranteed
+  match_count: guaranteed
+  total_results: guaranteed
+  matches: guaranteed
+  lists_queried: guaranteed
+  score_threshold: common
+  source: guaranteed
+  screened_at: guaranteed
+  country_filter: common
+  birth_date_filter: common
 limitations:
-  - title: Coverage depends on OpenSanctions dataset
-    text: Coverage depends on OpenSanctions dataset — may not include all national PEP lists
+  - title: PEP coverage depends on OpenSanctions consolidated dataset
+    text: >-
+      OpenSanctions aggregates international and national PEP lists into the default collection. National
+      coverage varies — well-published parliaments and EU-institution lists are well-covered; some national
+      lists may include only senior figures rather than the full PEP universe defined by EU C/2023/724.
     category: coverage
     severity: info
-  - title: Fuzzy name matching may produce false positives
-    text: Name matching is fuzzy — common names may produce false positives. Date of birth strongly recommended for disambiguation.
+    workaround: For jurisdiction-critical screening, supplement with the national source directly (e.g. national parliament website).
+  - title: Fuzzy name matching can produce false positives for common names
+    text: >-
+      Default match threshold is 0.7. Common names (e.g. "Mohammad", "John Smith") may produce false-positive
+      matches. Provide date_of_birth for disambiguation; tune min_score upward (e.g. 0.85) for stricter recall.
     category: accuracy
     severity: warning
-    workaround: Provide date_of_birth parameter for disambiguation
+    workaround: Provide date_of_birth and an ISO country code; raise min_score for high-stakes use.
+  - title: Match score and list-version metadata only available on OpenSanctions path
+    text: >-
+      The Dilisense fallback (used when OpenSanctions is unavailable) does not expose per-list versioning or
+      match scores. Output sets score_threshold=null and lists_queried.version=null when source="dilisense".
+    category: coverage
+    severity: info
+    workaround: Treat dilisense-sourced calls as adequate but lower-evidence for audit purposes.
