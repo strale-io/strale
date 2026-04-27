@@ -52,6 +52,31 @@ Ran a live coverage battery to convert "asserted but unverified" coverage claims
 3. ~~Make the adverse-media language-coverage decision~~ — **CLOSED.** Accept-and-disclose chosen, logged as DEC-20260427-A.
 4. **Investigate the 3 zero-hits** — entity-naming variants for IT/BPVi, GR/Folli Follie, EE/Danske Bank Estonia. ~30 min of code/test work.
 
+## Late-late-session bonus: catalog-wide test-staleness incident
+
+After completing the screening-cap work, ran a system-wide diagnostic ([`apps/api/scripts/staleness-distribution.ts`](../../../apps/api/scripts/staleness-distribution.ts)) to check whether the lei-lookup `freshness=expired` reading was a one-off or a pattern. **155 of 278 active+visible caps (56%) were in `unverified` state**, which forces SQS=0 and returns `capability_unavailable` on /v1/do. Massive v1 risk hiding under a healthy-looking deploy.
+
+**Root cause:** `ecb-interest-rates` was stuck at `capabilities.last_tested_at = 2026-03-23` while writing 12,132 test_result rows in the prior 7 days (~89% of all scheduler bandwidth). With `ORDER BY c.last_tested_at ASC NULLS FIRST` in the scheduler eligibility query, ECB sat at the front of every poll cycle, its tests timed out against a geo-restricted upstream (ECB SDW, blocked from Railway US East), 5-min cycles drained on ECB, the rest of the catalog starved.
+
+**Why `last_tested_at` didn't advance:** [`persistDualProfileScores`](../../../apps/api/src/lib/test-runner.ts#L1939) early-`continue`d when `dual.matrix.pending === true`, skipping the cap-level timestamp update entirely. ECB's correctness suite always failed (geo-restriction → empty responses), keeping matrix permanently pending.
+
+**Fix shipped (two commits):**
+- `5b355ce` — added `ecb-interest-rates` to `auto-register.ts` DEACTIVATED list with reason; ran one-shot script ([`apps/api/scripts/deactivate-ecb.ts`](../../../apps/api/scripts/deactivate-ecb.ts)) that flipped `capabilities.is_active = false` in production. Immediate unblock.
+- `3098fc7` — patched `persistDualProfileScores` to advance `last_tested_at` even when matrix is pending. Prevents recurrence for any future cap that hits a permanent-pending state.
+
+**Diagnostic scripts added** (production-safe, read-only — keep them):
+- `staleness-distribution.ts` — full catalog freshness map by SQS staleness bucket
+- `test-status-distribution.ts` — test_suites.test_status histogram + scheduler-eligibility audit
+- `last-tested-divergence.ts` — capabilities.last_tested_at vs MAX(test_results.executed_at) per cap
+- `scheduler-coverage.ts` — distinct caps tested per recent window
+- `caps-tested-recently.ts` — top-N caps by test volume in last 7d
+- `ecb-investigate.ts` — case study, kept for reference
+- `provider-health-check.ts` — which providers are flagged unhealthy by the dependency-health probe
+
+**Recovery status (at handoff):** ECB deactivated in DB ~22:05 UTC. Scheduler should drain the unverified bucket over the next 6-12 hours as poll cycles process the now-unblocked queue. Re-run [`apps/api/scripts/staleness-distribution.ts`](../../../apps/api/scripts/staleness-distribution.ts) tomorrow morning to confirm. If the count is still >50% unverified, there's a second stuck cap — use [`apps/api/scripts/last-tested-divergence.ts`](../../../apps/api/scripts/last-tested-divergence.ts) to find it.
+
+**Material v1 implication:** the staleness incident affected most of the catalog including several Payee Assurance v1 dependencies (address-validate, bank-bic-lookup, beneficial-ownership-lookup, belgian-company-data, etc.). Until the catalog drains, Payee Assurance v1 dry-runs will hit `capability_unavailable` on those caps. Confirm recovery before any pilot customer demo.
+
 ## What still needs to happen (pre-existing items, post-launch)
 
 1. **Watch the next test-runner cycle.** All three caps have updated `known_answer` fixtures asserting on real fields. Tier B (24h) cadence — confirm SQS recovery for adverse-media-check (its previous fixtures asserted on fields that didn't exist; SQS may have been artificially low or high).
