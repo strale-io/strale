@@ -16,16 +16,17 @@ import type { ParsedVat, VatProvider, VatProviderResult } from "./types.js";
 const UID_URL = "https://www.uid-wse.admin.ch/V3.0/PublicServices.svc";
 
 function buildValidateVatRequest(uidPart: string): string {
-  // ValidateVatNumber accepts the UID portion (9 digits, "CHE" prefix
-  // optional). We pass the full canonical form CHE-XXX.XXX.XXX which the
-  // service accepts on either input.
+  // ValidateVatNumber accepts the UID portion in canonical form
+  // CHE-XXX.XXX.XXX. The operation lives in the uid-wse namespace, NOT
+  // tempuri (verified against the live WSDL — the "V3" path is the URL
+  // suffix, not the interface name).
   return `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/" xmlns:uid="http://www.uid.admin.ch/xmlns/uid-wse">
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:uid="http://www.uid.admin.ch/xmlns/uid-wse">
   <soapenv:Header/>
   <soapenv:Body>
-    <tem:ValidateVatNumber>
-      <tem:vatNumber>${uidPart}</tem:vatNumber>
-    </tem:ValidateVatNumber>
+    <uid:ValidateVatNumber>
+      <uid:vatNumber>${uidPart}</uid:vatNumber>
+    </uid:ValidateVatNumber>
   </soapenv:Body>
 </soapenv:Envelope>`;
 }
@@ -56,7 +57,7 @@ async function callUidCh(parsed: ParsedVat): Promise<VatProviderResult> {
     method: "POST",
     headers: {
       "Content-Type": "text/xml; charset=utf-8",
-      SOAPAction: "http://tempuri.org/IPublicServicesV3/ValidateVatNumber",
+      SOAPAction: '"http://www.uid.admin.ch/xmlns/uid-wse/IPublicServices/ValidateVatNumber"',
     },
     body: buildValidateVatRequest(uidPart),
     signal: AbortSignal.timeout(15000),
