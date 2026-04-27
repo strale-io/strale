@@ -790,7 +790,7 @@ const seedCapabilities = [
   {
     name: "Sanctions Check",
     slug: "sanctions-check",
-    description: "Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK OFSI, and 300+ other sources). Uses OpenSanctions consolidated database with Dilisense fallback. Returns audit-grade evidence: match classification (primary/sectoral/linked/debarment), confidence scores, and list-source version metadata.",
+    description: "Check if a person or entity is on sanctions lists (OFAC SDN, EU FSF, UN Security Council, UK OFSI, Swiss SECO, BIS, World Bank, EBRD, ADB + 125 national sanctions/debarment lists). Uses Dilisense consolidated database. Returns audit-grade evidence: match classification, country attribution, sanction details, and named source attribution.",
     category: "compliance",
     inputSchema: {
       type: "object",
@@ -800,7 +800,6 @@ const seedCapabilities = [
         country: { type: "string", description: "ISO country code filter (optional)" },
         entity_type: { type: "string", enum: ["person", "company"], description: "Override auto-detection (optional)" },
         birth_date: { type: "string", format: "date", description: "ISO date of birth (YYYY-MM-DD) for person disambiguation (optional)" },
-        min_score: { type: "number", minimum: 0, maximum: 1, description: "Match-score threshold (0-1). Default 0.7 (optional)" },
       },
     },
     outputSchema: {
@@ -810,13 +809,12 @@ const seedCapabilities = [
         schema: { type: "string", enum: ["Person", "Company"] },
         country_filter: { type: ["string", "null"] },
         birth_date_filter: { type: ["string", "null"] },
-        score_threshold: { type: ["number", "null"] },
         is_sanctioned: { type: "boolean" },
         match_count: { type: "integer" },
         total_results: { type: "integer" },
         matches: { type: "array" },
-        lists_queried: { type: "object", properties: { collection: { type: "string" }, list_count: { type: ["integer", "null"] }, version: { type: ["string", "null"] }, last_updated_at: { type: ["string", "null"] } } },
-        source: { type: "string", enum: ["opensanctions", "dilisense"] },
+        lists_queried: { type: "object", properties: { collection: { type: "string" }, source_count: { type: "integer" }, major_lists: { type: "array" }, freshness_note: { type: "string" }, source_catalog_url: { type: "string" }, version: { type: ["string", "null"] }, last_updated_at: { type: ["string", "null"] } } },
+        source: { type: "string", enum: ["dilisense"] },
         queried_at: { type: "string" },
       },
     },
@@ -2542,7 +2540,7 @@ const seedCapabilities = [
   {
     name: "PEP Check",
     slug: "pep-check",
-    description: "Screen a person against Politically Exposed Persons (PEP) databases via OpenSanctions, with Dilisense fallback. Returns audit-grade evidence: match classification (pep / political role / relative or associate), confidence scores, positions held, jurisdictions, and list-source version metadata. Required for AML/KYC compliance.",
+    description: "Screen a person against Politically Exposed Persons (PEP) databases via Dilisense. Coverage spans 230+ territories aligned with EU C/2023/724 PEP function definitions and includes Relatives and Close Associates (RCAs). Returns audit-grade evidence: match classification, position history, jurisdictions, and named source attribution. Required for AML/KYC compliance.",
     category: "compliance",
     inputSchema: {
       type: "object",
@@ -2552,7 +2550,6 @@ const seedCapabilities = [
         date_of_birth: { type: "string", format: "date", description: "ISO date of birth (YYYY-MM-DD) for disambiguation (optional)" },
         birth_date: { type: "string", format: "date", description: "Alias for date_of_birth (optional)" },
         country: { type: "string", description: "ISO country code filter (optional)" },
-        min_score: { type: "number", minimum: 0, maximum: 1, description: "Match-score threshold (0-1). Default 0.7 (optional)" },
       },
     },
     outputSchema: {
@@ -2561,17 +2558,16 @@ const seedCapabilities = [
         query: { type: "string" },
         country_filter: { type: ["string", "null"] },
         birth_date_filter: { type: ["string", "null"] },
-        score_threshold: { type: ["number", "null"] },
         is_pep: { type: "boolean" },
         match_count: { type: "integer" },
         total_results: { type: "integer" },
         matches: { type: "array" },
-        lists_queried: { type: "object", properties: { collection: { type: "string" }, list_count: { type: ["integer", "null"] }, version: { type: ["string", "null"] }, last_updated_at: { type: ["string", "null"] } } },
-        source: { type: "string", enum: ["opensanctions", "dilisense"] },
+        lists_queried: { type: "object", properties: { collection: { type: "string" }, source_count: { type: "integer" }, major_lists: { type: "array" }, freshness_note: { type: "string" }, source_catalog_url: { type: "string" }, version: { type: ["string", "null"] }, last_updated_at: { type: ["string", "null"] } } },
+        source: { type: "string", enum: ["dilisense"] },
         screened_at: { type: "string" },
       },
     },
-    priceCents: 5, // was 15, reduced after migration to OpenSanctions (same source as sanctions-check at €0.02)
+    priceCents: 5,
   },
   {
     name: "Adverse Media Check",

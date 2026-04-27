@@ -1,9 +1,9 @@
 slug: sanctions-check
 name: Sanctions Check
 description: >-
-  Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK OFSI, and 300+ other sources).
-  Uses OpenSanctions consolidated database. Returns audit-grade evidence: match results with
-  classification (primary/sectoral/linked/debarment), confidence scores, and list-source version metadata.
+  Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK OFSI, Swiss SECO, BIS, World
+  Bank, EBRD, ADB + 125 national lists). Uses Dilisense consolidated database. Returns audit-grade
+  evidence: match results with classification, named source attribution, and country attribution.
 category: compliance
 price_cents: 20
 is_free_tier: false
@@ -28,11 +28,6 @@ input_schema:
       type: string
       format: date
       description: ISO date of birth (YYYY-MM-DD) for person disambiguation, reduces false positives on common names (optional)
-    min_score:
-      type: number
-      minimum: 0
-      maximum: 1
-      description: "Match-score threshold (0-1). Defaults to 0.7 — lower widens recall at the cost of false positives (optional)"
 output_schema:
   type: object
   example:
@@ -40,31 +35,37 @@ output_schema:
     schema: Person
     country_filter: null
     birth_date_filter: "1952-10-07"
-    score_threshold: 0.7
     is_sanctioned: true
-    match_count: 1
-    total_results: 1
+    match_count: 14
+    total_results: 14
     matches:
       - name: Vladimir Vladimirovich Putin
-        entity_id: Q7747
-        score: 0.95
+        entity_id: us_ofac_sdn
         classification: primary_sanction
         topics:
           - sanction
-          - role.pep
         datasets:
           - us_ofac_sdn
-          - eu_fsf
-          - gb_hmt_sanctions
         countries:
           - ru
-        last_updated_at: "2026-04-26T18:00:00"
+        sanction_details: ["Executive Order 14024"]
+        last_updated_at: null
     lists_queried:
-      collection: opensanctions/default
-      list_count: 347
-      version: 20260427125425-hms
-      last_updated_at: "2026-04-27T12:54:25"
-    source: opensanctions
+      collection: dilisense/consolidated-sanctions
+      source_count: 134
+      major_lists:
+        - "OFAC — Specially Designated Nationals (SDN)"
+        - "European Commission — Consolidated List of Financial Sanctions"
+        - "UN Security Council — Consolidated List"
+        - "HMT OFSI — Financial Sanctions"
+        - "SECO — Switzerland Sanctions"
+        - "BIS — Entity List"
+        - "(plus ~128 more)"
+      freshness_note: "Dilisense aggregates 130+ sanctions, debarment, and restrictive-measure lists into a consolidated index. The publisher refreshes the consolidated index multiple times daily; per-list timestamps are not exposed via the screening API."
+      source_catalog_url: "https://dilisense.com/en/sources/sanction-sources"
+      version: null
+      last_updated_at: null
+    source: dilisense
     queried_at: "2026-04-27T13:00:00.000Z"
   properties:
     query:
@@ -82,10 +83,6 @@ output_schema:
       type:
         - string
         - "null"
-    score_threshold:
-      type:
-        - number
-        - "null"
     is_sanctioned:
       type: boolean
     match_count:
@@ -101,24 +98,17 @@ output_schema:
             type: string
           entity_id:
             type: string
-          score:
-            type:
-              - number
-              - "null"
           classification:
             type: string
             enum:
               - primary_sanction
-              - sectoral_sanction
-              - linked_to_sanctioned
-              - debarment
-              - financial_crime
-              - other_risk
           topics:
             type: array
           datasets:
             type: array
           countries:
+            type: array
+          sanction_details:
             type: array
           last_updated_at:
             type:
@@ -129,10 +119,14 @@ output_schema:
       properties:
         collection:
           type: string
-        list_count:
-          type:
-            - integer
-            - "null"
+        source_count:
+          type: integer
+        major_lists:
+          type: array
+        freshness_note:
+          type: string
+        source_catalog_url:
+          type: string
         version:
           type:
             - string
@@ -144,11 +138,10 @@ output_schema:
     source:
       type: string
       enum:
-        - opensanctions
         - dilisense
     queried_at:
       type: string
-data_source: OpenSanctions consolidated (OFAC SDN, EU FSF, UN SC, UK OFSI, CH SECO, AU DFAT, CA DFATD, JP MOF + 300 more); Dilisense fallback
+data_source: Dilisense consolidated (OFAC SDN, EU FSF, UN SC, UK OFSI, CH SECO, BIS, World Bank, EBRD, ADB + 125 national sanctions/debarment lists; full attribution at https://dilisense.com/en/sources/sanction-sources)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -170,9 +163,6 @@ test_fixtures:
       - field: lists_queried
         operator: not_null
         reliability: guaranteed
-      - field: score_threshold
-        operator: not_null
-        reliability: guaranteed
       # NOTE: No is_false assertion — fuzzy matching can return false positives for common names.
   health_check_input:
     name: Google
@@ -185,31 +175,23 @@ output_field_reliability:
   total_results: guaranteed
   matches: guaranteed
   lists_queried: guaranteed
-  score_threshold: common
   source: guaranteed
   queried_at: guaranteed
   country_filter: common
   birth_date_filter: common
 limitations:
-  - title: Sanctions lists update at most every few hours — newly designated entities may lag
+  - title: Per-list version timestamps are not exposed by the upstream API
     text: >-
-      OpenSanctions refreshes the consolidated default collection multiple times daily. The output's
-      lists_queried.last_updated_at reflects the actual list freshness for each call. Newly designated entities
-      may take up to a few hours to appear.
+      Dilisense refreshes the consolidated index multiple times daily, but the screening API does not return
+      a per-list last_updated_at value per call. Output sets lists_queried.last_updated_at = null with a
+      freshness_note attesting to the publisher's refresh cadence and a source_catalog_url for verification.
     category: freshness
     severity: info
     workaround: For same-day compliance against fresh designations, cross-reference primary sources (OFAC RSS, EU OJ).
   - title: Fuzzy name matching can produce false positives for common names
     text: >-
-      Default match threshold is 0.7. Common names (e.g. "Mohammad", "John Smith") may produce false-positive
-      matches. Use birth_date for person disambiguation; tune min_score upward (e.g. 0.85) for stricter recall.
+      Common names (e.g. "Mohammad", "John Smith") may produce false-positive matches. Use birth_date for
+      person disambiguation.
     category: accuracy
     severity: warning
-    workaround: Provide birth_date for individuals and an ISO country code for companies; raise min_score for high-stakes use.
-  - title: Match score and list-version metadata only available on OpenSanctions path
-    text: >-
-      The Dilisense fallback (used when OpenSanctions is unavailable) does not expose per-list versioning or
-      match scores. Output sets score_threshold=null and lists_queried.version=null when source="dilisense".
-    category: coverage
-    severity: info
-    workaround: Treat dilisense-sourced calls as adequate but lower-evidence for audit purposes.
+    workaround: Provide birth_date for individuals and an ISO country code for companies.

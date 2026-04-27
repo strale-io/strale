@@ -225,7 +225,7 @@ async function testAdverse(c: AdverseCase): Promise<AdverseResult> {
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     const params = new URLSearchParams({ names: c.subject, fetch_articles: "true", start_date: oneYearAgo.toISOString().slice(0, 10) });
     const res = await fetch(`https://api.dilisense.com/v1/media/${endpoint}?${params}`, {
-      headers: { "x-api-key": DILISENSE_KEY },
+      headers: { "x-api-key": DILISENSE_KEY! },
       signal: AbortSignal.timeout(20_000),
     });
     if (!res.ok) {

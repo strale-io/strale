@@ -1,11 +1,12 @@
 slug: pep-check
 name: PEP Check
 description: >-
-  Screens an individual against the Politically Exposed Persons (PEP) database via OpenSanctions.
-  Returns audit-grade evidence: match results with classification (pep / political role / relative or
-  associate), confidence scores, jurisdictions, positions held, and list-source version metadata.
+  Screens an individual against the Politically Exposed Persons (PEP) database via Dilisense.
+  Coverage spans 230+ geopolitical territories aligned with EU C/2023/724 PEP function definitions
+  and includes Relatives and Close Associates (RCAs). Returns audit-grade evidence: match results
+  with classification, position history, jurisdictions, and named source attribution.
 category: compliance
-price_cents: 15
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
@@ -26,44 +27,41 @@ input_schema:
     country:
       type: string
       description: ISO country code filter (optional)
-    min_score:
-      type: number
-      minimum: 0
-      maximum: 1
-      description: "Match-score threshold (0-1). Defaults to 0.7 — lower widens recall at the cost of false positives (optional)"
 output_schema:
   type: object
   example:
     query: Angela Merkel
     country_filter: DE
     birth_date_filter: "1954-07-17"
-    score_threshold: 0.7
     is_pep: true
     match_count: 1
     total_results: 1
     matches:
       - name: Angela Dorothea Merkel
-        entity_id: Q567
-        score: 0.96
+        entity_id: dilisense_pep
         classification: pep
         topics:
           - role.pep
-          - role.pol
         positions:
           - Chancellor of Germany
           - Member of the Bundestag
         countries:
-          - de
+          - DE
         datasets:
-          - eu_cor_members
-          - de_pep
-        last_updated_at: "2026-04-26T18:00:00"
+          - dilisense_pep
+        last_updated_at: null
     lists_queried:
-      collection: opensanctions/default
-      list_count: 347
-      version: 20260427125425-hms
-      last_updated_at: "2026-04-27T12:54:25"
-    source: opensanctions
+      collection: dilisense/consolidated-pep
+      source_count: 230
+      major_lists:
+        - "EU C/2023/724 — Member-State PEP function definitions"
+        - "DE Bundestag, Bundesrat, Bundespräsident, Bundesbank, state-owned enterprises"
+        - "(plus 228+ national parliament/government/central-bank/judiciary sources)"
+      freshness_note: "Dilisense PEP coverage spans 230+ geopolitical territories and aligns with EU C/2023/724 PEP function definitions. The publisher refreshes the index multiple times daily; per-list timestamps are not exposed via the screening API."
+      source_catalog_url: "https://dilisense.com/en/sources/politically-exposed-persons-list"
+      version: null
+      last_updated_at: null
+    source: dilisense
     screened_at: "2026-04-27T13:00:00.000Z"
   properties:
     query:
@@ -75,10 +73,6 @@ output_schema:
     birth_date_filter:
       type:
         - string
-        - "null"
-    score_threshold:
-      type:
-        - number
         - "null"
     is_pep:
       type: boolean
@@ -95,17 +89,10 @@ output_schema:
             type: string
           entity_id:
             type: string
-          score:
-            type:
-              - number
-              - "null"
           classification:
             type: string
             enum:
               - pep
-              - political_role
-              - relative_or_associate
-              - other_political
           topics:
             type: array
           positions:
@@ -123,10 +110,14 @@ output_schema:
       properties:
         collection:
           type: string
-        list_count:
-          type:
-            - integer
-            - "null"
+        source_count:
+          type: integer
+        major_lists:
+          type: array
+        freshness_note:
+          type: string
+        source_catalog_url:
+          type: string
         version:
           type:
             - string
@@ -138,11 +129,10 @@ output_schema:
     source:
       type: string
       enum:
-        - opensanctions
         - dilisense
     screened_at:
       type: string
-data_source: OpenSanctions consolidated PEP database (international + national PEP lists, RCAs); Dilisense fallback
+data_source: Dilisense consolidated PEP database (230+ territories, EU C/2023/724-aligned, RCAs included; full attribution at https://dilisense.com/en/sources/politically-exposed-persons-list)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -171,9 +161,6 @@ test_fixtures:
       - field: query
         operator: not_null
         reliability: guaranteed
-      - field: score_threshold
-        operator: not_null
-        reliability: guaranteed
   health_check_input:
     name: Angela Merkel
 output_field_reliability:
@@ -183,31 +170,28 @@ output_field_reliability:
   total_results: guaranteed
   matches: guaranteed
   lists_queried: guaranteed
-  score_threshold: common
   source: guaranteed
   screened_at: guaranteed
   country_filter: common
   birth_date_filter: common
 limitations:
-  - title: PEP coverage depends on OpenSanctions consolidated dataset
+  - title: National-PEP coverage is asserted by the publisher, not verified per call
     text: >-
-      OpenSanctions aggregates international and national PEP lists into the default collection. National
-      coverage varies — well-published parliaments and EU-institution lists are well-covered; some national
-      lists may include only senior figures rather than the full PEP universe defined by EU C/2023/724.
+      Dilisense aggregates national parliament, government, central-bank, judiciary, and state-owned-enterprise
+      board sources for 230+ territories. Per-country source attribution is published at the source_catalog_url.
+      For jurisdiction-critical screening, supplement with the national source directly.
     category: coverage
     severity: info
-    workaround: For jurisdiction-critical screening, supplement with the national source directly (e.g. national parliament website).
+    workaround: For high-stakes screening, cross-reference with the national parliament or central-bank website.
   - title: Fuzzy name matching can produce false positives for common names
-    text: >-
-      Default match threshold is 0.7. Common names (e.g. "Mohammad", "John Smith") may produce false-positive
-      matches. Provide date_of_birth for disambiguation; tune min_score upward (e.g. 0.85) for stricter recall.
+    text: Common names may produce false-positive matches. Provide date_of_birth for disambiguation.
     category: accuracy
     severity: warning
-    workaround: Provide date_of_birth and an ISO country code; raise min_score for high-stakes use.
-  - title: Match score and list-version metadata only available on OpenSanctions path
+    workaround: Provide date_of_birth and an ISO country code.
+  - title: Per-list version timestamps are not exposed by the upstream API
     text: >-
-      The Dilisense fallback (used when OpenSanctions is unavailable) does not expose per-list versioning or
-      match scores. Output sets score_threshold=null and lists_queried.version=null when source="dilisense".
-    category: coverage
+      Dilisense refreshes the consolidated PEP index multiple times daily, but the screening API does not return
+      a per-list last_updated_at value per call. Output sets lists_queried.last_updated_at = null with a
+      freshness_note attesting to the publisher's refresh cadence.
+    category: freshness
     severity: info
-    workaround: Treat dilisense-sourced calls as adequate but lower-evidence for audit purposes.
