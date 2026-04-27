@@ -4,7 +4,7 @@ description: >-
   Validate an Ethereum address. Checks 0x-prefixed 40-hex format and EIP-55 mixed-case checksum to catch
   single-character typos. Returns checksummed (canonical) form. Pure algorithmic — fast and cheap.
 category: validation
-price_cents: 2
+price_cents: 5
 is_free_tier: true
 input_schema:
   type: object
