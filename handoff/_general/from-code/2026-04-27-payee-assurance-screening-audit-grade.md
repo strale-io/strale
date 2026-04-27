@@ -45,9 +45,9 @@ Ran a live coverage battery to convert "asserted but unverified" coverage claims
 | pep-check | ✅ ready (100% hit rate today) | ✅ ready |
 | adverse-media-check | ⚠️ functional but native-language gap requires product decision | ✅ ready (English-language press well-covered) |
 
-## Pre-v1 must-do (4 items, all blocking)
+## Pre-v1 must-do (3 items, all blocking — was 4 before OS-drop)
 
-1. **Set `OPENSANCTIONS_API_KEY` on Railway** (5 min) — restores the advertised audit shape.
+1. ~~Set `OPENSANCTIONS_API_KEY` on Railway~~ — **CLOSED.** OS dropped from v1 entirely.
 2. **Upgrade Dilisense to Basic** — Q1 quota for v1 traffic + DPA + Service Agreement.
 3. **Make the adverse-media language-coverage decision** — accept-and-disclose / supplement / scope-cut.
 4. **Investigate the 3 zero-hits** — entity-naming variants, ~30 min of code/test work.
@@ -76,7 +76,32 @@ Ran a live coverage battery to convert "asserted but unverified" coverage claims
 - `manifests/adverse-media-check.yaml`
 - `docs/x402-listing.md` (example output)
 
-Three commits this session, all pushed:
-- `c1100f8` — sanctions-check + pep-check audit-grade hardening
+Five commits this session, all pushed:
+- `c1100f8` — sanctions-check + pep-check audit-grade hardening (initial OS+Dilisense dual path)
 - `f00c088` — adverse-media-check audit-grade hardening + Notion canonical update + handoff
 - `b7ccd6a` — empirical coverage test runner + report
+- `834ac7d` — extended handoff with empirical findings
+- `16ca790` — **OpenSanctions dropped, single-vendor on Dilisense for v1**
+
+## OpenSanctions decision (late-session pivot)
+
+After the empirical test confirmed (a) `OPENSANCTIONS_API_KEY` was never set on Railway and (b) the OS trial account had expired, the cost/benefit re-opened. Dilisense alone gave 65/65 = 100% PEP hit rate. OpenSanctions commercial pricing (€2,400+/yr Starter, reseller tier higher) didn't pencil against the marginal value over Dilisense for our use case.
+
+**Decision: drop OpenSanctions entirely. Single-vendor on Dilisense for v1.**
+
+Implemented in `16ca790`:
+- New `lib/dilisense-sources.ts` exporting named source attribution sourced verbatim from Dilisense's published catalog (134 sanctions sources, 230+ PEP territories). Surfaces in `lists_queried.major_lists` so audit logs name the underlying lists screened.
+- `sanctions-check.ts` and `pep-check.ts` simplified to Dilisense-only path.
+- `score_threshold` input removed (Dilisense returns binary hits, not scored matches).
+- Multi-classification taxonomy reduced to `primary_sanction` only on sanctions side (Dilisense returns flat `SANCTION` source_type; the major underlying lists are still attributed in `major_lists`).
+- `lib/opensanctions-catalog.ts` deleted (dead code).
+- Manifests + seed.ts realigned. Production DB synced.
+- Notion Payee Assurance canonical page updated.
+
+**Audit-shape preserved.** `lists_queried` now carries collection name, source_count, major_lists array, freshness_note attesting to publisher refresh cadence, and source_catalog_url for compliance-officer verification. The only material loss is per-list version timestamps (Dilisense doesn't expose them) — documented in manifest limitations honestly.
+
+**Trade-offs accepted:**
+- No per-list version timestamps in audit log (Dilisense limitation).
+- No match score per result (binary hits — adequate for is_sanctioned / is_pep decisions).
+- No sectoral/SDN distinction at output classification level (still attributable via major_lists).
+- Single-source-of-truth — if Dilisense has an outage, the screening capability is unavailable. Mitigation: Basic-tier SLA + Dilisense's published 99.9% uptime claim.
