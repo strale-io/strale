@@ -1,0 +1,110 @@
+slug: eth-address-validate
+name: Ethereum Address Validation
+description: >-
+  Validate an Ethereum address. Checks 0x-prefixed 40-hex format and EIP-55 mixed-case checksum to catch
+  single-character typos. Returns checksummed (canonical) form. Pure algorithmic — fast and cheap.
+category: validation
+price_cents: 2
+is_free_tier: true
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: Ethereum address (e.g. 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045)
+output_schema:
+  type: object
+  example:
+    input: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    valid: true
+    format_valid: true
+    checksum_present: true
+    checksum_valid: true
+    is_zero_address: false
+    normalized: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+  properties:
+    input:
+      type: string
+    valid:
+      type: boolean
+    format_valid:
+      type: boolean
+    checksum_present:
+      type: boolean
+    checksum_valid:
+      type:
+        - boolean
+        - "null"
+    is_zero_address:
+      type: boolean
+    normalized:
+      type:
+        - string
+        - "null"
+data_source: Algorithmic validation (EIP-55, viem)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+maintenance_class: pure-computation
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    expected_fields:
+      - field: input
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: format_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: checksum_present
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: checksum_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: is_zero_address
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: normalized
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+output_field_reliability:
+  input: guaranteed
+  valid: guaranteed
+  format_valid: guaranteed
+  checksum_present: guaranteed
+  checksum_valid: common
+  is_zero_address: guaranteed
+  normalized: common
+limitations:
+  - title: Format and checksum only — no on-chain check
+    text: >-
+      Validates Ethereum address format (0x + 40 hex) and EIP-55 mixed-case checksum. Does not check whether the address
+      has a balance, has been used on-chain, or whether it's a contract or an externally owned account.
+    category: coverage
+    severity: info
+    workaround: Use wallet-balance-lookup, wallet-age-check, or wallet-transactions-lookup for on-chain verification.
+  - title: All-lowercase or all-uppercase addresses skip checksum verification
+    text: >-
+      EIP-55 typo detection requires mixed-case input. All-lowercase or all-uppercase addresses are accepted as
+      format-valid (checksum_present=false, checksum_valid=null) but no typo-detection runs against them.
+    category: accuracy
+    severity: warning
+    workaround: >-
+      Always pass the checksummed form returned in 'normalized' to downstream calls so that future copies of the address
+      are typo-protected.
