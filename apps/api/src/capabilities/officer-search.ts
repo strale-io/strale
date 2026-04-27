@@ -6,7 +6,10 @@ import { registerCapability, type CapabilityInput } from "./index.js";
  * Sources:
  * - UK: Companies House officers API (free, requires API key)
  * - US: SEC EDGAR submissions (free, no auth)
- * - EU: northdata.com JSON-LD (directors field)
+ *
+ * The northdata.com EU fallback was removed under DEC-20260427-I (commercial
+ * KYB-aggregator scraping ban). EU coverage will be reinstated when a licensed
+ * source for officer data lands.
  *
  * Returns officer names, roles, appointment dates from official public records.
  */
@@ -106,59 +109,6 @@ async function searchUsOfficers(query: string): Promise<{ company: string; offic
   return { company: subData.name || match.title, officers };
 }
 
-async function searchNorthdataOfficers(companyName: string, country: string): Promise<{ company: string; officers: Officer[] } | null> {
-  const searchUrl = `https://www.northdata.com/${encodeURIComponent(companyName)}`;
-  const resp = await fetch(searchUrl, {
-    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", Accept: "text/html" },
-    signal: AbortSignal.timeout(10000),
-    redirect: "follow",
-  });
-  if (!resp.ok) return null;
-
-  const html = await resp.text();
-
-  // Find search results matching the country
-  const titleRe = /class="title" href="([^"]+)">([^<]+)/g;
-  let m: RegExpExecArray | null;
-  let bestUrl = "";
-  while ((m = titleRe.exec(html)) !== null) {
-    if (m[2].includes(country)) { bestUrl = m[1]; break; }
-  }
-
-  // Follow through to the company page if needed
-  let companyHtml = html;
-  if (bestUrl && !html.includes('"@type" : "LocalBusiness"')) {
-    const pageResp = await fetch(`https://www.northdata.com${bestUrl}`, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", Accept: "text/html" },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (pageResp.ok) companyHtml = await pageResp.text();
-  }
-
-  // Extract from JSON-LD
-  const ldBlocks = companyHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g) || [];
-  for (const block of ldBlocks) {
-    try {
-      const jsonStr = block.replace(/<script type="application\/ld\+json">/, "").replace(/<\/script>/, "");
-      const data = JSON.parse(jsonStr);
-      if ((data["@type"] === "LocalBusiness" || data["@type"] === "Organization") && Array.isArray(data.member)) {
-        const officers: Officer[] = data.member
-          .filter((m: any) => m.name)
-          .map((m: any) => ({
-            name: m.name,
-            role: m.jobTitle || "Unknown",
-            appointed: null,
-            resigned: null,
-          }))
-          .slice(0, 20);
-        return { company: data.name || companyName, officers };
-      }
-    } catch { /* skip */ }
-  }
-
-  return null;
-}
-
 async function searchCompanyHouseByName(name: string): Promise<string | null> {
   const apiKey = process.env.COMPANIES_HOUSE_API_KEY;
   if (!apiKey) return null;
@@ -202,21 +152,12 @@ registerCapability("officer-search", async (input: CapabilityInput) => {
     if (result) source = "SEC EDGAR";
   }
 
-  if (!result) {
-    // Try northdata for EU companies
-    const countryMap: Record<string, string> = {
-      DE: "Germany", NL: "Netherlands", CH: "Switzerland", SE: "Sweden",
-      NO: "Norway", DK: "Denmark", FI: "Finland", FR: "France",
-      BE: "Belgium", AT: "Austria", PL: "Poland", ES: "Spain",
-      IT: "Italy", PT: "Portugal", IE: "Ireland", LT: "Lithuania",
-    };
-    const countryName = countryMap[country] || "";
-    result = await searchNorthdataOfficers(query, countryName || "");
-    if (result) source = "northdata.com";
-  }
-
   if (!result || result.officers.length === 0) {
-    throw new Error(`No officers found for "${query}"${country ? ` in ${country}` : ""}. Try a more specific company name or provide the country code.`);
+    throw new Error(
+      `No officers found for "${query}"${country ? ` in ${country}` : ""}. ` +
+        "officer-search currently covers UK (Companies House) and US (SEC EDGAR) only. " +
+        "EU coverage was removed under DEC-20260427-I and will be reinstated when a licensed source lands.",
+    );
   }
 
   const activeOfficers = result.officers.filter(o => !o.resigned);

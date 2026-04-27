@@ -1,16 +1,16 @@
 /**
  * DataProvider chain for swiss-company-data.
  *
- * Primary: Zefix PublicREST API (zefix.admin.ch/ZefixPublicREST)
+ * Sole provider: Zefix PublicREST API (zefix.admin.ch/ZefixPublicREST)
  *   - Free government API, no rate limits defined
  *   - Requires HTTP Basic Auth: ZEFIX_USERNAME + ZEFIX_PASSWORD
  *   - Attribution required: "Data from Zefix, Federal Office of Justice, Switzerland"
  *
- * Fallback: Existing Browserless scraper (registered executor)
+ * The northdata.com Browserless fallback was removed under DEC-20260427-I
+ * (commercial KYB-aggregator scraping ban).
  */
 
 import { registerChain } from "../../lib/data-provider.js";
-import { getDirectExecutor } from "../index.js";
 
 const ZEFIX_API = "https://www.zefix.admin.ch/ZefixPublicREST/api/v1";
 
@@ -152,17 +152,6 @@ registerChain({
             data_attribution: "Data from Zefix, Federal Office of Justice, Switzerland",
           },
         };
-      },
-    },
-    {
-      id: "browserless-zefix",
-      name: "Browserless scrape of Zefix (fallback)",
-      type: "scraping",
-      requiredServices: ["browserless"],
-      fetch: async (input) => {
-        const executor = getDirectExecutor("swiss-company-data");
-        if (!executor) throw new Error("No executor for swiss-company-data");
-        return executor(input);
       },
     },
   ],

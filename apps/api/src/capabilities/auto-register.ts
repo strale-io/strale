@@ -62,6 +62,60 @@ const DEACTIVATED = new Map<string, string>([
     "Google Patents scraping prohibited by Google ToS (see DEC-20260420-H)",
   ],
   [
+    "dutch-company-data",
+    // DEC-20260427-I-1: Runtime fetched northdata.com (Bavarian commercial KYB aggregator)
+    // and extracted JSON-LD profile data for Dutch (KVK) company lookups. Manifest claimed
+    // KVK / Kamer van Koophandel as the data source — full divergence. northdata.com's
+    // ToS forbids automated access; using it undermines Strale's compliance positioning.
+    // Reactivation trigger: licensed contract with KVK directly (their Handelsregister API
+    // requires Dutch business registration), or with a licensed multi-country aggregator
+    // (Creditsafe, Bisnode/Dun & Bradstreet, Experian).
+    "northdata.com scraping prohibited by ToS; pending licensed KVK or aggregator contract (see DEC-20260427-I)",
+  ],
+  [
+    "portuguese-company-data",
+    // DEC-20260427-I-2: Same as dutch-company-data — runtime fetched northdata.com,
+    // manifest claimed Registo Comercial. Full divergence.
+    // Reactivation trigger: licensed contract with the Portuguese Registo Comercial
+    // (via IRN/Justiça Portuguesa) or a multi-country licensed aggregator.
+    "northdata.com scraping prohibited by ToS; pending licensed PT registry or aggregator contract (see DEC-20260427-I)",
+  ],
+  [
+    "lithuanian-company-data",
+    // DEC-20260427-I-3: Same pattern — runtime fetched northdata.com, manifest claimed
+    // Registrų centras (Lithuanian Centre of Registers). Full divergence.
+    // Reactivation trigger: licensed contract with Registrų centras or a multi-country
+    // licensed aggregator.
+    "northdata.com scraping prohibited by ToS; pending licensed LT registry or aggregator contract (see DEC-20260427-I)",
+  ],
+  [
+    "spanish-company-data",
+    // DEC-20260427-I-4: Runtime fetched empresia.es and infocif.es (commercial Spanish
+    // KYB aggregators), manifest claimed Registro Mercantil Central. Full divergence.
+    // Reactivation trigger: licensed contract with the Spanish Registro Mercantil
+    // (via Colegio de Registradores) or a multi-country licensed aggregator.
+    "empresia.es / infocif.es scraping prohibited by ToS; pending licensed ES registry or aggregator contract (see DEC-20260427-I)",
+  ],
+  [
+    "german-company-data",
+    // DEC-20260427-I-5: Runtime fetched northdata.com. Manifest acknowledged "via
+    // northdata.com" (transport-divergence — at least honest), but the underlying
+    // ToS-prohibited scrape remains.
+    // Reactivation trigger: licensed contract with Handelsregister Bundesanzeiger
+    // (via Bundesanzeiger Verlag) or a multi-country licensed aggregator.
+    "northdata.com scraping prohibited by ToS; pending licensed Handelsregister or aggregator contract (see DEC-20260427-I)",
+  ],
+  [
+    "austrian-company-data",
+    // DEC-20260427-I-6: Primary runtime fetched firmenbuch.finapu.com (commercial
+    // third-party AT register wrapper); fallback scraped firmen.wko.at via Browserless
+    // + Claude. Both paths are ToS-prohibited scrapes of commercial / semi-official
+    // sources. Manifest claimed FinAPU Firmenbuch API (transport-divergence).
+    // Reactivation trigger: licensed contract with the Austrian Justizministerium for
+    // direct Firmenbuch API access, or a multi-country licensed aggregator.
+    "finapu.com / wko.at scraping prohibited by ToS; pending licensed Firmenbuch or aggregator contract (see DEC-20260427-I)",
+  ],
+  [
     "trustpilot-score",
     // DEC-20260427-H-2: Runtime fetched trustpilot.com/review/{domain} via Browserless + Claude.
     // Trustpilot's ToS forbids automated access to public review pages; Trustpilot Business
