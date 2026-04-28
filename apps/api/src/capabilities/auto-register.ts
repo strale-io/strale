@@ -166,6 +166,41 @@ const DEACTIVATED = new Map<string, string>([
     // Reactivation trigger: LinkedIn Marketing Developer Program / Sales Navigator API contract.
     "LinkedIn forbids all automated access incl. accessibility probes (see DEC-20260420-H)",
   ],
+  // ─── Government public-UI scrapers, deactivated 2026-04-28 ────────────────
+  // The 2026-04-21 platform-wide audit (Journal 34967c87082c8194bd85c5d618cd3585)
+  // categorised these as "transport divergence": manifest names a government
+  // authority as data_source, but runtime calls Strale's own scraper against
+  // the government's public web UI rather than an API. DEC-20260427-I deactivated
+  // the worse "full divergence" cases (third-party aggregators); transport-
+  // divergence was left for migration. Today we tightened the posture and pulled
+  // these too — Strale's Tier 1 doctrine (DEC-20260428-A) is "Strale itself never
+  // operates scrapers" without exceptions, and a self-operated scraper against a
+  // government UI is still a self-operated scraper. No third-party ToS violation
+  // identified, but the doctrine is absolute.
+  //
+  // Reactivation per cap: licensed registry/source contract with the named
+  // authority. The IE/IT-style transport-divergence pattern in irish-company-data
+  // and latvian-company-data is the same shape and should be revisited as a
+  // workstream, not a pre-emptive deactivation.
+  [
+    "italian-company-data",
+    // Runtime scrapes registroimprese.it/ricerca-libera (Italian Registro Imprese
+    // public UI) via Browserless + Claude. Manifest claimed InfoCamere /
+    // Registro Imprese as data source — transport-divergence per the audit.
+    // Reactivation: InfoCamere accessoallebanchedati per-certificate API
+    // (paid, not PAYG-friendly for bulk) or licensed multi-country aggregator.
+    "registroimprese.it scraping violates Strale Tier 1 (DEC-20260428-A); pending licensed InfoCamere or aggregator contract",
+  ],
+  [
+    "eu-court-case-search",
+    // Runtime scrapes curia.europa.eu/juris (CJEU) and hudoc.echr.coe.int (ECHR).
+    // Both are EU public court records and access is generally permitted, so
+    // there is no clear third-party ToS violation. But Strale's Tier 1 doctrine
+    // (DEC-20260428-A) prohibits Strale-operated scrapers categorically.
+    // Reactivation: licensed CJEU / ECHR data feed, or migrate to bulk dataset
+    // download where the source publishes one.
+    "CURIA / HUDOC scraping violates Strale Tier 1 (DEC-20260428-A); pending licensed feed or bulk-dataset migration",
+  ],
   // ─── UK property vertical, parked 2026-04-28 ─────────────────────────────
   // Built on 2026-04-11 in a fast push to claim ground after a Reddit
   // competitor post (Journal 33f67c87...d9049b). Audit on 2026-04-21
