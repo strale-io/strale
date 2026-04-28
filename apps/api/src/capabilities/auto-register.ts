@@ -166,6 +166,29 @@ const DEACTIVATED = new Map<string, string>([
     // Reactivation trigger: LinkedIn Marketing Developer Program / Sales Navigator API contract.
     "LinkedIn forbids all automated access incl. accessibility probes (see DEC-20260420-H)",
   ],
+  // ─── UK property vertical, parked 2026-04-28 ─────────────────────────────
+  // Built on 2026-04-11 in a fast push to claim ground after a Reddit
+  // competitor post (Journal 33f67c87...d9049b). Audit on 2026-04-21
+  // (Journal 34967c87...c5d618cd3585) flagged them as the "10 pre-manifest
+  // UK-property capabilities with no data_source at all". A to-do was
+  // raised the same week — "Decide UK-property suspended capabilities:
+  // permanent park or temporary?" (page 34967c87...df56a10c2bb3) — but
+  // the page was never written and the question was never answered.
+  // They've sat in lifecycle_state=suspended since the 7d auto-suspend
+  // hit. Today (2026-04-28), confirmed parked: out of scope for the
+  // Payee Assurance v1 wedge, and revival requires real onboarding (all
+  // 9 currently have last_tested_at=NULL and matrix_sqs=NULL — they were
+  // never validated end-to-end). Reactivation when the property vertical
+  // is the active focus, not before.
+  ["uk-epc-rating",        "UK property vertical parked — never validated, out of v1 wedge scope (see Journal 2026-04-28-partial-failure-cap-triage)"],
+  ["uk-flood-risk",        "UK property vertical parked — never validated, out of v1 wedge scope"],
+  ["uk-sold-prices",       "UK property vertical parked — never validated, out of v1 wedge scope"],
+  ["uk-rental-yield",      "UK property vertical parked — never validated, out of v1 wedge scope"],
+  ["uk-crime-stats",       "UK property vertical parked — never validated, out of v1 wedge scope"],
+  ["uk-deprivation-index", "UK property vertical parked — never validated, out of v1 wedge scope"],
+  ["uk-transport-access",  "UK property vertical parked — never validated, out of v1 wedge scope"],
+  ["council-tax-lookup",   "UK property vertical parked — never validated, out of v1 wedge scope"],
+  ["stamp-duty-calculate", "UK property vertical parked — never validated, out of v1 wedge scope"],
 ]);
 
 export function getDeactivatedCapabilities(): ReadonlyMap<string, string> {
