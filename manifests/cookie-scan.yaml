@@ -82,7 +82,7 @@ output_schema:
       type: array
     consent_banner_detected:
       type: boolean
-data_source: Headless browser (cookie detection, script analysis, consent banner check)
+data_source: Web page rendering (cookie detection, script analysis, consent banner check)
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch

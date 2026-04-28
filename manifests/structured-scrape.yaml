@@ -33,7 +33,7 @@ output_schema:
       type: string
     data:
       type: object
-data_source: Headless browser + Claude API (structured data extraction)
+data_source: Web page scraping with rendering fallback + Claude API structured extraction
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch

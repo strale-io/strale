@@ -44,7 +44,7 @@ output_schema:
       type: object
     recommend_percent:
       type: number
-data_source: Headless browser + Claude API (employer review site analysis)
+data_source: Employer review aggregators (web scraping) + Claude API analysis
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch

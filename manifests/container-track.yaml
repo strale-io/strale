@@ -47,7 +47,7 @@ output_schema:
       type: boolean
     container_number:
       type: string
-data_source: Headless browser (shipping line tracking portals)
+data_source: Shipping line tracking portals (web scraping with rendering fallback)
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch

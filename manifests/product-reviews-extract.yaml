@@ -46,7 +46,7 @@ output_schema:
       type: number
     rating_distribution:
       type: object
-data_source: Headless browser + Claude API (product review extraction)
+data_source: E-commerce product pages (web scraping) + Claude API extraction
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch

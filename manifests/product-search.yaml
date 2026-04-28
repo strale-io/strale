@@ -29,7 +29,7 @@ output_schema:
       type: array
     total_results_estimate:
       type: number
-data_source: Headless browser (e-commerce product search)
+data_source: E-commerce search results (web scraping with rendering fallback)
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch

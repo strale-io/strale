@@ -41,7 +41,7 @@ output_schema:
       type: string
     return_window_days:
       type: number
-data_source: Headless browser + Claude API (return policy extraction from retailer sites)
+data_source: Retailer policy pages (web scraping) + Claude API extraction
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch

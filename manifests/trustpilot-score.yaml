@@ -68,7 +68,7 @@ output_schema:
       type: number
     rating_distribution:
       type: object
-data_source: Headless browser (Trustpilot public company pages)
+data_source: Trustpilot public company pages (web scraping with rendering fallback)
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch

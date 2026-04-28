@@ -38,7 +38,7 @@ output_schema:
       type: number
     highest_price:
       type: object
-data_source: Headless browser (multi-retailer price comparison)
+data_source: Multi-retailer product pages (web scraping with rendering fallback)
 data_source_type: scrape
 transparency_tag: ai_generated
 freshness_category: live-fetch
