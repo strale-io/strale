@@ -15,7 +15,7 @@ if (!process.env.DATABASE_URL) {
 import postgres from "postgres";
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
 
-const slugs = ["italian-company-data", "eu-court-case-search"];
+const slugs = ["irish-company-data", "latvian-company-data"];
 const rows = await sql`
   SELECT s.slug AS solution_slug, s.is_active, s.x402_enabled,
          ARRAY_AGG(ss.capability_slug) AS steps

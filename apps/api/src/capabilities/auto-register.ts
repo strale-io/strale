@@ -201,6 +201,26 @@ const DEACTIVATED = new Map<string, string>([
     // download where the source publishes one.
     "CURIA / HUDOC scraping violates Strale Tier 1 (DEC-20260428-A); pending licensed feed or bulk-dataset migration",
   ],
+  [
+    "irish-company-data",
+    // Runtime scrapes core.cro.ie (Ireland CRO public UI) via Browserless +
+    // Claude. Manifest claimed CRO / Companies Registration Office as data
+    // source — transport-divergence per the 2026-04-21 audit. No clear
+    // third-party ToS violation, but Tier 1 doctrine is absolute.
+    // Reactivation: CRO API direct contract or licensed multi-country
+    // aggregator. CRO offers a paid B2B API tier — viable migration path.
+    "core.cro.ie scraping violates Strale Tier 1 (DEC-20260428-A); pending licensed CRO API or aggregator contract",
+  ],
+  [
+    "latvian-company-data",
+    // Runtime scrapes info.ur.gov.lv (Latvian Register of Enterprises public
+    // UI) via Browserless + Claude. Manifest claimed Uzņēmumu reģistrs as
+    // data source — transport-divergence per the 2026-04-21 audit.
+    // Reactivation: Latvia publishes open-data CSV exports of the register
+    // — bulk-dataset migration is the licensed path. Or licensed multi-
+    // country aggregator.
+    "info.ur.gov.lv scraping violates Strale Tier 1 (DEC-20260428-A); pending licensed Uzņēmumu reģistrs or aggregator contract",
+  ],
   // ─── UK property vertical, parked 2026-04-28 ─────────────────────────────
   // Built on 2026-04-11 in a fast push to claim ground after a Reddit
   // competitor post (Journal 33f67c87...d9049b). Audit on 2026-04-21

@@ -1,9 +1,11 @@
 /**
- * Pause 3 Italian KYB solutions whose chains include italian-company-data,
- * which was deactivated 2026-04-28 alongside eu-court-case-search per the
- * Strale Tier 1 doctrine (DEC-20260428-A). Mirrors the pattern used by
- * apps/api/scripts/drop-aggregator-kyb.ts (DEC-20260427-I).
+ * Pause KYB solutions whose chains include capabilities deactivated in the
+ * 2026-04-28 Tier 1 doctrine tightening (DEC-20260428-A). Initial run
+ * covered IT (italian-company-data); extended to IE
+ * (irish-company-data) and any future country-suffix solutions whose
+ * underlying *-company-data cap has been added to the DEACTIVATED map.
  *
+ * Mirrors the pattern used by scripts/drop-aggregator-kyb.ts (DEC-20260427-I).
  * Idempotent — safe to re-run.
  */
 import { config } from "dotenv";
@@ -23,7 +25,10 @@ if (!process.env.DATABASE_URL) {
 import postgres from "postgres";
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
 
-const slugs = ["kyb-essentials-it", "kyb-complete-it", "invoice-verify-it"];
+const slugs = [
+  "kyb-essentials-it", "kyb-complete-it", "invoice-verify-it",
+  "kyb-essentials-ie", "kyb-complete-ie", "invoice-verify-ie",
+];
 
 const before = await sql<{ slug: string; is_active: boolean; x402_enabled: boolean }[]>`
   SELECT slug, is_active, x402_enabled FROM solutions WHERE slug = ANY(${slugs})

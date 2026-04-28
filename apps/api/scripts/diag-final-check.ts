@@ -15,7 +15,7 @@ if (!process.env.DATABASE_URL) {
 import postgres from "postgres";
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
 
-const slugs = ["italian-company-data","eu-court-case-search","uk-rental-yield","uk-flood-risk","uk-epc-rating"];
+const slugs = ["italian-company-data","eu-court-case-search","irish-company-data","latvian-company-data","uk-rental-yield"];
 const r = await sql`SELECT slug, is_active, visible, x402_enabled FROM capabilities WHERE slug = ANY(${slugs}) ORDER BY slug`;
 for (const row of r) console.log(`  ${(row.slug as string).padEnd(30)} active=${row.is_active} visible=${row.visible} x402=${row.x402_enabled}`);
 
