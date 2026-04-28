@@ -255,4 +255,41 @@ export async function autoRegisterCapabilities(): Promise<void> {
     },
     "auto-register-done",
   );
+
+  // Phase 3: sync DEACTIVATED list to DB catalog state. Deactivation here
+  // means "no executor" — but if the cap's row stayed is_active=true /
+  // visible=true / x402_enabled=true, it would still appear in the public
+  // catalog as a paid capability that returns "no executor registered" on
+  // call. That's a worse failure mode than just hiding it. This pass keeps
+  // the runtime DEACTIVATED map and the DB catalog in lockstep on every
+  // boot, so adding a cap to the map auto-hides it from /v1/capabilities,
+  // /x402/catalog, and the website without manual SQL.
+  if (DEACTIVATED.size > 0) {
+    try {
+      const { getDb } = await import("../db/index.js");
+      const { sql } = await import("drizzle-orm");
+      const slugs = [...DEACTIVATED.keys()];
+      const result = await getDb().execute(sql`
+        UPDATE capabilities
+        SET is_active = false,
+            visible = false,
+            x402_enabled = false,
+            updated_at = NOW()
+        WHERE slug = ANY(${slugs})
+          AND (is_active = true OR visible = true OR x402_enabled = true)
+        RETURNING slug
+      `);
+      const rows = Array.isArray(result) ? result : (result as { rows?: { slug: string }[] }).rows ?? [];
+      if (rows.length > 0) {
+        log.info(
+          { label: "auto-register-deactivated-synced", synced_count: rows.length, slugs: rows.map((r) => r.slug) },
+          "auto-register-deactivated-synced",
+        );
+      }
+    } catch (err) {
+      // Non-fatal — caps just remain visible until next boot. Better than
+      // crashing startup over a catalog drift fix.
+      logError("auto-register-deactivated-sync-failed", err, { count: DEACTIVATED.size });
+    }
+  }
 }
