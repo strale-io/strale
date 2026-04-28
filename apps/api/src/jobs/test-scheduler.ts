@@ -356,6 +356,7 @@ async function pollCycle(): Promise<void> {
       // Check provider health — skip capabilities whose provider is unhealthy
       // to prevent SQS score pollution during outages
       let runnableCaps = overdue;
+      let skippedSlugs: string[] = [];
       try {
         const { runDependencyHealthChecks } = await import("../lib/dependency-health.js");
         const { getActiveProviders } = await import("../lib/dependency-manifest.js");
@@ -370,18 +371,53 @@ async function pollCycle(): Promise<void> {
           }
         }
         if (unhealthySlugs.size > 0) {
-          const before = runnableCaps.length;
+          skippedSlugs = overdue
+            .filter((cap) => unhealthySlugs.has(cap.slug))
+            .map((cap) => cap.slug);
           runnableCaps = overdue.filter((cap) => !unhealthySlugs.has(cap.slug));
-          const skipped = before - runnableCaps.length;
-          if (skipped > 0) {
+          if (skippedSlugs.length > 0) {
             jobLog.info(
-              { label: "test-scheduler-skip-unhealthy", skipped_count: skipped },
+              { label: "test-scheduler-skip-unhealthy", skipped_count: skippedSlugs.length },
               "test-scheduler-skip-unhealthy",
             );
           }
         }
       } catch {
         // If health check fails, run all tests (graceful degradation)
+      }
+
+      // Skip-marker: bump last_tested_at + freshness_level on caps we skipped
+      // due to unhealthy provider, so they don't permanently occupy the queue
+      // head and starve the rest of the catalog. Without this, every probe
+      // cycle returns the SAME 20 oldest caps (all unhealthy), filters them
+      // all out, and exits — caps further down the queue never get a turn.
+      //
+      // We DO NOT touch matrix_sqs / qp_score / rp_score — those reflect the
+      // last real test result and stay accurate. We DO set freshness_level to
+      // 'unverified' because freshness-decay treats that as "score forced to
+      // 0" — honest reflection that we couldn't verify this cap right now.
+      // When the provider recovers, the next real test will reset
+      // freshness_level via persistDualProfileScores.
+      //
+      // No fake test_results rows are inserted; this is purely a queue-
+      // ordering hint that respects the Scoring Integrity Protocol.
+      if (skippedSlugs.length > 0) {
+        try {
+          await getDb().execute(sql`
+            UPDATE capabilities
+            SET last_tested_at = NOW(),
+                freshness_level = 'unverified'
+            WHERE slug = ANY(${skippedSlugs})
+          `);
+          jobLog.info(
+            { label: "test-scheduler-skip-bumped", count: skippedSlugs.length },
+            "test-scheduler-skip-bumped",
+          );
+        } catch (err) {
+          // Non-fatal — scheduler continues with runnableCaps. Worst case is
+          // we replay the same blocked queue head next tick.
+          logError("test-scheduler-skip-bump-failed", err, { count: skippedSlugs.length });
+        }
       }
 
       if (runnableCaps.length === 0) {
