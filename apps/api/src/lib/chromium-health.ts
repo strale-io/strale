@@ -101,11 +101,11 @@ export async function probeChromiumHealth(): Promise<boolean> {
   }
 
   try {
-    const res = await fetch(`${url}/content`, {
+    // Browserless v2 cloud uses ?token= query auth — Bearer is rejected at edge.
+    const res = await fetch(`${url}/content?token=${encodeURIComponent(key)}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${key}`,
       },
       body: JSON.stringify({
         url: "https://example.com",

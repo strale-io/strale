@@ -281,7 +281,10 @@ export async function fetchPage(
   // Acquire a browser concurrency slot to prevent OOM on Railway (1GB limit)
   return withBrowserLimit(async () => {
     const { url, key } = getBrowserlessConfig();
-    const contentUrl = `${url}/content`;
+    // Browserless v2 cloud (production-*.browserless.io) uses ?token= query
+    // string auth, not Authorization: Bearer. Bearer is rejected at the
+    // openresty edge with HTTP 500 before reaching the account.
+    const contentUrl = `${url}/content?token=${encodeURIComponent(key)}`;
 
     let lastError: Error | null = null;
 
@@ -296,7 +299,6 @@ export async function fetchPage(
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${key}`,
           },
           body: JSON.stringify({
             url: targetUrl,

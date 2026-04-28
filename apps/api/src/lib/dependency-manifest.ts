@@ -54,6 +54,10 @@ export interface DependencyProvider {
   authType: AuthType;
   envVar?: string;
   authHeader?: string;
+  /** Query-param name when authType === "api-key-query". Required for probes
+   *  that don't set skipAuth. Capability execution code can also read this
+   *  to keep auth shape consistent. */
+  authQueryParam?: string;
   /** Extra headers needed for the probe (e.g. anthropic-version) */
   extraProbeHeaders?: Record<string, string>;
   healthProbe: HealthProbe;
@@ -71,8 +75,12 @@ export const PROVIDERS: DependencyProvider[] = [
     displayName: "Browserless (Chromium)",
     description: "Chromium browser automation for web scraping and rendering.",
     baseUrl: "", // read from BROWSERLESS_URL at runtime
-    authType: "bearer",
+    // Browserless v2 cloud (production-*.browserless.io) uses ?token= query
+    // string auth. Bearer header is rejected at the openresty edge with HTTP
+    // 500 before reaching the account.
+    authType: "api-key-query",
     envVar: "BROWSERLESS_API_KEY",
+    authQueryParam: "token",
     healthProbe: {
       path: "/content",
       method: "POST",
@@ -84,24 +92,23 @@ export const PROVIDERS: DependencyProvider[] = [
       timeoutMs: 12000,
       functional: true,
     },
+    // Only capabilities that genuinely REQUIRE Browserless are listed here
+    // — i.e. they call Browserless directly and have no fallback. The
+    // scheduler uses this list to gate test runs by provider health, so
+    // listing a cap here means "test fails when Browserless is down."
+    //
+    // Capabilities that go through web-provider.ts / browserless-extract.ts
+    // have a 3-tier fallback (plain HTTP → Jina Reader → Browserless) and
+    // continue to work even when Browserless is down. Those caps are NOT
+    // listed here — they should still be tested when Browserless is unhealthy.
     capabilities: [
-      "accessibility-audit", "amazon-price", "annual-report-extract",
-      "australian-company-data", "austrian-company-data", "belgian-company-data",
-      "business-license-check-se", "canadian-company-data", "company-enrich",
-      "company-tech-stack", "competitor-compare", "container-track",
-      "cookie-scan", "credit-report-summary", "customs-duty-lookup",
-      "dutch-company-data", "employer-review-summary", "eu-court-case-search",
-      "eu-regulation-search", "eu-trademark-search", "gdpr-fine-lookup",
-      "german-company-data", "hong-kong-company-data", "indian-company-data",
-      "irish-company-data", "italian-company-data", "japanese-company-data",
-      "landing-page-roast", "latvian-company-data", "lithuanian-company-data",
-      "patent-search", "portuguese-company-data", "price-compare",
-      "pricing-page-extract", "privacy-policy-analyze", "product-reviews-extract",
-      "product-search", "return-policy-extract", "salary-benchmark",
-      "seo-audit", "singapore-company-data", "spanish-company-data",
-      "structured-scrape", "swedish-company-data", "swiss-company-data",
-      "tech-stack-detect", "terms-of-service-extract", "trustpilot-score",
-      "url-to-markdown", "web-extract", "youtube-summarize",
+      "annual-report-extract",   // direct Browserless call for PDF retrieval
+      "company-enrich",          // direct Browserless call
+      "estonian-company-data",   // direct Browserless call (EU IP proxy)
+      "html-to-pdf",             // requires real Chromium PDF rendering
+      "landing-page-roast",      // direct Browserless screenshot
+      "screenshot-url",          // requires real Chromium screenshots
+      "web-extract",             // direct Browserless call for extraction
     ],
     tier: "self-hosted",
   },

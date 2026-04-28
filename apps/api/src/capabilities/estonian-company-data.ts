@@ -32,11 +32,11 @@ async function extractCompanyName(text: string): Promise<string> {
 /** Fetch the Estonian API through Browserless EU West to bypass IP restrictions. */
 async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
   const { url, key } = getBrowserlessConfig();
-  const resp = await fetch(`${url}/content`, {
+  // Browserless v2 cloud uses ?token= query auth — Bearer is rejected at edge.
+  const resp = await fetch(`${url}/content?token=${encodeURIComponent(key)}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${key}`,
     },
     body: JSON.stringify({
       url: apiUrl,

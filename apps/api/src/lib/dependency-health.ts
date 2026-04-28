@@ -102,6 +102,7 @@ async function probeProvider(
     "Content-Type": "application/json",
   };
 
+  let probePath = probe.path;
   if (apiKey && !probe.skipAuth) {
     switch (provider.authType) {
       case "api-key-header":
@@ -113,6 +114,12 @@ async function probeProvider(
       case "basic":
         headers["Authorization"] = `Basic ${Buffer.from(apiKey + ":").toString("base64")}`;
         break;
+      case "api-key-query": {
+        const param = provider.authQueryParam ?? "token";
+        const sep = probePath.includes("?") ? "&" : "?";
+        probePath = `${probePath}${sep}${param}=${encodeURIComponent(apiKey)}`;
+        break;
+      }
     }
   }
 
@@ -135,7 +142,7 @@ async function probeProvider(
     const errors: string[] = [];
     let bestLatency = 0;
     for (const b of poolBaseUrls) {
-      const res = await probeSingleUrl(`${b}${probe.path}`, provider, headers);
+      const res = await probeSingleUrl(`${b}${probePath}`, provider, headers);
       if (res.healthy) {
         return { healthy: true, latency_ms: res.latency_ms };
       }
