@@ -110,6 +110,7 @@ export function normalizeManifestToRow(
     outputFieldReliability: manifest.output_field_reliability,
     maintenanceClass: manifest.maintenance_class
       ?? (partial ? undefined : "scraping-fragile-target"),
+    avgLatencyMs: manifest.avg_latency_ms ?? (partial ? undefined : null),
     // F-B-008: processes_personal_data is passed through as-is. `null` and
     // `undefined` are both stripped by persistCapability.normalizePiiFields
     // so the DB default (`false`) applies. The gate (validateManifest)

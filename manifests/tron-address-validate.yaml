@@ -1,0 +1,111 @@
+slug: tron-address-validate
+name: Tron Address Validation
+description: >-
+  Validate a Tron (TRX) address. Checks Base58Check encoding and 0x41 mainnet version byte (T-prefix). Verifies the
+  4-byte double-SHA256 checksum to catch typos. Pure algorithmic — fast and cheap, no on-chain lookup.
+category: validation
+price_cents: 5
+is_free_tier: true
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: Tron mainnet address (e.g. TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t)
+output_schema:
+  type: object
+  example:
+    input: TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t
+    valid: true
+    format_valid: true
+    checksum_valid: true
+    prefix_valid: true
+    network: mainnet
+    normalized: TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t
+  properties:
+    input:
+      type: string
+    valid:
+      type: boolean
+    format_valid:
+      type: boolean
+    checksum_valid:
+      type: boolean
+    prefix_valid:
+      type: boolean
+    network:
+      type:
+        - string
+        - "null"
+      enum:
+        - mainnet
+        - null
+    normalized:
+      type:
+        - string
+        - "null"
+data_source: Algorithmic validation (Base58Check + Tron 0x41 prefix)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+maintenance_class: pure-computation
+avg_latency_ms: 15
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      address: TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t
+    expected_fields:
+      - field: input
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: format_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: checksum_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: prefix_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: network
+        operator: equals
+        reliability: guaranteed
+        value: mainnet
+      - field: normalized
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    address: TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t
+output_field_reliability:
+  input: guaranteed
+  valid: guaranteed
+  format_valid: guaranteed
+  checksum_valid: guaranteed
+  prefix_valid: guaranteed
+  network: common
+  normalized: common
+limitations:
+  - title: Mainnet only
+    text: >-
+      Validates Tron mainnet addresses (0x41 prefix → T-prefixed in Base58Check). Tron's testnets (Nile, Shasta) use the
+      same address format and are accepted as mainnet — this validator does not distinguish them.
+    category: scope
+    severity: info
+  - title: Format and checksum only — no on-chain check
+    text: >-
+      Validates address shape and checksum only. Does not check whether the account exists on-chain, holds TRX, or is a
+      contract account vs. EOA.
+    category: coverage
+    severity: info
+    workaround: Use a Tron full node or TronGrid API for on-chain state.

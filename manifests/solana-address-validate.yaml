@@ -1,0 +1,99 @@
+slug: solana-address-validate
+name: Solana Address Validation
+description: >-
+  Validate a Solana address. Checks base58 alphabet and 32-byte ed25519 public-key length. Solana addresses have no
+  checksum — validity is purely structural. Pure algorithmic — fast and cheap, no on-chain lookup.
+category: validation
+price_cents: 5
+is_free_tier: true
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: Solana address (e.g. DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy)
+output_schema:
+  type: object
+  example:
+    input: DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy
+    valid: true
+    format_valid: true
+    length_valid: true
+    is_system_program: false
+    normalized: DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy
+  properties:
+    input:
+      type: string
+    valid:
+      type: boolean
+    format_valid:
+      type: boolean
+    length_valid:
+      type: boolean
+    is_system_program:
+      type: boolean
+    normalized:
+      type:
+        - string
+        - "null"
+data_source: Algorithmic validation (base58 decode + 32-byte ed25519 length check)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+maintenance_class: pure-computation
+avg_latency_ms: 15
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      address: DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy
+    expected_fields:
+      - field: input
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: format_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: length_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: is_system_program
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: normalized
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    address: DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy
+output_field_reliability:
+  input: guaranteed
+  valid: guaranteed
+  format_valid: guaranteed
+  length_valid: guaranteed
+  is_system_program: guaranteed
+  normalized: common
+limitations:
+  - title: Format only — no on-chain check, no checksum
+    text: >-
+      Solana addresses have no checksum (unlike Bitcoin/Ethereum). A single-character typo will produce a different but
+      still structurally-valid address. Validation cannot detect typos — it can only confirm the input decodes to 32
+      bytes via base58.
+    category: accuracy
+    severity: warning
+    workaround: For high-stakes flows, verify the address controls funds via an on-chain lookup before sending.
+  - title: Cannot distinguish wallets, PDAs, and program accounts
+    text: >-
+      All Solana account addresses are 32 bytes regardless of whether they are user wallets, Program-Derived Addresses
+      (PDAs), or program accounts. This validator confirms the shape but does not classify.
+    category: coverage
+    severity: info

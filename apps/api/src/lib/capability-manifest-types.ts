@@ -51,6 +51,9 @@ export interface Manifest {
   output_field_reliability: Record<string, string>;
   limitations: ManifestLimitation[];
   maintenance_class?: string;
+  // Initial latency seed; test runner overwrites once it has measured data.
+  // Db-canonical per FIELD_CATEGORIES — manifest only seeds, never authority.
+  avg_latency_ms?: number | null;
   // SA.2b (F-A-003, F-A-009): per-capability PII classification.
   // Required for all new capabilities onboarded post-SA.2b.b.
   processes_personal_data?: boolean;

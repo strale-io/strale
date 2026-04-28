@@ -1,0 +1,125 @@
+slug: dogecoin-address-validate
+name: Dogecoin Address Validation
+description: >-
+  Validate a Dogecoin (DOGE) address. Checks Base58Check encoding and Dogecoin version bytes (P2PKH 0x1E / 0x71, P2SH
+  0x16 / 0xC4). Verifies the 4-byte double-SHA256 checksum to catch typos. Pure algorithmic — fast and cheap, no
+  on-chain lookup.
+category: validation
+price_cents: 5
+is_free_tier: true
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: Dogecoin address (e.g. DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L)
+output_schema:
+  type: object
+  example:
+    input: DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L
+    valid: true
+    format_valid: true
+    checksum_valid: true
+    address_type: p2pkh
+    network: mainnet
+    normalized: DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L
+  properties:
+    input:
+      type: string
+    valid:
+      type: boolean
+    format_valid:
+      type: boolean
+    checksum_valid:
+      type: boolean
+    address_type:
+      type:
+        - string
+        - "null"
+      enum:
+        - p2pkh
+        - p2sh
+        - null
+    network:
+      type:
+        - string
+        - "null"
+      enum:
+        - mainnet
+        - testnet
+        - null
+    normalized:
+      type:
+        - string
+        - "null"
+data_source: Algorithmic validation (Base58Check + Dogecoin version bytes 0x1E/0x16/0x71/0xC4)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+maintenance_class: pure-computation
+avg_latency_ms: 15
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      address: DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L
+    expected_fields:
+      - field: input
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: format_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: checksum_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: address_type
+        operator: equals
+        reliability: guaranteed
+        value: p2pkh
+      - field: network
+        operator: equals
+        reliability: guaranteed
+        value: mainnet
+      - field: normalized
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    address: DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L
+output_field_reliability:
+  input: guaranteed
+  valid: guaranteed
+  format_valid: guaranteed
+  checksum_valid: guaranteed
+  address_type: common
+  network: common
+  normalized: common
+limitations:
+  - title: Legacy address formats only — no SegWit
+    text: >-
+      Dogecoin has not adopted SegWit, so all addresses are Base58Check (P2PKH or P2SH). If the network ever activates
+      SegWit/bech32, this validator will need to be extended.
+    category: scope
+    severity: info
+  - title: Format and checksum only — no on-chain check
+    text: >-
+      Validates address shape and checksum only. Does not check whether the address has a balance, has been used, or
+      whether it controls any DOGE.
+    category: coverage
+    severity: info
+    workaround: Use a Dogecoin full node or block explorer API for on-chain state.
+  - title: Could be confused with chains sharing version bytes
+    text: >-
+      DOGE shares its 0x71 testnet P2PKH version byte with several other Bitcoin-derivative testnets. If chain
+      disambiguation matters, validate against the expected chain explicitly.
+    category: accuracy
+    severity: info

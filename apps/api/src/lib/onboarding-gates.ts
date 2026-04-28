@@ -22,6 +22,7 @@ import {
   FIELD_CATEGORIES as AUTHORITY_FIELDS,
   decideFieldAuthority,
   AuthorityViolationError,
+  valuesEqual,
 } from "./capability-field-authority.js";
 
 const INPUT_REF = /^\$input\.(.+)$/;
@@ -536,16 +537,6 @@ export class GateViolationError extends Error {
 // still used by the checkAuthorityDrift warning path below.
 function manifestFieldToDbField(field: string): string {
   return field.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-}
-
-function valuesEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a == null || b == null) return a == null && b == null;
-  if (typeof a !== typeof b) return false;
-  if (typeof a === "object") {
-    try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
-  }
-  return false;
 }
 
 /**

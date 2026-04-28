@@ -1,0 +1,129 @@
+slug: xrp-address-validate
+name: XRP Address Validation
+description: >-
+  Validate an XRP Ledger address. Supports classic addresses (r-prefix) and X-addresses (X/T-prefix, with embedded
+  destination tag and network flag). Verifies XRPL base58 alphabet and 4-byte checksum. Pure algorithmic — fast and
+  cheap, no on-chain lookup.
+category: validation
+price_cents: 5
+is_free_tier: true
+input_schema:
+  type: object
+  required:
+    - address
+  properties:
+    address:
+      type: string
+      description: XRP Ledger address (e.g. rPdvC6ccq8hCdPKSPJkPmyZ4Mi1oG2FFkT or X7AcgcsBL6XDcUb289X4mJ8djcdyKaB5hJDWMArnXr61cqZ)
+output_schema:
+  type: object
+  example:
+    input: rPdvC6ccq8hCdPKSPJkPmyZ4Mi1oG2FFkT
+    valid: true
+    address_format: classic
+    network: null
+    tag: null
+    classic_form: rPdvC6ccq8hCdPKSPJkPmyZ4Mi1oG2FFkT
+    x_address_form: XV5sbjUmgPpvXv4ixFWZ5ptAYZ6PD28Sq49uo34VyjnmK5H
+    normalized: rPdvC6ccq8hCdPKSPJkPmyZ4Mi1oG2FFkT
+  properties:
+    input:
+      type: string
+    valid:
+      type: boolean
+    address_format:
+      type:
+        - string
+        - "null"
+      enum:
+        - classic
+        - x-address
+        - null
+    network:
+      type:
+        - string
+        - "null"
+      enum:
+        - mainnet
+        - testnet
+        - null
+    tag:
+      type:
+        - integer
+        - "null"
+    classic_form:
+      type:
+        - string
+        - "null"
+    x_address_form:
+      type:
+        - string
+        - "null"
+    normalized:
+      type:
+        - string
+        - "null"
+data_source: ripple-address-codec (XRPL base58 + classic/X-address spec)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: computed
+maintenance_class: pure-computation
+avg_latency_ms: 20
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      address: rPdvC6ccq8hCdPKSPJkPmyZ4Mi1oG2FFkT
+    expected_fields:
+      - field: input
+        operator: not_null
+        reliability: guaranteed
+      - field: valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: address_format
+        operator: equals
+        reliability: guaranteed
+        value: classic
+      - field: classic_form
+        operator: not_null
+        reliability: guaranteed
+      - field: x_address_form
+        operator: not_null
+        reliability: guaranteed
+      - field: normalized
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    address: rPdvC6ccq8hCdPKSPJkPmyZ4Mi1oG2FFkT
+output_field_reliability:
+  input: guaranteed
+  valid: guaranteed
+  address_format: common
+  network: rare
+  tag: rare
+  classic_form: common
+  x_address_form: common
+  normalized: common
+limitations:
+  - title: Format and checksum only — no on-chain check
+    text: >-
+      Validates address structure only. Does not check whether the account exists on-chain, has been activated with a
+      reserve, or holds any balance.
+    category: coverage
+    severity: info
+    workaround: Use an XRPL node or rippled API for on-chain account state.
+  - title: Classic addresses don't encode network
+    text: >-
+      Only X-addresses encode mainnet vs. testnet. For classic r-addresses, the same address is valid on both networks;
+      "network" will be null.
+    category: accuracy
+    severity: info
+  - title: Destination tag is part of X-address only
+    text: >-
+      For classic addresses, destination tags are sent separately as a transaction field. The "tag" output will be null
+      for classic addresses even if the user's intent was to include one.
+    category: scope
+    severity: info
