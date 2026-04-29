@@ -27,8 +27,28 @@ const DEACTIVATED = new Map<string, string>([
     // sanctioned ECB data feed that allows non-EU egress.
     "ECB SDW geo-restricted from Railway US East; was starving scheduler queue (see 2026-04-27 staleness investigation)",
   ],
-  ["hong-kong-company-data", "No viable data source identified"],
-  ["indian-company-data", "No viable data source identified"],
+  // hong-kong-company-data: probed 2026-04-29. The public
+  // data.cr.gov.hk/cr/api/api/v1/api_builder/json/local/search endpoint is
+  // documented and works, but the underlying dataset only contains "C"-prefix
+  // BRNs — i.e. Companies Limited by Guarantee (charities, foundations, NPOs).
+  // Regular limited-by-shares HK companies (HSBC HK CR 263876 etc.) return
+  // "No result found". Shipping this as "Hong Kong company data" would be
+  // misleading. Reactivation requires a different source: paid Companies
+  // Registry e-Search subscription, ICRIS API, or a licensed aggregator.
+  [
+    "hong-kong-company-data",
+    "data.cr.gov.hk public dataset only covers CLG/NPO entities — no clean source for limited-by-shares companies (probed 2026-04-29)",
+  ],
+  // indian-company-data: probed 2026-04-29. data.gov.in publishes "Company
+  // Master Data" with ~30 datasets, one per Registrar of Companies (RoC)
+  // state. CIN format encodes state in chars 6-7, so the executor would parse
+  // CIN → look up correct RoC dataset → query that specific resource_id. API
+  // requires DATA_GOV_IN_API_KEY (free, registration at data.gov.in/my-account).
+  // Doable as a clean Tier-2 ship after the key is provisioned.
+  [
+    "indian-company-data",
+    "data.gov.in MCA Company Master Data probed 2026-04-29 — clean migration path, blocked on DATA_GOV_IN_API_KEY registration",
+  ],
   // singapore-company-data REACTIVATED 2026-04-29: migrated from
   // OpenCorporates.com Browserless scrape (Tier-1 violation) to direct
   // data.gov.sg CKAN datastore_search API against the ACRA "Entities
