@@ -1,8 +1,9 @@
 slug: german-company-data
 name: German Company Data
 description: >-
-  Look up German company data from the Handelsregister. Accepts HRB/HRA number
-  with court (Registergericht), or a fuzzy company name.
+  [TEMPORARILY UNAVAILABLE 2026-04-29 — pending licensed Handelsregister or aggregator contract per DEC-20260428-A.]
+  Look up German company data from the Handelsregister. Accepts HRB/HRA number with court (Registergericht), or a fuzzy
+  company name.
 category: data-extraction
 price_cents: 80
 is_free_tier: false

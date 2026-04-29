@@ -27,6 +27,18 @@ const DEACTIVATED = new Map<string, string>([
     // sanctioned ECB data feed that allows non-EU egress.
     "ECB SDW geo-restricted from Railway US East; was starving scheduler queue (see 2026-04-27 staleness investigation)",
   ],
+  // australian-company-data: deactivated 2026-04-29. Duplicate of au-company-data.
+  // Both target the Australian Business Register (ABR). au-company-data
+  // (au-company-data.ts) calls the official ABR XML SOAP API directly (requires
+  // ABN_LOOKUP_GUID, which is set). australian-company-data
+  // (australian-company-data.ts) scrapes the abr.business.gov.au public web UI
+  // via Browserless+Claude — Tier-1 violation per DEC-20260428-A. Since the
+  // clean direct-API path is already live as au-company-data, this duplicate
+  // is deactivated rather than migrated.
+  [
+    "australian-company-data",
+    "duplicate of au-company-data which is the clean direct-API path; this Browserless scrape of abr.business.gov.au violates Tier 1 per DEC-20260428-A",
+  ],
   // hong-kong-company-data: probed 2026-04-29. The public
   // data.cr.gov.hk/cr/api/api/v1/api_builder/json/local/search endpoint is
   // documented and works, but the underlying dataset only contains "C"-prefix

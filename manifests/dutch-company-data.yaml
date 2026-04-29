@@ -3,7 +3,9 @@
 
 slug: dutch-company-data
 name: Dutch Company Data
-description: Look up Dutch company data from KVK (Kamer van Koophandel). Accepts KVK number (8 digits) or fuzzy company name.
+description: >-
+  [TEMPORARILY UNAVAILABLE 2026-04-29 — pending licensed KVK or aggregator contract per DEC-20260428-A.] Look up Dutch
+  company data from KVK (Kamer van Koophandel). Accepts KVK number (8 digits) or fuzzy company name.
 category: data-extraction
 price_cents: 80
 is_free_tier: false

@@ -3,7 +3,9 @@
 
 slug: spanish-company-data
 name: Spanish Company Data
-description: Look up Spanish company data from the Registro Mercantil. Accepts CIF/NIF (e.g. A28015865) or fuzzy company name.
+description: >-
+  [TEMPORARILY UNAVAILABLE 2026-04-29 — pending licensed ES registry or aggregator contract per DEC-20260428-A.] Look
+  up Spanish company data from the Registro Mercantil. Accepts CIF/NIF (e.g. A28015865) or fuzzy company name.
 category: data-extraction
 price_cents: 80
 is_free_tier: false

@@ -3,7 +3,9 @@
 
 slug: austrian-company-data
 name: Austrian Company Data
-description: Look up Austrian company data from the Firmenbuch. Accepts Firmenbuchnummer (e.g. FN 150913f) or fuzzy company name.
+description: >-
+  [TEMPORARILY UNAVAILABLE 2026-04-29 — pending licensed Firmenbuch or aggregator contract per DEC-20260428-A.] Look up
+  Austrian company data from the Firmenbuch. Accepts Firmenbuchnummer (e.g. FN 150913f) or fuzzy company name.
 category: data-extraction
 price_cents: 80
 is_free_tier: false

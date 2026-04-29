@@ -1,7 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
-// Brazil — ReceitaWS free CNPJ lookup API
+/**
+ * Brazilian company data via ReceitaWS, a third-party JSON wrapper of the
+ * official Receita Federal CNPJ register.
+ *
+ * acquisition_method: vendor_aggregation. ReceitaWS re-publishes public
+ * register data; underlying records are statutory public records published
+ * by the Receita Federal do Brasil.
+ *
+ * Long-term migration target: direct ingest of Receita Federal's published
+ * CNPJ open-data files (full bulk dataset on dados.gov.br). Tracked
+ * separately when BR enters v1.x scope.
+ */
 const RECEITAWS_API = "https://receitaws.com.br/v1/cnpj";
 
 // CNPJ: 14 digits (formatted: xx.xxx.xxx/xxxx-xx)
@@ -92,7 +103,15 @@ registerCapability("brazilian-company-data", async (input: CapabilityInput) => {
     output,
     provenance: {
       source: "receitaws.com.br",
+      source_url: "https://receitaws.com.br/",
       fetched_at: new Date().toISOString(),
+      acquisition_method: "vendor_aggregation" as const,
+      upstream_vendor: "receitaws.com.br",
+      primary_source_reference: `https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/cnpj/${cnpj}`,
+      attribution:
+        "Data sourced from ReceitaWS, a third-party JSON wrapper of the Brazilian Receita Federal CNPJ register. Underlying records are statutory public records published by Receita Federal do Brasil.",
+      source_note:
+        "Tier-2 vendor-mediated public records (DEC-20260428-A). Long-term migration to first-party ingest of Receita Federal CNPJ open data (dados.gov.br) is queued for when BR enters v1.x scope.",
     },
   };
 });

@@ -4,10 +4,10 @@
 slug: brazilian-company-data
 name: Brazilian Company Data
 description: >-
-  Look up Brazilian company data from ReceitaWS. Requires CNPJ (14 digits). Returns company name, trade name, status,
-  address, activity codes, partners.
-category: data-extraction
-price_cents: 80
+  Look up Brazilian company data from the Receita Federal CNPJ register via the ReceitaWS JSON wrapper. Requires CNPJ
+  (14 digits). Returns company name, trade name, status, address, activity codes, and partners.
+category: company-data
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
@@ -47,9 +47,9 @@ output_schema:
       type: string
     activity_codes:
       type: array
-data_source: Receita Federal / CNPJ Registry (Brazil)
+data_source: ReceitaWS (vendor wrapper of Brazilian Receita Federal CNPJ register)
 data_source_type: api
-transparency_tag: ai_generated
+transparency_tag: algorithmic
 freshness_category: live-fetch
 maintenance_class: free-stable-api
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
@@ -101,8 +101,22 @@ output_field_reliability:
   company_name: guaranteed
   activity_codes: guaranteed
 limitations:
-  - title: Data extracted via web scraping — CNPJ coverage may vary and some registrations show limited detail
-    text: Data extracted via web scraping — CNPJ lookup coverage may vary and some registrations show limited detail
-    category: coverage
+  - title: Sourced via the ReceitaWS vendor wrapper, not directly from Receita Federal
+    text: >-
+      This capability uses ReceitaWS, a third-party JSON wrapper of the Brazilian Receita Federal CNPJ register.
+      Underlying records are statutory public records, but a first-party ingest of the official Receita Federal CNPJ
+      open-data files (dados.gov.br) is the longer-term target.
+    category: provenance
     severity: info
-    workaround: Use the CNPJ from the response to query the Receita Federal directly for the most complete registration data
+  - title: ReceitaWS free tier rate-limits aggressively
+    text: >-
+      ReceitaWS's free tier limits unauthenticated calls to roughly 3 per minute. Bursty traffic may receive HTTP 429.
+      Higher limits require a paid ReceitaWS plan or migration to direct Receita Federal CNPJ open data.
+    category: reliability
+    severity: warning
+  - title: Personal-name data should not be used for direct marketing
+    text: >-
+      The partners[] array carries personal names and roles for non-corporate partners. Per Brazilian LGPD, this data
+      should not be reused for direct marketing without a separate lawful basis.
+    category: legal
+    severity: warning

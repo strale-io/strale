@@ -3,7 +3,9 @@
 
 slug: italian-company-data
 name: Italian Company Data
-description: Look up Italian company data from Registro Imprese. Accepts Partita IVA (11 digits) or fuzzy company name.
+description: >-
+  [TEMPORARILY UNAVAILABLE 2026-04-29 — pending licensed InfoCamere or aggregator contract per DEC-20260428-A.] Look up
+  Italian company data from Registro Imprese. Accepts Partita IVA (11 digits) or fuzzy company name.
 category: data-extraction
 price_cents: 80
 is_free_tier: false
