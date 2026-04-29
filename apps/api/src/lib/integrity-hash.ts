@@ -22,6 +22,26 @@ import { transactions } from "../db/schema.js";
 // break `reaches_genesis` checks in the other.
 export const GENESIS_HASH = createHash("sha256").update("strale-genesis-v1").digest("hex");
 
+// F-AUDIT-12: Date-serialization defensive coercion.
+// Drizzle returns Dates from `timestamp` columns, but JSONB-cached rows,
+// raw-SQL paths, and serialized Date strings would otherwise hash to a
+// different value. "2026-04-20T12:00:00Z" and "2026-04-20T12:00:00.000Z"
+// represent the same instant but produce different SHA-256s. Coerce
+// every datetime through `new Date(x).toISOString()` so all
+// representations of an instant collapse to one canonical form.
+function toCanonicalIso(value: string | Date | null | undefined): string | null {
+  if (value == null) return null;
+  if (value instanceof Date) return value.toISOString();
+  // Already a string — re-parse and re-serialize so equivalent forms hash equally.
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) {
+    // Unparseable: preserve verbatim. Safer than silently producing a different hash.
+    // The chain will detect the divergence at verify time.
+    return value;
+  }
+  return d.toISOString();
+}
+
 /**
  * Compute the integrity hash for a transaction record.
  * Includes all compliance-relevant fields + the previous hash.
@@ -58,8 +78,8 @@ export function computeIntegrityHash(
     auditTrail: record.auditTrail,
     transparencyMarker: record.transparencyMarker,
     dataJurisdiction: record.dataJurisdiction,
-    createdAt: record.createdAt instanceof Date ? record.createdAt.toISOString() : record.createdAt,
-    completedAt: record.completedAt instanceof Date ? record.completedAt.toISOString() : record.completedAt,
+    createdAt: toCanonicalIso(record.createdAt),
+    completedAt: toCanonicalIso(record.completedAt),
     previousHash,
   });
   return createHash("sha256").update(payload).digest("hex");

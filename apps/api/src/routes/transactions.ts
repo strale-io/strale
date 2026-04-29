@@ -3,9 +3,9 @@ import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { transactions, capabilities, transactionQuality } from "../db/schema.js";
 import { authMiddleware, optionalAuthMiddleware } from "../lib/middleware.js";
-import { rateLimitByKey } from "../lib/rate-limit.js";
+import { rateLimitByKey, rateLimitByIp } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
-import { computeIntegrityHash } from "../lib/integrity-hash.js";
+import { computeIntegrityHash, GENESIS_HASH } from "../lib/integrity-hash.js";
 import { generateAuditToken } from "../lib/audit-token.js";
 import { sqsLabel, gradeFromScore } from "../lib/trust-labels.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
@@ -227,10 +227,17 @@ transactionsRoute.get(
 );
 
 // GET /v1/transactions/:id/verify — Verify cryptographic integrity of a transaction record
+// F-AUDIT-15: rate limit was rateLimitByKey(10, 1000) which only applies
+// when a user is authenticated. Unauthenticated callers (the legitimate
+// free-tier path) had effectively no rate limit on a chain-walking endpoint
+// — abuse vector. Switched to rateLimitByIp(10, 60_000) to match the public
+// /v1/verify/:id surface. Authenticated callers also get the IP-based cap,
+// which is fine: a verify request is cheap-but-DB-touching and 10/min/IP is
+// well above any legitimate workflow.
 transactionsRoute.get(
   "/:id/verify",
   optionalAuthMiddleware,
-  rateLimitByKey(10, 1000),
+  rateLimitByIp(10, 60_000),
   async (c) => {
     const id = c.req.param("id") as string;
     const user = c.get("user") as { id: string } | undefined;
@@ -251,8 +258,12 @@ transactionsRoute.get(
       return c.json(apiError("not_found", "Transaction not found."), 404);
     }
 
-    // Recompute hash and compare
-    const recomputed = computeIntegrityHash(txn, txn.previousHash ?? "");
+    // F-AUDIT-11: previousHash defaults to GENESIS_HASH, matching the worker
+    // in jobs/integrity-hash-retry.ts and the public /v1/verify/:id endpoint.
+    // Empty-string default cannot reproduce the worker's hash for any row
+    // where previousHash is null (e.g. the very first row ever written), so
+    // verify would falsely report broken.
+    const recomputed = computeIntegrityHash(txn, txn.previousHash ?? GENESIS_HASH);
     const storedHash = txn.integrityHash;
     const verified = storedHash != null && recomputed === storedHash;
 
@@ -260,7 +271,7 @@ transactionsRoute.get(
     const chain: Array<{ id: string; hash: string | null; verified: boolean }> = [];
     let current = txn;
     for (let i = 0; i < 10 && current; i++) {
-      const hash = computeIntegrityHash(current, current.previousHash ?? "");
+      const hash = computeIntegrityHash(current, current.previousHash ?? GENESIS_HASH);
       chain.push({
         id: current.id,
         hash: current.integrityHash,
