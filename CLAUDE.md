@@ -130,8 +130,8 @@ strale/
 All capabilities and solutions available via x402 pay-per-use USDC payments on Base mainnet. No signup or API key needed — payment IS the auth. DB-driven: adding capabilities to x402 requires only `UPDATE capabilities SET x402_enabled = true`. Catalog: GET /x402/catalog. Discovery: GET /.well-known/x402.json. Wildcard handler: GET/POST /x402/:slug.
 
 **New capabilities (March 2026):**
-- `pep-check` — Screens individuals against OpenSanctions PEP dataset. Category: compliance. Price: €0.15. Transparency: mixed. Uses OPENSANCTIONS_API_KEY.
-- `adverse-media-check` — Google search + Claude Haiku risk assessment for adverse news. Category: compliance. Price: €0.20. Transparency: ai_generated. Uses SERPER_API_KEY + ANTHROPIC_API_KEY.
+- `pep-check` — Dilisense consolidated PEP database (230+ territories, EU C/2023/724-aligned, RCAs included). Category: compliance. Price: €0.05. Transparency: algorithmic. Uses DILISENSE_API_KEY. (OpenSanctions previously primary with Dilisense fallback; OS dropped 2026-04-27 commit `16ca790` — single-vendor on Dilisense per DEC-20260429-A.)
+- `adverse-media-check` — Dilisense Adverse Media (235k+ news sources, FATF-categorized) primary; Serper.dev (Google) fallback with deterministic keyword classification. No LLM. Category: compliance. Price: €0.20. Transparency: algorithmic. Uses DILISENSE_API_KEY (primary) + SERPER_API_KEY (fallback). Risk-level rule documented in output via `risk_level_thresholds`.
 - `risk-narrative-generate` — AI synthesis of structured check results into plain-language risk narrative. Category: agent-tooling. Price: €0.05. Transparency: ai_generated. Uses ANTHROPIC_API_KEY.
 - `au-company-data` — Australian Business Register (ABR) lookup by ABN. Category: company-data. Price: €0.05. Transparency: algorithmic. Uses ABN_LOOKUP_GUID.
 

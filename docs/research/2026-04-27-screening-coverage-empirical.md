@@ -145,10 +145,45 @@ Confirmed empirically. The "EN/FR/DE only" marketing claim isn't just an absence
 
 ### Pre-v1 must-do
 
-1. **Set `OPENSANCTIONS_API_KEY` on Railway.** Blocks the audit-grade evidence shape we ship today.
-2. **Upgrade Dilisense to Basic tier.** Quota-blocked from finishing this empirical test; will block real customers within hours of v1 launch.
-3. **Make the adverse-media language-coverage decision.** Three options above; this is the single biggest product question for the v1 bundle.
-4. **Investigate the three zero-hit adverse-media cases** with alternative entity names (BPVi, Folli Follie SA, Danske Bank without "Estonia" suffix). Likely a query-tuning fix in code.
+1. ~~**Set `OPENSANCTIONS_API_KEY` on Railway.**~~ **CLOSED 2026-04-27** — OS dropped from v1, single-vendor Dilisense (commit `16ca790`).
+2. ~~**Upgrade Dilisense to Basic tier.**~~ **DEFERRED 2026-04-29 to reactive trigger** per DEC-20260429-A. Mirko granted Starter grace; upgrade fires on Dilisense bill > €100/mo OR regulated customer asks for DPA OR vendor-initiated.
+3. ~~**Make the adverse-media language-coverage decision.**~~ **CLOSED 2026-04-27** — accept-and-disclose chosen, logged as DEC-20260427-A.
+4. ~~**Investigate the three zero-hit adverse-media cases.**~~ **CLOSED 2026-04-29** — see follow-up below.
+
+---
+
+## 2026-04-29 follow-up — zero-hit variant testing
+
+Diagnostic script: [`apps/api/scripts/diag-adverse-media-variants.ts`](../../apps/api/scripts/diag-adverse-media-variants.ts). Cost: 9 Dilisense calls (quota was not exhausted; under the 100/mo free cap including the original 2026-04-27 testing).
+
+### Results
+
+| Country | Baseline (zero-hit) | Variant tested | Result |
+|---|---|---|---|
+| IT | Banca Popolare di Vicenza | "BPVi" | 0 hits |
+| IT | Banca Popolare di Vicenza | "Banca Popolare di Vicenza Scpa" | 0 hits |
+| IT | Banca Popolare di Vicenza | "Popolare di Vicenza" | 0 hits |
+| GR | Folli Follie | "Folli Follie SA" | 0 hits |
+| GR | Folli Follie | **"FF Group"** | **12 hits** |
+| GR | Folli Follie | "Folli Follie Group" | 0 hits |
+| EE | Danske Bank Estonia | **"Danske Bank"** | **11,486 hits** |
+| EE | Danske Bank Estonia | "Danske Bank Eesti" | 0 hits |
+| EE | Danske Bank Estonia | "Danske Bank A/S Eesti filiaal" | 0 hits |
+
+### Findings
+
+- **IT/Banca Popolare di Vicenza: confirmed Dilisense coverage gap.** All three reasonable variants returned zero. Despite the 2017 BPVi failure being one of the largest Italian bank scandals of the decade, Dilisense's adverse-media index does not surface it. This is a real coverage gap, not a query-tuning problem.
+- **GR/Folli Follie: naming issue confirmed.** "FF Group" (the corporate-name form actually used in Greek financial press during the 2018 fraud scandal) returns 12 hits. The consumer-brand name "Folli Follie" misses because Dilisense indexes the corporate filing name.
+- **EE/Danske Bank Estonia: naming issue confirmed.** "Danske Bank" (the parent name) returns 11,486 hits — including the Estonian-branch laundering coverage. The descriptor-style "Danske Bank Estonia" misses because there is no separate corporate entity by that name; the Estonian branch is part of Danske Bank A/S.
+
+Native-language surfacing remained false for both recovered cases — confirms the broader finding that Dilisense's index is English-language-skewed even when underlying coverage exists.
+
+### Implications for v1
+
+1. **No code change to `adverse-media-check`.** Auto-rewriting customer queries (e.g., stripping country suffixes, mapping consumer brand names to corporate filings) would silently mutate the audit trail and break the "what we asked Dilisense" / "what Dilisense returned" transparency. Wrong direction.
+2. **Manifest limitation added** — `adverse-media-check.yaml` now notes parent/branch and brand/corporate naming behavior so customers query the right name.
+3. **The 24-case empirical test inflates coverage in one direction and deflates it in the other.** Of the 16 originally-tested adverse cases (8 quota-blocked), 13 returned hits, 3 returned zero. After this follow-up: 14 of 16 *would* return hits if the customer queries with the corporate/parent name. The IT/BPVi gap remains real.
+4. **Future work — `query_suggestions` field on zero-hit responses.** When `total_hits == 0` and the queried name has a country-suffix or brand-vs-corporate pattern, surface a suggested re-query. v1.5 product enhancement, not v1.
 
 ### Post-v1 must-do
 

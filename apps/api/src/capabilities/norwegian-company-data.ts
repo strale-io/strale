@@ -113,7 +113,15 @@ registerCapability("norwegian-company-data", async (input: CapabilityInput) => {
     output,
     provenance: {
       source: "data.brreg.no",
+      source_url: `${BRREG_API}/enheter/${orgNumber}`,
       fetched_at: new Date().toISOString(),
+      acquisition_method: "direct_api" as const,
+      primary_source_reference: `${BRREG_API}/enheter/${orgNumber}`,
+      license: "NLOD 2.0",
+      license_url: "https://data.norge.no/nlod/no/2.0",
+      attribution: "Kilde: Brønnøysundregistrene",
+      source_note:
+        "Norsk lisens for offentlige data (NLOD) 2.0. Brreg basic company data is on Norway's national high-value-dataset list.",
     },
   };
 });

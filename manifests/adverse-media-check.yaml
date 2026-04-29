@@ -213,3 +213,24 @@ limitations:
     text: Both paths filter to the last 12 months of articles. Older adverse coverage is not surfaced.
     category: freshness
     severity: info
+  - title: Entity name must match the corporate filing form, not consumer brand or descriptor
+    text: >-
+      Dilisense indexes coverage against the corporate filing name. Querying with a consumer brand
+      name or a country-descriptor suffix (e.g. "Folli Follie" misses; "FF Group" returns 12 hits.
+      "Danske Bank Estonia" misses; "Danske Bank" returns 11k+ hits including Estonian-branch
+      laundering coverage). For parent-branch entities, query the parent name. For
+      brand-vs-corporate, use the corporate filing name. We do NOT auto-rewrite the query
+      — audit trail must reflect what was actually asked.
+    category: accuracy
+    severity: warning
+    workaround: When total_hits=0 for a major entity, retry with the parent corporate name (drop country suffixes; drop consumer brand names in favour of the registered corporate name).
+  - title: Coverage gap for some major regional bank failures
+    text: >-
+      Empirically confirmed gap (2026-04-29 variant test): "Banca Popolare di Vicenza" — a major
+      2017 Italian bank failure — returns zero adverse-media hits across all reasonable name
+      variants (BPVi, Banca Popolare di Vicenza Scpa, Popolare di Vicenza). Dilisense's index
+      depth is uneven by country; Italian non-headline banking coverage appears materially weaker
+      than UK/DE/FR/EN equivalents.
+    category: coverage
+    severity: warning
+    workaround: For high-stakes Italian banking-counterparty screening, supplement with a native-source check.

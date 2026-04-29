@@ -160,7 +160,14 @@ registerCapability("polish-company-data", async (input: CapabilityInput) => {
     output,
     provenance: {
       source: "api-krs.ms.gov.pl",
+      source_url: `${KRS_API}/OdpisPelny/${krs}`,
       fetched_at: new Date().toISOString(),
+      acquisition_method: "direct_api" as const,
+      primary_source_reference: `${KRS_API}/OdpisPelny/${krs}?rejestr=P&format=json`,
+      attribution:
+        "Źródło: Krajowy Rejestr Sądowy (KRS), Ministerstwo Sprawiedliwości RP.",
+      source_note:
+        "KRS is the Polish National Court Register, operated by the Ministry of Justice. Basic company data is designated as an EU High-Value Dataset under Reg. (EU) 2023/138. Specific reuse-licence text is not declared on the API; reuse falls under the Polish 2021 open-data act (Ustawa o otwartych danych i ponownym wykorzystywaniu informacji sektora publicznego).",
     },
   };
 });

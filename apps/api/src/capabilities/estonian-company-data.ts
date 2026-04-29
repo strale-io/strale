@@ -118,11 +118,25 @@ registerCapability("estonian-company-data", async (input: CapabilityInput) => {
   const query = regCode || await extractCompanyName(trimmed);
   const output = await searchCompany(query);
 
+  const regCodeForRef = (output.registry_code as string) || "";
+  const primarySourceUrl = regCodeForRef
+    ? `https://ariregister.rik.ee/eng/company/${regCodeForRef}`
+    : "https://ariregister.rik.ee/eng";
+
   return {
     output,
     provenance: {
       source: "ariregister.rik.ee",
+      source_url: "https://ariregister.rik.ee/eng",
       fetched_at: new Date().toISOString(),
+      acquisition_method: "direct_api" as const,
+      primary_source_reference: primarySourceUrl,
+      license: "CC BY 4.0",
+      license_url: "https://creativecommons.org/licenses/by/4.0/legalcode",
+      attribution:
+        "Source: e-Business Register (Centre of Registers and Information Systems / RIK), Estonia.",
+      source_note:
+        "Estonian e-Business Register open data is published by RIK under CC BY 4.0 via avaandmed.ariregister.rik.ee. Designated as an EU High-Value Dataset under Reg. (EU) 2023/138.",
     },
   };
 });

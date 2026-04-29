@@ -153,7 +153,15 @@ registerCapability("finnish-company-data", async (input: CapabilityInput) => {
     output,
     provenance: {
       source: "avoindata.prh.fi",
+      source_url: `${PRH_API}?businessId=${encodeURIComponent(businessId)}`,
       fetched_at: new Date().toISOString(),
+      acquisition_method: "direct_api" as const,
+      primary_source_reference: `${PRH_API}?businessId=${encodeURIComponent(businessId)}`,
+      license: "CC BY 4.0",
+      license_url: "https://creativecommons.org/licenses/by/4.0/",
+      attribution: "Lähde: Patentti- ja rekisterihallitus (PRH)",
+      source_note:
+        "PRH/YTJ open data is published under Creative Commons Attribution 4.0 (CC BY 4.0) per avoindata.suomi.fi. Designated as an EU High-Value Dataset under Reg. (EU) 2023/138.",
     },
   };
 });

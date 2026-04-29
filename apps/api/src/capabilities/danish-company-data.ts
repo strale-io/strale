@@ -123,11 +123,24 @@ registerCapability("danish-company-data", async (input: CapabilityInput) => {
     output = await fetchCompany({ name: companyName });
   }
 
+  const cvrForRef = (output.cvr_number as string) || "";
+  const primarySourceUrl = cvrForRef
+    ? `https://datacvr.virk.dk/enhed/virksomhed/${cvrForRef}`
+    : "https://datacvr.virk.dk/";
+
   return {
     output,
     provenance: {
       source: "cvrapi.dk",
+      source_url: "https://cvrapi.dk/",
       fetched_at: new Date().toISOString(),
+      acquisition_method: "vendor_aggregation" as const,
+      upstream_vendor: "cvrapi.dk",
+      primary_source_reference: primarySourceUrl,
+      attribution:
+        "Data sourced from cvrapi.dk, a third-party JSON wrapper of the Danish Central Business Register (CVR). Underlying records are public-register data from Erhvervsstyrelsen (Danish Business Authority).",
+      source_note:
+        "Tier-2 vendor-mediated public records (DEC-20260428-A). cvrapi.dk's redistribution terms are not formally published; CVR basic company data is on the EU High-Value Datasets list (Reg. (EU) 2023/138). Migration to direct datacvr.virk.dk system-to-system access is queued.",
     },
   };
 });

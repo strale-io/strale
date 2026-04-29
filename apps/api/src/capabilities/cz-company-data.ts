@@ -125,7 +125,14 @@ registerCapability("cz-company-data", async (input: CapabilityInput) => {
     },
     provenance: {
       source: "ares.gov.cz",
+      source_url: `${ARES_API}/${ico}`,
       fetched_at: new Date().toISOString(),
+      acquisition_method: "direct_api" as const,
+      primary_source_reference: `${ARES_API}/${ico}`,
+      attribution:
+        "Zdroj: Administrativní registr ekonomických subjektů (ARES), Ministerstvo financí ČR.",
+      source_note:
+        "ARES is a Czech Ministry of Finance public registry; basic company data is designated as an EU High-Value Dataset under Reg. (EU) 2023/138. Specific reuse-licence text is not declared on the API; see ares.gov.cz for current terms.",
     },
   };
 });
