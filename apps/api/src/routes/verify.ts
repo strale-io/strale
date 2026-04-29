@@ -117,15 +117,35 @@ verifyRoute.get("/:transactionId", async (c) => {
   // the chain link itself is preserved.
   const targetRedacted = txn.deletedAt != null;
   const targetVerifiedLink = !targetRedacted && hashValid;
+  const targetDeletionReason = txn.deletionReason ?? null;
 
-  // CCO #4-polish: human-readable reason for the redacted state. Without
-  // this, a regulator hitting /v1/verify on a GDPR-erased row sees
-  // hash_valid: null with no context for WHY — could mistake a legitimate
-  // erasure for tampering. The reason explicitly explains the design.
-  const REDACTION_REASON =
-    "Row redacted under GDPR Art. 17 right-to-erasure. Original chain hash is preserved for chain continuity, " +
-    "but the per-row content hash no longer matches because input/output/audit_trail were zeroed by design. " +
-    "This is not tampering. See methodology_url for full deletion-vs-tampering distinction.";
+  // CCO #4-polish + World-class #6: human-readable reason for the redacted
+  // state. The text varies by deletion_reason so customers/regulators can
+  // distinguish GDPR Art. 17 erasure (customer-initiated) from retention
+  // policy purge (system-initiated). Pre-fix, both rendered the same
+  // generic "redacted under GDPR Art. 17" text — wrong for retention rows.
+  function redactionReasonText(reason: string | null): string {
+    if (reason === "retention_purge") {
+      return (
+        "Row redacted by Strale's retention policy after the configured retention window. " +
+        "Original chain hash is preserved for chain continuity; per-row content hash no longer matches " +
+        "because the row's input/output/audit_trail were zeroed by design. This is routine and not tampering."
+      );
+    }
+    if (reason === "user_request") {
+      return (
+        "Row redacted at the customer's request under GDPR Art. 17 right-to-erasure. " +
+        "Original chain hash is preserved for chain continuity; per-row content hash no longer matches " +
+        "because input/output/audit_trail were zeroed by design. This is a legitimate customer action and not tampering."
+      );
+    }
+    // Unknown reason or legacy redaction without deletion_reason set.
+    return (
+      "Row redacted (deletion_reason unknown). Original chain hash is preserved for chain continuity; " +
+      "per-row content hash no longer matches because the row's input/output/audit_trail were zeroed. " +
+      "This is not tampering, but the deletion_reason was not recorded — flagged for operator review."
+    );
+  }
 
   return c.json({
     transaction_id: transactionId,
@@ -135,12 +155,22 @@ verifyRoute.get("/:transactionId", async (c) => {
     verified: (targetVerifiedLink || targetRedacted) && chain.brokenLinks === 0,
     hash_valid: targetRedacted ? null : hashValid,
     redacted: targetRedacted,
-    ...(targetRedacted ? { redaction_reason: REDACTION_REASON } : {}),
+    ...(targetRedacted ? {
+      redaction_reason: redactionReasonText(targetDeletionReason),
+      deletion_reason: targetDeletionReason,
+    } : {}),
     chain: {
       length: chain.length + 1, // +1 for the target transaction
       verified_links: chain.verifiedLinks + (targetVerifiedLink ? 1 : 0),
       broken_links: chain.brokenLinks + (!targetRedacted && !hashValid ? 1 : 0),
       redacted_links: chain.redactedLinks + (targetRedacted ? 1 : 0),
+      // World-class #6: per-reason breakdown so a regulator walking the
+      // chain sees how many links are GDPR-erasure vs. retention-purge.
+      redacted_by_reason: {
+        user_request: chain.redactedByReason.user_request + (targetRedacted && targetDeletionReason === "user_request" ? 1 : 0),
+        retention_purge: chain.redactedByReason.retention_purge + (targetRedacted && targetDeletionReason === "retention_purge" ? 1 : 0),
+        other: chain.redactedByReason.other + (targetRedacted && targetDeletionReason !== "user_request" && targetDeletionReason !== "retention_purge" ? 1 : 0),
+      },
       reaches_genesis: chain.reachesGenesis,
       chain_start_date: chain.startDate,
       chain_end_date: txn.createdAt instanceof Date
@@ -177,6 +207,13 @@ export interface ChainWalkResult {
   // chain verify doesn't falsely report tampering when a customer exercises
   // their legal rights.
   redactedLinks: number;
+  // World-class #6: per-redaction breakdown so customers and regulators
+  // can distinguish three different events with three different regulator
+  // responses:
+  //   - user_request   → GDPR Art. 17 / DSAR-driven erasure (customer-initiated)
+  //   - retention_purge → routine retention policy (system-initiated)
+  //   - other            → any other deletion_reason; flagged for review
+  redactedByReason: { user_request: number; retention_purge: number; other: number };
   reachesGenesis: boolean;
   startDate: string | null;
   firstBrokenLinkId: string | null;
@@ -198,6 +235,10 @@ export async function walkChain(
   let verifiedLinks = 0;
   let brokenLinks = 0;
   let redactedLinks = 0;
+  // World-class #6: per-reason redaction tally
+  let redactedByUserRequest = 0;
+  let redactedByRetentionPurge = 0;
+  let redactedByOther = 0;
   let reachesGenesis = false;
   let startDate: string | null = null;
   let firstBrokenLinkId: string | null = null;
@@ -222,11 +263,17 @@ export async function walkChain(
     length++;
 
     // F-AUDIT-13/16: redacted rows (deletedAt IS NOT NULL) had their
-    // input/output/audit_trail zeroed under GDPR Art. 17. Their stored
-    // integrityHash predates the redaction; recomputing now will mismatch
-    // by design. Treat as a third category — neither verified nor broken.
+    // input/output/audit_trail zeroed under GDPR Art. 17 OR by retention
+    // purge. Their stored integrityHash predates the redaction; recomputing
+    // now will mismatch by design. Treat as a third category — neither
+    // verified nor broken. World-class #6: tally by deletion_reason so
+    // the response can report user_request vs retention_purge separately.
     if (prev.deletedAt != null) {
       redactedLinks++;
+      const reason = prev.deletionReason ?? "";
+      if (reason === "user_request") redactedByUserRequest++;
+      else if (reason === "retention_purge") redactedByRetentionPurge++;
+      else redactedByOther++;
       startDate = prev.createdAt instanceof Date
         ? prev.createdAt.toISOString().slice(0, 10)
         : String(prev.createdAt).slice(0, 10);
@@ -281,7 +328,21 @@ export async function walkChain(
     truncated = true;
   }
 
-  return { length, verifiedLinks, brokenLinks, redactedLinks, reachesGenesis, startDate, firstBrokenLinkId, truncated };
+  return {
+    length,
+    verifiedLinks,
+    brokenLinks,
+    redactedLinks,
+    redactedByReason: {
+      user_request: redactedByUserRequest,
+      retention_purge: redactedByRetentionPurge,
+      other: redactedByOther,
+    },
+    reachesGenesis,
+    startDate,
+    firstBrokenLinkId,
+    truncated,
+  };
 }
 
 // Pure helper, exported for unit testing. Mirrors the per-row classification
