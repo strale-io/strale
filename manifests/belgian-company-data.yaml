@@ -1,50 +1,70 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: belgian-company-data
 name: Belgian Company Data
 description: >-
-  Look up Belgian company data from KBO/BCE (Crossroads Bank for Enterprises). Accepts enterprise number (10 digits,
-  e.g. 0404.616.494) or fuzzy company name.
-category: data-extraction
-price_cents: 80
+  Look up Belgian company data from the KBO/BCE Crossroads Bank for Enterprises via the CBEAPI.be JSON wrapper. Accepts
+  enterprise number (10 digits, e.g. 0404.616.494) or fuzzy company name. Returns name, status, type, address,
+  registration date, NACE code, and derived BE VAT number.
+category: company-data
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - enterprise_number
+  required: []
   properties:
     enterprise_number:
       type: string
-      description: KBO/BCE enterprise number (e.g. 0404.616.494) or company name
+      description: KBO/BCE enterprise number (e.g. 0404.616.494)
+    company_name:
+      type: string
+      description: Belgian company name (fuzzy match)
+    task:
+      type: string
+      description: Free-text input — first matching enterprise number or name is used
 output_schema:
   type: object
   example:
-    status: unknown
-    address: null
+    company_name: ANHEUSER-BUSCH INBEV
+    registration_number: 0417.497.106
+    status: active
+    business_type: Société anonyme
+    address: Grand-Place 1 1000 Bruxelles BE
+    registration_date: "1977-08-02"
     industry: null
-    directors: null
-    company_name: null
-    business_type: null
-    registration_date: null
-    registration_number: null
+    directors: []
+    establishments_count: 5
+    abbreviation: A.P.I.
+    commercial_name: null
+    vat_number: BE0417497106
   properties:
-    status:
-      type: string
-    address:
-      type: string
     company_name:
-      type: string
-    business_type:
       type: string
     registration_number:
       type: string
-data_source: Kruispuntbank van Ondernemingen (Belgian Crossroads Bank for Enterprises)
-data_source_type: scrape
-transparency_tag: ai_generated
+    status:
+      type: string
+    business_type:
+      type: string
+    address:
+      type: string
+    registration_date:
+      type: string
+    industry:
+      type: string
+    directors:
+      type: array
+    establishments_count:
+      type: integer
+    abbreviation:
+      type: string
+    commercial_name:
+      type: string
+    vat_number:
+      type: string
+data_source: CBEAPI.be (vendor wrapper of KBO/BCE Crossroads Bank for Enterprises)
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
 maintenance_class: free-stable-api
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -56,47 +76,73 @@ test_fixtures:
     input:
       enterprise_number: "0417497106"
     expected_fields:
-      - field: status
-        operator: not_null
-        reliability: guaranteed
-      - field: status
-        operator: type
-        reliability: guaranteed
-        value: string
-      - field: address
-        operator: not_null
-        reliability: guaranteed
-      - field: address
-        operator: type
-        reliability: guaranteed
-        value: string
       - field: company_name
         operator: not_null
         reliability: guaranteed
-      - field: company_name
-        operator: type
+      - field: registration_number
+        operator: equals
         reliability: guaranteed
-        value: string
+        value: 0417.497.106
+      - field: status
+        operator: equals
+        reliability: guaranteed
+        value: active
       - field: business_type
         operator: not_null
         reliability: guaranteed
-      - field: business_type
-        operator: type
+      - field: address
+        operator: not_null
         reliability: guaranteed
-        value: string
+      - field: registration_date
+        operator: equals
+        reliability: guaranteed
+        value: "1977-08-02"
+      - field: directors
+        operator: not_null
+        reliability: guaranteed
+      - field: establishments_count
+        operator: not_null
+        reliability: guaranteed
+      - field: abbreviation
+        operator: equals
+        reliability: guaranteed
+        value: A.P.I.
+      - field: vat_number
+        operator: equals
+        reliability: guaranteed
+        value: BE0417497106
   health_check_input:
     enterprise_number: "0417497106"
 output_field_reliability:
-  status: guaranteed
-  address: guaranteed
   company_name: guaranteed
-  business_type: guaranteed
   registration_number: guaranteed
+  status: guaranteed
+  business_type: guaranteed
+  address: common
+  registration_date: common
+  industry: rare
+  directors: guaranteed
+  establishments_count: guaranteed
+  abbreviation: rare
+  commercial_name: rare
+  vat_number: guaranteed
 limitations:
-  - title: Extracted from KBO/BCE via Browserless — financial data availability varies by company size and filing obligations
-    text: Extracted from KBO/BCE via Browserless — financial data availability varies by company size and filing obligations
-    category: coverage
+  - title: Sourced via the CBEAPI.be vendor wrapper, not directly from FPS Economy
+    text: >-
+      This capability uses CBEAPI.be, a free third-party JSON wrapper over the Belgian KBO/BCE register, rather than the
+      official FPS Economy Open Data SFTP feed. The underlying records are public-register data, but a first-party
+      ingest of the official KBO Open Data is the longer-term target.
+    category: provenance
     severity: info
-    workaround: >-
-      Use the enterprise number from the response to query the NBB Central Balance Sheet Office for full financial
-      filings
+  - title: Daily refresh — sub-day filings may not be reflected immediately
+    text: >-
+      The KBO/BCE register is refreshed daily. Filings submitted today may not be reflected in the response until the
+      next daily refresh.
+    category: freshness
+    severity: info
+  - title: Personal data restrictions on direct marketing
+    text: >-
+      Personal-name data (e.g. for sole proprietorships) carried in this response may not be reused for direct marketing
+      purposes per the Belgian KBO Open Data terms.
+    category: legal
+    severity: warning
