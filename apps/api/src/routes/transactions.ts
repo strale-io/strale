@@ -6,6 +6,7 @@ import { authMiddleware, optionalAuthMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey, rateLimitByIp } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import { computeIntegrityHash, GENESIS_HASH } from "../lib/integrity-hash.js";
+import { walkChain } from "./verify.js";
 import { generateAuditToken } from "../lib/audit-token.js";
 import { sqsLabel, gradeFromScore } from "../lib/trust-labels.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
@@ -227,13 +228,15 @@ transactionsRoute.get(
 );
 
 // GET /v1/transactions/:id/verify — Verify cryptographic integrity of a transaction record
-// F-AUDIT-15: rate limit was rateLimitByKey(10, 1000) which only applies
-// when a user is authenticated. Unauthenticated callers (the legitimate
-// free-tier path) had effectively no rate limit on a chain-walking endpoint
-// — abuse vector. Switched to rateLimitByIp(10, 60_000) to match the public
-// /v1/verify/:id surface. Authenticated callers also get the IP-based cap,
-// which is fine: a verify request is cheap-but-DB-touching and 10/min/IP is
-// well above any legitimate workflow.
+// F-AUDIT-15 + MED-7: this endpoint adds an ownership check to the public
+// /v1/verify/:id (auth'd users see only their own; unauth see only free-tier).
+// Apart from that filter, it now uses the same walker, depth ceiling, and
+// response shape as the public endpoint — pre-fix it had its own walker
+// hardcoded to depth=10, no truncated flag, no redacted-aware handling, no
+// methodology_url. Two endpoints with divergent answers for the same row.
+const AUTH_VERIFY_MAX_DEPTH = 50;
+const AUTH_VERIFY_DEFAULT_DEPTH = 20;
+
 transactionsRoute.get(
   "/:id/verify",
   optionalAuthMiddleware,
@@ -243,10 +246,17 @@ transactionsRoute.get(
     const user = c.get("user") as { id: string } | undefined;
     const db = getDb();
 
-    // Look up transaction — same auth rules as /:id above
+    // MED-7: depth query param matches public endpoint.
+    const depthParam = parseInt(c.req.query("depth") ?? String(AUTH_VERIFY_DEFAULT_DEPTH), 10);
+    const maxDepth = Math.min(Math.max(Number.isFinite(depthParam) ? depthParam : AUTH_VERIFY_DEFAULT_DEPTH, 1), AUTH_VERIFY_MAX_DEPTH);
+
+    // Look up transaction — ownership filter is the unique value of this
+    // endpoint (auth'd: only your own; unauth: only free-tier). Note: we
+    // do NOT exclude redacted rows here — verify needs to be able to walk
+    // through (and report on) redacted predecessors per F-AUDIT-13/16.
     const condition = user
-      ? and(eq(transactions.id, id), eq(transactions.userId, user.id), isNull(transactions.deletedAt))
-      : and(eq(transactions.id, id), eq(transactions.isFreeTier, true), isNull(transactions.deletedAt));
+      ? and(eq(transactions.id, id), eq(transactions.userId, user.id))
+      : and(eq(transactions.id, id), eq(transactions.isFreeTier, true));
 
     const [txn] = await db
       .select()
@@ -258,42 +268,75 @@ transactionsRoute.get(
       return c.json(apiError("not_found", "Transaction not found."), 404);
     }
 
+    // CCO P0 #5: rows in 'unhashed_legacy' state predate the cryptographic
+    // chain (migration 0047 backfilled them). Same handling as public verify.
+    if (txn.complianceHashState === "unhashed_legacy") {
+      return c.json({
+        transaction_id: txn.id,
+        verified: null,
+        hash_valid: null,
+        legacy: true,
+        legacy_reason:
+          "Transaction predates Strale's cryptographic audit chain. " +
+          "It has no integrity_hash by design — see /v1/audit/:id for the reconstructed compliance record (informational, not hash-protected).",
+        transaction_metadata: {
+          created_at: txn.createdAt instanceof Date ? txn.createdAt.toISOString() : txn.createdAt,
+          status: txn.status,
+        },
+        methodology_url: "https://strale.dev/trust/methodology",
+      });
+    }
+
+    if (!txn.integrityHash) {
+      return c.json({
+        transaction_id: id,
+        verified: false,
+        hash_valid: false,
+        reason: "Transaction does not have an integrity hash (may be too old or in-progress).",
+      });
+    }
+
     // F-AUDIT-11: previousHash defaults to GENESIS_HASH, matching the worker
     // in jobs/integrity-hash-retry.ts and the public /v1/verify/:id endpoint.
-    // Empty-string default cannot reproduce the worker's hash for any row
-    // where previousHash is null (e.g. the very first row ever written), so
-    // verify would falsely report broken.
     const recomputed = computeIntegrityHash(txn, txn.previousHash ?? GENESIS_HASH);
     const storedHash = txn.integrityHash;
-    const verified = storedHash != null && recomputed === storedHash;
+    const hashValid = recomputed === storedHash;
 
-    // Walk chain backward
-    const chain: Array<{ id: string; hash: string | null; verified: boolean }> = [];
-    let current = txn;
-    for (let i = 0; i < 10 && current; i++) {
-      const hash = computeIntegrityHash(current, current.previousHash ?? GENESIS_HASH);
-      chain.push({
-        id: current.id,
-        hash: current.integrityHash,
-        verified: current.integrityHash != null && hash === current.integrityHash,
-      });
-      if (!current.previousHash) break;
-      const [prev] = await db
-        .select()
-        .from(transactions)
-        .where(eq(transactions.integrityHash, current.previousHash))
-        .limit(1);
-      if (!prev) break;
-      current = prev;
-    }
+    // MED-7: shared walker — eliminates depth + flag drift between the two
+    // endpoints. Deletion-aware handling (redacted_links) and truncation
+    // signalling are inherited.
+    const chain = await walkChain(db, txn.previousHash, maxDepth);
+
+    const targetRedacted = txn.deletedAt != null;
+    const targetVerifiedLink = !targetRedacted && hashValid;
 
     return c.json({
       transaction_id: txn.id,
-      integrity_hash: storedHash,
-      recomputed_hash: recomputed,
-      verified,
-      chain_length: chain.length,
-      chain,
+      verified: (targetVerifiedLink || targetRedacted) && chain.brokenLinks === 0,
+      hash_valid: targetRedacted ? null : hashValid,
+      redacted: targetRedacted,
+      ...(targetRedacted ? {
+        redaction_reason:
+          "Row redacted under GDPR Art. 17 right-to-erasure or retention policy. Original chain hash preserved for chain continuity; per-row content hash no longer matches by design.",
+      } : {}),
+      chain: {
+        length: chain.length + 1,
+        verified_links: chain.verifiedLinks + (targetVerifiedLink ? 1 : 0),
+        broken_links: chain.brokenLinks + (!targetRedacted && !hashValid ? 1 : 0),
+        redacted_links: chain.redactedLinks + (targetRedacted ? 1 : 0),
+        reaches_genesis: chain.reachesGenesis,
+        max_depth: maxDepth,
+        truncated: chain.truncated,
+        truncated_reason: chain.truncated ? `max_depth_reached (N=${maxDepth})` : null,
+        ...(chain.firstBrokenLinkId ? { first_broken_link_id: chain.firstBrokenLinkId } : {}),
+      },
+      transaction_metadata: {
+        created_at: txn.createdAt instanceof Date ? txn.createdAt.toISOString() : txn.createdAt,
+        transparency_marker: txn.transparencyMarker,
+        data_jurisdiction: txn.dataJurisdiction,
+        status: txn.status,
+      },
+      methodology_url: "https://strale.dev/trust/methodology",
     });
   },
 );

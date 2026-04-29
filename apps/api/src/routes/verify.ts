@@ -186,7 +186,9 @@ export interface ChainWalkResult {
   truncated: boolean;
 }
 
-async function walkChain(
+// Exported so the auth-gated /v1/transactions/:id/verify endpoint can
+// share the same walker (MED-7 convergence with the public surface).
+export async function walkChain(
   db: ReturnType<typeof getDb>,
   startHash: string | null,
   maxDepth: number,

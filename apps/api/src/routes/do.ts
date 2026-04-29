@@ -482,6 +482,11 @@ doRoute.post(
         .where(eq(wallets.userId, user.id))
         .limit(1);
 
+      // MED-5: include the stored audit body in the replay so an agent
+      // relying on compliance.shareable_url from the original call still
+      // gets it on retry. Pre-fix, replays returned no meta.audit at all
+      // and customers parsing audit data hit undefined. idempotency_replay:
+      // true distinguishes replays from original calls in customer logs.
       return c.json({
         transaction_id: existing.id,
         status: existing.status,
@@ -491,6 +496,10 @@ doRoute.post(
         wallet_balance_cents: wallet?.balanceCents ?? 0,
         output: existing.output,
         provenance: existing.provenance,
+        meta: {
+          idempotency_replay: true,
+          audit: existing.auditTrail,
+        },
       });
     }
   }
@@ -1910,7 +1919,10 @@ async function executeAsync(
   const { transactionId, walletId, balanceAfter } = setupResult;
   const startTime = Date.now();
 
-  // Fire-and-forget: execute in background, update DB when done
+  // Fire-and-forget: execute in background, update DB when done.
+  // MED-3: pass the SQS that was already computed before the async launch
+  // (instead of the prior hardcoded {score: 0, label: "unknown", pending: true}
+  // sentinel that made every async audit body claim no-quality-data).
   executeInBackground(
     db,
     executor,
@@ -1920,6 +1932,7 @@ async function executeAsync(
     capability,
     startTime,
     outputSchema,
+    sqs,
   ).catch((err) => {
     // Last-resort error logging — should not normally reach here
     logError("async-exec-unhandled", err, { transaction_id: transactionId });
@@ -1953,6 +1966,7 @@ async function executeInBackground(
   capability: CapabilityInfo,
   startTime: number,
   outputSchema: Record<string, unknown>,
+  sqs: { score: number; label: string; trend: string; pending: boolean },
 ) {
   try {
     const capResult = await executeWithRetry(executor, executionInput, capability);
@@ -1971,7 +1985,11 @@ async function executeInBackground(
       output: capResult.output,
       outputSchema,
       provenance: capResult.provenance,
-      sqs: { score: 0, label: "unknown", trend: "stable", pending: true },
+      // MED-3: was previously hardcoded { score: 0, label: "unknown",
+      // pending: true } even though SQS had been computed before the
+      // async launch. Now threaded from executeAsync so the audit body
+      // reflects the real quality signal at execution time.
+      sqs: { score: sqs.score, label: sqs.label, trend: sqs.trend ?? "stable", pending: sqs.pending },
       requestContext: undefined, // background execution — no request context available
     });
 
