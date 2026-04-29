@@ -43,6 +43,29 @@ verifyRoute.get("/:transactionId", async (c) => {
     return c.json(apiError("not_found", "Transaction not found."), 404);
   }
 
+  // CCO P0 #5: rows in 'unhashed_legacy' state predate the cryptographic
+  // chain (migration 0047 backfilled them; migration 0052 marked them
+  // honestly). They have integrity_hash IS NULL by definition. Report as
+  // a legitimate state rather than as missing/broken — same treatment as
+  // redacted rows. /v1/audit/:id stamps these too.
+  if (txn.complianceHashState === "unhashed_legacy") {
+    return c.json({
+      transaction_id: transactionId,
+      verified: null,
+      hash_valid: null,
+      legacy: true,
+      legacy_reason:
+        "Transaction predates Strale's cryptographic audit chain. " +
+        "It has no integrity_hash by design — see /v1/audit/:id for the reconstructed compliance record (informational, not hash-protected). " +
+        "Transactions executed after the chain was finalised carry hash_valid: true | false here.",
+      transaction_metadata: {
+        created_at: txn.createdAt instanceof Date ? txn.createdAt.toISOString() : txn.createdAt,
+        status: txn.status,
+      },
+      methodology_url: "https://strale.dev/trust/methodology",
+    });
+  }
+
   if (!txn.integrityHash) {
     return c.json({
       transaction_id: transactionId,

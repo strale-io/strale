@@ -382,6 +382,12 @@ auditRoute.get("/:transactionId", async (c) => {
       503,
     );
   }
+  // CCO P0 #5: rows that predate the cryptographic chain (migration 0047
+  // backfilled them as 'complete' without computing a hash). Migration
+  // 0052 moved them to 'unhashed_legacy'. Serve them — their 90-day
+  // audit URLs still resolve — but stamp the response so customers and
+  // regulators see the row is informational, not hash-protected.
+  const isUnhashedLegacy = txn.complianceHashState === "unhashed_legacy";
 
   // Resolve entity → fetch its compliance profile.
   let profile: ComplianceProfile | null = null;
@@ -429,5 +435,18 @@ auditRoute.get("/:transactionId", async (c) => {
     transaction_status: txn.status,
     generated_at: new Date().toISOString(),
     note: "This compliance record was generated automatically by Strale. For questions: compliance@strale.io",
+    // CCO P0 #5: explicit chain-state stamp. For 'unhashed_legacy' rows,
+    // a clear disclaimer that the row predates the cryptographic chain
+    // and is not third-party verifiable via /v1/verify.
+    audit_chain_state: isUnhashedLegacy ? "unhashed_legacy" : "hashed",
+    ...(isUnhashedLegacy
+      ? {
+          unhashed_legacy_disclaimer:
+            "This transaction predates Strale's cryptographic audit chain (introduced in migration 0047, finalised by 0052). " +
+            "The compliance record above is reconstructed from execution metadata but is NOT hash-protected; " +
+            "/v1/verify will return hash_valid: null for this transaction by design. " +
+            "Transactions executed after the chain was finalised carry hash_valid: true | false on /v1/verify and are independently verifiable.",
+        }
+      : {}),
   });
 });
