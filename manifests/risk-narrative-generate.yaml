@@ -36,7 +36,7 @@ output_schema:
       - sanctions clear
     checks_performed: 3
     data_sources_consulted:
-      - Claude Haiku risk assessment
+      - Claude Sonnet risk assessment
     raw_checks:
       company_exists:
         pass: true
@@ -63,7 +63,7 @@ output_schema:
       type: array
     raw_checks:
       type: object
-data_source: Claude Haiku (Anthropic API)
+data_source: Claude Sonnet (Anthropic API)
 data_source_type: api
 transparency_tag: ai_generated
 freshness_category: computed

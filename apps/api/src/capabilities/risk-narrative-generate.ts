@@ -6,6 +6,11 @@ const SYSTEM_PROMPT = `You are providing factual observations about data found i
 
 Generate a risk assessment narrative from the structured check results provided. Follow these rules:
 
+CITATION RULES (per DEC-20260428-B engineering bar — non-negotiable):
+- Every flag must reference the specific check_results source that produced it (e.g., "from sanctions-check", "from domain-age-check"). Use the source_check field on each flag.
+- Never assert a fact that is not present in the structured check_results input. If the data does not say it, you do not say it.
+- Frame as "screening checks found" not "X did Y". You are summarising what the data shows, not making a finding about a person or entity.
+
 LANGUAGE RULES:
 - Never use technical terms without explanation ("MX records" → "email server configuration")
 - Never use acronyms without spelling them out first
@@ -38,13 +43,13 @@ Respond ONLY with valid JSON matching this schema:
   "risk_level": "none|low|medium|high|critical",
   "risk_score": 0-100,
   "summary": "2-3 sentence overview",
-  "flags": [{ "severity": "...", "finding": "...", "recommendation": "..." }],
+  "flags": [{ "severity": "...", "finding": "...", "recommendation": "...", "source_check": "name of the check_results key that produced this finding" }],
   "passed_checks": ["list of checks that passed"],
   "checks_performed": number,
   "data_sources_consulted": ["list of data sources"]
 }`;
 
-/** Algorithmic fallback when Haiku is unavailable */
+/** Algorithmic fallback when Sonnet is unavailable */
 function algorithmicAssessment(
   checkResults: Record<string, any>,
   context: string,
@@ -180,9 +185,13 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
 
   try {
     const client = new Anthropic({ apiKey });
+    // Sonnet 4.6 for risk-narrative synthesis: judgment-heavy, false-positive cost
+    // is high, defamation risk if synthesis is sloppy. Per chat 2026-04-28 + DEC-20260428-B.
+    // Effective cost goes from ~EUR 0.05–0.08 to ~EUR 0.15–0.25 per call (3x), still well
+    // within the leg's price envelope. Haiku stays for simple extraction tasks elsewhere.
     const r = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 800,
+      model: "claude-sonnet-4-6",
+      max_tokens: 1500,
       system: SYSTEM_PROMPT,
       messages: [
         {
@@ -227,10 +236,10 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
         data_sources_consulted: parsed.data_sources_consulted ?? [],
         raw_checks: checkResults,
       },
-      provenance: { source: "claude-haiku", fetched_at: new Date().toISOString() },
+      provenance: { source: "claude-sonnet", fetched_at: new Date().toISOString() },
     };
   } catch (err) {
-    logError("risk-narrative-generate-haiku-failed", err);
+    logError("risk-narrative-generate-sonnet-failed", err);
     const output = algorithmicAssessment(checkResults, context);
     return {
       output: { ...output, raw_checks: checkResults },
