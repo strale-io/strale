@@ -24,6 +24,7 @@ import { apiError } from "../lib/errors.js";
 import { executeSolution } from "../lib/solution-executor.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { logError } from "../lib/log.js";
+import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import type { AppEnv } from "../types.js";
 
 export const solutionExecuteRoute = new Hono<AppEnv>();
@@ -143,7 +144,13 @@ solutionExecuteRoute.post(
             input: inputs as Record<string, unknown>,
             priceCents: sol.priceCents,
             transparencyMarker: sol.transparencyTag ?? "mixed",
-            dataJurisdiction: "EU",
+            // F-AUDIT-01 / CCO #3: previously hardcoded "EU" while running in
+            // US East. Solutions always include orchestration through Strale's
+            // own processing region, plus US for any LLM step (Anthropic).
+            // transparencyTag "mixed" or "ai_generated" → adds US automatically.
+            dataJurisdiction:
+              getProcessingJurisdictions("stable_api", sol.transparencyTag ?? "mixed").join(",") ||
+              "unknown",
             paymentMethod: "wallet",
           })
           .returning({ id: transactions.id });

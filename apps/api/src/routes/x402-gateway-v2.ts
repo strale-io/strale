@@ -30,6 +30,7 @@ import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { executeSolution } from "../lib/solution-executor.js";
 import { logError } from "../lib/log.js";
+import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -45,7 +46,13 @@ interface X402Capability {
   priceCents: number;
   matrixSqs: string | null;
   transparencyTag: string | null;
-  dataJurisdiction: string | null;
+  // CCO #3 / F-AUDIT-01: previously stored capabilities.geography here
+  // and passed it as dataJurisdiction at record time. Conceptual error:
+  // geography is "where the data is about" (a property of the dataset);
+  // dataJurisdiction is "where the call was processed" (a property of
+  // the runtime). The two are unrelated under GDPR Art. 30/44–49.
+  // dataJurisdiction is now computed at record time from Strale's region
+  // + transparencyTag — see recordX402Transaction.
 }
 
 interface X402Solution {
@@ -85,7 +92,6 @@ async function ensureCache(): Promise<void> {
         priceCents: capabilities.priceCents,
         matrixSqs: capabilities.matrixSqs,
         transparencyTag: capabilities.transparencyTag,
-        dataJurisdiction: capabilities.geography,
       })
       .from(capabilities)
       .where(and(
@@ -110,7 +116,6 @@ async function ensureCache(): Promise<void> {
         priceCents: row.priceCents,
         matrixSqs: row.matrixSqs ?? null,
         transparencyTag: row.transparencyTag ?? null,
-        dataJurisdiction: row.dataJurisdiction ?? null,
       });
     }
 
@@ -444,7 +449,7 @@ interface RecordX402Args {
   priceCents: number;
   priceUsd: number;
   transparencyTag: string | null;
-  dataJurisdiction: string | null;
+  // dataJurisdiction is computed inside recordX402Transaction; not passed in.
   settlementId?: string;
   payerAddress?: string | null;
   error?: string;
@@ -453,6 +458,16 @@ interface RecordX402Args {
 async function recordX402Transaction(args: RecordX402Args): Promise<string | null> {
   try {
     const db = getDb();
+    // F-AUDIT-01 / CCO #3: dataJurisdiction must be the actual processing
+    // region(s), not capabilities.geography (which is "where the data is
+    // about" — a property of the dataset, not the call). Compute from
+    // Strale's region + LLM provider region based on transparencyTag.
+    // Prior code passed args.dataJurisdiction populated from the cache's
+    // capabilities.geography read (line ~88) and defaulted to "EU".
+    const jurisdictions = getProcessingJurisdictions(
+      "stable_api",
+      args.transparencyTag,
+    ).join(",") || "unknown";
     const [row] = await db.insert(transactions).values({
       userId: null,
       capabilityId: args.capabilityId,
@@ -473,7 +488,7 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
         timestamp: new Date().toISOString(),
       },
       transparencyMarker: args.transparencyTag ?? "algorithmic",
-      dataJurisdiction: args.dataJurisdiction ?? "EU",
+      dataJurisdiction: jurisdictions,
       isFreeTier: false,
       paymentMethod: "x402",
       x402SettlementId: args.settlementId ?? null,
@@ -657,6 +672,9 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
 
   // Record transaction (fire-and-forget) — mirrors capability path so x402
   // solution calls show up in activity scripts and audit logs.
+  // F-AUDIT-01 / CCO #3: dataJurisdiction is no longer passed here; it's
+  // computed inside recordX402Transaction from Strale's actual region +
+  // LLM reach derived from transparencyTag.
   const solPayerAddress = verified ? extractPayerAddress(verified) : null;
   recordX402Transaction({
     capabilityId: null,
@@ -668,7 +686,6 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
     priceCents: sol.priceCents,
     priceUsd: sol.x402PriceUsd,
     transparencyTag: "mixed",
-    dataJurisdiction: "EU",
     settlementId,
     payerAddress: solPayerAddress,
   });
@@ -843,7 +860,6 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
     priceCents: cap.priceCents,
     priceUsd: cap.x402PriceUsd,
     transparencyTag: cap.transparencyTag,
-    dataJurisdiction: cap.dataJurisdiction,
     settlementId,
     payerAddress,
   });
