@@ -372,6 +372,27 @@
       "when": 1777672800000,
       "tag": "0051_capability_insert_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1777672801000,
+      "tag": "0052_unhashed_legacy_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1777672802000,
+      "tag": "0053_x402_orphan_settlements",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1777672803000,
+      "tag": "0054_append_only_chain_trigger",
+      "breakpoints": true
     }
   ]
 }

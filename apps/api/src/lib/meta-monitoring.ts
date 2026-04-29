@@ -15,6 +15,12 @@ import { and, eq, desc, sql, inArray, lt, lte, isNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, testSuites, testResults, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "./health-monitor.js";
+import {
+  checkChainPendingBacklog,
+  checkChainFailedCount,
+  checkChainStuckDeferred,
+  checkChainUnhashedLegacyCount,
+} from "./chain-health-monitoring.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -936,40 +942,217 @@ export async function checkSchedulerHeartbeat(): Promise<MetaCheckResult> {
   }
 }
 
+// ─── Check 17: Capability test-staleness fleet count (CRITICAL, hourly) ────
+
+/**
+ * Check 17: Capability staleness (CRITICAL)
+ * Counts active capabilities whose last_tested_at exceeds 4× their tier
+ * interval (the "aging → stale" boundary in lib/freshness-decay.ts). The
+ * scheduler-heartbeat check answers "did the scheduler tick?", which can be
+ * true while individual caps go untested for weeks (the 2026-04-26 incident).
+ * This check answers the right invariant: "are caps actually getting tested
+ * at expected cadence?".
+ *
+ * Threshold: alert when more than STALE_THRESHOLD caps are stale, or when
+ * never-tested active caps exist.
+ */
+const STALE_THRESHOLD = 5;
+
+export async function checkCapabilityStaleness(): Promise<MetaCheckResult> {
+  const check = "capability_staleness";
+  try {
+    const db = getDb();
+    const rows = await db.execute(sql`
+      WITH cap_tier AS (
+        SELECT
+          c.slug,
+          c.last_tested_at,
+          MIN(ts.schedule_tier) AS tier
+        FROM capabilities c
+        INNER JOIN test_suites ts
+          ON ts.capability_slug = c.slug AND ts.active = true
+        WHERE c.is_active = true
+        GROUP BY c.slug, c.last_tested_at
+      )
+      SELECT
+        slug,
+        last_tested_at,
+        tier,
+        CASE
+          WHEN last_tested_at IS NULL THEN NULL
+          ELSE EXTRACT(EPOCH FROM (NOW() - last_tested_at)) / 3600
+        END AS hours_since
+      FROM cap_tier
+      WHERE
+        last_tested_at IS NULL
+        OR last_tested_at < NOW() - (
+          CASE tier
+            WHEN 'A' THEN INTERVAL '24 hours'
+            WHEN 'B' THEN INTERVAL '96 hours'
+            WHEN 'C' THEN INTERVAL '288 hours'
+            ELSE INTERVAL '96 hours'
+          END
+        )
+      ORDER BY last_tested_at ASC NULLS FIRST
+    `);
+    const stale = (Array.isArray(rows) ? rows : (rows as any).rows) as Array<{
+      slug: string;
+      last_tested_at: Date | null;
+      tier: string;
+      hours_since: string | null;
+    }>;
+
+    const neverTested = stale.filter((s) => s.last_tested_at === null);
+    const overdueCount = stale.length;
+    const affected = stale.slice(0, 20).map((s) => s.slug);
+
+    if (overdueCount === 0) {
+      return {
+        check,
+        severity: "info",
+        passed: true,
+        details: "All active capabilities tested within 4× tier interval",
+      };
+    }
+
+    if (overdueCount <= STALE_THRESHOLD && neverTested.length === 0) {
+      return {
+        check,
+        severity: "warning",
+        passed: true,
+        details: `${overdueCount} capabilities stale (within tolerance of ${STALE_THRESHOLD})`,
+        affected,
+      };
+    }
+
+    const severity: "critical" | "warning" =
+      overdueCount > STALE_THRESHOLD * 4 || neverTested.length > 0 ? "critical" : "warning";
+
+    await _logMetaEvent(
+      check,
+      severity,
+      `${overdueCount} active capabilities stale beyond 4× tier interval (${neverTested.length} never tested)`,
+      { stale_count: overdueCount, never_tested_count: neverTested.length, affected },
+    );
+
+    return {
+      check,
+      severity,
+      passed: false,
+      details: `${overdueCount} capabilities stale (${neverTested.length} never tested) — scheduler may be falling behind or skipping these`,
+      affected,
+    };
+  } catch (err) {
+    return {
+      check,
+      severity: "warning",
+      passed: false,
+      details: `Check failed: ${err instanceof Error ? err.message : err}`,
+    };
+  }
+}
+
+// ─── Check registry ──────────────────────────────────────────────────────────
+//
+// Single source of truth for which checks run on which schedule. The runner
+// functions below (runHourlyChecks / runDailyChecks / runWeeklyChecks) all
+// derive their work from this registry — adding a new check means adding a
+// row here, not editing three call sites.
+//
+// `meta-monitoring.test.ts` asserts that every exported `check*` function in
+// this module is either listed below OR present in CHECKS_EXEMPT_FROM_AUTO_RUN.
+// That assertion is what closes the "wrote a watchdog, never wired it" gap
+// that hid the 2026-04-26 scheduler staleness for 9 days.
+
+export type CheckSchedule = "post_test_run" | "hourly" | "daily" | "weekly";
+
+export interface CheckRegistration {
+  name: string;
+  fn: () => Promise<MetaCheckResult>;
+  schedule: Exclude<CheckSchedule, "post_test_run">;
+}
+
+export const CHECK_REGISTRY: CheckRegistration[] = [
+  // Hourly — fast critical-path checks of the platform's own pulse
+  { name: "scheduler_heartbeat",   fn: checkSchedulerHeartbeat,   schedule: "hourly" },
+  { name: "capability_staleness",  fn: checkCapabilityStaleness,  schedule: "hourly" },
+  // CCO P0 #14 / CRIT-11: integrity-hash chain health. The audit subsystem
+  // is the platform's central trust promise — none of the prior 17 checks
+  // touched it. A silent retry-worker stall = pending rows pile up =
+  // /v1/audit/:id 202s indefinitely = customers can't get compliance
+  // records and the brand promise fails silently. See chain-health-monitoring.ts.
+  { name: "chain_pending_backlog",       fn: checkChainPendingBacklog,       schedule: "hourly" },
+  { name: "chain_failed_count",          fn: checkChainFailedCount,          schedule: "hourly" },
+  { name: "chain_stuck_deferred",        fn: checkChainStuckDeferred,        schedule: "hourly" },
+
+  // Daily — pipeline + free-tier health
+  { name: "validation_queue_stuck", fn: checkValidationQueueStuck, schedule: "daily" },
+  { name: "probation_timeout",     fn: checkProbationTimeout,     schedule: "daily" },
+  { name: "degraded_count",        fn: checkDegradedCount,        schedule: "daily" },
+  { name: "free_tier_health",      fn: checkFreeTierHealth,       schedule: "daily" },
+  // Daily — informational count of pre-chain rows from migration 0047/0052.
+  // Stable count; not an alert; verifies methodology page disclosure.
+  { name: "chain_unhashed_legacy_count", fn: checkChainUnhashedLegacyCount, schedule: "daily" },
+
+  // Weekly — coverage + SQS integrity sweeps (DB-heavy)
+  { name: "orphaned_test_suites",  fn: checkOrphanedTestSuites,   schedule: "weekly" },
+  { name: "untested_capabilities", fn: checkUntestedCapabilities, schedule: "weekly" },
+  { name: "stale_tests",           fn: checkStaleTests,           schedule: "weekly" },
+  { name: "missing_test_coverage", fn: checkMissingTestCoverage,  schedule: "weekly" },
+  { name: "score_without_evidence", fn: checkScoreWithoutEvidence, schedule: "weekly" },
+  { name: "stuck_scores",          fn: checkStuckScores,          schedule: "weekly" },
+  { name: "impossible_scores",     fn: checkImpossibleScores,     schedule: "weekly" },
+  { name: "sqs_pass_rate_divergence", fn: checkSqsPassRateDivergence, schedule: "weekly" },
+  { name: "methodology_drift",     fn: checkMethodologyDrift,     schedule: "weekly" },
+];
+
+/**
+ * Names of `check*` exports that are intentionally NOT in the registry.
+ * Each entry must explain why; the registry assertion test reads these
+ * comments when a maintainer is debugging a failure.
+ *
+ *   - check_new_failure_alert / check_infrastructure_health: take a
+ *     `BatchTestResult[]` argument and are invoked per-test-batch from
+ *     test-runner.ts (not on a fixed cadence).
+ */
+export const CHECKS_EXEMPT_FROM_AUTO_RUN: ReadonlySet<string> = new Set([
+  "checkNewFailures",
+  "checkInfrastructureHealth",
+]);
+
 // ─── Batch runners ───────────────────────────────────────────────────────────
 
-/** Run all 8D daily checks and log a summary event */
-export async function runDailyChecks(): Promise<MetaCheckResult[]> {
-  const results = await Promise.all([
-    checkValidationQueueStuck(),
-    checkProbationTimeout(),
-    checkDegradedCount(),
-    checkFreeTierHealth(),
-    checkSchedulerHeartbeat(),
-  ]);
-  await _logSummary("daily", results);
+async function runScheduled(
+  schedule: CheckRegistration["schedule"],
+  parallel: boolean,
+): Promise<MetaCheckResult[]> {
+  const checks = CHECK_REGISTRY.filter((c) => c.schedule === schedule);
+  let results: MetaCheckResult[];
+  if (parallel) {
+    results = await Promise.all(checks.map((c) => c.fn()));
+  } else {
+    results = [];
+    for (const c of checks) {
+      results.push(await c.fn());
+    }
+  }
+  await _logSummary(schedule, results);
   return results;
 }
 
-/** Run all 8B + 8C weekly checks and log a summary event */
+/** Hourly checks: scheduler heartbeat + capability staleness */
+export async function runHourlyChecks(): Promise<MetaCheckResult[]> {
+  return runScheduled("hourly", true);
+}
+
+/** Daily checks: pipeline + free-tier health */
+export async function runDailyChecks(): Promise<MetaCheckResult[]> {
+  return runScheduled("daily", true);
+}
+
+/** Weekly checks: coverage + SQS integrity (sequential — DB contention) */
 export async function runWeeklyChecks(): Promise<MetaCheckResult[]> {
-  const results: MetaCheckResult[] = [];
-  // Run sequentially to avoid DB contention
-  for (const fn of [
-    checkOrphanedTestSuites,
-    checkUntestedCapabilities,
-    checkStaleTests,
-    checkMissingTestCoverage,
-    checkScoreWithoutEvidence,
-    checkStuckScores,
-    checkImpossibleScores,
-    checkSqsPassRateDivergence,
-    checkMethodologyDrift,
-  ]) {
-    results.push(await fn());
-  }
-  await _logSummary("weekly", results);
-  return results;
+  return runScheduled("weekly", false);
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -989,7 +1172,7 @@ async function _logMetaEvent(
 }
 
 async function _logSummary(
-  frequency: "daily" | "weekly",
+  frequency: "hourly" | "daily" | "weekly",
   results: MetaCheckResult[],
 ): Promise<void> {
   const passed = results.filter((r) => r.passed).length;
