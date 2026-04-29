@@ -1,0 +1,154 @@
+slug: singapore-company-data
+name: Singapore Company Data
+description: >-
+  Look up Singapore entity data from the Accounting and Corporate Regulatory Authority (ACRA) via the data.gov.sg CKAN
+  open-data API. Accepts UEN (9-10 alphanumeric) or entity name. Returns name, UEN, entity type, status, registration
+  date, and registered address.
+category: company-data
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required: []
+  properties:
+    uen:
+      type: string
+      description: Unique Entity Number (e.g. 197200078R)
+    company_name:
+      type: string
+      description: Singapore entity name (fuzzy match, prefer exact substring)
+    task:
+      type: string
+      description: Free-text input — first matching UEN or entity name is used
+output_schema:
+  type: object
+  example:
+    entity_name: SINGAPORE AIRLINES LIMITED
+    uen: 197200078R
+    entity_type: Local Company
+    status: Registered
+    is_active: true
+    issuance_agency: ACRA
+    uen_issue_date: "1972-01-28"
+    registered_street: AIRLINE ROAD
+    registered_postal_code: "819829"
+    registered_address: AIRLINE ROAD, Singapore 819829
+    jurisdiction: SG
+  properties:
+    entity_name:
+      type: string
+    uen:
+      type: string
+    entity_type:
+      type: string
+    status:
+      type: string
+    is_active:
+      type: boolean
+    issuance_agency:
+      type: string
+    uen_issue_date:
+      type: string
+    registered_street:
+      type: string
+    registered_postal_code:
+      type: string
+    registered_address:
+      type: string
+    jurisdiction:
+      type: string
+data_source: data.gov.sg — Entities Registered with ACRA (CKAN datastore_search API)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - address
+  - professional
+geography: apac
+test_fixtures:
+  known_answer:
+    input:
+      uen: 197200078R
+    expected_fields:
+      - field: entity_name
+        operator: not_null
+        reliability: guaranteed
+      - field: uen
+        operator: equals
+        reliability: guaranteed
+        value: 197200078R
+      - field: entity_type
+        operator: not_null
+        reliability: guaranteed
+      - field: status
+        operator: equals
+        reliability: guaranteed
+        value: Registered
+      - field: is_active
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: issuance_agency
+        operator: equals
+        reliability: guaranteed
+        value: ACRA
+      - field: uen_issue_date
+        operator: equals
+        reliability: guaranteed
+        value: "1972-01-28"
+      - field: registered_street
+        operator: not_null
+        reliability: guaranteed
+      - field: registered_postal_code
+        operator: equals
+        reliability: guaranteed
+        value: "819829"
+      - field: registered_address
+        operator: not_null
+        reliability: guaranteed
+      - field: jurisdiction
+        operator: equals
+        reliability: guaranteed
+        value: SG
+  health_check_input:
+    uen: 197200078R
+output_field_reliability:
+  entity_name: guaranteed
+  uen: guaranteed
+  entity_type: guaranteed
+  status: guaranteed
+  is_active: guaranteed
+  issuance_agency: guaranteed
+  uen_issue_date: guaranteed
+  registered_street: common
+  registered_postal_code: common
+  registered_address: common
+  jurisdiction: guaranteed
+limitations:
+  - title: Address is street + postal code only — no building number or unit
+    text: >-
+      The data.gov.sg ACRA dataset publishes only registered street name and postal code. Building number, unit number,
+      and full street address are not included. For complete address detail, query ACRA BizFile+ directly.
+    category: coverage
+    severity: info
+  - title: Monthly refresh — sub-month filings may not be reflected immediately
+    text: >-
+      The ACRA Open Data dataset is republished monthly. Filings made within the current month may not be reflected in
+      the API response until the next monthly refresh.
+    category: freshness
+    severity: warning
+  - title: Open data covers core register only — directors, shareholders, and financials require BizFile+ access
+    text: >-
+      This capability returns the structured register record only. Directors, shareholders, beneficial owners, share
+      capital, and financial filings require a paid lookup at ACRA BizFile+ and are not included in this response.
+    category: coverage
+    severity: info
+  - title: Personal-name data should not be used for direct marketing
+    text: >-
+      Sole proprietorships and partnerships carry the proprietor's personal name in the entity_name field. This data is
+      published as open data but should not be reused for direct marketing per the Singapore Open Data Licence.
+    category: legal
+    severity: warning

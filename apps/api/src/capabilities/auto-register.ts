@@ -29,7 +29,13 @@ const DEACTIVATED = new Map<string, string>([
   ],
   ["hong-kong-company-data", "No viable data source identified"],
   ["indian-company-data", "No viable data source identified"],
-  ["singapore-company-data", "No viable data source identified"],
+  // singapore-company-data REACTIVATED 2026-04-29: migrated from
+  // OpenCorporates.com Browserless scrape (Tier-1 violation) to direct
+  // data.gov.sg CKAN datastore_search API against the ACRA "Entities
+  // Registered with ACRA" dataset (~2.1M records, monthly refresh,
+  // Singapore Open Data Licence v1.0 — commercial reuse permitted with
+  // attribution). acquisition_method: direct_api per DEC-20260428-A
+  // Tier 2.
   [
     "annual-report-extract",
     // DEC-20260421-SE-B: Previous runtime fetched allabolag.se/{orgnr}/arsredovisning and
