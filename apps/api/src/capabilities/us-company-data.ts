@@ -107,7 +107,10 @@ registerCapability("us-company-data", async (input: CapabilityInput) => {
     output,
     provenance: {
       source: "sec.gov/edgar",
+      source_url: `${EDGAR_COMPANY}/CIK${cik.padStart(10, "0")}.json`,
       fetched_at: new Date().toISOString(),
+      acquisition_method: "direct_api" as const,
+      primary_source_reference: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${cik.padStart(10, "0")}`,
     },
   };
 });

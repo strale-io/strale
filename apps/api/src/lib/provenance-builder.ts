@@ -9,6 +9,16 @@
 
 import { createHash } from "node:crypto";
 
+// Acquisition method per DEC-20260428-A (third-party scraping doctrine).
+// Identifies how the upstream vendor obtained the data, so customers can
+// reason about provenance under EU AMLR / US BSA enhanced-due-diligence.
+export type AcquisitionMethod =
+  | "direct_api"        // direct call to authoritative API (e.g. SEC EDGAR, GLEIF, VIES)
+  | "licensed_bulk"     // bulk feed under licence (e.g. FL Sunbiz download, vendor-licensed snapshot)
+  | "vendor_aggregation" // multi-source aggregator with mixed methods
+  | "vendor_scraping"   // vendor scrapes public-records portal (permitted under DEC-20260428-A Tier 2)
+  | "primary_source";    // direct primary-source document retrieval (e.g. court filing, registry doc)
+
 export interface RichProvenance {
   source: string;
   source_url?: string;
@@ -24,6 +34,13 @@ export interface RichProvenance {
   license?: string;
   license_url?: string;
   source_note?: string;
+
+  // Upstream sourcing disclosure (DEC-20260428-A Tier 2(c)(d)).
+  // Set when data passes through a third-party vendor before reaching Strale.
+  // Required for vendor_scraping; recommended for licensed_bulk and vendor_aggregation.
+  upstream_vendor?: string;            // e.g. "cobalt-intelligence", "govlink", "brightquery"
+  acquisition_method?: AcquisitionMethod;
+  primary_source_reference?: string;   // URL, filing ID, screenshot handle, document hash
 
   // AI-specific fields
   ai_model?: string;
