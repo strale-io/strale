@@ -1132,6 +1132,7 @@ async function executeFreeTier(
       latencyMs,
       executionInput,
       output: capResult.output,
+      outputSchema,
       provenance: capResult.provenance,
       sqs,
       requestContext: c.get("requestContext" as any),
@@ -1339,6 +1340,7 @@ async function executeFreeTierAuthenticated(
       latencyMs,
       executionInput,
       output: capResult.output,
+      outputSchema,
       provenance: capResult.provenance,
       sqs,
       requestContext: c.get("requestContext" as any),
@@ -1717,6 +1719,7 @@ async function executeSync(
     latencyMs: result.latencyMs,
     executionInput,
     output: result.output,
+    outputSchema,
     provenance: result.provenance,
     sqs: { score: sqs.score, label: sqs.label, trend: sqs.trend ?? "stable", pending: sqs.pending },
     qualityPassRate,
@@ -1963,6 +1966,7 @@ async function executeInBackground(
       latencyMs,
       executionInput,
       output: capResult.output,
+      outputSchema,
       provenance: capResult.provenance,
       sqs: { score: 0, label: "unknown", trend: "stable", pending: true },
       requestContext: undefined, // background execution — no request context available
@@ -2112,7 +2116,41 @@ function hashInput(input: Record<string, unknown>): string {
   return `sha256:${createHash("sha256").update(JSON.stringify(input)).digest("hex")}`;
 }
 
-function buildFreeTierAudit(capability: CapabilityInfo, latencyMs: number) {
+// CRIT-3: schema_validated was hardcoded `true` on every successful audit
+// body — a fabricated compliance claim, since no validation was actually
+// run. This helper performs the same minimal "object + required fields
+// present" check that piggyback-monitor uses when scoring real test runs.
+// It is INTENTIONALLY shallow (no nested-property type checking, no enum
+// validation): we surface what we can verify cheaply, mark the rest as
+// "Not validated" via the schema_validated=false path. A real Ajv-driven
+// validator is a v1.1 enhancement; for v1, we trade granularity for honesty.
+function computeSchemaValidated(
+  output: unknown,
+  outputSchema: Record<string, unknown> | null | undefined,
+): boolean {
+  if (!outputSchema) return false;
+  if (!output || typeof output !== "object" || Array.isArray(output)) {
+    return outputSchema.type !== "object";
+  }
+  const required = (outputSchema as { required?: string[] }).required ?? [];
+  for (const field of required) {
+    if (!(field in (output as Record<string, unknown>)) || (output as Record<string, unknown>)[field] == null) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// NOTE: buildFreeTierAudit is currently unused — free-tier calls take
+// the same buildFullAudit path with isFreeTier=true on the row. Keeping
+// the function compiled so the patterns mirror, and fixed for honesty
+// alongside buildFullAudit in case it gets re-wired.
+function buildFreeTierAudit(
+  capability: CapabilityInfo,
+  latencyMs: number,
+  output: unknown,
+  outputSchema: Record<string, unknown> | null | undefined,
+) {
   const marker = getTransparencyMarker(capability.transparencyTag);
   return {
     timestamp: new Date().toISOString(),
@@ -2130,7 +2168,9 @@ function buildFreeTierAudit(capability: CapabilityInfo, latencyMs: number) {
     processing_location: getProcessingLocation(),
     execution_mode: "sync",
     latency_ms: latencyMs,
-    schema_validated: true,
+    // CRIT-3: was hardcoded `true`. Now computed from the actual
+    // executor output against the published outputSchema's required fields.
+    schema_validated: computeSchemaValidated(output, outputSchema),
     compliance: {
       ai_involvement: getAiDescription(capability.slug, marker),
       // F-A-003 + SA.2b.d: manifest-declared classification is authoritative.
@@ -2139,7 +2179,13 @@ function buildFreeTierAudit(capability: CapabilityInfo, latencyMs: number) {
       personal_data_processed: capability.processesPersonalData,
       personal_data_categories: capability.personalDataCategories ?? [],
       applicable_regulations: ["EU AI Act (Articles 12, 13, 50)"],
-      notes: "Free-tier call — no transaction record stored. Upgrade for full audit trail with shareable compliance URLs.",
+      // CRIT-4: was "no transaction record stored. Upgrade for full audit
+      // trail" — false today; free-tier calls ARE persisted to transactions
+      // as isFreeTier=true rows and are queryable via /v1/audit/:id with a
+      // token. Rewritten to reflect actual behaviour.
+      notes:
+        "Free-tier call. Transaction is persisted with limited audit metadata; " +
+        "shareable compliance URL is available via the standard audit endpoint.",
     },
   };
 }
@@ -2153,6 +2199,11 @@ function buildFullAudit(params: {
   latencyMs: number;
   executionInput: Record<string, unknown>;
   output: unknown;
+  // CRIT-3: outputSchema is required for honest schema_validated computation.
+  // Optional only because legacy call paths may not have it loaded; when
+  // omitted, schema_validated falls back to false (the truthful answer when
+  // we can't verify).
+  outputSchema?: Record<string, unknown> | null;
   provenance?: unknown;
   sqs: { score: number; label: string; trend: string; pending: boolean };
   qualityPassRate?: number | null;
@@ -2167,7 +2218,7 @@ function buildFullAudit(params: {
 }) {
   const {
     transactionId, startTime, capability, marker, executionMode,
-    latencyMs, executionInput, output, provenance, sqs, qualityPassRate,
+    latencyMs, executionInput, output, outputSchema, provenance, sqs, qualityPassRate,
     requestContext,
   } = params;
 
@@ -2203,7 +2254,9 @@ function buildFullAudit(params: {
     latency_ms: latencyMs,
     input_hash: hashInput(executionInput),
     request_context: requestContext ?? null,
-    schema_validated: true,
+    // CRIT-3: was hardcoded `true`. Now computed against outputSchema.
+    // false on missing schema (we can't verify) or missing required fields.
+    schema_validated: computeSchemaValidated(output, outputSchema),
     quality: {
       sqs: sqs.pending ? null : sqs.score,
       label: sqs.label,
