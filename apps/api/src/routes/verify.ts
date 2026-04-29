@@ -89,14 +89,25 @@ verifyRoute.get("/:transactionId", async (c) => {
     capSlug = cap?.slug ?? null;
   }
 
+  // F-AUDIT-13/16: target transaction itself may also be redacted.
+  // If so, hash_valid is meaningless — the source data is gone — but
+  // the chain link itself is preserved.
+  const targetRedacted = txn.deletedAt != null;
+  const targetVerifiedLink = !targetRedacted && hashValid;
+
   return c.json({
     transaction_id: transactionId,
-    verified: hashValid && chain.brokenLinks === 0,
-    hash_valid: hashValid,
+    // `verified` means: every link in the chain we walked is either
+    // verified-against-its-stored-hash OR a legitimate redaction.
+    // Redacted links are NOT broken — see ChainWalkResult docstring.
+    verified: (targetVerifiedLink || targetRedacted) && chain.brokenLinks === 0,
+    hash_valid: targetRedacted ? null : hashValid,
+    redacted: targetRedacted,
     chain: {
       length: chain.length + 1, // +1 for the target transaction
-      verified_links: chain.verifiedLinks + (hashValid ? 1 : 0),
-      broken_links: chain.brokenLinks + (hashValid ? 0 : 1),
+      verified_links: chain.verifiedLinks + (targetVerifiedLink ? 1 : 0),
+      broken_links: chain.brokenLinks + (!targetRedacted && !hashValid ? 1 : 0),
+      redacted_links: chain.redactedLinks + (targetRedacted ? 1 : 0),
       reaches_genesis: chain.reachesGenesis,
       chain_start_date: chain.startDate,
       chain_end_date: txn.createdAt instanceof Date
@@ -113,6 +124,7 @@ verifyRoute.get("/:transactionId", async (c) => {
       transparency_marker: txn.transparencyMarker,
       data_jurisdiction: txn.dataJurisdiction,
       status: txn.status,
+      ...(targetRedacted ? { redacted_at: txn.redactedAt instanceof Date ? txn.redactedAt.toISOString() : txn.redactedAt } : {}),
     },
     methodology_url: "https://strale.dev/trust/methodology",
   });
@@ -120,10 +132,18 @@ verifyRoute.get("/:transactionId", async (c) => {
 
 // ── Chain walk ────────────────────────────────────────────────────────────────
 
-interface ChainWalkResult {
+export interface ChainWalkResult {
   length: number;
   verifiedLinks: number;
   brokenLinks: number;
+  // F-AUDIT-13/16: rows whose source data has been redacted under GDPR Art.
+  // 17 right-to-erasure. Per-row content-hash verifiability is intentionally
+  // sacrificed on redaction (see DELETE /v1/transactions/:id), so the recomputed
+  // hash will not match the stored one. These are NOT broken — they are a
+  // legitimate, customer-requested erasure. Counted separately so the public
+  // chain verify doesn't falsely report tampering when a customer exercises
+  // their legal rights.
+  redactedLinks: number;
   reachesGenesis: boolean;
   startDate: string | null;
   firstBrokenLinkId: string | null;
@@ -142,6 +162,7 @@ async function walkChain(
   let length = 0;
   let verifiedLinks = 0;
   let brokenLinks = 0;
+  let redactedLinks = 0;
   let reachesGenesis = false;
   let startDate: string | null = null;
   let firstBrokenLinkId: string | null = null;
@@ -164,6 +185,19 @@ async function walkChain(
     if (!prev) break;
 
     length++;
+
+    // F-AUDIT-13/16: redacted rows (deletedAt IS NOT NULL) had their
+    // input/output/audit_trail zeroed under GDPR Art. 17. Their stored
+    // integrityHash predates the redaction; recomputing now will mismatch
+    // by design. Treat as a third category — neither verified nor broken.
+    if (prev.deletedAt != null) {
+      redactedLinks++;
+      startDate = prev.createdAt instanceof Date
+        ? prev.createdAt.toISOString().slice(0, 10)
+        : String(prev.createdAt).slice(0, 10);
+      currentHash = prev.previousHash;
+      continue;
+    }
 
     // Same field mapping as storeIntegrityHash() in do.ts
     const recomputed = computeIntegrityHash(
@@ -212,5 +246,20 @@ async function walkChain(
     truncated = true;
   }
 
-  return { length, verifiedLinks, brokenLinks, reachesGenesis, startDate, firstBrokenLinkId, truncated };
+  return { length, verifiedLinks, brokenLinks, redactedLinks, reachesGenesis, startDate, firstBrokenLinkId, truncated };
+}
+
+// Pure helper, exported for unit testing. Mirrors the per-row classification
+// logic in walkChain but operates on a single fetched row so tests can exercise
+// the redacted-vs-broken-vs-verified decision without spinning up a DB.
+export type ChainLinkClassification = "verified" | "redacted" | "broken";
+
+export function classifyChainLink(prev: {
+  deletedAt: Date | null;
+  integrityHash: string | null;
+  recomputedHash: string | null;
+}): ChainLinkClassification {
+  if (prev.deletedAt != null) return "redacted";
+  if (prev.integrityHash != null && prev.recomputedHash === prev.integrityHash) return "verified";
+  return "broken";
 }

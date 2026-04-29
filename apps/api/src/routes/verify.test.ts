@@ -230,3 +230,73 @@ describe("GET /v1/verify/:id — F-A-012 rate limit 10/min per IP", () => {
     expect(freshB.status).toBe(200);
   });
 });
+
+describe("classifyChainLink — F-AUDIT-13/16 redacted-aware verify", () => {
+  it("classifies as 'redacted' when deletedAt is set, regardless of hash mismatch", async () => {
+    // Redacted rows have their source data zeroed → recomputed hash will
+    // differ from stored. This MUST be classified as redacted, not broken,
+    // so a customer's GDPR erasure doesn't make Strale's chain look tampered.
+    const { classifyChainLink } = await import("./verify.js");
+    const result = classifyChainLink({
+      deletedAt: new Date("2026-04-29T10:00:00Z"),
+      integrityHash: "abc123",
+      recomputedHash: "def456", // mismatch — but legitimate
+    });
+    expect(result).toBe("redacted");
+  });
+
+  it("classifies as 'redacted' even when hash recomputes correctly (deletedAt is the discriminator)", async () => {
+    const { classifyChainLink } = await import("./verify.js");
+    const result = classifyChainLink({
+      deletedAt: new Date("2026-04-29T10:00:00Z"),
+      integrityHash: "abc123",
+      recomputedHash: "abc123",
+    });
+    expect(result).toBe("redacted");
+  });
+
+  it("classifies as 'verified' when hash matches and not deleted", async () => {
+    const { classifyChainLink } = await import("./verify.js");
+    const result = classifyChainLink({
+      deletedAt: null,
+      integrityHash: "abc123",
+      recomputedHash: "abc123",
+    });
+    expect(result).toBe("verified");
+  });
+
+  it("classifies as 'broken' when hash mismatches and not deleted", async () => {
+    const { classifyChainLink } = await import("./verify.js");
+    const result = classifyChainLink({
+      deletedAt: null,
+      integrityHash: "abc123",
+      recomputedHash: "def456",
+    });
+    expect(result).toBe("broken");
+  });
+
+  it("classifies as 'broken' when stored integrityHash is null (never finalized) and not deleted", async () => {
+    const { classifyChainLink } = await import("./verify.js");
+    const result = classifyChainLink({
+      deletedAt: null,
+      integrityHash: null,
+      recomputedHash: "abc123",
+    });
+    expect(result).toBe("broken");
+  });
+
+  it("F-AUDIT-13 regression guard: a deleted row with mismatched hash MUST NOT be classified as 'broken'", async () => {
+    // The exact scenario that produced the bug: GDPR-erased row in the
+    // chain reported as a tampered link. If this test ever returns "broken"
+    // for a deletedAt-set row, the public chain verify will lie about
+    // legitimate erasures.
+    const { classifyChainLink } = await import("./verify.js");
+    const result = classifyChainLink({
+      deletedAt: new Date("2026-04-29T10:00:00Z"),
+      integrityHash: "abc123",
+      recomputedHash: "def456",
+    });
+    expect(result).not.toBe("broken");
+    expect(result).toBe("redacted");
+  });
+});
