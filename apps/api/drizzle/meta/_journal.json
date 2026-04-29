@@ -393,6 +393,13 @@
       "when": 1777672803000,
       "tag": "0054_append_only_chain_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1777672806000,
+      "tag": "0055_transactions_client_ip_hash",
+      "breakpoints": true
     }
   ]
 }

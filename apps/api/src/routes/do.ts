@@ -1014,12 +1014,17 @@ async function getFreeTierUsageToday(
   // F-0-020: any DB error now throws FreeTierCheckUnavailable — fail CLOSED.
   if (ipHash) {
     try {
+      // MED-10: read from top-level client_ip_hash column (migration 0055).
+      // Pre-fix this read from audit_trail->'request_context'->>'ipHash' which
+      // (a) couldn't use a native index, and (b) raced the post-INSERT
+      // audit_trail UPDATE on async paths. Now hits a partial index built on
+      // (client_ip_hash, created_at) WHERE is_free_tier AND user_id IS NULL.
       const [row] = await db.execute(sql`
         SELECT COUNT(*)::int AS cnt FROM transactions
         WHERE created_at >= CURRENT_DATE
           AND user_id IS NULL
           AND is_free_tier = true
-          AND audit_trail->'request_context'->>'ipHash' = ${ipHash}
+          AND client_ip_hash = ${ipHash}
       `);
       return { count: (row as any)?.cnt ?? 0, identifiedBy: "ip" };
     } catch (err) {
@@ -1113,7 +1118,10 @@ async function executeFreeTier(
   const startTime = Date.now();
   const marker = getTransparencyMarker(capability.transparencyTag);
 
-  // Create a persisted transaction record so the audit trail is verifiable
+  // Create a persisted transaction record so the audit trail is verifiable.
+  // MED-10: write client_ip_hash directly so the free-tier rate-limit query
+  // hits a top-level indexed column instead of audit_trail JSONB.
+  const reqCtxForInsert = c.get("requestContext" as any) as { ipHash?: string | null } | undefined;
   const [txnRecord] = await db
     .insert(transactions)
     .values({
@@ -1125,6 +1133,7 @@ async function executeFreeTier(
       transparencyMarker: marker,
       dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
       isFreeTier: true,
+      clientIpHash: reqCtxForInsert?.ipHash ?? null,
     })
     .returning({ id: transactions.id });
 

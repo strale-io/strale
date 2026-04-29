@@ -181,9 +181,13 @@ describe("sandbox and API share one bucket", () => {
 });
 
 describe("failed calls count against daily cap", () => {
-  // The counter query has no status filter — it matches ANY transaction row
-  // where audit_trail.request_context.ipHash is populated. After the fix,
-  // buildFailureAudit includes request_context, so failed rows are counted.
+  // MED-10 (migration 0055): the rate-limit counter now reads from the
+  // top-level transactions.client_ip_hash column instead of from
+  // audit_trail->'request_context'->>'ipHash' JSONB. The audit body still
+  // carries request_context.ipHash for record completeness; the column is
+  // the source of truth for the rate-limit decision. Failed rows count
+  // toward the cap iff client_ip_hash was populated at INSERT time
+  // (which the free-tier path now does directly from c.get(requestContext)).
 
   it("buildFailureAudit includes request_context when provided", () => {
     // Simulate what buildFailureAudit now returns
@@ -211,21 +215,20 @@ describe("failed calls count against daily cap", () => {
     expect(audit.request_context).toBeNull();
   });
 
-  it("counter query would match failed rows with ipHash populated", () => {
-    // The SQL filter is: audit_trail->'request_context'->>'ipHash' = $1
-    // If request_context.ipHash is present → row matches → counts
-    // If request_context is null → NULL->>'ipHash' = NULL → doesn't match
-    // This test documents the invariant.
-    const withContext = { request_context: { ipHash: "abc123" } };
-    const withoutContext = { request_context: null };
+  it("counter query would match failed rows with client_ip_hash populated", () => {
+    // MED-10: The SQL filter is now: client_ip_hash = $1 (against the
+    // top-level column populated at INSERT time, not the audit_trail JSONB).
+    // If client_ip_hash is present → row matches → counts
+    // If client_ip_hash is null → doesn't match (NULL = $1 is NULL, not true)
+    const withClientIp = { client_ip_hash: "abc123" };
+    const withoutClientIp = { client_ip_hash: null };
 
-    // Simulate the SQL condition: field is not null and equals the identifier
     const matches = (row: any, identifier: string) =>
-      row.request_context?.ipHash === identifier;
+      row.client_ip_hash === identifier;
 
-    expect(matches(withContext, "abc123")).toBe(true);
-    expect(matches(withContext, "other")).toBe(false);
-    expect(matches(withoutContext, "abc123")).toBe(false);
+    expect(matches(withClientIp, "abc123")).toBe(true);
+    expect(matches(withClientIp, "other")).toBe(false);
+    expect(matches(withoutClientIp, "abc123")).toBe(false);
   });
 
   it("10 failed + 0 successful = cap reached (all count)", () => {

@@ -228,6 +228,14 @@ export const transactions = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     redactedAt: timestamp("redacted_at", { withTimezone: true }),
     deletionReason: text("deletion_reason"),
+    // MED-10 (migration 0055): IP hash for free-tier rate-limit queries.
+    // Was previously read from audit_trail->'request_context'->>'ipHash' —
+    // a JSONB extract that can't use a native index and that races the
+    // post-INSERT audit_trail UPDATE on async paths. Free-tier INSERTs
+    // populate this column directly from c.get("requestContext").ipHash;
+    // the audit_trail JSONB still carries the same value for record
+    // completeness.
+    clientIpHash: varchar("client_ip_hash", { length: 16 }),
     // x402 payment tracking
     paymentMethod: varchar("payment_method", { length: 20 }).notNull().default("wallet"),
     x402SettlementId: text("x402_settlement_id"),
