@@ -1,77 +1,129 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: lithuanian-company-data
 name: Lithuanian Company Data
-description: Look up Lithuanian company data from Registrų centras. Accepts company code (7-9 digits) or fuzzy company name.
-category: data-extraction
-price_cents: 80
+description: >-
+  Look up Lithuanian company data from the Centre of Registers (Registrų centras / JAR) via the data.gov.lt open-data
+  Spinta API. Accepts company code (7-9 digits) or fuzzy company name. Returns name, code, legal form, status, and
+  registration dates.
+category: company-data
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - company_code
+  required: []
   properties:
     company_code:
       type: string
-      description: Lithuanian company code (7-9 digits) or company name
+      description: Lithuanian company code (7-9 digits)
+    company_name:
+      type: string
+      description: Lithuanian company name (fuzzy match)
+    task:
+      type: string
+      description: Free-text input — first matching company code or name is used
 output_schema:
   type: object
   example:
-    status: unknown
-    address: null
-    industry: null
-    directors: null
-    company_name: null
-    business_type: null
-    registration_date: null
-    registration_number: null
+    company_name: AB "Energijos skirstymo operatorius"
+    company_code: "304151376"
+    legal_form: Akcinė bendrovė
+    legal_form_en: Public Limited Company
+    legal_form_type: Privatusis
+    status: Teisinis statusas neįregistruotas
+    status_en: No legal proceedings
+    status_date: "2015-12-11"
+    registration_date: "2015-12-11"
+    deregistration_date: null
+    is_active: true
+    jurisdiction: LT
   properties:
-    status:
-      type: string
-    address:
-      type: string
     company_name:
       type: string
-    business_type:
+    company_code:
       type: string
-    registration_number:
+    legal_form:
       type: string
-data_source: Registrų centras (Lithuanian Centre of Registers)
-data_source_type: scrape
-transparency_tag: ai_generated
+    legal_form_en:
+      type: string
+    legal_form_type:
+      type: string
+    status:
+      type: string
+    status_en:
+      type: string
+    status_date:
+      type: string
+    registration_date:
+      type: string
+    deregistration_date:
+      type: string
+    is_active:
+      type: boolean
+    jurisdiction:
+      type: string
+data_source: Lithuanian Open Data Portal (data.gov.lt) — Registrų centras / JAR Spinta JSON API
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: scraping-stable-target
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+maintenance_class: free-stable-api
 processes_personal_data: true
 personal_data_categories:
   - name
-  - address
   - professional
 geography: eu
 test_fixtures:
   known_answer:
     input:
-      company_code: "301524699"
+      company_code: "304151376"
     expected_fields:
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: company_code
+        operator: equals
+        reliability: guaranteed
+        value: "304151376"
       - field: status
         operator: not_null
         reliability: guaranteed
-      - field: status
-        operator: type
+      - field: legal_form
+        operator: not_null
         reliability: guaranteed
-        value: string
+      - field: jurisdiction
+        operator: equals
+        reliability: guaranteed
+        value: LT
   health_check_input:
-    company_code: "301524699"
+    company_code: "304151376"
 output_field_reliability:
-  status: guaranteed
-  address: guaranteed
   company_name: guaranteed
-  business_type: guaranteed
-  registration_number: guaranteed
+  company_code: guaranteed
+  legal_form: guaranteed
+  legal_form_en: common
+  legal_form_type: common
+  status: guaranteed
+  status_en: common
+  status_date: guaranteed
+  registration_date: guaranteed
+  deregistration_date: rare
+  is_active: guaranteed
+  jurisdiction: guaranteed
 limitations:
-  - title: Extracted from Lithuanian Registrų Centras via Browserless — full financial filings require separate access
-    text: Extracted from Registrų Centras via Browserless — full financial filings require separate access
+  - title: Address is not included in this response
+    text: >-
+      The Lithuanian JAR open-data API splits company addresses into a separate dataset (buveines/Buveine) keyed by
+      legal-entity UUID. This capability returns the structured register record only. Company address requires a
+      follow-up query to the address registry and is not currently included in the response.
     category: coverage
     severity: info
-    workaround: Use the company code from the response to search registrucentras.lt for complete filings
+  - title: Open data covers core register only — financials and management bodies require separate datasets
+    text: >-
+      Beneficial owners, share capital, board composition, and financial statements are published as separate
+      data.gov.lt datasets and are not included in this response.
+    category: coverage
+    severity: info
+  - title: Daily refresh — sub-day filings may not be reflected immediately
+    text: >-
+      The Lithuanian Open Data Portal publishes Centre of Registers data on a daily refresh cadence. Filings submitted
+      today may not be reflected in the API response until the next daily refresh.
+    category: freshness
+    severity: info

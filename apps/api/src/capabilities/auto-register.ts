@@ -95,14 +95,11 @@ const DEACTIVATED = new Map<string, string>([
     // (via IRN/Justiça Portuguesa) or a multi-country licensed aggregator.
     "northdata.com scraping prohibited by ToS; pending licensed PT registry or aggregator contract (see DEC-20260427-I)",
   ],
-  [
-    "lithuanian-company-data",
-    // DEC-20260427-I-3: Same pattern — runtime fetched northdata.com, manifest claimed
-    // Registrų centras (Lithuanian Centre of Registers). Full divergence.
-    // Reactivation trigger: licensed contract with Registrų centras or a multi-country
-    // licensed aggregator.
-    "northdata.com scraping prohibited by ToS; pending licensed LT registry or aggregator contract (see DEC-20260427-I)",
-  ],
+  // lithuanian-company-data REACTIVATED 2026-04-29: migrated from
+  // northdata.com aggregator scrape to direct data.gov.lt Spinta JSON API
+  // (Registrų centras / JAR — Juridinių asmenų registras). Free, real-time
+  // JSON, no signup, CC-BY 4.0 (commercial reuse permitted with attribution).
+  // acquisition_method: direct_api per DEC-20260428-A Tier 2.
   [
     "spanish-company-data",
     // DEC-20260427-I-4: Runtime fetched empresia.es and infocif.es (commercial Spanish
