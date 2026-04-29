@@ -30,11 +30,12 @@
  * Phase C deploy.
  */
 
-import { sql, eq, and, lt } from "drizzle-orm";
+import { sql, eq, and, lt, asc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { transactions } from "../db/schema.js";
 import { computeIntegrityHash, getPreviousHash } from "../lib/integrity-hash.js";
 import { log, logError, logWarn } from "../lib/log.js";
+import { logHealthEvent } from "../lib/health-monitor.js";
 
 const INTERVAL_MS = 30_000;               // how often to wake
 const STARTUP_DELAY_MS = 10_000;          // don't fire immediately on boot
@@ -69,6 +70,13 @@ async function runOnce(): Promise<void> {
       }
 
       const pendingCutoff = new Date(Date.now() - GRACE_MS);
+      // CRIT-6: ORDER BY (createdAt, id) ASC — without explicit ordering,
+      // PostgreSQL returns heap-scan order, which is non-deterministic.
+      // Two same-second inserts would chain in arbitrary order, producing
+      // a chain that's non-deterministically reproducible after the fact.
+      // id is the secondary tiebreaker for same-millisecond inserts; it's
+      // a uuid().defaultRandom(), so the order is deterministic without
+      // implying time semantics.
       const pending = await tx
         .select()
         .from(transactions)
@@ -78,6 +86,7 @@ async function runOnce(): Promise<void> {
             lt(transactions.createdAt, pendingCutoff),
           ),
         )
+        .orderBy(asc(transactions.createdAt), asc(transactions.id))
         .limit(BATCH_SIZE);
 
       if (pending.length === 0) return;
@@ -161,6 +170,22 @@ async function runOnce(): Promise<void> {
           `${staleCount} transactions pending > 5 min; compliance chain falling behind`,
           { staleCount, batchSize: pending.length },
         );
+        // CRIT-11: emit a structured health event so meta-monitoring's
+        // alert channel surfaces the worker stall in real time, not just
+        // when chain-health-monitoring runs its hourly tick. A silent worker
+        // stall keeps customers' /v1/audit/:id at 202 forever — the brand
+        // promise fails silently. logHealthEvent never throws.
+        await logHealthEvent({
+          eventType: "integrity_hash_stale",
+          tier: 1,
+          actionTaken: "logged",
+          details: {
+            stale_count: staleCount,
+            batch_size: pending.length,
+            stale_warn_ms: STALE_WARN_MS,
+            note: "Worker likely behind or stalled. Check chain_pending_backlog metric and integrity-hash-retry log stream.",
+          },
+        });
       }
 
       log.info(
@@ -199,6 +224,19 @@ async function runOnce(): Promise<void> {
           `${stuckDeferred.length} transactions stuck in 'deferred' > 30 min — route handler likely died between INSERT and completion UPDATE; flipped to 'failed' for visibility`,
           { count: stuckDeferred.length },
         );
+        // CRIT-11: same alert channel as integrity_hash_stale — these
+        // are operationally similar (worker can't make progress) but
+        // structurally different (a route handler died, not the worker).
+        await logHealthEvent({
+          eventType: "integrity_hash_stuck_deferred",
+          tier: 1,
+          actionTaken: "flipped_to_failed",
+          details: {
+            count: stuckDeferred.length,
+            stale_deferred_ms: STALE_DEFERRED_MS,
+            note: "Route handler died between INSERT (deferred) and completion UPDATE. Flipped to 'failed' for visibility. Investigate logs around the affected transaction IDs.",
+          },
+        });
       }
     });
   } catch (err) {

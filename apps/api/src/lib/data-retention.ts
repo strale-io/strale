@@ -69,24 +69,58 @@ async function purgeTransactionQuality(cutoff: Date): Promise<number> {
 
 async function purgeTransactions(cutoff: Date): Promise<number> {
   const db = getDb();
-  let deleted = 0;
+  let redacted = 0;
   while (true) {
-    // NEVER delete transactions with legal_hold = true
+    // NEVER touch transactions with legal_hold = true.
+    //
+    // CRIT-7: previously this was a hard DELETE. That broke the integrity-
+    // hash chain — every newer row whose previousHash pointed at a purged
+    // row failed verification, with the public chain walker reporting
+    // broken_links >= 1 and no way to distinguish "retention purged" from
+    // "tampered out." A 3-year-old chain would silently corrupt every time
+    // this swept.
+    //
+    // Now: redact in place. PII columns (input/output/error/audit_trail/
+    // provenance/idempotency_key) are zeroed; integrity_hash, previous_hash,
+    // status, capability/solution slug, jurisdiction, transparency_marker,
+    // created_at, completed_at, price_cents, and latency_ms are preserved.
+    // deleted_at + redacted_at + deletion_reason = 'retention_purge' mark
+    // the row honestly.
+    //
+    // verify.ts already classifies rows with deleted_at IS NOT NULL as
+    // redacted (not broken) — the chain stays verifiable across retention
+    // events. Operators can distinguish retention from GDPR Art. 17
+    // erasure by reading deletion_reason.
+    //
+    // WHERE clause also excludes already-redacted rows (deleted_at IS NOT
+    // NULL) so re-running the sweep is a true no-op rather than a
+    // re-write of a row that's already been redacted by a prior sweep.
     const result = await db.execute(sql`
-      DELETE FROM transactions
+      UPDATE transactions
+      SET
+        input = '{}'::jsonb,
+        output = NULL,
+        error = NULL,
+        audit_trail = NULL,
+        provenance = NULL,
+        idempotency_key = NULL,
+        deleted_at = NOW(),
+        redacted_at = NOW(),
+        deletion_reason = 'retention_purge'
       WHERE id IN (
         SELECT id FROM transactions
         WHERE created_at < ${cutoff.toISOString()}::timestamptz
           AND legal_hold = false
+          AND deleted_at IS NULL
         LIMIT ${BATCH_SIZE}
       )
     `);
     const count = (result as any).rowCount ?? 0;
-    deleted += count;
+    redacted += count;
     if (count < BATCH_SIZE) break;
     await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
   }
-  return deleted;
+  return redacted;
 }
 
 async function purgeHealthMonitorEvents(cutoff: Date): Promise<number> {
@@ -160,7 +194,11 @@ export async function cleanupOldTestData(): Promise<void> {
 
   const testResultsDeleted = await purgeTestResults(ninetyDaysAgo);
   const txQualityDeleted = await purgeTransactionQuality(threeYearsAgo);
-  const txDeleted = await purgeTransactions(threeYearsAgo);
+  // CRIT-7: transactions are now REDACTED in place, not deleted. Returns
+  // the redacted-row count under the same key so existing dashboards keep
+  // working; the field is renamed to transactions_redacted in the log
+  // payload to reflect actual semantics.
+  const txRedacted = await purgeTransactions(threeYearsAgo);
   const eventsDeleted = await purgeHealthMonitorEvents(oneEightyDaysAgo);
   const snapshotsDeleted = await purgeSqsSnapshots(oneYearAgo);
 
@@ -169,7 +207,7 @@ export async function cleanupOldTestData(): Promise<void> {
       label: "retention-cleanup-done",
       test_results_deleted: testResultsDeleted,
       transaction_quality_deleted: txQualityDeleted,
-      transactions_deleted: txDeleted,
+      transactions_redacted: txRedacted,
       health_monitor_events_deleted: eventsDeleted,
       sqs_daily_snapshot_deleted: snapshotsDeleted,
     },

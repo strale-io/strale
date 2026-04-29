@@ -1492,6 +1492,10 @@ async function executeSync(
         provenance: unknown;
         latencyMs: number;
         balanceAfter: number;
+        // CRIT-5: audit object built inside the tx and returned so the
+        // response can surface it as meta.audit without rebuilding it
+        // (and without the f-a-f UPDATE that produced the race).
+        audit: ReturnType<typeof buildFullAudit>;
       }
     | {
         ok: false;
@@ -1563,8 +1567,34 @@ async function executeSync(
         description: `Capability: ${capability.slug}`,
       });
 
-      // Mark transaction completed with audit trail
-      // Note: full audit object built after tx commits (needs quality data)
+      // CRIT-5: build the audit body INSIDE the tx and write auditTrail
+      // atomically with status='completed'. Pre-fix, status was set here
+      // without auditTrail, then a fire-and-forget UPDATE wrote auditTrail
+      // after the tx committed. The retry worker's GRACE_MS (10s) is too
+      // short to outlast a stalled f-a-f UPDATE under DB pressure: worker
+      // hashes auditTrail=null, then the UPDATE lands and mutates the
+      // hashed column → permanently broken row. By writing both in the
+      // same tx, the row is never published to the worker without its
+      // final auditTrail.
+      const qualityPassRate = dual && !dual.qp.pending
+        ? dual.qp.factors.correctness.rate
+        : null;
+      const audit = buildFullAudit({
+        transactionId: txnRecord.id,
+        startTime,
+        capability,
+        marker,
+        executionMode: "sync",
+        latencyMs,
+        executionInput,
+        output: capResult.output,
+        outputSchema,
+        provenance: capResult.provenance,
+        sqs: { score: sqs.score, label: sqs.label, trend: sqs.trend ?? "stable", pending: sqs.pending },
+        qualityPassRate,
+        requestContext: c.get("requestContext" as any),
+      });
+
       await tx
         .update(transactions)
         .set({
@@ -1573,6 +1603,7 @@ async function executeSync(
           provenance: capResult.provenance,
           latencyMs,
           completedAt: new Date(),
+          auditTrail: audit,
         })
         .where(eq(transactions.id, txnRecord.id));
 
@@ -1583,6 +1614,7 @@ async function executeSync(
         provenance: capResult.provenance,
         latencyMs,
         balanceAfter: newBalance,
+        audit,
       };
     } catch (err) {
       const latencyMs = Date.now() - startTime;
@@ -1703,41 +1735,12 @@ async function executeSync(
     );
   }
 
-  // Derive pass_rate from already-loaded dual profile (avoids expensive DB query)
-  const qualityPassRate = dual && !dual.qp.pending
-    ? dual.qp.factors.correctness.rate
-    : null;
-
-  // Success — build full audit object
-  const marker = getTransparencyMarker(capability.transparencyTag);
-  const audit = buildFullAudit({
-    transactionId: result.transactionId,
-    startTime,
-    capability,
-    marker,
-    executionMode: "sync",
-    latencyMs: result.latencyMs,
-    executionInput,
-    output: result.output,
-    outputSchema,
-    provenance: result.provenance,
-    sqs: { score: sqs.score, label: sqs.label, trend: sqs.trend ?? "stable", pending: sqs.pending },
-    qualityPassRate,
-    requestContext: c.get("requestContext" as any),
-  });
-
-  // Store full audit in DB (fire-and-forget, non-blocking). The retry
-  // worker (jobs/integrity-hash-retry.ts) picks up the row once the
-  // audit trail is persisted — by the time the worker's GRACE_MS window
-  // elapses, this UPDATE will have committed.
-  fireAndForget(
-    () =>
-      db
-        .update(transactions)
-        .set({ auditTrail: audit })
-        .where(eq(transactions.id, result.transactionId)),
-    { label: "audit-trail-store", context: { transactionId: result.transactionId, slug: capability.slug } },
-  );
+  // CRIT-5: audit was previously rebuilt here and written via fire-and-forget
+  // UPDATE — the worker's GRACE_MS could fire between status='completed'
+  // commit and the f-a-f write, hashing auditTrail=null permanently. Audit
+  // is now built inside the tx and returned via TxResult; nothing left to
+  // write here.
+  const audit = result.audit;
 
   const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
 
