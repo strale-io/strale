@@ -47,10 +47,31 @@ export const DEFAULT_TOKEN_TTL_SECONDS = 90 * 24 * 60 * 60;
 // F-A-006 backwards-compat: tokens issued before this deploy carry no
 // expires_at query param. `verifyLegacyToken` accepts them under the old
 // algorithm (HMAC(SECRET, txnId) with no time component) until the sunset
-// date. Set to 180 days from 2026-04-20 → 2026-10-17 UTC. After this,
+// date. Default: 180 days from 2026-04-20 → 2026-10-17 UTC. After this,
 // legacy tokens return 410 / legacy_token_sunset and callers must
 // re-issue via POST /v1/transactions/:id/audit-token.
-export const LEGACY_TOKEN_SUNSET_MS = Date.UTC(2026, 9, 17); // Oct 17, 2026
+//
+// F-AUDIT-05: env override `LEGACY_TOKEN_SUNSET_ISO` lets us bring the
+// sunset forward (or extend it) without a code change. Format: ISO 8601
+// date or datetime, parsed via Date.parse. Falls back to the hardcoded
+// default if unset, empty, or unparseable. The override exists so that
+// security-driven early sunset (e.g. discovered legacy-format token leak)
+// doesn't require a redeploy.
+function resolveLegacySunset(): number {
+  const envValue = process.env.LEGACY_TOKEN_SUNSET_ISO;
+  if (envValue && envValue.trim()) {
+    const parsed = Date.parse(envValue.trim());
+    if (Number.isFinite(parsed)) return parsed;
+    // Don't crash on a malformed env — operations may have typo'd. Log
+    // once and fall back to the hardcoded default.
+    console.warn(
+      `[audit-token] LEGACY_TOKEN_SUNSET_ISO=${JSON.stringify(envValue)} could not be parsed; falling back to hardcoded default 2026-10-17`,
+    );
+  }
+  return Date.UTC(2026, 9, 17); // Oct 17, 2026
+}
+
+export const LEGACY_TOKEN_SUNSET_MS = resolveLegacySunset();
 
 export type VerifyResult =
   | { valid: true; legacy?: true; usedFallback?: true }
@@ -191,6 +212,27 @@ function hmacCompareHex(token: string, expected: string): boolean {
   return timingSafeEqual(tokenBuf, expectedBuf);
 }
 
+// F-AUDIT-06: env-overridable host for the shareable URL. Default is
+// the production frontend; staging / preview deploys can set
+// AUDIT_FRONTEND_URL to point customers at the right host. A staging
+// deploy that emits prod URLs is a real footgun — the URL works (token
+// is valid against the rotated-into-staging secret) but loads a page
+// that has no record of the transaction, leaving the customer confused
+// about whether their compliance record actually exists.
+//
+// Resolution: AUDIT_FRONTEND_URL → FRONTEND_URL → hardcoded default.
+// Trailing slash stripped to keep URL formatting consistent regardless
+// of how operations sets the env.
+function resolveAuditFrontendBase(): string {
+  const candidates = [process.env.AUDIT_FRONTEND_URL, process.env.FRONTEND_URL];
+  for (const c of candidates) {
+    if (c && c.trim()) return c.trim().replace(/\/$/, "");
+  }
+  return "https://strale.dev";
+}
+
+const AUDIT_FRONTEND_BASE = resolveAuditFrontendBase();
+
 // F-A-006: returns both the URL and the expiry so callers can surface
 // `expires_at` alongside the URL (e.g. in the POST /v1/do compliance block).
 export function getShareableUrl(
@@ -198,6 +240,6 @@ export function getShareableUrl(
   expiresInSeconds: number = DEFAULT_TOKEN_TTL_SECONDS,
 ): { url: string; expiresAt: number } {
   const { token, expiresAt } = generateAuditToken(transactionId, expiresInSeconds);
-  const url = `https://strale.dev/audit/${transactionId}?token=${token}&expires_at=${expiresAt}`;
+  const url = `${AUDIT_FRONTEND_BASE}/audit/${transactionId}?token=${token}&expires_at=${expiresAt}`;
   return { url, expiresAt };
 }

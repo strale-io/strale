@@ -97,6 +97,16 @@ interface AuditRecord {
   schema_steps_passed: number;
   input_fingerprint: string;
   compliance_refs: string[];
+  // F-AUDIT-07: this is a BARE PATH (no token), intended as a reference
+  // identifier for the compliance UI to render. Loading it directly
+  // returns 401 because there's no auth token. The full token-bearing
+  // URL is `compliance.shareable_url` on the POST /v1/do response (or
+  // re-issued via POST /v1/transactions/:id/audit-token). Field renamed
+  // from `audit_url` so a client doesn't store this thinking it's loadable
+  // and then get confused when it 401s. The original field is kept on
+  // the response for backwards-compat under the new key as well.
+  audit_path: string;
+  /** @deprecated Use audit_path. Kept for back-compat through 2026-10. */
   audit_url: string;
   steps: AuditStep[];
   // CRIT-2: real quality data from the stored row + capability/solution
@@ -321,6 +331,10 @@ function composeAuditRecord(args: {
     schema_steps_passed: schemaPassed,
     input_fingerprint: inputFingerprint,
     compliance_refs: mapComplianceRefs(profile),
+    // F-AUDIT-07: emit both keys for back-compat. audit_path is the new
+    // canonical name (it's a path, not a loadable URL); audit_url stays
+    // populated for any client that hardcoded the old name.
+    audit_path: `/audit/${transactionId}`,
     audit_url: `strale.dev/audit/${transactionId}`,
     steps,
     quality,
