@@ -13,7 +13,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, transactions } from "../db/schema.js";
+import { capabilities, solutions, transactions, x402OrphanSettlements } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import {
   isX402Configured,
@@ -456,18 +456,18 @@ interface RecordX402Args {
 }
 
 async function recordX402Transaction(args: RecordX402Args): Promise<string | null> {
+  // F-AUDIT-01 / CCO #3: dataJurisdiction must be the actual processing
+  // region(s), not capabilities.geography (which is "where the data is
+  // about" — a property of the dataset, not the call). Compute from
+  // Strale's region + LLM provider region based on transparencyTag.
+  // Prior code passed args.dataJurisdiction populated from the cache's
+  // capabilities.geography read (line ~88) and defaulted to "EU".
+  const jurisdictions = getProcessingJurisdictions(
+    "stable_api",
+    args.transparencyTag,
+  ).join(",") || "unknown";
+  const db = getDb();
   try {
-    const db = getDb();
-    // F-AUDIT-01 / CCO #3: dataJurisdiction must be the actual processing
-    // region(s), not capabilities.geography (which is "where the data is
-    // about" — a property of the dataset, not the call). Compute from
-    // Strale's region + LLM provider region based on transparencyTag.
-    // Prior code passed args.dataJurisdiction populated from the cache's
-    // capabilities.geography read (line ~88) and defaulted to "EU".
-    const jurisdictions = getProcessingJurisdictions(
-      "stable_api",
-      args.transparencyTag,
-    ).join(",") || "unknown";
     const [row] = await db.insert(transactions).values({
       userId: null,
       capabilityId: args.capabilityId,
@@ -498,6 +498,40 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
     return row?.id ?? null;
   } catch (err) {
     logError("x402-transaction-recording-failed", err);
+    // CCO P0 #12: settlement preceded this INSERT and is irreversible.
+    // Capture the orphan in a dedicated table so operations can reconcile
+    // (recreate the transactions row OR refund the customer at payer_address).
+    // Best-effort; if the orphan write also fails, we log and the only
+    // remaining recovery is on-chain reconciliation against our wallet.
+    if (args.settlementId) {
+      try {
+        await db.insert(x402OrphanSettlements).values({
+          settlementId: args.settlementId,
+          capabilitySlug: args.capabilityId ? args.slug : null,
+          solutionSlug: args.solutionSlug,
+          payerAddress: args.payerAddress ?? null,
+          priceUsd: args.priceUsd.toFixed(4),
+          priceCents: args.priceCents,
+          rawArgs: args as unknown as Record<string, unknown>,
+          failureReason: err instanceof Error ? err.message.slice(0, 500) : String(err).slice(0, 500),
+        });
+        logError("x402-orphan-settlement-recorded", new Error(
+          `Settlement ${args.settlementId} captured in x402_orphan_settlements for manual reconciliation`,
+        ), { settlementId: args.settlementId });
+      } catch (orphanErr) {
+        // Both writes failed. This is a rare double-failure that
+        // requires on-chain reconciliation. Log loudly with all the
+        // context we have so an operator can manually recover.
+        logError("x402-orphan-settlement-write-also-failed", orphanErr, {
+          settlementId: args.settlementId,
+          payerAddress: args.payerAddress,
+          priceUsd: args.priceUsd,
+          slug: args.slug,
+          capabilityId: args.capabilityId,
+          solutionSlug: args.solutionSlug,
+        });
+      }
+    }
     return null;
   }
 }
@@ -670,13 +704,15 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
     }
   }
 
-  // Record transaction (fire-and-forget) — mirrors capability path so x402
-  // solution calls show up in activity scripts and audit logs.
+  // CCO P0 #12: AWAIT the record. Settlement happened on-chain and is
+  // irreversible; if the INSERT fails, recordX402Transaction writes an
+  // orphan-settlement row for manual reconciliation. If we fire-and-forget
+  // here, an INSERT failure has nowhere to land.
   // F-AUDIT-01 / CCO #3: dataJurisdiction is no longer passed here; it's
   // computed inside recordX402Transaction from Strale's actual region +
   // LLM reach derived from transparencyTag.
   const solPayerAddress = verified ? extractPayerAddress(verified) : null;
-  recordX402Transaction({
+  await recordX402Transaction({
     capabilityId: null,
     solutionSlug: sol.slug,
     slug: sol.slug,
@@ -848,9 +884,11 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
     }
   }
 
-  // Record transaction (fire-and-forget)
+  // CCO P0 #12: AWAIT (see recordX402Transaction for orphan-settlement
+  // handling). Settlement is irreversible; an INSERT failure must land
+  // in x402_orphan_settlements for reconciliation, not vanish.
   const payerAddress = verified ? extractPayerAddress(verified) : null;
-  recordX402Transaction({
+  await recordX402Transaction({
     capabilityId: cap.id,
     solutionSlug: null,
     slug: cap.slug,

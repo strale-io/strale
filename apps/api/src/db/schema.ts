@@ -246,6 +246,26 @@ export const transactions = pgTable(
   ],
 );
 
+// ─── x402_orphan_settlements ────────────────────────────────────────────────
+// CCO P0 #12: log of x402 settlements that succeeded on-chain but whose
+// transactions row INSERT failed. See migration 0053 for the recovery
+// playbook. A row here means: customer paid USDC, settlement succeeded,
+// but our DB write failed — orphaned settlement awaiting reconciliation.
+export const x402OrphanSettlements = pgTable("x402_orphan_settlements", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  settlementId: text("settlement_id").notNull(),
+  capabilitySlug: text("capability_slug"),
+  solutionSlug: text("solution_slug"),
+  payerAddress: text("payer_address"),
+  priceUsd: decimal("price_usd", { precision: 10, scale: 4 }).notNull(),
+  priceCents: integer("price_cents").notNull(),
+  rawArgs: jsonb("raw_args").notNull(),
+  failureReason: text("failure_reason").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  reconciledAt: timestamp("reconciled_at", { withTimezone: true }),
+  reconciliationStatus: text("reconciliation_status"),
+});
+
 // ─── transaction_quality ────────────────────────────────────────────────────
 // Quality signals captured per transaction for SQI scoring
 export const transactionQuality = pgTable("transaction_quality", {
