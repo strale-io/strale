@@ -1,53 +1,79 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: irish-company-data
 name: Irish Company Data
 description: >-
-  Look up Irish company data from CRO (Companies Registration Office). Accepts CRO number (5-6 digits) or fuzzy company
-  name.
-category: data-extraction
-price_cents: 80
+  Look up Irish company data from the Companies Registration Office (CRO) Open Data Portal. Accepts CRO number (5-6
+  digits) or fuzzy company name. Returns name, status, type, address, registration date, annual return dates, NACE
+  code, and Eircode.
+category: company-data
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - cro_number
+  required: []
   properties:
     cro_number:
       type: string
-      description: CRO number (5-6 digits) or company name
+      description: CRO number (5-6 digits)
+    company_name:
+      type: string
+      description: Irish company name (fuzzy match)
+    task:
+      type: string
+      description: Free-text input — first matching CRO number or company name is used
 output_schema:
   type: object
   example:
-    error: >-
-      Unable to access Irish company registry. Page blocked by Cloudflare security service. No company data available to
-      extract.
-    status: unknown
-    address: null
-    industry: null
-    directors: null
-    company_name: null
-    business_type: null
-    registration_date: null
-    registration_number: null
+    company_name: STRIPE PAYMENTS EUROPE, LIMITED
+    cro_number: "513174"
+    company_type: LTD - Private Company Limited by Shares
+    status: Normal
+    address: One Wilton Park, Wilton Place, Ireland
+    eircode: D02FX04
+    registration_date: "2012-05-15"
+    last_annual_return_date: "2025-09-30"
+    next_annual_return_date: "2026-09-30"
+    last_accounts_date: "2024-12-31"
+    status_date: null
+    dissolution_date: null
+    nace_v2_code: null
+    principal_object_code: "65.23"
+    jurisdiction: IE
   properties:
+    company_name:
+      type: string
+    cro_number:
+      type: string
+    company_type:
+      type: string
     status:
       type: string
     address:
       type: string
-    company_name:
+    eircode:
       type: string
-    business_type:
+    registration_date:
       type: string
-    registration_number:
+    last_annual_return_date:
       type: string
-data_source: CRO / Companies Registration Office (Ireland)
-data_source_type: scrape
-transparency_tag: ai_generated
+    next_annual_return_date:
+      type: string
+    last_accounts_date:
+      type: string
+    status_date:
+      type: string
+    dissolution_date:
+      type: string
+    nace_v2_code:
+      type: string
+    principal_object_code:
+      type: string
+    jurisdiction:
+      type: string
+data_source: CRO Open Data Portal (opendata.cro.ie) — CKAN datastore_search API
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: scraping-stable-target
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+maintenance_class: api-stable
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -57,26 +83,55 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      cro_number: "461461"
+      cro_number: "513174"
     expected_fields:
-      - field: status
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: cro_number
         operator: not_null
         reliability: guaranteed
       - field: status
-        operator: type
+        operator: not_null
         reliability: guaranteed
-        value: string
+      - field: jurisdiction
+        operator: equals
+        reliability: guaranteed
+        value: IE
   health_check_input:
-    cro_number: 461onal
+    cro_number: "513174"
 output_field_reliability:
-  status: guaranteed
-  address: guaranteed
   company_name: guaranteed
-  business_type: guaranteed
-  registration_number: guaranteed
+  cro_number: guaranteed
+  company_type: guaranteed
+  status: guaranteed
+  address: common
+  eircode: rare
+  registration_date: guaranteed
+  last_annual_return_date: common
+  next_annual_return_date: common
+  last_accounts_date: rare
+  status_date: rare
+  dissolution_date: rare
+  nace_v2_code: rare
+  principal_object_code: common
+  jurisdiction: guaranteed
 limitations:
-  - title: Extracted from Irish CRO via Browserless — some company filings require a paid CRO search for full documents
-    text: Extracted from CRO via Browserless — some company filings may require a paid CRO search for full documents
+  - title: Eircode (postal code) is not present for older or dissolved entities
+    text: >-
+      The Eircode field was introduced in 2014 and is populated for newer registrations and recently-updated entities.
+      Older or dissolved companies may have a null eircode.
     category: coverage
     severity: info
-    workaround: Use the company number from the response to access full filings at core.cro.ie
+  - title: Daily snapshot — sub-day filings may not be reflected immediately
+    text: >-
+      The CRO Open Data Portal publishes a daily snapshot. Filings submitted today may not be reflected in the API
+      response until the next daily refresh.
+    category: freshness
+    severity: info
+  - title: Open data covers core register only — full filings require separate access
+    text: >-
+      This capability returns the structured register record only. Document-level filings (memorandums of association,
+      annual return forms, etc.) require a separate paid lookup at core.cro.ie.
+    category: coverage
+    severity: info
