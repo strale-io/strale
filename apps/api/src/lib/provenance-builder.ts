@@ -8,6 +8,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { getStraleJurisdiction } from "./processing-location.js";
 
 // Acquisition method per DEC-20260428-A (third-party scraping doctrine).
 // Identifies how the upstream vendor obtained the data, so customers can
@@ -79,23 +80,38 @@ export function hashString(s: string): string {
 }
 
 /**
- * Determine processing jurisdictions based on capability characteristics.
- * Strale infrastructure is always EU (Railway EU West).
- * Anthropic API calls cross to US.
+ * Determine processing jurisdictions for a capability call.
+ *
+ * Composition (in order, deduped):
+ *   1. Strale's own processing region — read from RAILWAY_REPLICA_REGION
+ *      via processing-location.getStraleJurisdiction(). Today: "US"
+ *      (Railway us-east-4). Was previously hardcoded as "EU" — F-AUDIT-18.
+ *   2. "US" if the call invokes a US-hosted model provider (Anthropic via
+ *      capabilityType=ai_assisted or transparencyTag in
+ *      [ai_generated, mixed]).
+ *
+ * NOT YET captured (chunk 1.5 follow-up):
+ *   - Per-capability vendor-side jurisdictions, e.g. Dilisense in Frankfurt
+ *     (DE/EU), Browserless region, etc. These should be manifest-declared
+ *     and merged in here. The "US" today is honest about Strale's own
+ *     processing without claiming knowledge we don't have about vendors.
+ *
+ * Returns a deduped, deterministic-order list. "unknown" is dropped from
+ * the output (audit body must not assert jurisdictions we cannot derive).
  */
 export function getProcessingJurisdictions(
   capabilityType: string,
   transparencyTag: string | null,
 ): string[] {
-  const jurisdictions = ["EU"];
-  if (
+  const out: string[] = [];
+  const strale = getStraleJurisdiction();
+  if (strale && strale !== "unknown") out.push(strale);
+  const usesAnthropic =
     capabilityType === "ai_assisted" ||
     transparencyTag === "ai_generated" ||
-    transparencyTag === "mixed"
-  ) {
-    jurisdictions.push("US"); // Anthropic API is US-based
-  }
-  return jurisdictions;
+    transparencyTag === "mixed";
+  if (usesAnthropic && !out.includes("US")) out.push("US");
+  return out;
 }
 
 /**

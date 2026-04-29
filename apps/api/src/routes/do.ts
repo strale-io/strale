@@ -2105,7 +2105,12 @@ function buildFreeTierAudit(capability: CapabilityInfo, latencyMs: number) {
     data_classification: capability.dataClassification ?? "unknown",
     transparency_marker: marker,
     ai_description: getAiDescription(capability.slug, marker),
-    data_jurisdiction: "EU",
+    // F-AUDIT-01: was hardcoded "EU" while running in US East. Now computed
+    // from the actual processing region + AI vendor reach.
+    data_jurisdiction: getProcessingJurisdictions(
+      capability.capabilityType,
+      capability.transparencyTag,
+    ).join(",") || "unknown",
     processing_location: getProcessingLocation(),
     execution_mode: "sync",
     latency_ms: latencyMs,
@@ -2171,7 +2176,12 @@ function buildFullAudit(params: {
     data_classification: capability.dataClassification ?? "unknown",
     transparency_marker: marker,
     ai_description: getAiDescription(capability.slug, marker),
-    data_jurisdiction: "EU",
+    // F-AUDIT-01: was hardcoded "EU" while running in US East. Now computed
+    // from the actual processing region + AI vendor reach.
+    data_jurisdiction: getProcessingJurisdictions(
+      capability.capabilityType,
+      capability.transparencyTag,
+    ).join(",") || "unknown",
     processing_location: getProcessingLocation(),
     execution_mode: executionMode,
     latency_ms: latencyMs,
