@@ -206,16 +206,13 @@ const DEACTIVATED = new Map<string, string>([
   // (opendata.cro.ie/api/3/action/datastore_search). Free, real-time JSON,
   // no signup, CC-BY 4.0 (commercial redistribution permitted with
   // attribution). acquisition_method: direct_api per DEC-20260428-A Tier 2.
-  [
-    "latvian-company-data",
-    // Runtime scrapes info.ur.gov.lv (Latvian Register of Enterprises public
-    // UI) via Browserless + Claude. Manifest claimed Uzņēmumu reģistrs as
-    // data source — transport-divergence per the 2026-04-21 audit.
-    // Reactivation: Latvia publishes open-data CSV exports of the register
-    // — bulk-dataset migration is the licensed path. Or licensed multi-
-    // country aggregator.
-    "info.ur.gov.lv scraping violates Strale Tier 1 (DEC-20260428-A); pending licensed Uzņēmumu reģistrs or aggregator contract",
-  ],
+  //
+  // latvian-company-data REACTIVATED 2026-04-29: migrated from Browserless +
+  // Claude scrape of info.ur.gov.lv to direct Latvian Open Data Portal CKAN
+  // API (data.gov.lv/dati/api/3/action/datastore_search) against the
+  // Uzņēmumu reģistra atvērtie dati resource. Free, real-time JSON, no
+  // signup, CC0 1.0 (public domain — unrestricted commercial use).
+  // acquisition_method: direct_api per DEC-20260428-A Tier 2.
   // ─── UK property vertical, parked 2026-04-28 ─────────────────────────────
   // Built on 2026-04-11 in a fast push to claim ground after a Reddit
   // competitor post (Journal 33f67c87...d9049b). Audit on 2026-04-21

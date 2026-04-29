@@ -1,50 +1,73 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: latvian-company-data
 name: Latvian Company Data
 description: >-
-  Look up Latvian company data from the Enterprise Register (Uzņēmumu reģistrs). Accepts registration number (11 digits)
-  or fuzzy company name.
-category: data-extraction
-price_cents: 80
+  Look up Latvian company data from the Enterprise Register (Uzņēmumu reģistrs) via the data.gov.lv open-data CKAN API.
+  Accepts registration number (11 digits) or fuzzy company name. Returns name, status, type, address, registration date,
+  SEPA creditor ID, and ATVK administrative code.
+category: company-data
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - reg_number
+  required: []
   properties:
     reg_number:
       type: string
-      description: Latvian registration number (11 digits) or company name
+      description: Latvian registration number (11 digits)
+    company_name:
+      type: string
+      description: Latvian company name (fuzzy match)
+    task:
+      type: string
+      description: Free-text input — first matching registration number or company name is used
 output_schema:
   type: object
   example:
-    status: unknown
-    address: null
-    industry: null
-    directors: null
-    company_name: null
-    business_type: null
-    registration_date: null
-    registration_number: null
+    company_name: Air Baltic Corporation AS
+    reg_number: "40003245752"
+    company_type: Akciju sabiedrība
+    company_type_code: AS
+    register_type: Komercreģistrs
+    status: Reģistrēts
+    address: Mārupes nov., Mārupes pag., Lidosta "Rīga", Tehnikas iela 3
+    postal_index: "1053"
+    registration_date: "1995-02-08"
+    termination_date: null
+    sepa_creditor_id: LV78ZZZ40003245752
+    atvk_code: "807600"
+    jurisdiction: LV
   properties:
+    company_name:
+      type: string
+    reg_number:
+      type: string
+    company_type:
+      type: string
+    company_type_code:
+      type: string
+    register_type:
+      type: string
     status:
       type: string
     address:
       type: string
-    company_name:
+    postal_index:
       type: string
-    business_type:
+    registration_date:
       type: string
-    registration_number:
+    termination_date:
       type: string
-data_source: Uzņēmumu reģistrs (Latvian Register of Enterprises)
-data_source_type: scrape
-transparency_tag: ai_generated
+    sepa_creditor_id:
+      type: string
+    atvk_code:
+      type: string
+    jurisdiction:
+      type: string
+data_source: Latvian Open Data Portal (data.gov.lv) — Uzņēmumu reģistra atvērtie dati CKAN datastore_search API
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: scraping-stable-target
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+maintenance_class: free-stable-api
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -56,24 +79,84 @@ test_fixtures:
     input:
       reg_number: "40003245752"
     expected_fields:
-      - field: status
+      - field: company_name
         operator: not_null
         reliability: guaranteed
-      - field: status
-        operator: type
+      - field: reg_number
+        operator: equals
         reliability: guaranteed
-        value: string
+        value: "40003245752"
+      - field: company_type
+        operator: not_null
+        reliability: guaranteed
+      - field: company_type_code
+        operator: equals
+        reliability: guaranteed
+        value: AS
+      - field: register_type
+        operator: equals
+        reliability: guaranteed
+        value: Komercreģistrs
+      - field: status
+        operator: equals
+        reliability: guaranteed
+        value: Reģistrēts
+      - field: address
+        operator: not_null
+        reliability: guaranteed
+      - field: postal_index
+        operator: equals
+        reliability: guaranteed
+        value: "1053"
+      - field: registration_date
+        operator: equals
+        reliability: guaranteed
+        value: "1995-02-08"
+      - field: sepa_creditor_id
+        operator: equals
+        reliability: guaranteed
+        value: LV78ZZZ40003245752
+      - field: atvk_code
+        operator: equals
+        reliability: guaranteed
+        value: "807600"
+      - field: jurisdiction
+        operator: equals
+        reliability: guaranteed
+        value: LV
   health_check_input:
     reg_number: "40003245752"
 output_field_reliability:
-  status: guaranteed
-  address: guaranteed
   company_name: guaranteed
-  business_type: guaranteed
-  registration_number: guaranteed
+  reg_number: guaranteed
+  company_type: guaranteed
+  company_type_code: guaranteed
+  register_type: guaranteed
+  status: guaranteed
+  address: common
+  postal_index: common
+  registration_date: guaranteed
+  termination_date: rare
+  sepa_creditor_id: common
+  atvk_code: common
+  jurisdiction: guaranteed
 limitations:
-  - title: Extracted from Lursoft/UR via Browserless — detailed Latvian financial data may require paid access
-    text: Extracted from Lursoft/UR via Browserless — detailed financial data may require paid access
+  - title: Daily snapshot — sub-day filings may not be reflected immediately
+    text: >-
+      The Latvian Open Data Portal publishes a daily snapshot. Filings submitted today may not be reflected in the API
+      response until the next daily refresh.
+    category: freshness
+    severity: info
+  - title: Open data covers core register only — beneficial owners and financials require separate datasets
+    text: >-
+      This capability returns the structured register record only. Beneficial owners (Patiesie labuma guvēji) and
+      financial statements (Gada pārskatu finanšu dati) are published as separate data.gov.lv datasets and are not
+      included in this response.
     category: coverage
     severity: info
-    workaround: Use the registration number from the response to query the Latvian Enterprise Register directly at ur.gov.lv
+  - title: SEPA creditor ID and postal index are not present for all entities
+    text: >-
+      The SEPA creditor identifier and postal index fields are populated for most actively registered legal entities but
+      may be missing for older or terminated records.
+    category: coverage
+    severity: info
