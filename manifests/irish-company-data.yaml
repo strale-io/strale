@@ -73,7 +73,7 @@ data_source: CRO Open Data Portal (opendata.cro.ie) — CKAN datastore_search AP
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: api-stable
+maintenance_class: free-stable-api
 processes_personal_data: true
 personal_data_categories:
   - name

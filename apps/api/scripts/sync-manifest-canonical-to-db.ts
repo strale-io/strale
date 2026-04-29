@@ -51,6 +51,8 @@ const manifest = yaml.load(readFileSync(manifestPath, "utf8")) as {
   transparency_tag?: string;
   freshness_category?: string;
   output_field_reliability?: Record<string, string>;
+  processes_personal_data?: boolean;
+  personal_data_categories?: string[];
 };
 
 if (manifest.slug !== slug) {
@@ -67,7 +69,7 @@ console.log(`Mode: ${dryRun ? "dry-run" : "WRITE"}`);
 const before = await sql`
   SELECT slug, description, category, input_schema, output_schema,
          data_source, maintenance_class, transparency_tag, freshness_category,
-         output_field_reliability
+         output_field_reliability, processes_personal_data, personal_data_categories
   FROM capabilities
   WHERE slug = ${slug}
 `;
@@ -113,6 +115,20 @@ if (manifest.output_field_reliability !== undefined) {
     manifest.output_field_reliability,
   );
 }
+if (manifest.processes_personal_data !== undefined) {
+  compare(
+    "processes_personal_data",
+    dbRow.processes_personal_data,
+    manifest.processes_personal_data,
+  );
+}
+if (manifest.personal_data_categories !== undefined) {
+  compare(
+    "personal_data_categories",
+    dbRow.personal_data_categories,
+    manifest.personal_data_categories,
+  );
+}
 
 if (drifts.length === 0) {
   console.log("\nNo drift — DB already matches manifest. Nothing to do.");
@@ -142,6 +158,12 @@ const result = await sql`
         manifest.output_field_reliability !== undefined
           ? sql.json(manifest.output_field_reliability)
           : (dbRow.output_field_reliability as never)
+      },
+      processes_personal_data = ${manifest.processes_personal_data ?? dbRow.processes_personal_data},
+      personal_data_categories = ${
+        manifest.personal_data_categories !== undefined
+          ? sql.array(manifest.personal_data_categories, 1009)
+          : (dbRow.personal_data_categories as never)
       }
   WHERE slug = ${slug}
   RETURNING slug, data_source, maintenance_class
