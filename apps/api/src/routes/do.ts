@@ -1939,6 +1939,16 @@ async function executeAsync(
   });
 
   // Return 202 immediately — client polls GET /v1/transactions/:id
+  // MED-6: pre-fix, the 202 response carried no audit reference at all.
+  // Callers had to poll /v1/transactions/:id and parse audit_trail JSONB
+  // to find shareable_url — undocumented and brittle. The audit token is
+  // deterministic for a given transaction_id (HMAC over txnId + expiresAt),
+  // so we can issue and surface the shareable URL NOW even though the
+  // audit body itself fills in once the background execution completes.
+  // Callers store the URL; it resolves the moment the worker hashes the
+  // row. Polling /v1/transactions/:id is no longer required to discover
+  // the URL.
+  const shareable = getShareableUrl(transactionId);
   const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
   return c.json(
     {
@@ -1951,6 +1961,19 @@ async function executeAsync(
       },
       meta: {
         ...dualProfile,
+        // The audit body is not yet available (background execution still
+        // running) — but the URL that will serve the eventual audit IS
+        // available now. The /v1/audit/:id endpoint will return 202 +
+        // Retry-After while the row's compliance_hash_state is 'pending';
+        // the same URL becomes successful once the worker finalises the
+        // chain link. Callers should store this URL and poll the audit
+        // endpoint with it (or the polling URL below) to resolve.
+        audit: {
+          status: "pending",
+          shareable_url: shareable.url,
+          shareable_url_expires_at: shareable.expiresAt,
+          poll_url: `/v1/transactions/${transactionId}`,
+        },
       },
     },
     202,
