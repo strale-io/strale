@@ -309,6 +309,37 @@ type CapabilityInfo = {
   personalDataCategories: string[] | null;
 };
 
+/**
+ * Cert-audit C8: in-transaction spend-cap check. Caller must hold the
+ * wallet FOR UPDATE lock for `userId` so concurrent requests for the
+ * same user serialize on this read. Returns the over-cap details if
+ * the requested cents would push hourly spend above `capCents`,
+ * otherwise null.
+ *
+ * Counts both `completed` (sync success) and `executing` rows so a
+ * burst of in-flight async requests can't slip past while their final
+ * status is still being written.
+ */
+async function spendCapWouldExceed(
+  tx: any,
+  userId: string,
+  requestedCents: number,
+  capCents: number,
+): Promise<{ spent: number } | null> {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const result = await tx.execute(
+    sql`SELECT COALESCE(SUM(price_cents), 0)::text AS total
+        FROM transactions
+        WHERE user_id = ${userId}
+          AND status IN ('completed', 'executing')
+          AND created_at >= ${oneHourAgo}`,
+  );
+  const rows: any[] = Array.isArray(result) ? result : (result?.rows ?? []);
+  const spent = Number(rows[0]?.total ?? 0);
+  if (spent + requestedCents > capCents) return { spent };
+  return null;
+}
+
 /** Execute with retry for non-deterministic capabilities. */
 function executeWithRetry(
   executor: (input: Record<string, unknown>) => Promise<any>,
@@ -347,6 +378,41 @@ const MAX_PRICE_CAP_CENTS = 2000; // €20 absolute cap per request
 
 // DEC-22: Capabilities with avg latency above this threshold execute async
 const ASYNC_THRESHOLD_MS = 10_000;
+
+// Cert-audit C7 follow-up: hard wall-clock timeout for the async executor
+// path. Even if a capability skips AbortSignal on its fetch (or hangs in a
+// CPU loop), the watchdog forces the promise chain to reject so the catch
+// block runs the refund + mark-failed path. The stuck-deferred sweep
+// (integrity-hash-retry) is a janitor that runs at 30-min cadence — this
+// is the closer-fitting bound that cuts off the executor in real time.
+// Override per-cap or globally with EXEC_HARD_TIMEOUT_MS env.
+const EXEC_HARD_TIMEOUT_MS = parseInt(process.env.EXEC_HARD_TIMEOUT_MS ?? "300000", 10);
+
+class ExecutionTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Capability execution exceeded ${timeoutMs}ms hard timeout`);
+    this.name = "ExecutionTimeoutError";
+  }
+}
+
+function executeWithHardTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  return new Promise<T>((resolveExec, rejectExec) => {
+    const timer = setTimeout(() => rejectExec(new ExecutionTimeoutError(timeoutMs)), timeoutMs);
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolveExec(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        rejectExec(e);
+      },
+    );
+  });
+}
 
 export const doRoute = new Hono<AppEnv>();
 
@@ -659,7 +725,16 @@ doRoute.post(
     );
   }
 
-  // ── 3b. Hourly spend cap check (DEC-21) — authenticated only ────────────
+  // ── 3b. Hourly spend cap fast-fail (DEC-21) — authenticated only ───────
+  // Cert-audit C8: this is the cheap pre-check that catches the obvious
+  // over-budget case without holding any locks. The authoritative check
+  // runs INSIDE the wallet-locked transaction (executeWithSpendCapCheck)
+  // so concurrent requests can't each pass the pre-check and collectively
+  // blow the cap. Race window: two requests arrive milliseconds apart,
+  // both read SUM=950, both pass `950+50 ≤ 1000`, and both proceed to
+  // debit — the cap is breached. The atomic check inside the tx fixes
+  // it; this pre-check is kept only to avoid spinning up the executor
+  // for the trivially-over case.
   if (user && user.maxSpendPerHourCents) {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const [spendRow] = await db
@@ -1490,7 +1565,7 @@ async function executeFreeTierAuthenticated(
 async function executeSync(
   c: any,
   db: ReturnType<typeof getDb>,
-  user: { id: string },
+  user: { id: string; maxSpendPerHourCents?: number | null },
   capability: CapabilityInfo,
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
@@ -1523,6 +1598,14 @@ async function executeSync(
       }
     | {
         ok: false;
+        errorCode: "spend_cap_exceeded";
+        balance: number;
+        required: number;
+        spent: number;
+        limit: number;
+      }
+    | {
+        ok: false;
         errorCode: "execution_failed";
         error: string;
         transactionId: string;
@@ -1530,6 +1613,18 @@ async function executeSync(
       };
 
   const result: TxResult = await db.transaction(async (tx) => {
+    // Cert-audit C4: cap the lock-hold time. The sync path holds the
+    // wallet FOR UPDATE row for the duration of executeWithRetry, which
+    // can be several seconds for non-async caps. Without this, a stuck
+    // upstream pins the wallet row and serializes every concurrent
+    // request from the same user. SET LOCAL applies for this tx only —
+    // 15s is comfortable for the slowest sync caps (LLM, scrape) while
+    // still cutting off pathological hangs well before the 60s pool
+    // default. A timeout here aborts the tx with code 25P03; the catch
+    // block treats that as execution_failed and refunds nothing (no
+    // debit committed).
+    await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = '15s'`);
+
     // Lock wallet row
     const [wallet] = await tx
       .select()
@@ -1544,6 +1639,29 @@ async function executeSync(
         balance: wallet?.balanceCents ?? 0,
         required: capability.priceCents,
       };
+    }
+
+    // Cert-audit C8: authoritative spend-cap re-check INSIDE the wallet-
+    // locked tx. Concurrent requests for this user serialize on the wallet
+    // FOR UPDATE lock, so the SUM here reflects every previously-committed
+    // debit. Pre-check at line 698 is a fast-fail; this is the closer.
+    if (user.maxSpendPerHourCents) {
+      const capCheck = await spendCapWouldExceed(
+        tx,
+        user.id,
+        capability.priceCents,
+        user.maxSpendPerHourCents,
+      );
+      if (capCheck) {
+        return {
+          ok: false as const,
+          errorCode: "spend_cap_exceeded" as const,
+          balance: wallet.balanceCents,
+          required: capability.priceCents,
+          spent: capCheck.spent,
+          limit: user.maxSpendPerHourCents,
+        };
+      }
     }
 
     // Determine transparency marker based on capability type
@@ -1738,6 +1856,24 @@ async function executeSync(
     );
   }
 
+  if (!result.ok && result.errorCode === "spend_cap_exceeded") {
+    // Cert-audit C8: hit the in-tx authoritative check after the pre-check
+    // already passed. Treat as the same client-facing error so SDKs don't
+    // need to handle two error codes.
+    return c.json(
+      apiError(
+        "spend_cap_exceeded",
+        `Hourly spend limit (€${(result.limit / 100).toFixed(2)}) would be exceeded. Spent: €${(result.spent / 100).toFixed(2)}, requested: €${(result.required / 100).toFixed(2)}.`,
+        {
+          spent_cents: result.spent,
+          requested_cents: result.required,
+          limit_cents: result.limit,
+        },
+      ),
+      429,
+    );
+  }
+
   if (!result.ok && result.errorCode === "execution_failed") {
     return c.json(
       apiError(
@@ -1822,7 +1958,7 @@ async function executeSync(
 async function executeAsync(
   c: any,
   db: ReturnType<typeof getDb>,
-  user: { id: string },
+  user: { id: string; maxSpendPerHourCents?: number | null },
   capability: CapabilityInfo,
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
@@ -1845,6 +1981,13 @@ async function executeAsync(
         errorCode: "insufficient_balance";
         balance: number;
         required: number;
+      }
+    | {
+        ok: false;
+        errorCode: "spend_cap_exceeded";
+        spent: number;
+        required: number;
+        limit: number;
       };
 
   const setupResult: SetupResult = await db.transaction(async (tx) => {
@@ -1861,6 +2004,26 @@ async function executeAsync(
         balance: wallet?.balanceCents ?? 0,
         required: capability.priceCents,
       };
+    }
+
+    // Cert-audit C8: spend-cap re-check inside the wallet-locked tx.
+    // Same rationale as executeSync — see spendCapWouldExceed().
+    if (user.maxSpendPerHourCents) {
+      const capCheck = await spendCapWouldExceed(
+        tx,
+        user.id,
+        capability.priceCents,
+        user.maxSpendPerHourCents,
+      );
+      if (capCheck) {
+        return {
+          ok: false as const,
+          errorCode: "spend_cap_exceeded" as const,
+          spent: capCheck.spent,
+          required: capability.priceCents,
+          limit: user.maxSpendPerHourCents,
+        };
+      }
     }
 
     // Optimistic debit — refunded if execution fails
@@ -1909,6 +2072,21 @@ async function executeAsync(
       balanceAfter: newBalance,
     };
   });
+
+  if (!setupResult.ok && setupResult.errorCode === "spend_cap_exceeded") {
+    return c.json(
+      apiError(
+        "spend_cap_exceeded",
+        `Hourly spend limit (€${(setupResult.limit / 100).toFixed(2)}) would be exceeded. Spent: €${(setupResult.spent / 100).toFixed(2)}, requested: €${(setupResult.required / 100).toFixed(2)}.`,
+        {
+          spent_cents: setupResult.spent,
+          requested_cents: setupResult.required,
+          limit_cents: setupResult.limit,
+        },
+      ),
+      429,
+    );
+  }
 
   if (!setupResult.ok) {
     return c.json(
@@ -2001,7 +2179,16 @@ async function executeInBackground(
   sqs: { score: number; label: string; trend: string; pending: boolean },
 ) {
   try {
-    const capResult = await executeWithRetry(executor, executionInput, capability);
+    // Cert-audit C7: hard timeout on the executor. Without this, an executor
+    // that hangs (no AbortSignal on its fetch, infinite CPU loop, deadlock)
+    // would leave the row in 'deferred' until the integrity-hash-retry
+    // janitor flips it to 'failed' 30 min later — and would never refund
+    // the optimistic debit. The race forces the catch block to run when
+    // the wall-clock budget is up.
+    const capResult = await executeWithHardTimeout(
+      executeWithRetry(executor, executionInput, capability),
+      EXEC_HARD_TIMEOUT_MS,
+    );
     const latencyMs = Date.now() - startTime;
 
     // Success: update transaction record with full audit trail

@@ -64,15 +64,17 @@ describe("Cluster 2 Phase 1: enum exports", () => {
     expect(VALID_CATEGORIES).toContain("web-intelligence");
   });
 
-  it("PII_CATEGORY_ENUM pins the 12 canonical categories per DEC-20260420-D", () => {
+  it("PII_CATEGORY_ENUM pins the canonical categories per DEC-20260420-D (extended 2026-04-30)", () => {
     const expected = [
       "name", "email", "phone", "address", "date_of_birth",
       "government_id", "financial", "professional", "behavioral",
       "biometric", "health", "sensitive_special",
+      // Extended 2026-04-30 to cover sanctions/PEP screening manifests.
+      "nationality", "political_affiliation",
     ];
     for (const cat of expected) {
       expect(PII_CATEGORY_ENUM).toContain(cat);
     }
-    expect(PII_CATEGORY_ENUM.length).toBe(12);
+    expect(PII_CATEGORY_ENUM.length).toBe(14);
   });
 });

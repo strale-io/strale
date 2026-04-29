@@ -247,6 +247,11 @@ export const PII_CATEGORY_ENUM = [
   "biometric",
   "health",
   "sensitive_special",
+  // Added 2026-04-30 to cover sanctions/PEP screening manifests.
+  // `nationality` is country-of-citizenship; `political_affiliation`
+  // is an Art. 9 special-category attribute for PEP records.
+  "nationality",
+  "political_affiliation",
 ] as const;
 
 export type PiiCategory = typeof PII_CATEGORY_ENUM[number];

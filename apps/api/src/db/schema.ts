@@ -41,6 +41,19 @@ export const users = pgTable("users", {
   firstTransactionAt: timestamp("first_transaction_at", { withTimezone: true }),
   activationEmailStage: integer("activation_email_stage").notNull().default(0),
   activationCompletedAt: timestamp("activation_completed_at", { withTimezone: true }),
+  // Cert-audit G1 (GDPR Art. 17): erasure marker. When set, the row is
+  // anonymized (email/name/apiKeyHash overwritten with sentinel values)
+  // and the user can no longer authenticate. Historical transactions are
+  // NOT deleted because they participate in the audit hash chain (Art. 30
+  // records-of-processing balance, DEC-20260428-B); the FK still points
+  // to this redacted row.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletionReason: text("deletion_reason"),
+  // Cert-audit G7: ToS acceptance is recorded at signup so we can show
+  // proof of contract formation if disputed. Version string lets us
+  // identify which Terms revision the user accepted.
+  tosAcceptedAt: timestamp("tos_accepted_at", { withTimezone: true }),
+  tosVersion: varchar("tos_version", { length: 32 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -239,6 +252,13 @@ export const transactions = pgTable(
     // x402 payment tracking
     paymentMethod: varchar("payment_method", { length: 20 }).notNull().default("wallet"),
     x402SettlementId: text("x402_settlement_id"),
+    // Cert-audit C9: SHA-256 hash of the X-Payment header (first 32 hex
+    // chars). Set on every x402 path BEFORE verifyX402PaymentOnly returns;
+    // a unique partial index lets the gateway return cached output if the
+    // same header is replayed (an upstream client retry, a misbehaving
+    // proxy, or an attacker trying to double-charge during the
+    // verify-then-settle window). Null on wallet-paid rows.
+    x402PaymentHash: varchar("x402_payment_hash", { length: 32 }),
     priceUsd: decimal("price_usd", { precision: 10, scale: 4 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -251,6 +271,13 @@ export const transactions = pgTable(
       .where(sql`idempotency_key IS NOT NULL`),
     index("transactions_user_id_idx").on(table.userId),
     index("transactions_status_idx").on(table.status),
+    // Cert-audit C9: x402 payment-header dedup. Partial index so wallet
+    // rows (NULL) don't compete for slots; uniqueness keeps two distinct
+    // requests with the same X-Payment header from each becoming a
+    // recorded charge.
+    uniqueIndex("transactions_x402_payment_hash_unique")
+      .on(table.x402PaymentHash)
+      .where(sql`x402_payment_hash IS NOT NULL`),
   ],
 );
 

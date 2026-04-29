@@ -458,7 +458,40 @@ function build402(
   return { body, headerPayload, paymentRequirement };
 }
 
-// ─── Transaction recording ──────────────────────────────────────────────────
+// ─── Cert-audit C9: payment-header dedup ────────────────────────────────────
+//
+// The x402 flow is verify → execute → settle. Between verify and settle,
+// the same payment header can be replayed (client retry, proxy redelivery,
+// adversarial replay). Without dedup, the second arrival would re-execute
+// the capability and attempt a second on-chain settlement. The facilitator
+// usually rejects the duplicate, but we'd still consume external API quota
+// for the executor and produce a second transactions row.
+//
+// Dedup strategy: hash(X-Payment header) → unique partial index on
+// transactions.x402_payment_hash. Pre-execute lookup. If found and the
+// row is `completed`, return its output as the cached response. If found
+// and `failed`, return its error.
+
+function hashPaymentHeader(header: string): string {
+  return createHash("sha256").update(header).digest("hex").slice(0, 32);
+}
+
+async function findCachedX402Response(
+  paymentHash: string,
+): Promise<{ status: string; output: unknown; latencyMs: number | null; settlementId: string | null } | null> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      status: transactions.status,
+      output: transactions.output,
+      latencyMs: transactions.latencyMs,
+      settlementId: transactions.x402SettlementId,
+    })
+    .from(transactions)
+    .where(eq(transactions.x402PaymentHash, paymentHash))
+    .limit(1);
+  return rows[0] ?? null;
+}
 
 interface RecordX402Args {
   // Exactly one of capabilityId / solutionSlug is set.
@@ -488,6 +521,8 @@ interface RecordX402Args {
     personalDataCategories: string[];
     outputSchema: Record<string, unknown> | null;
   };
+  // Cert-audit C9: persisted with the row so a replay returns this row.
+  paymentHash?: string | null;
 }
 
 // CRIT-8: produce an audit_trail JSONB shape comparable to buildFullAudit
@@ -632,6 +667,7 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       isFreeTier: false,
       paymentMethod: "x402",
       x402SettlementId: args.settlementId ?? null,
+      x402PaymentHash: args.paymentHash ?? null,
       priceUsd: args.priceUsd.toFixed(4),
       completedAt: new Date(),
     }).returning({ id: transactions.id });
@@ -778,6 +814,7 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
   // successful step (DEC-14). If the solution produces no output the caller is
   // not charged.
   let verified: X402VerifiedPayment | undefined;
+  let paymentHash: string | null = null;
   if (sol.x402PriceUsd > 0) {
     const paymentHeader = extractPaymentHeader(c.req.raw.headers);
 
@@ -819,6 +856,34 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
       return c.json({ error: "Payment verification failed", detail: verification.error }, 402);
     }
     verified = verification.verified;
+
+    // Cert-audit C9: replay dedup. If this exact payment header was already
+    // processed and recorded, return the cached row instead of re-running.
+    // Only safe AFTER verify so an unverified replay can't probe for the
+    // existence of cached rows.
+    paymentHash = hashPaymentHeader(paymentHeader);
+    const cached = await findCachedX402Response(paymentHash);
+    if (cached) {
+      if (cached.status === "completed") {
+        return c.json({
+          solution: sol.slug,
+          steps: (cached.output as { steps?: unknown })?.steps ?? cached.output,
+          _meta: {
+            solution: sol.slug,
+            replayed: true,
+            note: "Returned from cache — same X-Payment header was already processed.",
+            latency_ms: cached.latencyMs,
+            payment: cached.settlementId
+              ? { method: "x402", settlement_id: cached.settlementId, price_usd: sol.x402PriceUsd }
+              : { method: "x402", price_usd: sol.x402PriceUsd },
+          },
+        });
+      }
+      return c.json(
+        { error: "Prior request with this payment header failed.", solution: sol.slug, _meta: { replayed: true } },
+        502,
+      );
+    }
   }
 
   // Extract inputs (after verify, before settle — bad input returns 4xx without charging)
@@ -893,6 +958,7 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
     transparencyTag: "mixed",
     settlementId,
     payerAddress: solPayerAddress,
+    paymentHash,
   });
 
   return c.json({
@@ -930,6 +996,7 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
   // Free capabilities ($0.00) skip payment
   const isFree = cap.x402PriceUsd === 0;
   let verified: X402VerifiedPayment | undefined;
+  let paymentHash: string | null = null;
 
   // Payment check FIRST — before any input validation. CDP's Bazaar crawler
   // sends an empty request to discover endpoints and requires HTTP 402 back.
@@ -987,6 +1054,32 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
       );
     }
     verified = verification.verified;
+
+    // Cert-audit C9: replay dedup. Same logic as the solutions handler —
+    // if this exact payment header already produced a recorded transaction,
+    // return the cached output and don't re-execute or re-settle.
+    paymentHash = hashPaymentHeader(paymentHeader);
+    const cached = await findCachedX402Response(paymentHash);
+    if (cached) {
+      if (cached.status === "completed") {
+        return c.json({
+          ...((cached.output as Record<string, unknown>) ?? {}),
+          _meta: {
+            capability: cap.slug,
+            replayed: true,
+            note: "Returned from cache — same X-Payment header was already processed.",
+            latency_ms: cached.latencyMs,
+            payment: cached.settlementId
+              ? { method: "x402", settlement_id: cached.settlementId, price_usd: cap.x402PriceUsd }
+              : { method: "x402", price_usd: cap.x402PriceUsd },
+          },
+        });
+      }
+      return c.json(
+        { error: "Prior request with this payment header failed.", capability: cap.slug, _meta: { replayed: true } },
+        502,
+      );
+    }
   }
 
   // Method check (after verify — crawler hits with any method)
@@ -1054,6 +1147,9 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
         settlementId: undefined,
         payerAddress: verified ? extractPayerAddress(verified) : null,
         error: sanitized ?? message,
+        // Cert-audit C9: record the failure under the same payment hash so a
+        // replay is short-circuited with the failure response, not re-run.
+        paymentHash,
         capForAudit: {
           transparencyTag: cap.transparencyTag,
           capabilityType: cap.capabilityType,
@@ -1107,6 +1203,7 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
     transparencyTag: cap.transparencyTag,
     settlementId,
     payerAddress,
+    paymentHash,
     capForAudit: {
       transparencyTag: cap.transparencyTag,
       capabilityType: cap.capabilityType,

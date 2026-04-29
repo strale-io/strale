@@ -15,6 +15,12 @@ import type { Context } from "hono";
 
 const TRIAL_CREDITS_CENTS = 200; // €2.00 per DEC-10
 
+// Cert-audit G7: ToS version recorded at signup. Bump whenever the
+// public Terms page changes materially. Mirror this value in the
+// frontend Terms component (LAST_UPDATED) so the user sees the same
+// version they accepted.
+export const CURRENT_TOS_VERSION = "2026-04-30";
+
 export const authRoute = new Hono<AppEnv>();
 
 // POST /v1/auth/register — Register new account
@@ -63,9 +69,21 @@ authRoute.post(
   const clientIp = getClientIp(c);
   const signupIpHash = clientIp !== "unknown" ? hashIp(clientIp) : null;
 
+  // Cert-audit G7: record ToS acceptance at the moment the account is
+  // created. Treats account creation as acceptance of the in-force
+  // version (the public registration flow shows the Terms link adjacent
+  // to the submit button). The agentSignupHandler below does the same.
   const [user] = await db
     .insert(users)
-    .values({ email, name, apiKeyHash, keyPrefix, signupIpHash })
+    .values({
+      email,
+      name,
+      apiKeyHash,
+      keyPrefix,
+      signupIpHash,
+      tosAcceptedAt: new Date(),
+      tosVersion: CURRENT_TOS_VERSION,
+    })
     .returning({ id: users.id, email: users.email });
 
   const [wallet] = await db
@@ -205,6 +223,81 @@ authRoute.post(
   return c.json(genericResponse);
 });
 
+// DELETE /v1/auth/me — GDPR Art. 17 right to erasure (cert-audit G1).
+//
+// Anonymises the user row in place rather than physically deleting it.
+// Transactions are NOT deleted — they participate in the audit hash chain
+// (DEC-20260428-B) and represent processing records under Art. 30, which
+// the controller is obliged to retain. Anonymising the user link satisfies
+// Art. 17 because no re-identification of the user is possible from the
+// remaining data.
+//
+// What this endpoint does:
+//   1. Overwrites email + name + apiKeyHash on the users row
+//   2. Burns the wallet balance (cannot be reactivated)
+//   3. Sets deleted_at + deletion_reason
+//
+// What this endpoint deliberately does NOT do:
+//   - Touch transactions / wallet_transactions / audit chain
+//   - Cascade-delete to anything that affects another customer's data
+//
+// The response itemises both lists so the user has explicit confirmation
+// of what survived erasure and the legal basis. This is a one-way action;
+// the API key dies the moment this returns 200.
+authRoute.delete("/me", authMiddleware, async (c) => {
+  const user = c.get("user");
+  const db = getDb();
+  const body = await c.req.json().catch(() => ({})) as { reason?: string };
+  const reason = (body.reason ?? "").toString().slice(0, 500) || "user_request";
+
+  const now = new Date();
+  // Replace identifiers with sentinels. Email keeps the unique-index
+  // happy by tagging a UUID; apiKeyHash gets a random sha256 so the
+  // current key fails immediately on next use.
+  const sentinel = `redacted-${user.id}@deleted.local`;
+  const burnedKeyHash = hashApiKey(generateApiKey());
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(users)
+      .set({
+        email: sentinel,
+        name: null,
+        apiKeyHash: burnedKeyHash,
+        keyPrefix: "REDACTED",
+        signupIpHash: null,
+        deletedAt: now,
+        deletionReason: reason,
+        updatedAt: now,
+      })
+      .where(eq(users.id, user.id));
+
+    // Burn the wallet — refund-on-delete is out of scope (would require
+    // a Stripe payout flow). Documented in the response.
+    await tx
+      .update(wallets)
+      .set({ balanceCents: 0, updatedAt: now })
+      .where(eq(wallets.userId, user.id));
+  });
+
+  return c.json({
+    status: "redacted",
+    user_id: user.id,
+    redacted_at: now.toISOString(),
+    deletion_reason: reason,
+    summary: {
+      anonymized: ["email", "name", "api_key_hash", "key_prefix", "signup_ip_hash"],
+      retained: ["transactions", "wallet_transactions", "audit_trail"],
+      retained_legal_basis:
+        "GDPR Art. 30 (records of processing) + DEC-20260428-B (integrity hash chain). " +
+        "Retained data is anonymised — your user_id is no longer linkable to a real person via this controller.",
+    },
+    api_key_status: "burned — current key will fail on next use",
+    wallet_status: "balance_zeroed",
+    contact: "petter@strale.io",
+  });
+});
+
 // POST /v1/auth/api-key — Regenerate API key
 // Requires auth (old key must still work)
 authRoute.post("/api-key", authMiddleware, async (c) => {
@@ -335,7 +428,17 @@ export async function agentSignupHandler(c: Context) {
 
   const [user] = await db
     .insert(users)
-    .values({ email, apiKeyHash, keyPrefix, signupIpHash: ipHash })
+    .values({
+      email,
+      apiKeyHash,
+      keyPrefix,
+      signupIpHash: ipHash,
+      // Cert-audit G7: agent self-signup also accepts ToS at the moment
+      // of API call. The signup endpoint's response includes a link to
+      // the current Terms; usage of the returned API key is acceptance.
+      tosAcceptedAt: new Date(),
+      tosVersion: CURRENT_TOS_VERSION,
+    })
     .returning({ id: users.id, email: users.email });
 
   const [wallet] = await db
