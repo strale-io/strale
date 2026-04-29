@@ -8,7 +8,9 @@
  */
 
 import { createHash } from "node:crypto";
+import { z } from "zod";
 import { getStraleJurisdiction } from "./processing-location.js";
+import { logError, logWarn } from "./log.js";
 
 // Acquisition method per DEC-20260428-A (third-party scraping doctrine).
 // Identifies how the upstream vendor obtained the data, so customers can
@@ -73,6 +75,153 @@ export function buildProvenance(
     fetched_at: new Date().toISOString(),
     ...options,
   };
+}
+
+// CRIT-10 / F-AUDIT-17: Zod gate at the provenance boundary.
+//
+// Pre-fix: RichProvenance had an open index signature and was never
+// validated at runtime. A capability that returned provenance: null,
+// provenance: {}, or provenance lacking DEC-20260428-A Tier-2 fields
+// (upstream_vendor / acquisition_method / primary_source_reference)
+// silently produced a "compliance-grade" audit with no provenance. With
+// 290+ capabilities including Tier-2 vendor-mediated sources, this was
+// producing wrong audits in prod today.
+//
+// This gate runs at the executor result boundary (do.ts and friends call
+// validateProvenanceAtBoundary on capResult.provenance after the executor
+// returns). Failures are warn-then-block:
+//
+//   - source missing or non-string                → WARN every time, accept
+//   - acquisition_method is "vendor_scraping" but
+//     upstream_vendor or primary_source_reference
+//     missing                                     → WARN every time, accept
+//   - acquisition_method missing for capability
+//     where data_source_type = "scrape"           → WARN every time, accept
+//   - schema-shape errors                         → WARN once per slug, accept
+//
+// "Block" escalation is v1.1 once we've seen which capabilities trip each
+// warning in production logs. For v1, visibility is the goal: regulators
+// looking at audit_trail.provenance need to see what's missing instead of
+// finding silently empty fields.
+
+const acquisitionMethodSchema = z.enum([
+  "direct_api",
+  "licensed_bulk",
+  "vendor_aggregation",
+  "vendor_scraping",
+  "primary_source",
+]);
+
+const richProvenanceSchema = z
+  .object({
+    source: z.string().min(1),
+    source_url: z.string().optional(),
+    fetched_at: z.string(),
+    attribution: z.string().optional(),
+    license: z.string().optional(),
+    license_url: z.string().optional(),
+    source_note: z.string().optional(),
+    upstream_vendor: z.string().optional(),
+    acquisition_method: acquisitionMethodSchema.optional(),
+    primary_source_reference: z.string().optional(),
+    ai_model: z.string().optional(),
+    ai_prompt_hash: z.string().optional(),
+    ai_raw_output_hash: z.string().optional(),
+    ai_processing_description: z.string().optional(),
+    response_time_ms: z.number().optional(),
+    retry_count: z.number().optional(),
+    fallback_used: z.string().optional(),
+    cache_hit: z.boolean().optional(),
+    processing_jurisdictions: z.array(z.string()).optional(),
+    failed: z.boolean().optional(),
+    error_category: z.string().optional(),
+  })
+  .passthrough(); // additional fields allowed; the open index signature is preserved
+
+const _shapeWarnedSlugs = new Set<string>();
+
+export interface ProvenanceValidationContext {
+  /** Capability slug. Used to deduplicate "shape warning" logs per-slug. */
+  slug: string;
+  /** From capabilities.data_source_type — "scrape" requires DEC-20260428-A Tier-2 fields. */
+  dataSourceType: string | null;
+}
+
+export interface ProvenanceValidationResult {
+  /** True when provenance is structurally valid. False = log-and-accept (warn). */
+  ok: boolean;
+  /** True when one or more DEC-20260428-A Tier-2 fields were expected but missing. */
+  tier2Incomplete: boolean;
+  /** Provenance object as-passed (for use after validation). */
+  provenance: unknown;
+}
+
+export function validateProvenanceAtBoundary(
+  provenance: unknown,
+  ctx: ProvenanceValidationContext,
+): ProvenanceValidationResult {
+  // Hard reject: provenance is null / not an object. Audit body cannot
+  // claim "compliance-grade" when there's literally nothing to attest to.
+  // We log + return ok:false but still ACCEPT (don't throw); the audit
+  // builder will surface failed:true in the audit's provenance field.
+  if (!provenance || typeof provenance !== "object" || Array.isArray(provenance)) {
+    if (!_shapeWarnedSlugs.has(ctx.slug)) {
+      logError(
+        "provenance-missing-or-invalid",
+        new Error(`Capability ${ctx.slug} returned non-object provenance`),
+        { slug: ctx.slug, type: typeof provenance },
+      );
+      _shapeWarnedSlugs.add(ctx.slug);
+    }
+    return { ok: false, tier2Incomplete: false, provenance };
+  }
+
+  const parsed = richProvenanceSchema.safeParse(provenance);
+  if (!parsed.success) {
+    if (!_shapeWarnedSlugs.has(ctx.slug)) {
+      logWarn(
+        "provenance-shape-invalid",
+        `Capability ${ctx.slug} returned provenance failing RichProvenance schema`,
+        {
+          slug: ctx.slug,
+          issues: parsed.error.issues.slice(0, 5).map((i) => ({ path: i.path, code: i.code, message: i.message })),
+        },
+      );
+      _shapeWarnedSlugs.add(ctx.slug);
+    }
+    return { ok: false, tier2Incomplete: false, provenance };
+  }
+
+  // DEC-20260428-A Tier-2 completeness check.
+  const p = parsed.data;
+  let tier2Incomplete = false;
+  if (p.acquisition_method === "vendor_scraping") {
+    if (!p.upstream_vendor || !p.primary_source_reference) {
+      tier2Incomplete = true;
+      logWarn(
+        "provenance-tier2-incomplete",
+        `Capability ${ctx.slug}: vendor_scraping requires upstream_vendor + primary_source_reference per DEC-20260428-A`,
+        { slug: ctx.slug, has_upstream_vendor: !!p.upstream_vendor, has_primary_source_reference: !!p.primary_source_reference },
+      );
+    }
+  } else if (ctx.dataSourceType === "scrape" && !p.acquisition_method) {
+    // Capability is classified scrape in its manifest but provenance
+    // doesn't declare acquisition_method. Doctrine requires explicit
+    // disclosure under Tier-2.
+    tier2Incomplete = true;
+    logWarn(
+      "provenance-tier2-acquisition-method-missing",
+      `Capability ${ctx.slug}: data_source_type=scrape but provenance lacks acquisition_method per DEC-20260428-A`,
+      { slug: ctx.slug, dataSourceType: ctx.dataSourceType },
+    );
+  }
+
+  return { ok: true, tier2Incomplete, provenance };
+}
+
+// Test-only — resets the warned-slugs set so tests don't leak state.
+export function __resetProvenanceWarningsForTests(): void {
+  _shapeWarnedSlugs.clear();
 }
 
 export function hashString(s: string): string {

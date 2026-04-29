@@ -37,7 +37,7 @@ import {
   type FreshnessInfo,
 } from "../lib/trust-grade.js";
 import { withRetry } from "../lib/retry.js";
-import { buildFailureProvenance, getProcessingJurisdictions } from "../lib/provenance-builder.js";
+import { buildFailureProvenance, getProcessingJurisdictions, validateProvenanceAtBoundary } from "../lib/provenance-builder.js";
 import { getProcessingLocation } from "../lib/processing-location.js";
 // F-0-009 Stage 2: integrity hashing moved to jobs/integrity-hash-retry.ts.
 import {
@@ -2224,6 +2224,18 @@ function buildFullAudit(params: {
     latencyMs, executionInput, output, outputSchema, provenance, sqs, qualityPassRate,
     requestContext,
   } = params;
+
+  // CRIT-10 / F-AUDIT-17: validate provenance at the audit-build boundary.
+  // Logs warnings when provenance is missing/invalid or when DEC-20260428-A
+  // Tier-2 disclosure (upstream_vendor / acquisition_method / primary_source_
+  // _reference) is incomplete for vendor-scraping capabilities. Warn-only in
+  // v1; v1.1 escalates to block once we've quantified production failure rate.
+  // capabilityType="scraping" is used as a proxy for data_source_type=scrape
+  // since manifests aren't queryable as a column today.
+  validateProvenanceAtBoundary(provenance, {
+    slug: capability.slug,
+    dataSourceType: capability.capabilityType === "scraping" ? "scrape" : null,
+  });
 
   // F-A-003 + F-A-009 + SA.2b.d: manifest-declared classification is
   // the authoritative source. Heuristic fallback was deleted after
