@@ -31,6 +31,10 @@ import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { executeSolution } from "../lib/solution-executor.js";
 import { logError } from "../lib/log.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
+import { getProcessingLocation } from "../lib/processing-location.js";
+import { getShareableUrl } from "../lib/audit-token.js";
+import { TRANSACTION_RETENTION_DAYS } from "../lib/data-retention.js";
+import { createHash } from "node:crypto";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -53,6 +57,14 @@ interface X402Capability {
   // the runtime). The two are unrelated under GDPR Art. 30/44–49.
   // dataJurisdiction is now computed at record time from Strale's region
   // + transparencyTag — see recordX402Transaction.
+  // CRIT-8: extra fields needed to build a full-shape audit body. Pre-fix
+  // the audit_trail JSONB on x402 rows had only payment+latency fields;
+  // these extras let buildX402AuditTrail produce parity with buildFullAudit.
+  capabilityType: string | null;
+  dataSource: string | null;
+  dataClassification: string | null;
+  processesPersonalData: boolean;
+  personalDataCategories: string[];
 }
 
 interface X402Solution {
@@ -92,6 +104,11 @@ async function ensureCache(): Promise<void> {
         priceCents: capabilities.priceCents,
         matrixSqs: capabilities.matrixSqs,
         transparencyTag: capabilities.transparencyTag,
+        capabilityType: capabilities.capabilityType,
+        dataSource: capabilities.dataSource,
+        dataClassification: capabilities.dataClassification,
+        processesPersonalData: capabilities.processesPersonalData,
+        personalDataCategories: capabilities.personalDataCategories,
       })
       .from(capabilities)
       .where(and(
@@ -116,6 +133,11 @@ async function ensureCache(): Promise<void> {
         priceCents: row.priceCents,
         matrixSqs: row.matrixSqs ?? null,
         transparencyTag: row.transparencyTag ?? null,
+        capabilityType: row.capabilityType ?? null,
+        dataSource: row.dataSource ?? null,
+        dataClassification: row.dataClassification ?? null,
+        processesPersonalData: row.processesPersonalData,
+        personalDataCategories: row.personalDataCategories ?? [],
       });
     }
 
@@ -453,20 +475,146 @@ interface RecordX402Args {
   settlementId?: string;
   payerAddress?: string | null;
   error?: string;
+  // CRIT-8: when present, the rich buildX402AuditTrail builder uses these
+  // cap-side fields to produce a full-shape audit body. Capability path
+  // populates this from the X402Capability cache; solution path leaves
+  // it null (solutions get the leaner aggregate shape).
+  capForAudit?: {
+    transparencyTag: string | null;
+    capabilityType: string | null;
+    dataSource: string | null;
+    dataClassification: string | null;
+    processesPersonalData: boolean;
+    personalDataCategories: string[];
+    outputSchema: Record<string, unknown> | null;
+  };
+}
+
+// CRIT-8: produce an audit_trail JSONB shape comparable to buildFullAudit
+// (do.ts) so x402 customers get a real compliance record, not the prior
+// 7-field stub. Mirrors the wallet-path body's compliance block, regulatory
+// mapping, transparency marker, and schema validation.
+function buildX402AuditTrail(args: {
+  transactionId: string | null; // null when called pre-INSERT (we don't have one yet)
+  cap: { slug: string; transparencyTag: string | null; capabilityType: string | null; dataSource: string | null; dataClassification: string | null; processesPersonalData: boolean; personalDataCategories: string[]; outputSchema: Record<string, unknown> | null };
+  inputs: Record<string, unknown>;
+  output: unknown;
+  latencyMs: number;
+  priceUsd: number;
+  settlementId?: string;
+  payerAddress?: string | null;
+  error?: string;
+}): Record<string, unknown> {
+  const { cap, inputs, output, latencyMs, priceUsd, settlementId, payerAddress, error, transactionId } = args;
+  const marker = cap.transparencyTag === "algorithmic" ? "algorithmic" :
+                 cap.transparencyTag === "mixed" ? "hybrid" : "ai_generated";
+  const aiInvolvement = marker === "algorithmic"
+    ? "None — fully algorithmic (no LLM calls)"
+    : marker === "hybrid"
+      ? "Mixed — LLM-assisted with algorithmic validation"
+      : "Fully AI — LLM generates or transforms output";
+  const inputHash = `sha256:${createHash("sha256").update(JSON.stringify(inputs)).digest("hex")}`;
+  // schema_validated: same minimal "object + required fields present" check
+  // do.ts uses. False when we can't verify (no schema, or output null on
+  // failure path).
+  const schemaValidated = (() => {
+    if (!cap.outputSchema || error) return false;
+    if (!output || typeof output !== "object" || Array.isArray(output)) {
+      return cap.outputSchema.type !== "object";
+    }
+    const required = (cap.outputSchema as { required?: string[] }).required ?? [];
+    for (const f of required) {
+      if (!(f in (output as Record<string, unknown>)) || (output as Record<string, unknown>)[f] == null) {
+        return false;
+      }
+    }
+    return true;
+  })();
+  const shareable = transactionId ? getShareableUrl(transactionId) : null;
+  return {
+    transaction_id: transactionId,
+    timestamp: new Date().toISOString(),
+    capability: cap.slug,
+    data_source: cap.dataSource ?? cap.slug,
+    data_classification: cap.dataClassification ?? "unknown",
+    transparency_marker: marker,
+    ai_description: aiInvolvement,
+    data_jurisdiction: getProcessingJurisdictions("stable_api", cap.transparencyTag).join(",") || "unknown",
+    processing_location: getProcessingLocation(),
+    execution_mode: "sync",
+    latency_ms: latencyMs,
+    input_hash: inputHash,
+    schema_validated: schemaValidated,
+    // x402-specific payment context preserved alongside the compliance shape.
+    payment_method: "x402",
+    settlement_id: settlementId ?? null,
+    payer_address: payerAddress ?? null,
+    price_usd: priceUsd,
+    ...(error ? { error: error.substring(0, 500) } : {}),
+    compliance: {
+      ai_involvement: aiInvolvement,
+      personal_data_processed: cap.processesPersonalData,
+      personal_data_categories: cap.personalDataCategories,
+      human_oversight: "autonomous",
+      data_retention_days: TRANSACTION_RETENTION_DAYS,
+      ...(transactionId && shareable ? {
+        shareable_url: shareable.url,
+        shareable_url_expires_at: shareable.expiresAt,
+        deletion_endpoint: `DELETE /v1/transactions/${transactionId}`,
+        access_endpoint: `GET /v1/transactions/${transactionId}`,
+      } : {}),
+      regulations_addressed: {
+        eu_ai_act: {
+          article_12: "Full execution logging with timestamp, data source, latency, and payment settlement",
+          article_13: "Transparency marker indicates AI vs algorithmic processing",
+          article_50: "AI-generated content marked via transparency_marker",
+        },
+        gdpr: {
+          article_30: "Complete processing record with data sources, classifications, and jurisdiction",
+        },
+      },
+    },
+  };
 }
 
 async function recordX402Transaction(args: RecordX402Args): Promise<string | null> {
-  // F-AUDIT-01 / CCO #3: dataJurisdiction must be the actual processing
-  // region(s), not capabilities.geography (which is "where the data is
-  // about" — a property of the dataset, not the call). Compute from
-  // Strale's region + LLM provider region based on transparencyTag.
-  // Prior code passed args.dataJurisdiction populated from the cache's
-  // capabilities.geography read (line ~88) and defaulted to "EU".
+  // F-AUDIT-01 / CCO #3: dataJurisdiction is the actual processing region(s),
+  // computed from Strale's region + LLM provider region based on transparencyTag.
   const jurisdictions = getProcessingJurisdictions(
     "stable_api",
     args.transparencyTag,
   ).join(",") || "unknown";
   const db = getDb();
+  // CRIT-8: build the rich audit_trail shape when cap-side context is
+  // available (capability path); fall back to the leaner shape for
+  // solutions and any path that doesn't supply capForAudit.
+  // transactionId is null at insert time — buildX402AuditTrail's
+  // shareable_url + endpoint paths are populated post-INSERT in a
+  // follow-up UPDATE so the row's own ID can be referenced.
+  const auditTrail = args.capForAudit
+    ? buildX402AuditTrail({
+        transactionId: null,
+        cap: { slug: args.slug, ...args.capForAudit },
+        inputs: args.inputs,
+        output: args.output,
+        latencyMs: args.latencyMs,
+        priceUsd: args.priceUsd,
+        settlementId: args.settlementId,
+        payerAddress: args.payerAddress,
+        error: args.error,
+      })
+    : {
+        // Legacy lean shape for solution path (and any caller that doesn't
+        // populate capForAudit). Rich solution-path audit is a v1.1 task.
+        payment_method: "x402",
+        settlement_id: args.settlementId ?? null,
+        payer_address: args.payerAddress ?? null,
+        price_usd: args.priceUsd,
+        capability: args.slug,
+        latency_ms: args.latencyMs,
+        timestamp: new Date().toISOString(),
+        ...(args.error ? { error: args.error.substring(0, 500) } : {}),
+      };
   try {
     const [row] = await db.insert(transactions).values({
       userId: null,
@@ -478,15 +626,7 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       error: args.error ?? null,
       priceCents: args.priceCents,
       latencyMs: args.latencyMs,
-      auditTrail: {
-        payment_method: "x402",
-        settlement_id: args.settlementId ?? null,
-        payer_address: args.payerAddress ?? null,
-        price_usd: args.priceUsd,
-        capability: args.slug,
-        latency_ms: args.latencyMs,
-        timestamp: new Date().toISOString(),
-      },
+      auditTrail,
       transparencyMarker: args.transparencyTag ?? "algorithmic",
       dataJurisdiction: jurisdictions,
       isFreeTier: false,
@@ -495,7 +635,36 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       priceUsd: args.priceUsd.toFixed(4),
       completedAt: new Date(),
     }).returning({ id: transactions.id });
-    return row?.id ?? null;
+    const insertedId = row?.id ?? null;
+    // CRIT-8 follow-up: now that we have the row's id, rebuild the audit
+    // with the shareable_url / endpoint fields populated and overwrite.
+    // Same-tx rebuild not used here because the rich shape is only
+    // valuable when transactionId is real — and we get the id from the
+    // INSERT's returning(). Best-effort UPDATE; failure leaves the row
+    // with the pre-id audit body, which is still richer than the
+    // pre-CRIT-8 stub.
+    if (insertedId && args.capForAudit) {
+      const fullAudit = buildX402AuditTrail({
+        transactionId: insertedId,
+        cap: { slug: args.slug, ...args.capForAudit },
+        inputs: args.inputs,
+        output: args.output,
+        latencyMs: args.latencyMs,
+        priceUsd: args.priceUsd,
+        settlementId: args.settlementId,
+        payerAddress: args.payerAddress,
+        error: args.error,
+      });
+      try {
+        await db
+          .update(transactions)
+          .set({ auditTrail: fullAudit })
+          .where(eq(transactions.id, insertedId));
+      } catch (updErr) {
+        logError("x402-audit-rebuild-failed", updErr, { transactionId: insertedId });
+      }
+    }
+    return insertedId;
   } catch (err) {
     logError("x402-transaction-recording-failed", err);
     // CCO P0 #12: settlement preceded this INSERT and is irreversible.
@@ -860,9 +1029,45 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
   try {
     result = await executor(inputs);
   } catch (err) {
-    // Execution failed — do NOT settle. The signed authorization expires unused.
+    // CRIT-9: executor failure was previously logged-only — no transactions
+    // row, no audit record, no compliance evidence the call ever happened.
+    // Now record a 'failed' x402 transaction with no settlement so failed
+    // executions are visible in the same /v1/audit and verify surfaces as
+    // wallet-path failures. Per DEC-14 we still do NOT settle on failure;
+    // the signed authorization expires unused.
     const message = err instanceof Error ? err.message : String(err);
-    return c.json({ error: sanitizeFailureReason(message) }, 400);
+    const latencyMs = Date.now() - startMs;
+    const sanitized = sanitizeFailureReason(message);
+    try {
+      await recordX402Transaction({
+        capabilityId: cap.id,
+        solutionSlug: null,
+        slug: cap.slug,
+        inputs,
+        output: null,
+        latencyMs,
+        priceCents: cap.priceCents,
+        priceUsd: cap.x402PriceUsd,
+        transparencyTag: cap.transparencyTag,
+        // No settlement on failure (DEC-14). Orphan-settlement table only
+        // catches paid-but-unrecorded; this is unpaid-and-unsettled.
+        settlementId: undefined,
+        payerAddress: verified ? extractPayerAddress(verified) : null,
+        error: sanitized ?? message,
+        capForAudit: {
+          transparencyTag: cap.transparencyTag,
+          capabilityType: cap.capabilityType,
+          dataSource: cap.dataSource,
+          dataClassification: cap.dataClassification,
+          processesPersonalData: cap.processesPersonalData,
+          personalDataCategories: cap.personalDataCategories,
+          outputSchema: cap.outputSchema,
+        },
+      });
+    } catch (recordErr) {
+      logError("x402-failure-record-failed", recordErr, { slug: cap.slug });
+    }
+    return c.json({ error: sanitized }, 400);
   }
 
   const latencyMs = Date.now() - startMs;
@@ -887,6 +1092,8 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
   // CCO P0 #12: AWAIT (see recordX402Transaction for orphan-settlement
   // handling). Settlement is irreversible; an INSERT failure must land
   // in x402_orphan_settlements for reconciliation, not vanish.
+  // CRIT-8: pass capForAudit so buildX402AuditTrail produces the rich
+  // compliance shape (was a 7-field stub previously).
   const payerAddress = verified ? extractPayerAddress(verified) : null;
   await recordX402Transaction({
     capabilityId: cap.id,
@@ -900,6 +1107,15 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
     transparencyTag: cap.transparencyTag,
     settlementId,
     payerAddress,
+    capForAudit: {
+      transparencyTag: cap.transparencyTag,
+      capabilityType: cap.capabilityType,
+      dataSource: cap.dataSource,
+      dataClassification: cap.dataClassification,
+      processesPersonalData: cap.processesPersonalData,
+      personalDataCategories: cap.personalDataCategories,
+      outputSchema: cap.outputSchema,
+    },
   });
 
   return c.json({
