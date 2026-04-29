@@ -79,6 +79,8 @@ const TIER_HOURS: Record<string, number> = { A: 6, B: 24, C: 72 };
 // Auxiliary task intervals (in ms)
 const HEALTH_CHECK_INTERVAL_MS      = 6 * 60 * 60 * 1000;   // 6h
 const CHROMIUM_PROBE_INTERVAL_MS    = 30 * 60 * 1000;        // 30min
+const META_HOURLY_INTERVAL_MS       = 60 * 60 * 1000;        // 1h — scheduler heartbeat + capability staleness watchdogs
+const META_DAILY_INTERVAL_MS        = 24 * 60 * 60 * 1000;   // 24h — pipeline + free-tier checks
 const WEEKLY_SWEEP_INTERVAL_MS      = 7 * 24 * 60 * 60 * 1000;
 const DIAGNOSTIC_INTERVAL_MS        = 24 * 60 * 60 * 1000;   // 24h
 const SNAPSHOT_INTERVAL_MS          = 24 * 60 * 60 * 1000;   // 24h
@@ -182,8 +184,14 @@ interface OverdueCapability {
 async function findOverdueCapabilities(): Promise<OverdueCapability[]> {
   const db = getDb();
 
-  // Find capabilities where last_tested_at is overdue for their tier.
-  // Uses MIN(schedule_tier) to pick the most frequent tier per capability.
+  // Eligibility = at least one active test suite whose last_tested_at is
+  // older than max(tier interval, status floor). The CASE expressions mirror
+  // the policy in lib/test-scheduler-policy.ts; the SQL is the binding
+  // implementation because the policy must run inside the LIMIT/ORDER BY.
+  //
+  // ELSE branches default to 0 hours, so any new test_status added later
+  // falls back to "tier interval only" rather than silently dropping the
+  // cap from the queue. No status creates a black hole.
   const rows = await db.execute(sql`
     SELECT
       c.slug,
@@ -193,12 +201,22 @@ async function findOverdueCapabilities(): Promise<OverdueCapability[]> {
     INNER JOIN test_suites ts
       ON ts.capability_slug = c.slug AND ts.active = true
     WHERE c.is_active = true
-      AND ts.test_status IN ('normal', 'env_dependent', 'upstream_broken')
       AND (
         c.last_tested_at IS NULL
-        OR (ts.schedule_tier = 'A' AND c.last_tested_at < NOW() - INTERVAL '6 hours')
-        OR (ts.schedule_tier = 'B' AND c.last_tested_at < NOW() - INTERVAL '24 hours')
-        OR (ts.schedule_tier = 'C' AND c.last_tested_at < NOW() - INTERVAL '72 hours')
+        OR c.last_tested_at < NOW() - GREATEST(
+          CASE ts.schedule_tier
+            WHEN 'A' THEN INTERVAL '6 hours'
+            WHEN 'B' THEN INTERVAL '24 hours'
+            WHEN 'C' THEN INTERVAL '72 hours'
+            ELSE INTERVAL '24 hours'
+          END,
+          CASE ts.test_status
+            WHEN 'upstream_broken' THEN INTERVAL '24 hours'
+            WHEN 'infra_limited'   THEN INTERVAL '24 hours'
+            WHEN 'quarantined'     THEN INTERVAL '168 hours'
+            ELSE INTERVAL '0 hours'
+          END
+        )
       )
     GROUP BY c.slug, c.last_tested_at
     ORDER BY c.last_tested_at ASC NULLS FIRST
@@ -211,6 +229,41 @@ async function findOverdueCapabilities(): Promise<OverdueCapability[]> {
     lastTestedAt: r.lastTestedAt ? new Date(r.lastTestedAt) : null,
     scheduleTier: r.scheduleTier ?? "B",
   }));
+}
+
+/**
+ * Total count of capabilities currently overdue per scheduler policy.
+ * Used for queue-depth observability — pollCycle processes BATCH_SIZE per
+ * tick, so `overdue_total - tested` is the depth still queued.
+ */
+async function countOverdueCapabilities(): Promise<number> {
+  const db = getDb();
+  const rows = await db.execute(sql`
+    SELECT COUNT(DISTINCT c.slug)::int AS count
+    FROM capabilities c
+    INNER JOIN test_suites ts
+      ON ts.capability_slug = c.slug AND ts.active = true
+    WHERE c.is_active = true
+      AND (
+        c.last_tested_at IS NULL
+        OR c.last_tested_at < NOW() - GREATEST(
+          CASE ts.schedule_tier
+            WHEN 'A' THEN INTERVAL '6 hours'
+            WHEN 'B' THEN INTERVAL '24 hours'
+            WHEN 'C' THEN INTERVAL '72 hours'
+            ELSE INTERVAL '24 hours'
+          END,
+          CASE ts.test_status
+            WHEN 'upstream_broken' THEN INTERVAL '24 hours'
+            WHEN 'infra_limited'   THEN INTERVAL '24 hours'
+            WHEN 'quarantined'     THEN INTERVAL '168 hours'
+            ELSE INTERVAL '0 hours'
+          END
+        )
+      )
+  `);
+  const resultRows = Array.isArray(rows) ? rows : (rows as any)?.rows ?? [];
+  return resultRows[0]?.count ?? 0;
 }
 
 // ─── Delay helper ───────────────────────────────────────────────────────────
@@ -252,6 +305,29 @@ async function runAuxiliaryTasks(): Promise<void> {
       }
     } catch (err) {
       logError("test-scheduler-health-check-failed", err);
+    }
+  }
+
+  // Hourly meta-monitoring (scheduler heartbeat + capability staleness).
+  // These watch the scheduler itself; if it stops or starts dropping caps,
+  // the heartbeat won't fire here either, so the scripts/meta-monitoring-run.ts
+  // CLI invocation remains a backstop for the truly-stopped case.
+  if (shouldRun("meta-hourly", META_HOURLY_INTERVAL_MS)) {
+    try {
+      const { runHourlyChecks } = await import("../lib/meta-monitoring.js");
+      await runHourlyChecks();
+    } catch (err) {
+      logError("test-scheduler-meta-hourly-failed", err);
+    }
+  }
+
+  // Daily meta-monitoring (pipeline + free-tier checks).
+  if (shouldRun("meta-daily", META_DAILY_INTERVAL_MS)) {
+    try {
+      const { runDailyChecks } = await import("../lib/meta-monitoring.js");
+      await runDailyChecks();
+    } catch (err) {
+      logError("test-scheduler-meta-daily-failed", err);
     }
   }
 
@@ -345,11 +421,19 @@ async function pollCycle(): Promise<void> {
       // Run auxiliary tasks (health checks, probes, etc.)
       await runAuxiliaryTasks();
 
-      // Find overdue capabilities
-      const overdue = await findOverdueCapabilities();
+      // Find overdue capabilities + total queue depth (for observability —
+      // BATCH_SIZE-limited result vs. total tells us when the scheduler is
+      // falling behind even though it ticks).
+      const [overdue, queueDepth] = await Promise.all([
+        findOverdueCapabilities(),
+        countOverdueCapabilities().catch(() => -1),
+      ]);
 
       if (overdue.length === 0) {
-        jobLog.info({ label: "test-scheduler-poll-all-fresh" }, "all capabilities fresh, nothing to test");
+        jobLog.info(
+          { label: "test-scheduler-poll-all-fresh", queue_depth: queueDepth },
+          "all capabilities fresh, nothing to test",
+        );
         return;
       }
 
@@ -385,6 +469,7 @@ async function pollCycle(): Promise<void> {
       } catch {
         // If health check fails, run all tests (graceful degradation)
       }
+      const skippedUnhealthy = skippedSlugs.length;
 
       // Skip-marker: bump last_tested_at + freshness_level on caps we skipped
       // due to unhealthy provider, so they don't permanently occupy the queue
@@ -434,7 +519,13 @@ async function pollCycle(): Promise<void> {
         .map(([tier, count]) => `${count} tier-${tier}`)
         .join(", ");
       jobLog.info(
-        { label: "test-scheduler-poll-start", runnable: runnableCaps.length, tier_counts: tierCounts },
+        {
+          label: "test-scheduler-poll-start",
+          runnable: runnableCaps.length,
+          tier_counts: tierCounts,
+          queue_depth: queueDepth,
+          skipped_unhealthy: skippedUnhealthy,
+        },
         "test-scheduler-poll-start",
       );
 
@@ -502,6 +593,8 @@ async function pollCycle(): Promise<void> {
           tested: runnableCaps.length,
           passed: totalPassed,
           failed: totalFailed,
+          skipped_unhealthy: skippedUnhealthy,
+          queue_depth: queueDepth,
         },
         "test-scheduler-poll-complete",
       );
@@ -517,6 +610,8 @@ async function pollCycle(): Promise<void> {
               tested: runnableCaps.length,
               passed: totalPassed,
               failed: totalFailed,
+              skipped_unhealthy: skippedUnhealthy,
+              queue_depth: queueDepth,
               tierCounts,
             },
           }),

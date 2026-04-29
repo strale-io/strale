@@ -15,6 +15,14 @@ if (!process.env.DATABASE_URL) {
 import postgres from "postgres";
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
 
+console.log("=== Most recent browserless probes (last 5) ===");
+const probes = await sql`
+  SELECT created_at, details FROM health_monitor_events
+  WHERE event_type='dependency_probe' AND details->>'dependency'='browserless'
+  ORDER BY created_at DESC LIMIT 5
+`;
+for (const r of probes) console.log(`  ${(r.created_at as Date).toISOString()} ${JSON.stringify(r.details)}`);
+
 console.log("\n=== test_results in last 6 hours (by capability) ===");
 const recent = await sql`
   SELECT capability_slug, COUNT(*)::int AS n, MAX(executed_at) AS last
