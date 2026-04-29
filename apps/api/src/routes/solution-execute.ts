@@ -151,6 +151,11 @@ solutionExecuteRoute.post(
             dataJurisdiction:
               getProcessingJurisdictions("stable_api", sol.transparencyTag ?? "mixed").join(",") ||
               "unknown",
+            // CCO P0 #6: solutions can take >10s (the GRACE_MS the retry
+            // worker uses), so a 'pending' insert would race the worker.
+            // Insert as 'deferred'; phase-2 UPDATEs flip to 'pending'
+            // atomically with the final auditTrail/output writes.
+            complianceHashState: "deferred",
             paymentMethod: "wallet",
           })
           .returning({ id: transactions.id });
@@ -214,6 +219,9 @@ solutionExecuteRoute.post(
             latencyMs,
             completedAt: new Date(),
             auditTrail: buildInlineAudit(slug, [], 0, 0, latencyMs, true, c),
+            // CCO P0 #6: flip 'deferred' → 'pending' atomically with the
+            // final write so the retry worker hashes the final state.
+            complianceHashState: "pending",
           })
           .where(eq(transactions.id, transactionId));
       } catch (e) {
@@ -250,6 +258,9 @@ solutionExecuteRoute.post(
             latencyMs,
             completedAt: new Date(),
             auditTrail: buildInlineAudit(slug, [], 0, 0, latencyMs, true, c),
+            // CCO P0 #6: flip 'deferred' → 'pending' atomically with the
+            // final write so the retry worker hashes the final state.
+            complianceHashState: "pending",
           })
           .where(eq(transactions.id, transactionId));
       } catch (e) {
@@ -326,6 +337,10 @@ solutionExecuteRoute.post(
           completedAt: new Date(),
           priceCents: chargedPrice,
           auditTrail,
+          // CCO P0 #6: flip 'deferred' → 'pending' atomically with the
+          // final auditTrail/output write. The retry worker will hash the
+          // final state on its next tick (≥10s later) — no race possible.
+          complianceHashState: "pending",
         })
         .where(eq(transactions.id, transactionId));
     } catch (e) {

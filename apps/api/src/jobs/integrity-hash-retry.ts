@@ -40,6 +40,7 @@ const INTERVAL_MS = 30_000;               // how often to wake
 const STARTUP_DELAY_MS = 10_000;          // don't fire immediately on boot
 const GRACE_MS = 10_000;                  // don't race the inserting tx's commit
 const STALE_WARN_MS = 5 * 60_000;         // warn on rows pending > 5 min
+const STALE_DEFERRED_MS = 30 * 60_000;    // CCO #6: 'deferred' rows older than this are stuck (route handler died between INSERT and completion UPDATE)
 const BATCH_SIZE = 50;                    // process N rows per wake
 const MAX_HASH_ATTEMPTS = 3;              // after this, flip to 'failed'
 const ADVISORY_LOCK_ID = 20260417;
@@ -166,6 +167,39 @@ async function runOnce(): Promise<void> {
         { completed, failed, stale: staleCount, batch_size: pending.length },
         "integrity-hash-batch-done",
       );
+
+      // CCO P0 #6: stuck-deferred sweep. The async/solution paths INSERT
+      // rows as 'deferred' and flip to 'pending' on completion. If the
+      // route handler dies between INSERT and completion UPDATE (Railway
+      // restart, OOM, panic in the executor), the row stays 'deferred'
+      // forever — invisible to this worker's primary query. Sweep them
+      // up after STALE_DEFERRED_MS and flip to 'failed' so operators
+      // see the drift in metrics rather than as silent integrity drift.
+      const stuckDeferredCutoff = new Date(Date.now() - STALE_DEFERRED_MS);
+      const stuckDeferred = await tx
+        .select({ id: transactions.id, createdAt: transactions.createdAt })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.complianceHashState, "deferred"),
+            lt(transactions.createdAt, stuckDeferredCutoff),
+          ),
+        )
+        .limit(BATCH_SIZE);
+
+      if (stuckDeferred.length > 0) {
+        for (const row of stuckDeferred) {
+          await tx
+            .update(transactions)
+            .set({ complianceHashState: "failed" })
+            .where(eq(transactions.id, row.id));
+        }
+        logWarn(
+          "integrity-hash-stuck-deferred",
+          `${stuckDeferred.length} transactions stuck in 'deferred' > 30 min — route handler likely died between INSERT and completion UPDATE; flipped to 'failed' for visibility`,
+          { count: stuckDeferred.length },
+        );
+      }
     });
   } catch (err) {
     logError("integrity-hash-retry-batch-failed", err);

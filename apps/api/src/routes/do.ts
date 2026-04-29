@@ -1859,6 +1859,13 @@ async function executeAsync(
         priceCents: capability.priceCents,
         transparencyMarker: marker,
         dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
+        // CCO P0 #6: async path INSERTs as 'deferred', not 'pending'.
+        // Async exists for executions taking >10s — exactly the case
+        // where the worker's GRACE_MS=10s would let it hash a still-
+        // executing row. The retry worker filters on 'pending' only,
+        // so deferred rows are invisible until executeInBackground
+        // flips them to 'pending' atomically with the final write.
+        complianceHashState: "deferred",
       })
       .returning({ id: transactions.id });
 
@@ -1970,6 +1977,11 @@ async function executeInBackground(
         auditTrail: audit,
         latencyMs,
         completedAt: new Date(),
+        // CCO P0 #6: flip from 'deferred' to 'pending' atomically with the
+        // hashed-field writes. After this UPDATE commits, the retry worker
+        // will pick the row up on its next tick (≥10s later) and hash it
+        // with the final values — no race possible.
+        complianceHashState: "pending",
       })
       .where(eq(transactions.id, transactionId));
 
@@ -2054,12 +2066,16 @@ async function executeInBackground(
           completedAt: new Date(),
           auditTrail: failAudit,
           provenance: failProvenance,
+          // CCO P0 #6: flip from 'deferred' to 'pending' atomically with
+          // the failure write so the retry worker picks up the final
+          // state. Same race-elimination as the success path above.
+          complianceHashState: "pending",
         })
         .where(eq(transactions.id, transactionId));
     });
 
-    // F-0-009 Stage 2: row already has compliance_hash_state = 'pending'
-    // by column default; retry worker fills it in.
+    // CCO P0 #6: row was 'deferred' until the UPDATE above flipped it
+    // to 'pending'. Retry worker picks it up on its next tick.
     // Record failure for circuit breaker + quality
     fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
     fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
