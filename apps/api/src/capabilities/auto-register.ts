@@ -372,22 +372,37 @@ export async function autoRegisterCapabilities(): Promise<void> {
   if (DEACTIVATED.size > 0) {
     try {
       const { getDb } = await import("../db/index.js");
-      const { sql } = await import("drizzle-orm");
+      const { inArray, eq, or, and } = await import("drizzle-orm");
+      const { capabilities } = await import("../db/schema.js");
       const slugs = [...DEACTIVATED.keys()];
-      const result = await getDb().execute(sql`
-        UPDATE capabilities
-        SET is_active = false,
-            visible = false,
-            x402_enabled = false,
-            updated_at = NOW()
-        WHERE slug = ANY(${slugs})
-          AND (is_active = true OR visible = true OR x402_enabled = true)
-        RETURNING slug
-      `);
-      const rows = Array.isArray(result) ? result : (result as { rows?: { slug: string }[] }).rows ?? [];
-      if (rows.length > 0) {
+      // Pre-fix used `sql\`WHERE slug = ANY(${slugs})\`` which failed at
+      // runtime with `op ANY/ALL (array) requires array on right side` —
+      // drizzle's sql template expanded the JS array as a positional
+      // parameter list rather than a single PG array, so ANY() saw N
+      // separate text args instead of one array. Switched to drizzle's
+      // inArray() helper which constructs `slug IN (...)` correctly.
+      const result = await getDb()
+        .update(capabilities)
+        .set({
+          isActive: false,
+          visible: false,
+          x402Enabled: false,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            inArray(capabilities.slug, slugs),
+            or(
+              eq(capabilities.isActive, true),
+              eq(capabilities.visible, true),
+              eq(capabilities.x402Enabled, true),
+            ),
+          ),
+        )
+        .returning({ slug: capabilities.slug });
+      if (result.length > 0) {
         log.info(
-          { label: "auto-register-deactivated-synced", synced_count: rows.length, slugs: rows.map((r) => r.slug) },
+          { label: "auto-register-deactivated-synced", synced_count: result.length, slugs: result.map((r) => r.slug) },
           "auto-register-deactivated-synced",
         );
       }
