@@ -21,6 +21,7 @@ import { computeSolutionScore } from "../lib/trust-labels.js";
 import { sendAlert } from "../lib/alerting.js";
 import { randomUUID } from "node:crypto";
 import { log, logError, logWarn } from "../lib/log.js";
+import { isShuttingDown } from "../lib/shutdown.js";
 
 const CHECK_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
 const STARTUP_DELAY_MS = 60_000; // 60 seconds
@@ -203,11 +204,13 @@ export function startInvariantChecker(): void {
 
   // Run once on startup after DB warms up
   setTimeout(() => {
+    if (isShuttingDown()) return;
     runInvariantChecks().catch((err) => logError("invariant-startup-run-failed", err));
   }, STARTUP_DELAY_MS);
 
   // Recurring 2-hour check
   setInterval(() => {
+    if (isShuttingDown()) return;
     runInvariantChecks().catch((err) => logError("invariant-scheduled-run-failed", err));
   }, CHECK_INTERVAL_MS);
 }

@@ -15,7 +15,7 @@ registerCapability("forex-history", async (input: CapabilityInput) => {
   if (!from || !to) throw new Error("'from' and 'to' currency codes are required.");
 
   const url = `https://api.frankfurter.app/${startDate}..${endDate}?from=${from}&to=${to}`;
-  const resp = await fetch(url);
+  const resp = await fetch(url, { signal: AbortSignal.timeout(30_000) });
   if (!resp.ok) {
     const text = await resp.text();
     throw new Error(`Frankfurter API error ${resp.status}: ${text.slice(0, 200)}`);

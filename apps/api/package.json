@@ -14,6 +14,7 @@
     "lint:ssrf-inventory": "node scripts/check-ssrf-inventory.mjs",
     "lint:no-new-console": "node scripts/check-no-new-console.mjs",
     "lint:no-external-column-access": "node scripts/check-no-external-column-access.mjs",
+    "lint:migration-prefixes": "node scripts/check-migration-prefixes.mjs",
     "digest": "tsx src/jobs/daily-digest.ts",
     "digest:preview": "tsx src/jobs/digest-preview.ts",
     "db:generate": "drizzle-kit generate",

@@ -16,6 +16,7 @@ export async function sendDigestEmail(html: string, date: Date): Promise<void> {
 
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
+    signal: AbortSignal.timeout(20_000),
     headers: {
       Authorization: `Bearer ${resendKey}`,
       "Content-Type": "application/json",

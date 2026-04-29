@@ -109,9 +109,17 @@ export { safeDispatcher };
 export interface SafeFetchOptions extends Omit<RequestInit, "redirect"> {
   /** Maximum number of redirects to follow. Default: 3. Set to 0 to refuse. */
   maxRedirects?: number;
+  /**
+   * Cert-audit C6: hard timeout for the entire request (including all
+   * redirect hops). Default 60s. Pass an explicit `signal` in `init` to
+   * override; pass `timeoutMs: 0` to disable (only for opted-in long-poll
+   * cases, never for normal capability fetches).
+   */
+  timeoutMs?: number;
 }
 
 const DEFAULT_MAX_REDIRECTS = 3;
+const DEFAULT_TIMEOUT_MS = 60_000;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
 /**
@@ -131,7 +139,17 @@ export async function safeFetch(
   url: string | URL,
   opts: SafeFetchOptions = {},
 ): Promise<Response> {
-  const { maxRedirects = DEFAULT_MAX_REDIRECTS, ...init } = opts;
+  const { maxRedirects = DEFAULT_MAX_REDIRECTS, timeoutMs, ...init } = opts;
+
+  // Cert-audit C6: ensure every safeFetch caller is timeout-bounded so a
+  // stuck upstream can't pin a connection or pool slot indefinitely.
+  // Caller's own signal wins if provided; otherwise apply DEFAULT_TIMEOUT_MS.
+  // `timeoutMs: 0` opts out (long-poll endpoints only).
+  const effectiveTimeout = timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  if (!init.signal && effectiveTimeout > 0) {
+    init.signal = AbortSignal.timeout(effectiveTimeout);
+  }
+
   return followRedirects(
     typeof url === "string" ? url : url.toString(),
     init,

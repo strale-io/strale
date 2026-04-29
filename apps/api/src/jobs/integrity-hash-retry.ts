@@ -36,6 +36,7 @@ import { transactions } from "../db/schema.js";
 import { computeIntegrityHash, getPreviousHash } from "../lib/integrity-hash.js";
 import { log, logError, logWarn } from "../lib/log.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
+import { isShuttingDown } from "../lib/shutdown.js";
 
 const INTERVAL_MS = 30_000;               // how often to wake
 const STARTUP_DELAY_MS = 10_000;          // don't fire immediately on boot
@@ -251,10 +252,12 @@ export function startIntegrityHashRetry(): void {
   log.info(`integrity-hash-retry: started (${INTERVAL_MS}ms interval, ${STARTUP_DELAY_MS}ms initial delay)`);
 
   setTimeout(() => {
+    if (isShuttingDown()) return;
     runOnce().catch((err) => logError("integrity-hash-retry-startup-run-failed", err));
   }, STARTUP_DELAY_MS);
 
   setInterval(() => {
+    if (isShuttingDown()) return;
     runOnce().catch((err) => logError("integrity-hash-retry-run-failed", err));
   }, INTERVAL_MS);
 }

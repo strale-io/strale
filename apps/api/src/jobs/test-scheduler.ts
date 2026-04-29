@@ -26,6 +26,7 @@ import { probeChromiumHealth } from "../lib/chromium-health.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
 import { randomUUID } from "node:crypto";
 import { log, logError, logWarn } from "../lib/log.js";
+import { isShuttingDown } from "../lib/shutdown.js";
 
 // ─── Solution quality gate (auto-activate when all steps are scored) ────────
 
@@ -667,10 +668,12 @@ export function startTestScheduler(): void {
 
   // First poll after startup delay
   setTimeout(() => {
+    if (isShuttingDown()) return;
     pollCycle().catch((err) => logError("test-scheduler-initial-poll-failed", err));
 
     // Recurring poll
     _pollTimer = setInterval(() => {
+      if (isShuttingDown()) return;
       pollCycle().catch((err) => logError("test-scheduler-poll-failed", err));
     }, POLL_INTERVAL_MS);
   }, STARTUP_DELAY_MS);

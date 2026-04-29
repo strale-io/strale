@@ -1,0 +1,22 @@
+# Cert-audit C6 follow-up: known false positives in check-fetch-timeout-coverage.mjs.
+# Each entry is a path (relative to repo root) where the script's heuristic flags
+# something that isn't actually a runtime fetch without a timeout.
+#
+# Add to this list ONLY when manually verified safe. Real offenders should be
+# fixed (add `signal: AbortSignal.timeout(ms)` to the call), not allowlisted.
+
+# safeFetch is the wrapper itself — it adds AbortSignal.timeout(60s) by default
+# before delegating to the underlying fetch. The internal fetch() in
+# followRedirects() is what gets wrapped.
+api/src/lib/safe-fetch.ts
+
+# http-to-curl emits literal `fetch(` strings as code-snippet output. The
+# capability performs no network I/O.
+api/src/capabilities/http-to-curl.ts
+
+# web-provider has `fetch` mentions only in JSDoc.
+api/src/capabilities/lib/web-provider.ts
+
+# embeddings wraps init via withTimeout() which the heuristic can't see;
+# the wrapper enforces 20s on every Voyage call.
+api/src/lib/embeddings.ts

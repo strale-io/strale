@@ -346,10 +346,14 @@ async function handleMessageSend(
   }
 
   try {
+    // Cert-audit C6: bound the inner /v1/do call. A2A is meant for slow
+    // capabilities, so 90s gives async-friendly room without leaving
+    // a request stuck if the inner handler hangs.
     const resp = await fetch(`${BASE_URL}/v1/do`, {
       method: "POST",
       headers,
       body: JSON.stringify(doBody),
+      signal: AbortSignal.timeout(90_000),
     });
 
     const data = await resp.json().catch(() => ({})) as Record<string, unknown>;

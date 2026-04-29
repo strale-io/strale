@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { logWarn } from "./log.js";
 
 // F-0-001: fail-fast on a missing secret instead of falling back to a
 // committed default. A hardcoded default lets anyone forge `/audit/:id?token=...`
@@ -64,8 +65,9 @@ function resolveLegacySunset(): number {
     if (Number.isFinite(parsed)) return parsed;
     // Don't crash on a malformed env — operations may have typo'd. Log
     // once and fall back to the hardcoded default.
-    console.warn(
-      `[audit-token] LEGACY_TOKEN_SUNSET_ISO=${JSON.stringify(envValue)} could not be parsed; falling back to hardcoded default 2026-10-17`,
+    logWarn(
+      "audit_token.legacy_sunset_env_unparseable",
+      `LEGACY_TOKEN_SUNSET_ISO=${JSON.stringify(envValue)} could not be parsed; falling back to hardcoded default 2026-10-17`,
     );
   }
   return Date.UTC(2026, 9, 17); // Oct 17, 2026

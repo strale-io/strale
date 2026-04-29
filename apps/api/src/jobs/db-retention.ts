@@ -21,6 +21,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { log, logError, logWarn } from "../lib/log.js";
+import { isShuttingDown } from "../lib/shutdown.js";
 
 const RETENTION_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const STARTUP_DELAY_MS = 5 * 60 * 1000;
@@ -96,10 +97,12 @@ export function startDbRetention(): void {
   log.info({ label: "db-retention-started", interval_ms: RETENTION_INTERVAL_MS, startup_delay_ms: STARTUP_DELAY_MS }, "db-retention-started");
 
   setTimeout(() => {
+    if (isShuttingDown()) return;
     runRetention().catch((err) => logError("db-retention-startup-run-failed", err));
   }, STARTUP_DELAY_MS);
 
   setInterval(() => {
+    if (isShuttingDown()) return;
     runRetention().catch((err) => logError("db-retention-scheduled-run-failed", err));
   }, RETENTION_INTERVAL_MS);
 }

@@ -24,6 +24,12 @@ async function main() {
   }
   console.log(`[startup] Health gate passed: ${count} executors registered`);
 
+  // Cert-audit C11: surface alerting/log-sink misconfiguration loudly so
+  // production doesn't drift into "alerts only land in stdout" without
+  // operations noticing.
+  const { assertAlertingConfigured } = await import("./lib/alerting.js");
+  assertAlertingConfigured();
+
   // Validate required provider env vars
   const { getActiveProviders } = await import("./lib/dependency-manifest.js");
   const missingVars: string[] = [];
@@ -91,7 +97,7 @@ async function main() {
 
   const port = parseInt(process.env.PORT || "3000", 10);
 
-  serve({ fetch: app.fetch, port }, (info) => {
+  const server = serve({ fetch: app.fetch, port }, (info) => {
     console.log(`Strale API running on http://localhost:${info.port}`);
 
     // Pre-warm suggest catalog after env + server are ready
@@ -99,6 +105,25 @@ async function main() {
       console.warn("[suggest] Catalog warm-up failed:", err.message),
     );
   });
+
+  // Cert-audit C3 follow-up: graceful shutdown on SIGTERM/SIGINT.
+  // Cleanups run LIFO. HTTP server (registered last) drains in-flight
+  // requests first; DB pool (registered first) is closed only after the
+  // last request has returned. Without this, Railway redeploys truncate
+  // requests mid-flight and tear down the pool under SIGKILL at +30s.
+  const { onShutdown, installShutdownHandlers } = await import("./lib/shutdown.js");
+  const { closeDbPool } = await import("./db/index.js");
+
+  onShutdown("db-pool", () => closeDbPool());
+  onShutdown(
+    "http-server",
+    () =>
+      new Promise<void>((resolveClose, rejectClose) => {
+        server.close((err) => (err ? rejectClose(err) : resolveClose()));
+      }),
+  );
+
+  installShutdownHandlers();
 }
 
 main().catch((err) => {

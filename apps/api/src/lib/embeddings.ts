@@ -10,8 +10,13 @@ async function fetchWithRetry(
   init: RequestInit,
   retries = 3,
 ): Promise<Response> {
+  // Cert-audit C6: Voyage hangs occasionally — without per-attempt timeout
+  // a single stuck call eats the whole retry budget plus the caller's wait.
+  // Caller's signal wins if provided.
+  const withTimeout = (): RequestInit =>
+    init.signal ? init : { ...init, signal: AbortSignal.timeout(20_000) };
   for (let attempt = 0; attempt < retries; attempt++) {
-    const response = await fetch(url, init);
+    const response = await fetch(url, withTimeout());
     if (response.status === 429 && attempt < retries - 1) {
       // Rate limited — wait and retry with exponential backoff
       const wait = Math.min(2000 * Math.pow(2, attempt), 30000);
@@ -25,7 +30,7 @@ async function fetchWithRetry(
     }
     return response;
   }
-  return fetch(url, init); // Last attempt, no retry
+  return fetch(url, withTimeout()); // Last attempt, no retry
 }
 
 /**

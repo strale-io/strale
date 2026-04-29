@@ -11,6 +11,7 @@ registerCapability("ticker-lookup", async (input: CapabilityInput) => {
       "User-Agent": "Mozilla/5.0 (compatible; Strale/1.0)",
       Accept: "application/json",
     },
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!resp.ok) throw new Error(`Yahoo Finance API returned ${resp.status}`);

@@ -51,4 +51,12 @@ jobs:
       # with. Blocks the "hollow package" class of incident that surfaced
       # with pydantic-ai on 2026-04-21. See CONTAINMENT_REPORT.md.
       - run: node apps/api/scripts/check-framework-packages.mjs
+      # Cert-audit C2 follow-up: prevent future duplicate migration prefixes.
+      # The historical 0046 collision is allowlisted in the script; see
+      # apps/api/drizzle/README.md.
+      - run: node apps/api/scripts/check-migration-prefixes.mjs
+      # Cert-audit C6 follow-up: every fetch() must be timeout-bounded.
+      # Pre-existing offenders are tracked in fetch-timeout-allowlist.txt;
+      # --strict fails CI on new offenders.
+      - run: node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict
       - run: npm test

@@ -50,6 +50,7 @@ import { getDb } from "../db/index.js";
 import { healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { log, logError, logWarn } from "../lib/log.js";
+import { isShuttingDown } from "../lib/shutdown.js";
 
 const INTERVAL_MS = 24 * 60 * 60 * 1000;       // check every 24h
 const STARTUP_DELAY_MS = 15 * 60 * 1000;       // don't fire right after boot
@@ -226,12 +227,14 @@ export function startReindexTransactions(): void {
   );
 
   setTimeout(() => {
+    if (isShuttingDown()) return;
     runOnce().catch((err) =>
       logError("reindex-transactions-startup-run-failed", err),
     );
   }, STARTUP_DELAY_MS);
 
   setInterval(() => {
+    if (isShuttingDown()) return;
     runOnce().catch((err) =>
       logError("reindex-transactions-run-failed", err),
     );
