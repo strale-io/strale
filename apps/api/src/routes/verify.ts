@@ -95,6 +95,15 @@ verifyRoute.get("/:transactionId", async (c) => {
   const targetRedacted = txn.deletedAt != null;
   const targetVerifiedLink = !targetRedacted && hashValid;
 
+  // CCO #4-polish: human-readable reason for the redacted state. Without
+  // this, a regulator hitting /v1/verify on a GDPR-erased row sees
+  // hash_valid: null with no context for WHY — could mistake a legitimate
+  // erasure for tampering. The reason explicitly explains the design.
+  const REDACTION_REASON =
+    "Row redacted under GDPR Art. 17 right-to-erasure. Original chain hash is preserved for chain continuity, " +
+    "but the per-row content hash no longer matches because input/output/audit_trail were zeroed by design. " +
+    "This is not tampering. See methodology_url for full deletion-vs-tampering distinction.";
+
   return c.json({
     transaction_id: transactionId,
     // `verified` means: every link in the chain we walked is either
@@ -103,6 +112,7 @@ verifyRoute.get("/:transactionId", async (c) => {
     verified: (targetVerifiedLink || targetRedacted) && chain.brokenLinks === 0,
     hash_valid: targetRedacted ? null : hashValid,
     redacted: targetRedacted,
+    ...(targetRedacted ? { redaction_reason: REDACTION_REASON } : {}),
     chain: {
       length: chain.length + 1, // +1 for the target transaction
       verified_links: chain.verifiedLinks + (targetVerifiedLink ? 1 : 0),
