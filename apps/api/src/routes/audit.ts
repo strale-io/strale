@@ -26,6 +26,7 @@ import { eq, and, isNull, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { transactions, capabilities } from "../db/schema.js";
+import { rateLimitByIp } from "../lib/rate-limit.js";
 
 // CRIT-2: SQS letter label derivation. Mirrors the public 5-bucket mapping
 // the trust pages use; kept here (not in compliance-profile) so audit-record
@@ -48,6 +49,16 @@ import {
 import type { AppEnv } from "../types.js";
 
 export const auditRoute = new Hono<AppEnv>();
+
+// MED-4: rate-limit /v1/audit/:id at 10 req/min per IP — same shape as
+// /v1/verify/:id (verify.ts:26). Pre-fix the endpoint had no rate limit
+// at all. Token-gated, but a leaked or about-to-expire token can be
+// hammered, and every unauthenticated call hits getCapabilityProfile +
+// getSolutionProfile (cost-amplification: each request triggers DB
+// lookups against the capabilities/solutions tables and runs the
+// regulatory-mapping builder). 10 req/min/IP is plenty for any
+// legitimate compliance workflow; abuse traffic gets 429 + Retry-After.
+auditRoute.use("*", rateLimitByIp(10, 60_000));
 
 interface AuditStep {
   step: number;

@@ -2348,6 +2348,16 @@ function buildFailureAudit(params: {
 }) {
   const { transactionId, startTime, capability, executionInput, errorMessage, executionMode, requestContext } = params;
   const marker = getTransparencyMarker(capability.transparencyTag);
+  // F-AUDIT-03 / MED-2: failure audit was missing shareable_url, GDPR Art.
+  // 15/17 mapping, data_retention_days, and the personal-data signal that
+  // success audits carry. EU AI Act Art. 12 requires logging ALL executions
+  // including failures, not just successes — and customers can't share a
+  // failed-call compliance record with their DPO if there's no token-issued
+  // shareable_url. Now mirrors the success-audit compliance block exactly,
+  // with status:"failed" + the original error_message preserved.
+  const personalDataDetected = capability.processesPersonalData;
+  const personalDataCategories = capability.personalDataCategories ?? [];
+  const shareable = getShareableUrl(transactionId);
   return {
     transaction_id: transactionId,
     status: "failed",
@@ -2355,18 +2365,47 @@ function buildFailureAudit(params: {
     failed_at: new Date().toISOString(),
     capability: capability.slug,
     data_source: capability.dataSource ?? capability.name,
+    data_classification: capability.dataClassification ?? "unknown",
     transparency_marker: marker,
-    data_jurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
+    ai_description: getAiDescription(capability.slug, marker),
+    data_jurisdiction: getProcessingJurisdictions(
+      capability.capabilityType,
+      capability.transparencyTag,
+    ).join(",") || "unknown",
     processing_location: getProcessingLocation(),
     execution_mode: executionMode,
     latency_ms: Date.now() - startTime,
     input_hash: hashInput(executionInput),
     request_context: requestContext ?? null,
     error_message: errorMessage.substring(0, 500),
+    schema_validated: false,
     compliance: {
       ai_involvement: getAiDescription(capability.slug, marker),
+      personal_data_processed: personalDataDetected,
+      personal_data_categories: personalDataCategories,
+      human_oversight: "autonomous",
+      human_oversight_description:
+        "Automated execution failed before output was produced. No customer-facing data generated.",
+      data_retention_days: TRANSACTION_RETENTION_DAYS,
+      deletion_endpoint: `DELETE /v1/transactions/${transactionId}`,
+      access_endpoint: `GET /v1/transactions/${transactionId}`,
+      shareable_url: shareable.url,
+      shareable_url_expires_at: shareable.expiresAt,
       regulations_addressed: {
-        eu_ai_act: { article_12: "Failure logging — execution attempted and error captured" },
+        eu_ai_act: {
+          article_12:
+            "Full execution logging — failure attempted, error captured, audit trail preserved",
+          article_13: "Transparency marker indicates AI vs algorithmic processing",
+        },
+        gdpr: {
+          article_30:
+            "Complete processing record with data sources, classifications, and jurisdiction (failure mode)",
+          article_15: `Transaction data accessible via GET /v1/transactions/${transactionId}`,
+          article_17: `Transaction data deletable via DELETE /v1/transactions/${transactionId}`,
+        },
+        notes: personalDataDetected
+          ? "Capability is classified as processing personal data — even on failure, redaction rules apply per Art. 17."
+          : "No personal data classified for this capability.",
       },
     },
   };
