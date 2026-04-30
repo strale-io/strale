@@ -10,21 +10,32 @@ import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
+import { computePlatformFacts } from "../lib/platform-facts.js";
+import { logError } from "../lib/log.js";
 
 const llmsTxtRoute = new Hono();
 
-// ─── Static content ─────────────────────────────────────────────────────────
+// ─── Body builder (uses platform-facts for live counts) ─────────────────────
+//
+// Cert-audit Y-1 + Y-2: capability count and country count used to be
+// hardcoded ("250+", "27 countries") and drifted from production. Now
+// every count is computed at request time from PLATFORM_FACTS (cached
+// 5min via the same module). The category labels also derive country
+// coverage from the live catalogue rather than a hardcoded "27".
 
-const LLMS_TXT = `# Strale
+function renderLlmsTxt(facts: Awaited<ReturnType<typeof computePlatformFacts>>): string {
+  const capCount = facts.capability_counts.active_visible;
+  const countryCount = facts.countries.company_data_active.length;
+  return `# Strale
 
-> One API call. Verified data your agent can trust. 250+ independently tested and scored data capabilities across 27 countries.
+> One API call. Verified data your agent can trust. ${capCount}+ independently tested and scored data capabilities across ${countryCount} countries.
 
 Strale provides business data capabilities that AI agents can use at runtime via MCP, A2A, REST API, or x402 micropayments. Every capability is independently tested with the Strale Quality Score (SQS) — a dual-profile trust scoring system inspired by S&P credit ratings.
 
 ## Use Strale When Your Agent Needs To:
 
 - Validate IBANs, VAT numbers, LEI codes, or BIC/SWIFT codes
-- Look up company data across 27 countries (EU, Nordic, UK, US, APAC)
+- Look up company data across ${countryCount} countries (live catalogue)
 - Check sanctions lists and adverse media
 - Verify SSL certificates, DNS records, or domain availability
 - Validate EU addresses and postal codes
@@ -95,11 +106,16 @@ Every capability has a Strale Quality Score (SQS) with:
 - npm: https://www.npmjs.com/package/strale-mcp
 - Contact: hello@strale.io
 `;
+}
 
 // ─── Category display names ─────────────────────────────────────────────────
+//
+// Country count for the company-data label is filled in at render time
+// from the live catalogue. Hardcoding "27" was the cert-audit drift.
 
-const CATEGORY_LABELS: Record<string, string> = {
-  "company-data": "Company Data (27 countries)",
+function categoryLabels(countryCount: number): Record<string, string> {
+  return {
+  "company-data": `Company Data (${countryCount} countries)`,
   compliance: "Compliance & KYB",
   "developer-tools": "Developer Tools",
   finance: "Finance & Banking",
@@ -110,16 +126,30 @@ const CATEGORY_LABELS: Record<string, string> = {
   validation: "Validation",
   "data-extraction": "Data Extraction",
   web3: "Web3 & DeFi",
-};
+  };
+}
 
 // ─── Cache for full version ─────────────────────────────────────────────────
 
+let cachedShort: { text: string; at: number } | null = null;
 let cachedFull: { text: string; at: number } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function buildShortText(): Promise<string> {
+  const now = Date.now();
+  if (cachedShort && now - cachedShort.at < CACHE_TTL_MS) return cachedShort.text;
+  const facts = await computePlatformFacts();
+  const text = renderLlmsTxt(facts);
+  cachedShort = { text, at: now };
+  return text;
+}
 
 async function buildFullText(): Promise<string> {
   const now = Date.now();
   if (cachedFull && now - cachedFull.at < CACHE_TTL_MS) return cachedFull.text;
+
+  const facts = await computePlatformFacts();
+  const labels = categoryLabels(facts.countries.company_data_active.length);
 
   const db = getDb();
   const rows = await db
@@ -142,26 +172,41 @@ async function buildFullText(): Promise<string> {
 
   let section = "\n## Capability Categories\n";
   for (const [category, slugs] of sortedCategories) {
-    const label = CATEGORY_LABELS[category] ?? category;
+    const label = labels[category] ?? category;
     slugs.sort();
     section += `\n### ${label}\n${slugs.join(", ")}\n`;
   }
 
-  const text = LLMS_TXT + section;
+  const text = renderLlmsTxt(facts) + section;
   cachedFull = { text, at: now };
   return text;
 }
 
 // ─── Routes ─────────────────────────────────────────────────────────────────
 
-llmsTxtRoute.get("/llms.txt", (c) => {
+// Stale-tolerant fallback: if the DB is briefly unavailable, prefer the
+// last good cache to a 503. llms.txt being down is more damaging than
+// llms.txt being 5min stale.
+async function withFallback<T>(fn: () => Promise<T>, fallback: T | null): Promise<T | null> {
+  try {
+    return await fn();
+  } catch (err) {
+    logError("llms-txt-render-failed", err);
+    return fallback;
+  }
+}
+
+llmsTxtRoute.get("/llms.txt", async (c) => {
+  const text = await withFallback(buildShortText, cachedShort?.text ?? null);
+  if (text == null) return c.text("Service temporarily unavailable", 503);
   c.header("Cache-Control", "public, max-age=3600");
   c.header("Content-Type", "text/plain; charset=utf-8");
-  return c.body(LLMS_TXT);
+  return c.body(text);
 });
 
 llmsTxtRoute.get("/llms-full.txt", async (c) => {
-  const text = await buildFullText();
+  const text = await withFallback(buildFullText, cachedFull?.text ?? null);
+  if (text == null) return c.text("Service temporarily unavailable", 503);
   c.header("Cache-Control", "public, max-age=3600");
   c.header("Content-Type", "text/plain; charset=utf-8");
   return c.body(text);

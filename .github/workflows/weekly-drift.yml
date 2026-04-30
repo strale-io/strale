@@ -1,0 +1,138 @@
+name: Weekly drift sweep
+
+# Runs every Monday 07:00 UTC (08:00 CET winter, 09:00 CET summer).
+# Catches drift between PLATFORM_FACTS, manifests, and the public surfaces
+# (frontend marketing, llms.txt, agent card, methodology pages) before a
+# real customer or auditor finds it.
+#
+# This intentionally runs against `main` only — drift on a feature branch
+# is fine; drift on what's deployed is not. If a check fails, an issue is
+# auto-opened and Petter is notified via the existing alert channel.
+
+on:
+  schedule:
+    # Monday 07:00 UTC
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    env:
+      AUDIT_HMAC_SECRET: ci-placeholder-secret-at-least-32-chars-long-0123456789
+      FRONTEND_URL: https://strale.dev
+      # The cron runs without a strale-frontend checkout. Drift checks
+      # that point at frontend paths skip cleanly when the path is missing.
+      STRALE_FRONTEND_PATH: /tmp/__missing__
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+      - run: npm --workspace=packages/mcp-server run build
+
+      # Each sweep is non-fatal individually so we collect ALL findings
+      # in one run rather than failing on the first. Aggregate at the end.
+      - id: manifest-drift
+        run: |
+          set +e
+          cd apps/api && npx tsx scripts/sweep-manifest-drift.ts 2>&1 | tee /tmp/manifest-drift.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - id: facts-drift
+        run: |
+          set +e
+          node apps/api/scripts/check-platform-facts-drift.mjs 2>&1 | tee /tmp/facts-drift.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - id: fetch-timeout
+        run: |
+          set +e
+          node apps/api/scripts/check-fetch-timeout-coverage.mjs 2>&1 | tee /tmp/fetch-timeout.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - id: migration-prefixes
+        run: |
+          set +e
+          node apps/api/scripts/check-migration-prefixes.mjs 2>&1 | tee /tmp/migration-prefixes.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      # Aggregate report. Step fails (and triggers issue creation) if
+      # ANY upstream sweep reported drift.
+      - id: aggregate
+        run: |
+          {
+            echo "# Weekly drift sweep — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo ""
+            echo "## Manifest ↔ DB drift"
+            echo '```'
+            cat /tmp/manifest-drift.txt
+            echo '```'
+            echo ""
+            echo "## Platform-facts drift (vendors, counts, retention)"
+            echo '```'
+            cat /tmp/facts-drift.txt
+            echo '```'
+            echo ""
+            echo "## fetch() AbortSignal coverage"
+            echo '```'
+            cat /tmp/fetch-timeout.txt
+            echo '```'
+            echo ""
+            echo "## Migration prefix collisions"
+            echo '```'
+            cat /tmp/migration-prefixes.txt
+            echo '```'
+          } > /tmp/report.md
+          cat /tmp/report.md
+
+          # Aggregate exit: nonzero if any sweep failed.
+          MD=${{ steps.manifest-drift.outputs.exit }}
+          FD=${{ steps.facts-drift.outputs.exit }}
+          FT=${{ steps.fetch-timeout.outputs.exit }}
+          MP=${{ steps.migration-prefixes.outputs.exit }}
+          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$MP" != "0" ]; then
+            echo "::warning::One or more drift sweeps reported findings — see report"
+            exit 1
+          fi
+
+      # If aggregate failed, open / refresh a tracking issue so the drift
+      # has a home. Issue title is stable so re-runs append, not duplicate.
+      - name: Open drift-tracking issue
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/report.md', 'utf8');
+            const title = 'Weekly drift sweep findings';
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'drift-sweep',
+            });
+            const found = existing.find((i) => i.title === title);
+            if (found) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: found.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['drift-sweep'],
+              });
+            }

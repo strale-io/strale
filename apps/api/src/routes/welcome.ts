@@ -8,20 +8,25 @@
  */
 
 import { Hono } from "hono";
+import { computePlatformFacts } from "../lib/platform-facts.js";
+import { logError } from "../lib/log.js";
 
 export const welcomeRoute = new Hono();
 
 // ─── Welcome JSON ───────────────────────────────────────────────────────────
+//
+// Cert-audit Y-1 + Y-2: capability count and country count are computed
+// from PLATFORM_FACTS at request time, cached 5min. Hardcoding "250+"
+// and "27 countries" (the prior state) drifted from the live catalogue.
 
-const WELCOME = {
+const WELCOME_TEMPLATE = {
   // Top-level JSON-LD fields for Beacon structured data detection
   status: "ok",
   "@context": "https://schema.org",
   "@type": "WebAPI",
   name: "Strale API",
   tagline: "The trust layer for AI agents",
-  description:
-    "250+ independently tested and scored data capabilities across 27 countries. Business data, compliance checks, web scraping, and more — accessible via REST API, MCP, and A2A protocols.",
+  description: "", // filled by buildWelcome()
   version: "1.0.0",
 
   // Top-level links for Beacon first-contact navigation detection
@@ -166,8 +171,7 @@ const WELCOME = {
     "@context": "https://schema.org",
     "@type": "WebAPI",
     name: "Strale API",
-    description:
-      "The trust layer for AI agents \u2014 250+ independently tested data capabilities across 27 countries",
+    description: "", // filled at request time by buildWelcome()
     url: "https://api.strale.io",
     documentation: "https://strale.dev/docs",
     termsOfService: "https://strale.dev/terms",
@@ -180,13 +184,49 @@ const WELCOME = {
   },
 };
 
+// Build the welcome body with live counts. Cached 5min; falls back to
+// last-good or template strings if compute fails.
+let _welcomeCache: { body: typeof WELCOME_TEMPLATE; md: string; at: number } | null = null;
+const WELCOME_TTL_MS = 5 * 60 * 1000;
+
+async function buildWelcome(): Promise<{ body: typeof WELCOME_TEMPLATE; md: string }> {
+  const now = Date.now();
+  if (_welcomeCache && now - _welcomeCache.at < WELCOME_TTL_MS) {
+    return { body: _welcomeCache.body, md: _welcomeCache.md };
+  }
+  try {
+    const facts = await computePlatformFacts();
+    const cap = facts.capability_counts.active_visible;
+    const cn = facts.countries.company_data_active.length;
+    const description = `${cap}+ independently tested and scored data capabilities across ${cn} countries. Business data, compliance checks, web scraping, and more — accessible via REST API, MCP, and A2A protocols.`;
+    const body = {
+      ...WELCOME_TEMPLATE,
+      description,
+      structured_data: {
+        ...WELCOME_TEMPLATE.structured_data,
+        description: `The trust layer for AI agents — ${cap}+ independently tested data capabilities across ${cn} countries`,
+      },
+    };
+    const md = renderWelcomeMd(cap, cn);
+    _welcomeCache = { body, md, at: now };
+    return { body, md };
+  } catch (err) {
+    logError("welcome-build-failed", err);
+    if (_welcomeCache) return { body: _welcomeCache.body, md: _welcomeCache.md };
+    const body = { ...WELCOME_TEMPLATE, description: "Strale API — capability count temporarily unavailable" };
+    const md = renderWelcomeMd(0, 0);
+    return { body, md };
+  }
+}
+
 // ─── Markdown version of the welcome response ──────────────────────────────
 
-const WELCOME_MD = `# Strale API
+function renderWelcomeMd(capCount: number, countryCount: number): string {
+  return `# Strale API
 
 > The trust layer for AI agents
 
-250+ independently tested and scored data capabilities across 27 countries.
+${capCount}+ independently tested and scored data capabilities across ${countryCount} countries.
 
 ## Quick Start
 
@@ -237,6 +277,7 @@ Register via \`POST /v1/auth/register\` with email. Returns API key and €2.00 
 - Email: hello@strale.io
 - Security: security@strale.io
 `;
+}
 
 function setWelcomeHeaders(c: { header: (name: string, value: string) => void }) {
   c.header("Cache-Control", "public, max-age=3600");
@@ -248,14 +289,15 @@ function setWelcomeHeaders(c: { header: (name: string, value: string) => void })
   c.header("X-Credits-Info", "Authenticate to see usage. GET /v1/wallet/balance for current balance.");
 }
 
-function serveWelcome(c: { req: { header: (name: string) => string | undefined }; header: (name: string, value: string) => void; json: (data: unknown) => Response; text: (data: string) => Response }) {
+async function serveWelcome(c: { req: { header: (name: string) => string | undefined }; header: (name: string, value: string) => void; json: (data: unknown) => Response; text: (data: string) => Response }) {
   setWelcomeHeaders(c);
+  const { body, md } = await buildWelcome();
   const accept = c.req.header("Accept") || "";
   if (accept.includes("text/markdown")) {
     c.header("Content-Type", "text/markdown; charset=utf-8");
-    return c.text(WELCOME_MD);
+    return c.text(md);
   }
-  return c.json(WELCOME);
+  return c.json(body);
 }
 
 welcomeRoute.get("/", (c) => serveWelcome(c));

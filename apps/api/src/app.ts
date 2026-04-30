@@ -34,6 +34,7 @@ import { x402GatewayV2, getX402Manifest, getX402WellKnownResources, getX402OpenA
 import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
+import { platformFactsRoute } from "./routes/platform-facts.js";
 import { openApiSpec } from "./openapi.js";
 import { welcomeRoute } from "./routes/welcome.js";
 import { getDb } from "./db/index.js";
@@ -276,6 +277,11 @@ app.route("/v1/solutions", solutionsRoute);
 app.route("/v1/solutions", solutionExecuteRoute);
 app.route("/v1/quality", qualityRoute);
 app.route("/v1", suggestRoute);
+// Single source of truth for facts that appear on multiple surfaces.
+// Public + cached 5min. See lib/platform-facts.ts for the rationale
+// and the contract every consumer (frontend, llms.txt, agent card,
+// methodology pages) should read from.
+app.route("/v1/platform/facts", platformFactsRoute);
 // F-0-003 allowlist — the only paths /v1/public/ops/* will serve
 // anonymously. Everything else returns 404. Derived from the route
 // handlers that had no per-handler admin check on the day F-0-003 was

@@ -16,6 +16,7 @@ import { getDb } from "../db/index.js";
 import { capabilities, solutions, transactions, users } from "../db/schema.js";
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { suggest } from "../lib/suggest.js";
+import { computePlatformFacts } from "../lib/platform-facts.js";
 import type { AppEnv } from "../types.js";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -142,10 +143,17 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
 
   const skills = [...capSkills, ...solSkills];
 
+  // Cert-audit Y-2: capability count and country count are computed from
+  // PLATFORM_FACTS rather than hardcoded. Hardcoding "250+" / "27 countries"
+  // drifted from the live catalogue (production showed 6 active countries).
+  const facts = await computePlatformFacts();
+  const capCount = facts.capability_counts.active_visible;
+  const countryCount = facts.countries.company_data_active.length;
+
   const card = {
     name: "Strale",
     description:
-      "Commercial capability marketplace for AI agents. 250+ capabilities with transparent per-call pricing. Available via API key (EUR wallet) or x402 pay-per-use (USDC on Base). Compliance, KYC/KYB, payment validation, company data across 27 countries, regulatory intelligence, and developer tools. Quality-scored with the Strale Quality Score (SQS).",
+      `Commercial capability marketplace for AI agents. ${capCount}+ capabilities with transparent per-call pricing. Available via API key (EUR wallet) or x402 pay-per-use (USDC on Base). Compliance, KYC/KYB, payment validation, company data across ${countryCount} countries, regulatory intelligence, and developer tools. Quality-scored with the Strale Quality Score (SQS).`,
     url: `${BASE_URL}/a2a`,
     version: "1.0.0",
     documentationUrl: "https://strale.dev/docs",
