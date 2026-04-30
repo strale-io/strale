@@ -64,6 +64,27 @@ jobs:
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
+      # Cert-audit Layer 2: AuditRecord type-shape check. Needs the
+      # strale-frontend repo checked out alongside; without it the
+      # script skips cleanly. We checkout the sibling repo here so the
+      # weekly run actually fires the check.
+      - uses: actions/checkout@v4
+        with:
+          repository: strale-io/strale-frontend
+          path: strale-frontend
+          # No token needed for public-repo read; if the repo is
+          # private, set a GH_PAT secret and reference it here.
+        continue-on-error: true
+
+      - id: audit-record-shape
+        env:
+          STRALE_FRONTEND_PATH: ${{ github.workspace }}/strale-frontend
+        run: |
+          set +e
+          node apps/api/scripts/check-audit-record-shape.mjs 2>&1 | tee /tmp/audit-record-shape.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
       # Aggregate report. Step fails (and triggers issue creation) if
       # ANY upstream sweep reported drift.
       - id: aggregate
@@ -90,6 +111,11 @@ jobs:
             echo '```'
             cat /tmp/migration-prefixes.txt
             echo '```'
+            echo ""
+            echo "## AuditRecord shape (backend ↔ frontend)"
+            echo '```'
+            cat /tmp/audit-record-shape.txt
+            echo '```'
           } > /tmp/report.md
           cat /tmp/report.md
 
@@ -98,7 +124,8 @@ jobs:
           FD=${{ steps.facts-drift.outputs.exit }}
           FT=${{ steps.fetch-timeout.outputs.exit }}
           MP=${{ steps.migration-prefixes.outputs.exit }}
-          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$MP" != "0" ]; then
+          AR=${{ steps.audit-record-shape.outputs.exit }}
+          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$MP" != "0" ] || [ "$AR" != "0" ]; then
             echo "::warning::One or more drift sweeps reported findings — see report"
             exit 1
           fi

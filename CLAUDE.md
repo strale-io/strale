@@ -389,3 +389,16 @@ When making changes to the backend repo, check if these files in the frontend re
 
 - **public/llms.txt** — Update when: adding/removing/renaming capability categories, adding new SDKs or integrations, changing API endpoints or auth flow, changing pricing model. This file is what LLMs read when someone shares strale.dev — it must stay accurate.
 - **public/sitemap.xml** — Regenerate when: adding new pages or routes. Run: `npx tsx scripts/generate-sitemap.ts` in strale-frontend.
+- **src/lib/compliance-types.ts `AuditRecord` interface** — Update when: any change to `AuditRecord` in `apps/api/src/routes/audit.ts`. The two declarations must match shape (field names + types). The CI check at `apps/api/scripts/check-audit-record-shape.mjs` enforces this and runs in the weekly drift cron with both repos checked out. If you add/remove/rename a field on the backend without updating the frontend, the check fails and an issue is auto-opened.
+
+### Drift-prevention surfaces
+
+When changing facts that appear on multiple surfaces (capability count, country count, retention period, vendor names, free-tier list, processing region), update **only** the canonical source and let consumers read from it:
+
+- **Backend canonical source**: `apps/api/src/lib/platform-facts.ts` — `STATIC_FACTS` for fixed values, `computePlatformFacts()` for live-DB values. Exposed via `GET /v1/platform/facts` (cached 5 min).
+- **Frontend consumer**: `usePlatformFacts()` hook in `strale-frontend/src/hooks/use-platform-facts.ts`. Component pages read from this; never hardcode the displayed value.
+- **Static frontend files** that can't reach the hook (`public/llms.txt`, `public/.well-known/*.json`): use phrasing that doesn't bake in counts, with a pointer to `/v1/platform/facts`.
+
+The `apps/api/scripts/check-platform-facts-drift.mjs` CI guard catches new hardcoded values introduced into surface files. The weekly cron runs the same sweep across both repos and opens a tracking issue on any drift.
+
+For vendor switches specifically, invoke the `vendor-switch` skill (in `.claude/skills/vendor-switch/SKILL.md`) — it codifies the full surface-update + DEC-entry checklist.

@@ -59,4 +59,10 @@ jobs:
       # Pre-existing offenders are tracked in fetch-timeout-allowlist.txt;
       # --strict fails CI on new offenders.
       - run: node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict
+      # Cert-audit Layer 2: AuditRecord type-shape check between backend
+      # and the strale-frontend repo. Skips cleanly when STRALE_FRONTEND_PATH
+      # is not present (CI doesn't check out the frontend repo); the weekly
+      # drift cron is the place where this fires for real, with the frontend
+      # checked out alongside.
+      - run: node apps/api/scripts/check-audit-record-shape.mjs
       - run: npm test

@@ -16,8 +16,16 @@ build/
 *.tar.gz
 strale-frontend/
 
-# Claude Code settings (contains local API keys)
-.claude/
+# Claude Code: ignore local-only state + per-machine settings, but allow
+# project skills/commands/protocol docs to be tracked. Skills are project
+# knowledge (vendor-switch checklist, /go, /end-session, etc.) — they
+# should be available to every Claude Code session, not just Petter's
+# local machine.
+.claude/state/
+.claude/worktrees/
+.claude/settings.json
+.claude/settings.local.json
+.claude/*.local.*
 
 # MCP publisher and registry tokens (CRIT-S43: previously corrupted as UTF-16)
 mcp-publisher.exe
