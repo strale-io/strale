@@ -398,7 +398,20 @@ When making changes to the backend repo, check if these files in the frontend re
 
 - **public/llms.txt** — Update when: adding/removing/renaming capability categories, adding new SDKs or integrations, changing API endpoints or auth flow, changing pricing model. This file is what LLMs read when someone shares strale.dev — it must stay accurate.
 - **public/sitemap.xml** — Regenerate when: adding new pages or routes. Run: `npx tsx scripts/generate-sitemap.ts` in strale-frontend.
-- **src/lib/compliance-types.ts `AuditRecord` interface** — Update when: any change to `AuditRecord` in `apps/api/src/routes/audit.ts`. The two declarations must match shape (field names + types). The CI check at `apps/api/scripts/check-audit-record-shape.mjs` enforces this and runs in the weekly drift cron with both repos checked out. If you add/remove/rename a field on the backend without updating the frontend, the check fails and an issue is auto-opened.
+- **src/lib/compliance-types.ts `AuditRecord` interface** — Update when: any change to `AuditRecord` in `apps/api/src/routes/audit.ts`. The two declarations must match shape (field names + types). The CI check at `apps/api/scripts/check-shape-contracts.mjs` (registry-driven; run with `--list` to see registered contracts) enforces this and runs in the weekly drift cron with both repos checked out. If you add/remove/rename a field on the backend without updating the frontend, the check fails and an issue is auto-opened. Add new shared interfaces to the `CONTRACTS` array in that script when applicable.
+
+### Wire-shape rule for /v1/public/ops/trust/* endpoints
+
+The trust endpoints (and any future endpoint surfacing money values, scores, or anything formattable) MUST emit canonical machine-readable values, NEVER pre-formatted display strings. Specifically:
+
+- **Money** is always integer cents (`*_cents`), never a formatted string like `"€0.02"`.
+- **Scores** are 0-100 integers or 0-1 decimals (be consistent within an endpoint).
+- **Dates** are ISO 8601 strings.
+- If you need to ship a pre-rendered display value alongside the canonical one, add a `*_formatted` field — additive, never replacing.
+
+Why: a 2026-04-30 cert-audit finding traced the empty "SQS 0 / Price unavailable" fallback card on capability detail pages to a serializer that emitted `fallback_price: "€0.02"` (string) and dropped the integer. The frontend normalizer either had to regex-parse currency or read a fictitious `*_cents` field that defaulted to 0. Removing the formatted strings entirely was cheaper than maintaining a deprecated lossy field forever. Display formatting is the consumer's responsibility.
+
+For wire-shape ↔ consumer-shape contracts (where backend uses one set of names and the frontend normalizer maps to different names — e.g. backend `fallback_capability` → frontend `capability_slug`), the shape-check script can't help (the names are different by design). Use a frozen-fixture contract test instead. Pattern: `strale-frontend/src/lib/api.contract.test.ts` with the fixture in `src/lib/__fixtures__/`. Re-capture the fixture when the wire shape legitimately changes (the test file's docstring has the curl command); the test fails loudly when a normalizer change drops a field or reads a wrong name.
 
 ### Drift-prevention surfaces
 

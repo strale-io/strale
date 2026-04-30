@@ -81,7 +81,7 @@ jobs:
           STRALE_FRONTEND_PATH: ${{ github.workspace }}/strale-frontend
         run: |
           set +e
-          node apps/api/scripts/check-audit-record-shape.mjs 2>&1 | tee /tmp/audit-record-shape.txt
+          node apps/api/scripts/check-shape-contracts.mjs 2>&1 | tee /tmp/audit-record-shape.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 

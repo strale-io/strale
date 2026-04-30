@@ -161,9 +161,11 @@ function computeNextRun(tier: string, lastRun: string | null): string | null {
   return new Date(new Date(lastRun).getTime() + interval).toISOString();
 }
 
-function formatPrice(cents: number): string {
-  return `€${(cents / 100).toFixed(2)}`;
-}
+// formatPrice was the lossy serializer that turned `2` (cents int) into
+// `"€0.02"` (currency string). Removed 2026-04-30 per the wire-shape
+// rule above formatGuidanceForResponse — display formatting is the
+// consumer's responsibility. If a future endpoint needs pre-formatted
+// display values, re-add it as an explicit helper at that endpoint.
 
 // ─── RP label ────────────────────────────────────────────────────────────────
 
@@ -255,6 +257,21 @@ async function computeGuidanceForSlug(
 }
 
 // ─── Format execution guidance for API response ────────────────────────────
+//
+// Wire-shape rule (cert-audit follow-up 2026-04-30):
+// **The wire shape carries integer cents, never pre-formatted currency
+// strings.** Display formatting is the consumer's responsibility.
+//
+// Why: an earlier version of this serializer emitted
+// `fallback_price: "€0.02"` (string) and dropped the integer. Frontend
+// consumers had to either regex-parse the string or read a fictitious
+// `*_cents` field that defaulted to 0. The latter is what produced
+// the cert-audited "SQS 0 / Price unavailable" empty fallback card.
+// Removing the formatted strings entirely is cheaper now (low usage)
+// than keeping a deprecated lossy field forever.
+//
+// If the dashboard wants pre-formatted display values, it imports
+// formatPrice and renders client-side from the integer.
 
 function formatGuidanceForResponse(g: ExecutionGuidance): Record<string, unknown> {
   return {
@@ -265,21 +282,18 @@ function formatGuidanceForResponse(g: ExecutionGuidance): Record<string, unknown
     error_handling: g.error_handling,
     if_strategy_fails: g.if_strategy_fails ? {
       fallback_capability: g.if_strategy_fails.fallback_capability,
+      fallback_capability_name: g.if_strategy_fails.fallback_capability_name,
       fallback_coverage: g.if_strategy_fails.fallback_coverage,
       fallback_sqs: g.if_strategy_fails.fallback_sqs,
-      fallback_price: g.if_strategy_fails.fallback_price_cents != null
-        ? formatPrice(g.if_strategy_fails.fallback_price_cents)
-        : null,
+      fallback_price_cents: g.if_strategy_fails.fallback_price_cents,
       fallback_verification_level: g.if_strategy_fails.fallback_verification_level,
       trigger: g.if_strategy_fails.trigger,
     } : null,
     recovery: g.recovery,
     cost_envelope: {
-      primary_price: formatPrice(g.cost_envelope.primary_price_cents),
-      worst_case_with_retries: formatPrice(g.cost_envelope.worst_case_with_retries_cents),
-      fallback_price: g.cost_envelope.fallback_price_cents != null
-        ? formatPrice(g.cost_envelope.fallback_price_cents)
-        : null,
+      primary_price_cents: g.cost_envelope.primary_price_cents,
+      worst_case_with_retries_cents: g.cost_envelope.worst_case_with_retries_cents,
+      fallback_price_cents: g.cost_envelope.fallback_price_cents,
     },
     circuit_breaker: g.circuit_breaker,
     context: g.context,

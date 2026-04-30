@@ -35,6 +35,11 @@ export interface ExecutionGuidance {
   };
   if_strategy_fails: {
     fallback_capability: string | null;
+    // Capability display name (looked up alongside the slug). Frontend
+    // needs both because card renders the name and links by slug.
+    // Without this here the frontend would have to make a second
+    // /v1/capabilities/:slug round-trip just to render the card.
+    fallback_capability_name: string | null;
     fallback_coverage: string | null;
     fallback_sqs: number | null;
     fallback_price_cents: number | null;
@@ -235,6 +240,7 @@ async function lookupFallback(
   const db = getDb();
   const [fbCap] = await db
     .select({
+      name: capabilities.name,
       matrixSqs: capabilities.matrixSqs,
       priceCents: capabilities.priceCents,
     })
@@ -244,6 +250,7 @@ async function lookupFallback(
 
   return {
     fallback_capability: fallback.fallbackSlug,
+    fallback_capability_name: fbCap?.name ?? null,
     fallback_coverage: fallback.coverage,
     fallback_sqs: fbCap?.matrixSqs ? Number(fbCap.matrixSqs) : null,
     fallback_price_cents: fbCap?.priceCents ?? null,
