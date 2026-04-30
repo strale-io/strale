@@ -113,11 +113,17 @@ const surfaceRoots = [
   resolve(repoRoot, "apps/api/src/routes/llms-txt.ts"),
   resolve(repoRoot, "apps/api/src/routes/ai-catalog.ts"),
   resolve(repoRoot, "apps/api/src/routes/welcome.ts"),
-  // Frontend pages (if path exists)
+  resolve(repoRoot, "apps/api/src/routes/a2a.ts"),
+  // Frontend repo (if path exists). `src/data` carries learnGuides
+  // (static markdown for the Learn page); `index.html` carries SSR
+  // SEO metadata + JSON-LD that React can't reach. The build output
+  // (dist/) is intentionally excluded — it's a derivative of src/.
   resolve(frontendRoot, "src/pages"),
   resolve(frontendRoot, "src/components"),
   resolve(frontendRoot, "src/lib"),
+  resolve(frontendRoot, "src/data"),
   resolve(frontendRoot, "public"),
+  resolve(frontendRoot, "index.html"),
 ];
 
 const surfaceFiles = [];
@@ -172,11 +178,15 @@ for (const file of surfaceFiles) {
     if (!m) continue;
     const claimed = parseInt(m[1], 10);
     if (claimed === RETENTION_DAYS) continue;
-    // Only flag if the line context is about retention/storage/audit/keep.
+    // Only flag if the line context is about retention/storage. The
+    // word "audit" alone is too broad (matches "auditing third-party
+    // services" or "security audit"); require an explicit retention
+    // verb. False positives on SSL "expiring within 30 days" and
+    // similar were the original failure mode.
     const context = lines.slice(Math.max(0, i - 2), Math.min(lines.length, i + 3)).join(" ").toLowerCase();
-    if (!/retain|retention|stor|keep|delete|deletion|audit/i.test(context)) continue;
+    if (!/\b(retain|retention|retained|stored|store|keep|kept|delete|deletion|deleted|purge|purged)\b/i.test(context)) continue;
     // Skip 90/180/365/3650 in code-side TTL constants (token TTL, cache TTL).
-    if (/(token|cache|ttl|interval|delay)/i.test(context)) continue;
+    if (/(token|cache|ttl|interval|delay|expir|validity|cert)/i.test(context)) continue;
     flag(
       file,
       i + 1,
@@ -203,9 +213,12 @@ for (const file of surfaceFiles) {
     countryClaimPattern.lastIndex = 0;
     const m = countryClaimPattern.exec(lines[i]);
     if (!m) continue;
-    // Skip lines that interpolate a variable (template literal), since
-    // those are reading the live count.
-    if (/\$\{|\{countryCount|\{countries/i.test(lines[i])) continue;
+    // Skip the LITERAL match itself if it's adjacent to an interpolation
+    // (e.g. `${countryCount} countries`) — but a digit in a template
+    // literal that ALSO has unrelated interpolations elsewhere should
+    // still flag. Conservative test: the matched number must appear as
+    // a literal numeric substring with no interpolation between it and
+    // the word "countries".
     flag(
       file,
       i + 1,
@@ -216,8 +229,12 @@ for (const file of surfaceFiles) {
 }
 
 // ─── Check 4: hardcoded "NNN+ capabilities" in prose ───────────────────────
+//
+// Allows up to 4 adjective words between the number and "capabilities"
+// so we catch "250+ Verified API Capabilities" and "Browse 250+ individual
+// capabilities" — patterns the original `\s*` was too tight to find.
 
-const capClaimPattern = /\b(\d{2,4})\+?\s*capabilities\b/gi;
+const capClaimPattern = /\b(\d{2,4})\+?\s+(?:[A-Za-z-]+\s+){0,4}capabilities\b/gi;
 
 for (const file of surfaceFiles) {
   let src;
@@ -232,7 +249,8 @@ for (const file of surfaceFiles) {
     capClaimPattern.lastIndex = 0;
     const m = capClaimPattern.exec(lines[i]);
     if (!m) continue;
-    if (/\$\{|\{capCount|\{cap_/i.test(lines[i])) continue;
+    // Same conservative rule as country count: a literal "NNN+ capabilities"
+    // is flagged regardless of what other interpolations exist on the line.
     flag(
       file,
       i + 1,
