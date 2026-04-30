@@ -8,7 +8,12 @@
  * Chain is per-day (not globally sequential) to avoid serialization bottleneck.
  * Each day's first transaction uses the previous day's last hash.
  *
- * Satisfies: SOC 2 2026 tamper-evident logging, ISO/IEC 24970.
+ * Aligned with: SOC 2 2026 tamper-evident logging.
+ *
+ * Note (cert-audit 2026-04-30): an earlier comment cited ISO/IEC 24970
+ * as also satisfied; that standard is a Draft International Standard
+ * (DIS), not yet adopted. Removed to avoid asserting conformance to
+ * something that doesn't yet exist as a published standard.
  */
 
 import { createHash } from "node:crypto";

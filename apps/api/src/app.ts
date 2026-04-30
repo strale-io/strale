@@ -35,6 +35,7 @@ import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
 import { platformFactsRoute } from "./routes/platform-facts.js";
+import { disputeRoute } from "./routes/dispute.js";
 import { openApiSpec } from "./openapi.js";
 import { welcomeRoute } from "./routes/welcome.js";
 import { getDb } from "./db/index.js";
@@ -282,6 +283,10 @@ app.route("/v1", suggestRoute);
 // and the contract every consumer (frontend, llms.txt, agent card,
 // methodology pages) should read from.
 app.route("/v1/platform/facts", platformFactsRoute);
+// Bucket C — GDPR Art. 22(3) dispute intake. Accepts authenticated
+// (account holder) or signed-token (anonymous data subject with a
+// shareable audit URL) submissions. See routes/dispute.ts.
+app.route("/v1/transactions", disputeRoute);
 // F-0-003 allowlist — the only paths /v1/public/ops/* will serve
 // anonymously. Everything else returns 404. Derived from the route
 // handlers that had no per-handler admin check on the day F-0-003 was

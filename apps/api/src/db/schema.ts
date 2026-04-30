@@ -178,6 +178,16 @@ export const capabilities = pgTable("capabilities", {
   x402Enabled: boolean("x402_enabled").notNull().default(false),
   x402PriceUsd: decimal("x402_price_usd", { precision: 10, scale: 4 }),
   x402Method: varchar("x402_method", { length: 4 }).notNull().default("POST"),
+  // Bucket C — GDPR Art. 22 classification per capability (migration 0058).
+  // Surfaced in audit body so the customer (controller) sees the
+  // automated-decision posture and the data subject can find the
+  // dispute endpoint when applicable.
+  //   data_lookup       — factual data, not decision-supporting
+  //   screening_signal  — produces matches/findings the customer uses to decide
+  //   risk_synthesis    — AI synthesis producing a recommendation
+  gdprArt22Classification: varchar("gdpr_art_22_classification", { length: 20 })
+    .notNull()
+    .default("data_lookup"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -280,6 +290,32 @@ export const transactions = pgTable(
       .where(sql`x402_payment_hash IS NOT NULL`),
   ],
 );
+
+// ─── dispute_requests ───────────────────────────────────────────────────────
+// Bucket C — GDPR Art. 22(3) "right to obtain human intervention".
+// Receives data-subject objections to a recorded transaction. Storage
+// only; admins review disposition out-of-band. Anonymous disputes are
+// supported (data subject is rarely the same person as the API caller).
+// See migration 0058 for the column-by-column rationale.
+export const disputeRequests = pgTable("dispute_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  transactionId: uuid("transaction_id")
+    .notNull()
+    .references(() => transactions.id),
+  userId: uuid("user_id").references(() => users.id),
+  reason: text("reason").notNull(),
+  affectedField: text("affected_field"),
+  contactEmail: varchar("contact_email", { length: 255 }),
+  submittedAt: timestamp("submitted_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  disposition: varchar("disposition", { length: 20 })
+    .notNull()
+    .default("received"),
+  // 'received' | 'reviewing' | 'upheld' | 'rejected' | 'no_action'
+  dispositionAt: timestamp("disposition_at", { withTimezone: true }),
+  dispositionNotes: text("disposition_notes"),
+});
 
 // ─── x402_orphan_settlements ────────────────────────────────────────────────
 // CCO P0 #12: log of x402 settlements that succeeded on-chain but whose

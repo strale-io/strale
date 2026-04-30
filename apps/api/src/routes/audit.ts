@@ -139,6 +139,35 @@ interface AuditRecord {
   // surfaced so auditors can see the executor's own assertion alongside
   // per-step transparency. Null on legacy rows that predate the column.
   transparency_marker: string | null;
+  // Bucket C — GDPR Art. 22(2)/(3) disclosure. Tells the controller
+  // (API caller) which Art. 22 obligations apply for this row, and
+  // tells the data subject (whose data was processed) where to
+  // exercise the right to obtain human intervention.
+  gdpr: {
+    /**
+     * Per-capability classification:
+     *   data_lookup      — factual data, not decision-supporting
+     *   screening_signal — produces matches/findings the customer uses to decide
+     *   risk_synthesis   — AI synthesis producing a recommendation
+     */
+    art_22_classification: "data_lookup" | "screening_signal" | "risk_synthesis";
+    /** Plain-language description of what the classification means. */
+    art_22_disclosure: string;
+    /**
+     * URL accepting POST { reason, contact_email?, affected_field? } for
+     * the data subject to challenge a recorded transaction. Surfaced
+     * regardless of classification (data subjects can dispute factual
+     * data too) but the audit-page UI hides it for data_lookup rows.
+     */
+    dispute_endpoint: string;
+    dispute_endpoint_method: "POST";
+    /**
+     * Brief reminder that the API caller is the controller, not Strale,
+     * for the Art. 22 right itself — Strale provides the infrastructure
+     * but the Art. 22 right runs against the controller.
+     */
+    controller_obligations: string;
+  };
 }
 
 // Shape of audit_trail.steps[] as written by solution-execute.ts:buildInlineAudit.
@@ -353,7 +382,55 @@ function composeAuditRecord(args: {
     // public response carried only per-step transparency and not the
     // executor's own assertion. Null for legacy rows.
     transparency_marker: storedTransparencyMarker,
+    // Bucket C — GDPR Art. 22 disclosure + dispute infrastructure.
+    // The classification comes from the per-capability/per-solution
+    // column (default data_lookup). Disclosure text is derived
+    // deterministically from the classification so customer/auditor
+    // see the same prose for every row of that class.
+    gdpr: buildGdprBlock(profile.art_22_classification, transactionId),
   };
+}
+
+// Bucket C — Art. 22 disclosure prose + dispute endpoint URL builder.
+// Deterministic mapping from classification → disclosure text so the
+// audit body for every row of the same class reads identically.
+function buildGdprBlock(
+  classification: ComplianceProfile["art_22_classification"],
+  transactionId: string,
+) {
+  const dispute_endpoint = `/v1/transactions/${transactionId}/dispute`;
+  const controller_obligations =
+    "The Strale customer that initiated this call is the GDPR controller for any personal data processed. The Art. 22 right not to be subject to a decision based solely on automated processing runs against the controller, not Strale. Strale (as processor) provides this audit record + dispute endpoint to support the controller's compliance — pass the dispute_endpoint URL through to your end users.";
+  switch (classification) {
+    case "risk_synthesis":
+      return {
+        art_22_classification: "risk_synthesis" as const,
+        art_22_disclosure:
+          "This row is the output of an AI synthesis step that produces a risk recommendation. If your downstream workflow auto-acts on this output (e.g. blocks a customer, declines a transaction) without human review, you are operating an Art. 22 automated-decision system and must afford the data subject the right to obtain human intervention, express their point of view, and contest the decision.",
+        dispute_endpoint,
+        dispute_endpoint_method: "POST" as const,
+        controller_obligations,
+      };
+    case "screening_signal":
+      return {
+        art_22_classification: "screening_signal" as const,
+        art_22_disclosure:
+          "This row produced screening signals (matches against external lists or databases). The signals themselves are factual reports of what the upstream sources contain, not decisions; if you auto-act on a positive signal without human review, your downstream workflow becomes the Art. 22 decision and the right-to-human-intervention attaches there.",
+        dispute_endpoint,
+        dispute_endpoint_method: "POST" as const,
+        controller_obligations,
+      };
+    case "data_lookup":
+    default:
+      return {
+        art_22_classification: "data_lookup" as const,
+        art_22_disclosure:
+          "This row returns factual data from external sources. It is not a decision and does not in itself trigger Art. 22 obligations. The dispute endpoint is provided regardless so the data subject can challenge factual claims (e.g. an outdated registry record).",
+        dispute_endpoint,
+        dispute_endpoint_method: "POST" as const,
+        controller_obligations,
+      };
+  }
 }
 
 auditRoute.get("/:transactionId", async (c) => {

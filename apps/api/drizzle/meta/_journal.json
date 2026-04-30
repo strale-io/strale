@@ -414,6 +414,13 @@
       "when": 1777759201000,
       "tag": "0057_user_erasure_and_tos",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1777845600000,
+      "tag": "0058_dispute_and_art22",
+      "breakpoints": true
     }
   ]
 }

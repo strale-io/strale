@@ -1,10 +1,16 @@
 /**
  * Rich provenance builder for regulatory-grade audit trails.
  *
- * Provides structured provenance that satisfies:
+ * Provides structured provenance aligned with:
  * - EU AI Act Art. 12 — automatic logging including data sources
  * - US Inference Data Use Records — full inference chain
- * - ISO/IEC 24970 — AI system logging standard
+ *
+ * Note (cert-audit 2026-04-30): an earlier comment cited ISO/IEC 24970
+ * as a satisfied standard. That standard is a Draft International
+ * Standard (DIS), not yet adopted; citing it as satisfied was
+ * misleading. Removed from public-facing claims. We track DIS 24970
+ * for future alignment but do not assert conformance until it's
+ * published as an IS.
  */
 
 import { createHash } from "node:crypto";

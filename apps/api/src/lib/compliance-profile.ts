@@ -57,6 +57,16 @@ export interface ComplianceRegulatoryItem {
   relevance: "primary" | "supporting";
 }
 
+/**
+ * Bucket C — GDPR Art. 22 classification per capability/solution.
+ *   data_lookup       — factual data, not decision-supporting (default)
+ *   screening_signal  — produces matches/findings the customer uses to decide
+ *   risk_synthesis    — AI synthesis producing a recommendation
+ * Surfaced in the audit body so the controller knows their Art. 22
+ * obligations and the data subject can find the dispute endpoint.
+ */
+export type Art22Classification = "data_lookup" | "screening_signal" | "risk_synthesis";
+
 export interface ComplianceProfile {
   entity_type: "capability" | "solution";
   entity_slug: string;
@@ -70,6 +80,8 @@ export interface ComplianceProfile {
   /** Where execution physically runs (from env, not per-capability) */
   processing_location: string;
   regulatory_mapping: ComplianceRegulatoryItem[];
+  /** Bucket C — Art. 22 classification, max-of for solutions */
+  art_22_classification: Art22Classification;
   avg_latency_ms: number | null;
   /** Aggregate: true iff every included step has schema-validated data */
   schema_validated: boolean;
@@ -216,6 +228,7 @@ export async function getCapabilityProfile(
     ai_steps_count: aiSteps,
     jurisdiction: (c.geography as string) ?? "global",
     processing_location: processingLocation(),
+    art_22_classification: ((c.gdprArt22Classification as string) ?? "data_lookup") as Art22Classification,
     regulatory_mapping: buildRegulatoryMapping({
       hasAI: transparency !== "algorithmic",
       geography: (c.geography as string) ?? "global",
@@ -259,6 +272,18 @@ export async function getSolutionProfile(
   let latencySum = 0;
   let latencyCount = 0;
 
+  // Bucket C — solution Art. 22 classification is the max-of its
+  // steps. risk_synthesis > screening_signal > data_lookup. A KYB
+  // Complete that chains screenings + risk-narrative is risk_synthesis;
+  // a KYB Essentials that's screening-only stops at screening_signal.
+  const ART_22_RANK: Record<Art22Classification, number> = {
+    data_lookup: 0,
+    screening_signal: 1,
+    risk_synthesis: 2,
+  };
+  const ART_22_BY_RANK: Art22Classification[] = ["data_lookup", "screening_signal", "risk_synthesis"];
+  let solArt22Rank = 0;
+
   stepsRows.forEach((r, i) => {
     const t = normalizeTransparency(r.cap.transparencyTag as string | null);
     transparencies.push(t);
@@ -272,6 +297,8 @@ export async function getSolutionProfile(
       latencySum += r.cap.avgLatencyMs;
       latencyCount++;
     }
+    const stepArt22 = ((r.cap.gdprArt22Classification as string) ?? "data_lookup") as Art22Classification;
+    solArt22Rank = Math.max(solArt22Rank, ART_22_RANK[stepArt22] ?? 0);
     data_sources.push({
       slug: r.cap.slug,
       name: r.cap.name,
@@ -294,6 +321,7 @@ export async function getSolutionProfile(
     ai_steps_count: aiSteps,
     jurisdiction: (s.geography as string) ?? "global",
     processing_location: processingLocation(),
+    art_22_classification: ART_22_BY_RANK[solArt22Rank],
     regulatory_mapping: buildRegulatoryMapping({
       hasAI: aiInvolvement !== "none",
       geography: (s.geography as string) ?? "global",

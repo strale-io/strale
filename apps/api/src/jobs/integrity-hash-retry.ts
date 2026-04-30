@@ -3,8 +3,11 @@
  *
  * Before: storeIntegrityHash was called as a fire-and-forget
  * `.catch(() => {})` at six sites in do.ts. Every failure silently
- * vanished. Because the hash chain is compliance-critical (SOC 2,
- * ISO/IEC 24970), silence in failure was the worst possible mode.
+ * vanished. Because the hash chain is compliance-critical (SOC 2
+ * tamper-evident logging; an earlier comment also cited ISO/IEC 24970
+ * but that's a Draft International Standard — see cert-audit
+ * 2026-04-30 for the cleanup), silence in failure was the worst
+ * possible mode.
  *
  * After: every new transaction row lands with
  * `compliance_hash_state = 'pending'` via the column default (migration
