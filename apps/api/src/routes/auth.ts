@@ -280,17 +280,40 @@ authRoute.delete("/me", authMiddleware, async (c) => {
       .where(eq(wallets.userId, user.id));
   });
 
+  // Cert-audit Y-7: be explicit about what survives erasure. The
+  // integrity hash includes input + auditTrail in the hashed payload
+  // (lib/integrity-hash.ts), so nullifying those fields would break the
+  // chain for every subsequent transaction in the day's chain. We
+  // therefore retain audit_trail.executionInput under Art. 30; the
+  // contact channel below exists for users who exercise their absolute
+  // Art. 17 right and accept the chain reset. Anonymisation of the
+  // controller-side identifiers (email/name/api_key/IP) happens
+  // immediately and is irreversible.
   return c.json({
     status: "redacted",
     user_id: user.id,
     redacted_at: now.toISOString(),
     deletion_reason: reason,
     summary: {
-      anonymized: ["email", "name", "api_key_hash", "key_prefix", "signup_ip_hash"],
-      retained: ["transactions", "wallet_transactions", "audit_trail"],
+      anonymized: [
+        "users.email",
+        "users.name",
+        "users.api_key_hash",
+        "users.key_prefix",
+        "users.signup_ip_hash",
+      ],
+      retained: [
+        "transactions (rows)",
+        "wallet_transactions (rows)",
+        "audit_trail JSONB on each transaction (includes executionInput for capabilities flagged processes_personal_data — see retained_pii_disclosure)",
+      ],
       retained_legal_basis:
-        "GDPR Art. 30 (records of processing) + DEC-20260428-B (integrity hash chain). " +
-        "Retained data is anonymised — your user_id is no longer linkable to a real person via this controller.",
+        "GDPR Art. 30 (records of processing) + DEC-20260428-B (audit-chain integrity). " +
+        "The user_id linkage is severed (your row's identifiers are anonymised); the transaction-level audit body is retained because it is part of a hashed chain that other transactions reference. " +
+        "This is the same legal basis many regulated-industry providers (banks, KYC vendors) use for retention-on-deletion.",
+      retained_pii_disclosure:
+        "If you used capabilities that take personal data as input — e.g. pii-redact, invoice-extract, company-enrich, sanctions-check on a real person — the input you supplied is retained inside audit_trail.executionInput on the transactions row. The row no longer links to your account, but the input itself is still readable to a Strale operator who could correlate by content. " +
+        "If this matters to your situation (e.g. data subject was a third party who has now exercised Art. 17), email petter@strale.io with the affected transaction IDs; we'll redact in place and accept the audit-chain reset that requires.",
     },
     api_key_status: "burned — current key will fail on next use",
     wallet_status: "balance_zeroed",

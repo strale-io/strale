@@ -319,6 +319,20 @@ type CapabilityInfo = {
  * Counts both `completed` (sync success) and `executing` rows so a
  * burst of in-flight async requests can't slip past while their final
  * status is still being written.
+ *
+ * Cert-audit Y-11 (documented, intentionally not "fixed"): there is a
+ * brief window where a row that has just completed but whose status
+ * column hasn't been UPDATEd yet from `executing` to `completed` is
+ * counted in BOTH buckets — the SUM still includes it as `executing`,
+ * and the next sub-second post-commit it'll appear as `completed`.
+ * Within the wallet-locked tx the row is a single value (one or the
+ * other, not both), so this can't cause double-billing — it can only
+ * cause a false `spend_cap_exceeded` rejection of a request that
+ * arrives in the millisecond between the executor returning and the
+ * status-flip committing. Tightening the SUM filter to exclude rows
+ * whose `completed_at` is set but `status` is still `executing` would
+ * close the window but at the cost of a more complex query for a
+ * benign over-rejection case. Documented; not fixed.
  */
 async function spendCapWouldExceed(
   tx: any,
@@ -2526,13 +2540,21 @@ function buildFullAudit(params: {
       access_endpoint: `GET /v1/transactions/${transactionId}`,
       shareable_url: shareable.url,
       shareable_url_expires_at: shareable.expiresAt,
+      // Cert-audit Y-9: gate EU AI Act articles on whether AI was actually
+      // involved. Pre-fix, every algorithmic-only call (e.g. iban-validate)
+      // emitted "article_50: AI-generated content marked via transparency_
+      // marker field" — a misleading provenance claim because no AI ran.
+      // compliance-profile.ts/buildRegulatoryMapping already gates on
+      // hasAI; this brings buildFullAudit into alignment.
       regulations_addressed: {
-        eu_ai_act: {
-          article_12: "Full execution logging with timestamps, data sources, and latency",
-          article_13: "Transparency markers indicating AI vs algorithmic processing",
-          article_14: "Human oversight classification documented",
-          article_50: "AI-generated content marked via transparency_marker field",
-        },
+        ...(marker !== "algorithmic" ? {
+          eu_ai_act: {
+            article_12: "Full execution logging with timestamps, data sources, and latency",
+            article_13: "Transparency markers indicating AI vs algorithmic processing",
+            article_14: "Human oversight classification documented",
+            article_50: "AI-generated content marked via transparency_marker field",
+          },
+        } : {}),
         gdpr: {
           article_30: "Complete processing record with data sources, classifications, and jurisdiction",
           article_15: `Transaction data accessible via GET /v1/transactions/${transactionId}`,
@@ -2610,12 +2632,19 @@ function buildFailureAudit(params: {
       access_endpoint: `GET /v1/transactions/${transactionId}`,
       shareable_url: shareable.url,
       shareable_url_expires_at: shareable.expiresAt,
+      // Cert-audit Y-9: gate EU AI Act articles on AI involvement (same
+      // rule as buildFullAudit). An algorithmic capability that fails
+      // shouldn't carry "Transparency marker indicates AI vs algorithmic
+      // processing" in its failure audit — there was never any AI to
+      // mark transparency for.
       regulations_addressed: {
-        eu_ai_act: {
-          article_12:
-            "Full execution logging — failure attempted, error captured, audit trail preserved",
-          article_13: "Transparency marker indicates AI vs algorithmic processing",
-        },
+        ...(marker !== "algorithmic" ? {
+          eu_ai_act: {
+            article_12:
+              "Full execution logging — failure attempted, error captured, audit trail preserved",
+            article_13: "Transparency marker indicates AI vs algorithmic processing",
+          },
+        } : {}),
         gdpr: {
           article_30:
             "Complete processing record with data sources, classifications, and jurisdiction (failure mode)",

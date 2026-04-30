@@ -133,6 +133,12 @@ interface AuditRecord {
   // Customers can use this to distinguish what the chain actually
   // protects from what we're showing for convenience.
   source: "stored" | "derived" | "hybrid";
+  // Cert-audit Y-8: at-execution-time transparency marker
+  // (algorithmic | ai_generated | hybrid) the executor stamped on the
+  // row. Was previously read from the DB and silently dropped; now
+  // surfaced so auditors can see the executor's own assertion alongside
+  // per-step transparency. Null on legacy rows that predate the column.
+  transparency_marker: string | null;
 }
 
 // Shape of audit_trail.steps[] as written by solution-execute.ts:buildInlineAudit.
@@ -341,6 +347,12 @@ function composeAuditRecord(args: {
     personal_data_processed: personalDataProcessed,
     personal_data_categories: personalDataCategories,
     source,
+    // Cert-audit Y-8: surface the at-execution-time transparency marker
+    // that the executor stamped on the row (algorithmic | ai_generated |
+    // hybrid). Previously destructured here but never returned, so the
+    // public response carried only per-step transparency and not the
+    // executor's own assertion. Null for legacy rows.
+    transparency_marker: storedTransparencyMarker,
   };
 }
 

@@ -9,7 +9,11 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const drizzleDir = resolve(__dirname, "../drizzle");
 
-const KNOWN_HISTORICAL = new Set(["0046"]);
+// Was ["0046"] until the 2026-04-30 rename of 0046_suggest_log.sql →
+// 0099_suggest_log.sql resolved the historical collision. Empty now;
+// keep the set so future intentional collisions can be allowlisted with
+// a documented rationale rather than removing the guard wholesale.
+const KNOWN_HISTORICAL = new Set([]);
 
 const files = readdirSync(drizzleDir).filter((f) => /^\d{4}_.*\.sql$/.test(f));
 const byPrefix = new Map();
