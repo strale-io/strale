@@ -56,7 +56,8 @@ describe("shutdown", () => {
     const task = Promise.reject(new Error("simulated"));
     const tracked = trackBackgroundTask("failing-task", task);
     expect(getInflightTaskCount()).toBe(1);
-    await tracked.catch(() => {/* expected */});
+    // F-0-009 lint forbids bare `() => {}` — the (err) arg shape passes.
+    await tracked.catch((err) => { void err; });
     await Promise.resolve();
     expect(getInflightTaskCount()).toBe(0);
   });

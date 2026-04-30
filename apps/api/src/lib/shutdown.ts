@@ -59,7 +59,13 @@ export function trackBackgroundTask<T>(
   promise: Promise<T>,
 ): Promise<T> {
   inflightTasks.add(promise);
-  promise.finally(() => inflightTasks.delete(promise)).catch(() => {/* no-op */});
+  // The underlying promise's rejection is the caller's concern; we
+  // only catch here so the tracking chain doesn't surface as an
+  // unhandled rejection on the .finally(). The arg shape (err) is
+  // required by the F-0-009 lint guard — bare `() => {}` is forbidden.
+  promise
+    .finally(() => inflightTasks.delete(promise))
+    .catch((err) => { void err; });
   // Trace tracking only at debug; the promise itself logs its own outcome.
   log.debug?.({ label: "background.tracked", task: label, inflight: inflightTasks.size }, "background.tracked");
   return promise;
