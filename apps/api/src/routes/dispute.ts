@@ -29,6 +29,8 @@ import { authMiddleware } from "../lib/middleware.js";
 import { apiError } from "../lib/errors.js";
 import { verifyAuditToken } from "../lib/audit-token.js";
 import { logWarn } from "../lib/log.js";
+import { sendAlert } from "../lib/alerting.js";
+import { fireAndForget } from "../lib/fire-and-forget.js";
 import type { AppEnv } from "../types.js";
 
 export const disputeRoute = new Hono<AppEnv>();
@@ -141,13 +143,18 @@ disputeRoute.post("/:transactionId/dispute", async (c) => {
 
   const db = getDb();
 
-  // Verify the transaction exists. If not, 404.
+  // Verify the transaction exists + grab capability slug for alerting.
+  // The capability slug isn't stored on dispute_requests (the
+  // transaction reference is the link), but it's the most useful
+  // human-readable identifier for the alert subject line.
   const [txn] = await db
     .select({
       id: transactions.id,
       capabilityId: transactions.capabilityId,
+      capabilitySlug: capabilities.slug,
     })
     .from(transactions)
+    .leftJoin(capabilities, eq(capabilities.id, transactions.capabilityId))
     .where(eq(transactions.id, transactionId))
     .limit(1);
   if (!txn) {
@@ -176,6 +183,40 @@ disputeRoute.post("/:transactionId/dispute", async (c) => {
       affected_field: affectedField,
       anonymous: userId === null,
     },
+  );
+
+  // Email notification — fire-and-forget so a Resend outage doesn't
+  // fail the dispute submission. The structured log line above is the
+  // authoritative event trail; the email is operator convenience.
+  // 30-day SLA (Art. 22(3)) starts now from the dispute's submitted_at;
+  // the alert exists so an operator notices within hours, not the
+  // 30-day deadline. Severity = warning (not critical) — disputes are
+  // expected operational events, not incidents.
+  fireAndForget(
+    () => sendAlert({
+      severity: "warning",
+      subject: `Dispute received — ${txn.capabilitySlug ?? "unknown capability"} (txn ${transactionId.slice(0, 8)})`,
+      body: [
+        `A new dispute was submitted under GDPR Art. 22(3) (right to obtain human intervention).`,
+        ``,
+        `Dispute ID:       ${dispute.id}`,
+        `Transaction ID:   ${transactionId}`,
+        `Capability:       ${txn.capabilitySlug ?? "(unknown)"}`,
+        `Submitted at:     ${dispute.submittedAt.toISOString()}`,
+        `Submitter:        ${userId ? `account user ${userId}` : "anonymous (signed audit token)"}`,
+        `Contact email:    ${contactEmail ?? "(account holder; lookup via user_id)"}`,
+        `Affected field:   ${affectedField ?? "(none specified — full-record dispute)"}`,
+        ``,
+        `Reason given:`,
+        reason,
+        ``,
+        `Review at:        ${process.env.ADMIN_DASHBOARD_URL ?? "https://strale.dev"}/admin/disputes/${dispute.id}`,
+        `Or via DB:        SELECT * FROM dispute_requests WHERE id = '${dispute.id}';`,
+        ``,
+        `30-day SLA: respond by ${new Date(dispute.submittedAt.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)} (Art. 22(3) statutory).`,
+      ].join("\n"),
+    }),
+    { label: "dispute-alert-email", context: { dispute_id: dispute.id } },
   );
 
   return c.json(
@@ -252,7 +293,6 @@ disputeRoute.get("/:transactionId/dispute", async (c) => {
   });
 });
 
-// Suppress unused-import lint if `capabilities` ends up not used in
-// future trims (kept here for the cap-side art_22_classification lookup
-// once the dispute admin surface lands in v1.1).
-void capabilities;
+// `capabilities` is now used by the leftJoin in the POST handler
+// (capability slug for the alert subject); the previous void-suppress
+// shim is no longer needed.

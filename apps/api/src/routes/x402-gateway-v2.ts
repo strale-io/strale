@@ -1239,6 +1239,16 @@ export async function getX402Manifest(): Promise<{
 }> {
   await ensureCache();
 
+  // NOTE on the `price: string` shape (cert-audit follow-up 2026-04-30):
+  // Looks like the lossy-formatted-currency anti-pattern that bit the
+  // trust endpoint, but it isn't. The x402 protocol spec defines the
+  // resource manifest's `price` as a string deliberately — USDC is a
+  // 6-decimal-precision token whose atomic units are NOT integer cents,
+  // and the manifest pairs `price` with `currency` so any consumer has
+  // an unambiguous parse. Don't "fix" this to *_cents: it would break
+  // x402 protocol compliance for every facilitator + scanner that reads
+  // /.well-known/x402.json. The integer is also still available
+  // server-side (cap.x402PriceUsd as a decimal) for any internal use.
   const endpoints = [
     ...[..._capCache.values()].map((cap) => ({
       path: `/x402/${cap.slug}`,
