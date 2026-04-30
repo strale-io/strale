@@ -256,6 +256,21 @@ export const PII_CATEGORY_ENUM = [
 
 export type PiiCategory = typeof PII_CATEGORY_ENUM[number];
 
+// Bucket C — GDPR Art. 22 classification. Optional in manifest YAML;
+// omitted = `data_lookup` (the safe default — non-decision-supporting
+// data). Set explicitly to `screening_signal` (e.g. sanctions-check,
+// pep-check, adverse-media-check, insolvency-check) when the
+// capability produces matches/findings the customer uses to decide,
+// or `risk_synthesis` (e.g. risk-narrative-generate) when the
+// capability is itself an AI synthesis producing a recommendation.
+// Surfaced in the audit body's gdpr block per cert-audit Bucket C.
+export const VALID_GDPR_ART_22_CLASSIFICATIONS = [
+  "data_lookup",
+  "screening_signal",
+  "risk_synthesis",
+] as const;
+export type Art22Classification = typeof VALID_GDPR_ART_22_CLASSIFICATIONS[number];
+
 export function validateCapabilityStructure(cap: {
   slug: string;
   name: string | null;
@@ -271,6 +286,8 @@ export function validateCapabilityStructure(cap: {
   maintenanceClass: string | null;
   processesPersonalData?: boolean | null;
   personalDataCategories?: string[] | null;
+  // Bucket C — optional; default 'data_lookup' applied at the DB layer.
+  gdprArt22Classification?: string | null;
 }): GateViolation[] {
   const violations: GateViolation[] = [];
 
@@ -361,6 +378,22 @@ export function validateCapabilityStructure(cap: {
         detail: `${cap.slug}: personal_data_categories is populated but processes_personal_data is false. Either set processes_personal_data: true, or clear the categories.`,
       });
     }
+  }
+
+  // Check 15 (Bucket C): Art. 22 classification, when set, must be one
+  // of the canonical values. Missing/null is allowed — the DB layer
+  // applies the 'data_lookup' default. Surfacing as a gate failure on
+  // unknown values keeps the manifest schema disciplined as new
+  // compliance capabilities ship.
+  if (
+    cap.gdprArt22Classification != null &&
+    !(VALID_GDPR_ART_22_CLASSIFICATIONS as readonly string[]).includes(cap.gdprArt22Classification)
+  ) {
+    violations.push({
+      gate: "gate1_structure",
+      severity: "error",
+      detail: `${cap.slug}: gdpr_art_22_classification '${cap.gdprArt22Classification}' is not valid. Options: ${VALID_GDPR_ART_22_CLASSIFICATIONS.join(", ")} (or omit for the 'data_lookup' default).`,
+    });
   }
 
   return violations;

@@ -73,6 +73,12 @@ processes_personal_data: true
 personal_data_categories:
   - name
   - financial
+# Bucket C — Art. 22 classification. AI synthesis that produces a
+# recommendation (risk_level + flags + recommendation per flag). If the
+# customer auto-acts on the output without human review, they are
+# operating an Art. 22 automated-decision system. Strongest disclosure
+# of the family — see docs/dpia/risk-narrative-generate.md.
+gdpr_art_22_classification: risk_synthesis
 geography: global
 test_fixtures:
   known_answer:

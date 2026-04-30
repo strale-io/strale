@@ -231,6 +231,15 @@ data_source_type: "api"  # api | scrape | computed | reference
 transparency_tag: "algorithmic"  # algorithmic | ai_generated | mixed
 freshness_category: "live-fetch"  # live-fetch | reference-data | computed
 
+# Bucket C — GDPR Art. 22 classification (optional; default 'data_lookup').
+# Set to 'screening_signal' for capabilities that produce matches/findings
+# the customer uses to decide (e.g. sanctions-check). Set to
+# 'risk_synthesis' for AI synthesis producing a recommendation
+# (e.g. risk-narrative-generate). Surfaced in the audit body's gdpr block
+# along with the dispute_endpoint URL. Validated at authoring time by
+# validateCapabilityStructure (gate 15) against the canonical enum.
+gdpr_art_22_classification: "data_lookup"  # data_lookup | screening_signal | risk_synthesis
+
 test_fixtures:
   known_answer:
     input:

@@ -141,6 +141,11 @@ maintenance_class: commercial-stable-api
 processes_personal_data: true
 personal_data_categories:
   - name
+# Bucket C — Art. 22 classification. Returns adverse-news findings the
+# controller uses to apply enhanced due diligence; the controller's
+# pipeline turns the signal into a decision. Audit body's gdpr block
+# carries the disclosure + dispute endpoint URL.
+gdpr_art_22_classification: screening_signal
 geography: global
 test_fixtures:
   known_answer:

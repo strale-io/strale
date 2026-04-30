@@ -35,6 +35,7 @@ interface Manifest {
   data_source?: unknown;
   maintenance_class?: unknown;
   transparency_tag?: unknown;
+  gdpr_art_22_classification?: unknown;
   freshness_category?: unknown;
   output_field_reliability?: unknown;
   processes_personal_data?: unknown;
@@ -71,7 +72,8 @@ for (const file of manifestFiles) {
 
   const rows = await sql`
     SELECT slug, data_source, maintenance_class, transparency_tag, freshness_category,
-           output_field_reliability, processes_personal_data, personal_data_categories
+           output_field_reliability, processes_personal_data, personal_data_categories,
+           gdpr_art_22_classification
     FROM capabilities
     WHERE slug = ${slug}
   `;
@@ -109,6 +111,7 @@ for (const file of manifestFiles) {
   compare("output_field_reliability", dbRow.output_field_reliability, manifest.output_field_reliability);
   compare("processes_personal_data", dbRow.processes_personal_data, manifest.processes_personal_data);
   compare("personal_data_categories", dbRow.personal_data_categories, manifest.personal_data_categories);
+  compare("gdpr_art_22_classification", dbRow.gdpr_art_22_classification, manifest.gdpr_art_22_classification);
 
   if (fields.length === 0) {
     cleanCount++;

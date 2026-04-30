@@ -229,13 +229,15 @@ export const FIELD_CATEGORIES: Record<string, FieldAuthorityEntry> = {
     reason: "Operator-configured x402 HTTP method.",
   },
   gdpr_art_22_classification: {
-    category: "db",
+    category: "manifest",
     reason:
       "Bucket C (migration 0058): per-capability GDPR Art. 22 classification " +
-      "(data_lookup | screening_signal | risk_synthesis). Set explicitly by " +
-      "the cert-audit backfill script for the compliance set; default " +
-      "data_lookup for all other rows. Future: move to manifest YAML so the " +
-      "classification ships with the capability author's PR.",
+      "(data_lookup | screening_signal | risk_synthesis). Manifest-canonical " +
+      "from 2026-04-30 (the next session after the initial backfill); the " +
+      "manifest YAML's gdpr_art_22_classification field is the authoring " +
+      "surface. Validated at authoring time by validateCapabilityStructure " +
+      "(gate 15) against VALID_GDPR_ART_22_CLASSIFICATIONS. Optional in the " +
+      "manifest; the DB column applies a 'data_lookup' default when unset.",
   },
 
   // ── hybrid: manifest seeds on create/when DB is null; DB preserved ──

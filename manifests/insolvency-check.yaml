@@ -42,6 +42,10 @@ processes_personal_data: true
 personal_data_categories:
   - name
   - sensitive_special
+# Bucket C — Art. 22 classification. Returns insolvency-status matches
+# from public registries; the controller decides whether the result
+# warrants any action (refusing service, requiring guarantees, etc.).
+gdpr_art_22_classification: screening_signal
 geography: global
 test_fixtures:
   known_answer:

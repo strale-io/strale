@@ -53,6 +53,10 @@ const manifest = yaml.load(readFileSync(manifestPath, "utf8")) as {
   output_field_reliability?: Record<string, string>;
   processes_personal_data?: boolean;
   personal_data_categories?: string[];
+  // Bucket C — Art. 22 classification, manifest-canonical from
+  // 2026-04-30. Optional; the DB applies a 'data_lookup' default
+  // when unset.
+  gdpr_art_22_classification?: string;
 };
 
 if (manifest.slug !== slug) {
@@ -69,7 +73,8 @@ console.log(`Mode: ${dryRun ? "dry-run" : "WRITE"}`);
 const before = await sql`
   SELECT slug, description, category, input_schema, output_schema,
          data_source, maintenance_class, transparency_tag, freshness_category,
-         output_field_reliability, processes_personal_data, personal_data_categories
+         output_field_reliability, processes_personal_data, personal_data_categories,
+         gdpr_art_22_classification
   FROM capabilities
   WHERE slug = ${slug}
 `;
@@ -129,6 +134,13 @@ if (manifest.personal_data_categories !== undefined) {
     manifest.personal_data_categories,
   );
 }
+if (manifest.gdpr_art_22_classification !== undefined) {
+  compare(
+    "gdpr_art_22_classification",
+    dbRow.gdpr_art_22_classification,
+    manifest.gdpr_art_22_classification,
+  );
+}
 
 if (drifts.length === 0) {
   console.log("\nNo drift — DB already matches manifest. Nothing to do.");
@@ -164,7 +176,8 @@ const result = await sql`
         manifest.personal_data_categories !== undefined
           ? sql.array(manifest.personal_data_categories, 1009)
           : (dbRow.personal_data_categories as never)
-      }
+      },
+      gdpr_art_22_classification = ${manifest.gdpr_art_22_classification ?? dbRow.gdpr_art_22_classification}
   WHERE slug = ${slug}
   RETURNING slug, data_source, maintenance_class
 `;
