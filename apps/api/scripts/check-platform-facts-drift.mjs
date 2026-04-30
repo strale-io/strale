@@ -82,12 +82,19 @@ function walk(dir, exts) {
 
 const findings = [];
 
-// Skip lines that are JSDoc / line comments — the drift checks fire on
-// prose, and our own "fixed Cert-audit Y-N: hardcoded ..." comments
-// shouldn't trigger false positives.
+// Skip lines that are JSDoc / line comments / JSX comment blocks — the
+// drift checks fire on prose, and our own "fixed Cert-audit Y-N: ..."
+// comments shouldn't trigger false positives. Covers `// ...`,
+// `* ...` (continuation), `/* ...`, `{/* ...` (JSX), and `<!-- ...` (HTML).
 function isCommentLine(line) {
   const t = line.trimStart();
-  return t.startsWith("//") || t.startsWith("*") || t.startsWith("/*");
+  return (
+    t.startsWith("//") ||
+    t.startsWith("*") ||
+    t.startsWith("/*") ||
+    t.startsWith("{/*") ||
+    t.startsWith("<!--")
+  );
 }
 
 function flag(file, line, problem, truth) {
@@ -130,6 +137,7 @@ for (const file of surfaceFiles) {
   }
   const lines = src.split("\n");
   for (let i = 0; i < lines.length; i++) {
+    if (isCommentLine(lines[i])) continue;
     for (const stale of STALE_VENDORS) {
       // Word-boundary match — avoid matching substrings of other words.
       const pattern = new RegExp(`\\b${stale}\\b`, "i");
@@ -157,6 +165,7 @@ for (const file of surfaceFiles) {
   const lines = src.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    if (isCommentLine(line)) continue;
     // Retention claim shape: a number followed by "day" within audit/retention context.
     // Skip if the number matches the canonical value.
     const m = line.match(/(\d+)\s*day/i);
