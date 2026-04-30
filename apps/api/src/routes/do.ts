@@ -32,6 +32,7 @@ import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { logError, logWarn } from "../lib/log.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
+import { trackBackgroundTask } from "../lib/shutdown.js";
 import {
   computeFreshnessGrade,
   type FreshnessInfo,
@@ -1626,7 +1627,21 @@ async function executeSync(
         balanceAfter: number;
       };
 
-  const result: TxResult = await db.transaction(async (tx) => {
+  // Cert-audit Y-5: catch postgres timeout codes from the wallet tx so
+  // they surface as a clean `timeout_exceeded` API response instead of
+  // a generic 500. Two cases:
+  //   25P03  — idle_in_transaction_session_timeout (executor took longer
+  //            than the SET LOCAL value below); the tx was rolled back,
+  //            no debit committed, no refund needed.
+  //   55P03  — lock_not_available (FOR UPDATE waited longer than the
+  //            SET LOCAL lock_timeout); same outcome — tx never began
+  //            its body, no row state changed.
+  // Both are operational events, not bugs in the executor; a clean
+  // error code lets clients distinguish from execution_failed (which
+  // means the executor itself raised) and surface a helpful retry hint.
+  let result: TxResult;
+  try {
+    result = await db.transaction(async (tx) => {
     // Cert-audit C4: cap the lock-hold time. The sync path holds the
     // wallet FOR UPDATE row for the duration of executeWithRetry, which
     // can be several seconds for non-async caps. Without this, a stuck
@@ -1638,6 +1653,13 @@ async function executeSync(
     // block treats that as execution_failed and refunds nothing (no
     // debit committed).
     await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = '15s'`);
+    // Cert-audit Y-5: bound the FOR UPDATE wait time so a long-running
+    // tx for the same user can't pin a fresh request indefinitely. 5s
+    // is generous for the typical sync wallet tx (~10-50ms) and still
+    // tight enough that a stuck holder times out before clients give
+    // up. The error surfaces as Postgres code 55P03 (lock_not_available)
+    // and is caught at the route boundary as a clean execution_timeout.
+    await tx.execute(sql`SET LOCAL lock_timeout = '5s'`);
 
     // Lock wallet row
     const [wallet] = await tx
@@ -1804,7 +1826,25 @@ async function executeSync(
         balanceAfter: wallet.balanceCents,
       };
     }
-  });
+    });
+  } catch (err) {
+    // Cert-audit Y-5: catch postgres timeout codes from the wallet tx.
+    // The error shape from postgres-js is `{ code: '25P03' }` or
+    // `{ code: '55P03' }`; the tx is rolled back automatically so no
+    // wallet state needs unwinding.
+    const code = (err as { code?: string } | null)?.code;
+    if (code === "25P03" || code === "55P03") {
+      const reason = code === "25P03"
+        ? "Capability execution exceeded the per-transaction timeout (15s). The request was not charged."
+        : "Wallet was contended by a concurrent request that took too long. Retry with backoff.";
+      logWarn("wallet-tx-timeout", reason, { code, slug: capability.slug, userId: user.id });
+      return c.json(
+        apiError("timeout_exceeded", reason, { postgres_code: code }),
+        503,
+      );
+    }
+    throw err; // anything else propagates as a real 500
+  }
 
   // ── Record circuit breaker + quality + piggyback (fire-and-forget) ───
   if (result.ok) {
@@ -2124,16 +2164,24 @@ async function executeAsync(
   // MED-3: pass the SQS that was already computed before the async launch
   // (instead of the prior hardcoded {score: 0, label: "unknown", pending: true}
   // sentinel that made every async audit body claim no-quality-data).
-  executeInBackground(
-    db,
-    executor,
-    executionInput,
-    transactionId,
-    walletId,
-    capability,
-    startTime,
-    outputSchema,
-    sqs,
+  // Cert-audit Y-6: wrap with trackBackgroundTask so SIGTERM drains
+  // this promise before the HTTP server / DB pool tear down. Without
+  // tracking, a Railway redeploy in the middle of a 12-second
+  // executor would kill it mid-write, leaving the row in `executing`
+  // for the 30-min janitor sweep and stranding the optimistic debit.
+  trackBackgroundTask(
+    `async-exec:${capability.slug}:${transactionId}`,
+    executeInBackground(
+      db,
+      executor,
+      executionInput,
+      transactionId,
+      walletId,
+      capability,
+      startTime,
+      outputSchema,
+      sqs,
+    ),
   ).catch((err) => {
     // Last-resort error logging — should not normally reach here
     logError("async-exec-unhandled", err, { transaction_id: transactionId });

@@ -24,6 +24,55 @@ export function isShuttingDown(): boolean {
   return shuttingDown;
 }
 
+// ─── Background task tracking (cert-audit Y-6) ─────────────────────────────
+//
+// `server.close()` only drains in-flight HTTP REQUESTS. The async
+// /v1/do path returns HTTP 202 immediately and continues executing in
+// a fire-and-forget promise — by the time SIGTERM arrives, the HTTP
+// layer thinks the request already finished and lets the server close,
+// after which SIGKILL kills the executor mid-write at +25s. The DB row
+// stays in `executing` until the 30-min integrity-hash-retry janitor
+// flips it to `failed`. Customer's wallet was already debited; refund
+// only fires on completion of the catch block in executeInBackground,
+// which never runs because the process was killed.
+//
+// Fix: every fire-and-forget background task that mutates DB state
+// registers itself with the tracker. On shutdown, we await all tracked
+// promises (with a deadline that respects the overall 25s budget)
+// BEFORE the HTTP server / DB pool cleanup runs.
+
+const inflightTasks = new Set<Promise<unknown>>();
+
+/**
+ * Register a background promise so graceful shutdown can wait for it.
+ * Returns the promise verbatim so callers can chain `.catch(...)`.
+ *
+ * Use for: executeInBackground, executeSolutionInBackground, anything
+ * else that mutates DB state outside the HTTP request lifecycle.
+ *
+ * Don't use for: lightweight metric/circuit-breaker fire-and-forget
+ * (they're short and idempotent; awaiting them on shutdown adds no
+ * customer-visible value).
+ */
+export function trackBackgroundTask<T>(
+  label: string,
+  promise: Promise<T>,
+): Promise<T> {
+  inflightTasks.add(promise);
+  promise.finally(() => inflightTasks.delete(promise)).catch(() => {/* no-op */});
+  // Trace tracking only at debug; the promise itself logs its own outcome.
+  log.debug?.({ label: "background.tracked", task: label, inflight: inflightTasks.size }, "background.tracked");
+  return promise;
+}
+
+/**
+ * Returns the count of currently-tracked tasks. Exposed for ops surfaces
+ * (e.g. /health) and for tests.
+ */
+export function getInflightTaskCount(): number {
+  return inflightTasks.size;
+}
+
 // Test-only — vitest workers reuse module state across files; without a
 // reset, a previous test's installed handlers stay attached and Node logs
 // "MaxListenersExceededWarning". Not exported as part of the runtime API.
@@ -31,6 +80,7 @@ export function _resetForTests(): void {
   cleanups.length = 0;
   shuttingDown = false;
   installed = false;
+  inflightTasks.clear();
 }
 
 export function installShutdownHandlers(opts?: { timeoutMs?: number }): void {
@@ -53,6 +103,26 @@ export function installShutdownHandlers(opts?: { timeoutMs?: number }): void {
     force.unref();
 
     void (async () => {
+      // Cert-audit Y-6: drain in-flight background tasks BEFORE the
+      // HTTP server closes and the DB pool exits. Otherwise async
+      // /v1/do calls that returned 202 keep running into a torn-down
+      // pool and crash mid-write. Budget: half the cleanup deadline,
+      // so the rest (server.close, db pool drain, log flush) still
+      // has room before SIGKILL at +30s.
+      const drainBudget = Math.max(5_000, Math.floor(TIMEOUT / 2));
+      if (inflightTasks.size > 0) {
+        log.info({ label: "shutdown.background.drain.start", count: inflightTasks.size, budget_ms: drainBudget }, "shutdown.background.drain.start");
+        const tasks = [...inflightTasks];
+        const deadline = new Promise<"deadline">((resolveDeadline) => {
+          const t = setTimeout(() => resolveDeadline("deadline"), drainBudget);
+          t.unref();
+        });
+        // Promise.allSettled never throws — we don't care about the
+        // individual outcomes here, only that we waited.
+        await Promise.race([Promise.allSettled(tasks), deadline]);
+        log.info({ label: "shutdown.background.drain.end", remaining: inflightTasks.size }, "shutdown.background.drain.end");
+      }
+
       // LIFO: HTTP server (registered last) drains before DB pool closes,
       // so requests in flight can still reach the database.
       for (const { label, fn } of [...cleanups].reverse()) {

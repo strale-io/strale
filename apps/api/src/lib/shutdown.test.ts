@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { onShutdown, isShuttingDown, _resetForTests, installShutdownHandlers } from "./shutdown.js";
+import {
+  onShutdown,
+  isShuttingDown,
+  _resetForTests,
+  installShutdownHandlers,
+  trackBackgroundTask,
+  getInflightTaskCount,
+} from "./shutdown.js";
 
 describe("shutdown", () => {
   beforeEach(() => {
@@ -29,5 +36,28 @@ describe("shutdown", () => {
     // Cleanup so we don't pollute other tests
     process.removeAllListeners("SIGTERM");
     process.removeAllListeners("SIGINT");
+  });
+
+  it("trackBackgroundTask increments and decrements the inflight set", async () => {
+    expect(getInflightTaskCount()).toBe(0);
+    let resolveTask: () => void;
+    const task = new Promise<void>((resolve) => { resolveTask = resolve; });
+    const tracked = trackBackgroundTask("test-task", task);
+    expect(getInflightTaskCount()).toBe(1);
+    resolveTask!();
+    await tracked;
+    // Microtask flush — finally() decrements after the awaited promise resolves
+    await Promise.resolve();
+    expect(getInflightTaskCount()).toBe(0);
+  });
+
+  it("trackBackgroundTask cleans up on rejection too", async () => {
+    expect(getInflightTaskCount()).toBe(0);
+    const task = Promise.reject(new Error("simulated"));
+    const tracked = trackBackgroundTask("failing-task", task);
+    expect(getInflightTaskCount()).toBe(1);
+    await tracked.catch(() => {/* expected */});
+    await Promise.resolve();
+    expect(getInflightTaskCount()).toBe(0);
   });
 });

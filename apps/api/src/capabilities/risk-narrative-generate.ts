@@ -1,6 +1,40 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
-import { logError } from "../lib/log.js";
+import { logError, logWarn } from "../lib/log.js";
+
+// Cert-audit Y-10 — model pinning for replay determinism.
+// `claude-sonnet-4-6` is a moving alias; the same check_results passed
+// across an alias-version bump will produce different narratives. For
+// compliance evidence we want "given inputs X, produce output Y" to be
+// reproducible.
+//
+// The default below is the alias for ergonomics; production should
+// override with a dated snapshot via RISK_NARRATIVE_MODEL env var
+// (e.g. "claude-sonnet-4-6-20260317"). Either way, the actual model
+// version returned by the API is captured in provenance.model_resolved
+// so audit replay can identify the exact snapshot that produced the
+// stored output.
+const DEFAULT_MODEL = "claude-sonnet-4-6";
+const PINNED_MODEL = process.env.RISK_NARRATIVE_MODEL ?? DEFAULT_MODEL;
+
+// Cert-audit Y-10 — wording-rule enforcement. The system prompt
+// enumerates phrases the LLM must never use ("This company is clean",
+// "you must reject this", etc.) but Anthropic doesn't enforce prompt
+// rules — it interprets them. If the model violates a wording rule,
+// the resulting narrative could create defamation or absolute-claim
+// liability. This regex post-check fires the algorithmic fallback
+// when the LLM output trips a prohibited phrase.
+//
+// Rules mirror the WORDING RULES block in SYSTEM_PROMPT — keep them
+// in sync. Each entry is the prohibited shape; the wording rule
+// itself shows the safe alternative the LLM should produce instead.
+const PROHIBITED_PHRASES: RegExp[] = [
+  /\b(?:this\s+(?:company|entity|invoice|payment)\s+is\s+)(?:clean|safe|trustworthy|legitimate|compliant|fraud|scam|fraudulent)\b/i,
+  /\b(?:safe|risky|dangerous)\s+to\s+(?:pay|accept|approve|trust|proceed)\b/i,
+  /\byou\s+(?:must|should|need\s+to)\s+(?:reject|decline|approve|trust|accept|block)\b/i,
+  /\bthis\s+is\s+(?:a\s+)?(?:scam|fraud|fraudulent)\b/i,
+  /\bPEP\s*=\s*(?:high|extreme|critical)\s+risk\b/i,
+];
 
 const SYSTEM_PROMPT = `You are providing factual observations about data found in public registries and screening databases. You are not providing legal advice, compliance advice, or making risk decisions.
 
@@ -190,7 +224,7 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
     // Effective cost goes from ~EUR 0.05–0.08 to ~EUR 0.15–0.25 per call (3x), still well
     // within the leg's price envelope. Haiku stays for simple extraction tasks elsewhere.
     const r = await client.messages.create({
-      model: "claude-sonnet-4-6",
+      model: PINNED_MODEL,
       max_tokens: 1500,
       system: SYSTEM_PROMPT,
       messages: [
@@ -202,6 +236,32 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
     });
 
     const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
+
+    // Cert-audit Y-10: regex-check the raw LLM output for prohibited
+    // wording before parsing. If the model violated a wording rule
+    // from the system prompt (these create defamation / absolute-claim
+    // liability), abandon the LLM output and fall back to the
+    // algorithmic assessment. This is the "automated enforcement" the
+    // manifest's known-limitation block flagged as missing.
+    for (const pattern of PROHIBITED_PHRASES) {
+      if (pattern.test(responseText)) {
+        logWarn(
+          "risk-narrative-prohibited-phrase",
+          "LLM output tripped a prohibited-phrase rule; falling back to algorithmic assessment",
+          { pattern: pattern.source, model: r.model },
+        );
+        const output = algorithmicAssessment(checkResults, context);
+        return {
+          output: { ...output, raw_checks: checkResults },
+          provenance: {
+            source: "algorithmic-fallback",
+            fallback_reason: "llm_wording_rule_violation",
+            fetched_at: new Date().toISOString(),
+          },
+        };
+      }
+    }
+
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {
@@ -236,7 +296,17 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
         data_sources_consulted: parsed.data_sources_consulted ?? [],
         raw_checks: checkResults,
       },
-      provenance: { source: "claude-sonnet", fetched_at: new Date().toISOString() },
+      // Cert-audit Y-10: include the actual model version returned by
+      // Anthropic so audit replay can identify the snapshot that
+      // produced this narrative. PINNED_MODEL is what we asked for;
+      // r.model is what we got (Anthropic's resolution of the alias
+      // or, if RISK_NARRATIVE_MODEL is set, the literal pinned id).
+      provenance: {
+        source: "claude-sonnet",
+        model_requested: PINNED_MODEL,
+        model_resolved: r.model,
+        fetched_at: new Date().toISOString(),
+      },
     };
   } catch (err) {
     logError("risk-narrative-generate-sonnet-failed", err);
