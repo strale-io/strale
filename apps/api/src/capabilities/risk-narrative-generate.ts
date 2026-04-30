@@ -8,12 +8,20 @@ import { logError, logWarn } from "../lib/log.js";
 // compliance evidence we want "given inputs X, produce output Y" to be
 // reproducible.
 //
-// The default below is the alias for ergonomics; production should
-// override with a dated snapshot via RISK_NARRATIVE_MODEL env var
-// (e.g. "claude-sonnet-4-6-20260317"). Either way, the actual model
-// version returned by the API is captured in provenance.model_resolved
-// so audit replay can identify the exact snapshot that produced the
-// stored output.
+// Status as of 2026-04-30: Anthropic's GET /v1/models endpoint only
+// publishes the alias for Sonnet 4.6 — no dated snapshot
+// ("claude-sonnet-4-6-YYYYMMDD") is available yet. (Sonnet 4 and 4.5
+// DO have dated snapshots; 4.6 doesn't.) Setting RISK_NARRATIVE_MODEL
+// to a fabricated snapshot would 404 on every call and break the
+// capability immediately. So PINNED_MODEL stays on the alias and we
+// rely on provenance.model_resolved (captured below) to identify the
+// snapshot Anthropic actually resolved to per call.
+//
+// When Anthropic publishes a dated snapshot for 4.6, set
+// RISK_NARRATIVE_MODEL on Railway to that snapshot ID — the env
+// override below is wired and will pin it. Run scripts/diag-risk-
+// narrative-model.ts to find the resolved snapshot from recent prod
+// calls before pinning.
 const DEFAULT_MODEL = "claude-sonnet-4-6";
 const PINNED_MODEL = process.env.RISK_NARRATIVE_MODEL ?? DEFAULT_MODEL;
 

@@ -24,16 +24,16 @@ result returns.
 
 | Capability | Trigger | Document |
 |---|---|---|
+| `sanctions-check` + `pep-check` (combined) | Art. 9 special-category data (PEP) + Art. 10 criminal data (sanctions) + Art. 22 screening signal | [sanctions-and-pep-check.md](sanctions-and-pep-check.md) |
 | `adverse-media-check` | Art. 9 special-category data + Art. 10 criminal data | [adverse-media-check.md](adverse-media-check.md) |
 | `risk-narrative-generate` | Art. 22 automated decision support | [risk-narrative-generate.md](risk-narrative-generate.md) |
 | `company-enrich` | Web-scraped data may include personal data of officers/contacts | [company-enrich.md](company-enrich.md) |
 
-DPIAs for `sanctions-check` and `pep-check` are deferred to a separate
-document because they share substantially the same processing description,
-risk profile, and mitigations (both are wrapped on the Dilisense vendor's
-consolidated screening database; the same DEC-20260428-A Tier-2 doctrine
-applies; the same Art. 22 disclosure surfaces in the audit body); their
-combined DPIA is tracked as a follow-up to this batch.
+The combined sanctions + pep DPIA exists as a single document because
+the two capabilities share substantively-identical processing
+description, vendor wrap (Dilisense per DEC-20260429-A), risk
+profile, and mitigations. Keeping them in one document prevents the
+copy-paste drift the cert-audit found across other surfaces.
 
 Last reviewed: 2026-04-30. Re-review trigger: any change to the upstream
 vendor (sanctions/PEP/adverse-media), the AI model used by
