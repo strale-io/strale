@@ -1,0 +1,135 @@
+slug: fr-bodacc-lookup
+name: BODACC Lookup (FR)
+description: >-
+  Lookup of French commercial-registry announcements (BODACC) by SIREN. Returns insolvency proceedings (procédures
+  collectives), modifications, sales, strikeoffs, and incorporations from the official Bulletin Officiel des Annonces
+  Civiles et Commerciales. Elevates insolvency signal for risk decisions.
+category: compliance
+price_cents: 5
+is_free_tier: false
+avg_latency_ms: 800
+input_schema:
+  type: object
+  required: []
+  properties:
+    siren:
+      type: string
+      description: 9-digit French SIREN (with or without spaces). Canonical input.
+    company_name:
+      type: string
+      description: Optional fallback input — company name to search BODACC if no SIREN is known. Resolves to SIREN internally.
+    since_date:
+      type: string
+      description: Optional ISO date (YYYY-MM-DD) to filter announcements published on or after this date.
+    limit:
+      type: integer
+      description: Optional max number of announcements to return (default 50, max 200).
+output_schema:
+  type: object
+  example:
+    siren: "552049447"
+    total_announcements: 72
+    insolvency_count: 0
+    has_insolvency_filing: false
+    most_recent_announcement_date: "2021-08-27"
+    most_recent_insolvency: null
+    announcements:
+      - id: B202101671375
+        date: "2021-08-27"
+        family: modification
+        family_label: Modifications diverses
+        court: GREFFE DU TRIBUNAL DE COMMERCE DE BOBIGNY
+        entity_name: Société nationale SNCF
+        city: Saint-Denis
+        postal_code: "93200"
+        judgment: null
+        url: https://www.bodacc.fr/pages/annonces-commerciales-detail/?q.id=id:B202101671375
+    data_source: BODACC (Bulletin Officiel des Annonces Civiles et Commerciales)
+  properties:
+    siren:
+      type: string
+    total_announcements:
+      type: integer
+    insolvency_count:
+      type: integer
+    has_insolvency_filing:
+      type: boolean
+    most_recent_announcement_date:
+      type:
+        - string
+        - "null"
+    most_recent_insolvency:
+      type:
+        - object
+        - "null"
+    announcements:
+      type: array
+    data_source:
+      type: string
+data_source: BODACC (Bulletin Officiel des Annonces Civiles et Commerciales)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: fr
+test_fixtures:
+  known_answer:
+    input:
+      siren: "552049447"
+    expected_fields:
+      - field: siren
+        operator: equals
+        reliability: guaranteed
+        value: "552049447"
+      - field: total_announcements
+        operator: not_null
+        reliability: guaranteed
+      - field: insolvency_count
+        operator: not_null
+        reliability: guaranteed
+      - field: has_insolvency_filing
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: announcements
+        operator: not_null
+        reliability: guaranteed
+      - field: data_source
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    siren: "552049447"
+output_field_reliability:
+  siren: guaranteed
+  total_announcements: guaranteed
+  insolvency_count: guaranteed
+  has_insolvency_filing: guaranteed
+  announcements: guaranteed
+  data_source: guaranteed
+  most_recent_announcement_date: common
+  most_recent_insolvency: common
+limitations:
+  - title: Coverage limited to French registered entities
+    text: >-
+      BODACC only contains announcements for entities registered in the French commercial register (RCS). Foreign
+      entities operating in France without RCS registration are not covered. SIREN is the unique identifier — entities
+      without a SIREN cannot be looked up.
+    category: coverage
+    severity: info
+  - title: Annual-accounts deposits ("dpc") dominate the corpus
+    text: >-
+      The most common announcement type is "Dépôts des comptes" (annual accounts deposit) — these are routine compliance
+      filings, not risk signals. Use has_insolvency_filing or insolvency_count to isolate the litigation/bankruptcy
+      signal.
+    category: accuracy
+    severity: info
+  - title: Recovery from insolvency is not auto-detected
+    text: >-
+      has_insolvency_filing is true if any procédure collective announcement exists in history. It does not distinguish
+      active proceedings from closed/recovered ones. Inspect most_recent_insolvency.judgment_nature to read the latest
+      court action (e.g. "Jugement de clôture" indicates closure).
+    category: accuracy
+    severity: warning
+    workaround: Read most_recent_insolvency.judgment_nature and judgment_date to determine current status.
