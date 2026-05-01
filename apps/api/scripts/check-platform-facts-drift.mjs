@@ -50,9 +50,43 @@ const CURRENT_VENDORS = {
   sanctions: "Dilisense",
   pep: "Dilisense",
   adverse_media_primary: "Dilisense",
+  iban_name_match_eu: "Digiteal",
+  iban_name_match_uk: "eSortcode",
+  us_company_registry: "Cobalt Intelligence",
+  us_ein: "Liberty Data",
+  ubo_supplement_global: "GLEIF L2",
+  ubo_uk_dk_sk_smes: "OpenOwnership",
+  fr_litigation: "BODACC",
 };
 
-const STALE_VENDORS = ["OpenSanctions"];
+// Vendors that have been Rejected or Deferred per the Vendor Roster
+// (af5a164b-dea9-4837-9835-210ae69b4283) and DEC-20260430-A. These should
+// NEVER appear in consumer-facing copy as if they were active. The single
+// permitted location for these names is the Vendor Roster itself, where
+// each row documents WHY the vendor was rejected.
+//
+// IMPORTANT: when a vendor's status changes, update this list at the same
+// time as the Vendor Roster row and the Active Vendor Stack page. See the
+// "Vendor stack maintenance" section in How this workspace works.
+const STALE_VENDORS = [
+  // Sanctions/PEP — self-host deferred 2026-04-29 per DEC-20260429-A
+  "OpenSanctions self-host",
+  // IBAN/name match — all rejected per DEC-20260430-A
+  "SurePay",
+  "MonitorPay",
+  "Movitz",
+  "Banfico",
+  "iPiD",
+  "Bottomline",
+  "Yapily",
+  // US registry / EIN / KYB workflow — all rejected per DEC-20260430-A
+  "Middesk",
+  "Persona",
+  "Socure",
+  "GovLink",
+  // Sanctions/PEP/adverse-media competitors — rejected
+  "ComplyAdvantage",
+];
 const RETENTION_DAYS = 1095;
 
 // ─── Walker ────────────────────────────────────────────────────────────────
