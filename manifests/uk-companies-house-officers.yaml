@@ -7,7 +7,7 @@ description: >-
   Look up officers (directors, secretaries) of a UK company via Companies House API. Returns active and resigned
   officers with appointment dates.
 category: data-extraction
-price_cents: 10
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

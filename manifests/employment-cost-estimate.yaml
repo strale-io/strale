@@ -7,7 +7,7 @@ description: >-
   Calculate total employer cost and net salary estimate for 20+ countries. Includes social contributions, pension,
   income tax.
 category: data-extraction
-price_cents: 15
+price_cents: 3
 is_free_tier: false
 input_schema:
   type: object

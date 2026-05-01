@@ -2,7 +2,7 @@ slug: package-security-audit
 name: Package Security Audit
 description: Composite security audit for npm and PyPI packages with supply chain anomaly detection
 category: security
-price_cents: 15
+price_cents: 5
 data_source: OSV.dev + deps.dev + npm Registry + PyPI
 data_source_type: api
 transparency_tag: algorithmic

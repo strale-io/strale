@@ -7,7 +7,7 @@ description: >-
   Look up a Legal Entity Identifier (LEI) via the GLEIF database. Accepts a 20-character LEI or company name. Returns
   entity name, jurisdiction, addresses, registration status.
 category: validation
-price_cents: 10
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

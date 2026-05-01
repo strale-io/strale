@@ -7,7 +7,7 @@ description: >-
   Generate a user-facing changelog from git commits. Groups by type, writes human-readable descriptions. Supports Keep a
   Changelog, semantic, and bullet formats.
 category: developer-tools
-price_cents: 15
+price_cents: 3
 is_free_tier: false
 input_schema:
   type: object

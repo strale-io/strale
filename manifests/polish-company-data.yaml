@@ -7,7 +7,7 @@ description: >-
   Look up Polish company data from KRS (Krajowy Rejestr Sądowy). Accepts KRS number (10 digits) or fuzzy company name.
   Returns company name, legal form, address, registration date.
 category: data-extraction
-price_cents: 80
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

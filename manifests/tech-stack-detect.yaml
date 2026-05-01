@@ -7,7 +7,7 @@ description: >-
   Detect the technology stack of a website. Identifies frontend framework, CSS framework, CMS, analytics, hosting, CDN,
   and other technologies.
 category: web-intelligence
-price_cents: 20
+price_cents: 3
 is_free_tier: false
 input_schema:
   type: object

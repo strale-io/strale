@@ -5,7 +5,7 @@ slug: invoice-validate
 name: Invoice Validate
 description: "Validate invoice data: VAT number format, line item math, tax calculations, EU compliance requirements."
 category: validation
-price_cents: 15
+price_cents: 2
 is_free_tier: false
 input_schema:
   type: object

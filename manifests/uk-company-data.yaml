@@ -7,7 +7,7 @@ description: >-
   Look up UK company data from Companies House. Accepts company number (8 digits) or fuzzy company name. Returns company
   name, status, incorporation date, SIC codes, registered address.
 category: data-extraction
-price_cents: 80
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

@@ -7,7 +7,7 @@ description: >-
   Extract and categorize receipt data. Returns vendor, date, amount, tax, currency, expense category, line items. Ready
   for expense reports.
 category: document-extraction
-price_cents: 10
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

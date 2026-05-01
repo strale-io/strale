@@ -7,7 +7,7 @@ description: >-
   Audit npm or Python dependencies. Checks each package against registry for latest version, deprecation,
   vulnerabilities. Verifiable against actual registries.
 category: developer-tools
-price_cents: 20
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

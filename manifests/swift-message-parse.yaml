@@ -7,7 +7,7 @@ description: >-
   Parse SWIFT MT messages (MT103/MT940/MT202) into structured data. Extracts sender/receiver BIC, amount, currency,
   beneficiary.
 category: data-extraction
-price_cents: 15
+price_cents: 2
 is_free_tier: false
 input_schema:
   type: object

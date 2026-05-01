@@ -7,7 +7,7 @@ description: >-
   Test page speed using Google PageSpeed Insights API. Returns performance score, Core Web Vitals, optimization
   opportunities.
 category: data-extraction
-price_cents: 10
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
