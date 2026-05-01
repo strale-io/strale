@@ -7,7 +7,7 @@ description: >-
   Analyze a public GitHub repository. Returns tech stack, documentation quality, activity level, bus factor, maintenance
   health score. Uses GitHub API + AI analysis.
 category: developer-tools
-price_cents: 50
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

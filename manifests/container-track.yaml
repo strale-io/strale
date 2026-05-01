@@ -5,7 +5,7 @@ slug: container-track
 name: Container Track
 description: Track shipping containers by ISO 6346 number. Validates format, detects carrier, provides tracking status.
 category: data-extraction
-price_cents: 25
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

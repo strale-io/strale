@@ -7,7 +7,7 @@ description: >-
   Look up flight status by flight number (e.g. LH400, BA117). Returns departure/arrival times, delays, gates. Requires
   AVIATIONSTACK_API_KEY for live data.
 category: data-extraction
-price_cents: 10
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

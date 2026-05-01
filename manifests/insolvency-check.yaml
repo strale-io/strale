@@ -4,7 +4,7 @@ description: >-
   Check if a company has any insolvency, bankruptcy, or winding-up proceedings. Currently
   covers UK (via Companies House). Returns status and key dates.
 category: compliance
-price_cents: 10
+price_cents: 2
 is_free_tier: false
 input_schema:
   type: object

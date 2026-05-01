@@ -7,7 +7,7 @@ description: >-
   Look up Norwegian company data from the Brønnøysund Register Centre. Accepts org number (9 digits) or fuzzy company
   name.
 category: data-extraction
-price_cents: 80
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

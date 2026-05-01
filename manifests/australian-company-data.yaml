@@ -5,7 +5,7 @@ slug: australian-company-data
 name: Australian Company Data
 description: Look up Australian company data from ABN Lookup. Accepts ABN (11 digits), ACN (9 digits), or fuzzy company name.
 category: data-extraction
-price_cents: 80
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

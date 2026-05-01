@@ -7,7 +7,7 @@ description: >-
   Look up French company data from the SIRENE registry. Accepts SIREN (9 digits), SIRET (14 digits), or fuzzy company
   name. Returns company name, address, activity code, directors.
 category: data-extraction
-price_cents: 80
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

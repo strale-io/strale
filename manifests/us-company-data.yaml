@@ -7,7 +7,7 @@ description: >-
   Look up US company data from SEC EDGAR. Accepts CIK number, ticker symbol, or fuzzy company name. Returns company
   name, CIK, SIC code, state, filings summary.
 category: data-extraction
-price_cents: 80
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

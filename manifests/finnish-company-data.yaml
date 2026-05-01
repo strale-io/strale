@@ -7,7 +7,7 @@ description: >-
   Look up Finnish company data from PRH (Patent and Registration Office). Accepts Business ID (e.g. 0112038-9) or fuzzy
   company name.
 category: data-extraction
-price_cents: 80
+price_cents: 5
 is_free_tier: false
 input_schema:
   type: object

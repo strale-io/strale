@@ -7,7 +7,7 @@ description: >-
   Extract skills from job descriptions or CVs. Categorizes 500+ skills into technical, soft skills, tools,
   certifications, languages.
 category: data-extraction
-price_cents: 10
+price_cents: 3
 is_free_tier: false
 input_schema:
   type: object

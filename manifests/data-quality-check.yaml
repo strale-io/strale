@@ -7,7 +7,7 @@ description: >-
   Check data quality with custom rules (email_format, range, pattern, etc.) or auto-detect issues. Returns quality score
   and field-level report. Algorithmic.
 category: data-processing
-price_cents: 10
+price_cents: 2
 is_free_tier: false
 input_schema:
   type: object
