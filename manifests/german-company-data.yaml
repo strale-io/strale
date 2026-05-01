@@ -38,6 +38,10 @@ output_schema:
     registration_number: "HRB 2001"
     court_used: "Amtsgericht Landsberg a. Lech"
   properties:
+    vat_number:
+      type:
+        - string
+        - "null"
     status:
       type: string
     address:

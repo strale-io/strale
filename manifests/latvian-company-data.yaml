@@ -37,6 +37,10 @@ output_schema:
     atvk_code: "807600"
     jurisdiction: LV
   properties:
+    vat_number:
+      type:
+        - string
+        - "null"
     company_name:
       type: string
     reg_number:

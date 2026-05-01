@@ -32,6 +32,10 @@ output_schema:
     data_source_url: "https://www.zefix.admin.ch/"
     data_attribution: "Data from Zefix, Federal Office of Justice, Switzerland"
   properties:
+    vat_number:
+      type:
+        - string
+        - "null"
     company_name:
       type: string
     uid:

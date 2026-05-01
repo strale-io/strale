@@ -35,6 +35,12 @@ output_schema:
     registered_address: AIRLINE ROAD, Singapore 819829
     jurisdiction: SG
   properties:
+    company_name:
+      type: string
+    vat_number:
+      type:
+        - string
+        - "null"
     entity_name:
       type: string
     uen:

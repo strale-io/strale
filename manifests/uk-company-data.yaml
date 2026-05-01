@@ -32,6 +32,10 @@ output_schema:
     dissolution_date: null
     incorporation_date: "2017-06-30"
   properties:
+    vat_number:
+      type:
+        - string
+        - "null"
     status:
       type: string
     address:
