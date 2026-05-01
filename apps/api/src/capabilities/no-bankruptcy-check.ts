@@ -1,4 +1,11 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import {
+  BRREG_ORG_NUMBER_RE,
+  brregProvenance,
+  fetchBrregEntity,
+  normalizeOrgNumber,
+  searchBrregByName,
+} from "../lib/brreg-fetch.js";
 
 /**
  * Norwegian bankruptcy / dissolution status check via Brønnøysundregistrene
@@ -17,34 +24,9 @@ import { registerCapability, type CapabilityInput } from "./index.js";
  * Assurance — the boolean signals plus the bankruptcy filing date are
  * what risk-decisioning code needs.
  *
- * Source: data.brreg.no, NLOD 2.0, free, no auth.
+ * Shares the upstream Brreg fetch with norwegian-company-data via
+ * lib/brreg-fetch.ts.
  */
-
-const BRREG_API = "https://data.brreg.no/enhetsregisteret/api";
-const ORG_NUMBER_RE = /^\d{9}$/;
-
-function normalizeOrgNumber(input: string): string {
-  return input.replace(/[\s.-]/g, "").trim();
-}
-
-async function searchByName(name: string): Promise<string> {
-  const res = await fetch(
-    `${BRREG_API}/enheter?navn=${encodeURIComponent(name)}&size=1`,
-    {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(10000),
-    },
-  );
-  if (!res.ok) {
-    throw new Error(`Brønnøysundregistrene search returned HTTP ${res.status}`);
-  }
-  const data = (await res.json()) as any;
-  const entities = data?._embedded?.enheter;
-  if (!entities || entities.length === 0) {
-    throw new Error(`No Norwegian company found matching "${name}".`);
-  }
-  return String(entities[0].organisasjonsnummer);
-}
 
 registerCapability("no-bankruptcy-check", async (input: CapabilityInput) => {
   const orgInput = ((input.org_number as string) ?? "").trim();
@@ -57,24 +39,14 @@ registerCapability("no-bankruptcy-check", async (input: CapabilityInput) => {
   let orgNumber: string;
   if (orgInput) {
     orgNumber = normalizeOrgNumber(orgInput);
-    if (!ORG_NUMBER_RE.test(orgNumber)) {
+    if (!BRREG_ORG_NUMBER_RE.test(orgNumber)) {
       throw new Error(`Invalid org_number: "${orgInput}". Norwegian org numbers must be exactly 9 digits.`);
     }
   } else {
-    orgNumber = await searchByName(companyName);
+    orgNumber = await searchBrregByName(companyName);
   }
 
-  const res = await fetch(`${BRREG_API}/enheter/${orgNumber}`, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10000),
-  });
-  if (res.status === 404) {
-    throw new Error(`Norwegian company with org number ${orgNumber} not found.`);
-  }
-  if (!res.ok) {
-    throw new Error(`Brønnøysundregistrene returned HTTP ${res.status}`);
-  }
-  const data = (await res.json()) as any;
+  const data = await fetchBrregEntity(orgNumber);
 
   const hasBankruptcy = Boolean(data.konkurs);
   const isUnderDissolution = Boolean(data.underAvvikling);
@@ -94,15 +66,6 @@ registerCapability("no-bankruptcy-check", async (input: CapabilityInput) => {
       registry_annotations: annotations,
       data_source: "Brønnøysundregistrene Enhetsregisteret",
     },
-    provenance: {
-      source: "data.brreg.no",
-      source_url: `${BRREG_API}/enheter/${orgNumber}`,
-      fetched_at: new Date().toISOString(),
-      acquisition_method: "direct_api" as const,
-      primary_source_reference: `${BRREG_API}/enheter/${orgNumber}`,
-      license: "NLOD 2.0",
-      license_url: "https://data.norge.no/nlod/no/2.0",
-      attribution: "Kilde: Brønnøysundregistrene",
-    },
+    provenance: brregProvenance(orgNumber),
   };
 });

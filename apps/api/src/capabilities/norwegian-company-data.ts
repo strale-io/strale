@@ -1,23 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatNO } from "../lib/vat-derivation.js";
-
-// Brønnøysundregistrene public API (data.brreg.no)
-const BRREG_API = "https://data.brreg.no/enhetsregisteret/api";
-
-// Norwegian org numbers: 9 digits
-const ORG_NUMBER_RE = /^\d{9}$/;
-
-function isOrgNumber(input: string): string | null {
-  const cleaned = input.replace(/[\s.-]/g, "");
-  return ORG_NUMBER_RE.test(cleaned) ? cleaned : null;
-}
-
-function findOrgNumber(input: string): string | null {
-  const match = input.match(/\d{9}/);
-  if (!match) return null;
-  return isOrgNumber(match[0]);
-}
+import {
+  brregProvenance,
+  fetchBrregEntity,
+  findOrgNumberInText,
+  isOrgNumber,
+  searchBrregByName,
+} from "../lib/brreg-fetch.js";
 
 async function extractCompanyName(naturalLanguage: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -43,53 +33,33 @@ async function extractCompanyName(naturalLanguage: string): Promise<string> {
   return name;
 }
 
-async function searchBrreg(name: string): Promise<string> {
-  const url = `${BRREG_API}/enheter?navn=${encodeURIComponent(name)}&size=1`;
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!response.ok) throw new Error(`Brønnøysundregistrene search returned HTTP ${response.status}`);
-  const data = await response.json() as any;
-  const entities = data?._embedded?.enheter;
-  if (!entities || entities.length === 0) {
-    throw new Error(`No Norwegian company found matching "${name}".`);
-  }
-  return String(entities[0].organisasjonsnummer);
-}
-
-async function fetchCompany(orgNumber: string): Promise<Record<string, unknown>> {
-  const url = `${BRREG_API}/enheter/${orgNumber}`;
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10000),
-  });
-  if (response.status === 404) {
-    throw new Error(`Norwegian company with org number ${orgNumber} not found.`);
-  }
-  if (!response.ok) throw new Error(`Brønnøysundregistrene returned HTTP ${response.status}`);
-  const data = await response.json() as any;
-
-  const addr = data.forretningsadresse || data.postadresse || {};
+function shapeBrregOutput(data: Record<string, unknown>): Record<string, unknown> {
+  const addr = (data.forretningsadresse as Record<string, unknown>)
+    || (data.postadresse as Record<string, unknown>)
+    || {};
   const address = [
-    ...(addr.adresse || []),
-    [addr.postnummer, addr.poststed].filter(Boolean).join(" "),
-    addr.land,
+    ...(((addr as { adresse?: string[] }).adresse ?? []) as string[]),
+    [(addr as { postnummer?: string }).postnummer, (addr as { poststed?: string }).poststed].filter(Boolean).join(" "),
+    (addr as { land?: string }).land,
   ]
     .filter(Boolean)
     .join(", ");
 
+  const orgForm = data.organisasjonsform as { beskrivelse?: string } | undefined;
+  const naeringskode = data.naeringskode1 as { kode?: string; beskrivelse?: string } | undefined;
+  const orgNo = String(data.organisasjonsnummer ?? "");
+
   return {
-    company_name: data.navn || "",
-    org_number: String(data.organisasjonsnummer),
-    business_type: data.organisasjonsform?.beskrivelse || "",
-    industry_code: data.naeringskode1?.kode || null,
-    industry_description: data.naeringskode1?.beskrivelse || null,
+    company_name: (data.navn as string) || "",
+    org_number: orgNo,
+    business_type: orgForm?.beskrivelse || "",
+    industry_code: naeringskode?.kode || null,
+    industry_description: naeringskode?.beskrivelse || null,
     address,
-    registration_date: data.registreringsdatoEnhetsregisteret || null,
-    employee_count: data.antallAnsatte ?? null,
+    registration_date: (data.registreringsdatoEnhetsregisteret as string) || null,
+    employee_count: (data.antallAnsatte as number) ?? null,
     status: data.konkurs ? "bankrupt" : data.underAvvikling ? "dissolving" : "active",
-    vat_number: deriveVatNO(String(data.organisasjonsnummer)),
+    vat_number: deriveVatNO(orgNo),
   };
 }
 
@@ -100,26 +70,20 @@ registerCapability("norwegian-company-data", async (input: CapabilityInput) => {
   }
 
   const trimmed = rawInput.trim();
-  let orgNumber = isOrgNumber(trimmed) ?? findOrgNumber(trimmed);
+  let orgNumber = isOrgNumber(trimmed) ?? findOrgNumberInText(trimmed);
 
   if (!orgNumber) {
     const companyName = await extractCompanyName(trimmed);
-    orgNumber = await searchBrreg(companyName);
+    orgNumber = await searchBrregByName(companyName);
   }
 
-  const output = await fetchCompany(orgNumber);
+  const data = await fetchBrregEntity(orgNumber);
+  const output = shapeBrregOutput(data);
 
   return {
     output,
     provenance: {
-      source: "data.brreg.no",
-      source_url: `${BRREG_API}/enheter/${orgNumber}`,
-      fetched_at: new Date().toISOString(),
-      acquisition_method: "direct_api" as const,
-      primary_source_reference: `${BRREG_API}/enheter/${orgNumber}`,
-      license: "NLOD 2.0",
-      license_url: "https://data.norge.no/nlod/no/2.0",
-      attribution: "Kilde: Brønnøysundregistrene",
+      ...brregProvenance(orgNumber),
       source_note:
         "Norsk lisens for offentlige data (NLOD) 2.0. Brreg basic company data is on Norway's national high-value-dataset list.",
     },
