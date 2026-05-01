@@ -97,8 +97,8 @@ maintenance_class: commercial-stable-api
 gdpr_art_22_classification: screening_signal
 processes_personal_data: true
 personal_data_categories:
-  - account_holder_name
-  - bank_account_details
+  - name
+  - financial
 geography: uk
 test_fixtures:
   known_answer:
