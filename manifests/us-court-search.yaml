@@ -1,0 +1,139 @@
+slug: us-court-search
+name: US Court Search (CourtListener)
+description: >-
+  Search US federal court records (RECAP dockets) by party name. Returns matching cases with court,
+  date filed, docket number, and absolute URL. Elevates bankruptcy filings as top-level signals
+  (has_bankruptcy_filing, bankruptcy_count, most_recent_bankruptcy) for risk decisioning. Federal
+  district + appellate courts; no state-court coverage.
+category: compliance
+price_cents: 15
+is_free_tier: false
+avg_latency_ms: 1500
+input_schema:
+  type: object
+  required: []
+  properties:
+    query:
+      type: string
+      description: Search query (typically a party name). Equivalent to party_name / company_name aliases.
+    party_name:
+      type: string
+      description: Alias for query. Accepts company or individual name.
+    company_name:
+      type: string
+      description: Alias for query.
+    court_type:
+      type: string
+      description: Optional. "bankruptcy" filters to bankruptcy court matches only.
+    since_date:
+      type: string
+      description: Optional ISO date (YYYY-MM-DD) to filter cases filed on or after this date.
+    limit:
+      type: integer
+      description: Optional max number of cases to return (default 20, max 100).
+output_schema:
+  type: object
+  example:
+    query: Lehman Brothers
+    court_type_filter: null
+    total_matches: 482
+    returned_count: 20
+    has_bankruptcy_filing: true
+    bankruptcy_count: 47
+    most_recent_filing_date: "2024-08-15"
+    most_recent_bankruptcy:
+      case_name: "In re: Lehman Brothers Holdings Inc."
+      court: nysb
+      court_id: nysb
+      date_filed: "2008-09-15"
+      docket_number: "08-13555"
+      absolute_url: https://www.courtlistener.com/...
+    cases: []
+    data_source: CourtListener + RECAP (Free Law Project)
+  properties:
+    query:
+      type: string
+    court_type_filter:
+      type:
+        - string
+        - "null"
+    total_matches:
+      type: integer
+    returned_count:
+      type: integer
+    has_bankruptcy_filing:
+      type: boolean
+    bankruptcy_count:
+      type: integer
+    most_recent_filing_date:
+      type:
+        - string
+        - "null"
+    most_recent_bankruptcy:
+      type:
+        - object
+        - "null"
+    cases:
+      type: array
+    data_source:
+      type: string
+data_source: CourtListener + RECAP (Free Law Project)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: us
+test_fixtures:
+  known_answer:
+    input:
+      query: "Lehman Brothers"
+      court_type: "bankruptcy"
+    expected_fields:
+      - field: total_matches
+        operator: not_null
+        reliability: guaranteed
+      - field: has_bankruptcy_filing
+        operator: not_null
+        reliability: guaranteed
+      - field: cases
+        operator: not_null
+        reliability: guaranteed
+      - field: data_source
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    query: "Lehman Brothers"
+output_field_reliability:
+  query: guaranteed
+  total_matches: guaranteed
+  returned_count: guaranteed
+  has_bankruptcy_filing: guaranteed
+  bankruptcy_count: guaranteed
+  cases: guaranteed
+  data_source: guaranteed
+  most_recent_filing_date: common
+  most_recent_bankruptcy: common
+  court_type_filter: common
+limitations:
+  - title: Federal courts only
+    text: >-
+      RECAP covers US federal courts (district + appellate + bankruptcy). State court records are NOT
+      included. For state-level coverage, supplement with Docket Alarm (PAYG) — separate capability.
+    category: coverage
+    severity: warning
+  - title: Common-name false positives
+    text: >-
+      Searching "Acme Corp" returns every matching docket regardless of which Acme Corp is the actual
+      party. Disambiguate using the address or jurisdiction context. The structured cases array
+      includes court, jurisdiction, and date for each match so the calling code can filter further.
+    category: accuracy
+    severity: warning
+  - title: RECAP coverage varies per court
+    text: >-
+      Free Law Project's RECAP archive covers ~95% of recent federal dockets but older cases may be
+      incomplete. The `total_matches` count reflects what RECAP has — actual federal docket count for
+      the party may be higher.
+    category: coverage
+    severity: info
