@@ -27,6 +27,10 @@ output_schema:
     registration_date: null
     registration_number: null
   properties:
+    vat_number:
+      type:
+        - string
+        - "null"
     status:
       type: string
     company_name:

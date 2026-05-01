@@ -46,6 +46,10 @@ output_schema:
     company_name: Red Bull GmbH
     business_type: GmbH (Limited liability company)
   properties:
+    vat_number:
+      type:
+        - string
+        - "null"
     status:
       type: string
     address:

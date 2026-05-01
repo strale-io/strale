@@ -39,6 +39,10 @@ output_schema:
     principal_object_code: "65.23"
     jurisdiction: IE
   properties:
+    vat_number:
+      type:
+        - string
+        - "null"
     company_name:
       type: string
     cro_number:

@@ -36,6 +36,10 @@ output_schema:
     is_active: true
     jurisdiction: LT
   properties:
+    vat_number:
+      type:
+        - string
+        - "null"
     company_name:
       type: string
     company_code:

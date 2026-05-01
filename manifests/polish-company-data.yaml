@@ -28,6 +28,10 @@ output_schema:
     share_capital: 90000,00 PLN
     registration_date: null
   properties:
+    vat_number:
+      type:
+        - string
+        - "null"
     status:
       type: string
     address:

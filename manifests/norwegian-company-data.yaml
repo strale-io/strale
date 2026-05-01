@@ -41,11 +41,25 @@ output_schema:
     business_type:
       type: string
     industry_code:
-      type: string
+      type:
+        - string
+        - "null"
+    industry_description:
+      type:
+        - string
+        - "null"
     employee_count:
-      type: integer
+      type:
+        - integer
+        - "null"
     registration_date:
-      type: string
+      type:
+        - string
+        - "null"
+    vat_number:
+      type:
+        - string
+        - "null"
 data_source: Brønnøysund Register Centre (Norway)
 data_source_type: api
 transparency_tag: mixed

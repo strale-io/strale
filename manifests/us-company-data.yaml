@@ -33,6 +33,14 @@ output_schema:
     fiscal_year_end: "1231"
     sic_description: Real Estate Investment Trusts
   properties:
+    status:
+      type:
+        - string
+        - "null"
+    vat_number:
+      type:
+        - string
+        - "null"
     cik:
       type: string
     state:

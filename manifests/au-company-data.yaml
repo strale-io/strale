@@ -31,6 +31,10 @@ output_schema:
     data_source_url: https://abr.business.gov.au/
     retrieved_at: "2026-03-20T10:00:00.000Z"
   properties:
+    vat_number:
+      type:
+        - string
+        - "null"
     abn:
       type: string
     acn:

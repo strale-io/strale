@@ -27,6 +27,10 @@ output_schema:
     registry_code: "17449106"
     historical_names: []
   properties:
+    vat_number:
+      type:
+        - string
+        - "null"
     status:
       type: string
     address:
