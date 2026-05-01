@@ -1,0 +1,154 @@
+slug: gleif-l2-children-lookup
+name: GLEIF L2 Children Lookup
+description: >-
+  Direct or ultimate child LEI records for a given entity, via GLEIF Level 2 (Who Owns Whom). Useful for "is this a
+  holding entity?" and "what subsidiaries does this entity own?". Pairs with gleif-l2-ubo-lookup (which goes the other
+  direction). Free, CC0-equivalent license.
+category: compliance
+price_cents: 5
+is_free_tier: false
+avg_latency_ms: 800
+input_schema:
+  type: object
+  required: []
+  properties:
+    lei:
+      type: string
+      description: 20-character LEI of the entity to look up children for. Canonical input.
+    company_name:
+      type: string
+      description: Optional fallback input — company name to search GLEIF for if no LEI is known. Resolves to an LEI internally.
+    jurisdiction:
+      type: string
+      description: Optional ISO country code (e.g. "LU") to disambiguate name search.
+    level:
+      type: string
+      description: Optional. Either "direct" (immediate children) or "ultimate" (full descendant tree). Default direct.
+    limit:
+      type: integer
+      description: Optional max number of children to return per page (default 20, max 200).
+output_schema:
+  type: object
+  example:
+    input_lei: 549300B4X0JHWV0DTD60
+    legal_name: SPOTIFY TECHNOLOGY S.A.
+    jurisdiction: LU
+    level: direct
+    total_children: 2
+    has_children: true
+    is_holding_entity: true
+    children:
+      - lei: 335800LYVN89V3RVI889
+        legal_name: SPOTIFY INDIA LLP
+        jurisdiction: IN
+        country: IN
+    paginated: false
+    data_source: GLEIF Level 2 (Who Owns Whom)
+  properties:
+    input_lei:
+      type: string
+    legal_name:
+      type: string
+    jurisdiction:
+      type:
+        - string
+        - "null"
+    level:
+      type: string
+    total_children:
+      type: integer
+    has_children:
+      type: boolean
+    is_holding_entity:
+      type: boolean
+    children:
+      type: array
+    paginated:
+      type: boolean
+    data_source:
+      type: string
+data_source: GLEIF Level 2 (Who Owns Whom)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      lei: 549300B4X0JHWV0DTD60
+    expected_fields:
+      - field: input_lei
+        operator: equals
+        reliability: guaranteed
+        value: 549300B4X0JHWV0DTD60
+      - field: legal_name
+        operator: not_null
+        reliability: guaranteed
+      - field: jurisdiction
+        operator: equals
+        reliability: guaranteed
+        value: LU
+      - field: level
+        operator: equals
+        reliability: guaranteed
+        value: direct
+      - field: total_children
+        operator: not_null
+        reliability: guaranteed
+      - field: has_children
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: is_holding_entity
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: children
+        operator: not_null
+        reliability: guaranteed
+      - field: paginated
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: data_source
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    lei: 549300B4X0JHWV0DTD60
+output_field_reliability:
+  input_lei: guaranteed
+  legal_name: guaranteed
+  jurisdiction: guaranteed
+  level: guaranteed
+  total_children: guaranteed
+  has_children: guaranteed
+  is_holding_entity: guaranteed
+  children: guaranteed
+  paginated: guaranteed
+  data_source: guaranteed
+limitations:
+  - title: Coverage is limited to entities that have an LEI
+    text: >-
+      GLEIF L2 only lists children whose LEIs themselves are registered in the GLEIF system. A subsidiary that has not
+      registered for an LEI will not appear in the children list, even if its parent relationship is real and reported
+      elsewhere. Pair with country-registry subsidiary lookups for SMEs.
+    category: coverage
+    severity: info
+  - title: Direct vs ultimate is the explicit knob
+    text: >-
+      Default is `level=direct` — only immediate children are returned. Pass `level=ultimate` to return the full
+      descendant tree (entities reporting this LEI as their ultimate parent transitively). Ultimate-children pages can
+      be very large for top-of-tree multinationals; use `limit` to bound.
+    category: accuracy
+    severity: info
+  - title: Pagination not yet exposed in output
+    text: >-
+      First page of children is returned with total_children indicating the full count. When total_children >
+      children.length, the `paginated: true` flag signals more results available upstream but the executor returns only
+      the first page. To retrieve subsequent pages a new capability call would be needed (next-page support is a future
+      enhancement).
+    category: coverage
+    severity: warning

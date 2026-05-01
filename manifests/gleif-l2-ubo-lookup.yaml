@@ -1,0 +1,172 @@
+slug: gleif-l2-ubo-lookup
+name: GLEIF L2 UBO Lookup
+description: >-
+  Beneficial ownership supplement via GLEIF Level 2 (Who Owns Whom). Returns direct and ultimate parent relationships
+  for any LEI-bearing entity globally, plus structured reporting exceptions when a parent is not reported. Free,
+  CC0-equivalent license. Pairs with country registries to fill UBO gaps.
+category: compliance
+price_cents: 5
+is_free_tier: false
+avg_latency_ms: 1000
+input_schema:
+  type: object
+  required: []
+  properties:
+    lei:
+      type: string
+      description: 20-character LEI of the entity to look up parents for. Canonical input.
+    company_name:
+      type: string
+      description: >-
+        Optional fallback input — company name to search GLEIF for if no LEI is known. Resolves to an LEI internally
+        before fetching parent data.
+    jurisdiction:
+      type: string
+      description: Optional ISO country code (e.g. "SE") to disambiguate name search.
+output_schema:
+  type: object
+  example:
+    input_lei: 5493004INDUJX1TDHI57
+    legal_name: Spotify AB
+    jurisdiction: SE
+    direct_parent:
+      lei: 549300B4X0JHWV0DTD60
+      legal_name: SPOTIFY TECHNOLOGY S.A.
+      jurisdiction: LU
+      country: LU
+    direct_parent_exception: null
+    ultimate_parent:
+      lei: 549300B4X0JHWV0DTD60
+      legal_name: SPOTIFY TECHNOLOGY S.A.
+      jurisdiction: LU
+      country: LU
+    ultimate_parent_exception: null
+    has_direct_parent: true
+    has_ultimate_parent: true
+    is_top_of_tree: false
+    ownership_chain_complete: true
+    data_source: GLEIF Level 2 (Who Owns Whom)
+  properties:
+    input_lei:
+      type: string
+    legal_name:
+      type: string
+    jurisdiction:
+      type:
+        - string
+        - "null"
+    direct_parent:
+      type:
+        - object
+        - "null"
+    direct_parent_exception:
+      type:
+        - object
+        - "null"
+    ultimate_parent:
+      type:
+        - object
+        - "null"
+    ultimate_parent_exception:
+      type:
+        - object
+        - "null"
+    has_direct_parent:
+      type: boolean
+    has_ultimate_parent:
+      type: boolean
+    is_top_of_tree:
+      type: boolean
+    ownership_chain_complete:
+      type: boolean
+    data_source:
+      type: string
+data_source: GLEIF Level 2 (Who Owns Whom)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      lei: 5493004INDUJX1TDHI57
+    expected_fields:
+      - field: input_lei
+        operator: equals
+        reliability: guaranteed
+        value: 5493004INDUJX1TDHI57
+      - field: legal_name
+        operator: not_null
+        reliability: guaranteed
+      - field: jurisdiction
+        operator: equals
+        reliability: guaranteed
+        value: SE
+      - field: direct_parent
+        operator: not_null
+        reliability: guaranteed
+      - field: ultimate_parent
+        operator: not_null
+        reliability: guaranteed
+      - field: has_direct_parent
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: has_ultimate_parent
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: is_top_of_tree
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: ownership_chain_complete
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: data_source
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    lei: 5493004INDUJX1TDHI57
+output_field_reliability:
+  input_lei: guaranteed
+  legal_name: guaranteed
+  jurisdiction: guaranteed
+  has_direct_parent: guaranteed
+  has_ultimate_parent: guaranteed
+  is_top_of_tree: guaranteed
+  ownership_chain_complete: guaranteed
+  data_source: guaranteed
+  direct_parent: common
+  direct_parent_exception: common
+  ultimate_parent: common
+  ultimate_parent_exception: common
+limitations:
+  - title: Coverage is limited to entities that have an LEI
+    text: >-
+      GLEIF L2 only contains relationship data for entities registered in the GLEIF system. Approximately 2.6M entities
+      globally have LEIs, primarily large or regulated entities. SMEs without LEIs return no L2 data — pair with
+      country-registry beneficial ownership lookups for full SME coverage.
+    category: coverage
+    severity: info
+    workaround: >-
+      For SMEs without an LEI, use country-specific UBO sources (e.g. Companies House PSC for UK, OpenOwnership BODS for
+      UK/DK/SK).
+  - title: Reporting exceptions are common
+    text: >-
+      Many entities report a structured "reporting exception" instead of naming a parent (NATURAL_PERSONS,
+      NON_CONSOLIDATING, NO_KNOWN_PERSON, LEGAL_OBSTACLES, DISCLOSURE_DETRIMENTAL, BINDING_LEGAL_COMMITMENTS). The
+      exception is structured data and is surfaced verbatim in direct_parent_exception / ultimate_parent_exception, but
+      it does not name an ultimate beneficiary.
+    category: coverage
+    severity: warning
+  - title: Parent relationships are self-reported and refreshed annually
+    text: >-
+      Entities self-report parent relationships in their annual LEI renewal. Stale data is possible for restructurings
+      between renewal cycles. The lastUpdateDate on the underlying LEI record indicates currency.
+    category: freshness
+    severity: info

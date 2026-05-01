@@ -1,0 +1,130 @@
+slug: no-bankruptcy-check
+name: Norwegian Bankruptcy Check
+description: >-
+  Check Norwegian entity bankruptcy and dissolution status via Brønnøysundregistrene Enhetsregisteret. Returns
+  structured signals: has_bankruptcy_filing, bankruptcy_date, is_under_dissolution, is_under_compulsory_dissolution,
+  plus official registry annotations. NLOD 2.0 license.
+category: compliance
+price_cents: 5
+is_free_tier: false
+avg_latency_ms: 400
+input_schema:
+  type: object
+  required: []
+  properties:
+    org_number:
+      type: string
+      description: 9-digit Norwegian organization number (with or without spaces). Canonical input.
+    company_name:
+      type: string
+      description: Optional fallback input — Norwegian company name to search Brønnøysundregistrene if no org number is known.
+output_schema:
+  type: object
+  example:
+    org_number: "923609016"
+    company_name: EQUINOR ASA
+    has_bankruptcy_filing: false
+    bankruptcy_date: null
+    is_under_dissolution: false
+    is_under_compulsory_dissolution: false
+    has_any_distress_signal: false
+    registry_annotations: []
+    data_source: Brønnøysundregistrene Enhetsregisteret
+  properties:
+    org_number:
+      type: string
+    company_name:
+      type:
+        - string
+        - "null"
+    has_bankruptcy_filing:
+      type: boolean
+    bankruptcy_date:
+      type:
+        - string
+        - "null"
+    is_under_dissolution:
+      type: boolean
+    is_under_compulsory_dissolution:
+      type: boolean
+    has_any_distress_signal:
+      type: boolean
+    registry_annotations:
+      type: array
+    data_source:
+      type: string
+data_source: Brønnøysundregistrene Enhetsregisteret
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: "no"
+test_fixtures:
+  known_answer:
+    input:
+      org_number: "923609016"
+    expected_fields:
+      - field: org_number
+        operator: equals
+        reliability: guaranteed
+        value: "923609016"
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: has_bankruptcy_filing
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: is_under_dissolution
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: is_under_compulsory_dissolution
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: has_any_distress_signal
+        operator: equals
+        reliability: guaranteed
+        value: false
+      - field: registry_annotations
+        operator: not_null
+        reliability: guaranteed
+      - field: data_source
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    org_number: "923609016"
+output_field_reliability:
+  org_number: guaranteed
+  has_bankruptcy_filing: guaranteed
+  is_under_dissolution: guaranteed
+  is_under_compulsory_dissolution: guaranteed
+  has_any_distress_signal: guaranteed
+  registry_annotations: guaranteed
+  data_source: guaranteed
+  company_name: common
+  bankruptcy_date: rare
+limitations:
+  - title: Coverage limited to entities in Brønnøysundregistrene Enhetsregisteret
+    text: >-
+      Only Norwegian entities registered in Enhetsregisteret are covered. Foreign entities and informal businesses
+      without an org number cannot be looked up.
+    category: coverage
+    severity: info
+  - title: Recovery from bankruptcy or dissolution is not surfaced separately
+    text: >-
+      has_bankruptcy_filing reflects current registry state. If a previously bankrupt entity has been restored or
+      completed liquidation, the registry may no longer show konkurs=true. Inspect registry_annotations (paategninger)
+      for the historical timeline of registry events.
+    category: accuracy
+    severity: info
+  - title: Bankruptcy proceedings detail (court, trustee, creditor list) not exposed
+    text: >-
+      Brønnøysundregistrene's free open-data API exposes only the structured booleans and bankruptcy_date. Full
+      case-by-case detail (handling court, appointed trustee, creditor schedule) is held in Konkursregisteret and Norsk
+      Lysingsblad and is not free machine-readable.
+    category: coverage
+    severity: warning
