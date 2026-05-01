@@ -1,0 +1,123 @@
+slug: us-ein-match
+name: US EIN Match
+description: >-
+  US Employer Identification Number (EIN) lookup and name search via Liberty Data EINsearch
+  (~24M EIN database, bureau-derived). Two modes: EIN exact lookup, or business name search
+  (optionally constrained by state). Returns business name, status, formed state, address, and
+  match score for name searches.
+category: compliance
+price_cents: 75
+is_free_tier: false
+avg_latency_ms: 800
+input_schema:
+  type: object
+  required: []
+  properties:
+    ein:
+      type: string
+      description: 9-digit US EIN, optionally formatted XX-XXXXXXX. Canonical input for exact lookup.
+    business_name:
+      type: string
+      description: Optional fallback input — business name to search EINsearch when no EIN is known.
+    state:
+      type: string
+      description: Optional 2-letter US state code to constrain name search (e.g. "CA").
+    limit:
+      type: integer
+      description: Optional max number of candidates to return for name search (default 5, max 25).
+output_schema:
+  type: object
+  example:
+    mode: ein_lookup
+    ein: "123456789"
+    found: true
+    business_name: ACME WIDGETS INC
+    status: active
+    formed_state: DE
+    address: "100 Main St, Wilmington, DE 19801"
+    candidates: []
+    data_source: Liberty Data EINsearch (~24M EIN database)
+  properties:
+    mode:
+      type: string
+      enum:
+        - ein_lookup
+        - name_search
+    ein:
+      type:
+        - string
+        - "null"
+    found:
+      type: boolean
+    business_name:
+      type:
+        - string
+        - "null"
+    status:
+      type:
+        - string
+        - "null"
+    formed_state:
+      type:
+        - string
+        - "null"
+    address:
+      type:
+        - string
+        - "object"
+        - "null"
+    candidates:
+      type: array
+    data_source:
+      type: string
+data_source: Liberty Data EINsearch
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: reference-data
+maintenance_class: commercial-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: us
+test_fixtures:
+  known_answer:
+    input:
+      business_name: "Apple Inc"
+      state: "CA"
+    expected_fields:
+      - field: mode
+        operator: equals
+        reliability: guaranteed
+        value: name_search
+      - field: candidates
+        operator: not_null
+        reliability: guaranteed
+      - field: data_source
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    business_name: "Apple Inc"
+    state: "CA"
+output_field_reliability:
+  mode: guaranteed
+  found: guaranteed
+  candidates: guaranteed
+  data_source: guaranteed
+  ein: common
+  business_name: common
+  status: common
+  formed_state: common
+  address: common
+limitations:
+  - title: US only
+    text: >-
+      EIN is a US tax identifier. For non-US business identifiers (VAT number, registration number),
+      use the country-specific company-data capabilities.
+    category: coverage
+    severity: info
+  - title: Bureau-derived data may lag IRS updates
+    text: >-
+      The EINsearch database is sourced from filings and bureau records, not directly from the IRS.
+      Newly-formed entities may not appear for 30-90 days; recently-dissolved entities may still
+      appear active. Cross-reference with state SOS data via us-company-data-cobalt for active status.
+    category: freshness
+    severity: warning

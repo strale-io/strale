@@ -1,0 +1,168 @@
+slug: uk-cop-check
+name: UK Confirmation of Payee Check
+description: >-
+  Verify that a UK sort code + account number pair matches the account holder name registered at the
+  responding PSP. Returns Pay.UK CoP match status (match / close_match / no_match / no_account /
+  cannot_be_checked), bank name, BIC, and a reason code. Implementation via eSortcode (Pay.UK CoP
+  scheme participant).
+category: compliance
+price_cents: 25
+is_free_tier: false
+avg_latency_ms: 1500
+input_schema:
+  type: object
+  required:
+    - sort_code
+    - account_number
+    - account_holder_name
+  properties:
+    sort_code:
+      type: string
+      description: 6-digit UK sort code (with or without dashes).
+    account_number:
+      type: string
+      description: 8-digit UK account number.
+    account_holder_name:
+      type: string
+      description: Account holder name as it appears on the originating side. CoP scheme uses fuzzy match against the responding PSP's registered name.
+    account_type:
+      type: string
+      description: Optional. "personal" or "business". Defaults to "business".
+output_schema:
+  type: object
+  example:
+    match_status: match
+    account_holder_name_provided: ACME WIDGETS LTD
+    close_match_name: null
+    bank_name: HSBC UK Bank plc
+    bic: HBUKGB4B
+    reason_code: null
+    reason: null
+    sort_code: "400515"
+    account_number_last4: "1234"
+    account_type: business
+    reference_id: cop-7f2a9c
+    checked_at: "2026-05-04T12:00:00Z"
+    data_source: Pay.UK Confirmation of Payee scheme via eSortcode
+  properties:
+    match_status:
+      type: string
+      enum:
+        - match
+        - close_match
+        - no_match
+        - no_account
+        - cannot_be_checked
+    account_holder_name_provided:
+      type: string
+    close_match_name:
+      type:
+        - string
+        - "null"
+    bank_name:
+      type:
+        - string
+        - "null"
+    bic:
+      type:
+        - string
+        - "null"
+    reason_code:
+      type:
+        - string
+        - "null"
+    reason:
+      type:
+        - string
+        - "null"
+    sort_code:
+      type: string
+    account_number_last4:
+      type: string
+    account_type:
+      type: string
+    reference_id:
+      type:
+        - string
+        - "null"
+    checked_at:
+      type: string
+    data_source:
+      type: string
+data_source: Pay.UK Confirmation of Payee scheme via eSortcode
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: commercial-stable-api
+gdpr_art_22_classification: screening_signal
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - financial
+geography: uk
+test_fixtures:
+  known_answer:
+    input:
+      sort_code: "400515"
+      account_number: "12345678"
+      account_holder_name: "Strale Test"
+      account_type: "business"
+    expected_fields:
+      - field: match_status
+        operator: not_null
+        reliability: guaranteed
+      - field: sort_code
+        operator: equals
+        reliability: guaranteed
+        value: "400515"
+      - field: account_number_last4
+        operator: equals
+        reliability: guaranteed
+        value: "5678"
+      - field: account_type
+        operator: equals
+        reliability: guaranteed
+        value: business
+      - field: data_source
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    sort_code: "400515"
+    account_number: "12345678"
+    account_holder_name: "Strale Test"
+    account_type: "business"
+output_field_reliability:
+  match_status: guaranteed
+  account_holder_name_provided: guaranteed
+  sort_code: guaranteed
+  account_number_last4: guaranteed
+  account_type: guaranteed
+  checked_at: guaranteed
+  data_source: guaranteed
+  bank_name: common
+  bic: common
+  close_match_name: rare
+  reason_code: rare
+  reason: rare
+  reference_id: common
+limitations:
+  - title: UK only
+    text: >-
+      Pay.UK Confirmation of Payee covers UK domestic accounts only (sort code + account number pairs).
+      For EU SEPA IBAN-based name matching, see the SEPA VoP capability (separate vendor).
+    category: coverage
+    severity: info
+  - title: CoP is a scheme attestation, not an identity proof
+    text: >-
+      A "match" indicates the responding PSP returned that the name on file matches the provided name
+      under their fuzzy-matching rules. It does NOT prove the named person controls the account or
+      that the account is the right account for a payment. Use alongside other risk signals.
+    category: accuracy
+    severity: warning
+  - title: No-account / cannot-be-checked are common edge cases
+    text: >-
+      A small fraction of UK PSPs do not respond to CoP queries (cannot_be_checked) and some accounts
+      are flagged as no_account when they are dormant or recently closed. These are scheme-level
+      limitations, not vendor bugs. Surface them in customer-visible audit output.
+    category: coverage
+    severity: info

@@ -1,0 +1,128 @@
+slug: us-sec-filings-extended
+name: US SEC Filings (Extended)
+description: >-
+  Extended SEC EDGAR filings search via sec-api.io. Full-text search across the EDGAR corpus (10-K,
+  10-Q, 8-K, S-1, proxy, insider Form 4, etc.) by CIK or company name, optionally filtered by form
+  type and date. Supplements the free SEC EDGAR API used by us-company-data with full-text search,
+  cross-form aggregation, and filing-event monitoring.
+category: compliance
+price_cents: 25
+is_free_tier: false
+avg_latency_ms: 1500
+input_schema:
+  type: object
+  required: []
+  properties:
+    cik:
+      type: string
+      description: 10-digit SEC Central Index Key. Canonical input for exact entity match.
+    company_name:
+      type: string
+      description: Optional fallback input — company name to search EDGAR for.
+    form_type:
+      type: string
+      description: Optional filter by SEC form type (e.g. "10-K", "8-K", "S-1", "4").
+    since_date:
+      type: string
+      description: Optional ISO date (YYYY-MM-DD) to filter filings filed on or after this date.
+    limit:
+      type: integer
+      description: Optional max number of filings to return (default 20, max 100).
+output_schema:
+  type: object
+  example:
+    query: companyName:"Apple Inc"
+    cik: null
+    company_name: Apple Inc
+    form_type_filter: 10-K
+    total_matches: 28
+    returned_count: 20
+    most_recent_filing_date: "2024-11-01"
+    most_recent_8k_date: null
+    filings: []
+    data_source: sec-api.io (extended SEC EDGAR index)
+  properties:
+    query:
+      type: string
+    cik:
+      type:
+        - string
+        - "null"
+    company_name:
+      type:
+        - string
+        - "null"
+    form_type_filter:
+      type:
+        - string
+        - "null"
+    total_matches:
+      type: integer
+    returned_count:
+      type: integer
+    most_recent_filing_date:
+      type:
+        - string
+        - "null"
+    most_recent_8k_date:
+      type:
+        - string
+        - "null"
+    filings:
+      type: array
+    data_source:
+      type: string
+data_source: sec-api.io (extended SEC EDGAR index)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: commercial-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: us
+test_fixtures:
+  known_answer:
+    input:
+      company_name: "Apple Inc"
+      form_type: "10-K"
+      limit: 5
+    expected_fields:
+      - field: total_matches
+        operator: not_null
+        reliability: guaranteed
+      - field: filings
+        operator: not_null
+        reliability: guaranteed
+      - field: data_source
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    company_name: "Apple Inc"
+    form_type: "10-K"
+    limit: 5
+output_field_reliability:
+  query: guaranteed
+  total_matches: guaranteed
+  returned_count: guaranteed
+  filings: guaranteed
+  data_source: guaranteed
+  cik: common
+  company_name: common
+  form_type_filter: common
+  most_recent_filing_date: common
+  most_recent_8k_date: common
+limitations:
+  - title: SEC filers only
+    text: >-
+      Coverage limited to entities that file with the SEC (publicly-traded US companies + foreign
+      private issuers ~13k filers). Most US private companies do not file with the SEC; for those,
+      use us-company-data-cobalt (50-state SoS coverage).
+    category: coverage
+    severity: info
+  - title: Full-text search may surface incidental mentions
+    text: >-
+      A company-name search against filing bodies returns any filing that mentions the name, including
+      filings BY other entities that mention this company (e.g. as a counterparty, subsidiary, supplier).
+      Use cik-based search when you want strictly the entity's own filings.
+    category: accuracy
+    severity: warning

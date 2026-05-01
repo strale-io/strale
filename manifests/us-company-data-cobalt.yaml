@@ -1,0 +1,148 @@
+slug: us-company-data-cobalt
+name: US Company Data (Cobalt)
+description: >-
+  US company registry lookup via Cobalt Intelligence — 50-state Secretary of State live SoS data.
+  Covers ~33M+ US private LLCs/corporations. Two input modes: SoS-issued company ID + state, or
+  company name + state. Returns canonical entity info, status, entity type, formed date, address,
+  registered agent, officers, and filings history. Distinct from the SEC-EDGAR-only us-company-data
+  capability.
+category: company-data
+price_cents: 200
+is_free_tier: false
+avg_latency_ms: 3000
+input_schema:
+  type: object
+  required:
+    - state
+  properties:
+    company_id:
+      type: string
+      description: SoS-issued business ID (registration number). Canonical input when known.
+    company_name:
+      type: string
+      description: Optional fallback input — company name to search if no ID is known.
+    state:
+      type: string
+      description: Required 2-letter US state code (e.g. "DE", "CA", "NY"). Cobalt routes per state.
+output_schema:
+  type: object
+  example:
+    found: true
+    company_name: APPLE INC
+    company_id: "C0806592"
+    state: CA
+    status: active
+    entity_type: Corporation
+    formed_date: "1977-01-03"
+    address: "One Apple Park Way, Cupertino, CA 95014"
+    registered_agent: CT CORPORATION SYSTEM
+    officers: []
+    filings: []
+    sos_url: https://bizfileonline.sos.ca.gov/...
+    data_source: Cobalt Intelligence (50-state SoS live)
+  properties:
+    found:
+      type: boolean
+    company_name:
+      type:
+        - string
+        - "null"
+    company_id:
+      type:
+        - string
+        - "null"
+    state:
+      type: string
+    status:
+      type:
+        - string
+        - "null"
+    entity_type:
+      type:
+        - string
+        - "null"
+    formed_date:
+      type:
+        - string
+        - "null"
+    address:
+      type:
+        - string
+        - "null"
+    registered_agent:
+      type:
+        - string
+        - "null"
+    officers:
+      type: array
+    filings:
+      type: array
+    sos_url:
+      type:
+        - string
+        - "null"
+    data_source:
+      type: string
+data_source: Cobalt Intelligence (50-state SoS live)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: commercial-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: us
+test_fixtures:
+  known_answer:
+    input:
+      company_name: "Apple Inc"
+      state: "CA"
+    expected_fields:
+      - field: found
+        operator: not_null
+        reliability: guaranteed
+      - field: state
+        operator: equals
+        reliability: guaranteed
+        value: CA
+      - field: data_source
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    company_name: "Apple Inc"
+    state: "CA"
+output_field_reliability:
+  found: guaranteed
+  state: guaranteed
+  data_source: guaranteed
+  company_name: common
+  company_id: common
+  status: common
+  entity_type: common
+  formed_date: common
+  address: common
+  registered_agent: common
+  officers: rare
+  filings: rare
+  sos_url: rare
+limitations:
+  - title: State is required
+    text: >-
+      Cobalt routes queries per Secretary of State. Cross-state name searches are not supported in a
+      single call. Provide the state of incorporation; if unknown, query DE first (most common
+      domicile) then NY/CA/TX as fallbacks.
+    category: coverage
+    severity: info
+  - title: Status definitions vary per state
+    text: >-
+      Each state's SoS uses its own status taxonomy (active / good standing / suspended / delinquent /
+      forfeited / etc.). Status is surfaced verbatim from the SoS portal — interpret per state, not
+      across states.
+    category: accuracy
+    severity: warning
+  - title: Officer / filing depth varies per state
+    text: >-
+      Some states publish full officer rosters and 10+ years of filings; others publish only the
+      registered agent and incorporation event. Empty officers/filings arrays are normal for some
+      jurisdictions, not necessarily a coverage gap.
+    category: coverage
+    severity: info
