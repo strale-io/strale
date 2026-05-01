@@ -204,7 +204,7 @@ function buildKybComplete(c: Country): SolutionDef {
     inputMap: { [c.inputField]: `$input.${c.inputField}` },
   });
 
-  // Group 2: VAT + LEI (parallel)
+  // Group 2: VAT + LEI + UBO supplement (parallel)
   if (c.isEU) {
     steps.push({
       capabilitySlug: "vat-validate",
@@ -216,6 +216,18 @@ function buildKybComplete(c: Country): SolutionDef {
   }
   steps.push({
     capabilitySlug: "lei-lookup",
+    stepOrder: stepOrder++,
+    canParallel: true,
+    parallelGroup: 1,
+    inputMap: { company_name: "$steps[0].company_name" },
+  });
+  // GLEIF L2 UBO supplement — fills UBO for any LEI-bearing entity
+  // (returns reporting exception when no parent is reported, or a
+  // structured direct + ultimate parent record when one exists).
+  // Pairs with country-specific UBO sources (UK PSC, future
+  // OpenOwnership for UK/DK/SK) which target SMEs without LEIs.
+  steps.push({
+    capabilitySlug: "gleif-l2-ubo-lookup",
     stepOrder: stepOrder++,
     canParallel: true,
     parallelGroup: 1,
@@ -282,7 +294,7 @@ function buildKybComplete(c: Country): SolutionDef {
     inputMap: { email: "$input.contact_email" },
   });
 
-  // Sweden bonus: Group 4b
+  // Group 4b: Country-specific litigation/bankruptcy bonus
   if (c.code === "se") {
     steps.push({
       capabilitySlug: "credit-report-summary",
@@ -290,6 +302,40 @@ function buildKybComplete(c: Country): SolutionDef {
       canParallel: true,
       parallelGroup: 4,
       inputMap: { org_number: "$input.org_number" },
+    });
+  }
+  if (c.code === "fr") {
+    // BODACC official commercial-registry events feed; elevates insolvency
+    // signal (procédures collectives) for FR risk decisions.
+    steps.push({
+      capabilitySlug: "fr-bodacc-lookup",
+      stepOrder: stepOrder++,
+      canParallel: true,
+      parallelGroup: 4,
+      inputMap: { siren: "$input.siren" },
+    });
+  }
+  if (c.code === "no") {
+    // Brreg Enhetsregisteret bankruptcy/dissolution detail — surfaces
+    // bankruptcy_date, is_under_dissolution, registry_annotations beyond
+    // the binary status from norwegian-company-data.
+    steps.push({
+      capabilitySlug: "no-bankruptcy-check",
+      stepOrder: stepOrder++,
+      canParallel: true,
+      parallelGroup: 4,
+      inputMap: { org_number: "$input.org_number" },
+    });
+  }
+  if (c.code === "uk") {
+    // UK Companies House insolvency endpoint — already shipped as the
+    // multi-country insolvency-check capability.
+    steps.push({
+      capabilitySlug: "insolvency-check",
+      stepOrder: stepOrder++,
+      canParallel: true,
+      parallelGroup: 4,
+      inputMap: { company_number: "$input.company_number", country_code: "GB" },
     });
   }
 
@@ -309,7 +355,12 @@ function buildKybComplete(c: Country): SolutionDef {
     name: `KYB Complete — ${c.name}`,
     marketingName: `KYB Complete — ${c.name}`,
     description: `Comprehensive company verification for ${c.name}. Full compliance check including registry verification, sanctions screening, PEP screening, adverse media search, digital presence analysis, and a plain-language risk narrative.`,
-    longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup, ${c.isEU ? "VAT validation, " : ""}LEI check, sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation${c.code === "se" ? " plus credit report summary" : ""}. Produces a dual-output response with structured checks and a human-readable risk narrative.`,
+    longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup, ${c.isEU ? "VAT validation, " : ""}LEI check, GLEIF L2 UBO supplement (parent ownership for LEI-bearing entities), sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation${
+      c.code === "se" ? " plus credit report summary" :
+      c.code === "fr" ? " plus BODACC commercial-registry and insolvency events" :
+      c.code === "no" ? " plus Brreg bankruptcy / dissolution detail" :
+      c.code === "uk" ? " plus Companies House insolvency cases" : ""
+    }. Produces a dual-output response with structured checks and a human-readable risk narrative.`,
     agentDescription: `comprehensive ${c.name.toLowerCase()} company check, full kyb ${c.code}, deep ${c.name.toLowerCase()} verification, compliance check ${c.code}, due diligence ${c.name.toLowerCase()}`,
     category: "compliance-verification",
     priceCents: 250,
@@ -408,6 +459,37 @@ function buildInvoiceVerify(c: Country): SolutionDef {
     parallelGroup: 2,
     inputMap: { invoice_data: "$input.invoice_data" },
   });
+
+  // Country-specific litigation/bankruptcy bonus — runs alongside
+  // sanctions/adverse-media as another risk-screening signal. An invoice
+  // from a counterparty in active insolvency is materially higher risk.
+  if (c.code === "fr") {
+    steps.push({
+      capabilitySlug: "fr-bodacc-lookup",
+      stepOrder: stepOrder++,
+      canParallel: true,
+      parallelGroup: 2,
+      inputMap: { siren: "$input.siren" },
+    });
+  }
+  if (c.code === "no") {
+    steps.push({
+      capabilitySlug: "no-bankruptcy-check",
+      stepOrder: stepOrder++,
+      canParallel: true,
+      parallelGroup: 2,
+      inputMap: { org_number: "$input.org_number" },
+    });
+  }
+  if (c.code === "uk") {
+    steps.push({
+      capabilitySlug: "insolvency-check",
+      stepOrder: stepOrder++,
+      canParallel: true,
+      parallelGroup: 2,
+      inputMap: { company_number: "$input.company_number", country_code: "GB" },
+    });
+  }
 
   // Group 4: Sender domain checks (parallel)
   steps.push({
