@@ -1,10 +1,10 @@
 slug: uk-cop-check
 name: UK Confirmation of Payee Check
 description: >-
-  Verify that a UK sort code + account number pair matches the account holder name registered at the
-  responding PSP. Returns Pay.UK CoP match status (match / close_match / no_match / no_account /
-  cannot_be_checked), bank name, BIC, and a reason code. Implementation via eSortcode (Pay.UK CoP
-  scheme participant).
+  Verify that a UK sort code + account number pair matches the account holder name registered at the responding PSP.
+  Returns Pay.UK CoP match status (match / close_match / no_match / no_account / cannot_be_checked), the eSortcode raw
+  cop_code (14 codes), modulus check, bank name, and the registered name when a close_match is returned. Implementation
+  via eSortcode (Pay.UK CoP scheme participant).
 category: compliance
 price_cents: 25
 is_free_tier: false
@@ -24,24 +24,38 @@ input_schema:
       description: 8-digit UK account number.
     account_holder_name:
       type: string
-      description: Account holder name as it appears on the originating side. CoP scheme uses fuzzy match against the responding PSP's registered name.
+      description: >-
+        Account holder name as it appears on the originating side. CoP scheme uses fuzzy match against the responding
+        PSP's registered name. For personal accounts provide first + last name space- separated; do not include titles
+        or honorifics.
     account_type:
       type: string
-      description: Optional. "personal" or "business". Defaults to "business".
+      description: Optional. "PERSONAL" or "BUSINESS" (case-insensitive). Defaults to BUSINESS.
+    secondary_account_id:
+      type: string
+      description: Optional. Building society roll number, credit card number, or similar PSP-required disambiguator.
+    test_outcome:
+      type: string
+      description: >-
+        Optional. Pass an eSortcode CoP code (e.g. "MATCHED", "CLOSE_MATCH") to receive a deterministic test response
+        that does not deduct credits. Used by the test scheduler.
 output_schema:
   type: object
   example:
     match_status: match
+    cop_code: MATCHED
+    cop_description: The account name and account type match the name and account type provided.
+    cop_advice: You can proceed with the creation of the Direct Debit Instruction.
     account_holder_name_provided: ACME WIDGETS LTD
-    close_match_name: null
+    returned_name: null
+    modulus_check_valid: true
     bank_name: HSBC UK Bank plc
-    bic: HBUKGB4B
-    reason_code: null
-    reason: null
+    bic: null
     sort_code: "400515"
-    account_number_last4: "1234"
-    account_type: business
-    reference_id: cop-7f2a9c
+    account_number_last4: "5678"
+    account_type: BUSINESS
+    secondary_account_id: null
+    test_outcome_used: null
     checked_at: "2026-05-04T12:00:00Z"
     data_source: Pay.UK Confirmation of Payee scheme via eSortcode
   properties:
@@ -53,11 +67,27 @@ output_schema:
         - no_match
         - no_account
         - cannot_be_checked
-    account_holder_name_provided:
-      type: string
-    close_match_name:
+    cop_code:
       type:
         - string
+        - "null"
+    cop_description:
+      type:
+        - string
+        - "null"
+    cop_advice:
+      type:
+        - string
+        - "null"
+    account_holder_name_provided:
+      type: string
+    returned_name:
+      type:
+        - string
+        - "null"
+    modulus_check_valid:
+      type:
+        - boolean
         - "null"
     bank_name:
       type:
@@ -67,21 +97,17 @@ output_schema:
       type:
         - string
         - "null"
-    reason_code:
-      type:
-        - string
-        - "null"
-    reason:
-      type:
-        - string
-        - "null"
     sort_code:
       type: string
     account_number_last4:
       type: string
     account_type:
       type: string
-    reference_id:
+    secondary_account_id:
+      type:
+        - string
+        - "null"
+    test_outcome_used:
       type:
         - string
         - "null"
@@ -103,66 +129,105 @@ geography: uk
 test_fixtures:
   known_answer:
     input:
-      sort_code: "400515"
-      account_number: "12345678"
-      account_holder_name: "Strale Test"
-      account_type: "business"
+      sort_code: "000000"
+      account_number: "00110022"
+      account_holder_name: Joe Bloggs
+      account_type: PERSONAL
+      test_outcome: MATCHED
     expected_fields:
       - field: match_status
+        operator: equals
+        reliability: guaranteed
+        value: match
+      - field: cop_code
+        operator: equals
+        reliability: guaranteed
+        value: MATCHED
+      - field: cop_description
+        operator: not_null
+        reliability: guaranteed
+      - field: cop_advice
+        operator: not_null
+        reliability: guaranteed
+      - field: account_holder_name_provided
+        operator: not_null
+        reliability: guaranteed
+      - field: modulus_check_valid
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: bank_name
         operator: not_null
         reliability: guaranteed
       - field: sort_code
         operator: equals
         reliability: guaranteed
-        value: "400515"
+        value: "000000"
       - field: account_number_last4
         operator: equals
         reliability: guaranteed
-        value: "5678"
+        value: "0022"
       - field: account_type
         operator: equals
         reliability: guaranteed
-        value: business
+        value: PERSONAL
+      - field: test_outcome_used
+        operator: equals
+        reliability: guaranteed
+        value: MATCHED
+      - field: checked_at
+        operator: not_null
+        reliability: guaranteed
       - field: data_source
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    sort_code: "400515"
-    account_number: "12345678"
-    account_holder_name: "Strale Test"
-    account_type: "business"
+    sort_code: "000000"
+    account_number: "00110022"
+    account_holder_name: Joe Bloggs
+    account_type: PERSONAL
+    test_outcome: MATCHED
 output_field_reliability:
   match_status: guaranteed
+  cop_code: guaranteed
   account_holder_name_provided: guaranteed
   sort_code: guaranteed
   account_number_last4: guaranteed
   account_type: guaranteed
   checked_at: guaranteed
   data_source: guaranteed
+  cop_description: common
+  cop_advice: common
+  modulus_check_valid: common
   bank_name: common
-  bic: common
-  close_match_name: rare
-  reason_code: rare
-  reason: rare
-  reference_id: common
+  returned_name: rare
+  bic: rare
+  secondary_account_id: rare
+  test_outcome_used: rare
 limitations:
   - title: UK only
     text: >-
-      Pay.UK Confirmation of Payee covers UK domestic accounts only (sort code + account number pairs).
-      For EU SEPA IBAN-based name matching, see the SEPA VoP capability (separate vendor).
+      Pay.UK Confirmation of Payee covers UK domestic accounts only (sort code + 8-digit account number pairs). For EU
+      SEPA IBAN-based name matching, see the SEPA VoP capability (Digiteal).
     category: coverage
     severity: info
   - title: CoP is a scheme attestation, not an identity proof
     text: >-
-      A "match" indicates the responding PSP returned that the name on file matches the provided name
-      under their fuzzy-matching rules. It does NOT prove the named person controls the account or
-      that the account is the right account for a payment. Use alongside other risk signals.
+      A "match" indicates the responding PSP returned that the name on file matches the provided name under their
+      fuzzy-matching rules. It does NOT prove the named person controls the account or that the account is the right
+      account for a payment. Use alongside other risk signals.
     category: accuracy
     severity: warning
-  - title: No-account / cannot-be-checked are common edge cases
+  - title: BIC is not returned by the eSortcode CoP API
     text: >-
-      A small fraction of UK PSPs do not respond to CoP queries (cannot_be_checked) and some accounts
-      are flagged as no_account when they are dormant or recently closed. These are scheme-level
-      limitations, not vendor bugs. Surface them in customer-visible audit output.
+      The eSortcode CoP response includes bank name and branch details but not the BIC/SWIFT code. The bic field is
+      always null. To obtain BIC for a UK account, supplement with bank-bic-lookup.
+    category: coverage
+    severity: info
+  - title: ACCOUNT_NOT_SUPPORTED / NO_RESPONSE / NOT_ENROLLED edge cases
+    text: >-
+      A small fraction of UK PSPs do not respond to CoP queries — these surface as match_status = cannot_be_checked with
+      cop_code naming the specific reason. Verify account details carefully via Open Banking AIS before proceeding when
+      match_status is cannot_be_checked.
     category: coverage
     severity: info

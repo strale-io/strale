@@ -21,6 +21,7 @@ import {
   settleX402Payment,
   extractPaymentHeader,
   extractPayerAddress,
+  eurCentsToUsd,
   eurCentsToUsdcAtomic,
   eurCentsToUsdString,
   encodePaymentResponseHeader,
@@ -91,13 +92,19 @@ async function ensureCache(): Promise<void> {
     const db = getDb();
 
     // Capabilities
+    //
+    // x402PriceUsd is derived at load time from priceCents × EUR_USD_RATE
+    // (see eurCentsToUsd in lib/x402-gateway.ts). The capabilities.x402_price_usd
+    // DB column is a stored cache only — runtime never trusts it. Per
+    // DEC-20260502-A: x402 uses the same catalog price as the wallet path;
+    // there is no separate USD tier. Free-tier capabilities are signalled by
+    // priceCents === 0 and bypass payment regardless of the column.
     const capRows = await db
       .select({
         id: capabilities.id,
         slug: capabilities.slug,
         name: capabilities.name,
         description: capabilities.description,
-        x402PriceUsd: capabilities.x402PriceUsd,
         x402Method: capabilities.x402Method,
         inputSchema: capabilities.inputSchema,
         outputSchema: capabilities.outputSchema,
@@ -126,7 +133,7 @@ async function ensureCache(): Promise<void> {
         slug: row.slug,
         name: row.name,
         description: row.description ?? "",
-        x402PriceUsd: parseFloat(row.x402PriceUsd ?? "0"),
+        x402PriceUsd: eurCentsToUsd(row.priceCents),
         x402Method: row.x402Method ?? "POST",
         inputSchema: row.inputSchema as Record<string, unknown> | null,
         outputSchema: row.outputSchema as Record<string, unknown> | null,
@@ -141,14 +148,13 @@ async function ensureCache(): Promise<void> {
       });
     }
 
-    // Solutions
+    // Solutions — same derivation rule as capabilities.
     const solRows = await db
       .select({
         id: solutions.id,
         slug: solutions.slug,
         name: solutions.name,
         description: solutions.description,
-        x402PriceUsd: solutions.x402PriceUsd,
         priceCents: solutions.priceCents,
         inputSchema: solutions.inputSchema,
       })
@@ -162,7 +168,7 @@ async function ensureCache(): Promise<void> {
         slug: row.slug,
         name: row.name,
         description: row.description ?? "",
-        x402PriceUsd: parseFloat(row.x402PriceUsd ?? "0"),
+        x402PriceUsd: eurCentsToUsd(row.priceCents),
         priceCents: row.priceCents,
         inputSchema: row.inputSchema as Record<string, unknown> | null,
         outputSchema: null, // solutions table has no output_schema column
@@ -1247,8 +1253,9 @@ export async function getX402Manifest(): Promise<{
   // and the manifest pairs `price` with `currency` so any consumer has
   // an unambiguous parse. Don't "fix" this to *_cents: it would break
   // x402 protocol compliance for every facilitator + scanner that reads
-  // /.well-known/x402.json. The integer is also still available
-  // server-side (cap.x402PriceUsd as a decimal) for any internal use.
+  // /.well-known/x402.json. The canonical numeric value is always
+  // available server-side as `priceCents` (EUR) and the live USD figure
+  // is `eurCentsToUsd(priceCents)` per DEC-20260502-A.
   const endpoints = [
     ...[..._capCache.values()].map((cap) => ({
       path: `/x402/${cap.slug}`,

@@ -68,19 +68,28 @@ function getFacilitator(): HTTPFacilitatorClient {
 }
 
 // ─── Price conversion ───────────────────────────────────────────────────────
+//
+// Single source of truth for x402 pricing: capabilities.price_cents (EUR) ×
+// EUR_USD_RATE → USDC. Per DEC-20260308-1, EUR is the canonical platform
+// currency; per DEC-20260502-A, x402 uses the same catalog price as the
+// wallet path, converted at this single rate. See those decisions before
+// reintroducing any per-channel discount.
+
+/** Numeric USD value for a EUR-cent capability price. */
+export function eurCentsToUsd(eurCents: number): number {
+  return (eurCents / 100) * EUR_USD_RATE;
+}
 
 /**
  * Convert EUR cents to USDC atomic units (6 decimals).
  * USDC is pegged to USD, so we convert EUR → USD → atomic.
  */
 export function eurCentsToUsdcAtomic(eurCents: number): string {
-  const usd = (eurCents / 100) * EUR_USD_RATE;
-  return Math.ceil(usd * 1_000_000).toString();
+  return Math.ceil(eurCentsToUsd(eurCents) * 1_000_000).toString();
 }
 
 export function eurCentsToUsdString(eurCents: number): string {
-  const usd = (eurCents / 100) * EUR_USD_RATE;
-  return `$${usd.toFixed(4)}`;
+  return `$${eurCentsToUsd(eurCents).toFixed(4)}`;
 }
 
 // ─── 402 Response builder ───────────────────────────────────────────────────
