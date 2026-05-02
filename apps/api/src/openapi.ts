@@ -305,6 +305,74 @@ export const openApiSpec = {
       },
     },
 
+    // ─── Web3 Assurance ────────────────────────────────────────────────
+    "/v1/web3-assurance": {
+      post: {
+        tags: ["web3-assurance"],
+        summary: "Decision-ready answer about an on-chain counterparty",
+        description:
+          "Sister product to Payee Assurance for on-chain targets (wallet, contract, token, DeFi protocol, bridge). Returns a verdict (proceed/review/block/insufficient_evidence), reason_codes (UPPERCASE_SNAKE_CASE), critical_flags, suggested_action, evidence map, and a sidecar audit_url. " +
+          "Two modes: `outbound` (agent vetting recipient pre-payment, full evaluator set, 8s budget — default) and `reverse-call` (x402 service publisher gating an inbound buyer in real-time, critical evaluators only, sub-second SLA).",
+        security: [{ BearerAuth: [] }, {}],
+        "x-ratelimit": { limit: 10, window: "1s", scope: "per API key" },
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object" as const,
+                required: ["target"],
+                properties: {
+                  target: { type: "string" as const, description: "Wallet address (0x... or Solana), contract, token, protocol slug, or domain.", example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" },
+                  target_type: { type: "string" as const, enum: ["wallet", "contract", "token", "protocol", "bridge", "domain"] },
+                  chain: { type: "string" as const, example: "ethereum" },
+                  action: { type: "string" as const, enum: ["send_payment", "swap", "stake", "mint", "interact", "bridge"] },
+                  amount_usd: { type: "number" as const },
+                  mode: { type: "string" as const, enum: ["outbound", "reverse-call"], default: "outbound" },
+                  agent_id: { type: "string" as const, description: "Optional ERC-8004 agent identifier." },
+                  caller_jurisdiction: { type: "string" as const, description: "Optional ISO country code for jurisdiction-aware verdict (US, EU, UK, etc.)." },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Decision-ready answer.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object" as const,
+                  properties: {
+                    target: { type: "string" as const },
+                    target_type: { type: "string" as const },
+                    chain: { type: "string" as const },
+                    mode: { type: "string" as const, enum: ["outbound", "reverse-call"] },
+                    verdict: { type: "string" as const, enum: ["proceed", "review", "block", "insufficient_evidence"] },
+                    reason_codes: { type: "array" as const, items: { type: "string" as const, example: "MIXER_DELISTED_ELEVATED" } },
+                    confidence: { type: "number" as const, minimum: 0, maximum: 1 },
+                    evidence_completeness: { type: "string" as const, enum: ["complete", "partial", "minimal"] },
+                    evidence_status: { type: "string" as const, enum: ["corroborated", "partial", "contradictory", "single_source", "minimal"] },
+                    critical_flags: { type: "array" as const, items: { type: "string" as const } },
+                    suggested_action: { type: "string" as const },
+                    expires_at: { type: "string" as const, format: "date-time" },
+                    evidence: { type: "object" as const, additionalProperties: true },
+                    source_quality: { type: "array" as const, items: { type: "object" as const, properties: { source: { type: "string" as const }, ms: { type: "integer" as const }, ok: { type: "boolean" as const } } } },
+                    audit_url: { type: "string" as const, format: "uri" },
+                    sla: { type: "object" as const, properties: { mode: { type: "string" as const }, p99_ms: { type: "integer" as const }, p50_ms: { type: "integer" as const } } },
+                    meta: { type: "object" as const, properties: { api_version: { type: "string" as const }, fetched_at: { type: "string" as const, format: "date-time" }, response_ms: { type: "integer" as const } } },
+                  },
+                },
+              },
+            },
+          },
+          "400": errorResponse("invalid_request", "Missing or invalid target / mode."),
+          "401": errorResponse("unauthorized", "Authentication required."),
+          "429": errorResponse("rate_limited", "Rate limit exceeded."),
+        },
+      },
+    },
+
     // ─── Auth ──────────────────────────────────────────────────────────
     "/v1/auth/register": {
       post: {

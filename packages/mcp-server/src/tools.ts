@@ -478,7 +478,7 @@ export function registerStraleTools(
               status: "ok",
               server: "strale-mcp",
               version: opts.version ?? "unknown",
-              tools_registered: 8, // UPDATE if tools are added/removed
+              tools_registered: 9, // UPDATE if tools are added/removed
               capabilities_available: capabilities.length,
               solutions_available: solutions.length,
               timestamp: new Date().toISOString(),
@@ -1114,6 +1114,94 @@ ACCESSING TRUST DATA
             {
               type: "text" as const,
               text: `Failed to fetch transaction: ${err instanceof Error ? err.message : err}`,
+            },
+          ],
+        };
+      }
+    },
+  );
+
+  // Web3 Assurance — on-chain counterparty assurance (sister product to Payee Assurance)
+  server.registerTool(
+    "strale_web3_assurance",
+    {
+      description:
+        "Returns a decision-ready answer about an on-chain counterparty (wallet, smart contract, token, DeFi protocol, or bridge) in a single call. Surfaces verdict (proceed/review/block/insufficient_evidence), reason_codes (machine-parsable UPPERCASE_SNAKE_CASE), critical_flags, suggested_action, evidence map (sanctions, mixer-graded, scam-cluster, wallet-history, token-safety, contract-verification, protocol-risk, EAS attestations, ERC-8004 reputation, more), and a sidecar audit_url. Two modes: 'outbound' (agent vetting recipient pre-payment, full evaluator set, 8s budget) or 'reverse-call' (service publisher gating an inbound x402 buyer in real-time, critical evaluators only, sub-second SLA). Use before any agent transacts on-chain — sending value, swapping, staking, minting, bridging, or interacting with a contract.",
+      inputSchema: z.object({
+        target: z
+          .string()
+          .describe(
+            "On-chain target. EVM wallet/contract/token (0x...), Solana address, or DeFi protocol slug (e.g. 'aave', 'uniswap-v3').",
+          ),
+        target_type: z
+          .enum(["wallet", "contract", "token", "protocol", "bridge", "domain"])
+          .optional()
+          .describe(
+            "Target kind. Inferred when omitted: 0x... → wallet (default), .eth/.sol → wallet, slug → protocol.",
+          ),
+        chain: z
+          .string()
+          .optional()
+          .describe(
+            "Chain. EVM: 'ethereum' (default), 'base', 'polygon', 'arbitrum', 'optimism', 'bsc'. Or 'solana'.",
+          ),
+        action: z
+          .enum(["send_payment", "swap", "stake", "mint", "interact", "bridge"])
+          .optional()
+          .describe(
+            "Optional intended action. When provided, enables pre-trade simulation (outbound mode) and tunes verdict severity.",
+          ),
+        amount_usd: z
+          .number()
+          .optional()
+          .describe("Optional amount in USD. Sharpens verdict for high-value flows."),
+        mode: z
+          .enum(["outbound", "reverse-call"])
+          .optional()
+          .describe(
+            "Default 'outbound' (agent → recipient, 8s budget, all evidence). Use 'reverse-call' when you are an x402 service publisher gating an inbound buyer (critical evidence only, sub-second SLA).",
+          ),
+        agent_id: z
+          .string()
+          .optional()
+          .describe("Optional ERC-8004 agent identifier for the calling agent."),
+        caller_jurisdiction: z
+          .string()
+          .optional()
+          .describe("Optional ISO country code for jurisdiction-aware verdict (US, EU, UK, etc.)."),
+      }),
+    },
+    async (input) => {
+      try {
+        const { data, status } = await stralePost<Record<string, unknown>>(
+          "/v1/web3-assurance",
+          input as Record<string, unknown>,
+          { baseUrl: opts.baseUrl, apiKey: opts.apiKey },
+        );
+        if (status >= 400) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `Web3 Assurance ${status}: ${JSON.stringify(data).slice(0, 500)}`,
+              },
+            ],
+          };
+        }
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
+        };
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Failed to call Web3 Assurance: ${err instanceof Error ? err.message : err}`,
             },
           ],
         };

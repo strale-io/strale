@@ -65,6 +65,21 @@ Pre-built solutions (single-call multi-step workflows):
 - web3-vasp-check: EU MiCA VASP verification + sanctions ($0.08)
 - web3-wallet-identity: ENS reverse + risk + age + balance ($0.08)
 
+## Web3 Assurance (decision-ready on-chain counterparty answer)
+
+For agents that transact on-chain (send value, swap, stake, mint, bridge, or call a contract), Strale ships Web3 Assurance — a single call that returns a verdict (proceed / review / block / insufficient_evidence) plus machine-parsable reason_codes, critical_flags, suggested_action, evidence map, and a sidecar audit_url. Sister product to Payee Assurance (off-chain KYB).
+
+Two modes:
+- outbound: agent vetting recipient pre-payment. Full evaluator set, 8s budget. Default.
+- reverse-call: x402 service publisher gating an inbound buyer in real-time. Critical evaluators only, sub-second SLA.
+
+20 evaluators behind one call: sanctions (multi-jurisdiction), mixer-graded scoring (Tornado-Cash-graded per OFAC March 2025 precedent — graded, not binary), scam-cluster cross-reference (ScamSniffer), wallet-history risk (GoPlus address security), token safety (GoPlus token security), contract verification (Etherscan + Sourcify), approval inventory (drainer cross-reference), protocol risk (DefiLlama TVL + hacks DB + governance), bridge legitimacy (DefiLlama + L2Beat), audit-firm cross-reference (Certik/OZ/Trail of Bits/Cyfrin/Sherlock/Code4rena), pre-trade simulation (Tenderly), EAS attestations, ERC-8004 reputation, sister-rug detector, REKT Database, Web3 Antivirus.
+
+Endpoint: POST https://api.strale.io/v1/web3-assurance
+MCP tool: strale_web3_assurance
+Drop-in middleware: Hono, Express, FastAPI, LangGraph, Coinbase AgentKit
+Pricing: $0.03 USDC/call standard via x402 + Stripe annual commits
+
 ## Quick Start
 
 ### MCP (recommended for Claude, Cursor, Windsurf)

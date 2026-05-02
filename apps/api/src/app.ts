@@ -20,6 +20,13 @@ import { agentCardRoute, a2aRoute } from "./routes/a2a.js";
 import { adminRoute } from "./routes/admin.js";
 import { solutionsRoute } from "./routes/solutions.js";
 import { solutionExecuteRoute } from "./routes/solution-execute.js";
+import { web3AssuranceRoute } from "./web3-assurance/routes.js";
+import {
+  methodologyRoute as web3AssuranceMethodologyRoute,
+  sourceQualityRoute as web3AssuranceSourceQualityRoute,
+  bridgeConfigIndexRoute as web3AssuranceBridgeConfigIndexRoute,
+} from "./web3-assurance/methodology.js";
+import { trustIndexRoute as web3AssuranceTrustIndexRoute } from "./web3-assurance/trust-index.js";
 import { qualityRoute } from "./routes/quality.js";
 import { suggestRoute } from "./routes/suggest.js";
 import { internalQualityRoute } from "./routes/internal-quality.js";
@@ -276,6 +283,11 @@ app.route("/v1/demand-signals", demandSignalsRoute);
 app.route("/v1/admin", adminRoute);
 app.route("/v1/solutions", solutionsRoute);
 app.route("/v1/solutions", solutionExecuteRoute);
+app.route("/v1/web3-assurance", web3AssuranceRoute);
+app.route("/v1/web3-assurance/methodology", web3AssuranceMethodologyRoute);
+app.route("/v1/web3-assurance/source-quality", web3AssuranceSourceQualityRoute);
+app.route("/v1/web3-assurance/bridge-config-index", web3AssuranceBridgeConfigIndexRoute);
+app.route("/v1/web3-assurance/trust-index", web3AssuranceTrustIndexRoute);
 app.route("/v1/quality", qualityRoute);
 app.route("/v1", suggestRoute);
 // Single source of truth for facts that appear on multiple surfaces.

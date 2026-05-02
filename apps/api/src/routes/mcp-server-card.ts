@@ -46,6 +46,22 @@ async function buildCard(): Promise<object> {
         "Strale API key (sk_live_...). The strale_search tool works without authentication. All other tools require an API key from https://strale.dev",
     },
     tools: "dynamic",
+    products: [
+      {
+        name: "Payee Assurance",
+        description:
+          "Decision-ready off-chain counterparty answer (KYB / sanctions / UBO / IBAN-name match) in a single auditable call.",
+        endpoint: "https://api.strale.io/v1/do",
+        mcp_tool: "strale_execute",
+      },
+      {
+        name: "Web3 Assurance",
+        description:
+          "Decision-ready on-chain counterparty answer (wallet / contract / token / protocol / bridge). Verdict + reason_codes + sidecar audit_url. Outbound + reverse-call modes; sub-second SLA in reverse-call.",
+        endpoint: "https://api.strale.io/v1/web3-assurance",
+        mcp_tool: "strale_web3_assurance",
+      },
+    ],
     resources: [],
     prompts: [],
     links: {
