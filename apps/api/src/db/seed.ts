@@ -21,16 +21,10 @@ function estimateDefaultLatency(cap: { category: string; description?: string })
   return 500;
 }
 
-/** Convert EUR cents price to x402-friendly USD price tier. */
-function eurToX402Price(priceCents: number): number {
-  if (priceCents <= 5) return 0.005;
-  if (priceCents <= 10) return 0.01;
-  if (priceCents <= 20) return 0.02;
-  if (priceCents <= 30) return 0.03;
-  if (priceCents <= 50) return 0.05;
-  if (priceCents <= 100) return 0.08;
-  return 0.10;
-}
+// Per DEC-20260502-A, x402 prices are derived at runtime from price_cents
+// × EUR_USD_RATE in lib/x402-gateway.ts — there is no separate USD column
+// to seed and no per-channel tier. Seed-time price logic is exclusively
+// `priceCents` (EUR).
 
 const seedCapabilities = [
   {
@@ -2927,7 +2921,6 @@ async function seedCapabilityWithDiscovery(
         visible: true,
         avgLatencyMs: estimateDefaultLatency(cap),
         x402Enabled: true,
-        x402PriceUsd: eurToX402Price(cap.priceCents).toFixed(4),
         x402Method: "GET",
       } as never,
     },

@@ -174,9 +174,10 @@ export const capabilities = pgTable("capabilities", {
     .default("scraping-fragile-target"),
   // 'free-stable-api' | 'commercial-stable-api' | 'pure-computation' |
   // 'scraping-stable-target' | 'scraping-fragile-target' | 'requires-domain-expertise'
-  // x402 payment gateway (DB-driven, no-deploy exposure)
+  // x402 payment gateway (DB-driven, no-deploy exposure).
+  // Per DEC-20260502-A, USDC price is derived at runtime from price_cents
+  // × EUR_USD_RATE — there is no separate stored USD column.
   x402Enabled: boolean("x402_enabled").notNull().default(false),
-  x402PriceUsd: decimal("x402_price_usd", { precision: 10, scale: 4 }),
   x402Method: varchar("x402_method", { length: 4 }).notNull().default("POST"),
   // Bucket C — GDPR Art. 22 classification per capability (migration 0058).
   // Surfaced in audit body so the customer (controller) sees the
@@ -444,9 +445,10 @@ export const solutions = pgTable("solutions", {
   isActive: boolean("is_active").notNull().default(true),
   displayOrder: integer("display_order").notNull().default(0),
   searchTags: text("search_tags").array().default([]),
-  // x402 payment gateway (DB-driven, no-deploy exposure)
+  // x402 payment gateway (DB-driven, no-deploy exposure).
+  // Per DEC-20260502-A, USDC price is derived at runtime from price_cents
+  // × EUR_USD_RATE — there is no separate stored USD column.
   x402Enabled: boolean("x402_enabled").notNull().default(false),
-  x402PriceUsd: decimal("x402_price_usd", { precision: 10, scale: 4 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

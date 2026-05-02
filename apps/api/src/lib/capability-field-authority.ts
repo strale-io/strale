@@ -220,10 +220,6 @@ export const FIELD_CATEGORIES: Record<string, FieldAuthorityEntry> = {
     category: "db",
     reason: "Operator-toggled x402 payment-gateway exposure (DB-driven, no-deploy).",
   },
-  x402_price_usd: {
-    category: "db",
-    reason: "Derived from price_cents at seed time; operator can tune.",
-  },
   x402_method: {
     category: "db",
     reason: "Operator-configured x402 HTTP method.",
