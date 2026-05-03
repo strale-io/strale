@@ -121,6 +121,10 @@ async function ensureCache(): Promise<void> {
       .where(and(
         eq(capabilities.x402Enabled, true),
         eq(capabilities.isActive, true),
+        // strale.dev surfacing per DEC-20260503-A — the x402 manifest
+        // mirrors the marketplace, so non-eligible capabilities are
+        // hidden from the facilitator/discovery layer too.
+        eq(capabilities.marketplaceEligible, true),
         // Only serve active or probation capabilities via x402
         // Block degraded/suspended to prevent serving known-broken capabilities
         inArray(capabilities.lifecycleState, ["active", "probation"]),

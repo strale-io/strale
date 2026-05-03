@@ -260,4 +260,42 @@ describe("Phase 4a authority enforcement in partial mode", () => {
       bypassAuthority: true,
     })).toThrow(/Authority violation/);
   });
+
+  // ── marketplace_eligible (DEC-20260503-A) ────────────────────────────────
+
+  it("marketplace_eligible: maps snake_case manifest field to camelCase row", () => {
+    const m = fullManifest({
+      marketplace_eligible: false,
+      marketplace_eligible_reason: "Wraps paid 3rd-party vendor X",
+    });
+    const row = normalizeManifestToRow(m);
+    expect(row.marketplaceEligible).toBe(false);
+    expect(row.marketplaceEligibleReason).toBe("Wraps paid 3rd-party vendor X");
+  });
+
+  it("marketplace_eligible: omitted manifest field → undefined in row → DB default true applies", () => {
+    // The field is OPTIONAL in the Manifest type. When omitted, the
+    // normalizer leaves it undefined and the DB column default (true)
+    // takes effect at INSERT time.
+    const row = normalizeManifestToRow(fullManifest());
+    expect(row.marketplaceEligible).toBeUndefined();
+    expect(row.marketplaceEligibleReason).toBeUndefined();
+  });
+
+  it("partial mode: hybrid marketplace_eligible with DB set → stripped (operator override preserved)", () => {
+    // The hybrid authority pattern: operator may have flipped the flag
+    // after onboarding (vendor ToS change, etc.). Backfill must not
+    // clobber that override.
+    const m = fullManifest({ marketplace_eligible: true });
+    const existingRow = { slug: "test-cap", marketplaceEligible: false };
+    const row = normalizeManifestToRow(m, { partial: true, existingRow });
+    expect(Object.prototype.hasOwnProperty.call(row, "marketplaceEligible")).toBe(false);
+  });
+
+  it("partial mode: hybrid marketplace_eligible with DB null → kept (manifest fills the gap)", () => {
+    const m = fullManifest({ marketplace_eligible: false });
+    const existingRow = { slug: "test-cap", marketplaceEligible: null };
+    const row = normalizeManifestToRow(m, { partial: true, existingRow });
+    expect(row.marketplaceEligible).toBe(false);
+  });
 });

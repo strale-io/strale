@@ -256,6 +256,9 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           and(
             eq(capabilities.isActive, true),
             eq(capabilities.visible, true),
+            // strale.dev surfacing per DEC-20260503-A — semantic suggest
+            // mirrors the public marketplace.
+            eq(capabilities.marketplaceEligible, true),
             inArray(capabilities.lifecycleState, ["active", "degraded"]),
           ),
         );

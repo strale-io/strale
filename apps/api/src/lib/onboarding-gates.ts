@@ -288,6 +288,10 @@ export function validateCapabilityStructure(cap: {
   personalDataCategories?: string[] | null;
   // Bucket C — optional; default 'data_lookup' applied at the DB layer.
   gdprArt22Classification?: string | null;
+  // Per DEC-20260503-A — marketplace surfacing flag. NOT NULL with DB
+  // default true; reason required only when explicitly set false.
+  marketplaceEligible?: boolean | null;
+  marketplaceEligibleReason?: string | null;
 }): GateViolation[] {
   const violations: GateViolation[] = [];
 
@@ -394,6 +398,22 @@ export function validateCapabilityStructure(cap: {
       severity: "error",
       detail: `${cap.slug}: gdpr_art_22_classification '${cap.gdprArt22Classification}' is not valid. Options: ${VALID_GDPR_ART_22_CLASSIFICATIONS.join(", ")} (or omit for the 'data_lookup' default).`,
     });
+  }
+
+  // Check 16 (DEC-20260503-A): marketplace_eligible cross-field rule.
+  // Mirrors the validateManifest gate for DB-row re-validation: when a
+  // capability is explicitly hidden from the strale.dev marketplace, an
+  // operator-readable rationale is required. See CLASSIFICATION.md for
+  // the cost-shape, maintenance-burden, and ToS-posture criteria.
+  if (cap.marketplaceEligible === false) {
+    const reason = cap.marketplaceEligibleReason;
+    if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
+      violations.push({
+        gate: "gate1_structure",
+        severity: "error",
+        detail: `${cap.slug}: marketplace_eligible_reason is required and must be non-empty when marketplace_eligible is false. See manifests/CLASSIFICATION.md.`,
+      });
+    }
   }
 
   return violations;
@@ -518,6 +538,23 @@ export function validateManifest(m: Manifest, discover: boolean): string[] {
     }
     if (m.processes_personal_data === false && m.personal_data_categories.length > 0) {
       errors.push("personal_data_categories is populated but processes_personal_data is false. Either set processes_personal_data: true, or clear the categories.");
+    }
+  }
+
+  // Per DEC-20260503-A — marketplace_eligible cross-field rule.
+  // Field is optional; omitted/undefined → DB default true applies.
+  // When the manifest explicitly sets false, a non-empty rationale is
+  // required so future operators can audit why the capability is hidden
+  // from strale.dev. See CLASSIFICATION.md (capability onboarding dir)
+  // for the cost-shape, maintenance-burden, and ToS-posture criteria.
+  if (m.marketplace_eligible === false) {
+    const reason = m.marketplace_eligible_reason;
+    if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
+      errors.push(
+        "marketplace_eligible_reason is required and must be non-empty when marketplace_eligible is false. " +
+          "See manifests/CLASSIFICATION.md for the cost-shape, " +
+          "maintenance-burden, and ToS-posture criteria.",
+      );
     }
   }
 

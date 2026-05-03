@@ -58,4 +58,15 @@ export interface Manifest {
   // Required for all new capabilities onboarded post-SA.2b.b.
   processes_personal_data?: boolean;
   personal_data_categories?: string[];
+  // Per DEC-20260503-A — strale.dev marketplace surfacing decision.
+  // Defaults to true in the DB if omitted from the manifest. Set false
+  // for thin passthroughs of paid 3rd-party vendors with significant
+  // fixed cost or ToS-prohibited resale terms; PAYG with low fixed cost
+  // is fine and stays true. When set false, marketplace_eligible_reason
+  // is REQUIRED (non-empty) — enforced by validateManifest and
+  // validateCapabilityStructure. See manifests/CLASSIFICATION.md for the
+  // full cost-shape, maintenance-burden, and ToS-posture criteria plus
+  // the decision tree and reason-string content guide.
+  marketplace_eligible?: boolean;
+  marketplace_eligible_reason?: string | null;
 }

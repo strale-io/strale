@@ -160,6 +160,61 @@ describe("validateCapability orchestrator (Cluster 2 Phase 2)", () => {
     const result = await validateCapability(manifest, existing, baseCtx({ mode: "backfill" }));
     expect(result.warnings.some((w) => w.gate === "authority" && w.detail.includes("transparency_tag"))).toBe(true);
   });
+
+  // ── DEC-20260503-A: marketplace_eligible cross-field rule ────────────────
+
+  it("accepts manifest with marketplace_eligible omitted (defaults to true)", async () => {
+    const m = validManifest();
+    delete (m as { marketplace_eligible?: boolean }).marketplace_eligible;
+    delete (m as { marketplace_eligible_reason?: string | null }).marketplace_eligible_reason;
+    const result = await validateCapability(m, null, baseCtx());
+    expect(result.violations).toEqual([]);
+  });
+
+  it("accepts manifest with marketplace_eligible: true and no reason", async () => {
+    const m = validManifest({ marketplace_eligible: true });
+    const result = await validateCapability(m, null, baseCtx());
+    expect(result.violations).toEqual([]);
+  });
+
+  it("accepts manifest with marketplace_eligible: false and a non-empty reason", async () => {
+    const m = validManifest({
+      marketplace_eligible: false,
+      marketplace_eligible_reason: "Vendor X Basic tier $300/mo minimum; thin passthrough margin negative.",
+    });
+    const result = await validateCapability(m, null, baseCtx());
+    expect(result.violations).toEqual([]);
+  });
+
+  it("rejects manifest with marketplace_eligible: false and missing reason", async () => {
+    const m = validManifest({ marketplace_eligible: false });
+    const result = await validateCapability(m, null, baseCtx());
+    expect(result.violations.some((v) =>
+      v.gate === "gate1_manifest" && v.detail.includes("marketplace_eligible_reason")
+    )).toBe(true);
+  });
+
+  it("rejects manifest with marketplace_eligible: false and empty-string reason", async () => {
+    const m = validManifest({
+      marketplace_eligible: false,
+      marketplace_eligible_reason: "   ",
+    });
+    const result = await validateCapability(m, null, baseCtx());
+    expect(result.violations.some((v) =>
+      v.gate === "gate1_manifest" && v.detail.includes("marketplace_eligible_reason")
+    )).toBe(true);
+  });
+
+  it("rejects manifest with marketplace_eligible: false and null reason", async () => {
+    const m = validManifest({
+      marketplace_eligible: false,
+      marketplace_eligible_reason: null,
+    });
+    const result = await validateCapability(m, null, baseCtx());
+    expect(result.violations.some((v) =>
+      v.gate === "gate1_manifest" && v.detail.includes("marketplace_eligible_reason")
+    )).toBe(true);
+  });
 });
 
 // ── GateViolationError ──────────────────────────────────────────────────────

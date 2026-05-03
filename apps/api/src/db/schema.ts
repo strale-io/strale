@@ -179,6 +179,19 @@ export const capabilities = pgTable("capabilities", {
   // × EUR_USD_RATE — there is no separate stored USD column.
   x402Enabled: boolean("x402_enabled").notNull().default(false),
   x402Method: varchar("x402_method", { length: 4 }).notNull().default("POST"),
+  // Per DEC-20260503-A — controls whether the capability appears on
+  // strale.dev's public surfaces (listing, MCP card, A2A card, llms.txt,
+  // x402 manifest, /v1/suggest). Internal callers (do.ts, products,
+  // routing, lifecycle) IGNORE this flag and see all capabilities.
+  // Default true: classified at onboarding time. Set false for thin
+  // passthroughs of paid 3rd-party vendors where strale.dev surfacing
+  // would constitute reseller-style competitor enablement, or for
+  // capabilities whose ToS forbids resale, or for fixed-cost vendors
+  // where a self-serve marketplace would burn the budget.
+  marketplaceEligible: boolean("marketplace_eligible")
+    .notNull()
+    .default(true),
+  marketplaceEligibleReason: text("marketplace_eligible_reason"),
   // Bucket C — GDPR Art. 22 classification per capability (migration 0058).
   // Surfaced in audit body so the customer (controller) sees the
   // automated-decision posture and the data subject can find the

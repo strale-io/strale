@@ -44,6 +44,9 @@ capabilitiesRoute.get("/", async (c) => {
       and(
         eq(capabilities.isActive, true),
         eq(capabilities.visible, true),
+        // strale.dev surfacing per DEC-20260503-A — internal callers
+        // (do.ts, products, routing, lifecycle) bypass this filter.
+        eq(capabilities.marketplaceEligible, true),
         inArray(capabilities.lifecycleState, ["active", "degraded"]),
       ),
     );
@@ -122,6 +125,8 @@ capabilitiesRoute.get("/:slug", async (c) => {
       and(
         eq(capabilities.slug, slug),
         eq(capabilities.isActive, true),
+        // strale.dev surfacing per DEC-20260503-A.
+        eq(capabilities.marketplaceEligible, true),
         inArray(capabilities.lifecycleState, ["active", "degraded"]),
       ),
     )

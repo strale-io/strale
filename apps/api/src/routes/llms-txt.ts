@@ -7,7 +7,7 @@
  */
 
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
 import { computePlatformFacts } from "../lib/platform-facts.js";
@@ -170,7 +170,13 @@ async function buildFullText(): Promise<string> {
   const rows = await db
     .select({ slug: capabilities.slug, category: capabilities.category })
     .from(capabilities)
-    .where(eq(capabilities.isActive, true));
+    .where(
+      and(
+        eq(capabilities.isActive, true),
+        // strale.dev surfacing per DEC-20260503-A.
+        eq(capabilities.marketplaceEligible, true),
+      ),
+    );
 
   // Group by category
   const grouped = new Map<string, string[]>();

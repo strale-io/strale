@@ -104,7 +104,13 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
       isFreeTier: capabilities.isFreeTier,
     })
     .from(capabilities)
-    .where(eq(capabilities.isActive, true));
+    .where(
+      and(
+        eq(capabilities.isActive, true),
+        // strale.dev surfacing per DEC-20260503-A.
+        eq(capabilities.marketplaceEligible, true),
+      ),
+    );
 
   // Fetch active solutions
   const solRows = await db

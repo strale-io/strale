@@ -6,7 +6,7 @@
  */
 
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
 
@@ -27,7 +27,13 @@ async function buildCard(): Promise<object> {
   const rows = await db
     .select({ slug: capabilities.slug })
     .from(capabilities)
-    .where(eq(capabilities.isActive, true));
+    .where(
+      and(
+        eq(capabilities.isActive, true),
+        // strale.dev surfacing per DEC-20260503-A.
+        eq(capabilities.marketplaceEligible, true),
+      ),
+    );
   const count = rows.length;
 
   const card = {
