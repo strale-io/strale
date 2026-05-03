@@ -6,7 +6,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center font-mono">
       <div className="space-y-4 max-w-xl">
-        <h1 className="text-4xl">Spike — Railway DX verification</h1>
+        <h1 className="text-4xl">Spike v2 — Railway DX verification</h1>
         <p className="text-zinc-400">Build timestamp: {BUILD_TIME}</p>
         <p className="text-zinc-500 text-sm">
           Per DEC-20260503-C and to-do #3 from Session 3B. Throwaway spike.
