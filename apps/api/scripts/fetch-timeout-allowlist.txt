@@ -20,3 +20,9 @@ api/src/capabilities/lib/web-provider.ts
 # embeddings wraps init via withTimeout() which the heuristic can't see;
 # the wrapper enforces 20s on every Voyage call.
 api/src/lib/embeddings.ts
+
+# tenderly-simulation.ts has signal: AbortSignal.timeout(TIMEOUT_MS) inside
+# the fetch options object but on a later line than the fetch() call —
+# the heuristic only inspects the call line itself, missing it. Verified
+# safe: TIMEOUT_MS is enforced.
+api/src/web3-assurance/evaluators/tenderly-simulation.ts
