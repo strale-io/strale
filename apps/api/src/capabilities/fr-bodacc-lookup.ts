@@ -7,7 +7,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
  * registry events: insolvency proceedings, sales, registry modifications,
  * incorporations, strikeoffs, annual-accounts deposits.
  *
- * For Payee Assurance the primary value is the insolvency signal —
+ * For Counterparty Assurance the primary value is the insolvency signal —
  * Procédures collectives (familleavis = "collective"). The executor
  * returns all announcement types for full history but elevates insolvency
  * count + most-recent-insolvency to top-level fields.

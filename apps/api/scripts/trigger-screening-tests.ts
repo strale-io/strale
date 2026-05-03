@@ -1,5 +1,5 @@
 /**
- * Run two test rounds (65s apart) for the three Payee Assurance screening
+ * Run two test rounds (65s apart) for the three Counterparty Assurance screening
  * capabilities so their SQS freshness gate lifts after the audit-grade
  * hardening session on 2026-04-27.
  *

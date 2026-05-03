@@ -12,7 +12,7 @@
  *      mixer-graded classifier, Tenderly simulation, EAS, ERC-8004, sister-rug,
  *      ScamSniffer, Web3 Antivirus, REKT, audit-firm aggregation)
  *
- * Sanctions evaluation is delegated to the Payee Assurance sanctions substrate
+ * Sanctions evaluation is delegated to the Counterparty Assurance sanctions substrate
  * via the existing sanctions-check capability — not duplicated here.
  */
 

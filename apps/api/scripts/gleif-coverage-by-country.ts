@@ -1,5 +1,5 @@
 /**
- * Probe GLEIF for total LEI registrations per Payee Assurance target jurisdiction.
+ * Probe GLEIF for total LEI registrations per Counterparty Assurance target jurisdiction.
  * Free, no auth. Just paginates the lei-records endpoint with filter[entity.legalAddress.country]
  * and reads meta.pagination.total.
  *

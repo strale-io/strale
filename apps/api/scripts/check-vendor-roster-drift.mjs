@@ -100,7 +100,7 @@ DEC-20260430-A read the Vendor Roster verbatim — but the Roster row
 for OpenSanctions still said Status=Self-built (a "planned migration")
 even though DEC-20260429-A had deferred it indefinitely the day before
 on a CC-BY-NonCommercial licensing finding. The stale Roster state
-propagated into the canonicalizing DEC, the Payee Assurance product
+propagated into the canonicalizing DEC, the Counterparty Assurance product
 page, and the session-end summary. Petter caught it; cleanup took
 ~30 minutes.
 

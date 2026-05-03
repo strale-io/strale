@@ -21,7 +21,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
  * Two query modes:
  *   1. Search by case_name / party_name across all dockets.
  *   2. Filter by court_type=bankruptcy to get only bankruptcy filings
- *      (focused query for Payee Assurance risk decisions).
+ *      (focused query for Counterparty Assurance risk decisions).
  */
 
 const CL_API = "https://www.courtlistener.com/api/rest/v3";
