@@ -13,7 +13,6 @@ import { runTests } from "../lib/test-runner.js";
 const fixedSlugs = [
   // Phase 2: bad inputs (now have real company names)
   "austrian-company-data",
-  "hong-kong-company-data",
   "singapore-company-data",
   // Phase 3: bad URLs
   "youtube-summarize",
@@ -36,7 +35,6 @@ const fixedSlugs = [
   "swiss-company-data",
   "japanese-company-data",
   "dutch-company-data",
-  "indian-company-data",
   "australian-company-data",
   "company-tech-stack",
   "pricing-page-extract",

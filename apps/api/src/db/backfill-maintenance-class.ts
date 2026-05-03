@@ -270,8 +270,6 @@ const CLASSIFICATION: Record<string, MaintenanceClass> = {
   "eu-trademark-search": "scraping-stable-target",      // EUIPO
   "gdpr-fine-lookup": "scraping-stable-target",         // enforcementtracker.com (institutional)
   "german-company-data": "scraping-stable-target",      // Handelsregister
-  "hong-kong-company-data": "scraping-stable-target",   // HK Companies Registry
-  "indian-company-data": "scraping-stable-target",      // Indian MCA
   "irish-company-data": "scraping-stable-target",       // CRO Ireland
   "italian-company-data": "scraping-stable-target",     // Italian Chamber of Commerce
   "japanese-company-data": "scraping-stable-target",    // Japanese e-Gov / EDINET
@@ -287,7 +285,6 @@ const CLASSIFICATION: Record<string, MaintenanceClass> = {
   // ── scraping-fragile-target ─────────────────────────────────────────────────
   // Browserless scraping of commercial/third-party sites or user-provided URLs.
   "accessibility-audit": "scraping-fragile-target",     // User-provided URL
-  "amazon-price": "scraping-fragile-target",            // Amazon (anti-bot, frequent changes)
   "annual-report-extract": "scraping-fragile-target",   // User-provided URL/PDF
   "company-enrich": "scraping-fragile-target",          // User-provided company website
   "company-tech-stack": "scraping-fragile-target",      // User-provided URL

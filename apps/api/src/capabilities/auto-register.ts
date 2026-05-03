@@ -454,7 +454,7 @@ export async function autoRegisterCapabilities(): Promise<AutoRegisterCounts> {
   // the runtime DEACTIVATED map and the DB catalog in lockstep on every
   // boot, so adding a cap to the map auto-hides it from /v1/capabilities,
   // /x402/catalog, and the website without manual SQL.
-  if (DEACTIVATED.size > 0) {
+  if (DEACTIVATED.size > 0 && process.env.DATABASE_URL) {
     try {
       const { getDb } = await import("../db/index.js");
       const { inArray, eq, or, and } = await import("drizzle-orm");

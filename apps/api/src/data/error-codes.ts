@@ -77,13 +77,13 @@ const DETERMINISTIC_SLUGS = [
 ];
 
 const SCRAPING_SLUGS = [
-  "accessibility-audit", "amazon-price", "australian-company-data", "austrian-company-data",
+  "accessibility-audit", "australian-company-data", "austrian-company-data",
   "belgian-company-data", "business-license-check-se", "canadian-company-data",
   "company-tech-stack", "competitor-compare", "container-track", "cookie-scan",
   "credit-report-summary", "customs-duty-lookup", "dutch-company-data",
   "employer-review-summary", "eu-court-case-search", "eu-regulation-search",
   "eu-trademark-search", "gdpr-fine-lookup", "german-company-data",
-  "hong-kong-company-data", "html-to-pdf", "indian-company-data", "irish-company-data",
+  "html-to-pdf", "irish-company-data",
   "italian-company-data", "japanese-company-data", "landing-page-roast",
   "latvian-company-data", "lithuanian-company-data", "patent-search",
   "portuguese-company-data", "price-compare", "pricing-page-extract",
