@@ -1,0 +1,75 @@
+slug: email-pattern-discover
+name: Email Pattern Discover
+description: Detect likely corporate email format for a domain. Checks MX records, identifies email provider (Google Workspace, Microsoft 365, etc.), and suggests common patterns.
+category: web-intelligence
+price_cents: 5
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+      description: Domain name (e.g. stripe.com)
+    url:
+      type: string
+      description: Optional URL to extract domain from
+output_schema:
+  type: object
+  properties:
+    domain:
+      type: string
+    accepts_email:
+      type: boolean
+    email_provider:
+      type: string
+    mx_records:
+      type: array
+    patterns:
+      type: array
+    recommendation:
+      type: string
+data_source: DNS protocol + public website HTML
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: false
+personal_data_categories: []
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      domain: stripe.com
+    expected_fields:
+      - field: domain
+        operator: not_null
+        reliability: guaranteed
+      - field: accepts_email
+        operator: not_null
+        reliability: guaranteed
+      - field: mx_records
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    domain: stripe.com
+output_field_reliability:
+  domain: guaranteed
+  accepts_email: guaranteed
+  mx_records: guaranteed
+  patterns: guaranteed
+  recommendation: guaranteed
+  email_provider: common
+  inferred_pattern: rare
+  public_emails_found: rare
+  generic_addresses: common
+limitations:
+  - title: Pattern inference is heuristic, not verified per-address
+    text: Returned patterns are based on email-provider conventions and any public emails found on the domain's homepage. Individual addresses must still be validated with email-validate before sending.
+    category: accuracy
+    severity: info
+    workaround: Combine output with email-validate on candidate addresses
+  - title: Domain-level only — does not enumerate users
+    text: Returns the likely format pattern (e.g. first.last@example.com), not a list of employees. Personnel discovery is not supported.
+    category: coverage
+    severity: info

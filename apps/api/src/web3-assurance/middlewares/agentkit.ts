@@ -89,6 +89,7 @@ export function withStraleWeb3Gate<I, O>(
         method: "POST",
         headers,
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(5_000),
       });
     } catch {
       return action(input);

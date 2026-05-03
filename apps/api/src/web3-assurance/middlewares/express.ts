@@ -92,6 +92,7 @@ export function straleWeb3Guard(config: ExpressGuardConfig) {
         method: "POST",
         headers,
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(5_000),
       });
     } catch (err) {
       res.setHeader("X-Strale-Verdict", "skipped:fetch-error");

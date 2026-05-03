@@ -17,6 +17,12 @@ COPY apps/api/ apps/api/
 COPY packages/sdk-typescript/ packages/sdk-typescript/
 COPY packages/mcp-server/ packages/mcp-server/
 
+# Manifests are the source of truth for capability registration (see
+# apps/api/src/capabilities/auto-register.ts). They must be present at
+# runtime — without them, no capabilities register and the API boots
+# with an empty catalog.
+COPY manifests/ manifests/
+
 # Build MCP server first (apps/api imports from it)
 RUN npm run build --workspace=packages/mcp-server
 RUN npm run build --workspace=apps/api
