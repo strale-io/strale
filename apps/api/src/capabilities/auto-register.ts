@@ -402,35 +402,27 @@ export async function autoRegisterCapabilities(): Promise<AutoRegisterCounts> {
     registered++;
   }
 
-  // Phase 2: DataProvider fallback chains (providers/ subdirectory).
-  // Providers don't have manifests — they're discovered by filesystem.
-  const providersDir = resolve(dir, "providers");
+  // Phase 2: DataProvider fallback chains. Each module side-effect-registers
+  // its chain via registerChain() on import. Static imports avoid the vite
+  // dynamic-import limitation that broke chain loading under vitest, and
+  // make the provider list explicit (the old filesystem glob masked drift —
+  // a stale provider for a deactivated cap, e.g. australian-company-data,
+  // was being registered for months without anyone noticing).
   let providerCount = 0;
-  try {
-    const providerFiles = readdirSync(providersDir)
-      .filter((f) => {
-        if (!f.endsWith(".ts") && !f.endsWith(".js")) return false;
-        const nameWithoutExt = f.replace(/\.(ts|js)$/, "");
-        if (nameWithoutExt.endsWith(".d")) return false;
-        return true;
-      })
-      .sort();
-
-    const seenProviders = new Set<string>();
-    for (const file of providerFiles) {
-      const name = file.replace(/\.(ts|js)$/, "");
-      if (seenProviders.has(name)) continue;
-      seenProviders.add(name);
-      try {
-        await import(`./providers/${name}.js`);
-        providerCount++;
-      } catch (err) {
-        logError("auto-register-provider-import-failed", err, { provider: name });
-        errors++;
-      }
+  const providerImports: Array<{ name: string; load: () => Promise<unknown> }> = [
+    { name: "finnish-company-data", load: () => import("./providers/finnish-company-data.js") },
+    { name: "latvian-company-data-sdda", load: () => import("./providers/latvian-company-data-sdda.js") },
+    { name: "norwegian-company-data", load: () => import("./providers/norwegian-company-data.js") },
+    { name: "swiss-company-data", load: () => import("./providers/swiss-company-data.js") },
+  ];
+  for (const { name, load } of providerImports) {
+    try {
+      await load();
+      providerCount++;
+    } catch (err) {
+      logError("auto-register-provider-import-failed", err, { provider: name });
+      errors++;
     }
-  } catch {
-    // providers/ directory doesn't exist — that's fine
   }
 
   log.info(
