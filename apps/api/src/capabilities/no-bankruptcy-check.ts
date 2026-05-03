@@ -20,9 +20,9 @@ import {
  *
  * The companion `norwegian-company-data` capability returns the broader
  * registry record but exposes bankruptcy as a coarse `status` enum only.
- * This capability is the dedicated litigation/bankruptcy leg for Payee
- * Assurance — the boolean signals plus the bankruptcy filing date are
- * what risk-decisioning code needs.
+ * This capability is the dedicated litigation/bankruptcy leg for
+ * Counterparty Assurance — the boolean signals plus the bankruptcy filing
+ * date are what risk-decisioning code needs.
  *
  * Shares the upstream Brreg fetch with norwegian-company-data via
  * lib/brreg-fetch.ts.

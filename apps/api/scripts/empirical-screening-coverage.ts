@@ -1,5 +1,5 @@
 /**
- * Empirical coverage test for the three Payee Assurance screening capabilities.
+ * Empirical coverage test for the three Counterparty Assurance screening capabilities.
  *
  * - PEP: 2 known PEPs per jurisdiction × 30 (EU27 + UK + NO + CH) + 5 US PEPs
  *   via Strale /v1/do → pep-check. Tests breadth of OpenSanctions PEP coverage.

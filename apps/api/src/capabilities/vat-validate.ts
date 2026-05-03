@@ -32,7 +32,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 // 48h cache. VAT registration changes can happen — deregistration in
-// particular is a real failure mode for Payee Assurance — but most agents
+// particular is a real failure mode for Counterparty Assurance — but most agents
 // are validating the same handful of counterparties repeatedly. 48h trades
 // off freshness vs. upstream load and lands well within the "freshness lag"
 // already disclosed in the manifest's limitations.

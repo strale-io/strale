@@ -2,9 +2,9 @@
  * Web3 Assurance — type definitions.
  *
  * Returns a decision-ready answer about an on-chain counterparty (wallet,
- * contract, token, protocol, bridge, or domain). Sister product to Payee
- * Assurance (off-chain KYB). PA's sanctions substrate is reused here;
- * everything else is crypto-native.
+ * contract, token, protocol, bridge, or domain). Sister product to
+ * Counterparty Assurance (off-chain KYB). The platform's sanctions
+ * substrate is reused here; everything else is crypto-native.
  *
  * Response shape is agent-first: verdict + reason_codes + suggested_action
  * surface at top level. Audit trail demoted to sidecar audit_url. Per

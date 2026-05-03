@@ -15,7 +15,7 @@ import { capabilities } from "../src/db/schema.js";
 
 const db = getDb();
 
-// Per the cert-audit's Payee Assurance Readiness analysis, the compliance
+// Per the cert-audit's Counterparty Assurance Readiness analysis, the compliance
 // capabilities + risk-synthesis cap are the rows where Art. 22 disclosure
 // matters. beneficial-ownership-lookup stays as data_lookup because it
 // returns factual UBO data; the customer's downstream KYB rules are what

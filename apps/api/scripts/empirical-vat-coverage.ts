@@ -1,9 +1,9 @@
 /**
- * Empirical VAT validation coverage across Payee Assurance target countries.
+ * Empirical VAT validation coverage across Counterparty Assurance target countries.
  * EU27 + UK + NO + CH for v1; v1.1 has no VAT (US uses sales tax).
  *
  * One real-world VAT per country, calls /v1/do, captures: provider, valid flag,
- * name returned (for Payee Assurance name-match), error if any.
+ * name returned (for Counterparty Assurance name-match), error if any.
  *
  * Goal: confirm the capability routes correctly to the right provider for each
  * jurisdiction and returns a structured response. Some VATs may be deregistered
@@ -119,7 +119,7 @@ for (const c of CASES) {
 const out: string[] = [];
 out.push(`# Empirical VAT Coverage — ${new Date().toISOString().slice(0, 10)}`);
 out.push("");
-out.push("**Method:** One real-world VAT per Payee Assurance target country, called via Strale /v1/do → vat-validate. Throttled 1.5s between calls (VIES rate limit). v1.1 (US) has no VAT — sales tax instead, out of scope for this capability.");
+out.push("**Method:** One real-world VAT per Counterparty Assurance target country, called via Strale /v1/do → vat-validate. Throttled 1.5s between calls (VIES rate limit). v1.1 (US) has no VAT — sales tax instead, out of scope for this capability.");
 out.push("");
 out.push("| Country | Code | VAT | valid | Name returned | Provider | Status | Notes |");
 out.push("|---|---|---|---|---|---|---|---|");
@@ -136,7 +136,7 @@ const hasName = results.filter((r) => r.has_name).length;
 out.push("");
 out.push("## Summary");
 out.push(`- Capability returned a structured response: ${ok} / ${results.length}`);
-out.push(`- Response included an entity name: ${hasName} / ${results.length} (Payee Assurance name-match availability per country)`);
+out.push(`- Response included an entity name: ${hasName} / ${results.length} (Counterparty Assurance name-match availability per country)`);
 
 const reportPath = resolve(import.meta.dirname, "../../../docs/research/2026-04-28-vat-coverage-empirical.md");
 await writeFile(reportPath, out.join("\n"));
