@@ -1,14 +1,32 @@
 /**
- * Auto-discovers and imports all capability executor files.
- * Replaces the manual import list that was previously in app.ts.
+ * Manifest-driven capability registration.
  *
- * Deactivated capabilities are tracked in DEACTIVATED with a reason,
- * so they are explicitly skipped (not silently ignored).
+ * For each `manifests/<slug>.yaml`:
+ *   1. Extract slug
+ *   2. Skip if in DEACTIVATED (with reason logged)
+ *   3. Dynamic-import `./<slug>.js` so the executor self-registers
+ *   4. Verify `getExecutor(slug)` returns a registered handler
+ *
+ * Distinct outcomes are logged with distinct labels so a real failure
+ * is never confused with an expected skip:
+ *   - auto-register-skip-deactivated  — manifest in DEACTIVATED, intentional
+ *   - auto-register-no-executor-after-import — manifest exists, file imported,
+ *     but no registerCapability(slug, ...) call was made (real bug)
+ *   - auto-register-executor-file-missing — manifest references slug with no
+ *     executor file (real bug)
+ *   - auto-register-import-failed     — executor file threw on import (real bug)
+ *
+ * The previous filesystem-glob discovery pulled in test files
+ * (.test.ts) and any unrelated .ts file, producing spurious errors and
+ * masking real failures. Manifest is the source of truth — matching
+ * validate-capability, onboard, and smoke-test.
  */
 
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import yaml from "js-yaml";
 import { log, logError } from "../lib/log.js";
+import { getExecutor } from "./index.js";
 
 const DEACTIVATED = new Map<string, string>([
   ["amazon-price", "Amazon CAPTCHA blocks datacenter IPs"],
@@ -72,7 +90,7 @@ const DEACTIVATED = new Map<string, string>([
     "annual-report-extract",
     // DEC-20260421-SE-B: Previous runtime fetched allabolag.se/{orgnr}/arsredovisning and
     // extracted financial fields from linked PDFs via Claude Haiku — banned by
-    // DEC-20260420-H (Payee Assurance v1 forbids scraping). Bolagsverket's HVD API
+    // DEC-20260420-H (Counterparty Assurance v1 forbids scraping). Bolagsverket's HVD API
     // exposes annual-report filing events but PDF content sits behind the paid
     // årsredovisning-ordering service (~50–200 SEK/report), breaking the €1.00 price point.
     // Only consumer was KYB Complete SE's step 4b (SE-only bonus, output fed
@@ -258,7 +276,7 @@ const DEACTIVATED = new Map<string, string>([
   // the page was never written and the question was never answered.
   // They've sat in lifecycle_state=suspended since the 7d auto-suspend
   // hit. Today (2026-04-28), confirmed parked: out of scope for the
-  // Payee Assurance v1 wedge, and revival requires real onboarding (all
+  // Counterparty Assurance v1 wedge, and revival requires real onboarding (all
   // 9 currently have last_tested_at=NULL and matrix_sqs=NULL — they were
   // never validated end-to-end). Reactivation when the property vertical
   // is the active focus, not before.
@@ -277,32 +295,67 @@ export function getDeactivatedCapabilities(): ReadonlyMap<string, string> {
   return DEACTIVATED;
 }
 
-export async function autoRegisterCapabilities(): Promise<void> {
-  const dir = import.meta.dirname;
+export interface AutoRegisterCounts {
+  executors_registered: number;
+  providers_registered: number;
+  skipped_deactivated: number;
+  errors: number;
+}
 
-  // Phase 1: capability executors (top-level .ts/.js files excluding index, this file, and .d.ts declarations)
-  const executorFiles = readdirSync(dir)
-    .filter((f) => {
-      if (!f.endsWith(".ts") && !f.endsWith(".js")) return false;
-      if (f === "index.ts" || f === "index.js") return false;
-      if (f === "auto-register.ts" || f === "auto-register.js") return false;
-      // Exclude TypeScript declaration files (.d.ts in source, .d.js in compiled output)
-      const nameWithoutExt = f.replace(/\.(ts|js)$/, "");
-      if (nameWithoutExt.endsWith(".d")) return false;
-      return true;
-    })
-    .sort();
+/** Resolve `manifests/` from the running source tree (works for src/ and dist/). */
+function resolveManifestsDir(): string {
+  // auto-register lives at apps/api/{src,dist}/capabilities/. Walk up four
+  // levels to reach the repo root, then into manifests/.
+  return resolve(import.meta.dirname, "..", "..", "..", "..", "manifests");
+}
+
+/** Read manifest slugs from manifests/*.yaml, skipping malformed files. */
+function readManifestSlugs(manifestsDir: string): string[] {
+  if (!existsSync(manifestsDir)) {
+    logError("auto-register-manifests-dir-missing", new Error(`manifests/ not found at ${manifestsDir}`), {});
+    return [];
+  }
+  const files = readdirSync(manifestsDir).filter((f) => f.endsWith(".yaml") || f.endsWith(".yml"));
+  const slugs: string[] = [];
+  for (const file of files) {
+    const filenameSlug = file.replace(/\.(yaml|yml)$/, "");
+    try {
+      const raw = readFileSync(resolve(manifestsDir, file), "utf8");
+      const parsed = yaml.load(raw) as { slug?: string } | null;
+      const slug = parsed?.slug;
+      if (typeof slug !== "string" || slug.length === 0) {
+        logError("auto-register-manifest-no-slug", new Error("manifest missing top-level slug field"), { file });
+        continue;
+      }
+      if (slug !== filenameSlug) {
+        // Filename and slug must match. The pipeline assumes manifests/<slug>.yaml.
+        logError(
+          "auto-register-manifest-slug-filename-mismatch",
+          new Error(`manifest slug "${slug}" does not match filename "${filenameSlug}"`),
+          { file, manifest_slug: slug, filename_slug: filenameSlug },
+        );
+        continue;
+      }
+      slugs.push(slug);
+    } catch (err) {
+      logError("auto-register-manifest-parse-failed", err, { file });
+    }
+  }
+  return slugs.sort();
+}
+
+export async function autoRegisterCapabilities(): Promise<AutoRegisterCounts> {
+  const dir = import.meta.dirname;
+  const manifestsDir = resolveManifestsDir();
+
+  // Phase 1: capability executors driven by manifests/<slug>.yaml
+  const slugs = readManifestSlugs(manifestsDir);
 
   let registered = 0;
   let skipped = 0;
   let errors = 0;
 
-  // Deduplicate: in compiled output both .js and .d.ts exist; locally only .ts
-  const seen = new Set<string>();
-  for (const file of executorFiles) {
-    const slug = file.replace(/\.(ts|js)$/, "");
-    if (seen.has(slug)) continue;
-    seen.add(slug);
+  for (const slug of slugs) {
     if (DEACTIVATED.has(slug)) {
       log.info(
         { label: "auto-register-skip-deactivated", capability_slug: slug, reason: DEACTIVATED.get(slug) },
@@ -311,16 +364,46 @@ export async function autoRegisterCapabilities(): Promise<void> {
       skipped++;
       continue;
     }
+
+    // Resolve the executor file relative to this module so the same
+    // logic works from both src/ (tsx) and dist/ (compiled).
+    const executorTsPath = resolve(dir, `${slug}.ts`);
+    const executorJsPath = resolve(dir, `${slug}.js`);
+    const executorExists = existsSync(executorTsPath) || existsSync(executorJsPath);
+
+    if (!executorExists) {
+      logError(
+        "auto-register-executor-file-missing",
+        new Error(`manifest references slug "${slug}" but no executor file exists at ${slug}.{ts,js}`),
+        { capability_slug: slug },
+      );
+      errors++;
+      continue;
+    }
+
     try {
       await import(`./${slug}.js`);
-      registered++;
     } catch (err) {
       logError("auto-register-import-failed", err, { capability_slug: slug });
       errors++;
+      continue;
     }
+
+    if (!getExecutor(slug)) {
+      logError(
+        "auto-register-no-executor-after-import",
+        new Error(`module ./${slug}.js imported successfully but did not call registerCapability("${slug}", ...)`),
+        { capability_slug: slug },
+      );
+      errors++;
+      continue;
+    }
+
+    registered++;
   }
 
-  // Phase 2: DataProvider fallback chains (providers/ subdirectory)
+  // Phase 2: DataProvider fallback chains (providers/ subdirectory).
+  // Providers don't have manifests — they're discovered by filesystem.
   const providersDir = resolve(dir, "providers");
   let providerCount = 0;
   try {
@@ -412,4 +495,11 @@ export async function autoRegisterCapabilities(): Promise<void> {
       logError("auto-register-deactivated-sync-failed", err, { count: DEACTIVATED.size });
     }
   }
+
+  return {
+    executors_registered: registered,
+    providers_registered: providerCount,
+    skipped_deactivated: skipped,
+    errors,
+  };
 }

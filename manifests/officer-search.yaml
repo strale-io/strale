@@ -1,0 +1,88 @@
+slug: officer-search
+name: Officer Search
+description: Find company directors and officers from official public registries. Covers UK (Companies House) and US (SEC EDGAR). Returns officer names, roles, appointment dates.
+category: company-data
+price_cents: 10
+input_schema:
+  type: object
+  required:
+    - company_name
+  properties:
+    company_name:
+      type: string
+      description: Company name to search for
+    country:
+      type: string
+      description: ISO 2-letter country code (GB, UK, or US)
+    company_number:
+      type: string
+      description: Optional UK company number (skips name lookup)
+output_schema:
+  type: object
+  properties:
+    company_name:
+      type: string
+    country:
+      type: string
+    source:
+      type: string
+    total_officers:
+      type: integer
+    active_officers:
+      type: integer
+    officers:
+      type: array
+    former_officers:
+      type: array
+data_source: UK Companies House API + US SEC EDGAR
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - professional
+  - nationality
+geography: GB,US
+gdpr_art_22_classification: data_lookup
+test_fixtures:
+  known_answer:
+    input:
+      company_name: HSBC Holdings plc
+      country: GB
+    expected_fields:
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: source
+        operator: not_null
+        reliability: guaranteed
+      - field: officers
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    company_name: HSBC Holdings plc
+    country: GB
+output_field_reliability:
+  company_name: guaranteed
+  source: guaranteed
+  total_officers: guaranteed
+  active_officers: guaranteed
+  officers: guaranteed
+  former_officers: guaranteed
+  country: common
+limitations:
+  - title: Coverage limited to UK and US
+    text: Only UK Companies House and US SEC EDGAR are supported. EU coverage was removed under DEC-20260427-I (commercial KYB-aggregator scraping ban) and will be reinstated when a licensed source lands.
+    category: coverage
+    severity: warning
+    workaround: For EU officer data, use country-specific company-data capabilities where available
+  - title: US officer detail is shallow
+    text: SEC EDGAR exposes officer-change events (8-K item 5.02) and entity names rather than a structured officer list. Detailed names and roles often require reading the underlying filing.
+    category: coverage
+    severity: info
+  - title: Requires COMPANIES_HOUSE_API_KEY for UK
+    text: UK lookups require a Companies House API key (free registration at developer.company-information.service.gov.uk). Without it, UK searches return no results.
+    category: configuration
+    severity: warning
