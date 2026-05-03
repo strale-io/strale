@@ -361,9 +361,10 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 2. Connectivity check (Git + handoff; Notion if needed). Log failures.
 3. Read handoff/from-chat/ for pending items (if empty, proceed)
 4. Do the work
-5. Move completed To-do items to Archive > Completed To-dos (page ID: 34067c87-082c-814e-a45c-fa8d851c8f12)
-6. Write handoff file to `handoff/_general/from-code/`. Even one-liner, starts with Intent:
-7. Create Journal entry in Notion (even one line)
+5. **Code-review gate (before /end-session):** if any code was modified this session and `/go` was not run on it, halt and run `/go` (or escalate to Petter if a hard refusal blocks /go). Never run `/end-session` over unreviewed code. Docs / CLAUDE.md / Notion-only sessions are exempt.
+6. Move completed To-do items to Archive > Completed To-dos (page ID: 34067c87-082c-814e-a45c-fa8d851c8f12)
+7. Write handoff file to `handoff/_general/from-code/`. Even one-liner, starts with Intent:
+8. Create Journal entry in Notion (even one line)
 
 ### Full Session Checklist
 1. Declare session intent
@@ -373,11 +374,12 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 5. Read active Decisions — global always, feature-scope when relevant
 6. Read handoff/from-chat/ for pending specs or feedback
 7. Do the work
-8. Move completed To-do items to Archive > Completed To-dos (page ID: 34067c87-082c-814e-a45c-fa8d851c8f12)
-9. Create Journal entry (full format)
-10. Log decisions made (respect authority thresholds)
-11. Save session summary to `handoff/_general/from-code/`
-12. Contradiction check if decisions were made
+8. **Code-review gate (before /end-session):** if any code was modified this session and `/go` was not run on it, halt and run `/go` (or escalate to Petter if a hard refusal blocks /go). Never run `/end-session` over unreviewed code. Docs / CLAUDE.md / Notion-only sessions are exempt.
+9. Move completed To-do items to Archive > Completed To-dos (page ID: 34067c87-082c-814e-a45c-fa8d851c8f12)
+10. Create Journal entry (full format)
+11. Log decisions made (respect authority thresholds)
+12. Save session summary to `handoff/_general/from-code/`
+13. Contradiction check if decisions were made
 
 ### Workflow Invariants (Non-Negotiable)
 - NEVER edit Journal entries, Decision content, or Deferred content

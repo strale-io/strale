@@ -60,37 +60,46 @@ If capability categories, endpoints, auth flow, or pricing model changed, flag t
 
 Invoke the `simplify` skill on the changed code. Accept its edits if they're strictly improvements. If it proposes structural changes that would bloat scope, defer them — mention in the PR body instead.
 
-## 4. Independent review (technical + founder lens)
+## 4. Independent review (six-lens pass)
 
-After verification + simplify, before opening the PR, run two independent reviews on the diff in parallel. Petter is non-technical and depends on these lenses being applied at PR-creation time, where their findings can land in the PR description for him to read before approving merge — not as a separate output that gets lost.
+After verification + simplify, before opening the PR, run a multi-lens review on the diff in parallel. Petter is non-technical and depends on these lenses being applied at PR-creation time, where findings land in the PR description before approving merge — not as a separate output that gets lost.
 
-Both reviews use the `feature-dev:code-reviewer` subagent. Send both in a single message so they run concurrently.
+Use the `feature-dev:code-reviewer` subagent for both passes below. **Send both in a single message** so they run concurrently. Each pass takes 1–3 minutes; serial would double the latency.
 
-### Technical lens
+### Pass A — technical (CTO + architect + senior dev + security)
 
-Prompt the reviewer to assess: bugs, logic errors, security vulnerabilities (SSRF, SQL injection, secrets exposure, missing auth, missing input validation), architecture concerns, adherence to Strale conventions (Capability Onboarding Protocol, Scoring Integrity, third-party scraping doctrine, drift-prevention surfaces), and any side-effect imports of files this PR deletes. Pass it the PR's branch name, target main, and a one-paragraph summary of intent.
+Prompt the reviewer to apply four overlapping technical lenses on the diff:
 
-### Founder / UX / product lens
+- **Senior developer (correctness)**: bugs, logic errors, off-by-one, null handling, race conditions, leaks. Are tests present and meaningful? Does the code adhere to existing idiom in nearby files?
+- **Security reviewer**: SSRF (any user-controlled URL → must use `safeFetch`), SQL injection (any string-built query → must use parameterised drizzle), secrets exposure (any `console.log` or `log.info` of `process.env.*`?), missing auth (new route without `authMiddleware`?), missing input validation, side-effect imports of files this PR deletes (TypeScript with NodeNext does NOT flag missing `.js` targets — grep manually).
+- **System architect**: coupling and layering. Does this introduce a dependency in the wrong direction (db → routes? capabilities → app?)? Does it duplicate logic that already exists in `lib/`? Does it introduce a new abstraction where copy-paste would have been simpler, or copy-paste where an abstraction is needed (third instance of the same pattern)? Are cross-cutting concerns (logging, errors, auth) handled consistently with neighbours?
+- **CTO (strategic / debt)**: does this conflict with an active Decision in `CLAUDE.md` or the Decisions DB (DEC-20260428-A scraping doctrine, DEC-20260428-B engineering bar, DEC-20260420-H direct connections, etc.)? Does it create technical debt the team hasn't budgeted for? Is the change scoped to one concern, or does it bundle three unrelated things? Is there a "this is the third one-off integration with vendor X — should we abstract?" pattern?
 
-Prompt the reviewer to assess from the perspective of *a non-technical founder who will use this code via API calls, a CLI, or the dashboard*. Specifically:
-- **Error messages**: are they actionable? Do they tell the user what to fix? ("Missing required field: email" is good; "Invalid request" is bad.) Do they leak internals (stack traces, DB names, file paths)?
-- **API shape**: are field names consistent with the rest of the platform (e.g. `*_cents` for money, ISO 8601 for dates, `inputs` not `input`)? Will an agent get confused?
-- **Naming**: do slugs, route names, and field names match what an external developer would search for? Or are they Strale-internal abbreviations?
-- **Defaults**: are sensible defaults provided? Or is the caller forced to specify everything?
-- **Failure modes from the caller's perspective**: when this fails, does the caller know whether to retry, fix their input, contact support, or give up?
-- **Documentation gap**: if this changes a public surface (API endpoint, SDK method, capability slug), is `strale-frontend/public/llms.txt` going to stay accurate?
+Pass it: the branch name, target `main`, and a one-paragraph summary of intent.
 
-This lens is NOT redundant with the technical lens. The technical lens asks "is the code correct"; the founder lens asks "is the code *kind* to its user."
+### Pass B — product (PM + UX + founder)
+
+Prompt the reviewer to apply three overlapping product lenses on the diff:
+
+- **Product manager**: does this serve a real user need? If you can't tell from the diff what user problem this solves, that's a finding — surface it. Is the change consistent with the platform's positioning (Strale = data layer for AI agents, not a competitor to compliance bureaus)? Does it expand scope into a vertical the platform doesn't claim?
+- **UX**: error messages — are they actionable? Do they tell the caller WHAT to fix and what to do next? Do they leak internals (stack traces, DB names, file paths)? Are HTTP status codes used correctly (400 vs 422 vs 500)? When the call fails, can the caller tell whether to retry, fix input, contact support, or give up?
+- **Non-technical-founder**: API shape consistency (`*_cents` for money, ISO 8601 for dates, `inputs` not `input` per the request envelope, slugs match catalog conventions). Naming — would an external developer searching docs find this? Defaults — does the caller have to specify boilerplate Strale could pick? If Petter sees this in a log line tomorrow, will he understand it without asking?
+
+Pass it the same context as Pass A.
+
+### Honest caveat on the lens prompts
+
+Pass A's "CTO/architect" lenses are stronger than Pass B's "PM" lens, because the diff carries enough signal for "is this coupled wrong?" but rarely enough for "is this the right thing to build?" — that needs roadmap context the agent doesn't have. Treat PM findings as flags to consider, not authoritative judgments. The UX and founder findings within Pass B are sharper because they read straight from the code.
 
 ### Acting on findings
 
-Aggregate findings from both lenses. Classify each:
+Aggregate findings from both passes. Classify each:
 
-- **HIGH**: ship-blocker. Surface it, do NOT proceed to PR. Examples: silent data corruption, leaked secrets, broken public API contract, unclear error message that would block real users, broken backwards compatibility on a versioned endpoint.
-- **MEDIUM**: include in the PR body under a `## Reviewer findings` section so Petter can decide before merge. Examples: error messages could be better, naming is inconsistent with another endpoint, missing example in docstring.
-- **LOW / nit**: drop unless the reviewer explicitly flags it as part of a pattern.
+- **HIGH**: ship-blocker. Surface it, do NOT proceed to PR. Examples: silent data corruption, leaked secret, broken public API contract, error message that would actively confuse a real user, conflict with an active Decision, security vulnerability, side-effect import of a file deleted in this PR.
+- **MEDIUM**: include in the PR body under `## Reviewer findings` so Petter can decide before merge. Examples: error messages could be better, naming inconsistent with another endpoint, missing example in docstring, layering choice that's defensible but worth flagging.
+- **LOW / nit**: drop unless part of a pattern (five inconsistent field names → fix the pattern in one pass).
 
-If both reviews come back fully clean, that itself is signal — note it explicitly in the PR body (`## Reviewer findings — clean`).
+If both passes come back fully clean, note it explicitly in the PR body (`## Reviewer findings — clean (technical + product)`). Clean is a real outcome, not a reason to invent findings.
 
 ## 5. Commit and PR
 
