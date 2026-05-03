@@ -344,7 +344,17 @@ function readManifestSlugs(manifestsDir: string): string[] {
   return slugs.sort();
 }
 
+// Cache the registration result so repeated calls within a single process
+// short-circuit. In production auto-register runs once at startup, but
+// vitest re-runs it per test file (each ssrf-bucket-*.test.ts has its own
+// beforeAll that calls autoRegisterCapabilities). Without caching, each
+// test pays the full 313-manifest disk-read + DB-sync cost — under
+// parallel fs contention this trips vitest's 10s hookTimeout. Module
+// state is per-worker-process, so the cache is naturally scoped right.
+let cachedResult: AutoRegisterCounts | null = null;
+
 export async function autoRegisterCapabilities(): Promise<AutoRegisterCounts> {
+  if (cachedResult) return cachedResult;
   const dir = import.meta.dirname;
   const manifestsDir = resolveManifestsDir();
 
@@ -488,10 +498,16 @@ export async function autoRegisterCapabilities(): Promise<AutoRegisterCounts> {
     }
   }
 
-  return {
+  cachedResult = {
     executors_registered: registered,
     providers_registered: providerCount,
     skipped_deactivated: skipped,
     errors,
   };
+  return cachedResult;
+}
+
+/** For tests that need to force a re-run (rare). Resets the idempotency cache. */
+export function resetAutoRegisterCacheForTests(): void {
+  cachedResult = null;
 }

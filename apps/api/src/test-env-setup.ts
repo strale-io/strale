@@ -16,7 +16,7 @@ process.env.ADMIN_SECRET ??=
   "vitest-setup-admin-secret-plenty-of-entropy-0123456789";
 // wallet.ts validates FRONTEND_URL at module-load time (F-0-015 — Stripe
 // redirect URLs must come from a server-controlled var). Any test that
-// imports app.ts transitively imports wallet.ts and crashes if the var is
-// unset. The placeholder is never reached at runtime — wallet routes
-// require auth in tests.
-process.env.FRONTEND_URL ??= "http://localhost-test-placeholder";
+// imports app.ts transitively imports wallet.ts and crashes if the var
+// is unset. Use the production frontend URL because audit-token.test
+// asserts the shareable URL starts with https://strale.dev/audit/...
+process.env.FRONTEND_URL ??= "https://strale.dev";
