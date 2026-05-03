@@ -14,3 +14,9 @@ process.env.AUDIT_HMAC_SECRET ??=
   "vitest-setup-audit-secret-plenty-of-entropy-0123456789abcdef";
 process.env.ADMIN_SECRET ??=
   "vitest-setup-admin-secret-plenty-of-entropy-0123456789";
+// wallet.ts validates FRONTEND_URL at module-load time (F-0-015 — Stripe
+// redirect URLs must come from a server-controlled var). Any test that
+// imports app.ts transitively imports wallet.ts and crashes if the var is
+// unset. The placeholder is never reached at runtime — wallet routes
+// require auth in tests.
+process.env.FRONTEND_URL ??= "http://localhost-test-placeholder";
