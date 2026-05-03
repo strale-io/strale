@@ -1,10 +1,9 @@
 slug: us-court-search
 name: US Court Search (CourtListener)
 description: >-
-  Search US federal court records (RECAP dockets) by party name. Returns matching cases with court,
-  date filed, docket number, and absolute URL. Elevates bankruptcy filings as top-level signals
-  (has_bankruptcy_filing, bankruptcy_count, most_recent_bankruptcy) for risk decisioning. Federal
-  district + appellate courts; no state-court coverage.
+  Search US federal court records (RECAP dockets) by party name. Returns matching cases with court, date filed, docket
+  number, and absolute URL. Elevates bankruptcy filings as top-level signals (has_bankruptcy_filing, bankruptcy_count,
+  most_recent_bankruptcy) for risk decisioning. Federal district + appellate courts; no state-court coverage.
 category: compliance
 price_cents: 15
 is_free_tier: false
@@ -46,7 +45,7 @@ output_schema:
       court: nysb
       court_id: nysb
       date_filed: "2008-09-15"
-      docket_number: "08-13555"
+      docket_number: 08-13555
       absolute_url: https://www.courtlistener.com/...
     cases: []
     data_source: CourtListener + RECAP (Free Law Project)
@@ -88,15 +87,30 @@ geography: us
 test_fixtures:
   known_answer:
     input:
-      query: "Lehman Brothers"
-      court_type: "bankruptcy"
+      query: Lehman Brothers
     expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
       - field: total_matches
+        operator: not_null
+        reliability: guaranteed
+      - field: returned_count
         operator: not_null
         reliability: guaranteed
       - field: has_bankruptcy_filing
         operator: not_null
         reliability: guaranteed
+        # Lehman Brothers is a concluded mega-bankruptcy (2008); has_bankruptcy_filing
+        # will be true for this query in any healthy result set. Not asserted equals:true
+        # to avoid false failure if CourtListener query tokenization changes — same
+        # conservative pattern as sanctions-check.yaml and pep-check.yaml.
+      - field: bankruptcy_count
+        operator: not_null
+        reliability: guaranteed
+      # most_recent_filing_date and most_recent_bankruptcy are 'common' per
+      # output_field_reliability (null on empty result sets). Not asserted here
+      # — type-check happens automatically via the harness for non-guaranteed fields.
       - field: cases
         operator: not_null
         reliability: guaranteed
@@ -104,7 +118,7 @@ test_fixtures:
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    query: "Lehman Brothers"
+    query: Lehman Brothers
 output_field_reliability:
   query: guaranteed
   total_matches: guaranteed
@@ -119,21 +133,20 @@ output_field_reliability:
 limitations:
   - title: Federal courts only
     text: >-
-      RECAP covers US federal courts (district + appellate + bankruptcy). State court records are NOT
-      included. For state-level coverage, supplement with Docket Alarm (PAYG) — separate capability.
+      RECAP covers US federal courts (district + appellate + bankruptcy). State court records are NOT included. For
+      state-level coverage, supplement with Docket Alarm (PAYG) — separate capability.
     category: coverage
     severity: warning
   - title: Common-name false positives
     text: >-
-      Searching "Acme Corp" returns every matching docket regardless of which Acme Corp is the actual
-      party. Disambiguate using the address or jurisdiction context. The structured cases array
-      includes court, jurisdiction, and date for each match so the calling code can filter further.
+      Searching "Acme Corp" returns every matching docket regardless of which Acme Corp is the actual party.
+      Disambiguate using the address or jurisdiction context. The structured cases array includes court, jurisdiction,
+      and date for each match so the calling code can filter further.
     category: accuracy
     severity: warning
   - title: RECAP coverage varies per court
     text: >-
-      Free Law Project's RECAP archive covers ~95% of recent federal dockets but older cases may be
-      incomplete. The `total_matches` count reflects what RECAP has — actual federal docket count for
-      the party may be higher.
+      Free Law Project's RECAP archive covers ~95% of recent federal dockets but older cases may be incomplete. The
+      `total_matches` count reflects what RECAP has — actual federal docket count for the party may be higher.
     category: coverage
     severity: info
