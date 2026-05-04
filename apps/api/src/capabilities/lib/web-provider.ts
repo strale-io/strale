@@ -20,6 +20,7 @@
  * `fetchPage` is the only layer we own for tiers 2 and 3.
  */
 
+import { buildBrowserlessRequestUrl } from "../../lib/browserless-launch.js";
 import { safeFetch } from "../../lib/safe-fetch.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -284,7 +285,10 @@ export async function fetchPage(
     // Browserless v2 cloud (production-*.browserless.io) uses ?token= query
     // string auth, not Authorization: Bearer. Bearer is rejected at the
     // openresty edge with HTTP 500 before reaching the account.
-    const contentUrl = `${url}/content?token=${encodeURIComponent(key)}`;
+    // buildBrowserlessRequestUrl also appends the per-request `?launch=`
+    // query param Browserless v2 requires for Chrome flags (LAUNCH_ARGS
+    // env var is deprecated and ignored — see lib/browserless-launch.ts).
+    const contentUrl = buildBrowserlessRequestUrl(url, "/content", key);
 
     let lastError: Error | null = null;
 

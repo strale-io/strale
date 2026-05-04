@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
+import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("screenshot-url", async (input: CapabilityInput) => {
@@ -17,7 +18,9 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
   await validateUrl(fullUrl);
 
   const { url: blessUrl, key } = getBrowserlessConfig();
-  const endpoint = `${blessUrl}/screenshot?token=${key}`;
+  // buildBrowserlessRequestUrl appends ?launch= per-request, required by
+  // Browserless v2 (LAUNCH_ARGS env var is deprecated). See lib/browserless-launch.ts.
+  const endpoint = buildBrowserlessRequestUrl(blessUrl, "/screenshot", key);
 
   const gotoOptions: Record<string, unknown> = { waitUntil: "networkidle0", timeout: 25000 };
 
