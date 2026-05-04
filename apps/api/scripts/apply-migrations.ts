@@ -64,6 +64,61 @@ async function main() {
     console.log("[migration] actual_cost_cents already exists — skipping");
   }
 
+  // Migration 0062: paid-vendor suite cost classification per the
+  // 2026-05-04 audit. The UPDATEs are idempotent because they only
+  // touch rows where external_cost_cents = 0; a re-run is a no-op.
+  // Two-step (1¢ for Dilisense/eSortcode, 3¢ for risk-narrative-
+  // generate Sonnet) matches the migration SQL file. See
+  // drizzle/0062_paid_vendor_suite_cost.sql for the full rationale.
+  console.log("[migration] Setting external_cost_cents on paid-vendor suites (audit-followup)...");
+  const dili = await db.execute(sql`
+    UPDATE test_suites
+    SET external_cost_cents = 1, updated_at = NOW()
+    WHERE capability_slug IN ('pep-check', 'sanctions-check', 'adverse-media-check', 'uk-cop-check')
+      AND active = true
+      AND test_mode = 'live'
+      AND test_type IN ('known_answer', 'edge_case', 'negative', 'known_bad')
+      AND external_cost_cents = 0
+  `);
+  const diliCount = (dili as { count?: number }).count ?? 0;
+  console.log(`[migration] Dilisense/eSortcode suites updated: ${diliCount}`);
+
+  const rng = await db.execute(sql`
+    UPDATE test_suites
+    SET external_cost_cents = 3, updated_at = NOW()
+    WHERE capability_slug = 'risk-narrative-generate'
+      AND active = true
+      AND test_mode = 'live'
+      AND test_type IN ('known_answer', 'edge_case', 'negative', 'known_bad')
+      AND external_cost_cents = 0
+  `);
+  const rngCount = (rng as { count?: number }).count ?? 0;
+  console.log(`[migration] risk-narrative-generate suites updated: ${rngCount}`);
+
+  // Post-condition: no paid-vendor live non-probe suite should still be
+  // at external_cost_cents = 0 after this migration runs. If any are,
+  // a new suite was added between audit and apply, or the migration
+  // didn't land cleanly. Log the count so the line is greppable in
+  // Railway logs.
+  const checkRows = await db.execute(sql`
+    SELECT COUNT(*)::int AS remaining_zero
+    FROM test_suites
+    WHERE capability_slug IN (
+            'pep-check', 'sanctions-check', 'adverse-media-check',
+            'uk-cop-check', 'risk-narrative-generate'
+          )
+      AND active = true
+      AND test_mode = 'live'
+      AND test_type IN ('known_answer', 'edge_case', 'negative', 'known_bad')
+      AND external_cost_cents = 0
+  `);
+  const checkResultRows = Array.isArray(checkRows) ? checkRows : (checkRows as any)?.rows ?? [];
+  const remainingZero = (checkResultRows[0] as { remaining_zero?: number })?.remaining_zero ?? 0;
+  console.log(`[migration] paid-vendor remaining-at-zero post-check: ${remainingZero} (expected 0)`);
+  if (remainingZero > 0) {
+    console.warn(`[migration] WARNING: ${remainingZero} paid-vendor suites still at external_cost_cents = 0`);
+  }
+
   console.log("[migration] All migrations applied");
   process.exit(0);
 }
