@@ -59,33 +59,52 @@ async function runRetention(): Promise<void> {
 
     const started = Date.now();
     const results: Array<{ table: string; deleted: number }> = [];
+    const failures: Array<{ table: string; error: string }> = [];
 
     for (const rule of RULES) {
-      const cutoff = new Date(Date.now() - rule.days * 86_400_000);
+      // ISO-string cast, not a raw Date, because postgres-js's bind-parameter
+      // encoder cannot serialize a Date object through the sql-template path
+      // (it falls through to Buffer.byteLength(date) and throws). The throw
+      // was being swallowed by the catch below — every retention tick logged
+      // total: 0 and looked healthy while no rows were ever deleted. Same
+      // bug shape as do.ts spendCapWouldExceed (fixed in PR #43); both came
+      // from the 2026-04-30 cert-audit batch (this file: commit 968bc82;
+      // do.ts: commit 6613bd7).
+      const cutoffIso = new Date(Date.now() - rule.days * 86_400_000).toISOString();
       try {
         const res = await tx.execute(
-          sql`DELETE FROM ${sql.raw(rule.table)} WHERE ${sql.raw(rule.column)} < ${cutoff}`,
+          sql`DELETE FROM ${sql.raw(rule.table)} WHERE ${sql.raw(rule.column)} < ${cutoffIso}::timestamptz`,
         );
         const deleted = (res as { count?: number }).count ?? 0;
         results.push({ table: rule.table, deleted });
       } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
         jobLog.error(
-          { label: "db-retention-delete-failed", table: rule.table, err: err instanceof Error ? { message: err.message } : err },
+          { label: "db-retention-delete-failed", table: rule.table, err: { message: errMsg } },
           "db-retention-delete-failed",
         );
+        failures.push({ table: rule.table, error: errMsg });
       }
     }
 
     const total = results.reduce((s, r) => s + r.deleted, 0);
     const elapsed_ms = Date.now() - started;
-    jobLog.info(
+    // Surface failures in the summary log so a "looks healthy" tick (which
+    // logs total: 0 and per_table: {}) is distinguishable from a silently
+    // broken tick where every rule errored. Pre-fix, the catch above
+    // swallowed errors and the summary always reported total: 0, so
+    // retention silently stopped working without a visible signal.
+    const allFailed = results.length === 0 && failures.length === RULES.length;
+    const logFn = allFailed ? jobLog.error.bind(jobLog) : jobLog.info.bind(jobLog);
+    logFn(
       {
-        label: "db-retention-pruned",
+        label: allFailed ? "db-retention-all-rules-failed" : "db-retention-pruned",
         total_deleted: total,
         elapsed_ms,
         per_table: Object.fromEntries(results.map((r) => [r.table, r.deleted])),
+        failures,
       },
-      "db-retention-pruned",
+      allFailed ? "db-retention-all-rules-failed" : "db-retention-pruned",
     );
   });
 }
