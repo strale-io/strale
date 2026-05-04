@@ -126,6 +126,16 @@ personal_data_categories:
   - name
   - financial
 geography: uk
+# test_outcome=MATCHED is load-bearing for cost classification.
+# eSortcode does not deduct credits when test_outcome is set; the test
+# scheduler's runs against this fixture therefore burn no credits in
+# practice. The capability still bills per call in production (Pay.UK
+# CoP scheme — eSortcode is the gateway), so test_suites.external_cost_cents
+# is set to 1 to keep the hourly scheduler from running paid suites
+# (PR #49 + DEC-20260503-B). If you change the fixture input below,
+# leave test_outcome set to one of the 14 eSortcode CoP codes
+# (MATCHED, CLOSE_MATCH, NO_MATCH, NO_ACCOUNT, etc.) — removing it
+# silently causes scheduled tests to burn real credits.
 test_fixtures:
   known_answer:
     input:
@@ -133,7 +143,7 @@ test_fixtures:
       account_number: "00110022"
       account_holder_name: Joe Bloggs
       account_type: PERSONAL
-      test_outcome: MATCHED
+      test_outcome: MATCHED  # zero-credit bypass — see manifest header note
     expected_fields:
       - field: match_status
         operator: equals
@@ -186,7 +196,7 @@ test_fixtures:
     account_number: "00110022"
     account_holder_name: Joe Bloggs
     account_type: PERSONAL
-    test_outcome: MATCHED
+    test_outcome: MATCHED  # zero-credit bypass — see manifest header note above test_fixtures
 output_field_reliability:
   match_status: guaranteed
   cop_code: guaranteed
