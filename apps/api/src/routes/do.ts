@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, gte, isNull, sql } from "drizzle-orm";
+import { eq, and, gte, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   wallets,
@@ -335,22 +335,32 @@ type CapabilityInfo = {
  * close the window but at the cost of a more complex query for a
  * benign over-rejection case. Documented; not fixed.
  */
-async function spendCapWouldExceed(
+// Exported for the regression test at do.spend-cap.test.ts. The unit test
+// asserts no `Date` instance is ever passed through `tx.execute(sql``)` —
+// the bug at commit 6613bd7 (2026-04-30) interpolated a Date directly into
+// a sql-template, and postgres-js's bind-parameter encoder couldn't
+// serialize it (Buffer.byteLength on a Date throws). Every authenticated
+// paid /v1/do call for a user with maxSpendPerHourCents set 500'd as a
+// result. The fix below uses Drizzle's typed column query so the Date
+// goes through the column's mapToDriverValue serializer.
+export async function spendCapWouldExceed(
   tx: any,
   userId: string,
   requestedCents: number,
   capCents: number,
 ): Promise<{ spent: number } | null> {
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  const result = await tx.execute(
-    sql`SELECT COALESCE(SUM(price_cents), 0)::text AS total
-        FROM transactions
-        WHERE user_id = ${userId}
-          AND status IN ('completed', 'executing')
-          AND created_at >= ${oneHourAgo}`,
-  );
-  const rows: any[] = Array.isArray(result) ? result : (result?.rows ?? []);
-  const spent = Number(rows[0]?.total ?? 0);
+  const [row] = await tx
+    .select({ total: sql<string>`COALESCE(SUM(price_cents), 0)::text` })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.userId, userId),
+        inArray(transactions.status, ["completed", "executing"]),
+        gte(transactions.createdAt, oneHourAgo),
+      ),
+    );
+  const spent = Number(row?.total ?? 0);
   if (spent + requestedCents > capCents) return { spent };
   return null;
 }
