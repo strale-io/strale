@@ -552,12 +552,21 @@ async function pollCycle(): Promise<void> {
       // ordering hint that respects the Scoring Integrity Protocol.
       if (skippedSlugs.length > 0) {
         try {
-          await getDb().execute(sql`
-            UPDATE capabilities
-            SET last_tested_at = NOW(),
-                freshness_level = 'unverified'
-            WHERE slug = ANY(${skippedSlugs})
-          `);
+          // Use drizzle's typed UPDATE + inArray — the previous raw-SQL
+          // form `WHERE slug = ANY(${skippedSlugs})` interpolated the JS
+          // array as a tuple `($1,$2,$3)` (row constructor) which Postgres
+          // rejects with "op ANY/ALL (array) requires array on right side".
+          // Production logs from 2026-04-30 onward show this firing every
+          // 5 min while the scheduler ticked at 5-min cadence; PR #46
+          // moved that to 1-min cadence which would have amplified the
+          // failure rate 5×. Bug pre-existed PR #46 — fixing here.
+          await getDb()
+            .update(capabilities)
+            .set({
+              lastTestedAt: new Date(),
+              freshnessLevel: "unverified",
+            })
+            .where(inArray(capabilities.slug, skippedSlugs));
           jobLog.info(
             { label: "test-scheduler-skip-bumped", count: skippedSlugs.length },
             "test-scheduler-skip-bumped",
