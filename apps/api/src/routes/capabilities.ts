@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, solutionSteps } from "../db/schema.js";
+import { capabilities } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { sqsLabel, gradeFromScore } from "../lib/trust-labels.js";
@@ -134,49 +134,5 @@ capabilitiesRoute.get("/:slug", async (c) => {
     );
   }
 
-  // Reverse lookup: which solutions include this capability?
-  const parentSolutions = await db
-    .selectDistinct({
-      slug: solutions.slug,
-      name: solutions.name,
-      description: solutions.description,
-      priceCents: solutions.priceCents,
-      category: solutions.category,
-      geography: solutions.geography,
-    })
-    .from(solutions)
-    .innerJoin(solutionSteps, eq(solutionSteps.solutionId, solutions.id))
-    .where(
-      and(
-        eq(solutionSteps.capabilitySlug, slug),
-        eq(solutions.isActive, true),
-      ),
-    );
-
-  // Batch step counts for all parent solutions in one query
-  const solSlugs = parentSolutions.map((s) => s.slug);
-  const stepCounts = solSlugs.length > 0
-    ? await db
-        .select({
-          slug: solutions.slug,
-          count: sql<number>`count(*)`,
-        })
-        .from(solutionSteps)
-        .innerJoin(solutions, eq(solutionSteps.solutionId, solutions.id))
-        .where(inArray(solutions.slug, solSlugs))
-        .groupBy(solutions.slug)
-    : [];
-  const stepCountMap = new Map(stepCounts.map((r) => [r.slug, Number(r.count)]));
-
-  const partOfSolutions = parentSolutions.map((sol) => ({
-    slug: sol.slug,
-    name: sol.name,
-    description: sol.description,
-    price_cents: sol.priceCents,
-    category: sol.category,
-    geography: sol.geography,
-    step_count: stepCountMap.get(sol.slug) ?? 0,
-  }));
-
-  return c.json({ ...cap, partOfSolutions });
+  return c.json(cap);
 });

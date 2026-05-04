@@ -13,7 +13,7 @@ import { Hono } from "hono";
 import { eq, and, isNull } from "drizzle-orm";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, transactions, users } from "../db/schema.js";
+import { capabilities, transactions, users } from "../db/schema.js";
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { suggest } from "../lib/suggest.js";
 import { computePlatformFacts } from "../lib/platform-facts.js";
@@ -106,18 +106,6 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
     .from(capabilities)
     .where(eq(capabilities.isActive, true));
 
-  // Fetch active solutions
-  const solRows = await db
-    .select({
-      slug: solutions.slug,
-      name: solutions.name,
-      description: solutions.description,
-      category: solutions.category,
-      priceCents: solutions.priceCents,
-    })
-    .from(solutions)
-    .where(eq(solutions.isActive, true));
-
   // Build capability skills
   const capSkills = capRows.map((cap) => {
     const sqs = cap.matrixSqs ? parseFloat(String(cap.matrixSqs)) : 0;
@@ -132,51 +120,7 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
     };
   });
 
-  // Build solution skills
-  const solSkills = solRows.map((sol) => ({
-    id: `solution-${sol.slug}`,
-    name: sol.name,
-    description: sol.description,
-    tags: ["solution", sol.category],
-    examples: [sol.description.split(/\.\s/)[0].replace(/\.$/, "")],
-  }));
-
-  const productSkills = [
-    {
-      id: "product-web3-assurance",
-      name: "Web3 Assurance",
-      description:
-        "Decision-ready answer about an on-chain counterparty (wallet, contract, token, DeFi protocol, or bridge) in a single call. Returns verdict (proceed/review/block/insufficient_evidence), reason_codes (UPPERCASE_SNAKE_CASE), critical_flags, suggested_action, evidence map (sanctions, mixer-graded, scam-cluster, wallet-history, token-safety, contract-verification, protocol-risk, audit firms, EAS, ERC-8004, more), and a sidecar audit_url. Two modes: outbound (agent vetting recipient pre-payment, 8s budget) or reverse-call (x402 service publisher gating an inbound buyer, sub-second SLA).",
-      tags: [
-        "web3",
-        "defi",
-        "blockchain",
-        "crypto",
-        "x402",
-        "agent-economy",
-        "counterparty",
-        "decision-ready",
-        "verdict",
-        "reason-codes",
-        "audit-trail",
-        "sanctions",
-        "mixer-graded",
-        "tornado-cash",
-        "ofac",
-        "mica",
-        "compliance",
-      ],
-      examples: [
-        "Vet a wallet before sending USDC",
-        "Check a token contract for honeypot or rug pattern before swapping",
-        "Pre-trade simulation of a DeFi interaction",
-        "Gate an inbound x402 buyer before delivering service",
-        "Verify a DeFi protocol's audit history and recent exploits",
-      ],
-    },
-  ];
-
-  const skills = [...productSkills, ...capSkills, ...solSkills];
+  const skills = capSkills;
 
   // Cert-audit Y-2: capability count and country count are computed from
   // PLATFORM_FACTS rather than hardcoded. Hardcoding "250+" / "27 countries"

@@ -47,38 +47,12 @@ Strale provides business data capabilities that AI agents can use at runtime via
 
 ## Web3 and DeFi Agent Capabilities
 
-17 Web3-specific capabilities and 9 solutions for on-chain agents. All payable via x402 (USDC on Base) or standard API key.
+Web3-specific atomic capabilities for on-chain agents, all payable via x402 (USDC on Base) or standard API key. Discover the live set at GET /v1/capabilities (filter by category=web3) — counts and slugs change as the catalog grows.
 
 Wallet security: wallet-risk-score, approval-security-check, wallet-age-check, wallet-balance-lookup, wallet-transactions-lookup.
 Token and contract safety: token-security-check, contract-verify-check, phishing-site-check.
 DeFi intelligence: protocol-tvl-lookup, protocol-fees-lookup, stablecoin-flow-check, fear-greed-index, gas-price-check.
 Identity and compliance: ens-resolve, ens-reverse-lookup, vasp-verify, vasp-non-compliant-check.
-
-Pre-built solutions (single-call multi-step workflows):
-- web3-counterparty-dd: wallet risk + age + ENS + sanctions + PEP + adverse media ($0.12)
-- web3-token-safety: contract security + verification + deployer risk + domain ($0.05)
-- web3-pre-tx-gate: go/no-go middleware for DeFi agents ($0.12)
-- web3-dapp-trust: phishing detection + domain intelligence ($0.05)
-- web3-protocol-health: TVL + fees + stablecoins + domain trust ($0.05)
-- web3-pre-trade: price + security + TVL + sentiment + gas ($0.08)
-- web3-wallet-snapshot: balance + transactions + age + ENS + price ($0.05)
-- web3-vasp-check: EU MiCA VASP verification + sanctions ($0.08)
-- web3-wallet-identity: ENS reverse + risk + age + balance ($0.08)
-
-## Web3 Assurance (decision-ready on-chain counterparty answer)
-
-For agents that transact on-chain (send value, swap, stake, mint, bridge, or call a contract), Strale ships Web3 Assurance — a single call that returns a verdict (proceed / review / block / insufficient_evidence) plus machine-parsable reason_codes, critical_flags, suggested_action, evidence map, and a sidecar audit_url. Sister product to Payee Assurance (off-chain KYB).
-
-Two modes:
-- outbound: agent vetting recipient pre-payment. Full evaluator set, 8s budget. Default.
-- reverse-call: x402 service publisher gating an inbound buyer in real-time. Critical evaluators only, sub-second SLA.
-
-20 evaluators behind one call: sanctions (multi-jurisdiction), mixer-graded scoring (Tornado-Cash-graded per OFAC March 2025 precedent — graded, not binary), scam-cluster cross-reference (ScamSniffer), wallet-history risk (GoPlus address security), token safety (GoPlus token security), contract verification (Etherscan + Sourcify), approval inventory (drainer cross-reference), protocol risk (DefiLlama TVL + hacks DB + governance), bridge legitimacy (DefiLlama + L2Beat), audit-firm cross-reference (Certik/OZ/Trail of Bits/Cyfrin/Sherlock/Code4rena), pre-trade simulation (Tenderly), EAS attestations, ERC-8004 reputation, sister-rug detector, REKT Database, Web3 Antivirus.
-
-Endpoint: POST https://api.strale.io/v1/web3-assurance
-MCP tool: strale_web3_assurance
-Drop-in middleware: Hono, Express, FastAPI, LangGraph, Coinbase AgentKit
-Pricing: $0.03 USDC/call standard via x402 + Stripe annual commits
 
 ## Quick Start
 
