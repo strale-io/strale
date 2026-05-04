@@ -151,6 +151,69 @@ export async function runMigration0029_actualCostCents(
   };
 }
 
+// ─── Block 0030: compliance infrastructure (transactions hash chain) ────────
+//
+// Adds three columns to the transactions table for the EU AI Act / DEC-
+// 20260428-B audit-trail engine: hash-chained integrity, parent-link, and
+// a legal-hold flag. Plus an index on the integrity_hash for chain-walk
+// performance.
+//
+// information_schema check + skip pattern matches blocks 0028 / 0029.
+// Cannot use a bare ADD COLUMN IF NOT EXISTS for `legal_hold` because the
+// NOT NULL DEFAULT false would re-apply on a pre-existing column without
+// the conditional — at best a no-op, at worst confusing in audit logs.
+
+export async function runMigration0030_complianceColumns(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  const check = await tx.execute(sql`
+    SELECT count(*)::text AS cnt FROM information_schema.columns
+    WHERE table_name = 'transactions' AND column_name = 'integrity_hash'
+  `);
+  const rows = Array.isArray(check) ? check : (check as { rows?: unknown[] })?.rows ?? [];
+  const exists = (rows[0] as { cnt?: string })?.cnt !== "0";
+
+  if (exists) {
+    return {
+      block: "0030_compliance_columns",
+      outcome: "skipped (columns already exist)",
+      duration_ms: Date.now() - startedAt,
+    };
+  }
+
+  await tx.execute(sql`ALTER TABLE "transactions" ADD COLUMN "integrity_hash" varchar(128)`);
+  await tx.execute(sql`ALTER TABLE "transactions" ADD COLUMN "previous_hash" varchar(128)`);
+  await tx.execute(sql`ALTER TABLE "transactions" ADD COLUMN "legal_hold" boolean DEFAULT false NOT NULL`);
+  await tx.execute(sql`CREATE INDEX IF NOT EXISTS "transactions_integrity_hash_idx" ON "transactions" ("integrity_hash")`);
+
+  return {
+    block: "0030_compliance_columns",
+    outcome: "added integrity_hash + previous_hash + legal_hold + index",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0031: test_results composite index ───────────────────────────────
+//
+// CREATE INDEX IF NOT EXISTS — idempotent at the SQL level. On re-run
+// Postgres detects the existing index and is a no-op.
+
+export async function runMigration0031_testResultsCompositeIdx(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS "test_results_suite_executed_idx"
+    ON "test_results" ("test_suite_id", "executed_at" DESC)
+  `);
+  return {
+    block: "0031_test_results_suite_executed_idx",
+    outcome: "ensured composite index on (test_suite_id, executed_at DESC)",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
 // ─── Block 3: marketplace_eligible columns ──────────────────────────────────
 //
 // Both ALTER TABLE statements use ADD COLUMN IF NOT EXISTS, so they're
@@ -252,10 +315,19 @@ export async function runMigration0062_paidVendorCosts(
 
 // ─── Orchestrator ───────────────────────────────────────────────────────────
 
-/** Block set executed in order at API boot. New migrations append. */
-const BLOCKS: Array<(tx: MigrationExecutor) => Promise<BlockResult>> = [
+/**
+ * Block set executed in order. Append new migrations here. Order is
+ * historical (oldest first); idempotency makes the order operationally
+ * irrelevant on existing prod, but it's the audit-trail-friendly shape.
+ *
+ * Exported so the admin endpoint regression test can introspect the
+ * canonical block list and assert it matches what the endpoint returns.
+ */
+export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0028_sqsDailySnapshot,
   runMigration0029_actualCostCents,
+  runMigration0030_complianceColumns,
+  runMigration0031_testResultsCompositeIdx,
   runMigration0060_marketplaceEligible,
   runMigration0062_paidVendorCosts,
 ];
@@ -265,8 +337,13 @@ const BLOCKS: Array<(tx: MigrationExecutor) => Promise<BlockResult>> = [
  * failure — the caller in index.ts has the catch that exits the
  * process with a fatal log. Don't catch internally; missing schema
  * is not something the API can run with.
+ *
+ * Returns the per-block summary so callers (the admin endpoint) can
+ * surface it as an HTTP response. The startup wiring in index.ts
+ * ignores the return value; the throw-on-failure semantics is what
+ * matters there.
  */
-export async function runStartupMigrations(): Promise<void> {
+export async function runStartupMigrations(): Promise<BlockResult[]> {
   const startedAt = Date.now();
   const db = getDb();
   const results: BlockResult[] = [];
@@ -301,4 +378,6 @@ export async function runStartupMigrations(): Promise<void> {
     },
     "startup-migrations-complete",
   );
+
+  return results;
 }

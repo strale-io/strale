@@ -30,8 +30,11 @@ import { describe, expect, it } from "vitest";
 import { sql, type SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import {
+  BLOCKS,
   runMigration0028_sqsDailySnapshot,
   runMigration0029_actualCostCents,
+  runMigration0030_complianceColumns,
+  runMigration0031_testResultsCompositeIdx,
   runMigration0060_marketplaceEligible,
   runMigration0062_paidVendorCosts,
   type MigrationExecutor,
@@ -161,6 +164,57 @@ describe("startup-migrations — block 0062 (paid-vendor costs)", () => {
     await expect(runMigration0062_paidVendorCosts(stub)).rejects.toThrow(
       /post-condition failed.*1 paid-vendor suites/i,
     );
+  });
+});
+
+describe("startup-migrations — block 0030 (compliance columns)", () => {
+  it("first run: adds 3 columns + index when integrity_hash is absent", async () => {
+    const stub = makeStub({ queue: [[{ cnt: "0" }]] });
+    const result = await runMigration0030_complianceColumns(stub);
+    expect(result.outcome).toMatch(/added/i);
+    // 1 information_schema check + 3 ALTER TABLE + 1 CREATE INDEX = 5 queries.
+    expect(stub.captured).toHaveLength(5);
+    expect(stub.renderedSql.some((s) => /alter table.*integrity_hash/i.test(s))).toBe(true);
+    expect(stub.renderedSql.some((s) => /alter table.*previous_hash/i.test(s))).toBe(true);
+    expect(stub.renderedSql.some((s) => /alter table.*legal_hold.*not null/i.test(s))).toBe(true);
+    expect(stub.renderedSql.some((s) => /create index if not exists.*integrity_hash/i.test(s))).toBe(true);
+  });
+
+  it("second run: skips when integrity_hash column already exists", async () => {
+    const stub = makeStub({ queue: [[{ cnt: "1" }]] });
+    const result = await runMigration0030_complianceColumns(stub);
+    expect(result.outcome).toMatch(/skipped/i);
+    expect(stub.captured).toHaveLength(1); // only the check ran
+    expect(stub.renderedSql.some((s) => /alter table/i.test(s))).toBe(false);
+  });
+});
+
+describe("startup-migrations — block 0031 (test_results composite index)", () => {
+  it("emits CREATE INDEX IF NOT EXISTS unconditionally — Postgres-level idempotent", async () => {
+    const stub = makeStub({});
+    const result = await runMigration0031_testResultsCompositeIdx(stub);
+    expect(result.outcome).toMatch(/composite index/i);
+    expect(stub.captured).toHaveLength(1);
+    expect(stub.renderedSql[0].toLowerCase()).toMatch(/create index if not exists/);
+    expect(stub.renderedSql[0].toLowerCase()).toMatch(/test_results_suite_executed_idx/);
+  });
+});
+
+describe("startup-migrations — BLOCKS list (canonical block set)", () => {
+  it("exports the expected 6 blocks in historical order", () => {
+    // Pin the canonical block list so an accidental scope-creep edit
+    // (adding a block to BLOCKS without updating tests / admin endpoint
+    // expectations) trips a test failure. Order matters because the
+    // historical numbering is the audit trail.
+    const blockNames = BLOCKS.map((fn) => fn.name);
+    expect(blockNames).toEqual([
+      "runMigration0028_sqsDailySnapshot",
+      "runMigration0029_actualCostCents",
+      "runMigration0030_complianceColumns",
+      "runMigration0031_testResultsCompositeIdx",
+      "runMigration0060_marketplaceEligible",
+      "runMigration0062_paidVendorCosts",
+    ]);
   });
 });
 

@@ -1267,106 +1267,46 @@ internalTestsRoute.get("/cost-summary", async (c) => {
 });
 
 // POST /v1/internal/tests/admin/apply-migrations — Apply pending DB migrations
-// Admin-only, secured with ADMIN_SECRET
+//
+// Single source of truth: delegates to runStartupMigrations() in
+// lib/startup-migrations.ts. Pre-PR-#52 this endpoint had its own
+// inline block set (0028, 0029, 0030, 0031) that drifted from the
+// startup-time set (which had 0028, 0029, 0060, 0062). The drift
+// caused PR #42's columns to never reach prod via either path until
+// the 2026-05-04 outage forced a manual recovery.
+//
+// Now there's one block list and one set of per-block functions.
+// Adding a migration to startup-migrations.ts automatically extends
+// admin-endpoint coverage. The endpoint stays as an emergency-rerun
+// path that mirrors what would run on the next deploy, with the same
+// blocking-on-throw semantics.
+//
+// Admin auth gate retained as-is.
 internalTestsRoute.post("/admin/apply-migrations", async (c) => {
   if (!isValidAdminAuth(c.req.header("Authorization"))) {
     return c.json(apiError("unauthorized", "Admin authentication required"), 401);
   }
 
-  const db = getDb();
-  const results: string[] = [];
+  const { runStartupMigrations } = await import("../lib/startup-migrations.js");
 
-  // Migration 0028: sqs_daily_snapshot
   try {
-    const check1 = await db.execute(sql`
-      SELECT count(*)::text as cnt FROM information_schema.tables
-      WHERE table_name = 'sqs_daily_snapshot'
-    `);
-    const rows1 = Array.isArray(check1) ? check1 : (check1 as any)?.rows ?? [];
-    if (rows1[0]?.cnt === "0") {
-      await db.execute(sql`
-        CREATE TABLE IF NOT EXISTS "sqs_daily_snapshot" (
-          "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-          "capability_slug" text NOT NULL,
-          "snapshot_date" date NOT NULL,
-          "matrix_sqs" numeric(5, 2) NOT NULL,
-          "qp_score" numeric(5, 2),
-          "rp_score" numeric(5, 2),
-          "qp_grade" varchar(2),
-          "rp_grade" varchar(2),
-          "trend" varchar(20),
-          "health_state" varchar(20),
-          "runs_analyzed" integer,
-          "created_at" timestamp with time zone DEFAULT now() NOT NULL
-        )
-      `);
-      await db.execute(sql`
-        CREATE UNIQUE INDEX IF NOT EXISTS "sqs_daily_snapshot_slug_date_unique"
-        ON "sqs_daily_snapshot" ("capability_slug", "snapshot_date")
-      `);
-      await db.execute(sql`
-        CREATE INDEX IF NOT EXISTS "sqs_daily_snapshot_slug_date_desc_idx"
-        ON "sqs_daily_snapshot" ("capability_slug", "snapshot_date" DESC)
-      `);
-      results.push("0028: sqs_daily_snapshot created");
-    } else {
-      results.push("0028: sqs_daily_snapshot already exists");
-    }
+    const blocks = await runStartupMigrations();
+    return c.json({
+      ok: true as const,
+      block_count: blocks.length,
+      blocks,
+    });
   } catch (err) {
-    results.push(`0028: FAILED — ${err instanceof Error ? err.message : err}`);
+    // Mirror the boot-time blocking semantics: a failure aborts the
+    // operation rather than silently continuing. The endpoint returns
+    // a 500 with the error message so the operator running the manual
+    // recovery sees what failed.
+    const message = err instanceof Error ? err.message : String(err);
+    return c.json(
+      apiError("migration_failed", `runStartupMigrations failed: ${message}`),
+      500,
+    );
   }
-
-  // Migration 0029: actual_cost_cents on test_run_log
-  try {
-    const check2 = await db.execute(sql`
-      SELECT count(*)::text as cnt FROM information_schema.columns
-      WHERE table_name = 'test_run_log' AND column_name = 'actual_cost_cents'
-    `);
-    const rows2 = Array.isArray(check2) ? check2 : (check2 as any)?.rows ?? [];
-    if (rows2[0]?.cnt === "0") {
-      await db.execute(sql`
-        ALTER TABLE "test_run_log" ADD COLUMN "actual_cost_cents" integer DEFAULT 0 NOT NULL
-      `);
-      results.push("0029: actual_cost_cents added");
-    } else {
-      results.push("0029: actual_cost_cents already exists");
-    }
-  } catch (err) {
-    results.push(`0029: FAILED — ${err instanceof Error ? err.message : err}`);
-  }
-
-  // Migration 0030: compliance infrastructure (integrity_hash, previous_hash, legal_hold)
-  try {
-    const check3 = await db.execute(sql`
-      SELECT count(*)::text as cnt FROM information_schema.columns
-      WHERE table_name = 'transactions' AND column_name = 'integrity_hash'
-    `);
-    const rows3 = Array.isArray(check3) ? check3 : (check3 as any)?.rows ?? [];
-    if (rows3[0]?.cnt === "0") {
-      await db.execute(sql`ALTER TABLE "transactions" ADD COLUMN "integrity_hash" varchar(128)`);
-      await db.execute(sql`ALTER TABLE "transactions" ADD COLUMN "previous_hash" varchar(128)`);
-      await db.execute(sql`ALTER TABLE "transactions" ADD COLUMN "legal_hold" boolean DEFAULT false NOT NULL`);
-      await db.execute(sql`CREATE INDEX IF NOT EXISTS "transactions_integrity_hash_idx" ON "transactions" ("integrity_hash")`);
-      results.push("0030: compliance columns added (integrity_hash, previous_hash, legal_hold)");
-    } else {
-      results.push("0030: compliance columns already exist");
-    }
-  } catch (err) {
-    results.push(`0030: FAILED — ${err instanceof Error ? err.message : err}`);
-  }
-
-  // Migration 0031: composite index on test_results(test_suite_id, executed_at DESC)
-  try {
-    await db.execute(sql`
-      CREATE INDEX IF NOT EXISTS "test_results_suite_executed_idx"
-      ON "test_results" ("test_suite_id", "executed_at" DESC)
-    `);
-    results.push("0031: test_results_suite_executed_idx created (or already exists)");
-  } catch (err) {
-    results.push(`0031: FAILED — ${err instanceof Error ? err.message : err}`);
-  }
-
-  return c.json({ migrations: results });
 });
 
 // POST /v1/internal/tests/admin/run-script — Run a post-deploy script

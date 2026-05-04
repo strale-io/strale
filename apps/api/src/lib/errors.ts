@@ -22,7 +22,12 @@ export type ErrorCode =
   // UPDATE failed. Wallet has been refunded. Distinct from execution_failed
   // so callers can retry the same inputs safely (execution happened; only
   // the record did not).
-  | "transaction_finalization_failed";
+  | "transaction_finalization_failed"
+  // Internal admin surface only — POST /v1/internal/tests/admin/
+  // apply-migrations returns this when runStartupMigrations() throws
+  // (e.g. block 0062 post-condition violation). Not exposed on the
+  // public DEC-19 contract; the admin endpoint is admin-only.
+  | "migration_failed";
 
 export interface ApiError {
   error_code: ErrorCode;
