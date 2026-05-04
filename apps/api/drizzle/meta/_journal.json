@@ -421,6 +421,13 @@
       "when": 1777845600000,
       "tag": "0058_dispute_and_art22",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1777850861158,
+      "tag": "0060_marketplace_eligible",
+      "breakpoints": true
     }
   ]
 }

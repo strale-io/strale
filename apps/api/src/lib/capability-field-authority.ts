@@ -253,6 +253,20 @@ export const FIELD_CATEGORIES: Record<string, FieldAuthorityEntry> = {
     category: "hybrid",
     reason: "Defaults to 'public' on create; operator may tune to 'personal'/'public_financial_data'/etc. Backfill fills NULL; preserves set values.",
   },
+  marketplace_eligible: {
+    category: "hybrid",
+    reason:
+      "Per DEC-20260503-A: strale.dev marketplace surfacing decision. " +
+      "Manifest seeds the value on create; operator may override later " +
+      "(admin or direct DB) when vendor terms change. DB value preserved " +
+      "on backfill so manifest re-runs don't clobber an operator override.",
+  },
+  marketplace_eligible_reason: {
+    category: "hybrid",
+    reason:
+      "Per DEC-20260503-A: rationale text for marketplace_eligible. " +
+      "Same authority pattern as marketplace_eligible itself.",
+  },
 };
 
 /** Convert a snake_case field name to the Drizzle camelCase column key. */

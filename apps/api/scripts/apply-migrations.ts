@@ -64,6 +64,22 @@ async function main() {
     console.log("[migration] actual_cost_cents already exists — skipping");
   }
 
+  // Migration 0060: marketplace_eligible flag on capabilities (DEC-20260503-A).
+  // Both ALTER TABLE statements use ADD COLUMN IF NOT EXISTS, so they are
+  // independently idempotent — no outer conditional. A previous wrapper that
+  // checked only the first column would skip both adds when a partial prior
+  // run left only `marketplace_eligible` present, leaving `..._reason` missing.
+  console.log("[migration] Ensuring capabilities.marketplace_eligible columns...");
+  await db.execute(sql`
+    ALTER TABLE "capabilities"
+      ADD COLUMN IF NOT EXISTS "marketplace_eligible" boolean DEFAULT true NOT NULL
+  `);
+  await db.execute(sql`
+    ALTER TABLE "capabilities"
+      ADD COLUMN IF NOT EXISTS "marketplace_eligible_reason" text
+  `);
+  console.log("[migration] marketplace_eligible columns ensured");
+
   // Migration 0062: paid-vendor suite cost classification per the
   // 2026-05-04 audit. The UPDATEs are idempotent because they only
   // touch rows where external_cost_cents = 0; a re-run is a no-op.

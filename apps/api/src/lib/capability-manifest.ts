@@ -122,6 +122,12 @@ export function normalizeManifestToRow(
     // authority model hardens. For now, pass through when present.
     freshnessCategory: manifest.freshness_category,
     geography: manifest.geography,
+    // Per DEC-20260503-A — strale.dev marketplace surfacing. Hybrid
+    // field: manifest seeds on create, DB-preserved on backfill so an
+    // operator's later override (e.g. vendor ToS change) survives a
+    // manifest re-onboard.
+    marketplaceEligible: manifest.marketplace_eligible,
+    marketplaceEligibleReason: manifest.marketplace_eligible_reason,
   };
 
   if (!partial) {
