@@ -67,6 +67,7 @@ export async function runMigration0028_sqsDailySnapshot(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
   const startedAt = Date.now();
+  // information_schema column counts return bigint; coerce via text to avoid postgres-js's bigint→string default.
   const check = await tx.execute(sql`
     SELECT count(*)::text AS cnt FROM information_schema.tables
     WHERE table_name = 'sqs_daily_snapshot'
@@ -125,6 +126,7 @@ export async function runMigration0029_actualCostCents(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
   const startedAt = Date.now();
+  // information_schema column counts return bigint; coerce via text to avoid postgres-js's bigint→string default.
   const check = await tx.execute(sql`
     SELECT count(*)::text AS cnt FROM information_schema.columns
     WHERE table_name = 'test_run_log' AND column_name = 'actual_cost_cents'
@@ -167,6 +169,7 @@ export async function runMigration0030_complianceColumns(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
   const startedAt = Date.now();
+  // information_schema column counts return bigint; coerce via text to avoid postgres-js's bigint→string default.
   const check = await tx.execute(sql`
     SELECT count(*)::text AS cnt FROM information_schema.columns
     WHERE table_name = 'transactions' AND column_name = 'integrity_hash'
@@ -281,6 +284,7 @@ export async function runMigration0062_paidVendorCosts(
   // If any are, a new suite was added since the last apply or a manual
   // edit cleared the value. Fail boot in that case so the operator
   // notices.
+  // COUNT(*)::int → postgres-js coerces int4 to JS number; assertion fires correctly.
   const checkRows = await tx.execute(sql`
     SELECT COUNT(*)::int AS remaining_zero
     FROM test_suites
@@ -356,6 +360,7 @@ export async function runMigration0063_invoiceExtractCostReclassify(
   // Post-condition: no active live non-probe suite for invoice-extract
   // may remain at 0 after this block. If a new suite shows up at 0,
   // fail boot so the operator notices.
+  // COUNT(*)::int → postgres-js coerces int4 to JS number; assertion fires correctly.
   const checkRows = await tx.execute(sql`
     SELECT COUNT(*)::int AS remaining_zero
     FROM test_suites
