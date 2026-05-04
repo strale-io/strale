@@ -26,9 +26,20 @@
  * query and returns canned results. No prod DB connection.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { sql, type SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
+
+// Mock the DB layer so the orchestrator-level test below can inject a
+// stub executor via getDb(). Per-block tests pass their stub directly
+// into the per-block function and don't touch getDb, so they're not
+// affected by this mock.
+const mockGetDb = vi.fn();
+vi.mock("../db/index.js", () => ({
+  getDb: () => mockGetDb(),
+  closeDbPool: () => Promise.resolve(),
+}));
+
 import {
   BLOCKS,
   runMigration0028_sqsDailySnapshot,
@@ -38,6 +49,7 @@ import {
   runMigration0060_marketplaceEligible,
   runMigration0062_paidVendorCosts,
   runMigration0063_invoiceExtractCostReclassify,
+  runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
 
@@ -274,16 +286,65 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
   });
 });
 
-describe("startup-migrations — failure-aborts-boot semantics", () => {
-  it("if a block throws, runStartupMigrations propagates (no catch-and-continue)", async () => {
-    // Use the post-condition-violation block as the failure trigger:
-    // dili UPDATE 0, rng UPDATE 0, post-check returns 1 → block throws.
-    // We invoke the block directly here because runStartupMigrations()
-    // pulls getDb() from the real DB; the per-block test is the
-    // behavioural assertion.
-    const stub = makeStub({
-      queue: [{ count: 0 }, { count: 0 }, [{ remaining_zero: 5 }]],
+describe("startup-migrations — failure-aborts-boot semantics (orchestrator)", () => {
+  // These tests target runStartupMigrations() itself — not per-block
+  // functions — to pin the orchestrator's contract: if any block throws
+  // for any reason, the throw propagates and aborts boot. Per
+  // DEC-20260504-A this regression test must fail against the un-applied
+  // fix: if a future engineer wraps the BLOCKS for-loop in a try/catch
+  // (turning the orchestrator into catch-and-continue), this test fails.
+
+  it("propagates a throw from a block (executor-level failure on first query)", async () => {
+    // Stub getDb() to return an executor whose every execute() throws.
+    // Block 0028 runs first; its information_schema check is the very
+    // first execute() call. The throw must bubble up through the for-loop
+    // into runStartupMigrations()'s caller.
+    mockGetDb.mockReturnValueOnce({
+      async execute() {
+        throw new Error("simulated executor failure on first query");
+      },
     });
-    await expect(runMigration0062_paidVendorCosts(stub)).rejects.toThrow();
+
+    await expect(runStartupMigrations()).rejects.toThrow(
+      /simulated executor failure on first query/,
+    );
+  });
+
+  it("propagates a post-condition violation thrown by a later block", async () => {
+    // Realistic scenario: blocks 0028–0060 take their no-op paths (table
+    // exists / column exists / IF NOT EXISTS no-op), 0062's UPDATEs
+    // capture 0 rows, but the post-condition SELECT finds remaining_zero
+    // > 0 — block 0062 throws and the orchestrator must propagate.
+    //
+    // Order of execute() calls across all blocks until the throw:
+    //   0028: information_schema → cnt:"1" (skip)              [1]
+    //   0029: information_schema → cnt:"1" (skip)              [2]
+    //   0030: information_schema → cnt:"1" (skip)              [3]
+    //   0031: CREATE INDEX IF NOT EXISTS                       [4]
+    //   0060: ADD COLUMN IF NOT EXISTS marketplace_eligible    [5]
+    //   0060: ADD COLUMN IF NOT EXISTS marketplace_eligible_…  [6]
+    //   0062: UPDATE dilisense → {count: 0}                    [7]
+    //   0062: UPDATE risk-narrative-generate → {count: 0}      [8]
+    //   0062: SELECT remaining_zero → 1 → THROWS               [9]
+    const queue: unknown[] = [
+      [{ cnt: "1" }],
+      [{ cnt: "1" }],
+      [{ cnt: "1" }],
+      undefined,
+      undefined,
+      undefined,
+      { count: 0 },
+      { count: 0 },
+      [{ remaining_zero: 1 }],
+    ];
+    mockGetDb.mockReturnValueOnce({
+      async execute() {
+        return queue.length > 0 ? queue.shift() : { count: 0 };
+      },
+    });
+
+    await expect(runStartupMigrations()).rejects.toThrow(
+      /0062_paid_vendor_costs post-condition failed/,
+    );
   });
 });
