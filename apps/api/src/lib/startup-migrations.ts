@@ -1,0 +1,304 @@
+/**
+ * Startup migrations — blocking, idempotent DDL/DML applied at API boot.
+ *
+ * Replaces `apps/api/scripts/apply-migrations.ts` which was effectively dead
+ * code. The script existed but the Dockerfile CMD never invoked it, and
+ * apps/api/tsconfig.json's `rootDir: "./src"` excluded it from the build
+ * entirely. As a result every block we shipped through that file (PR #29
+ * actual_cost_cents, PR #42 marketplace_eligible, PR #49 paid-vendor
+ * cost UPDATEs) silently never ran in production. The 2026-05-04 PR-#42
+ * deploy outage made this visible: the API started referencing a column
+ * that the migration was supposed to add, but the migration never ran,
+ * so every public-surface request 500'd until the columns were applied
+ * manually.
+ *
+ * Design rules (the user pinned these in the recovery directive):
+ *
+ * - **Blocking, not fire-and-forget.** A failed migration must abort
+ *   API startup. ANALYZE-on-recovery is fire-and-forget because stale
+ *   stats degrade performance gracefully; missing schema is a 500-fest.
+ * - **Runs BEFORE `validateSchema()`** in `index.ts`. validateSchema
+ *   asserts the DB matches what the code expects; the migrations make
+ *   the assertion true on first boot after a column is added.
+ * - **Runs BEFORE the API listens, BEFORE any scheduler / job boots.**
+ *   No other code can race the migration.
+ * - **Every block is idempotent.** `IF NOT EXISTS` for DDL,
+ *   `WHERE <filter>` for DML. A re-run on a healthy DB is a no-op.
+ * - **Per-block structured logging** so a Railway log-grep can
+ *   distinguish "block X ran and changed N rows" from "block X
+ *   skipped because the change was already present" from "block X
+ *   threw and aborted boot."
+ *
+ * Adding a new block: write a `runMigrationXXXX_<name>` function that
+ * uses `IF NOT EXISTS` / `WHERE` for idempotency, register it in
+ * `BLOCKS`, ship a regression test that asserts both shape (the SQL
+ * has the idempotency markers) and behaviour (a second invocation
+ * with the same input is a no-op).
+ */
+
+import { sql, type SQL } from "drizzle-orm";
+import { getDb } from "../db/index.js";
+import { log } from "./log.js";
+
+/**
+ * Minimal executor surface — matches what `getDb().execute()` returns
+ * but lets the regression tests inject a stub without touching prod.
+ */
+export interface MigrationExecutor {
+  execute(query: SQL): Promise<unknown>;
+}
+
+export interface BlockResult {
+  /** Stable label, also the log line's `label` field. */
+  block: string;
+  /** Human-readable description of what changed (or "skipped"). */
+  outcome: string;
+  /** Rows affected by the block's primary write, if applicable. */
+  rows_affected?: number;
+  duration_ms: number;
+}
+
+// ─── Block 1: sqs_daily_snapshot ────────────────────────────────────────────
+//
+// CREATE TABLE IF NOT EXISTS + indexes. Predates the audit; left in for
+// completeness so existing prod DBs that don't have the table get it.
+
+export async function runMigration0028_sqsDailySnapshot(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  const check = await tx.execute(sql`
+    SELECT count(*)::text AS cnt FROM information_schema.tables
+    WHERE table_name = 'sqs_daily_snapshot'
+  `);
+  const rows = Array.isArray(check) ? check : (check as { rows?: unknown[] })?.rows ?? [];
+  const exists = (rows[0] as { cnt?: string })?.cnt !== "0";
+
+  if (exists) {
+    return {
+      block: "0028_sqs_daily_snapshot",
+      outcome: "skipped (table already exists)",
+      duration_ms: Date.now() - startedAt,
+    };
+  }
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS "sqs_daily_snapshot" (
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+      "capability_slug" text NOT NULL,
+      "snapshot_date" date NOT NULL,
+      "matrix_sqs" numeric(5, 2) NOT NULL,
+      "qp_score" numeric(5, 2),
+      "rp_score" numeric(5, 2),
+      "qp_grade" varchar(2),
+      "rp_grade" varchar(2),
+      "trend" varchar(20),
+      "health_state" varchar(20),
+      "runs_analyzed" integer,
+      "created_at" timestamp with time zone DEFAULT now() NOT NULL
+    )
+  `);
+  await tx.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS "sqs_daily_snapshot_slug_date_unique"
+    ON "sqs_daily_snapshot" ("capability_slug", "snapshot_date")
+  `);
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS "sqs_daily_snapshot_slug_date_desc_idx"
+    ON "sqs_daily_snapshot" ("capability_slug", "snapshot_date" DESC)
+  `);
+
+  return {
+    block: "0028_sqs_daily_snapshot",
+    outcome: "created table + 2 indexes",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 2: actual_cost_cents on test_run_log ─────────────────────────────
+//
+// Adds the column conditionally — IF NOT EXISTS isn't quite enough here
+// because the column has a `NOT NULL DEFAULT 0` constraint that we want
+// to apply on first creation only. The information_schema check makes
+// that explicit and matches the prior shape.
+
+export async function runMigration0029_actualCostCents(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  const check = await tx.execute(sql`
+    SELECT count(*)::text AS cnt FROM information_schema.columns
+    WHERE table_name = 'test_run_log' AND column_name = 'actual_cost_cents'
+  `);
+  const rows = Array.isArray(check) ? check : (check as { rows?: unknown[] })?.rows ?? [];
+  const exists = (rows[0] as { cnt?: string })?.cnt !== "0";
+
+  if (exists) {
+    return {
+      block: "0029_actual_cost_cents",
+      outcome: "skipped (column already exists)",
+      duration_ms: Date.now() - startedAt,
+    };
+  }
+
+  await tx.execute(sql`
+    ALTER TABLE "test_run_log" ADD COLUMN "actual_cost_cents" integer DEFAULT 0 NOT NULL
+  `);
+
+  return {
+    block: "0029_actual_cost_cents",
+    outcome: "added column",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 3: marketplace_eligible columns ──────────────────────────────────
+//
+// Both ALTER TABLE statements use ADD COLUMN IF NOT EXISTS, so they're
+// independently idempotent. The two columns added together as a
+// "marketplace classification" pair (DEC-20260503-A): boolean flag +
+// nullable reason text. A previous wrapper that checked only the first
+// column would skip both adds when a partial prior run left only
+// `marketplace_eligible` present, leaving `..._reason` missing.
+
+export async function runMigration0060_marketplaceEligible(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  await tx.execute(sql`
+    ALTER TABLE "capabilities"
+      ADD COLUMN IF NOT EXISTS "marketplace_eligible" boolean DEFAULT true NOT NULL
+  `);
+  await tx.execute(sql`
+    ALTER TABLE "capabilities"
+      ADD COLUMN IF NOT EXISTS "marketplace_eligible_reason" text
+  `);
+  return {
+    block: "0060_marketplace_eligible",
+    outcome: "ensured marketplace_eligible + marketplace_eligible_reason columns",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 4: paid-vendor suite cost classification ─────────────────────────
+//
+// The two UPDATEs are idempotent because the WHERE clause filters on
+// `external_cost_cents = 0` — once a row is set to 1 or 3, a re-run
+// won't match it. See drizzle/0062_paid_vendor_suite_cost.sql for the
+// full audit-followup rationale (DEC-20260504-A).
+
+export async function runMigration0062_paidVendorCosts(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  const dili = await tx.execute(sql`
+    UPDATE test_suites
+    SET external_cost_cents = 1, updated_at = NOW()
+    WHERE capability_slug IN ('pep-check', 'sanctions-check', 'adverse-media-check', 'uk-cop-check')
+      AND active = true
+      AND test_mode = 'live'
+      AND test_type IN ('known_answer', 'edge_case', 'negative', 'known_bad')
+      AND external_cost_cents = 0
+  `);
+  const diliCount = (dili as { count?: number }).count ?? 0;
+
+  const rng = await tx.execute(sql`
+    UPDATE test_suites
+    SET external_cost_cents = 3, updated_at = NOW()
+    WHERE capability_slug = 'risk-narrative-generate'
+      AND active = true
+      AND test_mode = 'live'
+      AND test_type IN ('known_answer', 'edge_case', 'negative', 'known_bad')
+      AND external_cost_cents = 0
+  `);
+  const rngCount = (rng as { count?: number }).count ?? 0;
+
+  // Post-condition assertion: no paid-vendor live non-probe suite
+  // should still be at external_cost_cents = 0 after this block runs.
+  // If any are, a new suite was added since the last apply or a manual
+  // edit cleared the value. Fail boot in that case so the operator
+  // notices.
+  const checkRows = await tx.execute(sql`
+    SELECT COUNT(*)::int AS remaining_zero
+    FROM test_suites
+    WHERE capability_slug IN (
+            'pep-check', 'sanctions-check', 'adverse-media-check',
+            'uk-cop-check', 'risk-narrative-generate'
+          )
+      AND active = true
+      AND test_mode = 'live'
+      AND test_type IN ('known_answer', 'edge_case', 'negative', 'known_bad')
+      AND external_cost_cents = 0
+  `);
+  const checkResultRows = Array.isArray(checkRows) ? checkRows : (checkRows as { rows?: unknown[] })?.rows ?? [];
+  const remainingZero = (checkResultRows[0] as { remaining_zero?: number })?.remaining_zero ?? 0;
+  if (remainingZero > 0) {
+    throw new Error(
+      `0062_paid_vendor_costs post-condition failed: ${remainingZero} paid-vendor suites still at external_cost_cents = 0`,
+    );
+  }
+
+  const total = diliCount + rngCount;
+  return {
+    block: "0062_paid_vendor_costs",
+    outcome:
+      total === 0
+        ? "no rows to update (already classified)"
+        : `Dilisense+eSortcode=${diliCount}, risk-narrative-generate=${rngCount}`,
+    rows_affected: total,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Orchestrator ───────────────────────────────────────────────────────────
+
+/** Block set executed in order at API boot. New migrations append. */
+const BLOCKS: Array<(tx: MigrationExecutor) => Promise<BlockResult>> = [
+  runMigration0028_sqsDailySnapshot,
+  runMigration0029_actualCostCents,
+  runMigration0060_marketplaceEligible,
+  runMigration0062_paidVendorCosts,
+];
+
+/**
+ * Run every registered migration block, in order. Throws on first
+ * failure — the caller in index.ts has the catch that exits the
+ * process with a fatal log. Don't catch internally; missing schema
+ * is not something the API can run with.
+ */
+export async function runStartupMigrations(): Promise<void> {
+  const startedAt = Date.now();
+  const db = getDb();
+  const results: BlockResult[] = [];
+
+  log.info({ label: "startup-migrations-begin", block_count: BLOCKS.length }, "startup-migrations-begin");
+
+  for (const block of BLOCKS) {
+    const result = await block(db);
+    results.push(result);
+    log.info(
+      {
+        label: "startup-migration-block",
+        block: result.block,
+        outcome: result.outcome,
+        rows_affected: result.rows_affected ?? null,
+        duration_ms: result.duration_ms,
+      },
+      `startup-migration-block ${result.block}`,
+    );
+  }
+
+  log.info(
+    {
+      label: "startup-migrations-complete",
+      block_count: results.length,
+      total_duration_ms: Date.now() - startedAt,
+      blocks: results.map((r) => ({
+        block: r.block,
+        outcome: r.outcome,
+        rows_affected: r.rows_affected ?? null,
+      })),
+    },
+    "startup-migrations-complete",
+  );
+}
