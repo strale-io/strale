@@ -33,7 +33,10 @@ async function extractCompanyName(text: string): Promise<string> {
 async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
   const { url, key } = getBrowserlessConfig();
   // Browserless v2 cloud uses ?token= query auth — Bearer is rejected at edge.
-  const resp = await fetch(`${url}/content?token=${encodeURIComponent(key)}`, {
+  // buildBrowserlessRequestUrl also appends ?launch= per-request, required by
+  // Browserless v2 (LAUNCH_ARGS env var is deprecated). See lib/browserless-launch.ts.
+  const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
+  const resp = await fetch(buildBrowserlessRequestUrl(url, "/content", key), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -67,7 +67,10 @@ async function findAnnualReportPdf(
 
   // Strategy 1: Try Allabolag's annual report page which links to PDF downloads
   const allabolagUrl = `https://www.allabolag.se/${cleanOrg}/arsredovisning`;
-  const contentUrl = `${browserlessUrl}/content?token=${browserlessKey}`;
+  // buildBrowserlessRequestUrl appends ?launch= per-request — Browserless v2's
+  // LAUNCH_ARGS env var is deprecated/ignored. See lib/browserless-launch.ts.
+  const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
+  const contentUrl = buildBrowserlessRequestUrl(browserlessUrl, "/content", browserlessKey);
 
   const pageResponse = await fetch(contentUrl, {
     method: "POST",

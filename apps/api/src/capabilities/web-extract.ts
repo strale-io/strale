@@ -34,7 +34,10 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
   }
 
   // Step 1: Render page with Browserless
-  const contentUrl = `${browserlessUrl}/content?token=${browserlessKey}`;
+  // buildBrowserlessRequestUrl appends ?launch= per-request — Browserless v2's
+  // LAUNCH_ARGS env var is deprecated/ignored. See lib/browserless-launch.ts.
+  const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
+  const contentUrl = buildBrowserlessRequestUrl(browserlessUrl, "/content", browserlessKey);
 
   const renderResponse = await fetch(contentUrl, {
     method: "POST",

@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
+import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("html-to-pdf", async (input: CapabilityInput) => {
@@ -13,7 +14,9 @@ registerCapability("html-to-pdf", async (input: CapabilityInput) => {
   const margins = (input.margins as Record<string, string>) ?? { top: "1cm", right: "1cm", bottom: "1cm", left: "1cm" };
 
   const { url: blessUrl, key } = getBrowserlessConfig();
-  const endpoint = `${blessUrl}/pdf?token=${key}`;
+  // buildBrowserlessRequestUrl appends ?launch= per-request, required by
+  // Browserless v2 (LAUNCH_ARGS env var is deprecated). See lib/browserless-launch.ts.
+  const endpoint = buildBrowserlessRequestUrl(blessUrl, "/pdf", key);
 
   const bodyObj: Record<string, unknown> = {
     options: {

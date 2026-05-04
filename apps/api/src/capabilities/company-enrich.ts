@@ -36,7 +36,10 @@ async function scrapeUrl(url: string): Promise<string> {
     throw new Error("BROWSERLESS_URL and BROWSERLESS_API_KEY are required.");
   }
 
-  const contentUrl = `${browserlessUrl}/content?token=${browserlessKey}`;
+  // buildBrowserlessRequestUrl appends ?launch= per-request — Browserless v2's
+  // LAUNCH_ARGS env var is deprecated/ignored. See lib/browserless-launch.ts.
+  const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
+  const contentUrl = buildBrowserlessRequestUrl(browserlessUrl, "/content", browserlessKey);
   const response = await fetch(contentUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

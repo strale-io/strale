@@ -15,6 +15,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
+import { buildBrowserlessRequestUrl } from "./browserless-launch.js";
 import { fireAndForget } from "./fire-and-forget.js";
 import { log, logError, logWarn } from "./log.js";
 
@@ -102,7 +103,10 @@ export async function probeChromiumHealth(): Promise<boolean> {
 
   try {
     // Browserless v2 cloud uses ?token= query auth — Bearer is rejected at edge.
-    const res = await fetch(`${url}/content?token=${encodeURIComponent(key)}`, {
+    // buildBrowserlessRequestUrl also appends the per-request `?launch=` query
+    // param required by Browserless v2 (LAUNCH_ARGS env var is deprecated and
+    // ignored — see browserless-launch.ts for the discovery context).
+    const res = await fetch(buildBrowserlessRequestUrl(url, "/content", key), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
