@@ -16,7 +16,6 @@
   "apps/api/src/db/generate-tests.ts": 13,
   "apps/api/src/db/manual-test-rerun.ts": 14,
   "apps/api/src/db/seed-limitations.ts": 4,
-  "apps/api/src/db/seed-solutions.ts": 9,
   "apps/api/src/db/seed-tests.ts": 8,
   "apps/api/src/db/verify-dual-profile.ts": 15,
   "apps/api/src/diagnostics/self-heal-check.ts": 2,

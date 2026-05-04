@@ -48,18 +48,11 @@ async function buildCard(): Promise<object> {
     tools: "dynamic",
     products: [
       {
-        name: "Payee Assurance",
+        name: "Counterparty Assurance",
         description:
-          "Decision-ready off-chain counterparty answer (KYB / sanctions / UBO / IBAN-name match) in a single auditable call.",
+          "Decision-ready counterparty answer (KYB / sanctions / UBO / IBAN-name match) in a single auditable call. Available via the atomic capability catalog and the strale_execute MCP tool while the bundled product surface is built.",
         endpoint: "https://api.strale.io/v1/do",
         mcp_tool: "strale_execute",
-      },
-      {
-        name: "Web3 Assurance",
-        description:
-          "Decision-ready on-chain counterparty answer (wallet / contract / token / protocol / bridge). Verdict + reason_codes + sidecar audit_url. Outbound + reverse-call modes; sub-second SLA in reverse-call.",
-        endpoint: "https://api.strale.io/v1/web3-assurance",
-        mcp_tool: "strale_web3_assurance",
       },
     ],
     resources: [],

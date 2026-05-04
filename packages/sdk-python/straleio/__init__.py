@@ -23,11 +23,11 @@ from .types import (
     Transaction,
     TransactionDetail,
 )
-from .web3_assurance import (
-    Web3AssuranceClient,
-    Web3AssuranceResult,
-    strale_web3_guard,
-)
+
+# Web3 Assurance retired 2026-05-04. The Web3AssuranceClient module was
+# deleted in lockstep with the backend code. Imports of
+# `straleio.web3_assurance` will raise ImportError on this and later
+# package versions.
 
 __all__ = [
     # Client
@@ -52,10 +52,6 @@ __all__ = [
     "RateLimitedError",
     "UnauthorizedError",
     "NotFoundError",
-    # Web3 Assurance
-    "Web3AssuranceClient",
-    "Web3AssuranceResult",
-    "strale_web3_guard",
 ]
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"

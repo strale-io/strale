@@ -64,6 +64,28 @@ async function main() {
     console.log("[migration] actual_cost_cents already exists — skipping");
   }
 
+  // Migration 0061: archive + truncate solutions + solution_steps per
+  // DEC-20260503-A. Idempotent because the archive tables use IF NOT
+  // EXISTS, the source tables are TRUNCATEd unconditionally each run,
+  // and a second run finds the live tables already empty (no-op).
+  // After archive tables exist on first run, future runs skip the
+  // CREATE TABLE AS step (no clobber) but still re-TRUNCATE — fine
+  // because the schema's intended steady state is empty live tables.
+  console.log("[migration] Ensuring solutions archive + truncate (DEC-20260503-A)...");
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS solutions_archived_2026_05_04 AS
+      SELECT *, NOW() AS archived_at FROM solutions
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS solution_steps_archived_2026_05_04 AS
+      SELECT *, NOW() AS archived_at FROM solution_steps
+  `);
+  // TRUNCATE both. Using two statements keeps intent explicit; CASCADE
+  // on solutions handles the FK to solution_steps either way.
+  await db.execute(sql`TRUNCATE TABLE solutions CASCADE`);
+  await db.execute(sql`TRUNCATE TABLE solution_steps`);
+  console.log("[migration] solutions retired (archived + truncated)");
+
   console.log("[migration] All migrations applied");
   process.exit(0);
 }

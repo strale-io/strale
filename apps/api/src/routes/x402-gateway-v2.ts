@@ -13,7 +13,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, solutions, transactions, x402OrphanSettlements } from "../db/schema.js";
+import { capabilities, transactions, x402OrphanSettlements } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import {
   isX402Configured,
@@ -29,7 +29,6 @@ import {
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
-import { executeSolution } from "../lib/solution-executor.js";
 import { logError } from "../lib/log.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import { getProcessingLocation } from "../lib/processing-location.js";
@@ -68,22 +67,10 @@ interface X402Capability {
   personalDataCategories: string[];
 }
 
-interface X402Solution {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  x402PriceUsd: number;
-  priceCents: number;
-  inputSchema: Record<string, unknown> | null;
-  outputSchema: Record<string, unknown> | null;
-}
-
 // ─── Cache ──────────────────────────────────────────────────────────────────
 
 const CACHE_TTL_MS = 60_000;
 let _capCache: Map<string, X402Capability> = new Map();
-let _solCache: Map<string, X402Solution> = new Map();
 let _cacheExpiry = 0;
 
 async function ensureCache(): Promise<void> {
@@ -148,35 +135,7 @@ async function ensureCache(): Promise<void> {
       });
     }
 
-    // Solutions — same derivation rule as capabilities.
-    const solRows = await db
-      .select({
-        id: solutions.id,
-        slug: solutions.slug,
-        name: solutions.name,
-        description: solutions.description,
-        priceCents: solutions.priceCents,
-        inputSchema: solutions.inputSchema,
-      })
-      .from(solutions)
-      .where(and(eq(solutions.x402Enabled, true), eq(solutions.isActive, true)));
-
-    const newSolCache = new Map<string, X402Solution>();
-    for (const row of solRows) {
-      newSolCache.set(row.slug, {
-        id: row.id,
-        slug: row.slug,
-        name: row.name,
-        description: row.description ?? "",
-        x402PriceUsd: eurCentsToUsd(row.priceCents),
-        priceCents: row.priceCents,
-        inputSchema: row.inputSchema as Record<string, unknown> | null,
-        outputSchema: null, // solutions table has no output_schema column
-      });
-    }
-
     _capCache = newCapCache;
-    _solCache = newSolCache;
     _cacheExpiry = Date.now() + CACHE_TTL_MS;
   } catch (err) {
     logError("x402-cache-refresh-failed", err);
@@ -777,16 +736,6 @@ x402GatewayV2.get("/catalog", async (c) => {
     input_schema: cap.inputSchema,
   }));
 
-  const sols = [..._solCache.values()].map((sol) => ({
-    slug: sol.slug,
-    name: sol.name,
-    description: sol.description,
-    price_usd: sol.x402PriceUsd,
-    method: "POST",
-    endpoint: `${BASE_URL}/x402/solutions/${sol.slug}`,
-    input_schema: sol.inputSchema,
-  }));
-
   c.header("Cache-Control", "public, max-age=60");
   return c.json({
     x402: true,
@@ -794,193 +743,29 @@ x402GatewayV2.get("/catalog", async (c) => {
     facilitator: process.env.X402_FACILITATOR_URL ?? "https://x402.org/facilitator",
     wallet: WALLET_ADDRESS || null,
     capabilities: caps,
-    solutions: sols,
-    total: caps.length + sols.length,
+    total: caps.length,
   });
 });
 
-// ─── Solution execution: /x402/solutions/:slug ──────────────────────────────
+// ─── Solution execution: /x402/solutions/:slug — retired ────────────────────
+//
+// Retired DEC-20260503-A 2026-05-04. Phase 1b removal: separate to-do.
+// The public solutions surface (including x402 execution) is retired with
+// the rest of the solutions concept. lib/solution-executor.ts is kept for
+// any future bundled-product module that reuses the composition tech.
 
-x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
-  const slug = c.req.param("slug");
-  await ensureCache();
-
-  const sol = _solCache.get(slug);
-  if (!sol) {
-    return c.json(
-      { error: "Solution not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
-      404,
-    );
-  }
-
-  // Payment check FIRST — so Bazaar's empty-body discovery crawl gets a 402
-  // (not a 400 from failed JSON parse). See capability handler for detail.
-  //
-  // Verify only; defer settlement until the solution has produced at least one
-  // successful step (DEC-14). If the solution produces no output the caller is
-  // not charged.
-  let verified: X402VerifiedPayment | undefined;
-  let paymentHash: string | null = null;
-  if (sol.x402PriceUsd > 0) {
-    const paymentHeader = extractPaymentHeader(c.req.raw.headers);
-
-    if (!paymentHeader) {
-      if (!isX402Configured()) {
-        return c.json({ error: "x402 payments not configured on this server." }, 503);
-      }
-      const { body } = build402(
-        sol.name, sol.description, sol.x402PriceUsd,
-        `${BASE_URL}/x402/solutions/${slug}`,
-        null, sol.inputSchema, "POST", sol.outputSchema,
-      );
-      // No Payment-Required header: v1 body is the canonical source. Emitting a
-      // v1-encoded header trips v2-only header decoders (e.g. @agentcash/discovery)
-      // which never fall back to body parsing once any header is present.
-      return c.json(body, 402);
-    }
-
-    if (!isX402Configured()) {
-      return c.json({ error: "x402 payments not configured." }, 503);
-    }
-
-    const solRebuild = build402(
-      sol.name, sol.description, sol.x402PriceUsd,
-      `${BASE_URL}/x402/solutions/${slug}`,
-      null, sol.inputSchema, "POST", sol.outputSchema,
-    );
-    const verification = await verifyX402PaymentOnly(
-      paymentHeader,
-      sol.priceCents,
-      sol.x402PriceUsd,
-      {
-        resource: solRebuild.paymentRequirement.resource as string,
-        description: solRebuild.paymentRequirement.description as string,
-        outputSchema: solRebuild.paymentRequirement.outputSchema as Record<string, unknown>,
-      },
-    );
-    if (!verification.valid || !verification.verified) {
-      return c.json({ error: "Payment verification failed", detail: verification.error }, 402);
-    }
-    verified = verification.verified;
-
-    // Cert-audit C9: replay dedup. If this exact payment header was already
-    // processed and recorded, return the cached row instead of re-running.
-    // Only safe AFTER verify so an unverified replay can't probe for the
-    // existence of cached rows.
-    paymentHash = hashPaymentHeader(paymentHeader);
-    const cached = await findCachedX402Response(paymentHash);
-    if (cached) {
-      if (cached.status === "completed") {
-        return c.json({
-          solution: sol.slug,
-          steps: (cached.output as { steps?: unknown })?.steps ?? cached.output,
-          _meta: {
-            solution: sol.slug,
-            replayed: true,
-            note: "Returned from cache — same X-Payment header was already processed.",
-            latency_ms: cached.latencyMs,
-            payment: cached.settlementId
-              ? { method: "x402", settlement_id: cached.settlementId, price_usd: sol.x402PriceUsd }
-              : { method: "x402", price_usd: sol.x402PriceUsd },
-          },
-        });
-      }
-      return c.json(
-        { error: "Prior request with this payment header failed.", solution: sol.slug, _meta: { replayed: true } },
-        502,
-      );
-    }
-  }
-
-  // Extract inputs (after verify, before settle — bad input returns 4xx without charging)
-  let inputs: Record<string, unknown>;
-  try {
-    inputs = await extractInputs(c, sol.inputSchema);
-  } catch {
-    return c.json({ error: "Invalid request body. Expected JSON." }, 400);
-  }
-
-  // Execute solution steps via shared orchestration module
-  const result = await executeSolution(sol.id, inputs);
-
-  if (!result) {
-    return c.json({ error: "Solution has no steps configured." }, 503);
-  }
-
-  // Settle only if at least one step produced output. All-steps-failed returns
-  // a 4xx-shaped response and the caller keeps their USDC authorization.
-  // `result.steps` is a Record<slug, output | {error} | {skipped}>. A step
-  // counts as successful when its value is an object with neither `error` nor
-  // `skipped` set.
-  const anyStepSucceeded = Object.values(result.steps).some((v) => {
-    if (!v || typeof v !== "object") return false;
-    const obj = v as Record<string, unknown>;
-    return !("error" in obj) && !("skipped" in obj);
-  });
-  if (!anyStepSucceeded) {
-    return c.json(
-      {
-        error: "Solution failed — no steps produced output. No payment was taken.",
-        solution: sol.slug,
-        steps: result.steps,
-        errors: result.errors,
-      },
-      502,
-    );
-  }
-
-  let settlementId: string | undefined;
-  if (verified) {
-    const settled = await settleX402Payment(verified);
-    if (!settled.valid) {
-      return c.json(
-        { error: "Payment settlement failed", detail: settled.error },
-        402,
-      );
-    }
-    settlementId = settled.settlementId;
-    if (settlementId) {
-      c.header("X-Payment-Response", encodePaymentResponseHeader(settlementId));
-    }
-  }
-
-  // CCO P0 #12: AWAIT the record. Settlement happened on-chain and is
-  // irreversible; if the INSERT fails, recordX402Transaction writes an
-  // orphan-settlement row for manual reconciliation. If we fire-and-forget
-  // here, an INSERT failure has nowhere to land.
-  // F-AUDIT-01 / CCO #3: dataJurisdiction is no longer passed here; it's
-  // computed inside recordX402Transaction from Strale's actual region +
-  // LLM reach derived from transparencyTag.
-  const solPayerAddress = verified ? extractPayerAddress(verified) : null;
-  await recordX402Transaction({
-    capabilityId: null,
-    solutionSlug: sol.slug,
-    slug: sol.slug,
-    inputs,
-    output: { steps: result.steps, errors: result.errors },
-    latencyMs: result.latency_ms,
-    priceCents: sol.priceCents,
-    priceUsd: sol.x402PriceUsd,
-    transparencyTag: "mixed",
-    settlementId,
-    payerAddress: solPayerAddress,
-    paymentHash,
-  });
-
-  return c.json({
-    solution: sol.slug,
-    steps: result.steps,
-    errors: result.errors.length > 0 ? result.errors : undefined,
-    _meta: {
-      solution: sol.slug,
-      step_count: result.step_count,
-      latency_ms: result.latency_ms,
-      payment: settlementId
-        ? { method: "x402", settlement_id: settlementId, price_usd: sol.x402PriceUsd }
-        : { method: "x402", price_usd: sol.x402PriceUsd },
+x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", (c) =>
+  c.json(
+    {
+      error_code: "gone",
+      message:
+        "Solutions surface retired per DEC-20260503-A. Visit https://strale.io for Counterparty Assurance.",
+      deprecated_at: "2026-05-04",
+      alternative: "https://strale.io",
     },
-  });
-});
+    410,
+  ),
+);
 
 // ─── Wildcard capability handler: /x402/:slug ───────────────────────────────
 
@@ -1256,24 +1041,14 @@ export async function getX402Manifest(): Promise<{
   // /.well-known/x402.json. The canonical numeric value is always
   // available server-side as `priceCents` (EUR) and the live USD figure
   // is `eurCentsToUsd(priceCents)` per DEC-20260502-A.
-  const endpoints = [
-    ...[..._capCache.values()].map((cap) => ({
-      path: `/x402/${cap.slug}`,
-      method: cap.x402Method,
-      price: cap.x402PriceUsd.toFixed(2),
-      currency: "USDC",
-      network: NETWORK,
-      description: cap.description,
-    })),
-    ...[..._solCache.values()].map((sol) => ({
-      path: `/x402/solutions/${sol.slug}`,
-      method: "POST",
-      price: sol.x402PriceUsd.toFixed(2),
-      currency: "USDC",
-      network: NETWORK,
-      description: sol.description,
-    })),
-  ];
+  const endpoints = [..._capCache.values()].map((cap) => ({
+    path: `/x402/${cap.slug}`,
+    method: cap.x402Method,
+    price: cap.x402PriceUsd.toFixed(2),
+    currency: "USDC",
+    network: NETWORK,
+    description: cap.description,
+  }));
 
   return {
     x402: true,
@@ -1290,10 +1065,9 @@ export async function getX402Manifest(): Promise<{
 // against them fails. They remain reachable via /v1/capabilities and /x402/catalog.
 export async function getX402WellKnownResources(): Promise<{ version: number; resources: string[] }> {
   await ensureCache();
-  const resources = [
-    ...[..._capCache.values()].filter((cap) => cap.x402PriceUsd > 0).map((cap) => `${BASE_URL}/x402/${cap.slug}`),
-    ...[..._solCache.values()].filter((sol) => sol.x402PriceUsd > 0).map((sol) => `${BASE_URL}/x402/solutions/${sol.slug}`),
-  ];
+  const resources = [..._capCache.values()]
+    .filter((cap) => cap.x402PriceUsd > 0)
+    .map((cap) => `${BASE_URL}/x402/${cap.slug}`);
   return { version: 1, resources };
 }
 
@@ -1318,20 +1092,6 @@ export async function getX402OpenApiPaths(): Promise<Record<string, unknown>> {
         priceUsd: cap.x402PriceUsd,
         inputSchema: cap.inputSchema,
         outputSchema: cap.outputSchema,
-      }),
-    };
-  }
-
-  for (const sol of _solCache.values()) {
-    if (sol.x402PriceUsd <= 0) continue;
-    paths[`/x402/solutions/${sol.slug}`] = {
-      post: buildX402Operation({
-        summary: `${sol.name} (x402 solution)`,
-        description: sol.description,
-        method: "post",
-        priceUsd: sol.x402PriceUsd,
-        inputSchema: sol.inputSchema,
-        outputSchema: sol.outputSchema,
       }),
     };
   }
