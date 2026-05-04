@@ -58,9 +58,80 @@ export const app = new Hono<AppEnv>();
 // has a populated `c.get("log")`.
 app.use("*", requestContext());
 
-// Global error handler — never leak internals to client
+// Global error handler — never leak internals to client.
+//
+// Server-side, classify the error so dashboards can group by underlying
+// cause instead of staring at an undifferentiated "internal_error" bucket.
+// The PR-43 incident (do.ts spendCapWouldExceed Date-encoding bug) sat
+// silent for 4 days because every failure logged as plain "[unhandled]"
+// with no error_class field — there was no way to alert on a sudden
+// surge of db_bind_error entries vs. genuine 500s.
+//
+// Client-facing response stays generic (no internals leaked) — the
+// classification lives only in structured logs.
+export function classifyError(err: Error): {
+  error_class: string;
+  pg_code?: string;
+} {
+  const e = err as Error & { code?: string };
+  // postgres-js attaches `code` (5-char SQLSTATE) on real DB errors.
+  if (e.code && /^[0-9A-Z]{5}$/.test(e.code)) {
+    // Common SQLSTATEs we care about; rest fall through to `db_unknown`.
+    const known: Record<string, string> = {
+      "23505": "db_unique_violation",
+      "23503": "db_foreign_key_violation",
+      "23502": "db_not_null_violation",
+      "23514": "db_check_violation",
+      "25P03": "db_idle_in_tx_timeout",
+      "55P03": "db_lock_timeout",
+      "57014": "db_query_canceled",
+      "40001": "db_serialization_failure",
+      "40P01": "db_deadlock",
+      "42703": "db_undefined_column",
+      "42P01": "db_undefined_table",
+    };
+    return { error_class: known[e.code] ?? "db_unknown", pg_code: e.code };
+  }
+  // postgres-js bind-encoder failure (the PR-43 shape): TypeError thrown
+  // from Buffer.byteLength when a non-string/Buffer reaches the wire.
+  // No SQLSTATE because we never made it to the server.
+  if (
+    err.name === "TypeError" &&
+    err.message.includes("string") &&
+    /Date|Buffer|ArrayBuffer/.test(err.message) &&
+    /byteLength|prepared|Bind|ParameterDescription/.test(err.stack ?? "")
+  ) {
+    return { error_class: "db_bind_encoder" };
+  }
+  // Hono's BodyTimeout / our explicit AbortError shapes.
+  if (err.name === "AbortError" || err.message.includes("aborted")) {
+    return { error_class: "request_aborted" };
+  }
+  if (err.name === "ZodError" || err.message.startsWith("Validation")) {
+    return { error_class: "validation_error" };
+  }
+  return { error_class: "unknown" };
+}
+
 app.onError((err, c) => {
-  console.error("[unhandled]", err.message, err.stack);
+  const { error_class, pg_code } = classifyError(err);
+  const reqLog = (c.get("log" as any) as { error?: (...args: unknown[]) => void } | undefined);
+  const logCtx = {
+    label: "unhandled",
+    error_class,
+    ...(pg_code ? { pg_code } : {}),
+    err_name: err.name,
+    err_message: err.message,
+    method: c.req.method,
+    path: c.req.path,
+    stack: err.stack,
+  };
+  if (reqLog?.error) {
+    reqLog.error(logCtx, "[unhandled]");
+  } else {
+    // Pre-requestContext path (rare); fall back to console with the same shape.
+    console.error("[unhandled]", JSON.stringify(logCtx));
+  }
   return c.json(
     {
       error_code: "internal_error" as const,
