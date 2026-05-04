@@ -1,13 +1,24 @@
 /**
- * DB-Driven Test Scheduler
+ * DB-Driven Test Scheduler — hourly free-only (DEC-20260503-B).
  *
  * Replaces the old setInterval-based scheduler that counted time from process
  * start. That approach broke on every Railway deploy (timers reset, tests
  * never fire during active development).
  *
- * This scheduler polls the DB every 5 minutes for capabilities whose
- * last_tested_at is overdue relative to their schedule tier. It is
- * deploy-resistant because it relies on DB state, not process uptime.
+ * Per DEC-20260503-B (2026-05-04), the previous tiered cadence (A=6h /
+ * B=24h / C=72h) is replaced by a single hourly schedule for free
+ * capabilities only. Paid capabilities (test_suites.external_cost_cents > 0)
+ * are removed from scheduled testing entirely; quality signals for them
+ * come from production observability, piggyback test suites, and any
+ * zero-cost auth-less probes the vendor permits. The schedule_tier column
+ * stays on test_suites for backwards compatibility but is no longer read
+ * by the scheduler.
+ *
+ * Cadence: the scheduler ticks every minute. Each minute M (0–59) it
+ * picks free capabilities whose `abs(hashtext(slug)) % 60 = M` and whose
+ * last_tested_at is older than 1 hour. This stagger spreads the per-hour
+ * test load across the hour to avoid spiky pressure on shared upstream
+ * sources (Companies House, GLEIF, VIES, etc.).
  *
  * Also runs auxiliary periodic tasks (health checks, chromium probes,
  * weekly sweep, diagnostics, snapshots, retention, staleness refresh,
@@ -70,12 +81,17 @@ async function checkSolutionGates(capabilitySlug: string): Promise<void> {
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const POLL_INTERVAL_MS = 5 * 60 * 1000;            // 5 minutes
-const BATCH_SIZE = 20;                              // max capabilities per poll cycle
+const POLL_INTERVAL_MS = 60 * 1000;                 // 1 minute (per-minute slug-hash stagger)
+const BATCH_SIZE = 20;                              // safety cap; expected ~5/min with hash spread
 const DELAY_BETWEEN_CAPABILITIES_MS = 2_000;        // 2s between capabilities
 const STARTUP_DELAY_MS = 90_000;                    // 90 seconds after startup
+const FREE_TEST_INTERVAL_HOURS = 1;                 // DEC-20260503-B: hourly free-only
 
-const TIER_HOURS: Record<string, number> = { A: 6, B: 24, C: 72 };
+// schedule_tier (A/B/C) is no longer read by the scheduler. The column
+// remains on test_suites for backwards compatibility and downstream
+// consumers (refresh-stale-scores.ts uses it for freshness-decay tier
+// hours). Per DEC-20260503-B, the scheduler dispatches strictly on
+// external_cost_cents = 0 + slug-hash stagger.
 
 // Auxiliary task intervals (in ms)
 const HEALTH_CHECK_INTERVAL_MS      = 6 * 60 * 60 * 1000;   // 6h
@@ -179,38 +195,63 @@ async function withAdvisoryLock<T>(
 interface OverdueCapability {
   slug: string;
   lastTestedAt: Date | null;
-  scheduleTier: string;
 }
 
+/**
+ * Slug-hash modulo 60 — deterministic minute-of-hour offset for a slug.
+ * Used by both the SQL query (Postgres `hashtext` keeps the agreement) and
+ * the unit tests (TypeScript implementation must produce the same output).
+ *
+ * `hashtext` is Postgres's built-in lookup hash for character data —
+ * stable across versions for ASCII inputs and well-spread for slug-shaped
+ * strings. Wrapping in `abs()` ensures non-negative modulo.
+ */
+export function slugStaggerMinute(slug: string): number {
+  // Mirrors `abs(hashtext($slug)) % 60` — used only in unit tests + as a
+  // documentation aid. The authoritative computation lives in SQL so the
+  // scheduler doesn't have to ship every active slug to the app layer.
+  // We use the FNV-1a 32-bit hash here because it's deterministic and
+  // well-distributed for slug strings; Postgres's `hashtext` is also
+  // well-distributed but uses a different algorithm — the stagger only
+  // needs to be deterministic per-slug, not cross-language identical.
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < slug.length; i++) {
+    hash ^= slug.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash % 60;
+}
+
+/**
+ * Find free capabilities due for testing this minute.
+ *
+ * Per DEC-20260503-B:
+ *   - external_cost_cents = 0  (free; paid caps skipped entirely)
+ *   - last_tested_at older than 1h  (or never tested)
+ *   - abs(hashtext(slug)) % 60 = current minute  (slug-hash stagger)
+ *
+ * The status floor (upstream_broken, infra_limited, quarantined) still
+ * applies — known-broken suites back off to daily/weekly even on the new
+ * hourly cadence. The "no status creates a black hole" invariant from the
+ * old tiered query is preserved by the ELSE branch.
+ */
 async function findOverdueCapabilities(): Promise<OverdueCapability[]> {
   const db = getDb();
 
-  // Eligibility = at least one active test suite whose last_tested_at is
-  // older than max(tier interval, status floor). The CASE expressions mirror
-  // the policy in lib/test-scheduler-policy.ts; the SQL is the binding
-  // implementation because the policy must run inside the LIMIT/ORDER BY.
-  //
-  // ELSE branches default to 0 hours, so any new test_status added later
-  // falls back to "tier interval only" rather than silently dropping the
-  // cap from the queue. No status creates a black hole.
   const rows = await db.execute(sql`
     SELECT
       c.slug,
-      c.last_tested_at AS "lastTestedAt",
-      MIN(ts.schedule_tier) AS "scheduleTier"
+      c.last_tested_at AS "lastTestedAt"
     FROM capabilities c
     INNER JOIN test_suites ts
       ON ts.capability_slug = c.slug AND ts.active = true
     WHERE c.is_active = true
+      AND ts.external_cost_cents = 0
+      AND (abs(hashtext(c.slug)) % 60) = EXTRACT(MINUTE FROM NOW())::int
       AND (
         c.last_tested_at IS NULL
         OR c.last_tested_at < NOW() - GREATEST(
-          CASE ts.schedule_tier
-            WHEN 'A' THEN INTERVAL '6 hours'
-            WHEN 'B' THEN INTERVAL '24 hours'
-            WHEN 'C' THEN INTERVAL '72 hours'
-            ELSE INTERVAL '24 hours'
-          END,
+          INTERVAL '1 hour',
           CASE ts.test_status
             WHEN 'upstream_broken' THEN INTERVAL '24 hours'
             WHEN 'infra_limited'   THEN INTERVAL '24 hours'
@@ -228,14 +269,14 @@ async function findOverdueCapabilities(): Promise<OverdueCapability[]> {
   return resultRows.map((r: any) => ({
     slug: r.slug,
     lastTestedAt: r.lastTestedAt ? new Date(r.lastTestedAt) : null,
-    scheduleTier: r.scheduleTier ?? "B",
   }));
 }
 
 /**
- * Total count of capabilities currently overdue per scheduler policy.
- * Used for queue-depth observability — pollCycle processes BATCH_SIZE per
- * tick, so `overdue_total - tested` is the depth still queued.
+ * Total count of free capabilities currently overdue (across the whole
+ * hour, ignoring the per-minute stagger). Used for queue-depth
+ * observability — if this number creeps up, hourly testing is falling
+ * behind.
  */
 async function countOverdueCapabilities(): Promise<number> {
   const db = getDb();
@@ -245,15 +286,11 @@ async function countOverdueCapabilities(): Promise<number> {
     INNER JOIN test_suites ts
       ON ts.capability_slug = c.slug AND ts.active = true
     WHERE c.is_active = true
+      AND ts.external_cost_cents = 0
       AND (
         c.last_tested_at IS NULL
         OR c.last_tested_at < NOW() - GREATEST(
-          CASE ts.schedule_tier
-            WHEN 'A' THEN INTERVAL '6 hours'
-            WHEN 'B' THEN INTERVAL '24 hours'
-            WHEN 'C' THEN INTERVAL '72 hours'
-            ELSE INTERVAL '24 hours'
-          END,
+          INTERVAL '1 hour',
           CASE ts.test_status
             WHEN 'upstream_broken' THEN INTERVAL '24 hours'
             WHEN 'infra_limited'   THEN INTERVAL '24 hours'
@@ -262,6 +299,25 @@ async function countOverdueCapabilities(): Promise<number> {
           END
         )
       )
+  `);
+  const resultRows = Array.isArray(rows) ? rows : (rows as any)?.rows ?? [];
+  return resultRows[0]?.count ?? 0;
+}
+
+/**
+ * Total count of paid capabilities skipped by the scheduler. Used for
+ * end-of-cycle observability so operators can see how many paid caps the
+ * scheduler is consciously NOT testing per DEC-20260503-B.
+ */
+async function countPaidSkipped(): Promise<number> {
+  const db = getDb();
+  const rows = await db.execute(sql`
+    SELECT COUNT(DISTINCT c.slug)::int AS count
+    FROM capabilities c
+    INNER JOIN test_suites ts
+      ON ts.capability_slug = c.slug AND ts.active = true
+    WHERE c.is_active = true
+      AND ts.external_cost_cents > 0
   `);
   const resultRows = Array.isArray(rows) ? rows : (rows as any)?.rows ?? [];
   return resultRows[0]?.count ?? 0;
@@ -422,18 +478,25 @@ async function pollCycle(): Promise<void> {
       // Run auxiliary tasks (health checks, probes, etc.)
       await runAuxiliaryTasks();
 
-      // Find overdue capabilities + total queue depth (for observability —
-      // BATCH_SIZE-limited result vs. total tells us when the scheduler is
-      // falling behind even though it ticks).
-      const [overdue, queueDepth] = await Promise.all([
+      // Find this minute's free capabilities + total queue depth (caps
+      // overdue across the whole hour) + paid-skipped count. Paid skipped
+      // is logged once per tick for visibility into the DEC-20260503-B
+      // policy: the scheduler is consciously NOT testing those.
+      const [overdue, queueDepth, paidSkipped] = await Promise.all([
         findOverdueCapabilities(),
         countOverdueCapabilities().catch(() => -1),
+        countPaidSkipped().catch(() => -1),
       ]);
 
       if (overdue.length === 0) {
         jobLog.info(
-          { label: "test-scheduler-poll-all-fresh", queue_depth: queueDepth },
-          "all capabilities fresh, nothing to test",
+          {
+            label: "test-scheduler-poll-no-stagger-match",
+            queue_depth: queueDepth,
+            paid_skipped: paidSkipped,
+            current_minute: new Date().getMinutes(),
+          },
+          "no free capabilities match this minute's stagger; nothing to test",
         );
         return;
       }
@@ -511,21 +574,14 @@ async function pollCycle(): Promise<void> {
         return;
       }
 
-      // Summarize by tier
-      const tierCounts: Record<string, number> = {};
-      for (const cap of runnableCaps) {
-        tierCounts[cap.scheduleTier] = (tierCounts[cap.scheduleTier] ?? 0) + 1;
-      }
-      const tierSummary = Object.entries(tierCounts)
-        .map(([tier, count]) => `${count} tier-${tier}`)
-        .join(", ");
       jobLog.info(
         {
           label: "test-scheduler-poll-start",
           runnable: runnableCaps.length,
-          tier_counts: tierCounts,
           queue_depth: queueDepth,
+          paid_skipped: paidSkipped,
           skipped_unhealthy: skippedUnhealthy,
+          current_minute: new Date().getMinutes(),
         },
         "test-scheduler-poll-start",
       );
@@ -539,7 +595,7 @@ async function pollCycle(): Promise<void> {
 
         try {
           jobLog.info(
-            { label: "test-scheduler-testing", capability_slug: cap.slug, tier: cap.scheduleTier, last_tested: agoLabel },
+            { label: "test-scheduler-testing", capability_slug: cap.slug, last_tested: agoLabel },
             "test-scheduler-testing",
           );
 
@@ -595,6 +651,7 @@ async function pollCycle(): Promise<void> {
           passed: totalPassed,
           failed: totalFailed,
           skipped_unhealthy: skippedUnhealthy,
+          paid_skipped: paidSkipped,
           queue_depth: queueDepth,
         },
         "test-scheduler-poll-complete",
@@ -612,8 +669,8 @@ async function pollCycle(): Promise<void> {
               passed: totalPassed,
               failed: totalFailed,
               skipped_unhealthy: skippedUnhealthy,
+              paid_skipped: paidSkipped,
               queue_depth: queueDepth,
-              tierCounts,
             },
           }),
         { label: "health-event-log", context: { event: "scheduler_heartbeat" } },
