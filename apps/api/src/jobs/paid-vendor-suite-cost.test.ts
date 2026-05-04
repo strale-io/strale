@@ -15,9 +15,12 @@
  *   - filter on external_cost_cents = 0 so existing manual values are
  *     preserved (idempotent)
  *
- * The drizzle SQL we ship in apply-migrations.ts is compiled here with
- * PgDialect and asserted directly. No prod connection needed — the
- * test runs in CI without DB access.
+ * The drizzle SQL we ship in src/lib/startup-migrations.ts (block 0062)
+ * is compiled here with PgDialect and asserted directly. No prod
+ * connection needed — the test runs in CI without DB access. (The
+ * earlier scripts/apply-migrations.ts referenced in this file's
+ * git history was deleted in the runStartupMigrations() refactor;
+ * see src/lib/startup-migrations.ts for the current home.)
  *
  * Note on shape: the SQL is built with sql`UPDATE … WHERE
  * capability_slug IN ('foo', 'bar')`. Static string literals inside
@@ -32,7 +35,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 const dialect = new PgDialect();
 
 /** Mirrors the Dilisense + eSortcode UPDATE in
- *  scripts/apply-migrations.ts (and drizzle/0062_paid_vendor_suite_cost.sql).
+ *  src/lib/startup-migrations.ts block 0062 (and drizzle/0062_paid_vendor_suite_cost.sql).
  *  Keeping this re-stated locally rather than importing from the script
  *  is the smallest faithful contract: the test doesn't pin the script's
  *  exact text but pins the SHAPE we expect the script to ship. */

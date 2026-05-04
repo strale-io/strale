@@ -64,7 +64,17 @@ async function main() {
     );
   }
 
-  // Schema validation: fail fast if DB is missing columns the code expects
+  // Apply startup migrations BEFORE schema validation. Each block is
+  // idempotent (IF NOT EXISTS / WHERE filter) so a re-run on a healthy
+  // DB is a no-op. Blocking — if any block throws, the process aborts
+  // before the API listens. Replaces the previously-dead
+  // apps/api/scripts/apply-migrations.ts (excluded from build by
+  // tsconfig and never invoked by the Dockerfile CMD).
+  const { runStartupMigrations } = await import("./lib/startup-migrations.js");
+  await runStartupMigrations();
+
+  // Schema validation: fail fast if DB is missing columns the code expects.
+  // Runs AFTER migrations so it sees the post-migration state.
   const { validateSchema } = await import("./lib/schema-validator.js");
   await validateSchema();
 
