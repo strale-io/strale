@@ -37,6 +37,7 @@ import {
   runMigration0031_testResultsCompositeIdx,
   runMigration0060_marketplaceEligible,
   runMigration0062_paidVendorCosts,
+  runMigration0063_invoiceExtractCostReclassify,
   type MigrationExecutor,
 } from "./startup-migrations.js";
 
@@ -200,8 +201,62 @@ describe("startup-migrations — block 0031 (test_results composite index)", () 
   });
 });
 
+describe("startup-migrations — block 0063 (invoice-extract cost reclassify)", () => {
+  it("first run: updates 4 rows when invoice-extract suites are at 0; post-check passes", async () => {
+    // Queue: UPDATE returns 4 (the 4 paid-burning suites flipped from 0 → 1);
+    // post-check returns 0 (none remaining at 0).
+    const stub = makeStub({
+      queue: [{ count: 4 }, [{ remaining_zero: 0 }]],
+    });
+    const result = await runMigration0063_invoiceExtractCostReclassify(stub);
+    expect(result.rows_affected).toBe(4);
+    expect(result.outcome).toContain("invoice-extract suites reclassified: 4");
+    expect(stub.captured).toHaveLength(2);
+
+    // The UPDATE shape — single capability_slug, exactly the 4 paid test_types,
+    // active+live filter, and the = 0 idempotency filter.
+    const updateSql = stub.renderedSql[0].toLowerCase();
+    expect(updateSql).toContain("update test_suites");
+    expect(updateSql).toContain("set external_cost_cents = 1");
+    expect(updateSql).toContain("capability_slug = 'invoice-extract'");
+    expect(updateSql).toContain("active = true");
+    expect(updateSql).toMatch(/test_mode = 'live'/);
+    expect(updateSql).toContain("'known_answer'");
+    expect(updateSql).toContain("'edge_case'");
+    expect(updateSql).toContain("'negative'");
+    expect(updateSql).toContain("'known_bad'");
+    // Negative assertion: the two probe types must NOT be in the list —
+    // they legitimately stay at 0 (auth-less probe pattern, no paid call).
+    expect(updateSql).not.toContain("'dependency_health'");
+    expect(updateSql).not.toContain("'schema_check'");
+    // Idempotency filter:
+    expect(updateSql).toContain("external_cost_cents = 0");
+  });
+
+  it("second run: idempotent — UPDATE returns 0 rows; outcome reports already-classified", async () => {
+    const stub = makeStub({
+      queue: [{ count: 0 }, [{ remaining_zero: 0 }]],
+    });
+    const result = await runMigration0063_invoiceExtractCostReclassify(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to update.*already classified/i);
+    expect(stub.captured).toHaveLength(2);
+  });
+
+  it("post-condition violation throws (would fail boot)", async () => {
+    // Imagine a new invoice-extract suite landed at cost=0 between deploys.
+    // The UPDATE captures 4, but the post-check finds a leftover.
+    const stub = makeStub({
+      queue: [{ count: 4 }, [{ remaining_zero: 1 }]],
+    });
+    await expect(runMigration0063_invoiceExtractCostReclassify(stub)).rejects.toThrow(
+      /post-condition failed.*1 invoice-extract suites/i,
+    );
+  });
+});
+
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 6 blocks in historical order", () => {
+  it("exports the expected 7 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -214,6 +269,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0031_testResultsCompositeIdx",
       "runMigration0060_marketplaceEligible",
       "runMigration0062_paidVendorCosts",
+      "runMigration0063_invoiceExtractCostReclassify",
     ]);
   });
 });
