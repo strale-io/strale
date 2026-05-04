@@ -100,6 +100,7 @@ describe("POST /v1/internal/tests/admin/apply-migrations — success path", () =
       { block: "0031_test_results_suite_executed_idx", outcome: "ensured composite index on (test_suite_id, executed_at DESC)", duration_ms: 3 },
       { block: "0060_marketplace_eligible", outcome: "ensured marketplace_eligible + marketplace_eligible_reason columns", duration_ms: 7 },
       { block: "0062_paid_vendor_costs", outcome: "no rows to update (already classified)", rows_affected: 0, duration_ms: 12 },
+      { block: "0063_invoice_extract_cost_reclassify", outcome: "no rows to update (already classified)", rows_affected: 0, duration_ms: 4 },
     ];
     mockRunStartupMigrations.mockReset();
     mockRunStartupMigrations.mockResolvedValueOnce(fakeBlocks);
@@ -116,7 +117,7 @@ describe("POST /v1/internal/tests/admin/apply-migrations — success path", () =
     const body = await res.json();
     expect(body).toEqual({
       ok: true,
-      block_count: 6,
+      block_count: 7,
       blocks: fakeBlocks,
     });
   });
