@@ -64,6 +64,33 @@ jobs:
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
+      # Vendor Roster ↔ Decisions DB drift. Flags vendor rows whose
+      # Last evaluated date is older than a Decision in the window
+      # mentioning that vendor — surfaces the 2026-04-30 failure mode
+      # where DEC-20260429-A deferred OpenSanctions but the Roster row
+      # stayed at Self-built for an extra day.
+      - id: vendor-roster
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: |
+          set +e
+          node apps/api/scripts/check-vendor-roster-drift.mjs --strict 2>&1 | tee /tmp/vendor-roster.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      # Provider-Coverage matrix ↔ Vendor Roster ↔ Decisions DB drift.
+      # Two checks: (1) matrix row Live/Committed while Roster says
+      # non-Active, (2) Last verified older than most recent Decision
+      # touching the provider. Catches stale routing entries.
+      - id: provider-coverage
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: |
+          set +e
+          node apps/api/scripts/check-provider-coverage-drift.mjs --strict 2>&1 | tee /tmp/provider-coverage.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
       # Cert-audit Layer 2: AuditRecord type-shape check. Needs the
       # strale-frontend repo checked out alongside; without it the
       # script skips cleanly. We checkout the sibling repo here so the
@@ -112,6 +139,16 @@ jobs:
             cat /tmp/migration-prefixes.txt
             echo '```'
             echo ""
+            echo "## Vendor Roster ↔ Decisions drift"
+            echo '```'
+            cat /tmp/vendor-roster.txt
+            echo '```'
+            echo ""
+            echo "## Provider-Coverage ↔ Roster ↔ Decisions drift"
+            echo '```'
+            cat /tmp/provider-coverage.txt
+            echo '```'
+            echo ""
             echo "## AuditRecord shape (backend ↔ frontend)"
             echo '```'
             cat /tmp/audit-record-shape.txt
@@ -124,8 +161,10 @@ jobs:
           FD=${{ steps.facts-drift.outputs.exit }}
           FT=${{ steps.fetch-timeout.outputs.exit }}
           MP=${{ steps.migration-prefixes.outputs.exit }}
+          VR=${{ steps.vendor-roster.outputs.exit }}
+          PC=${{ steps.provider-coverage.outputs.exit }}
           AR=${{ steps.audit-record-shape.outputs.exit }}
-          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$MP" != "0" ] || [ "$AR" != "0" ]; then
+          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$MP" != "0" ] || [ "$VR" != "0" ] || [ "$PC" != "0" ] || [ "$AR" != "0" ]; then
             echo "::warning::One or more drift sweeps reported findings — see report"
             exit 1
           fi
