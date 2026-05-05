@@ -37,11 +37,6 @@ const MOCK_FREE_TIER_ROW = {
   is_free_tier: true,
   created_at: new Date("2026-04-20T00:00:00Z"),
   completed_at: new Date("2026-04-20T00:00:01Z"),
-  _matrix_sqs: "84.6",
-  _qp_score: "82.1",
-  _rp_score: "93.8",
-  _guidance_usable: true,
-  _guidance_strategy: "direct",
 };
 
 // Mock the select chain: select(fields).from(tbl).leftJoin(...).where(...).limit(n) → [row]
@@ -115,8 +110,6 @@ describe("GET /v1/transactions/:id — F-A-005 redaction", () => {
     expect(body.transparency_marker).toBe("algorithmic");
     expect(body.data_jurisdiction).toBe("EU");
     expect(body.is_free_tier).toBe(true);
-    expect(body.quality).toBeDefined();
-    expect(typeof body.quality.sqs).toBe("number");
   });
 });
 

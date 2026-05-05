@@ -92,7 +92,7 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
 
   const db = getDb();
 
-  // Fetch capabilities with SQS scores and free-tier flag
+  // Fetch capabilities (free-tier flag drives the per-capability description suffix)
   const capRows = await db
     .select({
       slug: capabilities.slug,
@@ -100,7 +100,6 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
       description: capabilities.description,
       category: capabilities.category,
       priceCents: capabilities.priceCents,
-      matrixSqs: capabilities.matrixSqs,
       isFreeTier: capabilities.isFreeTier,
     })
     .from(capabilities)
@@ -126,13 +125,11 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
 
   // Build capability skills
   const capSkills = capRows.map((cap) => {
-    const sqs = cap.matrixSqs ? parseFloat(String(cap.matrixSqs)) : 0;
-    const sqsStr = sqs > 0 ? ` SQS: ${Math.round(sqs)}/100.` : "";
     const freeStr = cap.isFreeTier ? " FREE — no API key required." : "";
     return {
       id: cap.slug,
       name: cap.name,
-      description: `${cap.description}${sqsStr}${freeStr}`,
+      description: `${cap.description}${freeStr}`,
       tags: categoryToTags(cap.category, cap.slug),
       examples: generateExamples(cap.slug, cap.name, cap.description),
     };
@@ -194,7 +191,7 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
   const card = {
     name: "Strale",
     description:
-      `Commercial capability marketplace for AI agents. ${capCount}+ capabilities with transparent per-call pricing. Available via API key (EUR wallet) or x402 pay-per-use (USDC on Base). Compliance, KYC/KYB, payment validation, company data across ${countryCount} countries, regulatory intelligence, and developer tools. Quality-scored with the Strale Quality Score (SQS).`,
+      `Commercial capability marketplace for AI agents. ${capCount}+ capabilities with transparent per-call pricing. Available via API key (EUR wallet) or x402 pay-per-use (USDC on Base). Compliance, KYC/KYB, payment validation, company data across ${countryCount} countries, regulatory intelligence, and developer tools. Every call returns an audit record with cryptographic chain hashing.`,
     url: `${BASE_URL}/a2a`,
     version: "1.0.0",
     documentationUrl: "https://strale.dev/docs",
@@ -455,8 +452,6 @@ async function handleMessageSend(
       });
     }
 
-    // Success — include SQS metadata
-    const quality = (m.quality ?? data.quality) as Record<string, unknown> | undefined;
     const transactionId = r.transaction_id as string;
 
     return c.json({
@@ -473,8 +468,6 @@ async function handleMessageSend(
               data: r.output,
               metadata: {
                 mimeType: "application/json",
-                sqs: quality?.sqs ?? null,
-                sqs_label: quality?.label ?? null,
                 capability_used: r.capability_used,
                 latency_ms: r.latency_ms,
                 audit_trail_id: transactionId,
@@ -491,8 +484,6 @@ async function handleMessageSend(
             data: r.output,
             metadata: {
               mimeType: "application/json",
-              sqs: quality?.sqs ?? null,
-              sqs_label: quality?.label ?? null,
             },
           }],
         }],

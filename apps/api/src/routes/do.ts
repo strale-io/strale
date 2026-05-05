@@ -24,7 +24,6 @@ import { recordQuality } from "../lib/quality-capture.js";
 import { triggerOnFailure } from "../lib/event-triggers.js";
 import { recordPiggybackResult } from "../lib/piggyback-monitor.js";
 import { TRANSACTION_RETENTION_DAYS } from "../lib/data-retention.js";
-import { computeDualProfileSQS } from "../lib/sqs.js";
 import { createHash } from "node:crypto";
 import { getShareableUrl } from "../lib/audit-token.js";
 import { getAiDescription, getDataSourceUrl } from "../lib/audit-helpers.js";
@@ -59,24 +58,6 @@ function setCreditsHeaders(c: { header: (name: string, value: string) => void },
   if (costCents !== undefined) {
     c.header("X-Cost-Cents", String(costCents));
   }
-}
-
-// Dual-profile quality block for /v1/do responses
-interface DualProfileQuality {
-  sqs: number;
-  label: string;
-  quality_profile: { grade: string; score: number; label: string };
-  reliability_profile: { grade: string; score: number; label: string };
-  trend: string;
-}
-
-// Compact guidance for /v1/do consumers (agents need usable + strategy + confidence).
-// Internal trust detail returns full 10-field config; solution trust returns 4-field subset.
-// This variation is intentional: each endpoint serves different consumer needs.
-interface DualProfileGuidance {
-  usable: boolean;
-  strategy: string;
-  confidence_after_strategy: number;
 }
 
 // ── Contextual upgrade block for free-tier responses ──────────────────────────
@@ -249,45 +230,6 @@ function inferContextualNudge(
   }
 
   return null;
-}
-
-// Dual-profile response helpers
-type DualProfileSQSResult = Awaited<ReturnType<typeof computeDualProfileSQS>>;
-
-function buildDualProfileResponse(dual: DualProfileSQSResult | null, sqs: { score: number; label: string; trend: string; pending: boolean }, lifecycleState?: string) {
-  const warning = lifecycleState === "degraded"
-    ? { quality_warning: "This capability is currently degraded. Results may be unreliable." }
-    : {};
-  if (!dual) {
-    return {
-      quality: {
-        sqs: sqs.score, label: sqs.label,
-        quality_profile: { grade: "pending", score: 0, label: "Pending" },
-        reliability_profile: { grade: "pending", score: 0, label: "Pending" },
-        trend: sqs.trend,
-      },
-      execution_guidance: { usable: true, strategy: "direct" as const, confidence_after_strategy: 100 },
-      ...warning,
-    };
-  }
-  return {
-    quality: {
-      sqs: dual.matrix.score,
-      label: dual.matrix.label,
-      quality_profile: { grade: dual.qp.grade, score: dual.qp.score, label: dual.qp.label },
-      reliability_profile: { grade: dual.rp.grade, score: dual.rp.score, label: dual.rp.label },
-      trend: dual.rp.trend,
-    },
-    execution_guidance: {
-      usable: dual.matrix.score >= 25 && dual.qp.grade !== "F",
-      strategy: dual.rp.grade === "A" || dual.rp.grade === "B" ? "direct" as const
-        : dual.rp.grade === "C" ? "retry_with_backoff" as const
-          : dual.rp.grade === "D" && dual.rp.trend === "improving" ? "queue_for_later" as const
-            : dual.matrix.score < 25 ? "unavailable" as const : "direct" as const,
-      confidence_after_strategy: dual.rp.grade === "A" ? 100 : Math.min(99, Math.round(dual.rp.score)),
-    },
-    ...warning,
-  };
 }
 
 // Shared capability type for execution functions
@@ -502,10 +444,8 @@ doRoute.post(
     MAX_TIMEOUT_SECONDS,
   );
   const dryRun: boolean = body.dry_run === true;
-  const minSqs: number | undefined =
-    typeof body.min_sqs === "number" && body.min_sqs >= 0 && body.min_sqs <= 100
-      ? Math.round(body.min_sqs)
-      : undefined;
+  // `min_sqs` retired with the SQS engine (DEC-20260503-B). Silently ignored
+  // when present in the body; not parsed, not gated, not echoed.
   const requireFresh: boolean = body.require_fresh === true;
   const maxLatencyMs: number | undefined =
     typeof body.max_latency_ms === "number" && body.max_latency_ms > 0
@@ -643,7 +583,6 @@ doRoute.post(
           slug: capabilitySlug,
           name: lookedUp.name,
           priceCents: lookedUp.priceCents,
-          matrixSqs: lookedUp.matrixSqs,
         });
         return c.json(resp.body, 402);
       } else {
@@ -736,19 +675,8 @@ doRoute.post(
   const capability = match.capability;
   const isFreeTier = capability.isFreeTier;
 
-  // ── 3a. Platform SQS quality floor — don't serve from known-broken capabilities
-  const PLATFORM_SQS_FLOOR = 15;
-  const capSqs = capability.matrixSqs != null ? parseFloat(String(capability.matrixSqs)) : null;
-  if (capSqs !== null && capSqs < PLATFORM_SQS_FLOOR && capability.lifecycleState !== "probation") {
-    return c.json(
-      apiError(
-        "capability_unavailable",
-        `Capability '${capability.slug}' is temporarily below the platform quality threshold (SQS ${capSqs}). It may recover after the next test cycle.`,
-        { sqs: capSqs, threshold: PLATFORM_SQS_FLOOR },
-      ),
-      503,
-    );
-  }
+  // ── 3a. Platform-quality-floor gate retired with the SQS engine
+  //         (DEC-20260503-B). Lifecycle state + circuit-breaker still gate.
 
   // ── 3b. Hourly spend cap fast-fail (DEC-21) — authenticated only ───────
   // Cert-audit C8: this is the cheap pre-check that catches the obvious
@@ -844,41 +772,8 @@ doRoute.post(
     );
   }
 
-  // ── 5c. SQS quality gate (uses dual-profile matrix score) ───────────
-  const PLATFORM_FLOOR_SQS = 25;
-  const dual = await computeDualProfileSQS(capability.slug).catch((err) => {
-    logWarn("do-dual-profile-sqs-failed", "dual-profile SQS computation failed", {
-      capability_slug: capability.slug,
-      err: err instanceof Error ? err.message : String(err),
-    });
-    return null;
-  });
-  // If dual-profile fails, treat as pending so the gate is skipped (fail open)
-  const sqs = dual
-    ? { score: dual.score, label: dual.label, pending: dual.matrix.pending, trend: dual.rp.trend }
-    : { score: 0, label: "Pending", pending: true, trend: "stable" as const };
-
-  if (!sqs.pending && sqs.score < PLATFORM_FLOOR_SQS) {
-    return c.json(
-      apiError(
-        "capability_degraded",
-        `Capability '${capability.slug}' is currently degraded (SQS ${sqs.score}/100). Execution refused.`,
-        { sqs: sqs.score, sqs_label: sqs.label },
-      ),
-      503,
-    );
-  }
-
-  if (minSqs !== undefined && !sqs.pending && sqs.score < minSqs) {
-    return c.json(
-      apiError(
-        "below_quality_threshold",
-        `Capability '${capability.slug}' SQS (${sqs.score}) is below your threshold (${minSqs}).`,
-        { sqs: sqs.score, sqs_label: sqs.label, min_sqs: minSqs },
-      ),
-      422,
-    );
-  }
+  // ── 5c. SQS quality gate retired (DEC-20260503-B): no platform-floor SQS,
+  //         no min_sqs threshold. Capability lifecycle/circuit-breaker still gate.
 
   // ── 5d. Freshness + latency pre-execution checks ──────────────────────
   const freshness = computeFreshnessGrade({
@@ -933,7 +828,7 @@ doRoute.post(
   const inputSchema = (match.capability as any).inputSchema as { required?: string[]; properties?: Record<string, unknown> } | null;
   // Detect common mistake: passing the /v1/do body shape as "inputs"
   // e.g., {"capability_slug": "email-validate", "inputs": {"task": "email-validate"}}
-  const DO_BODY_KEYS = new Set(["task", "capability_slug", "inputs", "max_price_cents", "dry_run", "min_sqs"]);
+  const DO_BODY_KEYS = new Set(["task", "capability_slug", "inputs", "max_price_cents", "dry_run"]);
   const confusedKeys = Object.keys(executionInput).filter((k) => DO_BODY_KEYS.has(k));
   if (confusedKeys.length > 0 && inputSchema?.properties) {
     const expectedFields = Object.keys(inputSchema.properties);
@@ -1007,7 +902,7 @@ doRoute.post(
 
   // x402 paid: on-chain settlement already verified — execute like free-tier (no wallet debit)
   if (!user && (c.get("x402_paid" as any))) {
-    return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, sqs, freshness, dual);
+    return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, freshness);
   }
 
   // Free-tier or progressively unlocked: enforce daily cap (DB-based, restart-safe)
@@ -1063,20 +958,20 @@ doRoute.post(
       );
     }
 
-    return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, sqs, freshness, dual);
+    return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, freshness);
   }
 
   // Free-tier with auth: skip wallet operations but still record transaction
   if (user && isFreeTier) {
-    return executeFreeTierAuthenticated(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs, freshness, dual);
+    return executeFreeTierAuthenticated(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, freshness);
   }
 
   // Paid execution: sync or async (DEC-22)
   const isAsync = (capability.avgLatencyMs ?? 0) > ASYNC_THRESHOLD_MS;
   if (isAsync) {
-    return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs, freshness, dual);
+    return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, freshness);
   } else {
-    return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, sqs, freshness, dual);
+    return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, freshness);
   }
 });
 
@@ -1211,9 +1106,7 @@ async function executeFreeTier(
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
   outputSchema: Record<string, unknown>,
-  sqs: { score: number; label: string; trend: string; pending: boolean },
   freshness: FreshnessInfo | null,
-  dual: DualProfileSQSResult | null,
 ) {
   const startTime = Date.now();
   const marker = getTransparencyMarker(capability.transparencyTag);
@@ -1252,7 +1145,6 @@ async function executeFreeTier(
       output: capResult.output,
       outputSchema,
       provenance: capResult.provenance,
-      sqs,
       requestContext: c.get("requestContext" as any),
     });
 
@@ -1317,7 +1209,6 @@ async function executeFreeTier(
     // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
     // by column default; jobs/integrity-hash-retry.ts will fill it in.
 
-    const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
 
     // Usage counter for free-tier calls (informational block in response).
     // F-0-020: enforcement above is fail-closed. This call site only builds
@@ -1353,7 +1244,6 @@ async function executeFreeTier(
         provenance: capResult.provenance,
       },
       meta: {
-        ...dualProfile,
         audit,
       },
       free_tier: true,
@@ -1423,9 +1313,7 @@ async function executeFreeTierAuthenticated(
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
   outputSchema: Record<string, unknown>,
-  sqs: { score: number; label: string; trend: string; pending: boolean },
   freshness: FreshnessInfo | null,
-  dual: DualProfileSQSResult | null,
 ) {
   const startTime = Date.now();
   const marker = getTransparencyMarker(capability.transparencyTag);
@@ -1460,7 +1348,6 @@ async function executeFreeTierAuthenticated(
       output: capResult.output,
       outputSchema,
       provenance: capResult.provenance,
-      sqs,
       requestContext: c.get("requestContext" as any),
     });
 
@@ -1510,7 +1397,6 @@ async function executeFreeTierAuthenticated(
       .where(eq(wallets.userId, user.id))
       .limit(1);
 
-    const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
     setCreditsHeaders(c, wallet?.balanceCents ?? 0, 0);
     return c.json({
       result: {
@@ -1524,7 +1410,6 @@ async function executeFreeTierAuthenticated(
         provenance: capResult.provenance,
       },
       meta: {
-        ...dualProfile,
         audit,
       },
     });
@@ -1596,9 +1481,7 @@ async function executeSync(
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
   outputSchema: Record<string, unknown>,
-  sqs: { score: number; label: string; trend: string; pending: boolean },
   freshness: FreshnessInfo | null,
-  dual: DualProfileSQSResult | null,
 ) {
   const startTime = Date.now();
 
@@ -1758,9 +1641,6 @@ async function executeSync(
       // hashed column → permanently broken row. By writing both in the
       // same tx, the row is never published to the worker without its
       // final auditTrail.
-      const qualityPassRate = dual && !dual.qp.pending
-        ? dual.qp.factors.correctness.rate
-        : null;
       const audit = buildFullAudit({
         transactionId: txnRecord.id,
         startTime,
@@ -1772,8 +1652,6 @@ async function executeSync(
         output: capResult.output,
         outputSchema,
         provenance: capResult.provenance,
-        sqs: { score: sqs.score, label: sqs.label, trend: sqs.trend ?? "stable", pending: sqs.pending },
-        qualityPassRate,
         requestContext: c.get("requestContext" as any),
       });
 
@@ -1960,7 +1838,6 @@ async function executeSync(
   // write here.
   const audit = result.audit;
 
-  const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
 
   // Low-balance / zero-balance conversion emails (DEC-20260410-A, fire-and-forget)
   const LOW_BALANCE_THRESHOLD = 50; // €0.50
@@ -2001,7 +1878,6 @@ async function executeSync(
       provenance: result.provenance,
     },
     meta: {
-      ...dualProfile,
       audit,
     },
   });
@@ -2028,9 +1904,7 @@ async function executeAsync(
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
   outputSchema: Record<string, unknown>,
-  sqs: { score: number; label: string; trend: string; pending: boolean },
   freshness: FreshnessInfo | null,
-  dual: DualProfileSQSResult | null,
 ) {
   // Short DB tx: lock wallet → check balance → debit → create record → commit
   type SetupResult =
@@ -2190,7 +2064,6 @@ async function executeAsync(
       capability,
       startTime,
       outputSchema,
-      sqs,
     ),
   ).catch((err) => {
     // Last-resort error logging — should not normally reach here
@@ -2208,7 +2081,6 @@ async function executeAsync(
   // row. Polling /v1/transactions/:id is no longer required to discover
   // the URL.
   const shareable = getShareableUrl(transactionId);
-  const dualProfile = buildDualProfileResponse(dual, sqs, capability.lifecycleState);
   return c.json(
     {
       result: {
@@ -2219,7 +2091,6 @@ async function executeAsync(
         wallet_balance_cents: balanceAfter,
       },
       meta: {
-        ...dualProfile,
         // The audit body is not yet available (background execution still
         // running) — but the URL that will serve the eventual audit IS
         // available now. The /v1/audit/:id endpoint will return 202 +
@@ -2248,7 +2119,6 @@ async function executeInBackground(
   capability: CapabilityInfo,
   startTime: number,
   outputSchema: Record<string, unknown>,
-  sqs: { score: number; label: string; trend: string; pending: boolean },
 ) {
   try {
     // Cert-audit C7: hard timeout on the executor. Without this, an executor
@@ -2276,11 +2146,6 @@ async function executeInBackground(
       output: capResult.output,
       outputSchema,
       provenance: capResult.provenance,
-      // MED-3: was previously hardcoded { score: 0, label: "unknown",
-      // pending: true } even though SQS had been computed before the
-      // async launch. Now threaded from executeAsync so the audit body
-      // reflects the real quality signal at execution time.
-      sqs: { score: sqs.score, label: sqs.label, trend: sqs.trend ?? "stable", pending: sqs.pending },
       requestContext: undefined, // background execution — no request context available
     });
 
@@ -2517,8 +2382,6 @@ function buildFullAudit(params: {
   // we can't verify).
   outputSchema?: Record<string, unknown> | null;
   provenance?: unknown;
-  sqs: { score: number; label: string; trend: string; pending: boolean };
-  qualityPassRate?: number | null;
   requestContext?: {
     referer: string | null;
     origin: string | null;
@@ -2530,7 +2393,7 @@ function buildFullAudit(params: {
 }) {
   const {
     transactionId, startTime, capability, marker, executionMode,
-    latencyMs, executionInput, output, outputSchema, provenance, sqs, qualityPassRate,
+    latencyMs, executionInput, output, outputSchema, provenance,
     requestContext,
   } = params;
 
@@ -2581,11 +2444,6 @@ function buildFullAudit(params: {
     // CRIT-3: was hardcoded `true`. Now computed against outputSchema.
     // false on missing schema (we can't verify) or missing required fields.
     schema_validated: computeSchemaValidated(output, outputSchema),
-    quality: {
-      sqs: sqs.pending ? null : sqs.score,
-      label: sqs.label,
-      pass_rate: qualityPassRate ?? null,
-    },
     provenance: provenance ?? null,
     compliance: {
       ai_involvement: getAiDescription(capability.slug, marker),

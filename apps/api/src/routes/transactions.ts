@@ -8,7 +8,6 @@ import { apiError } from "../lib/errors.js";
 import { computeIntegrityHash, GENESIS_HASH } from "../lib/integrity-hash.js";
 import { walkChain } from "./verify.js";
 import { generateAuditToken } from "../lib/audit-token.js";
-import { sqsLabel, gradeFromScore } from "../lib/trust-labels.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import type { AppEnv } from "../types.js";
 
@@ -87,37 +86,10 @@ transactionsRoute.get(
       is_free_tier: transactions.isFreeTier,
       created_at: transactions.createdAt,
       completed_at: transactions.completedAt,
-      // Quality data from capabilities table (only populated for capability rows)
-      _matrix_sqs: capabilities.matrixSqs,
-      _qp_score: capabilities.qpScore,
-      _rp_score: capabilities.rpScore,
-      _guidance_usable: capabilities.guidanceUsable,
-      _guidance_strategy: capabilities.guidanceStrategy,
     };
 
     function formatRow(row: typeof selectFields extends infer T ? { [K in keyof T]: any } : never) {
       const isSolution = row.solution_slug != null;
-
-      // For solution rows, all SQS/quality fields are strictly null.
-      // A solution has no SQS — the response says so honestly.
-      const quality = isSolution
-        ? {
-            sqs: null,
-            sqs_label: null,
-            quality_grade: null,
-            reliability_grade: null,
-            usable: null,
-            strategy: null,
-          }
-        : {
-            sqs: row._matrix_sqs != null ? parseFloat(row._matrix_sqs) : null,
-            sqs_label: sqsLabel(row._matrix_sqs != null ? parseFloat(row._matrix_sqs) : null),
-            quality_grade: gradeFromScore(row._qp_score != null ? parseFloat(row._qp_score) : null),
-            reliability_grade: gradeFromScore(row._rp_score != null ? parseFloat(row._rp_score) : null),
-            usable: row._guidance_usable ?? true,
-            strategy: row._guidance_strategy ?? "direct",
-          };
-
       return {
         id: row.id,
         type: isSolution ? "solution" as const : "capability" as const,
@@ -136,32 +108,11 @@ transactionsRoute.get(
         is_free_tier: row.is_free_tier,
         created_at: row.created_at,
         completed_at: row.completed_at,
-        quality,
       };
     }
 
     function formatRedactedRow(row: typeof selectFields extends infer T ? { [K in keyof T]: any } : never) {
       const isSolution = row.solution_slug != null;
-
-      // Same quality construction as formatRow — operator-domain metric, no PII.
-      const quality = isSolution
-        ? {
-            sqs: null,
-            sqs_label: null,
-            quality_grade: null,
-            reliability_grade: null,
-            usable: null,
-            strategy: null,
-          }
-        : {
-            sqs: row._matrix_sqs != null ? parseFloat(row._matrix_sqs) : null,
-            sqs_label: sqsLabel(row._matrix_sqs != null ? parseFloat(row._matrix_sqs) : null),
-            quality_grade: gradeFromScore(row._qp_score != null ? parseFloat(row._qp_score) : null),
-            reliability_grade: gradeFromScore(row._rp_score != null ? parseFloat(row._rp_score) : null),
-            usable: row._guidance_usable ?? true,
-            strategy: row._guidance_strategy ?? "direct",
-          };
-
       return {
         id: row.id,
         type: isSolution ? "solution" as const : "capability" as const,
@@ -175,7 +126,6 @@ transactionsRoute.get(
         is_free_tier: row.is_free_tier,
         created_at: row.created_at,
         completed_at: row.completed_at,
-        quality,
         // F-A-005: explicit body redaction marker. input, output, error,
         // provenance, audit_trail are not returned to unauthenticated callers.
         body_redacted: true as const,

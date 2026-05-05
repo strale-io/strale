@@ -28,17 +28,6 @@ import { getDb } from "../db/index.js";
 import { transactions, capabilities } from "../db/schema.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 
-// CRIT-2: SQS letter label derivation. Mirrors the public 5-bucket mapping
-// the trust pages use; kept here (not in compliance-profile) so audit-record
-// truth doesn't require importing the SQS engine.
-function sqsLabel(score: number | null): string {
-  if (score == null) return "unknown";
-  if (score >= 90) return "Excellent";
-  if (score >= 75) return "Good";
-  if (score >= 50) return "Acceptable";
-  if (score >= 25) return "Degraded";
-  return "Poor";
-}
 import { verifyAuditToken } from "../lib/audit-token.js";
 import { apiError } from "../lib/errors.js";
 import {
@@ -109,17 +98,6 @@ interface AuditRecord {
   /** @deprecated Use audit_path. Kept for back-compat through 2026-10. */
   audit_url: string;
   steps: AuditStep[];
-  // CRIT-2: real quality data from the stored row + capability/solution
-  // metadata. Frontend was rendering hardcoded SQS=85, pass=94% on every
-  // audit. Now the API returns the actual values; frontend consumes them.
-  // pass_rate is null when the capability/solution has no recent test
-  // signal (probation, brand-new). sqs is null for solutions where
-  // floor-aware SQS is pending; label distinguishes the cases.
-  quality: {
-    sqs: number | null;
-    label: string;
-    pass_rate: number | null;
-  };
   // CRIT-2 + frontend §5 Data Governance: was hardcoded "No — public
   // company and infrastructure data only" in AuditRecord.tsx. Now derived
   // from capabilities.processes_personal_data (manifest-declared per
@@ -272,9 +250,6 @@ function composeAuditRecord(args: {
   // was edited after the call ran).
   storedDataJurisdiction: string | null;
   storedTransparencyMarker: string | null;
-  // CRIT-2: real SQS / pass-rate / personal-data metadata for this row's
-  // capability or solution. Replaces the frontend's hardcoded constants.
-  quality: { sqs: number | null; label: string; pass_rate: number | null };
   personalDataProcessed: boolean;
   personalDataCategories: string[];
 }): AuditRecord {
@@ -282,7 +257,7 @@ function composeAuditRecord(args: {
     transactionId, createdAt, completedAt, latencyMs, input,
     profile, status, auditTrail, provenance,
     storedDataJurisdiction, storedTransparencyMarker,
-    quality, personalDataProcessed, personalDataCategories,
+    personalDataProcessed, personalDataCategories,
   } = args;
   const completed = completedAt ?? createdAt;
   const latencyS = Math.round(((latencyMs ?? 0) / 1000) * 10) / 10;
@@ -372,7 +347,6 @@ function composeAuditRecord(args: {
     audit_path: `/audit/${transactionId}`,
     audit_url: `strale.dev/audit/${transactionId}`,
     steps,
-    quality,
     personal_data_processed: personalDataProcessed,
     personal_data_categories: personalDataCategories,
     source,
@@ -541,25 +515,12 @@ auditRoute.get("/:transactionId", async (c) => {
   // regulators see the row is informational, not hash-protected.
   const isUnhashedLegacy = txn.complianceHashState === "unhashed_legacy";
 
-  // Resolve entity → fetch its compliance profile.
-  // CRIT-2: also fetch the capability row's real quality + personal-data
-  // signals so the audit response can carry actual values instead of the
-  // frontend rendering hardcoded SQS=85 / pass=94% / "No — public data only".
+  // Resolve entity → fetch its compliance profile + personal-data signals.
   let profile: ComplianceProfile | null = null;
-  let qualityFromDb: { sqs: number | null; label: string; pass_rate: number | null } = {
-    sqs: null,
-    label: "unknown",
-    pass_rate: null,
-  };
   let personalDataProcessed = false;
   let personalDataCategories: string[] = [];
   if (txn.solutionSlug) {
     profile = await getSolutionProfile(txn.solutionSlug);
-    // Solutions table has no aggregate matrix_sqs column; floor-aware
-    // SQS aggregation is computed live by the solution-quality module
-    // and not yet exposed here. For v1 we return null + "unknown" rather
-    // than fabricating. v1.1: compute aggregate at audit time.
-    qualityFromDb = { sqs: null, label: "unknown", pass_rate: null };
     // For solutions, set processing-personal-data true if ANY step does.
     // For v1, derive conservatively from capability rows reachable via
     // solution_steps. Cheap query, runs only on audit fetch.
@@ -580,8 +541,6 @@ auditRoute.get("/:transactionId", async (c) => {
     const [cap] = await db
       .select({
         slug: capabilities.slug,
-        matrixSqs: capabilities.matrixSqs,
-        successRate: capabilities.successRate,
         processesPersonalData: capabilities.processesPersonalData,
         personalDataCategories: capabilities.personalDataCategories,
       })
@@ -590,11 +549,6 @@ auditRoute.get("/:transactionId", async (c) => {
       .limit(1);
     if (cap) {
       profile = await getCapabilityProfile(cap.slug);
-      qualityFromDb = {
-        sqs: cap.matrixSqs ? Number(cap.matrixSqs) : null,
-        label: sqsLabel(cap.matrixSqs ? Number(cap.matrixSqs) : null),
-        pass_rate: cap.successRate ? Number(cap.successRate) : null,
-      };
       personalDataProcessed = cap.processesPersonalData;
       personalDataCategories = cap.personalDataCategories ?? [];
     }
@@ -626,7 +580,6 @@ auditRoute.get("/:transactionId", async (c) => {
     provenance: txn.provenance,
     storedDataJurisdiction: txn.dataJurisdiction ?? null,
     storedTransparencyMarker: txn.transparencyMarker ?? null,
-    quality: qualityFromDb,
     personalDataProcessed,
     personalDataCategories,
   });

@@ -9,7 +9,6 @@ import {
 import { embedQuery, embedDocuments, cosineSimilarity } from "./embeddings.js";
 import { tokenize } from "./tokenize.js";
 import { determineBadge } from "./trust-helpers.js";
-import { sqsLabel as sharedSqsLabel, computeSolutionScore } from "./trust-labels.js";
 import { log, logError, logWarn } from "./log.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -22,8 +21,6 @@ interface TrustSummary {
   tests_total: number;
   last_tested_at: string | null;
   data_source: "internal_testing" | "blended" | "customer_transactions";
-  sqs: number;
-  sqs_label: string;
 }
 
 interface CatalogItem {
@@ -302,18 +299,17 @@ async function loadCatalog(): Promise<CatalogItem[]> {
         }
       }
 
-      // Batch-fetch persisted SQS scores and test counts (2-3 queries instead of ~5,355)
+      // Batch-fetch persisted success-rate / latency and test counts (2 queries instead of ~5,355)
       const allCapSlugs = capItems.map((c) => c.slug);
       const allStepSlugs = solItems.flatMap((s) => (s.steps ?? []).map((st) => st.capabilitySlug));
       const allSlugsNeeded = [...new Set([...allCapSlugs, ...allStepSlugs])];
 
       const [persistedRows, testCountRows] = await Promise.all([
-        // Query 1: Persisted SQS scores from capabilities table
+        // Query 1: Persisted success-rate + latency from capabilities table
         allSlugsNeeded.length > 0
           ? db
               .select({
                 slug: capabilities.slug,
-                matrixSqs: capabilities.matrixSqs,
                 successRate: capabilities.successRate,
                 avgLatencyMs: capabilities.avgLatencyMs,
               })
@@ -351,7 +347,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
       ]);
 
       // Build lookup maps
-      const sqsMap = new Map(
+      const persistedMap = new Map(
         persistedRows.map((r) => [r.slug, r]),
       );
       const testCountRaw = Array.isArray(testCountRows) ? testCountRows : (testCountRows as any)?.rows ?? [];
@@ -368,9 +364,8 @@ async function loadCatalog(): Promise<CatalogItem[]> {
       for (const item of allItems) {
         try {
           if (item.type === "capability") {
-            const persisted = sqsMap.get(item.slug);
+            const persisted = persistedMap.get(item.slug);
             const tests = testCountMap.get(item.slug);
-            const sqs = persisted?.matrixSqs ? parseFloat(persisted.matrixSqs) : 0;
             const sr = persisted?.successRate ? parseFloat(persisted.successRate) : null;
             const { badge, badge_label } = determineBadge(tests?.total ?? 0, 0, sr);
 
@@ -382,8 +377,6 @@ async function loadCatalog(): Promise<CatalogItem[]> {
               tests_total: tests?.total ?? 0,
               last_tested_at: tests?.last_tested_at ?? null,
               data_source: "internal_testing",
-              sqs,
-              sqs_label: sqs > 0 ? sharedSqsLabel(sqs) : "Pending",
             };
           } else {
             // Solution: aggregate from step capabilities
@@ -391,7 +384,6 @@ async function loadCatalog(): Promise<CatalogItem[]> {
             let totalPassed = 0;
             let totalTests = 0;
             let lastTestedAt: string | null = null;
-            const stepScores: number[] = [];
 
             for (const ss of stepSlugs) {
               const tests = testCountMap.get(ss);
@@ -404,14 +396,6 @@ async function loadCatalog(): Promise<CatalogItem[]> {
                   }
                 }
               }
-              const persisted = sqsMap.get(ss);
-              stepScores.push(persisted?.matrixSqs ? parseFloat(persisted.matrixSqs) : 0);
-            }
-
-            // Solution SQS: floor-aware — cannot exceed lowest step + 20
-            let solSqs = 0;
-            if (stepScores.length > 0 && stepScores.every((s) => s > 0)) {
-              solSqs = computeSolutionScore(stepScores);
             }
 
             const { badge, badge_label } = determineBadge(totalTests, 0, null);
@@ -424,8 +408,6 @@ async function loadCatalog(): Promise<CatalogItem[]> {
               tests_total: totalTests,
               last_tested_at: lastTestedAt,
               data_source: "internal_testing",
-              sqs: solSqs,
-              sqs_label: solSqs > 0 ? sharedSqsLabel(solSqs) : "Pending",
             };
           }
         } catch (err) {
@@ -495,8 +477,6 @@ export interface TypeaheadResult {
   category: string;
   price_cents: number | null;
   geography: string | null;
-  sqs: number | null;
-  sqs_label: string | null;
   is_free_tier?: boolean;
   step_count?: number;
   match_snippet?: string;
@@ -617,8 +597,6 @@ export async function typeahead(
       // DEC-20260304-A: price_cents MUST be null for capabilities
       price_cents: item.type === "solution" ? item.priceCents : null,
       geography: item.geography,
-      sqs: item.trustSummary?.sqs ?? null,
-      sqs_label: item.trustSummary?.sqs_label ?? null,
       is_free_tier: item.isFreeTier || undefined,
     };
     if (item.type === "solution" && item.stepCount) {

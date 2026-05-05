@@ -4,7 +4,6 @@ import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
 import { authMiddleware } from "../lib/middleware.js";
-import { sqsLabel, gradeFromScore } from "../lib/trust-labels.js";
 import { getAllHealth } from "../lib/circuit-breaker.js";
 import type { AppEnv } from "../types.js";
 
@@ -28,16 +27,8 @@ capabilitiesRoute.get("/", async (c) => {
       data_source: capabilities.dataSource,
       is_free_tier: capabilities.isFreeTier,
       search_tags: capabilities.searchTags,
-      // Dual-profile cached columns
-      matrix_sqs: capabilities.matrixSqs,
-      matrix_sqs_raw: capabilities.matrixSqsRaw,
-      qp_score: capabilities.qpScore,
-      rp_score: capabilities.rpScore,
-      trend: capabilities.trend,
       freshness_level: capabilities.freshnessLevel,
       last_tested_at: capabilities.lastTestedAt,
-      guidance_usable: capabilities.guidanceUsable,
-      guidance_strategy: capabilities.guidanceStrategy,
     })
     .from(capabilities)
     .where(
@@ -51,38 +42,24 @@ capabilitiesRoute.get("/", async (c) => {
       ),
     );
 
-  const capabilitiesWithDualProfile = rows.map((r) => {
-    const sqs = r.matrix_sqs ? parseFloat(r.matrix_sqs) : 0;
-    const qpScore = r.qp_score ? parseFloat(r.qp_score) : null;
-    const rpScore = r.rp_score ? parseFloat(r.rp_score) : null;
+  const capabilitiesList = rows.map((r) => ({
+    slug: r.slug,
+    name: r.name,
+    description: r.description,
+    category: r.category,
+    price_cents: r.price_cents,
+    input_schema: r.input_schema,
+    output_schema: r.output_schema,
+    transparency_tag: r.transparency_tag,
+    geography: r.geography ?? "global",
+    data_source: r.data_source,
+    is_free_tier: r.is_free_tier,
+    search_tags: r.search_tags ?? [],
+    freshness_level: r.freshness_level ?? "fresh",
+    last_tested_at: r.last_tested_at?.toISOString() ?? null,
+  }));
 
-    return {
-      slug: r.slug,
-      name: r.name,
-      description: r.description,
-      category: r.category,
-      price_cents: r.price_cents,
-      input_schema: r.input_schema,
-      output_schema: r.output_schema,
-      transparency_tag: r.transparency_tag,
-      geography: r.geography ?? "global",
-      data_source: r.data_source,
-      is_free_tier: r.is_free_tier,
-      search_tags: r.search_tags ?? [],
-      sqs: sqs,
-      sqs_raw: r.matrix_sqs_raw ? parseFloat(r.matrix_sqs_raw) : sqs,
-      sqs_label: sqsLabel(sqs),
-      quality: gradeFromScore(qpScore),
-      reliability: gradeFromScore(rpScore),
-      trend: r.trend ?? "stable",
-      freshness_level: r.freshness_level ?? "fresh",
-      last_tested_at: r.last_tested_at?.toISOString() ?? null,
-      usable: r.guidance_usable ?? true,
-      strategy: r.guidance_strategy ?? "direct",
-    };
-  });
-
-  return c.json({ capabilities: capabilitiesWithDualProfile });
+  return c.json({ capabilities: capabilitiesList });
 });
 
 // GET /v1/capabilities/health — Circuit breaker health status (auth required)

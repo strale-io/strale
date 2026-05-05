@@ -26,7 +26,7 @@ export const openApiSpec = {
     title: "Strale API",
     version: "1.0.0",
     description:
-      "The trust layer for AI agents — 250+ independently tested data capabilities across 27 countries. Execute capabilities via REST, MCP, A2A, or x402 micropayments. Every capability is quality-scored with the Strale Quality Score (SQS).",
+      "The trust layer for AI agents — 250+ independently tested data capabilities across 27 countries. Execute capabilities via REST, MCP, A2A, or x402 micropayments. Every call returns an audit record with cryptographic chain hashing.",
     contact: { name: "Strale", email: "hello@strale.io", url: "https://strale.dev" },
     termsOfService: "https://strale.dev/terms",
     license: { name: "MIT", url: "https://opensource.org/licenses/MIT" },
@@ -68,16 +68,8 @@ export const openApiSpec = {
           data_source: { type: "string" as const, nullable: true },
           is_free_tier: { type: "boolean" as const },
           search_tags: { type: "array" as const, items: { type: "string" as const }, description: "Searchability tags" },
-          sqs: { type: "number" as const, description: "Strale Quality Score (0-100, freshness-decayed)" },
-          sqs_raw: { type: "number" as const, description: "Raw SQS before freshness decay" },
-          sqs_label: { type: "string" as const, enum: ["Excellent", "Good", "Fair", "Poor", "Degraded", "Pending"] },
-          quality: { type: "string" as const, description: "Quality Profile grade", enum: ["A", "B", "C", "D", "F", "pending"] },
-          reliability: { type: "string" as const, description: "Reliability Profile grade", enum: ["A", "B", "C", "D", "F", "pending"] },
-          trend: { type: "string" as const, enum: ["stable", "improving", "declining", "stale"] },
           freshness_level: { type: "string" as const, description: "Test data freshness", enum: ["fresh", "aging", "stale", "expired", "unverified"] },
           last_tested_at: { type: "string" as const, format: "date-time", nullable: true, description: "When this capability was last tested" },
-          usable: { type: "boolean" as const },
-          strategy: { type: "string" as const, enum: ["direct", "retry_with_backoff", "queue_for_later", "unavailable"] },
         },
       },
       Solution: {
@@ -95,15 +87,8 @@ export const openApiSpec = {
           search_tags: { type: "array" as const, items: { type: "string" as const }, description: "Searchability tags" },
           capabilities: { type: "array" as const, items: { type: "string" as const }, description: "Step capability slugs" },
           data_sources: { type: "array" as const, items: { type: "string" as const }, description: "Unique data sources across steps" },
-          sqs: { type: "number" as const, description: "Solution SQS (avg of steps, capped at weakest + 20)" },
-          sqs_label: { type: "string" as const, enum: ["Excellent", "Good", "Fair", "Poor", "Degraded"] },
-          quality: { type: "string" as const, description: "Worst step QP grade", enum: ["A", "B", "C", "D", "F", "pending"] },
-          reliability: { type: "string" as const, description: "Worst step RP grade", enum: ["A", "B", "C", "D", "F", "pending"] },
-          trend: { type: "string" as const, enum: ["stable", "improving", "declining", "stale"] },
           freshness_level: { type: "string" as const, description: "Worst step freshness", enum: ["fresh", "aging", "stale", "expired", "unverified"] },
           last_tested_at: { type: "string" as const, format: "date-time", nullable: true, description: "Oldest step last-tested timestamp" },
-          usable: { type: "boolean" as const },
-          strategy: { type: "string" as const, enum: ["direct", "retry_with_backoff", "queue_for_later", "unavailable"] },
         },
       },
       DoRequest: {
@@ -116,7 +101,6 @@ export const openApiSpec = {
           max_price_cents: { type: "integer" as const, description: "Maximum price willing to pay (EUR cents). Required for authenticated requests to paid capabilities." },
           timeout_seconds: { type: "integer" as const, description: "Max execution time (1-60, default 30)." },
           dry_run: { type: "boolean" as const, description: "If true, returns matched capability without executing.", default: false },
-          min_sqs: { type: "integer" as const, description: "Minimum SQS score required (0-100)." },
         },
       },
       DoResponse: {
@@ -145,26 +129,8 @@ export const openApiSpec = {
           },
           meta: {
             type: "object" as const,
-            description: "Trust layer metadata — quality scores, execution guidance, audit trail.",
+            description: "Per-call audit trail.",
             properties: {
-              quality: {
-                type: "object" as const,
-                properties: {
-                  sqs: { type: "number" as const },
-                  label: { type: "string" as const },
-                  quality_profile: { type: "object" as const },
-                  reliability_profile: { type: "object" as const },
-                  trend: { type: "string" as const },
-                },
-              },
-              execution_guidance: {
-                type: "object" as const,
-                properties: {
-                  usable: { type: "boolean" as const },
-                  strategy: { type: "string" as const },
-                  confidence_after_strategy: { type: "number" as const },
-                },
-              },
               audit: { type: "object" as const, description: "EU AI Act compliant audit trail." },
             },
           },
@@ -181,7 +147,7 @@ export const openApiSpec = {
       get: {
         tags: ["capabilities"],
         summary: "List all capabilities",
-        description: "Returns the full catalog of active capabilities with their current SQS scores, pricing, and input schemas. No authentication required.",
+        description: "Returns the full catalog of active capabilities with their pricing and input schemas. No authentication required.",
         responses: {
           "200": {
             description: "Capability catalog",
@@ -217,7 +183,7 @@ export const openApiSpec = {
       get: {
         tags: ["solutions"],
         summary: "List all solutions",
-        description: "Returns all active bundled solutions with pricing, step counts, and SQS scores.",
+        description: "Returns all active bundled solutions with pricing and step counts.",
         parameters: [{ name: "category", in: "query" as const, required: false, schema: { type: "string" as const }, description: "Filter by category slug" }],
         responses: {
           "200": {
@@ -300,7 +266,7 @@ export const openApiSpec = {
           "402": errorResponse("insufficient_balance", "Insufficient wallet balance. Top up at the included checkout URL."),
           "404": errorResponse("no_matching_capability", "No capability matches the task within budget."),
           "429": errorResponse("rate_limited", "Rate limit exceeded."),
-          "503": errorResponse("capability_unavailable", "Capability SQS below platform floor."),
+          "503": errorResponse("capability_unavailable", "Capability is temporarily unavailable (circuit breaker open)."),
         },
       },
     },
@@ -733,58 +699,6 @@ export const openApiSpec = {
           },
           "404": errorResponse("not_found", "Transaction not found."),
           "429": errorResponse("rate_limited", "Rate limit exceeded (F-A-012: 10 req/min per IP). Retry after the window resets."),
-        },
-      },
-    },
-
-    // ─── Trust / Quality ──────────────────────────────────────────────
-    "/v1/quality/{slug}": {
-      get: {
-        tags: ["trust"],
-        summary: "Get capability quality score",
-        description: "Returns the dual-profile SQS score for a capability: Quality Profile (code quality) and Reliability Profile (operational health). Public, no auth required. Cached for 5 minutes.",
-        parameters: [{ name: "slug", in: "path" as const, required: true, schema: { type: "string" as const }, example: "iban-validate" }],
-        responses: {
-          "200": {
-            description: "Quality score data",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object" as const,
-                  properties: {
-                    capability: { type: "string" as const },
-                    sqs: {
-                      type: "object" as const,
-                      properties: {
-                        score: { type: "number" as const },
-                        label: { type: "string" as const },
-                        trend: { type: "string" as const },
-                      },
-                    },
-                    quality_profile: {
-                      type: "object" as const,
-                      properties: {
-                        grade: { type: "string" as const },
-                        score: { type: "number" as const },
-                        factors: { type: "array" as const, items: { type: "object" as const } },
-                      },
-                    },
-                    reliability_profile: {
-                      type: "object" as const,
-                      properties: {
-                        grade: { type: "string" as const },
-                        score: { type: "number" as const },
-                        capability_type: { type: "string" as const },
-                        factors: { type: "array" as const, items: { type: "object" as const } },
-                      },
-                    },
-                    pending: { type: "boolean" as const },
-                  },
-                },
-              },
-            },
-          },
-          "404": errorResponse("not_found", "Capability not found."),
         },
       },
     },

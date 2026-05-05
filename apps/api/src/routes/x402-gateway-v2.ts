@@ -49,7 +49,6 @@ interface X402Capability {
   inputSchema: Record<string, unknown> | null;
   outputSchema: Record<string, unknown> | null;
   priceCents: number;
-  matrixSqs: string | null;
   transparencyTag: string | null;
   // CCO #3 / F-AUDIT-01: previously stored capabilities.geography here
   // and passed it as dataJurisdiction at record time. Conceptual error:
@@ -109,7 +108,6 @@ async function ensureCache(): Promise<void> {
         inputSchema: capabilities.inputSchema,
         outputSchema: capabilities.outputSchema,
         priceCents: capabilities.priceCents,
-        matrixSqs: capabilities.matrixSqs,
         transparencyTag: capabilities.transparencyTag,
         capabilityType: capabilities.capabilityType,
         dataSource: capabilities.dataSource,
@@ -142,7 +140,6 @@ async function ensureCache(): Promise<void> {
         inputSchema: row.inputSchema as Record<string, unknown> | null,
         outputSchema: row.outputSchema as Record<string, unknown> | null,
         priceCents: row.priceCents,
-        matrixSqs: row.matrixSqs ?? null,
         transparencyTag: row.transparencyTag ?? null,
         capabilityType: row.capabilityType ?? null,
         dataSource: row.dataSource ?? null,
@@ -400,14 +397,11 @@ function build402(
   description: string,
   priceUsd: number,
   resourceUrl: string,
-  matrixSqs?: string | null,
   inputSchema?: Record<string, unknown> | null,
   method?: string,
   outputSchema?: Record<string, unknown> | null,
 ) {
   const maxAmount = usdToUsdcAtomic(priceUsd);
-  const sqs = matrixSqs ? parseFloat(String(matrixSqs)) : null;
-  const sqsStr = sqs != null && sqs > 0 ? ` SQS: ${Math.round(sqs)}/100.` : "";
 
   const httpMethod = (method ?? "POST").toUpperCase();
   const { v2Extensions, v1OutputSchema } = buildBazaarDiscovery(
@@ -422,11 +416,10 @@ function build402(
   // safely under it and preserves the usable prefix. Keeps long descriptions
   // in the capability's input/output metadata without blocking settlement.
   const DESCRIPTION_MAX = 256;
-  const combined = `${description}${sqsStr}`;
   const finalDescription =
-    combined.length > DESCRIPTION_MAX
-      ? `${combined.slice(0, DESCRIPTION_MAX - 1).trimEnd()}…`
-      : combined;
+    description.length > DESCRIPTION_MAX
+      ? `${description.slice(0, DESCRIPTION_MAX - 1).trimEnd()}…`
+      : description;
 
   const paymentRequirement: Record<string, unknown> = {
     scheme: "exact",
@@ -835,7 +828,7 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
       const { body } = build402(
         sol.name, sol.description, sol.x402PriceUsd,
         `${BASE_URL}/x402/solutions/${slug}`,
-        null, sol.inputSchema, "POST", sol.outputSchema,
+        sol.inputSchema, "POST", sol.outputSchema,
       );
       // No Payment-Required header: v1 body is the canonical source. Emitting a
       // v1-encoded header trips v2-only header decoders (e.g. @agentcash/discovery)
@@ -850,7 +843,7 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
     const solRebuild = build402(
       sol.name, sol.description, sol.x402PriceUsd,
       `${BASE_URL}/x402/solutions/${slug}`,
-      null, sol.inputSchema, "POST", sol.outputSchema,
+      sol.inputSchema, "POST", sol.outputSchema,
     );
     const verification = await verifyX402PaymentOnly(
       paymentHeader,
@@ -1028,7 +1021,7 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
       }
       const { body } = build402(
         cap.name, cap.description, cap.x402PriceUsd,
-        `${BASE_URL}/x402/${slug}`, cap.matrixSqs,
+        `${BASE_URL}/x402/${slug}`,
         cap.inputSchema, cap.x402Method, cap.outputSchema,
       );
       // See note on the solutions handler above — no Payment-Required header.
@@ -1044,7 +1037,7 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
     // The same handle is reused at settle time below.
     const capRebuild = build402(
       cap.name, cap.description, cap.x402PriceUsd,
-      `${BASE_URL}/x402/${slug}`, cap.matrixSqs,
+      `${BASE_URL}/x402/${slug}`,
       cap.inputSchema, cap.x402Method, cap.outputSchema,
     );
     const verification = await verifyX402PaymentOnly(

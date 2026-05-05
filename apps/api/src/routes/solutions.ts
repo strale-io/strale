@@ -4,7 +4,7 @@ import { getDb } from "../db/index.js";
 import { solutions, solutionSteps, capabilities } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
 import { getRelatedSolutions } from "../lib/related-items.js";
-import { sqsLabel, gradeFromScore, computeSolutionScore, computeSolutionTrend, worstFreshnessLevel, oldestTestedAt } from "../lib/trust-labels.js";
+import { worstFreshnessLevel, oldestTestedAt } from "../lib/trust-labels.js";
 import type { AppEnv } from "../types.js";
 
 // Solutions are public — no auth required (catalog data, same as capabilities)
@@ -44,14 +44,8 @@ solutionsRoute.get("/", async (c) => {
         .select({
           solutionId: solutionSteps.solutionId,
           capabilitySlug: solutionSteps.capabilitySlug,
-          matrixSqs: capabilities.matrixSqs,
-          qpScore: capabilities.qpScore,
-          rpScore: capabilities.rpScore,
-          trend: capabilities.trend,
           freshnessLevel: capabilities.freshnessLevel,
           lastTestedAt: capabilities.lastTestedAt,
-          guidanceUsable: capabilities.guidanceUsable,
-          guidanceStrategy: capabilities.guidanceStrategy,
           dataSource: capabilities.dataSource,
         })
         .from(solutionSteps)
@@ -68,34 +62,8 @@ solutionsRoute.get("/", async (c) => {
     stepsBySolution.set(step.solutionId, list);
   }
 
-  const gradeOrder = ["A", "B", "C", "D", "F", "pending"];
-  const strategyOrder = ["direct", "retry_with_backoff", "queue_for_later", "unavailable"];
-
   const result = rows.map((row) => {
     const steps = stepsBySolution.get(row.id) ?? [];
-    const stepSqs = steps.map((s) => s.matrixSqs ? parseFloat(s.matrixSqs) : 0);
-    const sqs = computeSolutionScore(stepSqs);
-
-    // Detect pending steps: SQS 0 AND qpScore null (never tested, not degraded)
-    const hasPendingStep = steps.some((s) =>
-      (!s.matrixSqs || parseFloat(s.matrixSqs) === 0) && s.qpScore === null,
-    );
-
-    const worstQuality = steps.reduce((w, s) => {
-      const g = gradeFromScore(s.qpScore);
-      return gradeOrder.indexOf(g) > gradeOrder.indexOf(w) ? g : w;
-    }, "A");
-    const worstReliability = steps.reduce((w, s) => {
-      const g = gradeFromScore(s.rpScore);
-      return gradeOrder.indexOf(g) > gradeOrder.indexOf(w) ? g : w;
-    }, "A");
-
-    const allUsable = steps.every((s) => s.guidanceUsable ?? true);
-    const worstStrategy = steps.reduce((w, s) => {
-      const st = s.guidanceStrategy ?? "direct";
-      return strategyOrder.indexOf(st) > strategyOrder.indexOf(w) ? st : w;
-    }, "direct");
-
     return {
       slug: row.slug,
       name: row.name,
@@ -109,16 +77,8 @@ solutionsRoute.get("/", async (c) => {
       search_tags: row.searchTags ?? [],
       capabilities: steps.map((s) => s.capabilitySlug),
       data_sources: [...new Set(steps.map((s) => s.dataSource).filter(Boolean))],
-      sqs: hasPendingStep ? null : sqs,
-      sqs_label: hasPendingStep ? "Building track record" : sqsLabel(sqs),
-      quality: hasPendingStep ? "pending" : worstQuality,
-      reliability: hasPendingStep ? "pending" : worstReliability,
-      trend: hasPendingStep ? "stable" : computeSolutionTrend(steps.map((s) => s.trend ?? "stable")),
       freshness_level: worstFreshnessLevel(steps.map((s) => s.freshnessLevel ?? "fresh")),
       last_tested_at: oldestTestedAt(steps.map((s) => s.lastTestedAt)),
-      usable: hasPendingStep ? false : allUsable,
-      strategy: hasPendingStep ? "queue_for_later" : worstStrategy,
-      pending: hasPendingStep || undefined,
     };
   });
 

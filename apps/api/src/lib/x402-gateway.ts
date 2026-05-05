@@ -101,13 +101,10 @@ export function build402Response(capability: {
   slug: string;
   name: string;
   priceCents: number;
-  matrixSqs?: string | null;
 }): {
   status: 402;
   body: Record<string, unknown>;
 } {
-  const sqs = capability.matrixSqs ? parseFloat(String(capability.matrixSqs)) : null;
-  const sqsStr = sqs != null && sqs > 0 ? ` SQS: ${Math.round(sqs)}/100.` : "";
   const priceUsd = eurCentsToUsdString(capability.priceCents);
 
   return {
@@ -120,7 +117,7 @@ export function build402Response(capability: {
           network: NETWORK,
           maxAmountRequired: eurCentsToUsdcAtomic(capability.priceCents),
           resource: "/v1/do",
-          description: `${capability.name}.${sqsStr} Strale: the trust layer for AI agents.`,
+          description: `${capability.name}. Strale: the trust layer for AI agents.`,
           payTo: WALLET_ADDRESS,
           mimeType: "application/json",
           asset: USDC_ADDRESS,
