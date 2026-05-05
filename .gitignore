@@ -31,3 +31,5 @@ strale-frontend/
 mcp-publisher.exe
 .mcpregistry_github_token
 .mcpregistry_registry_token
+
+apps/spike/
