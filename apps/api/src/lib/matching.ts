@@ -148,8 +148,10 @@ function betterRate(
   b: CapabilityRow | null,
 ): boolean {
   if (!b) return true;
-  // Use matrix SQS (dual-profile, freshness-decayed) as tiebreaker
-  const rateA = a.matrixSqs ? parseFloat(a.matrixSqs) : 0;
-  const rateB = b.matrixSqs ? parseFloat(b.matrixSqs) : 0;
-  return rateA > rateB;
+  // Tiebreaker: cheaper price wins; equal price → alphabetical slug.
+  // Replaces the SQS-DESC tiebreaker retired with the SQS engine
+  // (DEC-20260503-B). Deterministic and price-aware so a low-cost
+  // capability is preferred when match quality is identical.
+  if (a.priceCents !== b.priceCents) return a.priceCents < b.priceCents;
+  return a.slug < b.slug;
 }

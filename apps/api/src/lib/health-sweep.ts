@@ -17,7 +17,7 @@ import { getDb } from "../db/index.js";
 import { testSuites, testResults } from "../db/schema.js";
 import { analyzeAndRemediate, applyRemediation } from "./auto-remediation.js";
 import { runUpstreamEscalationSweep } from "./upstream-tracker.js";
-import { runLifecycleSweep } from "./lifecycle.js";
+// Lifecycle automatic sweep removed with the SQS engine (DEC-20260503-B).
 import { runWeeklyChecks } from "./meta-monitoring.js";
 import { log, logWarn } from "./log.js";
 
@@ -166,26 +166,8 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
     });
   }
 
-  // ── 7. Lifecycle sweep ────────────────────────────────────────────────
-  try {
-    const transitions = await runLifecycleSweep();
-    for (const t of transitions) {
-      log.info(
-        {
-          label: "health-sweep-lifecycle-transition",
-          capability_slug: t.slug,
-          from_state: t.from,
-          to_state: t.to,
-          reason: t.reason,
-        },
-        "health-sweep-lifecycle-transition",
-      );
-    }
-  } catch (err) {
-    logWarn("health-sweep-lifecycle-failed", "lifecycle sweep failed", {
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
+  // ── 7. Lifecycle sweep removed (DEC-20260503-B) ───────────────────────
+  // Automatic SQS-keyed transitions are gone. Manual flips only.
 
   // ── 8. Meta-monitoring weekly checks (8B + 8C) ────────────────────────
   // META-MONITORING: Also run daily via Railway cron or manual trigger:

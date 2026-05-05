@@ -13,7 +13,7 @@ import type { CapabilityResult } from "../capabilities/index.js";
 import { computeHealthState, HEALTH_STATE_FREQUENCY_HOURS } from "./health-state.js";
 import { sanitizeErrorMessage, getTestResultsForSlug } from "./trust-helpers.js";
 import { computeDualProfileSQS } from "./sqs.js";
-import { computeExecutionGuidance, type ComputeGuidanceInput } from "./execution-guidance.js";
+// execution-guidance retired with the SQS engine (DEC-20260503-B).
 import { classifyFailure } from "./failure-classifier.js";
 import {
   attemptRemediation,
@@ -26,7 +26,7 @@ import { checkUpstreamEscalation } from "./upstream-tracker.js";
 import { getUnconfiguredCapabilities } from "./credential-health.js";
 import { isChromiumHealthy, isBrowserlessCapability, probeChromiumHealth } from "./chromium-health.js";
 import { findUnhealthyUpstream, refreshUpstreamMapping, isCacheExpired } from "./upstream-health-gate.js";
-import { evaluateLifecycle } from "./lifecycle.js";
+// Lifecycle automatic evaluation removed (DEC-20260503-B).
 import { logHealthEvent } from "./health-monitor.js";
 import { checkNewFailures, checkInfrastructureHealth } from "./meta-monitoring.js";
 import type { CapabilityType } from "./reliability-profile.js";
@@ -336,12 +336,8 @@ export async function runTests(
     }
   }
 
-  // ── Evaluate lifecycle transitions for all capabilities in this batch ──
-  for (const slug of affectedSlugs) {
-    evaluateLifecycle(slug).catch((err) => {
-      logError("lifecycle-evaluate-failed", err, { capability_slug: slug });
-    });
-  }
+  // Lifecycle automatic transitions removed (DEC-20260503-B).
+  // `affectedSlugs` is no longer evaluated here; manual flips only.
 
   // ── Mass failure detection: >10% and >5 failures → situation assessment ──
   if (results.length > 0 && failed > 5 && failed / results.length > 0.10) {
@@ -2023,45 +2019,14 @@ export async function persistDualProfileScores(slugs: string[]): Promise<void> {
       // Override trend to "stale" when freshness warrants it
       const effectiveTrend = shouldOverrideTrend(freshness) ? "stale" as const : dual.rp.trend;
 
-      const guidanceInput: ComputeGuidanceInput = {
-        slug,
-        qpGrade: dual.qp.grade === "pending" ? "F" : dual.qp.grade,
-        rpGrade: dual.rp.grade === "pending" ? "F" : dual.rp.grade,
-        rpScore: dual.rp.score,
-        rpTrend: effectiveTrend === "stale" ? "declining" : dual.rp.trend,
-        rpAvailabilityRate: rpAvailRate,
-        matrixSqs: decayedMatrixSqs,
-        capabilityType: capType,
-        testScheduleHours: scheduleTierHours,
-        lastTestedAt: lastTest?.executedAt?.toISOString() ?? null,
-        priceCents: cap?.priceCents ?? 0,
-        dataSource: cap?.dataSource ?? null,
-        hasExternalFailures: hasExtFailures,
-      };
-
-      let guidance = await computeExecutionGuidance(guidanceInput);
-
-      // Apply freshness overrides to execution guidance
-      if (freshness.staleness_level === "expired" || freshness.staleness_level === "unverified") {
-        const daysSinceTested = lastTest?.executedAt
-          ? Math.round((Date.now() - lastTest.executedAt.getTime()) / 86400_000)
-          : null;
-        guidance = {
-          ...guidance,
-          usable: false,
-          strategy: "unavailable",
-          confidence_after_strategy: 0,
-          context: daysSinceTested != null
-            ? `Capability has not been tested in ${daysSinceTested} days. Quality cannot be verified.`
-            : "Capability has never been tested. Quality cannot be verified.",
-        };
-      } else if (freshness.staleness_level === "stale") {
-        guidance = {
-          ...guidance,
-          confidence_after_strategy: Math.round(guidance.confidence_after_strategy * 0.5),
-          strategy: guidance.strategy === "direct" ? "retry_with_backoff" : guidance.strategy,
-        };
-      }
+      // Execution guidance retired with the SQS engine (DEC-20260503-B).
+      // Suppress unused-var warnings for variables that fed the guidance
+      // computation; Wave 3 deletes the surrounding function entirely.
+      void capType;
+      void rpAvailRate;
+      void hasExtFailures;
+      void cap;
+      void scheduleTierHours;
 
       const now = new Date();
       await db
@@ -2075,9 +2040,9 @@ export async function persistDualProfileScores(slugs: string[]): Promise<void> {
           freshnessLevel: freshness.staleness_level,
           lastTestedAt: lastTest?.executedAt ?? null,
           freshnessDecayedAt: now,
-          guidanceUsable: guidance.usable,
-          guidanceStrategy: guidance.strategy,
-          guidanceConfidence: String(guidance.confidence_after_strategy),
+          guidanceUsable: null,
+          guidanceStrategy: null,
+          guidanceConfidence: null,
           updatedAt: now,
         })
         .where(eq(capabilities.slug, slug));

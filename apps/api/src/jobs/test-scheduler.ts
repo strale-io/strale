@@ -63,11 +63,24 @@ async function checkSolutionGates(capabilitySlug: string): Promise<void> {
       .from(solutionSteps).where(eq(solutionSteps.solutionId, solId));
 
     const slugs = steps.map((s) => s.capabilitySlug);
-    const caps = await db.select({ slug: capabilities.slug, matrixSqs: capabilities.matrixSqs })
-      .from(capabilities).where(inArray(capabilities.slug, slugs));
-
-    const allQualified = caps.every((c) => c.matrixSqs && parseFloat(String(c.matrixSqs)) > 0);
-    if (allQualified && caps.length === slugs.length) {
+    // Per DEC-20260503-B: a solution auto-activates when every step capability
+    // has at least one passing test_result in the last 30 days. The previous
+    // gate keyed on matrixSqs > 0 — replaced with a substrate-only signal.
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const passingRows = await db.execute(sql`
+      SELECT DISTINCT capability_slug
+      FROM test_results
+      WHERE capability_slug IN (${sql.join(slugs.map((s) => sql`${s}`), sql`, `)})
+        AND passed = true
+        AND executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
+    `);
+    const passingSet = new Set(
+      ((Array.isArray(passingRows) ? passingRows : (passingRows as any)?.rows ?? []) as { capability_slug: string }[])
+        .map((r) => r.capability_slug),
+    );
+    const allQualified = slugs.every((s) => passingSet.has(s));
+    if (allQualified && slugs.length > 0) {
       await db.update(solutions)
         .set({ isActive: true, updatedAt: new Date() })
         .where(eq(solutions.id, solId));

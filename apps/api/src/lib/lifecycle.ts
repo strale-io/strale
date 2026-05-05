@@ -1,29 +1,24 @@
 /**
  * Lifecycle state machine for capabilities.
  *
- * States: draft → validating → probation → active ⇄ degraded → suspended
+ * States: draft → validating → probation → active → degraded → suspended → deactivated
  *
- * Auto-evaluated transitions:
- *   probation → active:    SQS ≥ 50 AND qualified (≥5 runs, all 5 factors have data)
- *   active → degraded:     SQS < 25 OR circuit breaker active
- *   degraded → active:     SQS ≥ 50 AND circuit breaker not active
- *   degraded → suspended:  7 consecutive days in degraded state (regardless of SQS)
+ * Per DEC-20260503-B (SQS deletion), automatic transitions are removed.
+ * Lifecycle state now only changes via:
+ *   - validate-capability.ts            (validating → probation, validating → draft)
+ *   - admin scripts (lifecycle-transition.ts, batch-transition-to-probation.ts,
+ *     fix-lifecycle-anomalies.ts) which call `transitionCapability` directly
+ *   - the executor onboarding pipeline (draft → validating after suite seeding)
  *
- * Manual-only transitions (via lifecycle-transition.ts --to):
- *   any → suspended, suspended → draft
- *
- * Transitions driven by validate-capability.ts:
- *   validating → probation: all 15 checks pass
- *   validating → draft:     any check fails
+ * No background sweep evaluates SQS thresholds. Capabilities sit in whatever
+ * state they're put in until a human flips them.
  */
 
-import { eq, and, desc, inArray, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { capabilities, testSuites, testResults, healthMonitorEvents } from "../db/schema.js";
-import { computeDualProfileSQS } from "./sqs.js";
+import { capabilities, testSuites, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "./health-monitor.js";
-import { getExecutor } from "../capabilities/index.js";
-import { log, logError, logWarn } from "./log.js";
+import { log } from "./log.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -45,28 +40,11 @@ export interface TransitionResult {
   reason: string;
 }
 
-// ─── Thresholds ──────────────────────────────────────────────────────────────
-
-const ACTIVE_SQS_MIN = 50;           // SQS required to promote probation → active OR recover degraded → active
-const DEGRADE_SQS_THRESHOLD = 25;    // SQS below which active → degraded (platform floor per SQS Constitution)
-const DEGRADED_SUSPEND_DAYS = 7;     // consecutive days in degraded → suspended (regardless of SQS)
-const DEGRADED_RECOVERY_RUNS = 3;    // consecutive qualifying SQS runs required before degraded → active (anti-flap)
-const SUSPENDED_DEACTIVATE_DAYS = 30; // days in suspended before auto-deactivation
-const DRAFT_MIN_SUITES = 2;           // min test suites to auto-promote draft → validating
-const VALIDATING_MIN_RUNS = 5;        // min completed test runs for validating → probation
-const VALIDATING_MIN_QP = 50;         // min QP score for validating → probation
-
-// Tier for health monitor events per transition
-function transitionTier(to: LifecycleState): 1 | 2 | 3 {
-  if (to === "degraded" || to === "suspended") return 2;
-  return 1;
-}
-
 // ─── State visibility map ─────────────────────────────────────────────────────
 
 /**
  * Whether a capability in a given state is visible to external API consumers.
- * active/degraded → visible (degraded serves with quality warnings);
+ * active/degraded → visible (degraded serves but is flagged for human review);
  * all other states → hidden (not discoverable via /v1/capabilities).
  */
 const STATE_VISIBILITY: Record<LifecycleState, boolean> = {
@@ -79,37 +57,10 @@ const STATE_VISIBILITY: Record<LifecycleState, boolean> = {
   deactivated: false,
 };
 
-// ─── Smoke test: execute once from production before promoting ───────────────
-
-/**
- * Run a single execution of the capability from the production environment.
- * Uses the first known_answer test input as the smoke test input.
- * Only applies to probation → active transitions (first-time activation).
- */
-async function smokeTest(slug: string): Promise<{ passed: boolean; error?: string }> {
-  const executor = getExecutor(slug);
-  if (!executor) return { passed: false, error: "No executor registered" };
-
-  const db = getDb();
-  const [suite] = await db.select({ input: testSuites.input })
-    .from(testSuites)
-    .where(and(
-      eq(testSuites.capabilitySlug, slug),
-      eq(testSuites.testType, "known_answer"),
-      eq(testSuites.active, true),
-    ))
-    .limit(1);
-
-  if (!suite) return { passed: false, error: "No known_answer test suite for smoke test input" };
-
-  try {
-    const result = await executor(suite.input as Record<string, unknown>);
-    if (!result?.output) return { passed: false, error: "Executor returned no output" };
-    return { passed: true };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { passed: false, error: msg.slice(0, 200) };
-  }
+// Tier for health monitor events per transition
+function transitionTier(to: LifecycleState): 1 | 2 | 3 {
+  if (to === "degraded" || to === "suspended") return 2;
+  return 1;
 }
 
 // ─── Core: write a transition ─────────────────────────────────────────────────
@@ -117,13 +68,16 @@ async function smokeTest(slug: string): Promise<{ passed: boolean; error?: strin
 /**
  * Apply a lifecycle state transition: update the capability row and log an event.
  * Does NOT validate whether the transition is allowed — callers are responsible.
+ *
+ * Note: `healthMonitorEvents` is intentionally referenced in the import block
+ * so downstream `getStateEnteredAt`-style helpers can be re-introduced when a
+ * source-health-aware lifecycle policy lands.
  */
 export async function transitionCapability(
   slug: string,
   toState: LifecycleState,
   reason: string,
-  triggeredBy: TransitionTrigger = "auto",
-  sqsScore?: number,
+  triggeredBy: TransitionTrigger = "admin",
 ): Promise<void> {
   const db = getDb();
 
@@ -170,7 +124,6 @@ export async function transitionCapability(
       to: toState,
       reason,
       triggered_by: triggeredBy,
-      ...(sqsScore !== undefined ? { sqs_score: sqsScore } : {}),
     },
   });
 
@@ -187,330 +140,15 @@ export async function transitionCapability(
   );
 }
 
-// ─── Evaluate auto-transitions for a single capability ──────────────────────
+// `evaluateLifecycle` and `runLifecycleSweep` were removed with the SQS
+// engine (DEC-20260503-B). All automatic transitions that keyed on SQS
+// thresholds (probation→active, active→degraded, degraded→active,
+// degraded→suspended, suspended→deactivated) are gone. Manual flips
+// remain via `transitionCapability`. A future per-product routing engine
+// may reintroduce automatic transitions keyed on `source_health.status`
+// once that substrate exists.
 
-/**
- * Check whether a capability's current state should auto-transition.
- * Returns the transition result if one was applied, or null if no change.
- */
-export async function evaluateLifecycle(
-  slug: string,
-): Promise<TransitionResult | null> {
-  const db = getDb();
-
-  const [cap] = await db
-    .select({
-      lifecycleState: capabilities.lifecycleState,
-      degradedRecoveryCount: capabilities.degradedRecoveryCount,
-    })
-    .from(capabilities)
-    .where(eq(capabilities.slug, slug))
-    .limit(1);
-
-  if (!cap) return null;
-
-  const state = cap.lifecycleState as LifecycleState;
-
-  // Only auto-evaluate states with auto-transitions
-  if (!["draft", "validating", "probation", "active", "degraded", "suspended"].includes(state)) return null;
-
-  // ── draft → validating ───────────────────────────────────────────────────
-  // Requires: ≥2 test suites, non-null schemas, registered executor
-  if (state === "draft") {
-    const [suiteCount] = await db
-      .select({ count: sql<number>`COUNT(*)::int` })
-      .from(testSuites)
-      .where(and(eq(testSuites.capabilitySlug, slug), eq(testSuites.active, true)));
-
-    const [capRow] = await db
-      .select({ inputSchema: capabilities.inputSchema, outputSchema: capabilities.outputSchema })
-      .from(capabilities)
-      .where(eq(capabilities.slug, slug))
-      .limit(1);
-
-    const hasSchemas = capRow?.inputSchema != null && capRow?.outputSchema != null;
-    const hasExecutor = !!getExecutor(slug);
-
-    if ((suiteCount?.count ?? 0) >= DRAFT_MIN_SUITES && hasSchemas && hasExecutor) {
-      const reason = `Auto-promoted: ${suiteCount.count} test suites, schemas present, executor registered`;
-      await transitionCapability(slug, "validating", reason, "auto");
-      return { slug, from: "draft", to: "validating", reason };
-    }
-    return null;
-  }
-
-  // ── validating → probation ───────────────────────────────────────────────
-  // Requires: QP ≥ 50, ≥5 completed test runs, ≥1 passing in last 3
-  if (state === "validating") {
-    const [runCount] = await db
-      .select({ count: sql<number>`COUNT(*)::int` })
-      .from(testResults)
-      .where(eq(testResults.capabilitySlug, slug));
-
-    if ((runCount?.count ?? 0) < VALIDATING_MIN_RUNS) return null;
-
-    const dual = await computeDualProfileSQS(slug);
-    if (dual.qp.score < VALIDATING_MIN_QP) return null;
-
-    // Check at least 1 pass in last 3 runs
-    const recentRuns = await db
-      .select({ passed: testResults.passed })
-      .from(testResults)
-      .where(eq(testResults.capabilitySlug, slug))
-      .orderBy(desc(testResults.executedAt))
-      .limit(3);
-
-    const hasRecentPass = recentRuns.some((r) => r.passed);
-    if (!hasRecentPass) return null;
-
-    const reason = `Auto-promoted: QP ${dual.qp.score.toFixed(1)} ≥ ${VALIDATING_MIN_QP}, ${runCount.count} runs, recent passes`;
-    await transitionCapability(slug, "probation", reason, "auto", dual.score);
-    return { slug, from: "validating", to: "probation", reason };
-  }
-
-  const dual = await computeDualProfileSQS(slug);
-  const now = Date.now();
-
-  // ── probation → active ────────────────────────────────────────────────────
-  // Requires: SQS ≥ 50 AND qualified (not pending = has ≥5 runs + all factors)
-  if (state === "probation") {
-    // Bypass detection: probation without test suites = violation
-    const [suiteCheck] = await db
-      .select({ id: testSuites.id })
-      .from(testSuites)
-      .where(and(eq(testSuites.capabilitySlug, slug), eq(testSuites.active, true)))
-      .limit(1);
-    if (!suiteCheck) {
-      await logHealthEvent({
-        eventType: "lifecycle_violation",
-        capabilitySlug: slug,
-        tier: 3,
-        actionTaken: "Capability in probation state has no active test suites — potential bypass",
-        details: { current_state: "probation", test_count: 0 },
-      });
-      return null;
-    }
-
-    if (!dual.matrix.pending && dual.score >= ACTIVE_SQS_MIN) {
-      // Production smoke test: execute once from this environment before activating
-      const smokeResult = await smokeTest(slug);
-      if (!smokeResult.passed) {
-        logWarn("lifecycle-smoke-failed", "SQS qualifies but smoke test failed", {
-          capability_slug: slug,
-          sqs: Number(dual.score.toFixed(1)),
-          err: smokeResult.error,
-        });
-        await logHealthEvent({
-          eventType: "lifecycle_transition",
-          capabilitySlug: slug,
-          tier: 2,
-          actionTaken: `Smoke test blocked probation→active: ${smokeResult.error}`,
-          details: { sqs: dual.score, smoke_error: smokeResult.error },
-        });
-        return null; // Stay in probation — will retry next evaluation cycle
-      }
-
-      const reason = `SQS ${dual.score.toFixed(1)} ≥ ${ACTIVE_SQS_MIN}, ${dual.qp.runs_analyzed} runs, smoke test passed`;
-      await transitionCapability(slug, "active", reason, "auto", dual.score);
-      return { slug, from: "probation", to: "active", reason };
-    }
-    return null;
-  }
-
-  // ── active → degraded ─────────────────────────────────────────────────────
-  if (state === "active") {
-    if (dual.score < DEGRADE_SQS_THRESHOLD || dual.rp.circuit_breaker) {
-      const reason = dual.rp.circuit_breaker
-        ? `Circuit breaker active (SQS ${dual.score.toFixed(1)})`
-        : `SQS ${dual.score.toFixed(1)} < ${DEGRADE_SQS_THRESHOLD}`;
-      await transitionCapability(slug, "degraded", reason, "auto", dual.score);
-      return { slug, from: "active", to: "degraded", reason };
-    }
-    return null;
-  }
-
-  // ── degraded → active | suspended ─────────────────────────────────────────
-  if (state === "degraded") {
-    const degradedSince = await getStateEnteredAt(slug, "degraded");
-    const degradedMs = degradedSince !== null ? now - degradedSince : 0;
-    const degradedDays = degradedMs / (1000 * 60 * 60 * 24);
-
-    // Recovery path: SQS ≥ 50 and circuit breaker not active.
-    // Requires DEGRADED_RECOVERY_RUNS consecutive qualifying evaluations to prevent flapping.
-    if (dual.score >= ACTIVE_SQS_MIN && !dual.rp.circuit_breaker) {
-      const newCount = (cap.degradedRecoveryCount ?? 0) + 1;
-
-      if (newCount >= DEGRADED_RECOVERY_RUNS) {
-        const reason = `SQS recovered to ${dual.score.toFixed(1)} for ${DEGRADED_RECOVERY_RUNS} consecutive runs, circuit breaker clear`;
-        await transitionCapability(slug, "active", reason, "auto", dual.score);
-        return { slug, from: "degraded", to: "active", reason };
-      }
-
-      // Not enough consecutive runs yet — increment counter and wait
-      await db
-        .update(capabilities)
-        .set({ degradedRecoveryCount: newCount, updatedAt: new Date() })
-        .where(eq(capabilities.slug, slug));
-      log.info(
-        {
-          label: "lifecycle-degraded-recovery",
-          capability_slug: slug,
-          recovery_count: newCount,
-          required: DEGRADED_RECOVERY_RUNS,
-          sqs: Number(dual.score.toFixed(1)),
-        },
-        "lifecycle-degraded-recovery",
-      );
-      return null;
-    }
-
-    // SQS below threshold or circuit breaker active — reset recovery counter
-    if ((cap.degradedRecoveryCount ?? 0) > 0) {
-      await db
-        .update(capabilities)
-        .set({ degradedRecoveryCount: 0, updatedAt: new Date() })
-        .where(eq(capabilities.slug, slug));
-    }
-
-    // 24h suspension warning at day 6 (one day before auto-suspend)
-    if (degradedDays >= DEGRADED_SUSPEND_DAYS - 1 && degradedDays < DEGRADED_SUSPEND_DAYS) {
-      const autoSuspendAt = new Date(
-        (degradedSince ?? now) + DEGRADED_SUSPEND_DAYS * 24 * 3600_000,
-      );
-      import("./interrupt-sender.js").then(({ sendInterruptEmail }) =>
-        sendInterruptEmail({
-          type: "suspension_warning",
-          capabilitySlug: slug,
-          details: {
-            sqs_score: dual.score.toFixed(1),
-            degraded_days: degradedDays.toFixed(1),
-            reason: dual.rp.circuit_breaker
-              ? `Circuit breaker active (SQS ${dual.score.toFixed(1)})`
-              : `SQS ${dual.score.toFixed(1)} below platform floor`,
-            auto_suspend_at: autoSuspendAt.toISOString(),
-          },
-        })
-      ).catch((err) => {
-        logError("interrupt-suspension-warning-failed", err, { capability_slug: slug });
-      });
-    }
-
-    // Suspend path: 7 consecutive days in degraded (regardless of SQS)
-    if (degradedDays >= DEGRADED_SUSPEND_DAYS) {
-      const reason = `${Math.floor(degradedDays)}d in degraded state — auto-suspended`;
-      await transitionCapability(slug, "suspended", reason, "auto", dual.score);
-      return { slug, from: "degraded", to: "suspended", reason };
-    }
-
-    return null;
-  }
-
-  // ── suspended → deactivated (30-day TTL) ──────────────────────────────────
-  if (state === "suspended") {
-    const suspendedSince = await getStateEnteredAt(slug, "suspended");
-    if (suspendedSince !== null) {
-      const suspendedDays = (now - suspendedSince) / (1000 * 60 * 60 * 24);
-      if (suspendedDays >= SUSPENDED_DEACTIVATE_DAYS) {
-        const reason = `${Math.floor(suspendedDays)}d suspended — auto-deactivated`;
-        await transitionCapability(slug, "deactivated", reason, "auto");
-        // Also set is_active=false so test scheduler stops
-        await db.update(capabilities).set({
-          isActive: false,
-          deactivationReason: reason,
-          updatedAt: new Date(),
-        }).where(eq(capabilities.slug, slug));
-        // Cascade to dependent solutions
-        try {
-          const { onCapabilityDeactivated } = await import("./capability-onboarding.js");
-          await onCapabilityDeactivated(slug, reason);
-        } catch { /* ignore cascade errors */ }
-        return { slug, from: "suspended", to: "deactivated", reason };
-      }
-    }
-    return null;
-  }
-
-  return null;
-}
-
-// ─── Bulk lifecycle sweep ────────────────────────────────────────────────────
-
-/**
- * Evaluate auto-transitions for all capabilities in auto-evaluable states.
- * Called from the weekly health sweep.
- */
-export async function runLifecycleSweep(): Promise<TransitionResult[]> {
-  const db = getDb();
-
-  const caps = await db
-    .select({ slug: capabilities.slug })
-    .from(capabilities)
-    .where(
-      and(
-        eq(capabilities.isActive, true),
-        inArray(capabilities.lifecycleState, ["draft", "validating", "probation", "active", "degraded", "suspended"]),
-      ),
-    );
-
-  const transitions: TransitionResult[] = [];
-
-  for (const cap of caps) {
-    try {
-      const result = await evaluateLifecycle(cap.slug);
-      if (result) {
-        transitions.push(result);
-      }
-    } catch (err) {
-      logWarn("lifecycle-sweep-capability-failed", "sweep failed for capability", {
-        capability_slug: cap.slug,
-        err: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-
-  if (transitions.length > 0) {
-    log.info(
-      { label: "lifecycle-sweep-complete", transitions: transitions.length },
-      "lifecycle-sweep-complete",
-    );
-  }
-
-  return transitions;
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-/**
- * Find the timestamp when a capability last entered the given state,
- * by looking for the most recent lifecycle_transition event with that target state.
- * Returns null if no such event exists (capability was seeded in that state).
- */
-async function getStateEnteredAt(
-  slug: string,
-  state: LifecycleState,
-): Promise<number | null> {
-  const db = getDb();
-
-  // Drizzle doesn't support JSON field filtering cleanly; fetch recent events
-  // and filter in-memory (max 20, very fast).
-  const events = await db
-    .select({ createdAt: healthMonitorEvents.createdAt, details: healthMonitorEvents.details })
-    .from(healthMonitorEvents)
-    .where(
-      and(
-        eq(healthMonitorEvents.capabilitySlug, slug),
-        eq(healthMonitorEvents.eventType, "lifecycle_transition"),
-      ),
-    )
-    .orderBy(desc(healthMonitorEvents.createdAt))
-    .limit(20);
-
-  for (const ev of events) {
-    const d = ev.details as { to?: string } | null;
-    if (d?.to === state) {
-      return new Date(ev.createdAt).getTime();
-    }
-  }
-
-  return null;
-}
+// Suppress unused import warning — `healthMonitorEvents` is part of the
+// schema surface this file touches; re-introducing automatic transitions
+// will need it for the state-entry timestamp lookup.
+void healthMonitorEvents;
