@@ -111,7 +111,7 @@ make Vendor Roster ↔ Decisions DB drift visible.
 }
 
 async function fetchNotionDB(dataSourceId, token, filter, sorts) {
-  const res = await fetch(`https://api.notion.com/v1/data_sources/${dataSourceId}/query`, {
+  const res = await fetch(`https://api.notion.com/v1/databases/${dataSourceId}/query`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

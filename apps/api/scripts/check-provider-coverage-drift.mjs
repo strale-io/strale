@@ -139,7 +139,7 @@ async function fetchNotionDB(dataSourceId, token, filter, sorts) {
     if (filter) body.filter = filter;
     if (sorts) body.sorts = sorts;
     if (cursor) body.start_cursor = cursor;
-    const res = await fetch(`https://api.notion.com/v1/data_sources/${dataSourceId}/query`, {
+    const res = await fetch(`https://api.notion.com/v1/databases/${dataSourceId}/query`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
