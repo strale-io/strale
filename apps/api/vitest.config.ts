@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     globals: false,
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "test/**/*.test.ts"],
     setupFiles: ["./src/test-env-setup.ts"],
     testTimeout: 10_000,
     // beforeAll hooks that bootstrap the capability registry parse 313
