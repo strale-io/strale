@@ -420,92 +420,16 @@ function check4() {
   r.details.push(r.passed ? "PASS" : "FAIL — missing exports");
 }
 
-// ─── Check 5: Scoring integrity verification ─────────────────────────────────
+// Check 5 (scoring integrity) retired with the SQS engine (DEC-20260503-B).
+// Upstream-vs-infrastructure error classification is still meaningful for
+// the failure-classifier, but the EXTERNAL_SERVICE_PATTERNS regex set lived
+// inside sqs.ts and is gone. Reintroduce when the source-health substrate
+// has its own canonical classifier.
 
 function check5() {
-  const r = check("Scoring integrity");
-
-  // Replicate the EXTERNAL_SERVICE_PATTERNS from sqs.ts (it's private)
-  const EXTERNAL_SERVICE_PATTERNS = [
-    /HTTP 429/i, /HTTP 503/i, /HTTP 502/i,
-    /Too Many Requests/i, /rate limit/i, /QUOTA_EXCEEDED/i,
-    /ECONNRESET/i, /ECONNREFUSED/i, /ETIMEDOUT/i, /ENOTFOUND/i,
-    /timeout/i, /upstream/i, /Browserless/i,
-    /VIES error/i, /Navigation timeout/i,
-    /fetch failed/i,
-  ];
-
-  function isExternal(reason: string): boolean {
-    return EXTERNAL_SERVICE_PATTERNS.some((p) => p.test(reason));
-  }
-
-  // Infrastructure errors: MUST NOT be classified as external/upstream
-  const infraCases = [
-    "No API key provided",
-    "DILISENSE_API_KEY is required for this capability",
-    "Key not configured",
-    "ANTHROPIC_API_KEY is required.",
-    "SERPER_API_KEY is required for adverse-media-check",
-  ];
-
-  let infraOk = true;
-  for (const reason of infraCases) {
-    const result = isExternal(reason);
-    if (result) {
-      r.details.push(`  FAIL: "${reason.slice(0, 60)}" incorrectly classified as upstream`);
-      infraOk = false;
-    }
-  }
-  r.details.push(
-    infraOk
-      ? "Infrastructure errors correctly NOT upstream"
-      : "FAIL — some infra errors leak into upstream",
-  );
-
-  // Upstream errors: MUST be classified as external
-  const upstreamCases = [
-    "HTTP 503 Service Unavailable",
-    "ETIMEDOUT",
-    "Navigation timeout of 30000 ms exceeded",
-    "VIES error: MS_UNAVAILABLE",
-    "HTTP 429 Too Many Requests",
-    "Browserless error: Navigation timeout",
-    "fetch failed",
-    "ECONNREFUSED",
-    "QUOTA_EXCEEDED",
-  ];
-
-  let upstreamOk = true;
-  for (const reason of upstreamCases) {
-    const result = isExternal(reason);
-    if (!result) {
-      r.details.push(`  FAIL: "${reason}" NOT classified as upstream`);
-      upstreamOk = false;
-    }
-  }
-  r.details.push(
-    upstreamOk
-      ? "Genuine upstream patterns correctly recognized"
-      : "FAIL — some upstream errors not recognized",
-  );
-
-  // Verify CLAUDE.md has scoring integrity section
-  try {
-    const claudeMd = readFileSync(resolve(__dirname, "../../../../CLAUDE.md"), "utf-8");
-    const hasIntegrity = claudeMd.includes("Scoring Integrity");
-    r.details.push(
-      hasIntegrity
-        ? "CLAUDE.md guardrail present"
-        : "FAIL — CLAUDE.md missing Scoring Integrity section",
-    );
-    if (!hasIntegrity) upstreamOk = false;
-  } catch {
-    r.details.push("FAIL — could not read CLAUDE.md");
-    upstreamOk = false;
-  }
-
-  r.passed = infraOk && upstreamOk;
-  r.details.push(r.passed ? "PASS" : "FAIL");
+  const r = check("Scoring integrity (retired)");
+  r.passed = true;
+  r.details.push("Retired with SQS engine — DEC-20260503-B");
 }
 
 // ─── Check 6: Test runner credential skip verification ───────────────────────

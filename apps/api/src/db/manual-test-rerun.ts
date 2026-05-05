@@ -48,7 +48,7 @@ const fixedSlugs = [
   "schema-migration-generate",
   // credit-report-summary deactivated DEC-20260405-B
   "return-policy-extract",
-  // Remaining 5 (from fix-low-sqs-remaining.ts)
+  // Remaining 5 from a one-off slug list
   "annual-report-extract",
   "lithuanian-company-data",
   "brand-mention-search",
@@ -111,5 +111,5 @@ if (failedSlugs.length > 0) {
   for (const s of failedSlugs) console.log(`  - ${s}`);
 }
 
-console.log("\nSQS scores will recalculate on next quality aggregation cycle.");
+console.log("\nDone — last_tested_at updated for the listed capabilities.");
 process.exit(0);
