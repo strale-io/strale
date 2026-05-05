@@ -24,14 +24,6 @@ export interface Solution {
   capabilities: string[];
   transparency_tag: string | null;
   search_tags?: string[];
-  // Dual-profile fields
-  sqs?: number;
-  sqs_label?: string;
-  quality?: string;
-  reliability?: string;
-  trend?: string;
-  usable?: boolean;
-  strategy?: string;
 }
 
 export interface Capability {
@@ -45,14 +37,6 @@ export interface Capability {
   output_schema: unknown;
   is_free_tier?: boolean;
   search_tags?: string[];
-  // Dual-profile fields
-  sqs?: number;
-  sqs_label?: string;
-  quality?: string;
-  reliability?: string;
-  trend?: string;
-  usable?: boolean;
-  strategy?: string;
 }
 
 export interface JsonSchema {
@@ -68,24 +52,10 @@ export interface JsonSchemaProperty {
 }
 
 export interface TrustBatchEntry {
-  sqs: number;
-  sqs_label: string;
-  quality: string;
-  reliability: string;
-  trend: string;
-  usable: boolean;
-  strategy: string;
   badge: string | null;
 }
 
 export interface SolutionTrustEntry {
-  sqs: number;
-  sqs_label: string;
-  quality: string;
-  reliability: string;
-  trend: string;
-  usable: boolean;
-  strategy: string;
   badge: string | null;
   badge_label: string | null;
 }
@@ -370,13 +340,6 @@ export async function fetchSolutions(baseUrl: string): Promise<Solution[]> {
     capabilities: (s.capabilities as string[]) ?? [],
     transparency_tag: ((s.transparency_tag ?? s.transparencyTag) as string) ?? null,
     search_tags: (s.search_tags ?? s.searchTags) as string[] | undefined,
-    sqs: s.sqs as number | undefined,
-    sqs_label: s.sqs_label as string | undefined,
-    quality: s.quality as string | undefined,
-    reliability: s.reliability as string | undefined,
-    trend: s.trend as string | undefined,
-    usable: s.usable as boolean | undefined,
-    strategy: s.strategy as string | undefined,
   }));
 }
 
@@ -425,13 +388,6 @@ export async function fetchSolutionTrust(
       return {
         slug,
         entry: {
-          sqs: data.sqs?.score ?? 0,
-          sqs_label: data.sqs?.label ?? "Pending",
-          quality: data.quality_profile?.grade ?? "pending",
-          reliability: data.reliability_profile?.grade ?? "pending",
-          trend: data.sqs?.trend ?? "stable",
-          usable: data.execution_guidance?.usable ?? true,
-          strategy: data.execution_guidance?.strategy ?? "direct",
           badge: data.badge ?? null,
           badge_label: data.badge_label ?? null,
         } as SolutionTrustEntry,
@@ -604,8 +560,6 @@ export function registerStraleTools(
                 category: string;
                 price_cents: number | null;
                 geography: string | null;
-                sqs: number | null;
-                sqs_label: string | null;
                 is_free_tier?: boolean;
                 step_count?: number;
                 also_available_for?: string[];
@@ -623,8 +577,6 @@ export function registerStraleTools(
                 category: r.category,
                 geography: r.geography ?? "global",
                 price: r.price_cents != null ? `€${(r.price_cents / 100).toFixed(2)}` : null,
-                sqs: r.sqs ?? 0,
-                sqs_label: r.sqs_label ?? "Pending",
               };
               if (r.type === "solution") {
                 if (r.step_count) base.step_count = r.step_count;
@@ -715,8 +667,6 @@ export function registerStraleTools(
           geography: s.geography,
           step_count: s.step_count,
           capabilities: s.capabilities,
-          sqs: s.sqs ?? 0,
-          sqs_label: s.sqs_label ?? "Pending",
         }));
 
       // Match capabilities
@@ -750,8 +700,6 @@ export function registerStraleTools(
             geography: c.geography ?? "global",
             price: `€${(c.price_cents / 100).toFixed(2)}`,
             input_fields: inputFields,
-            sqs: c.sqs ?? 0,
-            sqs_label: c.sqs_label ?? "Pending",
           };
         });
 
@@ -842,118 +790,42 @@ export function registerStraleTools(
     "strale_methodology",
     {
       description:
-        "Returns the Strale Quality Score (SQS) methodology as a full reference document. Call this when you need to understand how capability quality scores are computed, or when a user asks how trust is evaluated. Returns a markdown document covering the dual-profile scoring model (Quality Profile + Reliability Profile), the 5x5 SQS matrix, execution guidance strategies, test infrastructure, provenance tracking, audit trails, badge system, and current limitations. No API key required.",
+        "Returns Strale's trust methodology as a short reference document — covers test cadence, audit-trail integrity, and provenance. No API key required.",
       inputSchema: z.object({}),
     },
     async () => {
-      const methodologyText = `STRALE QUALITY & TRUST METHODOLOGY
-===================================
+      const methodologyText = `STRALE TRUST METHODOLOGY
+=========================
 
 WHAT STRALE IS
-Strale is trust and quality infrastructure for AI agents. Agents call capabilities (atomic data operations) and solutions (multi-step workflows) via a unified API. Every execution is independently tested, scored, and auditable.
+Strale is data infrastructure for AI agents. Agents call capabilities (atomic data operations) and solutions (multi-step workflows) via a unified API. Every call returns a chain-hashed audit record.
 
-SQS — STRALE QUALITY SCORE
-The SQS is a combined confidence score (0-100) derived from two independent profiles:
-- Quality Profile (QP): How well-built is Strale's code? (code correctness, schema compliance, error handling, edge cases)
-- Reliability Profile (RP): How dependable is the service right now? (availability, success rate, upstream health, latency)
-The two profiles combine via a published matrix into the headline SQS score.
+TEST CADENCE
+Free capabilities are tested hourly with canary inputs that don't consume vendor quota. The scheduler hash-spreads runs across the hour to keep upstream pressure even.
+Paid capabilities are not proactively scheduled. Quality signals come from production traffic, piggyback test suites attached to real customer calls, and any zero-cost auth-less probes the vendor permits.
 
-QUALITY PROFILE (QP)
-Measures code and methodology quality. Stable over time — only changes when code changes.
-Four factors:
-  Correctness (50%) — Does it return accurate data for known inputs?
-  Schema Compliance (31%) — Does the response match the declared format?
-  Error Handling (13%) — Are errors caught and reported cleanly?
-  Edge Cases (6%) — Does it handle unusual inputs gracefully?
-Upstream service failures are EXCLUDED from the Quality Profile.
-Grade scale: A (>=90), B (>=75), C (>=50), D (>=25), F (<25)
-Label format: "Code quality: [Grade]" (DEC-20260315-J)
+AUDIT TRAIL
+Every execution writes a transaction row with input, output, provenance (source + fetched_at), latency, price, and an integrity_hash chained to the previous transaction. Retrieve via /v1/audit/{transactionId} or programmatically via strale_transaction.
+The chain is independently verifiable at /v1/verify/{transactionId} — Counterparty Assurance and standalone capability calls both produce the same chain shape.
 
-RELIABILITY PROFILE (RP)
-Measures operational dependability. Volatile — changes with upstream conditions.
-Upstream service failures ARE INCLUDED in the Reliability Profile (unlike QP where they are excluded).
-Four factors, each answering a distinct operational question:
-  current_availability — Is it working RIGHT NOW? Latest test run pass rate (point-in-time snapshot)
-  rolling_success      — What's the recent trend? Recency-weighted success rate across last 10 runs
-  upstream_health      — Are external dependencies healthy? Derived from 30-day health state assessment
-  latency              — Is response time acceptable? p95 mapped to score by capability type thresholds
+PROVENANCE
+Every successful call includes:
+  source — the external service that provided the data
+  fetched_at — ISO 8601 timestamp
+  upstream_vendor / acquisition_method / primary_source_reference — where applicable, per the third-party scraping doctrine (DEC-20260428-A)
 
-Factor weights vary by capability type:
-  Deterministic (no external deps): current_availability 10%, rolling_success 30%, upstream_health 10%, latency 50%
-  Stable API:                       current_availability 30%, rolling_success 30%, upstream_health 25%, latency 15%
-  Scraping:                         current_availability 35%, rolling_success 30%, upstream_health 25%, latency 10%
-  AI-assisted:                      current_availability 25%, rolling_success 30%, upstream_health 25%, latency 20%
-Grade scale: A (>=90), B (>=75), C (>=50), D (>=25), F (<25)
-Labels: A="Highly reliable", B="Reliable", C="Degraded reliability", D="Unreliable right now", F="Down"
-
-SQS MATRIX
-Quality Profile grade × Reliability Profile grade → SQS score via published matrix:
-       RP:A   RP:B   RP:C   RP:D   RP:F
-QP A    95     82     65     45     30
-QP B    85     75     58     40     25
-QP C    70     62     50     35     20
-QP D    55     48     38     28     15
-QP F    35     30     22     15     10
-Labels: Excellent (90-100), Good (75-89), Fair (50-74), Poor (25-49), Degraded (0-24)
-SQS values include ±3 point interpolation within each cell based on exact profile scores, so observed values may differ slightly from the grid anchors above. For example, QP:A + RP:B with strong sub-scores may produce SQS 84 rather than the anchor value of 82.
-
-EXECUTION GUIDANCE
-Every capability includes machine-readable execution guidance:
-  usable — Can this be used right now? (true/false). Derived: SQS >= 25 AND strategy != 'unavailable' AND QP grade >= 'C'
-  strategy — How to call it: direct, retry_with_backoff, queue_for_later, or unavailable
-  confidence_after_strategy — Expected success rate if you follow the strategy (0-100)
-  error_handling — Which errors are retryable (upstream timeout, rate limit) vs permanent (invalid input, not found)
-  if_strategy_fails — Fallback capability (if available) with coverage description and verification level
-  recovery — Estimated hours to recovery, next test timestamp, historical outage pattern
-  cost_envelope — Cost of primary call, cost with retries, fallback cost
-Failed calls due to upstream service issues are NOT billed. Only successful executions are charged (DEC-20260315-I).
-
-SOLUTION SQS
-Each step's QP and RP are computed independently.
-Solution-level SQS = weighted average of step SQS scores, capped at weakest step + 20 points.
-This ensures no solution appears stronger than its weakest link.
-Solution usable = all steps usable. Solution strategy = worst step strategy.
-
-PROVENANCE TRACKING (per execution)
-Every API response includes:
-  source — which external service provided the data (e.g. "vies", "allabolag-scrape", "opensanctions")
-  fetched_at — ISO 8601 timestamp of when the data was retrieved
-External service failures are attributed to the upstream provider, not Strale.
-
-AUDIT TRAIL (per transaction)
-Every execution records:
-  Full input parameters and complete output data
-  Execution latency in milliseconds
-  Price charged in EUR cents
-  Provenance metadata (source + timestamp)
-  Success or failure status
-  Failure categorization: "upstream" (provider timeout, rate limit, HTTP 5xx) vs "internal" (Strale bug)
-  Unique transaction ID for retrieval and dispute resolution
-  Retrieve any past transaction: call strale_transaction with the transaction ID returned from strale_execute.
-
-TEST INFRASTRUCTURE
-  ~${capabilities.length * 5} active test suites across all ${capabilities.length} active capabilities
-  Tiered scheduling: Tier A (critical) every 6 hours, Tier B every 24 hours, Tier C every 72 hours
-  Test types: known_answer, schema_check, dependency_health, negative, edge_case
-  Automated failure categorization distinguishes external service issues from Strale bugs
-
-BADGE SYSTEM
-  strale_tested — Automated test suite coverage with internal testing data
-  strale_monitored — Real customer usage data combined with automated testing
-  strale_verified — 500+ customer transactions with sustained >80% success rate
+LIFECYCLE
+Capabilities transition through states (draft → validating → probation → active → degraded → suspended) via human-driven admin flips. Automatic state transitions retired with the SQS engine in DEC-20260503-B.
 
 CURRENT LIMITATIONS (honest disclosure)
-  Zero external users to date — all transaction and quality data is from internal testing
-  No SOC 2, ISO 27001, or HIPAA certification
-  No contractual SLAs
-  All capabilities are currently at "strale_tested" badge level (no customer volume yet)
-  Quality scoring uses the dual-profile model. Methodology published at https://strale.dev/trust/methodology
+  Capabilities expose lifecycle_state and last_tested_at but do NOT expose a numeric quality score. The dual-profile SQS engine retired 2026-05-05.
+  Source-health substrate (per-vendor status, fallback availability, last-canary-tested timestamps) is being rebuilt as a separate routing-engine concern.
+  No SOC 2 / ISO 27001 / HIPAA certification.
+  No contractual SLAs.
 
-ACCESSING TRUST DATA
-  Per-capability trust profile: call strale_trust_profile with type "capability" and the slug
-  Per-solution trust profile: call strale_trust_profile with type "solution" and the slug
-  Search capabilities: call strale_search — results include SQS, Quality grade, Reliability grade, usable flag, and strategy
-  Methodology page: https://strale.dev/trust/methodology`;
+REFERENCES
+  Decisions DB: DEC-20260503-B (SQS deletion).
+  Public methodology: https://strale.dev/trust/methodology`;
 
       return { content: [{ type: "text" as const, text: methodologyText }] };
     },

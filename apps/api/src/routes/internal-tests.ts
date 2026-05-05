@@ -1329,9 +1329,10 @@ internalTestsRoute.post("/admin/run-script", async (c) => {
   try {
     switch (script) {
       case "seed-snapshot": {
-        const { captureDailySnapshots } = await import("../lib/sqs-snapshots.js");
-        await captureDailySnapshots();
-        return c.json({ script, status: "completed", message: "SQS snapshots captured" });
+        return c.json(
+          { script, status: "retired", message: "SQS daily snapshot retired (DEC-20260503-B)." },
+          410,
+        );
       }
 
       case "reclassify-unknowns": {

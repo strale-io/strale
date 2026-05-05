@@ -85,7 +85,6 @@ export interface Evaluator {
 
 export interface SourceQualityEntry {
   source: string;
-  sqs?: number;
   ms: number;
   ok: boolean;
 }

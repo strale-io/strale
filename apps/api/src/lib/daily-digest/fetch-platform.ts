@@ -203,37 +203,9 @@ export async function getPlatformHealth(): Promise<PlatformHealth> {
   const testRow = toRows(testRaw)[0] ?? { passed: 0, failed: 0, total: 0 };
   const testTotal = testRow.total || 1;
 
-  const gradeChangesRaw = await db.execute(sql`
-    WITH today AS (
-      SELECT slug,
-        CASE
-          WHEN qp_score >= 90 THEN 'A'
-          WHEN qp_score >= 75 THEN 'B'
-          WHEN qp_score >= 50 THEN 'C'
-          WHEN qp_score >= 25 THEN 'D'
-          ELSE 'F'
-        END AS qp_grade
-      FROM capabilities
-      WHERE is_active = true AND qp_score IS NOT NULL
-    ),
-    yesterday AS (
-      SELECT DISTINCT ON (capability_slug) capability_slug, qp_grade
-      FROM sqs_daily_snapshot
-      WHERE snapshot_date = CURRENT_DATE - 1
-      ORDER BY capability_slug, created_at DESC
-    )
-    SELECT t.slug, y.qp_grade AS old_grade, t.qp_grade AS new_grade
-    FROM today t
-    JOIN yesterday y ON y.capability_slug = t.slug
-    WHERE t.qp_grade IS DISTINCT FROM y.qp_grade
-  `);
-  const gradeOrder = ["A", "B", "C", "D", "F"];
-  const sqsChanges = toRows(gradeChangesRaw).map((r: any) => ({
-    slug: r.slug as string,
-    oldGrade: (r.old_grade ?? "?") as string,
-    newGrade: (r.new_grade ?? "?") as string,
-    direction: (gradeOrder.indexOf(r.new_grade) < gradeOrder.indexOf(r.old_grade) ? "up" : "down") as "up" | "down",
-  }));
+  // Grade-change deltas retired with the SQS engine (DEC-20260503-B);
+  // sqs_daily_snapshot table dropped in PR2.
+  const sqsChanges: Array<{ slug: string; oldGrade: string; newGrade: string; direction: "up" | "down" }> = [];
 
   return {
     circuitBreakers: openBreakers.map((h) => ({

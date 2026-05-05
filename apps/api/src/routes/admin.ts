@@ -501,9 +501,9 @@ adminRoute.get("/platform-status", async (c) => {
     db.execute(sql`
       SELECT slug, updated_at, deactivation_reason FROM capabilities WHERE lifecycle_state = 'suspended'
     `),
-    // Validating details
+    // Validating details (qp_score retired with the SQS engine — DEC-20260503-B)
     db.execute(sql`
-      SELECT c.slug, c.qp_score,
+      SELECT c.slug,
         (SELECT COUNT(*)::int FROM test_results tr WHERE tr.capability_slug = c.slug) AS run_count
       FROM capabilities c WHERE c.lifecycle_state = 'validating'
     `),
@@ -577,10 +577,9 @@ adminRoute.get("/platform-status", async (c) => {
     deactivation_reason: r.deactivation_reason ?? null,
   }));
 
-  // Validating
+  // Validating (sqs_quality_profile retired with the SQS engine — DEC-20260503-B)
   const validatingDetails = rows(validatingRaw).map((r: any) => ({
     slug: r.slug,
-    sqs_quality_profile: r.qp_score ? parseFloat(r.qp_score) : null,
     test_run_count: r.run_count ?? 0,
   }));
 

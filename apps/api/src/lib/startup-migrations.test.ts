@@ -42,7 +42,6 @@ vi.mock("../db/index.js", () => ({
 
 import {
   BLOCKS,
-  runMigration0028_sqsDailySnapshot,
   runMigration0029_actualCostCents,
   runMigration0030_complianceColumns,
   runMigration0031_testResultsCompositeIdx,
@@ -77,30 +76,8 @@ function makeStub(canned: { default?: unknown; queue?: unknown[] }) {
   return exec;
 }
 
-describe("startup-migrations — block 0028 (sqs_daily_snapshot)", () => {
-  it("first run: creates table + 2 indexes when information_schema reports absence", async () => {
-    // First execute: information_schema check returns cnt: "0" (table absent).
-    // Subsequent executes: the CREATE TABLE + 2 CREATE INDEX (we don't care about return).
-    const stub = makeStub({ queue: [[{ cnt: "0" }]], default: undefined });
-    const result = await runMigration0028_sqsDailySnapshot(stub);
-    expect(result.outcome).toMatch(/created table/i);
-    // 1 information_schema check + 1 CREATE TABLE + 2 CREATE INDEX = 4 queries.
-    expect(stub.captured).toHaveLength(4);
-    expect(stub.renderedSql.some((s) => /create table if not exists/i.test(s))).toBe(true);
-    // Both indexes also use IF NOT EXISTS — idempotent at SQL level.
-    const indexCreates = stub.renderedSql.filter((s) => /create.*index if not exists/i.test(s));
-    expect(indexCreates).toHaveLength(2);
-  });
-
-  it("second run: skips when table already exists (information_schema says cnt > 0)", async () => {
-    const stub = makeStub({ queue: [[{ cnt: "1" }]] });
-    const result = await runMigration0028_sqsDailySnapshot(stub);
-    expect(result.outcome).toMatch(/skipped/i);
-    // Only the information_schema check should run; no CREATE statements.
-    expect(stub.captured).toHaveLength(1);
-    expect(stub.renderedSql.some((s) => /create table/i.test(s))).toBe(false);
-  });
-});
+// Block 0028 (sqs_daily_snapshot) tests retired with the SQS engine
+// (DEC-20260503-B). The table is dropped in PR2.
 
 describe("startup-migrations — block 0029 (actual_cost_cents)", () => {
   it("first run: adds column when information_schema reports absence", async () => {
@@ -275,7 +252,6 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
     // historical numbering is the audit trail.
     const blockNames = BLOCKS.map((fn) => fn.name);
     expect(blockNames).toEqual([
-      "runMigration0028_sqsDailySnapshot",
       "runMigration0029_actualCostCents",
       "runMigration0030_complianceColumns",
       "runMigration0031_testResultsCompositeIdx",
@@ -316,18 +292,17 @@ describe("startup-migrations — failure-aborts-boot semantics (orchestrator)", 
     // capture 0 rows, but the post-condition SELECT finds remaining_zero
     // > 0 — block 0062 throws and the orchestrator must propagate.
     //
-    // Order of execute() calls across all blocks until the throw:
-    //   0028: information_schema → cnt:"1" (skip)              [1]
-    //   0029: information_schema → cnt:"1" (skip)              [2]
-    //   0030: information_schema → cnt:"1" (skip)              [3]
-    //   0031: CREATE INDEX IF NOT EXISTS                       [4]
-    //   0060: ADD COLUMN IF NOT EXISTS marketplace_eligible    [5]
-    //   0060: ADD COLUMN IF NOT EXISTS marketplace_eligible_…  [6]
-    //   0062: UPDATE dilisense → {count: 0}                    [7]
-    //   0062: UPDATE risk-narrative-generate → {count: 0}      [8]
-    //   0062: SELECT remaining_zero → 1 → THROWS               [9]
+    // Order of execute() calls across all blocks until the throw
+    // (0028 retired with the SQS engine — DEC-20260503-B):
+    //   0029: information_schema → cnt:"1" (skip)              [1]
+    //   0030: information_schema → cnt:"1" (skip)              [2]
+    //   0031: CREATE INDEX IF NOT EXISTS                       [3]
+    //   0060: ADD COLUMN IF NOT EXISTS marketplace_eligible    [4]
+    //   0060: ADD COLUMN IF NOT EXISTS marketplace_eligible_…  [5]
+    //   0062: UPDATE dilisense → {count: 0}                    [6]
+    //   0062: UPDATE risk-narrative-generate → {count: 0}      [7]
+    //   0062: SELECT remaining_zero → 1 → THROWS               [8]
     const queue: unknown[] = [
-      [{ cnt: "1" }],
       [{ cnt: "1" }],
       [{ cnt: "1" }],
       undefined,

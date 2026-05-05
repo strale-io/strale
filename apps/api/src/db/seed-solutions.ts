@@ -5,7 +5,7 @@ config({ path: resolve(import.meta.dirname, "../../../../.env") });
 
 import { getDb } from "./index.js";
 import { capabilities, solutions, solutionSteps, type ComplianceCoverageItem } from "./schema.js";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { validateSolution, enforceGates } from "../lib/onboarding-gates.js";
 
 // ─── Solution definitions ───────────────────────────────────────────────────
@@ -3038,18 +3038,25 @@ async function seed() {
 
     if (steps.length === 0) continue;
 
-    // Check each step's capability for SQS > 0
+    // SQS-based qualification gate retired (DEC-20260503-B). Per the new
+    // model, a solution auto-activates when every step capability has at
+    // least one passing test_result in the last 30 days; the seed script
+    // mirrors the live test-scheduler gate.
     const stepSlugs = steps.map((s) => s.capabilitySlug);
-    const capRows = await db.select({
-      slug: capabilities.slug,
-      matrixSqs: capabilities.matrixSqs,
-    }).from(capabilities).where(inArray(capabilities.slug, stepSlugs));
-
-    const capMap = new Map(capRows.map((c) => [c.slug, c.matrixSqs]));
-    const unqualified = stepSlugs.filter((slug) => {
-      const sqs = capMap.get(slug);
-      return !sqs || parseFloat(String(sqs)) === 0;
-    });
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const passingRows = await db.execute(sql`
+      SELECT DISTINCT capability_slug
+      FROM test_results
+      WHERE capability_slug IN (${sql.join(stepSlugs.map((s) => sql`${s}`), sql`, `)})
+        AND passed = true
+        AND executed_at >= ${thirtyDaysAgo.toISOString()}::timestamptz
+    `);
+    const passingSet = new Set(
+      ((Array.isArray(passingRows) ? passingRows : (passingRows as any)?.rows ?? []) as { capability_slug: string }[])
+        .map((r) => r.capability_slug),
+    );
+    const unqualified = stepSlugs.filter((slug) => !passingSet.has(slug));
 
     if (unqualified.length > 0 && sol.isActive) {
       await db.update(solutions)

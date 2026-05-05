@@ -40,7 +40,6 @@ export interface SituationAssessment {
     customersAffected: boolean;
     capabilitiesAffected: number;
     affectedSlugs: string[];
-    sqsImpact: "none" | "decay_only" | "active_degradation";
   };
   action: {
     type: "none_needed" | "monitor" | "investigate" | "immediate_action";
@@ -368,9 +367,6 @@ export async function assessDependencyProbeFailure(
   const severity: SituationAssessment["impact"]["severity"] =
     customersAffected ? "critical" : failCount >= 2 ? "warning" : "info";
 
-  const sqsImpact: SituationAssessment["impact"]["sqsImpact"] =
-    failCount >= 2 ? "active_degradation" : failCount >= 1 ? "none" : "none";
-
   // ── Action ────────────────────────────────────────────────────────────
   const isFirstFailure = failCount <= 1;
   const selfResolving = isFirstFailure || category === "transient_network";
@@ -383,10 +379,7 @@ export async function assessDependencyProbeFailure(
 
   const automaticActions: string[] = [];
   if (failCount >= 1) {
-    automaticActions.push(`Tests for ${capCount} ${dependency}-dependent capabilities are being skipped to prevent SQS pollution`);
-  }
-  if (failCount >= 2) {
-    automaticActions.push("Freshness decay will gradually reduce SQS scores until testing resumes");
+    automaticActions.push(`Tests for ${capCount} ${dependency}-dependent capabilities are being skipped to prevent test-result pollution`);
   }
 
   return {
@@ -399,7 +392,6 @@ export async function assessDependencyProbeFailure(
       customersAffected,
       capabilitiesAffected: capCount,
       affectedSlugs: [], // Too expensive to list all here
-      sqsImpact,
     },
     action: {
       type: actionType,
@@ -481,7 +473,6 @@ export async function assessMassTestFailure(
       customersAffected: false, // Mass test failures don't directly mean customer impact
       capabilitiesAffected: failedSlugs.length,
       affectedSlugs: failedSlugs.slice(0, 10),
-      sqsImpact: failRate > 0.1 ? "active_degradation" : "decay_only",
     },
     action: {
       type: dominantUpstream ? "monitor" : "investigate",
@@ -493,7 +484,6 @@ export async function assessMassTestFailure(
       automaticActions: [
         "Affected capability tests will retry on next scheduled sweep",
         "Circuit breakers will trip after 3 consecutive failures per capability",
-        "SQS scores will degrade gradually if failures persist",
       ],
     },
   };
@@ -522,7 +512,6 @@ export async function assessSchedulerStale(lastHeartbeat: Date | null): Promise<
       customersAffected: false,
       capabilitiesAffected: 0,
       affectedSlugs: [],
-      sqsImpact: "decay_only",
     },
     action: {
       type: "immediate_action",

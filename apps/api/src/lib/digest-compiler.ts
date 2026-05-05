@@ -190,30 +190,11 @@ async function buildSnapshot(db: ReturnType<typeof getDb>): Promise<DigestCapabi
   return snapshot;
 }
 
-// ─── SQS Distribution ────────────────────────────────────────────────────────
-
-async function buildSqsDistribution(db: ReturnType<typeof getDb>): Promise<SqsDistribution> {
-  const rows = await db
-    .select({ matrixSqs: capabilities.matrixSqs })
-    .from(capabilities)
-    .where(and(
-      eq(capabilities.isActive, true),
-      eq(capabilities.lifecycleState, "active"),
-    ));
-
-  const dist: SqsDistribution = { excellent: 0, good: 0, fair: 0, poor: 0, degraded: 0, pending: 0 };
-
-  for (const row of rows) {
-    if (row.matrixSqs === null) { dist.pending++; continue; }
-    const s = Number(row.matrixSqs);
-    if (s >= 90) dist.excellent++;
-    else if (s >= 75) dist.good++;
-    else if (s >= 50) dist.fair++;
-    else if (s >= 25) dist.poor++;
-    else dist.degraded++;
-  }
-
-  return dist;
+// SQS distribution retired (DEC-20260503-B). The digest still ships the
+// shape for back-compat with consumers; values are always zero until a
+// replacement substrate signal is wired in.
+async function buildSqsDistribution(_db: ReturnType<typeof getDb>): Promise<SqsDistribution> {
+  return { excellent: 0, good: 0, fair: 0, poor: 0, degraded: 0, pending: 0 };
 }
 
 // ─── Week-over-week ──────────────────────────────────────────────────────────
@@ -385,7 +366,6 @@ async function buildQualification(db: ReturnType<typeof getDb>): Promise<Qualifi
       slug: capabilities.slug,
       name: capabilities.name,
       lifecycleState: capabilities.lifecycleState,
-      matrixSqs: capabilities.matrixSqs,
     })
     .from(capabilities)
     .where(and(
@@ -416,8 +396,8 @@ async function buildQualification(db: ReturnType<typeof getDb>): Promise<Qualifi
       name: cap.name,
       state: cap.lifecycleState as "probation" | "validating",
       runsCompleted,
-      currentSqs: cap.matrixSqs !== null ? Number(cap.matrixSqs) : null,
-      trend: null, // trend not stored directly on capabilities; omit for now
+      currentSqs: null,
+      trend: null,
     });
   }
 
@@ -513,11 +493,10 @@ export async function getAffectedCapabilityDetails(
   if (slugs.length === 0) return [];
   const db = getDb();
 
-  // Get SQS scores from the capabilities table (cached after each test run)
+  // SQS retired (DEC-20260503-B); freshness category survives.
   const capRows = await db
     .select({
       slug: capabilities.slug,
-      matrixSqs: capabilities.matrixSqs,
       freshnessCategory: capabilities.freshnessCategory,
     })
     .from(capabilities)
@@ -540,8 +519,6 @@ export async function getAffectedCapabilityDetails(
   }
 
   return capRows.map((c) => {
-    const sqs = c.matrixSqs ? parseFloat(String(c.matrixSqs)) : 0;
-    const grade = sqs >= 90 ? "A" : sqs >= 75 ? "B" : sqs >= 50 ? "C" : sqs >= 25 ? "D" : "F";
     const lastTested = lastTestMap.get(c.slug);
     const lastTestedStr = lastTested
       ? new Date(lastTested).toLocaleString("en-GB", {
@@ -555,8 +532,8 @@ export async function getAffectedCapabilityDetails(
 
     return {
       slug: c.slug,
-      sqs_score: Math.round(sqs),
-      sqs_grade: grade,
+      sqs_score: 0,
+      sqs_grade: "—",
       freshness: c.freshnessCategory ?? "unknown",
       last_tested: lastTestedStr,
     };

@@ -28,9 +28,9 @@ function renderLlmsTxt(facts: Awaited<ReturnType<typeof computePlatformFacts>>):
   const countryCount = facts.countries.company_data_active.length;
   return `# Strale
 
-> One API call. Verified data your agent can trust. ${capCount}+ independently tested and scored data capabilities across ${countryCount} countries.
+> One API call. Verified data your agent can trust. ${capCount}+ independently tested data capabilities across ${countryCount} countries.
 
-Strale provides business data capabilities that AI agents can use at runtime via MCP, A2A, REST API, or x402 micropayments. Every capability is independently tested with the Strale Quality Score (SQS) — a dual-profile trust scoring system inspired by S&P credit ratings.
+Strale provides business data capabilities that AI agents can use at runtime via MCP, A2A, REST API, or x402 micropayments. Free capabilities are continuously canary-tested; paid capabilities are observed via production traffic and piggyback test suites. Every call returns an audit record with cryptographic chain hashing.
 
 ## Use Strale When Your Agent Needs To:
 
@@ -106,10 +106,7 @@ The iban-validate capability is free. Use it to test the integration without an 
 
 ## Trust & Quality
 
-Every capability has a Strale Quality Score (SQS) with:
-- Quality Profile: correctness, schema compliance, error handling, edge case coverage
-- Reliability Profile: availability, success rate, upstream health, latency
-- Combined via a 5x5 matrix producing grades A through E
+Free capabilities are tested hourly with canary inputs that don't consume vendor quota; paid capabilities are observed via production traffic, piggyback test suites, and any zero-cost auth-less probes the vendor permits. Every call to /v1/do produces a chain-hashed audit record retrievable at /v1/audit/{transactionId} for downstream regulatory verification.
 
 ## Links
 

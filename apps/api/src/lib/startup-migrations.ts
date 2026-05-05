@@ -58,62 +58,8 @@ export interface BlockResult {
   duration_ms: number;
 }
 
-// ─── Block 1: sqs_daily_snapshot ────────────────────────────────────────────
-//
-// CREATE TABLE IF NOT EXISTS + indexes. Predates the audit; left in for
-// completeness so existing prod DBs that don't have the table get it.
-
-export async function runMigration0028_sqsDailySnapshot(
-  tx: MigrationExecutor,
-): Promise<BlockResult> {
-  const startedAt = Date.now();
-  // information_schema column counts return bigint; coerce via text to avoid postgres-js's bigint→string default.
-  const check = await tx.execute(sql`
-    SELECT count(*)::text AS cnt FROM information_schema.tables
-    WHERE table_name = 'sqs_daily_snapshot'
-  `);
-  const rows = Array.isArray(check) ? check : (check as { rows?: unknown[] })?.rows ?? [];
-  const exists = (rows[0] as { cnt?: string })?.cnt !== "0";
-
-  if (exists) {
-    return {
-      block: "0028_sqs_daily_snapshot",
-      outcome: "skipped (table already exists)",
-      duration_ms: Date.now() - startedAt,
-    };
-  }
-
-  await tx.execute(sql`
-    CREATE TABLE IF NOT EXISTS "sqs_daily_snapshot" (
-      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-      "capability_slug" text NOT NULL,
-      "snapshot_date" date NOT NULL,
-      "matrix_sqs" numeric(5, 2) NOT NULL,
-      "qp_score" numeric(5, 2),
-      "rp_score" numeric(5, 2),
-      "qp_grade" varchar(2),
-      "rp_grade" varchar(2),
-      "trend" varchar(20),
-      "health_state" varchar(20),
-      "runs_analyzed" integer,
-      "created_at" timestamp with time zone DEFAULT now() NOT NULL
-    )
-  `);
-  await tx.execute(sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS "sqs_daily_snapshot_slug_date_unique"
-    ON "sqs_daily_snapshot" ("capability_slug", "snapshot_date")
-  `);
-  await tx.execute(sql`
-    CREATE INDEX IF NOT EXISTS "sqs_daily_snapshot_slug_date_desc_idx"
-    ON "sqs_daily_snapshot" ("capability_slug", "snapshot_date" DESC)
-  `);
-
-  return {
-    block: "0028_sqs_daily_snapshot",
-    outcome: "created table + 2 indexes",
-    duration_ms: Date.now() - startedAt,
-  };
-}
+// Block 1 (runMigration0028_sqsDailySnapshot) retired with the SQS engine
+// (DEC-20260503-B). The sqs_daily_snapshot table is dropped in PR2.
 
 // ─── Block 2: actual_cost_cents on test_run_log ─────────────────────────────
 //
@@ -400,7 +346,6 @@ export async function runMigration0063_invoiceExtractCostReclassify(
  * canonical block list and assert it matches what the endpoint returns.
  */
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
-  runMigration0028_sqsDailySnapshot,
   runMigration0029_actualCostCents,
   runMigration0030_complianceColumns,
   runMigration0031_testResultsCompositeIdx,

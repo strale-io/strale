@@ -85,8 +85,8 @@ async function buildCard(): Promise<object> {
       capabilities_count: count,
       countries_covered: 27,
       free_tier_available: true,
-      trust_scoring:
-        "Strale Quality Score (SQS) — dual-profile model with Quality Profile and Reliability Profile",
+      trust_model:
+        "Free capabilities canary-tested hourly; paid capabilities observed via production traffic. Every call returns a cryptographically chain-hashed audit record.",
       compliance: ["EU AI Act", "GDPR"],
       protocols: ["MCP", "A2A", "REST", "x402"],
     },

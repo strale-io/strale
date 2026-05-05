@@ -547,7 +547,6 @@ doRoute.post(
         isActive: capabilities.isActive,
         priceCents: capabilities.priceCents,
         name: capabilities.name,
-        matrixSqs: capabilities.matrixSqs,
       })
       .from(capabilities)
       .where(eq(capabilities.slug, capabilitySlug))

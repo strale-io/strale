@@ -27,12 +27,9 @@ import {
   bridgeConfigIndexRoute as web3AssuranceBridgeConfigIndexRoute,
 } from "./web3-assurance/methodology.js";
 import { trustIndexRoute as web3AssuranceTrustIndexRoute } from "./web3-assurance/trust-index.js";
-import { qualityRoute } from "./routes/quality.js";
 import { suggestRoute } from "./routes/suggest.js";
-import { internalQualityRoute } from "./routes/internal-quality.js";
 import { internalTestsRoute } from "./routes/internal-tests.js";
 import { internalLimitationsRoute } from "./routes/internal-limitations.js";
-import { internalTrustRoute } from "./routes/internal-trust.js";
 import { internalHealthMonitorRoute } from "./routes/internal-health-monitor.js";
 import { replyWebhookRoute } from "./routes/reply-webhook.js";
 import { auditRoute } from "./routes/audit.js";
@@ -359,7 +356,7 @@ app.route("/v1/web3-assurance/methodology", web3AssuranceMethodologyRoute);
 app.route("/v1/web3-assurance/source-quality", web3AssuranceSourceQualityRoute);
 app.route("/v1/web3-assurance/bridge-config-index", web3AssuranceBridgeConfigIndexRoute);
 app.route("/v1/web3-assurance/trust-index", web3AssuranceTrustIndexRoute);
-app.route("/v1/quality", qualityRoute);
+// /v1/quality/:slug retired with the SQS engine (DEC-20260503-B).
 app.route("/v1", suggestRoute);
 // Single source of truth for facts that appear on multiple surfaces.
 // Public + cached 5min. See lib/platform-facts.ts for the rationale
@@ -390,13 +387,9 @@ const PUBLIC_OPS_ALLOWLIST: RegExp[] = [
   /^\/v1\/public\/ops\/tests\/solutions\/[^/]+\/runs$/,
   /^\/v1\/public\/ops\/tests\/dependency-health\/(?:summary|history)$/,
   /^\/v1\/public\/ops\/tests\/situations$/,
-  // quality/, limitations/, trust/ — all GETs already public today
-  /^\/v1\/public\/ops\/quality\/[^/]+$/,
-  /^\/v1\/public\/ops\/quality\/[^/]+\/[^/]+$/,
+  // limitations/ — public GETs (quality/ and trust/ retired with SQS engine)
   /^\/v1\/public\/ops\/limitations\/[^/]+$/,
   /^\/v1\/public\/ops\/limitations\/[^/]+\/[^/]+$/,
-  /^\/v1\/public\/ops\/trust\/capabilities(?:\/[^/]+(?:\/[^/]+)?)?$/,
-  /^\/v1\/public\/ops\/trust\/solutions(?:\/[^/]+(?:\/[^/]+)?)?$/,
   // health-monitor/events, onboarding/readiness — anonymous reads today
   /^\/v1\/public\/ops\/events$/,
   /^\/v1\/public\/ops\/onboarding\/readiness$/,
@@ -410,10 +403,10 @@ app.use("/v1/public/ops/*", async (c, next) => {
 
 // Mount the public-ops dashboards. Same routers as /v1/internal/* — the
 // allowlist above, not the router, is the access boundary.
-app.route("/v1/public/ops/quality", internalQualityRoute);
+// /quality and /trust mounts retired with the SQS engine (DEC-20260503-B);
+// internal-quality.ts and internal-trust.ts deleted.
 app.route("/v1/public/ops/tests", internalTestsRoute);
 app.route("/v1/public/ops/limitations", internalLimitationsRoute);
-app.route("/v1/public/ops/trust", internalTrustRoute);
 app.route("/v1/public/ops", internalHealthMonitorRoute);
 app.route("/v1/public/ops/onboarding", internalOnboardingRoute);
 
@@ -423,10 +416,10 @@ app.route("/v1/public/ops/onboarding", internalOnboardingRoute);
 // files are kept as defence-in-depth but are no longer load-bearing.
 app.use("/v1/internal/*", adminOnly);
 
-app.route("/v1/internal/quality", internalQualityRoute);
+// /v1/internal/quality and /v1/internal/trust retired with the SQS engine
+// (DEC-20260503-B); the route files are deleted.
 app.route("/v1/internal/tests", internalTestsRoute);
 app.route("/v1/internal/limitations", internalLimitationsRoute);
-app.route("/v1/internal/trust", internalTrustRoute);
 app.route("/v1/internal", internalHealthMonitorRoute);
 app.route("/v1/internal", replyWebhookRoute);
 app.route("/v1/internal/onboarding", internalOnboardingRoute);

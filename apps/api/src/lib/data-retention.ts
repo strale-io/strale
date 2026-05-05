@@ -143,25 +143,8 @@ async function purgeHealthMonitorEvents(cutoff: Date): Promise<number> {
   return deleted;
 }
 
-async function purgeSqsSnapshots(cutoff: Date): Promise<number> {
-  const db = getDb();
-  let deleted = 0;
-  while (true) {
-    const result = await db.execute(sql`
-      DELETE FROM sqs_daily_snapshot
-      WHERE id IN (
-        SELECT id FROM sqs_daily_snapshot
-        WHERE created_at < ${cutoff.toISOString()}::timestamptz
-        LIMIT ${BATCH_SIZE}
-      )
-    `);
-    const count = (result as any).rowCount ?? 0;
-    deleted += count;
-    if (count < BATCH_SIZE) break;
-    await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
-  }
-  return deleted;
-}
+// purgeSqsSnapshots retired with the SQS engine (DEC-20260503-B). The
+// sqs_daily_snapshot table is dropped in PR2.
 
 /**
  * Run data retention cleanup. Safe to call multiple times — idempotent.
@@ -171,7 +154,6 @@ async function purgeSqsSnapshots(cutoff: Date): Promise<number> {
  * - transaction_quality: 3 years (paired with transactions)
  * - test_results: 90 days (operational)
  * - health_monitor_events: 180 days (operational)
- * - sqs_daily_snapshot: 365 days (trend analysis)
  *
  * Transactions with legal_hold = true are never deleted.
  */
@@ -185,9 +167,6 @@ export async function cleanupOldTestData(): Promise<void> {
   const oneEightyDaysAgo = new Date(now);
   oneEightyDaysAgo.setDate(oneEightyDaysAgo.getDate() - 180);
 
-  const oneYearAgo = new Date(now);
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
   // Compliance data — 3 year retention
   const threeYearsAgo = new Date(now);
   threeYearsAgo.setDate(threeYearsAgo.getDate() - TRANSACTION_RETENTION_DAYS);
@@ -200,7 +179,6 @@ export async function cleanupOldTestData(): Promise<void> {
   // payload to reflect actual semantics.
   const txRedacted = await purgeTransactions(threeYearsAgo);
   const eventsDeleted = await purgeHealthMonitorEvents(oneEightyDaysAgo);
-  const snapshotsDeleted = await purgeSqsSnapshots(oneYearAgo);
 
   log.info(
     {
@@ -209,7 +187,6 @@ export async function cleanupOldTestData(): Promise<void> {
       transaction_quality_deleted: txQualityDeleted,
       transactions_redacted: txRedacted,
       health_monitor_events_deleted: eventsDeleted,
-      sqs_daily_snapshot_deleted: snapshotsDeleted,
     },
     "retention-cleanup-done",
   );

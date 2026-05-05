@@ -325,7 +325,7 @@ async function handleKeep(subject: string): Promise<void> {
 
   await sendConfirmation(
     `🛡️ Kept: ${slug}`,
-    `'${slug}' will remain in degraded state. Auto-suspension timer reset for 24 hours.\n\nNext steps:\n- Investigate why SQS is below 25\n- Fix the underlying issue and use RESTORE ${slug} when ready\n- If you want to suspend it manually: RESTORE will put it in validating, or use the admin API`,
+    `'${slug}' will remain in degraded state. Auto-suspension timer reset for 24 hours.\n\nNext steps:\n- Investigate why the capability is degraded (test failures, upstream issues)\n- Fix the underlying issue and use RESTORE ${slug} when ready\n- If you want to suspend it manually: RESTORE will put it in validating, or use the admin API`,
   );
 }
 

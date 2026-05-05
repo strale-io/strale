@@ -225,7 +225,7 @@ async function sendRecoveryEmail(dependency: string, pending: PendingAlert): Pro
     "",
     "Recovery actions taken automatically:",
     `  - ${capCount} ${dependency}-dependent capabilities have resumed normal testing`,
-    "  - SQS scores were not penalized during the outage (tests were skipped, not failed)",
+    "  - Tests were skipped (not failed) during the outage, so test history is clean",
     "  - No circuit breakers were tripped",
     "",
     "No action needed.",
@@ -318,7 +318,6 @@ async function sendAssessmentEmail(assessment: SituationAssessment): Promise<voi
   // Impact
   lines.push("Impact:");
   lines.push(`  ${assessment.impact.capabilitiesAffected} capabilities affected`);
-  lines.push(`  SQS impact: ${assessment.impact.sqsImpact.replace(/_/g, " ")}`);
   lines.push(`  Customer traffic: ${assessment.impact.customersAffected ? "CONFIRMED FAILING" : "not directly affected"}`);
   lines.push("");
 

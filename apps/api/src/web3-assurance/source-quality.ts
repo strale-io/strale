@@ -9,11 +9,9 @@
  * the same call-history dataset.
  *
  * v0.1 storage: in-memory ring buffer per source. Survives until process
- * restart. v0.2 will move to persistent storage (Postgres) and surface
- * historical SQS via a public endpoint that becomes a category-defining
- * artifact (vendors compete on Strale's score; consumers pick MCPs by it).
+ * restart. v0.2 will move to persistent storage (Postgres).
  *
- * Scoring methodology mirrors Strale's existing SQS engine (lib/sqs.ts):
+ * Per-source rolling-window stats:
  *   - Rolling window of last N calls per source (default: 100)
  *   - Per-source: success_rate, p50_ms, p95_ms, p99_ms, last_ok_at
  *   - Composite score 0..100 derived from success_rate × latency_grade

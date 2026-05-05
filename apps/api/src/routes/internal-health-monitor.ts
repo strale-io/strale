@@ -37,7 +37,7 @@ import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { capabilities, testSuites, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
-import { computeDualProfileSQS } from "../lib/sqs.js";
+// SQS engine retired (DEC-20260503-B) — no programmatic publish gate.
 import { runWeeklyHealthSweep } from "../lib/health-sweep.js";
 import { compileWeeklyDigest } from "../lib/digest-compiler.js";
 import { formatDigestEmail } from "../lib/digest-formatter.js";
@@ -252,7 +252,7 @@ internalHealthMonitorRoute.post("/health-monitor/send-digest", async (c) => {
 // ─── POST /v1/internal/capabilities/:slug/publish ──────────────────────────
 // Publish a capability (set visible=true) if SQS ≥ 60 and state='active'.
 
-const PUBLISH_SQS_THRESHOLD = 60;
+// PUBLISH_SQS_THRESHOLD retired (DEC-20260503-B).
 
 internalHealthMonitorRoute.post("/capabilities/:slug/publish", async (c) => {
   const auth = c.req.header("Authorization");
@@ -293,24 +293,9 @@ internalHealthMonitorRoute.post("/capabilities/:slug/publish", async (c) => {
     return c.json({ slug, already_visible: true, message: `Capability '${slug}' is already visible.` });
   }
 
-  const dual = await computeDualProfileSQS(slug);
-
-  if (dual.matrix.pending) {
-    return c.json(
-      apiError("invalid_request", `SQS pending — not enough test runs yet.`),
-      422,
-    );
-  }
-
-  if (dual.score < PUBLISH_SQS_THRESHOLD) {
-    return c.json(
-      apiError(
-        "invalid_request",
-        `SQS ${dual.score.toFixed(1)} is below publication threshold of ${PUBLISH_SQS_THRESHOLD}.`,
-      ),
-      422,
-    );
-  }
+  // SQS-based publish threshold retired (DEC-20260503-B). Publication is
+  // now gated only by lifecycle_state === "active". The endpoint flips
+  // visibility for an already-active capability.
 
   await db
     .update(capabilities)
@@ -321,15 +306,14 @@ internalHealthMonitorRoute.post("/capabilities/:slug/publish", async (c) => {
     eventType: "lifecycle_transition",
     capabilitySlug: slug,
     tier: 2,
-    actionTaken: `Published: now visible in catalog (SQS ${dual.score.toFixed(1)})`,
-    details: { action: "publish", sqs_score: dual.score, triggered_by: "admin" },
+    actionTaken: `Published: now visible in catalog`,
+    details: { action: "publish", triggered_by: "admin" },
     humanOverride: true,
   });
 
   return c.json({
     slug,
     published: true,
-    sqs: Math.round(dual.score),
     message: `Capability '${slug}' is now visible in the catalog.`,
   });
 });
@@ -516,11 +500,9 @@ internalHealthMonitorRoute.get("/platform-status", async (c) => {
       .where(eq(capabilities.isActive, true))
       .groupBy(capabilities.lifecycleState, capabilities.visible),
 
-    // SQS distribution (cached)
-    db
-      .select({ matrixSqs: capabilities.matrixSqs })
-      .from(capabilities)
-      .where(and(eq(capabilities.isActive, true), eq(capabilities.lifecycleState, "active"))),
+    // SQS distribution retired (DEC-20260503-B); preserved as empty list
+    // for response shape back-compat.
+    Promise.resolve([]) as Promise<Array<{ matrixSqs: string | null }>>,
 
     // Test health counts
     db
@@ -544,7 +526,7 @@ internalHealthMonitorRoute.get("/platform-status", async (c) => {
 
     // Hidden active capabilities (ready to publish)
     db
-      .select({ slug: capabilities.slug, name: capabilities.name, matrixSqs: capabilities.matrixSqs })
+      .select({ slug: capabilities.slug, name: capabilities.name })
       .from(capabilities)
       .where(
         and(
@@ -584,13 +566,11 @@ internalHealthMonitorRoute.get("/platform-status", async (c) => {
   const eventCounts: Record<string, number> = {};
   for (const row of eventRows) eventCounts[row.eventType] = Number(row.count);
 
-  // Ready to publish
+  // Ready to publish — SQS scoring retired (DEC-20260503-B); the list is
+  // alphabetical by slug.
   const readyToPublish = hiddenActive
-    .map((cap) => {
-      const sqs = cap.matrixSqs !== null ? Number(cap.matrixSqs) : null;
-      return { slug: cap.slug, name: cap.name, sqs, below_threshold: sqs !== null && sqs < PUBLISH_SQS_THRESHOLD };
-    })
-    .sort((a, b) => (b.sqs ?? -1) - (a.sqs ?? -1));
+    .map((cap) => ({ slug: cap.slug, name: cap.name }))
+    .sort((a, b) => a.slug.localeCompare(b.slug));
 
   return c.json({
     generated_at: now.toISOString(),

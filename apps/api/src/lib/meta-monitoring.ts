@@ -378,222 +378,6 @@ export async function checkMissingTestCoverage(): Promise<MetaCheckResult> {
   }
 }
 
-// ─── 8C: Weekly SQS integrity checks ─────────────────────────────────────────
-
-/**
- * Check 7: Score without evidence
- * Capabilities with a numeric SQS but fewer than 5 distinct test run results
- * in the last 30 days.
- */
-export async function checkScoreWithoutEvidence(): Promise<MetaCheckResult> {
-  const check = "score_without_evidence";
-  try {
-    const db = getDb();
-    const rows = await db.execute(sql`
-      SELECT c.slug, c.matrix_sqs,
-        COUNT(tr.id)::int AS result_count
-      FROM capabilities c
-      LEFT JOIN test_results tr
-        ON tr.capability_slug = c.slug
-        AND tr.executed_at >= NOW() - INTERVAL '30 days'
-      WHERE c.is_active = true
-        AND c.matrix_sqs IS NOT NULL
-        AND CAST(c.matrix_sqs AS NUMERIC) > 0
-      GROUP BY c.slug, c.matrix_sqs
-      HAVING COUNT(tr.id) < 5
-      ORDER BY COUNT(tr.id), c.slug
-    `);
-    const results = (Array.isArray(rows) ? rows : (rows as any).rows) as Array<{
-      slug: string;
-      matrix_sqs: string;
-      result_count: number;
-    }>;
-
-    if (results.length === 0) {
-      return { check, severity: "warning", passed: true, details: "All SQS scores have sufficient evidence (≥5 results in 30d)" };
-    }
-
-    const affected = results.map((r) => r.slug);
-    await _logMetaEvent(check, "warning", `${affected.length} capability(ies) have SQS scores with insufficient evidence`, {
-      affected: results.map((r) => ({ slug: r.slug, sqs: r.matrix_sqs, result_count: r.result_count })),
-    });
-
-    return {
-      check,
-      severity: "warning",
-      passed: false,
-      details: `${affected.length} capabilities have SQS > 0 but < 5 test results in 30d`,
-      affected,
-    };
-  } catch (err) {
-    return { check, severity: "warning", passed: false, details: `Check error: ${err instanceof Error ? err.message : String(err)}` };
-  }
-}
-
-/**
- * Check 8: Stuck scores
- * Capabilities whose updated_at is older than 14 days but have test_results
- * in the last 14 days — indicates persistDualProfileScores silently failed.
- *
- * Excludes perfectly-stable deterministic capabilities (100% pass rate
- * across all recent results) because a stuck 100.0 score is correct.
- */
-export async function checkStuckScores(): Promise<MetaCheckResult> {
-  const check = "stuck_scores";
-  try {
-    const db = getDb();
-    const rows = await db.execute(sql`
-      SELECT c.slug, c.matrix_sqs, c.updated_at,
-        COUNT(tr.id)::int AS recent_results,
-        SUM(CASE WHEN tr.passed THEN 1 ELSE 0 END)::int AS recent_passes
-      FROM capabilities c
-      INNER JOIN test_results tr
-        ON tr.capability_slug = c.slug
-        AND tr.executed_at >= NOW() - INTERVAL '14 days'
-      WHERE c.is_active = true
-        AND c.matrix_sqs IS NOT NULL
-        AND c.updated_at < NOW() - INTERVAL '14 days'
-      GROUP BY c.slug, c.matrix_sqs, c.updated_at
-      HAVING
-        -- Only flag if there's score variation evidence (not a perfect-100 cap)
-        SUM(CASE WHEN tr.passed THEN 1 ELSE 0 END)::float / NULLIF(COUNT(tr.id), 0) < 0.99
-      ORDER BY c.updated_at
-    `);
-    const results = (Array.isArray(rows) ? rows : (rows as any).rows) as Array<{
-      slug: string;
-      matrix_sqs: string;
-      updated_at: string;
-      recent_results: number;
-      recent_passes: number;
-    }>;
-
-    if (results.length === 0) {
-      return { check, severity: "warning", passed: true, details: "No stuck SQS scores detected" };
-    }
-
-    const affected = results.map((r) => r.slug);
-    await _logMetaEvent(check, "warning", `${affected.length} capability(ies) may have stuck SQS scores`, {
-      affected: results.map((r) => ({
-        slug: r.slug,
-        matrix_sqs: r.matrix_sqs,
-        updated_at: r.updated_at,
-        recent_results: r.recent_results,
-      })),
-    });
-
-    return {
-      check,
-      severity: "warning",
-      passed: false,
-      details: `${affected.length} capabilities: SQS not updated in >14d despite recent test results`,
-      affected,
-    };
-  } catch (err) {
-    return { check, severity: "warning", passed: false, details: `Check error: ${err instanceof Error ? err.message : String(err)}` };
-  }
-}
-
-/**
- * Check 9: Impossible scores
- * SQS > 100 or < 0.
- */
-export async function checkImpossibleScores(): Promise<MetaCheckResult> {
-  const check = "impossible_scores";
-  try {
-    const db = getDb();
-    const rows = await db.execute(sql`
-      SELECT slug, matrix_sqs
-      FROM capabilities
-      WHERE is_active = true
-        AND matrix_sqs IS NOT NULL
-        AND (CAST(matrix_sqs AS NUMERIC) > 100 OR CAST(matrix_sqs AS NUMERIC) < 0)
-      ORDER BY slug
-    `);
-    const results = (Array.isArray(rows) ? rows : (rows as any).rows) as Array<{
-      slug: string;
-      matrix_sqs: string;
-    }>;
-
-    if (results.length === 0) {
-      return { check, severity: "critical", passed: true, details: "All SQS scores in valid range [0, 100]" };
-    }
-
-    const affected = results.map((r) => r.slug);
-    await _logMetaEvent(check, "critical", `IMPOSSIBLE SCORES: ${affected.length} capability(ies) with SQS outside [0, 100]`, {
-      affected: results.map((r) => ({ slug: r.slug, matrix_sqs: r.matrix_sqs })),
-    });
-
-    return {
-      check,
-      severity: "critical",
-      passed: false,
-      details: `${affected.length} capabilities with SQS outside [0, 100]: ${results.map((r) => `${r.slug}=${r.matrix_sqs}`).join(", ")}`,
-      affected,
-    };
-  } catch (err) {
-    return { check, severity: "critical", passed: false, details: `Check error: ${err instanceof Error ? err.message : String(err)}` };
-  }
-}
-
-/**
- * Check 10: Divergence check
- * Capabilities where SQS > 80 but actual 30-day pass rate < 30%.
- * Guards against stale cached SQS or miscalculated scores.
- */
-export async function checkSqsPassRateDivergence(): Promise<MetaCheckResult> {
-  const check = "sqs_passrate_divergence";
-  try {
-    const db = getDb();
-    const rows = await db.execute(sql`
-      SELECT c.slug, c.matrix_sqs,
-        COUNT(tr.id)::int AS result_count,
-        ROUND(SUM(CASE WHEN tr.passed THEN 1 ELSE 0 END)::numeric / NULLIF(COUNT(tr.id), 0) * 100, 1) AS pass_rate_pct
-      FROM capabilities c
-      INNER JOIN test_results tr
-        ON tr.capability_slug = c.slug
-        AND tr.executed_at >= NOW() - INTERVAL '30 days'
-      WHERE c.is_active = true
-        AND c.matrix_sqs IS NOT NULL
-        AND CAST(c.matrix_sqs AS NUMERIC) > 80
-      GROUP BY c.slug, c.matrix_sqs
-      HAVING
-        COUNT(tr.id) >= 5
-        AND SUM(CASE WHEN tr.passed THEN 1 ELSE 0 END)::float / NULLIF(COUNT(tr.id), 0) < 0.30
-      ORDER BY c.slug
-    `);
-    const results = (Array.isArray(rows) ? rows : (rows as any).rows) as Array<{
-      slug: string;
-      matrix_sqs: string;
-      result_count: number;
-      pass_rate_pct: string;
-    }>;
-
-    if (results.length === 0) {
-      return { check, severity: "warning", passed: true, details: "No SQS/pass-rate divergence detected" };
-    }
-
-    const affected = results.map((r) => r.slug);
-    await _logMetaEvent(check, "warning", `${affected.length} capability(ies) show SQS vs pass-rate divergence`, {
-      affected: results.map((r) => ({
-        slug: r.slug,
-        matrix_sqs: r.matrix_sqs,
-        pass_rate_pct: r.pass_rate_pct,
-        result_count: r.result_count,
-      })),
-    });
-
-    return {
-      check,
-      severity: "warning",
-      passed: false,
-      details: `${affected.length} capabilities: SQS > 80 but <30% pass rate in 30d — possible stale cache`,
-      affected,
-    };
-  } catch (err) {
-    return { check, severity: "warning", passed: false, details: `Check error: ${err instanceof Error ? err.message : String(err)}` };
-  }
-}
-
 // ─── 8D: Daily pipeline health checks ────────────────────────────────────────
 
 /**
@@ -759,15 +543,14 @@ const FREE_TIER_SLUGS = [
 /**
  * Check 14: Free-tier health (CRITICAL)
  * The 5 free-tier capabilities are the first thing agents try.
- * All must be Excellent (SQS >= 90), usable, stable/improving, with
- * zero external_service_failures (they're all deterministic).
+ * All deterministic — zero external_service_failures expected.
  */
 export async function checkFreeTierHealth(): Promise<MetaCheckResult> {
   const check = "free_tier_health";
   try {
     const db = getDb();
     const rows = await db.execute(sql`
-      SELECT c.slug, c.matrix_sqs, c.guidance_usable, c.capability_type,
+      SELECT c.slug, c.capability_type,
         (
           SELECT COUNT(*)::int
           FROM test_results tr
@@ -783,24 +566,19 @@ export async function checkFreeTierHealth(): Promise<MetaCheckResult> {
 
     const results = (Array.isArray(rows) ? rows : (rows as any).rows) as Array<{
       slug: string;
-      matrix_sqs: string | null;
-      guidance_usable: boolean | null;
       capability_type: string;
       external_failures_7d: number;
     }>;
 
     const issues: string[] = [];
     for (const r of results) {
-      const sqs = r.matrix_sqs ? parseFloat(r.matrix_sqs) : 0;
-      if (sqs < 90) issues.push(`${r.slug}: SQS ${sqs} < 90`);
-      if (r.guidance_usable === false) issues.push(`${r.slug}: usable=false`);
       if (r.external_failures_7d > 0) {
         issues.push(`${r.slug}: ${r.external_failures_7d} external failures in 7d (deterministic capability)`);
       }
     }
 
     if (issues.length === 0) {
-      return { check, severity: "critical", passed: true, details: "All 5 free-tier capabilities healthy (SQS >= 90, usable, no external failures)" };
+      return { check, severity: "critical", passed: true, details: "All 5 free-tier capabilities healthy (no external failures)" };
     }
 
     await _logMetaEvent(check, "critical", `Free-tier showcase degraded: ${issues.length} issue(s)`, {
@@ -1094,15 +872,13 @@ export const CHECK_REGISTRY: CheckRegistration[] = [
   // Stable count; not an alert; verifies methodology page disclosure.
   { name: "chain_unhashed_legacy_count", fn: checkChainUnhashedLegacyCount, schedule: "daily" },
 
-  // Weekly — coverage + SQS integrity sweeps (DB-heavy)
+  // Weekly — coverage sweeps (DB-heavy). SQS integrity checks retired
+  // (DEC-20260503-B): score_without_evidence / stuck_scores /
+  // impossible_scores / sqs_pass_rate_divergence.
   { name: "orphaned_test_suites",  fn: checkOrphanedTestSuites,   schedule: "weekly" },
   { name: "untested_capabilities", fn: checkUntestedCapabilities, schedule: "weekly" },
   { name: "stale_tests",           fn: checkStaleTests,           schedule: "weekly" },
   { name: "missing_test_coverage", fn: checkMissingTestCoverage,  schedule: "weekly" },
-  { name: "score_without_evidence", fn: checkScoreWithoutEvidence, schedule: "weekly" },
-  { name: "stuck_scores",          fn: checkStuckScores,          schedule: "weekly" },
-  { name: "impossible_scores",     fn: checkImpossibleScores,     schedule: "weekly" },
-  { name: "sqs_pass_rate_divergence", fn: checkSqsPassRateDivergence, schedule: "weekly" },
   { name: "methodology_drift",     fn: checkMethodologyDrift,     schedule: "weekly" },
 ];
 

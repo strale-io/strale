@@ -86,13 +86,6 @@ export interface Capability {
   price_cents: number;
   input_schema: unknown;
   output_schema: unknown;
-  sqs: number;
-  sqs_label: string;
-  quality: string;
-  reliability: string;
-  trend: string;
-  usable: boolean;
-  strategy: string;
 }
 
 // ─── GET /v1/wallet/balance ────────────────────────────────────────────────────

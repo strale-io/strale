@@ -227,15 +227,15 @@ async function smokeTest(
     });
   }
 
-  // Step 5: SQS status
+  // Step 5: lifecycle state is sane (SQS check retired with the engine,
+  // DEC-20260503-B; the substrate signal is just the lifecycle state).
   const start5 = Date.now();
-  const sqs = cap.matrixSqs ? parseFloat(cap.matrixSqs) : null;
-  const sqsOk = sqs !== null || cap.lifecycleState === "probation" || cap.lifecycleState === "validating";
+  const lifecycleOk = ["active", "probation", "validating", "draft", "degraded"].includes(cap.lifecycleState);
   steps.push({
     step: 5,
-    name: "SQS is computed or building",
-    passed: sqsOk,
-    detail: sqs !== null ? `SQS = ${sqs}` : `lifecycle=${cap.lifecycleState}, SQS pending`,
+    name: "Lifecycle state is sane",
+    passed: lifecycleOk,
+    detail: `lifecycle=${cap.lifecycleState}`,
     durationMs: Date.now() - start5,
   });
 
@@ -358,49 +358,15 @@ async function smokeTest(
     });
   }
 
-  // Step 10: Trust profile returns valid data
-  const start10 = Date.now();
-  try {
-    const trustRes = await fetch(
-      `${API_BASE}/v1/internal/trust/capabilities/${slug}`,
-      {
-        headers: INTERNAL_SECRET ? { "x-internal-secret": INTERNAL_SECRET } : {},
-        signal: AbortSignal.timeout(8000),
-      },
-    );
-    if (trustRes.ok) {
-      const body = (await trustRes.json()) as Record<string, unknown>;
-      const hasRequired =
-        "sqs" in body &&
-        "quality_profile" in body &&
-        "reliability_profile" in body;
-      steps.push({
-        step: 10,
-        name: "Trust profile returns valid data",
-        passed: hasRequired,
-        detail: hasRequired
-          ? `SQS=${body.sqs}, QP=${typeof body.quality_profile}, RP=${typeof body.reliability_profile}`
-          : `Missing fields: ${["sqs", "quality_profile", "reliability_profile"].filter((k) => !(k in body)).join(", ")}`,
-        durationMs: Date.now() - start10,
-      });
-    } else {
-      steps.push({
-        step: 10,
-        name: "Trust profile returns valid data",
-        passed: true, // non-blocking: internal endpoint may need auth
-        detail: `Trust endpoint returned ${trustRes.status} — skipped`,
-        durationMs: Date.now() - start10,
-      });
-    }
-  } catch {
-    steps.push({
-      step: 10,
-      name: "Trust profile returns valid data",
-      passed: true, // non-blocking: local server may not be running
-      detail: "Trust endpoint unreachable — skipped",
-      durationMs: Date.now() - start10,
-    });
-  }
+  // Step 10: trust profile endpoint retired with the SQS engine
+  // (DEC-20260503-B). routes/internal-trust.ts is deleted.
+  steps.push({
+    step: 10,
+    name: "Trust profile (retired)",
+    passed: true,
+    detail: "/v1/internal/trust deleted with SQS engine — DEC-20260503-B",
+    durationMs: 0,
+  });
 
   // Step 11: Field reliability annotations exist and are non-empty
   const start11 = Date.now();

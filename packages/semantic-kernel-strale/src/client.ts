@@ -12,13 +12,6 @@ export interface Capability {
   price_cents: number;
   input_schema: Record<string, unknown> | null;
   output_schema: Record<string, unknown> | null;
-  sqs?: number;
-  sqs_label?: string;
-  quality?: string;
-  reliability?: string;
-  trend?: string;
-  usable?: boolean;
-  strategy?: string;
 }
 
 export interface ExecuteResult {

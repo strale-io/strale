@@ -94,7 +94,6 @@ describe("POST /v1/internal/tests/admin/apply-migrations — auth gate", () => {
 describe("POST /v1/internal/tests/admin/apply-migrations — success path", () => {
   it("delegates to runStartupMigrations exactly once and returns the per-block summary", async () => {
     const fakeBlocks = [
-      { block: "0028_sqs_daily_snapshot", outcome: "skipped (table already exists)", duration_ms: 5 },
       { block: "0029_actual_cost_cents", outcome: "skipped (column already exists)", duration_ms: 4 },
       { block: "0030_compliance_columns", outcome: "skipped (columns already exist)", duration_ms: 6 },
       { block: "0031_test_results_suite_executed_idx", outcome: "ensured composite index on (test_suite_id, executed_at DESC)", duration_ms: 3 },
@@ -117,7 +116,7 @@ describe("POST /v1/internal/tests/admin/apply-migrations — success path", () =
     const body = await res.json();
     expect(body).toEqual({
       ok: true,
-      block_count: 7,
+      block_count: 6,
       blocks: fakeBlocks,
     });
   });
@@ -127,7 +126,7 @@ describe("POST /v1/internal/tests/admin/apply-migrations — success path", () =
     // mocked function. If someone adds a parallel inline block in the
     // future, this test would either drift or surface it (because the
     // mock returns N blocks but the endpoint would return N+1).
-    const fake = [{ block: "0028_sqs_daily_snapshot", outcome: "skipped", duration_ms: 1 }];
+    const fake = [{ block: "0029_actual_cost_cents", outcome: "skipped", duration_ms: 1 }];
     mockRunStartupMigrations.mockReset();
     mockRunStartupMigrations.mockResolvedValueOnce(fake);
 

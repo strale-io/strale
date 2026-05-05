@@ -30,7 +30,7 @@ import { sql, eq, and, inArray, asc, desc } from "drizzle-orm";
 import postgres from "postgres";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps, testSuites, testResults } from "../db/schema.js";
-import { runTests, persistDualProfileScores } from "../lib/test-runner.js";
+import { runTests } from "../lib/test-runner.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { isCacheExpired, refreshUpstreamMapping } from "../lib/upstream-health-gate.js";
 import { probeChromiumHealth } from "../lib/chromium-health.js";
@@ -401,15 +401,8 @@ async function runAuxiliaryTasks(): Promise<void> {
     }
   }
 
-  // Staleness refresh (2h)
-  if (shouldRun("stale-refresh", STALE_REFRESH_INTERVAL_MS)) {
-    try {
-      const { refreshStaleScores } = await import("./refresh-stale-scores.js");
-      await refreshStaleScores();
-    } catch (err) {
-      logError("test-scheduler-stale-refresh-failed", err);
-    }
-  }
+  // Staleness refresh retired with the SQS engine (DEC-20260503-B).
+  // refresh-stale-scores.ts re-decayed matrix_sqs and is no longer present.
 
   // Daily diagnostics (24h)
   if (shouldRun("diagnostics", DIAGNOSTIC_INTERVAL_MS)) {
@@ -433,15 +426,7 @@ async function runAuxiliaryTasks(): Promise<void> {
     }
   }
 
-  // Daily SQS snapshot (24h)
-  if (shouldRun("sqs-snapshot", SNAPSHOT_INTERVAL_MS)) {
-    try {
-      const { captureDailySnapshots } = await import("../lib/sqs-snapshots.js");
-      await captureDailySnapshots();
-    } catch (err) {
-      logError("test-scheduler-sqs-snapshot-failed", err);
-    }
-  }
+  // Daily SQS snapshot retired with the SQS engine (DEC-20260503-B).
 
   // Weekly health sweep (7d)
   if (shouldRun("weekly-sweep", WEEKLY_SWEEP_INTERVAL_MS)) {
@@ -725,25 +710,11 @@ export function startTestScheduler(): void {
     "test-scheduler-started",
   );
 
-  // Stale score repair 15s after startup (carried over from old scheduler)
-  setTimeout(async () => {
-    try {
-      const { repairStaleScores } = await import("../lib/test-runner.js");
-      await repairStaleScores();
-    } catch (err) {
-      logError("test-scheduler-stale-repair-failed", err);
-    }
-  }, 15_000);
+  // Stale score repair retired with the SQS engine (DEC-20260503-B).
 
-  // Weekly digest scheduling (independent timer — needs Monday 08:00 CET alignment)
-  setTimeout(async () => {
-    try {
-      const { scheduleWeeklyDigest } = await import("../lib/test-runner.js");
-      scheduleWeeklyDigest();
-    } catch (err) {
-      logError("test-scheduler-digest-schedule-failed", err);
-    }
-  }, 5_000);
+  // Weekly digest scheduling lived in the deleted block of test-runner.ts.
+  // The digest itself still works via the daily-digest pipeline; this
+  // explicit Monday-08:00 timer is gone until re-introduced.
 
   // First poll after startup delay
   setTimeout(() => {
