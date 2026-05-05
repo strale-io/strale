@@ -49,16 +49,19 @@
  * weekly-drift.yml) alongside check-vendor-roster-drift.mjs.
  *
  * Database IDs (Strale workspace, 2026-05-05):
- *   Provider-Coverage matrix collection: 1dfb6122-6ca6-4ccc-9660-649b4e648220
- *   Vendor Roster collection:            638d0bf6-39de-4310-a0cd-b8e791878f33
- *   Decisions DB collection:             5e1a81ee-7b9f-4d3c-b58d-c8d97ae6386c
+ *   Provider-Coverage matrix database: 396c619280ef4397adcbcdc067ead321
+ *   Vendor Roster database:            af5a164bdea948379835210ae69b4283
+ *   Decisions database:                ea57671f-7167-44e4-a254-c0a1de79e7f9
  *
- * If those IDs change, update them here.
+ * Use database IDs (not data-source IDs) — `/v1/databases/{id}/query`
+ * under Notion-Version 2022-06-28 only resolves database IDs. If you
+ * copy a data-source ID by mistake, the API returns 404 object_not_found
+ * with the integration ID embedded, making it look like a permissions error.
  */
 
-const PROVIDER_COVERAGE_DS = "1dfb6122-6ca6-4ccc-9660-649b4e648220";
-const VENDOR_ROSTER_DS = "638d0bf6-39de-4310-a0cd-b8e791878f33";
-const DECISIONS_DS = "5e1a81ee-7b9f-4d3c-b58d-c8d97ae6386c";
+const PROVIDER_COVERAGE_DS = "396c619280ef4397adcbcdc067ead321";
+const VENDOR_ROSTER_DS = "af5a164bdea948379835210ae69b4283";
+const DECISIONS_DS = "ea57671f-7167-44e4-a254-c0a1de79e7f9";
 const PROVIDER_COVERAGE_PAGE = "https://app.notion.com/p/34867c87082c81879391ebc05a9b3d90";
 const VENDOR_ROSTER_PAGE = "https://app.notion.com/p/af5a164bdea948379835210ae69b4283";
 
