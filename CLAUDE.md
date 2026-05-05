@@ -142,7 +142,7 @@ All capabilities and solutions available via x402 pay-per-use USDC payments on B
 - Countries: SE, NO, DK, FI, UK, DE, FR, NL, BE, AT, IE, ES, IT, CH, PL, PT, US, CA, AU, SG
 - Deprecated: kyc-sweden, kyc-norway, kyc-denmark, kyc-finland, verify-us-company (isActive: false)
 
-SQS engine live (dual-profile model): Quality Profile (QP) with 4 factors (correctness 50%, schema 31%, error handling 13%, edge cases 6%) excludes upstream failures. Reliability Profile (RP) with 4 factors (current availability, rolling success, upstream health, latency) includes upstream failures, type-specific weights. QP and RP letter grades (A-E) combine via 5×5 matrix into SQS (0-100). Legacy 5-factor model (40/25/20/10/5) retained for regression comparison only. Circuit breaker penalties (3 consecutive failures → −30, 5 correctness failures → −20, schema break → −15). Recovery: immediate after 3 consecutive passes (no time gate). Recency-weighted rolling 10-run window. Floor-aware solution SQS (lowest step + 20 cap), min_sqs quality gate on POST /v1/do, platform floor SQS 25. Tiered test scheduling (A: 6h = pure-computation, B: 24h = stable APIs, C: 72h = scraping). SQS < 50 triggers intensification to min(6h, tier). Fixture and canary test modes. Public quality endpoint: GET /v1/quality/:slug.
+SQS scoring engine deleted per DEC-20260503-B (PR1 shipped 2026-05-05). The dual-profile model (QP + RP + 5×5 matrix), the `min_sqs` request parameter on POST /v1/do, the platform floor SQS gate, the floor-aware solution SQS rule, the public `/v1/quality/:slug` endpoint, and the automatic lifecycle transitions (probation→active, active→degraded, degraded→active, degraded→suspended) are all gone. PR2 will drop the residual schema columns (`qp_score`, `rp_score`, `matrix_sqs`, `matrix_sqs_raw`, `trend`, `guidance_*`) and the `sqs_daily_snapshot` table, and rename `capability_health` → `source_health`. Test scheduling is now hourly free-only (DEC-20260503-B): the scheduler ticks every minute and dispatches free capabilities (`external_cost_cents = 0`) whose slug-hash modulo 60 matches the current minute. Paid capabilities are not proactively tested; quality signals come from production observability, piggyback test suites, and any zero-cost auth-less probes the vendor permits. Circuit-breaker logic on `capability_health` survives. Fixture and canary test modes survive.
 
 Free-tier: 5 capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) require no auth/signup. IP-based daily rate limit (10/day, enforced via DB counter in do.ts using `rateLimitByIp`). Authenticated users calling free-tier capabilities get normal rate limits and no wallet debit.
 
@@ -261,19 +261,16 @@ limitations:
     severity: "info"
 ```
 
-### Scoring Integrity
+### Scoring Integrity (retired with the SQS engine — DEC-20260503-B)
 
-NEVER modify SQS scoring logic (`sqs.ts`, `EXTERNAL_SERVICE_PATTERNS`, `isExternalServiceFailure`, `computeFromRows`) to fix a specific capability's score. If a capability scores poorly:
+The Scoring Integrity Protocol has been retired. The SQS engine, `sqs.ts`,
+`EXTERNAL_SERVICE_PATTERNS`, `isExternalServiceFailure`, and `computeFromRows`
+no longer exist (PR1 deletion 2026-05-05). When a capability scores poorly under
+a future routing-engine signal, the same root-cause discipline still applies:
+diagnose the underlying issue (missing credential, bad fixture, real bug) and
+fix it; never bend the substrate to mask a specific capability's behaviour.
 
-1. First: diagnose the ROOT CAUSE (missing credential? bad fixture? real bug?)
-2. Fix the root cause (configure the key, fix the fixture, fix the code)
-3. The score will improve naturally on the next test run
-
-Adding exclusion patterns to make a score look better is PROHIBITED. The SQS must always reflect the user's actual experience.
-
-See: Scoring Integrity Rules comment block in `apps/api/src/lib/sqs.ts`
-See: SQS Constitution in Notion
-See also: Capability Onboarding Protocol (DEC-20260320-B) — the equivalent enforcement rule for capability onboarding.
+See also: Capability Onboarding Protocol (DEC-20260320-B).
 
 ### Test Infrastructure Cost Principles (always enforce)
 
@@ -322,7 +319,6 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 **Do NOT mark a distribution task as done if the pre-flight checklist didn't pass.** Report what's missing.
 
 **This rule does NOT override:**
-- The Scoring Integrity Protocol (never modify SQS scoring to fix a specific capability's score).
 - The Capability Onboarding Protocol (DEC-20260320-B).
 - Any PR-closure or code-change authorization that requires explicit Petter approval.
 
@@ -353,7 +349,6 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 
 **This rule does NOT override:**
 - The prompt's specification of what the capability does (slug, schemas, pricing, implementation logic)
-- The Scoring Integrity Protocol (never modify SQS scoring logic)
 - The DEACTIVATED list in `src/capabilities/auto-register.ts`
 
 ### Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)
@@ -378,7 +373,6 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 **Do NOT mark a cert-audit follow-up as done if the regression test gap is open.** Report what's missing.
 
 **This rule does NOT override:**
-- The Scoring Integrity Protocol.
 - The Capability Onboarding Protocol (DEC-20260320-B).
 - The Distribution PR Integrity Protocol (DEC-20260422-A).
 
@@ -408,7 +402,6 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 **Do NOT mark a bulk-operation fix as deployed if the accumulated-workload audit was skipped.** Report what's missing.
 
 **This rule does NOT override:**
-- The Scoring Integrity Protocol.
 - The Capability Onboarding Protocol (DEC-20260320-B).
 - The Distribution PR Integrity Protocol (DEC-20260422-A).
 - The Audit-Follow-up Test Coverage Protocol (DEC-20260504-A).
@@ -435,7 +428,6 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 **Do NOT mark a deploy-mechanism-dependent change as done if the verification step was skipped.** Report what's missing.
 
 **This rule does NOT override:**
-- The Scoring Integrity Protocol.
 - The Capability Onboarding Protocol (DEC-20260320-B).
 - The Distribution PR Integrity Protocol (DEC-20260422-A).
 - The Audit-Follow-up Test Coverage Protocol (DEC-20260504-A).
