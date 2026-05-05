@@ -70,7 +70,7 @@ geography: nl
 test_fixtures:
   known_answer:
     input:
-      postcode: "2514JK"
+      postcode: "1012JS"
       huisnummer: "1"
     expected_fields:
       - field: city
@@ -86,7 +86,7 @@ test_fixtures:
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    postcode: "2514JK"
+    postcode: "1012JS"
     huisnummer: "1"
 
 output_field_reliability:
