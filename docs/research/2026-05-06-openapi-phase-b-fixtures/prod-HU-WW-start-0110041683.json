@@ -1,0 +1,19 @@
+{
+  "entityName": "MOL Magyar Olaj- és Gázipari Nyrt. (cégjegyzékszám 01-10-041683)",
+  "result": {
+    "ok": false,
+    "status": 406,
+    "body": {
+      "success": false,
+      "message": "vatCode not valid, must match one of these regex: [\"^HU\\\\d{8}$\",\"^\\\\d{8}-\\\\d-\\\\d{2}$\"]",
+      "error": 2015,
+      "data": null
+    },
+    "error": "client",
+    "latencyMs": 1532,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "HU",
+    "identifier": "0110041683"
+  }
+}

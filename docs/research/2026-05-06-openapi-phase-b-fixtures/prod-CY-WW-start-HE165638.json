@@ -1,0 +1,19 @@
+{
+  "entityName": "Bank of Cyprus Holdings plc (HE165638)",
+  "result": {
+    "ok": false,
+    "status": 406,
+    "body": {
+      "success": false,
+      "message": "vatCode not valid, must match one of these regex: [\"^CY\\\\d{8}[A-Z]$\",\"^\\\\d{8}[A-Z]$\",\"^C\\\\d+$\"]",
+      "error": 2015,
+      "data": null
+    },
+    "error": "client",
+    "latencyMs": 1771,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "CY",
+    "identifier": "HE165638"
+  }
+}

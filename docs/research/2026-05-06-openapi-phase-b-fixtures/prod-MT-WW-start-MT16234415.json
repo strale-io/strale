@@ -1,0 +1,14 @@
+{
+  "entityName": "Bank of Valletta (VAT MT16234415)",
+  "result": {
+    "ok": true,
+    "status": 204,
+    "body": null,
+    "error": null,
+    "latencyMs": 4175,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "MT",
+    "identifier": "MT16234415"
+  }
+}

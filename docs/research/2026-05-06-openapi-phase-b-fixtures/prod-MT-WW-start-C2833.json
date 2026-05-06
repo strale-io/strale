@@ -1,0 +1,19 @@
+{
+  "entityName": "Bank of Valletta plc (C2833)",
+  "result": {
+    "ok": false,
+    "status": 406,
+    "body": {
+      "success": false,
+      "message": "vatCode not valid, must match one of these regex: [\"^MT\\\\d{8}$\"]",
+      "error": 2015,
+      "data": null
+    },
+    "error": "client",
+    "latencyMs": 1828,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "MT",
+    "identifier": "C2833"
+  }
+}

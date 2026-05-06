@@ -1,0 +1,113 @@
+{
+  "entityName": "Sopharma AD (UIC 831902088)",
+  "result": {
+    "ok": true,
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "69fb3b443d5eb197cf548ce4",
+          "lastUpdateTimestamp": 1778072387,
+          "companyName": "Sopharma",
+          "taxCode": "831902088",
+          "vatCode": "BG831902088",
+          "leiCode": "097900BGGW0000048796",
+          "address": {
+            "registeredOffice": {
+              "town": "Sofia",
+              "country": "BG",
+              "zipCode": "1220",
+              "streetName": "ul. Iliensko shose 16",
+              "streetNumber": "16",
+              "gps": {
+                "coordinates": [
+                  23.31702,
+                  42.7347
+                ]
+              }
+            }
+          },
+          "activityStatus": "ACTIVE",
+          "incorporationDate": "1933-01-01",
+          "contacts": {
+            "fax": "+359 29360286",
+            "phone": "+359 24055200",
+            "website": "www.sopharma.bg"
+          },
+          "internationalClassification": {
+            "nace": {
+              "code": "2120",
+              "description": "Manufacture of pharmaceutical preparations"
+            },
+            "naics": {
+              "code": "325412",
+              "description": "Pharmaceutical Preparation Manufacturing"
+            },
+            "sic": {
+              "code": "2834",
+              "description": "Pharmaceutical Preparations"
+            }
+          },
+          "balanceSheets": {
+            "last": {
+              "year": 2024,
+              "balanceSheetDate": "2024-12-31",
+              "employees": 5599,
+              "netWorth": 39016636.59,
+              "operatingRevenue": 1102175245.56,
+              "equity": 431071201.09,
+              "totalAssets": 918423810.98
+            },
+            "all": [
+              {
+                "year": 2024,
+                "balanceSheetDate": "2024-12-31",
+                "employees": 5599,
+                "netWorth": 39016636.59,
+                "operatingRevenue": 1102175245.56,
+                "equity": 431071201.09,
+                "totalAssets": 918423810.98
+              },
+              {
+                "year": 2023,
+                "balanceSheetDate": "2023-12-31",
+                "employees": 4721,
+                "netWorth": 49071736.5,
+                "operatingRevenue": 967560973.12,
+                "equity": 385318737.76,
+                "totalAssets": 774170464.66
+              },
+              {
+                "year": 2022,
+                "balanceSheetDate": "2022-12-31",
+                "employees": 4764,
+                "netWorth": 36363711.67,
+                "operatingRevenue": 856002110.06,
+                "equity": 366410373.11,
+                "totalAssets": 641150917.83
+              },
+              {
+                "year": 2021,
+                "balanceSheetDate": "2021-12-31",
+                "employees": 5507,
+                "netWorth": 45757231.32,
+                "operatingRevenue": 825113377.79,
+                "equity": 336863943.45,
+                "totalAssets": 616077333.93
+              }
+            ]
+          }
+        }
+      ],
+      "success": true,
+      "message": "",
+      "error": null
+    },
+    "error": null,
+    "latencyMs": 2380,
+    "mode": "production",
+    "endpoint": "WW-advanced",
+    "country": "BG",
+    "identifier": "831902088"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "entityName": "Krka d.d. (VAT SI82646716)",
+  "result": {
+    "ok": true,
+    "status": 204,
+    "body": null,
+    "error": null,
+    "latencyMs": 3781,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "SI",
+    "identifier": "SI82646716"
+  }
+}

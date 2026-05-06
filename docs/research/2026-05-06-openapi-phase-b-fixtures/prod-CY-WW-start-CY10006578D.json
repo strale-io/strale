@@ -1,0 +1,14 @@
+{
+  "entityName": "Bank of Cyprus Holdings (VAT CY10006578D)",
+  "result": {
+    "ok": true,
+    "status": 204,
+    "body": null,
+    "error": null,
+    "latencyMs": 3822,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "CY",
+    "identifier": "CY10006578D"
+  }
+}

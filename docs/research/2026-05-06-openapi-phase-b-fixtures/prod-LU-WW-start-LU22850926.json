@@ -1,0 +1,14 @@
+{
+  "entityName": "ArcelorMittal (VAT LU22850926)",
+  "result": {
+    "ok": true,
+    "status": 204,
+    "body": null,
+    "error": null,
+    "latencyMs": 4219,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "LU",
+    "identifier": "LU22850926"
+  }
+}
