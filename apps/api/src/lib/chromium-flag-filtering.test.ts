@@ -39,7 +39,7 @@ describe("chromium launch-arg flag-filtering regression (Phase 2 / 2026-05-06)",
     expect([...BROWSERLESS_LAUNCH_ARGS]).toEqual([...REQUIRED_FLAGS]);
   });
 
-  it("the encoded URL contains every required flag string verbatim (no filtering, no rewriting, no truncation)", () => {
+  it("the encoded URL payload contains every required flag string byte-for-byte (helper contract only — service-side filtering is NOT verified here)", () => {
     const url = buildBrowserlessRequestUrl(
       "http://chromium.railway.internal:8080",
       "/content",

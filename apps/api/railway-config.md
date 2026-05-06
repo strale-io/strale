@@ -93,11 +93,22 @@ https://www.notion.so/35867c87082c81a4a987e99d1ee564e8.
 
 ### When to revisit
 
-Revisit this pin when (a) scraping caps migrate off Browserless per
-DEC-20260421-C, or (b) Browserless v2 paid tier becomes commercially
-justified. v1 receives no upstream security updates from the vendor —
-the pin has finite useful lifetime, plausibly months. A reminder to-do
-sits in the Notion To-do DB dated 2026-08-06.
+Revisit this pin by 2026-08-06 (reminder to-do in the Notion To-do DB).
+v1 receives no upstream security updates from the vendor — the pin has
+finite useful lifetime, plausibly months. The revisit outcome should
+pick one of three explicit paths, not implicitly extend the pin:
+
+1. **Migrate scraping caps off Browserless** per DEC-20260421-C
+   (preferred if scraping volume is shrinking organically by then).
+2. **Upgrade to Browserless v2 paid tier** (if scraping is still
+   load-bearing and v2's flag allowlist is documented to include the
+   load-bearing flags by then).
+3. **Accept and explicitly extend the pin** — only valid with a fresh
+   security review of v1's last-known-vulnerability surface and a new
+   reminder date.
+
+The doc itself does not commit Strale to any vendor path; the choice
+belongs to whoever runs the August revisit.
 
 ### Required env vars
 

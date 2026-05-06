@@ -261,10 +261,14 @@ app.use("*", async (c, next) => {
 });
 
 // Health check — shallow (app is running). `commit` surfaces the build SHA
-// for deploy-mechanism verification (Rule 14): query /health to confirm
-// a redeploy has reached prod without reading service logs.
+// (12-char short form, matches `git log --oneline`) for deploy-mechanism
+// verification (Rule 14): query /health to confirm a redeploy has reached
+// prod without reading service logs.
 app.get("/health", (c) =>
-  c.json({ status: "ok", commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null }),
+  c.json({
+    status: "ok",
+    commit: process.env.RAILWAY_GIT_COMMIT_SHA?.slice(0, 12) ?? null,
+  }),
 );
 
 // Health check — deep (DB write path works, including indexes on transactions table)

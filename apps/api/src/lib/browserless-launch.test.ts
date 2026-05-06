@@ -108,6 +108,15 @@ describe("stripToken", () => {
     expect(stripToken(url)).toBe(url);
   });
 
+  it("redacts capitalised forms (Token=, TOKEN=) — exported helper must not silently miss case variants from upstream callers", () => {
+    expect(stripToken("https://example.com/?Token=secret123")).toBe(
+      "https://example.com/?Token=<redacted>",
+    );
+    expect(stripToken("https://example.com/?a=1&TOKEN=secret123")).toBe(
+      "https://example.com/?a=1&TOKEN=<redacted>",
+    );
+  });
+
   it("preserves the launch payload so the base64 still decodes to the canonical Chrome flags (Phase 2 diagnostic contract)", () => {
     const built = buildBrowserlessRequestUrl(
       "http://chromium.railway.internal:8080",
