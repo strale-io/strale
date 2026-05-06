@@ -164,15 +164,11 @@ const DEACTIVATED = new Map<string, string>([
     // (via Colegio de Registradores) or a multi-country licensed aggregator.
     "empresia.es / infocif.es scraping prohibited by ToS; pending licensed ES registry or aggregator contract (see DEC-20260427-I)",
   ],
-  [
-    "german-company-data",
-    // DEC-20260427-I-5: Runtime fetched northdata.com. Manifest acknowledged "via
-    // northdata.com" (transport-divergence — at least honest), but the underlying
-    // ToS-prohibited scrape remains.
-    // Reactivation trigger: licensed contract with Handelsregister Bundesanzeiger
-    // (via Bundesanzeiger Verlag) or a multi-country licensed aggregator.
-    "northdata.com scraping prohibited by ToS; pending licensed Handelsregister or aggregator contract (see DEC-20260427-I)",
-  ],
+  // german-company-data REACTIVATED 2026-05-06: migrated from northdata.com
+  // ToS-prohibited scrape (DEC-20260427-I-5) to direct OpenRegister API
+  // (api.openregister.de). Free tier 50 req/mo per DEC-20260505-H +
+  // DEC-20260506-G; auth via OPENREGISTER_API_KEY. acquisition_method:
+  // direct_api per DEC-20260428-A Tier 2.
   [
     "austrian-company-data",
     // DEC-20260427-I-6: Primary runtime fetched firmenbuch.finapu.com (commercial
