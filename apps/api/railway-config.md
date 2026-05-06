@@ -69,12 +69,27 @@ debug log under v2 showed Chrome launched with just `--remote-debugging-port`,
 small `/dev/shm`; without it Chrome's shared-memory setup fails and the
 process aborts with SIGABRT, taking down every scraping capability.
 
-v1 has no allowlist filter. The same `?launch=<base64 JSON>` payload
-passes to Chrome's command line verbatim. v1 also honors `LAUNCH_ARGS`
-as an env-var fallback — belt-and-braces.
+v1 has no allowlist filter, but it DOES dedupe the per-request `?launch=args`
+payload against its internal default-arg list and the `LAUNCH_ARGS` env. In
+practice on the running v1 image, of the 4 flags Strale's helper encodes
+(`--no-sandbox`, `--disable-dev-shm-usage`, `--disable-gpu`,
+`--disable-setuid-sandbox`), only the first two reach Chrome's command line —
+verified via the chromium service's own `browserless:chrome-helper Launching
+Chrome with args` debug log on 2026-05-06. The other two are functionally
+redundant: `--no-sandbox` subsumes `--disable-setuid-sandbox` (sandbox is
+fully off), and `--disable-gpu` is a no-op in GPU-less Railway containers.
+The helper still encodes all four — the contract is helper-side, not
+service-side. If the running v1 minor changes deduping behaviour and the 2
+load-bearing flags (`--no-sandbox` and `--disable-dev-shm-usage`) stop
+reaching Chrome, the chromium-side debug log is the operational signal.
 
-Phase 2 journal documenting the observation:
+v1 also honors `LAUNCH_ARGS` as an env-var fallback — belt-and-braces.
+
+Phase 2 journal (root cause, Browserless v2 OSS-tier filtering):
 https://www.notion.so/35867c87082c81cc87f4fc82e1f5ebba.
+
+Phase 3 halt journal (v1 deduping behaviour, decision to accept):
+https://www.notion.so/35867c87082c81a4a987e99d1ee564e8.
 
 ### When to revisit
 
@@ -98,7 +113,9 @@ sits in the Notion To-do DB dated 2026-08-06.
 
 - The 4 launch flags reach Chrome via two independent paths under v1: the
   per-request `?launch=` query (helper-driven, what Strale's code uses)
-  and the `LAUNCH_ARGS` env var (fallback). Either is sufficient.
+  and the `LAUNCH_ARGS` env var (fallback). Either is sufficient. v1
+  dedupes both paths against its internal default-arg list (see "Why v1"
+  above) — only the 2 load-bearing flags need to reach Chrome.
 - The strale service connects via `BROWSERLESS_URL=http://chromium.railway.internal:8080`.
 - Health probe: `POST /content` with `data:text/html,<html><body>ok</body></html>`
   (not `/health` — the `/health` endpoint only checks the wrapper, not Chromium itself).
