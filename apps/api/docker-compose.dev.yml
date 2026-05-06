@@ -1,9 +1,13 @@
-# Local development — Browserless v2 chromium container.
+# Local development — Browserless v1 chromium container (pinned).
 #
 # Mirrors the Railway-internal `chromium` service documented in
 # apps/api/railway-config.md. Use this so local dev runs against a
 # container under your control instead of consuming browserless.io
 # free-tier quota.
+#
+# Pin matches production: v2 OSS tier filters per-request launch flags
+# and only `--no-sandbox` survived in our Phase 2 observation; v1 has no
+# such filter. See railway-config.md "Why v1 (and not v2)" for context.
 #
 # Start:  docker compose -f apps/api/docker-compose.dev.yml up -d
 # Stop:   docker compose -f apps/api/docker-compose.dev.yml down
@@ -15,7 +19,7 @@
 
 services:
   chromium:
-    image: ghcr.io/browserless/chromium
+    image: browserless/chrome:1.61.1-chrome-stable
     container_name: strale-chromium-dev
     restart: unless-stopped
     ports:
@@ -24,3 +28,4 @@ services:
       TOKEN: strale-browser-2026
       CONCURRENT: "2"
       TIMEOUT: "30000"
+      LAUNCH_ARGS: "--no-sandbox --disable-dev-shm-usage --disable-gpu --disable-setuid-sandbox"

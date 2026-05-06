@@ -48,34 +48,70 @@ Key vars:
 
 ---
 
-## chromium (Browserless v2)
+## chromium (Browserless v1, pinned)
+
+### Pinned image
+
+`browserless/chrome:1.61.1-chrome-stable` (Docker Hub). Pinned per Phase 3
+of the 2026-05-04 chromium bug fix (commit `4b13d32` Phase 2 instrumentation;
+this section's update is Phase 3 (Harden)).
+
+### Why v1 (and not v2)
+
+Browserless v2 OSS tier filters per-request launch flags through an
+undocumented allowlist at the launch handler. Of the 4 flags Strale's
+helper passes via `?launch=<base64 JSON>` (`--no-sandbox`,
+`--disable-dev-shm-usage`, `--disable-gpu`, `--disable-setuid-sandbox`),
+only `--no-sandbox` survived in production — the chromium service's own
+debug log under v2 showed Chrome launched with just `--remote-debugging-port`,
+`--no-sandbox`, `--disable-features=LocalNetworkAccessChecks`, and
+`--user-data-dir`. `--disable-dev-shm-usage` is load-bearing on Railway's
+small `/dev/shm`; without it Chrome's shared-memory setup fails and the
+process aborts with SIGABRT, taking down every scraping capability.
+
+v1 has no allowlist filter. The same `?launch=<base64 JSON>` payload
+passes to Chrome's command line verbatim. v1 also honors `LAUNCH_ARGS`
+as an env-var fallback — belt-and-braces.
+
+Phase 2 journal documenting the observation:
+https://www.notion.so/35867c87082c81cc87f4fc82e1f5ebba.
+
+### When to revisit
+
+Revisit this pin when (a) scraping caps migrate off Browserless per
+DEC-20260421-C, or (b) Browserless v2 paid tier becomes commercially
+justified. v1 receives no upstream security updates from the vendor —
+the pin has finite useful lifetime, plausibly months. A reminder to-do
+sits in the Notion To-do DB dated 2026-08-06.
 
 ### Required env vars
 
 | Variable | Value | Purpose |
 |---|---|---|
-| `LAUNCH_ARGS` | `--no-sandbox --disable-dev-shm-usage --disable-gpu --disable-setuid-sandbox` | Required for Railway container sandbox |
+| `LAUNCH_ARGS` | `--no-sandbox --disable-dev-shm-usage --disable-gpu --disable-setuid-sandbox` | v1 fallback path; primary path is the per-request `?launch=` payload from `buildBrowserlessRequestUrl` in `apps/api/src/lib/browserless-launch.ts`. Keep this set so Chrome boots cleanly even on requests that bypass the helper. |
 | `TOKEN` | `<same as BROWSERLESS_API_KEY in strale>` | Auth token — must match |
 | `CONCURRENT` | `10` | Max concurrent browser sessions |
 | `TIMEOUT` | `30000` | Default timeout per session in ms |
+| `PORT` | `8080` | Chromium HTTP listen port. Must match the port in `BROWSERLESS_URL=http://chromium.railway.internal:8080` on the strale service. v1 default is 3000; we override so the Railway-internal URL stays stable. |
 
 ### Critical notes
 
-- **`LAUNCH_ARGS` is REQUIRED.** Without `--no-sandbox`, Chromium cannot
-  access `/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor` and will
-  crash on every render request (HTTP 500). This single missing flag takes
-  down all 48 Browserless-dependent capabilities.
-- The strale service connects via `BROWSERLESS_URL=http://chromium.railway.internal:8080`
+- The 4 launch flags reach Chrome via two independent paths under v1: the
+  per-request `?launch=` query (helper-driven, what Strale's code uses)
+  and the `LAUNCH_ARGS` env var (fallback). Either is sufficient.
+- The strale service connects via `BROWSERLESS_URL=http://chromium.railway.internal:8080`.
 - Health probe: `POST /content` with `data:text/html,<html><body>ok</body></html>`
-  (not `/health` — the `/health` endpoint only checks the wrapper, not Chromium itself)
-- Docker image: `ghcr.io/browserless/chromium`
+  (not `/health` — the `/health` endpoint only checks the wrapper, not Chromium itself).
+- Docker image: `browserless/chrome` on Docker Hub (NOT `ghcr.io/browserless/chromium`,
+  which is v2-only).
 
 ### Local development
 
 For local dev, run the same chromium image under Docker Compose so you
 do not consume browserless.io free-tier quota. The compose file is
-`apps/api/docker-compose.dev.yml`; it maps host port `8080` to the
-container's internal port `3000` and uses `TOKEN=strale-browser-2026`.
+`apps/api/docker-compose.dev.yml`; it pins the same v1 tag as production
+(`browserless/chrome:1.61.1-chrome-stable`), maps host port `8080` to
+the container's internal port `3000`, and uses `TOKEN=strale-browser-2026`.
 
 ```
 docker compose -f apps/api/docker-compose.dev.yml up -d    # start
