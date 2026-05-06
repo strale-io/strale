@@ -36,29 +36,53 @@ interface AutocompleteResponse {
   results?: AutocompleteResult[];
 }
 
+// OpenRegister CompanyV1 actual response shape (verified against live API
+// 2026-05-06 against SAP SE / DE-HRB-B1601-719915). The published OpenAPI
+// summary lists field names but not their structure — three were objects
+// not strings (name, purpose) and the register sub-object uses register_*
+// prefixed keys, not the flat type/number/court shape suggested by the
+// autocomplete result.
+interface CompanyV1Name {
+  name?: string | null;
+  legal_form?: string | null;
+  start_date?: string | null;
+}
+interface CompanyV1Purpose {
+  purpose?: string | null;
+  start_date?: string | null;
+}
+interface CompanyV1Register {
+  company_id?: string | null;
+  register_court?: string | null;
+  register_number?: string | null;
+  register_type?: string | null;
+  start_date?: string | null;
+}
+interface CompanyV1Address {
+  street?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
+  country?: string | null;
+  formatted_value?: string | null;
+  co?: string | null;
+}
+interface CompanyV1Representative {
+  name?: string | null;
+  role?: string | null;
+  type?: string | null;
+  natural_person?: { first_name?: string | null; last_name?: string | null } | null;
+  legal_person?: { name?: string | null } | null;
+}
 interface CompanyV1 {
   id: string;
-  register?: { type?: string | null; number?: string | null; court?: string | null } | null;
+  register?: CompanyV1Register | null;
   status?: string | null;
-  name?: string | null;
-  names?: Array<{ value?: string | null; type?: string | null }> | null;
-  address?: {
-    street?: string | null;
-    house_number?: string | null;
-    postal_code?: string | null;
-    city?: string | null;
-    country?: string | null;
-    co?: string | null;
-  } | null;
-  purpose?: string | null;
+  name?: CompanyV1Name | null;
+  names?: CompanyV1Name[] | null;
+  address?: CompanyV1Address | null;
+  purpose?: CompanyV1Purpose | null;
   capital?: { amount?: number | null; currency?: string | null } | null;
-  representation?: Array<{
-    name?: string | null;
-    first_name?: string | null;
-    last_name?: string | null;
-    role?: string | null;
-    type?: string | null;
-  }> | null;
+  representation?: CompanyV1Representative[] | null;
   legal_form?: string | null;
   lei?: string | null;
   incorporated_at?: string | null;
@@ -157,21 +181,34 @@ function normaliseStatus(raw: string | null | undefined, terminatedAt: string | 
 
 function buildAddress(a: CompanyV1["address"]): Record<string, string | null> | null {
   if (!a) return null;
-  const street = [a.street, a.house_number].filter((s): s is string => !!s && s.trim().length > 0).join(" ").trim() || null;
+  const street = a.street?.trim() || null;
   const postal_code = a.postal_code?.trim() || null;
   const city = a.city?.trim() || null;
-  const country = a.country?.trim() || "Deutschland";
+  const country = a.country?.trim() || "DE";
   const co_address = a.co?.trim() || null;
   if (!street && !postal_code && !city) return null;
   return { street, postal_code, city, country, co_address };
+}
+
+function repName(r: CompanyV1Representative): string | null {
+  const direct = r.name?.trim();
+  if (direct) return direct;
+  const np = r.natural_person;
+  if (np) {
+    const composed = [np.first_name, np.last_name]
+      .filter((s): s is string => !!s && s.trim().length > 0)
+      .join(" ")
+      .trim();
+    if (composed) return composed;
+  }
+  return r.legal_person?.name?.trim() || null;
 }
 
 function buildDirectors(reps: CompanyV1["representation"]): Array<{ name: string; role: string | null }> {
   if (!reps) return [];
   return reps
     .map((r) => {
-      const name = r.name?.trim()
-        || [r.first_name, r.last_name].filter((s): s is string => !!s && s.trim().length > 0).join(" ").trim();
+      const name = repName(r);
       if (!name) return null;
       return { name, role: r.role?.trim() || null };
     })
@@ -180,17 +217,17 @@ function buildDirectors(reps: CompanyV1["representation"]): Array<{ name: string
 
 function formatRegistrationNumber(reg: CompanyV1["register"]): string | null {
   if (!reg) return null;
-  const type = reg.type?.trim();
-  const num = reg.number?.trim();
+  const type = reg.register_type?.trim();
+  const num = reg.register_number?.trim();
   if (type && num) return `${type} ${num}`;
   return num ?? type ?? null;
 }
 
 function buildSources(sources: CompanyV1["sources"], fetchedAt: string): Array<Record<string, unknown>> {
-  if (!sources || sources.length === 0) {
+  if (!Array.isArray(sources) || sources.length === 0) {
     return [{ source: "openregister", fetched_at: fetchedAt }];
   }
-  return sources.map((s) => ({ ...s, fetched_at: fetchedAt }));
+  return sources.map((s) => ({ ...(s ?? {}), fetched_at: fetchedAt }));
 }
 
 registerCapability("german-company-data", async (input: CapabilityInput) => {
@@ -229,26 +266,31 @@ registerCapability("german-company-data", async (input: CapabilityInput) => {
   const status = normaliseStatus(company.status, company.terminated_at);
   const registrationNumber = formatRegistrationNumber(company.register);
 
+  const resolvedName = company.name?.name?.trim() || company.names?.[0]?.name?.trim() || null;
+  const businessDescription = company.purpose?.purpose?.trim() || null;
+
   return {
     output: {
-      company_name: company.name?.trim() || null,
+      company_name: resolvedName,
       company_id: company.id,
       registration_number: registrationNumber,
-      register_type: company.register?.type?.trim() || null,
-      court: company.register?.court?.trim() || null,
+      register_type: company.register?.register_type?.trim() || null,
+      court: company.register?.register_court?.trim() || null,
       country_code: "DE",
       legal_form: company.legal_form?.trim() || null,
       status: status.status,
       is_active: status.is_active,
       registered_address: buildAddress(company.address),
-      business_description: company.purpose?.trim() || null,
-      industry_codes: (company.industry_codes ?? [])
-        .map((c) => ({
-          code: (c.code ?? "").trim(),
-          description: (c.description ?? "").trim() || null,
-        }))
-        .filter((c) => c.code),
-      directors: buildDirectors(company.representation),
+      business_description: businessDescription,
+      industry_codes: Array.isArray(company.industry_codes)
+        ? company.industry_codes
+            .map((c) => ({
+              code: (c?.code ?? "").trim(),
+              description: (c?.description ?? "").trim() || null,
+            }))
+            .filter((c) => c.code)
+        : [],
+      directors: Array.isArray(company.representation) ? buildDirectors(company.representation) : [],
       capital: company.capital?.amount != null
         ? { amount: company.capital.amount, currency: company.capital.currency ?? "EUR" }
         : null,
