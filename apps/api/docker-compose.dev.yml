@@ -1,0 +1,26 @@
+# Local development — Browserless v2 chromium container.
+#
+# Mirrors the Railway-internal `chromium` service documented in
+# apps/api/railway-config.md. Use this so local dev runs against a
+# container under your control instead of consuming browserless.io
+# free-tier quota.
+#
+# Start:  docker compose -f apps/api/docker-compose.dev.yml up -d
+# Stop:   docker compose -f apps/api/docker-compose.dev.yml down
+# Logs:   docker compose -f apps/api/docker-compose.dev.yml logs -f chromium
+#
+# Pair with these values in apps/api/.env (or repo-root .env):
+#   BROWSERLESS_URL=http://localhost:8080
+#   BROWSERLESS_API_KEY=strale-browser-2026
+
+services:
+  chromium:
+    image: ghcr.io/browserless/chromium
+    container_name: strale-chromium-dev
+    restart: unless-stopped
+    ports:
+      - "8080:3000"
+    environment:
+      TOKEN: strale-browser-2026
+      CONCURRENT: "2"
+      TIMEOUT: "30000"

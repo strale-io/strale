@@ -70,6 +70,32 @@ Key vars:
   (not `/health` — the `/health` endpoint only checks the wrapper, not Chromium itself)
 - Docker image: `ghcr.io/browserless/chromium`
 
+### Local development
+
+For local dev, run the same chromium image under Docker Compose so you
+do not consume browserless.io free-tier quota. The compose file is
+`apps/api/docker-compose.dev.yml`; it maps host port `8080` to the
+container's internal port `3000` and uses `TOKEN=strale-browser-2026`.
+
+```
+docker compose -f apps/api/docker-compose.dev.yml up -d    # start
+docker compose -f apps/api/docker-compose.dev.yml down     # stop
+```
+
+In `.env`:
+
+```
+BROWSERLESS_URL=http://localhost:8080
+BROWSERLESS_API_KEY=strale-browser-2026
+```
+
+The browserless.io public hosted endpoint
+(`https://production-sfo.browserless.io/chromium`) remains a documented
+fallback only — its free tier is easily exhausted and on 2026-05-05 a
+stale `BROWSERLESS_URL` default propagated to Railway production env
+vars and degraded 32 scraping capabilities. Do not use the public
+endpoint as a default in either dev or prod.
+
 ---
 
 ## strale-digest-cron (daily digest email)
