@@ -260,8 +260,12 @@ app.use("*", async (c, next) => {
   );
 });
 
-// Health check — shallow (app is running)
-app.get("/health", (c) => c.json({ status: "ok" }));
+// Health check — shallow (app is running). `commit` surfaces the build SHA
+// for deploy-mechanism verification (Rule 14): query /health to confirm
+// a redeploy has reached prod without reading service logs.
+app.get("/health", (c) =>
+  c.json({ status: "ok", commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null }),
+);
 
 // Health check — deep (DB write path works, including indexes on transactions table)
 // Use this for Railway health checks to catch index corruption, disk full, connection pool exhaustion, etc.

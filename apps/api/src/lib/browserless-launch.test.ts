@@ -10,6 +10,7 @@ import {
   BROWSERLESS_LAUNCH_ARGS,
   LAUNCH_QUERY_PARAM,
   buildBrowserlessRequestUrl,
+  stripToken,
 } from "./browserless-launch.js";
 
 describe("BROWSERLESS_LAUNCH_ARGS", () => {
@@ -70,5 +71,54 @@ describe("buildBrowserlessRequestUrl", () => {
       "https://production-sfo.browserless.io/content?token=abc123&" +
         LAUNCH_QUERY_PARAM,
     );
+  });
+});
+
+describe("stripToken", () => {
+  it("redacts ?token=<value> when token is the first query param", () => {
+    const url = "https://production-sfo.browserless.io/content?token=secret123&launch=eyJhcmdzIjpbXX0=";
+    expect(stripToken(url)).toBe(
+      "https://production-sfo.browserless.io/content?token=<redacted>&launch=eyJhcmdzIjpbXX0=",
+    );
+  });
+
+  it("redacts &token=<value> when token is not the first query param", () => {
+    const url = "http://chromium.railway.internal:8080/content?launch=eyJhcmdzIjpbXX0=&token=secret123";
+    expect(stripToken(url)).toBe(
+      "http://chromium.railway.internal:8080/content?launch=eyJhcmdzIjpbXX0=&token=<redacted>",
+    );
+  });
+
+  it("redacts URL-encoded tokens too (the encodeURIComponent path in buildBrowserlessRequestUrl)", () => {
+    const url = buildBrowserlessRequestUrl(
+      "http://chromium.railway.internal:8080",
+      "/content",
+      "tok+with/special=chars",
+    );
+    const stripped = stripToken(url);
+    expect(stripped).not.toContain("tok%2Bwith");
+    expect(stripped).not.toContain("tok+with");
+    expect(stripped).toContain("token=<redacted>");
+    // Launch payload must survive intact — it's the entire point of logging.
+    expect(stripped).toContain(LAUNCH_QUERY_PARAM);
+  });
+
+  it("is a no-op on URLs with no token query param", () => {
+    const url = "http://chromium.railway.internal:8080/content";
+    expect(stripToken(url)).toBe(url);
+  });
+
+  it("preserves the launch payload so the base64 still decodes to the canonical Chrome flags (Phase 2 diagnostic contract)", () => {
+    const built = buildBrowserlessRequestUrl(
+      "http://chromium.railway.internal:8080",
+      "/content",
+      "strale-browser-2026",
+    );
+    const stripped = stripToken(built);
+    const launchMatch = stripped.match(/launch=([^&]+)/);
+    expect(launchMatch).not.toBeNull();
+    const decoded = Buffer.from(launchMatch![1], "base64").toString("utf-8");
+    const parsed = JSON.parse(decoded);
+    expect(parsed).toEqual({ args: [...BROWSERLESS_LAUNCH_ARGS] });
   });
 });

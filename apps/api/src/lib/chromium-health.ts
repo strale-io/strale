@@ -15,7 +15,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
-import { buildBrowserlessRequestUrl } from "./browserless-launch.js";
+import { buildBrowserlessRequestUrl, stripToken } from "./browserless-launch.js";
 import { fireAndForget } from "./fire-and-forget.js";
 import { log, logError, logWarn } from "./log.js";
 
@@ -106,7 +106,20 @@ export async function probeChromiumHealth(): Promise<boolean> {
     // buildBrowserlessRequestUrl also appends the per-request `?launch=` query
     // param required by Browserless v2 (LAUNCH_ARGS env var is deprecated and
     // ignored — see browserless-launch.ts for the discovery context).
-    const res = await fetch(buildBrowserlessRequestUrl(url, "/content", key), {
+    const contentUrl = buildBrowserlessRequestUrl(url, "/content", key);
+
+    // Phase 2 (Understand) instrumentation for the 2026-05-04 chromium
+    // bug fix: log the token-stripped wire URL once per probe so we can
+    // decode the `launch=` payload from logs and disambiguate (A) RLIMIT
+    // ceilings vs (B) v2 OSS-tier flag filtering. Safe against the public
+    // hosted endpoint (no-op) and against the internal chromium service
+    // (captures the exact URL that reaches the wire).
+    log.info(
+      { label: "chromium-probe-url", contentUrl: stripToken(contentUrl) },
+      "chromium probe URL",
+    );
+
+    const res = await fetch(contentUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

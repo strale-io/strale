@@ -48,3 +48,12 @@ export function buildBrowserlessRequestUrl(
 ): string {
   return `${baseUrl}${path}?token=${encodeURIComponent(token)}&${LAUNCH_QUERY_PARAM}`;
 }
+
+/**
+ * Redact the `token=` query value from a Browserless URL. Used by the
+ * chromium-health probe to log the wire-shape (host, path, launch payload)
+ * without leaking the API key into log sinks.
+ */
+export function stripToken(url: string): string {
+  return url.replace(/([?&])token=[^&]*/g, "$1token=<redacted>");
+}
