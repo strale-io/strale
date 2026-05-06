@@ -74,7 +74,9 @@ async function getAccessToken(
     grant_type: "client_credentials",
     client_id: clientId,
     client_secret: clientSecret,
-    scope: "read:vat-registered-companies",
+    // Per HMRC support reply (ref 2026-CNS433, 2026-05-05): the
+    // Check-a-UK-VAT-Number v2 endpoint is gated by `read:vat`.
+    scope: "read:vat",
   });
 
   const response = await fetch(`${baseUrl}/oauth/token`, {
