@@ -1,65 +1,104 @@
 slug: german-company-data
-name: German Company Data
+name: German Company Data (OpenRegister)
 description: >-
-  [TEMPORARILY UNAVAILABLE 2026-04-29 — pending licensed Handelsregister or aggregator contract per DEC-20260428-A.]
-  Look up German company data from the Handelsregister. Accepts HRB/HRA number with court (Registergericht), or a fuzzy
-  company name.
-category: data-extraction
-price_cents: 80
+  Look up German Handelsregister company data via OpenRegister. Returns name, registration number, court, legal form,
+  status, address, directors, capital, LEI, incorporation and termination dates.
+category: company-data
+price_cents: 5
 is_free_tier: false
+avg_latency_ms: 600
 input_schema:
   type: object
   required: []
   properties:
+    company_id:
+      type: string
+      description: >-
+        OpenRegister canonical id, e.g. "DE-HRB-F1103-267645". Preferred when known —
+        skips name resolution and consumes one fewer API call.
     hrb_number:
       type: string
       description: >-
-        Handelsregister number (e.g. HRB 2001) or company name.
-        When providing a registration number, 'court' is also required.
+        Handelsregister number (e.g. "HRB 2001"). When provided, 'court' is also required —
+        HRB/HRA numbers are per-court and not globally unique.
     court:
       type: string
       description: >-
-        Registergericht (German commercial court). Required when providing
-        a registration number. HRB/HRA numbers are per-court and not globally
-        unique. Example: 'Amtsgericht Landsberg a. Lech'
+        Registergericht (German commercial court). Required when providing 'hrb_number'.
+        Example: "Amtsgericht Landsberg a. Lech".
     company_name:
       type: string
-      description: Company name for fuzzy search (alternative to hrb_number)
+      description: Company name for fuzzy search via /v1/autocomplete/company.
 output_schema:
   type: object
-  example:
-    status: active
-    address: "Siegfried-Meister-Str. 1, 86899, Landsberg a. Lech, Germany"
-    industry: "Food industry"
-    directors: "Stadelmann, Peter Daniel (CEO)"
-    company_name: "RATIONAL AG"
-    business_type: "AG"
-    registration_date: "1999-02-09"
-    registration_number: "HRB 2001"
-    court_used: "Amtsgericht Landsberg a. Lech"
   properties:
-    vat_number:
+    company_name:
+      type:
+        - string
+        - "null"
+    company_id:
+      type: string
+    registration_number:
+      type:
+        - string
+        - "null"
+    register_type:
+      type:
+        - string
+        - "null"
+    court:
+      type:
+        - string
+        - "null"
+    country_code:
+      type: string
+    legal_form:
       type:
         - string
         - "null"
     status:
+      enum:
+        - active
+        - terminated
+        - unknown
       type: string
-    address:
-      type: string
-    company_name:
-      type: string
-    business_type:
-      type: string
-    registration_number:
-      type: string
-    court_used:
-      type: string
-data_source: Handelsregister (German Commercial Register) via northdata.com
-data_source_type: scrape
-transparency_tag: ai_generated
+    is_active:
+      type:
+        - boolean
+        - "null"
+    registered_address:
+      type:
+        - object
+        - "null"
+    business_description:
+      type:
+        - string
+        - "null"
+    industry_codes:
+      type: array
+    directors:
+      type: array
+    capital:
+      type:
+        - object
+        - "null"
+    lei:
+      type:
+        - string
+        - "null"
+    incorporated_at:
+      type:
+        - string
+        - "null"
+    terminated_at:
+      type:
+        - string
+        - "null"
+data_source: OpenRegister (api.openregister.de)
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: scraping-stable-target
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+maintenance_class: free-stable-api
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -69,47 +108,81 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      hrb_number: "HRB 2001"
-      court: "Amtsgericht Landsberg a. Lech"
+      company_name: "SAP SE"
     expected_fields:
       - field: company_name
         operator: contains
         reliability: guaranteed
-        value: "RATIONAL"
-      - field: registration_number
-        operator: contains
+        value: "SAP"
+      - field: country_code
+        operator: equals
         reliability: guaranteed
-        value: "HRB 2001"
+        value: "DE"
+      - field: company_id
+        operator: not_null
+        reliability: guaranteed
       - field: status
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    company_name: "Rational AG"
+    company_name: "SAP SE"
 output_field_reliability:
-  status: guaranteed
-  address: guaranteed
   company_name: guaranteed
-  business_type: guaranteed
+  company_id: guaranteed
   registration_number: guaranteed
-  court_used: common
-  industry: common
+  register_type: guaranteed
+  court: guaranteed
+  country_code: guaranteed
+  legal_form: common
+  status: guaranteed
+  is_active: guaranteed
+  registered_address: common
+  business_description: common
+  industry_codes: common
   directors: common
-  registration_date: common
-  jurisdiction: guaranteed
+  capital: common
+  lei: rare
+  incorporated_at: common
+  terminated_at: rare
 limitations:
-  - title: HRB/HRA numbers require court (Registergericht)
+  - title: Free tier capped at 50 requests/month
     text: >-
-      German registration numbers are per-court, not globally unique.
-      The same HRB number can refer to different companies at different courts.
-      Court is required when looking up by registration number.
-    category: coverage
+      Per DEC-20260506-G this capability runs on OpenRegister's Free tier (50 req/mo, €0/mo).
+      Sustained traffic above that cap requires a Pro-tier upgrade decision gated on
+      (customer attachment) AND (audit-retention written confirmation) per DEC-20260505-H.
+      On HTTP 429 the executor returns a structured 'capability-unavailable' error and the
+      framework's circuit breaker (DEC-20260503-B) trips after 3 consecutive failures.
+    category: cost
     severity: warning
-  - title: Data sourced from northdata.com aggregator
+    workaround: >-
+      Cache results per Strale's stored-with-refresh primary architecture (caching is
+      permitted while the OpenRegister subscription is active).
+  - title: UBO data not covered
     text: >-
-      Company data is extracted from northdata.com, which aggregates from the
-      Handelsregister. Freshness depends on northdata's update cycle.
+      OpenRegister does not expose Transparenzregister (German UBO registry) data. UBO
+      lookups for AML-obliged customers require a separate BYO-credentials path against
+      the Transparenzregister, per the Coverage Matrix architectural note.
+    category: coverage
+    severity: info
+    workaround: Use a dedicated UBO capability with customer-supplied Transparenzregister credentials.
+  - title: Real-time fetches not implemented
+    text: >-
+      OpenRegister's `realtime=true` flag (which forces a live Handelsregister fetch at
+      +10 credits per call) is not exposed by this capability. The default cadence is
+      OpenRegister's stored-with-refresh model — stored data refreshed every ≤4 weeks
+      with daily updates for financials and new incorporations. Out of scope for v1.
     category: freshness
     severity: info
     workaround: >-
-      For authoritative data, check the official Handelsregister portal at
-      handelsregister.de
+      For agents that need same-day filings, consume the capability and treat
+      `provenance.fetched_at` as the freshness floor for stored data.
+  - title: HRB/HRA numbers require court (Registergericht)
+    text: >-
+      German registration numbers are per-court, not globally unique. The same HRB
+      number can refer to different companies at different courts. When passing
+      'hrb_number', 'court' is also required.
+    category: coverage
+    severity: warning
+    workaround: >-
+      Prefer 'company_id' (OpenRegister canonical, e.g. "DE-HRB-F1103-267645") when
+      known — it skips the autocomplete step and consumes one fewer Free-tier credit.
