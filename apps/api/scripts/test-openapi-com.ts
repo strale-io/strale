@@ -79,6 +79,7 @@ const REQUIRED_FIELDS = [
   "lei",
   "nace_code",
   "share_capital",
+  "financials",
 ] as const;
 type RequiredField = (typeof REQUIRED_FIELDS)[number];
 
@@ -215,14 +216,30 @@ function valueStatus(value: unknown): FieldStatus {
  * the first field value matching any of the candidate keys (case-insensitive).
  * Openapi.com wraps payloads in `{ data: [{...}], success, ... }` — so the
  * walker must descend into arrays. Field names in the response are camelCase.
+ *
+ * Walker probe fixes (2026-05-06, Phase B):
+ *   - candidate `detailedLegalForm` added for legal_form (IT-only key — verified
+ *     present on IT-advanced sandbox; absent on DE/ES/PT/AT — see fixtures dir)
+ *   - candidate `managers` added for directors (matches IT-Stakeholders
+ *     `data.managers[]` shape; recursively populated via depth-6 walk)
+ *   - candidate `nace` added for nace_code (matches nested
+ *     `internationalClassification.nace.{code,description}`)
+ *   - new `financials` required field maps to `balanceSheets.last` /
+ *     `balanceSheets` — captures revenue/employees/equity/totalAssets that
+ *     Phase A's walker never surfaced
+ *   - depth raised 5 → 6 so deeper sub-trees (e.g. nace under
+ *     internationalClassification) are reached
  */
 function findField(body: Record<string, unknown> | null, candidates: string[]): {
   status: FieldStatus;
   matchedKey: string | null;
 } {
   if (!body) return { status: "missing", matchedKey: null };
-  const lc = candidates.map((c) => c.toLowerCase());
-  const visit = (val: unknown, depth: number): { status: FieldStatus; matchedKey: string | null } | null => {
+  const lcCandidates = new Set(candidates.map((c) => c.toLowerCase()));
+  const visit = (
+    val: unknown,
+    depth: number,
+  ): { status: FieldStatus; matchedKey: string | null } | null => {
     if (depth < 0) return null;
     if (Array.isArray(val)) {
       for (const item of val) {
@@ -234,7 +251,7 @@ function findField(body: Record<string, unknown> | null, candidates: string[]): 
     if (val && typeof val === "object") {
       const obj = val as Record<string, unknown>;
       for (const [key, v] of Object.entries(obj)) {
-        if (lc.includes(key.toLowerCase())) {
+        if (lcCandidates.has(key.toLowerCase())) {
           return { status: valueStatus(v), matchedKey: key };
         }
       }
@@ -245,23 +262,35 @@ function findField(body: Record<string, unknown> | null, candidates: string[]): 
     }
     return null;
   };
-  return visit(body, 5) ?? { status: "missing", matchedKey: null };
+  return visit(body, 6) ?? { status: "missing", matchedKey: null };
 }
 
 // Candidates include camelCase, snake_case, and country-specific variants —
-// Openapi.com responses are camelCase but per-country schemas vary.
+// Openapi.com responses are camelCase but per-country schemas vary. Keys
+// confirmed present in sandbox responses (see docs/research/2026-05-06-
+// openapi-phase-b-fixtures/) are listed first, alphabetised aliases after.
 const FIELD_CANDIDATES: Record<RequiredField, string[]> = {
   legal_name: ["companyName", "company_name", "legal_name", "denomination", "name", "ragioneSociale", "ragione_sociale", "denominazione"],
-  registration_number: ["registration_number", "registrationNumber", "company_number", "companyNumber", "taxCode", "tax_code", "vatCode", "vat_code", "vatNumber", "vat_number", "siren", "siret", "krs", "regon", "company_id", "id"],
+  registration_number: ["registration_number", "registrationNumber", "company_number", "companyNumber", "taxCode", "tax_code", "vatCode", "vat_code", "vatNumber", "vat_number", "siren", "siret", "krs", "regon", "company_id", "id", "reaCode"],
   status: ["activityStatus", "activity_status", "status", "companyStatus", "company_status", "stato_attivita", "active"],
   registered_address: ["registeredOffice", "registered_office", "registered_address", "address", "headquarters", "indirizzo"],
-  directors: ["stakeholders", "directors", "officers", "board", "rappresentanti", "amministratori"],
-  incorporation_date: ["registrationDate", "registration_date", "incorporation_date", "incorporationDate", "dateOfCreation", "date_of_creation", "constituzione", "data_iscrizione"],
-  legal_form: ["legalForm", "legal_form", "companyType", "company_type", "type", "forma_giuridica", "formaGiuridica"],
+  // `managers` matches IT-Stakeholders `data.managers[]`. Other keys cover
+  // alternate shapes that may appear on production tiers.
+  directors: ["managers", "stakeholders", "directors", "officers", "board", "rappresentanti", "amministratori", "shareHolders", "shareholders"],
+  incorporation_date: ["registrationDate", "registration_date", "incorporation_date", "incorporationDate", "dateOfCreation", "date_of_creation", "constituzione", "data_iscrizione", "startDate"],
+  // `detailedLegalForm` is the IT-advanced key (verified). Other countries
+  // do NOT carry legal_form in sandbox advanced responses — see fixtures.
+  legal_form: ["detailedLegalForm", "legalForm", "legal_form", "companyType", "company_type", "type", "forma_giuridica", "formaGiuridica", "rechtsform", "juridicalForm", "juridicalType", "natureOfBusiness", "entityType"],
   vat_number: ["vatNumber", "vatCode", "vat_number", "vat_code", "vatId", "vat_id"],
   lei: ["lei", "leiCode", "lei_code"],
-  nace_code: ["naceCode", "nace_code", "ateco", "atecoCode", "atecoDescription", "sicCodes", "sic_codes", "activityCode", "activity_code", "industryCode", "industry_code"],
+  // `nace` matches nested `internationalClassification.nace.{code,description}`.
+  // `ateco` is the IT-specific equivalent (atecoClassification.ateco.code).
+  nace_code: ["nace", "ateco", "naceCode", "nace_code", "atecoCode", "atecoDescription", "sicCodes", "sic_codes", "activityCode", "activity_code", "industryCode", "industry_code", "naics", "sic"],
   share_capital: ["shareCapital", "share_capital", "capitalAmount", "capital_amount", "capitale_sociale", "capitaleSociale", "capital"],
+  // `balanceSheets` carries multi-year financials on every country-specific
+  // advanced response. Capturing this in the matrix exposes a coverage
+  // dimension Phase A missed entirely.
+  financials: ["balanceSheets", "balance_sheets", "financials", "financialStatements", "lastFinancials"],
 };
 
 // ─── Result accumulator ────────────────────────────────────────────────────

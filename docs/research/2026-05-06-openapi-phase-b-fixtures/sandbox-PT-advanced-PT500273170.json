@@ -1,0 +1,100 @@
+{
+  "data": [
+    {
+      "id": "679a27b6269da526fedb81f5",
+      "lastUpdateTimestamp": 1738076833,
+      "companyName": "Sonae, Sgps, S A ",
+      "taxCode": "500273170",
+      "vatCode": "PT500273170",
+      "leiCode": "549300847SOBT7HY7R50",
+      "address": {
+        "registeredOffice": {
+          "town": "Maia",
+          "country": "PT",
+          "zipCode": "4470-177",
+          "streetName": "Rua Do Espido, Via Norte",
+          "streetNumber": null,
+          "gps": {
+            "coordinates": [
+              -8.63941,
+              41.23343
+            ]
+          }
+        }
+      },
+      "activityStatus": "ACTIVE",
+      "incorporationDate": "1959-05-18",
+      "contacts": {
+        "fax": "",
+        "phone": "+351 220104000",
+        "website": "www.sonae.pt"
+      },
+      "internationalClassification": {
+        "nace": {
+          "code": "4719",
+          "description": "Other retail sale in non-specialised stores"
+        },
+        "naics": {
+          "code": "455110",
+          "description": "Department Stores"
+        },
+        "sic": {
+          "code": "5311",
+          "description": "Department Stores"
+        }
+      },
+      "balanceSheets": {
+        "last": {
+          "year": 2023,
+          "balanceSheetDate": "2023-12-31",
+          "employees": null,
+          "netWorth": 357062000,
+          "operatingRevenue": 8622604000,
+          "equity": 3461779000,
+          "totalAssets": 8845055000
+        },
+        "all": [
+          {
+            "year": 2023,
+            "balanceSheetDate": "2023-12-31",
+            "employees": null,
+            "netWorth": 357062000,
+            "operatingRevenue": 8622604000,
+            "equity": 3461779000,
+            "totalAssets": 8845055000
+          },
+          {
+            "year": 2022,
+            "balanceSheetDate": "2022-12-31",
+            "employees": 48222,
+            "netWorth": 406655000,
+            "operatingRevenue": 8047340000,
+            "equity": 3320400000,
+            "totalAssets": 8647091000
+          },
+          {
+            "year": 2021,
+            "balanceSheetDate": "2021-12-31",
+            "employees": null,
+            "netWorth": 267653000,
+            "operatingRevenue": 7274581000,
+            "equity": 3145394000,
+            "totalAssets": 8317113000
+          },
+          {
+            "year": 2020,
+            "balanceSheetDate": "2020-12-31",
+            "employees": 44409,
+            "netWorth": 55659157,
+            "operatingRevenue": 7051492426,
+            "equity": 2439852346,
+            "totalAssets": 8148927271
+          }
+        ]
+      }
+    }
+  ],
+  "success": true,
+  "message": "",
+  "error": null
+}

@@ -13,47 +13,47 @@
 
 | Mode | Endpoint | Country | Identifier | Status | Latency | Error |
 |---|---|---|---|---|---|---|
-| sandbox | IT-start | IT | 12485671007 | 200 | 3242ms |  |
-| sandbox | IT-advanced | IT | 12485671007 | 200 | 1985ms |  |
-| sandbox | WW-start | IT | 12485671007 | 200 | 2237ms |  |
-| sandbox | WW-advanced | IT | 12485671007 | 200 | 2147ms |  |
-| sandbox | FR-start | FR | 883480147 | 200 | 1893ms |  |
-| sandbox | FR-advanced | FR | 883480147 | 200 | 1663ms |  |
-| sandbox | WW-start | FR | 883480147 | 200 | 1811ms |  |
-| sandbox | WW-advanced | FR | 883480147 | 200 | 1978ms |  |
-| sandbox | DE-start | DE | DE811115368 | 200 | 1807ms |  |
-| sandbox | DE-advanced | DE | DE811115368 | 200 | 2813ms |  |
-| sandbox | WW-start | DE | DE811115368 | 200 | 2468ms |  |
-| sandbox | WW-advanced | DE | DE811115368 | 200 | 1964ms |  |
-| sandbox | ES-start | ES | ESA81948077 | 200 | 2625ms |  |
-| sandbox | ES-advanced | ES | ESA81948077 | 200 | 2044ms |  |
-| sandbox | WW-start | ES | ESA81948077 | 200 | 2492ms |  |
-| sandbox | WW-advanced | ES | ESA81948077 | 200 | 2003ms |  |
-| sandbox | PT-start | PT | PT500273170 | 200 | 2083ms |  |
-| sandbox | PT-advanced | PT | PT500273170 | 200 | 1978ms |  |
-| sandbox | WW-start | PT | PT500273170 | 200 | 1887ms |  |
-| sandbox | WW-advanced | PT | PT500273170 | 200 | 1905ms |  |
-| sandbox | GB-start | GB | GB226335521 | 200 | 1786ms |  |
-| sandbox | GB-advanced | GB | GB226335521 | 200 | 1818ms |  |
-| sandbox | WW-start | GB | GB226335521 | 200 | 1784ms |  |
-| sandbox | WW-advanced | GB | GB226335521 | 200 | 1812ms |  |
-| sandbox | BE-start | BE | BE0202239951 | 200 | 1896ms |  |
-| sandbox | BE-advanced | BE | BE0202239951 | 200 | 2291ms |  |
-| sandbox | WW-start | BE | BE0202239951 | 200 | 2233ms |  |
-| sandbox | WW-advanced | BE | BE0202239951 | 200 | 2112ms |  |
-| sandbox | AT-start | AT | ATU22852606 | 200 | 2019ms |  |
-| sandbox | AT-advanced | AT | ATU22852606 | 200 | 2184ms |  |
-| sandbox | WW-start | AT | ATU22852606 | 200 | 1968ms |  |
-| sandbox | WW-advanced | AT | ATU22852606 | 200 | 1895ms |  |
-| sandbox | CH-start | CH | CHE-101.447.456 | 200 | 1992ms |  |
-| sandbox | CH-advanced | CH | CHE-101.447.456 | 200 | 1914ms |  |
-| sandbox | WW-start | CH | CHE-101.447.456 | 200 | 1786ms |  |
-| sandbox | WW-advanced | CH | CHE-101.447.456 | 200 | 1808ms |  |
-| sandbox | PL-start | PL | PL5213787274 | 200 | 1771ms |  |
-| sandbox | PL-advanced | PL | PL5213787274 | 200 | 1778ms |  |
-| sandbox | WW-start | PL | PL5213787274 | 200 | 1815ms |  |
-| sandbox | WW-advanced | PL | PL5213787274 | 200 | 1785ms |  |
-| sandbox | IT-stakeholders | IT | 12485671007 | 200 | 1706ms |  |
+| sandbox | IT-start | IT | 12485671007 | 200 | 2520ms |  |
+| sandbox | IT-advanced | IT | 12485671007 | 200 | 1582ms |  |
+| sandbox | WW-start | IT | 12485671007 | 200 | 1674ms |  |
+| sandbox | WW-advanced | IT | 12485671007 | 200 | 1658ms |  |
+| sandbox | FR-start | FR | 883480147 | 200 | 2054ms |  |
+| sandbox | FR-advanced | FR | 883480147 | 200 | 2083ms |  |
+| sandbox | WW-start | FR | 883480147 | 200 | 1689ms |  |
+| sandbox | WW-advanced | FR | 883480147 | 200 | 1613ms |  |
+| sandbox | DE-start | DE | DE811115368 | 200 | 2229ms |  |
+| sandbox | DE-advanced | DE | DE811115368 | 200 | 1670ms |  |
+| sandbox | WW-start | DE | DE811115368 | 200 | 1807ms |  |
+| sandbox | WW-advanced | DE | DE811115368 | 200 | 1675ms |  |
+| sandbox | ES-start | ES | ESA81948077 | 200 | 2106ms |  |
+| sandbox | ES-advanced | ES | ESA81948077 | 200 | 1709ms |  |
+| sandbox | WW-start | ES | ESA81948077 | 200 | 1684ms |  |
+| sandbox | WW-advanced | ES | ESA81948077 | 200 | 1687ms |  |
+| sandbox | PT-start | PT | PT500273170 | 200 | 2032ms |  |
+| sandbox | PT-advanced | PT | PT500273170 | 200 | 1521ms |  |
+| sandbox | WW-start | PT | PT500273170 | 200 | 1659ms |  |
+| sandbox | WW-advanced | PT | PT500273170 | 200 | 1676ms |  |
+| sandbox | GB-start | GB | GB226335521 | 200 | 2230ms |  |
+| sandbox | GB-advanced | GB | GB226335521 | 200 | 2247ms |  |
+| sandbox | WW-start | GB | GB226335521 | 200 | 1665ms |  |
+| sandbox | WW-advanced | GB | GB226335521 | 200 | 1574ms |  |
+| sandbox | BE-start | BE | BE0202239951 | 200 | 2080ms |  |
+| sandbox | BE-advanced | BE | BE0202239951 | 200 | 2133ms |  |
+| sandbox | WW-start | BE | BE0202239951 | 200 | 1691ms |  |
+| sandbox | WW-advanced | BE | BE0202239951 | 200 | 1691ms |  |
+| sandbox | AT-start | AT | ATU22852606 | 200 | 2177ms |  |
+| sandbox | AT-advanced | AT | ATU22852606 | 200 | 1836ms |  |
+| sandbox | WW-start | AT | ATU22852606 | 200 | 1678ms |  |
+| sandbox | WW-advanced | AT | ATU22852606 | 200 | 1843ms |  |
+| sandbox | CH-start | CH | CHE-101.447.456 | 200 | 2264ms |  |
+| sandbox | CH-advanced | CH | CHE-101.447.456 | 200 | 2095ms |  |
+| sandbox | WW-start | CH | CHE-101.447.456 | 200 | 1709ms |  |
+| sandbox | WW-advanced | CH | CHE-101.447.456 | 200 | 1616ms |  |
+| sandbox | PL-start | PL | PL5213787274 | 200 | 2081ms |  |
+| sandbox | PL-advanced | PL | PL5213787274 | 200 | 2269ms |  |
+| sandbox | WW-start | PL | PL5213787274 | 200 | 1694ms |  |
+| sandbox | WW-advanced | PL | PL5213787274 | 200 | 1531ms |  |
+| sandbox | IT-stakeholders | IT | 12485671007 | 200 | 1683ms |  |
 
 ## 3. Phase B (production) results
 
@@ -63,49 +63,49 @@ Phase B did not run.
 
 Per (country, endpoint, mode) cell — each Strale required field marked populated/null/missing/empty, with the Openapi response key that mapped (best-effort case-insensitive lookup, depth 2).
 
-| Mode | Endpoint | Country | Entity | legal_name | registration_number | status | registered_address | directors | incorporation_date | legal_form | vat_number | lei | nace_code | share_capital |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| sandbox | IT-start | IT | 12485671007 | populated(companyName) | populated(taxCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | IT-advanced | IT | 12485671007 | populated(companyName) | populated(taxCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | missing | populated(vatCode) | missing | populated(ateco) | populated(shareCapital) |
-| sandbox | WW-start | IT | 12485671007 | populated(companyName) | populated(taxCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | WW-advanced | IT | 12485671007 | populated(companyName) | populated(taxCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | missing | populated(vatCode) | missing | populated(ateco) | populated(shareCapital) |
-| sandbox | FR-start | FR | 883480147 | populated(companyName) | populated(vatCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | FR-advanced | FR | 883480147 | populated(companyName) | populated(vatCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | WW-start | FR | 883480147 | populated(companyName) | populated(vatCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | WW-advanced | FR | 883480147 | populated(companyName) | populated(vatCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | DE-start | DE | DE811115368 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | DE-advanced | DE | DE811115368 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | WW-start | DE | DE811115368 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | WW-advanced | DE | DE811115368 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | ES-start | ES | ESA81948077 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | ES-advanced | ES | ESA81948077 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | WW-start | ES | ESA81948077 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | WW-advanced | ES | ESA81948077 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | PT-start | PT | PT500273170 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | PT-advanced | PT | PT500273170 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | WW-start | PT | PT500273170 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | WW-advanced | PT | PT500273170 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | GB-start | GB | GB226335521 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | GB-advanced | GB | GB226335521 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | WW-start | GB | GB226335521 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | WW-advanced | GB | GB226335521 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | BE-start | BE | BE0202239951 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | missing | populated(leiCode) | missing | missing |
-| sandbox | BE-advanced | BE | BE0202239951 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | missing | populated(leiCode) | missing | missing |
-| sandbox | WW-start | BE | BE0202239951 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | missing | populated(leiCode) | missing | missing |
-| sandbox | WW-advanced | BE | BE0202239951 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | missing | populated(leiCode) | missing | missing |
-| sandbox | AT-start | AT | ATU22852606 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | AT-advanced | AT | ATU22852606 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | WW-start | AT | ATU22852606 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | WW-advanced | AT | ATU22852606 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing |
-| sandbox | CH-start | CH | CHE-101.447.456 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | CH-advanced | CH | CHE-101.447.456 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | WW-start | CH | CHE-101.447.456 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | WW-advanced | CH | CHE-101.447.456 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | PL-start | PL | PL5213787274 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | PL-advanced | PL | PL5213787274 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | WW-start | PL | PL5213787274 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | WW-advanced | PL | PL5213787274 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing |
-| sandbox | IT-stakeholders | IT | 12485671007 | populated(name) | populated(taxCode) | missing | populated(address) | missing | missing | missing | populated(vatCode) | missing | missing | missing |
+| Mode | Endpoint | Country | Entity | legal_name | registration_number | status | registered_address | directors | incorporation_date | legal_form | vat_number | lei | nace_code | share_capital | financials |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| sandbox | IT-start | IT | 12485671007 | populated(companyName) | populated(taxCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | missing | populated(vatCode) | missing | missing | missing | missing |
+| sandbox | IT-advanced | IT | 12485671007 | populated(companyName) | populated(taxCode) | populated(activityStatus) | populated(address) | populated(shareHolders) | populated(startDate) | populated(detailedLegalForm) | populated(vatCode) | missing | populated(ateco) | populated(shareCapital) | populated(balanceSheets) |
+| sandbox | WW-start | IT | 12485671007 | populated(companyName) | populated(taxCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | missing | populated(vatCode) | missing | missing | missing | missing |
+| sandbox | WW-advanced | IT | 12485671007 | populated(companyName) | populated(taxCode) | populated(activityStatus) | populated(address) | populated(shareHolders) | populated(startDate) | populated(detailedLegalForm) | populated(vatCode) | missing | populated(ateco) | populated(shareCapital) | populated(balanceSheets) |
+| sandbox | FR-start | FR | 883480147 | populated(companyName) | populated(vatCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | missing | populated(vatCode) | missing | missing | missing | missing |
+| sandbox | FR-advanced | FR | 883480147 | populated(companyName) | populated(vatCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | populated(detailedLegalForm) | populated(vatCode) | missing | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | WW-start | FR | 883480147 | populated(companyName) | populated(vatCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | missing | populated(vatCode) | missing | missing | missing | missing |
+| sandbox | WW-advanced | FR | 883480147 | populated(companyName) | populated(vatCode) | populated(activityStatus) | populated(address) | missing | populated(registrationDate) | populated(detailedLegalForm) | populated(vatCode) | missing | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | DE-start | DE | DE811115368 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing | missing |
+| sandbox | DE-advanced | DE | DE811115368 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | WW-start | DE | DE811115368 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing | missing |
+| sandbox | WW-advanced | DE | DE811115368 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | ES-start | ES | ESA81948077 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing | missing |
+| sandbox | ES-advanced | ES | ESA81948077 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | WW-start | ES | ESA81948077 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing | missing |
+| sandbox | WW-advanced | ES | ESA81948077 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | PT-start | PT | PT500273170 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing | missing |
+| sandbox | PT-advanced | PT | PT500273170 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | WW-start | PT | PT500273170 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing | missing |
+| sandbox | WW-advanced | PT | PT500273170 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | GB-start | GB | GB226335521 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing | missing |
+| sandbox | GB-advanced | GB | GB226335521 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | WW-start | GB | GB226335521 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing | missing |
+| sandbox | WW-advanced | GB | GB226335521 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | BE-start | BE | BE0202239951 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | missing | populated(leiCode) | missing | missing | missing |
+| sandbox | BE-advanced | BE | BE0202239951 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | missing | populated(leiCode) | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | WW-start | BE | BE0202239951 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | missing | populated(leiCode) | missing | missing | missing |
+| sandbox | WW-advanced | BE | BE0202239951 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | missing | populated(leiCode) | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | AT-start | AT | ATU22852606 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing | missing |
+| sandbox | AT-advanced | AT | ATU22852606 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | WW-start | AT | ATU22852606 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | missing | missing | missing |
+| sandbox | WW-advanced | AT | ATU22852606 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | populated(leiCode) | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | CH-start | CH | CHE-101.447.456 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing | missing |
+| sandbox | CH-advanced | CH | CHE-101.447.456 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | WW-start | CH | CHE-101.447.456 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing | missing |
+| sandbox | WW-advanced | CH | CHE-101.447.456 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | PL-start | PL | PL5213787274 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing | missing |
+| sandbox | PL-advanced | PL | PL5213787274 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | WW-start | PL | PL5213787274 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | missing | missing | missing |
+| sandbox | WW-advanced | PL | PL5213787274 | populated(companyName) | populated(id) | populated(activityStatus) | populated(address) | missing | populated(incorporationDate) | missing | populated(vatCode) | missing | populated(nace) | missing | populated(balanceSheets) |
+| sandbox | IT-stakeholders | IT | 12485671007 | populated(name) | populated(taxCode) | missing | populated(address) | populated(managers) | missing | missing | populated(vatCode) | missing | missing | missing | missing |
 
 ## 5. Cross-finding observations
 
@@ -136,13 +136,14 @@ Per (country, endpoint, mode) cell — each Strale required field marked populat
 - Field registration_number: populated in 41/41 successful responses (100%).
 - Field status: populated in 40/41 successful responses (98%).
 - Field registered_address: populated in 41/41 successful responses (100%).
-- Field directors: populated in 0/41 successful responses (0%).
+- Field directors: populated in 3/41 successful responses (7%).
 - Field incorporation_date: populated in 40/41 successful responses (98%).
-- Field legal_form: populated in 0/41 successful responses (0%).
+- Field legal_form: populated in 4/41 successful responses (10%).
 - Field vat_number: populated in 37/41 successful responses (90%).
 - Field lei: populated in 20/41 successful responses (49%).
-- Field nace_code: populated in 2/41 successful responses (5%).
+- Field nace_code: populated in 20/41 successful responses (49%).
 - Field share_capital: populated in 2/41 successful responses (5%).
+- Field financials: populated in 20/41 successful responses (49%).
 
 ## 6. Cost analysis
 
