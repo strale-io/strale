@@ -42,6 +42,28 @@ function computeOutputHash(output: unknown): string | null {
   return createHash("sha256").update(JSON.stringify(output)).digest("hex");
 }
 
+/**
+ * Decide whether a test result should feed `recordTestEvidence` (positive
+ * health signal to the circuit breaker).
+ *
+ * Only known_answer tests with a real successful execution count. edge_case
+ * is excluded because `validateResult` treats any thrown error as edge_case
+ * "passed" — that's a non-signal, not evidence of health. The
+ * `executionError === null` guard is defensive against future validateResult
+ * quirks that might mark known_answer passed despite a thrown error.
+ *
+ * Phase 3 Harden Fix A. See `docs/research/2026-05-07-dk-phase2-understand.md`
+ * (in branch `investigation/dk-phase-2-understand`) for the false-recovery
+ * incident this gate prevents.
+ */
+export function shouldRecordTestEvidence(
+  passed: boolean,
+  testType: string,
+  executionError: string | null,
+): boolean {
+  return passed && testType === "known_answer" && executionError === null;
+}
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface ValidationCheck {
@@ -547,8 +569,8 @@ async function runSingleTest(
         }),
       { label: "health-event-log", context: { slug: suite.capabilitySlug, event: "classification" } },
     );
-  } else if (passed && (suite.testType === "known_answer" || suite.testType === "edge_case")) {
-    // Test passed with real execution — feed evidence to circuit breaker
+  } else if (shouldRecordTestEvidence(passed, suite.testType, executionError)) {
+    // Test passed with real execution — feed evidence to circuit breaker.
     fireAndForget(
       async () => {
         const { recordTestEvidence } = await import("./circuit-breaker.js");
