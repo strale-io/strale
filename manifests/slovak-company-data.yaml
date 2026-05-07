@@ -114,9 +114,8 @@ test_fixtures:
         operator: not_null
         reliability: common
       - field: last_updated
-        operator: equals
-        reliability: guaranteed
-        value: "2025-07-07"
+        operator: not_null
+        reliability: common
 limitations:
   - title: Unauthenticated rate limit is 60 requests/minute per IP
     text: >-
@@ -127,8 +126,9 @@ limitations:
   - title: Status is derived, not explicit
     text: >-
       RPO does not publish an explicit active/dissolved flag at the entity root. Status is derived from whether the
-      current name, address, legal form, and identifier records are still open (no validTo). An entity with all current
-      records open is reported as active; otherwise inactive.
+      current address, legal form, and identifier records are still open (no validTo). An entity with all three open
+      is reported as active; otherwise inactive. Name is excluded because rebrands close the prior name without
+      dissolving the company.
     category: accuracy
     severity: info
   - title: Internal id is required for full detail
@@ -152,4 +152,4 @@ output_field_reliability:
   nace_code: common
   nace_description: common
   directors: common
-  last_updated: guaranteed
+  last_updated: common

@@ -1,4 +1,8 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+// Czech and Slovak IČO share the 8-digit zero-padded format inherited from
+// pre-1993 Czechoslovakia. The checksum rules differ (cz-validation also
+// exports isValidIcoChecksum, which is Czech-specific and not used here).
+import { normalizeIco } from "../lib/cz-validation.js";
 
 // Slovak Register of Legal Persons (Register právnických osôb / RPO)
 // Operated by the Statistical Office of the Slovak Republic (ŠÚ SR).
@@ -6,8 +10,6 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 // Free, no auth. Documented at https://susrrpo.docs.apiary.io/.
 // Unauthenticated access limited to 60 req/min/IP.
 const RPO_API = "https://api.statistics.sk/rpo/v1";
-
-const ICO_RE = /^\d{8}$/;
 
 interface ValidityWindow {
   validFrom?: string;
@@ -22,23 +24,12 @@ interface RpoFullName extends ValidityWindow {
   value: string;
 }
 
-interface RpoMunicipality {
-  value?: string;
-  code?: string;
-}
-
-interface RpoCountry {
-  value?: string;
-  code?: string;
-}
-
 interface RpoAddress extends ValidityWindow {
   street?: string;
   buildingNumber?: string;
-  regNumber?: number;
   postalCodes?: string[];
-  municipality?: RpoMunicipality;
-  country?: RpoCountry;
+  municipality?: { value?: string; code?: string };
+  country?: { value?: string; code?: string };
 }
 
 interface RpoLegalForm extends ValidityWindow {
@@ -46,20 +37,15 @@ interface RpoLegalForm extends ValidityWindow {
 }
 
 interface RpoStatutoryBody extends ValidityWindow {
-  stakeholderType?: { value?: string; code?: string };
-  personName?: { formatedName?: string; familyNames?: string[]; givenNames?: string[] };
+  personName?: { formatedName?: string };
 }
 
 interface RpoSearchResultEntry {
   id: number;
-  dbModificationDate?: string;
-  identifiers?: RpoIdentifier[];
-  fullNames?: RpoFullName[];
 }
 
 interface RpoSearchResponse {
   results?: RpoSearchResultEntry[];
-  license?: string;
 }
 
 interface RpoEntity {
@@ -77,38 +63,25 @@ interface RpoEntity {
     registrationNumbers?: Array<ValidityWindow & { value?: string }>;
   };
   statisticalCodes?: {
-    statCodesActualization?: string;
     mainActivity?: { value?: string; code?: string };
-    esa2010?: { value?: string; code?: string };
   };
-  license?: string;
-}
-
-function normalizeIco(raw: string): string | null {
-  const digits = raw.replace(/[\s.-]/g, "");
-  if (ICO_RE.test(digits)) return digits;
-  // Pad short numerics with leading zeros (RPO IČOs are zero-padded to 8)
-  if (/^\d{1,8}$/.test(digits)) return digits.padStart(8, "0");
-  return null;
 }
 
 /**
  * Pick the current entry from a time-versioned RPO array. RPO returns each
  * field as an array of historical values, where the active value has no
- * validTo (or the latest validTo if all are bounded). Picking the entry
- * whose validFrom is the most recent and whose validTo is unset gives the
- * current value.
+ * validTo. Picking the entry whose validFrom is the most recent and whose
+ * validTo is unset gives the current value; if every entry is closed (rare:
+ * dissolved companies), we still return the most recent one for context.
  */
 function pickCurrent<T extends ValidityWindow>(items: T[] | undefined): T | undefined {
   if (!items || items.length === 0) return undefined;
   const open = items.filter((x) => !x.validTo);
   const pool = open.length > 0 ? open : items;
-  return pool.reduce((best, x) => {
+  return pool.reduce<T | undefined>((best, x) => {
     if (!best) return x;
-    const a = x.validFrom ?? "";
-    const b = best.validFrom ?? "";
-    return a > b ? x : best;
-  }, undefined as T | undefined);
+    return (x.validFrom ?? "") > (best.validFrom ?? "") ? x : best;
+  }, undefined);
 }
 
 function formatAddress(addr: RpoAddress | undefined): string {
@@ -129,7 +102,10 @@ async function fetchJson<T>(url: string): Promise<T> {
     throw new Error("Not found in Slovak RPO registry.");
   }
   if (resp.status === 429) {
-    throw new Error("Slovak RPO rate limit exceeded (60 req/min unauthenticated). Retry shortly.");
+    throw new Error(
+      "Slovak RPO platform rate limit reached (60 req/min, shared across Strale's egress). " +
+        "Retry in 10–60 seconds.",
+    );
   }
   if (!resp.ok) {
     throw new Error(`Slovak RPO returned HTTP ${resp.status}`);
@@ -152,16 +128,18 @@ async function fetchEntity(id: number): Promise<RpoEntity> {
   return fetchJson<RpoEntity>(`${RPO_API}/entity/${id}`);
 }
 
-function deriveStatus(entity: RpoEntity): string {
-  // RPO does not publish an explicit active/dissolved flag at the entity root.
-  // A current address (no validTo) is the strongest available proxy: a
-  // company that has been deleted from the register has its final address
-  // closed out with a validTo. Same goes for legal form and identifier.
-  const addr = pickCurrent(entity.addresses);
-  const form = pickCurrent(entity.legalForms);
-  const ident = pickCurrent(entity.identifiers);
-  const allCurrent = addr && !addr.validTo && form && !form.validTo && ident && !ident.validTo;
-  return allCurrent ? "active" : "inactive";
+/**
+ * RPO does not publish an explicit active/dissolved flag at the entity
+ * root. A deleted entity has its final address, legal form, and identifier
+ * closed out with a validTo. If all three current entries are still open,
+ * the company is treated as active.
+ */
+function deriveStatus(
+  addr: RpoAddress | undefined,
+  form: RpoLegalForm | undefined,
+  ident: RpoIdentifier | undefined,
+): string {
+  return [addr, form, ident].every((x) => x && !x.validTo) ? "active" : "inactive";
 }
 
 registerCapability("slovak-company-data", async (input: CapabilityInput) => {
@@ -169,8 +147,12 @@ registerCapability("slovak-company-data", async (input: CapabilityInput) => {
   if (!raw) {
     throw new Error("'ico' is required. Provide a Slovak IČO (8 digits).");
   }
+  // normalizeIco zero-pads 1-7 digit numeric input to 8. Real Slovak IČOs go
+  // as low as 5 significant digits (e.g. 00151653), so we tolerate short
+  // input but reject obvious junk (<4 digits) before firing the API call.
+  const stripped = raw.replace(/[\s.-]/g, "");
   const ico = normalizeIco(raw);
-  if (!ico) {
+  if (!ico || stripped.length < 4) {
     throw new Error(
       `'${raw}' is not a valid IČO. Slovak IČO is 8 digits (zero-padded).`,
     );
@@ -182,12 +164,12 @@ registerCapability("slovak-company-data", async (input: CapabilityInput) => {
   const currentName = pickCurrent(entity.fullNames);
   const currentAddress = pickCurrent(entity.addresses);
   const currentLegalForm = pickCurrent(entity.legalForms);
+  const currentIdentifier = pickCurrent(entity.identifiers);
   const currentRegOffice = pickCurrent(entity.sourceRegister?.registrationOffices);
   const currentRegNumber = pickCurrent(entity.sourceRegister?.registrationNumbers);
-  const directors = (entity.statutoryBodies ?? [])
-    .filter((b) => !b.validTo)
-    .map((b) => b.personName?.formatedName ?? "")
-    .filter(Boolean);
+  const directors = (entity.statutoryBodies ?? []).flatMap((b) =>
+    !b.validTo && b.personName?.formatedName ? [b.personName.formatedName] : [],
+  );
 
   return {
     output: {
@@ -197,7 +179,7 @@ registerCapability("slovak-company-data", async (input: CapabilityInput) => {
       legal_form: currentLegalForm?.value?.value ?? null,
       legal_form_code: currentLegalForm?.value?.code ?? null,
       registration_date: entity.establishment ?? null,
-      status: deriveStatus(entity),
+      status: deriveStatus(currentAddress, currentLegalForm, currentIdentifier),
       source_register: entity.sourceRegister?.value?.value ?? null,
       registration_office: currentRegOffice?.value ?? null,
       registration_number: currentRegNumber?.value ?? null,
