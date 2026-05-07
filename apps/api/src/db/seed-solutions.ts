@@ -1751,7 +1751,7 @@ const SOLUTIONS: SolutionDef[] = [
     description:
       "Comprehensive due diligence on a company: registry verification, beneficial ownership, sanctions screening, PEP screening, and adverse media analysis. Returns everything a compliance officer needs in one call.",
     longDescription:
-      "Runs a full Enhanced Due Diligence (EDD) workflow: fetches official company registry data, looks up beneficial owners via OpenOwnership/Companies House, screens against international sanctions lists, checks for Politically Exposed Persons, and searches for adverse media coverage. All steps run in parallel where possible for fast results.",
+      "Runs a full Enhanced Due Diligence (EDD) workflow: fetches official company registry data, looks up beneficial owners via Companies House for UK companies, screens against international sanctions lists, checks for Politically Exposed Persons, and searches for adverse media coverage. All steps run in parallel where possible for fast results.",
     agentDescription:
       "full company due diligence, EDD check, enhanced due diligence company, KYC AML company check, compliance screening company, beneficial ownership sanctions PEP adverse media",
     category: "compliance",
