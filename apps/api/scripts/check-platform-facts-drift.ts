@@ -25,11 +25,22 @@
  *
  * Each drift is a `(file, line, problem, current_truth)` tuple — the
  * fix is always to re-read the source of truth from /v1/platform/facts.
+ *
+ * Reference lists derive from `apps/api/src/lib/platform-facts.ts` via
+ * `getActiveVendorNames()` and `getStaleVendorNames()`. The unit test in
+ * `platform-facts.test.ts` asserts every name in `getActiveVendorNames()`
+ * corresponds to a shipped capability slug — closing the "vendor listed
+ * without integration" mode that produced the OpenSanctions and
+ * OpenOwnership course-corrections (2026-05-01, 2026-05-07).
  */
 
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { resolve, dirname, relative, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  STATIC_FACTS,
+  getStaleVendorNames,
+} from "../src/lib/platform-facts.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../../..");
@@ -39,64 +50,11 @@ const frontendRoot = process.env.STRALE_FRONTEND_PATH
 
 const strict = process.argv.includes("--strict");
 
-// ─── Source-of-truth values ────────────────────────────────────────────────
-//
-// Hardcoded here mirroring STATIC_FACTS in apps/api/src/lib/platform-facts.ts.
-// A unit test (platform-facts.test.ts) asserts the runtime values match;
-// this script asserts the consumer surfaces match the runtime values.
-// Two layers of defence — TS test for code, lint for prose.
-
-const CURRENT_VENDORS = {
-  sanctions: "Dilisense",
-  pep: "Dilisense",
-  adverse_media_primary: "Dilisense",
-  iban_name_match_eu: "Digiteal",
-  iban_name_match_uk: "eSortcode",
-  us_company_registry: "Cobalt Intelligence",
-  us_ein: "Liberty Data",
-  ubo_supplement_global: "GLEIF L2",
-  fr_litigation: "BODACC",
-};
-
-// Vendors that have been Rejected or Deferred per the Vendor Roster
-// (af5a164b-dea9-4837-9835-210ae69b4283) and DEC-20260430-A. These should
-// NEVER appear in consumer-facing copy as if they were active. The single
-// permitted location for these names is the Vendor Roster itself, where
-// each row documents WHY the vendor was rejected.
-//
-// IMPORTANT: when a vendor's status changes, update this list at the same
-// time as the Vendor Roster row and the Active Vendor Stack page. See the
-// "Vendor stack maintenance" section in How this workspace works.
-const STALE_VENDORS = [
-  // Sanctions/PEP — self-host deferred 2026-04-29 per DEC-20260429-A
-  "OpenSanctions self-host",
-  // IBAN/name match — all rejected per DEC-20260430-A
-  "SurePay",
-  "MonitorPay",
-  "Movitz",
-  "Banfico",
-  "iPiD",
-  "Bottomline",
-  "Yapily",
-  // US registry / EIN / KYB workflow — all rejected per DEC-20260430-A
-  "Middesk",
-  "Persona",
-  "Socure",
-  "GovLink",
-  // Sanctions/PEP/adverse-media competitors — rejected
-  "ComplyAdvantage",
-  // UBO — OpenOwnership BODS evaluated 2026-04-02 in apps/api/docs/ubo-resolve-uk-bods-evaluation.md
-  // and deferred (no Strale integration). Marketing-copy claims removed 2026-05-07
-  // (fix/openownership-copy-drift). DEF-20260507-B-DKUBO triggers reframed.
-  "OpenOwnership",
-];
-const RETENTION_DAYS = 1095;
-
 // ─── Walker ────────────────────────────────────────────────────────────────
 
-function walk(dir, exts) {
+function walk(dir: string, exts: string[]): string[] {
   if (!existsSync(dir)) return [];
-  const out = [];
+  const out: string[] = [];
   for (const entry of readdirSync(dir)) {
     if (entry === "node_modules" || entry === "dist" || entry === ".next" || entry === "build") continue;
     const full = join(dir, entry);
@@ -117,13 +75,20 @@ function walk(dir, exts) {
 
 // ─── Findings collector ────────────────────────────────────────────────────
 
-const findings = [];
+interface Finding {
+  file: string;
+  line: number;
+  problem: string;
+  truth: string;
+}
+
+const findings: Finding[] = [];
 
 // Skip lines that are JSDoc / line comments / JSX comment blocks — the
 // drift checks fire on prose, and our own "fixed Cert-audit Y-N: ..."
 // comments shouldn't trigger false positives. Covers `// ...`,
 // `* ...` (continuation), `/* ...`, `{/* ...` (JSX), and `<!-- ...` (HTML).
-function isCommentLine(line) {
+function isCommentLine(line: string): boolean {
   const t = line.trimStart();
   return (
     t.startsWith("//") ||
@@ -134,7 +99,7 @@ function isCommentLine(line) {
   );
 }
 
-function flag(file, line, problem, truth) {
+function flag(file: string, line: number, problem: string, truth: string): void {
   findings.push({
     file: relative(repoRoot, file).replace(/\\/g, "/"),
     line,
@@ -163,13 +128,15 @@ const surfaceRoots = [
   resolve(frontendRoot, "index.html"),
 ];
 
-const surfaceFiles = [];
+const surfaceFiles: string[] = [];
 for (const r of surfaceRoots) {
   if (!existsSync(r)) continue;
   const stat = statSync(r);
   if (stat.isFile()) surfaceFiles.push(r);
   else surfaceFiles.push(...walk(r, [".ts", ".tsx", ".js", ".jsx", ".md", ".txt", ".json"]));
 }
+
+const staleVendors = getStaleVendorNames();
 
 for (const file of surfaceFiles) {
   let src;
@@ -181,7 +148,7 @@ for (const file of surfaceFiles) {
   const lines = src.split("\n");
   for (let i = 0; i < lines.length; i++) {
     if (isCommentLine(lines[i])) continue;
-    for (const stale of STALE_VENDORS) {
+    for (const stale of staleVendors) {
       // Word-boundary match — avoid matching substrings of other words.
       const pattern = new RegExp(`\\b${stale}\\b`, "i");
       if (pattern.test(lines[i])) {
@@ -189,7 +156,7 @@ for (const file of surfaceFiles) {
           file,
           i + 1,
           `references stale vendor "${stale}"`,
-          `current sanctions/PEP vendor is "${CURRENT_VENDORS.sanctions}" per DEC-20260429-A`,
+          `current sanctions/PEP vendor is "${STATIC_FACTS.vendors.sanctions}" per DEC-20260429-A`,
         );
       }
     }
@@ -197,6 +164,8 @@ for (const file of surfaceFiles) {
 }
 
 // ─── Check 2: hardcoded retention numbers near audit/retention copy ────────
+
+const retentionDays = STATIC_FACTS.retention_days_default;
 
 for (const file of surfaceFiles) {
   let src;
@@ -214,7 +183,7 @@ for (const file of surfaceFiles) {
     const m = line.match(/(\d+)\s*day/i);
     if (!m) continue;
     const claimed = parseInt(m[1], 10);
-    if (claimed === RETENTION_DAYS) continue;
+    if (claimed === retentionDays) continue;
     // Only flag if the line context is about retention/storage. The
     // word "audit" alone is too broad (matches "auditing third-party
     // services" or "security audit"); require an explicit retention
@@ -228,7 +197,7 @@ for (const file of surfaceFiles) {
       file,
       i + 1,
       `claims "${claimed} days" near retention/audit context`,
-      `default retention is ${RETENTION_DAYS} days (TRANSACTION_RETENTION_DAYS)`,
+      `default retention is ${retentionDays} days (TRANSACTION_RETENTION_DAYS)`,
     );
   }
 }
@@ -309,10 +278,10 @@ if (findings.length === 0) {
 }
 
 console.log(`\n${findings.length} drift finding(s):\n`);
-const groupedByFile = new Map();
+const groupedByFile = new Map<string, Finding[]>();
 for (const f of findings) {
   if (!groupedByFile.has(f.file)) groupedByFile.set(f.file, []);
-  groupedByFile.get(f.file).push(f);
+  groupedByFile.get(f.file)!.push(f);
 }
 for (const [file, items] of groupedByFile) {
   console.log(`  ${file}`);
