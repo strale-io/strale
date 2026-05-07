@@ -55,7 +55,16 @@ const wantDoc = args.includes("--doc");
 const wantStrict = args.includes("--strict");
 const days = Number(args.find((a) => a.startsWith("--days="))?.split("=")[1] ?? 30);
 
-function printManualProcedure() {
+interface NotionPage {
+  url: string;
+  properties: Record<string, unknown>;
+}
+
+interface NotionQueryResult {
+  results?: NotionPage[];
+}
+
+function printManualProcedure(): void {
   console.log(`
 ─── Vendor Roster Drift Check — Manual Procedure ───────────────────────
 
@@ -91,7 +100,7 @@ Step 6. If any are stale → update the row in the same session and add
 Step 7. Verify the Active Vendor Stack page (${ACTIVE_VENDOR_STACK_PAGE})
         does not contradict the updated row. Update if it does.
 
-Step 8. Run check-platform-facts-drift.mjs to verify no consumer page
+Step 8. Run check-platform-facts-drift.ts to verify no consumer page
         names a now-Rejected vendor in prose.
 
 Done. Drift sweep complete.
@@ -113,7 +122,12 @@ make Vendor Roster ↔ Decisions DB drift visible.
 `);
 }
 
-async function fetchNotionDB(dataSourceId, token, filter, sorts) {
+async function fetchNotionDB(
+  dataSourceId: string,
+  token: string,
+  filter: unknown,
+  sorts: unknown,
+): Promise<NotionQueryResult> {
   const res = await fetch(`https://api.notion.com/v1/databases/${dataSourceId}/query`, {
     method: "POST",
     headers: {
@@ -127,21 +141,21 @@ async function fetchNotionDB(dataSourceId, token, filter, sorts) {
     const text = await res.text();
     throw new Error(`Notion API ${res.status}: ${text}`);
   }
-  return await res.json();
+  return (await res.json()) as NotionQueryResult;
 }
 
-function getProp(props, name) {
-  const p = props?.[name];
+function getProp(props: Record<string, unknown> | undefined, name: string): unknown {
+  const p = (props as Record<string, any> | undefined)?.[name];
   if (!p) return null;
-  if (p.type === "title") return p.title?.map((t) => t.plain_text).join("") ?? "";
-  if (p.type === "rich_text") return p.rich_text?.map((t) => t.plain_text).join("") ?? "";
+  if (p.type === "title") return p.title?.map((t: any) => t.plain_text).join("") ?? "";
+  if (p.type === "rich_text") return p.rich_text?.map((t: any) => t.plain_text).join("") ?? "";
   if (p.type === "select") return p.select?.name ?? null;
   if (p.type === "date") return p.date?.start ?? null;
-  if (p.type === "relation") return p.relation?.map((r) => r.id) ?? [];
+  if (p.type === "relation") return p.relation?.map((r: any) => r.id) ?? [];
   return null;
 }
 
-async function runCheck() {
+async function runCheck(): Promise<number> {
   const token = process.env.NOTION_TOKEN;
   if (!token) {
     console.log("NOTION_TOKEN not set — falling back to manual procedure.\n");
@@ -166,24 +180,30 @@ async function runCheck() {
   const roster = await fetchNotionDB(VENDOR_ROSTER_DS, token, undefined, undefined);
 
   // Build name → row index for vendors
-  const vendorByName = new Map();
+  const vendorByName = new Map<string, NotionPage>();
   for (const row of roster.results ?? []) {
-    const name = getProp(row.properties, "Vendor")?.toLowerCase().trim();
+    const name = (getProp(row.properties, "Vendor") as string | null)?.toLowerCase().trim();
     if (name) vendorByName.set(name, row);
   }
 
-  let driftFound = 0;
-  const findings = [];
+  const findings: Array<{
+    vendor: unknown;
+    decision: string;
+    decDate: unknown;
+    rowLastEval: unknown;
+    rowUrl: string;
+    decUrl: string;
+  }> = [];
 
   for (const dec of decisions.results ?? []) {
-    const decTitle = getProp(dec.properties, "Decision") ?? "";
-    const decDate = getProp(dec.properties, "Date");
+    const decTitle = (getProp(dec.properties, "Decision") as string | null) ?? "";
+    const decDate = getProp(dec.properties, "Date") as string | null;
     if (!decDate) continue;
 
     // Crude vendor-name match: any vendor name appearing in the title is a candidate.
     for (const [vendorName, row] of vendorByName) {
       if (decTitle.toLowerCase().includes(vendorName)) {
-        const rowLastEval = getProp(row.properties, "Last evaluated");
+        const rowLastEval = getProp(row.properties, "Last evaluated") as string | null;
         if (!rowLastEval || rowLastEval < decDate) {
           findings.push({
             vendor: getProp(row.properties, "Vendor"),
@@ -193,14 +213,13 @@ async function runCheck() {
             rowUrl: row.url,
             decUrl: dec.url,
           });
-          driftFound++;
         }
       }
     }
   }
 
   if (findings.length === 0) {
-    console.log(`✓ No drift detected. ${roster.results.length} vendor rows checked against ${decisions.results.length} Decisions in the last ${days} days.`);
+    console.log(`✓ No drift detected. ${roster.results?.length ?? 0} vendor rows checked against ${decisions.results?.length ?? 0} Decisions in the last ${days} days.`);
     return 0;
   }
 
@@ -222,8 +241,8 @@ if (wantDoc) {
 } else {
   runCheck().then(
     (code) => process.exit(code),
-    (err) => {
-      console.error(`Error: ${err.message}`);
+    (err: unknown) => {
+      console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
       process.exit(2);
     },
   );

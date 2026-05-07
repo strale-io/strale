@@ -42,11 +42,11 @@
  *
  * Requires NOTION_TOKEN in env (a Notion integration token with read
  * access to all three databases). Same token as
- * check-vendor-roster-drift.mjs uses. Without it, falls back to --doc
+ * check-vendor-roster-drift.ts uses. Without it, falls back to --doc
  * mode and prints the manual procedure.
  *
  * Wired into the weekly drift sweep workflow (.github/workflows/
- * weekly-drift.yml) alongside check-vendor-roster-drift.mjs.
+ * weekly-drift.yml) alongside check-vendor-roster-drift.ts.
  *
  * Database IDs (Strale workspace, 2026-05-05):
  *   Provider-Coverage matrix database: 396c619280ef4397adcbcdc067ead321
@@ -65,27 +65,17 @@ const DECISIONS_DS = "ea57671f-7167-44e4-a254-c0a1de79e7f9";
 const PROVIDER_COVERAGE_PAGE = "https://app.notion.com/p/34867c87082c81879391ebc05a9b3d90";
 const VENDOR_ROSTER_PAGE = "https://app.notion.com/p/af5a164bdea948379835210ae69b4283";
 
-// Provider names in the matrix that are gov registries / free public
-// APIs — they have no Vendor Roster row and shouldn't be flagged as
-// "missing from Roster" drift. Listed for explicit allow-listing only;
-// the script's primary "skip if no Roster match" logic catches them
-// regardless. Kept here as a sanity reference.
-const KNOWN_GOV_REGISTRY_PROVIDERS = new Set([
-  "Companies House", "VIES", "GLEIF", "Bolagsverket", "Brreg", "CVR",
-  "PRH", "Handelsregister", "Infogreffe", "INSEE", "KVK", "BCE-KBO",
-  "CRO", "Registro Imprese", "Registro Mercantil", "Portugal IRN",
-  "FN", "ARES", "Ariregister", "KRS", "Registru centras",
-  "Uznemumu registrs", "ABN Lookup", "OFAC", "EU Sanctions", "UK HMT",
-  "UN Sanctions", "PSC register", "Transparenzregister",
-  "UBO register NL", "RBE",
-]);
-
 const args = process.argv.slice(2);
 const wantDoc = args.includes("--doc");
 const wantStrict = args.includes("--strict");
 const days = Number(args.find((a) => a.startsWith("--days="))?.split("=")[1] ?? 30);
 
-function printManualProcedure() {
+interface NotionPage {
+  url: string;
+  properties: Record<string, unknown>;
+}
+
+function printManualProcedure(): void {
   console.log(`
 ─── Provider-Coverage Drift Check — Manual Procedure ────────────────────
 
@@ -134,11 +124,16 @@ audit. This script catches the same shape of drift automatically.
 `);
 }
 
-async function fetchNotionDB(dataSourceId, token, filter, sorts) {
-  const out = [];
-  let cursor = undefined;
+async function fetchNotionDB(
+  dataSourceId: string,
+  token: string,
+  filter: unknown,
+  sorts: unknown,
+): Promise<NotionPage[]> {
+  const out: NotionPage[] = [];
+  let cursor: string | undefined = undefined;
   for (;;) {
-    const body = { page_size: 100 };
+    const body: Record<string, unknown> = { page_size: 100 };
     if (filter) body.filter = filter;
     if (sorts) body.sorts = sorts;
     if (cursor) body.start_cursor = cursor;
@@ -155,7 +150,7 @@ async function fetchNotionDB(dataSourceId, token, filter, sorts) {
       const text = await res.text();
       throw new Error(`Notion API ${res.status}: ${text}`);
     }
-    const json = await res.json();
+    const json = (await res.json()) as { results?: NotionPage[]; has_more?: boolean; next_cursor?: string };
     out.push(...(json.results ?? []));
     if (!json.has_more || !json.next_cursor) break;
     cursor = json.next_cursor;
@@ -163,24 +158,37 @@ async function fetchNotionDB(dataSourceId, token, filter, sorts) {
   return out;
 }
 
-function getProp(props, name) {
-  const p = props?.[name];
+function getProp(props: Record<string, unknown> | undefined, name: string): unknown {
+  const p = (props as Record<string, any> | undefined)?.[name];
   if (!p) return null;
-  if (p.type === "title") return p.title?.map((t) => t.plain_text).join("") ?? "";
-  if (p.type === "rich_text") return p.rich_text?.map((t) => t.plain_text).join("") ?? "";
+  if (p.type === "title") return p.title?.map((t: any) => t.plain_text).join("") ?? "";
+  if (p.type === "rich_text") return p.rich_text?.map((t: any) => t.plain_text).join("") ?? "";
   if (p.type === "select") return p.select?.name ?? null;
-  if (p.type === "multi_select") return p.multi_select?.map((o) => o.name) ?? [];
+  if (p.type === "multi_select") return p.multi_select?.map((o: any) => o.name) ?? [];
   if (p.type === "date") return p.date?.start ?? null;
   if (p.type === "number") return p.number ?? null;
-  if (p.type === "relation") return p.relation?.map((r) => r.id) ?? [];
+  if (p.type === "relation") return p.relation?.map((r: any) => r.id) ?? [];
   return null;
 }
 
-function normalizeName(s) {
+function normalizeName(s: string | null | undefined): string {
   return (s ?? "").toLowerCase().trim();
 }
 
-async function runCheck() {
+interface RosterMatch {
+  vendor: unknown;
+  status: string | null;
+  lastEvaluated: string | null;
+  url: string;
+}
+
+interface DecisionMatch {
+  decTitle: string;
+  decDate: string;
+  decUrl: string;
+}
+
+async function runCheck(): Promise<number> {
   const token = process.env.NOTION_TOKEN;
   if (!token) {
     console.log("NOTION_TOKEN not set — falling back to manual procedure.\n");
@@ -202,14 +210,14 @@ async function runCheck() {
   ]);
 
   // Build vendor → {status, lastEvaluated, url} map keyed on normalised name.
-  const rosterByName = new Map();
+  const rosterByName = new Map<string, RosterMatch>();
   for (const row of rosterRows) {
-    const name = normalizeName(getProp(row.properties, "Vendor"));
+    const name = normalizeName(getProp(row.properties, "Vendor") as string | null);
     if (!name) continue;
     rosterByName.set(name, {
       vendor: getProp(row.properties, "Vendor"),
-      status: getProp(row.properties, "Status"),
-      lastEvaluated: getProp(row.properties, "Last evaluated"),
+      status: getProp(row.properties, "Status") as string | null,
+      lastEvaluated: getProp(row.properties, "Last evaluated") as string | null,
       url: row.url,
     });
   }
@@ -217,10 +225,10 @@ async function runCheck() {
   // Build provider-name → most-recent-decision-date map. Title-substring
   // match is intentionally loose: any Decision whose title contains a
   // Vendor Roster vendor name (case-insensitive) is "touching" that vendor.
-  const decisionByVendor = new Map();
+  const decisionByVendor = new Map<string, DecisionMatch>();
   for (const dec of decisions) {
-    const decTitle = getProp(dec.properties, "Decision") ?? "";
-    const decDate = getProp(dec.properties, "Date");
+    const decTitle = (getProp(dec.properties, "Decision") as string | null) ?? "";
+    const decDate = getProp(dec.properties, "Date") as string | null;
     if (!decDate) continue;
     const titleLower = decTitle.toLowerCase();
     for (const [vendorName] of rosterByName) {
@@ -238,24 +246,49 @@ async function runCheck() {
   }
 
   const liveStatuses = new Set(["Live", "Committed", "In discovery"]);
-  const findings = [];
+  type Finding =
+    | {
+        kind: "status";
+        entry: unknown;
+        country: unknown;
+        evidenceType: unknown;
+        provider: unknown;
+        matrixStatus: string | null;
+        rosterStatus: string | null;
+        rosterUrl: string;
+        rowUrl: string;
+      }
+    | {
+        kind: "stale-verified";
+        entry: unknown;
+        country: unknown;
+        evidenceType: unknown;
+        provider: unknown;
+        matrixStatus: string | null;
+        lastVerified: string;
+        decTitle: string;
+        decDate: string;
+        decUrl: string;
+        rowUrl: string;
+      };
+  const findings: Finding[] = [];
 
   for (const row of coverageRows) {
     const props = row.properties;
     const provider = getProp(props, "Provider");
-    const status = getProp(props, "Status");
-    const lastVerified = getProp(props, "Last verified");
+    const status = getProp(props, "Status") as string | null;
+    const lastVerified = getProp(props, "Last verified") as string | null;
     const country = getProp(props, "Country");
     const evidenceType = getProp(props, "Evidence Type");
     const entry = getProp(props, "Entry") ?? "(untitled row)";
     if (!provider) continue;
 
-    const providerKey = normalizeName(provider);
+    const providerKey = normalizeName(provider as string);
     const rosterMatch = rosterByName.get(providerKey);
 
     // Check 1: status drift — matrix Live/Committed/In discovery while
     // Roster says non-Active.
-    if (rosterMatch && rosterMatch.status && rosterMatch.status !== "Active" && liveStatuses.has(status)) {
+    if (rosterMatch && rosterMatch.status && rosterMatch.status !== "Active" && status && liveStatuses.has(status)) {
       findings.push({
         kind: "status",
         entry,
@@ -300,8 +333,8 @@ async function runCheck() {
     return 0;
   }
 
-  const statusFindings = findings.filter((f) => f.kind === "status");
-  const staleFindings = findings.filter((f) => f.kind === "stale-verified");
+  const statusFindings = findings.filter((f): f is Extract<Finding, { kind: "status" }> => f.kind === "status");
+  const staleFindings = findings.filter((f): f is Extract<Finding, { kind: "stale-verified" }> => f.kind === "stale-verified");
 
   console.log(`⚠ ${findings.length} potential drift case(s) found. ${summary}\n`);
 
@@ -338,8 +371,8 @@ if (wantDoc) {
 } else {
   runCheck().then(
     (code) => process.exit(code),
-    (err) => {
-      console.error(`Error: ${err.message}`);
+    (err: unknown) => {
+      console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
       process.exit(2);
     },
   );

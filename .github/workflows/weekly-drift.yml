@@ -46,7 +46,7 @@ jobs:
       - id: facts-drift
         run: |
           set +e
-          node apps/api/scripts/check-platform-facts-drift.mjs 2>&1 | tee /tmp/facts-drift.txt
+          cd apps/api && npx tsx scripts/check-platform-facts-drift.ts 2>&1 | tee /tmp/facts-drift.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
@@ -74,7 +74,7 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: |
           set +e
-          node apps/api/scripts/check-vendor-roster-drift.mjs --strict 2>&1 | tee /tmp/vendor-roster.txt
+          cd apps/api && npx tsx scripts/check-vendor-roster-drift.ts --strict 2>&1 | tee /tmp/vendor-roster.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
@@ -87,7 +87,7 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: |
           set +e
-          node apps/api/scripts/check-provider-coverage-drift.mjs --strict 2>&1 | tee /tmp/provider-coverage.txt
+          cd apps/api && npx tsx scripts/check-provider-coverage-drift.ts --strict 2>&1 | tee /tmp/provider-coverage.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
