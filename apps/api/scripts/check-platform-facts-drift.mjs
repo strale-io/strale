@@ -55,7 +55,6 @@ const CURRENT_VENDORS = {
   us_company_registry: "Cobalt Intelligence",
   us_ein: "Liberty Data",
   ubo_supplement_global: "GLEIF L2",
-  ubo_uk_dk_sk_smes: "OpenOwnership",
   fr_litigation: "BODACC",
 };
 
@@ -86,6 +85,10 @@ const STALE_VENDORS = [
   "GovLink",
   // Sanctions/PEP/adverse-media competitors — rejected
   "ComplyAdvantage",
+  // UBO — OpenOwnership BODS evaluated 2026-04-02 in apps/api/docs/ubo-resolve-uk-bods-evaluation.md
+  // and deferred (no Strale integration). Marketing-copy claims removed 2026-05-07
+  // (fix/openownership-copy-drift). DEF-20260507-B-DKUBO triggers reframed.
+  "OpenOwnership",
 ];
 const RETENTION_DAYS = 1095;
 
