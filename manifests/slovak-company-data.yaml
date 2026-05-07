@@ -1,0 +1,155 @@
+slug: slovak-company-data
+name: Slovak Company Data
+description: >-
+  Look up Slovak company data from RPO (Register právnických osôb), the Slovak Statistical Office's authoritative
+  legal-persons register. Returns name, address, legal form, registration details, and statutory representatives. Free,
+  CC-BY 4.0.
+category: company-data
+price_cents: 5
+is_free_tier: false
+data_source: Register právnických osôb (ŠÚ SR / Statistical Office of the Slovak Republic), CC-BY 4.0
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+marketplace_eligible: true
+avg_latency_ms: 1500
+input_schema:
+  type: object
+  required:
+    - ico
+  properties:
+    ico:
+      type: string
+      description: Slovak IČO (8-digit identifier, zero-padded if shorter)
+output_schema:
+  type: object
+  properties:
+    ico:
+      type: string
+    company_name:
+      type: string
+    address:
+      type: string
+    legal_form:
+      type: string
+    legal_form_code:
+      type: string
+    registration_date:
+      type: string
+    status:
+      type: string
+    source_register:
+      type: string
+    registration_office:
+      type: string
+    registration_number:
+      type: string
+    nace_code:
+      type: string
+    nace_description:
+      type: string
+    directors:
+      type: array
+      items:
+        type: string
+    last_updated:
+      type: string
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - address
+  - professional
+geography: eu
+test_fixtures:
+  health_check_input:
+    ico: "36674141"
+  known_answer:
+    input:
+      ico: "36674141"
+    expected_fields:
+      - field: ico
+        operator: equals
+        reliability: guaranteed
+        value: "36674141"
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: address
+        operator: not_null
+        reliability: guaranteed
+      - field: legal_form
+        operator: not_null
+        reliability: common
+      - field: legal_form_code
+        operator: equals
+        reliability: common
+        value: "112"
+      - field: registration_date
+        operator: equals
+        reliability: guaranteed
+        value: "2006-09-13"
+      - field: status
+        operator: equals
+        reliability: guaranteed
+        value: active
+      - field: source_register
+        operator: not_null
+        reliability: guaranteed
+      - field: registration_office
+        operator: not_null
+        reliability: common
+      - field: registration_number
+        operator: equals
+        reliability: common
+        value: Sro/42251/B
+      - field: nace_code
+        operator: equals
+        reliability: common
+        value: "4690"
+      - field: nace_description
+        operator: not_null
+        reliability: common
+      - field: directors
+        operator: not_null
+        reliability: common
+      - field: last_updated
+        operator: not_null
+        reliability: common
+limitations:
+  - title: Unauthenticated rate limit is 60 requests/minute per IP
+    text: >-
+      The Slovak RPO API limits anonymous traffic to 60 requests per minute per IP. Sustained higher throughput requires
+      registering for authenticated access with ŠÚ SR.
+    category: throughput
+    severity: info
+  - title: Status is derived, not explicit
+    text: >-
+      RPO does not publish an explicit active/dissolved flag at the entity root. Status is derived from whether the
+      current address, legal form, and identifier records are still open (no validTo). An entity with all three open
+      is reported as active; otherwise inactive. Name is excluded because rebrands close the prior name without
+      dissolving the company.
+    category: accuracy
+    severity: info
+  - title: Internal id is required for full detail
+    text: >-
+      RPO's lookup is a two-step pattern — search by IČO returns a lightweight match with the internal id, which is then
+      used to fetch the full entity. Each call counts against the 60 rpm limit, so effective throughput per IČO lookup
+      is 30/min.
+    category: coverage
+    severity: info
+output_field_reliability:
+  ico: guaranteed
+  company_name: guaranteed
+  address: guaranteed
+  legal_form: common
+  legal_form_code: common
+  registration_date: guaranteed
+  status: guaranteed
+  source_register: guaranteed
+  registration_office: common
+  registration_number: common
+  nace_code: common
+  nace_description: common
+  directors: common
+  last_updated: common
