@@ -77,7 +77,7 @@ const KNOWN_GOV_REGISTRY_PROVIDERS = new Set([
   "FN", "ARES", "Ariregister", "KRS", "Registru centras",
   "Uznemumu registrs", "ABN Lookup", "OFAC", "EU Sanctions", "UK HMT",
   "UN Sanctions", "PSC register", "Transparenzregister",
-  "UBO register NL", "RBE", "OpenOwnership",
+  "UBO register NL", "RBE",
 ]);
 
 const args = process.argv.slice(2);
