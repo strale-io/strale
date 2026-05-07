@@ -154,8 +154,8 @@ limitations:
     category: coverage
     severity: info
     workaround: >-
-      For SMEs without an LEI, use country-specific UBO sources (e.g. Companies House PSC for UK, OpenOwnership BODS for
-      UK/DK/SK).
+      For SMEs without an LEI, use country-specific UBO sources such as Companies House PSC for UK companies (exposed via the
+      beneficial-ownership-lookup capability).
   - title: Reporting exceptions are common
     text: >-
       Many entities report a structured "reporting exception" instead of naming a parent (NATURAL_PERSONS,

@@ -4643,7 +4643,7 @@
     {
       "slug": "beneficial-ownership-lookup",
       "name": "Beneficial Ownership Lookup",
-      "description": "Look up beneficial ownership (UBO) information for a company. Returns individuals who ultimately own or control the entity, their ownership percentage, and the ownership chain. Uses OpenOwnership and Companies House for UK companies.",
+      "description": "Look up UK beneficial ownership (UBO / PSC) information for a company. Returns individuals who ultimately own or control the entity, their ownership percentage, and the ownership chain. Uses Companies House Persons of Significant Control. UK only; non-GB inputs return a coverage notice.",
       "category": "compliance",
       "price_cents": 25,
       "input_schema": {
