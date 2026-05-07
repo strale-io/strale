@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { STATIC_FACTS, extractCountryCodes } from "./platform-facts.js";
+import { readdirSync } from "node:fs";
+import { resolve } from "node:path";
+import {
+  STATIC_FACTS,
+  STALE_VENDORS,
+  extractCountryCodes,
+  getActiveVendorNames,
+  getStaleVendorNames,
+} from "./platform-facts.js";
 import { TRANSACTION_RETENTION_DAYS } from "./data-retention.js";
 
 describe("platform-facts STATIC_FACTS", () => {
@@ -47,6 +55,83 @@ describe("platform-facts STATIC_FACTS", () => {
     // YYYY-MM-DD, so it sorts and is unambiguous. Bump in lockstep
     // with the Terms page LAST_UPDATED.
     expect(STATIC_FACTS.tos_version_current).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe("platform-facts vendor helpers (Phase B substrate)", () => {
+  // Map each STATIC_FACTS.vendors category to one or more capability-slug
+  // substrings that prove the vendor ships. A category passes if at least
+  // one capability file matches at least one of its substrings.
+  // Categories with no capability path (purely-runtime infrastructure: Stripe,
+  // x402 facilitator, Browserless headless layer, log sink, embeddings/risk
+  // helpers used internally) are explicitly opted out via `null`.
+  const VENDOR_CATEGORY_SLUG_HINTS: Record<keyof typeof STATIC_FACTS.vendors, string[] | null> = {
+    sanctions: ["sanctions-check"],
+    pep: ["pep-check"],
+    adverse_media_primary: ["adverse-media-check"],
+    adverse_media_fallback: ["adverse-media-check"],
+    embeddings: null,
+    risk_narrative: ["risk-narrative-generate"],
+    headless_browser: null,
+    payments_card: null,
+    payments_x402: null,
+    log_sink: null,
+    us_company_registry: ["us-company-data-cobalt", "us-company-data"],
+    us_ein: ["us-ein-match"],
+    ubo_supplement_global: ["gleif-l2-ubo-lookup", "gleif-l2-children-lookup"],
+    fr_litigation: ["fr-bodacc-lookup"],
+  };
+
+  function listCapabilitySlugs(): string[] {
+    const dir = resolve(import.meta.dirname, "../capabilities");
+    return readdirSync(dir)
+      .filter((f) => f.endsWith(".ts") && !f.endsWith(".d.ts") && f !== "index.ts" && f !== "auto-register.ts")
+      .map((f) => f.replace(/\.ts$/, ""));
+  }
+
+  it("every checked STATIC_FACTS.vendors category corresponds to a shipped capability slug", () => {
+    // Replaces the obsolete 'unit test asserts runtime values match'
+    // claim that lived in check-platform-facts-drift.mjs's header.
+    // New invariant: a vendor named in the canonical map must have shipped
+    // a capability slug. Catches the 'vendor listed without integration'
+    // mode (the OpenOwnership / OpenSanctions failure shape).
+    const slugs = new Set(listCapabilitySlugs());
+    const missing: string[] = [];
+    for (const [category, hints] of Object.entries(VENDOR_CATEGORY_SLUG_HINTS) as Array<
+      [keyof typeof STATIC_FACTS.vendors, string[] | null]
+    >) {
+      if (hints === null) continue;
+      const matched = hints.some((h) => slugs.has(h));
+      if (!matched) {
+        missing.push(`${category} (no capability matched any of: ${hints.join(", ")})`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  it("getActiveVendorNames() and getStaleVendorNames() are disjoint", () => {
+    // A vendor cannot be both active and stale. Catches the failure mode
+    // where a vendor switch leaves the old name in both lists.
+    const active = getActiveVendorNames();
+    const stale = getStaleVendorNames();
+    const overlap = [...active].filter((n) => stale.has(n));
+    expect(overlap).toEqual([]);
+  });
+
+  it("getActiveVendorNames() is non-empty", () => {
+    expect(getActiveVendorNames().size).toBeGreaterThan(0);
+  });
+
+  it("getStaleVendorNames() is non-empty", () => {
+    expect(getStaleVendorNames().size).toBeGreaterThan(0);
+  });
+
+  it("STALE_VENDORS contains the historical superseded vendors", () => {
+    // Pin a known-stale subset so a careless edit can't empty the list.
+    const stale = getStaleVendorNames();
+    for (const name of ["OpenSanctions self-host", "SurePay", "OpenOwnership"]) {
+      expect(stale.has(name)).toBe(true);
+    }
   });
 });
 

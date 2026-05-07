@@ -57,6 +57,13 @@ export const STATIC_FACTS = {
     payments_card: "Stripe",
     payments_x402: "Coinbase x402 facilitator (USDC on Base)",
     log_sink: "Better Stack",
+    // Added 2026-05-07 as part of Phase B (drift-check refactor). Each entry
+    // is gated by the platform-facts.test.ts assertion that the vendor name
+    // corresponds to a shipped capability slug under apps/api/src/capabilities/.
+    us_company_registry: "Cobalt Intelligence",
+    us_ein: "Liberty Data",
+    ubo_supplement_global: "GLEIF L2",
+    fr_litigation: "BODACC",
   } as const,
 
   /**
@@ -93,6 +100,62 @@ export const STATIC_FACTS = {
    */
   tos_version_current: "2026-04-30",
 } as const;
+
+/**
+ * Vendors that should NEVER appear in customer-facing copy as if active.
+ *
+ * The name "STALE_VENDORS" understates the scope — this list covers vendors
+ * Strale has explicitly Rejected, Deferred, marked Pending eval / sign-up,
+ * or kept Evaluation-only. None are integrated. The drift check fires on any
+ * mention of these names in scanned consumer surfaces. When a vendor in this
+ * list ships a capability slug, move its entry from here into
+ * `STATIC_FACTS.vendors` in the same PR that ships the capability.
+ *
+ * Established as the canonical home for this list 2026-05-07 per chat-session
+ * decision. Course-correction Journal entry naming the underlying pattern
+ * (drift-check scripts carrying their own copies of canonical lists):
+ * https://www.notion.so/35967c87082c81dc905fceff85603fe5
+ */
+export const STALE_VENDORS = [
+  // Sanctions/PEP — self-host deferred 2026-04-29 per DEC-20260429-A
+  "OpenSanctions self-host",
+  // IBAN/name match — all rejected per DEC-20260430-A
+  "SurePay",
+  "MonitorPay",
+  "Movitz",
+  "Banfico",
+  "iPiD",
+  "Bottomline",
+  "Yapily",
+  // US registry / EIN / KYB workflow — all rejected per DEC-20260430-A
+  "Middesk",
+  "Persona",
+  "Socure",
+  "GovLink",
+  // Sanctions/PEP/adverse-media competitors — rejected
+  "ComplyAdvantage",
+  // UBO — OpenOwnership BODS evaluated 2026-04-02 in apps/api/docs/ubo-resolve-uk-bods-evaluation.md
+  // and deferred (no Strale integration). Marketing-copy claims removed 2026-05-07
+  // (PR #62). DEF-20260507-B-DKUBO triggers reframed.
+  "OpenOwnership",
+] as const;
+
+/**
+ * Flat set of every active vendor name across all categories in
+ * `STATIC_FACTS.vendors`. The drift-check scripts use this to detect
+ * stale-vendor mentions in customer-facing surfaces (i.e., a vendor name
+ * appearing where a current-vendor mention should appear instead).
+ */
+export function getActiveVendorNames(): Set<string> {
+  return new Set<string>(Object.values(STATIC_FACTS.vendors));
+}
+
+/**
+ * Flat set of stale-vendor names. See `STALE_VENDORS` for semantics.
+ */
+export function getStaleVendorNames(): Set<string> {
+  return new Set<string>(STALE_VENDORS);
+}
 
 // ─── Live facts (computed from DB) ──────────────────────────────────────────
 
