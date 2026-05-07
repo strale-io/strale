@@ -389,12 +389,17 @@ export function categorizeFailureReason(reason: string | null): FailureCategory 
       !lower.includes("no matching capability")) return "endpoint_gone";
 
   // 5. transient — temporary failures, retry will help
+  // Phase 3 Harden Fix C — quota matching broadened from "quota_exceeded"
+  // (underscore-only) to any "quota" + "exceeded"|"exhausted" combination,
+  // so phrasings like the cvrapi.dk error "The Danish business registry API
+  // quota has been temporarily exceeded" classify correctly.
   if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("etimedout") ||
       lower.includes("rate limit") || lower.includes("429") || lower.includes("too many") ||
       lower.includes("econnrefused") || lower.includes("enotfound") || lower.includes("502") ||
       lower.includes("503") || lower.includes("504") || lower.includes("fetch failed") ||
       lower.includes("econnreset") || lower.includes("epipe") || lower.includes("network error") ||
-      lower.includes("ms_max_concurrent") || lower.includes("quota_exceeded") ||
+      lower.includes("ms_max_concurrent") ||
+      (lower.includes("quota") && (lower.includes("exceeded") || lower.includes("exhausted"))) ||
       lower.includes("dns")) return "transient";
 
   // 6. scraping_broken — HTTP succeeded but content extraction failed
