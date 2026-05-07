@@ -1,0 +1,156 @@
+slug: slovenian-company-data
+name: Slovenian Company Data
+description: >-
+  Look up Slovenian company data from the Poslovni register Slovenije (PRS) via the data.gov.si CKAN datastore. Returns
+  registration number, full name, legal form, registry authority, and address. Free, CC-BY 4.0.
+category: company-data
+price_cents: 5
+is_free_tier: false
+data_source: >-
+  Poslovni register Slovenije via data.gov.si CKAN datastore (resource beb70929-3d0d-41c6-9af2-25d525d906d3) — CC-BY
+  4.0; attribution: Poslovni register Slovenije, AGENCIJA REPUBLIKE SLOVENIJE ZA JAVNOPRAVNE EVIDENCE IN STORITVE
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+avg_latency_ms: 1500
+input_schema:
+  type: object
+  required:
+    - reg_number
+  properties:
+    reg_number:
+      type: string
+      description: Slovenian matična številka (7-digit base or 10-digit including 3-digit branch suffix; main entity is suffix 000)
+    company_name:
+      type: string
+      description: Slovenian company name (fuzzy keyword match; first hit returned)
+    task:
+      type: string
+      description: Free-text input — first matching matična številka or company name is used
+output_schema:
+  type: object
+  example:
+    company_name: KRKA, tovarna zdravil, d.d., Novo mesto
+    reg_number: "5043611000"
+    hseid: "100400000138816776"
+    legal_form: Delniška družba d.d.
+    registration_office: Okrožno sodišče Novo mesto
+    address: Šmarješka cesta 006, Novo mesto, 8000 Novo mesto, SLOVENIJA
+    settlement: Novo mesto
+    postal_code: "8000"
+    post_office: Novo mesto
+    country: SLOVENIJA
+    jurisdiction: SI
+  properties:
+    company_name:
+      type: string
+    reg_number:
+      type: string
+    hseid:
+      type: string
+    legal_form:
+      type: string
+    registration_office:
+      type: string
+    address:
+      type: string
+    settlement:
+      type: string
+    postal_code:
+      type: string
+    post_office:
+      type: string
+    country:
+      type: string
+    jurisdiction:
+      type: string
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - address
+  - professional
+geography: eu
+test_fixtures:
+  health_check_input:
+    reg_number: "5043611000"
+  known_answer:
+    input:
+      reg_number: "5043611000"
+    expected_fields:
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
+      - field: reg_number
+        operator: equals
+        reliability: guaranteed
+        value: "5043611000"
+      - field: hseid
+        operator: equals
+        reliability: guaranteed
+        value: "100400000138816776"
+      - field: legal_form
+        operator: not_null
+        reliability: guaranteed
+      - field: registration_office
+        operator: not_null
+        reliability: guaranteed
+      - field: address
+        operator: not_null
+        reliability: guaranteed
+      - field: settlement
+        operator: not_null
+        reliability: guaranteed
+      - field: postal_code
+        operator: equals
+        reliability: guaranteed
+        value: "8000"
+      - field: post_office
+        operator: not_null
+        reliability: guaranteed
+      - field: country
+        operator: equals
+        reliability: guaranteed
+        value: SLOVENIJA
+      - field: jurisdiction
+        operator: equals
+        reliability: guaranteed
+        value: SI
+limitations:
+  - title: Source dataset refreshes twice monthly
+    text: >-
+      AJPES publishes the Poslovni register Slovenije open-data CSV every two weeks (dvotedensko). Sub-fortnightly
+      registrations, address changes, name changes, or dissolutions will not be reflected in API responses until the
+      next snapshot. Other identity capabilities on Strale (IE, LV) refresh daily; SI does not. Customers requiring
+      real-time data must use the paid AJPES restPrsInfo service directly (not redistributable per AJPES ToU §7).
+    category: freshness
+    severity: info
+  - title: Open-data subset omits status, registration date, NACE, directors, and VAT
+    text: >-
+      The data.gov.si open-data dataset contains only the statutory open subset: matična številka, popolno ime,
+      pravnoorganizacijska oblika, registrski organ, and address. Active/dissolved status, registration date, SKD/NACE
+      activity codes, statutory representatives (directors), and VAT number are NOT in the open feed. Solutions that
+      filter on status or require those fields cannot meaningfully gate on SI output. Reactivation trigger: paid AJPES
+      restPrsInfo contract with redistribution rights, or a future EU High-Value-Dataset expansion.
+    category: coverage
+    severity: info
+  - title: Keyword search is unranked beyond CKAN relevance
+    text: >-
+      When resolving a Slovenian company name (rather than matična številka), the CKAN datastore_search keyword endpoint
+      returns the top relevance-ranked match with no further sorting. The source has no status or activity column to
+      prefer active entities over dissolved ones. Pass matična številka directly when the entity is known.
+    category: accuracy
+    severity: info
+    workaround: Pass matična številka (7 or 10 digits) directly when known.
+output_field_reliability:
+  company_name: guaranteed
+  reg_number: guaranteed
+  hseid: guaranteed
+  legal_form: guaranteed
+  registration_office: guaranteed
+  address: guaranteed
+  settlement: guaranteed
+  postal_code: guaranteed
+  post_office: guaranteed
+  country: guaranteed
+  jurisdiction: guaranteed
