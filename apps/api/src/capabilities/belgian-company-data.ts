@@ -18,19 +18,15 @@ import { deriveVatBE } from "../lib/vat-derivation.js";
  * separately — see handoff/_general/from-code/2026-04-29-be-kbo-open-data-scaffold.md.
  */
 
-// Belgium — KBO/BCE enterprise number: 10 digits, formatted 0xxx.xxx.xxx
-const KBO_RE = /^0?\d{3}\.?\d{3}\.?\d{3}$/;
-
-function findKbo(input: string): string | null {
-  const cleaned = input.replace(/[\s]/g, "");
-  if (KBO_RE.test(cleaned)) {
-    const digits = cleaned.replace(/\./g, "");
-    return digits.padStart(10, "0");
-  }
-  const match = input.match(/0?\d{3}\.?\d{3}\.?\d{3}/);
-  if (match && KBO_RE.test(match[0])) {
-    return match[0].replace(/\./g, "").padStart(10, "0");
-  }
+// Belgium — KBO/BCE enterprise number: 10 digits, formatted 0xxx.xxx.xxx.
+// 9-digit legacy VAT numbers are zero-padded. The BE/VAT prefix is
+// recognized explicitly to avoid the prior substring-fallback truncation
+// bug (a 10-digit input not starting with 0 was being silently rewritten
+// to a different valid KBO).
+export function findKbo(input: string): string | null {
+  const stripped = input.replace(/^\s*BE\s*/i, "").replace(/[\s.\-]/g, "");
+  if (/^\d{10}$/.test(stripped)) return stripped;
+  if (/^\d{9}$/.test(stripped)) return `0${stripped}`;
   return null;
 }
 
