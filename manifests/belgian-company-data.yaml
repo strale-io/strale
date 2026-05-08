@@ -2,8 +2,8 @@ slug: belgian-company-data
 name: Belgian Company Data
 description: >-
   Look up Belgian company data from the KBO/BCE Crossroads Bank for Enterprises via the CBEAPI.be JSON wrapper. Accepts
-  enterprise number (10 digits, e.g. 0404.616.494) or fuzzy company name. Returns name, status, type, address,
-  registration date, NACE code, and derived BE VAT number.
+  enterprise number (10 digits, e.g. 0404.616.494), VAT-prefixed form (BE0404170701), or fuzzy company name. Returns
+  name, status, juridical form, address, registration date, establishment count, and derived BE VAT number.
 category: company-data
 price_cents: 5
 is_free_tier: false
@@ -30,7 +30,6 @@ output_schema:
     address: Grand-Place 1 1000 Bruxelles BE
     registration_date: "1977-08-02"
     industry: null
-    directors: []
     establishments_count: 5
     abbreviation: A.P.I.
     commercial_name: null
@@ -51,8 +50,6 @@ output_schema:
       type: string
     industry:
       type: string
-    directors:
-      type: array
     establishments_count:
       type: integer
     abbreviation:
@@ -100,9 +97,6 @@ test_fixtures:
         operator: equals
         reliability: guaranteed
         value: "1977-08-02"
-      - field: directors
-        operator: not_null
-        reliability: guaranteed
       - field: establishments_count
         operator: not_null
         reliability: guaranteed
@@ -128,7 +122,6 @@ output_field_reliability:
   address: common
   registration_date: common
   industry: rare
-  directors: guaranteed
   establishments_count: guaranteed
   abbreviation: rare
   commercial_name: rare
