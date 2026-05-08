@@ -55,6 +55,8 @@ output_schema:
         type: string
     last_updated:
       type: string
+    jurisdiction:
+      type: string
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -116,6 +118,10 @@ test_fixtures:
       - field: last_updated
         operator: not_null
         reliability: common
+      - field: jurisdiction
+        operator: equals
+        reliability: guaranteed
+        value: SK
 limitations:
   - title: Unauthenticated rate limit is 60 requests/minute per IP
     text: >-
@@ -153,3 +159,4 @@ output_field_reliability:
   nace_description: common
   directors: common
   last_updated: common
+  jurisdiction: guaranteed

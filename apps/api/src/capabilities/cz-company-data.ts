@@ -122,6 +122,7 @@ registerCapability("cz-company-data", async (input: CapabilityInput) => {
       last_updated: data.datumAktualizace ?? null,
       status: deriveStatus(data.seznamRegistraci),
       primary_source: data.primarniZdroj ?? null,
+      jurisdiction: "CZ",
     },
     provenance: {
       source: "ares.gov.cz",

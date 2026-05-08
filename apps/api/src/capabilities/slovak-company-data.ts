@@ -187,6 +187,7 @@ registerCapability("slovak-company-data", async (input: CapabilityInput) => {
       nace_description: entity.statisticalCodes?.mainActivity?.value ?? null,
       directors,
       last_updated: entity.dbModificationDate ?? null,
+      jurisdiction: "SK",
     },
     provenance: {
       source: "api.statistics.sk/rpo",

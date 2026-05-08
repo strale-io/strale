@@ -44,7 +44,8 @@ output_schema:
       type: string
     primary_source:
       type: string
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+    jurisdiction:
+      type: string
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -85,6 +86,9 @@ test_fixtures:
       - field: primary_source
         operator: not_null
         reliability: guaranteed
+      - field: jurisdiction
+        operator: not_null
+        reliability: guaranteed
   health_check_input:
     ico: "00177041"
 limitations:
@@ -118,3 +122,4 @@ output_field_reliability:
   last_updated: guaranteed
   status: guaranteed
   primary_source: guaranteed
+  jurisdiction: guaranteed

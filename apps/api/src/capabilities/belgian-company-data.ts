@@ -134,6 +134,7 @@ async function lookupViaCbeApi(
       : 0,
     abbreviation: company.abbreviation,
     commercial_name: company.commercial_name,
+    jurisdiction: "BE",
   };
 }
 

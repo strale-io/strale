@@ -107,6 +107,7 @@ async function searchCompany(query: string): Promise<Record<string, unknown>> {
     status: statusMap[c.status] || c.status || "unknown",
     historical_names: c.historical_names || [],
     registry_url: c.url || null,
+    jurisdiction: "EE",
   };
 }
 
