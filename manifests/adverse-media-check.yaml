@@ -98,9 +98,13 @@ output_schema:
           source_link:
             type: string
           timestamp:
-            type: string
+            type:
+              - string
+              - "null"
           language:
-            type: string
+            type:
+              - string
+              - "null"
           category:
             type: string
     lists_queried:
