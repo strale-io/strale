@@ -70,11 +70,13 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
         is_pep: pepRecords.length > 0,
         match_count: pepRecords.length,
         total_results: pepRecords.length,
+        // classification = Dilisense pep_type passthrough (EU C/2023/724 function type
+        // when present); topic taxonomy is not exposed by Dilisense, do not fabricate
+        // (DEC-20260428-B).
         matches: pepRecords.slice(0, 10).map((r) => ({
           name: r.name,
           entity_id: r.source_id,
-          classification: "pep" as const,
-          topics: ["role.pep"],
+          classification: r.pep_type ?? null,
           positions: r.positions ?? [],
           countries: r.citizenship ?? [],
           datasets: [r.source_id],
