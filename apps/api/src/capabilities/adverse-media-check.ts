@@ -197,16 +197,17 @@ async function querySerper(
 
   // Classify each result by category
   const categories: Record<string, number> = {};
-  const topArticles: Array<{ headline: string; source_link: string; timestamp: string; language: string; category: string }> = [];
+  const topArticles: Array<{ headline: string; source_link: string; timestamp: string | null; language: string | null; category: string }> = [];
 
   for (const r of results) {
     const category = classifyArticle(r.title, r.snippet);
     categories[category] = (categories[category] ?? 0) + 1;
+    // Serper does not return article publication date or language; emit null rather than fabricate (DEC-20260428-B).
     topArticles.push({
       headline: r.title,
       source_link: r.link,
-      timestamp: r.date ?? new Date().toISOString(),
-      language: "en",
+      timestamp: r.date ?? null,
+      language: null,
       category,
     });
   }
