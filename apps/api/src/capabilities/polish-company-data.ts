@@ -137,6 +137,7 @@ function parseKrsResponse(data: any, krsNumber: string, register: "P" | "S"): Re
     registration_date: rejestracja,
     status: czyWykreslony ? "deregistered" : "active",
     share_capital: kapital ? `${kapital} ${waluta}` : null,
+    jurisdiction: "PL",
   };
 }
 

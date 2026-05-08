@@ -27,6 +27,7 @@ output_schema:
     company_name: PRZEDSIĘBIORSTWO PRODUKCYJNE I HANDLOWO-USŁUGOWE "MARTOM" SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ
     share_capital: 90000,00 PLN
     registration_date: null
+    jurisdiction: PL
   properties:
     vat_number:
       type:
@@ -43,6 +44,8 @@ output_schema:
     company_name:
       type: string
     registration_date:
+      type: string
+    jurisdiction:
       type: string
 data_source: KRS / Krajowy Rejestr Sądowy (Polish National Court Register)
 data_source_type: api
@@ -82,6 +85,10 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: string
+      - field: jurisdiction
+        operator: equals
+        reliability: guaranteed
+        value: PL
   health_check_input:
     krs_number: "0000028860"
 output_field_reliability:
@@ -91,6 +98,7 @@ output_field_reliability:
   legal_form: guaranteed
   company_name: guaranteed
   registration_date: guaranteed
+  jurisdiction: guaranteed
 limitations:
   - title: Covers KRS-registered entities only — Polish sole traders registered in CEIDG are not included
     text: >-

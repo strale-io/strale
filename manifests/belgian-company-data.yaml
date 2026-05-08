@@ -35,6 +35,7 @@ output_schema:
     abbreviation: A.P.I.
     commercial_name: null
     vat_number: BE0417497106
+    jurisdiction: BE
   properties:
     company_name:
       type: string
@@ -59,6 +60,8 @@ output_schema:
     commercial_name:
       type: string
     vat_number:
+      type: string
+    jurisdiction:
       type: string
 data_source: CBEAPI.be (vendor wrapper of KBO/BCE Crossroads Bank for Enterprises)
 data_source_type: api
@@ -107,6 +110,10 @@ test_fixtures:
         operator: equals
         reliability: guaranteed
         value: A.P.I.
+      - field: jurisdiction
+        operator: equals
+        reliability: guaranteed
+        value: BE
       - field: vat_number
         operator: equals
         reliability: guaranteed
@@ -126,6 +133,7 @@ output_field_reliability:
   abbreviation: rare
   commercial_name: rare
   vat_number: guaranteed
+  jurisdiction: guaranteed
 limitations:
   - title: Sourced via the CBEAPI.be vendor wrapper, not directly from FPS Economy
     text: >-
