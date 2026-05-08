@@ -111,6 +111,7 @@ async function lookupViaCbeApi(
         null
       : null;
 
+  // CBEAPI does not expose officer/director data; do not fabricate (DEC-20260428-B). Queued behind FPS Economy KBO Open Data SFTP migration.
   return {
     company_name: company.denomination ?? company.denomination_with_legal_form,
     registration_number: company.cbe_number_formatted ?? formatKbo(company.cbe_number),
@@ -124,7 +125,6 @@ async function lookupViaCbeApi(
       null,
     registration_date: company.start_date ?? null,
     industry: nace ? String(nace) : null,
-    directors: [],
     establishments_count: Array.isArray(company.establishments)
       ? company.establishments.length
       : 0,
