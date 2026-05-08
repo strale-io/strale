@@ -3,7 +3,7 @@ name: Sanctions Check
 description: >-
   Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK OFSI, Swiss SECO, BIS, World
   Bank, EBRD, ADB + 125 national lists). Uses Dilisense consolidated database. Returns audit-grade
-  evidence: match results with classification, named source attribution, and country attribution.
+  evidence: match results with named source attribution and country attribution.
 category: compliance
 price_cents: 20
 is_free_tier: false
@@ -41,9 +41,6 @@ output_schema:
     matches:
       - name: Vladimir Vladimirovich Putin
         entity_id: us_ofac_sdn
-        classification: primary_sanction
-        topics:
-          - sanction
         datasets:
           - us_ofac_sdn
         countries:
@@ -98,12 +95,6 @@ output_schema:
             type: string
           entity_id:
             type: string
-          classification:
-            type: string
-            enum:
-              - primary_sanction
-          topics:
-            type: array
           datasets:
             type: array
           countries:

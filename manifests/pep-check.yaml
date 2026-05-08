@@ -39,9 +39,7 @@ output_schema:
     matches:
       - name: Angela Dorothea Merkel
         entity_id: dilisense_pep
-        classification: pep
-        topics:
-          - role.pep
+        classification: head_of_state
         positions:
           - Chancellor of Germany
           - Member of the Bundestag
@@ -90,11 +88,10 @@ output_schema:
           entity_id:
             type: string
           classification:
-            type: string
-            enum:
-              - pep
-          topics:
-            type: array
+            type:
+              - string
+              - "null"
+            description: Dilisense pep_type passthrough (EU C/2023/724 function type when present)
           positions:
             type: array
           countries:

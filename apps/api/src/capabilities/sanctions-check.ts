@@ -79,11 +79,11 @@ registerCapability("sanctions-check", async (input: CapabilityInput) => {
         is_sanctioned: sanctionRecords.length > 0,
         match_count: sanctionRecords.length,
         total_results: sanctionRecords.length,
+        // Dilisense exposes no per-record classification or topic taxonomy on the
+        // consolidated sanctions endpoint; do not fabricate (DEC-20260428-B).
         matches: sanctionRecords.slice(0, 10).map((r) => ({
           name: r.name,
           entity_id: r.source_id,
-          classification: "primary_sanction" as const,
-          topics: ["sanction"],
           datasets: [r.source_id],
           countries: r.citizenship ?? [],
           sanction_details: r.sanction_details ?? [],
