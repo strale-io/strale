@@ -37,14 +37,18 @@ registerCapability("insolvency-check", async (input: CapabilityInput) => {
     }
 
     if (!number) {
+      // Not-found-via-search envelope: explicit `found: false` discriminator;
+      // data fields dropped per discriminated-runtime-shape pattern (PR #75,
+      // DEC-20260428-B). `proceedings: []` would falsely claim "we looked
+      // and there are none" when the truth is "we couldn't resolve the
+      // company to look up."
       return {
         output: {
           query: companyName || companyNumber,
           country_code: "GB",
           supported_country: true,
-          has_insolvency_proceedings: null,
-          proceedings: [],
-          error: "Company not found in Companies House.",
+          found: false,
+          message: "Company not found in Companies House.",
           data_source: "companies-house-uk",
         },
         provenance: { source: "companies-house-uk", fetched_at: new Date().toISOString() },
@@ -89,11 +93,16 @@ registerCapability("insolvency-check", async (input: CapabilityInput) => {
         country_code: "GB",
         supported_country: true,
         has_insolvency_proceedings: cases.length > 0,
+        // date_ended dropped: Companies House `dates` array structure is not
+        // verified empirically in this repo's fixtures; emitting `null`
+        // unconditionally claimed "the proceeding has not ended" which is
+        // a positive claim we can't substantiate (DEC-20260428-B). Status
+        // heuristic dropped: `c.dates?.length > 0 → "active"` wrongly tagged
+        // proceedings with closure-date entries as active.
         proceedings: cases.map((c: any) => ({
           type: c.type ?? null,
           date_started: c.dates?.[0]?.date ?? null,
-          date_ended: null,
-          status: c.status ?? (c.dates?.length > 0 ? "active" : "unknown"),
+          status: c.status ?? "unknown",
           practitioners: (c.practitioners ?? []).map((p: any) => ({
             name: p.name ?? null,
             role: p.role ?? null,
@@ -106,14 +115,15 @@ registerCapability("insolvency-check", async (input: CapabilityInput) => {
     };
   }
 
-  // Unsupported countries
+  // Unsupported-country envelope: `supported_country: false` discriminator;
+  // data fields dropped per discriminated-runtime-shape pattern (PR #75,
+  // DEC-20260428-B). `proceedings: []` would produce false "no proceedings"
+  // signals to compliance reviewers screening non-supported jurisdictions.
   return {
     output: {
       query: companyName || companyNumber,
       country_code: countryCode,
       supported_country: false,
-      has_insolvency_proceedings: null,
-      proceedings: [],
       message: `Insolvency checks are not yet available for '${countryCode}'. Currently supported: GB (UK via Companies House).`,
       data_source: null,
     },
