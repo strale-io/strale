@@ -291,8 +291,11 @@ registerCapability("german-company-data", async (input: CapabilityInput) => {
             .filter((c) => c.code)
         : [],
       directors: Array.isArray(company.representation) ? buildDirectors(company.representation) : [],
+      // Capital currency passthrough; do not default to "EUR". A German
+      // subsidiary in CHF or USD silently rewriting to EUR is a fabrication
+      // (DEC-20260428-B).
       capital: company.capital?.amount != null
-        ? { amount: company.capital.amount, currency: company.capital.currency ?? "EUR" }
+        ? { amount: company.capital.amount, currency: company.capital.currency ?? null }
         : null,
       lei: company.lei?.trim() || null,
       incorporated_at: company.incorporated_at ? company.incorporated_at.split("T")[0] : null,

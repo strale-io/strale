@@ -32,7 +32,13 @@ output_schema:
     is_datacenter:
       type: boolean
     is_residential:
-      type: boolean
+      type:
+        - boolean
+        - "null"
+      description: >-
+        Boolean on the public-IP path. Null on the private-IP path —
+        residential vs office vs datacenter cannot be inferred from a
+        private RFC1918 address alone.
 data_source: ip-api.com + Strale risk engine (ASN lists, datacenter detection)
 data_source_type: computed
 transparency_tag: mixed

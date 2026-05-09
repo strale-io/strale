@@ -47,9 +47,19 @@ async function searchCompany(query: string): Promise<Record<string, unknown>> {
   const c = results[0];
   const siege = c.siege || {};
 
+  // company_name and siren: null instead of "" when missing — empty string
+  // implies "we got a value, it was empty" rather than "the source omitted
+  // the field" (DEC-20260428-B).
+  // Directors: keep the slice(0, 3) but expose truncation transparency via
+  // companion fields so consumers know more directors exist beyond the slice.
+  const allDirectors = Array.isArray(c.dirigeants) ? c.dirigeants : [];
+  const directors = allDirectors.slice(0, 3).map((d: any) =>
+    `${d.prenoms || ""} ${d.nom || ""}`.trim() + (d.qualite ? ` (${d.qualite})` : ""),
+  );
+
   return {
-    company_name: c.nom_complet || c.nom_raison_sociale || "",
-    siren: c.siren || "",
+    company_name: c.nom_complet || c.nom_raison_sociale || null,
+    siren: c.siren || null,
     siret: siege.siret || null,
     business_type: c.nature_juridique || null,
     address: siege.adresse || siege.geo_adresse || null,
@@ -59,10 +69,10 @@ async function searchCompany(query: string): Promise<Record<string, unknown>> {
     creation_date: c.date_creation || null,
     employee_range: c.tranche_effectif_salarie || null,
     status: c.etat_administratif === "A" ? "active" : c.etat_administratif === "C" ? "closed" : c.etat_administratif || "unknown",
-    vat_number: deriveVatFR(c.siren || ""),
-    directors: (c.dirigeants || []).slice(0, 3).map((d: any) =>
-      `${d.prenoms || ""} ${d.nom || ""}`.trim() + (d.qualite ? ` (${d.qualite})` : ""),
-    ),
+    vat_number: c.siren ? deriveVatFR(c.siren) : null,
+    directors,
+    directors_truncated: allDirectors.length > 3,
+    total_directors: allDirectors.length,
   };
 }
 

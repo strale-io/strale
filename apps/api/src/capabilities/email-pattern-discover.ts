@@ -91,7 +91,7 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
         mx_records: [],
         email_provider: null,
         patterns: [],
-        generic_addresses: [],
+        common_pattern_addresses: [],
         recommendation: `${targetDomain} does not have MX records configured. This domain may not accept email.`,
       },
       provenance: {
@@ -101,16 +101,14 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
     };
   }
 
-  // Step 2: Check which generic addresses exist (catch-all detection)
-  const genericResults: Array<{ address: string; likely_exists: boolean }> = [];
-  for (const prefix of COMMON_PREFIXES.slice(0, 6)) {
-    // We can't do full SMTP verification without sending mail,
-    // but we can report common patterns
-    genericResults.push({
-      address: `${prefix}@${targetDomain}`,
-      likely_exists: ["info", "contact", "hello", "sales", "support"].includes(prefix),
-    });
-  }
+  // Step 2: Construct candidate generic addresses from common prefixes.
+  // These are heuristic prefix matches, NOT verified deliverable addresses
+  // (DEC-20260428-B). The previous `likely_exists` filter was a hardcoded
+  // prefix-membership check masquerading as deliverability evidence; it has
+  // been dropped. Use email-validate downstream for actual verification.
+  const commonPatternAddresses: string[] = COMMON_PREFIXES.slice(0, 6).map(
+    (prefix) => `${prefix}@${targetDomain}`,
+  );
 
   // Step 3: Determine likely email patterns based on provider and domain analysis
   // Google Workspace and Microsoft 365 commonly use first.last@ or firstlast@
@@ -164,7 +162,7 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
       inferred_pattern: inferredPattern,
       patterns,
       public_emails_found: publicEmails,
-      generic_addresses: genericResults.filter(g => g.likely_exists).map(g => g.address),
+      common_pattern_addresses: commonPatternAddresses,
       recommendation: emailProvider
         ? `${targetDomain} uses ${emailProvider}. Most common pattern is first.last@${targetDomain}. Verify individual addresses with email-validate before sending.`
         : `${targetDomain} accepts email. Try first.last@${targetDomain} as the most common pattern. Verify with email-validate before sending.`,

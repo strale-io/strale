@@ -46,10 +46,15 @@ registerCapability("ip-risk-score", async (input: CapabilityInput) => {
     const parts = ip.split(".").map(Number);
     if (parts[0] === 10 || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
         (parts[0] === 192 && parts[1] === 168) || parts[0] === 127) {
+      // Private RFC1918 IPs are correctly not-VPN, not-proxy, not-Tor, not-
+      // datacenter — those `false` values are honest. But `is_residential`
+      // can't be determined from the IP alone (a 192.168.x.x is residential
+      // on a home network, but is also valid in offices, datacenters, etc.);
+      // null instead of fabricated false (DEC-20260428-B).
       return {
         output: {
           ip, risk_score: 0, risk_level: "none",
-          is_vpn: false, is_proxy: false, is_tor: false, is_datacenter: false, is_residential: false,
+          is_vpn: false, is_proxy: false, is_tor: false, is_datacenter: false, is_residential: null,
           note: "Private/reserved IP address — not routable on the public internet",
         },
         provenance: { source: "strale-ip-risk", fetched_at: new Date().toISOString() },
