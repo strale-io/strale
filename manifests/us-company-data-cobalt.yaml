@@ -36,8 +36,8 @@ output_schema:
     formed_date: "1977-01-03"
     address: "One Apple Park Way, Cupertino, CA 95014"
     registered_agent: CT CORPORATION SYSTEM
-    officers: []
-    filings: []
+    officers: null
+    filings: null
     sos_url: https://bizfileonline.sos.ca.gov/...
     data_source: Cobalt Intelligence (50-state SoS live)
   properties:
@@ -74,9 +74,21 @@ output_schema:
         - string
         - "null"
     officers:
-      type: array
+      type:
+        - array
+        - "null"
+      description: >-
+        Officer roster when surfaced by the state's SoS feed; null when the
+        feed does not carry officer data OR when found=false. Absent fields
+        in a found=false envelope are not listed (data fields are dropped
+        entirely on not-found).
     filings:
-      type: array
+      type:
+        - array
+        - "null"
+      description: >-
+        Up to 25 most-recent filings when surfaced by the state's SoS feed;
+        null when the feed does not carry filing data OR when found=false.
     sos_url:
       type:
         - string
@@ -142,7 +154,9 @@ limitations:
   - title: Officer / filing depth varies per state
     text: >-
       Some states publish full officer rosters and 10+ years of filings; others publish only the
-      registered agent and incorporation event. Empty officers/filings arrays are normal for some
-      jurisdictions, not necessarily a coverage gap.
+      registered agent and incorporation event. When the state's SoS feed does not surface officer
+      or filing data, the corresponding field is null (not an empty array — empty would falsely
+      claim "this entity has no officers"). On a found=false envelope, the officers and filings
+      fields are absent entirely.
     category: coverage
     severity: info
