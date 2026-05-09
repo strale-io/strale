@@ -52,12 +52,14 @@ registerCapability("wallet-risk-score", async (input: CapabilityInput) => {
   const entry = isFlat ? result : (result[address.toLowerCase()] ?? result[Object.keys(result)[0]] ?? null);
 
   if (!entry || Object.keys(entry).length === 0) {
+    // No GoPlus entry for this address: emit null binary signals rather than
+    // fabricate a green-light is_malicious=false (DEC-20260428-B).
     return {
       output: {
         address,
         chain_id: chainId,
         risk_level: "unknown",
-        is_malicious: false,
+        is_malicious: null,
         risk_labels: [],
         details: null,
         note: "No security data available for this address on the specified chain.",

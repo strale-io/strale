@@ -47,14 +47,19 @@ registerCapability("token-security-check", async (input: CapabilityInput) => {
   const now = new Date().toISOString();
 
   if (!entry || Object.keys(entry).length === 0) {
+    // No GoPlus entry for this token: emit null binary signals rather than
+    // fabricate green-light is_honeypot=false / zero taxes for a token we
+    // have no data on (DEC-20260428-B). Web3 swap UIs treat these as
+    // green-light — clearing unindexed tokens (typical for new contracts,
+    // the highest-risk surface) is the inverse of safety-conscious default.
     return {
       output: {
         contract_address: contractAddress,
         chain_id: chainId,
         risk_level: "unknown",
-        is_honeypot: false,
-        sell_tax: "0",
-        buy_tax: "0",
+        is_honeypot: null,
+        sell_tax: null,
+        buy_tax: null,
         note: "No security data available for this token on the specified chain.",
       },
       provenance: { source: "api.gopluslabs.io", fetched_at: now },

@@ -57,7 +57,9 @@ output_schema:
       items:
         type: string
     is_malicious:
-      type: boolean
+      type:
+        - boolean
+        - "null"
 data_source: GoPlus Labs (Address Security API)
 data_source_type: api
 transparency_tag: algorithmic

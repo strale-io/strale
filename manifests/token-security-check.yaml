@@ -48,17 +48,23 @@ output_schema:
     can_take_back_ownership: false
   properties:
     buy_tax:
-      type: string
+      type:
+        - string
+        - "null"
     chain_id:
       type: string
     is_proxy:
       type: boolean
     sell_tax:
-      type: string
+      type:
+        - string
+        - "null"
     risk_level:
       type: string
     is_honeypot:
-      type: boolean
+      type:
+        - boolean
+        - "null"
     is_mintable:
       type: boolean
     hidden_owner:
