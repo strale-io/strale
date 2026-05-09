@@ -25,13 +25,32 @@ output_schema:
   type: object
   properties:
     has_insolvency_proceedings:
-      type: boolean
+      type:
+        - boolean
+        - "null"
+      description: >-
+        Boolean on the success path (company resolved). Absent entirely on
+        `found: false` and `supported_country: false` envelopes — discriminated
+        runtime shape; check the discriminator before reading.
     proceedings:
-      type: array
+      type:
+        - array
+        - "null"
+      description: >-
+        Array of proceedings on the success path (may be empty when the
+        company is found but has no insolvency cases). Absent entirely on
+        `found: false` and `supported_country: false` envelopes.
     supported_country:
       type: boolean
+    found:
+      type: boolean
+      description: >-
+        Present on the UK path when name/number resolution was attempted.
+        `false` indicates the company could not be resolved.
     data_source:
-      type: string
+      type:
+        - string
+        - "null"
 data_source: Companies House (UK)
 data_source_type: api
 transparency_tag: algorithmic
@@ -70,10 +89,11 @@ test_fixtures:
     company_number: "00445790"
 output_field_reliability:
   query: guaranteed
-  has_insolvency_proceedings: guaranteed
-  proceedings: guaranteed
   supported_country: guaranteed
-  data_source: guaranteed
+  has_insolvency_proceedings: common
+  proceedings: common
+  data_source: common
+  found: rare
   company_number: common
 limitations:
   - title: Currently UK only
