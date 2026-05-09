@@ -52,6 +52,14 @@ output_schema:
         - "null"
     status:
       type: string
+      enum:
+        - active
+        - terminated
+        - unknown
+      description: >-
+        Three-way enum matching german-company-data.ts:168-180 precedent.
+        Replaces the prior binary collapse (active/inactive) which lost
+        fidelity (in-liquidation, terminated, dissolved all became inactive).
     address:
       type: string
     company_name:

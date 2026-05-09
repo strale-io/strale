@@ -37,7 +37,9 @@ output_schema:
     employee_range: "51"
   properties:
     siren:
-      type: string
+      type:
+        - string
+        - "null"
     siret:
       type: string
     status:
@@ -46,8 +48,18 @@ output_schema:
       type: string
     directors:
       type: array
+      description: >-
+        Up to 3 directors from the registry (slice cap for payload). When
+        the registry lists more than 3, `directors_truncated` is true and
+        `total_directors` carries the full count.
+    directors_truncated:
+      type: boolean
+    total_directors:
+      type: integer
     company_name:
-      type: string
+      type:
+        - string
+        - "null"
     activity_code:
       type: string
 data_source: INSEE / Registre du Commerce (France)

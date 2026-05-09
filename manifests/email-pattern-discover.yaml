@@ -62,7 +62,7 @@ output_field_reliability:
   email_provider: common
   inferred_pattern: rare
   public_emails_found: rare
-  generic_addresses: common
+  common_pattern_addresses: common
 limitations:
   - title: Pattern inference is heuristic, not verified per-address
     text: Returned patterns are based on email-provider conventions and any public emails found on the domain's homepage. Individual addresses must still be validated with email-validate before sending.

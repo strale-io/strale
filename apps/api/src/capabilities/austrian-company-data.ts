@@ -41,9 +41,24 @@ interface FinapuSearchResult {
   rechtsform: string;
   sitz: string;
   activity: string | null;
-  status: "active" | "inactive";
+  status: string;
   initDate: string | null;
   endDate: string | null;
+}
+
+// Three-way status mapping matching german-company-data.ts:168-180 precedent.
+// The previous binary collapse (active vs inactive) silently lost fidelity:
+// in-liquidation, terminated, dissolved, and unknown all became "inactive"
+// (DEC-20260428-B).
+function normaliseAtStatus(raw: string | undefined, endDate: string | null): "active" | "terminated" | "unknown" {
+  if (endDate) return "terminated";
+  const v = (raw ?? "").toLowerCase();
+  if (v.includes("active") || v === "ok") return "active";
+  if (v.includes("liquidat") || v.includes("terminated") || v.includes("dissolved") || v.includes("aufgel")) {
+    return "terminated";
+  }
+  if (!v) return "unknown";
+  return "unknown";
 }
 
 interface FinapuDetails {
@@ -112,7 +127,7 @@ async function lookupViaFinapu(query: string, isFn: boolean): Promise<Record<str
         business_type: RECHTSFORM[details.rechtsform?.code] ?? details.rechtsform?.text ?? null,
         address: formatAddress(details.adresse),
         city: details.sitz,
-        status: details.status === "active" ? "active" : "inactive",
+        status: normaliseAtStatus(details.status, details.endDate),
         activity: details.activity || null,
         lei: details.lei || null,
         eu_vat_ids: details.euids?.length ? details.euids : null,
@@ -146,7 +161,7 @@ async function lookupViaFinapu(query: string, isFn: boolean): Promise<Record<str
       business_type: RECHTSFORM[details.rechtsform?.code] ?? details.rechtsform?.text ?? null,
       address: formatAddress(details.adresse),
       city: details.sitz,
-      status: details.status === "active" ? "active" : "inactive",
+      status: normaliseAtStatus(details.status, details.endDate),
       activity: details.activity || null,
       lei: details.lei || null,
       eu_vat_ids: details.euids?.length ? details.euids : null,
@@ -166,7 +181,7 @@ async function lookupViaFinapu(query: string, isFn: boolean): Promise<Record<str
       fn_number: `FN ${best.fnr}`,
       business_type: RECHTSFORM[best.rechtsform] ?? best.rechtsform ?? null,
       city: best.sitz,
-      status: best.status === "active" ? "active" : "inactive",
+      status: normaliseAtStatus(best.status, best.endDate),
       activity: best.activity || null,
     };
   }
