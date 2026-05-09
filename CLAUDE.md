@@ -124,7 +124,7 @@ strale/
 
 ### Capabilities & Quality
 <!-- Reminder: changes to capabilities, SDKs, or integrations require updating public/llms.txt in strale-frontend -->
-290+ capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 100+ bundled solutions across 6 categories. Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions. Counts grow frequently — check seed.ts and recent git log for exact current numbers.
+290+ capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 100+ bundled solutions across 6 categories. Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions. Counts grow frequently — check `manifests/*.yaml` and recent git log for exact current numbers.
 
 **x402 Payment Gateway (March 2026):**
 All capabilities and solutions available via x402 pay-per-use USDC payments on Base mainnet. No signup or API key needed — payment IS the auth. DB-driven: adding capabilities to x402 requires only `UPDATE capabilities SET x402_enabled = true`. Catalog: GET /x402/catalog. Discovery: GET /.well-known/x402.json. Wildcard handler: GET/POST /x402/:slug.
@@ -152,7 +152,7 @@ Stripe is LIVE in production (sk_live_ key on Railway). Local .env uses sk_test_
 
 ### Adding New Capabilities (MANDATORY PIPELINE)
 
-**NEVER add capabilities by directly editing seed.ts.** The old seed.ts + onboarding hook approach only generates 2 of 5 required test types. All new capabilities MUST go through the manifest-driven pipeline.
+**All new capabilities MUST go through the manifest-driven pipeline.** (The historical seed.ts file was deleted in PR #79; it duplicated manifest content and only generated 2 of 5 required test types via its onboarding hook. The canonical pipeline is `apps/api/scripts/onboard.ts` — it generates all 5 test types and is the only sanctioned path for capability creation.)
 
 #### Recommended workflow (--discover):
 
