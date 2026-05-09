@@ -28,7 +28,13 @@ output_schema:
     query:
       type: string
     beneficial_owners:
-      type: array
+      type:
+        - array
+        - "null"
+      description: >-
+        Array of resolved PSCs on the success path. Absent entirely on the
+        `supported_jurisdiction: false` envelope (non-UK jurisdictions —
+        discriminated runtime shape, check the discriminator before reading).
     total_owners:
       type: integer
     company_match:
@@ -37,6 +43,11 @@ output_schema:
       type: string
     lookup_date:
       type: string
+    supported_jurisdiction:
+      type: boolean
+      description: >-
+        Present on the non-UK path. `false` indicates the executor does not
+        currently cover this jurisdiction; data fields are absent.
 data_source: Companies House Persons of Significant Control (UK)
 data_source_type: api
 transparency_tag: algorithmic
@@ -76,7 +87,7 @@ test_fixtures:
     jurisdiction: "GB"
 output_field_reliability:
   query: guaranteed
-  beneficial_owners: guaranteed
+  beneficial_owners: common
   total_owners: guaranteed
   company_match: common
   data_source: guaranteed
@@ -84,6 +95,7 @@ output_field_reliability:
   jurisdiction: common
   company_number: common
   coverage_note: common
+  supported_jurisdiction: rare
 limitations:
   - title: UK only — non-GB inputs return a coverage notice
     text: This capability calls Companies House Persons of Significant Control. Non-GB jurisdictions return a structured coverage notice rather than a result. Adding non-UK coverage requires a separate real UBO source (OpenOwnership integration or aggregator wrap per DEC-20260428-A).

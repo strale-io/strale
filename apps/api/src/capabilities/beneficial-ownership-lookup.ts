@@ -35,15 +35,18 @@ registerCapability("beneficial-ownership-lookup", async (input: CapabilityInput)
   }
 
   if (jurisdiction !== "gb" && jurisdiction !== "uk") {
+    // Unsupported-jurisdiction envelope: `supported_jurisdiction: false`
+    // discriminator; data fields dropped per discriminated-runtime-shape
+    // pattern (PR #75/#76, DEC-20260428-B). `total_beneficial_owners: 0`
+    // and `beneficial_owners: []` would falsely claim "this company has no
+    // UBO" when the truth is "we don't support this jurisdiction yet."
     return {
       output: {
         company_name: companyName || null,
         company_number: companyNumber ?? null,
         jurisdiction,
-        beneficial_owners: [],
-        total_beneficial_owners: 0,
-        has_psc_data: false,
-        error: "Beneficial ownership lookup is currently available for UK companies only. More jurisdictions coming soon.",
+        supported_jurisdiction: false,
+        message: "Beneficial ownership lookup is currently available for UK companies only. More jurisdictions coming soon.",
         supported_jurisdictions: ["gb"],
       },
       provenance: { source: "none", fetched_at: new Date().toISOString() },
