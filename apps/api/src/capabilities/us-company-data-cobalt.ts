@@ -64,6 +64,9 @@ registerCapability("us-company-data-cobalt", async (input: CapabilityInput) => {
     throw new Error(`Cobalt rejected the API key (HTTP ${res.status}). Verify COBALT_API_KEY.`);
   }
   if (res.status === 404) {
+    // found: false envelope carries no officers/filings — empty arrays would
+    // claim "the entity has no officers" when the truth is "we didn't find an
+    // entity to query" (DEC-20260428-B).
     return {
       output: {
         found: false,
@@ -75,8 +78,6 @@ registerCapability("us-company-data-cobalt", async (input: CapabilityInput) => {
         formed_date: null,
         address: null,
         registered_agent: null,
-        officers: [],
-        filings: [],
         data_source: "Cobalt Intelligence (50-state SoS live)",
       },
       provenance: { source: "cobaltintelligence.com", fetched_at: new Date().toISOString() },
@@ -103,8 +104,6 @@ registerCapability("us-company-data-cobalt", async (input: CapabilityInput) => {
         formed_date: null,
         address: null,
         registered_agent: null,
-        officers: [],
-        filings: [],
         data_source: "Cobalt Intelligence (50-state SoS live)",
       },
       provenance: { source: "cobaltintelligence.com", fetched_at: new Date().toISOString() },
@@ -124,8 +123,11 @@ registerCapability("us-company-data-cobalt", async (input: CapabilityInput) => {
         result.address ??
         (result.principalAddress ? Object.values(result.principalAddress).filter(Boolean).join(", ") : null),
       registered_agent: result.registeredAgent ?? result.agent ?? null,
-      officers: Array.isArray(result.officers) ? result.officers : [],
-      filings: Array.isArray(result.filings) ? result.filings.slice(0, 25) : [],
+      // Cobalt's response shape varies by US state — some SoS feeds carry
+      // officers/filings, some don't. Null is the honest answer to "this
+      // state's feed didn't surface this data" (DEC-20260428-B).
+      officers: result.officers ?? null,
+      filings: result.filings?.slice(0, 25) ?? null,
       sos_url: result.sosUrl ?? null,
       data_source: "Cobalt Intelligence (50-state SoS live)",
     },
