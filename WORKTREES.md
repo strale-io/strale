@@ -47,3 +47,31 @@ Update this file in the same PR.
 
 The branch (if any) persists in `.git/`. Use `git branch -d <branch>` to
 clean up the branch ref if no longer needed.
+
+## Janitor: pruning orphan agent-isolation worktrees
+
+Despite Rule 3, CC sub-agents occasionally leave filesystem residue under
+`.claude/worktrees/*` that isn't registered in `git worktree list`. These
+are orphans — directories without git-tracked context, often paired with
+abandoned `claude/<adjective-name>` branches.
+
+The janitor script `apps/api/scripts/prune-claude-worktrees.ts` cleans
+these up safely.
+
+Run on demand (or after a CC session that may have spawned isolation
+worktrees):
+
+    npx tsx apps/api/scripts/prune-claude-worktrees.ts
+
+The script is **safe-by-construction**:
+
+- Never removes a directory registered in `git worktree list`.
+- Never force-deletes a branch (uses `git branch -d`, not `-D`).
+- Refused branches (those with unmerged work) are logged for operator
+  review, not deleted.
+- Idempotent — running twice is harmless.
+
+Output: list of directories removed, branches deleted, branches refused.
+
+Run frequency: after any session that uses agent isolation, OR weekly as
+a sweep. Not yet wired to CI; a future hook could automate this.
