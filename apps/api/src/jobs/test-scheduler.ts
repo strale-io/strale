@@ -6,13 +6,14 @@
  * never fire during active development).
  *
  * Per DEC-20260503-B (2026-05-04), the previous tiered cadence (A=6h /
- * B=24h / C=72h) is replaced by a single hourly schedule for free
- * capabilities only. Paid capabilities (test_suites.external_cost_cents > 0)
- * are removed from scheduled testing entirely; quality signals for them
- * come from production observability, piggyback test suites, and any
- * zero-cost auth-less probes the vendor permits. The schedule_tier column
- * stays on test_suites for backwards compatibility but is no longer read
- * by the scheduler.
+ * B=24h / C=72h) is replaced by a single hourly schedule for eligible
+ * capabilities only. Paid / LLM capabilities (test_suites.scheduled_testing_eligible
+ * = FALSE) are removed from scheduled testing entirely; quality signals
+ * for them come from production observability, piggyback test suites,
+ * and any zero-cost auth-less probes the vendor permits. The
+ * schedule_tier column stays on test_suites for backwards compatibility
+ * but is no longer read by the scheduler. Eligibility is an explicit
+ * column per the PR A decoupling (see DEC-20260511-?).
  *
  * Cadence: the scheduler ticks every minute. Each minute M (0–59) it
  * picks free capabilities whose `abs(hashtext(slug)) % 60 = M` and whose
@@ -103,8 +104,8 @@ const FREE_TEST_INTERVAL_HOURS = 1;                 // DEC-20260503-B: hourly fr
 // schedule_tier (A/B/C) is no longer read by the scheduler. The column
 // remains on test_suites for backwards compatibility and downstream
 // consumers (refresh-stale-scores.ts uses it for freshness-decay tier
-// hours). Per DEC-20260503-B, the scheduler dispatches strictly on
-// external_cost_cents = 0 + slug-hash stagger.
+// hours). Per DEC-20260503-B + PR A decoupling, the scheduler dispatches
+// strictly on scheduled_testing_eligible = TRUE + slug-hash stagger.
 
 // Auxiliary task intervals (in ms)
 const HEALTH_CHECK_INTERVAL_MS      = 6 * 60 * 60 * 1000;   // 6h
@@ -238,10 +239,13 @@ export function slugStaggerMinute(slug: string): number {
 /**
  * Find free capabilities due for testing this minute.
  *
- * Per DEC-20260503-B:
- *   - external_cost_cents = 0  (free; paid caps skipped entirely)
+ * Per DEC-20260503-B (refined by the PR A decoupling — see DEC-20260511-?):
+ *   - scheduled_testing_eligible = TRUE  (free/eligible; paid caps skipped)
  *   - last_tested_at older than 1h  (or never tested)
  *   - abs(hashtext(slug)) % 60 = current minute  (slug-hash stagger)
+ *
+ * Eligibility is an explicit column on `test_suites`. `external_cost_cents`
+ * is billing-only and no longer drives dispatch decisions.
  *
  * The status floor (upstream_broken, infra_limited, quarantined) still
  * applies — known-broken suites back off to daily/weekly even on the new
@@ -259,7 +263,7 @@ async function findOverdueCapabilities(): Promise<OverdueCapability[]> {
     INNER JOIN test_suites ts
       ON ts.capability_slug = c.slug AND ts.active = true
     WHERE c.is_active = true
-      AND ts.external_cost_cents = 0
+      AND ts.scheduled_testing_eligible = TRUE
       AND (abs(hashtext(c.slug)) % 60) = EXTRACT(MINUTE FROM NOW())::int
       AND (
         c.last_tested_at IS NULL
@@ -299,7 +303,7 @@ async function countOverdueCapabilities(): Promise<number> {
     INNER JOIN test_suites ts
       ON ts.capability_slug = c.slug AND ts.active = true
     WHERE c.is_active = true
-      AND ts.external_cost_cents = 0
+      AND ts.scheduled_testing_eligible = TRUE
       AND (
         c.last_tested_at IS NULL
         OR c.last_tested_at < NOW() - GREATEST(
@@ -318,9 +322,10 @@ async function countOverdueCapabilities(): Promise<number> {
 }
 
 /**
- * Total count of paid capabilities skipped by the scheduler. Used for
- * end-of-cycle observability so operators can see how many paid caps the
- * scheduler is consciously NOT testing per DEC-20260503-B.
+ * Total count of ineligible capabilities skipped by the scheduler. Used
+ * for end-of-cycle observability so operators can see how many caps the
+ * scheduler is consciously NOT testing per DEC-20260503-B (paid vendors,
+ * LLM caps, anything explicitly flagged scheduled_testing_eligible = FALSE).
  */
 async function countPaidSkipped(): Promise<number> {
   const db = getDb();
@@ -330,7 +335,7 @@ async function countPaidSkipped(): Promise<number> {
     INNER JOIN test_suites ts
       ON ts.capability_slug = c.slug AND ts.active = true
     WHERE c.is_active = true
-      AND ts.external_cost_cents > 0
+      AND ts.scheduled_testing_eligible = FALSE
   `);
   const resultRows = Array.isArray(rows) ? rows : (rows as any)?.rows ?? [];
   return resultRows[0]?.count ?? 0;

@@ -527,6 +527,78 @@ export async function runMigration0065_pr86LeakyCapsCleanup(
   };
 }
 
+// ─── Block 0066: reconcile scheduled_testing_eligible from cost ────────────
+//
+// PR A of the structural decoupling between `external_cost_cents`
+// (billing) and `scheduled_testing_eligible` (scheduling signal). PR A
+// introduces the new column with a backfill that preserves current
+// behavior exactly (eligible = TRUE where cost = 0). This block is the
+// interim derivation bridge: at every boot it re-derives eligibility
+// from cost, catching any INSERT site that ran between PR A and PR B
+// without setting eligibility explicitly.
+//
+// Why it exists: PR A does not touch the 12 INSERT call sites that
+// produce `test_suites` rows. A new free cap inserted between PR A and
+// PR B would land at eligible = FALSE (the column default) and silently
+// drop out of scheduled testing. This block restores the derivation
+// "cost = 0 ⇒ eligible = TRUE" at every boot, so the dispatch sees the
+// correct set regardless of which INSERT path created the row.
+//
+// Ordering: must run AFTER 0064 / 0065 so the cost-bump on LLM caps is
+// applied before eligibility is derived. On a fresh DB the order is:
+// Drizzle 0063 (column + initial backfill) → startup 0062/0063/0064/0065
+// (cost bumps) → startup 0066 (reconcile). On prod the cost-bumps have
+// already run, so 0066 is a no-op verifying the post-Drizzle-backfill
+// state matches.
+//
+// PR B removes this block when INSERT sites are forced explicit and the
+// CI assertion is rewritten to read eligibility instead of cost.
+//
+// Idempotent via the `WHERE` clause: a re-run on a reconciled DB is a
+// no-op (zero rows updated).
+
+export async function runMigration0066_reconcileEligibilityFromCost(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  const update = await tx.execute(sql`
+    UPDATE test_suites
+       SET scheduled_testing_eligible = (external_cost_cents = 0),
+           updated_at = NOW()
+     WHERE scheduled_testing_eligible IS DISTINCT FROM (external_cost_cents = 0)
+  `);
+  const updateCount = (update as { count?: number }).count ?? 0;
+
+  // Post-condition: every row's eligibility matches the cost derivation.
+  // If a row remains mismatched, something raced our UPDATE (or the
+  // expression form differs between engines). Fail boot.
+  const checkRows = await tx.execute(sql`
+    SELECT COUNT(*)::int AS mismatched
+      FROM test_suites
+     WHERE scheduled_testing_eligible IS DISTINCT FROM (external_cost_cents = 0)
+  `);
+  const checkResultRows = Array.isArray(checkRows)
+    ? checkRows
+    : (checkRows as { rows?: unknown[] })?.rows ?? [];
+  const mismatched = (checkResultRows[0] as { mismatched?: number })?.mismatched ?? 0;
+  if (mismatched > 0) {
+    throw new Error(
+      `0066_reconcile_eligibility_from_cost post-condition failed: ${mismatched} rows still mismatched after UPDATE`,
+    );
+  }
+
+  return {
+    block: "0066_reconcile_eligibility_from_cost",
+    outcome:
+      updateCount === 0
+        ? "no rows to reconcile (already aligned)"
+        : `reconciled ${updateCount} rows to derived eligibility`,
+    rows_affected: updateCount,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
 // ─── Orchestrator ───────────────────────────────────────────────────────────
 
 /**
@@ -546,6 +618,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0063_invoiceExtractCostReclassify,
   runMigration0064_alwaysLlmHaikuCosts,
   runMigration0065_pr86LeakyCapsCleanup,
+  runMigration0066_reconcileEligibilityFromCost,
 ];
 
 /**

@@ -125,7 +125,7 @@ async function main() {
       EXTRACT(MINUTE FROM NOW())::int AS current_minute,
       (c.is_active = true
         AND ts.active = true
-        AND ts.external_cost_cents = 0
+        AND ts.scheduled_testing_eligible = TRUE
       )                              AS would_be_picked_if_overdue
     FROM capabilities c
     LEFT JOIN test_suites ts ON ts.capability_slug = c.slug

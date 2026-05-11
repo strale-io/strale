@@ -409,7 +409,7 @@ describe("startup-migrations — block 0065 (PR #86 leaky-cap cleanup)", () => {
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 8 blocks in historical order", () => {
+  it("exports the expected 9 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -424,6 +424,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0063_invoiceExtractCostReclassify",
       "runMigration0064_alwaysLlmHaikuCosts",
       "runMigration0065_pr86LeakyCapsCleanup",
+      "runMigration0066_reconcileEligibilityFromCost",
     ]);
   });
 });
