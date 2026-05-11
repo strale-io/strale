@@ -527,41 +527,51 @@ export async function runMigration0065_pr86LeakyCapsCleanup(
   };
 }
 
-// ─── Block 0066: reconcile scheduled_testing_eligible from cost ────────────
+// ─── Block 0066: ensure scheduled_testing_eligible column + reconcile from cost
 //
-// PR A of the structural decoupling between `external_cost_cents`
-// (billing) and `scheduled_testing_eligible` (scheduling signal). PR A
-// introduces the new column with a backfill that preserves current
-// behavior exactly (eligible = TRUE where cost = 0). This block is the
-// interim derivation bridge: at every boot it re-derives eligibility
-// from cost, catching any INSERT site that ran between PR A and PR B
-// without setting eligibility explicitly.
+// Owns the lifecycle of the `test_suites.scheduled_testing_eligible`
+// column entirely: ADD COLUMN IF NOT EXISTS (idempotent — no-op on prod
+// where the column already exists from PR #88's manual recovery apply,
+// adds the column on fresh DBs), then reconciles eligibility from cost
+// as the PR A interim derivation bridge.
 //
-// Why it exists: PR A does not touch the 12 INSERT call sites that
-// produce `test_suites` rows. A new free cap inserted between PR A and
-// PR B would land at eligible = FALSE (the column default) and silently
-// drop out of scheduled testing. This block restores the derivation
-// "cost = 0 ⇒ eligible = TRUE" at every boot, so the dispatch sees the
-// correct set regardless of which INSERT path created the row.
+// History. PR A (PR #88, merged 2026-05-11) added the column via a
+// Drizzle SQL file at `apps/api/drizzle/0063_decouple_scheduled_testing_eligibility.sql`.
+// That file never ran at deploy time — the Dockerfile CMD invokes the
+// Node entrypoint, which calls `runStartupMigrations()`, which never
+// invokes `drizzle-kit migrate`. PR #88 healthchecked-failed in prod
+// because this block referenced the column before any mechanism created
+// it. Phase 1 (Contain) applied the column manually via `railway ssh`;
+// Phase 2 (Understand) named the failure pattern (Journal
+// `35d67c87082c815da2ead8ff87c638e2`); this revised block is Phase 3
+// (Harden) — the schema fact lives here, in the same place that already
+// reconciles eligibility from cost. DEC-20260511-C codifies the
+// in-TS-block convention.
 //
-// Ordering: must run AFTER 0064 / 0065 so the cost-bump on LLM caps is
-// applied before eligibility is derived. On a fresh DB the order is:
-// Drizzle 0063 (column + initial backfill) → startup 0062/0063/0064/0065
-// (cost bumps) → startup 0066 (reconcile). On prod the cost-bumps have
-// already run, so 0066 is a no-op verifying the post-Drizzle-backfill
-// state matches.
+// PR B will force explicit `scheduledTestingEligible` declarations at
+// the 12 INSERT call sites and remove the reconciliation UPDATE; whether
+// the ADD COLUMN portion stays here or moves to a dedicated block is a
+// PR B design choice.
 //
-// PR B removes this block when INSERT sites are forced explicit and the
-// CI assertion is rewritten to read eligibility instead of cost.
-//
-// Idempotent via the `WHERE` clause: a re-run on a reconciled DB is a
-// no-op (zero rows updated).
+// Idempotency.
+//   - ADD COLUMN IF NOT EXISTS is a Postgres no-op when the column
+//     already exists.
+//   - The reconciliation UPDATE filters `IS DISTINCT FROM` so a re-run
+//     against an already-reconciled DB matches zero rows.
 
-export async function runMigration0066_reconcileEligibilityFromCost(
+export async function runMigration0066_ensureEligibilityColumnAndReconcile(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
   const startedAt = Date.now();
 
+  // Schema: ensure column exists. No-op on existing prod; creates it on
+  // fresh DBs (local dev, staging, restored snapshots).
+  await tx.execute(sql`
+    ALTER TABLE test_suites
+      ADD COLUMN IF NOT EXISTS scheduled_testing_eligible BOOLEAN NOT NULL DEFAULT FALSE
+  `);
+
+  // Data: reconcile eligibility from cost (PR A interim derivation bridge).
   const update = await tx.execute(sql`
     UPDATE test_suites
        SET scheduled_testing_eligible = (external_cost_cents = 0),
@@ -584,16 +594,16 @@ export async function runMigration0066_reconcileEligibilityFromCost(
   const mismatched = (checkResultRows[0] as { mismatched?: number })?.mismatched ?? 0;
   if (mismatched > 0) {
     throw new Error(
-      `0066_reconcile_eligibility_from_cost post-condition failed: ${mismatched} rows still mismatched after UPDATE`,
+      `0066_ensure_eligibility_column_and_reconcile post-condition failed: ${mismatched} rows still mismatched after UPDATE`,
     );
   }
 
   return {
-    block: "0066_reconcile_eligibility_from_cost",
+    block: "0066_ensure_eligibility_column_and_reconcile",
     outcome:
       updateCount === 0
-        ? "no rows to reconcile (already aligned)"
-        : `reconciled ${updateCount} rows to derived eligibility`,
+        ? "column ensured; no rows to reconcile (already aligned)"
+        : `column ensured; reconciled ${updateCount} rows to derived eligibility`,
     rows_affected: updateCount,
     duration_ms: Date.now() - startedAt,
   };
@@ -618,7 +628,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0063_invoiceExtractCostReclassify,
   runMigration0064_alwaysLlmHaikuCosts,
   runMigration0065_pr86LeakyCapsCleanup,
-  runMigration0066_reconcileEligibilityFromCost,
+  runMigration0066_ensureEligibilityColumnAndReconcile,
 ];
 
 /**
