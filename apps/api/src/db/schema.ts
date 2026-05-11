@@ -251,8 +251,9 @@ export const transactions = pgTable(
       .default("pending"),
     // EXTERNALLY MANAGED — owned by an untracked external workflow (SCF-3)
     // that tags transactions as 'customer' / 'test' for analytics. Do NOT
-    // read, write, or modify from API code. Declared here only to prevent
-    // drizzle-kit generate from proposing a destructive DROP. See
+    // read, write, or modify from API code. Declared here so the schema
+    // shape reflects reality on disk (avoids spurious diff signals from
+    // any future schema-introspection tooling). See
     // SESSION_5_CARRY_FORWARD.md and PHASE_C_COLUMN_INVESTIGATION.md.
     // Lint guard: scripts/check-no-external-column-access.mjs.
     integrityHashStatus: varchar("integrity_hash_status", { length: 16 })

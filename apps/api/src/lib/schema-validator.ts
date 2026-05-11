@@ -133,7 +133,7 @@ export async function validateSchema(): Promise<void> {
     {
       label: "startup-schema-mismatch",
       missing_by_migration: Object.fromEntries(byMigration),
-      fix: "cd apps/api && npx drizzle-kit migrate",
+      fix: "Add ADD COLUMN IF NOT EXISTS for the missing column inside apps/api/src/lib/startup-migrations.ts (see DEC-20260511-C). Schema changes are runtime in-TS blocks; no separate migration step.",
     },
     "SCHEMA MISMATCH — DB is missing required columns. See missing_by_migration.",
   );

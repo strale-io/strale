@@ -424,7 +424,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0063_invoiceExtractCostReclassify",
       "runMigration0064_alwaysLlmHaikuCosts",
       "runMigration0065_pr86LeakyCapsCleanup",
-      "runMigration0066_reconcileEligibilityFromCost",
+      "runMigration0066_ensureEligibilityColumnAndReconcile",
     ]);
   });
 });

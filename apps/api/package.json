@@ -14,12 +14,8 @@
     "lint:ssrf-inventory": "node scripts/check-ssrf-inventory.mjs",
     "lint:no-new-console": "node scripts/check-no-new-console.mjs",
     "lint:no-external-column-access": "node scripts/check-no-external-column-access.mjs",
-    "lint:migration-prefixes": "node scripts/check-migration-prefixes.mjs",
     "digest": "tsx src/jobs/daily-digest.ts",
-    "digest:preview": "tsx src/jobs/digest-preview.ts",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push"
+    "digest:preview": "tsx src/jobs/digest-preview.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -56,7 +52,6 @@
     "@types/jsdom": "^28.0.1",
     "@types/node": "^22.12.0",
     "@types/turndown": "^5.0.6",
-    "drizzle-kit": "^0.30.4",
     "js-yaml": "^4.1.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
