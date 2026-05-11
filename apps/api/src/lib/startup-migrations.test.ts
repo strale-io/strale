@@ -48,9 +48,11 @@ import {
   runMigration0060_marketplaceEligible,
   runMigration0062_paidVendorCosts,
   runMigration0063_invoiceExtractCostReclassify,
+  runMigration0064_alwaysLlmHaikuCosts,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
+import { BLOCK_0064_SLUGS } from "./llm-capability-costs.js";
 
 const dialect = new PgDialect();
 
@@ -244,6 +246,80 @@ describe("startup-migrations — block 0063 (invoice-extract cost reclassify)", 
   });
 });
 
+describe("startup-migrations — block 0064 (always-LLM Haiku costs)", () => {
+  it("first run: updates rows when always-LLM Haiku suites are at 0; post-check passes", async () => {
+    // Queue: UPDATE returns N (the suites flipped from 0 → 1);
+    // post-check returns 0 (none remaining at 0).
+    const stub = makeStub({
+      queue: [{ count: 219 }, [{ remaining_zero: 0 }]],
+    });
+    const result = await runMigration0064_alwaysLlmHaikuCosts(stub);
+    expect(result.rows_affected).toBe(219);
+    expect(result.outcome).toMatch(/always-LLM Haiku suites reclassified across \d+ capabilities: 219/);
+    expect(stub.captured).toHaveLength(2);
+
+    // The UPDATE shape — IN-list of BLOCK_0064_SLUGS, exactly the 4 paid
+    // test_types, active+live filter, and the = 0 idempotency filter.
+    const updateSql = stub.renderedSql[0].toLowerCase();
+    expect(updateSql).toContain("update test_suites");
+    expect(updateSql).toContain("set external_cost_cents = 1");
+    expect(updateSql).toContain("active = true");
+    expect(updateSql).toMatch(/test_mode = 'live'/);
+    expect(updateSql).toContain("'known_answer'");
+    expect(updateSql).toContain("'edge_case'");
+    expect(updateSql).toContain("'negative'");
+    expect(updateSql).toContain("'known_bad'");
+    // Negative assertion: the two probe types must NOT be in the list —
+    // they legitimately stay at 0 (auth-less probe pattern, no paid call).
+    expect(updateSql).not.toContain("'dependency_health'");
+    expect(updateSql).not.toContain("'schema_check'");
+    // Idempotency filter:
+    expect(updateSql).toContain("external_cost_cents = 0");
+    // Earlier-block slugs are NOT in the IN-list (avoid stomping on
+    // 0062's 3¢ risk-narrative-generate, or duplicating 0063's invoice-extract).
+    expect(updateSql).not.toContain("'risk-narrative-generate'");
+    expect(updateSql).not.toContain("'invoice-extract'");
+  });
+
+  it("second run: idempotent — UPDATE returns 0 rows; outcome reports already-classified", async () => {
+    const stub = makeStub({
+      queue: [{ count: 0 }, [{ remaining_zero: 0 }]],
+    });
+    const result = await runMigration0064_alwaysLlmHaikuCosts(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to update.*already classified/i);
+    expect(stub.captured).toHaveLength(2);
+  });
+
+  it("post-condition violation throws (would fail boot)", async () => {
+    // Imagine a new always-LLM Haiku suite landed at cost=0 between
+    // deploys. The UPDATE captures some, but the post-check finds a
+    // leftover.
+    const stub = makeStub({
+      queue: [{ count: 219 }, [{ remaining_zero: 1 }]],
+    });
+    await expect(runMigration0064_alwaysLlmHaikuCosts(stub)).rejects.toThrow(
+      /post-condition failed.*1 always-LLM Haiku suites/i,
+    );
+  });
+
+  it("UPDATE binds every slug in BLOCK_0064_SLUGS as a parameter (no string concat)", async () => {
+    // Build-time parameterisation check: the rendered SQL should
+    // contain N placeholders ($1 etc.) at least equal to the number
+    // of slugs in BLOCK_0064_SLUGS, not the slug strings inline.
+    // (sql.join + sql`${s}` pushes each as a bind parameter.)
+    const stub = makeStub({
+      queue: [{ count: 0 }, [{ remaining_zero: 0 }]],
+    });
+    await runMigration0064_alwaysLlmHaikuCosts(stub);
+    const updateSql = stub.renderedSql[0];
+    // Count placeholders in the UPDATE-line — at least one per slug
+    // (the UPDATE has the IN-list; the post-check has its own).
+    const placeholderCount = (updateSql.match(/\$\d+/g) ?? []).length;
+    expect(placeholderCount).toBeGreaterThanOrEqual(BLOCK_0064_SLUGS.length);
+  });
+});
+
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
   it("exports the expected 7 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
@@ -258,6 +334,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0060_marketplaceEligible",
       "runMigration0062_paidVendorCosts",
       "runMigration0063_invoiceExtractCostReclassify",
+      "runMigration0064_alwaysLlmHaikuCosts",
     ]);
   });
 });
