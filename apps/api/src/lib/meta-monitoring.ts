@@ -15,6 +15,7 @@ import { and, eq, desc, sql, inArray, lt, lte, isNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, testSuites, testResults, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "./health-monitor.js";
+import type { LifecycleState } from "./lifecycle.js";
 import {
   checkChainPendingBacklog,
   checkChainFailedCount,
@@ -380,33 +381,108 @@ export async function checkMissingTestCoverage(): Promise<MetaCheckResult> {
 
 // ─── 8D: Daily pipeline health checks ────────────────────────────────────────
 
+// Staleness anchor for lifecycle-state checks. Uses the MAX(created_at) of any
+// lifecycle_transition event into the target state (definitive: a transition
+// happened then), falling back to capabilities.created_at for rows that
+// originated in the target state and have never transitioned. capabilities.
+// updated_at is NOT safe here — the test scheduler bumps it on routine
+// touches and silently resets the apparent "stuck" age. SI was stuck
+// 2026-05-07 → 2026-05-11 but the original updated_at-based query intermittently
+// missed it because background updates kept resetting the clock.
+// Per DEC-20260511-E.
+//
+// `targetState` is typed against the lifecycle state union — a typo like
+// `"validateing"` would compile against `string` and silently return 0 rows
+// forever, exactly the SI-grade silent-failure mode this DEC fixes.
+// `ageInterval` is narrowed to known literals because it is interpolated via
+// `sql.raw()` (postgres-js cannot bind INTERVAL via parameters); narrowing
+// keeps the call site safe-by-construction and prevents future drift toward
+// user-controlled values.
+type LifecycleAgeInterval = "48 hours" | "7 days";
+
+function lifecycleStateAgeSql(targetState: LifecycleState, ageInterval: LifecycleAgeInterval) {
+  const intervalSql = sql.raw(`INTERVAL '${ageInterval}'`);
+  return sql`
+    WITH cap_state_entry AS (
+      SELECT
+        c.slug,
+        COALESCE(
+          (
+            SELECT MAX(e.created_at)
+            FROM health_monitor_events e
+            WHERE e.capability_slug = c.slug
+              AND e.event_type = 'lifecycle_transition'
+              AND e.details->>'to' = ${targetState}
+          ),
+          c.created_at
+        ) AS state_entered_at
+      FROM capabilities c
+      WHERE c.lifecycle_state = ${targetState}
+        AND c.is_active = true
+    )
+    SELECT slug, state_entered_at
+    FROM cap_state_entry
+    WHERE state_entered_at < NOW() - ${intervalSql}
+    ORDER BY state_entered_at
+  `;
+}
+
 /**
- * Check 11: Validation queue stuck
- * Capabilities in 'validating' state for more than 48 hours.
+ * Check 11: Validation queue stuck (DEC-20260511-E)
+ *
+ * Capabilities in 'validating' for >48h, anchored on the lifecycle_transition
+ * event into 'validating' (not capabilities.updated_at, which is bumped by
+ * routine background touches and silently masked the SI incident).
+ *
+ * On detection, surfaces each stuck row as a [stuck-validating] GitHub Issue
+ * in strale-io/strale via the existing GITHUB_TOKEN env var. Issues are
+ * idempotent (existing one gets a comment, not a duplicate). When a slug
+ * is no longer in the stuck set, its open issue is auto-closed.
+ *
+ * Surface = GitHub Issues (not the daily digest — pipeline confirmed broken
+ * for 27+ days, see DEC-20260511-F).
  */
 export async function checkValidationQueueStuck(): Promise<MetaCheckResult> {
   const check = "validation_queue_stuck";
   try {
     const db = getDb();
-    const rows = await db.execute(sql`
-      SELECT slug, updated_at
-      FROM capabilities
-      WHERE lifecycle_state = 'validating'
-        AND updated_at < NOW() - INTERVAL '48 hours'
-      ORDER BY updated_at
-    `);
+    const rows = await db.execute(lifecycleStateAgeSql("validating", "48 hours"));
     const results = (Array.isArray(rows) ? rows : (rows as any).rows) as Array<{
       slug: string;
-      updated_at: string;
+      state_entered_at: string;
     }>;
 
+    // Sync GitHub Issues regardless of stuck-count: empty set = close any leftovers.
+    const { syncStuckValidatingIssues } = await import("./github-issues.js");
+
     if (results.length === 0) {
+      await syncStuckValidatingIssues([]);
       return { check, severity: "warning", passed: true, details: "No capabilities stuck in validating state" };
     }
 
+    const now = new Date();
+    const issuePayloads = results.map((r) => {
+      const enteredAt = new Date(r.state_entered_at);
+      const totalHours = Math.floor((now.getTime() - enteredAt.getTime()) / 3_600_000);
+      const days = Math.floor(totalHours / 24);
+      const hours = totalHours % 24;
+      const age = days > 0 ? `${days}d ${hours}h` : `${totalHours}h`;
+      const body = [
+        `**Capability:** \`${r.slug}\``,
+        `**Stuck for:** ${age} (since ${enteredAt.toISOString()})`,
+        ``,
+        `**Action:** run \`cd apps/api && npx tsx scripts/validate-capability.ts --slug ${r.slug} --apply\` once gate failures are addressed. Read-only sanity check first: omit \`--apply\` to see which Gate 1 checks fail.`,
+        ``,
+        `**Why this is open:** DEC-20260511-E surfaces capabilities sitting in lifecycle_state='validating' beyond 48h. Auto-closes when the row leaves 'validating'.`,
+      ].join("\n");
+      return { slug: r.slug, body };
+    });
+
+    await syncStuckValidatingIssues(issuePayloads);
+
     const affected = results.map((r) => r.slug);
     await _logMetaEvent(check, "warning", `${affected.length} capability(ies) stuck in validating state >48h`, {
-      affected: results.map((r) => ({ slug: r.slug, updated_at: r.updated_at })),
+      affected: results.map((r) => ({ slug: r.slug, state_entered_at: r.state_entered_at })),
     });
 
     return {
@@ -423,22 +499,19 @@ export async function checkValidationQueueStuck(): Promise<MetaCheckResult> {
 
 /**
  * Check 12: Probation timeout
- * Capabilities in 'probation' state for more than 7 days without promoting.
+ *
+ * Capabilities in 'probation' for >7d. Same staleness-anchor fix as
+ * validation_queue_stuck — anchored on lifecycle_transition into 'probation',
+ * not capabilities.updated_at. Per DEC-20260511-E.
  */
 export async function checkProbationTimeout(): Promise<MetaCheckResult> {
   const check = "probation_timeout";
   try {
     const db = getDb();
-    const rows = await db.execute(sql`
-      SELECT slug, updated_at
-      FROM capabilities
-      WHERE lifecycle_state = 'probation'
-        AND updated_at < NOW() - INTERVAL '7 days'
-      ORDER BY updated_at
-    `);
+    const rows = await db.execute(lifecycleStateAgeSql("probation", "7 days"));
     const results = (Array.isArray(rows) ? rows : (rows as any).rows) as Array<{
       slug: string;
-      updated_at: string;
+      state_entered_at: string;
     }>;
 
     if (results.length === 0) {
@@ -447,7 +520,7 @@ export async function checkProbationTimeout(): Promise<MetaCheckResult> {
 
     const affected = results.map((r) => r.slug);
     await _logMetaEvent(check, "warning", `${affected.length} capability(ies) stuck in probation >7d`, {
-      affected: results.map((r) => ({ slug: r.slug, updated_at: r.updated_at })),
+      affected: results.map((r) => ({ slug: r.slug, state_entered_at: r.state_entered_at })),
     });
 
     return {
