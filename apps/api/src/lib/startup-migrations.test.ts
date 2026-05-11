@@ -49,6 +49,7 @@ import {
   runMigration0062_paidVendorCosts,
   runMigration0063_invoiceExtractCostReclassify,
   runMigration0064_alwaysLlmHaikuCosts,
+  runMigration0065_pr86LeakyCapsCleanup,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -320,8 +321,95 @@ describe("startup-migrations — block 0064 (always-LLM Haiku costs)", () => {
   });
 });
 
+describe("startup-migrations — block 0065 (PR #86 leaky-cap cleanup)", () => {
+  it("first run: bumps website-to-company cost AND fixes us-company-data fixture", async () => {
+    // Queue: cost-bump UPDATE returns 4 (4 live non-probe suites);
+    //        fixture-fix UPDATE returns 4 (4 AAPL rows replaced);
+    //        cost post-check returns 0;
+    //        fixture post-check returns 0.
+    const stub = makeStub({
+      queue: [
+        { count: 4 },
+        { count: 4 },
+        [{ remaining_zero: 0 }],
+        [{ remaining_aapl: 0 }],
+      ],
+    });
+    const result = await runMigration0065_pr86LeakyCapsCleanup(stub);
+    expect(result.rows_affected).toBe(8);
+    expect(result.outcome).toContain("website-to-company cost-bumped=4");
+    expect(result.outcome).toContain("us-company-data fixture-fixed=4");
+    expect(stub.captured).toHaveLength(4);
+
+    // Cost-bump UPDATE shape
+    const costSql = stub.renderedSql[0].toLowerCase();
+    expect(costSql).toContain("update test_suites");
+    expect(costSql).toContain("set external_cost_cents = 1");
+    expect(costSql).toMatch(/test_mode = 'live'/);
+    expect(costSql).toContain("external_cost_cents = 0");
+    expect(costSql).not.toContain("'dependency_health'");
+    expect(costSql).not.toContain("'schema_check'");
+
+    // Fixture-fix UPDATE shape
+    const fixSql = stub.renderedSql[1].toLowerCase();
+    expect(fixSql).toContain("update test_suites");
+    expect(fixSql).toContain("jsonb_set");
+    expect(fixSql).toContain("'{company}'");
+    expect(fixSql).toContain("'\"320193\"'");
+    expect(fixSql).toContain("'us-company-data'");
+    expect(fixSql).toContain("'aapl'"); // idempotency filter (lowercased by toLowerCase)
+  });
+
+  it("second run: idempotent — both UPDATEs return 0 rows; outcome reports already-fixed", async () => {
+    const stub = makeStub({
+      queue: [
+        { count: 0 },
+        { count: 0 },
+        [{ remaining_zero: 0 }],
+        [{ remaining_aapl: 0 }],
+      ],
+    });
+    const result = await runMigration0065_pr86LeakyCapsCleanup(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to update.*already classified.*fixed/i);
+    expect(stub.captured).toHaveLength(4);
+  });
+
+  it("post-condition violation (cost) throws (would fail boot)", async () => {
+    // Cost UPDATE captured some, fixture UPDATE captured 0, post-check
+    // (cost) finds a leftover at external_cost_cents = 0.
+    const stub = makeStub({
+      queue: [
+        { count: 4 },
+        { count: 0 },
+        [{ remaining_zero: 1 }],
+        [{ remaining_aapl: 0 }],
+      ],
+    });
+    await expect(runMigration0065_pr86LeakyCapsCleanup(stub)).rejects.toThrow(
+      /post-condition failed.*1 website-to-company suites/i,
+    );
+  });
+
+  it("post-condition violation (fixture) throws (would fail boot)", async () => {
+    // Cost UPDATE clean, fixture UPDATE clean, but post-check (fixture)
+    // finds a leftover AAPL row.
+    const stub = makeStub({
+      queue: [
+        { count: 4 },
+        { count: 4 },
+        [{ remaining_zero: 0 }],
+        [{ remaining_aapl: 1 }],
+      ],
+    });
+    await expect(runMigration0065_pr86LeakyCapsCleanup(stub)).rejects.toThrow(
+      /post-condition failed.*1 us-company-data suites.*'AAPL'/i,
+    );
+  });
+});
+
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 7 blocks in historical order", () => {
+  it("exports the expected 8 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -335,6 +423,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0062_paidVendorCosts",
       "runMigration0063_invoiceExtractCostReclassify",
       "runMigration0064_alwaysLlmHaikuCosts",
+      "runMigration0065_pr86LeakyCapsCleanup",
     ]);
   });
 });

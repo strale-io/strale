@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
 /**
@@ -24,20 +23,6 @@ function findCnpj(input: string): string | null {
   const match = input.replace(/[\s]/g, "").match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
   if (match) return match[0].replace(/[\.\-/]/g, "");
   return null;
-}
-
-async function extractCompanyName(text: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
-  const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 100,
-    messages: [{ role: "user", content: `Extract the Brazilian company name from this request. Return ONLY the company name, nothing else.\n\nRequest: "${text}"` }],
-  });
-  const name = r.content[0].type === "text" ? r.content[0].text.trim().replace(/^["']|["']$/g, "") : "";
-  if (!name) throw new Error(`Could not identify a company name from: "${text}".`);
-  return name;
 }
 
 async function fetchByCnpj(cnpj: string): Promise<Record<string, unknown>> {

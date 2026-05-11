@@ -66,13 +66,13 @@ geography: us
 test_fixtures:
   known_answer:
     input:
-      company: AAPL
+      company: "320193"
     expected_fields:
       - field: company_name
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    company: AAPL
+    company: "320193"
 output_field_reliability:
   cik: guaranteed
   state: guaranteed

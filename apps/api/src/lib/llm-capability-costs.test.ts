@@ -121,14 +121,20 @@ describe("llm-capability-costs — Phase 3 CI gate", () => {
     expect(overlap).toEqual([]);
   });
 
-  it("BLOCK_0064_SLUGS excludes the slugs owned by earlier blocks (0062 risk-narrative, 0063 invoice-extract)", () => {
+  it("BLOCK_0064_SLUGS excludes slugs owned by other blocks (0062 risk-narrative, 0063 invoice-extract, 0065 website-to-company)", () => {
     expect(BLOCK_0064_SLUGS).not.toContain("risk-narrative-generate");
     expect(BLOCK_0064_SLUGS).not.toContain("invoice-extract");
+    expect(BLOCK_0064_SLUGS).not.toContain("website-to-company");
   });
 
-  it("BLOCK_0064_SLUGS covers exactly the Haiku always-LLM caps (Object.keys(ALWAYS_LLM_CAPABILITY_COSTS) minus the two earlier-block slugs)", () => {
+  it("BLOCK_0064_SLUGS covers exactly the Haiku always-LLM caps (Object.keys(ALWAYS_LLM_CAPABILITY_COSTS) minus slugs owned by other blocks)", () => {
     const expected = Object.keys(ALWAYS_LLM_CAPABILITY_COSTS)
-      .filter((s) => s !== "risk-narrative-generate" && s !== "invoice-extract")
+      .filter(
+        (s) =>
+          s !== "risk-narrative-generate" &&
+          s !== "invoice-extract" &&
+          s !== "website-to-company",
+      )
       .sort();
     expect([...BLOCK_0064_SLUGS]).toEqual(expected);
   });
