@@ -529,6 +529,14 @@ export const testSuites = pgTable(
     // 'live' (real API), 'fixture' (saved data), 'canary' (periodic live check)
     fixtureLastRefreshed: timestamp("fixture_last_refreshed", { withTimezone: true }),
     externalCostCents: integer("external_cost_cents").default(0),
+    // Scheduling eligibility — explicit billing/scheduling decoupling per PR A
+    // of the May 2026 Haiku-leak structural follow-up (see DEC-20260511-?).
+    // The hourly test scheduler reads this column to decide what to dispatch;
+    // `external_cost_cents` is billing-only. Block 0066 reconciles eligibility
+    // from cost at every boot as an interim derivation bridge (PR A).
+    scheduledTestingEligible: boolean("scheduled_testing_eligible")
+      .notNull()
+      .default(false),
     // For auto-generated tests: the capability's updated_at at generation time.
     // If the capability was modified after this timestamp, the ground truth
     // may be contaminated and should be re-verified.
