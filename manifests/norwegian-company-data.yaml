@@ -81,7 +81,7 @@ test_fixtures:
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    org_number: 556703-7485
+    org_number: "923609016"
 output_field_reliability:
   status: guaranteed
   address: guaranteed

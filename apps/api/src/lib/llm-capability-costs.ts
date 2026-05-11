@@ -62,6 +62,14 @@ export const ALWAYS_LLM_CAPABILITY_COSTS: Readonly<Record<string, number>> = Obj
   // Same pattern: listed for CI; runtime UPDATE fires from block 0063.
   "invoice-extract": 1,
 
+  // ─── Haiku 4.5 — owned by block 0065 (PR #86 follow-up) ────────────────────
+  // website-to-company: PR #86 traced the cap and found llmExtractCompanyName
+  // fires whenever meta-extract returns any title/site_name (i.e. every real
+  // site), and the cap also chains into a country-specific registry that
+  // can itself trigger another LLM call. The "structured-data bypasses LLM"
+  // bypass premise was wrong; promoting to the always-LLM band.
+  "website-to-company": 1,
+
   // ─── Haiku 4.5 — owned by block 0064 (this file) ────────────────────────────
   "address-parse": 1,
   "agent-trace-analyze": 1,
@@ -150,9 +158,23 @@ export const ALWAYS_LLM_CAPABILITY_COSTS: Readonly<Record<string, number>> = Obj
  */
 export const BLOCK_0064_SLUGS: readonly string[] = Object.freeze(
   Object.keys(ALWAYS_LLM_CAPABILITY_COSTS)
-    .filter((slug) => slug !== "risk-narrative-generate" && slug !== "invoice-extract")
+    .filter(
+      (slug) =>
+        slug !== "risk-narrative-generate" &&
+        slug !== "invoice-extract" &&
+        slug !== "website-to-company",
+    )
     .sort(),
 );
+
+/**
+ * Slugs owned by block 0065's cost UPDATE. PR #86 follow-up: the cap was
+ * previously in `CONDITIONAL_LLM_CAPABILITIES` but the audit's trace
+ * showed the bypass premise was wrong — `llmExtractCompanyName` fires
+ * on every real site URL. Block 0065 bumps it to 1¢ to flip the
+ * scheduler-skip semantic; same flat-cost-1¢ shape as block 0064.
+ */
+export const BLOCK_0065_SLUGS: readonly string[] = Object.freeze(["website-to-company"]);
 
 /**
  * Capabilities that import the Anthropic SDK but legitimately keep
@@ -174,10 +196,14 @@ export const CONDITIONAL_LLM_CAPABILITIES: ReadonlySet<string> = new Set([
   // resolver (`extractCompanyName` / `name-resolver.ts`) only fires
   // when the input is NOT a numeric registry code. Manifest
   // `health_check_input` uses the country's registry-code format
-  // (CNPJ, CIN, CVR, registry code, Y-tunnus, SIREN, organisasjonsnummer,
-  // company number, EIN, etc.), which bypasses the LLM call. Scheduled
+  // (CIN, CVR, registry code, Y-tunnus, SIREN, organisasjonsnummer,
+  // company number), which bypasses the LLM call. Scheduled
   // testing exercises the direct registry-API path (free).
-  "brazilian-company-data",
+  //
+  // brazilian-company-data was removed 2026-05-11 (PR #86 follow-up): the
+  // capability never reached its LLM helper from the registered executor;
+  // dead-code helper + SDK import were deleted, so the cap no longer
+  // imports `@anthropic-ai/sdk` and falls outside the CI gate entirely.
   "cz-company-data",
   "danish-company-data",
   "estonian-company-data",
@@ -185,18 +211,21 @@ export const CONDITIONAL_LLM_CAPABILITIES: ReadonlySet<string> = new Set([
   "french-company-data",
   "norwegian-company-data",
   "uk-company-data",
+  // us-company-data: SDK is reached only on alphanumeric / ticker inputs in
+  // production. The scheduled-test fixture was changed (PR #86 follow-up)
+  // from "AAPL" (ticker, fails `findCik` regex → LLM path) to a numeric
+  // CIK ("320193"), which matches `/^\d{1,10}$/` and routes directly to
+  // the SEC EDGAR API. Hourly outage detection on EDGAR is preserved.
   "us-company-data",
 
-  // ─── Domain-input cap with cached / structured-extract fast path ───────────
-  // website-to-company: LLM fires only when the structured-data
-  // extraction (JSON-LD, meta tags) doesn't surface a company name.
-  // Test fixture uses a site with rich structured data; LLM bypassed.
-  "website-to-company",
-
-  // ─── Carrier-ambiguity-only LLM ────────────────────────────────────────────
+  // ─── Invalid-format early-return ─────────────────────────────────────────────
   // container-track: ISO 6346 validation + carrier-prefix mapping
-  // resolves > 95% of inputs without LLM. LLM fires only when the
-  // carrier prefix doesn't match the static map. Test fixture uses a
-  // well-known carrier prefix (Maersk MAEU/MSKU/MRKU).
+  // resolves real container numbers without LLM. LLM (Browserless +
+  // Haiku tracking-page extraction) fires only when validation passes.
+  // The scheduled-test fixture is the placeholder string "test_value",
+  // which fails `validateContainerNumber` → invalid-format early-return
+  // path → no Browserless fetch, no LLM call. PR #86 corrected the
+  // bypass justification (was previously claimed to be a well-known
+  // carrier prefix); the verdict is unchanged.
   "container-track",
 ]);
