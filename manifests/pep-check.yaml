@@ -6,6 +6,8 @@ description: >-
   and includes Relatives and Close Associates (RCAs). Returns audit-grade evidence: match results
   with classification, position history, jurisdictions, and named source attribution.
 category: compliance
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

@@ -5,6 +5,8 @@ slug: google-search
 name: Google Search
 description: Perform a Google search and return structured results. Returns title, URL, snippet, position for each result.
 category: web-scraping
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 10
 is_free_tier: false
 input_schema:

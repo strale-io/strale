@@ -59,6 +59,8 @@ import {
   runMigration0073_classifyFreeUnlimitedMediumConfidence,
   runMigration0074_classifyAnthropicPaidPrepaid,
   runMigration0075_classifyFreeQuotaLowConfidence,
+  runMigration0076_classifyNonAnthropicPaidPrepaid,
+  runMigration0077_classifyFreeQuotaOverrides,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -952,8 +954,130 @@ describe("startup-migrations — phase-b4 low-conf free_quota cap list (invarian
   });
 });
 
+describe("startup-migrations — block 0076 (classify non-Anthropic paid_prepaid)", () => {
+  it("first run: UPDATEs DB-present slugs to paid_prepaid (orphans skipped by cost_class IS NULL+absent-row filter)", async () => {
+    // 7 DB-present caps update; 3 orphans return 0 rows (slug doesn't exist).
+    // The stub doesn't model the orphan-missing behavior, so we assert
+    // the SQL shape covers all 10 + the safety filter is present.
+    const stub = makeStub({ queue: [{ count: 7 }] });
+    const result = await runMigration0076_classifyNonAnthropicPaidPrepaid(stub);
+    expect(result.rows_affected).toBe(7);
+    expect(result.outcome).toMatch(/classified 7 cap/i);
+
+    const sqlText = stub.renderedSql[0].toLowerCase();
+    expect(sqlText).toContain("cost_class = 'paid_prepaid'");
+    expect(sqlText).toContain("quota_window = 'none'");
+    expect(sqlText).toContain("quota_cap = null");
+    // All 10 slugs (including orphans) in the IN-list.
+    expect(sqlText).toContain("'adverse-media-check'");
+    expect(sqlText).toContain("'sanctions-check'");
+    expect(sqlText).toContain("'google-search'");
+    expect(sqlText).toContain("'uk-cop-check'");
+    expect(sqlText).toContain("'us-company-data-cobalt'");   // orphan
+    expect(sqlText).toContain("'us-ein-match'");              // orphan
+    expect(sqlText).toContain("'us-sec-filings-extended'");   // orphan
+    // Idempotency clause.
+    expect(sqlText).toContain("cost_class is null");
+  });
+
+  it("second run: idempotent — count=0; outcome reports already-classified", async () => {
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    const result = await runMigration0076_classifyNonAnthropicPaidPrepaid(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to classify/i);
+  });
+
+  it("safety filter pin — UPDATE includes AND cost_class IS NULL", async () => {
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    await runMigration0076_classifyNonAnthropicPaidPrepaid(stub);
+    const sqlText = stub.renderedSql[0].toLowerCase();
+    expect(sqlText).toMatch(/and\s+cost_class\s+is\s+null/);
+  });
+});
+
+describe("startup-migrations — block 0077 (free_quota overrides — BAG + EP-Online)", () => {
+  it("first run: per-cap UPDATEs with chat-supplied quota_cap values", async () => {
+    const stub = makeStub({ queue: Array(2).fill({ count: 1 }) });
+    const result = await runMigration0077_classifyFreeQuotaOverrides(stub);
+    expect(result.rows_affected).toBe(2);
+    expect(result.outcome).toMatch(/classified 2 cap/i);
+    expect(stub.captured).toHaveLength(2);
+
+    const allSql = stub.renderedSql.join("\n").toLowerCase();
+    expect(allSql).toContain("cost_class = 'free_quota'");
+    expect(allSql).toContain("quota_window = 'daily'");
+    expect(allSql).toContain("quota_reset_dom = null");
+    expect(stub.renderedSql.every((s) => /cost_class\s+is\s+null/i.test(s))).toBe(true);
+  });
+
+  it("second run: idempotent — both UPDATEs return 0", async () => {
+    const stub = makeStub({ queue: Array(2).fill({ count: 0 }) });
+    const result = await runMigration0077_classifyFreeQuotaOverrides(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to classify/i);
+  });
+});
+
+describe("startup-migrations — phase-b5 slug lists (invariants)", () => {
+  it("PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS has the expected 10 entries", async () => {
+    const { PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./startup-migrations.js");
+    expect(PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS.length).toBeGreaterThanOrEqual(7);
+    expect(PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS.length).toBeLessThanOrEqual(10);
+    // Pin the chat-supplied slug set for regression resistance.
+    const sorted = [...PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS].sort();
+    expect(sorted).toEqual([
+      "adverse-media-check",
+      "backlink-check",
+      "google-search",
+      "pep-check",
+      "sanctions-check",
+      "serp-analyze",
+      "uk-cop-check",
+      "us-company-data-cobalt",
+      "us-ein-match",
+      "us-sec-filings-extended",
+    ]);
+  });
+
+  it("PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS has exactly 2 entries with pinned values", async () => {
+    const { PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS } = await import("./startup-migrations.js");
+    expect(PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS.length).toBe(2);
+    const byslug = Object.fromEntries(
+      PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS.map((c: { slug: string; quotaCap: number }) => [c.slug, c.quotaCap]),
+    );
+    expect(byslug["nl-bag-address"]).toBe(50000);
+    expect(byslug["nl-energy-label"]).toBe(1000);
+  });
+
+  it("B.5 slug lists do not overlap with B.1 / B.2 / B.3 / B.4", async () => {
+    const { PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS, PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS,
+            PHASE_B2_FREE_QUOTA_HIGH_CONF, PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF,
+            PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS } = await import("./startup-migrations.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+
+    const b1 = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
+    const b2a = new Set(PHASE_B2_FREE_QUOTA_HIGH_CONF.map((c: { slug: string }) => c.slug));
+    const b2b = new Set(PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF);
+    const b3 = new Set(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS);
+    const b4 = new Set(PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS.map((c: { slug: string }) => c.slug));
+
+    const allB5 = [
+      ...PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS,
+      ...PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS.map((c: { slug: string }) => c.slug),
+    ];
+    for (const slug of allB5) {
+      expect(b1.has(slug), `${slug} also in B.1`).toBe(false);
+      expect(b2a.has(slug), `${slug} also in B.2 free_quota`).toBe(false);
+      expect(b2b.has(slug), `${slug} also in B.2 free_unlimited`).toBe(false);
+      expect(b3.has(slug), `${slug} also in B.3`).toBe(false);
+      expect(b4.has(slug), `${slug} also in B.4`).toBe(false);
+    }
+  });
+});
+
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 18 blocks in historical order", () => {
+  it("exports the expected 20 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -978,6 +1102,8 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0073_classifyFreeUnlimitedMediumConfidence",
       "runMigration0074_classifyAnthropicPaidPrepaid",
       "runMigration0075_classifyFreeQuotaLowConfidence",
+      "runMigration0076_classifyNonAnthropicPaidPrepaid",
+      "runMigration0077_classifyFreeQuotaOverrides",
     ]);
   });
 });

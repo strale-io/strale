@@ -1192,6 +1192,128 @@ export async function runMigration0075_classifyFreeQuotaLowConfidence(
   };
 }
 
+// ─── Block 0076: classify 10 non-Anthropic paid_prepaid caps ────────────────
+//
+// Phase B.5 of DEC-20260512-A. Final paid_prepaid batch. 7 caps are
+// DB-present (the boot invariant's 9 visible unclassified rows = these
+// 7 + the 2 in Block 0077). 3 caps are code-but-not-DB orphans
+// (us-company-data-cobalt, us-ein-match, us-sec-filings-extended) —
+// they have executor files calling registerCapability AND manifest
+// files BUT no DB rows, suggesting onboard.ts was never run for them.
+// They're included in this slug list so when chat fixes their
+// onboarding the UPDATE classifies them on next boot via idempotency
+// (`AND cost_class IS NULL`).
+//
+// Vendor breakdown:
+//   - Dilisense (3): adverse-media-check, pep-check, sanctions-check
+//   - Serper.dev (3): backlink-check, google-search, serp-analyze
+//   - eSortcode (1): uk-cop-check  (Pay.UK CoP commercial bank verification)
+//   - Cobalt Intelligence (1): us-company-data-cobalt  [orphan]
+//   - Liberty Data EINsearch (1): us-ein-match  [orphan]
+//   - sec-api.io (1): us-sec-filings-extended  [orphan; 100-call trial only]
+//
+// All 10 ship paid_prepaid / quota_window='none' / quota_cap=NULL /
+// quota_reset_dom=NULL (same shape as Block 0074's Anthropic batch).
+
+export const PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS: ReadonlyArray<string> = [
+  "adverse-media-check",
+  "backlink-check",
+  "google-search",
+  "pep-check",
+  "sanctions-check",
+  "serp-analyze",
+  "uk-cop-check",
+  "us-company-data-cobalt",
+  "us-ein-match",
+  "us-sec-filings-extended",
+];
+
+export async function runMigration0076_classifyNonAnthropicPaidPrepaid(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  const result = await tx.execute(sql`
+    UPDATE capabilities
+       SET cost_class = 'paid_prepaid',
+           quota_window = 'none',
+           quota_cap = NULL,
+           quota_reset_dom = NULL,
+           updated_at = NOW()
+     WHERE slug IN ${sql.raw("(" + PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS.map((s) => `'${s.replace(/'/g, "''")}'`).join(",") + ")")}
+       AND cost_class IS NULL
+  `);
+  const updateCount = (result as { count?: number }).count ?? 0;
+
+  return {
+    block: "0076_classify_non_anthropic_paid_prepaid",
+    outcome:
+      updateCount === 0
+        ? `no rows to classify (all ${PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS.length} slugs already classified or 3 orphan slugs not in DB)`
+        : `classified ${updateCount} cap(s) as paid_prepaid (of ${PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS.length} target slugs; 3 orphans excluded by DB filter)`,
+    rows_affected: updateCount,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0077: classify 2 free_quota caps that override audit's paid heuristic ──
+//
+// Phase B.5 sibling. The Phase B.0 audit's heuristic classified these
+// 2 Dutch gov vendors as paid_prepaid because their maintenance_class
+// is `commercial-stable-api`. Chat research confirmed both are
+// gov-operated free APIs with auth-gated rate-limited access (NOT paid
+// commercial APIs as the heuristic assumed):
+//
+//   - nl-bag-address: Kadaster BAG API Individuele Bevragingen,
+//     documented free at 50k/day. URL api.bag.kadaster.nl matches.
+//   - nl-energy-label: RVO/EP-Online gov free with API-key auth,
+//     no published quota. Conservative cap 1000/day matches the
+//     SUDREG/GEMI posture used in Block 0075.
+//
+// Per-cap UPDATEs (same pattern as Block 0075). Idempotent via
+// `AND cost_class IS NULL`.
+
+interface FreeQuotaOverrideCap {
+  slug: string;
+  quotaCap: number;
+}
+
+export const PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS: ReadonlyArray<FreeQuotaOverrideCap> = [
+  { slug: "nl-bag-address",  quotaCap: 50000 }, // Kadaster BAG documented 50k/day
+  { slug: "nl-energy-label", quotaCap: 1000 },  // EP-Online conservative cap
+];
+
+export async function runMigration0077_classifyFreeQuotaOverrides(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  let totalAffected = 0;
+
+  for (const cap of PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS) {
+    const result = await tx.execute(sql`
+      UPDATE capabilities
+         SET cost_class = 'free_quota',
+             quota_window = 'daily',
+             quota_cap = ${cap.quotaCap},
+             quota_reset_dom = NULL,
+             updated_at = NOW()
+       WHERE slug = ${cap.slug}
+         AND cost_class IS NULL
+    `);
+    totalAffected += (result as { count?: number }).count ?? 0;
+  }
+
+  return {
+    block: "0077_classify_free_quota_overrides",
+    outcome:
+      totalAffected === 0
+        ? `no rows to classify (all ${PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS.length} slugs already classified)`
+        : `classified ${totalAffected} cap(s) as free_quota (of ${PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS.length} target slugs)`,
+    rows_affected: totalAffected,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
 // ─── Orchestrator ───────────────────────────────────────────────────────────
 
 /**
@@ -1221,6 +1343,8 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0073_classifyFreeUnlimitedMediumConfidence,
   runMigration0074_classifyAnthropicPaidPrepaid,
   runMigration0075_classifyFreeQuotaLowConfidence,
+  runMigration0076_classifyNonAnthropicPaidPrepaid,
+  runMigration0077_classifyFreeQuotaOverrides,
 ];
 
 /**

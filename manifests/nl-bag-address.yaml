@@ -4,6 +4,9 @@ description: >-
   Look up Dutch address and building data from the BAG (Basisregistratie Adressen en Gebouwen) via Kadaster API.
   Returns street, city, construction year, floor area, usage purposes, and RD coordinates (EPSG:28992).
 category: data-extraction
+cost_class: free_quota
+quota_window: daily
+quota_cap: 50000
 price_cents: 5
 is_free_tier: false
 input_schema:

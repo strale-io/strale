@@ -5,6 +5,8 @@ description: >-
   Bank, EBRD, ADB + 125 national lists). Uses Dilisense consolidated database. Returns audit-grade
   evidence: match results with named source attribution and country attribution.
 category: compliance
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 20
 is_free_tier: false
 input_schema:

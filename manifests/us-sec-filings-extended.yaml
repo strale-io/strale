@@ -6,6 +6,8 @@ description: >-
   type and date. Supplements the free SEC EDGAR API used by us-company-data with full-text search,
   cross-form aggregation, and filing-event monitoring.
 category: compliance
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 25
 is_free_tier: false
 avg_latency_ms: 1500
