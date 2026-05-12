@@ -55,6 +55,8 @@ import {
   runMigration0069_reconcileEligibilityFromCostClass,
   runMigration0070_capabilityBudgetCounters,
   runMigration0071_bulkClassifyFreeUnlimited,
+  runMigration0072_classifyFreeQuotaHighConfidence,
+  runMigration0073_classifyFreeUnlimitedMediumConfidence,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -641,8 +643,126 @@ describe("startup-migrations — phase-b1-free-unlimited-slugs list", () => {
   });
 });
 
+describe("startup-migrations — block 0072 (classify free_quota high-confidence)", () => {
+  it("first run: UPDATEs the 8 free_quota slugs with per-cap quota params", async () => {
+    const stub = makeStub({ queue: [{ count: 8 }] });
+    const result = await runMigration0072_classifyFreeQuotaHighConfidence(stub);
+    expect(result.rows_affected).toBe(8);
+    expect(result.outcome).toMatch(/classified 8 cap/i);
+    expect(stub.captured).toHaveLength(1);
+
+    const sqlText = stub.renderedSql[0].toLowerCase();
+    expect(sqlText).toContain("update capabilities");
+    expect(sqlText).toContain("cost_class = 'free_quota'");
+    // Per-cap params: VALUES clause must include each (slug, window, cap, reset_dom) tuple.
+    expect(sqlText).toContain("'au-company-data'");
+    expect(sqlText).toContain("'beneficial-ownership-lookup'");
+    expect(sqlText).toContain("'flight-status'");
+    expect(sqlText).toContain("'job-board-search'");
+    // Daily caps with reset_dom=NULL.
+    expect(sqlText).toMatch(/'au-company-data',\s*'daily',\s*1000,\s*null/);
+    // Monthly caps with reset_dom=1.
+    expect(sqlText).toMatch(/'flight-status',\s*'monthly',\s*100,\s*1/);
+    expect(sqlText).toMatch(/'job-board-search',\s*'monthly',\s*1000,\s*1/);
+    // Idempotency clause.
+    expect(sqlText).toContain("c.cost_class is null");
+  });
+
+  it("second run: idempotent — count=0; outcome reports already-classified", async () => {
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    const result = await runMigration0072_classifyFreeQuotaHighConfidence(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to classify.*already have cost_class/i);
+  });
+
+  it("does not touch already-classified rows (cost_class IS NULL safety filter)", async () => {
+    // Pins the safety clause so a future refactor that drops it would
+    // silently overwrite paid_prepaid / free_quota classifications from
+    // Phase B.3+ batches. Block 0072 must only fill blanks.
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    await runMigration0072_classifyFreeQuotaHighConfidence(stub);
+    const sqlText = stub.renderedSql[0].toLowerCase();
+    expect(sqlText).toMatch(/where[\s\S]*c\.cost_class\s+is\s+null/);
+  });
+});
+
+describe("startup-migrations — block 0073 (classify free_unlimited medium-conf)", () => {
+  it("first run: UPDATEs the 5 medium-conf scraping slugs", async () => {
+    const stub = makeStub({ queue: [{ count: 5 }] });
+    const result = await runMigration0073_classifyFreeUnlimitedMediumConfidence(stub);
+    expect(result.rows_affected).toBe(5);
+    expect(result.outcome).toMatch(/classified 5 cap/i);
+
+    const sqlText = stub.renderedSql[0].toLowerCase();
+    expect(sqlText).toContain("cost_class = 'free_unlimited'");
+    expect(sqlText).toContain("quota_window = 'none'");
+    expect(sqlText).toContain("quota_cap = null");
+    // All 5 scraping caps in the IN-list.
+    expect(sqlText).toContain("'canadian-company-data'");
+    expect(sqlText).toContain("'japanese-company-data'");
+    expect(sqlText).toContain("'polish-company-data'");
+    expect(sqlText).toContain("'seo-audit'");
+    expect(sqlText).toContain("'tech-stack-detect'");
+    // Idempotency clause.
+    expect(sqlText).toContain("cost_class is null");
+  });
+
+  it("second run: idempotent — count=0; outcome reports already-classified", async () => {
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    const result = await runMigration0073_classifyFreeUnlimitedMediumConfidence(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to classify/i);
+  });
+});
+
+describe("startup-migrations — phase-b2 slug lists (audit-trail invariants)", () => {
+  it("PHASE_B2_FREE_QUOTA_HIGH_CONF has 8 entries", async () => {
+    const { PHASE_B2_FREE_QUOTA_HIGH_CONF } = await import("./startup-migrations.js");
+    expect(PHASE_B2_FREE_QUOTA_HIGH_CONF.length).toBe(8);
+  });
+
+  it("PHASE_B2_FREE_QUOTA_HIGH_CONF entries have valid quota shapes", async () => {
+    const { PHASE_B2_FREE_QUOTA_HIGH_CONF } = await import("./startup-migrations.js");
+    for (const cap of PHASE_B2_FREE_QUOTA_HIGH_CONF) {
+      expect(cap.slug).toMatch(/^[a-z][a-z0-9-]+$/);
+      expect(["daily", "monthly"]).toContain(cap.quotaWindow);
+      expect(cap.quotaCap).toBeGreaterThan(0);
+      // reset_dom NULL only valid for daily windows.
+      if (cap.quotaWindow === "monthly") {
+        expect(cap.quotaResetDom).toBeGreaterThanOrEqual(1);
+        expect(cap.quotaResetDom).toBeLessThanOrEqual(31);
+      } else {
+        expect(cap.quotaResetDom).toBeNull();
+      }
+    }
+  });
+
+  it("PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF has 5 entries (audit-pinned count)", async () => {
+    const { PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF } = await import("./startup-migrations.js");
+    expect(PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF.length).toBe(5);
+  });
+
+  it("PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF has no duplicates", async () => {
+    const { PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF } = await import("./startup-migrations.js");
+    const unique = new Set(PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF);
+    expect(unique.size).toBe(PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF.length);
+  });
+
+  it("B.2 slug lists do not overlap with B.1 free_unlimited", async () => {
+    const { PHASE_B2_FREE_QUOTA_HIGH_CONF, PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF } = await import("./startup-migrations.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const b1Set = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
+    for (const cap of PHASE_B2_FREE_QUOTA_HIGH_CONF) {
+      expect(b1Set.has(cap.slug), `${cap.slug} appears in BOTH B.1 and B.2 free_quota`).toBe(false);
+    }
+    for (const slug of PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF) {
+      expect(b1Set.has(slug), `${slug} appears in BOTH B.1 and B.2 free_unlimited`).toBe(false);
+    }
+  });
+});
+
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 14 blocks in historical order", () => {
+  it("exports the expected 16 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -663,6 +783,8 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0069_reconcileEligibilityFromCostClass",
       "runMigration0070_capabilityBudgetCounters",
       "runMigration0071_bulkClassifyFreeUnlimited",
+      "runMigration0072_classifyFreeQuotaHighConfidence",
+      "runMigration0073_classifyFreeUnlimitedMediumConfidence",
     ]);
   });
 });

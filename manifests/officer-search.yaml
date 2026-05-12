@@ -2,6 +2,9 @@ slug: officer-search
 name: Officer Search
 description: Find company directors and officers from official public registries. Covers UK (Companies House) and US (SEC EDGAR). Returns officer names, roles, appointment dates.
 category: company-data
+cost_class: free_quota
+quota_window: daily
+quota_cap: 600
 price_cents: 10
 input_schema:
   type: object

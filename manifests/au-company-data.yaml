@@ -4,6 +4,9 @@ description: >-
   Look up Australian company data from the Australian Business Register (ABR). Accepts an ABN (11 digits). Returns
   entity name, status, type, GST registration, and address details. Free government API — fast and reliable.
 category: company-data
+cost_class: free_quota
+quota_window: daily
+quota_cap: 1000
 price_cents: 5
 is_free_tier: false
 input_schema:

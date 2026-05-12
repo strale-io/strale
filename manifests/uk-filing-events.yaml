@@ -2,6 +2,9 @@ slug: "uk-filing-events"
 name: "UK Filing Events"
 description: "Get recent filing history for a UK company from Companies House. Returns accounts, officer changes, confirmation statements, charges, and other corporate filings."
 category: "company-data"
+cost_class: free_quota
+quota_window: daily
+quota_cap: 600
 price_cents: 5
 data_source: "UK Companies House"
 data_source_type: "api"

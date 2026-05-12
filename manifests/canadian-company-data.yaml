@@ -5,6 +5,8 @@ slug: canadian-company-data
 name: Canadian Company Data
 description: Look up Canadian company data from Corporations Canada. Accepts corporation number or fuzzy company name.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 80
 is_free_tier: false
 input_schema:
