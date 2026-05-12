@@ -21,7 +21,7 @@
 
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { log } from "./log.js";
+import { log, logError } from "./log.js";
 
 export type CostClassMode = "STRICT" | "GRACE";
 
@@ -56,13 +56,18 @@ export async function assertCostClassTaxonomy(opts: { mode: CostClassMode }): Pr
   }
 
   if (mode === "STRICT") {
-    console.error(
-      `[FATAL] cost-class STRICT mode: ${unclassified.length} active+visible capabilities lack cost_class:`,
-    );
-    for (const r of unclassified) console.error(`  - ${r.slug} (${r.name})`);
-    console.error(
-      `[FATAL] Classify each by adding cost_class to its manifests/<slug>.yaml ` +
-        `(see CLAUDE.md cost-class taxonomy), then run drizzle-kit migrate or restart.`,
+    logError(
+      "cost-class-invariant-strict-fail",
+      new Error(
+        `[FATAL] cost-class STRICT mode: ${unclassified.length} active+visible capabilities lack cost_class. ` +
+          `Classify each by adding cost_class to its manifests/<slug>.yaml ` +
+          `(see CLAUDE.md cost-class taxonomy), then run drizzle-kit migrate or restart.`,
+      ),
+      {
+        mode: "STRICT",
+        unclassified_count: unclassified.length,
+        unclassified: unclassified.map((r) => ({ slug: r.slug, name: r.name })),
+      },
     );
     process.exit(1);
   }

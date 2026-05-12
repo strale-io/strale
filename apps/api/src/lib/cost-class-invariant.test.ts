@@ -73,13 +73,10 @@ describe("assertCostClassTaxonomy", () => {
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
       throw new Error(`exit(${code})`);
     }) as never);
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await expect(
       assertCostClassTaxonomy({ mode: "STRICT" }),
     ).rejects.toThrow(/exit\(1\)/);
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errSpy).toHaveBeenCalled();
     exitSpy.mockRestore();
-    errSpy.mockRestore();
   });
 });
