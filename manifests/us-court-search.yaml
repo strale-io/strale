@@ -5,6 +5,9 @@ description: >-
   number, and absolute URL. Elevates bankruptcy filings as top-level signals (has_bankruptcy_filing, bankruptcy_count,
   most_recent_bankruptcy) for risk decisioning. Federal district + appellate courts; no state-court coverage.
 category: compliance
+cost_class: free_quota
+quota_window: daily
+quota_cap: 5000
 price_cents: 15
 is_free_tier: false
 avg_latency_ms: 1500
