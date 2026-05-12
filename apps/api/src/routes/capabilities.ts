@@ -15,6 +15,7 @@ capabilitiesRoute.get("/", async (c) => {
   const db = getDb();
   const rows = await db
     .select({
+      id: capabilities.id,
       slug: capabilities.slug,
       name: capabilities.name,
       description: capabilities.description,
@@ -29,6 +30,12 @@ capabilitiesRoute.get("/", async (c) => {
       search_tags: capabilities.searchTags,
       freshness_level: capabilities.freshnessLevel,
       last_tested_at: capabilities.lastTestedAt,
+      // Phase A0c.1.v3 (2026-05-13): cost_class for frontend display logic.
+      // A0c.1.v2 added it to the detail handler only; the frontend reads
+      // from this list endpoint for both /capabilities and /capabilities/:slug
+      // surfaces (via useCapability filtering useCapabilities locally), so
+      // the badge silently failed everywhere until this field landed here.
+      cost_class: capabilities.costClass,
     })
     .from(capabilities)
     .where(
@@ -41,6 +48,36 @@ capabilitiesRoute.get("/", async (c) => {
         inArray(capabilities.lifecycleState, ["active", "degraded"]),
       ),
     );
+
+  // Phase A0c.1.v3: batch-fetch last_customer_call_at per capability via a
+  // single GROUP BY query. Same filter convention as the detail handler
+  // (lib/daily-digest/fetch-platform.ts:20-24): exclude transactions whose
+  // user_id is the system test user. Customer paths set user_id = real_user
+  // or NULL (free-tier); test-runner.ts:1270 writes user_id = system user.
+  //
+  // Performance note: the new compound index
+  // `transactions_capability_id_created_at_idx` (Block 0078, added in this
+  // PR) makes the GROUP BY an index-only aggregate. Without it the query
+  // would seq-scan the status='completed' filtered set, which is fine at
+  // pre-launch scale but degrades as transactions grow.
+  const lccRows = await db.execute(sql`
+    SELECT t.capability_id, MAX(t.created_at) AS last_customer_call_at
+      FROM transactions t
+     WHERE t.status = 'completed'
+       AND (t.user_id IS NULL OR t.user_id != (
+         SELECT id FROM users WHERE email = 'system@strale.internal' LIMIT 1
+       ))
+     GROUP BY t.capability_id
+  `);
+  const lccResultRows = Array.isArray(lccRows)
+    ? lccRows
+    : (lccRows as { rows?: unknown[] })?.rows ?? [];
+  const lccByCapId = new Map<string, Date | string>();
+  for (const row of lccResultRows as Array<{ capability_id?: string; last_customer_call_at?: Date | string | null }>) {
+    if (row.capability_id && row.last_customer_call_at != null) {
+      lccByCapId.set(row.capability_id, row.last_customer_call_at);
+    }
+  }
 
   const capabilitiesList = rows.map((r) => ({
     slug: r.slug,
@@ -57,6 +94,8 @@ capabilitiesRoute.get("/", async (c) => {
     search_tags: r.search_tags ?? [],
     freshness_level: r.freshness_level ?? "fresh",
     last_tested_at: r.last_tested_at?.toISOString() ?? null,
+    cost_class: r.cost_class,
+    last_customer_call_at: lccByCapId.get(r.id) ?? null,
   }));
 
   return c.json({ capabilities: capabilitiesList });

@@ -317,6 +317,15 @@ export const transactions = pgTable(
       .where(sql`idempotency_key IS NOT NULL`),
     index("transactions_user_id_idx").on(table.userId),
     index("transactions_status_idx").on(table.status),
+    // Phase A0c.1.v3 (Block 0078, 2026-05-13): compound index for the
+    // list-endpoint GROUP BY MAX(created_at) per capability_id. The
+    // detail handler's per-cap query (capabilities.ts:136-144) ALSO
+    // benefits — previously seq-scanned the status='completed' filter
+    // set looking for one capability_id.
+    index("transactions_capability_id_created_at_idx").on(
+      table.capabilityId,
+      table.createdAt,
+    ),
     // Cert-audit C9: x402 payment-header dedup. Partial index so wallet
     // rows (NULL) don't compete for slots; uniqueness keeps two distinct
     // requests with the same X-Payment header from each becoming a

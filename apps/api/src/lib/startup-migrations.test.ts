@@ -61,6 +61,7 @@ import {
   runMigration0075_classifyFreeQuotaLowConfidence,
   runMigration0076_classifyNonAnthropicPaidPrepaid,
   runMigration0077_classifyFreeQuotaOverrides,
+  runMigration0078_transactionsCapabilityIdCreatedAtIdx,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1077,7 +1078,7 @@ describe("startup-migrations — phase-b5 slug lists (invariants)", () => {
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 20 blocks in historical order", () => {
+  it("exports the expected 21 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1104,7 +1105,36 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0075_classifyFreeQuotaLowConfidence",
       "runMigration0076_classifyNonAnthropicPaidPrepaid",
       "runMigration0077_classifyFreeQuotaOverrides",
+      "runMigration0078_transactionsCapabilityIdCreatedAtIdx",
     ]);
+  });
+});
+
+describe("startup-migrations — block 0078 (transactions capability_id index)", () => {
+  it("emits CREATE INDEX IF NOT EXISTS for the compound index", async () => {
+    const stub = makeStub({ queue: [undefined] });
+    const result = await runMigration0078_transactionsCapabilityIdCreatedAtIdx(stub);
+    expect(result.outcome).toMatch(/compound index ensured/i);
+    expect(stub.captured).toHaveLength(1);
+
+    const sqlText = stub.renderedSql[0].toLowerCase();
+    expect(sqlText).toContain("create index if not exists");
+    expect(sqlText).toContain("transactions_capability_id_created_at_idx");
+    expect(sqlText).toContain("transactions");
+    expect(sqlText).toContain("capability_id");
+    expect(sqlText).toContain("created_at");
+  });
+
+  it("idempotent re-run: IF NOT EXISTS makes re-runs a Postgres-level no-op", async () => {
+    const stub = makeStub({ queue: [undefined, undefined] });
+    await runMigration0078_transactionsCapabilityIdCreatedAtIdx(stub);
+    const result = await runMigration0078_transactionsCapabilityIdCreatedAtIdx(stub);
+    expect(result.outcome).toMatch(/compound index ensured/i);
+    // Both runs issue the IF NOT EXISTS statement; PG handles the actual no-op.
+    expect(stub.captured).toHaveLength(2);
+    for (const sqlText of stub.renderedSql) {
+      expect(sqlText.toLowerCase()).toContain("create index if not exists");
+    }
   });
 });
 
