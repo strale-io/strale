@@ -86,15 +86,9 @@ capabilitiesRoute.get("/:slug", async (c) => {
   // Phase A0c.1 (DEC-20260512-A): expose cost_class so the frontend can
   // distinguish paid_prepaid / paid_subscription caps awaiting customer
   // traffic from caps that are genuinely unverified for other reasons.
-  // last_customer_call_at uses the daily-digest filter convention
-  // (lib/daily-digest/fetch-platform.ts:20-24, 56, 63, 70, 78, 92):
-  // exclude transactions whose user_id is the system test user
-  // ('system@strale.internal'); customer paths set a real user_id or
-  // NULL (free-tier), test-runner writes user_id = getSystemUserId().
-  // The MAX() runs against an indexed (capability_id, status) pair —
-  // one row per capability fetch is O(1) for this single-cap handler.
   const [cap] = await db
     .select({
+      id: capabilities.id,
       slug: capabilities.slug,
       name: capabilities.name,
       description: capabilities.description,
@@ -107,15 +101,6 @@ capabilitiesRoute.get("/:slug", async (c) => {
       data_source: capabilities.dataSource,
       is_free_tier: capabilities.isFreeTier,
       cost_class: capabilities.costClass,
-      last_customer_call_at: sql<string | null>`(
-        SELECT MAX(t.created_at)
-          FROM transactions t
-         WHERE t.capability_id = ${capabilities.id}
-           AND t.status = 'completed'
-           AND (t.user_id IS NULL OR t.user_id != (
-             SELECT id FROM users WHERE email = 'system@strale.internal' LIMIT 1
-           ))
-      )`,
     })
     .from(capabilities)
     .where(
@@ -135,6 +120,34 @@ capabilitiesRoute.get("/:slug", async (c) => {
       404,
     );
   }
+
+  // Phase A0c.1: last_customer_call_at via the daily-digest filter
+  // convention (lib/daily-digest/fetch-platform.ts:20-24, 56, 63, 70,
+  // 78, 92). Excludes internal test-runner transactions, identified by
+  // user_id = the system user. Customer paths set a real user_id or
+  // NULL (free-tier); test-runner.ts:1270 writes user_id = system user.
+  //
+  // Run as a separate query rather than a correlated subquery in the
+  // outer SELECT — Drizzle's `${capabilities.id}` interpolation inside
+  // a `sql` template tag within a .select({}) builder doesn't reliably
+  // produce the table-qualified reference needed to correlate to the
+  // outer FROM in postgres-js. A plain SELECT keyed on the resolved
+  // cap.id is both readable and provably correct.
+  const lastCustomerCallRows = await db.execute(sql`
+    SELECT MAX(t.created_at) AS last_customer_call_at
+      FROM transactions t
+     WHERE t.capability_id = ${cap.id}
+       AND t.status = 'completed'
+       AND (t.user_id IS NULL OR t.user_id != (
+         SELECT id FROM users WHERE email = 'system@strale.internal' LIMIT 1
+       ))
+  `);
+  const lccRows = Array.isArray(lastCustomerCallRows)
+    ? lastCustomerCallRows
+    : (lastCustomerCallRows as { rows?: unknown[] })?.rows ?? [];
+  const lastCustomerCallAt =
+    (lccRows[0] as { last_customer_call_at?: Date | string | null } | undefined)
+      ?.last_customer_call_at ?? null;
 
   // Reverse lookup: which solutions include this capability?
   const parentSolutions = await db
@@ -180,5 +193,13 @@ capabilitiesRoute.get("/:slug", async (c) => {
     step_count: stepCountMap.get(sol.slug) ?? 0,
   }));
 
-  return c.json({ ...cap, partOfSolutions });
+  // Strip internal cap.id from the response — it was selected only to
+  // drive the last_customer_call_at lookup above; the public catalog
+  // shape exposes the slug, not the internal UUID.
+  const { id: _internalId, ...capPublic } = cap;
+  return c.json({
+    ...capPublic,
+    last_customer_call_at: lastCustomerCallAt,
+    partOfSolutions,
+  });
 });
