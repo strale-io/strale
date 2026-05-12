@@ -4,6 +4,9 @@ description: >-
   Look up Swedish company registry data via Bolagsverket's Värdefulla datamängder API. Returns name, legal form, status,
   registered address, SNI industry codes, registration date, and ongoing insolvency/liquidation procedures.
 category: company-data
+cost_class: free_quota
+quota_window: daily
+quota_cap: 1000
 price_cents: 5
 is_free_tier: false
 avg_latency_ms: 400

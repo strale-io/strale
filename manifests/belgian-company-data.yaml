@@ -5,6 +5,9 @@ description: >-
   enterprise number (10 digits, e.g. 0404.616.494), VAT-prefixed form (BE0404170701), or fuzzy company name. Returns
   name, status, juridical form, address, registration date, establishment count, and derived BE VAT number.
 category: company-data
+cost_class: free_quota
+quota_window: daily
+quota_cap: 2500
 price_cents: 5
 is_free_tier: false
 input_schema:

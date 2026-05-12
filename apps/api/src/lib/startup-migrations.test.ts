@@ -58,6 +58,7 @@ import {
   runMigration0072_classifyFreeQuotaHighConfidence,
   runMigration0073_classifyFreeUnlimitedMediumConfidence,
   runMigration0074_classifyAnthropicPaidPrepaid,
+  runMigration0075_classifyFreeQuotaLowConfidence,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -844,8 +845,115 @@ describe("startup-migrations — phase-b3 ANTHROPIC slug list (audit invariants)
   });
 });
 
+describe("startup-migrations — block 0075 (classify free_quota low-confidence)", () => {
+  it("first run: issues 8 per-cap UPDATEs with chat-supplied quota_cap values", async () => {
+    // Block 0075 runs 8 atomic UPDATEs (one per cap), each returning count=1.
+    const stub = makeStub({
+      queue: Array(8).fill({ count: 1 }),
+    });
+    const result = await runMigration0075_classifyFreeQuotaLowConfidence(stub);
+    expect(result.rows_affected).toBe(8);
+    expect(result.outcome).toMatch(/classified 8 cap/i);
+    expect(stub.captured).toHaveLength(8);
+
+    // Each UPDATE has the same shape: cost_class='free_quota', daily, per-cap cap.
+    const allSql = stub.renderedSql.join("\n").toLowerCase();
+    expect(allSql).toContain("cost_class = 'free_quota'");
+    expect(allSql).toContain("quota_window = 'daily'");
+    expect(allSql).toContain("quota_reset_dom = null");
+    // Idempotency clause on every UPDATE.
+    expect(stub.renderedSql.every((s) => /cost_class\s+is\s+null/i.test(s))).toBe(true);
+    // Per-cap quota_cap values surface in the rendered SQL (drizzle binds
+    // them; the rendered string includes $1-style placeholders, but the
+    // slug also surfaces as $2).
+    expect(stub.renderedSql.every((s) => /quota_cap\s*=\s*\$\d+/i.test(s))).toBe(true);
+  });
+
+  it("second run: all 8 UPDATEs return 0 rows; outcome reports already-classified", async () => {
+    const stub = makeStub({ queue: Array(8).fill({ count: 0 }) });
+    const result = await runMigration0075_classifyFreeQuotaLowConfidence(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to classify.*already have cost_class/i);
+    // SQL still issued (8 statements) — WHERE filter does the idempotency.
+    expect(stub.captured).toHaveLength(8);
+  });
+
+  it("safety filter pin — every UPDATE includes AND cost_class IS NULL", async () => {
+    const stub = makeStub({ queue: Array(8).fill({ count: 0 }) });
+    await runMigration0075_classifyFreeQuotaLowConfidence(stub);
+    for (const sqlText of stub.renderedSql) {
+      expect(sqlText.toLowerCase()).toMatch(/and\s+cost_class\s+is\s+null/);
+    }
+  });
+});
+
+describe("startup-migrations — phase-b4 low-conf free_quota cap list (invariants)", () => {
+  it("has exactly 8 entries (audit-pinned count)", async () => {
+    const { PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS } = await import("./startup-migrations.js");
+    expect(PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS.length).toBe(8);
+  });
+
+  it("every entry has valid shape (slug + quota_cap > 0)", async () => {
+    const { PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS } = await import("./startup-migrations.js");
+    for (const cap of PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS) {
+      expect(cap.slug).toMatch(/^[a-z][a-z0-9-]+$/);
+      expect(cap.quotaCap).toBeGreaterThan(0);
+    }
+  });
+
+  it("contains the 8 chat-supplied slugs", async () => {
+    const { PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS } = await import("./startup-migrations.js");
+    const slugs = PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS.map((c: { slug: string }) => c.slug).sort();
+    expect(slugs).toEqual([
+      "belgian-company-data",
+      "croatian-company-data",
+      "github-repo-compare",
+      "github-user-profile",
+      "greek-company-data",
+      "page-speed-test",
+      "swedish-company-data",
+      "us-court-search",
+    ]);
+  });
+
+  it("pins per-cap quota_cap values (chat-supplied authoritative table)", async () => {
+    const { PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS } = await import("./startup-migrations.js");
+    const byslug = Object.fromEntries(
+      PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS.map((c: { slug: string; quotaCap: number }) => [c.slug, c.quotaCap]),
+    );
+    // Pin the chat-researched quota caps so a future refactor that
+    // re-loads "audit defaults" can't silently regress these values.
+    expect(byslug["belgian-company-data"]).toBe(2500);
+    expect(byslug["croatian-company-data"]).toBe(500);
+    expect(byslug["github-repo-compare"]).toBe(1000);
+    expect(byslug["github-user-profile"]).toBe(1000);
+    expect(byslug["greek-company-data"]).toBe(500);
+    expect(byslug["page-speed-test"]).toBe(25000);
+    expect(byslug["swedish-company-data"]).toBe(1000);
+    expect(byslug["us-court-search"]).toBe(5000);
+  });
+
+  it("does not overlap with B.1 / B.2 / B.3 slug lists", async () => {
+    const { PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS, PHASE_B2_FREE_QUOTA_HIGH_CONF, PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF } = await import("./startup-migrations.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+
+    const b1 = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
+    const b2a = new Set(PHASE_B2_FREE_QUOTA_HIGH_CONF.map((c: { slug: string }) => c.slug));
+    const b2b = new Set(PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF);
+    const b3 = new Set(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS);
+
+    for (const cap of PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS) {
+      expect(b1.has(cap.slug), `${cap.slug} also in B.1`).toBe(false);
+      expect(b2a.has(cap.slug), `${cap.slug} also in B.2 free_quota`).toBe(false);
+      expect(b2b.has(cap.slug), `${cap.slug} also in B.2 free_unlimited`).toBe(false);
+      expect(b3.has(cap.slug), `${cap.slug} also in B.3 paid_prepaid`).toBe(false);
+    }
+  });
+});
+
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 17 blocks in historical order", () => {
+  it("exports the expected 18 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -869,6 +977,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0072_classifyFreeQuotaHighConfidence",
       "runMigration0073_classifyFreeUnlimitedMediumConfidence",
       "runMigration0074_classifyAnthropicPaidPrepaid",
+      "runMigration0075_classifyFreeQuotaLowConfidence",
     ]);
   });
 });

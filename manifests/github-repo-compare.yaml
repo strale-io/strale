@@ -7,6 +7,9 @@ description: >-
   Compare two GitHub repositories side-by-side: stars, forks, activity, language, topics, license. Returns detailed
   comparison.
 category: data-extraction
+cost_class: free_quota
+quota_window: daily
+quota_cap: 1000
 price_cents: 5
 is_free_tier: false
 input_schema:

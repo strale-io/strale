@@ -5,6 +5,9 @@ description: >-
   Greek tax ID (AFM, 9 digits). Returns name, legal form, address, status, primary activity, directors, and the derived
   VAT number (EL + AFM).
 category: data-extraction
+cost_class: free_quota
+quota_window: daily
+quota_cap: 500
 price_cents: 5
 is_free_tier: false
 input_schema:
