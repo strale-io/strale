@@ -50,6 +50,8 @@ import {
   runMigration0063_invoiceExtractCostReclassify,
   runMigration0064_alwaysLlmHaikuCosts,
   runMigration0065_pr86LeakyCapsCleanup,
+  runMigration0067_costClassTaxonomy,
+  runMigration0070_capabilityBudgetCounters,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -408,8 +410,85 @@ describe("startup-migrations — block 0065 (PR #86 leaky-cap cleanup)", () => {
   });
 });
 
+describe("startup-migrations — block 0067 (cost_class taxonomy)", () => {
+  it("first run: adds 4 columns + 3 CHECK constraints when none exist", async () => {
+    // 4 ADD COLUMN, 3 constraint checks (each absent → cnt:"0"), 3 ALTER ADD CONSTRAINT.
+    const stub = makeStub({
+      queue: [
+        undefined, undefined, undefined, undefined, // 4 ADD COLUMN
+        [{ cnt: "0" }], undefined, // cost_class chk: absent + ADD
+        [{ cnt: "0" }], undefined, // quota_window chk: absent + ADD
+        [{ cnt: "0" }], undefined, // quota_reset_dom chk: absent + ADD
+      ],
+    });
+    const result = await runMigration0067_costClassTaxonomy(stub);
+    expect(result.outcome).toMatch(/columns.*constraints ensured/i);
+    expect(stub.captured).toHaveLength(10); // 4 ADD + 3×(check+ADD)
+    // ADD COLUMN statements all use IF NOT EXISTS.
+    const addColumns = stub.renderedSql.slice(0, 4);
+    for (const sqlStr of addColumns) {
+      expect(sqlStr.toLowerCase()).toMatch(/add column if not exists/);
+    }
+    // CHECK constraint SQL appears.
+    expect(stub.renderedSql.some((s) => /cost_class.*in.*free_unlimited.*paid_subscription/i.test(s))).toBe(true);
+    expect(stub.renderedSql.some((s) => /quota_window.*in.*daily.*monthly.*none/i.test(s))).toBe(true);
+    expect(stub.renderedSql.some((s) => /quota_reset_dom.*>= 1.*<= 31/i.test(s))).toBe(true);
+  });
+
+  it("second run: skips constraint ADDs when pg_constraint reports presence", async () => {
+    const stub = makeStub({
+      queue: [
+        undefined, undefined, undefined, undefined, // 4 ADD COLUMN IF NOT EXISTS — PG no-op
+        [{ cnt: "1" }], // cost_class chk: present
+        [{ cnt: "1" }], // quota_window chk: present
+        [{ cnt: "1" }], // quota_reset_dom chk: present
+      ],
+    });
+    const result = await runMigration0067_costClassTaxonomy(stub);
+    expect(result.outcome).toMatch(/columns.*constraints ensured/i);
+    // 4 ADD COLUMN + 3 constraint checks (no ADDs) = 7 queries.
+    expect(stub.captured).toHaveLength(7);
+    // No ALTER TABLE ... ADD CONSTRAINT issued.
+    expect(stub.renderedSql.some((s) => /add constraint/i.test(s))).toBe(false);
+  });
+});
+
+describe("startup-migrations — block 0070 (capability_budget_counters)", () => {
+  it("first run: creates table + index + CHECK constraint", async () => {
+    const stub = makeStub({
+      queue: [
+        undefined, // CREATE TABLE
+        undefined, // CREATE INDEX
+        [{ cnt: "0" }], // CHECK absent
+        undefined, // ALTER ADD CONSTRAINT
+      ],
+    });
+    const result = await runMigration0070_capabilityBudgetCounters(stub);
+    expect(result.outcome).toMatch(/table.*index.*check.*ensured/i);
+    expect(stub.captured).toHaveLength(4);
+    expect(stub.renderedSql.some((s) => /create table if not exists capability_budget_counters/i.test(s))).toBe(true);
+    expect(stub.renderedSql.some((s) => /primary key.*capability_slug.*window_start.*window_kind/i.test(s))).toBe(true);
+    expect(stub.renderedSql.some((s) => /create index if not exists capability_budget_counters_window_idx/i.test(s))).toBe(true);
+    expect(stub.renderedSql.some((s) => /window_kind in.*daily.*monthly/i.test(s))).toBe(true);
+  });
+
+  it("second run: skips CHECK ADD when pg_constraint reports presence", async () => {
+    const stub = makeStub({
+      queue: [
+        undefined,    // CREATE TABLE IF NOT EXISTS — PG no-op
+        undefined,    // CREATE INDEX IF NOT EXISTS — PG no-op
+        [{ cnt: "1" }], // CHECK present
+      ],
+    });
+    const result = await runMigration0070_capabilityBudgetCounters(stub);
+    expect(result.outcome).toMatch(/ensured/i);
+    expect(stub.captured).toHaveLength(3); // no ADD CONSTRAINT issued
+    expect(stub.renderedSql.some((s) => /add constraint/i.test(s))).toBe(false);
+  });
+});
+
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 9 blocks in historical order", () => {
+  it("exports the expected 11 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -425,6 +504,8 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0064_alwaysLlmHaikuCosts",
       "runMigration0065_pr86LeakyCapsCleanup",
       "runMigration0066_ensureEligibilityColumnAndReconcile",
+      "runMigration0067_costClassTaxonomy",
+      "runMigration0070_capabilityBudgetCounters",
     ]);
   });
 });

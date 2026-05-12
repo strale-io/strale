@@ -202,6 +202,27 @@ export const capabilities = pgTable("capabilities", {
   gdprArt22Classification: varchar("gdpr_art_22_classification", { length: 20 })
     .notNull()
     .default("data_lookup"),
+  // Cost-class taxonomy (Phase A0b). Inverted-default: NULL means
+  // "not yet classified" — scheduler skips, dispatcher refuses internal
+  // callers, customer_paid still allowed during GRACE backfill.
+  // Enum enforced by CHECK constraint in Block 0067, not by varchar length.
+  //   free_unlimited       — no cost, no quota (gov registries, BRREG, GLEIF)
+  //   free_quota           — no per-call cost but vendor enforces a window quota (OpenRegister 50/mo)
+  //   paid_with_free_tier  — paid above a free allowance (Dilisense, GitHub)
+  //   paid_prepaid         — every call bills (Anthropic, Browserless)
+  //   paid_subscription    — flat subscription, calls free at the margin
+  costClass: text("cost_class"),
+  // Quota reset window — daily, monthly, or none. NULL for free_unlimited
+  // and paid_prepaid (no quota). 'none' allowed when cost_class is
+  // free_unlimited and there's no rate-limit cap to track.
+  quotaWindow: text("quota_window"),
+  // Quota cap in calls per window. NULL for free_unlimited (no cap),
+  // paid_prepaid (no quota), paid_subscription (no quota).
+  // Required for free_quota and paid_with_free_tier (validated at app layer).
+  quotaCap: integer("quota_cap"),
+  // Day-of-month reset (1..31) for monthly window. NULL for daily / none.
+  // OpenRegister resets on the 1st → 1.
+  quotaResetDom: integer("quota_reset_dom"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -728,6 +749,45 @@ export const rateLimitCounters = pgTable(
   (table) => [
     primaryKey({ columns: [table.bucketKey, table.windowStart] }),
     index("rate_limit_counters_window_idx").on(table.windowStart),
+  ],
+);
+
+// ─── capability_budget_counters (Phase A0b) ─────────────────────────────────
+// Per-capability test-budget counter for free_quota and paid_with_free_tier
+// classes. Atomic INSERT ... ON CONFLICT DO UPDATE ... RETURNING increments
+// under burst load (race-free). Modeled on rate_limit_counters above.
+//
+// budget_cap is snapshotted from a percentage of capabilities.quota_cap at
+// counter creation:
+//   - free_quota: 10% daily / 20% monthly
+//   - paid_with_free_tier: 5% daily / 10% monthly
+// (Customer traffic against free_quota does NOT increment this counter —
+// the budget protects Strale's own test/CI usage. See guarded-executor.ts.)
+export const capabilityBudgetCounters = pgTable(
+  "capability_budget_counters",
+  {
+    capabilitySlug: text("capability_slug").notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    windowKind: text("window_kind").notNull(),
+    // 'daily' | 'monthly' — CHECK enforced by Block 0070.
+    testCount: integer("test_count").notNull().default(0),
+    budgetCap: integer("budget_cap").notNull(),
+    alert30FiredAt: timestamp("alert_30_fired_at", { withTimezone: true }),
+    alert50FiredAt: timestamp("alert_50_fired_at", { withTimezone: true }),
+    alert80FiredAt: timestamp("alert_80_fired_at", { withTimezone: true }),
+    hardStopFiredAt: timestamp("hard_stop_fired_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.capabilitySlug, table.windowStart, table.windowKind],
+    }),
+    index("capability_budget_counters_window_idx").on(
+      table.windowKind,
+      table.windowStart,
+    ),
   ],
 );
 
