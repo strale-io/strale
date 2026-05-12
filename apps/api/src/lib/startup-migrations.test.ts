@@ -51,6 +51,7 @@ import {
   runMigration0064_alwaysLlmHaikuCosts,
   runMigration0065_pr86LeakyCapsCleanup,
   runMigration0067_costClassTaxonomy,
+  runMigration0068_seedDeDkSkCostClass,
   runMigration0070_capabilityBudgetCounters,
   runStartupMigrations,
   type MigrationExecutor,
@@ -453,6 +454,52 @@ describe("startup-migrations — block 0067 (cost_class taxonomy)", () => {
   });
 });
 
+describe("startup-migrations — block 0068 (seed DE/DK/SK cost_class)", () => {
+  it("first run: updates 3 rows (DE=1, DK=1, SK=1); reports total affected", async () => {
+    const stub = makeStub({
+      queue: [{ count: 1 }, { count: 1 }, { count: 1 }],
+    });
+    const result = await runMigration0068_seedDeDkSkCostClass(stub);
+    expect(result.rows_affected).toBe(3);
+    expect(result.outcome).toMatch(/seeded.*3 row/i);
+    expect(stub.captured).toHaveLength(3);
+    // All 3 UPDATEs filter on cost_class IS NULL (idempotency).
+    for (const sqlStr of stub.renderedSql) {
+      expect(sqlStr.toLowerCase()).toContain("cost_class is null");
+    }
+    // German row sets quota_reset_dom = 1 (the 1st-of-month reset).
+    expect(stub.renderedSql[0]).toMatch(/german-company-data/);
+    expect(stub.renderedSql[0]).toMatch(/quota_reset_dom = 1|\$1/i);
+    // Danish row sets daily window, no reset_dom needed.
+    expect(stub.renderedSql[1]).toMatch(/danish-company-data/);
+    expect(stub.renderedSql[1].toLowerCase()).toContain("daily");
+    // Slovak row sets free_unlimited, window 'none'.
+    expect(stub.renderedSql[2]).toMatch(/slovak-company-data/);
+    expect(stub.renderedSql[2].toLowerCase()).toContain("free_unlimited");
+  });
+
+  it("second run: idempotent — all UPDATEs return 0 rows after first apply", async () => {
+    const stub = makeStub({
+      queue: [{ count: 0 }, { count: 0 }, { count: 0 }],
+    });
+    const result = await runMigration0068_seedDeDkSkCostClass(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to update.*already classified/i);
+    // SQL still issued — WHERE filter does the idempotency work.
+    expect(stub.captured).toHaveLength(3);
+  });
+
+  it("missing-rows path: zero rows hit when caps don't exist in DB", async () => {
+    // Same observable shape as already-classified: zero affected, no-op outcome.
+    const stub = makeStub({
+      queue: [{ count: 0 }, { count: 0 }, { count: 0 }],
+    });
+    const result = await runMigration0068_seedDeDkSkCostClass(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to update/i);
+  });
+});
+
 describe("startup-migrations — block 0070 (capability_budget_counters)", () => {
   it("first run: creates table + index + CHECK constraint", async () => {
     const stub = makeStub({
@@ -488,7 +535,7 @@ describe("startup-migrations — block 0070 (capability_budget_counters)", () =>
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 11 blocks in historical order", () => {
+  it("exports the expected 12 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -505,6 +552,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0065_pr86LeakyCapsCleanup",
       "runMigration0066_ensureEligibilityColumnAndReconcile",
       "runMigration0067_costClassTaxonomy",
+      "runMigration0068_seedDeDkSkCostClass",
       "runMigration0070_capabilityBudgetCounters",
     ]);
   });

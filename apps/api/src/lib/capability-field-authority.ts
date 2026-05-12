@@ -235,6 +235,37 @@ export const FIELD_CATEGORIES: Record<string, FieldAuthorityEntry> = {
       "(gate 15) against VALID_GDPR_ART_22_CLASSIFICATIONS. Optional in the " +
       "manifest; the DB column applies a 'data_lookup' default when unset.",
   },
+  cost_class: {
+    category: "manifest",
+    reason:
+      "Phase A0b cost-class taxonomy: manifest YAML is the authoring " +
+      "surface for the per-capability cost classification " +
+      "(free_unlimited | free_quota | paid_with_free_tier | paid_prepaid | " +
+      "paid_subscription). The DB CHECK constraint from Block 0067 enforces " +
+      "the enum at write time. NULL/unset means 'not yet classified' and is " +
+      "tolerated by the boot invariant in GRACE mode.",
+  },
+  quota_window: {
+    category: "manifest",
+    reason:
+      "Phase A0b: vendor quota window for free_quota and paid_with_free_tier " +
+      "classes (daily | monthly | none). Authored alongside cost_class in the " +
+      "manifest. CHECK constraint in Block 0067.",
+  },
+  quota_cap: {
+    category: "manifest",
+    reason:
+      "Phase A0b: vendor quota cap in calls per window. Authored in manifest " +
+      "alongside cost_class + quota_window. Required for free_quota and " +
+      "paid_with_free_tier; null for the other classes.",
+  },
+  quota_reset_dom: {
+    category: "manifest",
+    reason:
+      "Phase A0b: day-of-month (1..31) for monthly quota reset. Authored in " +
+      "manifest alongside cost_class. Null for daily/none windows. CHECK 1..31 " +
+      "enforced by Block 0067.",
+  },
 
   // ── hybrid: manifest seeds on create/when DB is null; DB preserved ──
   capability_type: {

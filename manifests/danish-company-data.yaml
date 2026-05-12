@@ -9,6 +9,12 @@ description: >-
 category: data-extraction
 price_cents: 5
 is_free_tier: false
+# Phase A0b cost-class: cvrapi.dk unauthenticated free tier, IP-quota-limited.
+# Empirical floor ~50/day; documented limit higher but conservative cap chosen
+# until we observe one clean cycle. See apps/api/src/capabilities/danish-company-data.ts:5-10.
+cost_class: free_quota
+quota_window: daily
+quota_cap: 50
 input_schema:
   type: object
   required:

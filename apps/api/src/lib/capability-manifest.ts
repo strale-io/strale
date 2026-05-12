@@ -128,6 +128,14 @@ export function normalizeManifestToRow(
     // manifest re-onboard.
     marketplaceEligible: manifest.marketplace_eligible,
     marketplaceEligibleReason: manifest.marketplace_eligible_reason,
+    // Cost-class taxonomy (Phase A0b). Manifest-canonical — the YAML
+    // is the authoring surface. FIELD_CATEGORIES entries enforce
+    // manifest authority on backfill; the DB CHECK constraints in
+    // Block 0067 reject invalid enum values.
+    costClass: manifest.cost_class ?? (partial ? undefined : null),
+    quotaWindow: manifest.quota_window ?? (partial ? undefined : null),
+    quotaCap: manifest.quota_cap ?? (partial ? undefined : null),
+    quotaResetDom: manifest.quota_reset_dom ?? (partial ? undefined : null),
   };
 
   if (!partial) {

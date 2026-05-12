@@ -7,6 +7,12 @@ category: company-data
 price_cents: 5
 is_free_tier: false
 avg_latency_ms: 600
+# Phase A0b cost-class: OpenRegister free tier is 50 req/month, resets on the 1st.
+# See apps/api/src/capabilities/german-company-data.ts:115-120 for the 429 handler.
+cost_class: free_quota
+quota_window: monthly
+quota_cap: 50
+quota_reset_dom: 1
 input_schema:
   type: object
   required: []
