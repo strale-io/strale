@@ -70,6 +70,18 @@ export const openApiSpec = {
           search_tags: { type: "array" as const, items: { type: "string" as const }, description: "Searchability tags" },
           freshness_level: { type: "string" as const, description: "Test data freshness", enum: ["fresh", "aging", "stale", "expired", "unverified"] },
           last_tested_at: { type: "string" as const, format: "date-time", nullable: true, description: "When this capability was last tested" },
+          cost_class: {
+            type: "string" as const,
+            nullable: true,
+            enum: ["free_unlimited", "free_quota", "paid_with_free_tier", "paid_prepaid", "paid_subscription"],
+            description: "Per-capability cost classification (Phase A0b, DEC-20260512-A). NULL means the capability has not yet been classified.",
+          },
+          last_customer_call_at: {
+            type: "string" as const,
+            format: "date-time",
+            nullable: true,
+            description: "Timestamp of the most recent customer-initiated completed invocation. Excludes internal test runs. Used by clients to distinguish 'paid capability awaiting first customer call' from 'capability with genuine quality issues.'",
+          },
         },
       },
       Solution: {
