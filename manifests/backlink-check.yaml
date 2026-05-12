@@ -7,6 +7,8 @@ description: >-
   Check backlinks for a domain via CommonCrawl and Google search. Returns linking domains, anchor text,
   dofollow/nofollow counts.
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 15
 is_free_tier: false
 input_schema:

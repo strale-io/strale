@@ -6,6 +6,8 @@ description: >-
   cop_code (14 codes), modulus check, bank name, and the registered name when a close_match is returned. Implementation
   via eSortcode (Pay.UK CoP scheme participant).
 category: compliance
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 25
 is_free_tier: false
 avg_latency_ms: 1500

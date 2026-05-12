@@ -6,6 +6,8 @@ description: >-
   documented thresholds, FATF-aligned category counts, top article headlines with source URLs and
   dates, and the rule used to classify severe vs non-severe coverage.
 category: compliance
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 20
 is_free_tier: false
 input_schema:

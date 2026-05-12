@@ -6,6 +6,8 @@ description: >-
   (optionally constrained by state). Returns business name, status, formed state, address, and
   match score for name searches.
 category: compliance
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 75
 is_free_tier: false
 avg_latency_ms: 800

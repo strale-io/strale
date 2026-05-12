@@ -4,6 +4,9 @@ description: >-
   Look up Dutch energy performance labels (energielabel) from EP-Online REST API v5. Returns energy class (A–G), energy
   index, CO2 emissions, building details, and validity.
 category: data-extraction
+cost_class: free_quota
+quota_window: daily
+quota_cap: 1000
 price_cents: 5
 is_free_tier: false
 input_schema:
