@@ -9,6 +9,12 @@ import {
   capabilities,
 } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
+import {
+  assertGuardedAllow,
+  CapabilityInvocationRefusedError,
+  CapabilityNotClassifiedError,
+  BudgetExhaustedError,
+} from "../capabilities/guarded-executor.js";
 import type { CapabilityResult } from "../capabilities/index.js";
 import { computeHealthState, HEALTH_STATE_FREQUENCY_HOURS } from "./health-state.js";
 import { sanitizeErrorMessage, getTestResultsForSlug } from "./trust-helpers.js";
@@ -476,20 +482,49 @@ async function runSingleTest(
   const capType = capabilityTypeMap?.get(suite.capabilitySlug);
   const shouldRetry = capType !== "deterministic";
 
+  // Phase A0b dispatcher gate. Scheduler-driven test execution runs under
+  // internal_test context — paid_prepaid / paid_subscription / unclassified
+  // capabilities will refuse here and free_quota / paid_with_free_tier
+  // capabilities will go through a budget reservation before the executor.
   try {
-    if (shouldRetry) {
-      capResult = await withRetry(
-        () => executor(suite.input as Record<string, unknown>),
-        { maxRetries: 1, baseDelayMs: 2000, slug: suite.capabilitySlug },
-      );
-    } else {
-      capResult = await executor(suite.input as Record<string, unknown>);
-    }
-    responseTimeMs = Date.now() - startTime;
+    await assertGuardedAllow(suite.capabilitySlug, {
+      kind: "internal_test",
+      suiteId: suite.id,
+      reason: "scheduled",
+    });
   } catch (err) {
-    responseTimeMs = Date.now() - startTime;
-    executionError =
-      err instanceof Error ? err.message : String(err);
+    if (
+      err instanceof CapabilityInvocationRefusedError ||
+      err instanceof CapabilityNotClassifiedError ||
+      err instanceof BudgetExhaustedError
+    ) {
+      executionError = err.message;
+      responseTimeMs = 0;
+      // Fall through to validateResult; null capResult + executionError
+      // yields a failed result row with the gate's reason as failure_reason.
+    } else {
+      throw err;
+    }
+  }
+
+  if (!executionError) {
+    try {
+      if (shouldRetry) {
+        capResult = await withRetry(
+          () => executor(suite.input as Record<string, unknown>),
+          { maxRetries: 1, baseDelayMs: 2000, slug: suite.capabilitySlug },
+        );
+      } else {
+        capResult = await executor(suite.input as Record<string, unknown>);
+      }
+      responseTimeMs = Date.now() - startTime;
+    } catch (err) {
+      responseTimeMs = Date.now() - startTime;
+      executionError =
+        err instanceof Error ? err.message : String(err);
+    }
+  } else {
+    responseTimeMs = 0;
   }
 
   // Validate the result
@@ -841,13 +876,37 @@ async function runRegressionTest(
   let executionError: string | null = null;
   let responseTimeMs: number;
 
+  // Phase A0b dispatcher gate. Same internal_test context as the per-suite
+  // path above. Regression-runner is the second scheduler entry point.
   try {
-    const result = await executor(suite.input as Record<string, unknown>);
-    responseTimeMs = Date.now() - startTime;
-    currentOutput = result?.output ?? null;
+    await assertGuardedAllow(suite.capabilitySlug, {
+      kind: "internal_test",
+      suiteId: suite.id,
+      reason: "scheduled",
+    });
   } catch (err) {
-    responseTimeMs = Date.now() - startTime;
-    executionError = err instanceof Error ? err.message : String(err);
+    if (
+      err instanceof CapabilityInvocationRefusedError ||
+      err instanceof CapabilityNotClassifiedError ||
+      err instanceof BudgetExhaustedError
+    ) {
+      executionError = err.message;
+    } else {
+      throw err;
+    }
+  }
+
+  if (executionError) {
+    responseTimeMs = 0;
+  } else {
+    try {
+      const result = await executor(suite.input as Record<string, unknown>);
+      responseTimeMs = Date.now() - startTime;
+      currentOutput = result?.output ?? null;
+    } catch (err) {
+      responseTimeMs = Date.now() - startTime;
+      executionError = err instanceof Error ? err.message : String(err);
+    }
   }
 
   if (executionError || !currentOutput) {

@@ -58,6 +58,7 @@ import { validateFixture } from "../src/lib/fixture-quality.js";
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { getExecutor } from "../src/capabilities/index.js";
+import { guardedExecute } from "../src/capabilities/guarded-executor.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 // Manifest / ManifestExpectedField / ManifestLimitation moved to
@@ -225,8 +226,15 @@ async function executeCapability(
   }
 
   try {
+    // Phase A0b dispatcher gate. onboard.ts execute is an internal_test/manual
+    // diagnostic — refuses if the capability hasn't been classified yet,
+    // which is the intended workflow (classify in manifest, then onboard).
     const result = await Promise.race([
-      executor(input),
+      guardedExecute(slug, input, {
+        kind: "internal_test",
+        suiteId: "onboard-script",
+        reason: "manual",
+      }),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("Timeout after 30s")), 30_000),
       ),

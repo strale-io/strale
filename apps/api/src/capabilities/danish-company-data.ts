@@ -24,6 +24,10 @@ function findCvrNumber(input: string): string | null {
 }
 
 async function extractCompanyName(naturalLanguage: string): Promise<string> {
+  // cost-class-coherence-exempt: ANTHROPIC_API_KEY (fuzzy-name fallback only)
+  // The primary path is cvrapi.dk (free); this Claude call only fires for
+  // natural-language input that doesn't parse as a CVR number. cost_class
+  // remains free_quota because the common case never bills.
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 

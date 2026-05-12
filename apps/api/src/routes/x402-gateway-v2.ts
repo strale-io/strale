@@ -16,6 +16,12 @@ import { getDb } from "../db/index.js";
 import { capabilities, solutions, transactions, x402OrphanSettlements } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
 import {
+  assertGuardedAllow,
+  CapabilityInvocationRefusedError,
+  CapabilityNotClassifiedError,
+  BudgetExhaustedError,
+} from "../capabilities/guarded-executor.js";
+import {
   isX402Configured,
   verifyX402PaymentOnly,
   settleX402Payment,
@@ -1118,6 +1124,25 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
   const executor = getExecutor(cap.slug);
   if (!executor) {
     return c.json({ error: "Capability executor unavailable. Try again later." }, 503);
+  }
+
+  // Phase A0b dispatcher gate. x402 callers are paying via USDC settlement,
+  // so the context is customer_paid (allow regardless of cost_class).
+  try {
+    await assertGuardedAllow(cap.slug, {
+      kind: "customer_paid",
+      userId: null,
+      transactionId: null,
+    });
+  } catch (err) {
+    if (
+      err instanceof CapabilityInvocationRefusedError ||
+      err instanceof CapabilityNotClassifiedError ||
+      err instanceof BudgetExhaustedError
+    ) {
+      return c.json({ error: err.message }, 503);
+    }
+    throw err;
   }
 
   const startMs = Date.now();

@@ -12,6 +12,7 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { getDb } from "../src/db/index.js";
 import { testSuites } from "../src/db/schema.js";
 import { getExecutor } from "../src/capabilities/index.js";
+import { guardedExecute } from "../src/capabilities/guarded-executor.js";
 import { autoRegisterCapabilities } from "../src/capabilities/auto-register.js";
 
 interface FixtureDef {
@@ -95,7 +96,12 @@ async function main() {
     }
 
     try {
-      const result = await executor(f.input);
+      // Phase A0b dispatcher gate.
+      const result = await guardedExecute(f.slug, f.input, {
+        kind: "internal_test",
+        suiteId: "add-name-fixtures",
+        reason: "manual",
+      });
       const output = result.output as Record<string, unknown>;
       console.log(`  Output keys: ${Object.keys(output).join(", ")}`);
 

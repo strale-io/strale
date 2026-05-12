@@ -15,6 +15,12 @@ import { getDb } from "./index.js";
 import { testSuites } from "./schema.js";
 import { eq } from "drizzle-orm";
 import { getExecutor, type CapabilityResult } from "../capabilities/index.js";
+import {
+  assertGuardedAllow,
+  CapabilityInvocationRefusedError,
+  CapabilityNotClassifiedError,
+  BudgetExhaustedError,
+} from "../capabilities/guarded-executor.js";
 import { writeFileSync } from "node:fs";
 
 // Capabilities are registered via autoRegisterCapabilities() inside main() —
@@ -246,6 +252,27 @@ async function main() {
         if (!executor) {
           noExecutorTests++;
           continue;
+        }
+
+        // Phase A0b dispatcher gate. Offline audit is internal_test/manual.
+        // A gate refusal counts as an execution error for audit purposes
+        // (the cap is unrunnable in this context until classified).
+        try {
+          await assertGuardedAllow(slug, {
+            kind: "internal_test",
+            suiteId: suite.id,
+            reason: "manual",
+          });
+        } catch (err) {
+          if (
+            err instanceof CapabilityInvocationRefusedError ||
+            err instanceof CapabilityNotClassifiedError ||
+            err instanceof BudgetExhaustedError
+          ) {
+            noExecutorTests++;
+            continue;
+          }
+          throw err;
         }
 
         const { result, error, timedOut } = await executeWithTimeout(
