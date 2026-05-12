@@ -24,6 +24,7 @@ import {
   capabilityLimitations,
 } from "../src/db/schema.js";
 import { getExecutor } from "../src/capabilities/index.js";
+import { guardedExecute } from "../src/capabilities/guarded-executor.js";
 
 // Base URL for internal API calls (smoke test runs locally against the live DB)
 const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3000";
@@ -112,8 +113,14 @@ async function smokeTest(
     const start2 = Date.now();
     try {
       const testInput = knownAnswerSuite.input as Record<string, unknown>;
+      // Phase A0b dispatcher gate. Smoke test is a manual operator
+      // diagnostic — internal_test/manual context.
       const result = await Promise.race([
-        executor(testInput),
+        guardedExecute(slug, testInput, {
+          kind: "internal_test",
+          suiteId: knownAnswerSuite.id,
+          reason: "manual",
+        }),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Timeout after 30s")), 30_000),
         ),
@@ -190,7 +197,11 @@ async function smokeTest(
     const start4 = Date.now();
     try {
       const result = await Promise.race([
-        executor({}),
+        guardedExecute(slug, {}, {
+          kind: "internal_test",
+          suiteId: negativeSuite.id,
+          reason: "manual",
+        }),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Timeout after 15s")), 15_000),
         ),

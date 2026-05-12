@@ -13,6 +13,7 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 // Import the capability for its side-effect registration.
 import "../src/capabilities/singapore-company-data.js";
 import { getExecutor } from "../src/capabilities/index.js";
+import { guardedExecute } from "../src/capabilities/guarded-executor.js";
 
 async function main() {
   const exec = getExecutor("singapore-company-data");
@@ -30,7 +31,12 @@ async function main() {
   for (const c of cases) {
     const t0 = Date.now();
     try {
-      const result = await exec(c.input);
+      // Phase A0b dispatcher gate — internal_test/manual.
+      const result = await guardedExecute("singapore-company-data", c.input, {
+        kind: "internal_test",
+        suiteId: "smoke-singapore",
+        reason: "manual",
+      });
       const ms = Date.now() - t0;
       console.log(`\n=== ${c.label}  (${ms}ms) ===`);
       console.log("output:", JSON.stringify(result.output, null, 2));

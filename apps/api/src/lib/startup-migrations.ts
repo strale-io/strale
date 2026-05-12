@@ -609,6 +609,286 @@ export async function runMigration0066_ensureEligibilityColumnAndReconcile(
   };
 }
 
+// ─── Block 0067: cost_class taxonomy columns on `capabilities` ──────────────
+//
+// Adds four nullable columns plus CHECK constraints. NULL means "not yet
+// classified" — scheduler skips, dispatcher refuses internal callers, but
+// customer_paid still flows through (Phase A0b GRACE-mode self-throttling).
+// Phase B will backfill the remaining ~312 caps under no time pressure;
+// commit #2's Block 0068 seeds DE/DK/SK because OpenRegister's free-tier
+// quota resets 2026-06-01 and the scheduler would burn the next cycle
+// without the gate.
+//
+// Idempotency. Each ADD COLUMN uses IF NOT EXISTS; CHECK constraints are
+// guarded by a NOT EXISTS lookup against pg_constraint so the second
+// invocation is a no-op.
+//
+// Rollback. ALTER TABLE ... DROP COLUMN cascades any downstream UPDATE
+// blocks (0068 etc.) automatically. See "## Rollback" in the Phase A0b
+// prompt for the manual SQL.
+
+export async function runMigration0067_costClassTaxonomy(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  // Columns first (idempotent).
+  await tx.execute(sql`
+    ALTER TABLE capabilities ADD COLUMN IF NOT EXISTS cost_class TEXT
+  `);
+  await tx.execute(sql`
+    ALTER TABLE capabilities ADD COLUMN IF NOT EXISTS quota_window TEXT
+  `);
+  await tx.execute(sql`
+    ALTER TABLE capabilities ADD COLUMN IF NOT EXISTS quota_cap INTEGER
+  `);
+  await tx.execute(sql`
+    ALTER TABLE capabilities ADD COLUMN IF NOT EXISTS quota_reset_dom INTEGER
+  `);
+
+  // Constraints — guard each with a NOT EXISTS lookup so re-runs no-op.
+  // information_schema.constraint_column_usage doesn't expose CHECK
+  // constraints reliably across PG versions; pg_constraint is the
+  // authoritative catalog.
+  const ensureConstraint = async (
+    name: string,
+    definition: string,
+  ): Promise<void> => {
+    const exists = await tx.execute(sql`
+      SELECT count(*)::text AS cnt FROM pg_constraint
+      WHERE conname = ${name} AND conrelid = 'capabilities'::regclass
+    `);
+    const rows = Array.isArray(exists) ? exists : (exists as { rows?: unknown[] })?.rows ?? [];
+    if ((rows[0] as { cnt?: string })?.cnt === "0") {
+      // Note: sql.raw is acceptable here because both `name` and `definition`
+      // are hardcoded literals controlled by this file, not user input.
+      await tx.execute(
+        sql.raw(`ALTER TABLE capabilities ADD CONSTRAINT ${name} CHECK (${definition})`),
+      );
+    }
+  };
+
+  await ensureConstraint(
+    "capabilities_cost_class_chk",
+    `cost_class IS NULL OR cost_class IN ('free_unlimited', 'free_quota', 'paid_with_free_tier', 'paid_prepaid', 'paid_subscription')`,
+  );
+  await ensureConstraint(
+    "capabilities_quota_window_chk",
+    `quota_window IS NULL OR quota_window IN ('daily', 'monthly', 'none')`,
+  );
+  await ensureConstraint(
+    "capabilities_quota_reset_dom_chk",
+    `quota_reset_dom IS NULL OR (quota_reset_dom >= 1 AND quota_reset_dom <= 31)`,
+  );
+
+  return {
+    block: "0067_cost_class_taxonomy",
+    outcome: "columns + CHECK constraints ensured",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0068: seed cost_class for DE/DK/SK ───────────────────────────────
+//
+// Phase A0b strategy (b) self-throttling: classifies only the three caps
+// whose vendors have the most-urgent quota exhaustion risk. DE OpenRegister
+// resets 2026-06-01 and was the original DE/DK breakage trigger; cvrapi.dk
+// (DK) is IP-quota-limited at ~50/day empirical; SK RPO is free_unlimited
+// because its only limit is a per-IP burst rate, not a cumulative quota.
+//
+// The remaining ~312 capabilities are Phase B (post-A0b) work — they stay
+// cost_class IS NULL and the scheduler/dispatcher fail-closed for internal
+// callers while still serving customer_paid traffic during the GRACE window.
+//
+// Idempotency. Each UPDATE filters `AND cost_class IS NULL`, so a re-run
+// after the seed lands is a no-op. A future Phase B classification that
+// lands a different cost_class on these rows is also preserved — this
+// block only fills in the blank.
+
+export async function runMigration0068_seedDeDkSkCostClass(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  let totalAffected = 0;
+
+  // DE OpenRegister — 50 req/month, resets on the 1st.
+  const de = await tx.execute(sql`
+    UPDATE capabilities
+       SET cost_class = 'free_quota',
+           quota_window = 'monthly',
+           quota_cap = 50,
+           quota_reset_dom = 1,
+           updated_at = NOW()
+     WHERE slug = 'german-company-data' AND cost_class IS NULL
+  `);
+  totalAffected += (de as { count?: number }).count ?? 0;
+
+  // DK cvrapi.dk — empirical floor ~50/day, no per-day reset_dom needed.
+  const dk = await tx.execute(sql`
+    UPDATE capabilities
+       SET cost_class = 'free_quota',
+           quota_window = 'daily',
+           quota_cap = 50,
+           updated_at = NOW()
+     WHERE slug = 'danish-company-data' AND cost_class IS NULL
+  `);
+  totalAffected += (dk as { count?: number }).count ?? 0;
+
+  // SK RPO — gov registry, CC-BY 4.0, only 60 req/min/IP burst limit.
+  // No cumulative quota → no quota_cap needed.
+  const sk = await tx.execute(sql`
+    UPDATE capabilities
+       SET cost_class = 'free_unlimited',
+           quota_window = 'none',
+           updated_at = NOW()
+     WHERE slug = 'slovak-company-data' AND cost_class IS NULL
+  `);
+  totalAffected += (sk as { count?: number }).count ?? 0;
+
+  return {
+    block: "0068_seed_de_dk_sk_cost_class",
+    outcome:
+      totalAffected === 0
+        ? "no rows to update (DE/DK/SK already classified or missing)"
+        : `seeded cost_class on ${totalAffected} row(s) (DE/DK/SK)`,
+    rows_affected: totalAffected,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0069: reconcile scheduled_testing_eligible from cost_class ───────
+//
+// Phase A0b commit #4. Block 0066's interim derivation
+// (`scheduled_testing_eligible := external_cost_cents = 0`) was the bridge
+// behavior that conflated "no per-call cost" with "no quota". This block
+// replaces it with the structural rule:
+//
+//   eligible := cost_class IN ('free_unlimited', 'free_quota', 'paid_with_free_tier')
+//
+// Unclassified caps (cost_class IS NULL) keep `scheduled_testing_eligible = FALSE`
+// — fail-closed, matches the GRACE-mode dispatcher behavior. The scheduler's
+// SELECT query is also tightened in test-scheduler.ts to exclude caps whose
+// per-window budget counter has reached its cap (defense-in-depth alongside
+// the per-call assertBudgetAvailable check).
+//
+// Idempotency. The UPDATE filters `IS DISTINCT FROM` so re-runs on an
+// already-reconciled DB match zero rows.
+
+export async function runMigration0069_reconcileEligibilityFromCostClass(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  const update = await tx.execute(sql`
+    UPDATE test_suites ts
+       SET scheduled_testing_eligible = (
+             c.cost_class IN ('free_unlimited', 'free_quota', 'paid_with_free_tier')
+           ),
+           updated_at = NOW()
+      FROM capabilities c
+     WHERE c.slug = ts.capability_slug
+       AND c.cost_class IS NOT NULL
+       AND ts.scheduled_testing_eligible IS DISTINCT FROM (
+             c.cost_class IN ('free_unlimited', 'free_quota', 'paid_with_free_tier')
+           )
+  `);
+  const updateCount = (update as { count?: number }).count ?? 0;
+
+  // Post-condition: for every classified cap, its suites' eligibility
+  // matches the cost_class derivation. Mismatch means the UPDATE didn't
+  // reach the rows we expected — fail boot rather than silently leave
+  // the scheduler reading stale eligibility.
+  const checkRows = await tx.execute(sql`
+    SELECT COUNT(*)::int AS mismatched
+      FROM test_suites ts
+      JOIN capabilities c ON c.slug = ts.capability_slug
+     WHERE c.cost_class IS NOT NULL
+       AND ts.scheduled_testing_eligible IS DISTINCT FROM (
+             c.cost_class IN ('free_unlimited', 'free_quota', 'paid_with_free_tier')
+           )
+  `);
+  const checkResultRows = Array.isArray(checkRows)
+    ? checkRows
+    : (checkRows as { rows?: unknown[] })?.rows ?? [];
+  const mismatched = (checkResultRows[0] as { mismatched?: number })?.mismatched ?? 0;
+  if (mismatched > 0) {
+    throw new Error(
+      `0069_reconcile_eligibility_from_cost_class post-condition failed: ${mismatched} rows still mismatched after UPDATE`,
+    );
+  }
+
+  return {
+    block: "0069_reconcile_eligibility_from_cost_class",
+    outcome:
+      updateCount === 0
+        ? "no rows to reconcile (already aligned with cost_class)"
+        : `reconciled ${updateCount} row(s) to cost_class-derived eligibility`,
+    rows_affected: updateCount,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0070: capability_budget_counters table ───────────────────────────
+//
+// Per-capability test-budget counter (free_quota / paid_with_free_tier).
+// Modeled on rate_limit_counters (composite PK + atomic ON CONFLICT
+// increment). budget_cap is snapshotted at counter creation from
+// capabilities.quota_cap × 5..20% depending on cost_class + window kind;
+// see guarded-executor.ts for the formula.
+//
+// Idempotency. CREATE TABLE IF NOT EXISTS; CHECK constraint guarded by
+// pg_constraint NOT EXISTS lookup.
+
+export async function runMigration0070_capabilityBudgetCounters(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS capability_budget_counters (
+      capability_slug TEXT NOT NULL,
+      window_start TIMESTAMP WITH TIME ZONE NOT NULL,
+      window_kind TEXT NOT NULL,
+      test_count INTEGER NOT NULL DEFAULT 0,
+      budget_cap INTEGER NOT NULL,
+      alert_30_fired_at TIMESTAMP WITH TIME ZONE,
+      alert_50_fired_at TIMESTAMP WITH TIME ZONE,
+      alert_80_fired_at TIMESTAMP WITH TIME ZONE,
+      hard_stop_fired_at TIMESTAMP WITH TIME ZONE,
+      updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (capability_slug, window_start, window_kind)
+    )
+  `);
+
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS capability_budget_counters_window_idx
+      ON capability_budget_counters (window_kind, window_start)
+  `);
+
+  // CHECK constraint guarded against re-add.
+  const checkExists = await tx.execute(sql`
+    SELECT count(*)::text AS cnt FROM pg_constraint
+    WHERE conname = 'capability_budget_counters_window_kind_chk'
+      AND conrelid = 'capability_budget_counters'::regclass
+  `);
+  const rows = Array.isArray(checkExists)
+    ? checkExists
+    : (checkExists as { rows?: unknown[] })?.rows ?? [];
+  if ((rows[0] as { cnt?: string })?.cnt === "0") {
+    await tx.execute(sql`
+      ALTER TABLE capability_budget_counters
+        ADD CONSTRAINT capability_budget_counters_window_kind_chk
+        CHECK (window_kind IN ('daily', 'monthly'))
+    `);
+  }
+
+  return {
+    block: "0070_capability_budget_counters",
+    outcome: "table + index + CHECK ensured",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
 // ─── Orchestrator ───────────────────────────────────────────────────────────
 
 /**
@@ -629,6 +909,10 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0064_alwaysLlmHaikuCosts,
   runMigration0065_pr86LeakyCapsCleanup,
   runMigration0066_ensureEligibilityColumnAndReconcile,
+  runMigration0067_costClassTaxonomy,
+  runMigration0068_seedDeDkSkCostClass,
+  runMigration0069_reconcileEligibilityFromCostClass,
+  runMigration0070_capabilityBudgetCounters,
 ];
 
 /**

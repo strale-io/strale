@@ -9,6 +9,12 @@ import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps, testSuites } from "../db/schema.js";
 import { generateTestInput } from "./test-input-generator.js";
 import { getExecutor } from "../capabilities/index.js";
+import {
+  assertGuardedAllow,
+  CapabilityInvocationRefusedError,
+  CapabilityNotClassifiedError,
+  BudgetExhaustedError,
+} from "../capabilities/guarded-executor.js";
 import { classifyFieldVolatility, makeVolatilityAwareCheck } from "./field-volatility.js";
 import { getOutputChecks, assignTier } from "./test-generation.js";
 import { checkReadiness, clearReadinessCache } from "./capability-readiness.js";
@@ -420,6 +426,32 @@ export async function validateTestFixtures(
   const execInput = calibratable[0].input as Record<string, unknown>;
   let realOutput: Record<string, unknown>;
 
+  // Phase A0b dispatcher gate. Same internal_test/manual context as the
+  // regression-test path. Refusal on null cost_class teaches: "classify
+  // before onboarding" without surfacing as a hard failure (logWarn +
+  // return matches the executor-missing skip behavior above).
+  try {
+    await assertGuardedAllow(capabilitySlug, {
+      kind: "internal_test",
+      suiteId: "onboarding-fixture-validate",
+      reason: "manual",
+    });
+  } catch (err) {
+    if (
+      err instanceof CapabilityInvocationRefusedError ||
+      err instanceof CapabilityNotClassifiedError ||
+      err instanceof BudgetExhaustedError
+    ) {
+      logWarn(
+        "onboarding-fixture-gate-refused",
+        "dispatcher gate refused fixture validation",
+        { capability_slug: capabilitySlug, reason: err.message },
+      );
+      return;
+    }
+    throw err;
+  }
+
   try {
     const result = await executor(execInput);
     if (!result?.output || Object.keys(result.output).length === 0) {
@@ -538,6 +570,32 @@ async function generateAlgorithmicRegressionTest(
       { capability_slug: cap.slug },
     );
     return;
+  }
+
+  // Phase A0b dispatcher gate. Onboarding regression-test generation
+  // calls the executor with manifest-derived input. Runs under
+  // internal_test/manual; refusal on null cost_class is the expected
+  // teaching signal ("classify this cap in its manifest first").
+  try {
+    await assertGuardedAllow(cap.slug, {
+      kind: "internal_test",
+      suiteId: "onboarding-regression",
+      reason: "manual",
+    });
+  } catch (err) {
+    if (
+      err instanceof CapabilityInvocationRefusedError ||
+      err instanceof CapabilityNotClassifiedError ||
+      err instanceof BudgetExhaustedError
+    ) {
+      logWarn(
+        "onboarding-regression-gate-refused",
+        "dispatcher gate refused regression test",
+        { capability_slug: cap.slug, reason: err.message },
+      );
+      return;
+    }
+    throw err;
   }
 
   let result: Awaited<ReturnType<typeof executor>> | null = null;

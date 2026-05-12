@@ -14,6 +14,12 @@ import { optionalAuthMiddleware, getClientIp, hashIp } from "../lib/middleware.j
 import { rateLimitByKey, rateLimitByIp } from "../lib/rate-limit.js";
 import { matchCapability } from "../lib/matching.js";
 import { getExecutor } from "../capabilities/index.js";
+import {
+  assertGuardedAllow,
+  CapabilityNotClassifiedError,
+  CapabilityInvocationRefusedError,
+  BudgetExhaustedError,
+} from "../capabilities/guarded-executor.js";
 import { apiError } from "../lib/errors.js";
 import {
   checkCircuitBreaker,
@@ -753,6 +759,34 @@ doRoute.post(
       ),
       503,
     );
+  }
+
+  // ── 5a. Dispatcher gate (Phase A0b). Every external invocation passes
+  //         through the ALLOW_MATRIX before reaching the executor. This is
+  //         a customer-paid path; the gate's null-row decision ALLOWS this
+  //         context during the GRACE backfill window (preserves customer
+  //         traffic for caps still awaiting cost_class classification).
+  try {
+    await assertGuardedAllow(capability.slug, {
+      kind: "customer_paid",
+      userId: user?.id ?? null,
+      transactionId: null,
+    });
+  } catch (err) {
+    if (err instanceof CapabilityInvocationRefusedError) {
+      return c.json(apiError("capability_unavailable", err.message), 503);
+    }
+    if (err instanceof CapabilityNotClassifiedError) {
+      // customer_paid + null is ALLOW per ALLOW_MATRIX — this branch is
+      // defensive; if it fires the matrix has been tampered with.
+      logError("dispatcher-gate-unexpected-null-refusal", err, { slug: capability.slug });
+      return c.json(apiError("capability_unavailable", err.message), 503);
+    }
+    if (err instanceof BudgetExhaustedError) {
+      // customer_paid never budget-checks; defensive.
+      return c.json(apiError("capability_unavailable", err.message), 503);
+    }
+    throw err;
   }
 
   // ── 5b. Circuit breaker check ──────────────────────────────────────────

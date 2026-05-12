@@ -18,6 +18,12 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { solutionSteps } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
+import {
+  assertGuardedAllow,
+  CapabilityInvocationRefusedError,
+  CapabilityNotClassifiedError,
+  BudgetExhaustedError,
+} from "../capabilities/guarded-executor.js";
 import { sanitizeFailureReason } from "./sanitize.js";
 import { enrichCompanyOutput } from "../capabilities/lib/enrich-company-output.js";
 import { logWarn } from "./log.js";
@@ -267,6 +273,27 @@ export async function executeSolution(
       if (!executor) {
         stepErrors.push(`${step.capabilitySlug}: executor unavailable`);
         return;
+      }
+
+      // Phase A0b dispatcher gate. Solution executions are customer-initiated
+      // (the outer route already authenticated the customer), so each step
+      // runs under customer_paid context. ALLOW_MATRIX permits all classes.
+      try {
+        await assertGuardedAllow(step.capabilitySlug, {
+          kind: "customer_paid",
+          userId: null,
+          transactionId: null,
+        });
+      } catch (err) {
+        if (
+          err instanceof CapabilityInvocationRefusedError ||
+          err instanceof CapabilityNotClassifiedError ||
+          err instanceof BudgetExhaustedError
+        ) {
+          stepErrors.push(`${step.capabilitySlug}: ${err.message}`);
+          return;
+        }
+        throw err;
       }
 
       const stepStartMs = Date.now();

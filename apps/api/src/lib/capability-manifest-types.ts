@@ -69,4 +69,21 @@ export interface Manifest {
   // the decision tree and reason-string content guide.
   marketplace_eligible?: boolean;
   marketplace_eligible_reason?: string | null;
+  // Cost-class taxonomy (Phase A0b). NULL/omitted means "not yet
+  // classified" — the boot invariant skips in GRACE mode; the
+  // dispatcher refuses internal-test invocations and the scheduler
+  // skips. customer_paid still flows through. Validated by the
+  // CHECK constraints from Block 0067 at DB level.
+  cost_class?:
+    | "free_unlimited"
+    | "free_quota"
+    | "paid_with_free_tier"
+    | "paid_prepaid"
+    | "paid_subscription";
+  quota_window?: "daily" | "monthly" | "none";
+  // Quota cap in calls per window. Required for free_quota and
+  // paid_with_free_tier. NULL for the other classes.
+  quota_cap?: number | null;
+  // Day-of-month reset for monthly window (1..31). NULL for daily/none.
+  quota_reset_dom?: number | null;
 }

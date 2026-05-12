@@ -78,6 +78,17 @@ async function main() {
   const { validateSchema } = await import("./lib/schema-validator.js");
   await validateSchema();
 
+  // Phase A0b cost-class taxonomy invariant. Runs AFTER validateSchema
+  // because the column must exist before the query reads it. GRACE
+  // (default) surfaces a count + one log line per unclassified cap;
+  // STRICT aborts boot on any unclassified row. Flip to STRICT after
+  // one operational cycle confirms the GRACE log line stays empty for
+  // the expected backfill horizon.
+  const { assertCostClassTaxonomy, resolveCostClassMode } = await import(
+    "./lib/cost-class-invariant.js"
+  );
+  await assertCostClassTaxonomy({ mode: resolveCostClassMode(process.env.COST_CLASS_MODE) });
+
   // Import app after executors are registered
   const { app, warmCatalog } = await import("./app.js");
   const { startTestScheduler } = await import("./jobs/test-scheduler.js");

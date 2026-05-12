@@ -13,7 +13,13 @@
  * and any zero-cost auth-less probes the vendor permits. The
  * schedule_tier column stays on test_suites for backwards compatibility
  * but is no longer read by the scheduler. Eligibility is an explicit
- * column per the PR A decoupling (see DEC-20260511-?).
+ * column per the PR A decoupling (see DEC-20260511-C). Phase A0b extends
+ * this further: eligibility is now derived from capabilities.cost_class
+ * (Block 0069) rather than external_cost_cents = 0, and the SELECT below
+ * also excludes capabilities whose per-window budget counter has reached
+ * its cap — defense-in-depth against the assertBudgetAvailable per-call
+ * check at the dispatcher gate.
+ * TODO(chat-draft): cite new cost-class DEC after Phase A0b session-end review
  *
  * Cadence: the scheduler ticks every minute. Each minute M (0–59) it
  * picks free capabilities whose `abs(hashtext(slug)) % 60 = M` and whose
@@ -239,7 +245,8 @@ export function slugStaggerMinute(slug: string): number {
 /**
  * Find free capabilities due for testing this minute.
  *
- * Per DEC-20260503-B (refined by the PR A decoupling — see DEC-20260511-?):
+ * Per DEC-20260503-B (refined by the PR A decoupling — see DEC-20260511-C;
+ * TODO(chat-draft): cite new cost-class DEC after Phase A0b session-end review):
  *   - scheduled_testing_eligible = TRUE  (free/eligible; paid caps skipped)
  *   - last_tested_at older than 1h  (or never tested)
  *   - abs(hashtext(slug)) % 60 = current minute  (slug-hash stagger)
@@ -255,6 +262,12 @@ export function slugStaggerMinute(slug: string): number {
 async function findOverdueCapabilities(): Promise<OverdueCapability[]> {
   const db = getDb();
 
+  // Phase A0b: exclude capabilities whose per-window test budget is
+  // already at cap. This is defense-in-depth — the per-call
+  // assertBudgetAvailable() in the dispatcher would also refuse — but
+  // skipping at query time avoids the round-trip and keeps the scheduler
+  // log noise-free during a saturated window. free_unlimited caps are
+  // never budget-tracked, so the OR short-circuits for them.
   const rows = await db.execute(sql`
     SELECT
       c.slug,
@@ -275,6 +288,24 @@ async function findOverdueCapabilities(): Promise<OverdueCapability[]> {
             WHEN 'quarantined'     THEN INTERVAL '168 hours'
             ELSE INTERVAL '0 hours'
           END
+        )
+      )
+      AND (
+        c.cost_class = 'free_unlimited'
+        OR c.cost_class IS NULL
+        OR NOT EXISTS (
+          SELECT 1 FROM capability_budget_counters b
+          WHERE b.capability_slug = c.slug
+            AND b.window_kind = c.quota_window
+            AND b.window_start = (
+              CASE c.quota_window
+                WHEN 'daily'   THEN date_trunc('day', NOW())
+                WHEN 'monthly' THEN date_trunc('month', NOW())
+                  + (COALESCE(c.quota_reset_dom, 1) - 1) * INTERVAL '1 day'
+                ELSE NULL
+              END
+            )
+            AND b.test_count >= b.budget_cap
         )
       )
     GROUP BY c.slug, c.last_tested_at

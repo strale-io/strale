@@ -155,6 +155,56 @@ describe("normalizeManifestToRow (Cluster 2 Phase 3 C2)", () => {
     expect(row.capabilityType).toBe("ai_assisted");
   });
 
+  // ── Phase A0b: cost_class taxonomy fields ───────────────────────────────
+
+  it("maps cost_class + quota_window + quota_cap + quota_reset_dom to camelCase row", () => {
+    const m = fullManifest({
+      cost_class: "free_quota",
+      quota_window: "monthly",
+      quota_cap: 50,
+      quota_reset_dom: 1,
+    });
+    const row = normalizeManifestToRow(m);
+    expect(row.costClass).toBe("free_quota");
+    expect(row.quotaWindow).toBe("monthly");
+    expect(row.quotaCap).toBe(50);
+    expect(row.quotaResetDom).toBe(1);
+  });
+
+  it("non-partial mode: emits null for missing cost_class fields (inverted default)", () => {
+    const m = fullManifest();
+    delete m.cost_class;
+    delete m.quota_window;
+    delete m.quota_cap;
+    delete m.quota_reset_dom;
+    const row = normalizeManifestToRow(m);
+    expect(row.costClass).toBeNull();
+    expect(row.quotaWindow).toBeNull();
+    expect(row.quotaCap).toBeNull();
+    expect(row.quotaResetDom).toBeNull();
+  });
+
+  it("partial mode: omits cost_class fields when not declared (manifest authority preserved)", () => {
+    const m = fullManifest();
+    delete m.cost_class;
+    delete m.quota_window;
+    delete m.quota_cap;
+    delete m.quota_reset_dom;
+    const row = normalizeManifestToRow(m, { partial: true });
+    expect(Object.prototype.hasOwnProperty.call(row, "costClass")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(row, "quotaWindow")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(row, "quotaCap")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(row, "quotaResetDom")).toBe(false);
+  });
+
+  it("partial mode: passes through cost_class when declared", () => {
+    const m = fullManifest({
+      cost_class: "paid_prepaid",
+    });
+    const row = normalizeManifestToRow(m, { partial: true });
+    expect(row.costClass).toBe("paid_prepaid");
+  });
+
   it("dataSourceTypeToCapType falls back to 'stable_api' for unknown values", () => {
     expect(dataSourceTypeToCapType("bogus")).toBe("stable_api");
     expect(dataSourceTypeToCapType("")).toBe("stable_api");

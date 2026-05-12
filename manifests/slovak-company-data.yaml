@@ -7,6 +7,11 @@ description: >-
 category: company-data
 price_cents: 5
 is_free_tier: false
+# Phase A0b cost-class: gov RPO API, CC-BY 4.0, no auth. Per-IP rate limit
+# (60 req/min) is a burst limit, not a cumulative quota → free_unlimited.
+# Current breakage (upstream 502/503) is orthogonal — see source_health.
+cost_class: free_unlimited
+quota_window: none
 data_source: Register právnických osôb (ŠÚ SR / Statistical Office of the Slovak Republic), CC-BY 4.0
 data_source_type: api
 transparency_tag: algorithmic

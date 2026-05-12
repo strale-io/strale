@@ -14,6 +14,12 @@ import {
 import { runTests } from "../lib/test-runner.js";
 import type { ScheduleTier } from "../lib/test-runner.js";
 import { getExecutor } from "../capabilities/index.js";
+import {
+  assertGuardedAllow,
+  CapabilityInvocationRefusedError,
+  CapabilityNotClassifiedError,
+  BudgetExhaustedError,
+} from "../capabilities/guarded-executor.js";
 import { generateTestInput } from "../lib/test-input-generator.js";
 import { categorizeFailureReason, toLegacyCategory, sanitizeErrorMessage } from "../lib/trust-helpers.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
@@ -1047,13 +1053,38 @@ internalTestsRoute.post("/recalibrate", async (c) => {
       const bestSuite = calibratable[0] ?? slugSuites[0];
       const resolution = resolveRecalInput(bestSuite.input as Record<string, unknown>, cap);
 
+      // Phase A0b dispatcher gate. Recalibration is operator-initiated
+      // admin diagnostic — internal_test/manual.
+      let gateError: string | null = null;
       try {
-        const result = await executor(resolution.input);
-        if (result?.output && Object.keys(result.output).length > 0) {
-          realOutput = result.output;
+        await assertGuardedAllow(slug, {
+          kind: "internal_test",
+          suiteId: bestSuite.id,
+          reason: "manual",
+        });
+      } catch (err) {
+        if (
+          err instanceof CapabilityInvocationRefusedError ||
+          err instanceof CapabilityNotClassifiedError ||
+          err instanceof BudgetExhaustedError
+        ) {
+          gateError = err.message;
+        } else {
+          throw err;
         }
-      } catch (err: any) {
-        executionError = err.message?.slice(0, 200) ?? "Unknown error";
+      }
+
+      if (gateError) {
+        executionError = gateError.slice(0, 200);
+      } else {
+        try {
+          const result = await executor(resolution.input);
+          if (result?.output && Object.keys(result.output).length > 0) {
+            realOutput = result.output;
+          }
+        } catch (err: any) {
+          executionError = err.message?.slice(0, 200) ?? "Unknown error";
+        }
       }
 
       // 2s delay between capabilities
