@@ -5,6 +5,8 @@ slug: financial-year-dates
 name: Financial Year Dates
 description: Get fiscal year start/end, tax filing deadlines, VAT filing frequency for 42+ countries.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

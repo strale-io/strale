@@ -5,6 +5,8 @@ slug: country-trade-data
 name: Country Trade Data
 description: "Get trade data for a country: top exports/imports, trade balance, trading partners. World Bank API + embedded data."
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 20
 is_free_tier: false
 input_schema:

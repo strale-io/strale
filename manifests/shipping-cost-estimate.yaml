@@ -5,6 +5,8 @@ slug: shipping-cost-estimate
 name: Shipping Cost Estimate
 description: Estimate shipping costs for PostNord, DHL, UPS by origin/destination, weight, and service level.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 15
 is_free_tier: false
 input_schema:

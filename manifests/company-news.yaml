@@ -4,6 +4,8 @@ description: >-
   Search global news for a company. Returns recent articles with source, date, and sentiment analysis. Covers 100+
   languages via GDELT, updating every 15 minutes.
 category: company-data
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 data_source: GDELT Project
 data_source_type: api

@@ -4,6 +4,8 @@ description: >-
   Validate a phone number and classify its type. Returns E.164 format, country, carrier name,
   and whether it is mobile, landline, or VOIP. Covers 200+ countries.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

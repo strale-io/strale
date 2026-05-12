@@ -7,6 +7,8 @@ description: >-
   Look up product information by UPC/EAN barcode. Uses Open Food Facts and UPC ItemDB. Returns product name, brand,
   nutrition, images.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

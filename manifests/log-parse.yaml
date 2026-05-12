@@ -7,6 +7,8 @@ description: >-
   Parse log files — auto-detects format (JSON, syslog, ISO, logfmt, Laravel). Extracts timestamps, levels, messages.
   Returns error/warning summary. Algorithmic.
 category: developer-tools
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

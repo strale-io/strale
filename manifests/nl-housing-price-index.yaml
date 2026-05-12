@@ -4,6 +4,8 @@ description: >-
   Dutch national housing price index and average sale prices from CBS/Kadaster. Returns monthly price index (2020=100),
   year-over-year trends, homes sold, and average sale price.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

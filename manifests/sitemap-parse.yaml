@@ -5,6 +5,8 @@ slug: sitemap-parse
 name: Sitemap Parse
 description: Fetch and parse a website's XML sitemap. Returns URL count, top path segments, lastmod dates, and sample URLs.
 category: monitoring
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

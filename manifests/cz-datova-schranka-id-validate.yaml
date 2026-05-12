@@ -4,6 +4,8 @@ description: >-
   Validate the 7-character format of a Czech data box (datová schránka) ID. Pure format check — there is no public
   checksum.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 data_source: Algorithmic (Czech Data Box specification)

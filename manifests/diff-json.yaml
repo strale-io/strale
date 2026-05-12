@@ -7,6 +7,8 @@ description: >-
   Compare two JSON objects and return structured diff. Shows added, removed, and changed fields with paths and values.
   Algorithmic.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

@@ -10,6 +10,8 @@ description: >-
   Look up the primary ENS name for a wallet address. Includes forward verification to confirm the name actually points
   back to the address. Returns null if no ENS name is set.
 category: web3
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

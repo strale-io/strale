@@ -7,6 +7,8 @@ description: >-
   Classify dangerous goods by UN number or substance name. Returns hazard class, packing group, labels, marine pollutant
   status. 200+ substances.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

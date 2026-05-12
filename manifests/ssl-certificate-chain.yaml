@@ -7,6 +7,8 @@ description: >-
   Inspect the full SSL/TLS certificate chain for a domain. Returns cert details, expiry, issuer, TLS version, cipher
   suite, and security issues.
 category: monitoring
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

@@ -5,6 +5,8 @@ slug: social-profile-check
 name: Social Profile Check
 description: "Check username availability across 7 platforms: GitHub, YouTube, TikTok, Reddit, Pinterest, npm, PyPI."
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

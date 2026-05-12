@@ -10,6 +10,8 @@ description: >-
   Check if a crypto-asset service provider is on ESMA's non-compliant entities list under MiCA regulation. Flags
   entities that have been identified for regulatory infringement.
 category: web3
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

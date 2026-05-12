@@ -4,6 +4,8 @@ description: >-
   Get recent 8-K filing events for US public companies from SEC EDGAR. Returns leadership changes, funding events,
   acquisitions, material agreements, and financial results.
 category: company-data
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 data_source: SEC EDGAR
 data_source_type: api

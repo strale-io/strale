@@ -7,6 +7,8 @@ description: >-
   Fetch a URL and return content as base64. Useful for embedding images, PDFs in API calls. Returns base64, content
   type, data URI.
 category: file-conversion
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

@@ -7,6 +7,8 @@ description: >-
   Validate a European VAT number format against country-specific rules. Pure algorithmic — does NOT check VIES. Use
   vat-validate for full VIES verification. Supports all 27 EU countries + GB, CH, NO.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

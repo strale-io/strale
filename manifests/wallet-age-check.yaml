@@ -10,6 +10,8 @@ description: >-
   Check when a wallet address made its first transaction. Returns the wallet's age in days. A new wallet transacting
   large amounts is a red flag. Supports Ethereum, Base, and other EVM chains via Etherscan V2.
 category: web3
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

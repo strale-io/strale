@@ -6,6 +6,8 @@ description: >-
   proceed/caution/avoid recommendation with parsed payment details. Use this before calling any paid
   external API to avoid wasting funds on broken, misconfigured, or fraudulent endpoints.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 capability_type: stable_api

@@ -7,6 +7,8 @@ description: >-
   Validate an email address. Checks format, MX records, disposable domain detection, and role-based address detection.
   No email is sent.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: true
 input_schema:

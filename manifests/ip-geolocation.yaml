@@ -5,6 +5,8 @@ slug: ip-geolocation
 name: IP Geolocation
 description: Look up geographic location, ISP, and network information for an IP address. Detects proxies and hosting providers.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

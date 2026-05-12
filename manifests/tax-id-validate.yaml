@@ -4,6 +4,8 @@ description: >-
   Validate tax identification number (TIN) formats for 40+ countries. Checks format rules and
   checksum algorithms where applicable. Does not verify with tax authorities.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

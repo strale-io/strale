@@ -4,6 +4,8 @@ description: >-
   Look up Swiss company data from the Zefix PublicREST API (Federal Office of Justice). Accepts UID
   (e.g. CHE-105.805.977), EHRAID, or fuzzy company name.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 80
 is_free_tier: false
 input_schema:

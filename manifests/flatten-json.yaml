@@ -7,6 +7,8 @@ description: >-
   Flatten nested JSON to dot-notation keys. E.g. {a:{b:[1,2]}} → {'a.b.0':1,'a.b.1':2}. Configurable delimiter and array
   handling. Algorithmic.
 category: data-processing
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

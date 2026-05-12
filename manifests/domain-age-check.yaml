@@ -4,6 +4,8 @@ description: >-
   Quick domain registration age lookup. Returns creation date, age in days, registrar, and
   expiry date. Useful for fraud detection — newly registered domains are higher risk.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

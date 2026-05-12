@@ -5,6 +5,8 @@ slug: markdown-to-html
 name: Markdown to HTML
 description: Convert markdown to styled HTML with inline CSS. Supports light, dark, and plain themes. Algorithmic — instant.
 category: file-conversion
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

@@ -7,6 +7,8 @@ description: >-
   Validate an EORI (Economic Operators Registration and Identification) number against the EU customs validation
   service. Returns trader name and address if valid.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

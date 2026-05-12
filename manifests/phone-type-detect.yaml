@@ -4,6 +4,8 @@ description: >-
   Detect whether a phone number is mobile, landline, VOIP, toll-free, or premium rate. Essential for SMS delivery
   verification and communication routing.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

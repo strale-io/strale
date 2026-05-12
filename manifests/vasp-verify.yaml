@@ -11,6 +11,8 @@ description: >-
   official register of authorized CASPs. Returns authorization status, licensed services, home country, and passporting
   rights.
 category: web3
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

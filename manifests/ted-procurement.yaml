@@ -7,6 +7,8 @@ description: >-
   Search EU public procurement tenders on TED (Tenders Electronic Daily). Filter by keyword, country, and CPV code.
   Returns tender titles, authorities, values, deadlines, and links.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 50
 is_free_tier: false
 input_schema:

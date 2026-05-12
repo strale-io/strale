@@ -7,6 +7,8 @@ description: >-
   Calculate LLM API cost for a prompt+completion across 14 models. Returns cheaper alternatives with savings
   percentages. Algorithmic.
 category: developer-tools
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

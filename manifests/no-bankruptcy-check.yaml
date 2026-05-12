@@ -5,6 +5,8 @@ description: >-
   structured signals: has_bankruptcy_filing, bankruptcy_date, is_under_dissolution, is_under_compulsory_dissolution,
   plus official registry annotations. NLOD 2.0 license.
 category: compliance
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 avg_latency_ms: 400

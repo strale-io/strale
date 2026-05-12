@@ -7,6 +7,8 @@ description: >-
   Generate .gitignore from language/framework/IDE combinations. Covers TypeScript, Python, Go, Rust, Java, React,
   Next.js, Django, VSCode, IntelliJ. Algorithmic.
 category: developer-tools
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

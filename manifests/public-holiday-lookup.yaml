@@ -5,6 +5,8 @@ slug: public-holiday-lookup
 name: Public Holiday Lookup
 description: Get public holidays for any country and year. Uses Nager.Date API. Returns holiday dates, names, and next upcoming.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

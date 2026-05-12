@@ -7,6 +7,8 @@ description: >-
   Convert an amount between currencies using ECB exchange rates. Supports all major currencies. Returns converted amount
   and rate.
 category: financial
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

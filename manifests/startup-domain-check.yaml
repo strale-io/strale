@@ -7,6 +7,8 @@ description: >-
   Check domain and handle availability for a startup name. Checks .com/.io/.ai/.co/.dev domains, Twitter, GitHub, npm,
   PyPI.
 category: utility
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

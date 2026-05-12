@@ -7,6 +7,8 @@ description: >-
   Perform a WHOIS lookup for a domain. Returns registrar, creation date, expiry date, name servers, registrant info, and
   raw WHOIS data.
 category: web-intelligence
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

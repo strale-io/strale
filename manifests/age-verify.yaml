@@ -5,6 +5,8 @@ description: >-
   age, whether the threshold is met, and days until the threshold (if not met). Accounts for
   leap years.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

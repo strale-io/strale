@@ -4,6 +4,8 @@ description: >-
   Validate Czech rodné číslo (birth number) — format, embedded birth date, gender encoding, and mod-11 checksum on
   10-digit post-1954 numbers.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 data_source: Algorithmic (Czech Ministry of Interior specification)

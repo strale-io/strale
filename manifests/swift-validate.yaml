@@ -7,6 +7,8 @@ description: >-
   Validate a SWIFT/BIC code. Checks format, length, and country code. Extracts bank code, location, and branch. Pure
   algorithmic — instant and cheap.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

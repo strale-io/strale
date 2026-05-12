@@ -7,6 +7,8 @@ description: >-
   Look up UK food hygiene ratings via the FSA API. Search by business name and optional location. Returns ratings,
   scores, addresses.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

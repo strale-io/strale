@@ -4,6 +4,8 @@ description: >-
   Inspect a media URL for C2PA Content Credentials. Parses the embedded manifest, verifies the cryptographic signature,
   and extracts claim generator, signer, edit assertions, and AI-generation flags. Pure parsing — no external API.
 category: media
+cost_class: free_unlimited
+quota_window: none
 price_cents: 10
 is_free_tier: false
 input_schema:

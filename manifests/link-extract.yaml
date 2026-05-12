@@ -5,6 +5,8 @@ slug: link-extract
 name: Link Extract
 description: Extract all links from a page with context. Filter by internal/external. Returns URL, anchor text, rel attributes.
 category: web-scraping
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

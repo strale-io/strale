@@ -7,6 +7,8 @@ description: >-
   Check HTTP response headers for security best practices: HSTS, CSP, X-Frame-Options, X-Content-Type-Options,
   Referrer-Policy, Permissions-Policy. Returns grade A-F.
 category: security
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:
