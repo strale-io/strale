@@ -52,6 +52,7 @@ import {
   runMigration0065_pr86LeakyCapsCleanup,
   runMigration0067_costClassTaxonomy,
   runMigration0068_seedDeDkSkCostClass,
+  runMigration0069_reconcileEligibilityFromCostClass,
   runMigration0070_capabilityBudgetCounters,
   runStartupMigrations,
   type MigrationExecutor,
@@ -500,6 +501,45 @@ describe("startup-migrations — block 0068 (seed DE/DK/SK cost_class)", () => {
   });
 });
 
+describe("startup-migrations — block 0069 (reconcile eligibility from cost_class)", () => {
+  it("first run: reconciles, post-check passes, reports row count", async () => {
+    // Queue: UPDATE returns 12; post-check returns 0 mismatched.
+    const stub = makeStub({
+      queue: [{ count: 12 }, [{ mismatched: 0 }]],
+    });
+    const result = await runMigration0069_reconcileEligibilityFromCostClass(stub);
+    expect(result.rows_affected).toBe(12);
+    expect(result.outcome).toMatch(/reconciled 12 row/i);
+    expect(stub.captured).toHaveLength(2);
+    // UPDATE references cost_class IN (...) derivation.
+    expect(stub.renderedSql[0].toLowerCase()).toContain("free_unlimited");
+    expect(stub.renderedSql[0].toLowerCase()).toContain("free_quota");
+    expect(stub.renderedSql[0].toLowerCase()).toContain("paid_with_free_tier");
+    expect(stub.renderedSql[0].toLowerCase()).toContain("is distinct from");
+  });
+
+  it("second run: idempotent — UPDATE returns 0; post-check still passes", async () => {
+    const stub = makeStub({
+      queue: [{ count: 0 }, [{ mismatched: 0 }]],
+    });
+    const result = await runMigration0069_reconcileEligibilityFromCostClass(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to reconcile.*already aligned/i);
+  });
+
+  it("post-condition violation throws (would fail boot)", async () => {
+    // Imagine a manifest landed mid-deploy with a contradictory state.
+    // Block must throw rather than silently leave the scheduler reading
+    // stale eligibility — same shape as block 0062's post-condition.
+    const stub = makeStub({
+      queue: [{ count: 0 }, [{ mismatched: 1 }]],
+    });
+    await expect(
+      runMigration0069_reconcileEligibilityFromCostClass(stub),
+    ).rejects.toThrow(/0069.*post-condition failed.*1 rows still mismatched/i);
+  });
+});
+
 describe("startup-migrations — block 0070 (capability_budget_counters)", () => {
   it("first run: creates table + index + CHECK constraint", async () => {
     const stub = makeStub({
@@ -535,7 +575,7 @@ describe("startup-migrations — block 0070 (capability_budget_counters)", () =>
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 12 blocks in historical order", () => {
+  it("exports the expected 13 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -553,6 +593,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0066_ensureEligibilityColumnAndReconcile",
       "runMigration0067_costClassTaxonomy",
       "runMigration0068_seedDeDkSkCostClass",
+      "runMigration0069_reconcileEligibilityFromCostClass",
       "runMigration0070_capabilityBudgetCounters",
     ]);
   });
