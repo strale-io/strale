@@ -5,6 +5,8 @@ slug: product-search
 name: Product Search
 description: Search products on Google Shopping. Returns product listings with title, price, merchant, rating.
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 15
 is_free_tier: false
 input_schema:

@@ -5,6 +5,8 @@ slug: pr-description-generate
 name: PR Description Generate
 description: Generate pull request descriptions from diffs or commit logs. Returns title, summary, changes list, testing steps.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

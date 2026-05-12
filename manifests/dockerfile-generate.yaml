@@ -7,6 +7,8 @@ description: >-
   Generate optimized, production-ready Dockerfiles. Multi-stage builds, Alpine base, non-root user, layer caching.
   Supports Node, Python, Go, Rust, Java.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

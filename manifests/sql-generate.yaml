@@ -7,6 +7,8 @@ description: >-
   Generate SQL queries from natural language descriptions. Provide table schema for best results. Supports PostgreSQL,
   MySQL, SQLite, MSSQL.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

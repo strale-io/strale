@@ -7,6 +7,8 @@ description: >-
   Rank and select document chunks by relevance to fit within a token budget. Returns selected/excluded chunks with
   scores.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

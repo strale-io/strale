@@ -5,6 +5,8 @@ slug: error-explain
 name: Error Explain
 description: Explain an error message or stack trace in plain English. Identifies root cause, suggests fixes with code examples.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

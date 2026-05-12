@@ -4,6 +4,8 @@ description: >-
   Look up Czech company data from ARES (Czech Ministry of Finance registry). Accepts IČO (8-digit identifier) or fuzzy
   company name via LLM name-resolution.
 category: company-data
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 data_source: ARES (Czech Ministry of Finance)

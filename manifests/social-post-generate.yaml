@@ -7,6 +7,8 @@ description: >-
   Generate platform-optimized social media posts. Supports Twitter, LinkedIn, Instagram. Returns post text, hashtags,
   thread version for Twitter.
 category: content-writing
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

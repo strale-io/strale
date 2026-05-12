@@ -7,6 +7,8 @@ description: >-
   Search the EUIPO trademark database for registered and pending EU trademarks. Returns trademark names, numbers,
   status, owners.
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 50
 is_free_tier: false
 input_schema:

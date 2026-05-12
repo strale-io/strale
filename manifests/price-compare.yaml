@@ -5,6 +5,8 @@ slug: price-compare
 name: Price Compare
 description: Compare prices across merchants via PriceRunner (Nordic) and Google Shopping. Returns lowest/highest/average prices.
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 20
 is_free_tier: false
 input_schema:

@@ -7,6 +7,8 @@ description: >-
   Generate realistic fake data matching a schema. Locale-aware: Swedish names for 'sv', Japanese for 'ja'. Up to 1000
   records.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

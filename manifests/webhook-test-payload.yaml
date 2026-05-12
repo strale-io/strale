@@ -7,6 +7,8 @@ description: >-
   Generate realistic test webhook payloads for Stripe, GitHub, Slack, Twilio, SendGrid, Shopify. Includes proper headers
   and schema-accurate data.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

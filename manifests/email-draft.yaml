@@ -7,6 +7,8 @@ description: >-
   Draft a professional email. Specify context, intent (cold outreach/follow-up/apology/etc), and tone. Returns subject
   line options, body, and key phrases.
 category: content-writing
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

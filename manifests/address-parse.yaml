@@ -7,6 +7,8 @@ description: >-
   Parse a free-text address into structured components. Returns street, city, postal code, state/province, country.
   Works with addresses worldwide.
 category: data-processing
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

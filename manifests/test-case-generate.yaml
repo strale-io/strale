@@ -7,6 +7,8 @@ description: >-
   Generate test cases from a function description or signature. Includes happy path, edge cases, boundary tests, and
   error cases.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 15
 is_free_tier: false
 input_schema:

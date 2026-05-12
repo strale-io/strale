@@ -7,6 +7,8 @@ description: >-
   Analyze the sentiment of text. Returns overall sentiment (positive/negative/neutral/mixed), confidence scores, and
   aspect-level sentiment.
 category: text-processing
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

@@ -7,6 +7,8 @@ description: >-
   AI conversion expert analyzes any landing page. Returns overall score, headline effectiveness, CTA clarity, value
   proposition, trust signals, issues, and suggestions.
 category: competitive-intelligence
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 50
 is_free_tier: false
 input_schema:

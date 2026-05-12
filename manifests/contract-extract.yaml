@@ -7,6 +7,8 @@ description: >-
   Extract key terms from a contract/legal document. Returns parties, dates, obligations, payment terms, liability caps,
   termination clauses. Not legal advice.
 category: document-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 50
 is_free_tier: false
 input_schema:

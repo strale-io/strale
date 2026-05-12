@@ -7,6 +7,8 @@ description: >-
   Extract structured data from any web page with full JavaScript rendering. Handles SPAs, dynamic content, and pages
   that require JS to load.
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 15
 is_free_tier: false
 input_schema:

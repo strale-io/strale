@@ -5,6 +5,8 @@ slug: crontab-generate
 name: Crontab Generate
 description: Convert natural language schedule to cron expression, or explain an existing cron expression. Returns next run times.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

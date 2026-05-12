@@ -6,6 +6,8 @@ description: >-
   appropriate national registry. Returns registry data for 24 supported
   countries.
 category: company-data
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 80
 is_free_tier: false
 input_schema:

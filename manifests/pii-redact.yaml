@@ -7,6 +7,8 @@ description: >-
   Detect and redact personally identifiable information (PII) from text. Identifies names, emails, phone numbers,
   national ID numbers (Swedish personnummer, Finnish henkilötunnus, etc.), addresses, and more.
 category: data-processing
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

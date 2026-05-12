@@ -7,6 +7,8 @@ description: >-
   Analyze AI agent execution traces (LangChain/CrewAI/AutoGen). Identifies failure points, root causes, token waste, and
   suggests fixes.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 20
 is_free_tier: false
 input_schema:

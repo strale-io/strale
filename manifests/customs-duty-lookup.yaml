@@ -7,6 +7,8 @@ description: >-
   Look up EU customs duty rates by HS code and origin country. Returns duty rate, preferential rates, anti-dumping
   status.
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 20
 is_free_tier: false
 input_schema:

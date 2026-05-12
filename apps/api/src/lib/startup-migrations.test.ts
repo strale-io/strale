@@ -57,6 +57,7 @@ import {
   runMigration0071_bulkClassifyFreeUnlimited,
   runMigration0072_classifyFreeQuotaHighConfidence,
   runMigration0073_classifyFreeUnlimitedMediumConfidence,
+  runMigration0074_classifyAnthropicPaidPrepaid,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -761,8 +762,90 @@ describe("startup-migrations — phase-b2 slug lists (audit-trail invariants)", 
   });
 });
 
+describe("startup-migrations — block 0074 (classify ANTHROPIC paid_prepaid)", () => {
+  it("first run: UPDATEs the 83 ANTHROPIC slugs to paid_prepaid", async () => {
+    const stub = makeStub({ queue: [{ count: 83 }] });
+    const result = await runMigration0074_classifyAnthropicPaidPrepaid(stub);
+    expect(result.rows_affected).toBe(83);
+    expect(result.outcome).toMatch(/classified 83 cap/i);
+
+    const sqlText = stub.renderedSql[0].toLowerCase();
+    expect(sqlText).toContain("update capabilities");
+    expect(sqlText).toContain("cost_class = 'paid_prepaid'");
+    expect(sqlText).toContain("quota_window = 'none'");
+    expect(sqlText).toContain("quota_cap = null");
+    // Sample slugs from the audit-derived list — assert presence to
+    // confirm the slug-list module was actually serialized into the SQL.
+    expect(sqlText).toContain("'agent-trace-analyze'");
+    expect(sqlText).toContain("'classify-text'");
+    expect(sqlText).toContain("'invoice-extract'");
+    expect(sqlText).toContain("'pii-redact'");
+    expect(sqlText).toContain("'translate'");
+    // Idempotency clause.
+    expect(sqlText).toContain("cost_class is null");
+  });
+
+  it("second run: idempotent — count=0; outcome reports already-classified", async () => {
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    const result = await runMigration0074_classifyAnthropicPaidPrepaid(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to classify.*already have cost_class/i);
+  });
+
+  it("does not overwrite already-classified rows (safety filter pin)", async () => {
+    // A future refactor that drops `AND cost_class IS NULL` would
+    // silently overwrite free_* / paid_subscription classifications
+    // from Phase B.1/B.2/B.4+ batches. Pin the safety filter shape.
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    await runMigration0074_classifyAnthropicPaidPrepaid(stub);
+    const sqlText = stub.renderedSql[0].toLowerCase();
+    expect(sqlText).toMatch(/where[\s\S]*and\s+cost_class\s+is\s+null/);
+  });
+});
+
+describe("startup-migrations — phase-b3 ANTHROPIC slug list (audit invariants)", () => {
+  it("list size is within the audit-bounded range", async () => {
+    // Loose bounds: the audit found 83 caps reading ANTHROPIC_API_KEY
+    // at high confidence on 2026-05-12. Anthropic-dominance in the
+    // LLM-backed fleet means this number is naturally ~80; a future
+    // audit refresh might add or remove a few. Bounds match the chat-
+    // approved 50-100 range from Phase B.3 prompt.
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    expect(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS.length).toBeGreaterThan(50);
+    expect(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS.length).toBeLessThan(100);
+  });
+
+  it("list is alphabetically sorted (audit-trail discipline)", async () => {
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const sorted = [...PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS].sort();
+    expect(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS).toEqual(sorted);
+  });
+
+  it("list has no duplicates", async () => {
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const unique = new Set(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS);
+    expect(unique.size).toBe(PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS.length);
+  });
+
+  it("does not overlap with B.1 free_unlimited or B.2 free_quota/free_unlimited", async () => {
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const { PHASE_B2_FREE_QUOTA_HIGH_CONF, PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF } = await import("./startup-migrations.js");
+
+    const b1 = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
+    const b2a = new Set(PHASE_B2_FREE_QUOTA_HIGH_CONF.map((c: { slug: string }) => c.slug));
+    const b2b = new Set(PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF);
+
+    for (const slug of PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS) {
+      expect(b1.has(slug), `${slug} also in B.1 free_unlimited`).toBe(false);
+      expect(b2a.has(slug), `${slug} also in B.2 free_quota`).toBe(false);
+      expect(b2b.has(slug), `${slug} also in B.2 free_unlimited`).toBe(false);
+    }
+  });
+});
+
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 16 blocks in historical order", () => {
+  it("exports the expected 17 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -785,6 +868,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0071_bulkClassifyFreeUnlimited",
       "runMigration0072_classifyFreeQuotaHighConfidence",
       "runMigration0073_classifyFreeUnlimitedMediumConfidence",
+      "runMigration0074_classifyAnthropicPaidPrepaid",
     ]);
   });
 });
