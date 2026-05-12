@@ -83,6 +83,16 @@ capabilitiesRoute.get("/:slug", async (c) => {
   const slug = c.req.param("slug");
   const db = getDb();
 
+  // Phase A0c.1 (DEC-20260512-A): expose cost_class so the frontend can
+  // distinguish paid_prepaid / paid_subscription caps awaiting customer
+  // traffic from caps that are genuinely unverified for other reasons.
+  // last_customer_call_at uses the daily-digest filter convention
+  // (lib/daily-digest/fetch-platform.ts:20-24, 56, 63, 70, 78, 92):
+  // exclude transactions whose user_id is the system test user
+  // ('system@strale.internal'); customer paths set a real user_id or
+  // NULL (free-tier), test-runner writes user_id = getSystemUserId().
+  // The MAX() runs against an indexed (capability_id, status) pair —
+  // one row per capability fetch is O(1) for this single-cap handler.
   const [cap] = await db
     .select({
       slug: capabilities.slug,
@@ -96,6 +106,16 @@ capabilitiesRoute.get("/:slug", async (c) => {
       geography: capabilities.geography,
       data_source: capabilities.dataSource,
       is_free_tier: capabilities.isFreeTier,
+      cost_class: capabilities.costClass,
+      last_customer_call_at: sql<string | null>`(
+        SELECT MAX(t.created_at)
+          FROM transactions t
+         WHERE t.capability_id = ${capabilities.id}
+           AND t.status = 'completed'
+           AND (t.user_id IS NULL OR t.user_id != (
+             SELECT id FROM users WHERE email = 'system@strale.internal' LIMIT 1
+           ))
+      )`,
     })
     .from(capabilities)
     .where(
