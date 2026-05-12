@@ -4,6 +4,8 @@ description: >-
   Summarize a YouTube video from its auto-generated transcript. Returns summary,
   key points, topics, timestamps of interest, and sentiment classification.
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 20
 is_free_tier: false
 maintenance_class: scraping-fragile-target

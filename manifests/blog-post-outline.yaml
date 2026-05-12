@@ -7,6 +7,8 @@ description: >-
   Generate a structured blog post outline. Returns title options, sections with subsections and key points, estimated
   word count, SEO keywords. JSON, not prose.
 category: content-writing
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 20
 is_free_tier: false
 input_schema:

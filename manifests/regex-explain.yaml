@@ -5,6 +5,8 @@ slug: regex-explain
 name: Regex Explain
 description: Explain a regular expression in plain English with token-by-token breakdown. Optionally test against sample strings.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

@@ -7,6 +7,8 @@ description: >-
   Scan source code for environment variable references (process.env, os.environ, etc.) and generate a .env template with
   descriptions and example values.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

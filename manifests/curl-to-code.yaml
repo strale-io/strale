@@ -5,6 +5,8 @@ slug: curl-to-code
 name: cURL to Code
 description: Convert a curl command to equivalent code in TypeScript, Python, Go, Rust, Java, or PHP.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

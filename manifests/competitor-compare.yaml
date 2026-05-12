@@ -7,6 +7,8 @@ description: >-
   Compare two company websites. Analyzes positioning, pricing model, features, target audience, trust signals, content
   strategy. Returns structured comparison + strategic analysis.
 category: competitive-intelligence
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 100
 is_free_tier: false
 input_schema:

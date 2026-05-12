@@ -5,6 +5,8 @@ description: >-
   quality. Returns structured findings with severity, file paths, and an approval recommendation. Built for CI/CD
   pre-merge checks.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 10
 is_free_tier: false
 maintenance_class: commercial-stable-api

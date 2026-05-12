@@ -7,6 +7,8 @@ description: >-
   Classify a product into Harmonized System (HS) commodity codes. Returns primary HS code, chapter, section, and
   alternative classifications with confidence levels.
 category: trade
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

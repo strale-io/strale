@@ -5,6 +5,8 @@ slug: terms-of-service-extract
 name: Terms of Service Extract
 description: "Extract key clauses from a company's Terms of Service: governing law, arbitration, termination, liability limitations."
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 30
 is_free_tier: false
 input_schema:

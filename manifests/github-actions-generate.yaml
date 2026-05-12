@@ -7,6 +7,8 @@ description: >-
   Generate CI/CD workflow YAML for GitHub Actions. Supports multiple languages, frameworks, and deploy targets (Railway,
   Vercel, Fly).
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 15
 is_free_tier: false
 input_schema:

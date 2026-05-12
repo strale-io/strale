@@ -7,6 +7,8 @@ description: >-
   Generate comprehensive README.md from project description. Includes installation, usage, API docs, contributing
   sections.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

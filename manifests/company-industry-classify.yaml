@@ -4,6 +4,8 @@ description: >-
   Classify a company's industry using standard codes. Given a company name, description, or
   website URL, returns SIC, NAICS, and NACE codes with confidence levels.
 category: data-processing
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

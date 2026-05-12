@@ -7,6 +7,8 @@ description: >-
   Extract structured meeting notes from a transcript. Returns summary, decisions, action items with owners, key
   discussion points, follow-ups.
 category: document-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 20
 is_free_tier: false
 input_schema:

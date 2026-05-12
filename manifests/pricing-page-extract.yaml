@@ -7,6 +7,8 @@ description: >-
   Extract structured pricing data from any SaaS pricing page. Returns plan names, prices, features per plan, billing
   periods, trial/guarantee info.
 category: competitive-intelligence
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 30
 is_free_tier: false
 input_schema:

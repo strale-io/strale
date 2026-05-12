@@ -7,6 +7,8 @@ description: >-
   OCR on any image via Claude vision. Works on screenshots, photos of documents, handwritten notes. Returns text with
   confidence.
 category: file-conversion
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

@@ -7,6 +7,8 @@ description: >-
   Deep tech stack analysis of any domain. Analyzes HTTP headers, HTML source, JS libraries, DNS records, meta tags.
   Returns frontend, analytics, CDN, hosting, CMS, and more.
 category: competitive-intelligence
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 30
 is_free_tier: false
 input_schema:

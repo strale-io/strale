@@ -7,6 +7,8 @@ description: >-
   Extract structured data from an invoice or receipt image/PDF. Returns line items, totals, dates, vendor info, VAT
   amounts.
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 50
 is_free_tier: false
 input_schema:

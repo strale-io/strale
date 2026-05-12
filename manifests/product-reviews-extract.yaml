@@ -7,6 +7,8 @@ description: >-
   Extract product reviews from Amazon, Trustpilot, or any review page. Returns rating distribution, pros/cons,
   sentiment.
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 25
 is_free_tier: false
 input_schema:

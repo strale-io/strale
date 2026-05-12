@@ -5,6 +5,8 @@ slug: api-mock-response
 name: API Mock Response
 description: Generate a realistic mock API response with proper headers, status codes, and schema-matching body data.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

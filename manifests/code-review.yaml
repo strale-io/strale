@@ -7,6 +7,8 @@ description: >-
   AI code review. Returns issues with severity, line numbers, fix suggestions. Focus on security, performance,
   readability, or bugs.
 category: agent-tooling
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 20
 is_free_tier: false
 input_schema:

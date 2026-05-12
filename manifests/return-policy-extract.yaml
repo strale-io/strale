@@ -5,6 +5,8 @@ slug: return-policy-extract
 name: Return Policy Extract
 description: Extract return/refund policy from a retailer website. Returns window, conditions, exclusions, process steps.
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 20
 is_free_tier: false
 input_schema:

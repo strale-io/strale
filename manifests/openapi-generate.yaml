@@ -5,6 +5,8 @@ slug: openapi-generate
 name: OpenAPI Generate
 description: Generate a complete OpenAPI 3.1 specification from a natural language API description.
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 15
 is_free_tier: false
 input_schema:

@@ -5,6 +5,8 @@ slug: gdpr-fine-lookup
 name: GDPR Fine Lookup
 description: Look up GDPR enforcement fines by company name or country. Returns fine amounts, authorities, articles violated.
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 20
 is_free_tier: false
 input_schema:

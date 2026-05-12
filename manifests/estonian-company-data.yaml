@@ -2,6 +2,8 @@ slug: estonian-company-data
 name: Estonian Company Data
 description: Look up Estonian company data from the e-Business Register. Accepts registry code (8 digits) or fuzzy company name.
 category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

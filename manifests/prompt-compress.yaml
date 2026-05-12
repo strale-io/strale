@@ -5,6 +5,8 @@ slug: prompt-compress
 name: Prompt Compress
 description: Compress a prompt to be shorter while preserving semantic meaning. Specify target reduction percentage (10-70%).
 category: developer-tools
+cost_class: paid_prepaid
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:
