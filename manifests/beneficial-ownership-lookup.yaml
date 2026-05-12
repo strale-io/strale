@@ -6,6 +6,9 @@ description: >-
   chain. Uses Companies House Persons of Significant Control. UK-only — non-GB inputs
   return a clear coverage notice rather than a fabricated result.
 category: compliance
+cost_class: free_quota
+quota_window: daily
+quota_cap: 600
 price_cents: 25
 is_free_tier: false
 input_schema:

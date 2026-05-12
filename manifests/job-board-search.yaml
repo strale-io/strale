@@ -5,6 +5,10 @@ slug: job-board-search
 name: Job Board Search
 description: Search job listings on Arbetsformedlingen (Swedish) and Adzuna (multi-country). Returns title, company, salary, URL.
 category: data-extraction
+cost_class: free_quota
+quota_window: monthly
+quota_cap: 1000
+quota_reset_dom: 1
 price_cents: 20
 is_free_tier: false
 input_schema:

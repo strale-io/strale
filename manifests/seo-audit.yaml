@@ -7,6 +7,8 @@ description: >-
   Comprehensive SEO audit of a URL. Checks title, meta description, h1 structure, image alt tags, canonical, robots.txt,
   sitemap, Open Graph, schema.org, link ratio.
 category: competitive-intelligence
+cost_class: free_unlimited
+quota_window: none
 price_cents: 30
 is_free_tier: false
 input_schema:
