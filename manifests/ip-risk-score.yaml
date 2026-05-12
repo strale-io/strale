@@ -4,6 +4,8 @@ description: >-
   Assess fraud risk for an IP address. Detects VPNs, proxies, Tor exit nodes, hosting/datacenter
   IPs. Returns risk score and risk factors.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

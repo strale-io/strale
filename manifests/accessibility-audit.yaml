@@ -7,6 +7,8 @@ description: >-
   WCAG 2.1 accessibility audit of a URL. Checks color contrast, alt text, form labels, ARIA roles, heading hierarchy,
   link text, language. Mostly deterministic.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 30
 is_free_tier: false
 input_schema:

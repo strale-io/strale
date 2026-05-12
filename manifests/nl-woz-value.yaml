@@ -4,6 +4,8 @@ description: >-
   Dutch WOZ (Waardering Onroerende Zaken) property tax assessment averages by municipality. Returns average property
   values and year-over-year trends from CBS OpenData.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

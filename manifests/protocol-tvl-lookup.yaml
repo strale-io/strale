@@ -10,6 +10,8 @@ description: >-
   Get the current Total Value Locked (TVL), chain distribution, category, audit status, and metadata for any DeFi
   protocol. Covers 7,000+ protocols across 500+ chains via DeFi Llama.
 category: web3
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

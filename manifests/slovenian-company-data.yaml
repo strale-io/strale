@@ -4,6 +4,8 @@ description: >-
   Look up Slovenian company data from the Poslovni register Slovenije (PRS) via the data.gov.si CKAN datastore. Returns
   registration number, full name, legal form, registry authority, and address. Free, CC-BY 4.0.
 category: company-data
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 data_source: >-

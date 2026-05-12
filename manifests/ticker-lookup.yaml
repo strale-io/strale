@@ -5,6 +5,8 @@ slug: ticker-lookup
 name: Ticker Lookup
 description: Find stock ticker symbols by company name. Returns matches with symbol, exchange, and type.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

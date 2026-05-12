@@ -7,6 +7,8 @@ description: >-
   Get current cryptocurrency price, market cap, and trends via CoinGecko API. Supports 10,000+ coins. Multiple fiat
   currencies.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

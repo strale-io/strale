@@ -7,6 +7,8 @@ description: >-
   Estimate token count and cost for text across LLM models (GPT-4o, Claude, Gemini, Mistral, Llama). Algorithmic — no
   API calls.
 category: developer-tools
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

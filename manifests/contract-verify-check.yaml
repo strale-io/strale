@@ -10,6 +10,8 @@ description: >-
   Check if a smart contract's source code is verified on Etherscan. Returns compiler version, license type, proxy
   status, and contract name. Unverified contracts are a red flag for token safety. Supports 60+ EVM chains.
 category: web3
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

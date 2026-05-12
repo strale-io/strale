@@ -7,6 +7,8 @@ description: >-
   Scan a website for GDPR compliance indicators: cookie consent, privacy policy, tracking scripts, security headers.
   Returns score A-F.
 category: compliance
+cost_class: free_unlimited
+quota_window: none
 price_cents: 10
 is_free_tier: false
 input_schema:

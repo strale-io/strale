@@ -7,6 +7,8 @@ description: >-
   Extract all metadata from a URL: Open Graph, Twitter cards, JSON-LD, favicon, canonical URL, RSS feeds, robots
   directives.
 category: web-scraping
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

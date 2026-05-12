@@ -54,6 +54,7 @@ import {
   runMigration0068_seedDeDkSkCostClass,
   runMigration0069_reconcileEligibilityFromCostClass,
   runMigration0070_capabilityBudgetCounters,
+  runMigration0071_bulkClassifyFreeUnlimited,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -574,8 +575,74 @@ describe("startup-migrations — block 0070 (capability_budget_counters)", () =>
   });
 });
 
+describe("startup-migrations — block 0071 (bulk-classify free_unlimited)", () => {
+  it("first run: UPDATEs the eligible slug subset; reports rows_affected", async () => {
+    // Queue: single UPDATE returns count=180 (everything matched).
+    const stub = makeStub({ queue: [{ count: 180 }] });
+    const result = await runMigration0071_bulkClassifyFreeUnlimited(stub);
+    expect(result.rows_affected).toBe(180);
+    expect(result.outcome).toMatch(/bulk-classified 180 cap/i);
+    expect(stub.captured).toHaveLength(1);
+
+    const sqlText = stub.renderedSql[0].toLowerCase();
+    expect(sqlText).toContain("update capabilities");
+    expect(sqlText).toContain("cost_class = 'free_unlimited'");
+    expect(sqlText).toContain("quota_window = 'none'");
+    expect(sqlText).toContain("quota_cap = null");
+    // Idempotency clause: only NULL rows update.
+    expect(sqlText).toContain("cost_class is null");
+    // Slug list is inline-bound — sample 3 known slugs to verify the
+    // PHASE_B1_FREE_UNLIMITED_SLUGS list was actually serialized.
+    expect(sqlText).toContain("'iban-validate'");
+    expect(sqlText).toContain("'dns-lookup'");
+    expect(sqlText).toContain("'json-repair'");
+  });
+
+  it("second run: idempotent — count=0; outcome reports already-classified", async () => {
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    const result = await runMigration0071_bulkClassifyFreeUnlimited(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to classify.*already have cost_class/i);
+  });
+
+  it("does not touch already-classified rows (idempotency by AND cost_class IS NULL)", async () => {
+    // Whatever the count returns, the SQL itself must filter on
+    // cost_class IS NULL. Without that clause, re-running the block
+    // would overwrite paid_prepaid / paid_subscription rows added by
+    // Phase B.2+ batches. This test pins the safety filter shape.
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    await runMigration0071_bulkClassifyFreeUnlimited(stub);
+    const sqlText = stub.renderedSql[0].toLowerCase();
+    expect(sqlText).toMatch(/where[\s\S]*and\s+cost_class\s+is\s+null/);
+  });
+});
+
+describe("startup-migrations — phase-b1-free-unlimited-slugs list", () => {
+  it("list size is within the 170-200 audit-bounded range", async () => {
+    // Loose bounds: the audit-reported high-confidence free_unlimited
+    // count was 180 on 2026-05-12. A future audit refresh might add or
+    // remove a few caps; the test stays green within reason but flags
+    // a wholesale loss (e.g., empty list or 300+ caps surprise).
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    expect(PHASE_B1_FREE_UNLIMITED_SLUGS.length).toBeGreaterThan(150);
+    expect(PHASE_B1_FREE_UNLIMITED_SLUGS.length).toBeLessThan(220);
+  });
+
+  it("list is alphabetically sorted (audit-trail discipline)", async () => {
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const sorted = [...PHASE_B1_FREE_UNLIMITED_SLUGS].sort();
+    expect(PHASE_B1_FREE_UNLIMITED_SLUGS).toEqual(sorted);
+  });
+
+  it("list has no duplicates", async () => {
+    const { PHASE_B1_FREE_UNLIMITED_SLUGS } = await import("./phase-b1-free-unlimited-slugs.js");
+    const unique = new Set(PHASE_B1_FREE_UNLIMITED_SLUGS);
+    expect(unique.size).toBe(PHASE_B1_FREE_UNLIMITED_SLUGS.length);
+  });
+});
+
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 13 blocks in historical order", () => {
+  it("exports the expected 14 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -595,6 +662,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0068_seedDeDkSkCostClass",
       "runMigration0069_reconcileEligibilityFromCostClass",
       "runMigration0070_capabilityBudgetCounters",
+      "runMigration0071_bulkClassifyFreeUnlimited",
     ]);
   });
 });

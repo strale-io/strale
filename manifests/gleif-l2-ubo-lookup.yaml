@@ -5,6 +5,8 @@ description: >-
   for any LEI-bearing entity globally, plus structured reporting exceptions when a parent is not reported. Free,
   CC0-equivalent license. Pairs with country registries to fill UBO gaps.
 category: compliance
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 avg_latency_ms: 1000

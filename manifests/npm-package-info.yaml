@@ -5,6 +5,8 @@ slug: npm-package-info
 name: npm Package Info
 description: "Fetch npm package metadata: version, dependencies, downloads, repository, license. Includes weekly download count."
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

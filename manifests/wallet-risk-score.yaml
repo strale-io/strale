@@ -10,6 +10,8 @@ description: >-
   Check if a wallet address is associated with malicious activity: phishing, money laundering, darknet, blackmail, or
   other fraud. Uses GoPlus Security's malicious address database covering 30+ blockchains.
 category: web3
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

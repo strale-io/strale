@@ -7,6 +7,8 @@ description: >-
   Detect shipping carrier from tracking number format and provide tracking URLs. Supports UPS, FedEx, USPS, DHL, Royal
   Mail, PostNord, and more. Algorithmic.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

@@ -5,6 +5,8 @@ slug: keyword-suggest
 name: Keyword Suggest
 description: Get keyword suggestions from Google Autocomplete. Returns suggestions, questions, comparisons, long-tail keywords.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

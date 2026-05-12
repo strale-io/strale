@@ -4,6 +4,8 @@ description: >-
   Calculate a trust score for an email address. Assesses domain age, MX configuration,
   disposable domain detection, and email provider reputation. Returns a 0-100 risk score.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

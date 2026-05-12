@@ -21,6 +21,8 @@ description: >-
   Validate a European VAT number against the VIES database. Returns company name, address, and validity. Caches results
   for 24 hours for instant responses on repeated lookups. Serves cached data when VIES is down.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

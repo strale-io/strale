@@ -5,6 +5,8 @@ description: >-
   regtest). Verifies Base58Check or BIP173/BIP350 bech32/bech32m checksum to catch typos. Pure algorithmic — fast and
   cheap, no on-chain lookup.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: true
 input_schema:

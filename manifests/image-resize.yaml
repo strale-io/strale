@@ -5,6 +5,8 @@ slug: image-resize
 name: Image Resize
 description: Resize, crop, and convert images. Supports PNG, JPEG, WebP. Configurable dimensions, quality, fit mode. Uses Sharp.
 category: file-conversion
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

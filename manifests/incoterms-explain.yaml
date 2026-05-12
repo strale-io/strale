@@ -5,6 +5,8 @@ slug: incoterms-explain
 name: Incoterms Explain
 description: Explain any Incoterms 2020 rule. Returns seller/buyer obligations, risk/cost transfer points, suitability.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

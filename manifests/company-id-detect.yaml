@@ -7,6 +7,8 @@ description: >-
   Identify the type and country of a company registration number. Detects Swedish org numbers, Finnish business IDs,
   German HRB numbers, LEIs, DUNS, and 20+ other formats. Pure algorithmic.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

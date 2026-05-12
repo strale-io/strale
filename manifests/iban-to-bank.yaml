@@ -4,6 +4,8 @@ description: >-
   Extract bank name and branch information from an IBAN. Returns bank name, BIC/SWIFT code,
   branch, and country. Pure algorithmic — uses bank code lookup tables.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

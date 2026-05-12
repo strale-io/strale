@@ -4,6 +4,8 @@ description: >-
   Validate a Solana address. Checks base58 alphabet and 32-byte ed25519 public-key length. Solana addresses have no
   checksum — validity is purely structural. Pure algorithmic — fast and cheap, no on-chain lookup.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: true
 input_schema:

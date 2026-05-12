@@ -7,6 +7,8 @@ description: >-
   Fetch Docker Hub image metadata: pull count, star count, tags, architectures, last updated. Supports official and user
   images.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

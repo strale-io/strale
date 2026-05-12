@@ -5,6 +5,8 @@ slug: tool-call-validate
 name: Tool Call Validate
 description: Validate an LLM tool call against a JSON Schema. Auto-fixes type mismatches (string '42' → number 42). Algorithmic.
 category: developer-tools
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

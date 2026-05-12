@@ -10,6 +10,8 @@ description: >-
   Get fees and revenue data for any DeFi protocol. Returns 24h, 7d, 30d, and all-time fees plus revenue breakdown.
   Covers 7,000+ protocols via DeFi Llama.
 category: web3
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

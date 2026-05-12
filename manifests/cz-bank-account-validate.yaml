@@ -4,6 +4,8 @@ description: >-
   Validate Czech bank account in domestic BBAN format '[prefix-]account/bank_code' using mod-11 weighted checksums on
   prefix and account parts.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 data_source: Algorithmic (Czech National Bank specification)

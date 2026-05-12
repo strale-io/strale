@@ -7,6 +7,8 @@ description: >-
   Validate and auto-repair LLM output. Parse JSON, validate against schema, attempt fixes for common LLM mistakes.
   Algorithmic — no LLM needed.
 category: agent-tooling
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

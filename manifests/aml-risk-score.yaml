@@ -5,6 +5,8 @@ description: >-
   Aggregates sanctions screening, PEP status, and jurisdiction risk into a single 0-100
   risk score with risk level classification.
 category: compliance
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

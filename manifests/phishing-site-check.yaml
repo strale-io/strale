@@ -10,6 +10,8 @@ description: >-
   Check if a URL is a known phishing site targeting Web3 users. Detects cloned dApp frontends, fake token claim pages,
   and wallet drainer sites. Uses GoPlus Security's phishing database.
 category: web3
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

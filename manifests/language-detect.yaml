@@ -4,6 +4,8 @@ description: >-
   Detect the language of input text. Returns top language with confidence score, plus alternative
   possibilities. Supports 170+ languages via trigram analysis.
 category: data-processing
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

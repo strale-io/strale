@@ -5,6 +5,8 @@ slug: xml-to-json
 name: XML to JSON
 description: Parse XML string to JSON. Preserves attributes (as @attr), handles CDATA, auto-types values. Algorithmic.
 category: data-processing
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:

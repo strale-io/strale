@@ -5,6 +5,8 @@ slug: uptime-check
 name: Uptime Check
 description: Check if a URL is up or down. Returns status code, latency, redirect info, TLS status, and server headers.
 category: monitoring
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

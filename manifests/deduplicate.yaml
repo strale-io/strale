@@ -7,6 +7,8 @@ description: >-
   Deduplicate a JSON array of objects using fuzzy string matching (Levenshtein + token sort). Specify match fields and
   threshold.
 category: data-processing
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

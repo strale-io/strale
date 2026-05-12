@@ -5,6 +5,8 @@ slug: cron-explain
 name: Cron Explain
 description: Parse a cron expression into human-readable explanation + next N execution times. Algorithmic — instant.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

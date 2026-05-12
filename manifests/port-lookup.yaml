@@ -5,6 +5,8 @@ slug: port-lookup
 name: Port Lookup
 description: Look up world ports by name or UN/LOCODE. Returns coordinates, country, timezone. 175+ major ports.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

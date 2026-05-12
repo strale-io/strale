@@ -5,6 +5,8 @@ slug: country-tax-rates
 name: Country Tax Rates
 description: Get corporate tax, VAT, personal income tax, capital gains, and social security rates for 45+ countries.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

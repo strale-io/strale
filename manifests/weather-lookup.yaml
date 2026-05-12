@@ -5,6 +5,8 @@ slug: weather-lookup
 name: Weather Lookup
 description: Get current weather and 7-day forecast for any location. Uses Open-Meteo API. Search by city name or coordinates.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

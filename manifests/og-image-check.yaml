@@ -5,6 +5,8 @@ slug: og-image-check
 name: OG Image Check
 description: Validate Open Graph and Twitter Card images for a URL. Checks dimensions, file size, format, alt text.
 category: validation
+cost_class: free_unlimited
+quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:

@@ -4,6 +4,8 @@ description: >-
   Get timezone information for a country code, city name, or coordinates. Returns IANA timezone,
   current UTC offset, DST status, and current local time.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

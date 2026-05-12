@@ -4,6 +4,8 @@ description: >-
   Look up location information from a postal/ZIP code. Returns city, region/state, and
   approximate coordinates. Covers 60+ countries via Zippopotam.us.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 2
 is_free_tier: false
 input_schema:

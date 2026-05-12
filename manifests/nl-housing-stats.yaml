@@ -4,6 +4,8 @@ description: >-
   Dutch housing statistics by municipality from CBS OpenData. Returns average sale prices, number of homes sold, housing
   stock breakdown (owner-occupied vs rental), and historical trends.
 category: data-extraction
+cost_class: free_unlimited
+quota_window: none
 price_cents: 3
 is_free_tier: false
 input_schema:
