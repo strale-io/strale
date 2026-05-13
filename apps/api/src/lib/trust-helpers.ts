@@ -364,12 +364,26 @@ export type FailureCategory =
   | "format_changed"      // 200 response but parsing fails — upstream changed response format
   | "dependency_missing"  // env var not set or not configured
   | "scraping_broken"     // HTML/regex extraction returns no data from a 200 response
+  | "manifest_drift"      // PR #109 sentinel: declared-guaranteed field absent from actual_output
   | "internal"            // Strale code error, not upstream
   | "unknown";            // cannot determine
 
 export function categorizeFailureReason(reason: string | null): FailureCategory {
   if (!reason) return "unknown";
   const lower = reason.toLowerCase();
+
+  // 0. manifest_drift — Phase 3a runtime sentinel (DEC-20260513-B + DEC-20260513-C)
+  //    emits `guaranteed_field_missing:<field-path>` when the executor's
+  //    actual_output omits a key declared `guaranteed` in
+  //    output_field_reliability. This is maintainer signal — the capability
+  //    is still serving valid data, the manifest is just incomplete or wrong
+  //    about what it guarantees. Per the Phase 3 closure decision, this
+  //    category is skipped at the circuit-breaker entry (see
+  //    circuit-breaker.ts recordFailure) so a manifest drift surfaces in
+  //    test_results without tripping the customer-facing breaker. Genuine
+  //    upstream failures (HTTP 5xx, exception, timeout) continue to trip
+  //    via the existing classifications below.
+  if (reason.startsWith("guaranteed_field_missing:")) return "manifest_drift";
 
   // 1. dependency_missing — env var / credential not configured
   if (/not (configured|set)|is required/i.test(reason) && /[A-Z_]{3,}/.test(reason)) return "dependency_missing";
@@ -432,6 +446,7 @@ export function toLegacyCategory(category: FailureCategory): "external_service" 
     case "scraping_broken":
     case "dependency_missing":
       return "external_service";
+    case "manifest_drift":
     case "internal":
       return "internal";
     case "unknown":

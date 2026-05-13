@@ -193,6 +193,19 @@ export async function recordFailure(slug: string, failureReason?: string): Promi
 
   const db = getDb();
   const category = categorizeFailureReason(failureReason ?? null);
+
+  // Skip circuit breaker for manifest_drift (PR #109 sentinel emissions per
+  // DEC-20260513-B + DEC-20260513-C). The capability is still serving valid
+  // data; only the manifest's output_field_reliability declaration is wrong
+  // or incomplete. The failure is recorded in test_results with the
+  // structured `guaranteed_field_missing:*` reason for triage visibility,
+  // but the customer-facing breaker stays closed. Real upstream failures
+  // (HTTP 5xx, exception, timeout) continue to trip via the unchanged
+  // non-retryable / 3-consecutive-retryable branches below.
+  if (category === "manifest_drift") {
+    return;
+  }
+
   const retryable = isRetryableFailure(category);
   const now = new Date();
 
