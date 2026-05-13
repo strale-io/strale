@@ -1,0 +1,13 @@
+# Identity fixture-shape sentinel allowlist
+#
+# Each line is a capability slug whose known_answer.input + expected_fields
+# currently violate one or more criteria in check-identity-fixture-shape.mjs
+# AND whose fix is being tracked for a separate per-manifest landing.
+#
+# Empty at v1 ship: the 2026-05-13 v1 Identity coverage audit (DEC-20260513-F,
+# PR #116) verified all 20 shipped Identity fixtures are well-shaped. Future
+# additions must include a comment line above the slug citing the DEC that
+# justifies the temporary exemption (typically the DEC that named the fix
+# follow-up).
+#
+# Format: one slug per line; blank lines and `#` comment lines ignored.

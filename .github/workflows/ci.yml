@@ -64,6 +64,15 @@ jobs:
       # time, and with onboard.ts verifyFixtures which fires at manifest
       # authoring time.
       - run: node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict
+      # DEC-20260513-D Phase 3 Harden gate (a): canonical-input sentinel for
+      # Identity capabilities. Catches the GR-PR-#116 class of bad-shape
+      # fixture (branch entity asserted, dissolved status equals-asserted,
+      # missing name-field assertion, off-shape identifier). Pairs with
+      # check-manifest-guaranteed-consistency.mjs (gate (b), pipeline-bypass
+      # detector) and the runtime guaranteed-fields-sentinel.ts. Observation
+      # mode here — flip to --strict in a follow-up commit once Step 4
+      # findings are resolved. See script header for criteria.
+      - run: node apps/api/scripts/check-identity-fixture-shape.mjs
       # Cert-audit Layer 2 (generalised 2026-04-30): cross-repo
       # type-shape contracts (currently AuditRecord). Skips cleanly
       # when STRALE_FRONTEND_PATH is not present (CI doesn't check out
