@@ -81,6 +81,9 @@ test_fixtures:
     input:
       siren: "542051180"
     expected_fields:
+      - field: company_name
+        operator: not_null
+        reliability: guaranteed
       - field: siren
         operator: not_null
         reliability: guaranteed
