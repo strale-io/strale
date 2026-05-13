@@ -63,9 +63,16 @@ personal_data_categories:
   - professional
 geography: eu
 test_fixtures:
+  # Fixture is HELLENiQ ENERGY Holdings SA (parent SA, listed entity, formerly
+  # Hellenic Petroleum SA). Swapped 2026-05-13 from the prior Lamia-region
+  # National Bank of Greece branch (GEMI 000237954001) per the v1 Identity
+  # coverage audit — branch records do not populate directors or industry_code,
+  # so the prior fixture could not prove that a non-branch parent returns
+  # directors + NACE. HELLENiQ exercises both. See
+  # apps/api/docs/v1-identity-coverage-matrix-2026-05-13.md §3 + §5.
   known_answer:
     input:
-      gemi_number: "000237954001"
+      gemi_number: "296601000"
     expected_fields:
       - field: company_name
         operator: not_null
@@ -73,15 +80,15 @@ test_fixtures:
       - field: org_number
         operator: equals
         reliability: guaranteed
-        value: "237954001"
+        value: "296601000"
       - field: vat_number
         operator: equals
         reliability: guaranteed
-        value: EL094014201
+        value: EL094049864
       - field: afm
         operator: equals
         reliability: guaranteed
-        value: "094014201"
+        value: "094049864"
       - field: business_type
         operator: equals
         reliability: guaranteed
@@ -92,7 +99,7 @@ test_fixtures:
       - field: registration_date
         operator: equals
         reliability: guaranteed
-        value: "1941-01-01"
+        value: "1975-07-19"
       - field: status
         operator: equals
         reliability: guaranteed
@@ -100,12 +107,15 @@ test_fixtures:
       - field: directors
         operator: not_null
         reliability: guaranteed
+      - field: industry_code
+        operator: not_null
+        reliability: guaranteed
       - field: is_branch
         operator: equals
         reliability: guaranteed
-        value: true
+        value: false
   health_check_input:
-    gemi_number: "000237954001"
+    gemi_number: "296601000"
 output_field_reliability:
   company_name: guaranteed
   org_number: guaranteed
