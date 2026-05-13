@@ -2,7 +2,7 @@ slug: swiss-company-data
 name: Swiss Company Data
 description: >-
   Look up Swiss company data from the Zefix PublicREST API (Federal Office of Justice). Accepts UID
-  (e.g. CHE-105.805.977), EHRAID, or fuzzy company name.
+  (e.g. CHE-101.602.521), EHRAID, or fuzzy company name.
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -15,7 +15,7 @@ input_schema:
   properties:
     uid:
       type: string
-      description: Swiss UID (e.g. CHE-105.805.977), EHRAID, or company name
+      description: Swiss UID (e.g. CHE-101.602.521), EHRAID, or company name
 output_schema:
   type: object
   example:
@@ -83,7 +83,7 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      uid: CHE-105.805.977
+      uid: CHE-101.602.521
     expected_fields:
       - field: company_name
         operator: not_null
@@ -98,7 +98,7 @@ test_fixtures:
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    uid: CHE-105.805.977
+    uid: CHE-101.602.521
 output_field_reliability:
   company_name: guaranteed
   uid: guaranteed
