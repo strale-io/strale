@@ -35,9 +35,31 @@ function normalizeUid(raw: string): string {
   return raw.replace(/[- .]/g, "").toUpperCase();
 }
 
-function parseCompany(company: Record<string, unknown>): Record<string, unknown> {
-  const legalSeat = company.legalSeat as Record<string, unknown> | undefined;
+// Zefix's `legalForm` is a structured object; the canonical short name
+// used in Swiss company correspondence is the German form ("AG", "GmbH",
+// "Sàrl", "SA"). Prefer .de, then .en as a fallback so non-Swiss callers
+// still get a meaningful string.
+export function extractLegalFormShort(legalForm: unknown): string | null {
+  if (!legalForm || typeof legalForm !== "object") return null;
+  const shortName = (legalForm as { shortName?: Record<string, unknown> }).shortName;
+  if (!shortName || typeof shortName !== "object") return null;
+  return (shortName.de as string) ?? (shortName.en as string) ?? null;
+}
+
+export function extractLegalFormId(legalForm: unknown): number | null {
+  if (!legalForm || typeof legalForm !== "object") return null;
+  const id = (legalForm as { id?: unknown }).id;
+  return typeof id === "number" ? id : null;
+}
+
+export function parseCompany(company: Record<string, unknown>): Record<string, unknown> {
   const address = company.address as Record<string, unknown> | undefined;
+  // Zefix returns `legalSeat` as a STRING (the municipality name, e.g.
+  // "Basel"), NOT as a nested object — the prior parser treated it as an
+  // object and silently produced `null` for canton/municipality. The
+  // canonical canton code (2 letters, e.g. "BS") lives at the company's
+  // top level, not under legalSeat.
+  const legalSeatString = typeof company.legalSeat === "string" ? company.legalSeat : null;
 
   // Build address string
   let addressStr: string | null = null;
@@ -55,15 +77,11 @@ function parseCompany(company: Record<string, unknown>): Record<string, unknown>
     uid: (company.uid as string) ?? null,
     ehraid: (company.ehraid as number) ?? null,
     ch_id: (company.chid as number) ?? (company.chId as number) ?? null,
-    legal_form: (company.legalForm as string) ?? null,
-    legal_form_id: (company.legalFormId as number) ?? null,
+    legal_form: extractLegalFormShort(company.legalForm),
+    legal_form_id: extractLegalFormId(company.legalForm),
     status: (company.status as string) ?? null,
-    canton: legalSeat
-      ? (legalSeat.canton as string) ?? null
-      : (company.canton as string) ?? null,
-    municipality: legalSeat
-      ? (legalSeat.municipalityName as string) ?? null
-      : (company.municipality as string) ?? null,
+    canton: (company.canton as string) ?? null,
+    municipality: legalSeatString,
     address: addressStr,
     purpose: (company.purpose as string) ?? (company.purposeTranslations as any)?.en ?? null,
     registration_date: (company.sogcDate as string) ?? (company.registrationDate as string) ?? null,
