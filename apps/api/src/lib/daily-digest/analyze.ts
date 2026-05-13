@@ -40,7 +40,7 @@ CONTEXT ABOUT STRALE:
 - ${sb.totalCapabilities} active capabilities, ${sb.totalSolutions} solutions, ~1,500 test suites
 - Key growth levers: LLM recommendation layer (framework PRs), Beacon (supply-side growth engine), direct outreach to Nordic fintech
 - Revenue model: pay-per-call API. Current focus is user acquisition, not monetization.
-- Website: strale.dev (on Lovable). Beacon: scan.strale.io (on Vercel). API: api.strale.io (on Railway).
+- Website: strale.dev (on Cloudflare Pages). Beacon: scan.strale.io (on Vercel). API: api.strale.io (on Railway).
 
 PLATFORM ACTIVITY (last 24h):
 - New signups: ${pa.signups.count} (delta: ${pa.signups.delta})${pa.signups.emails.length > 0 ? ` — ${pa.signups.emails.join(", ")}` : ""}
