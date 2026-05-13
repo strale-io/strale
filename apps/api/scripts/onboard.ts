@@ -59,6 +59,10 @@ import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { getExecutor } from "../src/capabilities/index.js";
 import { guardedExecute } from "../src/capabilities/guarded-executor.js";
+// Phase 3a runtime sentinel (PR #109): strict-missing-only assertion on
+// guaranteed fields. Reused here at onboard time so the same gate fires
+// before a manifest can be committed.
+import { checkGuaranteedFieldsPresent } from "../src/lib/guaranteed-fields-sentinel.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 // Manifest / ManifestExpectedField / ManifestLimitation moved to
@@ -508,6 +512,24 @@ async function verifyFixtures(
 
   console.log(`  Output: ${Object.keys(output).length} fields returned`);
 
+  // Phase 3b strict-missing gate (DEC-20260513-B + DEC-20260513-C): every
+  // field declared `guaranteed` in output_field_reliability must appear as
+  // a key in actual_output. Reuses the runtime sentinel from PR #109 so
+  // the same assertion fires at onboard time AND at scheduler-tick time.
+  // Caught fixtures are rejected before manifest commit; this closes the
+  // window between manifest authoring and the runtime sentinel's first tick.
+  const reliability = manifest.output_field_reliability ?? null;
+  const sentinel = checkGuaranteedFieldsPresent(output, reliability as Record<string, string> | null);
+  if (!sentinel.passed) {
+    console.log(`  ✗ Strict-missing gate failed: ${sentinel.failureReason}`);
+    console.log(
+      "  The executor's output is missing a field declared `guaranteed` in " +
+        "output_field_reliability. Either fix the executor to populate the field, " +
+        "or downgrade the reliability annotation to `common` or `rare`.",
+    );
+    return { passed: false, manifest };
+  }
+
   // Check each expected field
   let allPass = true;
   for (const ef of expectedFields) {
@@ -522,7 +544,7 @@ async function verifyFixtures(
   }
 
   if (allPass) {
-    console.log("  ✓ known_answer verified against live output");
+    console.log("  ✓ known_answer verified against live output (strict-missing + expected_fields)");
     return { passed: true, manifest };
   }
 

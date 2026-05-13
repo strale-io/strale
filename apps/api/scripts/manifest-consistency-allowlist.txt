@@ -1,0 +1,42 @@
+# Manifest guaranteed-field consistency allowlist
+#
+# Each line is a capability slug whose `output_field_reliability.guaranteed`
+# contains a field path not enumerated in `output_schema.properties` or
+# `output_schema.example`. These are grandfathered drifts as of 2026-05-13;
+# per DEC-20260513-B and DEC-20260513-C, each gets a Notion To-do filed
+# for individual manifest correction. As fixes land, the entry gets removed.
+#
+# If the allowlist length is ever zero, this file may be deleted.
+# If the allowlist length stays at the current size for >6 months, that's
+# a signal the gate became theatre — revisit the gate's value.
+#
+# Path A re-entry triggers (full PR-time dynamic gate that invokes the live
+# executor against changed manifests) per DEC-20260513-B/C:
+#   (a) multiple concurrent contributors merging manifests,
+#   (b) a CH-class bug recurs that the 1-hour runtime-sentinel window allows
+#       to damage production, or
+#   (c) CI infrastructure (DB + ~30 executor env vars) gets provisioned for
+#       unrelated reasons and the marginal cost of the dynamic gate drops to ~0.
+
+address-geocode
+address-validate
+age-verify
+aml-risk-score
+business-day-check
+company-name-match
+company-news
+credit-score-band
+email-reputation-score
+iban-to-bank
+insolvency-check
+license-compatibility-check
+nl-bag-address
+nl-energy-label
+nl-housing-price-index
+nl-housing-stats
+nl-woz-value
+phone-type-detect
+phone-validate
+sec-filing-events
+timezone-lookup
+uk-filing-events

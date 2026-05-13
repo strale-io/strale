@@ -55,6 +55,15 @@ jobs:
       # Pre-existing offenders are tracked in fetch-timeout-allowlist.txt;
       # --strict fails CI on new offenders.
       - run: node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict
+      # Phase 3b (DEC-20260513-B + DEC-20260513-C): every manifest's
+      # output_field_reliability.guaranteed entries must be enumerated in
+      # output_schema.properties or output_schema.example. Pre-existing
+      # drift tracked in scripts/manifest-consistency-allowlist.txt;
+      # --strict fails CI on new offenders. Pairs with the runtime sentinel
+      # at lib/guaranteed-fields-sentinel.ts which fires at scheduler-tick
+      # time, and with onboard.ts verifyFixtures which fires at manifest
+      # authoring time.
+      - run: node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict
       # Cert-audit Layer 2 (generalised 2026-04-30): cross-repo
       # type-shape contracts (currently AuditRecord). Skips cleanly
       # when STRALE_FRONTEND_PATH is not present (CI doesn't check out
