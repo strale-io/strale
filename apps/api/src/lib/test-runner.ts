@@ -1009,6 +1009,10 @@ async function captureBaseline(
 // Feature flag — defaults to disabled; enable with NULL_RATIO_RULE_ENABLED=true
 const NULL_RATIO_RULE_ENABLED = process.env.NULL_RATIO_RULE_ENABLED === "true";
 
+// Gate 3: Canonical-input sentinel (DEC-20260513-B + DEC-20260513-C).
+// See ./guaranteed-fields-sentinel.ts for the rationale + strict-missing semantics.
+import { checkGuaranteedFieldsPresent } from "./guaranteed-fields-sentinel.js";
+
 function validateResult(
   suite: typeof testSuites.$inferSelect,
   capResult: CapabilityResult | null,
@@ -1091,6 +1095,16 @@ function validateResult(
         // 'guaranteed' or unknown field → enforce the check (fall through to fail)
       }
       return { passed: false, failureReason: checkResult.reason };
+    }
+  }
+
+  // Gate 3: Canonical-input sentinel — strict-missing-only on guaranteed
+  // fields (DEC-20260513-B + DEC-20260513-C, Phase 3 Harden).
+  // Applies only to known_answer. See checkGuaranteedFieldsPresent docs.
+  if (suite.testType === "known_answer") {
+    const sentinel = checkGuaranteedFieldsPresent(capResult?.output, fieldReliability);
+    if (!sentinel.passed) {
+      return { passed: false, failureReason: sentinel.failureReason ?? null };
     }
   }
 
