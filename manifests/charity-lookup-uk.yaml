@@ -38,7 +38,7 @@ output_schema:
     date_of_registration: "1994-07-01"
     latest_financial_year_end: "2024-12-31"
   properties:
-    income:
+    latest_income:
       type: number
     status:
       type: string
@@ -87,7 +87,7 @@ test_fixtures:
   health_check_input:
     charity_number: "1038963"
 output_field_reliability:
-  income: guaranteed
+  latest_income: guaranteed
   status: guaranteed
   charity_name: guaranteed
   charity_number: guaranteed

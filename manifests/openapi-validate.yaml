@@ -30,14 +30,22 @@ output_schema:
     endpoint_count: 0
     version_detected: 3.0.0
   properties:
-    stats:
-      type: object
     valid:
       type: boolean
     errors:
       type: array
     warnings:
       type: array
+    error_count:
+      type: integer
+    schema_count:
+      type: integer
+    warning_count:
+      type: integer
+    endpoint_count:
+      type: integer
+    version_detected:
+      type: string
 data_source: Algorithmic (OpenAPI 3.x specification validation)
 data_source_type: computed
 transparency_tag: algorithmic
@@ -75,10 +83,18 @@ test_fixtures:
   health_check_input:
     spec: "{\"openapi\":\"3.0.0\",\"info\":{\"title\":\"Test\",\"version\":\"1.0.0\"},\"paths\":{}}"
 output_field_reliability:
-  stats: guaranteed
+  # `stats` was an orphan reliability declaration — the executor never
+  # returned a `stats` wrapper object; the actual statistics (error_count,
+  # schema_count, warning_count, endpoint_count, version_detected) live as
+  # top-level fields on the response. Replaced per PR #109 + PR #112 triage.
   valid: guaranteed
   errors: guaranteed
   warnings: guaranteed
+  error_count: guaranteed
+  warning_count: guaranteed
+  endpoint_count: guaranteed
+  schema_count: guaranteed
+  version_detected: guaranteed
 limitations:
   - title: Validates against OpenAPI 3.0/3.1 specification only — custom vendor extensions are not checked
     text: >-

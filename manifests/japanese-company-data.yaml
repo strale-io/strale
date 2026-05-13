@@ -37,7 +37,7 @@ output_schema:
       type: string
     business_type:
       type: string
-    corporate_number:
+    registration_number:
       type: string
 data_source: National Tax Agency Corporate Number System (Japan)
 data_source_type: scrape
@@ -76,7 +76,7 @@ output_field_reliability:
   status: guaranteed
   company_name: guaranteed
   business_type: guaranteed
-  corporate_number: guaranteed
+  registration_number: guaranteed
 limitations:
   - title: Japan NTA database provides corporate numbers only — financial data and officer details are not included
     text: Extracted from National Tax Agency corporate number database — financial data and officer details are not included

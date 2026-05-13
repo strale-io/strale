@@ -97,7 +97,12 @@ output_field_reliability:
   errors: guaranteed
   auto_fixed: guaranteed
   parsed_output: guaranteed
-  auto_fixed_output: guaranteed
+  # auto_fixed_output is only populated when auto_fixed=true (parser corrected
+  # an invalid JSON shape). For inputs that parse cleanly on first try the
+  # field is absent. Re-labeled to `common` per PR #109 + PR #112 triage —
+  # the strict-missing sentinel was correctly firing because the key didn't
+  # exist on the happy path; the manifest was wrong to declare it guaranteed.
+  auto_fixed_output: common
 limitations:
   - title: Validates LLM output structure and format only — cannot verify factual correctness of content
     text: Validates output structure and format — cannot verify factual correctness of LLM-generated content
