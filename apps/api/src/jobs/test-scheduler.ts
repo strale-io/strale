@@ -212,75 +212,85 @@ async function withAdvisoryLock<T>(
 
 // ─── Core polling query ─────────────────────────────────────────────────────
 
-interface OverdueCapability {
+interface OverdueSuite {
   slug: string;
-  lastTestedAt: Date | null;
+  testType: string;
+  lastRunAt: Date | null;
 }
 
 /**
- * Slug-hash modulo 60 — deterministic minute-of-hour offset for a slug.
- * Used by both the SQL query (Postgres `hashtext` keeps the agreement) and
- * the unit tests (TypeScript implementation must produce the same output).
+ * Hash-stagger modulo 60 — deterministic minute-of-hour offset.
  *
- * `hashtext` is Postgres's built-in lookup hash for character data —
- * stable across versions for ASCII inputs and well-spread for slug-shaped
- * strings. Wrapping in `abs()` ensures non-negative modulo.
+ * Single-arg form: `slugStaggerMinute(slug)` — historical behavior, hashes the
+ * slug only. Retained for callers that still pick capabilities (vs. suites).
+ *
+ * Two-arg form: `slugStaggerMinute(slug, testType)` — hashes `slug:testType`,
+ * which is the per-suite stagger used by the scheduler post-DEC-20260513-D
+ * (per-suite spread). Each of a capability's 5 active suites lands on a
+ * different minute, preventing the simultaneous-burst pattern that
+ * saturated Zenedge for `slovak-company-data` at the :41 tick.
+ *
+ * The authoritative computation lives in SQL (Postgres `hashtext`); this
+ * TypeScript implementation uses FNV-1a 32-bit for tests + documentation.
+ * Stagger only needs to be deterministic per (slug[, testType]), not
+ * cross-language identical.
  */
-export function slugStaggerMinute(slug: string): number {
-  // Mirrors `abs(hashtext($slug)) % 60` — used only in unit tests + as a
-  // documentation aid. The authoritative computation lives in SQL so the
-  // scheduler doesn't have to ship every active slug to the app layer.
-  // We use the FNV-1a 32-bit hash here because it's deterministic and
-  // well-distributed for slug strings; Postgres's `hashtext` is also
-  // well-distributed but uses a different algorithm — the stagger only
-  // needs to be deterministic per-slug, not cross-language identical.
+export function slugStaggerMinute(slug: string, testType?: string): number {
+  const key = testType ? `${slug}:${testType}` : slug;
   let hash = 0x811c9dc5;
-  for (let i = 0; i < slug.length; i++) {
-    hash ^= slug.charCodeAt(i);
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i);
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }
   return hash % 60;
 }
 
 /**
- * Find free capabilities due for testing this minute.
+ * Find suites (capability × test_type pairs) due for testing this minute.
  *
- * Per DEC-20260503-B (refined by the PR A decoupling — see DEC-20260511-C;
- * TODO(chat-draft): cite new cost-class DEC after Phase A0b session-end review):
+ * Per DEC-20260503-B + DEC-20260513-D (per-suite spread):
  *   - scheduled_testing_eligible = TRUE  (free/eligible; paid caps skipped)
- *   - last_tested_at older than 1h  (or never tested)
- *   - abs(hashtext(slug)) % 60 = current minute  (slug-hash stagger)
+ *   - per-suite last-run older than 1h  (derived from test_results)
+ *   - abs(hashtext(slug || ':' || test_type)) % 60 = current minute
  *
- * Eligibility is an explicit column on `test_suites`. `external_cost_cents`
- * is billing-only and no longer drives dispatch decisions.
+ * Per-suite stagger replaces the prior per-capability stagger. The earlier
+ * shape fired all 5 of a capability's suites on the same minute, which
+ * burst-saturated Zenedge-fronted upstreams (`slovak-company-data` /
+ * `api.statistics.sk` at the :41 tick). Spreading by (slug, test_type)
+ * keeps any single upstream's egress to ≤1 req/minute under steady state.
+ *
+ * Per-suite debounce derives from MAX(test_results.executed_at) per
+ * test_suite_id rather than capabilities.last_tested_at — the latter
+ * advances on any suite execution and would block sibling suites that
+ * haven't actually run for an hour.
  *
  * The status floor (upstream_broken, infra_limited, quarantined) still
  * applies — known-broken suites back off to daily/weekly even on the new
  * hourly cadence. The "no status creates a black hole" invariant from the
  * old tiered query is preserved by the ELSE branch.
  */
-async function findOverdueCapabilities(): Promise<OverdueCapability[]> {
+async function findOverdueSuites(): Promise<OverdueSuite[]> {
   const db = getDb();
 
   // Phase A0b: exclude capabilities whose per-window test budget is
-  // already at cap. This is defense-in-depth — the per-call
-  // assertBudgetAvailable() in the dispatcher would also refuse — but
-  // skipping at query time avoids the round-trip and keeps the scheduler
-  // log noise-free during a saturated window. free_unlimited caps are
-  // never budget-tracked, so the OR short-circuits for them.
+  // already at cap (defense-in-depth against the assertBudgetAvailable
+  // per-call dispatcher check). free_unlimited caps are never
+  // budget-tracked, so the OR short-circuits for them.
   const rows = await db.execute(sql`
     SELECT
       c.slug,
-      c.last_tested_at AS "lastTestedAt"
+      ts.test_type AS "testType",
+      (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id) AS "lastRunAt"
     FROM capabilities c
     INNER JOIN test_suites ts
       ON ts.capability_slug = c.slug AND ts.active = true
     WHERE c.is_active = true
       AND ts.scheduled_testing_eligible = TRUE
-      AND (abs(hashtext(c.slug)) % 60) = EXTRACT(MINUTE FROM NOW())::int
+      AND (abs(hashtext(c.slug || ':' || ts.test_type)) % 60) = EXTRACT(MINUTE FROM NOW())::int
       AND (
-        c.last_tested_at IS NULL
-        OR c.last_tested_at < NOW() - GREATEST(
+        (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id) IS NULL
+        OR (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id)
+           < NOW() - GREATEST(
           INTERVAL '1 hour',
           CASE ts.test_status
             WHEN 'upstream_broken' THEN INTERVAL '24 hours'
@@ -308,15 +318,15 @@ async function findOverdueCapabilities(): Promise<OverdueCapability[]> {
             AND b.test_count >= b.budget_cap
         )
       )
-    GROUP BY c.slug, c.last_tested_at
-    ORDER BY c.last_tested_at ASC NULLS FIRST
+    ORDER BY "lastRunAt" ASC NULLS FIRST
     LIMIT ${BATCH_SIZE}
   `);
 
   const resultRows = Array.isArray(rows) ? rows : (rows as any)?.rows ?? [];
   return resultRows.map((r: any) => ({
     slug: r.slug,
-    lastTestedAt: r.lastTestedAt ? new Date(r.lastTestedAt) : null,
+    testType: r.testType,
+    lastRunAt: r.lastRunAt ? new Date(r.lastRunAt) : null,
   }));
 }
 
@@ -517,7 +527,7 @@ async function pollCycle(): Promise<void> {
       // is logged once per tick for visibility into the DEC-20260503-B
       // policy: the scheduler is consciously NOT testing those.
       const [overdue, queueDepth, paidSkipped] = await Promise.all([
-        findOverdueCapabilities(),
+        findOverdueSuites(),
         countOverdueCapabilities().catch(() => -1),
         countPaidSkipped().catch(() => -1),
       ]);
@@ -530,14 +540,13 @@ async function pollCycle(): Promise<void> {
             paid_skipped: paidSkipped,
             current_minute: new Date().getMinutes(),
           },
-          "no free capabilities match this minute's stagger; nothing to test",
+          "no free suites match this minute's stagger; nothing to test",
         );
         return;
       }
 
-      // Check provider health — skip capabilities whose provider is unhealthy
-      // to prevent SQS score pollution during outages
-      let runnableCaps = overdue;
+      // Check provider health — skip suites whose capability provider is unhealthy
+      let runnableSuites: OverdueSuite[] = overdue;
       let skippedSlugs: string[] = [];
       try {
         const { runDependencyHealthChecks } = await import("../lib/dependency-health.js");
@@ -553,10 +562,16 @@ async function pollCycle(): Promise<void> {
           }
         }
         if (unhealthySlugs.size > 0) {
-          skippedSlugs = overdue
-            .filter((cap) => unhealthySlugs.has(cap.slug))
-            .map((cap) => cap.slug);
-          runnableCaps = overdue.filter((cap) => !unhealthySlugs.has(cap.slug));
+          // Dedupe slugs across suites — a capability with 5 suites would
+          // otherwise appear 5 times in skippedSlugs.
+          skippedSlugs = [
+            ...new Set(
+              overdue
+                .filter((s: OverdueSuite) => unhealthySlugs.has(s.slug))
+                .map((s: OverdueSuite) => s.slug),
+            ),
+          ];
+          runnableSuites = overdue.filter((s: OverdueSuite) => !unhealthySlugs.has(s.slug));
           if (skippedSlugs.length > 0) {
             jobLog.info(
               { label: "test-scheduler-skip-unhealthy", skipped_count: skippedSlugs.length },
@@ -612,15 +627,15 @@ async function pollCycle(): Promise<void> {
         }
       }
 
-      if (runnableCaps.length === 0) {
-        jobLog.info({ label: "test-scheduler-poll-all-unhealthy" }, "all overdue capabilities have unhealthy providers, skipping");
+      if (runnableSuites.length === 0) {
+        jobLog.info({ label: "test-scheduler-poll-all-unhealthy" }, "all overdue suites have unhealthy providers, skipping");
         return;
       }
 
       jobLog.info(
         {
           label: "test-scheduler-poll-start",
-          runnable: runnableCaps.length,
+          runnable: runnableSuites.length,
           queue_depth: queueDepth,
           paid_skipped: paidSkipped,
           skipped_unhealthy: skippedUnhealthy,
@@ -631,32 +646,48 @@ async function pollCycle(): Promise<void> {
 
       let totalPassed = 0;
       let totalFailed = 0;
+      const slugsTested = new Set<string>();
 
-      for (const cap of runnableCaps) {
-        const agoMs = cap.lastTestedAt ? Date.now() - cap.lastTestedAt.getTime() : null;
-        const agoLabel = agoMs != null ? `${Math.round(agoMs / 3600_000)}h ago` : "never tested";
+      for (const suite of runnableSuites) {
+        const agoMs = suite.lastRunAt ? Date.now() - suite.lastRunAt.getTime() : null;
+        const agoLabel = agoMs != null ? `${Math.round(agoMs / 60_000)}m ago` : "never tested";
 
         try {
           jobLog.info(
-            { label: "test-scheduler-testing", capability_slug: cap.slug, last_tested: agoLabel },
+            {
+              label: "test-scheduler-testing",
+              capability_slug: suite.slug,
+              test_type: suite.testType,
+              last_run: agoLabel,
+            },
             "test-scheduler-testing",
           );
 
-          const summary = await runTests({ capabilitySlug: cap.slug });
+          const summary = await runTests({ capabilitySlug: suite.slug, testType: suite.testType });
           totalPassed += summary.passed;
           totalFailed += summary.failed;
+          slugsTested.add(suite.slug);
 
-          // runTests() already calls persistDualProfileScores() internally (line 294),
-          // so DB columns are updated immediately after each capability's tests.
+          // runTests() already calls persistDualProfileScores() internally,
+          // so DB columns are updated immediately after each suite execution.
 
           jobLog.info(
-            { label: "test-scheduler-tested", capability_slug: cap.slug, passed: summary.passed, total: summary.total },
+            {
+              label: "test-scheduler-tested",
+              capability_slug: suite.slug,
+              test_type: suite.testType,
+              passed: summary.passed,
+              total: summary.total,
+            },
             "test-scheduler-tested",
           );
 
-          // Auto-activate gated solutions when all steps become qualified
+          // Auto-activate gated solutions when all steps become qualified.
+          // Per-suite scheduling means this fires more often than under the
+          // old per-capability scheduling, but the check is idempotent and
+          // the SELECT-only path is cheap.
           try {
-            await checkSolutionGates(cap.slug);
+            await checkSolutionGates(suite.slug);
           } catch (gateErr) {
             // Non-critical — don't block the scheduler
           }
@@ -679,7 +710,12 @@ async function pollCycle(): Promise<void> {
           }
         } catch (err) {
           jobLog.error(
-            { label: "test-scheduler-cap-threw", capability_slug: cap.slug, err: err instanceof Error ? { message: err.message } : err },
+            {
+              label: "test-scheduler-cap-threw",
+              capability_slug: suite.slug,
+              test_type: suite.testType,
+              err: err instanceof Error ? { message: err.message } : err,
+            },
             "test-scheduler-cap-threw",
           );
         }
@@ -690,7 +726,8 @@ async function pollCycle(): Promise<void> {
       jobLog.info(
         {
           label: "test-scheduler-poll-complete",
-          tested: runnableCaps.length,
+          suites_tested: runnableSuites.length,
+          capabilities_touched: slugsTested.size,
           passed: totalPassed,
           failed: totalFailed,
           skipped_unhealthy: skippedUnhealthy,
@@ -706,9 +743,10 @@ async function pollCycle(): Promise<void> {
           logHealthEvent({
             eventType: "scheduler_heartbeat",
             tier: 1,
-            actionTaken: `DB-driven poll: ${runnableCaps.length} capabilities tested`,
+            actionTaken: `DB-driven poll: ${runnableSuites.length} suites tested across ${slugsTested.size} capabilities`,
             details: {
-              tested: runnableCaps.length,
+              suites_tested: runnableSuites.length,
+              capabilities_touched: slugsTested.size,
               passed: totalPassed,
               failed: totalFailed,
               skipped_unhealthy: skippedUnhealthy,
