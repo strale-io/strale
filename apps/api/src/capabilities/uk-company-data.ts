@@ -1,6 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
+// UK VAT validation is handled by vat-validate.ts (which routes GB → HMRC v2),
+// not by this Identity capability. Companies House (the source for this
+// capability) does not return VAT data. See DEC-20260513-F + the Active Vendor
+// Stack page row split (2026-05-13) for the post-Brexit routing rationale.
+
 // UK Companies House API — free but requires API key
 // Register at https://developer.company-information.service.gov.uk/
 const API = "https://api.company-information.service.gov.uk";
