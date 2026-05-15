@@ -44,8 +44,20 @@ output_schema:
       type: string
     industry_code:
       type: string
+    industry_description:
+      type:
+        - string
+        - "null"
     registration_date:
       type: string
+    vat_number:
+      type:
+        - string
+        - "null"
+    website:
+      type:
+        - string
+        - "null"
 data_source: PRH / Finnish Patent and Registration Office
 data_source_type: api
 transparency_tag: mixed
@@ -75,7 +87,10 @@ output_field_reliability:
   company_name: guaranteed
   business_type: guaranteed
   industry_code: guaranteed
+  industry_description: common
   registration_date: guaranteed
+  vat_number: guaranteed
+  website: rare
 limitations:
   - title: Does not cover sole traders without a separate business ID — about 10%
     text: Does not cover sole traders (toiminimi) without separate business ID
