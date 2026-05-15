@@ -51,9 +51,11 @@ output_schema:
     directors:
       type: array
       description: >-
-        Up to 3 directors from the registry (slice cap for payload). When
-        the registry lists more than 3, `directors_truncated` is true and
-        `total_directors` carries the full count.
+        Up to 50 directors from the registry (slice cap for payload). When
+        the registry lists more than 50, `directors_truncated` is true and
+        `total_directors` carries the full count. Typical major French
+        entities have 15-20 directors; the cap protects against pathological
+        state-entity / mutuelle payloads.
     directors_truncated:
       type: boolean
     total_directors:
