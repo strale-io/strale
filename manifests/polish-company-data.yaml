@@ -95,11 +95,19 @@ test_fixtures:
     krs_number: "0000028860"
 output_field_reliability:
   status: guaranteed
-  address: guaranteed
+  # address and registration_date are downgraded from `guaranteed` to `common`
+  # following the 2026-05-15 audit Batch 3 finding: 0/3 fixtures (MARTOM,
+  # PKN Orlen, KGHM) returned address/registration_date despite manifest
+  # declaration. The KRS upstream returns these fields under nested paths
+  # (siedziba.address arrays, odpis-level registration metadata) that the
+  # current picker doesn't traverse robustly. Honest reliability classification
+  # until the picker is rewritten — see follow-up to fix the address/regdate
+  # extraction logic.
+  address: common
   krs_number: guaranteed
   legal_form: guaranteed
   company_name: guaranteed
-  registration_date: guaranteed
+  registration_date: common
   jurisdiction: guaranteed
 limitations:
   - title: Covers KRS-registered entities only — Polish sole traders registered in CEIDG are not included
