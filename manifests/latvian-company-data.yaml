@@ -145,6 +145,7 @@ output_field_reliability:
   termination_date: rare
   sepa_creditor_id: common
   atvk_code: common
+  vat_number: common
   jurisdiction: guaranteed
 limitations:
   - title: Daily snapshot — sub-day filings may not be reflected immediately

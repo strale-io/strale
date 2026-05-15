@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { deriveVatLV } from "../lib/vat-derivation.js";
 
 /**
  * Latvian company data via the data.gov.lv CKAN datastore API.
@@ -131,9 +132,10 @@ registerCapability("latvian-company-data", async (input: CapabilityInput) => {
   const reg = findReg(trimmed);
   const record = reg ? await lookupByRegcode(reg) : await lookupByName(trimmed);
 
+  const regNum = String(record.regcode);
   const output = {
     company_name: clean(record.name),
-    reg_number: String(record.regcode),
+    reg_number: regNum,
     company_type: clean(record.type_text),
     company_type_code: clean(record.type),
     register_type: clean(record.regtype_text),
@@ -144,6 +146,7 @@ registerCapability("latvian-company-data", async (input: CapabilityInput) => {
     termination_date: toIsoDate(record.terminated),
     sepa_creditor_id: clean(record.sepa),
     atvk_code: record.atvk != null ? String(record.atvk) : null,
+    vat_number: deriveVatLV(regNum),
     jurisdiction: "LV",
   };
 
