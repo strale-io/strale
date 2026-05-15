@@ -1,16 +1,17 @@
 # Identity field-coverage audit — 2026-05-15
 
-**Status:** Phase 1 partial. 10 of 20 countries scored across two batches. Phase 2 (SI Openapi WW-Top probe) and Phase 3 (US Topograph-listed state scout) deferred to follow-up sessions per session scoping.
+**Status:** Phase 1 partial. 15 of 20 countries scored across three batches. Phase 2 (SI Openapi WW-Top probe) and Phase 3 (US Topograph-listed state scout) deferred to follow-up sessions per session scoping.
 
 **Purpose:** Empirical follow-up to DEC-20260513-F's "20/20 v1-ready" verdict. DEC-20260513-F's certification rests on canonical-input fixture validation (one entity per capability) plus 24h canary green-rate for DK and DE only. This audit tests whether the "v1-ready" verdict holds when the capability is probed with multiple real entities (not just the fixture), and quantifies which canonical-identity fields populate at what rate across entity samples.
 
 **Batches:**
 - Batch 1 (2026-05-15, 5 countries): SE, UK, DE, SI, SG. Chosen to cover Nordics baseline, UK identifier quirks, OpenRegister free-tier quota surfacing, the known SI structural gap, and a non-EU sanity check.
 - Batch 2 (2026-05-15, 5 countries): NO, DK, FR, BE, CZ. Continues Nordics + adds FR (first country with directors), BE (CBEAPI Tier-2 wrapper), CZ (ARES).
+- Batch 3 (2026-05-15, 5 countries): FI, IE, EE, PL, LV. Tests the CKAN-thinness hypothesis (IE and LV both CKAN-based) and adds 2 direct-registry Eastern European integrations (EE, PL).
 
 **Methodology:** prod API at `https://strale-production.up.railway.app/v1/do` with test API key `sk_live_0d56f39c`. 3 real entities per country: canonical fixture (the `known_answer.input` per DEC-20260513-F) plus 2 well-known publicly-listed or otherwise large entities from the same jurisdiction. Identifiers validated against each capability's input schema before invocation.
 
-**Total cost:** €1.20 across both batches (24 successful calls × €0.05). 6 calls failed without wallet charge (1 bad identifier in UK Batch 1, 3 quota/circuit-breaker in DE Batch 1, 3 quota/circuit-breaker in DK Batch 2). Wallet: €33.99 → €33.39 (Batch 1) → €32.79 (Batch 2). Well within the €10 per-batch hard cap.
+**Total cost:** €1.95 across three batches (39 successful calls × €0.05). 7 calls failed without wallet charge (1 bad identifier in UK Batch 1, 3 quota/circuit-breaker in DE Batch 1, 3 quota/circuit-breaker in DK Batch 2, 1 transient internal_error in IE Batch 3 retried successfully). Wallet: €33.99 → €33.39 (Batch 1) → €32.79 (Batch 2) → €32.04 (Batch 3). Well within the €10 per-batch hard cap.
 
 **Doc references:**
 - DEC-20260513-F — 20/20 Identity v1-ready certification
@@ -64,12 +65,20 @@ For DE, where 0 of 3 entities executed successfully due to OpenRegister quota ex
 | CZ      | 3/3       | 3/3   | 3/3    | 3/3      | 3/3     | 3/3        | –         | 3/3 (NACE)    | 3/3 | –   |
 | DE      | quota     | quota | quota  | quota    | quota   | quota      | quota     | quota         | –   | quota |
 | DK      | quota     | quota | quota  | quota    | quota   | quota      | –         | quota         | –   | –   |
+| EE      | 3/3       | 3/3   | 3/3    | –        | 3/3     | 3/3        | –         | –             | 0/3 | –   |
+| FI      | 3/3       | 3/3   | 3/3    | 3/3      | 3/3     | 3/3        | –         | 3/3 (NACE)    | 3/3*| –   |
 | FR      | 3/3       | 3/3   | 3/3    | 3/3      | 3/3     | 3/3        | 3/3       | 3/3 (NAF)     | 3/3 | –   |
+| IE      | 3/3       | 3/3   | 3/3    | 3/3      | 3/3     | 3/3        | –         | 3/3 (PO)†     | 0/3 | –   |
+| LV      | 3/3       | 3/3   | 3/3    | 3/3      | 3/3     | 3/3        | –         | –             | 0/3 | –   |
 | NO      | 3/3       | 3/3   | 3/3    | 3/3      | 3/3     | 3/3        | –         | 3/3 (NACE)    | 3/3 | –   |
+| PL      | 3/3       | 3/3   | 3/3    | 0/3      | 0/3     | 3/3        | –         | –             | 3/3 | –   |
 | SE      | 3/3       | 3/3   | 3/3    | 3/3      | 3/3     | 3/3        | –         | 3/3 (SNI)     | 3/3 | –   |
 | SG      | 3/3       | 3/3   | 3/3    | 3/3      | 3/3     | 3/3        | –         | –             | –   | –   |
 | SI      | 3/3       | 3/3   | –      | –        | 3/3     | 3/3        | –         | –             | –   | –   |
 | UK      | 3/3       | 3/3   | 3/3    | 3/3      | 3/3     | 3/3        | –         | 2/3 (SIC)     | 0/3 | –   |
+
+`*` FI returns `vat_number` (and `website`) but the manifest's output_schema does not declare them. Schema undercount, not overcount. Recommend updating schema to declare these.
+`†` IE: `principal_object_code` populated 3/3 (NACE-compatible); `nace_v2_code` is null 3/3 (declared `rare`, consistent).
 
 ### Reading the matrix
 
@@ -80,6 +89,11 @@ For DE, where 0 of 3 entities executed successfully due to OpenRegister quota ex
 **Schema-vs-reality mismatches (declared fields, empirically `0/3`):**
 - UK `vat_number` — Companies House profile endpoint does not return VAT. Recommend dropping from schema.
 - BE `industry` — CBEAPI.be wrapper does not surface NACE codes from KBO/BCE. Recommend dropping from schema or hooking a KBO Open Data direct ingest.
+- IE `vat_number` — CRO Open Data CKAN does not include VAT. Recommend dropping or hooking Revenue's VIES lookup.
+- EE `vat_number` — Äriregister capability does not surface KMKR (Estonian VAT). EE VAT can be derived (`EE` + 9 digits) but the executor doesn't.
+- LV `vat_number` — `data.gov.lv` CKAN does not include VAT. LV VAT can be derived (`LV` + reg_number for 40NNN-prefix entities) but executor doesn't.
+- PL `address` — KRS capability declares the field but returned null 3/3 across major listed entities (Orlen, KGHM, MARTOM). Significant gap.
+- PL `registration_date` — same pattern, declared null 3/3.
 
 ### Per-country detail
 
@@ -278,6 +292,107 @@ The thin-coverage is *not* an empirical gap (0/3 fields populated despite schema
 - `primary_source` is `"ros"` for all 3 (ROS = Registr osob, the Czech base register). Indicates the underlying ARES route.
 - No `directors` or `lei` fields in the CZ schema. ARES exposes "statutární orgán" (statutory body) data via a separate endpoint that this capability does not call.
 
+#### FI — finnish-company-data (PRH / avoindata.prh.fi)
+
+**Entities tested:**
+- E1: Nokia Oyj, business_id `0112038-9` (fixture, Oyj)
+- E2: Stora Enso Oyj, business_id `1039050-8` (Oyj)
+- E3: Neste Oyj, business_id `1852302-9` (Oyj)
+
+**Legal-form constraint:** All 3 entities are Oyj (Public limited company). Finland's top-listed slice is dominated by Oyj. PRH also covers Oy, Ay, Ky, Osk, ry, but none are represented in the entity sample. Same constraint as NO/SE.
+
+**Anomalies:** None per entity. All 3 entities returned every schema-declared field plus 2 additional fields (`website`, `vat_number`) that are NOT declared in `output_schema`.
+
+**Field notes:**
+- **Schema-undercount (inverse of UK/BE pattern):** the response includes `vat_number` (FI + business_id minus the dash and check digit) and `website` (e.g. `"www.nokia.com"`), but the `output_schema` properties section does not declare them. Customers reading the schema would not know to expect them. Recommend adding both to the schema. This is the opposite of the schema-vs-reality mismatch — capability returns *more* than declared.
+- `industry_code` is NACE-compatible (5-digit, e.g. `70100`, `17120`, `19200`); 3/3 populated.
+- `registration_date` is populated even for old entities (Nokia: 1896-12-19, well within HVD coverage). PRH handles historical dates cleanly.
+- Address is a comma-delimited string with street, number, postal code, city: `"Karakaari, 7, 02610 ESBO"`.
+- `website` is null for Neste (E3) but populated for Nokia + Stora Enso. Useful for KYB enrichment when present.
+- No `directors` or `lei` fields in the FI schema. PRH `/bis/v1/{businessId}` exposes director-equivalent data via the `bisCacheTime` payload (companyForms array, businessLines array, registeredOffices array, names array). The capability does not currently surface it. Free-path direct-build candidate.
+
+#### IE — irish-company-data (CRO Open Data Portal CKAN)
+
+**Entities tested:**
+- E1: STRIPE PAYMENTS EUROPE, LIMITED, cro_number `513174` (fixture, LTD)
+- E2: CRH PUBLIC LIMITED COMPANY, cro_number `12965` (PLC)
+- E3: RYANAIR HOLDINGS PUBLIC LIMITED COMPANY, cro_number `249885` (PLC)
+
+**Legal-form constraint:** 2 distinct forms covered (LTD + PLC). Irish CRO Open Data also covers UNLTD, EXTERNAL, INDUSTRIAL_PROVIDENT, LBG, but those are not represented in the entity sample.
+
+**Anomalies:**
+- IE-2 (CRH) returned a transient `internal_error` on first attempt with no wallet charge. Succeeded on retry. Single transient failure across 15 Batch-3 calls; not a pattern but worth a Sentry/source_health glance.
+- `eircode` is populated 2/3 — Ryanair Holdings (E3, 1996 incorporation) has `null` eircode. Per manifest's documented limitation: "The Eircode field was introduced in 2014 and is populated for newer registrations and recently-updated entities." Consistent.
+- `nace_v2_code` is null 3/3 (declared `rare` in field reliability, so consistent with the manifest).
+- Status string is `"Normal"` — third distinct status vocabulary in this audit ("active" / "Registered" / "Reģistrēts" / "Normal"). Wire-shape consistency note.
+
+**Field notes:**
+- **Schema-vs-reality mismatch:** `vat_number` declared in `output_schema` properties but populated `0/3`. Irish VAT (`IE` + 7 chars or 8 chars + letter) comes from Revenue, not CRO. Same recommendation as UK: drop or hook a VIES lookup.
+- `principal_object_code` populated 3/3 (`65.23`, `74.15`, `74.84` — NACE-compatible Principal Object codes). Treated as the de-facto industry-code field for IE in the matrix, with `nace_v2_code` as the rare richer alternative.
+- `last_annual_return_date` / `next_annual_return_date` / `last_accounts_date` populated for all 3 — useful KYB freshness signal. Unique to IE among audited capabilities.
+- No `directors` or `lei` fields in the IE schema. CRO Open Data exposes directors via a *separate dataset* on opendata.cro.ie (the Directors dataset). Free-path direct-build candidate (likely the same CKAN endpoint pattern as the current capability).
+
+#### EE — estonian-company-data (e-Äriregister / ariregister.rik.ee)
+
+**Entities tested:**
+- E1: Bolt App Services AS, registry_code `17449106` (fixture, AS = Aktsiaselts)
+- E2: Aktsiaselts Tallink Grupp, registry_code `10238429` (AS)
+- E3: Pipedrive OÜ, registry_code `11958539` (OÜ = Osaühing / private LLC)
+
+**Legal-form constraint:** 2 distinct forms (AS, OÜ). Estonian e-Äriregister covers TÜ, FIE, MTÜ, KÜ, NB, SA also, but those are not represented in the top-listed slice.
+
+**Anomalies:**
+- **Wire-shape inconsistency in `business_type`:** E1 (Bolt AS) returns `"1"` (numeric code), E2 (Tallink AS) returns `"1"` (numeric code), E3 (Pipedrive OÜ) returns `"OÜ (Private limited company)"` (human-readable string). The capability handler is inconsistent — apparently the AS branch returns a code while the OÜ branch returns a label. Solutions parsing `business_type` will see this as two different shapes.
+- E2 (Tallink) and E3 (Pipedrive) have populated `historical_names` arrays (former names: "Hansatee Grupp", "New Pipe Technologies OÜ"). E1 (Bolt) has empty array. Historical-name tracking is rare among audited capabilities and useful for KYB.
+- The capability scrapes ariregister (the manifest flags `maintenance_class: scraping-stable-target`). Latency for E1 was 3.07s — noticeably slower than the direct-API capabilities (typically <1s). Worth a freshness/circuit-breaker note.
+
+**Field notes:**
+- **Schema-vs-reality mismatch:** `vat_number` declared in `output_schema` properties but populated `0/3`. Estonian KMKR can be derived (`EE` + 9 digits) — same gap as LV.
+- **Structural source/schema gap (SI-style minor):** EE schema does NOT declare `registration_date` or `industry_code`. Both are visible at ariregister.rik.ee on the public-facing entity page; the capability scrape doesn't surface them. Capability-level gap, not source-level — the upstream has the data.
+- No `directors` or `lei` fields in the EE schema. The Estonian e-Business Register exposes director ("juhatuse liige") and shareholder data on the public entity page; the capability does not surface it. Free-path direct-build candidate via the same scrape route, subject to the manifest's "blocked from certain IP ranges" caveat.
+
+#### PL — polish-company-data (KRS via krs-pobierz.ms.gov.pl)
+
+**Entities tested:**
+- E1: PPHU MARTOM Sp. z o.o., krs_number `0000033945` (fixture, Sp. z o.o.)
+- E2: ORLEN SPÓŁKA AKCYJNA, krs_number `0000028860` (SA)
+- E3: KGHM POLSKA MIEDŹ SPÓŁKA AKCYJNA, krs_number `0000023302` (SA)
+
+**Legal-form constraint:** 2 distinct forms (Sp. z o.o. + Spółka Akcyjna). Polish KRS also covers SK, SKA, SP, F (Foundation), Stowarzyszenie, but those are not represented in the entity sample.
+
+**Anomalies:**
+- **Two schema-vs-reality mismatches:** `address` and `registration_date` are both declared in `output_schema` properties but populated `null` for all 3 entities, including the canonical fixture (MARTOM). This is the most severe schema-vs-reality finding in the audit so far — 2 fields, including basic identity data, are promised but never delivered. Worth a code-level investigation: is the KRS scrape failing to extract these fields, or is it source-level?
+- The fixture's manifest example output already shows `address: null` and `registration_date: null` — so this is a *known* gap in the manifest, not a regression. The capability ships with these fields declared in the schema despite the example admitting they're always null. Recommend either fixing the scrape or dropping from schema.
+- The response includes 3 additional fields not declared in `output_schema.properties`: `nip` (Polish NIP tax number, 10 digits), `register_type` (`"commercial"` for all 3 — likely the KRS-vs-CEIDG-vs-Stowarzyszenie selector), and `share_capital` (e.g. `"1451177561,25 PLN"`). Schema-undercount, similar to FI.
+
+**Field notes:**
+- `vat_number` is derived from NIP (`PL` + NIP); 3/3 populated. Schema declares it.
+- `legal_form` is populated 3/3 (`"SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ"`, `"SPÓŁKA AKCYJNA"`) — Polish-language label, not a code. Different vocabulary from CZ's `"121"` and FR's `"5800"`.
+- `share_capital` is populated 3/3 with currency suffix — useful KYB signal, but not declared in schema (see above).
+- No `directors` or `lei` fields in the PL schema. KRS exposes statutory representatives ("organ reprezentujący") via a separate section of the same scrape page. Free-path direct-build candidate; the scrape route already has access.
+
+#### LV — latvian-company-data (Latvian Open Data Portal CKAN / data.gov.lv)
+
+**Entities tested:**
+- E1: Air Baltic Corporation AS, reg_number `40003245752` (fixture, AS = Akciju sabiedrība)
+- E2: Akciju sabiedrība "Latvenergo", reg_number `40003032949` (AS)
+- E3: "Latvijas Mobilais Telefons" SIA (LMT), reg_number `50003050931` (SIA = Sabiedrība ar ierobežotu atbildību / private LLC)
+
+**Legal-form constraint:** 2 distinct forms (AS + SIA). data.gov.lv also covers IK (individual merchant), KS, PS, biedrība, but those are not represented in the entity sample.
+
+**Anomalies:**
+- Status string is `"Reģistrēts"` (Latvian for "registered") — yet another vocabulary in the cross-country status pattern.
+
+**Field notes:**
+- **Schema-vs-reality mismatch:** `vat_number` declared in `output_schema` properties but populated `0/3`. LV VAT (PVN) is derivable from `reg_number` for the 40NNN-prefix legal-entity range (PVN = `LV` + reg_number for those entities). The capability doesn't derive it. Either drop from schema or compute.
+- **Structural source gap (SI-style minor):** `industry_code` (NACE) is NOT in the LV schema and not surfaced. data.gov.lv publishes a separate dataset with NACE codes that this capability doesn't ingest. Source has it; current capability doesn't. Capability-level gap.
+- `sepa_creditor_id` populated 3/3 (`LV78ZZZ40003245752`, `LV61ZZZ40003032949`, `LV67ZZZ50003050931`) — unique to LV among audited capabilities. Useful for SEPA-payment KYB workflows.
+- `atvk_code` populated 3/3 (Latvian administrative-territorial classification) — unique to LV.
+- `register_type` is `"Komercreģistrs"` for all 3 (Commercial Register).
+- No `directors` or `lei` fields in the LV schema. data.gov.lv publishes a separate dataset ("Patiesie labuma guvēji" — beneficial owners) per the manifest's coverage limitation. The director-equivalent ("amatpersonas" — officials) dataset is also published separately. Free-path direct-build candidate (both UBO and directors via separate CKAN ingest).
+
+**CKAN-thinness hypothesis verdict for IE + LV:** *mostly refuted.* Both registries return rich identity fields (12+ each). SI's thinness is unique among the audited CKAN-based registries — SI's `data.gov.si` open subset is structurally narrower than IE's `opendata.cro.ie` and LV's `data.gov.lv`. The hypothesis that "CKAN-based open-data registries are SI-style thin" does not hold.
+
 ---
 
 ## Phase 2 — SI Openapi WW-Top probe
@@ -298,71 +413,109 @@ Per session scoping, Phase 3 is a separate session. Phase 3 is *exploratory* (US
 
 ---
 
-## Synthesis (partial — 10 of 20 countries)
+## Synthesis (partial — 15 of 20 countries)
 
 ### Countries with full directors coverage (empirically verified)
 
 - **FR** — `directors` array populated 3/3 with role labels. `total_directors` reveals the true count (15–20 per entity); the payload-cap-at-3 is a Strale-side product decision, not a source limitation. INSEE/SIRENE supplies director data free of charge via api.gouv.fr.
 
-**One country across 10 scored.** FR is the only positive proof so far that a free public registry can populate `directors` end-to-end. The prior session's chat principle ("build directors wherever data is free") has its first concrete instance.
+**One country across 15 scored.** FR is still the only positive proof that a free public registry can populate `directors` end-to-end in the primary identity capability. The prior session's chat principle ("build directors wherever data is free") has 6 more concrete free-path build candidates after Batch 3 (see below).
 
 ### Countries with thin directors coverage (free-path direct-build candidates)
 
-- **SE** — Bolagsverket HVD does not include directors. Would require a separate paid Bolagsverket service or a different free EU registry-direct integration. Bolagsverket's full Värdefulla datamängder API roadmap includes director data per the EU HVD directive, but not in the current open subset. Direct-build candidate when/if HVD expansion ships.
-- **UK** — Companies House `/officers` endpoint is free and well-documented. The `uk-companies-house-officers` capability already exists (separate slug) per the manifests listing. Strategy decision: keep officers separate, or fold into `uk-company-data`? Currently separate, which preserves caller intent but doubles per-customer call cost.
-- **NO** — Brønnøysund `/enheter/{orgnr}/roller` endpoint is free and well-documented. Not currently called by `norwegian-company-data`. **Free-path direct-build candidate.** Similar shape to the UK officers split — either a sibling capability or in-line orchestration.
-- **CZ** — ARES exposes statutární orgán (statutory body) data via a separate endpoint. **Free-path direct-build candidate.**
-- **BE** — KBO/BCE does expose director data via the FPS Economy SFTP feed. The current CBEAPI.be wrapper does not surface it. A first-party KBO Open Data ingest (already flagged as the longer-term target in the manifest's provenance limitation) would close the gap.
-- **DK** — Schema-coverage cannot be determined this session due to quota exhaustion. CVR / Erhvervsstyrelsen does expose director data; whether cvrapi.dk's wrapper surfaces it is unknown until the quota resets.
-- **SG** — Directors require ACRA BizFile+ (paid). Not a free-path direct-build candidate. Customer would pay BizFile+ via Cobalt-style aggregator or BYO credentials.
+- **SE** — Bolagsverket HVD does not include directors. Would require a separate paid Bolagsverket service or a different free EU registry-direct integration. Direct-build candidate when/if HVD expansion ships.
+- **UK** — Companies House `/officers` endpoint is free. Already exists as separate slug `uk-companies-house-officers`. Strategy decision: keep separate vs. fold inline.
+- **NO** — Brønnøysund `/enheter/{orgnr}/roller` endpoint is free and well-documented. **Free-path direct-build candidate.**
+- **CZ** — ARES exposes statutární orgán via a separate endpoint. **Free-path direct-build candidate.**
+- **BE** — KBO/BCE does expose director data via FPS Economy SFTP feed. Current CBEAPI.be wrapper does not surface it. Direct-KBO-ingest candidate.
+- **DK** — Schema-coverage cannot be determined until quota resets. CVR/Erhvervsstyrelsen does expose director data.
+- **SG** — Directors require ACRA BizFile+ (paid). Not a free-path candidate; Cobalt-style aggregator route.
+- **FI** *(Batch 3 finding)* — PRH `/bis/v1/{businessId}` exposes companyForms/registeredOffices/names in the payload. Director-equivalent data ("hallitus" / board roles) is available via a separate PRH endpoint. **Free-path direct-build candidate.**
+- **IE** *(Batch 3 finding)* — CRO Open Data publishes a separate Directors dataset on opendata.cro.ie (CKAN). Likely the same fetch pattern as the existing `irish-company-data` capability. **Free-path direct-build candidate.**
+- **EE** *(Batch 3 finding)* — e-Äriregister public entity page exposes "juhatuse liige" (board members). The current capability scrapes the entity page already, so adding director extraction is a single-source-extension, not a new integration. **Free-path direct-build candidate** (subject to the existing IP-block caveat for some ranges).
+- **PL** *(Batch 3 finding)* — KRS scrape page already includes "organ reprezentujący" (representative body). Same scrape route. **Free-path direct-build candidate.**
+- **LV** *(Batch 3 finding)* — data.gov.lv publishes a separate "amatpersonas" (officials) dataset and a "Patiesie labuma guvēji" (UBO) dataset. Both via CKAN. **Free-path direct-build candidate** (two siblings, not one).
+
+**Tally:** of 15 scored, 1 has directors inline (FR), 11 are free-path direct-build candidates (SE/UK/NO/CZ/BE/FI/IE/EE/PL/LV/DK pending quota), 1 is paid-only (SG), 1 is structural-gap (SI), 1 is quota-blocked entirely (DE — schema declares directors, can't verify), 0 are explicitly out-of-scope.
 
 ### Countries with structural source gaps (SI-style — disclosure not build)
 
-- **SI** — confirmed: status, registration date, industry code, directors, VAT, LEI all absent from the data.gov.si open subset. Per-entity consistent across both d.d. and d.o.o. forms. The DEC-20260513-F disclosure is accurate and load-bearing. No build path until AJPES restPrsInfo contract or EU HVD expansion.
+- **SI** — confirmed: status, registration date, industry code, directors, VAT, LEI all absent from the data.gov.si open subset. The DEC-20260513-F disclosure is accurate and load-bearing.
 
-No new SI-style cases surfaced in Batch 2. BE's `industry` null-out is a wrapper-level gap (CBEAPI.be doesn't surface NACE that KBO has), not a source-level absence. DK's gaps cannot be confirmed until quota resets.
+**CKAN-thinness hypothesis verdict:** *refuted.* Batch 3 tested IE (CRO Open Data CKAN) and LV (data.gov.lv CKAN) — both returned 12+ rich identity fields. SI's structural thinness is *unique* among the audited CKAN-based registries and traces to the data.gov.si open subset specifically, not to CKAN as an architecture. The other 14 countries — including 2 CKAN-based ones — have reasonable identity coverage.
 
 ### Countries with quota-blocked re-test (2)
 
-- **DE** — OpenRegister 50/month free-tier exhausted on or before 2026-05-15 07:22Z. Circuit breaker tripped. Schema supports directors and LEI; cannot be empirically scored until quota reset (2026-06-01) or Pro-tier upgrade.
-- **DK** — cvrapi.dk 50/day free-tier exhausted before this Batch 2 session's first call (`"The Danish business registry API quota has been temporarily exceeded. Please try again in a few hours."`). Circuit breaker tripped until 2026-05-15T07:49:56Z. Re-test viable after the daily reset.
+- **DE** — OpenRegister 50/month free-tier exhausted on or before 2026-05-15 07:22Z. Schema supports directors and LEI; cannot be empirically scored until quota reset (2026-06-01) or Pro-tier upgrade.
+- **DK** — cvrapi.dk 50/day free-tier exhausted before this audit's Batch 2 first call. Re-test viable after the daily reset (~2026-05-16).
 
-Both are real operational signals worth investigating before the v1 launch. DE is the harder case (monthly cap, smaller volume budget); DK should self-recover daily.
+Both are real operational signals worth investigating before the v1 launch.
 
 ### Schema-vs-reality mismatches (declared fields, empirically `0/3`)
 
-- **UK `vat_number`** (Batch 1 finding) — recommend dropping from schema. Companies House profile endpoint does not return VAT.
-- **BE `industry`** (Batch 2 finding) — recommend dropping from schema or migrating to a direct KBO Open Data ingest. CBEAPI.be wrapper does not surface NACE codes.
+Significant growth in this category across Batch 3 — 5 new findings + 2 from prior batches:
+
+- **UK `vat_number`** (Batch 1) — Companies House profile does not return VAT. Drop or hook HMRC.
+- **BE `industry`** (Batch 2) — CBEAPI.be does not surface NACE. Drop or direct-KBO ingest.
+- **IE `vat_number`** *(Batch 3)* — CRO Open Data does not include VAT. Same shape as UK. Drop or hook Revenue VIES lookup.
+- **EE `vat_number`** *(Batch 3)* — Äriregister does not surface KMKR. Derivable algorithmically (`EE` + 9 digits) but executor doesn't.
+- **LV `vat_number`** *(Batch 3)* — `data.gov.lv` does not include PVN. Derivable for 40NNN-prefix entities but executor doesn't.
+- **PL `address`** *(Batch 3)* — declared but `null` 3/3 across major listed entities. The fixture's example output also shows `null`, indicating a *known* known issue not fixed since manifest authoring. **Most severe mismatch in the audit** — basic identity field declared but never returned. Worth a code-level investigation: scrape bug or genuinely absent from KRS public page?
+- **PL `registration_date`** *(Batch 3)* — same pattern as PL `address`. Declared, always null, fixture-acknowledged.
+
+**Schema-undercount findings (reverse — capability returns more than schema declares):**
+- **FI** *(Batch 3)* — returns `vat_number` (derived) and `website` but schema does not declare either. Add to schema.
+- **PL** *(Batch 3)* — returns `nip`, `register_type`, `share_capital` but schema does not declare them. `nip` is the underlying tax-ID source for `vat_number` — declare both.
 
 ### Sibling directors/officers capabilities discovered
 
-Searched `apps/api/src/capabilities/` for any capability with a directors / officers / UBO / shareholder / participant slug scoped to NO / DK / FR / BE / CZ. **None found.** Only the existing 3:
+Same set as Batch 2 — no new country-scoped siblings exist for any of FI/IE/EE/PL/LV. Total inventory:
 - `uk-companies-house-officers.ts` (UK-specific, free)
 - `officer-search.ts` (multi-country, currently UK + US only per its docstring; EU was removed under DEC-20260427-I commercial-KYB scraping ban)
 - `gleif-l2-ubo-lookup.ts` (global GLEIF, not country-scoped)
 
-No country-scoped sibling exists for NO/DK/FR/BE/CZ. NO and CZ are the cleanest direct-build candidates (both have free official endpoints documented above). FR already has directors inline in the main capability, no sibling needed.
+No country-scoped sibling exists for NO/DK/FR/BE/CZ/FI/IE/EE/PL/LV. Of these 10, all but DK/SG (paid) and FR (inline) are clean **free-path direct-build candidates** per the bullet list above. That's a build queue of ~9 capabilities, each likely small (sharing the underlying scrape/fetch route of the existing primary capability).
+
+### Wire-shape inconsistencies — cross-country status + legal-form vocabulary
+
+Tracked across 15 countries, the `status` field is anything but standardised:
+- `"active"` — SE, NO, FI, CZ, FR, BE
+- `"Registered"` — SG
+- `"Reģistrēts"` — LV
+- `"Normal"` — IE
+- `"active"` — UK
+- `"active"` — EE, PL (both surface the English word despite local-language elsewhere — executor-normalised likely)
+- (DE/DK quota-blocked)
+
+`legal_form` / `business_type` is also inconsistent:
+- Numeric code: CZ (`"121"`), FR (`"5800"` / `"5599"`), EE for AS branch only (`"1"`)
+- Human-readable label: SE (`"Aktiebolag"`), NO (`"Allmennaksjeselskap"`), UK (`"plc"`), IE (`"LTD - Private Company..."`), BE (`"Société anonyme"`), LV (`"Akciju sabiedrība"`), PL (`"SPÓŁKA AKCYJNA"`), FI (`"Public limited company"`), EE for OÜ branch (`"OÜ (Private limited company)"`)
+
+EE's intra-capability inconsistency (numeric for AS, label for OÜ) is the worst case. Solutions filtering on legal form across countries currently need 15+ vocabulary-per-country maps. Worth a dedicated wire-shape normalisation pass before v1 launch.
 
 ### Follow-up Notion updates needed (surface in chat, not implemented here)
 
-10-of-20 sample is now substantial enough to flag specific drift:
+15-of-20 sample is now substantial:
 
-- **Capability × Country Coverage Matrix:** if SE/UK/NO/CZ/BE/DK/SG entries claim "directors" coverage today, they should drop to "no" (no country except FR returns directors in their primary identity capability).
-- **Capability × Country Coverage Matrix:** FR should be marked "yes (capped at 3)" for directors. The cap is significant for KYB customers — full director rosters require uncapping.
-- **Active Vendor Stack:** confirm DE's OpenRegister and DK's cvrapi.dk free-tier quotas are accurately documented (DEC-20260508-D for DE; the DK manifest's "Empirical floor ~50/day" deserves equivalent decision-DB cross-reference).
-- **DK schema** should declare `vat_number` (derived from CVR) — currently missing. SE pattern is the template.
-- **BE schema** should drop `industry` (always null via CBEAPI.be wrapper) or migrate to direct KBO ingest.
+- **Capability × Country Coverage Matrix:** any country other than FR currently claiming "directors" coverage should drop to "no" or "via sibling capability."
+- **Capability × Country Coverage Matrix:** FR should be marked "yes (capped at 3, true count 15–20)".
+- **Active Vendor Stack:** confirm DE/DK quota disclosures are accurately documented per current state.
+- **Per-capability schema cleanups:** drop the 7 `0/3` declared fields (or implement what they promise) — UK/IE/EE/LV `vat_number`, BE `industry`, PL `address` + `registration_date`.
+- **FI schema** should declare the returned `vat_number` and `website` (currently schema-undercount).
+- **PL schema** should declare returned `nip`, `register_type`, `share_capital` (currently schema-undercount).
+- **EE `business_type` bug:** intra-capability inconsistency (numeric vs label) is a real bug worth a fix-it task.
 
-### Pilot — 10 countries scored, 10 remaining + Phase 2 + Phase 3
+### Pilot — 15 countries scored, 5 remaining + Phase 2 + Phase 3
 
-Remaining Phase 1 countries: FI, IE, EE, PL, LV, LT, SK, HR, GR, CH. The pilot's findings on identifier validation, response schema variance, and quota surfacing all carry over.
+Remaining Phase 1 countries: CH, GR, HR, LT, SK. The pilot's findings on identifier validation, response schema variance, quota surfacing, and wire-shape inconsistency all carry over.
 
-Methodology recommendations for the follow-up:
-1. Run an HTTP HEAD on Companies House or equivalent for each entity's identifier *before* invoking the capability (cheaper than the wallet-charged not-found error path).
-2. Use the prod API path (`POST /v1/do` with `inputs:` plural and `max_price_cents`) — verified working across both batches.
-3. Budget €0.60 wallet spend per 5-country batch at current pricing. Below €5 for the remaining 10 countries.
+Methodology recommendations for the follow-up (Batch 4):
+1. Run an HTTP HEAD on the relevant upstream endpoint for each entity's identifier *before* invoking the capability (cheaper than wallet-charged 404 path).
+2. Use the prod API path (`POST /v1/do` with `inputs:` plural and `max_price_cents`) — verified across 3 batches.
+3. Budget €0.75 wallet spend for the remaining 5 countries.
 4. For DE specifically, do not re-test before 2026-06-01 unless Pro-tier upgrade has shipped. DK can be re-tested after the daily reset (~24h cycle).
-5. **Add a `directors` discovery step to per-country detail.** When the schema doesn't declare directors, name the free upstream endpoint (or absence thereof) explicitly. This is the canonical input to Phase 4 (orchestration).
+5. **Add a `directors` discovery step to per-country detail.** When the schema doesn't declare directors, name the free upstream endpoint (or absence thereof) explicitly — this is the canonical input to Phase 4 (orchestration).
+6. **Flag any new wire-shape vocabulary divergence** — particularly status and legal_form values. Batch 4 has CH (likely German/French labels), GR (Greek script likely), HR/LT/SK (each their own local conventions). Wire-shape vocabulary will probably grow.
 
 ---
 
@@ -378,7 +531,12 @@ Methodology recommendations for the follow-up:
 8. **BE `industry` field** — declared but always null (3/3). CBEAPI.be wrapper does not surface NACE from KBO/BCE. Either drop from schema or accelerate the planned KBO Open Data first-party ingest. Suggest adding to the v1 launch punch list alongside UK `vat_number`.
 9. **FR directors payload cap at 3** — `directors_truncated: true` for all 3 entities tested; true counts are 15–20. KYB customers will need full rosters. Decision: raise the cap, paginate, or accept that customers needing full rosters must call a separate endpoint? Tag for v1 product decision.
 10. **CZ `legal_form_code` as numeric string** — returned as `"121"` not `"akciová společnost"`. Consistent with FR's `business_type: "5800"` shape. Are we standardising on numeric codes everywhere with human-readable labels in a `_label` companion field? Cross-country wire-shape consistency review item.
+11. **PL `address` + `registration_date` both `null` 3/3** *(Batch 3 finding)* — Most severe schema-vs-reality mismatch in the audit. The fixture's example output already shows these as null, so it's a known issue not fixed. Is the KRS scrape failing to extract these fields, or is the public KRS page genuinely missing them? Code-level investigation before v1.
+12. **EE `business_type` intra-capability inconsistency** *(Batch 3 finding)* — AS-branch returns `"1"` (numeric code), OÜ-branch returns `"OÜ (Private limited company)"` (human label). Real bug. Pick one shape and normalise the other branch.
+13. **FI / PL schema-undercount** *(Batch 3 finding)* — Both return fields not declared in `output_schema`. FI: `vat_number`, `website`. PL: `nip`, `register_type`, `share_capital`. Declare them. Easy schema wins.
+14. **Build-queue prioritisation for directors siblings** *(Batch 3 finding)* — 9 free-path direct-build candidates surfaced across Batches 1+2+3 (SE/UK exists, NO/CZ/BE/FI/IE/EE/PL/LV available). Which order? Suggest scoring by: (a) likely KYB customer demand by jurisdiction, (b) capability-extension cost (same scrape route = cheap; new integration = costly), (c) wire-shape consistency wins. Worth a chat decision before Batch 4 surfaces another batch of candidates.
+15. **CKAN-thinness hypothesis refuted** *(Batch 3 finding)* — IE and LV CKAN-based registries returned 12+ rich fields each. SI's structural thinness is unique to the data.gov.si open subset, not a CKAN-architecture issue. Worth correcting any prior briefing that implied otherwise.
 
 ---
 
-*Generated by Claude Code session 2026-05-15 (two batches). Wallet spend: €1.20 total (€0.60 Batch 1 + €0.60 Batch 2). Worktree: strale-research, branch `docs/identity-field-coverage-2026-05-15`. No code changes, no DB changes, no PR.*
+*Generated by Claude Code session 2026-05-15 (three batches). Wallet spend: €1.95 total (€0.60 Batch 1 + €0.60 Batch 2 + €0.75 Batch 3). Worktree: strale-research, branch `docs/identity-field-coverage-2026-05-15`. No code changes, no DB changes, no PR.*
