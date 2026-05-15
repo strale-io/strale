@@ -9,6 +9,13 @@ const API = "https://recherche-entreprises.api.gouv.fr";
 const SIREN_RE = /^\d{9}$/;
 const SIRET_RE = /^\d{14}$/;
 
+// Cap directors at 50. Typical major French entities have 15-20 directors;
+// the prior cap of 3 was empirically too aggressive (audit:
+// apps/api/docs/fr-directors-truncation-2026-05-15.md). 50 covers the long
+// tail without pathological payload growth, preserving directors_truncated /
+// total_directors honesty for state entities, mutuelles, etc.
+const DIRECTORS_CAP = 50;
+
 function findSiren(input: string): string | null {
   const cleaned = input.replace(/[\s.-]/g, "");
   if (SIREN_RE.test(cleaned)) return cleaned;
@@ -50,10 +57,10 @@ async function searchCompany(query: string): Promise<Record<string, unknown>> {
   // company_name and siren: null instead of "" when missing — empty string
   // implies "we got a value, it was empty" rather than "the source omitted
   // the field" (DEC-20260428-B).
-  // Directors: keep the slice(0, 3) but expose truncation transparency via
-  // companion fields so consumers know more directors exist beyond the slice.
+  // Directors: cap at DIRECTORS_CAP (50). directors_truncated / total_directors
+  // preserve honest disclosure for the rare 50+ case.
   const allDirectors = Array.isArray(c.dirigeants) ? c.dirigeants : [];
-  const directors = allDirectors.slice(0, 3).map((d: any) =>
+  const directors = allDirectors.slice(0, DIRECTORS_CAP).map((d: any) =>
     `${d.prenoms || ""} ${d.nom || ""}`.trim() + (d.qualite ? ` (${d.qualite})` : ""),
   );
 
@@ -71,7 +78,7 @@ async function searchCompany(query: string): Promise<Record<string, unknown>> {
     status: c.etat_administratif === "A" ? "active" : c.etat_administratif === "C" ? "closed" : c.etat_administratif || "unknown",
     vat_number: c.siren ? deriveVatFR(c.siren) : null,
     directors,
-    directors_truncated: allDirectors.length > 3,
+    directors_truncated: allDirectors.length > DIRECTORS_CAP,
     total_directors: allDirectors.length,
   };
 }
