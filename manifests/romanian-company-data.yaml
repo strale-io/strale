@@ -1,10 +1,10 @@
-slug: dutch-company-data
-name: Dutch Company Data
+slug: romanian-company-data
+name: Romanian Company Data
 description: >-
-  Look up Dutch company data via Openapi.com WW-Top (Tier-3 vendor aggregator). Accepts Dutch VAT/BTW number
-  (NL + 9 digits + B + 2 digits). Returns name, registration number, status, registered address, registration
-  date, LEI, primary NACE code, and last-update timestamp. KvK 8-digit registration numbers are NOT accepted by
-  the upstream API.
+  Look up Romanian company data via Openapi.com WW-Top (Tier-3 vendor aggregator). Accepts Romanian VAT (RO + 8
+  digits), 13-digit CUI, or 8-digit CUI. Returns name, registration number, status, registered address,
+  registration date, LEI, primary NACE code, and last-update timestamp. PARTIAL coverage — 7-digit CUI entities
+  (legacy banks, older corporations) are structurally rejected by the upstream catalog.
 category: company-data
 cost_class: paid_per_call
 price_cents: 16
@@ -17,24 +17,26 @@ input_schema:
   properties:
     vat_number:
       type: string
-      description: Dutch VAT/BTW number (NL + 9 digits + B + 2 digits, e.g. NL803441526B01). KvK numbers are NOT accepted.
+      description: >-
+        Romanian VAT (RO + 8 digits, e.g. RO13267213), 13-digit CUI, or 8-digit CUI. 7-digit CUI entities are
+        not in the upstream catalog (Banca Transilvania RO5022670, OMV Petrom RO1590082 confirmed unreachable).
 output_schema:
   type: object
   example:
-    company_name: ASML Holding N.V.
-    native_company_name: ASML Holding N.V.
-    registration_number: "17085815"
-    vat_number: NL803441526B01
-    country_code: NL
+    company_name: Societatea de Producere a Energiei Electrice in Hidrocentrale Hidroelectrica S.A.
+    native_company_name: Societatea de Producere a Energiei Electrice in Hidrocentrale Hidroelectrica S.A.
+    registration_number: "13267213"
+    vat_number: RO13267213
+    country_code: RO
     legal_form: null
     status: active
     is_active: true
-    registered_date: "1994-10-04"
-    registered_address: "De Run 6501, 6501, 5504 DR, Veldhoven, NL"
-    lei_code: 724500Y6DUVHQD6OXN27
+    registered_date: "2000-07-29"
+    registered_address: "Bulevardul Ion Mihalache, Bucharest, RO"
+    lei_code: 787200IISRQXO9PRB732
     nace_codes:
-      - code: "2611"
-        description: Manufacture of electronic components
+      - code: "3511"
+        description: Production of electricity
     company_size: Very large company
     source_as_of: "2026-04-30T12:00:00.000Z"
   properties:
@@ -67,17 +69,17 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      vat_number: NL803441526B01
+      vat_number: RO13267213
     expected_fields:
       - { field: company_name, operator: not_null, reliability: guaranteed }
-      - { field: vat_number, operator: equals, reliability: guaranteed, value: NL803441526B01 }
-      - { field: country_code, operator: equals, reliability: guaranteed, value: NL }
+      - { field: vat_number, operator: equals, reliability: guaranteed, value: RO13267213 }
+      - { field: country_code, operator: equals, reliability: guaranteed, value: RO }
       - { field: status, operator: equals, reliability: guaranteed, value: active }
       - { field: is_active, operator: equals, reliability: guaranteed, value: true }
       - { field: registered_address, operator: not_null, reliability: guaranteed }
       - { field: registration_number, operator: not_null, reliability: guaranteed }
   health_check_input:
-    vat_number: NL803441526B01
+    vat_number: RO13267213
 output_field_reliability:
   company_name: guaranteed
   native_company_name: common
@@ -90,7 +92,7 @@ output_field_reliability:
   registered_date: common
   registered_address: guaranteed
   lei_code: common
-  nace_codes: guaranteed
+  nace_codes: common
   company_size: common
   source_as_of: guaranteed
 limitations:
@@ -101,12 +103,15 @@ limitations:
       capability-unavailable.
     category: availability
     severity: warning
-  - title: KvK numbers rejected
-    text: Openapi WW-Top accepts only NL-prefix VAT format. KvK 8-digit registration numbers return 406.
+  - title: PARTIAL coverage — 7-digit CUI entities structurally unreachable
+    text: >-
+      Openapi WW-Top regex is ^RO\d{8}$ | ^\d{13}$ | ^\d{8}$. Entities with 7-digit CUI (Banca Transilvania
+      RO5022670, OMV Petrom RO1590082) are structurally rejected with 406 across all 4 probe attempts. Anomaly
+      logged on Openapi support case 151296. 8-digit-CUI entities (Hidroelectrica RO13267213) work fine.
     category: coverage
-    severity: info
+    severity: warning
   - title: Legal form not returned at WW-Top tier
-    text: Openapi WW-Top does not return Dutch legal form.
+    text: Openapi WW-Top does not return Romanian legal form.
     category: coverage
     severity: info
   - title: Directors not available at WW-Top tier

@@ -1,10 +1,9 @@
-slug: dutch-company-data
-name: Dutch Company Data
+slug: bulgarian-company-data
+name: Bulgarian Company Data
 description: >-
-  Look up Dutch company data via Openapi.com WW-Top (Tier-3 vendor aggregator). Accepts Dutch VAT/BTW number
-  (NL + 9 digits + B + 2 digits). Returns name, registration number, status, registered address, registration
-  date, LEI, primary NACE code, and last-update timestamp. KvK 8-digit registration numbers are NOT accepted by
-  the upstream API.
+  Look up Bulgarian company data via Openapi.com WW-Top (Tier-3 vendor aggregator). Accepts UIC/EIK (9 digits,
+  optionally BG-prefixed). Returns name, registration number, status, registered address, registration date, LEI,
+  primary NACE code, and last-update timestamp. Directors are not returned at the WW-Top tier.
 category: company-data
 cost_class: paid_per_call
 price_cents: 16
@@ -17,24 +16,24 @@ input_schema:
   properties:
     vat_number:
       type: string
-      description: Dutch VAT/BTW number (NL + 9 digits + B + 2 digits, e.g. NL803441526B01). KvK numbers are NOT accepted.
+      description: Bulgarian UIC/EIK (9 digits, optionally BG-prefixed; e.g. 831902088 or BG831902088).
 output_schema:
   type: object
   example:
-    company_name: ASML Holding N.V.
-    native_company_name: ASML Holding N.V.
-    registration_number: "17085815"
-    vat_number: NL803441526B01
-    country_code: NL
+    company_name: Sopharma
+    native_company_name: Софарма
+    registration_number: "831902088"
+    vat_number: BG831902088
+    country_code: BG
     legal_form: null
     status: active
     is_active: true
-    registered_date: "1994-10-04"
-    registered_address: "De Run 6501, 6501, 5504 DR, Veldhoven, NL"
-    lei_code: 724500Y6DUVHQD6OXN27
+    registered_date: "1991-04-18"
+    registered_address: "Iliensko Shose, 16, Sofia, BG"
+    lei_code: 097900BGGW0000048796
     nace_codes:
-      - code: "2611"
-        description: Manufacture of electronic components
+      - code: "2120"
+        description: Manufacture of pharmaceutical preparations
     company_size: Very large company
     source_as_of: "2026-04-30T12:00:00.000Z"
   properties:
@@ -67,17 +66,17 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      vat_number: NL803441526B01
+      vat_number: "831902088"
     expected_fields:
       - { field: company_name, operator: not_null, reliability: guaranteed }
-      - { field: vat_number, operator: equals, reliability: guaranteed, value: NL803441526B01 }
-      - { field: country_code, operator: equals, reliability: guaranteed, value: NL }
+      - { field: country_code, operator: equals, reliability: guaranteed, value: BG }
       - { field: status, operator: equals, reliability: guaranteed, value: active }
       - { field: is_active, operator: equals, reliability: guaranteed, value: true }
       - { field: registered_address, operator: not_null, reliability: guaranteed }
       - { field: registration_number, operator: not_null, reliability: guaranteed }
+      - { field: nace_codes, operator: not_null, reliability: guaranteed }
   health_check_input:
-    vat_number: NL803441526B01
+    vat_number: "831902088"
 output_field_reliability:
   company_name: guaranteed
   native_company_name: common
@@ -101,12 +100,8 @@ limitations:
       capability-unavailable.
     category: availability
     severity: warning
-  - title: KvK numbers rejected
-    text: Openapi WW-Top accepts only NL-prefix VAT format. KvK 8-digit registration numbers return 406.
-    category: coverage
-    severity: info
   - title: Legal form not returned at WW-Top tier
-    text: Openapi WW-Top does not return Dutch legal form.
+    text: Openapi WW-Top does not return Bulgarian legal form. Customers needing legal form must derive it from the registered name suffix.
     category: coverage
     severity: info
   - title: Directors not available at WW-Top tier
