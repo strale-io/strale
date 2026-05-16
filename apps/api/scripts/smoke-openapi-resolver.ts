@@ -35,20 +35,27 @@ const OFFLINE_ONLY = !LIVE;
 interface CountryConfig {
   country: string;
   slug: string;
+  product: "ww-top" | "es-advanced" | "pt-advanced";
   validFixture: Record<string, string>;
   invalidShape: Record<string, string>; // pre-flight regex reject
   expectedCompanyName: string;          // for live verify (loose match)
+  // Tier 3 fields expected populated. WW-Top: just NACE (1/6).
+  // ES/PT-Advanced: NACE + last_filing_date (2/6). IT-Advanced (Phase 2c):
+  // adds shareHolders[] (4/6); IT-Full adds managers + subsidiaries.
+  expectedT3Fields: string[];
 }
 
 const COUNTRIES: CountryConfig[] = [
-  { country: "AT", slug: "austrian-company-data", validFixture: { vat_number: "ATU14189108" }, invalidShape: { vat_number: "FN93363z" }, expectedCompanyName: "OMV" },
-  { country: "BG", slug: "bulgarian-company-data", validFixture: { vat_number: "831902088" }, invalidShape: { vat_number: "ABC" }, expectedCompanyName: "Sopharma" },
-  { country: "CY", slug: "cypriot-company-data", validFixture: { vat_number: "C165" }, invalidShape: { vat_number: "INVALID" }, expectedCompanyName: "Bank of Cyprus" },
-  { country: "HU", slug: "hungarian-company-data", validFixture: { vat_number: "HU10537914" }, invalidShape: { vat_number: "01-10-041585" }, expectedCompanyName: "OTP" },
-  { country: "LU", slug: "luxembourgish-company-data", validFixture: { vat_number: "LU18513414" }, invalidShape: { vat_number: "B10807" }, expectedCompanyName: "RTL" },
-  { country: "MT", slug: "maltese-company-data", validFixture: { vat_number: "MT12826209" }, invalidShape: { vat_number: "C 2833" }, expectedCompanyName: "GO" },
-  { country: "NL", slug: "dutch-company-data", validFixture: { vat_number: "NL803441526B01" }, invalidShape: { vat_number: "17085815" }, expectedCompanyName: "ASML" },
-  { country: "RO", slug: "romanian-company-data", validFixture: { vat_number: "RO13267213" }, invalidShape: { vat_number: "INVALID" }, expectedCompanyName: "Hidroelectrica" },
+  { country: "AT", slug: "austrian-company-data", product: "ww-top", validFixture: { vat_number: "ATU14189108" }, invalidShape: { vat_number: "FN93363z" }, expectedCompanyName: "OMV", expectedT3Fields: ["nace_codes"] },
+  { country: "BG", slug: "bulgarian-company-data", product: "ww-top", validFixture: { vat_number: "831902088" }, invalidShape: { vat_number: "ABC" }, expectedCompanyName: "Sopharma", expectedT3Fields: ["nace_codes"] },
+  { country: "CY", slug: "cypriot-company-data", product: "ww-top", validFixture: { vat_number: "C165" }, invalidShape: { vat_number: "INVALID" }, expectedCompanyName: "Bank of Cyprus", expectedT3Fields: ["nace_codes"] },
+  { country: "HU", slug: "hungarian-company-data", product: "ww-top", validFixture: { vat_number: "HU10537914" }, invalidShape: { vat_number: "01-10-041585" }, expectedCompanyName: "OTP", expectedT3Fields: ["nace_codes"] },
+  { country: "LU", slug: "luxembourgish-company-data", product: "ww-top", validFixture: { vat_number: "LU18513414" }, invalidShape: { vat_number: "B10807" }, expectedCompanyName: "RTL", expectedT3Fields: ["nace_codes"] },
+  { country: "MT", slug: "maltese-company-data", product: "ww-top", validFixture: { vat_number: "MT12826209" }, invalidShape: { vat_number: "C 2833" }, expectedCompanyName: "GO", expectedT3Fields: ["nace_codes"] },
+  { country: "NL", slug: "dutch-company-data", product: "ww-top", validFixture: { vat_number: "NL803441526B01" }, invalidShape: { vat_number: "17085815" }, expectedCompanyName: "ASML", expectedT3Fields: ["nace_codes"] },
+  { country: "RO", slug: "romanian-company-data", product: "ww-top", validFixture: { vat_number: "RO13267213" }, invalidShape: { vat_number: "INVALID" }, expectedCompanyName: "Hidroelectrica", expectedT3Fields: ["nace_codes"] },
+  { country: "ES", slug: "spanish-company-data", product: "es-advanced", validFixture: { vat_number: "A28015865" }, invalidShape: { vat_number: "INVALID" }, expectedCompanyName: "Telefonica", expectedT3Fields: ["nace_codes", "last_filing_date"] },
+  { country: "PT", slug: "portuguese-company-data", product: "pt-advanced", validFixture: { vat_number: "504499777" }, invalidShape: { vat_number: "ABC" }, expectedCompanyName: "Galp", expectedT3Fields: ["nace_codes", "last_filing_date"] },
 ];
 
 // Disable DB sync in auto-register — smoke runs locally without prod DB access.
@@ -141,15 +148,25 @@ async function runLiveTest(cfg: CountryConfig) {
     const t2OutputPopulated = t2OutputFields.filter((f) => output[f] !== null && output[f] !== undefined);
     record(cfg.country, `T2 output 2/2 (vat + source_as_of)`, t2OutputPopulated.length === 2, `${t2OutputPopulated.length}/2`);
 
-    // Tier 2 provenance fields (source_register_name, authoritative)
-    const provSourceOk = provenance.source === "Openapi.com WW-Top";
+    // Tier 2 provenance fields (source_register_name, authoritative).
+    // Source label is product-aware: "Openapi.com WW-Top" / "...ES-Advanced" / etc.
+    const provSourceOk = typeof provenance.source === "string" && provenance.source.startsWith("Openapi.com ");
     const provAuthOk = provenance.authoritative === false;
     record(cfg.country, "T2 provenance source-name + authoritative=false", provSourceOk && provAuthOk, `source=${provenance.source} authoritative=${provenance.authoritative}`);
 
-    // Tier 3 (NACE)
-    const nace = output.nace_codes;
-    const naceOk = Array.isArray(nace) && nace.length > 0;
-    record(cfg.country, "T3 NACE populated", naceOk);
+    // Tier 3 — per-product field expectations
+    const t3Populated = cfg.expectedT3Fields.filter((f) => {
+      const v = output[f];
+      if (Array.isArray(v)) return v.length > 0;
+      return v !== null && v !== undefined && v !== "";
+    });
+    const t3Denom = cfg.expectedT3Fields.length;
+    record(
+      cfg.country,
+      `T3 ${t3Denom}/${cfg.product === "ww-top" ? 6 : 6} expected (${cfg.expectedT3Fields.join("+")})`,
+      t3Populated.length === t3Denom,
+      `populated: ${t3Populated.join(",")}`,
+    );
   } catch (err) {
     record(cfg.country, "live HTTP call", false, String(err).slice(0, 200));
   }

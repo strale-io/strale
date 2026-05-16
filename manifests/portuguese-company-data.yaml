@@ -1,54 +1,65 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: portuguese-company-data
 name: Portuguese Company Data
 description: >-
-  [TEMPORARILY UNAVAILABLE 2026-04-29 — pending licensed PT registry or aggregator contract per DEC-20260428-A.] Look
-  up Portuguese company data from RNPC. Accepts NIPC (9 digits) or fuzzy company name.
-category: data-extraction
-price_cents: 80
+  Look up Portuguese company data via Openapi.com PT-Advanced (Tier-3 vendor aggregator). Accepts Portuguese NIPC
+  (9 digits). Returns name, registration number, status, registered address, registration date, LEI, primary NACE
+  code, last filing date (from balance-sheet data), and last-update timestamp. Directors are not returned at the
+  *-Advanced tier (Italian product line only).
+category: company-data
+cost_class: paid_per_call
+price_cents: 6
 is_free_tier: false
+avg_latency_ms: 2400
 input_schema:
   type: object
   required:
-    - nipc
+    - vat_number
   properties:
-    nipc:
+    vat_number:
       type: string
-      description: NIPC number (9 digits) or company name
+      description: Portuguese NIPC (9 digits, e.g. 504499777) or PT-prefix VAT (PT504499777).
 output_schema:
   type: object
   example:
-    status: unknown
-    address: null
-    industry: null
-    directors: null
-    company_name: null
-    business_type: null
-    registration_date: null
-    registration_number: null
+    company_name: Galp Energia, Sgps, S.A.
+    native_company_name: null
+    registration_number: "504499777"
+    vat_number: PT504499777
+    country_code: PT
+    legal_form: null
+    status: active
+    is_active: true
+    registered_date: "1999-04-22"
+    registered_address: "Avenida Da India, 8 6, 1349-065, Lisboa, PT"
+    lei_code: 2138003319Y7NM75FG53
+    nace_codes:
+      - code: "0910"
+        description: Support activities for petroleum and natural gas extraction
+    company_size: null
+    source_as_of: "2026-05-10T15:19:30.000Z"
+    last_filing_date: "2024-12-31"
   properties:
-    vat_number:
-      type:
-        - string
-        - "null"
-    status:
-      type: string
-    address:
-      type: string
-    company_name:
-      type: string
-    business_type:
-      type: string
-    registration_number:
-      type: string
-data_source: Registo Comercial (Portuguese Commercial Register)
-data_source_type: scrape
-transparency_tag: ai_generated
+    company_name: { type: string }
+    native_company_name: { type: ["string", "null"] }
+    registration_number: { type: string }
+    vat_number: { type: string }
+    country_code: { type: string }
+    legal_form: { type: ["string", "null"] }
+    status: { type: string, enum: [active, inactive, unknown] }
+    is_active: { type: boolean }
+    registered_date: { type: ["string", "null"] }
+    registered_address: { type: ["string", "null"] }
+    lei_code: { type: ["string", "null"] }
+    nace_codes: { type: array }
+    company_size: { type: ["string", "null"] }
+    source_as_of: { type: ["string", "null"] }
+    last_filing_date: { type: ["string", "null"] }
+data_source: Openapi.com PT-Advanced (Tier-3 vendor aggregator; Portuguese company-data product line)
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: scraping-stable-target
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+maintenance_class: commercial-stable-api
+gdpr_art_22_classification: data_lookup
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -58,26 +69,58 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      nipc: "503504564"
+      vat_number: "504499777"
     expected_fields:
-      - field: status
-        operator: not_null
-        reliability: guaranteed
-      - field: status
-        operator: type
-        reliability: guaranteed
-        value: string
+      - { field: company_name, operator: not_null, reliability: guaranteed }
+      - { field: country_code, operator: equals, reliability: guaranteed, value: PT }
+      - { field: status, operator: equals, reliability: guaranteed, value: active }
+      - { field: is_active, operator: equals, reliability: guaranteed, value: true }
+      - { field: registered_address, operator: not_null, reliability: guaranteed }
+      - { field: registration_number, operator: not_null, reliability: guaranteed }
+      - { field: nace_codes, operator: not_null, reliability: guaranteed }
+      - { field: last_filing_date, operator: not_null, reliability: guaranteed }
   health_check_input:
-    nipc: "503504564"
+    vat_number: "504499777"
 output_field_reliability:
-  status: guaranteed
-  address: guaranteed
   company_name: guaranteed
-  business_type: guaranteed
+  native_company_name: rare
   registration_number: guaranteed
+  vat_number: guaranteed
+  country_code: guaranteed
+  legal_form: rare
+  status: guaranteed
+  is_active: guaranteed
+  registered_date: guaranteed
+  registered_address: guaranteed
+  lei_code: common
+  nace_codes: guaranteed
+  company_size: rare
+  source_as_of: guaranteed
+  last_filing_date: guaranteed
 limitations:
-  - title: Extracted from Portal da Empresa via Browserless — detailed financial data requires paid IES filing access
-    text: Extracted from Portal da Empresa via Browserless — detailed financial data requires paid access to IES filings
+  - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
+    text: >-
+      Strale's resale of Openapi.com data requires the addendum issued via Openapi case 151296 (2026-05-08) to be
+      countersigned. Until then, OPENAPI_ENABLED stays false in production and this capability returns
+      capability-unavailable. price_cents flips from 6 to 5 (€0.061 → €0.05 net) when Moonlighter AB VAT confirms.
+    category: availability
+    severity: warning
+  - title: Legal form not returned at PT-Advanced tier
+    text: Openapi PT-Advanced does not return Portuguese legal form (S.A., Lda., etc.).
     category: coverage
     severity: info
-    workaround: Use the NIF from the response to access company filings via racius.com or einforma.pt
+  - title: Directors not available at PT-Advanced tier
+    text: >-
+      Directors / officers / shareholders are NOT returned at PT-Advanced — the directors-gap closure is IT-only
+      via Openapi IT-Full. Direct Registo Comercial / publicacoes.mj.pt integration queued as v1.1 quality
+      upgrade per DEC-20260507-C.
+    category: coverage
+    severity: info
+  - title: Share capital not returned at PT-Advanced tier
+    text: >-
+      Despite the Matrix's "share capital via balanceSheets" claim, the PT-Advanced response contains employees /
+      netWorth / operatingRevenue / equity / totalAssets per year, but NOT a dedicated shareCapital field. Tier 3
+      coverage is 2/6 (NACE + last_filing_date), not 3/6. Matrix needs reconciliation; documented for chat to
+      address separately. Only IT-Advanced surfaces shareCapital.
+    category: coverage
+    severity: info

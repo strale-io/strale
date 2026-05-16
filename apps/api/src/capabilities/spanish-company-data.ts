@@ -1,105 +1,64 @@
+// Spain — Openapi.com ES-Advanced (Tier-3 vendor aggregator).
+//
+// Phase 2b Openapi resolver replication. REPLACES the prior empresia.es +
+// infocif.es Browserless scraping path (Tier 1 violation per
+// DEC-20260427-I-4, deactivated 2026-04-29). Openapi is the licensed
+// multi-country aggregator path per DEC-20260507-C.
+//
+// Identifier shape: Spanish CIF/NIF — letter + 7 digits + check character
+// (letter or digit), e.g. A28015865 for Telefónica. The capability also
+// accepts ES-prefix VAT (ESA28015865) and strips the prefix.
+//
+// Field coverage (Matrix row 34867c87-082c-8178-8061-eda241b42b63):
+// Tier 1 6/7 (no legal_form via *-Advanced),
+// Tier 2 4/5 (no directors via *-Advanced — IT-only product line),
+// Tier 3 2/6 (NACE + last_filing_date; share_capital NOT returned by
+// ES-Advanced — Matrix's 3/6 claim with "share capital" is over-stated
+// by 1; only IT-Advanced has shareCapital).
+//
+// Direct Registradores / opendata.registradores.org integration queued
+// as v1.1 quality upgrade per DEC-20260507-C (separate workstream).
+
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { deriveVatES } from "../lib/vat-derivation.js";
-import {
-  fetchRenderedHtml,
-  htmlToText,
-  extractCompanyFromText,
-  extractCompanyName,
-} from "./lib/browserless-extract.js";
+import { executeOpenapiCapability } from "./lib/openapi-resolver.js";
 
-// Spain — CIF/NIF format: letter + 7 digits + check char
-const CIF_RE = /^[A-Z]\d{7}[A-Z0-9]$/;
+// CIF/NIF canonical: 1 letter + 7 digits + 1 check char (letter or digit).
+const ES_NIF_RE = /^[A-Z]\d{7}[A-Z0-9]$/;
 
-function findCif(input: string): string | null {
-  const cleaned = input.replace(/[\s.-]/g, "").toUpperCase();
-  if (CIF_RE.test(cleaned)) return cleaned;
-  const match = input.match(/[A-Z]\d{7}[A-Z0-9]/);
-  return match ? match[0] : null;
-}
-
-// Primary: empresia.es (BORME data, no SSL issues)
-async function lookupViaEmpresia(query: string, isCif: boolean): Promise<Record<string, unknown>> {
-  if (isCif) {
-    const html = await fetchRenderedHtml(`https://www.empresia.es/cif/${query}/`);
-    const text = htmlToText(html);
-    if (text.length < 200 || text.includes("404")) {
-      throw new Error(`No Spanish company found for CIF "${query}".`);
-    }
-    return extractCompanyFromText(text, "Spanish", query);
-  }
-
-  // Name lookup: try direct /empresa/{slug}/ first, fall back to search
-  const slug = query.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const directHtml = await fetchRenderedHtml(`https://www.empresia.es/empresa/${slug}/`);
-  const directText = htmlToText(directHtml);
-
-  if (directText.length >= 300 && !directText.includes("404") && !directText.includes("No encontrado")) {
-    return extractCompanyFromText(directText, "Spanish", query);
-  }
-
-  // Fallback: search page (requires JS rendering via Browserless)
-  const searchHtml = await fetchRenderedHtml(`https://www.empresia.es/buscador/?nombre=${encodeURIComponent(query)}`);
-  const searchText = htmlToText(searchHtml);
-
-  if (searchText.length < 200 || searchText.includes("No se encontraron")) {
-    throw new Error(`No Spanish company found matching "${query}".`);
-  }
-
-  return extractCompanyFromText(searchText, "Spanish", query);
-}
-
-// Fallback: infocif.es (may have SSL cert issues)
-async function lookupViaInfocif(query: string, isCif: boolean): Promise<Record<string, unknown>> {
-  const searchUrl = isCif
-    ? `https://www.infocif.es/ficha-empresa/${query}`
-    : `https://www.infocif.es/buscar-empresa?q=${encodeURIComponent(query)}`;
-
-  const html = await fetchRenderedHtml(searchUrl);
-  const text = htmlToText(html);
-
-  if (text.includes("No se encontraron") || text.includes("not found") || text.length < 200) {
-    throw new Error(`No Spanish company found matching "${query}".`);
-  }
-
-  return extractCompanyFromText(text, "Spanish", query);
+function normaliseEsIdentifier(raw: string): string | null {
+  const cleaned = raw.replace(/[\s.-]/g, "").toUpperCase();
+  // Strip ES-prefix VAT shape (ESA28015865 → A28015865)
+  const stripped = cleaned.startsWith("ES") ? cleaned.slice(2) : cleaned;
+  return ES_NIF_RE.test(stripped) ? stripped : null;
 }
 
 registerCapability("spanish-company-data", async (input: CapabilityInput) => {
-  const raw = (input.cif as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
-  if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'cif' or 'company_name' is required. Provide a CIF/NIF number (e.g. A28015865) or company name.");
+  const rawInput =
+    (input.vat_number as string) ??
+    (input.nif as string) ??
+    (input.cif as string) ??
+    (input.identifier as string) ??
+    "";
+  if (typeof rawInput !== "string" || !rawInput.trim()) {
+    throw new Error(
+      "'vat_number' or 'nif' is required. Provide a Spanish CIF/NIF (letter + 7 digits + check character, e.g. A28015865). ES-prefix VAT format is also accepted (e.g. ESA28015865).",
+    );
   }
-
-  const trimmed = raw.trim();
-  const cif = findCif(trimmed);
-  const query = cif ?? await extractCompanyName(trimmed, "Spanish");
-  const isCif = !!cif;
-
-  // Helper: add VAT derivation from CIF/NIF
-  const addVat = (output: Record<string, unknown>) => {
-    const regNum = (output.registration_number as string) ?? cif ?? "";
-    const vat = deriveVatES(regNum);
-    if (vat) output.vat_number = vat;
-    return output;
-  };
-
-  // Primary: empresia.es
-  try {
-    const output = addVat(await lookupViaEmpresia(query, isCif));
-    return {
-      output,
-      provenance: { source: "empresia.es", fetched_at: new Date().toISOString() },
-    };
-  } catch (primaryErr) {
-    // Fallback: infocif.es
-    try {
-      const output = addVat(await lookupViaInfocif(query, isCif));
-      return {
-        output,
-        provenance: { source: "infocif.es", fetched_at: new Date().toISOString() },
-      };
-    } catch {
-      throw primaryErr;
-    }
+  const normalised = normaliseEsIdentifier(rawInput.trim());
+  if (!normalised) {
+    throw new Error(
+      `'${rawInput.trim()}' is not a valid Spanish CIF/NIF. Expected format: letter + 7 digits + check character (e.g. A28015865).`,
+    );
   }
+  return executeOpenapiCapability(
+    {
+      countryCode: "ES",
+      identifierRegex: ES_NIF_RE,
+      openapiProduct: "es-advanced",
+      capabilitySlug: "spanish-company-data",
+    },
+    normalised,
+  );
 });
+
+export { ES_NIF_RE };

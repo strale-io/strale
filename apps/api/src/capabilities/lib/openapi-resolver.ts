@@ -1,15 +1,20 @@
-// Openapi.com WW-Top resolver — shared helper for Tier-3 vendor-aggregator
+// Openapi.com resolver — shared helper for Tier-3 vendor-aggregator
 // capabilities backed by the Openapi.com product line.
 //
 // Auth model: OAuth scope-exchange.
 //   1. POST https://oauth.openapi.it/token with HTTP Basic (email:api-token)
 //      and JSON body {"scopes":[scope],"ttl":600} → opaque Bearer, ~10 min TTL.
-//   2. GET https://company.openapi.com/WW-top/{country}/{identifier} with
+//   2. GET https://company.openapi.com/{PRODUCT}/{path...} with
 //      Authorization: Bearer <token>.
 //
-// Phase 1 only handles the WW-Top product. Phase 2 will extend the product
-// switch to handle country-specific Start/Advanced endpoints (ES-Advanced,
-// PT-Advanced, IT-Advanced, etc.) — those have richer response shapes.
+// Supported products (Phase 2b):
+//   ww-top      — global, country-keyed (BG/CY/HU/LU/MT/NL/RO/AT). T3=1/6 (NACE).
+//   es-advanced — Spain, NIF-keyed. T3=2/6 (NACE + last_filing_date).
+//   pt-advanced — Portugal, NIPC-keyed. T3=2/6 (NACE + last_filing_date).
+//
+// Phase 2c will add IT-advanced (shareHolders[]) + IT-full (managers,
+// subsidiaries, affiliateCompanies). The product-switch design (see
+// PRODUCT_REGISTRY below) is the extension point.
 //
 // Gating: process.env.OPENAPI_ENABLED must equal "true" or the resolver
 // returns a capability-unavailable error before any HTTP call. This is
@@ -17,15 +22,16 @@
 // countersignature (case 151296). The flag stays off in production until
 // that lands.
 //
-// Reference: c:/tmp/openapi-research/v4-2026-05-15/output.json + per-call
-// response files at c:/tmp/openapi-research/v4-2026-05-15/responses/.
+// Reference: c:/tmp/openapi-research/v4-2026-05-15/output.json (WW-Top
+// per-call responses) + c:/tmp/openapi-coverage-probe-v3-2026-05-15.json
+// (ES/PT-Advanced response shapes verified).
 
 import { log } from "../../lib/log.js";
 
-export type OpenapiProduct = "ww-top";
+export type OpenapiProduct = "ww-top" | "es-advanced" | "pt-advanced";
 
 export interface OpenapiResolverConfig {
-  countryCode: string;          // ISO 3166-1 alpha-2 (path segment for WW-Top)
+  countryCode: string;          // ISO 3166-1 alpha-2
   identifierRegex: RegExp;      // pre-flight identifier-shape validation
   openapiProduct: OpenapiProduct;
   capabilitySlug: string;       // for log context + error messages
@@ -95,8 +101,8 @@ async function issueToken(scope: string): Promise<string> {
   return data.token;
 }
 
-// ─── WW-Top response shape (subset; verified against v4 AT/OMV response) ───
-interface WWTopAddress {
+// ─── Shared response sub-types ─────────────────────────────────────────────
+interface OpenapiAddress {
   registeredOffice?: {
     town?: string | null;
     country?: string | null;
@@ -106,43 +112,83 @@ interface WWTopAddress {
     nativeTown?: string | null;
   };
 }
-interface WWTopMarker {
-  label?: string;
-  number?: string;
-  types?: string[];
-}
-interface WWTopNaceItem {
+interface WwTopNaceItem {
   code?: string;
   description?: string;
 }
-interface WWTopData {
+interface FlatNace {
+  code?: string;
+  description?: string;
+}
+interface BalanceSheetEntry {
+  year?: number;
+  balanceSheetDate?: string;
+  employees?: number;
+  netWorth?: number;
+  operatingRevenue?: number;
+  equity?: number;
+  totalAssets?: number;
+}
+
+// ─── WW-Top response shape (verified against v4 AT/OMV response) ───────────
+interface WwTopData {
   id?: string;
   lastUpdateTimestamp?: number;
   companyName?: string;
   nativeCompanyName?: string;
   companyNumber?: string;
   vatCode?: string;
+  taxCode?: string;
   leiCode?: string;
   companySize?: string;
-  markers?: WWTopMarker[];
-  address?: WWTopAddress;
+  address?: OpenapiAddress;
   activityStatus?: string;
   incorporationDate?: string;
   internationalClassification?: {
     nace?: {
-      primary?: WWTopNaceItem[];
-      secondary?: WWTopNaceItem[];
+      primary?: WwTopNaceItem[];
+      secondary?: WwTopNaceItem[];
     };
   };
 }
-interface WWTopResponse {
-  data?: WWTopData[];
+
+// ─── ES/PT-Advanced response shape (verified against v3 probe ─────────────
+// Phase B Telefonica + Galp responses). Shares identity fields with
+// WW-Top but NACE is flat (single object, not array) and adds
+// balanceSheets (last + 4-year history with employees, equity,
+// operatingRevenue, totalAssets, netWorth, balanceSheetDate).
+interface IberianAdvancedData {
+  id?: string;
+  lastUpdateTimestamp?: number;
+  companyName?: string;
+  nativeCompanyName?: string;
+  taxCode?: string;
+  vatCode?: string;
+  leiCode?: string;
+  address?: OpenapiAddress;
+  activityStatus?: string;
+  incorporationDate?: string;
+  contacts?: { fax?: string; phone?: string; website?: string };
+  internationalClassification?: {
+    nace?: FlatNace;
+    naics?: FlatNace;
+    sic?: FlatNace;
+  };
+  balanceSheets?: {
+    last?: BalanceSheetEntry;
+    all?: BalanceSheetEntry[];
+  };
+}
+
+interface OpenapiResponse<T> {
+  data?: T[];
   success?: boolean;
   message?: string;
   error?: unknown;
 }
 
-function composeAddress(addr: WWTopAddress | undefined): string | null {
+// ─── Shared mappers ────────────────────────────────────────────────────────
+function composeAddress(addr: OpenapiAddress | undefined): string | null {
   if (!addr?.registeredOffice) return null;
   const o = addr.registeredOffice;
   const street =
@@ -176,34 +222,134 @@ function normaliseStatus(raw: string | undefined): "active" | "inactive" | "unkn
   return "unknown";
 }
 
-function nacePrimary(
-  data: WWTopData,
+function wwTopNacePrimary(
+  data: WwTopData,
 ): { code: string; description: string } | null {
   const p = data.internationalClassification?.nace?.primary?.[0];
   if (!p?.code) return null;
   return { code: p.code, description: p.description ?? "" };
 }
 
-interface CallResult {
+function iberianNace(
+  data: IberianAdvancedData,
+): { code: string; description: string } | null {
+  const p = data.internationalClassification?.nace;
+  if (!p?.code) return null;
+  return { code: p.code, description: p.description ?? "" };
+}
+
+// ─── Per-product registry (URL builder + scope + mapper dispatch) ──────────
+interface ProductDispatch {
+  /** Build the fetch URL for a given country + identifier. */
+  buildUrl: (country: string, id: string) => string;
+  /** OAuth scope string required for this product. */
+  scope: string;
+  /** Human-readable provenance.source label. */
+  sourceLabel: string;
+}
+
+const PRODUCT_REGISTRY: Record<OpenapiProduct, ProductDispatch> = {
+  "ww-top": {
+    buildUrl: (country, id) =>
+      `https://company.openapi.com/WW-top/${encodeURIComponent(country)}/${encodeURIComponent(id)}`,
+    scope: "GET:company.openapi.com/WW-top",
+    sourceLabel: "Openapi.com WW-Top",
+  },
+  "es-advanced": {
+    // Country-specific products take a single path segment (the identifier).
+    // No country path segment because the product name encodes the country.
+    buildUrl: (_country, id) =>
+      `https://company.openapi.com/ES-advanced/${encodeURIComponent(id)}`,
+    scope: "GET:company.openapi.com/ES-advanced",
+    sourceLabel: "Openapi.com ES-Advanced",
+  },
+  "pt-advanced": {
+    buildUrl: (_country, id) =>
+      `https://company.openapi.com/PT-advanced/${encodeURIComponent(id)}`,
+    scope: "GET:company.openapi.com/PT-advanced",
+    sourceLabel: "Openapi.com PT-Advanced",
+  },
+};
+
+// ─── Mappers (produce Strale output{} per product) ─────────────────────────
+function mapWwTopOutput(
+  data: WwTopData,
+  config: OpenapiResolverConfig,
+  trimmed: string,
+): Record<string, unknown> {
+  const status = normaliseStatus(data.activityStatus);
+  const nace = wwTopNacePrimary(data);
+  const sourceAsOf = epochSecondsToIso(data.lastUpdateTimestamp);
+  return {
+    company_name: data.companyName ?? data.nativeCompanyName ?? null,
+    native_company_name: data.nativeCompanyName ?? null,
+    registration_number: data.companyNumber ?? trimmed,
+    vat_number: data.vatCode ?? trimmed,
+    country_code: config.countryCode,
+    legal_form: null,
+    status,
+    is_active: status === "active",
+    registered_date: data.incorporationDate ?? null,
+    registered_address: composeAddress(data.address),
+    lei_code: data.leiCode ?? null,
+    nace_codes: nace ? [nace] : [],
+    company_size: data.companySize ?? null,
+    source_as_of: sourceAsOf,
+  };
+}
+
+function mapIberianAdvancedOutput(
+  data: IberianAdvancedData,
+  config: OpenapiResolverConfig,
+  trimmed: string,
+): Record<string, unknown> {
+  const status = normaliseStatus(data.activityStatus);
+  const nace = iberianNace(data);
+  const sourceAsOf = epochSecondsToIso(data.lastUpdateTimestamp);
+  // last_filing_date comes from balanceSheets.last.balanceSheetDate (already
+  // ISO YYYY-MM-DD per probe data). NOTE: share_capital is NOT present in
+  // ES/PT-Advanced response — only IT-Advanced has shareCapital. Matrix's
+  // "T3 3/6 (NACE + share capital + last filing year)" claim is incorrect
+  // for ES/PT; reality is 2/6 (NACE + last_filing_date). See PR description.
+  const lastFilingDate = data.balanceSheets?.last?.balanceSheetDate ?? null;
+  return {
+    company_name: data.companyName ?? data.nativeCompanyName ?? null,
+    native_company_name: data.nativeCompanyName ?? null,
+    registration_number: data.taxCode ?? trimmed,
+    vat_number: data.vatCode ?? trimmed,
+    country_code: config.countryCode,
+    legal_form: null,
+    status,
+    is_active: status === "active",
+    registered_date: data.incorporationDate ?? null,
+    registered_address: composeAddress(data.address),
+    lei_code: data.leiCode ?? null,
+    nace_codes: nace ? [nace] : [],
+    company_size: null, // not returned at *-Advanced tier
+    source_as_of: sourceAsOf,
+    last_filing_date: lastFilingDate,
+  };
+}
+
+// ─── Fetch helpers ─────────────────────────────────────────────────────────
+interface CallResult<T> {
   status: number;
-  body: WWTopResponse | null;
+  body: OpenapiResponse<T> | null;
   text: string;
 }
 
-async function callWWTop(
-  country: string,
-  id: string,
+async function callProduct<T>(
+  url: string,
   bearer: string,
-): Promise<CallResult> {
-  const url = `https://company.openapi.com/WW-top/${encodeURIComponent(country)}/${encodeURIComponent(id)}`;
+): Promise<CallResult<T>> {
   const r = await fetch(url, {
     headers: { Authorization: `Bearer ${bearer}` },
     signal: AbortSignal.timeout(15_000),
   });
   const text = await r.text();
-  let body: WWTopResponse | null = null;
+  let body: OpenapiResponse<T> | null = null;
   try {
-    body = text ? (JSON.parse(text) as WWTopResponse) : null;
+    body = text ? (JSON.parse(text) as OpenapiResponse<T>) : null;
   } catch {
     body = null;
   }
@@ -211,15 +357,16 @@ async function callWWTop(
 }
 
 /**
- * Execute an Openapi-routed capability against the WW-Top product.
+ * Execute an Openapi-routed capability.
  *
  * Flow:
  *   1. Feature-flag check (OPENAPI_ENABLED).
- *   2. Credentials check (OPENAPI_COM_EMAIL + OPENAPI_COM_API_TOKEN_PROD).
+ *   2. Product validation (config.openapiProduct must be in PRODUCT_REGISTRY).
  *   3. Identifier shape validation against config.identifierRegex.
- *   4. Token acquire (cached per scope, 10-min TTL).
- *   5. WW-Top fetch with 15s timeout; single retry on 401 (token-stale) or 5xx.
- *   6. Map response to Strale Tier 1/2/3 shape; throw structured errors on
+ *   4. Credentials check (OPENAPI_COM_EMAIL + OPENAPI_COM_API_TOKEN_PROD).
+ *   5. Token acquire (cached per scope, 10-min TTL).
+ *   6. Product fetch with 15s timeout; single retry on 401 / 5xx.
+ *   7. Map response to Strale Tier 1/2/3 shape; throw structured errors on
  *      204/406/4xx/5xx/network.
  */
 export async function executeOpenapiCapability(
@@ -243,9 +390,10 @@ export async function executeOpenapiCapability(
     );
   }
 
-  if (config.openapiProduct !== "ww-top") {
+  const product = PRODUCT_REGISTRY[config.openapiProduct];
+  if (!product) {
     throw new Error(
-      `Openapi resolver phase 1 only supports the 'ww-top' product; received '${config.openapiProduct}'. Phase 2 extension pending.`,
+      `Openapi resolver does not support product '${config.openapiProduct}'. Supported: ${Object.keys(PRODUCT_REGISTRY).join(", ")}.`,
     );
   }
 
@@ -259,7 +407,7 @@ export async function executeOpenapiCapability(
     );
   }
 
-  const scope = "GET:company.openapi.com/WW-top";
+  const requestUrl = product.buildUrl(config.countryCode, trimmed);
   const maxAttempts = 2;
   let attempt = 0;
   let lastErr: unknown = null;
@@ -267,8 +415,8 @@ export async function executeOpenapiCapability(
   while (attempt < maxAttempts) {
     attempt += 1;
     try {
-      const bearer = await issueToken(scope);
-      const r = await callWWTop(config.countryCode, trimmed, bearer);
+      const bearer = await issueToken(product.scope);
+      const r = await callProduct<unknown>(requestUrl, bearer);
       const durationMs = Date.now() - t0;
 
       if (r.status === 200) {
@@ -283,10 +431,6 @@ export async function executeOpenapiCapability(
           );
         }
         const data = r.body.data[0];
-        const status = normaliseStatus(data.activityStatus);
-        const nace = nacePrimary(data);
-        const sourceAsOf = epochSecondsToIso(data.lastUpdateTimestamp);
-        const requestUrl = `https://company.openapi.com/WW-top/${encodeURIComponent(config.countryCode)}/${encodeURIComponent(trimmed)}`;
 
         log.info(
           {
@@ -299,31 +443,29 @@ export async function executeOpenapiCapability(
           "openapi-success",
         );
 
+        let output: Record<string, unknown>;
+        let recordId: string | null = null;
+        if (config.openapiProduct === "ww-top") {
+          const wwTopData = data as WwTopData;
+          output = mapWwTopOutput(wwTopData, config, trimmed);
+          recordId = wwTopData.id ?? null;
+        } else {
+          // es-advanced or pt-advanced share the same Iberian shape
+          const iberianData = data as IberianAdvancedData;
+          output = mapIberianAdvancedOutput(iberianData, config, trimmed);
+          recordId = iberianData.id ?? null;
+        }
+
         return {
-          output: {
-            company_name: data.companyName ?? data.nativeCompanyName ?? null,
-            native_company_name: data.nativeCompanyName ?? null,
-            registration_number: data.companyNumber ?? trimmed,
-            vat_number: data.vatCode ?? trimmed,
-            country_code: config.countryCode,
-            legal_form: null,
-            status,
-            is_active: status === "active",
-            registered_date: data.incorporationDate ?? null,
-            registered_address: composeAddress(data.address),
-            lei_code: data.leiCode ?? null,
-            nace_codes: nace ? [nace] : [],
-            company_size: data.companySize ?? null,
-            source_as_of: sourceAsOf,
-          },
+          output,
           provenance: {
-            source: "Openapi.com WW-Top",
+            source: product.sourceLabel,
             source_url: requestUrl,
             fetched_at: new Date().toISOString(),
             upstream_vendor: "openapi.com",
             acquisition_method: "vendor_aggregation",
             authoritative: false,
-            openapi_record_id: data.id ?? null,
+            openapi_record_id: recordId,
           },
         };
       }
@@ -361,7 +503,7 @@ export async function executeOpenapiCapability(
       }
 
       if (r.status === 401 && attempt === 1) {
-        tokenCache.delete(scope);
+        tokenCache.delete(product.scope);
         log.info(
           { label: "openapi-token-stale", ...baseCtx },
           "openapi-token-stale",
