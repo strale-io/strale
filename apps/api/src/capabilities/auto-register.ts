@@ -224,15 +224,14 @@ const DEACTIVATED = new Map<string, string>([
   // authority. The IE/IT-style transport-divergence pattern in irish-company-data
   // and latvian-company-data is the same shape and should be revisited as a
   // workstream, not a pre-emptive deactivation.
-  [
-    "italian-company-data",
-    // Runtime scrapes registroimprese.it/ricerca-libera (Italian Registro Imprese
-    // public UI) via Browserless + Claude. Manifest claimed InfoCamere /
-    // Registro Imprese as data source — transport-divergence per the audit.
-    // Reactivation: InfoCamere accessoallebanchedati per-certificate API
-    // (paid, not PAYG-friendly for bulk) or licensed multi-country aggregator.
-    "registroimprese.it scraping violates Strale Tier 1 (DEC-20260428-A); pending licensed InfoCamere or aggregator contract",
-  ],
+  // italian-company-data REACTIVATED 2026-05-16 (Phase 2c): migrated from
+  // registroimprese.it Browserless scrape (Tier 1 violation per
+  // DEC-20260428-A) to Openapi.com IT-Advanced (Tier 3 vendor aggregator).
+  // Satisfies the "licensed multi-country aggregator" reactivation trigger.
+  // Final EU30 country to reach code parity — Phase 2c completes 30/30.
+  // Double-gated: OPENAPI_ENABLED env flag + DB is_active. v1.1 deferrals:
+  // IT-Full async (managers/subsidiaries) + UBO-Italy product + direct
+  // InfoCamere integration per DEC-20260507-C.
   [
     "eu-court-case-search",
     // Runtime scrapes curia.europa.eu/juris (CJEU) and hudoc.echr.coe.int (ECHR).
