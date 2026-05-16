@@ -169,16 +169,15 @@ const DEACTIVATED = new Map<string, string>([
   // (api.openregister.de). Free tier 50 req/mo per DEC-20260505-H +
   // DEC-20260506-G; auth via OPENREGISTER_API_KEY. acquisition_method:
   // direct_api per DEC-20260428-A Tier 2.
-  [
-    "austrian-company-data",
-    // DEC-20260427-I-6: Primary runtime fetched firmenbuch.finapu.com (commercial
-    // third-party AT register wrapper); fallback scraped firmen.wko.at via Browserless
-    // + Claude. Both paths are ToS-prohibited scrapes of commercial / semi-official
-    // sources. Manifest claimed FinAPU Firmenbuch API (transport-divergence).
-    // Reactivation trigger: licensed contract with the Austrian Justizministerium for
-    // direct Firmenbuch API access, or a multi-country licensed aggregator.
-    "finapu.com / wko.at scraping prohibited by ToS; pending licensed Firmenbuch or aggregator contract (see DEC-20260427-I)",
-  ],
+  // austrian-company-data REACTIVATED 2026-05-16: migrated from FinAPU + WKO
+  // Browserless scraping (Tier 1 violation per DEC-20260427-I-6) to Openapi.com
+  // WW-Top (Tier 3 vendor aggregator). Satisfies the "licensed multi-country
+  // aggregator" reactivation trigger named in DEC-20260427-I-6. Runtime is
+  // double-gated: OPENAPI_ENABLED env flag must be "true" (off by default until
+  // resale addendum case 151296 countersigns) AND the capabilities DB row must
+  // be is_active=true (separate operator action — auto-register no longer
+  // syncs this slug to deactivated, but does not auto-activate either).
+  // See apps/api/src/capabilities/lib/openapi-resolver.ts.
   [
     "trustpilot-score",
     // DEC-20260427-H-2: Runtime fetched trustpilot.com/review/{domain} via Browserless + Claude.
