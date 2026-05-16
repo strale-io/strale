@@ -47,6 +47,18 @@ output_schema:
       type: string
     registration_date:
       type: string
+    nip:
+      type:
+        - string
+        - "null"
+    register_type:
+      type:
+        - string
+        - "null"
+    share_capital:
+      type:
+        - string
+        - "null"
     jurisdiction:
       type: string
 data_source: KRS / Krajowy Rejestr Sądowy (Polish National Court Register)
@@ -95,11 +107,27 @@ test_fixtures:
     krs_number: "0000028860"
 output_field_reliability:
   status: guaranteed
-  address: guaranteed
+  # address and registration_date are downgraded from `guaranteed` to `common`
+  # following the 2026-05-15 audit Batch 3 finding: 0/3 fixtures (MARTOM,
+  # PKN Orlen, KGHM) returned address/registration_date despite manifest
+  # declaration. The KRS upstream returns these fields under nested paths
+  # (siedziba.address arrays, odpis-level registration metadata) that the
+  # current picker doesn't traverse robustly. Honest reliability classification
+  # until the picker is rewritten — see follow-up to fix the address/regdate
+  # extraction logic.
+  address: common
   krs_number: guaranteed
   legal_form: guaranteed
   company_name: guaranteed
-  registration_date: guaranteed
+  registration_date: common
+  # nip, register_type, share_capital added 2026-05-16 to close the
+  # schema-undercount gap flagged in 2026-05-15 audit Batch 3 (handler
+  # returns all 3 but manifest didn't declare). Empirical 3/3 across audit
+  # fixtures (MARTOM, PKN Orlen, KGHM) — guaranteed reliability. Mirrors
+  # the FI additive-declaration commit 64d8a30 pattern.
+  nip: guaranteed
+  register_type: guaranteed
+  share_capital: guaranteed
   jurisdiction: guaranteed
 limitations:
   - title: Covers KRS-registered entities only — Polish sole traders registered in CEIDG are not included

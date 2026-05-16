@@ -27,10 +27,6 @@ output_schema:
     historical_names: []
     jurisdiction: EE
   properties:
-    vat_number:
-      type:
-        - string
-        - "null"
     status:
       type: string
     address:

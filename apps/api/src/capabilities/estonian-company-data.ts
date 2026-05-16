@@ -81,7 +81,14 @@ async function searchCompany(query: string): Promise<Record<string, unknown>> {
   }
 
   const c = results[0];
+  // EE registry returns two code systems for legal_form depending on entity vintage:
+  // legacy `liik` (1, 2, 3) and modern codes (4-10). Map both to canonical
+  // human-readable labels so the wire shape is consistent across entities.
+  // The "1 = AS" mapping is empirically validated against Bolt App Services AS
+  // (17449106) and Aktsiaselts Tallink Grupp (10238429) in the 2026-05-15 audit
+  // Batch 3 — both returned "1" pre-fix while modern AS entities use code "6".
   const legalForms: Record<string, string> = {
+    "1": "AS (Public limited company)",
     "4": "FIE (Sole proprietor)",
     "5": "OÜ (Private limited company)",
     "6": "AS (Public limited company)",

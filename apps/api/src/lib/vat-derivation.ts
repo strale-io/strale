@@ -117,3 +117,17 @@ export function deriveVatCZ(ico: string): string | null {
   if (!/^\d{8}$/.test(cleaned)) return null;
   return `CZ${cleaned}`;
 }
+
+/**
+ * Latvia: LV + registration number (11 digits). For commercial legal entities
+ * (Komercreģistrs, 40NNN-/50NNN-prefix), the VAT number equals "LV" + the
+ * 11-digit registration number. Non-commercial entities (associations,
+ * foundations) follow a different VAT registration path and may not be
+ * derivable; this function returns the LV-prefixed form for any 11-digit
+ * input. Caller is responsible for validating against VIES if needed.
+ */
+export function deriveVatLV(regNumber: string): string | null {
+  const cleaned = regNumber.replace(/[\s.-]/g, "");
+  if (!/^\d{11}$/.test(cleaned)) return null;
+  return `LV${cleaned}`;
+}
