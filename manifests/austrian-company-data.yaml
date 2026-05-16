@@ -1,52 +1,55 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: austrian-company-data
 name: Austrian Company Data
 description: >-
-  [TEMPORARILY UNAVAILABLE 2026-04-29 — pending licensed Firmenbuch or aggregator contract per DEC-20260428-A.] Look up
-  Austrian company data from the Firmenbuch. Accepts Firmenbuchnummer (e.g. FN 150913f) or fuzzy company name.
-category: data-extraction
-price_cents: 80
+  Look up Austrian company data via Openapi.com WW-Top (Tier-3 vendor aggregator). Accepts UID-Nummer (ATU + 8 digits).
+  Returns name, registration number (Firmenbuchnummer), status, registered address, registration date, LEI, primary
+  NACE code, and last-update timestamp. Directors are not returned at the WW-Top tier.
+category: company-data
+cost_class: paid_per_call
+price_cents: 16
 is_free_tier: false
+avg_latency_ms: 2200
 input_schema:
   type: object
   required:
-    - fn_number
+    - vat_number
   properties:
-    fn_number:
+    vat_number:
       type: string
-      description: Firmenbuchnummer (e.g. FN 150913f) or company name
+      description: Austrian UID-Nummer (VAT). Format ATU + 8 digits, e.g. ATU14189108. Firmenbuchnummer (FN) is NOT accepted.
 output_schema:
   type: object
   example:
-    lei: 5299000HTNHA5ACH9N32
-    city: Fuschl am See
+    company_name: OMV Aktiengesellschaft
+    native_company_name: OMV Aktiengesellschaft
+    registration_number: FN 93363 z
+    vat_number: ATU14189108
+    country_code: AT
+    legal_form: null
     status: active
-    address: Am Brunnen 1, 5330 Fuschl am See
-    founded: "1993-10-16"
-    activity: Verwertung der Marke RED BULL
-    directors:
-      - name: Alexander Kirchmayr
-        role: Geschäftsführer/in (handelsrechtlich)
-        since: "2022-11-14"
-      - name: Oliver Mintzlaff
-        role: Geschäftsführer/in (handelsrechtlich)
-        since: "2022-11-14"
-      - name: Franz Watzlawick
-        role: Geschäftsführer/in (handelsrechtlich)
-        since: "2022-11-14"
-      - name: Dr. Marcus Weber
-        role: Prokurist/in
-        since: "2022-11-14"
-    dissolved: null
-    fn_number: FN 56247t
-    eu_vat_ids: null
-    past_names: null
-    company_name: Red Bull GmbH
-    business_type: GmbH (Limited liability company)
+    is_active: true
+    registered_date: "1943-08-09"
+    registered_address: "Trabrennstrasse 6 -8 6, 1020, Wien, AT"
+    lei_code: 549300V62YJ9HTLRI486
+    nace_codes:
+      - code: "1920"
+        description: Manufacture of refined petroleum products
+    company_size: Very large company
+    source_as_of: "2026-05-10T14:34:33.000Z"
   properties:
+    company_name:
+      type: string
+    native_company_name:
+      type:
+        - string
+        - "null"
+    registration_number:
+      type: string
     vat_number:
+      type: string
+    country_code:
+      type: string
+    legal_form:
       type:
         - string
         - "null"
@@ -54,26 +57,38 @@ output_schema:
       type: string
       enum:
         - active
-        - terminated
+        - inactive
         - unknown
-      description: >-
-        Three-way enum matching german-company-data.ts:168-180 precedent.
-        Replaces the prior binary collapse (active/inactive) which lost
-        fidelity (in-liquidation, terminated, dissolved all became inactive).
-    address:
-      type: string
-    company_name:
-      type: string
-    business_type:
-      type: string
-    registration_number:
-      type: string
-data_source: FinAPU Firmenbuch API (Austrian Commercial Register)
-data_source_type: scrape
-transparency_tag: ai_generated
+    is_active:
+      type: boolean
+    registered_date:
+      type:
+        - string
+        - "null"
+    registered_address:
+      type:
+        - string
+        - "null"
+    lei_code:
+      type:
+        - string
+        - "null"
+    nace_codes:
+      type: array
+    company_size:
+      type:
+        - string
+        - "null"
+    source_as_of:
+      type:
+        - string
+        - "null"
+data_source: Openapi.com WW-Top (Tier-3 vendor aggregator of EU company registries)
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: scraping-stable-target
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+maintenance_class: commercial-stable-api
+gdpr_art_22_classification: data_lookup
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -83,27 +98,94 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      fn_number: 56247t
+      vat_number: ATU14189108
     expected_fields:
       - field: company_name
         operator: not_null
         reliability: guaranteed
+      - field: vat_number
+        operator: equals
+        reliability: guaranteed
+        value: ATU14189108
+      - field: country_code
+        operator: equals
+        reliability: guaranteed
+        value: AT
       - field: status
+        operator: equals
+        reliability: guaranteed
+        value: active
+      - field: is_active
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: registered_date
+        operator: not_null
+        reliability: guaranteed
+      - field: registered_address
+        operator: not_null
+        reliability: guaranteed
+      - field: registration_number
+        operator: not_null
+        reliability: guaranteed
+      - field: nace_codes
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    fn_number: 56247t
+    vat_number: ATU14189108
 output_field_reliability:
-  status: guaranteed
-  address: guaranteed
   company_name: guaranteed
-  business_type: guaranteed
+  native_company_name: common
   registration_number: guaranteed
+  vat_number: guaranteed
+  country_code: guaranteed
+  legal_form: rare
+  status: guaranteed
+  is_active: guaranteed
+  registered_date: guaranteed
+  registered_address: guaranteed
+  lei_code: common
+  nace_codes: guaranteed
+  company_size: common
+  source_as_of: guaranteed
 limitations:
-  - title: Extracted from Firmenbuch via web scraping — older registrations may have incomplete fields
-    text: Extracted from Firmenbuch via web scraping — some fields may be incomplete for older registrations
+  - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
+    text: >-
+      Strale's resale of Openapi.com data requires the addendum issued via Openapi case 151296 (2026-05-08) to be
+      countersigned. Until then, OPENAPI_ENABLED stays false in production and this capability returns
+      capability-unavailable. Removing the gate without the legal cover is a compliance miss.
+    category: availability
+    severity: warning
+    workaround: Use the Strale VAT-validate capability (via VIES) for AT VAT format validation only.
+  - title: Legal form not returned at WW-Top tier
+    text: >-
+      Openapi WW-Top does not return Austrian Rechtsform (GmbH / AG / KG / etc.). Customers needing legal form must
+      derive it from the registered name suffix or wait for the optional AT-Start / AT-Advanced product line (Phase 2
+      Openapi resolver extension, pending the same addendum gate).
+    category: coverage
+    severity: info
+    workaround: Parse legal-form hint from the company_name suffix where consistent.
+  - title: Directors not available at WW-Top tier
+    text: >-
+      Openapi WW-Top does not return Austrian Vertreter (Geschäftsführer, Vorstand) data. The directors-gap closure is
+      IT-only via Openapi IT-Full; no equivalent product is offered for AT. Directors require a separate licensed
+      Firmenbuch contract or a different aggregator.
+    category: coverage
+    severity: info
+    workaround: Skip directors-dependent KYB workflows for Austrian entities at v1.
+  - title: Firmenbuchnummer format rejected
+    text: >-
+      Openapi WW-Top rejects Austrian Firmenbuchnummer (FN format, e.g. FN 93363 z) with HTTP 406. Only VAT format
+      (ATU + 8 digits) is accepted. The executor normalises and validates input against the VAT regex before sending.
     category: coverage
     severity: info
     workaround: >-
-      For complete records, use the Firmenbuchnummer from the response to query the Austrian Commercial Register
-      directly
+      Convert FN to UID via a separate lookup before calling this capability; the relationship between FN and UID is
+      not publicly documented as a simple mapping.
+  - title: Resale provenance disclosure
+    text: >-
+      Customer responses include `acquisition_method: vendor_aggregation` + `upstream_vendor: openapi.com` in
+      provenance per DEC-20260428-A Tier-3 disclosure rules. The underlying authoritative source remains the Austrian
+      Firmenbuch maintained by the Justizministerium.
+    category: governance
+    severity: info

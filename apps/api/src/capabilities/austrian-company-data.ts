@@ -1,236 +1,61 @@
+// Austria — Openapi.com WW-Top (Tier-3 vendor aggregator).
+//
+// Replaces the prior FinAPU + WKO Browserless scraping path (deactivated
+// 2026-04-29 per DEC-20260427-I-6 as a Tier-1 violation). Reactivation
+// trigger named in that DEC: "licensed contract with the Austrian
+// Justizministerium for direct Firmenbuch API access, or a multi-country
+// licensed aggregator." Openapi.com is the multi-country licensed
+// aggregator path; resale addendum issued 2026-05-08 via case 151296,
+// gated on Moonlighter AB VAT + countersignature. Execution is double-
+// gated: this executor will refuse to run unless OPENAPI_ENABLED=true
+// AND the capability row in the DB is active.
+//
+// Identifier shape: AT VAT (UID-Nummer) in the form `ATU` + 8 digits.
+// Openapi WW-Top rejects Firmenbuchnummer (FN) format with 406 — VAT only.
+// Verified empirically by the 2026-05-15 v4 probe: OMV ATU14189108 → 200,
+// FN 93363z → 406.
+//
+// Field coverage per the 2026-05-15 BR Coverage Matrix row
+// (34867c87-082c-8165-9fcd-d01bc75c9766): Tier 1 6/7 (no legal_form via
+// WW-Top), Tier 2 3/5 (vatCode + source-as-of + source-name; no directors),
+// Tier 3 1/6 (NACE only).
+
 import { registerCapability, type CapabilityInput } from "./index.js";
-import {
-  fetchRenderedHtml,
-  htmlToText,
-  extractCompanyFromText,
-  extractCompanyName,
-} from "./lib/browserless-extract.js";
+import { executeOpenapiCapability } from "./lib/openapi-resolver.js";
 
-// Austria — FinAPU Firmenbuch API (primary) + WKO Firmen A-Z (fallback)
-// FN number: 6 digits + letter (e.g. 150913f)
-const FN_RE = /^\d{5,6}[a-z]$/i;
+const AT_VAT_RE = /^ATU\d{8}$/;
 
-const FINAPU_URL = "https://firmenbuch.finapu.com/fb-svc/firmen-service";
-
-// Legal form code → human-readable
-const RECHTSFORM: Record<string, string> = {
-  GES: "GmbH (Limited liability company)",
-  EU: "eU (Sole proprietorship)",
-  AG: "AG (Stock corporation)",
-  KG: "KG (Limited partnership)",
-  OG: "OG (General partnership)",
-  PST: "Privatstiftung (Private foundation)",
-  GEN: "Genossenschaft (Cooperative)",
-  FKG: "FlexKG (Flexible limited partnership)",
-  SE: "SE (European company)",
-  VER: "Versicherungsverein (Mutual insurance)",
-  SPA: "Sparkasse (Savings bank)",
-  PAR: "Partnerschaft (Partnership)",
-};
-
-function findFn(input: string): string | null {
-  const cleaned = input.replace(/[\s.-]/g, "").replace(/^FN/i, "");
-  if (FN_RE.test(cleaned)) return cleaned.toLowerCase();
-  const match = input.match(/\d{5,6}[a-z]/i);
-  return match ? match[0].toLowerCase() : null;
-}
-
-interface FinapuSearchResult {
-  fnr: string;
-  name: string;
-  rechtsform: string;
-  sitz: string;
-  activity: string | null;
-  status: string;
-  initDate: string | null;
-  endDate: string | null;
-}
-
-// Three-way status mapping matching german-company-data.ts:168-180 precedent.
-// The previous binary collapse (active vs inactive) silently lost fidelity:
-// in-liquidation, terminated, dissolved, and unknown all became "inactive"
-// (DEC-20260428-B).
-function normaliseAtStatus(raw: string | undefined, endDate: string | null): "active" | "terminated" | "unknown" {
-  if (endDate) return "terminated";
-  const v = (raw ?? "").toLowerCase();
-  if (v.includes("active") || v === "ok") return "active";
-  if (v.includes("liquidat") || v.includes("terminated") || v.includes("dissolved") || v.includes("aufgel")) {
-    return "terminated";
-  }
-  if (!v) return "unknown";
-  return "unknown";
-}
-
-interface FinapuDetails {
-  fbnr: number;
-  fbnrChar: string;
-  bezeichnung: string;
-  rechtsform: { code: string; text: string };
-  adresse: { strasse: string; hausnr: string; tuernr: string | null; plz: string; ort: string; staat: string };
-  status: string;
-  activity: string;
-  initDate: string | null;
-  endDate: string | null;
-  lei: string | null;
-  euids: string[];
-  pastNames: { name: string; bis: string }[];
-  sitz: string;
-  vertreter: { nameFormatiert: string; posBezeichnung: string; von: string | null }[];
-}
-
-async function finapuSearch(query: string): Promise<FinapuSearchResult[]> {
-  const resp = await fetch(FINAPU_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      query: "search-firma",
-      params: {
-        firmenname: query,
-        searchOptions: { withHistory: false, withAddress: false, withActivity: true, withPersons: false, withName: true },
-      },
-    }),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!resp.ok) throw new Error(`FinAPU API returned HTTP ${resp.status}`);
-  const data = await resp.json();
-  if (data.status === "error") throw new Error(`FinAPU error: ${data.message}`);
-  return data.results ?? [];
-}
-
-async function finapuDetails(fnr: string): Promise<FinapuDetails> {
-  const resp = await fetch(FINAPU_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query: "details-firma", params: { fnr } }),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!resp.ok) throw new Error(`FinAPU API returned HTTP ${resp.status}`);
-  const data = await resp.json();
-  if (data.status === "error") throw new Error(`FinAPU error: ${data.message}`);
-  return data;
-}
-
-function formatAddress(addr: FinapuDetails["adresse"]): string {
-  const parts = [addr.strasse, addr.hausnr].filter(Boolean).join(" ");
-  const door = addr.tuernr ? `/${addr.tuernr}` : "";
-  return `${parts}${door}, ${addr.plz} ${addr.ort}`;
-}
-
-async function lookupViaFinapu(query: string, isFn: boolean): Promise<Record<string, unknown>> {
-  if (isFn) {
-    // Direct lookup by FN number
-    try {
-      const details = await finapuDetails(query);
-      return {
-        company_name: details.bezeichnung,
-        fn_number: `FN ${details.fbnr}${details.fbnrChar}`,
-        business_type: RECHTSFORM[details.rechtsform?.code] ?? details.rechtsform?.text ?? null,
-        address: formatAddress(details.adresse),
-        city: details.sitz,
-        status: normaliseAtStatus(details.status, details.endDate),
-        activity: details.activity || null,
-        lei: details.lei || null,
-        eu_vat_ids: details.euids?.length ? details.euids : null,
-        founded: details.initDate || null,
-        dissolved: details.endDate || null,
-        past_names: details.pastNames?.length ? details.pastNames.map(p => p.name) : null,
-        directors: details.vertreter?.map(v => ({
-          name: v.nameFormatiert,
-          role: v.posBezeichnung,
-          since: v.von,
-        })) ?? null,
-      };
-    } catch {
-      // Fall through to search if details lookup fails
-    }
-  }
-
-  // Search by name
-  const results = await finapuSearch(query);
-  if (results.length === 0) {
-    throw new Error(`No Austrian company found matching "${query}".`);
-  }
-
-  // Get details for the best match
-  const best = results[0];
-  try {
-    const details = await finapuDetails(best.fnr);
-    return {
-      company_name: details.bezeichnung,
-      fn_number: `FN ${details.fbnr}${details.fbnrChar}`,
-      business_type: RECHTSFORM[details.rechtsform?.code] ?? details.rechtsform?.text ?? null,
-      address: formatAddress(details.adresse),
-      city: details.sitz,
-      status: normaliseAtStatus(details.status, details.endDate),
-      activity: details.activity || null,
-      lei: details.lei || null,
-      eu_vat_ids: details.euids?.length ? details.euids : null,
-      founded: details.initDate || null,
-      dissolved: details.endDate || null,
-      past_names: details.pastNames?.length ? details.pastNames.map(p => p.name) : null,
-      directors: details.vertreter?.map(v => ({
-        name: v.nameFormatiert,
-        role: v.posBezeichnung,
-        since: v.von,
-      })) ?? null,
-    };
-  } catch {
-    // Return basic info from search result if details fail
-    return {
-      company_name: best.name,
-      fn_number: `FN ${best.fnr}`,
-      business_type: RECHTSFORM[best.rechtsform] ?? best.rechtsform ?? null,
-      city: best.sitz,
-      status: normaliseAtStatus(best.status, best.endDate),
-      activity: best.activity || null,
-    };
-  }
-}
-
-// WKO.at fallback (existing Browserless scraper)
-async function lookupViaWko(query: string, isFn: boolean): Promise<Record<string, unknown>> {
-  const searchUrl = isFn
-    ? `https://firmen.wko.at/SearchSimple.aspx?searchterm=FN+${query}`
-    : `https://firmen.wko.at/SearchSimple.aspx?searchterm=${encodeURIComponent(query)}`;
-
-  const html = await fetchRenderedHtml(searchUrl);
-  const text = htmlToText(html);
-
-  if (text.includes("Keine Treffer") || text.includes("keine Ergebnisse") || text.length < 200) {
-    throw new Error(`No Austrian company found matching "${query}".`);
-  }
-
-  return extractCompanyFromText(text, "Austrian", query);
+function normaliseAtIdentifier(raw: string): string | null {
+  const cleaned = raw.replace(/[\s.-]/g, "").toUpperCase();
+  return AT_VAT_RE.test(cleaned) ? cleaned : null;
 }
 
 registerCapability("austrian-company-data", async (input: CapabilityInput) => {
-  const raw = (input.fn_number as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
-  if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'fn_number' or 'company_name' is required. Provide a Firmenbuchnummer (e.g. FN 150913f) or company name.");
+  const rawInput =
+    (input.vat_number as string) ??
+    (input.uid as string) ??
+    (input.identifier as string) ??
+    "";
+  if (typeof rawInput !== "string" || !rawInput.trim()) {
+    throw new Error(
+      "'vat_number' is required. Provide an Austrian UID-Nummer (e.g. ATU14189108). Firmenbuchnummer (FN) is not accepted by the upstream API; use the VAT format.",
+    );
   }
-
-  const trimmed = raw.trim();
-  const fn = findFn(trimmed);
-
-  // Primary: FinAPU Firmenbuch API
-  try {
-    const output = await lookupViaFinapu(fn ?? trimmed, !!fn);
-    return {
-      output,
-      provenance: { source: "firmenbuch.finapu.com", fetched_at: new Date().toISOString() },
-    };
-  } catch (finapuErr) {
-    // Fallback: WKO.at via Browserless
-    try {
-      const name = fn ?? await extractCompanyName(trimmed, "Austrian");
-      const output = await lookupViaWko(name, !!fn);
-      return {
-        output,
-        provenance: { source: "firmen.wko.at", fetched_at: new Date().toISOString() },
-      };
-    } catch {
-      // Re-throw the FinAPU error (more informative)
-      throw finapuErr;
-    }
+  const normalised = normaliseAtIdentifier(rawInput.trim());
+  if (!normalised) {
+    throw new Error(
+      `'${rawInput.trim()}' is not a valid Austrian UID-Nummer. Expected format: ATU + 8 digits (e.g. ATU14189108).`,
+    );
   }
+  return executeOpenapiCapability(
+    {
+      countryCode: "AT",
+      identifierRegex: AT_VAT_RE,
+      openapiProduct: "ww-top",
+      capabilitySlug: "austrian-company-data",
+    },
+    normalised,
+  );
 });
+
+export { AT_VAT_RE };

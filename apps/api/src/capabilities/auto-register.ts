@@ -132,53 +132,46 @@ const DEACTIVATED = new Map<string, string>([
     // Reactivation trigger: migrate to EPO OPS / USPTO PEDS / Lens.org.
     "Google Patents scraping prohibited by Google ToS (see DEC-20260420-H)",
   ],
-  [
-    "dutch-company-data",
-    // DEC-20260427-I-1: Runtime fetched northdata.com (Bavarian commercial KYB aggregator)
-    // and extracted JSON-LD profile data for Dutch (KVK) company lookups. Manifest claimed
-    // KVK / Kamer van Koophandel as the data source — full divergence. northdata.com's
-    // ToS forbids automated access; using it undermines Strale's compliance positioning.
-    // Reactivation trigger: licensed contract with KVK directly (their Handelsregister API
-    // requires Dutch business registration), or with a licensed multi-country aggregator
-    // (Creditsafe, Bisnode/Dun & Bradstreet, Experian).
-    "northdata.com scraping prohibited by ToS; pending licensed KVK or aggregator contract (see DEC-20260427-I)",
-  ],
-  [
-    "portuguese-company-data",
-    // DEC-20260427-I-2: Same as dutch-company-data — runtime fetched northdata.com,
-    // manifest claimed Registo Comercial. Full divergence.
-    // Reactivation trigger: licensed contract with the Portuguese Registo Comercial
-    // (via IRN/Justiça Portuguesa) or a multi-country licensed aggregator.
-    "northdata.com scraping prohibited by ToS; pending licensed PT registry or aggregator contract (see DEC-20260427-I)",
-  ],
+  // dutch-company-data REACTIVATED 2026-05-16 (Phase 2a): migrated from
+  // northdata.com Browserless scrape (Tier 1 violation per DEC-20260427-I-1)
+  // to Openapi.com WW-Top (Tier 3 vendor aggregator). KVK Option B closed
+  // 2026-05-12 (DEC-20260512-A: Mirjam Boele confirmed KVK partner status
+  // is closed to foreign EU entities); Openapi is the licensed-aggregator
+  // path per DEC-20260507-B. Double-gated: OPENAPI_ENABLED env flag +
+  // capabilities DB row is_active. Same pattern as Phase 1 AT (PR #121).
+  // portuguese-company-data REACTIVATED 2026-05-16 (Phase 2b): migrated from
+  // northdata.com Browserless scrape (Tier 1 violation per DEC-20260427-I-2)
+  // to Openapi.com PT-Advanced (Tier 3 vendor aggregator). Satisfies the
+  // "licensed multi-country aggregator" reactivation trigger named in
+  // DEC-20260427-I-2. Double-gated: OPENAPI_ENABLED env flag + DB is_active.
+  // Direct Registo Comercial / publicacoes.mj.pt integration queued as v1.1
+  // quality upgrade per DEC-20260507-C.
   // lithuanian-company-data REACTIVATED 2026-04-29: migrated from
   // northdata.com aggregator scrape to direct data.gov.lt Spinta JSON API
   // (Registrų centras / JAR — Juridinių asmenų registras). Free, real-time
   // JSON, no signup, CC-BY 4.0 (commercial reuse permitted with attribution).
   // acquisition_method: direct_api per DEC-20260428-A Tier 2.
-  [
-    "spanish-company-data",
-    // DEC-20260427-I-4: Runtime fetched empresia.es and infocif.es (commercial Spanish
-    // KYB aggregators), manifest claimed Registro Mercantil Central. Full divergence.
-    // Reactivation trigger: licensed contract with the Spanish Registro Mercantil
-    // (via Colegio de Registradores) or a multi-country licensed aggregator.
-    "empresia.es / infocif.es scraping prohibited by ToS; pending licensed ES registry or aggregator contract (see DEC-20260427-I)",
-  ],
+  // spanish-company-data REACTIVATED 2026-05-16 (Phase 2b): migrated from
+  // empresia.es + infocif.es Browserless scraping (Tier 1 violation per
+  // DEC-20260427-I-4) to Openapi.com ES-Advanced (Tier 3 vendor aggregator).
+  // Satisfies the "licensed multi-country aggregator" reactivation trigger
+  // named in DEC-20260427-I-4. Double-gated: OPENAPI_ENABLED env flag + DB
+  // is_active. Direct Registradores integration queued as v1.1 quality
+  // upgrade per DEC-20260507-C.
   // german-company-data REACTIVATED 2026-05-06: migrated from northdata.com
   // ToS-prohibited scrape (DEC-20260427-I-5) to direct OpenRegister API
   // (api.openregister.de). Free tier 50 req/mo per DEC-20260505-H +
   // DEC-20260506-G; auth via OPENREGISTER_API_KEY. acquisition_method:
   // direct_api per DEC-20260428-A Tier 2.
-  [
-    "austrian-company-data",
-    // DEC-20260427-I-6: Primary runtime fetched firmenbuch.finapu.com (commercial
-    // third-party AT register wrapper); fallback scraped firmen.wko.at via Browserless
-    // + Claude. Both paths are ToS-prohibited scrapes of commercial / semi-official
-    // sources. Manifest claimed FinAPU Firmenbuch API (transport-divergence).
-    // Reactivation trigger: licensed contract with the Austrian Justizministerium for
-    // direct Firmenbuch API access, or a multi-country licensed aggregator.
-    "finapu.com / wko.at scraping prohibited by ToS; pending licensed Firmenbuch or aggregator contract (see DEC-20260427-I)",
-  ],
+  // austrian-company-data REACTIVATED 2026-05-16: migrated from FinAPU + WKO
+  // Browserless scraping (Tier 1 violation per DEC-20260427-I-6) to Openapi.com
+  // WW-Top (Tier 3 vendor aggregator). Satisfies the "licensed multi-country
+  // aggregator" reactivation trigger named in DEC-20260427-I-6. Runtime is
+  // double-gated: OPENAPI_ENABLED env flag must be "true" (off by default until
+  // resale addendum case 151296 countersigns) AND the capabilities DB row must
+  // be is_active=true (separate operator action — auto-register no longer
+  // syncs this slug to deactivated, but does not auto-activate either).
+  // See apps/api/src/capabilities/lib/openapi-resolver.ts.
   [
     "trustpilot-score",
     // DEC-20260427-H-2: Runtime fetched trustpilot.com/review/{domain} via Browserless + Claude.
@@ -231,15 +224,14 @@ const DEACTIVATED = new Map<string, string>([
   // authority. The IE/IT-style transport-divergence pattern in irish-company-data
   // and latvian-company-data is the same shape and should be revisited as a
   // workstream, not a pre-emptive deactivation.
-  [
-    "italian-company-data",
-    // Runtime scrapes registroimprese.it/ricerca-libera (Italian Registro Imprese
-    // public UI) via Browserless + Claude. Manifest claimed InfoCamere /
-    // Registro Imprese as data source — transport-divergence per the audit.
-    // Reactivation: InfoCamere accessoallebanchedati per-certificate API
-    // (paid, not PAYG-friendly for bulk) or licensed multi-country aggregator.
-    "registroimprese.it scraping violates Strale Tier 1 (DEC-20260428-A); pending licensed InfoCamere or aggregator contract",
-  ],
+  // italian-company-data REACTIVATED 2026-05-16 (Phase 2c): migrated from
+  // registroimprese.it Browserless scrape (Tier 1 violation per
+  // DEC-20260428-A) to Openapi.com IT-Advanced (Tier 3 vendor aggregator).
+  // Satisfies the "licensed multi-country aggregator" reactivation trigger.
+  // Final EU30 country to reach code parity — Phase 2c completes 30/30.
+  // Double-gated: OPENAPI_ENABLED env flag + DB is_active. v1.1 deferrals:
+  // IT-Full async (managers/subsidiaries) + UBO-Italy product + direct
+  // InfoCamere integration per DEC-20260507-C.
   [
     "eu-court-case-search",
     // Runtime scrapes curia.europa.eu/juris (CJEU) and hudoc.echr.coe.int (ECHR).

@@ -1,54 +1,78 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: italian-company-data
 name: Italian Company Data
 description: >-
-  [TEMPORARILY UNAVAILABLE 2026-04-29 — pending licensed InfoCamere or aggregator contract per DEC-20260428-A.] Look up
-  Italian company data from Registro Imprese. Accepts Partita IVA (11 digits) or fuzzy company name.
-category: data-extraction
-price_cents: 80
+  Look up Italian company data via Openapi.com IT-Advanced (Tier-3 vendor aggregator; richest Openapi product
+  Strale ships in v1). Accepts Italian codice fiscale / P.IVA (11 digits). Returns name, legal form
+  (detailedLegalForm — unique to IT among Openapi-routed countries), registration number, status, registered
+  address, registration date, LEI, primary NACE/ATECO code, share capital, last filing date, and shareholders
+  array (≥10% threshold; empty for widely-held entities like Eni).
+category: company-data
+cost_class: paid_per_call
+price_cents: 12
 is_free_tier: false
+avg_latency_ms: 2000
 input_schema:
   type: object
   required:
-    - partita_iva
+    - vat_number
   properties:
-    partita_iva:
+    vat_number:
       type: string
-      description: Partita IVA (11 digits) or company name
+      description: Italian codice fiscale or P.IVA (11 digits, e.g. 00484960588). IT-prefix VAT format is also accepted (e.g. IT00484960588).
 output_schema:
   type: object
   example:
-    status: unknown
-    address: null
-    industry: null
-    directors: null
-    company_name: null
-    business_type: null
-    registration_date: null
-    registration_number: null
+    company_name: ENI S.P.A.
+    native_company_name: null
+    registration_number: "00484960588"
+    vat_number: "00905811006"
+    country_code: IT
+    legal_form: "SOCIETA' PER AZIONI"
+    status: active
+    is_active: true
+    registered_date: "1992-07-30"
+    registered_address: "PIAZZALE ENRICO MATTEI 1, 00144, ROMA, RM, IT"
+    lei_code: null
+    nace_codes:
+      - code: "19201"
+        description: Raffinerie di petrolio
+    company_size: null
+    source_as_of: "2026-02-14T09:14:46.000Z"
+    last_filing_date: "2024-12-31"
+    share_capital: 4005358876
+    shareholders: []
+    pec: eni@pec.eni.com
   properties:
-    vat_number:
-      type:
-        - string
-        - "null"
-    status:
-      type: string
-    address:
-      type: string
-    company_name:
-      type: string
-    business_type:
-      type: string
-    registration_number:
-      type: string
-data_source: Registro Imprese / Italian Business Register (InfoCamere)
-data_source_type: scrape
-transparency_tag: ai_generated
+    company_name: { type: string }
+    native_company_name: { type: ["string", "null"] }
+    registration_number: { type: string }
+    vat_number: { type: string }
+    country_code: { type: string }
+    legal_form: { type: ["string", "null"] }
+    status: { type: string, enum: [active, inactive, unknown] }
+    is_active: { type: boolean }
+    registered_date: { type: ["string", "null"] }
+    registered_address: { type: ["string", "null"] }
+    lei_code: { type: ["string", "null"] }
+    nace_codes: { type: array }
+    company_size: { type: ["string", "null"] }
+    source_as_of: { type: ["string", "null"] }
+    last_filing_date: { type: ["string", "null"] }
+    share_capital: { type: ["number", "null"] }
+    shareholders:
+      type: array
+      description: >-
+        Array of shareholders meeting Openapi's ≥10% threshold. Empty for widely-held entities. Sorted descending
+        by percent_share. Strale-canonical shape per Phase 2c contract: {type, name, identifier, percent_share,
+        share_type, source_as_of}. share_type is null for IT-Advanced (Openapi does not distinguish voting /
+        non-voting at this tier).
+    pec: { type: ["string", "null"], description: Italian PEC (certified electronic mail) address. }
+data_source: Openapi.com IT-Advanced (Tier-3 vendor aggregator; Italian company-data product line)
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: scraping-stable-target
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+maintenance_class: commercial-stable-api
+gdpr_art_22_classification: data_lookup
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -58,26 +82,85 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      partita_iva: "00484960588"
+      vat_number: "00484960588"
     expected_fields:
-      - field: status
-        operator: not_null
-        reliability: guaranteed
-      - field: status
-        operator: type
-        reliability: guaranteed
-        value: string
+      - { field: company_name, operator: not_null, reliability: guaranteed }
+      - { field: country_code, operator: equals, reliability: guaranteed, value: IT }
+      - { field: legal_form, operator: not_null, reliability: guaranteed }
+      - { field: status, operator: equals, reliability: guaranteed, value: active }
+      - { field: is_active, operator: equals, reliability: guaranteed, value: true }
+      - { field: registered_address, operator: not_null, reliability: guaranteed }
+      - { field: registration_number, operator: not_null, reliability: guaranteed }
+      - { field: registered_date, operator: not_null, reliability: guaranteed }
+      - { field: nace_codes, operator: not_null, reliability: guaranteed }
+      - { field: share_capital, operator: not_null, reliability: guaranteed }
+      - { field: last_filing_date, operator: not_null, reliability: guaranteed }
   health_check_input:
-    partita_iva: "00484960588"
+    vat_number: "00484960588"
 output_field_reliability:
-  status: guaranteed
-  address: guaranteed
   company_name: guaranteed
-  business_type: guaranteed
+  native_company_name: rare
   registration_number: guaranteed
+  vat_number: guaranteed
+  country_code: guaranteed
+  legal_form: guaranteed
+  status: guaranteed
+  is_active: guaranteed
+  registered_date: guaranteed
+  registered_address: guaranteed
+  lei_code: common
+  nace_codes: guaranteed
+  company_size: rare
+  source_as_of: guaranteed
+  last_filing_date: guaranteed
+  share_capital: guaranteed
+  shareholders: common
+  pec: common
 limitations:
-  - title: Extracted from Registro Imprese via Browserless — detailed financial data requires a paid Visura Camerale
-    text: Extracted from Registro Imprese via Browserless — detailed financial data requires a paid Visura Camerale
+  - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
+    text: >-
+      Strale's resale of Openapi.com data requires the addendum issued via Openapi case 151296 (2026-05-08) to be
+      countersigned. Until then, OPENAPI_ENABLED stays false in production and this capability returns
+      capability-unavailable. price_cents flips from 12 to 10 (€0.122 → €0.10 net) when Moonlighter AB VAT
+      confirms.
+    category: availability
+    severity: warning
+  - title: Directors / legal representatives not available at IT-Advanced tier
+    text: >-
+      IT-Advanced does NOT return directors / managers / officers. The IT-Full product surfaces managers[] but
+      has 12s+ latency requiring async execution — deferred to v1.1 quality upgrade per Phase 2c scope decision.
+      Customers needing Italian directors data should integrate the v1.1 IT-Full async path or use a separate
+      directors-specific Strale capability when shipped.
+    category: coverage
+    severity: warning
+  - title: Shareholders empty for widely-held entities
+    text: >-
+      shareHolders[] is structurally present in every IT-Advanced response, but ONLY entities with at least one
+      ≥10% shareholder return a non-empty array. Widely-held listed companies (Eni, Enel, etc.) return [].
+      output_field_reliability declares shareholders as "common" not "guaranteed" — applies for closely-held /
+      family-owned / subsidiary entities. UBO data is NOT included in shareHolders[] — that's a separate
+      Openapi product (UBO-Italy, v1.1+).
     category: coverage
     severity: info
-    workaround: Use the Codice Fiscale from the response to purchase a full Visura from registroimprese.it
+  - title: UBOs and subsidiaries not available at IT-Advanced tier
+    text: >-
+      UBO-Italy is a separate Openapi product not yet probed (v1.1+). Subsidiaries / affiliateCompanies are
+      IT-Full only (v1.1+). For now, IT Tier 3 coverage is 4/6 (shareholders + nace + share_capital +
+      last_filing_date); ubos + establishments null_via_vendor_limitation.
+    category: coverage
+    severity: info
+  - title: ATECO Italian variant of NACE; cross-EU comparisons may need translation
+    text: >-
+      atecoClassification returns Italian ATECO codes (ateco / ateco2007 / ateco2022). Strale's nace_codes field
+      uses the ateco2022 variant where available, falling back to ateco2007, then bare ateco. ATECO codes are
+      derived from NACE Rev 2 but Italian-specific extensions exist; cross-EU comparisons may need translation
+      via the EU NACE crosswalk.
+    category: coverage
+    severity: info
+  - title: Legal form is Italian-localized
+    text: >-
+      detailedLegalForm.description returns Italian-language values (e.g. "SOCIETA' PER AZIONI" not
+      "joint-stock company"). Customers needing English normalization should apply a downstream mapping;
+      Strale does not localize.
+    category: coverage
+    severity: info
