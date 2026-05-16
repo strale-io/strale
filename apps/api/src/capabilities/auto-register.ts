@@ -139,27 +139,25 @@ const DEACTIVATED = new Map<string, string>([
   // is closed to foreign EU entities); Openapi is the licensed-aggregator
   // path per DEC-20260507-B. Double-gated: OPENAPI_ENABLED env flag +
   // capabilities DB row is_active. Same pattern as Phase 1 AT (PR #121).
-  [
-    "portuguese-company-data",
-    // DEC-20260427-I-2: Same as dutch-company-data — runtime fetched northdata.com,
-    // manifest claimed Registo Comercial. Full divergence.
-    // Reactivation trigger: licensed contract with the Portuguese Registo Comercial
-    // (via IRN/Justiça Portuguesa) or a multi-country licensed aggregator.
-    "northdata.com scraping prohibited by ToS; pending licensed PT registry or aggregator contract (see DEC-20260427-I)",
-  ],
+  // portuguese-company-data REACTIVATED 2026-05-16 (Phase 2b): migrated from
+  // northdata.com Browserless scrape (Tier 1 violation per DEC-20260427-I-2)
+  // to Openapi.com PT-Advanced (Tier 3 vendor aggregator). Satisfies the
+  // "licensed multi-country aggregator" reactivation trigger named in
+  // DEC-20260427-I-2. Double-gated: OPENAPI_ENABLED env flag + DB is_active.
+  // Direct Registo Comercial / publicacoes.mj.pt integration queued as v1.1
+  // quality upgrade per DEC-20260507-C.
   // lithuanian-company-data REACTIVATED 2026-04-29: migrated from
   // northdata.com aggregator scrape to direct data.gov.lt Spinta JSON API
   // (Registrų centras / JAR — Juridinių asmenų registras). Free, real-time
   // JSON, no signup, CC-BY 4.0 (commercial reuse permitted with attribution).
   // acquisition_method: direct_api per DEC-20260428-A Tier 2.
-  [
-    "spanish-company-data",
-    // DEC-20260427-I-4: Runtime fetched empresia.es and infocif.es (commercial Spanish
-    // KYB aggregators), manifest claimed Registro Mercantil Central. Full divergence.
-    // Reactivation trigger: licensed contract with the Spanish Registro Mercantil
-    // (via Colegio de Registradores) or a multi-country licensed aggregator.
-    "empresia.es / infocif.es scraping prohibited by ToS; pending licensed ES registry or aggregator contract (see DEC-20260427-I)",
-  ],
+  // spanish-company-data REACTIVATED 2026-05-16 (Phase 2b): migrated from
+  // empresia.es + infocif.es Browserless scraping (Tier 1 violation per
+  // DEC-20260427-I-4) to Openapi.com ES-Advanced (Tier 3 vendor aggregator).
+  // Satisfies the "licensed multi-country aggregator" reactivation trigger
+  // named in DEC-20260427-I-4. Double-gated: OPENAPI_ENABLED env flag + DB
+  // is_active. Direct Registradores integration queued as v1.1 quality
+  // upgrade per DEC-20260507-C.
   // german-company-data REACTIVATED 2026-05-06: migrated from northdata.com
   // ToS-prohibited scrape (DEC-20260427-I-5) to direct OpenRegister API
   // (api.openregister.de). Free tier 50 req/mo per DEC-20260505-H +

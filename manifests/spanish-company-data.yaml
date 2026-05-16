@@ -1,54 +1,65 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: spanish-company-data
 name: Spanish Company Data
 description: >-
-  [TEMPORARILY UNAVAILABLE 2026-04-29 — pending licensed ES registry or aggregator contract per DEC-20260428-A.] Look
-  up Spanish company data from the Registro Mercantil. Accepts CIF/NIF (e.g. A28015865) or fuzzy company name.
-category: data-extraction
-price_cents: 80
+  Look up Spanish company data via Openapi.com ES-Advanced (Tier-3 vendor aggregator). Accepts Spanish CIF/NIF
+  (letter + 7 digits + check char). Returns name, registration number, status, registered address, registration
+  date, LEI, primary NACE code, last filing date (from balance-sheet data), and last-update timestamp. Directors
+  are not returned at the *-Advanced tier (Italian product line only).
+category: company-data
+cost_class: paid_per_call
+price_cents: 6
 is_free_tier: false
+avg_latency_ms: 2400
 input_schema:
   type: object
   required:
-    - cif
+    - vat_number
   properties:
-    cif:
+    vat_number:
       type: string
-      description: CIF/NIF number (e.g. A28015865) or company name
+      description: Spanish CIF/NIF (letter + 7 digits + check char, e.g. A28015865) or ES-prefix VAT (ESA28015865).
 output_schema:
   type: object
   example:
-    status: unknown
-    address: null
-    industry: null
-    directors: null
-    company_name: null
-    business_type: null
-    registration_date: null
-    registration_number: null
+    company_name: Telefonica, SA
+    native_company_name: null
+    registration_number: A28015865
+    vat_number: ESA28015865
+    country_code: ES
+    legal_form: null
+    status: active
+    is_active: true
+    registered_date: "1924-04-19"
+    registered_address: "Calle Gran Via, 28 5 28, 28013, Madrid, ES"
+    lei_code: 549300EEJH4FEPDBBR25
+    nace_codes:
+      - code: "6190"
+        description: Other telecommunications activities
+    company_size: null
+    source_as_of: "2026-05-10T14:33:21.000Z"
+    last_filing_date: "2024-12-31"
   properties:
-    vat_number:
-      type:
-        - string
-        - "null"
-    status:
-      type: string
-    address:
-      type: string
-    company_name:
-      type: string
-    business_type:
-      type: string
-    registration_number:
-      type: string
-data_source: Registro Mercantil Central (Spanish Commercial Register)
-data_source_type: scrape
-transparency_tag: ai_generated
+    company_name: { type: string }
+    native_company_name: { type: ["string", "null"] }
+    registration_number: { type: string }
+    vat_number: { type: string }
+    country_code: { type: string }
+    legal_form: { type: ["string", "null"] }
+    status: { type: string, enum: [active, inactive, unknown] }
+    is_active: { type: boolean }
+    registered_date: { type: ["string", "null"] }
+    registered_address: { type: ["string", "null"] }
+    lei_code: { type: ["string", "null"] }
+    nace_codes: { type: array }
+    company_size: { type: ["string", "null"] }
+    source_as_of: { type: ["string", "null"] }
+    last_filing_date: { type: ["string", "null"] }
+data_source: Openapi.com ES-Advanced (Tier-3 vendor aggregator; Spanish company-data product line)
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: scraping-stable-target
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+maintenance_class: commercial-stable-api
+gdpr_art_22_classification: data_lookup
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -58,40 +69,58 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      cif: "A15075062"
+      vat_number: A28015865
     expected_fields:
-      - field: status
-        operator: not_null
-        reliability: guaranteed
-      - field: status
-        operator: type
-        reliability: guaranteed
-        value: string
-      - field: company_name
-        operator: not_null
-        reliability: guaranteed
-      - field: company_name
-        operator: type
-        reliability: guaranteed
-        value: string
-      - field: business_type
-        operator: not_null
-        reliability: guaranteed
-      - field: business_type
-        operator: type
-        reliability: guaranteed
-        value: string
+      - { field: company_name, operator: not_null, reliability: guaranteed }
+      - { field: country_code, operator: equals, reliability: guaranteed, value: ES }
+      - { field: status, operator: equals, reliability: guaranteed, value: active }
+      - { field: is_active, operator: equals, reliability: guaranteed, value: true }
+      - { field: registered_address, operator: not_null, reliability: guaranteed }
+      - { field: registration_number, operator: not_null, reliability: guaranteed }
+      - { field: nace_codes, operator: not_null, reliability: guaranteed }
+      - { field: last_filing_date, operator: not_null, reliability: guaranteed }
   health_check_input:
-    company_name: Telefonica
+    vat_number: A28015865
 output_field_reliability:
-  status: guaranteed
-  address: guaranteed
   company_name: guaranteed
-  business_type: guaranteed
+  native_company_name: rare
   registration_number: guaranteed
+  vat_number: guaranteed
+  country_code: guaranteed
+  legal_form: rare
+  status: guaranteed
+  is_active: guaranteed
+  registered_date: guaranteed
+  registered_address: guaranteed
+  lei_code: common
+  nace_codes: guaranteed
+  company_size: rare
+  source_as_of: guaranteed
+  last_filing_date: guaranteed
 limitations:
-  - title: Extracted from Spanish Registro Mercantil via Browserless — financial data requires a paid access subscription
-    text: Extracted from Registro Mercantil via Browserless — financial data requires paid access to the Registro Mercantil
+  - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
+    text: >-
+      Strale's resale of Openapi.com data requires the addendum issued via Openapi case 151296 (2026-05-08) to be
+      countersigned. Until then, OPENAPI_ENABLED stays false in production and this capability returns
+      capability-unavailable. price_cents flips from 6 to 5 (€0.061 → €0.05 net) when Moonlighter AB VAT confirms.
+    category: availability
+    severity: warning
+  - title: Legal form not returned at ES-Advanced tier
+    text: Openapi ES-Advanced does not return Spanish legal form (S.A., S.L., etc.).
     category: coverage
     severity: info
-    workaround: Use the CIF from the response to access full filings at registradores.org or infocif.es
+  - title: Directors not available at ES-Advanced tier
+    text: >-
+      Directors / officers / shareholders are NOT returned at ES-Advanced — the directors-gap closure is IT-only
+      via Openapi IT-Full. Direct Registradores / opendata.registradores.org integration queued as v1.1 quality
+      upgrade per DEC-20260507-C.
+    category: coverage
+    severity: info
+  - title: Share capital not returned at ES-Advanced tier
+    text: >-
+      Despite the Matrix's "share capital via balanceSheets" claim, the ES-Advanced response contains employees /
+      netWorth / operatingRevenue / equity / totalAssets per year, but NOT a dedicated shareCapital field. Tier 3
+      coverage is 2/6 (NACE + last_filing_date), not 3/6. Matrix needs reconciliation; documented for chat to
+      address separately. Only IT-Advanced surfaces shareCapital.
+    category: coverage
+    severity: info
