@@ -28,7 +28,11 @@
 
 import { log } from "../../lib/log.js";
 
-export type OpenapiProduct = "ww-top" | "es-advanced" | "pt-advanced";
+export type OpenapiProduct =
+  | "ww-top"
+  | "es-advanced"
+  | "pt-advanced"
+  | "it-advanced";
 
 export interface OpenapiResolverConfig {
   countryCode: string;          // ISO 3166-1 alpha-2
@@ -180,11 +184,101 @@ interface IberianAdvancedData {
   };
 }
 
+// ─── IT-Advanced response shape (verified against v4 Eni response) ─────────
+// IT-Advanced is the richest Openapi product Strale ships in v1. Adds over
+// the WW-Top base:
+//   - detailedLegalForm  → closes T1 legal_form gap (IT is the only Openapi-
+//     routed country to reach T1=7/7)
+//   - atecoClassification.ateco → T3.nace (Italian NACE; ATECO=Italian variant)
+//   - balanceSheets.last.shareCapital → T3.share_capital (IT-Advanced-only;
+//     absent in ES/PT-Advanced per Phase 2b correction)
+//   - balanceSheets.last.balanceSheetDate → T3.last_filing_date
+//   - shareHolders[] → T3.shareholders (≥10% threshold per Openapi docs)
+//
+// shareHolders[] entry shape per 2026-05-11 openapi-test-plan.md:
+//   { companyName?, name?, surname?, taxCode?, percentShare? }
+// (companyName set for corporate shareholders; name+surname set for natural
+// persons.) For widely-held entities like Eni the array is empty by design
+// — Strale's manifest reliability declares "common" not "guaranteed".
+interface ItAdvancedAtecoEntry {
+  code?: string;
+  description?: string;
+}
+interface ItAdvancedAddressOffice {
+  toponym?: string | null;
+  street?: string | null;
+  streetNumber?: string | null;
+  streetName?: string | null;
+  town?: string | null;
+  zipCode?: string | null;
+  province?: string | null;
+  region?: { code?: string; description?: string };
+}
+interface ItAdvancedBalanceSheet {
+  year?: number;
+  balanceSheetDate?: string | null;
+  employees?: number;
+  turnover?: number;
+  netWorth?: number;
+  shareCapital?: number;
+  totalStaffCost?: number;
+  totalAssets?: number;
+  avgGrossSalary?: number;
+}
+interface ItAdvancedShareHolder {
+  companyName?: string;
+  name?: string;
+  surname?: string;
+  taxCode?: string;
+  percentShare?: number;
+}
+interface ItAdvancedData {
+  id?: string;
+  lastUpdateTimestamp?: number;
+  companyName?: string;
+  nativeCompanyName?: string;
+  taxCode?: string;
+  vatCode?: string;
+  leiCode?: string;
+  address?: { registeredOffice?: ItAdvancedAddressOffice };
+  activityStatus?: string;
+  registrationDate?: string;
+  startDate?: string;
+  endDate?: string | null;
+  pec?: string;
+  detailedLegalForm?: { code?: string; description?: string };
+  atecoClassification?: {
+    ateco?: ItAdvancedAtecoEntry;
+    ateco2007?: ItAdvancedAtecoEntry;
+    ateco2022?: ItAdvancedAtecoEntry;
+  };
+  balanceSheets?: {
+    last?: ItAdvancedBalanceSheet;
+    all?: ItAdvancedBalanceSheet[];
+  };
+  shareHolders?: ItAdvancedShareHolder[];
+}
+
 interface OpenapiResponse<T> {
   data?: T[];
   success?: boolean;
   message?: string;
   error?: unknown;
+}
+
+// ─── Strale's canonical shareholder shape (set by IT-Advanced, Phase 2c) ───
+//
+// First v1 capability to expose shareholders → this defines the contract.
+// v1.1+ enrichments (UK PSC, IT-Full managers, UBO-Italy) must conform.
+// Sort order: descending by percent_share (largest first).
+export interface StraleShareHolder {
+  type: "company" | "person";        // company if companyName set; else person
+  name: string;                       // companyName, or "name surname" composed
+  identifier: string | null;          // taxCode (codice fiscale for IT entities)
+  percent_share: number;              // 0-100; from Openapi percentShare
+  share_type: string | null;          // null for IT-Advanced (no shareType field
+                                      // in Openapi response); v1.1+ may populate
+  source_as_of: string | null;        // response-level lastUpdateTimestamp (ISO)
 }
 
 // ─── Shared mappers ────────────────────────────────────────────────────────
@@ -238,6 +332,58 @@ function iberianNace(
   return { code: p.code, description: p.description ?? "" };
 }
 
+function composeItAdvancedAddress(
+  office: ItAdvancedAddressOffice | undefined,
+): string | null {
+  if (!office) return null;
+  const street =
+    office.streetName ??
+    (office.street && office.streetNumber
+      ? `${office.street} ${office.streetNumber}`
+      : office.street ?? null);
+  const parts = [
+    street?.trim() ?? null,
+    office.zipCode?.trim() ?? null,
+    office.town?.trim() ?? null,
+    office.province?.trim() ?? null,
+    "IT",
+  ].filter((p): p is string => typeof p === "string" && p.length > 0);
+  return parts.length > 0 ? parts.join(", ") : null;
+}
+
+function itAdvancedNace(
+  data: ItAdvancedData,
+): { code: string; description: string } | null {
+  const a =
+    data.atecoClassification?.ateco2022 ??
+    data.atecoClassification?.ateco2007 ??
+    data.atecoClassification?.ateco;
+  if (!a?.code) return null;
+  return { code: a.code, description: a.description ?? "" };
+}
+
+function mapItShareHolder(
+  sh: ItAdvancedShareHolder,
+  sourceAsOf: string | null,
+): StraleShareHolder {
+  const isCompany = typeof sh.companyName === "string" && sh.companyName.trim().length > 0;
+  const composedName = [sh.name, sh.surname]
+    .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+    .map((p) => p.trim())
+    .join(" ");
+  return {
+    type: isCompany ? "company" : "person",
+    name: isCompany ? sh.companyName!.trim() : composedName || "(unknown)",
+    identifier: sh.taxCode ?? null,
+    percent_share:
+      typeof sh.percentShare === "number" && Number.isFinite(sh.percentShare)
+        ? sh.percentShare
+        : 0,
+    share_type: null,
+    source_as_of: sourceAsOf,
+  };
+}
+
 // ─── Per-product registry (URL builder + scope + mapper dispatch) ──────────
 interface ProductDispatch {
   /** Build the fetch URL for a given country + identifier. */
@@ -269,6 +415,14 @@ const PRODUCT_REGISTRY: Record<OpenapiProduct, ProductDispatch> = {
     scope: "GET:company.openapi.com/PT-advanced",
     sourceLabel: "Openapi.com PT-Advanced",
   },
+  "it-advanced": {
+    // Italy is identifier-keyed (bare 11-digit codice fiscale; same as
+    // P.IVA for IT legal entities). No country path segment.
+    buildUrl: (_country, id) =>
+      `https://company.openapi.com/IT-advanced/${encodeURIComponent(id)}`,
+    scope: "GET:company.openapi.com/IT-advanced",
+    sourceLabel: "Openapi.com IT-Advanced",
+  },
 };
 
 // ─── Mappers (produce Strale output{} per product) ─────────────────────────
@@ -295,6 +449,49 @@ function mapWwTopOutput(
     nace_codes: nace ? [nace] : [],
     company_size: data.companySize ?? null,
     source_as_of: sourceAsOf,
+  };
+}
+
+function mapItAdvancedOutput(
+  data: ItAdvancedData,
+  config: OpenapiResolverConfig,
+  trimmed: string,
+): Record<string, unknown> {
+  const status = normaliseStatus(data.activityStatus);
+  const nace = itAdvancedNace(data);
+  const sourceAsOf = epochSecondsToIso(data.lastUpdateTimestamp);
+  const legalForm = data.detailedLegalForm?.description ?? null;
+  const last = data.balanceSheets?.last;
+  const shareCapital =
+    typeof last?.shareCapital === "number" && Number.isFinite(last.shareCapital)
+      ? last.shareCapital
+      : null;
+  const lastFilingDate = last?.balanceSheetDate ?? null;
+  // shareHolders[] sorted descending by percent_share per Phase 2c contract.
+  const shareholders = Array.isArray(data.shareHolders)
+    ? data.shareHolders
+        .map((sh) => mapItShareHolder(sh, sourceAsOf))
+        .sort((a, b) => b.percent_share - a.percent_share)
+    : [];
+  return {
+    company_name: data.companyName ?? data.nativeCompanyName ?? null,
+    native_company_name: data.nativeCompanyName ?? null,
+    registration_number: data.taxCode ?? trimmed,
+    vat_number: data.vatCode ?? trimmed,
+    country_code: config.countryCode,
+    legal_form: legalForm,
+    status,
+    is_active: status === "active",
+    registered_date: data.registrationDate ?? data.startDate ?? null,
+    registered_address: composeItAdvancedAddress(data.address?.registeredOffice),
+    lei_code: data.leiCode ?? null,
+    nace_codes: nace ? [nace] : [],
+    company_size: null,
+    source_as_of: sourceAsOf,
+    last_filing_date: lastFilingDate,
+    share_capital: shareCapital,
+    shareholders,
+    pec: data.pec ?? null,
   };
 }
 
@@ -449,6 +646,10 @@ export async function executeOpenapiCapability(
           const wwTopData = data as WwTopData;
           output = mapWwTopOutput(wwTopData, config, trimmed);
           recordId = wwTopData.id ?? null;
+        } else if (config.openapiProduct === "it-advanced") {
+          const itData = data as ItAdvancedData;
+          output = mapItAdvancedOutput(itData, config, trimmed);
+          recordId = itData.id ?? null;
         } else {
           // es-advanced or pt-advanced share the same Iberian shape
           const iberianData = data as IberianAdvancedData;

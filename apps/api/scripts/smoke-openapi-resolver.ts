@@ -56,6 +56,11 @@ const COUNTRIES: CountryConfig[] = [
   { country: "RO", slug: "romanian-company-data", product: "ww-top", validFixture: { vat_number: "RO13267213" }, invalidShape: { vat_number: "INVALID" }, expectedCompanyName: "Hidroelectrica", expectedT3Fields: ["nace_codes"] },
   { country: "ES", slug: "spanish-company-data", product: "es-advanced", validFixture: { vat_number: "A28015865" }, invalidShape: { vat_number: "INVALID" }, expectedCompanyName: "Telefonica", expectedT3Fields: ["nace_codes", "last_filing_date"] },
   { country: "PT", slug: "portuguese-company-data", product: "pt-advanced", validFixture: { vat_number: "504499777" }, invalidShape: { vat_number: "ABC" }, expectedCompanyName: "Galp", expectedT3Fields: ["nace_codes", "last_filing_date"] },
+  // IT-Advanced is unique in v1: T1=7/7 (legal_form via detailedLegalForm),
+  // T3=4/6 (shareholders + nace + share_capital + last_filing_date).
+  // shareholders[] is structurally present but empty for widely-held Eni —
+  // the smoke validates structural presence (array), not non-empty count.
+  { country: "IT", slug: "italian-company-data", product: "it-advanced", validFixture: { vat_number: "00484960588" }, invalidShape: { vat_number: "INVALID" }, expectedCompanyName: "ENI", expectedT3Fields: ["nace_codes", "last_filing_date", "share_capital"] },
 ];
 
 // Disable DB sync in auto-register — smoke runs locally without prod DB access.
@@ -138,10 +143,16 @@ async function runLiveTest(cfg: CountryConfig) {
     record(cfg.country, `live HTTP 200 in ${ms}ms`, true);
     record(cfg.country, `company_name contains '${cfg.expectedCompanyName}'`, nameMatch, `got: ${companyName.slice(0, 80)}`);
 
-    // Tier 1 (6/7 — legal_form null OK at WW-Top)
+    // Tier 1. IT-Advanced reaches 7/7 via detailedLegalForm; all other
+    // Openapi-routed countries are 6/7 with legal_form structurally null.
     const t1Fields = ["company_name", "registration_number", "country_code", "status", "registered_date", "registered_address"];
     const t1Populated = t1Fields.filter((f) => output[f] !== null && output[f] !== undefined && output[f] !== "");
-    record(cfg.country, `T1 6/7 (legal_form null at WW-Top)`, t1Populated.length === 6, `${t1Populated.length}/6 (legal_form=${output.legal_form === null ? "null✓" : output.legal_form})`);
+    const legalFormPopulated = output.legal_form !== null && output.legal_form !== undefined && output.legal_form !== "";
+    if (cfg.product === "it-advanced") {
+      record(cfg.country, "T1 7/7 (legal_form via detailedLegalForm)", t1Populated.length === 6 && legalFormPopulated, `base ${t1Populated.length}/6, legal_form=${output.legal_form}`);
+    } else {
+      record(cfg.country, `T1 6/7 (legal_form null at non-IT products)`, t1Populated.length === 6, `${t1Populated.length}/6 (legal_form=${legalFormPopulated ? output.legal_form : "null✓"})`);
+    }
 
     // Tier 2 output fields (vat_number, source_as_of)
     const t2OutputFields = ["vat_number", "source_as_of"];
@@ -154,7 +165,7 @@ async function runLiveTest(cfg: CountryConfig) {
     const provAuthOk = provenance.authoritative === false;
     record(cfg.country, "T2 provenance source-name + authoritative=false", provSourceOk && provAuthOk, `source=${provenance.source} authoritative=${provenance.authoritative}`);
 
-    // Tier 3 — per-product field expectations
+    // Tier 3 — per-product field expectations.
     const t3Populated = cfg.expectedT3Fields.filter((f) => {
       const v = output[f];
       if (Array.isArray(v)) return v.length > 0;
@@ -163,10 +174,27 @@ async function runLiveTest(cfg: CountryConfig) {
     const t3Denom = cfg.expectedT3Fields.length;
     record(
       cfg.country,
-      `T3 ${t3Denom}/${cfg.product === "ww-top" ? 6 : 6} expected (${cfg.expectedT3Fields.join("+")})`,
+      `T3 ${t3Denom}/6 expected (${cfg.expectedT3Fields.join("+")})`,
       t3Populated.length === t3Denom,
       `populated: ${t3Populated.join(",")}`,
     );
+    // IT-Advanced shareholders contract assertion: structurally present as
+    // array; entries (when present) conform to canonical shape per Phase 2c.
+    // Eni is widely-held → empty array; this validates structure not count.
+    if (cfg.product === "it-advanced") {
+      const sh = output.shareholders;
+      const shStructuralOk = Array.isArray(sh);
+      record(cfg.country, "shareholders structural=array (Phase 2c contract)", shStructuralOk, `len=${Array.isArray(sh) ? sh.length : "non-array"}`);
+      // If the array is non-empty (e.g. for a closely-held entity in future
+      // fixtures), validate the canonical shape on the first entry.
+      if (shStructuralOk && Array.isArray(sh) && sh.length > 0) {
+        const first = sh[0] as Record<string, unknown>;
+        const hasType = first.type === "company" || first.type === "person";
+        const hasName = typeof first.name === "string" && first.name.length > 0;
+        const hasPct = typeof first.percent_share === "number";
+        record(cfg.country, "shareholders[0] shape (type+name+percent_share)", hasType && hasName && hasPct, `type=${first.type} name=${String(first.name).slice(0,40)} pct=${first.percent_share}`);
+      }
+    }
   } catch (err) {
     record(cfg.country, "live HTTP call", false, String(err).slice(0, 200));
   }
