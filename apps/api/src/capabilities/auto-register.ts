@@ -132,17 +132,13 @@ const DEACTIVATED = new Map<string, string>([
     // Reactivation trigger: migrate to EPO OPS / USPTO PEDS / Lens.org.
     "Google Patents scraping prohibited by Google ToS (see DEC-20260420-H)",
   ],
-  [
-    "dutch-company-data",
-    // DEC-20260427-I-1: Runtime fetched northdata.com (Bavarian commercial KYB aggregator)
-    // and extracted JSON-LD profile data for Dutch (KVK) company lookups. Manifest claimed
-    // KVK / Kamer van Koophandel as the data source — full divergence. northdata.com's
-    // ToS forbids automated access; using it undermines Strale's compliance positioning.
-    // Reactivation trigger: licensed contract with KVK directly (their Handelsregister API
-    // requires Dutch business registration), or with a licensed multi-country aggregator
-    // (Creditsafe, Bisnode/Dun & Bradstreet, Experian).
-    "northdata.com scraping prohibited by ToS; pending licensed KVK or aggregator contract (see DEC-20260427-I)",
-  ],
+  // dutch-company-data REACTIVATED 2026-05-16 (Phase 2a): migrated from
+  // northdata.com Browserless scrape (Tier 1 violation per DEC-20260427-I-1)
+  // to Openapi.com WW-Top (Tier 3 vendor aggregator). KVK Option B closed
+  // 2026-05-12 (DEC-20260512-A: Mirjam Boele confirmed KVK partner status
+  // is closed to foreign EU entities); Openapi is the licensed-aggregator
+  // path per DEC-20260507-B. Double-gated: OPENAPI_ENABLED env flag +
+  // capabilities DB row is_active. Same pattern as Phase 1 AT (PR #121).
   [
     "portuguese-company-data",
     // DEC-20260427-I-2: Same as dutch-company-data — runtime fetched northdata.com,

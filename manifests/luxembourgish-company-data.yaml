@@ -1,10 +1,9 @@
-slug: dutch-company-data
-name: Dutch Company Data
+slug: luxembourgish-company-data
+name: Luxembourgish Company Data
 description: >-
-  Look up Dutch company data via Openapi.com WW-Top (Tier-3 vendor aggregator). Accepts Dutch VAT/BTW number
-  (NL + 9 digits + B + 2 digits). Returns name, registration number, status, registered address, registration
-  date, LEI, primary NACE code, and last-update timestamp. KvK 8-digit registration numbers are NOT accepted by
-  the upstream API.
+  Look up Luxembourgish company data via Openapi.com WW-Top (Tier-3 vendor aggregator). Accepts LU VAT
+  (LU + 8 digits). Returns name, registration number, status, registered address, registration date, LEI,
+  primary NACE code, and last-update timestamp. RCS B-prefix company numbers are NOT accepted by the upstream API.
 category: company-data
 cost_class: paid_per_call
 price_cents: 16
@@ -17,24 +16,24 @@ input_schema:
   properties:
     vat_number:
       type: string
-      description: Dutch VAT/BTW number (NL + 9 digits + B + 2 digits, e.g. NL803441526B01). KvK numbers are NOT accepted.
+      description: Luxembourgish VAT (LU + 8 digits, e.g. LU18513414). RCS B-prefix company numbers are NOT accepted.
 output_schema:
   type: object
   example:
-    company_name: ASML Holding N.V.
-    native_company_name: ASML Holding N.V.
-    registration_number: "17085815"
-    vat_number: NL803441526B01
-    country_code: NL
+    company_name: RTL Group S.A.
+    native_company_name: RTL Group S.A.
+    registration_number: LU18513414
+    vat_number: LU18513414
+    country_code: LU
     legal_form: null
     status: active
     is_active: true
-    registered_date: "1994-10-04"
-    registered_address: "De Run 6501, 6501, 5504 DR, Veldhoven, NL"
-    lei_code: 724500Y6DUVHQD6OXN27
+    registered_date: "1972-12-30"
+    registered_address: "Boulevard Pierre Frieden 43 43, 1543, Luxembourg, LU"
+    lei_code: 5493000C8J3C3SZYS040
     nace_codes:
-      - code: "2611"
-        description: Manufacture of electronic components
+      - code: "6020"
+        description: Television programming and broadcasting activities
     company_size: Very large company
     source_as_of: "2026-04-30T12:00:00.000Z"
   properties:
@@ -67,17 +66,17 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      vat_number: NL803441526B01
+      vat_number: LU18513414
     expected_fields:
       - { field: company_name, operator: not_null, reliability: guaranteed }
-      - { field: vat_number, operator: equals, reliability: guaranteed, value: NL803441526B01 }
-      - { field: country_code, operator: equals, reliability: guaranteed, value: NL }
+      - { field: vat_number, operator: equals, reliability: guaranteed, value: LU18513414 }
+      - { field: country_code, operator: equals, reliability: guaranteed, value: LU }
       - { field: status, operator: equals, reliability: guaranteed, value: active }
       - { field: is_active, operator: equals, reliability: guaranteed, value: true }
       - { field: registered_address, operator: not_null, reliability: guaranteed }
       - { field: registration_number, operator: not_null, reliability: guaranteed }
   health_check_input:
-    vat_number: NL803441526B01
+    vat_number: LU18513414
 output_field_reliability:
   company_name: guaranteed
   native_company_name: common
@@ -87,7 +86,7 @@ output_field_reliability:
   legal_form: rare
   status: guaranteed
   is_active: guaranteed
-  registered_date: common
+  registered_date: guaranteed
   registered_address: guaranteed
   lei_code: common
   nace_codes: guaranteed
@@ -101,12 +100,12 @@ limitations:
       capability-unavailable.
     category: availability
     severity: warning
-  - title: KvK numbers rejected
-    text: Openapi WW-Top accepts only NL-prefix VAT format. KvK 8-digit registration numbers return 406.
+  - title: RCS B-prefix company numbers rejected
+    text: Openapi WW-Top accepts only LU-prefix VAT format. B-prefix RCS company numbers return 406.
     category: coverage
     severity: info
   - title: Legal form not returned at WW-Top tier
-    text: Openapi WW-Top does not return Dutch legal form.
+    text: Openapi WW-Top does not return Luxembourgish legal form.
     category: coverage
     severity: info
   - title: Directors not available at WW-Top tier
