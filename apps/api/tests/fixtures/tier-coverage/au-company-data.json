@@ -1,0 +1,15 @@
+{
+  "company_name": "AUSTRALIAN TAXATION OFFICE",
+  "abn": "51824753556",
+  "acn": null,
+  "status": "Active",
+  "entity_type": "Commonwealth Government Entity",
+  "state": "NSW",
+  "postcode": "2640",
+  "gst_registered": true,
+  "business_names": null,
+  "last_updated": "1999-11-01",
+  "data_source": "Australian Business Register (ABR)",
+  "data_source_url": "https://abr.business.gov.au/",
+  "retrieved_at": "[CAPTURE_TIMESTAMP]"
+}

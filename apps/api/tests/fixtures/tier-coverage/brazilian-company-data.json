@@ -1,0 +1,19 @@
+{
+  "company_name": "PETROLEO BRASILEIRO S A PETROBRAS",
+  "trade_name": "PETROBRAS - EDISE",
+  "cnpj": "33.000.167/0001-01",
+  "type": "MATRIZ",
+  "status": "ATIVA",
+  "address": "AV REPUBLICA DO CHILE, 65, CENTRO, 20.031-170 RIO DE JANEIRO, RJ",
+  "opening_date": "28/09/1966",
+  "legal_nature": "203-8 - Sociedade de Economia Mista",
+  "size": "DEMAIS",
+  "share_capital": "205431960490.52",
+  "activity_codes": [
+    {
+      "code": "06.00-0-01",
+      "description": "Extração de petróleo e gás natural"
+    }
+  ],
+  "partners": "[REDACTED]"
+}

@@ -1,0 +1,25 @@
+{
+  "company_name": "ENI S.P.A.",
+  "native_company_name": null,
+  "registration_number": "00484960588",
+  "vat_number": "00905811006",
+  "country_code": "IT",
+  "legal_form": "SOCIETA' PER AZIONI",
+  "status": "active",
+  "is_active": true,
+  "registered_date": "1992-07-30",
+  "registered_address": "PIAZZALE ENRICO MATTEI 1, 00144, ROMA, RM, IT",
+  "lei_code": null,
+  "nace_codes": [
+    {
+      "code": "19201",
+      "description": "Raffinerie di petrolio"
+    }
+  ],
+  "company_size": null,
+  "source_as_of": "[CAPTURE_TIMESTAMP]",
+  "last_filing_date": "2024-12-31",
+  "share_capital": 4005358876,
+  "shareholders": [],
+  "pec": "eni@pec.eni.com"
+}

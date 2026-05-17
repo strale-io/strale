@@ -1,0 +1,23 @@
+# tier-coverage gate — Phase 1 grandfathered findings.
+#
+# Each slug below has at least one finding in the 2026-05-17 capture pass.
+# Phase 1 (current) is WARN-ONLY and surfaces all findings; this allowlist
+# is consulted only for the per-finding "[allowlisted]" tag in the output.
+#
+# When the gate is promoted to Phase 2 (--strict exits 1 on new findings),
+# slugs in this allowlist are grandfathered and won't fail CI. New slugs
+# that appear in future captures will fail. Remove a slug from this list
+# AFTER its manifest is fixed (re-capture with `npx tsx
+# apps/api/scripts/capture-tier-fixtures.ts --slug <slug>` and confirm
+# the gate reports zero findings for it).
+#
+# Format: one slug per line, # comments allowed, blank lines ignored.
+
+brazilian-company-data
+estonian-company-data
+french-company-data
+japanese-company-data
+norwegian-company-data
+polish-company-data
+swedish-company-data
+us-company-data

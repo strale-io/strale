@@ -1,0 +1,21 @@
+{
+  "company_name": "Societatea de Producere A Energiei Electrice IN Hidrocentrale \" Hidroelectrica\" S.A.",
+  "native_company_name": "Societatea de Producere A Energiei Electrice IN Hidrocentrale \" Hidroelectrica\" S.A.",
+  "registration_number": "RO13267213",
+  "vat_number": "RO13267213",
+  "country_code": "RO",
+  "legal_form": null,
+  "status": "active",
+  "is_active": true,
+  "registered_date": "2000-08-10",
+  "registered_address": "ION MIHALACHE Nr. 15-17 Et. 10-15 Sect. 1 60, Bucuresti Sectorul 1, RO",
+  "lei_code": "787200IISRQXO9PRB732",
+  "nace_codes": [
+    {
+      "code": "3511",
+      "description": "Production of electricity"
+    }
+  ],
+  "company_size": "Very large company",
+  "source_as_of": "[CAPTURE_TIMESTAMP]"
+}

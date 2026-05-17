@@ -1,0 +1,17 @@
+{
+  "company_name": "ENGIE",
+  "siren": "542107651",
+  "siret": "54210765114459",
+  "business_type": "5599",
+  "address": "67 RUE JULES FERRY 92250 LA GARENNE-COLOMBES",
+  "city": "LA GARENNE-COLOMBES",
+  "postal_code": "92250",
+  "activity_code": "35.23Z",
+  "creation_date": "1954-01-01",
+  "employee_range": "51",
+  "status": "active",
+  "vat_number": "FR13542107651",
+  "directors": "[REDACTED]",
+  "directors_truncated": false,
+  "total_directors": 16
+}

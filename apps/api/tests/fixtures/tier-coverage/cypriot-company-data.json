@@ -1,0 +1,21 @@
+{
+  "company_name": "Bank of Cyprus Public Company Limited",
+  "native_company_name": "Bank of Cyprus Public Company Limited",
+  "registration_number": "C165",
+  "vat_number": "C165",
+  "country_code": "CY",
+  "legal_form": null,
+  "status": "active",
+  "is_active": true,
+  "registered_date": "1943-12-31",
+  "registered_address": "Agia Paraskeyi, Strovolos Stasinou 51 51, 2002, Nicosia, CY",
+  "lei_code": null,
+  "nace_codes": [
+    {
+      "code": "6419",
+      "description": "Other monetary intermediation"
+    }
+  ],
+  "company_size": "Very large company",
+  "source_as_of": "[CAPTURE_TIMESTAMP]"
+}

@@ -1,0 +1,21 @@
+{
+  "company_name": "ASML Holding N.V.",
+  "native_company_name": "ASML Holding N.V.",
+  "registration_number": "NL803441526B01",
+  "vat_number": "NL803441526B01",
+  "country_code": "NL",
+  "legal_form": null,
+  "status": "active",
+  "is_active": true,
+  "registered_date": "1994-10-03",
+  "registered_address": "De Run 6501 6501, 5504 DR, Veldhoven, NL",
+  "lei_code": "724500Y6DUVHQD6OXN27",
+  "nace_codes": [
+    {
+      "code": "2899",
+      "description": "Manufacture of other special-purpose machinery n.e.c."
+    }
+  ],
+  "company_size": "Very large company",
+  "source_as_of": "[CAPTURE_TIMESTAMP]"
+}
