@@ -1,0 +1,21 @@
+capability_slug: norwegian-company-data
+country: "NO"
+evidence_type: Company registry
+provider: Brreg
+status: Live
+sourcing_pattern: null
+per_call_price_eur: 0.05
+evidence_grade: live-verified
+tier_1_coverage: 7/7
+tier_2_coverage: 4/5
+tier_3_coverage: 1/6
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: Free, open data. No commercial restrictions. Rate limits generous.
+doctrine_reference: null
+notes: >-
+  2026-05-15 identity audit Batch 2 confirmed NO functional via Brreg (Brønnøysundregistrene).
+  Direct API, authoritative, free.
+_source_notion_page_id: 34867c87-082c-8136-b13c-cbc6590f5a02

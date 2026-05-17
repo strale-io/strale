@@ -1,0 +1,30 @@
+capability_slug: austrian-company-data
+country: AT
+evidence_type: Company registry
+provider: Openapi.com
+status: Committed
+sourcing_pattern: Vendor (Tier 3 aggregator)
+per_call_price_eur: 0.16
+evidence_grade: live-verified
+tier_1_coverage: 6/7 (no legal_form via WW-Top)
+tier_2_coverage: 4/5 (vatCode + source-as-of + source-name + authoritative-flag=false; no directors via WW-Top)
+tier_3_coverage: 1/6 (NACE only)
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: https://www.notion.so/35667c87082c811189f3e1824b52ac72
+provider_tos_notes: >-
+  Openapi.com WW-Top via case 151296 resale addendum (PAYG; €0.16/call inc 22% IT VAT pre-VAT-flip
+  target). AT identifier path: VAT only (Firmenbuch FN format returns 406). Previous finapu.com
+  scraping path deprecated 2026-05-17 per Tier-1 doctrine DEC-20260428-A (see corresponding
+  Deprecated row in matrix).
+doctrine_reference: >-
+  Moonlighter AB VAT issuance (via Skatteverket); Openapi resale addendum case 151296 awaiting
+  countersignature
+notes: >-
+  v4 probe 2026-05-15: OMV at ATU14189108 returned 200 via WW-Top. AT-start scope accessible on prod
+  credentials but returns same WW-Top dataset (normalized projection, not richer). 2026-05-11 prior
+  probe confirmed Erste/Andritz/Voestalpine catalog hits. Estimated cost €0.13 + 22% IT VAT =
+  €0.1586/call. Cheaper AT-start (€0.055) path exists but coverage is identical to WW-Top — defer
+  wire decision.
+_source_notion_page_id: 34867c87-082c-8165-9fcd-d01bc75c9766

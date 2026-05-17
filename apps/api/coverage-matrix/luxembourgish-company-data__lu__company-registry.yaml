@@ -1,0 +1,22 @@
+capability_slug: luxembourgish-company-data
+country: LU
+evidence_type: Company registry
+provider: Openapi.com
+status: Committed
+sourcing_pattern: Vendor (Tier 3 aggregator)
+per_call_price_eur: 0.16
+evidence_grade: live-verified
+tier_1_coverage: 6/7 (no legal_form via WW-Top)
+tier_2_coverage: 4/5 (vatCode + source-as-of + source-name + authoritative-flag=false; no directors via WW-Top)
+tier_3_coverage: 1/6 (NACE only)
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: N/A - no provider integrated
+doctrine_reference: Openapi addendum (countersignature pending)
+notes: >-
+  2026-05-11 prior probe + v4 spot-check 2026-05-15: RTL Group LU18513414, Aperam, BGL BNP Paribas,
+  Cargolux, BCEE, SES all 200 via WW-Top with LU-prefix VAT (LU + 8 digits). B-prefix RCS rejected
+  (406). No country-specific Openapi product (LU-start scope rejected). Cost €0.1586/call.
+_source_notion_page_id: 34867c87-082c-81c8-a809-f2673f0e7ff3

@@ -14,7 +14,10 @@
     "mcp:build": "npm run build --workspace=packages/mcp-server",
     "mcp:dev": "npm run dev --workspace=packages/mcp-server",
     "test": "npm run test --workspace=apps/api",
-    "typecheck": "npm run typecheck --workspace=apps/api"
+    "typecheck": "npm run typecheck --workspace=apps/api",
+    "validate:coverage-matrix": "node apps/api/scripts/validate-coverage-matrix.mjs",
+    "coverage-matrix:summary": "node apps/api/scripts/regenerate-coverage-matrix-summary.mjs",
+    "coverage-matrix:check": "npm run validate:coverage-matrix && npm run coverage-matrix:summary -- --check"
   },
   "license": "MIT",
   "engines": {

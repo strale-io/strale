@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strale.dev/schemas/coverage-matrix/v1.json",
+  "title": "Provider-Coverage matrix row",
+  "description": "Canonical shape for one (capability_slug, country, evidence_type) entry. See apps/api/coverage-matrix/README.md and DEC-20260517-A.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "capability_slug",
+    "country",
+    "evidence_type",
+    "provider",
+    "status",
+    "products",
+    "_source_notion_page_id"
+  ],
+  "properties": {
+    "capability_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Kebab-case capability slug. When status=Live and provider is Strale-built, should match a manifest in apps/api/src/capabilities/."
+    },
+    "country": {
+      "type": "string",
+      "pattern": "^([A-Z]{2}|EU-wide|Global)$",
+      "description": "ISO-3166-1 alpha-2, or 'EU-wide', or 'Global'."
+    },
+    "evidence_type": {
+      "type": "string",
+      "enum": [
+        "Company registry",
+        "VAT",
+        "LEI",
+        "Sanctions / PEP",
+        "IBAN / name match",
+        "Beneficial ownership",
+        "Address / other",
+        "Adverse media",
+        "Litigation / bankruptcy",
+        "EIN / Tax ID"
+      ]
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Live", "Committed"],
+      "description": "Deprecated / Gap / In discovery are filtered before migration; they never appear here."
+    },
+    "sourcing_pattern": {
+      "type": ["string", "null"],
+      "enum": [
+        "Direct API",
+        "Vendor (Tier 2)",
+        "Licensed bulk (Tier 3)",
+        "Self-hosted (Strale-built)",
+        "Free open data",
+        "Tier 1 violation",
+        "Vendor (Tier 3 aggregator)",
+        null
+      ],
+      "description": "Null permitted for unclassified rows pending chat-side backfill."
+    },
+    "per_call_price_eur": {
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "evidence_grade": {
+      "type": ["string", "null"],
+      "enum": ["live-verified", "vendor-claimed", "untested", "n/a", null],
+      "description": "live-verified = directly probed last 30 days. vendor-claimed = vendor doc/correspondence only. untested = neither. n/a = not applicable (e.g. structural exemption). Null when not yet classified."
+    },
+    "tier_1_coverage": {
+      "type": ["string", "null"],
+      "description": "BR Tier 1 (MUST) field coverage e.g. '7/7'. Null for non-BR or unmeasured."
+    },
+    "tier_2_coverage": {
+      "type": ["string", "null"]
+    },
+    "tier_3_coverage": {
+      "type": ["string", "null"]
+    },
+    "last_verified": {
+      "type": ["string", "null"],
+      "format": "date"
+    },
+    "products": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Strale product names this row participates in. Free-form strings; Notion currently uses 'Counterparty Assurance' and the placeholder 'Future vertical' (the latter accumulates in committed YAMLs and is expected to be replaced by real product names as the product line grows; no enum constraint to avoid breaking on legitimate future names)."
+    },
+    "vendor_roster_url": {
+      "type": ["string", "null"],
+      "pattern": "^https://www\\.notion\\.so/.+$"
+    },
+    "provider_tos_notes": {
+      "type": ["string", "null"]
+    },
+    "doctrine_reference": {
+      "type": ["string", "null"]
+    },
+    "notes": {
+      "type": ["string", "null"]
+    },
+    "_source_notion_page_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    }
+  }
+}

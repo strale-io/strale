@@ -1,0 +1,24 @@
+capability_slug: uk-company-data
+country: UK
+evidence_type: Company registry
+provider: Companies House
+status: Live
+sourcing_pattern: null
+per_call_price_eur: 0.05
+evidence_grade: live-verified
+tier_1_coverage: 7/7
+tier_2_coverage: 4/5 (directors via Companies House; VAT routed to HMRC v2 separately)
+tier_3_coverage: 2/6 (NACE + last filing date)
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: >-
+  Free direct API. Rate-limited but generous for Payee Assurance volume. Commercial use permitted.
+  No redistribution restrictions for verification use case.
+doctrine_reference: null
+notes: >-
+  2026-05-15 identity audit Batch 1 confirmed UK functional via Companies House. UK VAT not returned
+  by Companies House (HMRC v2 separate route per DEC-20260513-F). VAT field declared in manifest but
+  empirically null — PR #120 schema cleanup pending merge.
+_source_notion_page_id: 34867c87-082c-819c-b03f-e4d79828c1ba

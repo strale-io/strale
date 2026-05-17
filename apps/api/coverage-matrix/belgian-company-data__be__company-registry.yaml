@@ -1,0 +1,29 @@
+capability_slug: belgian-company-data
+country: BE
+evidence_type: Company registry
+provider: cbeapi.be
+status: Live
+sourcing_pattern: Vendor (Tier 2)
+per_call_price_eur: 0.05
+evidence_grade: live-verified
+tier_1_coverage: 6/7
+tier_2_coverage: 3/5
+tier_3_coverage: 0/6 (NACE null via CBEAPI wrapper)
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: >-
+  Current path: cbeapi.be third-party JSON wrapper of KBO/BCE. Free 2500 req/day tier with API key
+  (CBEAPI_KEY env var, set in production). Their public docs return 403 — license terms not
+  verifiable from outside. Treated as Tier-2 vendor-mediated. Mitigation: (c) FPS Economy KBO Open
+  Data ingest is queued and will replace this dependency entirely; the underlying KBO Open Data ToU
+  permits commercial reuse with no direct-marketing on personal-name data.
+doctrine_reference: >-
+  DEC-20260428-A Tier 2 (vendor-mediated public records); planned migration to Tier 3
+  (licensed-bulk) via FPS Economy KBO Open Data
+notes: >-
+  2026-05-15 identity audit Batch 2 confirmed BE functional via CBEAPI.be Tier-2 wrapper. CBEAPI
+  does not surface NACE — industry field declared in manifest but null 3/3 in audit. FPS Economy
+  direct migration queued.
+_source_notion_page_id: 34867c87-082c-81c0-bf46-c460d665b61b

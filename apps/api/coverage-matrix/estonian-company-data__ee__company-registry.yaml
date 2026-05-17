@@ -1,0 +1,23 @@
+capability_slug: estonian-company-data
+country: EE
+evidence_type: Company registry
+provider: Ariregister
+status: Live
+sourcing_pattern: null
+per_call_price_eur: 0.05
+evidence_grade: live-verified
+tier_1_coverage: 6/7
+tier_2_coverage: 3/5
+tier_3_coverage: 1/6
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: Direct API, open data. Estonia's strong e-government posture. Free-stable-api classification.
+doctrine_reference: null
+notes: >-
+  2026-05-15 identity audit Batch 3 confirmed EE functional via Ariregister direct API. PR #120
+  (merged 2026-05-16 at fd59571) covered EE schema cleanup including VAT derivation (EE + 9-digit)
+  and business_type label normalization. Tier 2 coverage may benefit from empirical re-verification
+  post-merge. Free direct API.
+_source_notion_page_id: 34867c87-082c-81a7-aa67-e9b7afd87069

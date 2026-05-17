@@ -1,0 +1,28 @@
+capability_slug: uk-company-data
+country: UK
+evidence_type: Beneficial ownership
+provider: PSC register
+status: Live
+sourcing_pattern: null
+per_call_price_eur: null
+evidence_grade: null
+tier_1_coverage: null
+tier_2_coverage: null
+tier_3_coverage: null
+last_verified: "2026-04-20"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: Free, part of Companies House API. Public data.
+doctrine_reference: null
+notes: >-
+  People with Significant Control (PSC) register is integrated into Companies House. Free, direct
+  API. Returns PSC name, date of birth (month/year), nationality, nature of control. SLUG ANNOTATION
+  CLEANED 2026-05-17: slug was 'uk-company-data (PSC fields embedded in Companies House response)';
+  annotation moved here. Slug uk-company-data is intentionally shared with the Company-registry row
+  for UK (34867c87-082c-819c-b03f-e4d79828c1ba) — both evidence types are returned by the same
+  Companies House API call (one capability handler, multiple evidence categories). Primary-key
+  disambiguation per DEC-20260517-A (post v2 halt): primary key is (capability_slug, country,
+  evidence_type), not (capability_slug, country). YAML filename pattern:
+  {slug}{country_lc}{evidence_type_slug}.yaml.
+_source_notion_page_id: 34867c87-082c-819c-835e-f539d2f8a333

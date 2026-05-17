@@ -1,0 +1,21 @@
+capability_slug: fr-bodacc-lookup
+country: FR
+evidence_type: Litigation / bankruptcy
+provider: Other
+status: Committed
+sourcing_pattern: Free open data
+per_call_price_eur: 0
+evidence_grade: null
+tier_1_coverage: null
+tier_2_coverage: null
+tier_3_coverage: null
+last_verified: "2026-04-28"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: null
+doctrine_reference: DEC-20260428-A Tier 2
+notes: >-
+  Free JSON REST. etalab-2.0 license = redistribution OK. Best EU insolvency source. Vendor Roster:
+  BODACC.
+_source_notion_page_id: 35067c87-082c-815b-9b77-f201311bcdde

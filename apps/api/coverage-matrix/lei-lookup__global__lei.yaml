@@ -1,0 +1,21 @@
+capability_slug: lei-lookup
+country: Global
+evidence_type: LEI
+provider: GLEIF
+status: Live
+sourcing_pattern: null
+per_call_price_eur: 0
+evidence_grade: null
+tier_1_coverage: null
+tier_2_coverage: null
+tier_3_coverage: null
+last_verified: "2026-04-20"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: Free, open data. No commercial restrictions. Global Legal Entity Identifier Foundation.
+doctrine_reference: null
+notes: >-
+  GLEIF provides Legal Entity Identifier (LEI) lookup globally. Single provider, no routing needed.
+  Used for corporate entities with LEI registration.
+_source_notion_page_id: 34867c87-082c-81a2-8c4a-c920a90232d1

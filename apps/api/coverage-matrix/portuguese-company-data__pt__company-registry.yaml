@@ -1,0 +1,34 @@
+capability_slug: portuguese-company-data
+country: PT
+evidence_type: Company registry
+provider: Openapi.com
+status: Committed
+sourcing_pattern: Vendor (Tier 3 aggregator)
+per_call_price_eur: 0.06
+evidence_grade: live-verified
+tier_1_coverage: 6/7 (no legal_form)
+tier_2_coverage: >-
+  4/5 (vatCode + source-as-of + source-name + authoritative-flag=false; no directors via
+  PT-Advanced)
+tier_3_coverage: >-
+  2/6 (NACE via naceClassification + last_filing_date via balanceSheets[].balanceSheetDate; no
+  share_capital field at PT-Advanced tier per Phase 2b empirical)
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: https://www.notion.so/35667c87082c81b1a0f4fc47fa62ffdb
+provider_tos_notes: >-
+  Direct-API path BLOCKED — no viable self-serve or commercial wrapper option for Portugal. Current
+  Browserless path stays until aggregator contract ships. Wave 2 target: licensed aggregator
+  (Creditsafe in commercial outreach, fallback to per-country aggregator if Creditsafe rejects).
+doctrine_reference: >-
+  Openapi addendum (countersignature pending); PT direct integration via Registo Comercial queued as
+  v1.1 quality upgrade
+notes: >-
+  v3 + v2 probes 2026-05-15: Galp + EDP both 200 via PT-start AND PT-advanced. NIPC bare 9-digit
+  accepted. PT-advanced (€0.05 + 22% IT VAT = €0.061/call) adds NACE + 4-year balance sheets. Within
+  Strale price band. NO directors/officers/shareholders — IT-only product line. CORRECTED 2026-05-16
+  post Phase 2b empirical probe: balanceSheets[] has NO shareCapital field (IT-Advanced-only); T3
+  reflects NACE + last_filing_date only. Direct Registo Comercial / publicacoes.mj.pt integration
+  (authoritative source + directors + share capital) queued for v1.1.
+_source_notion_page_id: 34867c87-082c-81ea-a495-d9b01e9da1d9
