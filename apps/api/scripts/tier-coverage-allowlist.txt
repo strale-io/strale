@@ -20,6 +20,4 @@ japanese-company-data
 norwegian-company-data
 polish-company-data
 swedish-company-data
-swiss-company-data
-uk-company-data
 us-company-data

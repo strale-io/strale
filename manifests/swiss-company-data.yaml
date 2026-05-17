@@ -48,6 +48,8 @@ output_schema:
       type: integer
     legal_form:
       type: string
+    legal_form_id:
+      type: integer
     status:
       type: string
     canton:
@@ -105,6 +107,7 @@ output_field_reliability:
   ehraid: guaranteed
   ch_id: common
   legal_form: guaranteed
+  legal_form_id: guaranteed
   status: guaranteed
   canton: common
   municipality: common
