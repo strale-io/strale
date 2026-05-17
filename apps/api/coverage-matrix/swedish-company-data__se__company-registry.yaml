@@ -3,7 +3,7 @@ country: SE
 evidence_type: Company registry
 provider: Bolagsverket
 status: Live
-sourcing_pattern: null
+sourcing_pattern: "Direct API"
 per_call_price_eur: 0.05
 evidence_grade: live-verified
 tier_1_coverage: 7/7

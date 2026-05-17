@@ -3,7 +3,7 @@ country: Global
 evidence_type: LEI
 provider: GLEIF
 status: Live
-sourcing_pattern: null
+sourcing_pattern: "Direct API"
 per_call_price_eur: 0
 evidence_grade: null
 tier_1_coverage: null
