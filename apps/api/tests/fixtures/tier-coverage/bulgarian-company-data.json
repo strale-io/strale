@@ -1,0 +1,21 @@
+{
+  "company_name": "Sopharma",
+  "native_company_name": "Софарма",
+  "registration_number": "831902088",
+  "vat_number": "BG831902088",
+  "country_code": "BG",
+  "legal_form": null,
+  "status": "active",
+  "is_active": true,
+  "registered_date": "1933-01-01",
+  "registered_address": "ul. Iliensko shose 16 16, 1220, Sofia, BG",
+  "lei_code": "097900BGGW0000048796",
+  "nace_codes": [
+    {
+      "code": "2120",
+      "description": "Manufacture of pharmaceutical preparations"
+    }
+  ],
+  "company_size": "Very large company",
+  "source_as_of": "[CAPTURE_TIMESTAMP]"
+}

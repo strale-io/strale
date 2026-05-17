@@ -1,0 +1,18 @@
+{
+  "company_name": "Roche Holding AG",
+  "uid": "CHE101602521",
+  "ehraid": 154673,
+  "ch_id": "CH27030051590",
+  "legal_form": "AG",
+  "legal_form_id": 3,
+  "status": "ACTIVE",
+  "canton": "BS",
+  "municipality": "Basel",
+  "address": "Grenzacherstr., 124, 4058 Basel",
+  "purpose": "Unter der Firma «Roche Holding AG» «Roche Holding SA» «Roche Holding Ltd» besteht eine Aktiengesellschaft, welche den Zweck hat, sich an Unternehmungen zu beteiligen, die in den Bereichen Life Sciences, Gesundheit oder verwandt en Gebieten tätig sind. Die Beteiligung jeglicher Art an sonstigen Unternehmungen und Holdinggesellschaften im In - und Ausland ist gestattet. Die Gesellschaft kann Zweigniederlassungen und Tochtergesellschaften im In- und Ausland errichten sowie alle Geschäfte tätigen, die direkt oder indirekt mit ihrem Zweck in Zusammenhang stehen. Die Gesellschaft kann im In- und Ausland Grundeigentum und Immaterialgüterrechte erwerben, belasten, veräussern und verwalten sowie andere Gesellschaften finanzieren. Bei der Verfolgung ihres Gesellschaftszwecks strebt die Gesellschaft die Schaffung von langfristigem, nachhaltigem Wert an.",
+  "registration_date": "2026-05-11",
+  "deletion_date": null,
+  "data_source": "Zefix, Federal Office of Justice, Switzerland",
+  "data_source_url": "https://www.zefix.admin.ch/",
+  "data_attribution": "Data from Zefix, Federal Office of Justice, Switzerland"
+}

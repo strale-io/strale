@@ -1,0 +1,21 @@
+{
+  "company_name": "OMV Aktiengesellschaft",
+  "native_company_name": "OMV Aktiengesellschaft",
+  "registration_number": "FN 93363 z",
+  "vat_number": "ATU14189108",
+  "country_code": "AT",
+  "legal_form": null,
+  "status": "active",
+  "is_active": true,
+  "registered_date": "1943-08-09",
+  "registered_address": "Trabrennstrasse 6 -8 6, 1020, Wien, AT",
+  "lei_code": "549300V62YJ9HTLRI486",
+  "nace_codes": [
+    {
+      "code": "1920",
+      "description": "Manufacture of refined petroleum products"
+    }
+  ],
+  "company_size": "Very large company",
+  "source_as_of": "[CAPTURE_TIMESTAMP]"
+}

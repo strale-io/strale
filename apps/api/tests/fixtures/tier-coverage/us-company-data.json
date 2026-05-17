@@ -1,0 +1,14 @@
+{
+  "company_name": "Apple Inc.",
+  "cik": "0000320193",
+  "entity_type": "operating",
+  "sic": "3571",
+  "sic_description": "Electronic Computers",
+  "state": "CA",
+  "address": "ONE APPLE PARK WAY, CUPERTINO, CA, 95014",
+  "ein": "942404110",
+  "fiscal_year_end": "0926",
+  "ticker": "AAPL",
+  "exchange": "Nasdaq",
+  "status": "active"
+}

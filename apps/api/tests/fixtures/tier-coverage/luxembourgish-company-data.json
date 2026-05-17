@@ -1,0 +1,21 @@
+{
+  "company_name": "RTL Group S.A.",
+  "native_company_name": "RTL Group S.A.",
+  "registration_number": "LU18513414",
+  "vat_number": "LU18513414",
+  "country_code": "LU",
+  "legal_form": null,
+  "status": "active",
+  "is_active": true,
+  "registered_date": "1972-12-30",
+  "registered_address": "Boulevard Pierre Frieden 43 43, 1543, Luxembourg, LU",
+  "lei_code": "5493000C8J3C3SZYS040",
+  "nace_codes": [
+    {
+      "code": "6020",
+      "description": "Television programming and broadcasting activities"
+    }
+  ],
+  "company_size": "Very large company",
+  "source_as_of": "[CAPTURE_TIMESTAMP]"
+}

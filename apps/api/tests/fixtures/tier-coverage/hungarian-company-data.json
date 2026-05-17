@@ -1,0 +1,21 @@
+{
+  "company_name": "OTP Bank PLC",
+  "native_company_name": "OTP Bank PLC",
+  "registration_number": "HU10537914",
+  "vat_number": "HU10537914",
+  "country_code": "HU",
+  "legal_form": null,
+  "status": "active",
+  "is_active": true,
+  "registered_date": "1949-01-01",
+  "registered_address": "HU",
+  "lei_code": "529900W3MOO00A18X956",
+  "nace_codes": [
+    {
+      "code": "6419",
+      "description": "Other monetary intermediation"
+    }
+  ],
+  "company_size": "Very large company",
+  "source_as_of": "[CAPTURE_TIMESTAMP]"
+}

@@ -1,0 +1,31 @@
+{
+  "company_name": "Spotify AB",
+  "org_number": "556703-7485",
+  "vat_number": "SE556703748501",
+  "country_code": "SE",
+  "company_type": "Aktiebolag",
+  "company_type_code": "AB",
+  "legal_form": "Övriga aktiebolag",
+  "legal_form_code": "49",
+  "status": "active",
+  "is_active": true,
+  "registered_date": "2006-05-10",
+  "deregistered_date": null,
+  "deregistration_reason": null,
+  "registered_address": {
+    "street": "Regeringsgatan 19",
+    "postal_code": "11153",
+    "city": "STOCKHOLM",
+    "country": "Sverige",
+    "co_address": null
+  },
+  "sni_codes": [
+    {
+      "code": "60100",
+      "description": "Radiosändning och distribution av ljudinspelningar"
+    }
+  ],
+  "business_description": "Bolaget har till föremål för sin verksamhet att bedriva Internetrelaterade tjänster inom digitala medier som musik, spel och TV, samt att, direkt eller indirekt, äga och förvalta fast och lös egendom, äga aktier och andelar i dotterbolag och andra bolag samt tillhandahålla administrativa tjänster för dessa bolag och därmed förenlig verksamhet.",
+  "ongoing_procedures": [],
+  "alternative_names": []
+}

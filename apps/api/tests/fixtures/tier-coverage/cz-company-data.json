@@ -1,0 +1,27 @@
+{
+  "ico": "00177041",
+  "company_name": "Škoda Auto a.s.",
+  "address": "tř. Václava Klementa 869, Mladá Boleslav II, 29301 Mladá Boleslav",
+  "legal_form_code": "121",
+  "vat_number": "CZ00177041",
+  "nace_codes": [
+    "29100",
+    "45200",
+    "471",
+    "47740",
+    "69200",
+    "702",
+    "7219",
+    "74300",
+    "77110",
+    "8532",
+    "854",
+    "86220",
+    "93290"
+  ],
+  "registration_date": "1990-11-20",
+  "last_updated": "2026-04-16",
+  "status": "active",
+  "primary_source": "ros",
+  "jurisdiction": "CZ"
+}

@@ -1,0 +1,22 @@
+{
+  "company_name": "Telefonica, SA",
+  "native_company_name": null,
+  "registration_number": "A28015865",
+  "vat_number": "ESA28015865",
+  "country_code": "ES",
+  "legal_form": null,
+  "status": "active",
+  "is_active": true,
+  "registered_date": "1924-04-19",
+  "registered_address": "Calle Gran Via, 28 5 28, 28013, Madrid, ES",
+  "lei_code": "549300EEJH4FEPDBBR25",
+  "nace_codes": [
+    {
+      "code": "6190",
+      "description": "Other telecommunications activities"
+    }
+  ],
+  "company_size": null,
+  "source_as_of": "[CAPTURE_TIMESTAMP]",
+  "last_filing_date": "2024-12-31"
+}

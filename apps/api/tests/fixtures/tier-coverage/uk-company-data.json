@@ -1,0 +1,14 @@
+{
+  "company_name": "TESCO PLC",
+  "company_number": "00445790",
+  "business_type": "plc",
+  "jurisdiction": "england-wales",
+  "address": "Tesco House, Shire Park, Kestrel Way, Welwyn Garden City, AL7 1GA, United Kingdom",
+  "incorporation_date": "1947-11-27",
+  "dissolution_date": null,
+  "status": "active",
+  "sic_codes": [
+    "47110"
+  ],
+  "has_charges": false
+}

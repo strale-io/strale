@@ -1,0 +1,22 @@
+{
+  "company_name": "Galp Energia, Sgps, S.A.",
+  "native_company_name": null,
+  "registration_number": "504499777",
+  "vat_number": "PT504499777",
+  "country_code": "PT",
+  "legal_form": null,
+  "status": "active",
+  "is_active": true,
+  "registered_date": "1999-04-22",
+  "registered_address": "Avenida Da India, 8 6, 1349-065, Lisboa, PT",
+  "lei_code": "2138003319Y7NM75FG53",
+  "nace_codes": [
+    {
+      "code": "0910",
+      "description": "Support activities for petroleum and natural gas extraction"
+    }
+  ],
+  "company_size": null,
+  "source_as_of": "[CAPTURE_TIMESTAMP]",
+  "last_filing_date": "2024-12-31"
+}

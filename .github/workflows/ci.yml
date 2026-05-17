@@ -64,6 +64,17 @@ jobs:
       # time, and with onboard.ts verifyFixtures which fires at manifest
       # authoring time.
       - run: node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict
+      # Phase 1 tier-coverage gate (WARN-ONLY). For each manifest with a
+      # captured response fixture at apps/api/tests/fixtures/tier-coverage/
+      # <slug>.json, compares empirical wire-shape against manifest
+      # declarations: guaranteed-reliability fields must be populated;
+      # populated fields must be declared in both output_field_reliability
+      # and output_schema.properties. Phase 1 exits 0 regardless of
+      # findings — surfacing the WARN signal in CI logs is the value.
+      # Phase 2 promotion (separate PR) flips --strict to exit 1 after
+      # the WARN findings are reviewed and the allowlist is established.
+      # See script header for findings classification + extension notes.
+      - run: node apps/api/scripts/check-tier-coverage.mjs
       # DEC-20260513-D Phase 3 Harden gate (a): canonical-input sentinel for
       # Identity capabilities. Catches the GR-PR-#116 class of bad-shape
       # fixture (branch entity asserted, dissolved status equals-asserted,
