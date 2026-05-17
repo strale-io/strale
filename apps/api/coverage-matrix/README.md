@@ -43,7 +43,7 @@ Country: ISO-3166-1 alpha-2 lowercased, or `eu-wide`, or `global`.
 
 ## Editing
 
-> For the chat-side update protocol governing changes to files in this directory, see [`PROTOCOL.md`](./PROTOCOL.md). For the canonical Notion-side definition, see Working Rule J in the Strale workspace (`33c67c87082c81ca91c7f5bfdccea5a2`).
+> For the step-by-step update protocol, see [`PROTOCOL.md`](./PROTOCOL.md) (in-repo mirror of Working Rule J). If `PROTOCOL.md` and the Notion page (`33c67c87082c81ca91c7f5bfdccea5a2`) ever diverge, the Notion version wins; `PROTOCOL.md` is updated to match.
 
 Reference-data changes from chat (Claude.ai) require a CC-prompt artifact per
 **Working Rule J**. Chat never directly edits these files; chat-side updates produce a

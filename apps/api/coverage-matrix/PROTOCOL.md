@@ -36,6 +36,12 @@ Each YAML row in `apps/api/coverage-matrix/` is keyed on `(capability_slug, coun
 
 ---
 
+## Glossary
+
+- **Chat** = Claude.ai (the conversational interface). Chat-side changes are decisions made in a Claude.ai conversation.
+- **CC** = Claude Code (the CLI tool that operates on this repo). A *CC prompt* is a structured instruction block that chat writes out in full, which then gets pasted into CC to execute the actual file changes here.
+- **Rule C** = the audit-first phase: read before writing, check for cross-worktree conflicts, state current → proposed → implications before touching a file. Defined in the cc-prompts skill.
+
 ## Required response template
 
 When chat decides a reference-data change, the chat response MUST follow this template:
