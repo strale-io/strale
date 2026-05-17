@@ -1,0 +1,33 @@
+capability_slug: singapore-company-data
+country: SG
+evidence_type: Company registry
+provider: ACRA
+status: Live
+sourcing_pattern: "Direct API"
+per_call_price_eur: 0
+evidence_grade: live-verified
+tier_1_coverage: 7/7 (first-pass estimate, pending audit-batch verification)
+tier_2_coverage: 1/5 (only source_register_name via issuance_agency)
+tier_3_coverage: 0/6 (CKAN snapshot has no shareholders / UBOs / NACE / share_capital / filings)
+last_verified: "2026-05-17"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: >-
+  Direct integration with the data.gov.sg CKAN datastore_search API
+  (data.gov.sg/api/action/datastore_search) — "Entities Registered with ACRA"
+  dataset published by Singapore's Accounting and Corporate Regulatory Authority.
+  Singapore Open Data Licence v1.0 (commercial reuse permitted with attribution).
+  Free, no signup required. Monthly-refresh snapshot (~2.1M records covering
+  active and deregistered entities since UEN was introduced). Replaces the prior
+  opencorporates.com Browserless scrape (Tier-1 violation per DEC-20260428-A).
+doctrine_reference: DEC-20260428-A (replaces opencorporates.com Tier-1 violation with direct gov open data)
+notes: >-
+  Shipped capability uses the data.gov.sg CKAN datastore endpoint with resource
+  ID d_3f960c10fed6145404ca7b821f263b87. Accepts UEN (9-10 alphanumeric) or
+  fuzzy entity name. Returns entity_name, uen, entity_type, status, is_active,
+  issuance_agency, uen_issue_date, registered_street, registered_postal_code,
+  registered_address, jurisdiction. Empty `Capability slug` in the pre-migration
+  Notion row (page 35167c87-082c-8188-85ab-fe2e21c51fe5); slug assigned and YAML
+  added 2026-05-17 via EMPTY-SLUG-FOLLOWUP resolution pass.
+_source_notion_page_id: 35167c87-082c-8188-85ab-fe2e21c51fe5

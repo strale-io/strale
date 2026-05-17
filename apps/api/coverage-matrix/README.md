@@ -81,16 +81,19 @@ this migration merged.
 
 ## Known follow-ups (not blocking)
 
-- [`EMPTY-SLUG-FOLLOWUP.md`](./EMPTY-SLUG-FOLLOWUP.md) lists 12 Live/Committed rows in
-  the Notion DB that had empty `Capability slug` at v4 migration time. Each row needs
-  a chat-side decision (assign a real slug, reclassify Status, or move to a separate
-  "Sources" list). Not blocking for this PR.
-- `sourcing_pattern` is null on several rows pending classification backfill
-  (chat-side). Schema permits null until backfill lands.
-- `provider: "Other"` on a couple of rows (e.g. `greek-company-data` / GEMI,
-  `slovak-company-data` / RPO). Notion-source data quality issue; the canonical
-  provider name lives in `notes`. Migration is faithful to source; chat-side will
-  correct in Notion + re-prompt.
 - The migration snapshot redacts `Provider ToS notes` / `Notes` / `Doctrine reference`
   free-text for rows with Status ∈ {In discovery, Gap} (commercial-negotiation notes
   for unsigned vendors). Live/Committed/Deprecated rows are kept verbatim.
+
+## Resolved post-migration (2026-05-17)
+
+- [`EMPTY-SLUG-FOLLOWUP.md`](./EMPTY-SLUG-FOLLOWUP.md) — all 12 originally-skipped
+  rows resolved via PR #130 (3 sources-not-capabilities, 1 added as
+  `singapore-company-data`, 8 deferred per v1 scope). File retained as audit log.
+- `sourcing_pattern: null` backfill — closed via PR #130 (11 Live rows updated to
+  `Direct API` with handler-source verification; Polish handler confirmed direct
+  KRS API, not scraper).
+- `provider: "Other"` on `greek-company-data` / `slovak-company-data` — closed
+  via PR #129 (fixed to `GEMI` and `RPO` respectively, with factual
+  `provider_tos_notes`). `adverse-media-check` and a few Committed rows still
+  carry `Other` legitimately (vendor TBD).

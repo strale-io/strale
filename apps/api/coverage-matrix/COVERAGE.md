@@ -2,11 +2,11 @@
 
 > Auto-generated. Do not edit by hand. Regenerate via `npm run coverage-matrix:summary`.
 
-Total rows: 46
+Total rows: 47
 
 ## By status
 
-- Live: 27
+- Live: 28
 - Committed: 19
 
 ## By evidence type
@@ -27,7 +27,7 @@ Total rows: 46
 | beneficial-ownership-lookup | UK | Beneficial ownership | OpenOwnership | Committed | €0 | — | 2026-04-28 |
 | uk-company-data | UK | Beneficial ownership | PSC register | Live | — | — | 2026-04-20 |
 
-### Company registry (31)
+### Company registry (32)
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -58,6 +58,7 @@ Total rows: 46
 | portuguese-company-data | PT | Company registry | Openapi.com | Committed | €0.06 | live-verified | 2026-05-15 |
 | romanian-company-data | RO | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
 | swedish-company-data | SE | Company registry | Bolagsverket | Live | €0.05 | live-verified | 2026-05-15 |
+| singapore-company-data | SG | Company registry | ACRA | Live | €0 | live-verified | 2026-05-17 |
 | slovenian-company-data | SI | Company registry | Other | Live | €0.05 | n/a | 2026-05-15 |
 | slovak-company-data | SK | Company registry | RPO | Live | €0.05 | live-verified | 2026-05-15 |
 | uk-company-data | UK | Company registry | Companies House | Live | €0.05 | live-verified | 2026-05-15 |
@@ -285,6 +286,12 @@ Total rows: 46
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | swedish-company-data | SE | Company registry | Bolagsverket | Live | €0.05 | live-verified | 2026-05-15 |
+
+### SG (1)
+
+| capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| singapore-company-data | SG | Company registry | ACRA | Live | €0 | live-verified | 2026-05-17 |
 
 ### SI (1)
 

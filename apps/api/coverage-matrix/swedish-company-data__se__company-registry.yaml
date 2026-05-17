@@ -3,7 +3,7 @@ country: SE
 evidence_type: Company registry
 provider: Bolagsverket
 status: Live
-sourcing_pattern: null
+sourcing_pattern: "Direct API"
 per_call_price_eur: 0.05
 evidence_grade: live-verified
 tier_1_coverage: 7/7
@@ -31,5 +31,8 @@ provider_tos_notes: >-
 doctrine_reference: null
 notes: >-
   2026-05-15 identity audit Batch 1 confirmed SE functional via Bolagsverket HVD API. Direct API,
-  authoritative, free. Canonical SE source.
+  authoritative, free. Canonical SE source. Integration uses OAuth2 client_credentials grant
+  against portal.api.bolagsverket.se/oauth2/token with BOLAGSVERKET_CLIENT_ID +
+  BOLAGSVERKET_CLIENT_SECRET (cached token, ~30 min TTL); credential-outage failure mode is
+  distinct from the anonymous-open-data rows like NO/Brreg or FI/PRH.
 _source_notion_page_id: 34a67c87-082c-8144-a195-f8d1a43b1512

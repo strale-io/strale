@@ -3,7 +3,7 @@ country: EU-wide
 evidence_type: VAT
 provider: VIES
 status: Live
-sourcing_pattern: null
+sourcing_pattern: "Direct API"
 per_call_price_eur: 0
 evidence_grade: null
 tier_1_coverage: null

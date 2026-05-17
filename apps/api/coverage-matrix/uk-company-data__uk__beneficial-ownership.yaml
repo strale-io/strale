@@ -3,7 +3,7 @@ country: UK
 evidence_type: Beneficial ownership
 provider: PSC register
 status: Live
-sourcing_pattern: null
+sourcing_pattern: "Direct API"
 per_call_price_eur: null
 evidence_grade: null
 tier_1_coverage: null
