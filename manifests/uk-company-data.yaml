@@ -46,6 +46,16 @@ output_schema:
       type: string
     incorporation_date:
       type: string
+    jurisdiction:
+      type:
+        - string
+        - "null"
+    sic_codes:
+      type: array
+      items:
+        type: string
+    has_charges:
+      type: boolean
 data_source: Companies House (UK Government)
 data_source_type: api
 transparency_tag: ai_generated
@@ -100,6 +110,9 @@ output_field_reliability:
   business_type: guaranteed
   company_number: guaranteed
   incorporation_date: guaranteed
+  jurisdiction: guaranteed
+  sic_codes: common
+  has_charges: guaranteed
 limitations:
   - title: Companies House API includes LLPs but sole traders and unregistered partnerships are not covered
     text: >-
