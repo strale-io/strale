@@ -10,7 +10,8 @@ tier_1_coverage: null
 tier_2_coverage: null
 tier_3_coverage: null
 last_verified: "2026-05-05"
-products: []
+products:
+  - Counterparty Assurance
 vendor_roster_url: null
 provider_tos_notes: >-
   Reseller-tier SA with embedded-in-bundles use governed by Basic+ pricing tier. Starter informal

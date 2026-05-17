@@ -1,7 +1,7 @@
 capability_slug: slovak-company-data
 country: SK
 evidence_type: Company registry
-provider: Other
+provider: RPO
 status: Live
 sourcing_pattern: Direct API
 per_call_price_eur: 0.05
@@ -13,7 +13,7 @@ last_verified: "2026-05-15"
 products:
   - Counterparty Assurance
 vendor_roster_url: null
-provider_tos_notes: N/A - no provider integrated
+provider_tos_notes: Direct integration with Slovak RPO public API (api.statistics.sk/rpo/v1) — ŠÚ SR. EU High-Value Dataset under Reg. (EU) 2023/138. 60 req/min rate limit (shared across Strale egress).
 doctrine_reference: >-
   RPO public API; SK DIČ (VAT) schema gap deferred from PR #120 pending RPO identifiers array shape
   investigation
