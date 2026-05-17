@@ -1,7 +1,7 @@
 capability_slug: greek-company-data
 country: GR
 evidence_type: Company registry
-provider: Other
+provider: GEMI
 status: Live
 sourcing_pattern: Direct API
 per_call_price_eur: 0
@@ -13,7 +13,7 @@ last_verified: "2026-05-15"
 products:
   - Counterparty Assurance
 vendor_roster_url: null
-provider_tos_notes: N/A - no provider integrated
+provider_tos_notes: Direct integration with GEMI Open Data API (opendata-api.businessportal.gr) — Greek Ministry of Development. Requires GEMI_API_KEY. 8 req/min rate limit.
 doctrine_reference: GEMI direct API; HELLENiQ ENERGY parent fixture (296601000 / EL094049864) per DEC-20260513-E
 notes: >-
   2026-05-15 identity audit Batch 4 confirmed GR functional via GEMI (Greek General Commercial

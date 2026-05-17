@@ -43,7 +43,7 @@ Total rows: 46
 | spanish-company-data | ES | Company registry | Openapi.com | Committed | €0.06 | live-verified | 2026-05-15 |
 | finnish-company-data | FI | Company registry | PRH | Live | €0.05 | live-verified | 2026-05-15 |
 | french-company-data | FR | Company registry | INSEE | Live | €0.05 | live-verified | 2026-05-15 |
-| greek-company-data | GR | Company registry | Other | Live | €0 | live-verified | 2026-05-15 |
+| greek-company-data | GR | Company registry | GEMI | Live | €0 | live-verified | 2026-05-15 |
 | croatian-company-data | HR | Company registry | Sudreg | Live | €0.05 | live-verified | 2026-05-15 |
 | hungarian-company-data | HU | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
 | irish-company-data | IE | Company registry | CRO | Live | €0.05 | live-verified | 2026-05-15 |
@@ -59,7 +59,7 @@ Total rows: 46
 | romanian-company-data | RO | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
 | swedish-company-data | SE | Company registry | Bolagsverket | Live | €0.05 | live-verified | 2026-05-15 |
 | slovenian-company-data | SI | Company registry | Other | Live | €0.05 | n/a | 2026-05-15 |
-| slovak-company-data | SK | Company registry | Other | Live | €0.05 | live-verified | 2026-05-15 |
+| slovak-company-data | SK | Company registry | RPO | Live | €0.05 | live-verified | 2026-05-15 |
 | uk-company-data | UK | Company registry | Companies House | Live | €0.05 | live-verified | 2026-05-15 |
 | us-company-data-cobalt | US | Company registry | Cobalt Intelligence | Committed | €1 | — | 2026-04-28 |
 
@@ -188,7 +188,7 @@ Total rows: 46
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| greek-company-data | GR | Company registry | Other | Live | €0 | live-verified | 2026-05-15 |
+| greek-company-data | GR | Company registry | GEMI | Live | €0 | live-verified | 2026-05-15 |
 
 ### Global (6)
 
@@ -296,7 +296,7 @@ Total rows: 46
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| slovak-company-data | SK | Company registry | Other | Live | €0.05 | live-verified | 2026-05-15 |
+| slovak-company-data | SK | Company registry | RPO | Live | €0.05 | live-verified | 2026-05-15 |
 
 ### UK (5)
 
