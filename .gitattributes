@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Force LF for the auto-generated coverage-matrix summary so the
+# regen --check round-trip stays clean on Windows. See
+# apps/api/scripts/regenerate-coverage-matrix-summary.mjs.
+apps/api/coverage-matrix/COVERAGE.md text eol=lf
