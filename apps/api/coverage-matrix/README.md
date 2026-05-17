@@ -43,6 +43,8 @@ Country: ISO-3166-1 alpha-2 lowercased, or `eu-wide`, or `global`.
 
 ## Editing
 
+> For the step-by-step update protocol, see [`PROTOCOL.md`](./PROTOCOL.md) (in-repo mirror of Working Rule J). If `PROTOCOL.md` and the Notion page (`33c67c87082c81ca91c7f5bfdccea5a2`) ever diverge, the Notion version wins; `PROTOCOL.md` is updated to match.
+
 Reference-data changes from chat (Claude.ai) require a CC-prompt artifact per
 **Working Rule J**. Chat never directly edits these files; chat-side updates produce a
 prompt that CC executes here, following the audit-first phase (Rule C).

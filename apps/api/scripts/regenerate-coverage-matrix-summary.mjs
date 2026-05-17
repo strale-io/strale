@@ -118,7 +118,16 @@ if (check) {
     process.exit(2);
   }
   const committed = readFileSync(outPath, "utf8");
-  if (committed !== content) {
+  // Normalize line endings to LF on both sides before comparing. A
+  // .gitattributes rule pins COVERAGE.md to LF, but a writer that
+  // ignores the attribute (e.g. an editor with autocrlf=true that
+  // overrides eol on save) would otherwise reintroduce false-stale on
+  // Windows checkouts. This makes --check robust to that class.
+  // Replace order matters: \r\n first, then lone \r — otherwise a CRLF
+  // would be double-converted to \n\n.
+  const committedNormalised = committed.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const contentNormalised = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  if (committedNormalised !== contentNormalised) {
     console.error(
       "COVERAGE.md is stale. Regenerate with: npm run coverage-matrix:summary  " +
         "(then commit the updated COVERAGE.md)",
