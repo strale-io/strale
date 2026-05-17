@@ -1,0 +1,22 @@
+capability_slug: hungarian-company-data
+country: HU
+evidence_type: Company registry
+provider: Openapi.com
+status: Committed
+sourcing_pattern: Vendor (Tier 3 aggregator)
+per_call_price_eur: 0.16
+evidence_grade: live-verified
+tier_1_coverage: 6/7 (no legal_form via WW-Top)
+tier_2_coverage: 4/5 (vatCode + source-as-of + source-name + authoritative-flag=false; no directors via WW-Top)
+tier_3_coverage: 1/6 (NACE only)
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: N/A - no provider integrated
+doctrine_reference: Openapi addendum (countersignature pending)
+notes: >-
+  v3 probe 2026-05-15: OTP/MOL/Richter Gedeon all 3/3 200 via WW-Top using HU-prefix VAT (HU + 8
+  digits). v2 used Cégjegyzékszám and bare digits, both 406; HU-prefix VAT is the working shape.
+  Cost €0.1586/call. No country-specific Openapi product (WW-Top only).
+_source_notion_page_id: 34867c87-082c-810f-a5a9-ef73291fc0f3

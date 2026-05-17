@@ -1,0 +1,33 @@
+name: Coverage matrix validation
+
+# Separate workflow (not a step inside ci.yml) because matrix-touching PRs
+# are infrequent and the 46-YAML scan is wasted work on PRs that don't
+# touch the matrix. Path filter keeps the gate fast-feedback for matrix
+# changes; non-matrix PRs skip the validation cost. Trade-off vs ci.yml
+# consolidation: doubled npm ci on matrix PRs, two GitHub check statuses.
+# Acceptable given expected change frequency. See coverage-matrix/README.md.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "apps/api/coverage-matrix/**"
+      - "apps/api/scripts/validate-coverage-matrix.mjs"
+      - "apps/api/scripts/regenerate-coverage-matrix-summary.mjs"
+      - ".github/workflows/coverage-matrix-validation.yml"
+      - "package.json"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      # Schema validation + filename/content alignment + COVERAGE.md
+      # staleness check. The latter exits 2 if a YAML edit didn't trigger
+      # `npm run coverage-matrix:summary`. See apps/api/coverage-matrix/README.md.
+      - run: npm run coverage-matrix:check

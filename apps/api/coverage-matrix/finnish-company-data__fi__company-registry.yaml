@@ -1,0 +1,24 @@
+capability_slug: finnish-company-data
+country: FI
+evidence_type: Company registry
+provider: PRH
+status: Live
+sourcing_pattern: null
+per_call_price_eur: 0.05
+evidence_grade: live-verified
+tier_1_coverage: 6/7
+tier_2_coverage: 4/5
+tier_3_coverage: 1/6
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: >-
+  Open data. Free access via YTJ (joint service with Finnish Tax Administration). CC to verify exact
+  current integration endpoint.
+doctrine_reference: null
+notes: >-
+  2026-05-15 identity audit Batch 3 confirmed FI functional via PRH/YTJ direct. PR #120 (merged
+  2026-05-16 at fd59571) added schema declarations for vat_number, website, and industry_description
+  as guaranteed reliability. Direct API, free.
+_source_notion_page_id: 34867c87-082c-818a-8410-cf762b420d09

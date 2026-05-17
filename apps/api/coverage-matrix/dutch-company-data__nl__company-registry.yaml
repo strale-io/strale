@@ -1,0 +1,28 @@
+capability_slug: dutch-company-data
+country: NL
+evidence_type: Company registry
+provider: Openapi.com
+status: Committed
+sourcing_pattern: Vendor (Tier 3 aggregator)
+per_call_price_eur: 0.16
+evidence_grade: live-verified
+tier_1_coverage: 6/7 (no legal_form via WW-Top)
+tier_2_coverage: 4/5 (vatCode + source-as-of + source-name + authoritative-flag=false; no directors via WW-Top)
+tier_3_coverage: 1/6 (NACE only)
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: https://www.notion.so/35767c87082c81cfaad9fb86062b4bb3
+provider_tos_notes: >-
+  Runtime: Openapi.com WW-Top routing per PR #122 (2026-05-16). Universal Openapi-served caveat:
+  directors data not returned at tested tiers. Previous Browserless+northdata.com scraping path
+  deprecated 2026-05-17 (see corresponding Deprecated row).
+doctrine_reference: >-
+  Openapi addendum (countersignature pending); supersedes Company.info mid-rebuild approach;
+  CrimiMail outreach optional v1.1 quality upgrade
+notes: >-
+  v4 probe 2026-05-15: ASML at NL803441526B01 returned 200 via WW-Top with NL-prefix VAT (NL + 9
+  digits + B + 2 digits). v3 used wrong VAT shape (NL807435303B01) and got 204 — identifier-mismatch
+  failure mode. KvK 8-digit format rejected (406). No country-specific Openapi product (NL-start
+  scope rejected). Cost €0.1586/call.
+_source_notion_page_id: 34867c87-082c-81f7-bb3b-f242c2d6edb2

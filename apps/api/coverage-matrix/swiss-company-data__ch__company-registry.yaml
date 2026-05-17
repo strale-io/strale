@@ -1,0 +1,25 @@
+capability_slug: swiss-company-data
+country: CH
+evidence_type: Company registry
+provider: Zefix
+status: Live
+sourcing_pattern: Direct API
+per_call_price_eur: 0.05
+evidence_grade: live-verified
+tier_1_coverage: 7/7
+tier_2_coverage: 4/5
+tier_3_coverage: 1/6
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: https://www.notion.so/35067c87082c8183945fef5d6046eb38
+provider_tos_notes: >-
+  Free, Swagger-documented. Account credentials required (ZEFIX_USERNAME / ZEFIX_PASSWORD). Account
+  scope confirmed 2026-05-13 to cover ACTIVE entity reads across all four UID endpoints.
+doctrine_reference: DEC-20260320-D Tier 2 (statutory public records, direct API). Reaffirmed per DEC-20260513-B.
+notes: >-
+  2026-05-15 identity audit Batch 4 confirmed CH functional via Zefix PublicREST. Outage during
+  audit (External service temporarily unavailable) self-resolved by 10:20Z per
+  lt-ch-hr-outage-triage doc. 2026-05-06 to 2026-05-12 positive-completion gap noted as longer-tail
+  reliability watchpoint (UNCLEAR resolution). DEC-20260513-E normalized CH price to €0.05.
+_source_notion_page_id: 34967c87-082c-812f-b04a-d9d4be391171

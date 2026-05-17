@@ -1,0 +1,28 @@
+capability_slug: german-company-data
+country: DE
+evidence_type: Company registry
+provider: OpenRegister
+status: Live
+sourcing_pattern: Vendor (Tier 2)
+per_call_price_eur: 0.05
+evidence_grade: live-verified
+tier_1_coverage: 7/7
+tier_2_coverage: 4/5
+tier_3_coverage: 2/6
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: https://www.notion.so/35667c87082c81518aebf9415c191cd4
+provider_tos_notes: >-
+  OpenRegister is registry-licensed redistribution of Handelsregister; reseller carve-out applies
+  per DEC-20260508-D (Pro/Business subscription-bound; Enterprise €1k/mo 6-month minimum for
+  perpetual). Audit-retention written confirmation received 2026-05-08 and accepted as known
+  constraint until Enterprise upgrade keyed to revenue. Shipped to production 2026-05-07 via PR #59
+  commit 3d62a4b.
+doctrine_reference: DEC-20260428-A; DEC-20260505-D
+notes: >-
+  2026-05-15 identity audit Batch 1 confirmed DE functional via OpenRegister wrapper. OPERATIONAL
+  ISSUE: 50/month OpenRegister free-tier exhausted by Strale's internal test scheduler
+  (system@strale.internal burning ~95% of quota per 2026-05-11 rootcause doc). quota_bound flag fix
+  on test_suites pending.
+_source_notion_page_id: 34867c87-082c-810b-8a75-f900a1e9dc71

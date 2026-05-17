@@ -1,0 +1,22 @@
+capability_slug: vat-validate
+country: EU-wide
+evidence_type: VAT
+provider: VIES
+status: Live
+sourcing_pattern: null
+per_call_price_eur: 0
+evidence_grade: null
+tier_1_coverage: null
+tier_2_coverage: null
+tier_3_coverage: null
+last_verified: "2026-04-20"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: Free, EU Commission-operated. Fair use applies. No commercial restrictions on result embedding.
+doctrine_reference: null
+notes: >-
+  VIES (VAT Information Exchange System) covers all 27 EU member states for VAT number validation.
+  Single source for EU VAT across the board. Known limitations: some member state registries
+  occasionally return 'service unavailable' responses.
+_source_notion_page_id: 34867c87-082c-81fb-ba05-c3cc83f88122

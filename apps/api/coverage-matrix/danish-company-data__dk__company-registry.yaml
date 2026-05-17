@@ -1,0 +1,29 @@
+capability_slug: danish-company-data
+country: DK
+evidence_type: Company registry
+provider: cvrapi.dk
+status: Live
+sourcing_pattern: Vendor (Tier 2)
+per_call_price_eur: 0.05
+evidence_grade: live-verified
+tier_1_coverage: 6/7
+tier_2_coverage: 3/5 (no VAT in current schema)
+tier_3_coverage: 1/6
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: https://www.notion.so/35067c87082c81e1b0e9c3bcdaac5d96
+provider_tos_notes: >-
+  Strale's runtime calls cvrapi.dk (Tier-2 wrapper around CVR) per
+  apps/api/docs/dk-handler-routing-2026-05-15.md. Underlying CVR data is free open data via Virk.dk
+  API; cvrapi.dk wraps for convenience. No commercial restrictions on the open data.
+doctrine_reference: >-
+  DEC-20260513-D (cvrapi.dk Tier-2 wrapper canonical; auto-recovered between 2026-05-06 and
+  2026-05-11; routing confirmed via apps/api/docs/dk-handler-routing-2026-05-15.md at commit
+  0fb7632).
+notes: >-
+  2026-05-15 identity audit Batch 2 confirmed DK functional via cvrapi.dk wrapper (NOT direct CVR).
+  AVS DK row split out as Tier-2 wrapper entry 2026-05-15 (drift resolved). OPERATIONAL ISSUE:
+  50/day cvrapi.dk free-tier exhausted by Strale's internal test scheduler. DK DIC (VAT) derivable
+  from CVR but not in schema — schema gap not yet in PR #120; queued for v1.1.
+_source_notion_page_id: 34867c87-082c-812c-80bf-f649429a8d79

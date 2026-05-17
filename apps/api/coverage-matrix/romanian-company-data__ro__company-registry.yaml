@@ -1,0 +1,27 @@
+capability_slug: romanian-company-data
+country: RO
+evidence_type: Company registry
+provider: Openapi.com
+status: Committed
+sourcing_pattern: Vendor (Tier 3 aggregator)
+per_call_price_eur: 0.16
+evidence_grade: live-verified
+tier_1_coverage: 6/7 for 8-digit-CUI entities; n/a for 7-digit-CUI
+tier_2_coverage: >-
+  4/5 (vatCode + source-as-of + source-name + authoritative-flag=false; no directors via WW-Top) for
+  resolvable entities
+tier_3_coverage: 1/6 (NACE only)
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: N/A - no provider integrated
+doctrine_reference: >-
+  Openapi addendum (countersignature pending); partial coverage — 7-digit-CUI entities blocked by
+  Openapi regex
+notes: >-
+  v3+v4 probe 2026-05-15: Hidroelectrica (CUI 13267213, 8 digits) returned 200 via WW-Top with
+  RO-prefix. PARTIAL: Openapi WW-Top regex ^ROd{8}$ | ^d{13}$ | ^d{8}$ structurally rejects 7-digit
+  CUIs. Banca Transilvania (RO5022670) and OMV Petrom (RO1590082) both 406 across 4 attempts.
+  Affects banks and entities where VAT ≠ CUI. Support ticket bundled on case 151296.
+_source_notion_page_id: 34867c87-082c-81dd-b802-e5397b801133

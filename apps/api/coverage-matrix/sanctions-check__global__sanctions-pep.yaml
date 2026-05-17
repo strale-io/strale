@@ -1,0 +1,27 @@
+capability_slug: sanctions-check
+country: Global
+evidence_type: Sanctions / PEP
+provider: Dilisense
+status: Live
+sourcing_pattern: Vendor (Tier 2)
+per_call_price_eur: 0.05
+evidence_grade: null
+tier_1_coverage: null
+tier_2_coverage: null
+tier_3_coverage: null
+last_verified: "2026-05-05"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: >-
+  Reseller-tier SA with embedded-in-bundles use governed by Basic+ pricing tier. Starter informal
+  grace acknowledged as non-binding. DPA + indemnification per Tier-2 doctrine (DEC-20260428-A).
+doctrine_reference: DEC-20260427-A + DEC-20260429-A
+notes: >-
+  Single-vendor sanctions for v1 per DEC-20260427-A. Dilisense consolidated sanctions database: 134
+  sources (OFAC SDN, EU FSF, UN SC, UK OFSI, Swiss SECO, BIS, World Bank, EBRD, ADB, plus
+  per-jurisdiction national lists). Companion row for pep-check split out 2026-05-17 per migration
+  prep (one slug per matrix row). Adverse media is a separate row (Dilisense primary + Strale
+  Serper+Claude fallback). Reseller SA pending at Basic+ tier when volume triggers (see Vendor
+  Roster Dilisense row).
+_source_notion_page_id: 35767c87-082c-81ff-8336-e5f6a569713d

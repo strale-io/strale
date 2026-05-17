@@ -1,0 +1,35 @@
+capability_slug: swedish-company-data
+country: SE
+evidence_type: Company registry
+provider: Bolagsverket
+status: Live
+sourcing_pattern: null
+per_call_price_eur: 0.05
+evidence_grade: live-verified
+tier_1_coverage: 7/7
+tier_2_coverage: 4/5 (directors via Bolagsverket; VAT via VIES routing)
+tier_3_coverage: 2/6 (NACE + last filing date)
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: >-
+  VERIFIED 2026-04-22. Commercial use and redistribution permitted. The HVD API is part of
+  Bolagsverket's värdefulla datamängder released 2025-02-03 under EU Commission Implementing
+  Regulation (EU) 2023/138 and the Swedish Öppna datalagen. Bolagsverket states explicitly: (a)
+  avgiftsfritt — no fees; (b) inget avtal — no contract required; (c) 'Du får använda dessa data
+  fritt för kommersiella och icke-kommersiella syften, exempelvis för att skapa nya tjänster eller
+  produkter'; (d) modification, processing, and combination with other sources allowed. Legal basis
+  requires HVD datasets to be licensed under CC0 or CC BY 4.0 (or equivalent less restrictive).
+  Attribution to Bolagsverket as source likely required — must be confirmed against the specific
+  license tag in their dataset metadata, but CC BY 4.0 is the default assumption. Rate limit: 60
+  requests/minute per client. Embed-and-bill: permitted by construction — HVD mandate explicitly
+  allows building commercial services and products on top of the data, which covers Strale's
+  embed-of-match-result model. Constraints to respect: GDPR/personuppgifter (no issue for corporate
+  registry data), sekretess (not applicable to public registry fields), attribution requirement (add
+  'Källa: Bolagsverket' to provenance metadata).
+doctrine_reference: null
+notes: >-
+  2026-05-15 identity audit Batch 1 confirmed SE functional via Bolagsverket HVD API. Direct API,
+  authoritative, free. Canonical SE source.
+_source_notion_page_id: 34a67c87-082c-8144-a195-f8d1a43b1512

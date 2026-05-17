@@ -1,0 +1,24 @@
+capability_slug: french-company-data
+country: FR
+evidence_type: Company registry
+provider: INSEE
+status: Live
+sourcing_pattern: null
+per_call_price_eur: 0.05
+evidence_grade: live-verified
+tier_1_coverage: 7/7
+tier_2_coverage: 5/5 (directors-cap fix shipped)
+tier_3_coverage: 2/6
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: >-
+  INSEE open data via api.gouv.fr. Free. Direct API. Infogreffe (commercial) is NOT currently
+  integrated.
+doctrine_reference: null
+notes: >-
+  2026-05-15 identity audit Batch 2 confirmed FR functional via recherche-entreprises.api.gouv.fr
+  (INSEE-backed). PR #119 fixed directors truncation (.slice(0,3) → DIRECTORS_CAP=50, merge commit
+  96ddb40). TotalEnergies SE confirmed 15+ directors returned.
+_source_notion_page_id: 34867c87-082c-811e-80c9-ef864e781b2e

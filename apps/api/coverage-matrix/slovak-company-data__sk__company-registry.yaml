@@ -1,0 +1,25 @@
+capability_slug: slovak-company-data
+country: SK
+evidence_type: Company registry
+provider: Other
+status: Live
+sourcing_pattern: Direct API
+per_call_price_eur: 0.05
+evidence_grade: live-verified
+tier_1_coverage: 6/7
+tier_2_coverage: 3/5 (no VAT in current schema)
+tier_3_coverage: 1/6
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: N/A - no provider integrated
+doctrine_reference: >-
+  RPO public API; SK DIČ (VAT) schema gap deferred from PR #120 pending RPO identifiers array shape
+  investigation
+notes: >-
+  2026-05-15 identity audit Batch 4 confirmed SK functional via Slovak RPO (Register právnických
+  osôb). Tested with IČOs 31560636/35763469/36211222. SK DIČ (VAT) derivable from IČO but not yet
+  declared in manifest — deferred from PR #120. 60-rpm RPO upstream rate-limit shared across Strale
+  egress.
+_source_notion_page_id: 34867c87-082c-819a-8649-e7b485c5207d

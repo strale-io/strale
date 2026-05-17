@@ -1,0 +1,22 @@
+capability_slug: bulgarian-company-data
+country: BG
+evidence_type: Company registry
+provider: Openapi.com
+status: Committed
+sourcing_pattern: Vendor (Tier 3 aggregator)
+per_call_price_eur: 0.16
+evidence_grade: live-verified
+tier_1_coverage: 6/7 (no legal_form via WW-Top)
+tier_2_coverage: 4/5 (vatCode + source-as-of + source-name + authoritative-flag=false; no directors via WW-Top)
+tier_3_coverage: 1/6 (NACE only)
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: N/A - no provider integrated
+doctrine_reference: Openapi addendum (countersignature pending)
+notes: >-
+  v2 probe 2026-05-15: Sopharma + Bulgarian Energy Holding (9-digit EIK) both 200 via WW-Top.
+  Identifier shape: bare 9-digit EIK accepted; no country-prefix needed. Cost €0.1586/call. No
+  country-specific Openapi product available for BG (WW-Top only).
+_source_notion_page_id: 34867c87-082c-819b-afdb-dafdeca4f369

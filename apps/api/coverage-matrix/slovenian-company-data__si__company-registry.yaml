@@ -1,0 +1,26 @@
+capability_slug: slovenian-company-data
+country: SI
+evidence_type: Company registry
+provider: Other
+status: Live
+sourcing_pattern: Free open data
+per_call_price_eur: 0.05
+evidence_grade: n/a
+tier_1_coverage: 2/7 (name + reg# only — source-absent for status/legal_form/regdate/address)
+tier_2_coverage: 1/5 (VAT via VIES; no directors source)
+tier_3_coverage: 0/6
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: N/A - no provider integrated
+doctrine_reference: >-
+  DEC-20260513-F: structural source-absent exemption. data.gov.si CKAN catalog does not expose
+  directors/status/regdate/NACE/VAT/LEI for SI legal entities.
+notes: >-
+  DEC-20260513-F structural exemption: SI ships v1 with name + reg# only. data.gov.si Spinta API
+  tested 2026-05-15 via Phase 2 of identity audit. Openapi WW-Top probed for SI on 2026-05-15: 5 of
+  7 well-known SI VATs returned 204 (including Krka SI82646716, anomaly on case 151296). Openapi
+  cannot close the directors/regdate gap either. SI ships partial by design until a licensed SI
+  registry source is found.
+_source_notion_page_id: 34867c87-082c-8182-892e-c5f3042a5cb0

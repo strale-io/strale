@@ -1,0 +1,26 @@
+capability_slug: lithuanian-company-data
+country: LT
+evidence_type: Company registry
+provider: Registru centras
+status: Live
+sourcing_pattern: Direct API
+per_call_price_eur: 0.05
+evidence_grade: live-verified
+tier_1_coverage: 6/7
+tier_2_coverage: 4/5
+tier_3_coverage: 1/6
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: >-
+  data.gov.lt terms: CC-BY 4.0 (Creative Commons Attribution 4.0 International). Commercial reuse
+  permitted with attribution. Required attribution: 'VĮ Registrų centras / data.gov.lt, CC-BY 4.0'
+  with link to license text. Same envelope pattern as Bolagsverket SE (commit 4bbe8c4) and IE CRO.
+doctrine_reference: DEC-20260428-A Tier 2 (statutory public records, direct API path)
+notes: >-
+  2026-05-15 identity audit Batch 3 confirmed LT functional via data.gov.lt Spinta API. Outage
+  during audit self-resolved per triage doc. Classifier cache cold-miss fragility under load (v1.1+
+  pre-warm optional). capability_health.total_failures=0 metric instrumentation gap noted (v1.1+
+  fix).
+_source_notion_page_id: 34867c87-082c-81d5-80b8-d840dacf4502

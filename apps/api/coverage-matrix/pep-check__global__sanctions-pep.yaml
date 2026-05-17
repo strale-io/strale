@@ -1,0 +1,25 @@
+capability_slug: pep-check
+country: Global
+evidence_type: Sanctions / PEP
+provider: Dilisense
+status: Live
+sourcing_pattern: Vendor (Tier 2)
+per_call_price_eur: 0.05
+evidence_grade: null
+tier_1_coverage: null
+tier_2_coverage: null
+tier_3_coverage: null
+last_verified: "2026-05-05"
+products: []
+vendor_roster_url: null
+provider_tos_notes: >-
+  Reseller-tier SA with embedded-in-bundles use governed by Basic+ pricing tier. Starter informal
+  grace acknowledged as non-binding. DPA + indemnification per Tier-2 doctrine (DEC-20260428-A).
+doctrine_reference: DEC-20260427-A + DEC-20260429-A
+notes: >-
+  Single-vendor PEP screening for v1 per DEC-20260427-A. Dilisense PEP database: 230 sources
+  (territories, EU C/2023/724-aligned, RCAs included). Split out from combined sanctions-check,
+  pep-check row 2026-05-17 per migration prep (one slug per matrix row). Companion row:
+  sanctions-check (35767c87-082c-81ff-8336-e5f6a569713d). Reseller SA pending at Basic+ tier when
+  volume triggers.
+_source_notion_page_id: 36367c87-082c-8124-998e-d1c6d1f0cf0e

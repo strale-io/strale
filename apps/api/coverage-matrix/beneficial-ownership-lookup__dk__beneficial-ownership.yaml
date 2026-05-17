@@ -1,0 +1,19 @@
+capability_slug: beneficial-ownership-lookup
+country: DK
+evidence_type: Beneficial ownership
+provider: OpenOwnership
+status: Committed
+sourcing_pattern: Free open data
+per_call_price_eur: 0
+evidence_grade: null
+tier_1_coverage: null
+tier_2_coverage: null
+tier_3_coverage: null
+last_verified: "2026-04-28"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: null
+doctrine_reference: DEC-20260428-A Tier 2
+notes: BODS-format bulk + CVR Denmark UBO endpoint. Combined as DK UBO source.
+_source_notion_page_id: 35067c87-082c-818f-8331-fca2428cb8b0

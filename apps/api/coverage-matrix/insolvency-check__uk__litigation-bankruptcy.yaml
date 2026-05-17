@@ -1,0 +1,19 @@
+capability_slug: insolvency-check
+country: UK
+evidence_type: Litigation / bankruptcy
+provider: Companies House
+status: Live
+sourcing_pattern: Direct API
+per_call_price_eur: 0
+evidence_grade: null
+tier_1_coverage: null
+tier_2_coverage: null
+tier_3_coverage: null
+last_verified: "2026-04-28"
+products:
+  - Counterparty Assurance
+vendor_roster_url: null
+provider_tos_notes: null
+doctrine_reference: DEC-20260428-A Tier 2
+notes: Free /company/{n}/insolvency endpoint. Already integrated for Companies House.
+_source_notion_page_id: 35067c87-082c-81b0-ad7e-c0b3391a0dba

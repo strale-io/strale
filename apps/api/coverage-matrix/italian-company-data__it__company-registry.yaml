@@ -1,0 +1,43 @@
+capability_slug: italian-company-data
+country: IT
+evidence_type: Company registry
+provider: Openapi.com
+status: Committed
+sourcing_pattern: Vendor (Tier 3 aggregator)
+per_call_price_eur: 0.12
+evidence_grade: live-verified
+tier_1_coverage: 7/7 (detailedLegalForm closes the gap)
+tier_2_coverage: >-
+  4/5 via IT-Advanced (vatCode + source-as-of + source-name + authoritative-flag=false; no directors
+  at IT-Advanced tier — managers[] is IT-Full only, deferred to v1.1)
+tier_3_coverage: >-
+  4/6 via IT-Advanced (shareHolders[] + atecoClassification/NACE + balanceSheets[].shareCapital +
+  balanceSheets[].balanceSheetDate); subsidiaries + affiliateCompanies deferred to v1.1 IT-Full;
+  UBOs via UBO-Italy product candidate
+last_verified: "2026-05-15"
+products:
+  - Counterparty Assurance
+vendor_roster_url: https://www.notion.so/35667c87082c815496e1cd35803a1d64
+provider_tos_notes: >-
+  Openapi ToS: 'Content cannot be reused until obtaining written consent from Openapi' (Terms of
+  Use). Sister-domain ToS explicitly prohibits resale/redistribution. Italian corporate agreement
+  has strict prefectural-license and privacy-law restrictions on third-party transmission. NOT
+  standard self-serve for embed-and-bill; requires explicit written permission from Openapi or
+  fallback to Creditsafe aggregator. Current Browserless path stays until sanctioned path lands.
+doctrine_reference: >-
+  Openapi IT product line (IT-Advanced); native Italian aggregator. IT-Full + UBO-Italy products
+  deferred to v1.1 (IT-Full requires async execution architecture, out of v1 sync scope).
+notes: >-
+  v2 + v4 probes 2026-05-15 + Phase 2c live validation 2026-05-16: Eni at codice fiscale 00484960588
+  returned 200 across IT-Start/IT-Advanced/IT-Full. IT-Advanced (€0.10 PAYG + 22% IT VAT =
+  €0.122/call) has shareHolders[] array, detailedLegalForm (closes T1 legal_form gap — IT is the
+  only Openapi-routed country reaching T1=7/7), atecoClassification, 4-year balanceSheets[] with
+  shareCapital field (unique to IT-Advanced; NOT in ES/PT-Advanced per Phase 2b empirical). T3
+  structural = 4/6; per-entity outcomes vary by ownership structure (Eni shareHolders[] correctly
+  empty in Phase 2c live smoke — widely-held / publicly-traded, no shareholder above 5%/10%
+  threshold; closely-held SrLs return populated array). Manifest declares shareholders
+  reliability=common (entity-dependent) per Phase 2c PR #124. IT-Full (€0.45+, 12s latency, async
+  only) adds managers[] (directors), subsidiaries[], affiliateCompanies[] — deferred to v1.1 as
+  quality upgrade; sync v1 ships IT-Advanced only. UBO-Italy separate product not probed; v1.1
+  candidate.
+_source_notion_page_id: 34867c87-082c-81c8-b080-ff1c566bfa73
