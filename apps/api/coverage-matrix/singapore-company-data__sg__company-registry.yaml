@@ -6,9 +6,9 @@ status: Live
 sourcing_pattern: "Direct API"
 per_call_price_eur: 0
 evidence_grade: live-verified
-tier_1_coverage: null
-tier_2_coverage: null
-tier_3_coverage: null
+tier_1_coverage: 7/7 (first-pass estimate, pending audit-batch verification)
+tier_2_coverage: 1/5 (only source_register_name via issuance_agency)
+tier_3_coverage: 0/6 (CKAN snapshot has no shareholders / UBOs / NACE / share_capital / filings)
 last_verified: "2026-05-17"
 products:
   - Counterparty Assurance
