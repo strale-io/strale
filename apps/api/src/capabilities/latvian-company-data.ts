@@ -249,7 +249,7 @@ registerCapability("latvian-company-data", async (input: CapabilityInput) => {
     o.tier_2_available = legalRepresentatives.length > 0;
     o.tier_2_available_reason =
       legalRepresentatives.length > 0
-        ? "Legal representatives extracted from Latvian Enterprise Register (Uznemumu registrs) via data.gov.lv amatpersonas open dataset. Current active appointments only — resignations and historical entries not exposed in this dataset."
+        ? "Legal representatives extracted from Latvian Enterprise Register (Uzņēmumu reģistrs) via data.gov.lv amatpersonas open dataset. Current active appointments only — resignations and historical entries not exposed in this dataset."
         : "Upstream amatpersonas dataset returned no active officers for this entity. Resignations and historical entries are not exposed in this dataset.";
     o.ubo_availability = "unavailable_no_registry";
     o.ubo_availability_reason = "Programmatic UBO access not yet operational at v1; verification pending public-source confirmation";
