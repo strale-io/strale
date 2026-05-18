@@ -7,9 +7,9 @@ sourcing_pattern: Direct API
 per_call_price_eur: 0.05
 evidence_grade: live-verified
 tier_1_coverage: 6/7
-tier_2_coverage: 3/5
+tier_2_coverage: 4/5
 tier_3_coverage: 1/6
-last_verified: "2026-05-15"
+last_verified: "2026-05-18"
 products:
   - Counterparty Assurance
 vendor_roster_url: null
@@ -20,7 +20,9 @@ provider_tos_notes: >-
 doctrine_reference: DEC-20260428-A Tier 2 (statutory public records, direct API path)
 notes: >-
   2026-05-15 identity audit Batch 3 confirmed LV functional via data.gov.lv CKAN. PR #120 (merged
-  2026-05-16 at fd59571) covered LV schema cleanup including VAT derivation for 40NNN prefixes. Tier
-  2 coverage may benefit from empirical re-verification post-merge. Free direct API, CC0 1.0
-  licensed.
+  2026-05-16 at fd59571) covered LV schema cleanup including VAT derivation for 40NNN prefixes. Free
+  direct API, CC0 1.0 licensed. Phase 3 (2026-05-18) added legal_representatives extraction from the
+  amatpersonas CKAN resource (e665114a-...) — current active officers only; no resignations or
+  historical entries in this dataset. Smoke-verified against airBaltic, Latvenergo, and a 40003020121
+  fallback entity (returns 2, 5, and 2 officers respectively).
 _source_notion_page_id: 34867c87-082c-81f0-be36-fed26cb11815
