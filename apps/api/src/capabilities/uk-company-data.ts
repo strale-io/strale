@@ -71,7 +71,6 @@ async function fetchOfficers(companyNumber: string): Promise<Array<{ name: strin
     },
     signal: AbortSignal.timeout(10000),
   });
-  if (response.status === 404) return [];
   if (!response.ok) throw new Error(`Companies House officers returned HTTP ${response.status}`);
   const data = (await response.json()) as any;
   const items: any[] = Array.isArray(data?.items) ? data.items : [];
@@ -170,7 +169,7 @@ registerCapability("uk-company-data", async (input: CapabilityInput) => {
     if (o.legal_form === undefined) o.legal_form = (o.business_type ?? o.company_type ?? o.entity_type ?? o.legal_form_code ?? o.legal_form_id);
     if (o.registered_address === undefined) o.registered_address = (o.address ?? o.office_address);
     if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
-    o.legal_representatives = officers;
+    if (o.legal_representatives === undefined) o.legal_representatives = officers;
     o.tier_2_available = true;
     o.tier_2_available_reason = "Legal representatives extracted from UK Companies House Officers register.";
     o.ubo_availability = "available";
