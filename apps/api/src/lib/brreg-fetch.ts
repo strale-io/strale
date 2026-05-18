@@ -84,6 +84,52 @@ export async function fetchBrregEntity(orgNumber: string): Promise<BrregEntity> 
 }
 
 /**
+ * Brreg /roller response — `rollegrupper` is an array of role groups (DAGL,
+ * STYR, KOMP, KONT, SIGN, PROK, etc.); each group has `roller[]` with the
+ * actual people. Person identity is name + birth date on the anonymous
+ * endpoint; fnr is only returned via the Maskinporten-authenticated variant.
+ */
+export interface BrregRollePerson {
+  fodselsdato?: string;
+  navn?: { fornavn?: string; etternavn?: string; mellomnavn?: string };
+  erDoed?: boolean;
+}
+export interface BrregRolle {
+  type?: { kode?: string; beskrivelse?: string };
+  person?: BrregRollePerson;
+  enhet?: { navn?: string; organisasjonsnummer?: string | number };
+  fratraadt?: boolean;
+  avregistrert?: boolean;
+  rekkefolge?: number;
+}
+export interface BrregRollegruppe {
+  type?: { kode?: string; beskrivelse?: string };
+  sistEndret?: string;
+  roller?: BrregRolle[];
+}
+export interface BrregRollerResponse {
+  rollegrupper?: BrregRollegruppe[];
+}
+
+/**
+ * Fetch the role groups (board, managing director, signatories, procurists,
+ * etc.) for a Brreg entity. Anonymous endpoint — no auth, name + birth date
+ * only. 404 maps to an empty response (entities exist with no registered
+ * roles, e.g. shell holdings).
+ */
+export async function fetchBrregRoles(orgNumber: string): Promise<BrregRollerResponse> {
+  const res = await fetch(`${BRREG_API}/enheter/${orgNumber}/roller`, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (res.status === 404) return { rollegrupper: [] };
+  if (!res.ok) {
+    throw new Error(`Brønnøysundregistrene /roller returned HTTP ${res.status}`);
+  }
+  return (await res.json()) as BrregRollerResponse;
+}
+
+/**
  * Provenance bundle for any Brreg-derived capability response.
  * Centralized so license / attribution stay consistent across capabilities.
  */

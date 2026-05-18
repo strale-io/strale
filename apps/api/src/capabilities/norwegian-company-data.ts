@@ -4,9 +4,11 @@ import { deriveVatNO } from "../lib/vat-derivation.js";
 import {
   brregProvenance,
   fetchBrregEntity,
+  fetchBrregRoles,
   findOrgNumberInText,
   isOrgNumber,
   searchBrregByName,
+  type BrregRollerResponse,
 } from "../lib/brreg-fetch.js";
 
 async function extractCompanyName(naturalLanguage: string): Promise<string> {
@@ -31,6 +33,60 @@ async function extractCompanyName(naturalLanguage: string): Promise<string> {
       : "";
   if (!name) throw new Error(`Could not identify a company name from: "${naturalLanguage}".`);
   return name;
+}
+
+interface LegalRepresentative {
+  type: "person" | "organisation";
+  name: string;
+  role: string;
+  role_code: string;
+  role_group: string;
+  date_of_birth: string | null;
+}
+
+// Brreg role-group codes map to Strale canonical role labels. STYR (board)
+// uses sub-codes per member; DAGL/SIGN/PROK use a single role per group.
+// Unmapped sub-codes fall back to beskrivelse for forward-compatibility.
+const STYR_ROLE_LABELS: Record<string, string> = {
+  LEDE: "Chair of the board",
+  NEST: "Deputy chair of the board",
+  MEDL: "Board member",
+  VARA: "Alternate board member",
+  OBS: "Observer",
+};
+
+function shapeRepresentatives(roles: BrregRollerResponse): LegalRepresentative[] {
+  const out: LegalRepresentative[] = [];
+  for (const group of roles.rollegrupper ?? []) {
+    const groupCode = group.type?.kode ?? "";
+    for (const r of group.roller ?? []) {
+      if (r.fratraadt || r.avregistrert) continue;
+      const subCode = r.type?.kode ?? "";
+      const subBeskrivelse = r.type?.beskrivelse ?? "";
+      const isOrg = !!r.enhet && !r.person;
+      const personName = r.person?.navn
+        ? [r.person.navn.fornavn, r.person.navn.mellomnavn, r.person.navn.etternavn]
+            .filter(Boolean)
+            .join(" ")
+            .trim()
+        : "";
+      const name = isOrg ? (r.enhet?.navn ?? "") : personName;
+      if (!name) continue;
+      let role = subBeskrivelse || subCode;
+      if (groupCode === "STYR" && STYR_ROLE_LABELS[subCode]) {
+        role = STYR_ROLE_LABELS[subCode];
+      }
+      out.push({
+        type: isOrg ? "organisation" : "person",
+        name,
+        role,
+        role_code: subCode,
+        role_group: groupCode,
+        date_of_birth: r.person?.fodselsdato ?? null,
+      });
+    }
+  }
+  return out;
 }
 
 function shapeBrregOutput(data: Record<string, unknown>): Record<string, unknown> {
@@ -77,8 +133,12 @@ registerCapability("norwegian-company-data", async (input: CapabilityInput) => {
     orgNumber = await searchBrregByName(companyName);
   }
 
-  const data = await fetchBrregEntity(orgNumber);
+  const [data, roles] = await Promise.all([
+    fetchBrregEntity(orgNumber),
+    fetchBrregRoles(orgNumber),
+  ]);
   const output = shapeBrregOutput(data);
+  const representatives = shapeRepresentatives(roles);
 
   // Evidence Tier framework labels + Tier 1 canonical aliases (DEC-20260518-A).
   // Resolves alias keys at runtime; only sets a canonical if not already present.
@@ -94,8 +154,12 @@ registerCapability("norwegian-company-data", async (input: CapabilityInput) => {
     if (o.legal_form === undefined) o.legal_form = (o.business_type ?? o.company_type ?? o.entity_type ?? o.legal_form_code ?? o.legal_form_id);
     if (o.registered_address === undefined) o.registered_address = (o.address ?? o.office_address);
     if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
-    o.tier_2_available = false;
-    o.tier_2_available_reason = "handler does not currently extract legal representatives from upstream registry; follow-up extraction task tracked";
+    o.legal_representatives = representatives;
+    o.total_legal_representatives = representatives.length;
+    o.tier_2_available = representatives.length > 0;
+    o.tier_2_available_reason = representatives.length > 0
+      ? "Legal representatives extracted from Brønnøysundregistrene (Brreg) /roller endpoint — board, managing director, signatories, procurists."
+      : "Brreg /roller returned no active roles for this entity; tier_2 not bindable on this record.";
     o.ubo_availability = "unavailable_no_registry";
     o.ubo_availability_reason = "Norwegian UBO register implementation delayed; not operational at v1";
   }

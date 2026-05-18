@@ -8,5 +8,16 @@
   "registration_date": "1995-03-12",
   "employee_count": 21327,
   "status": "active",
-  "vat_number": "NO923609016MVA"
+  "vat_number": "NO923609016MVA",
+  "legal_name": "EQUINOR ASA",
+  "primary_registration_id": "923609016",
+  "legal_form": "Allmennaksjeselskap",
+  "registered_address": "Forusbeen 50, 4035 STAVANGER, Norge",
+  "date_incorporated": "1995-03-12",
+  "legal_representatives": "[REDACTED]",
+  "total_legal_representatives": 16,
+  "tier_2_available": true,
+  "tier_2_available_reason": "Legal representatives extracted from Brønnøysundregistrene (Brreg) /roller endpoint — board, managing director, signatories, procurists.",
+  "ubo_availability": "unavailable_no_registry",
+  "ubo_availability_reason": "Norwegian UBO register implementation delayed; not operational at v1"
 }

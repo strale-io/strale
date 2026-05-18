@@ -7,9 +7,9 @@ sourcing_pattern: "Direct API"
 per_call_price_eur: 0.05
 evidence_grade: live-verified
 tier_1_coverage: 7/7
-tier_2_coverage: 4/5
+tier_2_coverage: 5/5
 tier_3_coverage: 1/6
-last_verified: "2026-05-15"
+last_verified: "2026-05-18"
 products:
   - Counterparty Assurance
 vendor_roster_url: null
@@ -17,5 +17,7 @@ provider_tos_notes: Free, open data. No commercial restrictions. Rate limits gen
 doctrine_reference: null
 notes: >-
   2026-05-15 identity audit Batch 2 confirmed NO functional via Brreg (Brønnøysundregistrene).
-  Direct API, authoritative, free.
+  Direct API, authoritative, free. 2026-05-18 Phase 2 extension: legal_representatives[] now
+  surfaced from Brreg /roller (board, managing director, signatories, procurists) — lifts T2
+  coverage 4/5 → 5/5 and flips tier_2_available to true.
 _source_notion_page_id: 34867c87-082c-8136-b13c-cbc6590f5a02
