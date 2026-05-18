@@ -116,6 +116,14 @@ async function main() {
   const { startReindexTransactions } = await import("./jobs/reindex-transactions.js");
   startReindexTransactions();
 
+  // Nightly EE-directors ingest from RIK Ariregister CC BY 4.0 open
+  // data. Refreshes the `ee_directors` cache that backs the
+  // `estonian-company-data` handler's `legal_representatives[]`
+  // (DEC-20260518-E). 10-minute startup delay + 24h interval; advisory
+  // lock 20260518 dedups across replicas.
+  const { startEeDirectorsIngest } = await import("./jobs/ingest-ee-directors.js");
+  startEeDirectorsIngest();
+
   const port = parseInt(process.env.PORT || "3000", 10);
 
   const server = serve({ fetch: app.fetch, port }, (info) => {

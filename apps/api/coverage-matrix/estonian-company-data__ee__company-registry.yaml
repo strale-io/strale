@@ -3,21 +3,27 @@ country: EE
 evidence_type: Company registry
 provider: Ariregister
 status: Live
-sourcing_pattern: "Direct API"
+sourcing_pattern: "Direct API + bulk open data (RIK Ariregister CC BY 4.0)"
 per_call_price_eur: 0.05
 evidence_grade: live-verified
 tier_1_coverage: 6/7
-tier_2_coverage: 3/5
+tier_2_coverage: 5/5
 tier_3_coverage: 1/6
-last_verified: "2026-05-15"
+last_verified: "2026-05-18"
 products:
   - Counterparty Assurance
 vendor_roster_url: null
-provider_tos_notes: Direct API, open data. Estonia's strong e-government posture. Free-stable-api classification.
-doctrine_reference: null
+provider_tos_notes: Direct API + nightly bulk open-data ingest from avaandmed.ariregister.rik.ee. CC BY 4.0; attribution preserved in provenance. Strong e-government posture. cost_class=free_unlimited.
+doctrine_reference: "DEC-20260518-E (exhaustive enumeration); DEC-20260518-F (attribution); DEC-20260518-A (canonical legal_representatives shape)"
 notes: >-
-  2026-05-15 identity audit Batch 3 confirmed EE functional via Ariregister direct API. PR #120
-  (merged 2026-05-16 at fd59571) covered EE schema cleanup including VAT derivation (EE + 9-digit)
-  and business_type label normalization. Tier 2 coverage may benefit from empirical re-verification
-  post-merge. Free direct API.
+  2026-05-18: legal_representatives[] now populated from RIK Ariregister Open Data bulk JSON
+  (`ettevotja_rekvisiidid__kaardile_kantud_isikud.json.zip`, ~45 MB compressed / ~1 GB JSON,
+  daily refresh ~10:37 UTC, CC BY 4.0). Nightly ingest job
+  `apps/api/src/jobs/ingest-ee-directors.ts` populates the `ee_directors` Postgres cache; handler
+  queries cache and shapes per DEC-20260518-A canonical legal_representatives[] shape. Phase 2/3
+  classified EE blocked because only the /autocomplete endpoint was checked and deeper SOAP
+  endpoints require a 5-day RIK contract; DEC-20260518-E exhaustive enumeration surfaced the
+  no-contract no-lead-time Path 5 (bulk open data). GDPR note: isikukood + DOB redacted upstream
+  since 2024-11-01; field kept null for canonical-shape parity. v1.1 upgrade path: RIK contract
+  API (`detailandmed_v2` / `esindus_v1`) for real-time + non-redacted PIDs.
 _source_notion_page_id: 34867c87-082c-81a7-aa67-e9b7afd87069
