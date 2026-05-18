@@ -17,5 +17,24 @@
     }
   ],
   "company_size": "Very large company",
-  "source_as_of": "[CAPTURE_TIMESTAMP]"
+  "source_as_of": "[CAPTURE_TIMESTAMP]",
+  "legal_name": "Bank of Cyprus Public Company Limited",
+  "primary_registration_id": "C165",
+  "date_incorporated": "1943-12-31",
+  "legal_representatives": [
+    {
+      "type": "person",
+      "name": "[SCRUBBED_PERSON_NAME]",
+      "role": "Διευθυντής",
+      "role_code": "director",
+      "role_group": "management_board",
+      "date_of_birth": null,
+      "start_date": null
+    }
+  ],
+  "total_legal_representatives": 12,
+  "tier_2_available": true,
+  "tier_2_available_reason": "Legal representatives sourced from Cyprus DRCOR (Department of Registrar of Companies and Intellectual Property) via monthly-refreshed open data: data.gov.cy organisation_officials_83.csv, CC BY 4.0. Up to 4-week freshness; per-row appointment dates and personal identifiers are not published in the open-data file. Last cache refresh: [CAPTURE_TIMESTAMP].",
+  "ubo_availability": "unavailable_no_registry",
+  "ubo_availability_reason": "Cyprus UBO Register access closed to public since 2023-01-03 per CJEU C-37/20 ruling; legitimate-interest gate applies. Programmatic UBO lookup not exposed at v1."
 }

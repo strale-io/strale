@@ -6,8 +6,8 @@ Total rows: 47
 
 ## By status
 
-- Live: 29
-- Committed: 18
+- Live: 30
+- Committed: 17
 
 ## By evidence type
 
@@ -35,7 +35,7 @@ Total rows: 47
 | belgian-company-data | BE | Company registry | cbeapi.be | Live | €0.05 | live-verified | 2026-05-15 |
 | bulgarian-company-data | BG | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
 | swiss-company-data | CH | Company registry | Zefix | Live | €0.05 | live-verified | 2026-05-15 |
-| cypriot-company-data | CY | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
+| cypriot-company-data | CY | Company registry | Openapi.com + DRCOR open data | Live | €0.16 | live-verified | 2026-05-19 |
 | cz-company-data | CZ | Company registry | ARES | Live | €0.05 | live-verified | 2026-05-18 |
 | german-company-data | DE | Company registry | OpenRegister | Live | €0.05 | live-verified | 2026-05-15 |
 | danish-company-data | DK | Company registry | cvrapi.dk | Live | €0.05 | live-verified | 2026-05-15 |
@@ -133,7 +133,7 @@ Total rows: 47
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| cypriot-company-data | CY | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
+| cypriot-company-data | CY | Company registry | Openapi.com + DRCOR open data | Live | €0.16 | live-verified | 2026-05-19 |
 
 ### CZ (1)
 

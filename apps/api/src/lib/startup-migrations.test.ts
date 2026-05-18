@@ -1062,6 +1062,41 @@ describe("startup-migrations — block 0079 (ee_directors)", () => {
   });
 });
 
+// Block 0080 mirrors the Block 0079 shape: 4 DDL statements followed by a
+// pg_constraint SELECT, then a conditional ALTER TABLE. Two cases lock down
+// the create path and the constraint-already-present skip path.
+describe("startup-migrations — block 0080 (cy_directors)", () => {
+  it("first run: creates tables + indexes + singleton CHECK constraint", async () => {
+    const stub = makeStub({ queue: [null, null, null, null, [{ cnt: "0" }]] });
+    const { runMigration0080_cyDirectors } = await import("./startup-migrations.js");
+    const result = await runMigration0080_cyDirectors(stub);
+    expect(result.outcome).toMatch(/cy_directors.*ensured/i);
+    expect(stub.captured).toHaveLength(6);
+    const allSql = stub.renderedSql.join("\n").toLowerCase();
+    expect(allSql).toContain("create table if not exists cy_directors");
+    expect(allSql).toContain("create index if not exists cy_directors_entity_idx");
+    expect(allSql).toContain("create index if not exists cy_directors_last_synced_idx");
+    expect(allSql).toContain("create table if not exists cy_directors_sync");
+    expect(allSql).toContain("add constraint cy_directors_sync_singleton_chk");
+    expect(allSql).toContain("check (id = 1)");
+    // Composite PK shape pinned — DRCOR has no stable per-row identifier
+    // upstream, so the PK is the natural unique tuple.
+    expect(allSql).toContain(
+      "primary key (entity_reg_code, person_or_organisation_name, official_position)",
+    );
+    expect(stub.renderedSql.filter((s) => /create table if not exists/i.test(s))).toHaveLength(2);
+    expect(stub.renderedSql.filter((s) => /create index if not exists/i.test(s))).toHaveLength(2);
+  });
+
+  it("second run: skips the ALTER TABLE when CHECK constraint already exists", async () => {
+    const stub = makeStub({ queue: [null, null, null, null, [{ cnt: "1" }]] });
+    const { runMigration0080_cyDirectors } = await import("./startup-migrations.js");
+    await runMigration0080_cyDirectors(stub);
+    expect(stub.captured).toHaveLength(5);
+    expect(stub.renderedSql.some((s) => /alter table.*add constraint/i.test(s))).toBe(false);
+  });
+});
+
 describe("startup-migrations — phase-b5 slug lists (invariants)", () => {
   it("PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS has the expected 10 entries", async () => {
     const { PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./startup-migrations.js");
@@ -1121,7 +1156,7 @@ describe("startup-migrations — phase-b5 slug lists (invariants)", () => {
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 22 blocks in historical order", () => {
+  it("exports the expected 23 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1150,6 +1185,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0077_classifyFreeQuotaOverrides",
       "runMigration0078_transactionsCapabilityIdCreatedAtIdx",
       "runMigration0079_eeDirectors",
+      "runMigration0080_cyDirectors",
     ]);
   });
 });

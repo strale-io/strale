@@ -124,6 +124,13 @@ async function main() {
   const { startEeDirectorsIngest } = await import("./jobs/ingest-ee-directors.js");
   startEeDirectorsIngest();
 
+  // CY directors / officers monthly ingest — DRCOR open-data CSV
+  // (DEC-20260518-E Phase 6). Same pattern as EE; weekly tick with
+  // Last-Modified skip since DRCOR refreshes monthly. Advisory lock
+  // 20260519 dedups across replicas.
+  const { startCyDirectorsIngest } = await import("./jobs/ingest-cy-directors.js");
+  startCyDirectorsIngest();
+
   const port = parseInt(process.env.PORT || "3000", 10);
 
   const server = serve({ fetch: app.fetch, port }, (info) => {
