@@ -74,7 +74,7 @@ processes_personal_data: true
 personal_data_categories:
   - name
   - date_of_birth
-  - tax_id
+  - government_id
   - professional
 geography: eu
 test_fixtures:
