@@ -7,7 +7,7 @@ sourcing_pattern: "Direct API"
 per_call_price_eur: 0.05
 evidence_grade: live-verified
 tier_1_coverage: 7/7
-tier_2_coverage: 4/5 (directors via Bolagsverket; VAT via VIES routing)
+tier_2_coverage: 3/5 (VAT via VIES routing; directors integration planned Phase 4)
 tier_3_coverage: 2/6 (NACE + last filing date)
 last_verified: "2026-05-15"
 products:

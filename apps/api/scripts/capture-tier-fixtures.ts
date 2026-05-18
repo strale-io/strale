@@ -88,6 +88,7 @@ const PII_ARRAY_FIELDS = new Set([
   "share_holders",
   "managers",
   "officers",
+  "legal_representatives",
 ]);
 
 // Fields whose value is a live wall-clock timestamp from the capture run.

@@ -61,6 +61,28 @@ async function searchCompany(name: string): Promise<string> {
   return items[0].company_number;
 }
 
+async function fetchOfficers(companyNumber: string): Promise<Array<{ name: string; role: string; start_date: string | null }>> {
+  const key = getApiKey();
+  const url = `${API}/company/${companyNumber}/officers?items_per_page=100`;
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      Authorization: `Basic ${Buffer.from(key + ":").toString("base64")}`,
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error(`Companies House officers returned HTTP ${response.status}`);
+  const data = (await response.json()) as any;
+  const items: any[] = Array.isArray(data?.items) ? data.items : [];
+  return items
+    .filter((o) => !o.resigned_on)
+    .map((o) => ({
+      name: o.name ?? "",
+      role: o.officer_role ?? "",
+      start_date: o.appointed_on ?? null,
+    }));
+}
+
 async function fetchCompany(companyNumber: string): Promise<Record<string, unknown>> {
   const key = getApiKey();
   const url = `${API}/company/${companyNumber}`;
@@ -128,7 +150,10 @@ registerCapability("uk-company-data", async (input: CapabilityInput) => {
     companyNumber = await searchCompany(name);
   }
 
-  const output = await fetchCompany(companyNumber);
+  const [output, officers] = await Promise.all([
+    fetchCompany(companyNumber),
+    fetchOfficers(companyNumber),
+  ]);
 
   // Evidence Tier framework labels + Tier 1 canonical aliases (DEC-20260518-A).
   // Resolves alias keys at runtime; only sets a canonical if not already present.
@@ -144,8 +169,9 @@ registerCapability("uk-company-data", async (input: CapabilityInput) => {
     if (o.legal_form === undefined) o.legal_form = (o.business_type ?? o.company_type ?? o.entity_type ?? o.legal_form_code ?? o.legal_form_id);
     if (o.registered_address === undefined) o.registered_address = (o.address ?? o.office_address);
     if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
-    o.tier_2_available = false;
-    o.tier_2_available_reason = "Companies House summary endpoint does not expose officers in current handler implementation; officers extraction is a follow-up labeling task";
+    if (o.legal_representatives === undefined) o.legal_representatives = officers;
+    o.tier_2_available = true;
+    o.tier_2_available_reason = "Legal representatives extracted from UK Companies House Officers register.";
     o.ubo_availability = "available";
     o.ubo_availability_reason = "Beneficial ownership data available via UK PSC register.";
   }

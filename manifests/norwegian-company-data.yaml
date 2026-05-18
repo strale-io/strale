@@ -62,6 +62,21 @@ output_schema:
       type:
         - string
         - "null"
+    legal_representatives:
+      type: array
+      description: >-
+        Active legal representatives (board members, managing director, signatories, procurists) from
+        the Brreg /roller endpoint. Strale canonical shape: {type, name, role, role_code, role_group,
+        date_of_birth}. role_group is the Brreg rollegruppe code (STYR, DAGL, SIGN, PROK, KOMP, KONT,
+        etc.); role_code is the per-member rolletype code (LEDE, NEST, MEDL, VARA, OBS for STYR; same
+        as the group for single-role groups). Resigned / deregistered roles (fratraadt, avregistrert)
+        are filtered out. Anonymous endpoint — name + birth date only, fnr not exposed.
+    total_legal_representatives:
+      type: integer
+    tier_2_available:
+      type: boolean
+    tier_2_available_reason:
+      type: string
 data_source: Brønnøysund Register Centre (Norway)
 data_source_type: api
 transparency_tag: mixed
@@ -93,6 +108,13 @@ output_field_reliability:
   industry_code: guaranteed
   employee_count: guaranteed
   registration_date: guaranteed
+  # Active roles exist for the overwhelming majority of registered AS/ASA/SA entities;
+  # rare exceptions (newly-registered shells, mid-restructuring records) can return
+  # an empty array. Marked common so the schema gate doesn't trip on the empty case.
+  legal_representatives: common
+  total_legal_representatives: guaranteed
+  tier_2_available: guaranteed
+  tier_2_available_reason: guaranteed
 limitations:
   - title: Does not cover sole proprietorships — about 15% of Norwegian businesses
     text: Does not cover sole proprietorships (enkeltpersonforetak)
