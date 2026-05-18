@@ -3,7 +3,7 @@ country: EE
 evidence_type: Company registry
 provider: Ariregister
 status: Live
-sourcing_pattern: "Direct API + bulk open data (RIK Ariregister CC BY 4.0)"
+sourcing_pattern: "Free open data"
 per_call_price_eur: 0.05
 evidence_grade: live-verified
 tier_1_coverage: 6/7
