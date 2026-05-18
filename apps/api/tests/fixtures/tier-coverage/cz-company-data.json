@@ -20,8 +20,20 @@
     "93290"
   ],
   "registration_date": "1990-11-20",
-  "last_updated": "2026-04-16",
+  "last_updated": "2026-05-16",
   "status": "active",
   "primary_source": "ros",
-  "jurisdiction": "CZ"
+  "jurisdiction": "CZ",
+  "legal_name": "Škoda Auto a.s.",
+  "primary_registration_id": "00177041",
+  "legal_form": "121",
+  "registered_address": "tř. Václava Klementa 869, Mladá Boleslav II, 29301 Mladá Boleslav",
+  "date_incorporated": "1990-11-20",
+  "legal_representatives": "[REDACTED]",
+  "total_legal_representatives": 7,
+  "signing_authority": null,
+  "tier_2_available": true,
+  "tier_2_available_reason": "Legal representatives extracted from ARES Veřejný rejstřík (statutární orgán + prokura); excludes supervisory boards (dozorčí rada) which do not legally represent the company.",
+  "ubo_availability": "restricted",
+  "ubo_availability_reason": "UBO evidence register access restricted to AML-obliged entities post-CJEU 2022"
 }
