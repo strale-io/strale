@@ -231,6 +231,26 @@ registerCapability("greek-company-data", async (input: CapabilityInput) => {
 
   const output = mapToOutput(company);
 
+  // Evidence Tier framework labels + Tier 1 canonical aliases (DEC-20260518-A).
+  // Resolves alias keys at runtime; only sets a canonical if not already present.
+  {
+    const o = output as Record<string, unknown>;
+    if (o.legal_name === undefined) o.legal_name = (o.company_name ?? o.name);
+    if (o.primary_registration_id === undefined) o.primary_registration_id = (o.company_number ?? o.registration_number ?? o.uen ?? o.fn_number ?? o.ico ?? o.krs_number ?? o.org_number ?? o.cnpj ?? o.reg_number);
+    if (o.status === undefined) {
+    if (typeof o.company_status === "string") o.status = o.company_status;
+    else if (o.is_active === true || o.active === true) o.status = "active";
+    else if (o.is_active === false || o.active === false) o.status = "inactive";
+  }
+    if (o.legal_form === undefined) o.legal_form = (o.business_type ?? o.company_type ?? o.entity_type ?? o.legal_form_code ?? o.legal_form_id);
+    if (o.registered_address === undefined) o.registered_address = (o.address ?? o.office_address);
+    if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
+    o.tier_2_available = true;
+    o.tier_2_available_reason = "GEMI exposes legal representatives via representation array; signing_authority not currently extracted";
+    o.ubo_availability = "unavailable_no_registry";
+    o.ubo_availability_reason = "Programmatic UBO access not yet operational at v1; verification pending public-source confirmation";
+  }
+
   return {
     output,
     provenance: {

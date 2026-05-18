@@ -163,6 +163,26 @@ registerCapability("belgian-company-data", async (input: CapabilityInput) => {
     ? `https://kbopub.economie.fgov.be/kbopub/toonondernemingps.html?ondernemingsnummer=${cbeNumber}`
     : "https://kbopub.economie.fgov.be/kbopub/zoekofficielenummerform.html";
 
+  // Evidence Tier framework labels + Tier 1 canonical aliases (DEC-20260518-A).
+  // Resolves alias keys at runtime; only sets a canonical if not already present.
+  {
+    const o = output as Record<string, unknown>;
+    if (o.legal_name === undefined) o.legal_name = (o.company_name ?? o.name);
+    if (o.primary_registration_id === undefined) o.primary_registration_id = (o.company_number ?? o.registration_number ?? o.uen ?? o.fn_number ?? o.ico ?? o.krs_number ?? o.org_number ?? o.cnpj ?? o.reg_number);
+    if (o.status === undefined) {
+    if (typeof o.company_status === "string") o.status = o.company_status;
+    else if (o.is_active === true || o.active === true) o.status = "active";
+    else if (o.is_active === false || o.active === false) o.status = "inactive";
+  }
+    if (o.legal_form === undefined) o.legal_form = (o.business_type ?? o.company_type ?? o.entity_type ?? o.legal_form_code ?? o.legal_form_id);
+    if (o.registered_address === undefined) o.registered_address = (o.address ?? o.office_address);
+    if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
+    o.tier_2_available = false;
+    o.tier_2_available_reason = "handler does not currently extract legal representatives from upstream registry; follow-up extraction task tracked";
+    o.ubo_availability = "restricted";
+    o.ubo_availability_reason = "UBO register (FPS Finance) access restricted post-CJEU 2022 ruling";
+  }
+
   return {
     output,
     provenance: {

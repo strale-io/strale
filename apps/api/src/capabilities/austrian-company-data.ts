@@ -47,7 +47,7 @@ registerCapability("austrian-company-data", async (input: CapabilityInput) => {
       `'${rawInput.trim()}' is not a valid Austrian UID-Nummer. Expected format: ATU + 8 digits (e.g. ATU14189108).`,
     );
   }
-  return executeOpenapiCapability(
+  const __etResult = await executeOpenapiCapability(
     {
       countryCode: "AT",
       identifierRegex: AT_VAT_RE,
@@ -56,6 +56,21 @@ registerCapability("austrian-company-data", async (input: CapabilityInput) => {
     },
     normalised,
   );
+  return {
+    ...__etResult,
+    output: {
+      ...__etResult.output,
+      // Evidence Tier 1 canonical aliases (DEC-20260518-A)
+      legal_name: (__etResult.output as Record<string, unknown>).company_name,
+      primary_registration_id: (__etResult.output as Record<string, unknown>).registration_number,
+      date_incorporated: (__etResult.output as Record<string, unknown>).registered_date,
+      // Evidence Tier framework labels (DEC-20260518-A)
+      tier_2_available: false,
+      tier_2_available_reason: "Openapi-served endpoint does not expose directors at current tier (universal caveat for WW-Top + *-Advanced products; IT-Full deferred to v1.1)",
+      ubo_availability: "restricted",
+      ubo_availability_reason: "WiEReG UBO register access restricted to AML-obliged entities per Austrian Beneficial Owners Register Act",
+    },
+  };
 });
 
 export { AT_VAT_RE };

@@ -130,6 +130,16 @@ registerCapability("us-company-data-cobalt", async (input: CapabilityInput) => {
       filings: result.filings?.slice(0, 25) ?? null,
       sos_url: result.sosUrl ?? null,
       data_source: "Cobalt Intelligence (50-state SoS live)",
+      // Evidence Tier 1 canonical aliases (DEC-20260518-A)
+      legal_name: result.title ?? result.businessName ?? result.name ?? null,
+      legal_form: result.businessType ?? result.entityType ?? null,
+      registered_address: result.address ??
+        (result.principalAddress ? Object.values(result.principalAddress).filter(Boolean).join(", ") : null),
+      // Evidence Tier framework labels (DEC-20260518-A)
+      tier_2_available: true,
+      tier_2_available_reason: "Cobalt Intelligence exposes officers and filings per state; signing_authority not currently extracted",
+      ubo_availability: "unavailable_no_registry",
+      ubo_availability_reason: "US has no federal UBO register operational at v1; CTA implementation deferred; verification pending per-state register evaluation",
     },
     provenance: {
       source: "cobaltintelligence.com",
