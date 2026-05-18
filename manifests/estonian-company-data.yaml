@@ -39,6 +39,23 @@ output_schema:
       type: string
     jurisdiction:
       type: string
+    legal_representatives:
+      type: array
+      description: Canonical legal-representatives shape (DEC-20260518-A). Each entry is { type, name, role, role_code, role_group, date_of_birth, start_date }. date_of_birth is always null for EE — redacted upstream by RIK since 2024-11-01.
+    total_legal_representatives:
+      type: integer
+      description: Count of active legal_representatives returned. 0 when ee_directors cache has no active rows for this registry code.
+    tier_2_available:
+      type: boolean
+      description: True when at least one active legal representative is returned from the ee_directors cache.
+    tier_2_available_reason:
+      type: string
+      description: Explanation of tier-2 availability (source + redacted-PIDs caveat + last cache refresh) or non-availability.
+    ubo_availability:
+      type: string
+      description: UBO availability flag. EE is unavailable_no_registry — programmatic UBO access not exposed by Ariregister at v1.
+    ubo_availability_reason:
+      type: string
 data_source: Äriregister / Estonian Business Register
 data_source_type: api
 transparency_tag: ai_generated
