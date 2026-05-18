@@ -188,6 +188,16 @@ registerCapability("slovak-company-data", async (input: CapabilityInput) => {
       directors,
       last_updated: entity.dbModificationDate ?? null,
       jurisdiction: "SK",
+      // Evidence Tier 1 canonical aliases (DEC-20260518-A)
+      legal_name: currentName?.value ?? "",
+      primary_registration_id: currentRegNumber?.value ?? null,
+      registered_address: formatAddress(currentAddress),
+      date_incorporated: entity.establishment ?? null,
+      // Evidence Tier framework labels (DEC-20260518-A)
+      tier_2_available: false,
+      tier_2_available_reason: "handler does not currently extract legal representatives from upstream registry; follow-up extraction task tracked",
+      ubo_availability: "unavailable_no_registry",
+      ubo_availability_reason: "RPVS (Register partnerov verejného sektora) not accessible for foreign users at v1; verification pending public-source confirmation",
     },
     provenance: {
       source: "api.statistics.sk/rpo",

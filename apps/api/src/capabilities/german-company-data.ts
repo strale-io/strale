@@ -300,6 +300,13 @@ registerCapability("german-company-data", async (input: CapabilityInput) => {
       lei: company.lei?.trim() || null,
       incorporated_at: company.incorporated_at ? company.incorporated_at.split("T")[0] : null,
       terminated_at: company.terminated_at ? company.terminated_at.split("T")[0] : null,
+      // Evidence Tier 1 canonical aliases (DEC-20260518-A)
+      legal_name: resolvedName,
+      primary_registration_id: registrationNumber,
+      // Evidence Tier framework labels (DEC-20260518-A)
+      tier_2_available: true,
+      ubo_availability: "restricted",
+      ubo_availability_reason: "Transparenzregister access restricted to obliged entities per GwG §23 post-CJEU 2022",
     },
     provenance: {
       source: "OpenRegister",

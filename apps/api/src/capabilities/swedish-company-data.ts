@@ -276,6 +276,15 @@ registerCapability(
             ?.pagaendeAvvecklingsEllerOmstruktureringsforfarandeLista,
         ),
         alternative_names: alternativeNames(nameList),
+        // Evidence Tier 1 canonical aliases (DEC-20260518-A)
+        legal_name: pickPrimaryName(nameList),
+        primary_registration_id: normalised.formatted,
+        date_incorporated: toIsoDate(org.organisationsdatum?.registreringsdatum),
+        // Evidence Tier framework labels (DEC-20260518-A)
+        tier_2_available: false,
+        tier_2_available_reason: "handler does not currently extract legal representatives from upstream registry; follow-up extraction task tracked",
+        ubo_availability: "unavailable_no_registry",
+        ubo_availability_reason: "Bolagsverket BO data not exposed programmatically at v1; verification pending public-source confirmation",
       },
       provenance: {
         source: "Bolagsverket Värdefulla datamängder API",

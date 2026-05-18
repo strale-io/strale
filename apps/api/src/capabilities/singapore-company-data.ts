@@ -148,6 +148,22 @@ registerCapability("singapore-company-data", async (input: CapabilityInput) => {
   const filterRef = encodeURIComponent(JSON.stringify({ uen: record.uen }));
   const primarySourceUrl = `${SG_DATASTORE_API}?resource_id=${SG_RESOURCE_ID}&filters=${filterRef}`;
 
+  // Evidence Tier framework labels + Tier 1 canonical aliases (DEC-20260518-A).
+  // Resolves alias keys at runtime; only sets a canonical if not already present.
+  {
+    const o = output as Record<string, unknown>;
+    if (o.legal_name === undefined) o.legal_name = (o.company_name ?? o.name);
+    if (o.primary_registration_id === undefined) o.primary_registration_id = (o.company_number ?? o.registration_number ?? o.uen ?? o.fn_number ?? o.ico ?? o.krs_number ?? o.org_number ?? o.cnpj ?? o.reg_number);
+    if (o.status === undefined) o.status = (o.company_status ?? o.is_active ?? o.active);
+    if (o.legal_form === undefined) o.legal_form = (o.business_type ?? o.company_type ?? o.entity_type ?? o.legal_form_code ?? o.legal_form_id);
+    if (o.registered_address === undefined) o.registered_address = (o.address ?? o.office_address);
+    if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
+    o.tier_2_available = false;
+    o.tier_2_available_reason = "ACRA data.gov.sg snapshot does not expose directors";
+    o.ubo_availability = "unavailable_no_registry";
+    o.ubo_availability_reason = "UBO data not exposed in ACRA data.gov.sg public dataset";
+  }
+
   return {
     output,
     provenance: {

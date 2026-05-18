@@ -194,6 +194,22 @@ registerCapability("lithuanian-company-data", async (input: CapabilityInput) => 
 
   const primarySourceUrl = `${JA_MODEL}?eq(ja_kodas,${record.ja_kodas})`;
 
+  // Evidence Tier framework labels + Tier 1 canonical aliases (DEC-20260518-A).
+  // Resolves alias keys at runtime; only sets a canonical if not already present.
+  {
+    const o = output as Record<string, unknown>;
+    if (o.legal_name === undefined) o.legal_name = (o.company_name ?? o.name);
+    if (o.primary_registration_id === undefined) o.primary_registration_id = (o.company_number ?? o.registration_number ?? o.uen ?? o.fn_number ?? o.ico ?? o.krs_number ?? o.org_number ?? o.cnpj ?? o.reg_number);
+    if (o.status === undefined) o.status = (o.company_status ?? o.is_active ?? o.active);
+    if (o.legal_form === undefined) o.legal_form = (o.business_type ?? o.company_type ?? o.entity_type ?? o.legal_form_code ?? o.legal_form_id);
+    if (o.registered_address === undefined) o.registered_address = (o.address ?? o.office_address);
+    if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
+    o.tier_2_available = false;
+    o.tier_2_available_reason = "handler does not currently extract legal representatives from upstream registry; follow-up extraction task tracked";
+    o.ubo_availability = "unavailable_no_registry";
+    o.ubo_availability_reason = "Programmatic UBO access not yet operational at v1; verification pending public-source confirmation";
+  }
+
   return {
     output,
     provenance: {

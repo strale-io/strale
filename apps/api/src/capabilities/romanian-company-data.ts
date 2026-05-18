@@ -42,7 +42,7 @@ registerCapability("romanian-company-data", async (input: CapabilityInput) => {
       `'${rawInput.trim()}' is not a valid Romanian identifier. Expected: RO + 8 digits (VAT), 13 digits (full CUI), or 8 digits (CUI). 7-digit CUI entities (legacy banks, older corporations) are not reachable.`,
     );
   }
-  return executeOpenapiCapability(
+  const __etResult = await executeOpenapiCapability(
     {
       countryCode: "RO",
       identifierRegex: RO_RE,
@@ -51,6 +51,21 @@ registerCapability("romanian-company-data", async (input: CapabilityInput) => {
     },
     normalised,
   );
+  return {
+    ...__etResult,
+    output: {
+      ...__etResult.output,
+      // Evidence Tier 1 canonical aliases (DEC-20260518-A)
+      legal_name: (__etResult.output as Record<string, unknown>).company_name,
+      primary_registration_id: (__etResult.output as Record<string, unknown>).registration_number,
+      date_incorporated: (__etResult.output as Record<string, unknown>).registered_date,
+      // Evidence Tier framework labels (DEC-20260518-A)
+      tier_2_available: false,
+      tier_2_available_reason: "Openapi-served endpoint does not expose directors at current tier (universal caveat for WW-Top + *-Advanced products; IT-Full deferred to v1.1)",
+      ubo_availability: "unavailable_no_registry",
+      ubo_availability_reason: "Programmatic UBO access not yet operational at v1; verification pending public-source confirmation",
+    },
+  };
 });
 
 export { RO_RE };

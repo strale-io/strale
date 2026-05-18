@@ -123,6 +123,17 @@ registerCapability("cz-company-data", async (input: CapabilityInput) => {
       status: deriveStatus(data.seznamRegistraci),
       primary_source: data.primarniZdroj ?? null,
       jurisdiction: "CZ",
+      // Evidence Tier 1 canonical aliases (DEC-20260518-A)
+      legal_name: data.obchodniJmeno ?? "",
+      primary_registration_id: data.ico,
+      legal_form: data.pravniForma ?? null,
+      registered_address: data.sidlo?.textovaAdresa ?? "",
+      date_incorporated: data.datumVzniku ?? null,
+      // Evidence Tier framework labels (DEC-20260518-A)
+      tier_2_available: false,
+      tier_2_available_reason: "handler does not currently extract legal representatives from upstream registry; follow-up extraction task tracked",
+      ubo_availability: "restricted",
+      ubo_availability_reason: "UBO evidence register access restricted to AML-obliged entities post-CJEU 2022",
     },
     provenance: {
       source: "ares.gov.cz",
