@@ -148,8 +148,8 @@ registerCapability("danish-company-data", async (input: CapabilityInput) => {
     if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
     o.tier_2_available = false;
     o.tier_2_available_reason = "cvrapi.dk free tier does not expose directors; Virk system-til-system direct integration tracked separately";
-    o.ubo_availability = "available";
-    o.ubo_availability_reason = "Beneficial owner data accessible via CVR / OpenOwnership BODS DK extraction (handler integration pending; flag reflects jurisdictional availability)";
+    o.ubo_availability = "unavailable_no_registry";
+    o.ubo_availability_reason = "Danish beneficial ownership data integration in progress; coverage in v1.1.";
   }
 
   return {

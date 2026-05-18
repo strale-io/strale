@@ -2,14 +2,14 @@ capability_slug: beneficial-ownership-lookup
 country: UK
 evidence_type: Beneficial ownership
 provider: OpenOwnership
-status: Committed
-sourcing_pattern: Free open data
+status: Live
+sourcing_pattern: Direct API
 per_call_price_eur: 0
 evidence_grade: null
 tier_1_coverage: null
 tier_2_coverage: null
 tier_3_coverage: null
-last_verified: "2026-04-28"
+last_verified: "2026-05-18"
 products:
   - Counterparty Assurance
 vendor_roster_url: null

@@ -147,7 +147,7 @@ registerCapability("uk-company-data", async (input: CapabilityInput) => {
     o.tier_2_available = false;
     o.tier_2_available_reason = "Companies House summary endpoint does not expose officers in current handler implementation; officers extraction is a follow-up labeling task";
     o.ubo_availability = "available";
-    o.ubo_availability_reason = "PSC (Persons with Significant Control) register publicly accessible via Companies House";
+    o.ubo_availability_reason = "Beneficial ownership data available via UK PSC register.";
   }
 
   return {

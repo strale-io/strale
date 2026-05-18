@@ -6,8 +6,8 @@ Total rows: 47
 
 ## By status
 
-- Live: 28
-- Committed: 19
+- Live: 29
+- Committed: 18
 
 ## By evidence type
 
@@ -24,7 +24,7 @@ Total rows: 47
 | beneficial-ownership-lookup | DK | Beneficial ownership | OpenOwnership | Committed | €0 | — | 2026-04-28 |
 | gleif-l2-children-lookup | Global | Beneficial ownership | GLEIF | Committed | €0 | — | 2026-04-28 |
 | gleif-l2-ubo-lookup | Global | Beneficial ownership | GLEIF | Committed | €0 | — | 2026-04-28 |
-| beneficial-ownership-lookup | UK | Beneficial ownership | OpenOwnership | Committed | €0 | — | 2026-04-28 |
+| beneficial-ownership-lookup | UK | Beneficial ownership | OpenOwnership | Live | €0 | — | 2026-05-18 |
 | uk-company-data | UK | Beneficial ownership | PSC register | Live | — | — | 2026-04-20 |
 
 ### Company registry (32)
@@ -309,7 +309,7 @@ Total rows: 47
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| beneficial-ownership-lookup | UK | Beneficial ownership | OpenOwnership | Committed | €0 | — | 2026-04-28 |
+| beneficial-ownership-lookup | UK | Beneficial ownership | OpenOwnership | Live | €0 | — | 2026-05-18 |
 | insolvency-check | UK | Litigation / bankruptcy | Companies House | Live | €0 | — | 2026-04-28 |
 | uk-company-data | UK | Beneficial ownership | PSC register | Live | — | — | 2026-04-20 |
 | uk-company-data | UK | Company registry | Companies House | Live | €0.05 | live-verified | 2026-05-15 |
