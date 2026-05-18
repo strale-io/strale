@@ -1,8 +1,8 @@
 slug: estonian-company-data
 name: Estonian Company Data
-description: Look up Estonian company data from the e-Business Register. Accepts registry code (8 digits) or fuzzy company name.
+description: Look up Estonian company data from the e-Business Register. Accepts registry code (8 digits) or fuzzy company name. Returns legal_representatives[] from RIK Ariregister Open Data (CC BY 4.0).
 category: data-extraction
-cost_class: paid_prepaid
+cost_class: free_unlimited
 quota_window: none
 price_cents: 5
 is_free_tier: false
@@ -38,6 +38,23 @@ output_schema:
     registry_code:
       type: string
     jurisdiction:
+      type: string
+    legal_representatives:
+      type: array
+      description: Canonical legal-representatives shape (DEC-20260518-A). Each entry is { type, name, role, role_code, role_group, date_of_birth, start_date }. date_of_birth is always null for EE — redacted upstream by RIK since 2024-11-01.
+    total_legal_representatives:
+      type: integer
+      description: Count of active legal_representatives returned. 0 when ee_directors cache has no active rows for this registry code.
+    tier_2_available:
+      type: boolean
+      description: True when at least one active legal representative is returned from the ee_directors cache.
+    tier_2_available_reason:
+      type: string
+      description: Explanation of tier-2 availability (source + redacted-PIDs caveat + last cache refresh) or non-availability.
+    ubo_availability:
+      type: string
+      description: UBO availability flag. EE is unavailable_no_registry — programmatic UBO access not exposed by Ariregister at v1.
+    ubo_availability_reason:
       type: string
 data_source: Äriregister / Estonian Business Register
 data_source_type: api
@@ -99,9 +116,25 @@ output_field_reliability:
   zip_code: guaranteed
   historical_names: guaranteed
   registry_url: guaranteed
+  legal_representatives: common
+  total_legal_representatives: guaranteed
+  tier_2_available: guaranteed
+  tier_2_available_reason: guaranteed
+  ubo_availability: guaranteed
+  ubo_availability_reason: guaranteed
 limitations:
   - title: Estonian e-Business Register (ariregister) may block requests from certain external IP ranges
     text: Estonian e-Business Register (ariregister) may block requests from certain IP ranges
     category: availability
     severity: info
     workaround: If lookup fails, use the registry code to search directly at ariregister.rik.ee
+  - title: legal_representatives.date_of_birth is always null for EE
+    text: Estonian Personal Identification Codes (isikukood) and Date of Birth are redacted upstream by RIK in the Open Data dump since 2024-11-01 per data-protection policy. The legal_representatives[] array preserves the date_of_birth field for canonical-shape parity with peer jurisdictions, but it is always null for EE entries.
+    category: completeness
+    severity: info
+    workaround: Use the RIK contract-gated API (`detailandmed_v2` / `esindus_v1`) for non-redacted personal codes when needed. Contract is free; ~5 working day approval lead time.
+  - title: legal_representatives reflects state as of last nightly ingest (≤24h stale)
+    text: legal_representatives[] is populated from a daily-refreshed bulk dump (~10:37 UTC), not real-time. New appointments / resignations may not appear for up to 24 hours after they are filed.
+    category: freshness
+    severity: info
+    workaround: For real-time accuracy, query the RIK contract API (`esindus_v1` Rights of Representation) directly.
