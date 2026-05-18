@@ -36,7 +36,7 @@ Total rows: 47
 | bulgarian-company-data | BG | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
 | swiss-company-data | CH | Company registry | Zefix | Live | €0.05 | live-verified | 2026-05-15 |
 | cypriot-company-data | CY | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
-| cz-company-data | CZ | Company registry | ARES | Live | €0.05 | live-verified | 2026-05-15 |
+| cz-company-data | CZ | Company registry | ARES | Live | €0.05 | live-verified | 2026-05-18 |
 | german-company-data | DE | Company registry | OpenRegister | Live | €0.05 | live-verified | 2026-05-15 |
 | danish-company-data | DK | Company registry | cvrapi.dk | Live | €0.05 | live-verified | 2026-05-15 |
 | estonian-company-data | EE | Company registry | Ariregister | Live | €0.05 | live-verified | 2026-05-15 |
@@ -139,7 +139,7 @@ Total rows: 47
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| cz-company-data | CZ | Company registry | ARES | Live | €0.05 | live-verified | 2026-05-15 |
+| cz-company-data | CZ | Company registry | ARES | Live | €0.05 | live-verified | 2026-05-18 |
 
 ### DE (1)
 
