@@ -137,6 +137,7 @@ registerCapability("us-company-data-cobalt", async (input: CapabilityInput) => {
         (result.principalAddress ? Object.values(result.principalAddress).filter(Boolean).join(", ") : null),
       // Evidence Tier framework labels (DEC-20260518-A)
       tier_2_available: true,
+      tier_2_available_reason: "Cobalt Intelligence exposes officers and filings per state; signing_authority not currently extracted",
       ubo_availability: "unavailable_no_registry",
       ubo_availability_reason: "US has no federal UBO register operational at v1; CTA implementation deferred; verification pending per-state register evaluation",
     },

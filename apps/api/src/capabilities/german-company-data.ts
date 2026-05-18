@@ -303,8 +303,10 @@ registerCapability("german-company-data", async (input: CapabilityInput) => {
       // Evidence Tier 1 canonical aliases (DEC-20260518-A)
       legal_name: resolvedName,
       primary_registration_id: registrationNumber,
+      date_incorporated: company.incorporated_at ? company.incorporated_at.split("T")[0] : null,
       // Evidence Tier framework labels (DEC-20260518-A)
       tier_2_available: true,
+      tier_2_available_reason: "OpenRegister exposes legal representatives (directors / managing directors) per Handelsregister filing; signing_authority not currently extracted",
       ubo_availability: "restricted",
       ubo_availability_reason: "Transparenzregister access restricted to obliged entities per GwG §23 post-CJEU 2022",
     },
