@@ -15,8 +15,10 @@ import { deriveVatLV } from "../lib/vat-derivation.js";
  */
 
 const LV_DATASTORE_API = "https://data.gov.lv/dati/api/3/action/datastore_search";
-// Resource ID for "Uzņēmumu reģistra atvērtie dati" on data.gov.lv.
+// Resource ID for "Uzņēmumu reģistra atvērtie dati" (entities master) on data.gov.lv.
 const LV_RESOURCE_ID = "25e80bf3-f107-4ab4-89ef-251b5b9374e9";
+// Resource ID for the officers ("amatpersonas") dataset — current active appointments only.
+const LV_OFFICERS_RESOURCE_ID = "e665114a-73c2-4375-9470-55874b4cfa6b";
 
 // Latvian unified registration number: 11 digits.
 const REG_RE = /^\d{11}$/;
@@ -51,13 +53,26 @@ interface LvRecord {
   reregistration_term: string | null;
 }
 
-interface DatastoreResponse {
-  success: boolean;
-  result: { records: LvRecord[]; total?: number };
+interface LvOfficerRecord {
+  at_legal_entity_registration_number: string | number | null;
+  entity_type: string | null;
+  position: string | null;
+  governing_body: string | null;
+  name: string | null;
+  latvian_identity_number_masked: string | null;
+  legal_entity_registration_number: string | null;
+  rights_of_representation_type: string | null;
+  representation_with_at_least: string | number | null;
+  registered_on: string | null;
 }
 
-async function callDatastore(qs: URLSearchParams): Promise<LvRecord[]> {
-  qs.set("resource_id", LV_RESOURCE_ID);
+interface DatastoreResponse<T> {
+  success: boolean;
+  result: { records: T[]; total?: number };
+}
+
+async function callDatastore<T>(resourceId: string, qs: URLSearchParams): Promise<T[]> {
+  qs.set("resource_id", resourceId);
   const url = `${LV_DATASTORE_API}?${qs.toString()}`;
   const res = await fetch(url, {
     headers: { Accept: "application/json" },
@@ -66,7 +81,7 @@ async function callDatastore(qs: URLSearchParams): Promise<LvRecord[]> {
   if (!res.ok) {
     throw new Error(`Latvian Open Data Portal returned HTTP ${res.status}`);
   }
-  const data = (await res.json()) as DatastoreResponse;
+  const data = (await res.json()) as DatastoreResponse<T>;
   if (!data.success) {
     throw new Error("Latvian Open Data Portal returned success=false");
   }
@@ -75,7 +90,10 @@ async function callDatastore(qs: URLSearchParams): Promise<LvRecord[]> {
 
 async function lookupByRegcode(regcode: string): Promise<LvRecord> {
   const filters = JSON.stringify({ regcode });
-  const records = await callDatastore(new URLSearchParams({ filters, limit: "1" }));
+  const records = await callDatastore<LvRecord>(
+    LV_RESOURCE_ID,
+    new URLSearchParams({ filters, limit: "1" }),
+  );
   if (!records.length) {
     throw new Error(`No Latvian company found for registration number ${regcode}.`);
   }
@@ -83,7 +101,10 @@ async function lookupByRegcode(regcode: string): Promise<LvRecord> {
 }
 
 async function lookupByName(name: string): Promise<LvRecord> {
-  const records = await callDatastore(new URLSearchParams({ q: name, limit: "10" }));
+  const records = await callDatastore<LvRecord>(
+    LV_RESOURCE_ID,
+    new URLSearchParams({ q: name, limit: "10" }),
+  );
   if (!records.length) {
     throw new Error(`No Latvian company found matching "${name}".`);
   }
@@ -112,6 +133,62 @@ function deriveStatus(record: LvRecord): string {
   return "Reģistrēts";
 }
 
+// Normalize Uzņēmumu reģistrs position/governing-body codes into a stable
+// canonical role label. Source uses Latvian-language enum codes; we map to
+// English KYB-style roles so downstream consumers don't depend on LV-specific
+// strings. Unknown values pass through verbatim.
+const POSITION_ROLE_MAP: Record<string, string> = {
+  CHAIR_OF_BOARD: "board_chair",
+  BOARD_MEMBER: "board_member",
+  COUNCIL_MEMBER: "council_member",
+  CHAIR_OF_COUNCIL: "council_chair",
+  PROCURIST: "procurist",
+  LIQUIDATOR: "liquidator",
+};
+
+function normalizeRole(position: string | null, governingBody: string | null): string {
+  const mapped = position ? POSITION_ROLE_MAP[position] : null;
+  if (mapped) return mapped;
+  if (position) return position.toLowerCase();
+  // Older records sometimes have empty position but a governing body — fall
+  // back to "<body>_member" so the role field is never blank.
+  if (governingBody) return `${governingBody.toLowerCase()}_member`;
+  return "representative";
+}
+
+interface LegalRepresentative {
+  name: string;
+  role: string;
+  start_date: string | null;
+  rights_of_representation: string | null;
+  representation_with_at_least: number | null;
+  entity_type: string | null;
+}
+
+async function fetchOfficers(regcode: string): Promise<LegalRepresentative[]> {
+  // The amatpersonas resource stores the entity FK as a numeric column, so the
+  // filter value MUST be sent unquoted in the JSON payload — wrapping it as a
+  // string returns zero rows.
+  const filters = `{"at_legal_entity_registration_number":${regcode}}`;
+  const records = await callDatastore<LvOfficerRecord>(
+    LV_OFFICERS_RESOURCE_ID,
+    new URLSearchParams({ filters, limit: "100" }),
+  );
+  return records
+    .filter((r) => clean(r.name))
+    .map((r) => ({
+      name: clean(r.name) as string,
+      role: normalizeRole(r.position, r.governing_body),
+      start_date: toIsoDate(r.registered_on),
+      rights_of_representation: clean(r.rights_of_representation_type),
+      representation_with_at_least:
+        r.representation_with_at_least != null && Number(r.representation_with_at_least) > 0
+          ? Number(r.representation_with_at_least)
+          : null,
+      entity_type: clean(r.entity_type),
+    }));
+}
+
 registerCapability("latvian-company-data", async (input: CapabilityInput) => {
   const raw =
     (input.reg_number as string) ??
@@ -133,6 +210,7 @@ registerCapability("latvian-company-data", async (input: CapabilityInput) => {
   const record = reg ? await lookupByRegcode(reg) : await lookupByName(trimmed);
 
   const regNum = String(record.regcode);
+  const legalRepresentatives = await fetchOfficers(regNum);
   const output = {
     company_name: clean(record.name),
     reg_number: regNum,
@@ -147,6 +225,7 @@ registerCapability("latvian-company-data", async (input: CapabilityInput) => {
     sepa_creditor_id: clean(record.sepa),
     atvk_code: record.atvk != null ? String(record.atvk) : null,
     vat_number: deriveVatLV(regNum),
+    legal_representatives: legalRepresentatives,
     jurisdiction: "LV",
   };
 
@@ -167,8 +246,11 @@ registerCapability("latvian-company-data", async (input: CapabilityInput) => {
     if (o.legal_form === undefined) o.legal_form = (o.business_type ?? o.company_type ?? o.entity_type ?? o.legal_form_code ?? o.legal_form_id);
     if (o.registered_address === undefined) o.registered_address = (o.address ?? o.office_address);
     if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
-    o.tier_2_available = false;
-    o.tier_2_available_reason = "handler does not currently extract legal representatives from upstream registry; follow-up extraction task tracked";
+    o.tier_2_available = legalRepresentatives.length > 0;
+    o.tier_2_available_reason =
+      legalRepresentatives.length > 0
+        ? "Legal representatives extracted from Latvian Enterprise Register (Uznemumu registrs) via data.gov.lv amatpersonas open dataset. Current active appointments only — resignations and historical entries not exposed in this dataset."
+        : "Upstream amatpersonas dataset returned no active officers for this entity. Resignations and historical entries are not exposed in this dataset.";
     o.ubo_availability = "unavailable_no_registry";
     o.ubo_availability_reason = "Programmatic UBO access not yet operational at v1; verification pending public-source confirmation";
   }
