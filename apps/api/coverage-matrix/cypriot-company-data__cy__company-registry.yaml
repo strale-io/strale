@@ -1,23 +1,35 @@
 capability_slug: cypriot-company-data
 country: CY
 evidence_type: Company registry
-provider: Openapi.com
-status: Committed
-sourcing_pattern: Vendor (Tier 3 aggregator)
+provider: Openapi.com + DRCOR open data
+status: Live
+sourcing_pattern: "Free open data"
 per_call_price_eur: 0.16
 evidence_grade: live-verified
-tier_1_coverage: 6/7 (no legal_form via WW-Top)
-tier_2_coverage: 4/5 (vatCode + source-as-of + source-name + authoritative-flag=false; no directors via WW-Top)
-tier_3_coverage: 1/6 (NACE only)
-last_verified: "2026-05-15"
+tier_1_coverage: 6/7
+tier_2_coverage: 5/5
+tier_3_coverage: 1/6
+last_verified: "2026-05-19"
 products:
   - Counterparty Assurance
 vendor_roster_url: null
-provider_tos_notes: N/A - no provider integrated
-doctrine_reference: Openapi addendum (countersignature pending); partial coverage
+provider_tos_notes: >-
+  Tier-1 identity via Openapi WW-Top (subject to Openapi addendum still pending countersignature — gated by
+  OPENAPI_ENABLED flag). Tier-2 legal_representatives[] sourced from data.gov.cy DRCOR open-data CSV
+  (organisation_officials_83.csv) under CC BY 4.0 — attribution preserved in handler provenance per
+  DEC-20260518-F constraint (d). cost_class=paid_per_call (Openapi €0.16/call passthrough).
+doctrine_reference: "DEC-20260518-E (Phase 6 exhaustive enumeration); DEC-20260518-A (canonical legal_representatives shape); DEC-20260518-F (attribution); DEC-20260428-A (Tier 1 direct gov open data)"
 notes: >-
-  v4 probe 2026-05-15: 3 regex variants accepted (^CYd{8}[A-Z]$ / ^d{8}[A-Z]$ / ^Cd+$). Bank of
-  Cyprus on C-format confirmed 200 (per 2026-05-11 prior probe). Wargaming CY99000230P returned 204
-  (Openapi correspondence claimed coverage — anomaly bundled for support ticket). PARTIAL: catalog
-  populated for some CY entities, thin for others.
+  2026-05-19: legal_representatives[] populated from data.gov.cy DRCOR open data via monthly bulk CSV
+  (organisation_officials_83.csv, 120 MB, CC BY 4.0, monthly refresh). Weekly ingest job
+  `apps/api/src/jobs/ingest-cy-directors.ts` with Last-Modified-skip populates the `cy_directors`
+  Postgres cache; handler queries cache and shapes per DEC-20260518-A canonical legal_representatives[].
+  Smoke 2026-05-19: parses 1,168,758 officer rows (635K directors + 438K secretaries + others) in 3.1s;
+  Bank of Cyprus C165 → 12 officers, Wargaming 290868 → 5 officers (matches Phase 6 partial). Identifier
+  mapping: only C-prefix inputs (e.g. C165) resolve against DRCOR; VAT-format inputs (CY-prefix or bare)
+  return tier_2_available=false with explicit reason — DRCOR indexes by numeric REGISTRATION_NO only, not
+  by VAT. Wargaming CY99000230P 204 anomaly from prior 2026-05-15 probe explained as invalid Openapi test
+  value (not a valid DRCOR registration number in any format). Phase 6 enumeration partial reconfirmed
+  DEC-20260507-G "Tier-1 direct buildable" finding with live evidence. Per-row appointment dates not
+  published in DRCOR open data (start_date kept null for canonical-shape parity).
 _source_notion_page_id: 34867c87-082c-8115-8442-e152ede99b8c

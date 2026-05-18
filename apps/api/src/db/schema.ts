@@ -857,3 +857,51 @@ export const eeDirectorsSync = pgTable("ee_directors_sync", {
   lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
   rowCount: integer("row_count"),
 });
+
+// ─── cy_directors ───────────────────────────────────────────────────────────
+// Cyprus directors/officers cache. Monthly ingest of the data.gov.cy DRCOR
+// open-data CSV (`organisation_officials_83.csv`, CC BY 4.0) — see
+// `apps/api/src/jobs/ingest-cy-directors.ts`. DRCOR publishes no stable per-row
+// identifier, so the natural composite key is (entity_reg_code,
+// person_or_organisation_name, official_position). The CSV does NOT include
+// per-row appointment/cessation dates — all rows are treated as currently-active
+// per the snapshot semantics of the upstream file. Greek role labels are stored
+// verbatim plus a normalized English `role_standardized` for handler ergonomics.
+export const cyDirectors = pgTable(
+  "cy_directors",
+  {
+    entityRegCode: text("entity_reg_code").notNull(),
+    personOrOrganisationName: text("person_or_organisation_name").notNull(),
+    officialPosition: text("official_position").notNull(),
+    organisationName: text("organisation_name"),
+    organisationTypeCode: text("organisation_type_code"),
+    organisationType: text("organisation_type"),
+    roleStandardized: text("role_standardized").notNull(),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [
+        table.entityRegCode,
+        table.personOrOrganisationName,
+        table.officialPosition,
+      ],
+    }),
+    index("cy_directors_entity_idx").on(table.entityRegCode),
+    index("cy_directors_last_synced_idx").on(table.lastSyncedAt),
+  ],
+);
+
+// ─── cy_directors_sync ──────────────────────────────────────────────────────
+// Single-row marker for the CY directors ingest. Tracks the upstream
+// `Last-Modified` header so the weekly ingest can skip when the monthly
+// DRCOR refresh hasn't fired yet. `id = 1` only (CHECK constraint).
+export const cyDirectorsSync = pgTable("cy_directors_sync", {
+  id: integer("id").primaryKey(),
+  lastModifiedUpstream: text("last_modified_upstream"),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+  rowCount: integer("row_count"),
+});
