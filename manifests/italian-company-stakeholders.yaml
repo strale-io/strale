@@ -1,0 +1,141 @@
+slug: italian-company-stakeholders
+name: Italian Company Stakeholders
+description: >-
+  Look up Italian company directors and legal representatives via Openapi.com IT-Stakeholders (Tier-3 vendor
+  aggregator). Accepts Italian codice fiscale / P.IVA (11 digits). Returns canonical legal_representatives[]
+  with name, role, role start date, tax code, birth date, and vendor-asserted is_legal_representative
+  flag. Sibling of italian-company-data; called separately when Tier 2 binding-readiness is required
+  (cost passes through per call per DEC-20260503-A).
+category: company-data
+cost_class: paid_per_call
+price_cents: 20
+is_free_tier: false
+avg_latency_ms: 2500
+input_schema:
+  type: object
+  required:
+    - vat_number
+  properties:
+    vat_number:
+      type: string
+      description: Italian codice fiscale or P.IVA (11 digits, e.g. 00484960588). IT-prefix VAT format is also accepted (e.g. IT00484960588).
+output_schema:
+  type: object
+  example:
+    company_name: OPENAPI SPA
+    registration_number: "12485671007"
+    vat_number: "12485671007"
+    country_code: IT
+    legal_representatives:
+      - type: person
+        name: LUCA SCURIATTI
+        role: Managing director
+        role_code: AUN
+        start_date: "2020-09-10"
+        tax_code: SCRLCU73R02H501H
+        birth_date: "1973-10-02"
+        is_legal_representative: true
+      - type: person
+        name: SIMONE DESANTIS
+        role: Special representative/agent
+        role_code: PP
+        start_date: "2013-10-17"
+        tax_code: DSNSMN80M11L117F
+        birth_date: "1980-08-11"
+        is_legal_representative: false
+    total_legal_representatives: 2
+    source_as_of: "2023-03-08T11:25:08.0331456Z"
+    tier_2_available: true
+    tier_2_available_reason: "Legal representatives extracted from Italian business register via Openapi IT-Stakeholders product."
+  properties:
+    company_name: { type: ["string", "null"] }
+    registration_number: { type: string }
+    vat_number: { type: string }
+    country_code: { type: string }
+    legal_representatives:
+      type: array
+      description: >-
+        Array of director / legal-representative entries. Strale-canonical shape per Phase 7a contract:
+        {type, name, role, role_code, start_date, tax_code, birth_date, is_legal_representative}.
+        Shareholder-only role codes (SOU) are filtered out — shareholders should be sourced from
+        italian-company-data shareholders field. Sorted: vendor-asserted legal representatives first,
+        then by start_date descending.
+    total_legal_representatives: { type: integer }
+    source_as_of: { type: ["string", "null"] }
+    tier_2_available: { type: boolean }
+    tier_2_available_reason: { type: string }
+data_source: Openapi.com IT-Stakeholders (Tier-3 vendor aggregator; Italian company directors / legal representatives)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: commercial-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - date_of_birth
+  - tax_id
+  - professional
+geography: eu
+test_fixtures:
+  known_answer:
+    input:
+      vat_number: "00484960588"
+    expected_fields:
+      - { field: company_name, operator: not_null, reliability: guaranteed }
+      - { field: country_code, operator: equals, reliability: guaranteed, value: IT }
+      - { field: registration_number, operator: not_null, reliability: guaranteed }
+      - { field: legal_representatives, operator: not_null, reliability: guaranteed }
+      - { field: total_legal_representatives, operator: not_null, reliability: guaranteed }
+      - { field: tier_2_available, operator: equals, reliability: guaranteed, value: true }
+  health_check_input:
+    vat_number: "00484960588"
+output_field_reliability:
+  company_name: guaranteed
+  registration_number: guaranteed
+  vat_number: guaranteed
+  country_code: guaranteed
+  legal_representatives: guaranteed
+  total_legal_representatives: guaranteed
+  source_as_of: common
+  tier_2_available: guaranteed
+  tier_2_available_reason: guaranteed
+limitations:
+  - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
+    text: >-
+      Strale's resale of Openapi.com data requires the addendum issued via Openapi case 151296 (2026-05-08) to be
+      countersigned. Until then, OPENAPI_ENABLED stays false in production and this capability returns
+      capability-unavailable.
+    category: availability
+    severity: warning
+  - title: Per-call paid SKU; cost passes through to customer
+    text: >-
+      IT-Stakeholders is a paid Openapi product (€0.10-0.20 PAYG + 22% Italian VAT). Per Petter's cost
+      directive and DEC-20260503-A bundle pricing, the per-call cost passes through to the customer.
+      Counterparty Assurance orchestration calls this capability only when Tier 2 binding-readiness is
+      requested.
+    category: cost
+    severity: info
+  - title: Roles are Italian-localised; role_code is the stable identifier
+    text: >-
+      Openapi returns role.description in English-localised vendor labels (e.g. "Managing director" for
+      AUN, "Special representative/agent" for PP), but the underlying role universe is Italian commercial
+      law. Use role_code (AUN, PP, AD, PCDA, LIQ, etc.) for stable downstream classification — descriptions
+      may shift between Openapi releases.
+    category: coverage
+    severity: info
+  - title: One primary role per representative
+    text: >-
+      Openapi's managers[] entries may carry multiple roles[]. This capability surfaces only the FIRST
+      role per representative; secondary roles are not currently emitted. Most representatives carry a
+      single role in practice. Multi-role exposure deferred to v1.1 if customer demand surfaces.
+    category: coverage
+    severity: info
+  - title: Sole-owner entries excluded from legal_representatives[]
+    text: >-
+      Openapi's managers[] universe includes SOU (Sole owner) — a shareholding relation, not a director
+      role. SOU entries are filtered out of legal_representatives[] in this capability. Shareholders
+      (including sole owners) should be sourced from italian-company-data shareholders field or
+      Openapi UBO-Italy when probed (v1.1+).
+    category: coverage
+    severity: info
