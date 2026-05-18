@@ -810,3 +810,50 @@ export const digestSnapshots = pgTable("digest_snapshots", {
     .notNull()
     .defaultNow(),
 });
+
+// ─── ee_directors ───────────────────────────────────────────────────────────
+// Estonian directors/representatives cache. Daily ingest of the RIK Ariregister
+// CC BY 4.0 open-data dump (`kaardile_kantud_isikud.json.zip`) — see
+// `apps/api/src/jobs/ingest-ee-directors.ts`. Primary key is `kirje_id` from
+// upstream (unique per registry-card filing). PIDs are redacted by RIK at
+// source since 2024-11-01; the hashed UUID lands in `isikukood_hash`. Names
+// + roles + start/end dates are retained.
+export const eeDirectors = pgTable(
+  "ee_directors",
+  {
+    kirjeId: integer("kirje_id").primaryKey(),
+    entityRegCode: text("entity_reg_code").notNull(),
+    personType: text("person_type").notNull(), // 'F' (natural) | 'J' (legal entity)
+    roleCode: text("role_code").notNull(), // JUHL, NOOK, PROK, LIK, etc.
+    roleText: text("role_text").notNull(), // localised label, e.g. "Juhatuse liige"
+    firstName: text("first_name"),
+    lastName: text("last_name"), // also business name when person_type='J'
+    isikukoodHash: text("isikukood_hash"),
+    foreignCode: text("foreign_code"),
+    foreignCountryCode: text("foreign_country_code"),
+    foreignCountryText: text("foreign_country_text"),
+    addressText: text("address_text"),
+    addressCountryCode: text("address_country_code"),
+    startDate: date("start_date"),
+    endDate: date("end_date"),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("ee_directors_entity_idx").on(table.entityRegCode),
+    index("ee_directors_last_synced_idx").on(table.lastSyncedAt),
+  ],
+);
+
+// ─── ee_directors_sync ──────────────────────────────────────────────────────
+// Single-row marker for the EE directors ingest. Tracks the upstream
+// `Last-Modified` header so the ingest can skip when there's no new data.
+// `id = 1` is the only valid row (CHECK constraint enforced by the migration).
+export const eeDirectorsSync = pgTable("ee_directors_sync", {
+  id: integer("id").primaryKey(),
+  lastModifiedUpstream: text("last_modified_upstream"),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+  rowCount: integer("row_count"),
+});
