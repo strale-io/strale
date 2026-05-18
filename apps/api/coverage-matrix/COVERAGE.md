@@ -2,11 +2,11 @@
 
 > Auto-generated. Do not edit by hand. Regenerate via `npm run coverage-matrix:summary`.
 
-Total rows: 47
+Total rows: 48
 
 ## By status
 
-- Live: 29
+- Live: 30
 - Committed: 18
 
 ## By evidence type
@@ -27,7 +27,7 @@ Total rows: 47
 | beneficial-ownership-lookup | UK | Beneficial ownership | OpenOwnership | Live | €0 | — | 2026-05-18 |
 | uk-company-data | UK | Beneficial ownership | PSC register | Live | — | — | 2026-04-20 |
 
-### Company registry (32)
+### Company registry (33)
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -48,6 +48,7 @@ Total rows: 47
 | hungarian-company-data | HU | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
 | irish-company-data | IE | Company registry | CRO | Live | €0.05 | live-verified | 2026-05-15 |
 | italian-company-data | IT | Company registry | Openapi.com | Committed | €0.12 | live-verified | 2026-05-15 |
+| italian-company-stakeholders | IT | Company registry | Openapi.com | Live | €0.18 | live-verified | 2026-05-18 |
 | lithuanian-company-data | LT | Company registry | Registru centras | Live | €0.05 | live-verified | 2026-05-15 |
 | luxembourgish-company-data | LU | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
 | latvian-company-data | LV | Company registry | Uznemumu registrs | Live | €0.05 | live-verified | 2026-05-15 |
@@ -220,11 +221,12 @@ Total rows: 47
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | irish-company-data | IE | Company registry | CRO | Live | €0.05 | live-verified | 2026-05-15 |
 
-### IT (1)
+### IT (2)
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | italian-company-data | IT | Company registry | Openapi.com | Committed | €0.12 | live-verified | 2026-05-15 |
+| italian-company-stakeholders | IT | Company registry | Openapi.com | Live | €0.18 | live-verified | 2026-05-18 |
 
 ### LT (1)
 

@@ -32,7 +32,8 @@ export type OpenapiProduct =
   | "ww-top"
   | "es-advanced"
   | "pt-advanced"
-  | "it-advanced";
+  | "it-advanced"
+  | "it-stakeholders";
 
 export interface OpenapiResolverConfig {
   countryCode: string;          // ISO 3166-1 alpha-2
@@ -259,8 +260,86 @@ interface ItAdvancedData {
   shareHolders?: ItAdvancedShareHolder[];
 }
 
+// ─── IT-Stakeholders response shape (verified against Openapi OAS spec) ─────
+// Phase 7a — adds the directors / legal-representatives surface that
+// IT-Advanced does not expose. Distinct wire shape from the other Openapi
+// products: `data` is a single object (not an array of one). See the data
+// guard in executeOpenapiCapability for the array-vs-object normalisation.
+//
+// managers[] = the "stakeholders" universe. Each entry is either a natural
+// person (name + surname populated) or a corporate stakeholder (companyName
+// populated, typically a sole-owner SRL holding shares). Each manager can
+// carry multiple roles[]; common codes: AUN (Amministratore Unico /
+// Managing director), PP (Procura speciale / Special representative), SOU
+// (Sole owner — shareholder relation, NOT a director), PCDA (Presidente
+// CdA), AD (Amministratore delegato), LIQ (Liquidatore). isLegalRepresentative
+// is Openapi's authoritative flag — used by Strale to derive the binding-ready
+// T2 legal_representatives[] subset.
+interface ItStakeholdersRole {
+  role?: { code?: string; description?: string };
+  roleStartDate?: string | null;
+}
+interface ItStakeholdersManager {
+  name?: string;
+  surname?: string;
+  companyName?: string;
+  roles?: ItStakeholdersRole[];
+  gender?: { code?: string; description?: string };
+  taxCode?: string;
+  birthDate?: string | null;
+  age?: number;
+  birthTown?: string | null;
+  isLegalRepresentative?: boolean;
+}
+interface ItStakeholdersShareholderRow {
+  taxCode?: string;
+  companyName?: string;
+  name?: string;
+  surname?: string;
+  openapiNumber?: string;
+  sinceDate?: string | null;
+  streetName?: string | null;
+  zipCode?: string | null;
+  town?: string | null;
+}
+interface ItStakeholdersShareholderEntry {
+  shareholdersInformation?: ItStakeholdersShareholderRow[];
+  percentShare?: number;
+}
+interface ItStakeholdersCompanyDetails {
+  vatCode?: string;
+  taxCode?: string;
+  lastUpdateDate?: string | null;
+  cciaa?: string;
+  reaCode?: string;
+  companyName?: string;
+  officeType?: { code?: string; description?: string };
+  openapiNumber?: string;
+}
+interface ItStakeholdersData {
+  managers?: ItStakeholdersManager[];
+  shareholders?: ItStakeholdersShareholderEntry[];
+  companyDetails?: ItStakeholdersCompanyDetails;
+}
+
+// ─── Strale canonical legal-representative shape (Phase 7a contract) ────────
+//
+// First v1 capability surfacing directors → this defines the contract.
+// v1.1+ enrichments (UK officers normalisation, additional country
+// directors capabilities) should conform.
+export interface StraleLegalRepresentative {
+  type: "person" | "company";
+  name: string;                       // composed natural-person name OR companyName
+  role: string | null;                // role description (vendor-localised)
+  role_code: string | null;           // raw vendor role code (e.g. AUN, PP, AD)
+  start_date: string | null;          // ISO date (YYYY-MM-DD) — role start
+  tax_code: string | null;            // codice fiscale (IT) or other identifier
+  birth_date: string | null;          // ISO date (YYYY-MM-DD) — null for companies
+  is_legal_representative: boolean;   // vendor-asserted binding authority
+}
+
 interface OpenapiResponse<T> {
-  data?: T[];
+  data?: T[] | T;
   success?: boolean;
   message?: string;
   error?: unknown;
@@ -423,6 +502,15 @@ const PRODUCT_REGISTRY: Record<OpenapiProduct, ProductDispatch> = {
     scope: "GET:company.openapi.com/IT-advanced",
     sourceLabel: "Openapi.com IT-Advanced",
   },
+  "it-stakeholders": {
+    // Italy stakeholders product — adds managers[] (directors / legal
+    // representatives) absent from IT-Advanced. Same identifier shape as
+    // IT-Advanced; separate scope + product path. Phase 7a.
+    buildUrl: (_country, id) =>
+      `https://company.openapi.com/IT-stakeholders/${encodeURIComponent(id)}`,
+    scope: "GET:company.openapi.com/IT-stakeholders",
+    sourceLabel: "Openapi.com IT-Stakeholders",
+  },
 };
 
 // ─── Mappers (produce Strale output{} per product) ─────────────────────────
@@ -492,6 +580,97 @@ function mapItAdvancedOutput(
     share_capital: shareCapital,
     shareholders,
     pec: data.pec ?? null,
+  };
+}
+
+function normaliseRoleStartDate(raw: string | null | undefined): string | null {
+  if (typeof raw !== "string" || raw.trim().length === 0) return null;
+  // Openapi emits roleStartDate as "YYYY-MM-DDTHH:MM:SS" without timezone.
+  // Reduce to YYYY-MM-DD; preserve nulls if parsing fails.
+  const m = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : null;
+}
+
+function normaliseBirthDate(raw: string | null | undefined): string | null {
+  return normaliseRoleStartDate(raw);
+}
+
+function mapItStakeholdersManager(
+  m: ItStakeholdersManager,
+): StraleLegalRepresentative {
+  const isCompany =
+    typeof m.companyName === "string" && m.companyName.trim().length > 0;
+  const composedName = [m.name, m.surname]
+    .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+    .map((p) => p.trim())
+    .join(" ");
+  // Each manager may carry multiple roles; pick the first as primary.
+  // Strale's v1 contract surfaces one (role, role_code, start_date) per
+  // representative; consumers needing the full role history can call the
+  // capability and inspect the raw vendor payload (deferred).
+  const primary =
+    Array.isArray(m.roles) && m.roles.length > 0 ? m.roles[0] : undefined;
+  const roleCode = primary?.role?.code ?? null;
+  const roleDescription = primary?.role?.description ?? null;
+  return {
+    type: isCompany ? "company" : "person",
+    name: isCompany ? m.companyName!.trim() : composedName || "(unknown)",
+    role: roleDescription,
+    role_code: roleCode,
+    start_date: normaliseRoleStartDate(primary?.roleStartDate),
+    tax_code: typeof m.taxCode === "string" && m.taxCode.length > 0 ? m.taxCode : null,
+    birth_date: isCompany ? null : normaliseBirthDate(m.birthDate),
+    is_legal_representative: m.isLegalRepresentative === true,
+  };
+}
+
+// SOU (sole-owner) is a shareholding relation surfaced inside managers[].
+// It is not a representative role; excluded from legal_representatives[].
+// Other shareholder-only role codes can be added here if Openapi expands
+// the universe.
+const NON_REPRESENTATIVE_ROLE_CODES = new Set<string>(["SOU"]);
+
+function mapItStakeholdersOutput(
+  data: ItStakeholdersData,
+  config: OpenapiResolverConfig,
+  trimmed: string,
+): Record<string, unknown> {
+  const managers = Array.isArray(data.managers) ? data.managers : [];
+  const allRepresentatives = managers.map(mapItStakeholdersManager);
+  // legal_representatives[] = managers carrying a director-like role.
+  // SOU (sole-owner) is filtered out — that's a shareholder relation.
+  // Within the remainder, sort: legal-representatives first, then by
+  // start_date descending (most recent appointments first).
+  const legalRepresentatives = allRepresentatives
+    .filter(
+      (rep) =>
+        rep.role_code === null ||
+        !NON_REPRESENTATIVE_ROLE_CODES.has(rep.role_code),
+    )
+    .sort((a, b) => {
+      if (a.is_legal_representative !== b.is_legal_representative) {
+        return a.is_legal_representative ? -1 : 1;
+      }
+      if (a.start_date && b.start_date) {
+        return b.start_date.localeCompare(a.start_date);
+      }
+      return 0;
+    });
+
+  const sourceAsOfRaw = data.companyDetails?.lastUpdateDate ?? null;
+  const sourceAsOf =
+    typeof sourceAsOfRaw === "string" && sourceAsOfRaw.length > 0
+      ? sourceAsOfRaw
+      : null;
+
+  return {
+    company_name: data.companyDetails?.companyName ?? null,
+    registration_number: data.companyDetails?.taxCode ?? trimmed,
+    vat_number: data.companyDetails?.vatCode ?? trimmed,
+    country_code: config.countryCode,
+    legal_representatives: legalRepresentatives,
+    total_legal_representatives: legalRepresentatives.length,
+    source_as_of: sourceAsOf,
   };
 }
 
@@ -617,17 +796,20 @@ export async function executeOpenapiCapability(
       const durationMs = Date.now() - t0;
 
       if (r.status === 200) {
+        // Most Openapi products wrap data in an array; IT-Stakeholders wraps
+        // a single object. Normalise both shapes before mapper dispatch.
+        const rawData: unknown = r.body?.data;
+        const data = Array.isArray(rawData) ? rawData[0] : rawData;
         if (
           !r.body ||
           r.body.success !== true ||
-          !Array.isArray(r.body.data) ||
-          !r.body.data[0]
+          !data ||
+          typeof data !== "object"
         ) {
           throw new Error(
-            `Openapi returned HTTP 200 but the response body did not contain expected data[0]: ${r.text.slice(0, 200)}`,
+            `Openapi returned HTTP 200 but the response body did not contain expected data: ${r.text.slice(0, 200)}`,
           );
         }
-        const data = r.body.data[0];
 
         log.info(
           {
@@ -650,6 +832,10 @@ export async function executeOpenapiCapability(
           const itData = data as ItAdvancedData;
           output = mapItAdvancedOutput(itData, config, trimmed);
           recordId = itData.id ?? null;
+        } else if (config.openapiProduct === "it-stakeholders") {
+          const stakeholdersData = data as ItStakeholdersData;
+          output = mapItStakeholdersOutput(stakeholdersData, config, trimmed);
+          recordId = stakeholdersData.companyDetails?.openapiNumber ?? null;
         } else {
           // es-advanced or pt-advanced share the same Iberian shape
           const iberianData = data as IberianAdvancedData;

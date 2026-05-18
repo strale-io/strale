@@ -1,0 +1,34 @@
+capability_slug: italian-company-stakeholders
+country: IT
+evidence_type: Company registry
+provider: Openapi.com
+status: Live
+sourcing_pattern: Vendor (Tier 3 aggregator)
+per_call_price_eur: 0.18
+evidence_grade: live-verified
+tier_1_coverage: n/a (Tier 2 directors-only capability; identity served by italian-company-data)
+tier_2_coverage: >-
+  5/5 via IT-Stakeholders (legal_representatives[] with role + role_code + start_date + tax_code +
+  birth_date + is_legal_representative flag; vendor-asserted binding-readiness)
+tier_3_coverage: n/a (T3 served by italian-company-data shareholders[]; UBOs via UBO-Italy candidate v1.1+)
+last_verified: "2026-05-18"
+products:
+  - Counterparty Assurance
+vendor_roster_url: https://www.notion.so/35667c87082c815496e1cd35803a1d64
+provider_tos_notes: >-
+  Openapi ToS: 'Content cannot be reused until obtaining written consent from Openapi'. Requires
+  resale addendum countersignature (case 151296). OPENAPI_ENABLED gate stays off in production until
+  the addendum lands. Same vendor relationship as italian-company-data IT-Advanced — no new contract.
+doctrine_reference: >-
+  Openapi IT product line (IT-Stakeholders). Phase 7a sibling of italian-company-data. Per-call paid SKU
+  passes through to customer via bundle pricing per DEC-20260503-A.
+notes: >-
+  Phase 7a (2026-05-18): IT-Stakeholders surfaces managers[] (directors + legal representatives) that
+  IT-Advanced does not expose. Lifts IT from tier_2_available: false to binding-ready Tier 2. Response
+  shape differs from other Openapi products — data is a single object (not array-of-one). Handled by
+  the array-vs-object normalisation in executeOpenapiCapability. Role codes include AUN (Managing
+  director), PP (Special representative/agent), AD, PCDA, LIQ; SOU (sole-owner) filtered out as
+  shareholder-only. Multi-role representatives surface only the first role in v1; multi-role exposure
+  deferred to v1.1 if needed. Smoke-test entity: Eni S.p.A. (codice fiscale 00484960588) — same as
+  italian-company-data.
+_source_notion_page_id: 00000000-0000-0000-0000-000000000000
