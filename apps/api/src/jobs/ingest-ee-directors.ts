@@ -516,7 +516,11 @@ export async function runIngestOnce(): Promise<IngestResult> {
         duration_ms: Date.now() - startedAt,
       };
     } finally {
-      await sqlClient`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`.catch(() => {});
+      // Cleanup; failures here should not mask the primary outcome. Log
+      // rather than swallow so an unlock-leak shows up in production.
+      await sqlClient`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`.catch((err) =>
+        logError("ingest-ee-directors-unlock-failed", err),
+      );
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -530,9 +534,13 @@ export async function runIngestOnce(): Promise<IngestResult> {
     };
   } finally {
     if (tmpZipPath) {
-      await fsp.unlink(tmpZipPath).catch(() => {});
+      await fsp.unlink(tmpZipPath).catch((err) =>
+        logError("ingest-ee-directors-tmp-unlink-failed", err, { tmpZipPath }),
+      );
     }
-    await sqlClient.end({ timeout: 5 }).catch(() => {});
+    await sqlClient.end({ timeout: 5 }).catch((err) =>
+      logError("ingest-ee-directors-client-end-failed", err),
+    );
   }
 }
 
