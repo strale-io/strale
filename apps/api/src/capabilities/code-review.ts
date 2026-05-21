@@ -56,7 +56,24 @@ Return JSON:
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Failed to review code.");
 
-  const output = JSON.parse(jsonMatch[0]);
+  let output: Record<string, unknown>;
+  try {
+    output = JSON.parse(jsonMatch[0]);
+  } catch {
+    // Claude occasionally emits raw (unescaped) control characters inside
+    // string values. Strip them and retry before giving up.
+    const sanitized = jsonMatch[0].replace(/[\x00-\x1F]/g, (ch) => {
+      if (ch === "\n") return "\\n";
+      if (ch === "\r") return "\\r";
+      if (ch === "\t") return "\\t";
+      return "";
+    });
+    try {
+      output = JSON.parse(sanitized);
+    } catch {
+      throw new Error("Failed to parse code review output. The model returned malformed JSON.");
+    }
+  }
   output.focus = focus;
   output.code_length = code.length;
 

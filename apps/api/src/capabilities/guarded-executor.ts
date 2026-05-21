@@ -316,13 +316,16 @@ export async function assertBudgetAvailable(
     );
   }
   const budgetCap = computeBudgetCap(meta);
-  const windowStart = computeWindowStart(meta.quota_window, meta.quota_reset_dom);
+  // F-AUDIT-A7-follow-up: coerce to ISO string before embedding in sql templates.
+  // postgres-js's bind encoder cannot serialize a raw Date; it throws
+  // ERR_INVALID_ARG_TYPE at Bind time. Same root cause as PR #43 / spendCapWouldExceed.
+  const windowStartIso = computeWindowStart(meta.quota_window, meta.quota_reset_dom).toISOString();
   const windowKind = meta.quota_window;
 
   const db = getDb();
   const result = await db.execute(sql`
     INSERT INTO capability_budget_counters (capability_slug, window_start, window_kind, test_count, budget_cap)
-    VALUES (${slug}, ${windowStart}, ${windowKind}, 1, ${budgetCap})
+    VALUES (${slug}, ${windowStartIso}, ${windowKind}, 1, ${budgetCap})
     ON CONFLICT (capability_slug, window_start, window_kind)
     DO UPDATE SET test_count = capability_budget_counters.test_count + 1, updated_at = NOW()
     RETURNING test_count, budget_cap, alert_30_fired_at, alert_50_fired_at, alert_80_fired_at, hard_stop_fired_at
@@ -340,7 +343,7 @@ export async function assertBudgetAvailable(
       UPDATE capability_budget_counters
          SET test_count = test_count - 1
        WHERE capability_slug = ${slug}
-         AND window_start = ${windowStart}
+         AND window_start = ${windowStartIso}
          AND window_kind = ${windowKind}
     `);
     // Fire hard-stop alert at most once per window.
@@ -352,7 +355,7 @@ export async function assertBudgetAvailable(
         UPDATE capability_budget_counters
            SET hard_stop_fired_at = NOW()
          WHERE capability_slug = ${slug}
-           AND window_start = ${windowStart}
+           AND window_start = ${windowStartIso}
            AND window_kind = ${windowKind}
            AND hard_stop_fired_at IS NULL
       `);
@@ -361,7 +364,7 @@ export async function assertBudgetAvailable(
   }
 
   // Fire threshold alerts (fire-and-forget, atomic single-fire via NULL check).
-  void maybeFireThresholdAlerts(row, slug, meta, budgetCap, windowStart, windowKind).catch((err) =>
+  void maybeFireThresholdAlerts(row, slug, meta, budgetCap, windowStartIso, windowKind).catch((err) =>
     logError("budget-threshold-alert-failed", err, { slug }),
   );
 }
@@ -371,7 +374,7 @@ async function maybeFireThresholdAlerts(
   slug: string,
   meta: CapabilityCostMeta,
   budgetCap: number,
-  windowStart: Date,
+  windowStartIso: string,
   windowKind: "daily" | "monthly",
 ): Promise<void> {
   const pct = row.test_count / budgetCap;
@@ -401,21 +404,21 @@ async function maybeFireThresholdAlerts(
       await db.execute(sql`
         UPDATE capability_budget_counters
            SET alert_30_fired_at = NOW()
-         WHERE capability_slug = ${slug} AND window_start = ${windowStart}
+         WHERE capability_slug = ${slug} AND window_start = ${windowStartIso}
            AND window_kind = ${windowKind} AND alert_30_fired_at IS NULL
       `);
     } else if (column === "alert_50_fired_at") {
       await db.execute(sql`
         UPDATE capability_budget_counters
            SET alert_50_fired_at = NOW()
-         WHERE capability_slug = ${slug} AND window_start = ${windowStart}
+         WHERE capability_slug = ${slug} AND window_start = ${windowStartIso}
            AND window_kind = ${windowKind} AND alert_50_fired_at IS NULL
       `);
     } else {
       await db.execute(sql`
         UPDATE capability_budget_counters
            SET alert_80_fired_at = NOW()
-         WHERE capability_slug = ${slug} AND window_start = ${windowStart}
+         WHERE capability_slug = ${slug} AND window_start = ${windowStartIso}
            AND window_kind = ${windowKind} AND alert_80_fired_at IS NULL
       `);
     }
