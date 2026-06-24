@@ -1,5 +1,16 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { parseLlmJsonObject } from "./lib/llm-json.js";
+
+// A comprehensive README (installation, usage, API docs, contributing) is the
+// output regardless of how short the input description is, so the output budget
+// can't be scaled to the input the way prompt-optimize does (#145) — it's a
+// fixed, generous ceiling instead. ~8000 tokens ≈ 32KB of markdown: comfortably
+// larger than any real README, well inside Haiku 4.5's 64K output limit, and
+// below the ~16K non-streaming HTTP-timeout threshold. The old 3000-token cap
+// truncated every comprehensive README mid-JSON, which 500'd all production
+// calls (3/3 failures, 2026-06-17→24).
+const MAX_OUTPUT_TOKENS = 8000;
 
 registerCapability("readme-generate", async (input: CapabilityInput) => {
   const project = ((input.project_description as string) ?? (input.description as string) ?? (input.task as string) ?? "").trim();
@@ -14,7 +25,7 @@ registerCapability("readme-generate", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const r = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 3000,
+    max_tokens: MAX_OUTPUT_TOKENS,
     messages: [
       {
         role: "user",
@@ -37,12 +48,8 @@ Return JSON:
     ],
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate README.");
-
   return {
-    output: JSON.parse(jsonMatch[0]),
+    output: parseLlmJsonObject(r, "The README generator"),
     provenance: { source: "claude-haiku", fetched_at: new Date().toISOString() },
   };
 });

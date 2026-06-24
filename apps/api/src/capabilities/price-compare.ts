@@ -1,10 +1,16 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
+import { parseLlmJsonObject } from "./lib/llm-json.js";
 import Anthropic from "@anthropic-ai/sdk";
 
 // Price comparison via PriceRunner (Nordic) / Google Shopping + Claude extraction
 
 const NORDIC_COUNTRIES = new Set(["se", "dk", "no", "fi"]);
+
+// A shopping page can yield many offers; 2000 tokens truncated the offer list on
+// busy results. 4000 (~16KB JSON) covers a long offer list with headroom while
+// staying well under Haiku 4.5's 64K limit.
+const MAX_OUTPUT_TOKENS = 4000;
 
 function getPriceRunnerTld(country: string): string | null {
   switch (country) {
@@ -58,7 +64,7 @@ registerCapability("price-compare", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const r = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
+    max_tokens: MAX_OUTPUT_TOKENS,
     messages: [
       {
         role: "user",
@@ -95,11 +101,7 @@ Extract all visible offers. Calculate lowest, highest, average and range from th
     ],
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract price comparison data.");
-
-  const output = JSON.parse(jsonMatch[0]);
+  const output = parseLlmJsonObject(r, "The price extractor");
   output.source = sourceUsed;
   output.country = country;
 
