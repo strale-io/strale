@@ -70,13 +70,22 @@ async function main() {
   // before the API listens. Replaces the previously-dead
   // apps/api/scripts/apply-migrations.ts (excluded from build by
   // tsconfig and never invoked by the Dockerfile CMD).
+  //
+  // 2026-07-02 outage: this is the boot's first DB touchpoint, and a
+  // transient CONNECT_TIMEOUT here used to be instantly fatal — Railway's
+  // restartPolicyMaxRetries=10 burned through in minutes and left the
+  // service CRASHED for hours after Postgres recovered. Transient
+  // connectivity errors now wait-and-retry in-process (default budget
+  // 10 min per boot, STARTUP_DB_RETRY_BUDGET_MS to override); real
+  // migration failures still abort immediately.
+  const { withStartupDbRetry } = await import("./lib/startup-db-retry.js");
   const { runStartupMigrations } = await import("./lib/startup-migrations.js");
-  await runStartupMigrations();
+  await withStartupDbRetry("startup-migrations", () => runStartupMigrations());
 
   // Schema validation: fail fast if DB is missing columns the code expects.
   // Runs AFTER migrations so it sees the post-migration state.
   const { validateSchema } = await import("./lib/schema-validator.js");
-  await validateSchema();
+  await withStartupDbRetry("schema-validation", () => validateSchema());
 
   // Phase A0b cost-class taxonomy invariant. Runs AFTER validateSchema
   // because the column must exist before the query reads it. GRACE
@@ -162,7 +171,31 @@ async function main() {
   installShutdownHandlers();
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error("Fatal startup error:", err);
+
+  // 2026-07-02 outage: the process died silently 10 times and nobody was
+  // paged. Best-effort email before exit (production only; RESEND_API_KEY
+  // is set on Railway). Race against a 10s cap so a hung network can't
+  // keep a dead process alive.
+  if ((process.env.NODE_ENV ?? "").toLowerCase() === "production") {
+    try {
+      const { sendAlert } = await import("./lib/alerting.js");
+      await Promise.race([
+        sendAlert({
+          subject: "API failed to start",
+          severity: "critical",
+          body:
+            `Strale API startup aborted with a fatal error. Railway will retry up to ` +
+            `restartPolicyMaxRetries times, then the service stays CRASHED until redeployed.\n\n` +
+            `Error: ${err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err)}`,
+        }),
+        new Promise<void>((r) => setTimeout(r, 10_000)),
+      ]);
+    } catch {
+      // Alerting must never mask the original fatal error.
+    }
+  }
+
   process.exit(1);
 });
