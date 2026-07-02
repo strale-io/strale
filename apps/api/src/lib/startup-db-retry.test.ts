@@ -152,6 +152,41 @@ describe("withStartupDbRetry", () => {
     expect(clock.sleeps).toEqual([]);
   });
 
+  it("shares one budget across call sites when startedAt is passed (per-boot, not per-site)", async () => {
+    const clock = fakeClock();
+    const timeout = errWithCode("write CONNECT_TIMEOUT postgres.railway.internal:5432", "CONNECT_TIMEOUT");
+    const bootStartedAt = clock.now();
+
+    // First call site burns 3s of the 5s boot budget (sleeps 1s + 2s), then succeeds.
+    let firstCalls = 0;
+    await withStartupDbRetry(
+      "startup-migrations",
+      async () => {
+        firstCalls++;
+        if (firstCalls <= 2) throw timeout;
+        return "ok";
+      },
+      { sleep: clock.sleep, now: clock.now, startedAt: bootStartedAt, baseDelayMs: 1000, maxDelayMs: 30_000, budgetMs: 5000 },
+    );
+    expect(clock.sleeps).toEqual([1000, 2000]);
+
+    // Second call site inherits the same clock: only ~2s of budget left,
+    // so its first 1s retry fits but the next 2s retry overshoots.
+    let secondCalls = 0;
+    await expect(
+      withStartupDbRetry(
+        "schema-validation",
+        async () => {
+          secondCalls++;
+          throw timeout;
+        },
+        { sleep: clock.sleep, now: clock.now, startedAt: bootStartedAt, baseDelayMs: 1000, maxDelayMs: 30_000, budgetMs: 5000 },
+      ),
+    ).rejects.toBe(timeout);
+    expect(secondCalls).toBe(2);
+    expect(clock.sleeps).toEqual([1000, 2000, 1000]);
+  });
+
   it("gives up and rethrows the transient error once the budget is exhausted", async () => {
     const clock = fakeClock();
     let calls = 0;

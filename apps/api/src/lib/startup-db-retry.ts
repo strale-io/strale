@@ -17,6 +17,13 @@
  * still abort the boot immediately — retrying those would only mask a
  * real bug. Migration blocks are idempotent by design, so re-running
  * the whole migration pass after a partial failure is safe.
+ *
+ * Deliberately NOT built on lib/retry.ts withRetry(): that helper
+ * classifies by message regex only (SQLSTATE/errno codes never appear
+ * in a match-able form — "the database system is starting up" would be
+ * non-retryable), is count-based rather than time-budget-based, and its
+ * NON_RETRYABLE heuristics (/invalid/, /missing/) are tuned for
+ * capability HTTP calls, not Postgres boot errors.
  */
 
 import { logWarn } from "./log.js";
@@ -79,8 +86,20 @@ export function isTransientDbConnectError(err: unknown): boolean {
 }
 
 export interface StartupDbRetryOptions {
-  /** Total time budget for retries, ms. Default 10 min (env STARTUP_DB_RETRY_BUDGET_MS). */
+  /**
+   * Total time budget for retries, ms. Default 10 min (env
+   * STARTUP_DB_RETRY_BUDGET_MS). 0 disables retries entirely
+   * (first transient error is fatal, the pre-2026-07-02 behaviour) —
+   * it does NOT mean "retry forever".
+   */
   budgetMs?: number;
+  /**
+   * Epoch ms the budget clock started. Pass the same value to every
+   * call site in a boot sequence so the budget is shared across them
+   * (one 10-min budget per boot, not 10 min × call sites). Defaults
+   * to "now" at call time.
+   */
+  startedAt?: number;
   /** First backoff delay, ms. Doubles each attempt. Default 1000. */
   baseDelayMs?: number;
   /** Backoff cap, ms. Default 30000. */
@@ -119,7 +138,7 @@ export async function withStartupDbRetry<T>(
   const sleep = opts.sleep ?? defaultSleep;
   const now = opts.now ?? Date.now;
 
-  const startedAt = now();
+  const startedAt = opts.startedAt ?? now();
   let attempt = 0;
 
   for (;;) {
@@ -136,7 +155,15 @@ export async function withStartupDbRetry<T>(
         logWarn(
           "startup-db-retry-exhausted",
           `${label}: transient DB error persisted past retry budget — giving up`,
-          { label, attempt, elapsed_ms: elapsedMs, budget_ms: budgetMs },
+          {
+            label,
+            attempt,
+            elapsed_ms: elapsedMs,
+            budget_ms: budgetMs,
+            error: err instanceof Error ? err.message : String(err),
+            next_action:
+              "process will exit(1); Railway restart policy applies, then a critical email alert fires",
+          },
         );
         throw err;
       }

@@ -75,17 +75,26 @@ async function main() {
   // transient CONNECT_TIMEOUT here used to be instantly fatal — Railway's
   // restartPolicyMaxRetries=10 burned through in minutes and left the
   // service CRASHED for hours after Postgres recovered. Transient
-  // connectivity errors now wait-and-retry in-process (default budget
-  // 10 min per boot, STARTUP_DB_RETRY_BUDGET_MS to override); real
-  // migration failures still abort immediately.
+  // connectivity errors at the three pre-listen DB touchpoints now
+  // wait-and-retry in-process. `startedAt` is shared across all three
+  // wraps so the budget (default 10 min, STARTUP_DB_RETRY_BUDGET_MS to
+  // override) is per BOOT, not per call site. Only thrown connectivity
+  // errors are retried — validateSchema/assertCostClassTaxonomy exit(1)
+  // directly on their invariant failures, and real migration failures
+  // still abort immediately.
   const { withStartupDbRetry } = await import("./lib/startup-db-retry.js");
   const { runStartupMigrations } = await import("./lib/startup-migrations.js");
-  await withStartupDbRetry("startup-migrations", () => runStartupMigrations());
+  const dbRetryStartedAt = Date.now();
+  await withStartupDbRetry("startup-migrations", () => runStartupMigrations(), {
+    startedAt: dbRetryStartedAt,
+  });
 
   // Schema validation: fail fast if DB is missing columns the code expects.
   // Runs AFTER migrations so it sees the post-migration state.
   const { validateSchema } = await import("./lib/schema-validator.js");
-  await withStartupDbRetry("schema-validation", () => validateSchema());
+  await withStartupDbRetry("schema-validation", () => validateSchema(), {
+    startedAt: dbRetryStartedAt,
+  });
 
   // Phase A0b cost-class taxonomy invariant. Runs AFTER validateSchema
   // because the column must exist before the query reads it. GRACE
@@ -96,7 +105,11 @@ async function main() {
   const { assertCostClassTaxonomy, resolveCostClassMode } = await import(
     "./lib/cost-class-invariant.js"
   );
-  await assertCostClassTaxonomy({ mode: resolveCostClassMode(process.env.COST_CLASS_MODE) });
+  await withStartupDbRetry(
+    "cost-class-invariant",
+    () => assertCostClassTaxonomy({ mode: resolveCostClassMode(process.env.COST_CLASS_MODE) }),
+    { startedAt: dbRetryStartedAt },
+  );
 
   // Import app after executors are registered
   const { app, warmCatalog } = await import("./app.js");
@@ -181,13 +194,23 @@ main().catch(async (err) => {
   if ((process.env.NODE_ENV ?? "").toLowerCase() === "production") {
     try {
       const { sendAlert } = await import("./lib/alerting.js");
+      const { isTransientDbConnectError } = await import("./lib/startup-db-retry.js");
+      const guidance = isTransientDbConnectError(err)
+        ? `This looks like TRANSIENT DB CONNECTIVITY (retry budget exhausted, DB likely still ` +
+          `degraded). Check Postgres in the Railway dashboard (project: Strale). ` +
+          `Once the DB is healthy, if the service shows CRASHED, run: railway redeploy --service strale`
+        : `This does NOT look like a transient DB issue — likely a broken migration, schema ` +
+          `mismatch, or missing env var. Check the stack trace below and Railway deploy logs; ` +
+          `a redeploy alone probably won't fix it.`;
       await Promise.race([
         sendAlert({
           subject: "API failed to start",
           severity: "critical",
           body:
             `Strale API startup aborted with a fatal error. Railway will retry up to ` +
-            `restartPolicyMaxRetries times, then the service stays CRASHED until redeployed.\n\n` +
+            `restartPolicyMaxRetries (10) times, then the service stays CRASHED until redeployed.\n\n` +
+            `${guidance}\n\n` +
+            `Dashboard: https://railway.com/project/16920e2f-8258-47db-86c0-60ec9d7edc13\n\n` +
             `Error: ${err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err)}`,
         }),
         new Promise<void>((r) => setTimeout(r, 10_000)),
