@@ -458,6 +458,10 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 12. Save session summary to `handoff/_general/from-code/`
 13. Contradiction check if decisions were made
 
+### Report Filing Convention
+
+Large investigative/audit/session reports (AUDIT-*, FIX_PHASE_*, SESSION_*, RESOLUTION_REPORT, REVIEW_FINDINGS_*, *_INVENTORY, *_RESEARCH, checklists tied to a specific incident, etc.) route to `archive/sessions/` (flat layout — see existing entries for naming convention), never to the repo root. Root stays reserved for genuine top-level canon (README, CLAUDE.md, LICENSE, WORKTREES.md-style structural docs, live-use checklists still actively referenced). Note: `AGENTS.md` is currently untracked in this repo pending its own resolution — it is not yet part of this convention's tracked surface.
+
 ### Workflow Invariants (Non-Negotiable)
 - NEVER edit Journal entries, Decision content, or Deferred content
 - NEVER delete anything in Notion
