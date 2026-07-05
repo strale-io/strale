@@ -19,6 +19,71 @@ function findCik(input: string): string | null {
   return CIK_RE.test(cleaned) ? cleaned.padStart(10, "0") : null;
 }
 
+export type MatchConfidence = "exact" | "high" | "low";
+
+// Common corporate suffixes / stopwords stripped before comparing names, so
+// "Apple Inc" and "Apple Inc." compare equal. Applied as standalone tokens
+// after punctuation has been flattened to spaces.
+const CORP_SUFFIX_RE =
+  /\b(incorporated|inc|corporation|corp|company|co|llc|ltd|limited|lp|plc|holdings?|group|the)\b/gi;
+
+/**
+ * Normalize a company name for fuzzy comparison: lowercase, flatten punctuation
+ * to spaces, drop common corporate suffixes, collapse whitespace.
+ */
+export function normalizeCompanyName(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(CORP_SUFFIX_RE, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Classify how well the name the caller asked for matches the name SEC EDGAR
+ * actually returned for the resolved CIK.
+ *
+ * Why this exists: name lookups resolve via SEC full-text *filing* search
+ * (`searchEdgar`), which returns the top-scoring filing that mentions the query
+ * — not an entity lookup. For a private company with no filings of its own
+ * (e.g. "Stripe Inc" pre-IPO) every hit is a *different* public filer that
+ * merely mentions the name, so the capability would otherwise return someone
+ * else's identity with no signal. This surfaces that risk (per the DEC-
+ * 20260428-B "screening_signal" transparency spirit): callers gate on
+ * `is_exact_match` / `match_confidence` rather than trusting a fuzzy hit.
+ *
+ * Errs toward "low": a correct-but-abbreviated match (e.g. "IBM" vs
+ * "International Business Machines Corp") is flagged low, which is the safe
+ * direction — a false "low" prompts a caller to verify; a false "exact" would
+ * assert a wrong identity.
+ */
+export function classifyNameMatch(
+  searched: string,
+  matched: string,
+): { match_confidence: MatchConfidence; is_exact_match: boolean } {
+  const q = normalizeCompanyName(searched);
+  const m = normalizeCompanyName(matched);
+  if (!q || !m) return { match_confidence: "low", is_exact_match: false };
+  if (q === m) return { match_confidence: "exact", is_exact_match: true };
+
+  const qTokens = new Set(q.split(" "));
+  const mTokens = new Set(m.split(" "));
+  const intersection = [...qTokens].filter((t) => mTokens.has(t)).length;
+  // Both sets are non-empty here (guarded above), so union is too.
+  const jaccard = intersection / new Set([...qTokens, ...mTokens]).size;
+
+  // A partial overlap only counts as "high" when BOTH names carry ≥2 tokens.
+  // A single-token name (Stripe, Uber, Meta) that shares its one token with a
+  // longer, different name ("Stripe Financial Holdings") is not a confident
+  // match and must fall through to "low" — otherwise Jaccard 1/2 would call it
+  // "high", the exact false-confidence this signal exists to prevent.
+  const bothMultiToken = qTokens.size >= 2 && mTokens.size >= 2;
+  return bothMultiToken && jaccard >= 0.5
+    ? { match_confidence: "high", is_exact_match: false }
+    : { match_confidence: "low", is_exact_match: false };
+}
+
 /**
  * Fetch a SEC endpoint, retrying once on transient upstream failure.
  *
@@ -133,12 +198,45 @@ registerCapability("us-company-data", async (input: CapabilityInput) => {
 
   const trimmed = raw.trim();
   let cik = findCik(trimmed);
+  // Null when the caller supplied a CIK directly (an authoritative, exact
+  // lookup with no name-matching ambiguity); set to the resolved name when we
+  // had to search EDGAR for it.
+  let searchedName: string | null = null;
   if (!cik) {
-    const name = await extractCompanyName(trimmed);
-    cik = await searchEdgar(name);
+    searchedName = await extractCompanyName(trimmed);
+    cik = await searchEdgar(searchedName);
   }
 
-  const output = await fetchCompany(cik);
+  const company = await fetchCompany(cik);
+
+  const match =
+    searchedName === null
+      ? { match_confidence: "exact" as MatchConfidence, is_exact_match: true }
+      : classifyNameMatch(searchedName, String(company.company_name ?? ""));
+
+  // Refuse to *assert* a low-confidence identity by default. A name search
+  // resolves via SEC full-text filing search, so a private company with no
+  // filings (e.g. "Stripe Inc") resolves to a different public filer that
+  // merely mentions the name. Returning that identity would let a bundled KYB
+  // solution pipe the wrong company straight into sanctions/PEP screening
+  // (DEC-20260428-B: never assert a fact not in the input). Callers who want
+  // the best-effort match opt in explicitly with allow_low_confidence.
+  const allowLowConfidence = input.allow_low_confidence === true;
+  if (match.match_confidence === "low" && !allowLowConfidence) {
+    const closest = company.company_name ? ` ("${company.company_name}")` : "";
+    throw new Error(
+      `No confident SEC EDGAR match for "${searchedName}". The closest filing belongs to a different entity${closest}, ` +
+        `which is common for private companies with no SEC filings of their own. Supply the company's CIK for an exact ` +
+        `lookup, or pass allow_low_confidence=true to receive the best-effort match with its confidence flags.`,
+    );
+  }
+
+  const output = {
+    ...company,
+    searched_name: searchedName,
+    match_confidence: match.match_confidence,
+    is_exact_match: match.is_exact_match,
+  };
 
   return {
     output,

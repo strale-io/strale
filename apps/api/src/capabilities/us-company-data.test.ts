@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
-import { fetchSec } from "./us-company-data.js";
+import { fetchSec, normalizeCompanyName, classifyNameMatch } from "./us-company-data.js";
 
 function resp(status: number): Response {
   return new Response(status === 200 ? "{}" : "", { status });
@@ -68,5 +68,68 @@ describe("fetchSec", () => {
     const r = await fetchSec("https://x", "SEC EDGAR", fetchImpl);
     expect(r.status).toBe(200);
     expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+});
+
+/**
+ * Regression test for the wrong-company match risk flagged in the PR #148
+ * six-lens review. Name lookups resolve via SEC full-text filing search, which
+ * for a private company (e.g. "Stripe Inc") returns a *different* public filer
+ * that merely mentions the name. classifyNameMatch surfaces that as a low /
+ * non-exact match so callers don't trust a speculative identity.
+ */
+describe("normalizeCompanyName", () => {
+  it("strips corporate suffixes and punctuation so equivalents compare equal", () => {
+    expect(normalizeCompanyName("Apple Inc.")).toBe(normalizeCompanyName("APPLE INCORPORATED"));
+    expect(normalizeCompanyName("Meta Platforms, Inc.")).toBe("meta platforms");
+  });
+});
+
+describe("classifyNameMatch", () => {
+  it("flags exact when normalized names are equal", () => {
+    expect(classifyNameMatch("Apple Inc", "Apple Inc.")).toEqual({
+      match_confidence: "exact",
+      is_exact_match: true,
+    });
+  });
+
+  it("flags LOW when the resolved company is a different filer (the Stripe bug case)", () => {
+    // "Stripe Inc" (private, no filings) resolving to some unrelated public
+    // company that merely mentioned it in a filing.
+    const r = classifyNameMatch("Stripe Inc", "Block, Inc.");
+    expect(r.is_exact_match).toBe(false);
+    expect(r.match_confidence).toBe("low");
+  });
+
+  it("flags high when two multi-token names share most tokens", () => {
+    const r = classifyNameMatch("Berkshire Hathaway", "Berkshire Hathaway Energy");
+    expect(r.match_confidence).toBe("high");
+    expect(r.is_exact_match).toBe(false);
+  });
+
+  it("does NOT let a single-token name reach high against a different longer name", () => {
+    // "Stripe" shares its one token with "Stripe Financial Holdings" (Jaccard
+    // 1/2) but they are different companies — must be low, not a false high.
+    expect(classifyNameMatch("Stripe", "Stripe Financial Holdings").match_confidence).toBe("low");
+    expect(classifyNameMatch("Uber", "Uber Freight LLC").match_confidence).toBe("low");
+  });
+
+  it("flags low when two multi-token names share too few tokens", () => {
+    // Different companies that happen to share one word.
+    expect(classifyNameMatch("Meta Platforms", "Meta Materials").match_confidence).toBe("low");
+  });
+
+  it("errs toward LOW for a correct-but-abbreviated name (safe direction)", () => {
+    // False "low" is acceptable; a false "exact" asserting a wrong identity is not.
+    expect(classifyNameMatch("IBM", "International Business Machines Corp").match_confidence).toBe(
+      "low",
+    );
+  });
+
+  it("returns low, non-exact for an empty resolved name", () => {
+    expect(classifyNameMatch("Anything", "")).toEqual({
+      match_confidence: "low",
+      is_exact_match: false,
+    });
   });
 });
