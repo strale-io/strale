@@ -1,5 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { withRetry } from "../lib/retry.js";
+
+const SEC_HEADERS = {
+  "User-Agent": "Strale/1.0 admin@strale.io",
+  Accept: "application/json",
+} as const;
 
 // US company data via SEC EDGAR (free, no auth, requires User-Agent)
 const EDGAR_SEARCH = "https://www.sec.gov/cgi-bin/browse-edgar";
@@ -11,6 +17,49 @@ const CIK_RE = /^\d{1,10}$/;
 function findCik(input: string): string | null {
   const cleaned = input.replace(/[\s.-]/g, "");
   return CIK_RE.test(cleaned) ? cleaned.padStart(10, "0") : null;
+}
+
+/**
+ * Fetch a SEC endpoint, retrying once on transient upstream failure.
+ *
+ * SEC EFTS/EDGAR intermittently returns 5xx and 429 (fair-access throttling,
+ * max 10 req/s) even for well-formed requests (observed 2026-07: a "Stripe Inc"
+ * lookup failed with HTTP 500 while the same query succeeds on retry). We
+ * delegate to the shared `withRetry` primitive — its defaults already retry
+ * 429 / 502 / 503 / 504 and network errors; we add bare `HTTP 5xx` locally
+ * because a plain 500 is the exact case seen and isn't in the shared default
+ * set (widening the shared default would change retry behaviour for every
+ * capability, out of scope here). A 5xx/429 is surfaced as a retryable Error;
+ * 4xx (incl. 404) is returned unretried for the caller to interpret.
+ *
+ * Interaction with the route layer: on the /v1/do path, `executeWithRetry`
+ * (routes/do.ts) already wraps non-deterministic executors in another
+ * `withRetry`. For a bare 500 that layer does NOT re-retry (not in its default
+ * set), so this inner retry is the sole authority — matching the observed bug.
+ * For 429/502/503/504 the two layers stack (~4 attempts worst case); that's
+ * bounded and only on rare persistent failures. This retry is also what covers
+ * the x402 path, which does not go through `executeWithRetry` at all.
+ *
+ * `fetchImpl` is injectable for tests; defaults to global fetch.
+ */
+export function fetchSec(
+  url: string,
+  label: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Response> {
+  return withRetry(
+    async () => {
+      const response = await fetchImpl(url, {
+        headers: SEC_HEADERS,
+        signal: AbortSignal.timeout(10000),
+      });
+      if (response.status >= 500 || response.status === 429) {
+        throw new Error(`${label} returned HTTP ${response.status}`);
+      }
+      return response;
+    },
+    { maxRetries: 1, baseDelayMs: 400, slug: "us-company-data", retryableErrors: [/HTTP 5\d\d/i] },
+  );
 }
 
 async function extractCompanyName(text: string): Promise<string> {
@@ -29,13 +78,7 @@ async function extractCompanyName(text: string): Promise<string> {
 
 async function searchEdgar(name: string): Promise<string> {
   const url = `https://efts.sec.gov/LATEST/search-index?q=%22${encodeURIComponent(name)}%22&forms=10-K,10-Q,8-K&_source=ciks,display_names,biz_locations,inc_states,sics`;
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Strale/1.0 admin@strale.io",
-      Accept: "application/json",
-    },
-    signal: AbortSignal.timeout(10000),
-  });
+  const response = await fetchSec(url, "SEC EDGAR search");
   if (!response.ok) throw new Error(`SEC EDGAR search returned HTTP ${response.status}`);
   const data = (await response.json()) as any;
   const hits = data?.hits?.hits;
@@ -50,13 +93,7 @@ async function searchEdgar(name: string): Promise<string> {
 async function fetchCompany(cik: string): Promise<Record<string, unknown>> {
   const paddedCik = cik.padStart(10, "0");
   const url = `${EDGAR_COMPANY}/CIK${paddedCik}.json`;
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Strale/1.0 admin@strale.io",
-      Accept: "application/json",
-    },
-    signal: AbortSignal.timeout(10000),
-  });
+  const response = await fetchSec(url, "SEC EDGAR");
 
   if (response.status === 404) {
     throw new Error(`US company with CIK ${cik} not found in SEC EDGAR.`);
