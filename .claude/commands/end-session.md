@@ -76,15 +76,31 @@ From the script output + Notion state:
 - Open circuit breakers → is there an alert/task tracking each?
 - Strategy brainstorms raised this session that are sitting un-discussed?
 
-## 7. Final verification report
+## 7. Archive session marker + final verification report
 
-Give the user a structured summary:
+Archive the persistent session marker (written at session start by `scripts/session-state.mjs`). This captures real start/end timestamps + duration + starting/ending commit. Run from the repo root:
+
+```
+node scripts/session-state.mjs end "ended via /end-session"
+```
+
+The script prints a JSON block with `session_started_at`, `ended_at`, `duration_ms`, `starting_commit`, `ending_commit`, `starting_branch`, `ending_branch`, and `archived` (path under `.claude/state/session-archive/`). If the response is `{"action":"no-session-to-end"}`, the marker was never created this session — note "duration unknown" in the report and recommend the user install the SessionStart hook (snippet in the PR that landed this feature).
+
+Then give the user a structured summary:
 
 ```
 === Session close-out ===
 ✓ Green      (N items clean)
 ⚠ Yellow    (N items review)
 ✗ Red       (N items blockers)
+
+Session start:             <ISO from marker> (or "unknown — no marker")
+Session end:               <ISO now>
+Duration:                  <Hh Mm> (or "unknown")
+Starting commit:           <SHA8>
+Ending commit:             <SHA8>
+Branch at end:             <branch>
+Archive:                   <path returned by session-state end>
 
 Handoff file (step 6):     ✓ <path> (written this session)
 Journal entry (step 7):    ✓ <title + URL> (written this session)
@@ -110,3 +126,4 @@ Ready to close? (yes / [which item you want to address first])
 - If Notion MCP tools are unavailable, write the handoff file anyway (filesystem); skip the Journal step and flag loudly — never silently proceed.
 - Distinguish pre-existing issues from new ones honestly. Don't hide issues you introduced; don't take credit for issues you didn't.
 - If the script exits 2 (red findings), default to "don't close yet" unless the user explicitly overrides — but still write the artifacts so the work is recorded.
+- **Always archive the session marker** in step 7, even when the close-check returned red — the archive is a historical record, not a quality gate. The "don't close yet" recommendation is advisory; the archive captures whatever state the session actually ended in.

@@ -5,10 +5,12 @@
  * Only flags state that this session is responsible for — pre-existing drift
  * from other sessions is filtered out.
  *
- * Session scope: work done in the last SESSION_WINDOW_HOURS (default 6).
- * Commits by the current git author within that window, files with mtime
- * in that window, and DB rows whose slugs were touched by those changes.
- * Override with SESSION_WINDOW_HOURS=N.
+ * Session scope: derived from `.claude/state/session-state.json` (written
+ * by scripts/session-state.mjs at session start). If the marker is missing,
+ * falls back to the previous behaviour — last SESSION_WINDOW_HOURS hours
+ * (default 6). Commits by the current git author within the window, files
+ * with mtime in the window, and DB rows whose slugs were touched by those
+ * changes. Override with SESSION_WINDOW_HOURS=N.
  *
  * Checks:
  *   - Git: dangling commits, unpushed work, uncommitted code (all session-scoped)
@@ -28,7 +30,7 @@
  */
 
 import { execSync } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import postgres from "postgres";
 
@@ -51,8 +53,38 @@ const HANDOFF_DIR = resolve(REPO_ROOT, "handoff/_general/from-code");
 
 const CURRENT_AUTHOR_EMAIL = sh("git config user.email", { cwd: REPO_ROOT, allowFail: true });
 
-const SESSION_WINDOW_HOURS = Number(process.env.SESSION_WINDOW_HOURS ?? 6);
-const SESSION_START_MS = Date.now() - SESSION_WINDOW_HOURS * 3600_000;
+// Prefer the persistent marker (real session start) over a fixed time window.
+// `SESSION_WINDOW_HOURS` (default 6) is the fallback when the marker is missing
+// — e.g. a session that ran without the SessionStart hook installed. Explicit
+// env override always wins, so an operator can force a wider window for audits.
+const FALLBACK_WINDOW_HOURS = Number(process.env.SESSION_WINDOW_HOURS ?? 6);
+const SESSION_MARKER_PATH = resolve(REPO_ROOT, ".claude/state/session-state.json");
+
+function readSessionStartMs(): { startMs: number; source: string } {
+  if (process.env.SESSION_WINDOW_HOURS) {
+    return {
+      startMs: Date.now() - FALLBACK_WINDOW_HOURS * 3600_000,
+      source: `env override (last ${FALLBACK_WINDOW_HOURS}h)`,
+    };
+  }
+  if (existsSync(SESSION_MARKER_PATH)) {
+    try {
+      const marker = JSON.parse(readFileSync(SESSION_MARKER_PATH, "utf-8"));
+      const ms = new Date(marker.session_started_at).getTime();
+      if (Number.isFinite(ms)) {
+        return { startMs: ms, source: `marker (${marker.session_started_at})` };
+      }
+    } catch {
+      // fall through to window fallback
+    }
+  }
+  return {
+    startMs: Date.now() - FALLBACK_WINDOW_HOURS * 3600_000,
+    source: `fallback (last ${FALLBACK_WINDOW_HOURS}h — no marker found)`,
+  };
+}
+
+const { startMs: SESSION_START_MS, source: SESSION_SOURCE } = readSessionStartMs();
 const SESSION_START_SEC = Math.floor(SESSION_START_MS / 1000);
 const SESSION_START_ISO = new Date(SESSION_START_MS).toISOString();
 
@@ -368,7 +400,7 @@ async function checkOpenBreakers(sql: postgres.Sql): Promise<void> {
 // ────────────────────────────────────────────────────────────────
 async function main() {
   console.log("Session close-out check");
-  console.log(`Session window: last ${SESSION_WINDOW_HOURS}h (since ${SESSION_START_ISO})`);
+  console.log(`Session start: ${SESSION_START_ISO}  [source: ${SESSION_SOURCE}]`);
   console.log("=".repeat(60));
 
   checkDanglingCommits();
