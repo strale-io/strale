@@ -1,0 +1,189 @@
+{
+  "_comment": "MODEL-OS LEDGER — the single machine-readable source of truth for model routing across ALL repos and BOTH CLIs (Claude Code + Codex). Doctrine lives in model-os/MODEL-OS.md and reasons in ROLES; model NAMES live only here. Edit THIS file when the landscape shifts (new model, limit change, capability re-rank) — nothing else changes. Read by hooks/model-os-health.mjs (SessionStart), hooks/model-os-gate.mjs (PreToolUse Agent), and the Codex AGENTS block. last_verified + stale_after_days drive the staleness flag: a stale ledger is surfaced BEFORE heavy work, never silently trusted.",
+  "version": 1,
+  "last_verified": "2026-07-09",
+  "stale_after_days": 21,
+  "verification_log": [
+    "2026-07-09: corrected against live evidence, not priors. (1) Fable 5 confirmed GA (this session ran on it end-to-end; Anthropic's claude-api skill lists it in the current pricing/model table as 'most intelligent generally available model... sits above Opus in capability') — flipped from a 'verify-availability' placeholder to taste-canon PRIMARY. (2) codex model id corrected from the invented 'gpt-5.5-codex' to the real string 'gpt-5.5' — confirmed directly from ~/.codex/config.toml (model = \"gpt-5.5\") and a live `codex exec` probe echoing 'model: gpt-5.5'; local default effort is 'xhigh'. (3) Added sourced strengths/weaknesses for Opus 4.8 vs GPT-5.5 from WebSearch (DataCamp, CodingFleet, MindStudio/DeepSuite comparisons, July 2026): Opus 4.8 leads SWE-bench Pro (69.2% vs 58.6%) and multi-file/root-cause debugging; GPT-5.5 leads Terminal-Bench 2.0 (82.7% vs 74.6%) and near-ties SWE-bench Verified (88.7% vs 88.6%) — i.e. GPT-5.5's edge is agentic/terminal execution, which is exactly the independent-review lane's job (verifying rendered/executed artifacts), not a case for making it a build-primary.",
+    "2026-07-09 (audit implementation): full-framework audit findings implemented, founder-ratified. (1) Workflow-bypass gate closed — the gate hook now also matches the Workflow tool and blocks scripts calling agent() with no model: routing anywhere (the one ungated fan-out path). (2) billing_watch mechanism added (generic, dated) — first use: Fable 5's 2026-07-12 move to metered credits; the health hook flags it 7 days out and loudly once active, so the no-surprise-bills guarantee doesn't depend on memory. (3) acknowledged_candidates added — reviewed-not-adopted ids stop re-proposing every cycle (anti alert-fatigue); the weekly workflow now updates one standing issue instead of opening a new one per run. (4) FALLBACK-LOG.md created + doctrine wired — the 'wanted X, fell to Y' evidence the refresh loop greps now has a real file that sessions append to. (5) Health hook now prints the per-repo synced-copy age and flags >30d staleness. Billing audit verdict recorded: recurring metered spend ≈ $0 (workflow hits free list endpoints only; all interactive work on subscriptions); idea-lab's dormant agentic crons (daily-run/weekly-run.yml) confirmed keyless and no-op — do NOT set ANTHROPIC_API_KEY as an idea-lab repo secret without meaning to activate them.",
+    "2026-07-09 (later): two founder-flagged current events, checked via WebSearch rather than taken on faith. (1) Fable 5's GA status has a real backstory the earlier entry missed: shipped 2026-06-09, pulled offline 2026-06-12 by a US export-control order, redeployed 2026-07-01 after Commerce lifted it (Anthropic's own 'Redeploying Fable 5' post) with a new safety classifier. Current 'status: current' / taste-canon-primary stands — but a real, DATED change is coming: after 2026-07-12, Fable 5 stops counting toward weekly plan limits and moves to metered usage credits instead (was: included in the $200/mo Max weekly cap). The anthropic-max budget lane's 'plan' description below is now stale for Fable specifically as of that date — see its updated note. (2) OpenAI publicly launched GPT-5.6 (three variants: Sol/Terra/Luna; Terra pitched as GPT-5.5-parity at half the cost) TODAY per CNBC/Neowin — but checked directly against the live Models API (same key/method refresh-research.mjs uses) and it does NOT appear yet (120 ids returned, same as the earlier same-day check; no id containing '5.6'/'sol'/'terra'/'luna'). NOT added to the ledger — unverifiable-live is not a basis for a model entry, no matter how well-sourced the announcement. This is exactly what the refresh mechanism is for: re-run `node model-os/refresh-research.mjs` (or wait for Monday's scheduled run) once it's actually queryable, and it will surface as a normal new-candidate proposal, no advance/hardcoded knowledge required. Also shipped this session: a relevance filter in refresh-research.mjs (family+recency gates, both self-relative to the ledger's own entries) that cut a 79-line noisy proposal list down to 14 genuinely-relevant candidates — see the script's own header comment for the design."
+  ],
+
+  "budgets": [
+    {
+      "id": "anthropic-max",
+      "provider": "anthropic",
+      "plan": "Claude Max $200/mo (20x) — weekly-capped; the scarce lane",
+      "on_exhaustion": "Shift execution / fan-out / mechanical to the openai lane. Taste/canon work STOPS and flags the founder (never silently downgraded off-provider). Log every fallback: 'wanted <X>, fell to <Y> — limit'.",
+      "notes": "WATCH (2026-07-09, see verification_log): from 2026-07-12, Fable 5 usage moves OFF the weekly plan cap and onto metered usage credits (confirmed via Anthropic's own announcement). This lane's 'weekly-capped' framing is accurate for Opus/Sonnet/Haiku but goes stale for Fable specifically on that date — the taste-canon primary's real cost behavior will need a founder-ratified update to this budget lane once the credit terms are confirmed live (not yet applied — a policy change, not a routine version bump)."
+    },
+    {
+      "id": "openai-codex",
+      "provider": "openai",
+      "plan": "ChatGPT $100/mo (Codex) — finite, not infinite; the relief + review lane",
+      "on_exhaustion": "Independent-review lane DOWN: buyer-facing artifacts queue as 'review: pending' (recorded, never dropped, never self-certified). Mechanical falls back to haiku on the anthropic lane."
+    }
+  ],
+
+  "models": [
+    {
+      "id": "claude-fable-5",
+      "alias": "fable",
+      "provider": "anthropic",
+      "budget": "anthropic-max",
+      "cost_class": "top",
+      "pricing": "$10/$50 per MTok (input/output) — confirmed 2026-07-09",
+      "requires_calibre_line": true,
+      "status": "current",
+      "strengths": ["most capable widely-released Claude model — sits above Opus 4.8 in capability (Anthropic, confirmed 2026-07-09)", "taste/craft judgment", "canon + doctrine writing", "long-horizon agentic work (thinking always-on)", "synthesis of major locked artifacts"],
+      "weaknesses": ["2x Opus 4.8's per-token cost — burns the weekly cap fastest of any Anthropic tier", "requires 30-day data retention (unavailable under ZDR orgs)", "no assistant-turn prefill; always-on thinking changes prompting patterns"],
+      "access": ["session", "agent-model-param"],
+      "billing_watch": {
+        "effective": "2026-07-12",
+        "message": "Fable 5 stops counting toward the Max weekly plan cap and requires opt-in usage credits (metered spend) — confirmed 2026-07-09 via Anthropic's announcements. If credits are NOT enabled: Fable becomes unavailable, fall to opus per the ladder. If credits ARE enabled: every fable session/subagent is metered — a deliberate, budgeted founder decision, never a default."
+      },
+      "notes": "Confirmed GA 2026-07-09 (this session ran on it), not a preview — the prior 'verify-availability' placeholder was stale. Real history: shipped 2026-06-09, pulled by US export-control order 2026-06-12, redeployed 2026-07-01. Tops taste-canon; Opus 4.8 is the half-price, still-excellent fallback. See billing_watch — the health hook flags the 2026-07-12 change automatically."
+    },
+    {
+      "id": "claude-opus-4-8",
+      "alias": "opus",
+      "provider": "anthropic",
+      "budget": "anthropic-max",
+      "cost_class": "top",
+      "pricing": "$5/$25 per MTok (input/output) — confirmed 2026-07-09",
+      "requires_calibre_line": true,
+      "status": "current",
+      "strengths": ["taste/craft judgment", "canon writing", "architecture + phase-gate review", "red-team/steelman synthesis", "SWE-bench Pro 69.2% vs GPT-5.5's 58.6% — stronger on complex multi-file engineering + root-cause bug tracing (DataCamp/MindStudio DeepSuite benchmarks, 2026-07-09)"],
+      "weaknesses": ["expensive for execution-from-spec and any fan-out", "trails GPT-5.5 on agentic terminal/tool-use tasks (Terminal-Bench 2.0: 74.6% vs 82.7%)"],
+      "access": ["session", "agent-model-param"]
+    },
+    {
+      "id": "claude-sonnet-5",
+      "alias": "sonnet",
+      "provider": "anthropic",
+      "budget": "anthropic-max",
+      "cost_class": "mid",
+      "pricing": "$3/$15 per MTok, intro $2/$10 through 2026-08-31 — confirmed 2026-07-09",
+      "requires_calibre_line": false,
+      "status": "current",
+      "strengths": ["implementation from a complete spec", "parallel lens research / casting / scans", "document analysis + extraction", "audits with explicit criteria"],
+      "weaknesses": ["not for final buyer-facing taste calls or canon writing"],
+      "access": ["session", "agent-model-param"]
+    },
+    {
+      "id": "claude-haiku-4-5",
+      "alias": "haiku",
+      "provider": "anthropic",
+      "budget": "anthropic-max",
+      "cost_class": "low",
+      "pricing": "$1/$5 per MTok — confirmed 2026-07-09; dated API id claude-haiku-4-5-20251001, 200K context, 64K max output",
+      "requires_calibre_line": false,
+      "status": "current",
+      "strengths": ["mechanical sweeps", "file inventory / triage", "search fan-outs", "formatting, link + status checks"],
+      "weaknesses": ["no judgment work of any kind"],
+      "access": ["session", "agent-model-param"]
+    },
+    {
+      "id": "gpt-5.5",
+      "alias": "codex",
+      "provider": "openai",
+      "budget": "openai-codex",
+      "cost_class": "high",
+      "default_effort": "xhigh",
+      "resolution": {
+        "method": "local-config",
+        "source": "codex-cli",
+        "config_path": "$CODEX_HOME/config.toml (fallback: ~/.codex/config.toml on POSIX, %USERPROFILE%\\.codex\\config.toml on Windows)",
+        "field": "model",
+        "effort_field": "model_reasoning_effort",
+        "cached_at": "2026-07-09"
+      },
+      "requires_calibre_line": false,
+      "status": "current",
+      "strengths": ["independent second perspective (de-correlated from Claude — LES-048)", "Terminal-Bench 2.0 leader (82.7% vs Opus 4.8's 74.6%) — the strongest tier for agentic/terminal execution and verifying rendered/executed artifacts", "near-ties SWE-bench Verified (88.7% vs Opus 4.8's 88.6%)", "UI/UX + copy verification on rendered artifacts", "precise well-specced code review", "well-specced implementation; relieves the anthropic weekly cap"],
+      "weaknesses": ["trails Opus 4.8 on SWE-bench Pro (58.6% vs 69.2%) — weaker on complex multi-file engineering + root-cause bug tracing (DataCamp/MindStudio DeepSuite, 2026-07-09), which is why it's the review lane, not a build-primary", "not the taste/canon author for this studio's craft bar", "no Claude-Code Agent-param access — reach via `codex exec`"],
+      "access": ["codex-session", "codex-exec-cli"],
+      "notes": "id/default_effort are the CACHED values of the `resolution` block above — hooks/resolve-local-models.mjs re-reads the live Codex config at every SessionStart and the health hook flags LEDGER DRIFT on any mismatch (never hand-checked, never silently trusted; the hook flags, a human edits). History: the 2026-07-09 refresh caught a fabricated 'gpt-5.5-codex' id here, corrected against ~/.codex/config.toml — that manual catch is what this resolution block automates. From Claude Code: `codex exec --sandbox read-only`. From a Codex session it IS the session model."
+    }
+  ],
+
+  "roles": {
+    "taste-canon": {
+      "job": "Buyer-facing craft authorship + judgment; DEC/LES/doctrine writing; verdicts. The scarce lane — reserve it for what only it can do.",
+      "primary": "claude-fable-5",
+      "ladder": ["claude-opus-4-8", "claude-sonnet-5"],
+      "silent_downgrade": false,
+      "effort": "high",
+      "notes": "Fable 5 confirmed 2026-07-09 as GA and above Opus 4.8 in capability — re-topped from Opus per the ledger's own re-top rule. Opus 4.8 remains an excellent, half-price fallback, not a downgrade in kind."
+    },
+    "heavy-analysis": {
+      "job": "Research synthesis, long-context reconciliation, architecture, plan review. High judgment, no new taste at stake.",
+      "primary": "claude-opus-4-8",
+      "ladder": ["claude-sonnet-5", "gpt-5.5"],
+      "silent_downgrade": true,
+      "effort": "high",
+      "notes": "Stays on Opus 4.8, not Fable — the calibre principle reserves the top-of-top tier for taste-canon alone; Opus 4.8 is independently strong here (SWE-bench Pro leader, complex multi-file reconciliation)."
+    },
+    "execution": {
+      "job": "Executing an already-locked decision into code/artifacts from a complete spec.",
+      "primary": "claude-sonnet-5",
+      "ladder": ["gpt-5.5", "claude-haiku-4-5"],
+      "silent_downgrade": true,
+      "effort": "medium"
+    },
+    "fan-out": {
+      "job": "Parallel lens research, reference casting, signal scans. Wide + cheap; a taste judge curates.",
+      "primary": "claude-sonnet-5",
+      "ladder": ["claude-haiku-4-5"],
+      "silent_downgrade": true,
+      "effort": "medium"
+    },
+    "mechanical": {
+      "job": "Commits, stamps, lints, capture loops, fixed-script re-runs.",
+      "primary": "claude-haiku-4-5",
+      "ladder": ["gpt-5.5"],
+      "silent_downgrade": true,
+      "effort": "low"
+    },
+    "independent-review": {
+      "job": "Cross-provider review — ALWAYS the other provider from the author. From Claude-authored work: codex (gpt-5.5). From Codex-authored work: claude (fable/opus for taste surfaces, sonnet for code).",
+      "primary": "gpt-5.5",
+      "ladder": [],
+      "silent_downgrade": false,
+      "effort": "high",
+      "notes": "No same-provider substitute exists for this role by definition; lane down => 'review: pending', recorded. gpt-5.5 is well-suited here independent of the review-direction rule: Terminal-Bench leader (agentic/execution verification) even though it trails Opus 4.8 on raw multi-file build quality — reviewing rendered/executed output is exactly its strength."
+    }
+  },
+
+  "review_policy": [
+    { "surface": "buyer-facing UI/UX + copy", "review": "cross-provider ALWAYS (invariant — idea-lab DEC-121); depth scales with stakes, never skipped", "self_review_first": true },
+    { "surface": "canon / doctrine / framework structure", "review": "self-review always; cross-provider on structural changes and at audit cadence", "self_review_first": true },
+    { "surface": "production code / irreversible or outward-facing actions", "review": "cross-provider before merge/deploy/send", "self_review_first": true },
+    { "surface": "research, drafts, scratch", "review": "downstream taste-judge curates; no cross-provider loop", "self_review_first": false },
+    { "surface": "mechanical output", "review": "none (verified by gates/CI where they exist)", "self_review_first": false }
+  ],
+
+  "caps": {
+    "fanout_width_default": 6,
+    "fanout_width_note": "A wider fan-out is fine when the task genuinely needs it — state the width + why in the plan BEFORE launching (LES-105: 2 research agents self-expanded to 5 and burned ~450k tokens on a single-job product).",
+    "subagent_respawn": "Subagents do NOT spawn their own subagents unless the orchestrator's plan names it explicitly.",
+    "top_tier_calibre_line": "Any subagent launch on a requires_calibre_line model must carry 'calibre: <role> — <one-line why>' in its prompt; the gate hook blocks it otherwise.",
+    "scheduled_runs_max_role": "fan-out",
+    "scheduled_runs_note": "Scheduled/recurring tasks are the biggest silent burner and can't pin a model — keep the app default on the fan-out tier and route heavy work DOWN from the prompt, never up."
+  },
+
+  "acknowledged_candidates": {
+    "_comment": "Ids the refresh loop surfaced and the founder reviewed WITHOUT adopting — they stop re-appearing as proposals every cycle (alert fatigue is how a loud mechanism decays into a silent one). Acknowledging is 'seen, declined for now', never 'never': remove an id from this list to re-surface it. Genuinely NEW ids (e.g. a future gpt-5.6 family) are unaffected and always surface.",
+    "acknowledged_at": "2026-07-09",
+    "ids": [
+      "claude-opus-4-7", "claude-opus-4-6", "claude-sonnet-4-6", "claude-sonnet-4-5-20250929",
+      "gpt-5.3-codex", "gpt-5.3-chat-latest",
+      "gpt-5.4", "gpt-5.4-2026-03-05", "gpt-5.4-pro", "gpt-5.4-pro-2026-03-05",
+      "gpt-5.4-mini", "gpt-5.4-mini-2026-03-17", "gpt-5.4-nano", "gpt-5.4-nano-2026-03-17"
+    ]
+  },
+
+  "providers_extension": "To add a provider (grok, gemini, ...): add a budget lane + model entries with strengths/weaknesses/access, then slot the models into role ladders where they earn a place. Roles and doctrine never change; only this ledger does.",
+
+  "resolution_extension": "Any model whose live id is readable from a LOCAL CLI config file carries a `resolution` block (see the codex entry): method 'local-config' · source (the CLI's name, display-only) · config_path ('$VAR/... (fallback: ~/..., %VAR%\\...)' syntax — env tokens + ~ expanded, fallbacks tried in order by hooks/resolve-local-models.mjs) · field (the config key holding the model id) · optional effort_field · cached_at. `id`/`default_effort` remain the cached values everything routes against (the gate hook and role ladders read them statically); the SessionStart health hook re-resolves the live file every session and flags LEDGER DRIFT on mismatch — loudly, for a human to fix; it NEVER self-writes this file. A resolver that can't find the file/field fails soft (the CLI may not be installed here) — absence is not drift. To cover a second CLI-backed provider: add a resolution block to its entry, nothing else — the resolver is provider-agnostic and names no CLI."
+}
