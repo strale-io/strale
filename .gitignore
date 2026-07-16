@@ -33,3 +33,4 @@ mcp-publisher.exe
 .mcpregistry_registry_token
 
 apps/spike/
+audit-output/
