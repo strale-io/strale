@@ -1,0 +1,424 @@
+{
+  "_comment": "MODEL-OS governed policy data. Machine code reads this file and NEVER writes it. Each number group carries its own ratified/provisional status where applicable. DEC-198 ratifies quota thresholds, the taste-canon weekly reserve, conservative p95 seeds, and mandatory route-aware role declarations. DEC-203 makes subscription_credits and api_metered hard-forbidden before any spend authorization is considered.",
+  "schema_version": 1,
+  "version": "2.5.0",
+  "quality_floors": {
+    "role_source": "routing.json models[].roles_qualified",
+    "capability_source": "routing.json models[].capabilities",
+    "automatic_high_stakes_reranking": true,
+    "provider_identity_weight": 0,
+    "note": "Provider is transport metadata. Qualification and task-specific capability evidence set the floor and order."
+  },
+  "billing": {
+    "autonomous_allowed_modes": ["subscription_included", "api_free_quota", "local_compute"],
+    "hard_forbidden_modes": ["subscription_credits", "api_metered"],
+    "spend_authorizations": []
+  },
+  "routing_evidence": {
+    "status": "ratified",
+    "decision": "DEC-206",
+    "confidence_weights": { "low": 0.2, "medium": 0.7, "high": 1 },
+    "provenance_weights": [
+      { "prefix": "machine:", "weight": 1 },
+      { "prefix": "bounded-probe:", "weight": 1 }
+    ],
+    "default_provenance_weight": 0.25,
+    "minimum_fact_scores": { "catalog": 0.7, "entitlement": 0.7, "spend_guard": 1, "quota": 0.7 },
+    "note": "Confidence and provenance affect route eligibility and ordering. Machine/bounded-probe evidence is strongest; a high-confidence but unrecognized source scores only 0.25. Spend guards require a full score of 1."
+  },
+  "dispatch": {
+    "status": "provisional",
+    "background_threshold_ms": 60000,
+    "minimum_launch_freshness_ms": 15000,
+    "timeout_by_mode_ms": {
+      "analysis": 300000,
+      "review": 300000,
+      "execution": 300000,
+      "heavy-execution": 600000
+    },
+    "note": "The provider-neutral dispatcher follows the selector's global order. Fan-out or a unit estimated above background_threshold_ms uses the caller harness's background-task adapter. Evidence must be fresh at launch; a long task may outlive a maintenance TTL without being killed by a near-equality race."
+  },
+  "maintenance": {
+    "status": "provisional",
+    "freshness_lead_seconds": 60,
+    "reset_delay_seconds": 30,
+    "max_poll_seconds": 900,
+    "daemon_max_runtime_seconds": 604800,
+    "note": "A single-instance off-hot-path monitor wakes no later than the earliest bounded deadline or max poll. Reset metadata may pull maintenance earlier but never extends an observation TTL or upgrades stale evidence."
+  },
+  "quota_recovery": {
+    "status": "provisional",
+    "enabled": true,
+    "passive_adapters": ["claude-statusline-rate-limits"],
+    "initial_retry_seconds": 900,
+    "max_retry_seconds": 3600,
+    "backoff_multiplier": 2,
+    "reset_delay_seconds": 30,
+    "max_reset_horizon_seconds": 2678400,
+    "max_probes_per_cycle": 1,
+    "require_machine_spend_guard": true,
+    "note": "Explicitly exhausted passive quota sources receive one tiny subscription-only recovery probe after 15 minutes or a reported reset boundary. Continued exhaustion backs off to one hour; success changes capacity to unknown/attemptable until exact passive utilization arrives."
+  },
+  "phase_routing": {
+    "status": "provisional",
+    "enabled": true,
+    "max_switches": 2,
+    "hysteresis_tokens": 256,
+    "note": "Explicit phase boundaries may switch only on calibrated conservative verified-token savings strictly above transition overhead plus hysteresis. No prompt decomposition is performed."
+  },
+  "calibration": {
+    "status": "provisional",
+    "enabled": true,
+    "benchmark_version": "model-os-v1",
+    "max_shadow_fraction": 0.05,
+    "max_runs_per_cycle": 2,
+    "require_deterministic_verifier": true,
+    "note": "Off-hot-path calibration is limited to five percent of deduplicated organic work attempts and two runs per cycle. Execution requires a deterministic machine verifier; no cold-start samples are fabricated."
+  },
+  "selection": {
+    "status": "ratified",
+    "decision": "Founder directive 2026-07-15",
+    "provider_identity_weight": 0,
+    "equivalent_capability_margin": 2,
+    "empirical_optimization": {
+      "status": "enabled",
+      "minimum_verified_samples": 10,
+      "evidence_ttl_seconds": 2592000,
+      "quality_floor_by_stakes": { "low": 0.75, "mid": 0.8, "high": 0.88, "critical": 0.92 },
+      "note": "Only deterministic verification outcomes count. Until a model/role/effort group reaches the minimum, ratified capability scores remain the prior and ordering is unchanged. Calibrated equivalent candidates minimize expected tokens to verified completion, then latency."
+    },
+    "order": ["safety-and-feasibility", "task-specific-capability", "evidence-confidence", "cost-and-latency"],
+    "unknown_quota_on_verified_subscription": "attemptable",
+    "quota_balance": {
+      "status": "ratified",
+      "decision": "DEC-213, founder-ratified 2026-07-16",
+      "enabled": true,
+      "window": "weekly",
+      "hysteresis_percent": 10,
+      "freshness_max_age_seconds": null,
+      "note": "FR-278 / DEC-213 (founder-ratified + ENABLED 2026-07-16). Provider load-balancing tiebreak: among capability-equivalent candidates, prefer the provider lane with more remaining WEEKLY quota headroom, applied per-group only when every candidate has a fresh reading and the group's headroom spread exceeds hysteresis_percent (avoids flip-flop on noise). Provider-NEUTRAL: measured remaining capacity, never provider identity (provider_identity_weight stays 0). No-ops safely until quota telemetry is fresh both sides (Anthropic statusline + Codex app-server). To disable: set enabled:false."
+    },
+    "note": "Cost and latency break ties only inside the equivalent-capability margin. Entry surface is recorded but never ranked."
+  },
+  "task_profile": {
+    "operations": ["decide", "analyze", "execute", "review", "mechanical"],
+    "artifacts": ["scratch", "code", "buyer-facing", "canon"],
+    "authorities": ["autonomous", "founder-directed"],
+    "stages": ["explore", "draft", "local-change", "commit", "push", "deploy-send"],
+    "classification": "deterministic-local-first",
+    "capability_semantics": {
+      "required": "hard feasibility constraints only",
+      "preferred": "soft ranking evidence; absence may degrade but never hard-blocks"
+    },
+    "quality_floor": "optional 0-100 task-fit floor; empirical optimization maps it to predicted success when calibrated",
+    "ambiguous_coordinator": "balanced model may classify only when it also begins useful work"
+  },
+  "effort": {
+    "abstract_levels": ["low", "medium", "high", "maximum"],
+    "dynamic_escalation": ["start-lowest-reasonable", "verify", "increase-after-unresolved-uncertainty", "change-model-when-more-promising"],
+    "maximum_requires": "critical stakes or concentrated judgment; an explicit override also requires effortJustification",
+    "parallelism": { "modes": ["single", "fan-out"], "default_width": 6, "maximum_width": 20 },
+    "multi_agent_compatibility": "legacy effort=multi-agent is accepted and normalized to fan-out topology with medium reasoning effort",
+    "fan_out_requires": "meaningfully decomposable work with an integral bounded unit count of at least two; an explicit override or width above the default also requires effortJustification"
+  },
+  "evaluation": {
+    "status": "ratified",
+    "active_roster_source": "routing.json qualified lifecycle entries",
+    "discovery_can_modify_active_roster": false,
+    "corpus": [
+      "canon-strategy-judgment",
+      "buyer-facing-copy-design-taste",
+      "architecture-debugging",
+      "implementation-from-specification",
+      "agentic-terminal-tool-execution",
+      "research-synthesis",
+      "mechanical-reliability",
+      "independent-review-quality",
+      "effort-quality-latency"
+    ],
+    "stages": ["candidate", "bounded-studio-evaluation", "shadow-comparison", "promotion-decision"],
+    "automatic_promotion_roles": ["execution", "fan-out", "mechanical"],
+    "automatic_promotion_min_clear_win_percent": 10,
+    "taste_canon_requires": "strong comparative evidence, rollback, and founder resolution only when materially ambiguous",
+    "refresh_failure": "retain-last-known-good-roster-and-warn"
+  },
+  "retention": {
+    "status": "provisional",
+    "note": "Operational bounds are enforced but the exact entry counts remain pending founder number-level ratification.",
+    "verification_log_max_entries": 9,
+    "fallback_log_max_entries": 200,
+    "shadow_log_max_entries": 1000,
+    "dispatch_receipt_max_entries": 1000,
+    "outcome_max_entries": 2000,
+    "run_telemetry_max_entries": 2000,
+    "candidate_transition_max_entries": 2000,
+    "candidate_watch_max_entries": 1000
+  },
+  "quota_resources": {
+    "anthropic-max-session": {
+      "provider": "anthropic",
+      "kind": "rolling-session-window",
+      "capacity_observation": "quota:anthropic-max-session",
+      "adapter": "claude-statusline-rate-limits",
+      "statusline_field": "five_hour",
+      "enforcement": "phase3"
+    },
+    "anthropic-max-weekly": {
+      "provider": "anthropic",
+      "kind": "rolling-weekly-window",
+      "capacity_observation": "quota:anthropic-max-weekly",
+      "adapter": "claude-statusline-rate-limits",
+      "statusline_field": "seven_day",
+      "enforcement": "phase3"
+    },
+    "openai-codex-five-hour": {
+      "provider": "openai",
+      "kind": "rolling-session-window",
+      "capacity_observation": "quota:openai-codex-five-hour",
+      "adapter": "codex-app-server-rate-limits",
+      "limit_id": "codex",
+      "window_duration_mins": 300,
+      "enforcement": "phase3"
+    },
+    "openai-codex-weekly": {
+      "provider": "openai",
+      "kind": "rolling-weekly-window",
+      "capacity_observation": "quota:openai-codex-weekly",
+      "adapter": "codex-app-server-rate-limits",
+      "limit_id": "codex",
+      "window_duration_mins": 10080,
+      "enforcement": "phase3"
+    }
+  },
+  "quota_state_thresholds": {
+    "status": "ratified",
+    "green_max_used_percent": 69,
+    "amber_max_used_percent": 84,
+    "red_max_used_percent": 99,
+    "decision": "DEC-198",
+    "note": "Founder-ratified 2026-07-13. Missing or expired telemetry remains unknown."
+  },
+  "quota_prediction": {
+    "unit": "percent_capacity",
+    "low_confidence_multiplier": 2,
+    "minimum_calibrated_samples": 10,
+    "task_classes": {
+      "taste-canon": {
+        "resources": {
+          "anthropic-max-session": { "p95_percent": 5, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "anthropic-max-weekly": { "p95_percent": 5, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 }
+        }
+      },
+      "heavy-analysis": {
+        "resources": {
+          "anthropic-max-session": { "p95_percent": 5, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "anthropic-max-weekly": { "p95_percent": 5, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "openai-codex-five-hour": { "p95_percent": 5, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "openai-codex-weekly": { "p95_percent": 5, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 }
+        }
+      },
+      "execution": {
+        "resources": {
+          "anthropic-max-session": { "p95_percent": 4, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "anthropic-max-weekly": { "p95_percent": 4, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "openai-codex-five-hour": { "p95_percent": 4, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "openai-codex-weekly": { "p95_percent": 4, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 }
+        }
+      },
+      "independent-review": {
+        "resources": {
+          "anthropic-max-session": { "p95_percent": 3, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "anthropic-max-weekly": { "p95_percent": 3, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "openai-codex-five-hour": { "p95_percent": 3, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "openai-codex-weekly": { "p95_percent": 3, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 }
+        }
+      },
+      "fan-out": {
+        "unit": "per-worker",
+        "resources": {
+          "anthropic-max-session": { "p95_percent": 2, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "anthropic-max-weekly": { "p95_percent": 2, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "openai-codex-five-hour": { "p95_percent": 2, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "openai-codex-weekly": { "p95_percent": 2, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 }
+        }
+      },
+      "mechanical": {
+        "resources": {
+          "anthropic-max-session": { "p95_percent": 1, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "anthropic-max-weekly": { "p95_percent": 1, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "openai-codex-five-hour": { "p95_percent": 1, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 },
+          "openai-codex-weekly": { "p95_percent": 1, "confidence": "low", "calibration_status": "uncalibrated", "sample_size": 0 }
+        }
+      }
+    },
+    "status": "ratified-seed-unconfirmed",
+    "decision": "DEC-198",
+    "note": "Founder-ratified conservative seeds. All rows remain low-confidence and receive the 2x multiplier until calibrated from at least 10 observations per task-class/resource pair. Missing prediction is unroutable, never zero."
+  },
+  "reserves": [
+    {
+      "id": "taste-canon-anthropic-weekly",
+      "status": "active",
+      "resource": "anthropic-max-weekly",
+      "reserve_percent": 15,
+      "protected_roles": ["taste-canon"],
+      "decision": "DEC-198",
+      "note": "Founder-ratified 2026-07-13. Applies only to the Anthropic weekly resource."
+    }
+  ],
+  "lifecycle": {
+    "states": ["discovered", "entitlement-check", "available-unassessed", "evaluating", "shadow", "qualified", "quarantined", "rejected"],
+    "routable_states": ["qualified"],
+    "promotion": "evaluation-gated",
+    "automatic_promotion_roles": ["execution", "fan-out", "mechanical"],
+    "operational_demotion": "immediate-from-observations",
+    "quarantine_clear_target": "available-unassessed",
+    "rumor_behavior": "watch-only"
+  },
+  "capability_dimensions": [
+    "research",
+    "copywriting",
+    "design-judgment",
+    "layout-ui-production",
+    "coding",
+    "image-generation-editing",
+    "video"
+    ,"strategic-judgment"
+    ,"design-taste"
+    ,"architecture"
+    ,"debugging"
+    ,"agentic-tool-execution"
+    ,"precision"
+    ,"context-length"
+    ,"multimodal"
+    ,"speed"
+    ,"mechanical-reliability"
+    ,"review-quality"
+  ],
+  "review_artifact_types": ["code", "ui-ux", "copy", "canon-structure", "image", "video"],
+  "observation_ttl": {
+    "status": "provisional",
+    "note": "Operational freshness bounds are enforced fail-closed; the exact TTL values remain pending founder number-level ratification.",
+    "catalog": 604800,
+    "entitlement": 86400,
+    "spend_guard": 86400,
+    "quota": 900,
+    "quota_by_adapter": {
+      "codex-app-server-rate-limits": 900,
+      "claude-statusline-rate-limits": 21600
+    }
+  },
+  "discovery": {
+    "source_ttl": {
+      "status": "provisional",
+      "account_catalog": 900,
+      "official_catalog": 3600,
+      "candidate": 2592000,
+      "terms": 3600,
+      "cli_compatibility": 86400
+    },
+    "sources": [
+      {
+        "id": "openai-codex-account",
+        "kind": "account_catalog",
+        "provider": "openai",
+        "surface": "codex",
+        "account_scope": "founder-chatgpt",
+        "adapter": "codex-app-server-model-list",
+        "observation_namespace": "openai:chatgpt:codex",
+        "entitlement_signal": "listed_not_probed",
+        "environments": ["local"]
+      },
+      {
+        "id": "anthropic-claude-account",
+        "kind": "account_catalog",
+        "provider": "anthropic",
+        "surface": "claude-code",
+        "account_scope": "founder-max",
+        "adapter": "claude-bounded-probe-only",
+        "observation_namespace": "anthropic:max:claude-code",
+        "environments": ["local"]
+      },
+      {
+        "id": "anthropic-official-api",
+        "kind": "official_catalog",
+        "provider": "anthropic",
+        "surface": "api",
+        "account_scope": "api-key",
+        "adapter": "anthropic-models-api",
+        "observation_namespace": "anthropic:api",
+        "model_patterns": ["^claude-"]
+      },
+      {
+        "id": "openai-official-api",
+        "kind": "official_catalog",
+        "provider": "openai",
+        "surface": "api",
+        "account_scope": "api-key",
+        "adapter": "openai-models-api",
+        "observation_namespace": "openai:api",
+        "model_patterns": ["^(gpt-[0-9]|o[0-9])"]
+      }
+    ],
+    "terms_sources": [
+      {
+        "id": "anthropic-news-announcements",
+        "provider": "anthropic",
+        "kind": "plan-and-access-announcements",
+        "url": "https://www.anthropic.com/news"
+      },
+      {
+        "id": "openai-news-announcements",
+        "provider": "openai",
+        "kind": "plan-and-access-announcements",
+        "url": "https://openai.com/news"
+      },
+      {
+        "id": "anthropic-model-overview",
+        "provider": "anthropic",
+        "kind": "catalogue-and-deprecation",
+        "url": "https://platform.claude.com/docs/en/about-claude/models/overview"
+      },
+      {
+        "id": "anthropic-pricing",
+        "provider": "anthropic",
+        "kind": "pricing-and-billing",
+        "url": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      {
+        "id": "openai-codex-changelog",
+        "provider": "openai",
+        "kind": "release-and-deprecation",
+        "url": "https://learn.chatgpt.com/docs/changelog"
+      },
+      {
+        "id": "openai-codex-pricing",
+        "provider": "openai",
+        "kind": "subscription-and-billing",
+        "url": "https://learn.chatgpt.com/docs/pricing"
+      },
+      {
+        "id": "openai-codex-models",
+        "provider": "openai",
+        "kind": "catalogue",
+        "url": "https://learn.chatgpt.com/docs/models"
+      }
+    ],
+    "cli_requirements": [
+      {
+        "id": "codex-cli",
+        "status": "provisional",
+        "command": "codex",
+        "minimum_version": "0.144.0",
+        "environments": ["local"]
+      },
+      {
+        "id": "claude-code",
+        "status": "provisional",
+        "command": "claude",
+        "minimum_version": "2.1.0",
+        "environments": ["local"]
+      }
+    ]
+  }
+}

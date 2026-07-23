@@ -1,0 +1,1044 @@
+{
+  "_comment": "MODEL-OS LEDGER — the single machine-readable source of truth for model routing across ALL repos and BOTH CLIs (Claude Code + Codex). Doctrine lives in model-os/MODEL-OS.md and reasons in ROLES; model NAMES live only here. Edit THIS file when the landscape shifts (new model, limit change, capability re-rank) — nothing else changes. Read by hooks/model-os-health.mjs (SessionStart), hooks/model-os-gate.mjs (PreToolUse Agent), and the Codex AGENTS block. last_verified + stale_after_days drive the staleness flag: a stale ledger is surfaced BEFORE heavy work, never silently trusted.",
+  "version": 2,
+  "schema_version": 2,
+  "scheduler_version": "global-provider-neutral-v2",
+  "policy_file": "policy.json",
+  "route_state_activation": "active",
+  "last_verified": "2026-07-15",
+  "stale_after_days": 21,
+  "verification_log": [
+    "2026-07-18 (Fable billing CORRECTED — Max plan is subscription-INCLUDED, not metered; founder-authorized): the same-day billing_boundary (beyond_mode subscription_credits) added from the @claudeai announcement mis-applied the Pro/Team-Standard usage-credits rule to this MAX account. The announcement says Fable is INCLUDED in Max plans at 50% of limits; credits are Pro/Team-Standard only. That mis-model fail-closed-EXCLUDED Fable at unknown weekly telemetry (the statusline rate_limits gap), locking the best taste model (role_score 98) out of the taste-canon lane — so the 2026-07-18 CoopReclaim flagship run again ran its entire crown/critique on Opus (94) while Fable merely orchestrated. billing_boundary REMOVED from claude-fable-5; it is now a plain subscription_included route. The 50%-of-limits soft cap consumes the shared anthropic-max-weekly allocation, gated by normal quota exhaustion (all anthropic models) with a fall to the Opus ladder if the Fable cap is hit — no metered spend either way, matching the founder's standing 'no use of metered api calls'. Founder authorization: the founder chose to fix this inversion (a-yes) and has repeatedly stated no metered use. DEC-148 reopen trigger: any observed metered Fable charge re-adds a boundary. Result: taste-canon routes to Fable again.",
+    "2026-07-18 (Fable 50%-of-limits boundary — official 2026-07-18 @claudeai announcement, founder-provided screenshot): from 2026-07-20 Fable 5 is standard on all Max and Team Premium plans at 50% of limits (Pro/Team-Standard stay usage-credits + a one-time credit). Encoded as a billing_boundary on the claude-fable-5 route (subscription_included while anthropic-max-weekly <50%; beyond_mode subscription_credits stays hard-forbidden without founder spend authorization, so Fable stops routing past 50% and taste-canon falls to Opus with a visible warning). Applied conservative-early (2 days before the effective date). KNOWN aftermath, so no unknown-probe billing_watch — this partially supersedes the 2026-07-17 disarm entry: the founder's no-metered-use resolution stands; the watch stays retired; only the dated inclusion boundary returns. Detection gap named honestly: both this change and the 07-12 promo reached the ledger via founder paste — terms_sources watched only platform/API docs; anthropic + openai NEWS/announcement pages added to hourly terms monitoring this same commit (the X channel itself is not headlessly pollable; founder paste remains the channel for X-only or account-specific facts).",
+    "2026-07-17 (Fable billing-watch disarm — founder resolution, executed by the MODEL-OS maintenance loop per the idea-lab ROADMAP assignment): founder stated verbatim 'fable billing has been resolved already. no use of metered api calls' (recorded in idea-lab commit a763a19); same founder-authority category as the 2026-07-13 billing-reversal entry this rhymes with. billing_watch + entitlement_recheck_at + the 50% billing_boundary removed from claude-fable-5; no roster edit needed — role ordering is computed, so taste-canon reverts to Fable (role_score 98 vs opus 94, per the standing 2026-07-13 founder re-ratification). Context that forced the timing: the 2026-07-17 CoopReclaim flagship run executed its ENTIRE taste lane (concept authoring, crown, all critique rounds) on opus one tier below the ratified ceiling solely because this watch made Fable's route rank below opus — an 8-hour calibration event run sub-ceiling on exactly the judgment calls it existed to calibrate. Re-verify at next ledger review (re-confirm the subscription state hasn't reverted).",
+    "2026-07-16 (automatic quota recovery and pending-review invalidation; policy 2.5.0): passive explicit exhaustion is rechecked after 15 minutes or a reported reset boundary by one fixed-prompt, subscription-only, spend-guarded probe per maintenance cycle; continued exhaustion backs off to one hour. Success proves capacity without fabricating utilization, so linked resources become unknown/attemptable pending exact passive telemetry. Status freshly classifies immutable pending review receipts as blocked or retryable, and dispatch reselects at launch instead of reusing historical BLACK-STATE. Metered APIs and subscription credits remain hard-forbidden.",
+    "2026-07-15 (calibration and operational phase execution; policy 2.4.0): added opaque task/phase linkage across dispatch, deterministic automatic failure outcomes, one-command task evidence closure with immediate performance refresh, a zero-provider-call stay path and dispatcher-backed economic switch path, and bounded off-hot-path calibration capped at five percent of organic attempts plus two runs per cycle. Status now distinguishes plan-only phase choices from actually executed requested/observed identities and never turns a plan into a savings claim. Synthetic eligibility fixtures remain isolated from founder state; real optimization still requires complete exact-identity usage plus named machine verification. Independent Anthropic review remains pending while its subscription quota is exhausted.",
+    "2026-07-15 (observability post-implementation audit; policy 2.3.1): corrected defects found after the original green suite. Maintenance now plans only actionable refresh sources, immediately applies stricter source TTL caps, satisfies dated entitlement rechecks only with post-boundary evidence, and converges to zero due sources after success. A single-instance deadline-driven freshness monitor keeps active sessions current without adding selection-path work; account catalogues poll at most every 15 minutes and official catalogue/terms sources hourly with conditional validators. Candidate lifecycle mutations are transaction-locked and snapshot/journal synchronized; replay validates the transition matrix and evidence instead of trusting journal rows. Performance optimization now requires fresh evidence plus complete requested/observed identity. Status separates the latest dispatch event from the last real execution, exposes bounded route reason codes, and refuses to claim savings without a qualified counterfactual. Automatic candidate evaluation and registry promotion remain intentionally outside this implementation; discovery surfaces candidates but the active ledger stays human-ratified. Same-provider verification passed locally; independent Anthropic review remains pending while its subscription quota is exhausted.",
+    "2026-07-15 (global provider-neutral scheduler — founder directive; v2 audit): replaced provider-local selection with one deterministic global task-fit kernel shared by Codex and Claude entry surfaces. Provider identity has zero ranking weight except the explicit different-provider constraint for independent review. The v2 audit separates hard required capabilities from soft preferences and explicit quality floors; separates reasoning effort from parallelism; adds compact/explain output, policy-driven dispatch timeouts and launch freshness, transcript-free receipt fingerprints, deterministic outcome evidence, calibrated expected-tokens-to-verified-completion optimization, TTL-gated catalogue maintenance, and a validated provider adapter contract. The follow-on observability implementation adds bounded allowlisted run telemetry, local status, reset-aware off-hot-path scheduling, durable candidate quarantine/evaluation with rumor-only watch state, and explicit phase switching gated by conservative verified-token savings above transition overhead. Reproduced and fixed the DIRECTION.json false taste-canon block, repository-root dispatcher path regression, explicit-quota BLACK-STATE false negative, task-duration/TTL race, 120-second timeout floor exposed by two real Sol dispatch timeouts, live catalogue maintenance downgrading authoritative OpenAI entitlement observations to unprobed state, isolated gate dependency drift, and status falsely evaluating calibrated routes without a qualified task class. MODEL-OS wrappers, complete entry-point tests, fault fixtures, and the before/after benchmark are the verification evidence; independent Claude review remains pending under the founder's explicit temporary waiver because Anthropic subscription capacity is exhausted.",
+    "2026-07-14 (Fable promotional access correction — founder-provided Anthropic 2026-07-12 announcement): Claude Code requires the canonical model id `claude-fable-5`; the `fable` alias is not accepted by the CLI. Fable is subscription-included on paid plans through 2026-07-19 only while anthropic-max-weekly usage is below 50%; at 50% and above its effective mode becomes subscription_credits, which remains unroutable without a founder spend authorization. The post-2026-07-19 state is deliberately unknown: a dated entitlement recheck expires pre-boundary evidence and the billing watch demands a fresh entitlement-change probe/terms observation. The same announcement's temporary +50% Claude Code weekly allowance requires no ledger transformation because provider telemetry reports actual usage percentages.",
+    "2026-07-13 (DEC-198 registry migration): founder ratified quota thresholds (green 0-69%, amber 70-84%, red 85-99%, exhausted 100%/provider-declared), a 15-point taste-canon reserve on anthropic-max-weekly, conservative low-confidence p95 seeds with a 2x multiplier until 10-sample calibration, and a mandatory role declaration for every route-aware Agent/Workflow launch. Real subscription access routes are activated per model; legacy access arrays remain for rollback/graceful consumers. Machine observations remain local and fail closed when missing or expired."
+  ],
+  "budgets": [
+    {
+      "id": "anthropic-max",
+      "provider": "anthropic",
+      "plan": "Claude Max $200/mo (20x) — weekly-capped; the scarce lane",
+      "on_exhaustion": "Shift execution / fan-out / mechanical to the openai lane. Taste/canon work STOPS and flags the founder (never silently downgraded off-provider). Log every fallback: 'wanted <X>, fell to <Y> — limit'.",
+      "notes": "Fable 5 is promotional in this lane through 2026-07-19 and subscription-included only below 50% weekly usage; at/above 50% it becomes subscription_credits and blocks without founder authorization. Opus/Sonnet/Haiku remain normally weekly-capped. Post-2026-07-19 Fable access is unknown pending a fresh probe/terms observation."
+    },
+    {
+      "id": "openai-codex",
+      "provider": "openai",
+      "plan": "ChatGPT $100/mo (Codex) — finite, not infinite; the relief + review lane",
+      "on_exhaustion": "Independent-review lane DOWN: buyer-facing artifacts queue as 'review: pending' (recorded, never dropped, never self-certified). Mechanical falls back to haiku on the anthropic lane."
+    }
+  ],
+  "models": [
+    {
+      "id": "claude-fable-5",
+      "alias": "fable",
+      "provider": "anthropic",
+      "budget": "anthropic-max",
+      "cost_class": "top",
+      "latency_class": "slow",
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
+      "effort_controls": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high",
+        "maximum": "max",
+        "multi-agent": "medium"
+      },
+      "pricing": "$10/$50 per MTok (input/output) — confirmed 2026-07-09",
+      "requires_calibre_line": true,
+      "status": "current",
+      "lifecycle_state": "qualified",
+      "roles_qualified": [
+        "taste-canon"
+      ],
+      "role_scores": {
+        "taste-canon": 98
+      },
+      "capability_scores": {
+        "strategic-judgment": 98,
+        "design-taste": 98,
+        "copywriting": 97,
+        "research": 91,
+        "precision": 91
+      },
+      "capability_evidence": {
+        "roles": {
+          "taste-canon": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified comparative assessment"
+          }
+        },
+        "capabilities": {
+          "precision": {
+            "confidence": "medium",
+            "as_of": "2026-07-16",
+            "source": "agent-researched, cross-provider reviewed APPROVE (gpt-5.6-sol 2026-07-17); provenance refresh-notes/2026-07-16-capability-evidence.md; empirical capability posterior corrects"
+          }
+        }
+      },
+      "execution_observations": {
+        "last_success": "execution:last-success:claude-fable-5",
+        "last_failure": "execution:last-failure:claude-fable-5"
+      },
+      "capabilities": {
+        "qualified": [
+          "research",
+          "copywriting",
+          "design-judgment"
+        ],
+        "review": [],
+        "evidence": "existing ratified role assessment"
+      },
+      "quality_rank": 95,
+      "strengths": [
+        "most capable widely-released Claude model — sits above Opus 4.8 in capability (Anthropic, confirmed 2026-07-09)",
+        "taste/craft judgment",
+        "canon + doctrine writing",
+        "long-horizon agentic work (thinking always-on)",
+        "synthesis of major locked artifacts"
+      ],
+      "weaknesses": [
+        "2x Opus 4.8's per-token cost",
+        "requires 30-day data retention (unavailable under ZDR orgs)",
+        "no assistant-turn prefill; always-on thinking changes prompting patterns"
+      ],
+      "access_routes": [
+        {
+          "id": "anthropic:max:claude-code:claude-fable-5",
+          "provider": "anthropic",
+          "surface": "claude-code",
+          "account_scope": "founder-max",
+          "auth_mode": "claude_ai_subscription",
+          "billing_mode": "subscription_included",
+          "access_methods": [
+            "session",
+            "agent-model-param"
+          ],
+          "catalog_observation": "catalog:anthropic:max:claude-code:claude-fable-5",
+          "entitlement_observation": "entitlement:anthropic:max:claude-code:claude-fable-5",
+          "spend_guard_observation": "spend-guard:anthropic:founder-max",
+          "quota_resources": [
+            "anthropic-max-session",
+            "anthropic-max-weekly"
+          ]
+        }
+      ],
+      "notes": "GA 2026-07-09 (history: shipped 2026-06-09, export-control pull 2026-06-12, redeployed 2026-07-01). Billing (CORRECTED 2026-07-18): this account is MAX; the official 2026-07-18 @claudeai announcement says Fable is 'included in all Max and Team Premium plans, at 50% of limits' — subscription_INCLUDED, NOT metered. The usage-credits/metered path is Pro/Team-Standard only. A prior same-day edit mis-applied the Pro credits rule to this Max route as a billing_boundary(beyond_mode:subscription_credits), which fail-closed-EXCLUDED Fable at unknown weekly telemetry (the statusline rate_limits gap) — locking the best taste model (role_score 98) out of the taste lane so Opus (94) did all the crown work while Fable only orchestrated. billing_boundary REMOVED: Fable is a plain subscription_included route like every other Anthropic model. The '50% of limits' is a platform-side soft cap consuming the shared anthropic-max-weekly allocation — enforced by normal quota exhaustion gating (which gates ALL anthropic models), and if the Fable-specific cap is hit the dispatch simply falls to the Opus ladder — NO metered spend either way, consistent with the founder's 'no use of metered api calls'. DEC-148 POSITION (founder-authorized: 'a-yes' + the no-metered statement); REOPEN TRIGGER: if an actual metered Fable charge is ever observed, re-add a boundary with beyond_mode reflecting the real mode. Taste-canon reverts to Fable (98 > opus 94) by computed ordering. silent_downgrade:false keeps the Opus fallback founder-visible."
+    },
+    {
+      "id": "claude-opus-4-8",
+      "alias": "opus",
+      "roles_qualified": [
+        "taste-canon",
+        "heavy-analysis",
+        "execution",
+        "independent-review"
+      ],
+      "role_scores": {
+        "taste-canon": 94,
+        "heavy-analysis": 96,
+        "execution": 88,
+        "independent-review": 94
+      },
+      "capability_scores": {
+        "strategic-judgment": 95,
+        "design-taste": 94,
+        "architecture": 97,
+        "debugging": 96,
+        "coding": 91,
+        "research": 95,
+        "review-quality": 95,
+        "context-length": 94,
+        "precision": 93
+      },
+      "capability_evidence": {
+        "roles": {
+          "taste-canon": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified assessment"
+          },
+          "heavy-analysis": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified comparative benchmarks"
+          },
+          "execution": {
+            "confidence": "medium",
+            "as_of": "2026-07-14",
+            "source": "ratified assessment"
+          },
+          "independent-review": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified assessment"
+          }
+        },
+        "capabilities": {
+          "precision": {
+            "confidence": "medium",
+            "as_of": "2026-07-16",
+            "source": "agent-researched, cross-provider reviewed APPROVE (gpt-5.6-sol 2026-07-17); provenance refresh-notes/2026-07-16-capability-evidence.md; empirical capability posterior corrects"
+          }
+        }
+      },
+      "execution_observations": {
+        "last_success": "execution:last-success:claude-opus-4-8",
+        "last_failure": "execution:last-failure:claude-opus-4-8"
+      },
+      "quality_rank": 90,
+      "provider": "anthropic",
+      "budget": "anthropic-max",
+      "cost_class": "top",
+      "latency_class": "slow",
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "effort_controls": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high",
+        "maximum": "max",
+        "multi-agent": "medium"
+      },
+      "pricing": "$5/$25 per MTok (input/output) — confirmed 2026-07-09",
+      "requires_calibre_line": true,
+      "status": "current",
+      "lifecycle_state": "qualified",
+      "capabilities": {
+        "qualified": [
+          "research",
+          "copywriting",
+          "design-judgment",
+          "coding"
+        ],
+        "review": [
+          "code",
+          "copy",
+          "canon-structure"
+        ],
+        "evidence": "existing ratified role assessment"
+      },
+      "strengths": [
+        "taste/craft judgment",
+        "canon writing",
+        "architecture + phase-gate review",
+        "red-team/steelman synthesis",
+        "SWE-bench Pro 69.2% vs GPT-5.5's 58.6% — stronger on complex multi-file engineering + root-cause bug tracing (DataCamp/MindStudio DeepSuite benchmarks, 2026-07-09)"
+      ],
+      "weaknesses": [
+        "expensive for execution-from-spec and any fan-out",
+        "trails GPT-5.5 on agentic terminal/tool-use tasks (Terminal-Bench 2.0: 74.6% vs 82.7%)"
+      ],
+      "access_routes": [
+        {
+          "id": "anthropic:max:claude-code:claude-opus-4-8",
+          "provider": "anthropic",
+          "surface": "claude-code",
+          "account_scope": "founder-max",
+          "auth_mode": "claude_ai_subscription",
+          "billing_mode": "subscription_included",
+          "access_methods": [
+            "session",
+            "agent-model-param"
+          ],
+          "catalog_observation": "catalog:anthropic:max:claude-code:claude-opus-4-8",
+          "entitlement_observation": "entitlement:anthropic:max:claude-code:claude-opus-4-8",
+          "spend_guard_observation": "spend-guard:anthropic:founder-max",
+          "quota_resources": [
+            "anthropic-max-session",
+            "anthropic-max-weekly"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "claude-sonnet-5",
+      "alias": "sonnet",
+      "roles_qualified": [
+        "execution",
+        "fan-out",
+        "independent-review"
+      ],
+      "role_scores": {
+        "execution": 89,
+        "fan-out": 88,
+        "independent-review": 86
+      },
+      "capability_scores": {
+        "coding": 90,
+        "agentic-tool-execution": 87,
+        "precision": 87,
+        "speed": 86,
+        "research": 85,
+        "review-quality": 85
+      },
+      "capability_evidence": {
+        "roles": {
+          "execution": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified assessment"
+          },
+          "fan-out": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified assessment"
+          },
+          "independent-review": {
+            "confidence": "medium",
+            "as_of": "2026-07-14",
+            "source": "ratified assessment"
+          }
+        }
+      },
+      "execution_observations": {
+        "last_success": "execution:last-success:claude-sonnet-5",
+        "last_failure": "execution:last-failure:claude-sonnet-5"
+      },
+      "quality_rank": 60,
+      "provider": "anthropic",
+      "budget": "anthropic-max",
+      "cost_class": "mid",
+      "latency_class": "balanced",
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "effort_controls": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high",
+        "maximum": "max",
+        "multi-agent": "medium"
+      },
+      "pricing": "$3/$15 per MTok, intro $2/$10 through 2026-08-31 — confirmed 2026-07-09",
+      "requires_calibre_line": false,
+      "status": "current",
+      "lifecycle_state": "qualified",
+      "capabilities": {
+        "qualified": [
+          "research",
+          "coding",
+          "layout-ui-production"
+        ],
+        "review": [
+          "code"
+        ],
+        "evidence": "existing ratified role assessment"
+      },
+      "strengths": [
+        "implementation from a complete spec",
+        "parallel lens research / casting / scans",
+        "document analysis + extraction",
+        "audits with explicit criteria"
+      ],
+      "weaknesses": [
+        "not for final buyer-facing taste calls or canon writing"
+      ],
+      "access_routes": [
+        {
+          "id": "anthropic:max:claude-code:claude-sonnet-5",
+          "provider": "anthropic",
+          "surface": "claude-code",
+          "account_scope": "founder-max",
+          "auth_mode": "claude_ai_subscription",
+          "billing_mode": "subscription_included",
+          "access_methods": [
+            "session",
+            "agent-model-param"
+          ],
+          "catalog_observation": "catalog:anthropic:max:claude-code:claude-sonnet-5",
+          "entitlement_observation": "entitlement:anthropic:max:claude-code:claude-sonnet-5",
+          "spend_guard_observation": "spend-guard:anthropic:founder-max",
+          "quota_resources": [
+            "anthropic-max-session",
+            "anthropic-max-weekly"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "claude-haiku-4-5",
+      "alias": "haiku",
+      "roles_qualified": [
+        "mechanical"
+      ],
+      "role_scores": {
+        "mechanical": 82
+      },
+      "capability_scores": {
+        "mechanical-reliability": 82,
+        "speed": 90,
+        "precision": 78
+      },
+      "capability_evidence": {
+        "roles": {
+          "mechanical": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified assessment"
+          }
+        }
+      },
+      "execution_observations": {
+        "last_success": "execution:last-success:claude-haiku-4-5",
+        "last_failure": "execution:last-failure:claude-haiku-4-5"
+      },
+      "quality_rank": 30,
+      "provider": "anthropic",
+      "budget": "anthropic-max",
+      "cost_class": "low",
+      "latency_class": "fast",
+      "supported_efforts": [
+        "low",
+        "medium"
+      ],
+      "effort_controls": {
+        "low": "low",
+        "medium": "medium",
+        "high": "medium",
+        "maximum": "medium",
+        "multi-agent": "low"
+      },
+      "pricing": "$1/$5 per MTok — confirmed 2026-07-09; dated API id claude-haiku-4-5-20251001, 200K context, 64K max output",
+      "requires_calibre_line": false,
+      "status": "current",
+      "lifecycle_state": "qualified",
+      "capabilities": {
+        "qualified": [],
+        "review": [],
+        "evidence": "existing ratified mechanical-only assessment"
+      },
+      "strengths": [
+        "mechanical sweeps",
+        "file inventory / triage",
+        "search fan-outs",
+        "formatting, link + status checks"
+      ],
+      "weaknesses": [
+        "no judgment work of any kind"
+      ],
+      "access_routes": [
+        {
+          "id": "anthropic:max:claude-code:claude-haiku-4-5",
+          "provider": "anthropic",
+          "surface": "claude-code",
+          "account_scope": "founder-max",
+          "auth_mode": "claude_ai_subscription",
+          "billing_mode": "subscription_included",
+          "access_methods": [
+            "session",
+            "agent-model-param"
+          ],
+          "catalog_observation": "catalog:anthropic:max:claude-code:claude-haiku-4-5",
+          "entitlement_observation": "entitlement:anthropic:max:claude-code:claude-haiku-4-5",
+          "spend_guard_observation": "spend-guard:anthropic:founder-max",
+          "quota_resources": [
+            "anthropic-max-session",
+            "anthropic-max-weekly"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gpt-5.5",
+      "alias": "codex",
+      "roles_qualified": [
+        "heavy-analysis",
+        "execution",
+        "mechanical",
+        "independent-review"
+      ],
+      "role_scores": {
+        "heavy-analysis": 88,
+        "execution": 84,
+        "mechanical": 78,
+        "independent-review": 90
+      },
+      "capability_scores": {
+        "architecture": 84,
+        "debugging": 84,
+        "coding": 88,
+        "agentic-tool-execution": 93,
+        "precision": 88,
+        "research": 87,
+        "review-quality": 90,
+        "context-length": 88
+      },
+      "capability_evidence": {
+        "roles": {
+          "heavy-analysis": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified comparative benchmarks"
+          },
+          "execution": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified comparative benchmarks"
+          },
+          "mechanical": {
+            "confidence": "medium",
+            "as_of": "2026-07-14",
+            "source": "ratified assessment"
+          },
+          "independent-review": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified comparative benchmarks"
+          }
+        }
+      },
+      "execution_observations": {
+        "last_success": "execution:last-success:gpt-5.5",
+        "last_failure": "execution:last-failure:gpt-5.5"
+      },
+      "quality_rank": 70,
+      "provider": "openai",
+      "budget": "openai-codex",
+      "cost_class": "high",
+      "latency_class": "balanced",
+      "default_effort": "xhigh",
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "effort_controls": {
+        "low": "low",
+        "medium": "medium",
+        "high": "xhigh",
+        "maximum": "max",
+        "multi-agent": "medium"
+      },
+      "requires_calibre_line": false,
+      "status": "current",
+      "lifecycle_state": "qualified",
+      "capabilities": {
+        "qualified": [
+          "research",
+          "coding",
+          "layout-ui-production"
+        ],
+        "review": [
+          "code",
+          "ui-ux",
+          "copy"
+        ],
+        "evidence": "existing ratified role assessment"
+      },
+      "strengths": [
+        "independent second perspective (de-correlated from Claude — LES-048)",
+        "Terminal-Bench 2.0 leader (82.7% vs Opus 4.8's 74.6%) — the strongest tier for agentic/terminal execution and verifying rendered/executed artifacts",
+        "near-ties SWE-bench Verified (88.7% vs Opus 4.8's 88.6%)",
+        "UI/UX + copy verification on rendered artifacts",
+        "precise well-specced code review",
+        "well-specced implementation; relieves the anthropic weekly cap"
+      ],
+      "weaknesses": [
+        "trails Opus 4.8 on SWE-bench Pro (58.6% vs 69.2%) — weaker on complex multi-file engineering + root-cause bug tracing (DataCamp/MindStudio DeepSuite, 2026-07-09), which is why it's the review lane, not a build-primary",
+        "not the taste/canon author for this studio's craft bar",
+        "no Claude-Code Agent-param access — reach via `codex exec`"
+      ],
+      "access_routes": [
+        {
+          "id": "openai:chatgpt:codex:gpt-5.5",
+          "provider": "openai",
+          "surface": "codex",
+          "account_scope": "founder-chatgpt",
+          "auth_mode": "chatgpt_subscription",
+          "billing_mode": "subscription_included",
+          "access_methods": [
+            "codex-session",
+            "codex-exec-cli"
+          ],
+          "catalog_observation": "catalog:openai:chatgpt:codex:gpt-5.5",
+          "entitlement_observation": "entitlement:openai:chatgpt:codex:gpt-5.5",
+          "spend_guard_observation": "spend-guard:openai:founder-chatgpt",
+          "quota_resources": [
+            "openai-codex-weekly"
+          ]
+        }
+      ],
+      "notes": "Review-lane FALLBACK since 2026-07-10 (gpt-5.6-sol ratified as primary); still slotted in the heavy-analysis/execution/mechanical ladders. Still available from OpenAI — no deprecation date (the 2026-07-23 sunsets cover the 5.2/5.3-codex era). The codex-cli default now runs sol, so reach THIS model explicitly: `codex exec -m gpt-5.5 --sandbox read-only`. The strengths/weaknesses above are verified claims about THIS id and never transfer to a successor (identity vs binding). History: the 2026-07-09 refresh caught a fabricated 'gpt-5.5-codex' id here — that manual catch is what the runtime_bindings resolver automates."
+    },
+    {
+      "id": "gpt-5.6-sol",
+      "alias": "sol",
+      "roles_qualified": [
+        "heavy-analysis",
+        "execution",
+        "independent-review"
+      ],
+      "role_scores": {
+        "heavy-analysis": 95,
+        "execution": 89,
+        "independent-review": 96
+      },
+      "capability_scores": {
+        "architecture": 94,
+        "debugging": 94,
+        "coding": 96,
+        "agentic-tool-execution": 98,
+        "precision": 94,
+        "research": 94,
+        "review-quality": 96,
+        "context-length": 99,
+        "design-judgment": 88,
+        "copywriting": 85,
+        "strategic-judgment": 84
+      },
+      "capability_evidence": {
+        "roles": {
+          "heavy-analysis": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified comparative benchmarks"
+          },
+          "execution": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified comparative benchmarks"
+          },
+          "independent-review": {
+            "confidence": "high",
+            "as_of": "2026-07-14",
+            "source": "ratified comparative benchmarks"
+          }
+        },
+        "capabilities": {
+          "design-judgment": {
+            "confidence": "medium",
+            "as_of": "2026-07-16",
+            "source": "agent-researched, cross-provider reviewed APPROVE (gpt-5.6-sol 2026-07-17); provenance refresh-notes/2026-07-16-capability-evidence.md; empirical capability posterior corrects"
+          },
+          "copywriting": {
+            "confidence": "medium",
+            "as_of": "2026-07-16",
+            "source": "agent-researched, cross-provider reviewed APPROVE (gpt-5.6-sol 2026-07-17); provenance refresh-notes/2026-07-16-capability-evidence.md; empirical capability posterior corrects"
+          },
+          "strategic-judgment": {
+            "confidence": "medium",
+            "as_of": "2026-07-16",
+            "source": "agent-researched, cross-provider reviewed APPROVE (gpt-5.6-sol 2026-07-17); provenance refresh-notes/2026-07-16-capability-evidence.md; empirical capability posterior corrects"
+          }
+        }
+      },
+      "execution_observations": {
+        "last_success": "execution:last-success:gpt-5.6-sol",
+        "last_failure": "execution:last-failure:gpt-5.6-sol"
+      },
+      "quality_rank": 88,
+      "provider": "openai",
+      "budget": "openai-codex",
+      "cost_class": "high",
+      "latency_class": "balanced",
+      "default_effort": "xhigh",
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra"
+      ],
+      "effort_controls": {
+        "low": "low",
+        "medium": "medium",
+        "high": "xhigh",
+        "maximum": "max",
+        "multi-agent": "medium"
+      },
+      "pricing": "$5/$30 per MTok (input/output) — sourced 2026-07-10 (OpenAI help center/QCode/AA); not yet live-API-verified (no key in the assessing env)",
+      "requires_calibre_line": false,
+      "status": "current",
+      "lifecycle_state": "qualified",
+      "capabilities": {
+        "qualified": [
+          "research",
+          "coding",
+          "layout-ui-production"
+        ],
+        "review": [
+          "code",
+          "ui-ux",
+          "copy"
+        ],
+        "evidence": "existing ratified role assessment"
+      },
+      "strengths": [
+        "independent second perspective (de-correlated from Claude — LES-048)",
+        "Terminal-Bench 2.1 leader among ledger models: 88.8% vs gpt-5.5's 83.4% and Opus 4.8's 78.9% — the strongest tier for agentic/terminal execution and verifying rendered/executed artifacts",
+        "leads every eval in the AA Coding Agent Index (80; DeepSWE, TB v2, SWE-Atlas-QnA) at ~$1.04/task — ~10% cheaper per task than Opus 4.8",
+        "≈ gpt-5.5's price point with better capability; slightly fewer output tokens per task",
+        "1.05M context / 128K max output; new 'max' effort + ultra mode"
+      ],
+      "weaknesses": [
+        "AA measured a HIGHER hallucination rate than gpt-5.5 alongside the accuracy uplift — watch own review-quality evidence; reviewer output is data, never doctrine (the standing mitigation)",
+        "SWE-bench Pro / multi-file root-cause numbers not yet published — gpt-5.5's weakness there is unverified either way for Sol; stays review lane, not a build-primary",
+        "first-week benchmarks; zero own-evidence rows yet",
+        "no Claude-Code Agent-param access — reach via `codex exec`"
+      ],
+      "access_routes": [
+        {
+          "id": "openai:chatgpt:codex:gpt-5.6-sol",
+          "provider": "openai",
+          "surface": "codex",
+          "account_scope": "founder-chatgpt",
+          "auth_mode": "chatgpt_subscription",
+          "billing_mode": "subscription_included",
+          "access_methods": [
+            "codex-session",
+            "codex-exec-cli"
+          ],
+          "catalog_observation": "catalog:openai:chatgpt:codex:gpt-5.6-sol",
+          "entitlement_observation": "entitlement:openai:chatgpt:codex:gpt-5.6-sol",
+          "spend_guard_observation": "spend-guard:openai:founder-chatgpt",
+          "quota_resources": [
+            "openai-codex-weekly"
+          ]
+        }
+      ],
+      "notes": "RATIFIED 2026-07-10 (phase (b) executed same day — see refresh-notes/2026-07-10.md for sources): independent-review primary + the codex-cli assessed binding. Previewed 2026-06-26, GA via API + Codex 2026-07-09. From Claude Code: `codex exec --sandbox read-only` (the CLI's live default IS this model). Entered the ledger 2026-07-10 as an unassessed identity record when the resolver caught the binding move — assessed and ratified the same day."
+    },
+    {
+      "id": "gpt-5.6-terra",
+      "alias": "terra",
+      "provider": "openai",
+      "budget": "openai-codex",
+      "cost_class": "mid",
+      "latency_class": "fast",
+      "pricing": "$2.50/$15 per MTok (input/output) — OpenAI, confirmed 2026-07-11 (WebSearch: OpenAI/DataCamp/Vellum/Finout)",
+      "default_effort": "medium",
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra"
+      ],
+      "effort_controls": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high",
+        "maximum": "max",
+        "multi-agent": "medium"
+      },
+      "requires_calibre_line": false,
+      "status": "current",
+      "lifecycle_state": "qualified",
+      "roles_qualified": [
+        "execution",
+        "fan-out"
+      ],
+      "role_scores": {
+        "execution": 91,
+        "fan-out": 90
+      },
+      "capability_scores": {
+        "coding": 92,
+        "agentic-tool-execution": 92,
+        "precision": 89,
+        "speed": 94
+      },
+      "capability_evidence": {
+        "roles": {
+          "execution": {
+            "confidence": "medium",
+            "as_of": "2026-07-14",
+            "source": "ratified lean public evidence"
+          },
+          "fan-out": {
+            "confidence": "medium",
+            "as_of": "2026-07-14",
+            "source": "ratified lean public evidence"
+          }
+        }
+      },
+      "execution_observations": {
+        "last_success": "execution:last-success:gpt-5.6-terra",
+        "last_failure": "execution:last-failure:gpt-5.6-terra"
+      },
+      "capabilities": {
+        "qualified": [
+          "coding",
+          "layout-ui-production"
+        ],
+        "review": [],
+        "evidence": "existing ratified execution/fan-out assessment"
+      },
+      "quality_rank": 55,
+      "strengths": [
+        "OpenAI list price $2.50/$15 — half Sol's token price (SOURCED, not assessed)",
+        "OpenAI positions Terra as 'competitive with GPT-5.5' (PROVIDER CLAIM, GA 2026-07-09)",
+        "THIRD-PARTY: AA Coding Agent Index 77.4 (Artificial Analysis, at GA) — not own-evidence"
+      ],
+      "weaknesses": [
+        "STUDIO qualification is execution/fan-out ONLY — NOT taste-canon, NOT the frontier heavy lane (that is Sol)",
+        "zero studio own-evidence rows yet (first-week model)",
+        "no Claude-Code Agent-param access — reach via codex exec"
+      ],
+      "access_routes": [
+        {
+          "id": "openai:chatgpt:codex:gpt-5.6-terra",
+          "provider": "openai",
+          "surface": "codex",
+          "account_scope": "founder-chatgpt",
+          "auth_mode": "chatgpt_subscription",
+          "billing_mode": "subscription_included",
+          "access_methods": [
+            "codex-session",
+            "codex-exec-cli"
+          ],
+          "catalog_observation": "catalog:openai:chatgpt:codex:gpt-5.6-terra",
+          "entitlement_observation": "entitlement:openai:chatgpt:codex:gpt-5.6-terra",
+          "spend_guard_observation": "spend-guard:openai:founder-chatgpt",
+          "quota_resources": [
+            "openai-codex-weekly"
+          ]
+        }
+      ],
+      "notes": "Assessed-LEAN 2026-07-11 (FR-224) from PUBLIC evidence only (GA 2026-07-09): sourced price + OpenAI positioning + one third-party benchmark, kept SEPARATE from the studio's own qualification (execution/fan-out) per the cross-provider review (Sol finding #12). Sol/Terra/Luna are DURABLE tier names; the generation number floats (identity-vs-binding). Discovered live in `codex debug models` (visibility:list, priority 2, api-reachable). WATCH: the AA hallucination uptick was measured for SOL specifically — carried as a family watch item, NOT a measured Terra finding; own review-quality evidence outranks it (data, never doctrine)."
+    },
+    {
+      "id": "gpt-5.6-luna",
+      "alias": "luna",
+      "provider": "openai",
+      "budget": "openai-codex",
+      "cost_class": "low",
+      "latency_class": "fast",
+      "pricing": "$1/$6 per MTok (input/output) — OpenAI, confirmed 2026-07-11 (WebSearch: OpenAI/DataCamp/Vellum/Finout)",
+      "default_effort": "low",
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "effort_controls": {
+        "low": "low",
+        "medium": "medium",
+        "high": "high",
+        "maximum": "max",
+        "multi-agent": "low"
+      },
+      "requires_calibre_line": false,
+      "status": "current",
+      "lifecycle_state": "qualified",
+      "roles_qualified": [
+        "mechanical"
+      ],
+      "role_scores": {
+        "mechanical": 86
+      },
+      "capability_scores": {
+        "mechanical-reliability": 86,
+        "speed": 96,
+        "precision": 84
+      },
+      "capability_evidence": {
+        "roles": {
+          "mechanical": {
+            "confidence": "medium",
+            "as_of": "2026-07-14",
+            "source": "ratified lean public evidence"
+          }
+        }
+      },
+      "execution_observations": {
+        "last_success": "execution:last-success:gpt-5.6-luna",
+        "last_failure": "execution:last-failure:gpt-5.6-luna"
+      },
+      "capabilities": {
+        "qualified": [],
+        "review": [],
+        "evidence": "existing ratified mechanical-only assessment"
+      },
+      "quality_rank": 35,
+      "strengths": [
+        "OpenAI list price $1/$6 — the cheapest GPT-5.6 tier (SOURCED)",
+        "OpenAI positions Luna for high-volume / latency-sensitive work (PROVIDER CLAIM)",
+        "THIRD-PARTY: AA Coding Agent Index 74.6, DeepSWE 67.2% (Artificial Analysis) — a coding aggregate, not own-evidence and not a fan-out-reliability measure"
+      ],
+      "weaknesses": [
+        "STUDIO qualification is mechanical ONLY (fan-out floor is the mid tier — Luna is a low-reasoning lane, not for judgment-concentrated work incl. fan-out research)",
+        "zero studio own-evidence rows yet",
+        "no Claude-Code Agent-param access — reach via codex exec"
+      ],
+      "access_routes": [
+        {
+          "id": "openai:chatgpt:codex:gpt-5.6-luna",
+          "provider": "openai",
+          "surface": "codex",
+          "account_scope": "founder-chatgpt",
+          "auth_mode": "chatgpt_subscription",
+          "billing_mode": "subscription_included",
+          "access_methods": [
+            "codex-session",
+            "codex-exec-cli"
+          ],
+          "catalog_observation": "catalog:openai:chatgpt:codex:gpt-5.6-luna",
+          "entitlement_observation": "entitlement:openai:chatgpt:codex:gpt-5.6-luna",
+          "spend_guard_observation": "spend-guard:openai:founder-chatgpt",
+          "quota_resources": [
+            "openai-codex-weekly"
+          ]
+        }
+      ],
+      "notes": "Assessed-LEAN 2026-07-11 (FR-224) from PUBLIC evidence only (GA 2026-07-09): sourced price + positioning + third-party benchmarks, kept SEPARATE from the studio's qualification (mechanical; fan-out dropped to the mid-tier floor) per the cross-provider review (Sol finding #13). Discovered live in `codex debug models` (visibility:list, priority 3, api-reachable). WATCH: the AA hallucination uptick was measured for SOL, not Luna — family watch item only. A coding-index score does not establish autonomous-fan-out reliability; qualification stays mechanical/fan-out until own evidence earns more."
+    }
+  ],
+  "runtime_bindings": [
+    {
+      "id": "codex-cli",
+      "_comment": "A binding records what a CLI-backed lane ACTUALLY invokes right now — resolved live from the local config at every SessionStart — as distinct from model IDENTITY (the assessed entries above, whose evidence never silently transfers to a successor id). The health hook flags divergence (live != assessed_model) with the explicit `-m` invocation directive, and flags an id the ledger doesn't know as drift (add a NEW unassessed entry; never overwrite the assessed one). last_seen is HUMAN-recorded acknowledgment of what the resolver found — the hooks never write this file.",
+      "assessed_model": "gpt-5.6-sol",
+      "resolution": {
+        "method": "local-config",
+        "source": "codex-cli",
+        "config_path": "$CODEX_HOME/config.toml (fallback: ~/.codex/config.toml on POSIX, %USERPROFILE%\\.codex\\config.toml on Windows)",
+        "field": "model",
+        "effort_field": "model_reasoning_effort"
+      },
+      "last_seen": {
+        "id": "gpt-5.6-sol",
+        "effort": "high",
+        "at": "2026-07-13"
+      }
+    }
+  ],
+  "roles": {
+    "taste-canon": {
+      "job": "Buyer-facing craft authorship + judgment; DEC/LES/doctrine writing; verdicts. The scarce lane — reserve it for what only it can do.",
+      "effort": "high",
+      "notes": "Current ordering is computed from qualified model role_scores, evidence, and route state; no provider-local ladder is stored here."
+    },
+    "heavy-analysis": {
+      "job": "Research synthesis, long-context reconciliation, architecture, plan review. High judgment, no new taste at stake.",
+      "effort": "high",
+      "notes": "Current ordering is computed globally from role_scores, evidence, and route state."
+    },
+    "execution": {
+      "job": "Executing an already-locked decision into code/artifacts from a complete spec.",
+      "effort": "medium"
+    },
+    "fan-out": {
+      "job": "Parallel lens research, reference casting, signal scans. Wide + cheap; a taste judge curates.",
+      "effort": "medium"
+    },
+    "mechanical": {
+      "job": "Commits, stamps, lints, capture loops, fixed-script re-runs.",
+      "effort": "low"
+    },
+    "independent-review": {
+      "job": "Cross-provider review — ALWAYS a provider different from the author, globally ranked among qualified review models.",
+      "effort": "high",
+      "notes": "Provider exclusion is a task requirement. If no different-provider candidate clears the review floor, record review: pending."
+    }
+  },
+  "review_policy": [
+    {
+      "surface": "buyer-facing UI/UX + copy",
+      "review": "cross-provider ALWAYS (invariant — idea-lab DEC-121); depth scales with stakes, never skipped",
+      "self_review_first": true
+    },
+    {
+      "surface": "canon / doctrine / framework structure",
+      "review": "self-review always; cross-provider on structural changes and at audit cadence",
+      "self_review_first": true
+    },
+    {
+      "surface": "production code / irreversible or outward-facing actions",
+      "review": "cross-provider before merge/deploy/send",
+      "self_review_first": true
+    },
+    {
+      "surface": "research, drafts, scratch",
+      "review": "downstream taste-judge curates; no cross-provider loop",
+      "self_review_first": false
+    },
+    {
+      "surface": "mechanical output",
+      "review": "none (verified by gates/CI where they exist)",
+      "self_review_first": false
+    }
+  ],
+  "selection_policy": {
+    "_comment": "Founder directive 2026-07-15: select.mjs is the single provider-neutral routing kernel. roles_qualified is the quality floor; role_scores and capability_scores rank exact task fit; evidence confidence follows; cost and latency break only effective ties. Provider and entry surface are transport metadata with zero ranking weight.",
+    "provider_local": false,
+    "provider_identity_weight": 0,
+    "ranking_order": [
+      "safety-and-feasibility",
+      "task-specific-capability",
+      "evidence-confidence",
+      "cost-and-latency"
+    ],
+    "surfaces": [
+      "claude-code",
+      "codex"
+    ],
+    "black_state": "explicit-only",
+    "black_state_note": "BLACK-STATE is emitted only when every qualified safe candidate is explicitly unavailable/exhausted or no safe route exists. Missing/unknown telemetry never implies it.",
+    "shadow_mode": true,
+    "shadow_note": "select.mjs logs selected-vs-session-model to $MODEL_OS_STATE_DIR/shadow.log.jsonl (opt-in: only when the dir exists) — the evidence that will decide whether a front-door router earns its complexity (Phase 3).",
+    "wired": "The selector returns selected + the remaining globally ranked qualified fallbacks. Dispatcher consumes that exact order. Hooks call the same kernel and treat unknown quota as attemptable only after safe subscription authentication is verified."
+  },
+  "caps": {
+    "fanout_width_default": 6,
+    "fanout_width_max": 20,
+    "fanout_width_note": "A wider fan-out is fine when the task genuinely needs it — state the width + why in effortJustification BEFORE launching; the hard maximum is 20 (LES-105: 2 research agents self-expanded to 5 and burned ~450k tokens on a single-job product).",
+    "subagent_respawn": "Subagents do NOT spawn their own subagents unless the orchestrator's plan names it explicitly.",
+    "top_tier_calibre_line": "Any subagent launch on a requires_calibre_line model must carry 'calibre: <role> — <one-line why>' in its prompt; the gate hook blocks it otherwise.",
+    "scheduled_runs_max_role": "fan-out",
+    "scheduled_runs_note": "Scheduled/recurring tasks are the biggest silent burner and can't pin a model — keep the app default on the fan-out tier and route heavy work DOWN from the prompt, never up."
+  },
+  "acknowledged_candidates": {
+    "_comment": "Ids AND families the refresh loop surfaced and the founder reviewed WITHOUT adopting — they stop re-appearing as proposals every cycle (alert fatigue is how a loud mechanism decays into a silent one). Acknowledging is 'seen, declined for now', never 'never': remove an entry to re-surface it. Genuinely NEW ids in tracked families always surface; an UNTRACKED family surfaces as one aggregated proposal until its family is acknowledged here (2026-07-10: families added — previously untracked families were silently dropped from proposals).",
+    "acknowledged_at": "2026-07-09",
+    "families": [
+      "o"
+    ],
+    "families_note": "'o' acknowledged 2026-07-10: the o-series was live and visible in the 2026-07-09 review the founder ratified; it was excluded from the roster then. Remove to re-surface.",
+    "ids": [
+      "claude-opus-4-7",
+      "claude-opus-4-6",
+      "claude-sonnet-4-6",
+      "claude-sonnet-4-5-20250929",
+      "gpt-5.3-codex",
+      "gpt-5.3-chat-latest",
+      "gpt-5.4",
+      "gpt-5.4-2026-03-05",
+      "gpt-5.4-pro",
+      "gpt-5.4-pro-2026-03-05",
+      "gpt-5.4-mini",
+      "gpt-5.4-mini-2026-03-17",
+      "gpt-5.4-nano",
+      "gpt-5.4-nano-2026-03-17"
+    ]
+  },
+  "providers_extension": "To add a provider: implement and register the versioned provider-registry execution/discovery adapter contract with observed identity and usage telemetry, declare a safe executable zero-spend route, discover the candidate identity, collect task-specific capability and effort evidence, run the bounded evaluation corpus, and promote only after the policy threshold. Adapter registration never grants qualification; provider identity never changes ranking.",
+  "runtime_bindings_extension": "Any CLI-backed lane whose live model is readable from a LOCAL config file gets a runtime_bindings element (see codex-cli): id (the CLI's name, display-only) · assessed_model (the ledger entry roles actually route to — its evidence stays attached to ITS id forever) · resolution {method 'local-config' · source · config_path ('$VAR/... (fallback: ~/..., %VAR%\\...)' syntax — env tokens + ~ expanded, fallbacks tried in order by hooks/resolve-local-models.mjs) · field · optional effort_field} · last_seen {id, effort, at} (human-recorded acknowledgment of resolver output). The SessionStart health hook re-resolves the live file every session: live == assessed -> in sync; live == another ledger entry -> BINDING DIVERGENCE flag with the explicit `-m <assessed>` directive; live unknown to the ledger -> LEDGER DRIFT flag (add a NEW unassessed entry — NEVER overwrite the assessed entry's id in place, that would silently re-attach its capability evidence to an unassessed successor). The hook flags, a human edits; it NEVER self-writes. A resolver that can't find the file/field fails soft (the CLI may not be installed here) — absence is not drift."
+}
