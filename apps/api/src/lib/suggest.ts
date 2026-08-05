@@ -8,6 +8,11 @@ import {
 } from "../db/schema.js";
 import { embedQuery, embedDocuments, cosineSimilarity } from "./embeddings.js";
 import { tokenize } from "./tokenize.js";
+import {
+  aliasTermsFor,
+  ALIAS_PRIMARY_WEIGHT,
+  ALIAS_SECONDARY_WEIGHT,
+} from "./search-aliases.js";
 import { determineBadge } from "./trust-helpers.js";
 import { log, logError, logWarn } from "./log.js";
 
@@ -47,6 +52,12 @@ interface CatalogItem {
   embedding: number[];
   embeddingText: string;
   tokens: Set<string>;
+  /**
+   * Tokens from the name and slug only — what the item *is*, as opposed to
+   * everything it mentions. Used to rank alias matches, where a description
+   * mention is much weaker evidence than a name match.
+   */
+  primaryTokens: Set<string>;
   trustSummary?: TrustSummary;
 }
 
@@ -234,6 +245,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           embedding: [],
           embeddingText,
           tokens: tokenize(tokenText),
+          primaryTokens: tokenize(`${sol.name} ${sol.slug}`),
         };
       });
 
@@ -277,6 +289,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           embedding: [],
           embeddingText,
           tokens: tokenize(tokenText),
+          primaryTokens: tokenize(`${cap.name} ${cap.slug}`),
         };
       });
 
@@ -502,6 +515,10 @@ export async function typeahead(
     return { results: [], total: 0 };
   }
 
+  // Vocabulary bridge: "fx" should reach exchange-rate even though the catalog
+  // never uses the word. Scored below a direct hit so literal matches win.
+  const aliasTerms = aliasTermsFor(qWords);
+
   const scored: Array<{ item: CatalogItem; score: number; snippet?: string; _alsoAvailable?: string[] }> = [];
 
   for (const item of items) {
@@ -513,6 +530,11 @@ export async function typeahead(
     // Token matching: +1 for each query word found in item tokens
     for (const word of qWords) {
       if (item.tokens.has(word)) score++;
+    }
+
+    for (const term of aliasTerms) {
+      if (item.primaryTokens.has(term)) score += ALIAS_PRIMARY_WEIGHT;
+      else if (item.tokens.has(term)) score += ALIAS_SECONDARY_WEIGHT;
     }
 
     // Exact slug match: +2
@@ -893,12 +915,21 @@ function suggestKeyword(
     };
   }
 
+  // Same vocabulary bridge as typeahead — this path runs whenever
+  // VOYAGE_API_KEY is absent, so it must not be blind to synonyms the
+  // typeahead surface understands.
+  const aliasTerms = aliasTermsFor([...queryTokens]);
+
   const scored: Array<{ item: CatalogItem; score: number }> = [];
 
   for (const item of items) {
     let score = 0;
     for (const token of queryTokens) {
       if (item.tokens.has(token)) score++;
+    }
+    for (const term of aliasTerms) {
+      if (item.primaryTokens.has(term)) score += ALIAS_PRIMARY_WEIGHT;
+      else if (item.tokens.has(term)) score += ALIAS_SECONDARY_WEIGHT;
     }
     if (queryTokens.has(item.slug)) score += 2;
     if (item.type === "solution" && score > 0) score += 3;
