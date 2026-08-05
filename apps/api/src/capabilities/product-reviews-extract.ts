@@ -1,19 +1,26 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
+import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import Anthropic from "@anthropic-ai/sdk";
 
-// Product review extraction from Amazon, Trustpilot, Google, etc. via Browserless + Claude
+// Product review extraction from review and product pages via Browserless + Claude.
+// Trustpilot is NOT supported — see lib/tos-blocklist.ts.
 
 registerCapability("product-reviews-extract", async (input: CapabilityInput) => {
   const url =
     ((input.url as string) ?? (input.product_url as string) ?? (input.task as string) ?? "").trim();
   if (!url) {
     throw new Error(
-      "'url' or 'product_url' is required. Provide an Amazon, Trustpilot, or other product review page URL.",
+      "'url' or 'product_url' is required. Provide a product or review page URL — for example a first-party product page, or a Reviews.io / Feefo listing.",
     );
   }
 
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
+
+  // Before any network work: refuse targets whose ToS forbids automated access,
+  // so the caller gets a straight answer instead of the target's 403, and we
+  // burn no Browserless render or LLM tokens on a request we cannot serve.
+  assertTargetAllowed(fullUrl);
 
   // Extract domain for provenance
   let domain: string;
