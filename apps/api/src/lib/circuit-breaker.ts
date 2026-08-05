@@ -169,9 +169,16 @@ const USER_INPUT_ERROR_PATTERNS = [
   "This URL points to a PDF",    // url-to-markdown: PDF file
   "This URL points to an image", // url-to-markdown: image file
   "Could not repair JSON",       // json-repair: unrecoverable input
+  // capabilities/lib/tos-blocklist.ts: the caller asked for a site whose ToS
+  // forbids automated access. The executor worked correctly and declined, so
+  // this must not trip the breaker — otherwise a burst of Trustpilot URLs
+  // (28 arrived in 16 days) would take the capability down for everyone.
+  // Kept in sync with TOS_REFUSAL_MARKER by tos-blocklist.test.ts.
+  "Terms of Service prohibit automated access",
 ];
 
-function isUserInputError(reason: string): boolean {
+/** Exported so tests can assert the pattern list stays in sync with its producers. */
+export function isUserInputError(reason: string): boolean {
   return USER_INPUT_ERROR_PATTERNS.some((p) => reason.includes(p));
 }
 
