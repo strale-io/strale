@@ -25,6 +25,31 @@ const PROVIDER_NAMES = [
   /\bip-api\.com\b/gi,
 ];
 
+/**
+ * Hostname-shaped strings that must survive sanitization.
+ *
+ * The stripper exists to stop internal infrastructure hostnames leaking into
+ * customer-facing errors, but it cannot tell those from a vendor name we
+ * deliberately wrote into guidance. It ate one: the ToS refusal in
+ * capabilities/lib/tos-blocklist.ts points callers at compliant review
+ * platforms, and "Reviews.io" reached production as "[service]" — advice that
+ * names nothing. Entries here are public product names appearing in authored
+ * copy, never infrastructure.
+ *
+ * Matched case-insensitively as substrings of a hostname-shaped token.
+ */
+const HOSTNAME_ALLOWLIST = [
+  "error.message",
+  "error.code",
+  "schema.org",
+  // Compliant alternatives named by the ToS blocklist refusal messages.
+  "reviews.io",
+  "trustpilot.com",
+  "glassdoor.com",
+  "linkedin.com",
+  "patents.google.com",
+];
+
 export function sanitizeFailureReason(raw: string | null): string {
   if (!raw) return "Unknown error";
 
@@ -63,9 +88,7 @@ export function sanitizeFailureReason(raw: string | null): string {
   // Strip raw hostnames (but preserve common words that match the pattern)
   // Only strip if it looks like a real hostname (has dots, not just "error.message")
   msg = msg.replace(HOSTNAME_PATTERN, (match) => {
-    // Keep common words that happen to match hostname pattern
-    const keepPatterns = ["error.message", "error.code", "schema.org"];
-    if (keepPatterns.some((p) => match.includes(p))) return match;
+    if (HOSTNAME_ALLOWLIST.some((p) => match.toLowerCase().includes(p))) return match;
     return "[service]";
   });
 
