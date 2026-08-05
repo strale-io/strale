@@ -14,10 +14,20 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const { fetchRenderedHtml } = vi.hoisted(() => ({ fetchRenderedHtml: vi.fn() }));
+const { fetchRenderedHtml, messagesCreate } = vi.hoisted(() => ({
+  fetchRenderedHtml: vi.fn(),
+  messagesCreate: vi.fn(),
+}));
+
 vi.mock("./lib/browserless-extract.js", () => ({
   fetchRenderedHtml,
   htmlToText: (h: string) => h,
+}));
+
+vi.mock("@anthropic-ai/sdk", () => ({
+  default: class {
+    messages = { create: messagesCreate };
+  },
 }));
 
 import { getDirectExecutor } from "./index.js";
@@ -26,6 +36,7 @@ import "./product-reviews-extract.js";
 describe("product-reviews-extract ToS rejection", () => {
   beforeEach(() => {
     fetchRenderedHtml.mockReset();
+    messagesCreate.mockReset();
     process.env.ANTHROPIC_API_KEY = "test-key";
   });
 
@@ -62,16 +73,23 @@ describe("product-reviews-extract ToS rejection", () => {
     expect(message).toContain("Reviews.io");
   });
 
-  it("still fetches an allowed source (no over-blocking)", async () => {
+  it("still extracts from an allowed source (no over-blocking)", async () => {
     // consumerlab.com completed successfully in the same production window.
     fetchRenderedHtml.mockResolvedValueOnce("<html>reviews</html>");
+    messagesCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: '{"product_name":"Primaforce","average_rating":4.1}' }],
+    });
 
-    // The Anthropic call is not stubbed here, so this rejects *after* the
-    // fetch — which is all this test needs to prove: the guard let it past.
-    await exec()({ url: "https://www.consumerlab.com/primaforce/" }).catch(() => {});
+    const result = await exec()({ url: "https://www.consumerlab.com/primaforce/" });
 
-    expect(fetchRenderedHtml).toHaveBeenCalledTimes(1);
-    expect(fetchRenderedHtml).toHaveBeenCalledWith("https://www.consumerlab.com/primaforce/");
+    expect(fetchRenderedHtml).toHaveBeenCalledExactlyOnceWith(
+      "https://www.consumerlab.com/primaforce/",
+    );
+    expect(result.output).toMatchObject({
+      product_name: "Primaforce",
+      url: "https://www.consumerlab.com/primaforce/",
+    });
+    expect(result.provenance.source).toBe("consumerlab.com");
   });
 
   it("still requires a url, with guidance that no longer names Trustpilot", async () => {
