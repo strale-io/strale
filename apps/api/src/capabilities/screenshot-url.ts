@@ -3,6 +3,47 @@ import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
+/**
+ * Normalize the `wait_for` input into a Browserless wait directive.
+ *
+ * A number — or a numeric-looking string such as `"3"` — means "wait N
+ * seconds" and maps to `waitForTimeout` (ms). A non-numeric string is a CSS
+ * selector and maps to `waitForSelector`.
+ *
+ * Bug this guards (observed 2026-07 in x402 traffic): the previous code sent
+ * *any* string down the selector branch, so `wait_for:"3"` became
+ * `waitForSelector{selector:"3"}` — a bogus selector. Best case Browserless
+ * waits the full selector timeout and screenshots nothing extra; at the time
+ * the hosted instance rejected it outright with HTTP 400. Only a real JS
+ * `number` ever reached the intended timeout path.
+ *
+ * Seconds are clamped to [0, 30] (the executor's own abort budget is 40s).
+ */
+export function normalizeWaitFor(
+  raw: unknown,
+): { waitForTimeout: number } | { waitForSelector: { selector: string; timeout: number } } | null {
+  let seconds: number | undefined;
+  let selector: string | undefined;
+
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    seconds = raw;
+  } else if (typeof raw === "string") {
+    const s = raw.trim();
+    if (!s) return null;
+    if (/^\d+(\.\d+)?$/.test(s)) seconds = Number(s);
+    else selector = s;
+  }
+
+  if (seconds !== undefined) {
+    const clamped = Math.min(Math.max(seconds, 0), 30);
+    return { waitForTimeout: Math.round(clamped * 1000) };
+  }
+  if (selector) {
+    return { waitForSelector: { selector, timeout: 10000 } };
+  }
+  return null;
+}
+
 registerCapability("screenshot-url", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
   if (!url) throw new Error("'url' is required.");
@@ -10,7 +51,7 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
   const fullPage = input.full_page !== false;
   const viewportWidth = (input.viewport_width as number) ?? 1280;
   const viewportHeight = (input.viewport_height as number) ?? 800;
-  const waitFor = (input.wait_for as string | number) ?? undefined;
+  const waitDirective = normalizeWaitFor(input.wait_for);
 
   // F-0-006: Browserless fetches the URL from its own network. validateUrl
   // is the only layer we own — refuse private-IP / bad-scheme before forwarding.
@@ -34,10 +75,8 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
     viewport: { width: viewportWidth, height: viewportHeight },
   };
 
-  if (typeof waitFor === "number") {
-    bodyObj.waitForTimeout = waitFor * 1000;
-  } else if (typeof waitFor === "string") {
-    bodyObj.waitForSelector = { selector: waitFor, timeout: 10000 };
+  if (waitDirective) {
+    Object.assign(bodyObj, waitDirective);
   }
 
   const response = await fetch(endpoint, {
