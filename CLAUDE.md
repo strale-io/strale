@@ -293,7 +293,7 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 
 **Trigger:** the session prompt mentions a PR on a framework repo (Pipedream, LangFlow, Flowise, pydantic-ai, langchain, crewAI, agno, composio, semantic-kernel, awesome-list, etc.), OR modifies files under `packages/*-strale/`, OR edits PyPI/npm publication metadata.
 
-**Background:** on 2026-04-21 the pydantic-ai maintainer DouweM closed `pydantic/pydantic-ai#4866` with "Shame on you" after finding that the published `pydantic-ai-strale` package contained zero pydantic-ai-specific code. An audit found two more packages with the same gap (`google-adk-strale`, `openai-agents-strale`). A prior agent session (2026-04-18) had edited the PR to trim promotional prose but did not verify the code example's imports. See `CONTAINMENT_REPORT.md` for the full incident.
+**Background:** on 2026-04-21 the pydantic-ai maintainer DouweM closed `pydantic/pydantic-ai#4866` with "Shame on you" after finding that the published `pydantic-ai-strale` package contained zero pydantic-ai-specific code. An audit found two more packages with the same gap (`google-adk-strale`, `openai-agents-strale`). A prior agent session (2026-04-18) had edited the PR to trim promotional prose but did not verify the code example's imports. See `archive/sessions/CONTAINMENT_REPORT.md` for the full incident.
 
 **Required steps (non-negotiable):**
 

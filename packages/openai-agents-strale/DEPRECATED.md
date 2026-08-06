@@ -4,7 +4,7 @@
 
 ## Why
 
-The published package contained a generic HTTP client (`StraleClient`) rather than an OpenAI-Agents-SDK-specific integration. The package name implied a tighter integration than the code delivered. The package has been voluntarily deprecated in favor of the canonical integration paths. See the `CONTAINMENT_REPORT.md` at the repo root for context.
+The published package contained a generic HTTP client (`StraleClient`) rather than an OpenAI-Agents-SDK-specific integration. The package name implied a tighter integration than the code delivered. The package has been voluntarily deprecated in favor of the canonical integration paths. See `archive/sessions/CONTAINMENT_REPORT.md` for context.
 
 ## What to use instead
 

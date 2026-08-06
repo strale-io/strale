@@ -46,6 +46,14 @@ describe("isTransientDbConnectError", () => {
     expect(isTransientDbConnectError(errWithCode("canceling authentication due to timeout", "57014"))).toBe(true);
   });
 
+  it("treats 57014 as fatal in its statement_timeout form — only the auth-phase cancel is transient", () => {
+    // Review finding: the DB config applies a 30s statement_timeout, so a
+    // slow migration or invariant query also raises 57014. Retrying that for
+    // the full budget would mask a real problem.
+    expect(isTransientDbConnectError(errWithCode("canceling statement due to statement timeout", "57014"))).toBe(false);
+    expect(isTransientDbConnectError(errWithCode("canceling statement due to user request", "57014"))).toBe(false);
+  });
+
   it("matches CONNECT_TIMEOUT surfaced in the message with no code property", () => {
     expect(isTransientDbConnectError(new Error("write CONNECT_TIMEOUT postgres.railway.internal:5432"))).toBe(true);
   });
@@ -185,6 +193,28 @@ describe("withStartupDbRetry", () => {
     ).rejects.toBe(timeout);
     expect(secondCalls).toBe(2);
     expect(clock.sleeps).toEqual([1000, 2000, 1000]);
+  });
+
+  it("gives up when a delay would end exactly on the budget boundary (>= not >)", async () => {
+    // Review finding: with a strict > comparison, elapsed+delay === budget
+    // scheduled one more sleep AND one more DB attempt starting exactly at
+    // the deadline. Budget 3000 / delays 1000,2000: the second delay lands
+    // exactly on 3000 and must NOT be taken.
+    const clock = fakeClock();
+    let calls = 0;
+    const timeout = errWithCode("write CONNECT_TIMEOUT postgres.railway.internal:5432", "CONNECT_TIMEOUT");
+    await expect(
+      withStartupDbRetry(
+        "boundary",
+        async () => {
+          calls++;
+          throw timeout;
+        },
+        { sleep: clock.sleep, now: clock.now, baseDelayMs: 1000, maxDelayMs: 30_000, budgetMs: 3000 },
+      ),
+    ).rejects.toBe(timeout);
+    expect(calls).toBe(2);
+    expect(clock.sleeps).toEqual([1000]);
   });
 
   it("gives up and rethrows the transient error once the budget is exhausted", async () => {

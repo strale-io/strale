@@ -66,17 +66,22 @@ describe("assertCostClassTaxonomy", () => {
     exitSpy.mockRestore();
   });
 
-  it("STRICT: aborts boot via process.exit(1) when unclassified rows exist", async () => {
+  it("STRICT: aborts boot by throwing StartupFatalError when unclassified rows exist", async () => {
+    // Regression (2026-08 review of the 2026-07-02 incident fix): STRICT used
+    // to process.exit(1) directly, which bypassed the fatal-startup email in
+    // index.ts main().catch — the exact silent-death mode the alert closes.
+    // It must THROW so the single fatal path owns alert-then-exit.
     mockDbExecute.mockResolvedValueOnce([
       { slug: "x", name: "X cap" },
     ]);
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
       throw new Error(`exit(${code})`);
     }) as never);
+    const { StartupFatalError } = await import("./startup-fatal.js");
     await expect(
       assertCostClassTaxonomy({ mode: "STRICT" }),
-    ).rejects.toThrow(/exit\(1\)/);
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    ).rejects.toBeInstanceOf(StartupFatalError);
+    expect(exitSpy).not.toHaveBeenCalled();
     exitSpy.mockRestore();
   });
 });

@@ -53,11 +53,17 @@ const TRANSIENT_POSTGRES_JS_CODES = new Set([
  * this connection right now" — startup/recovery/shutdown/resource
  * exhaustion. Class 08 = connection exception, class 53 = insufficient
  * resources, 57P0x = operator intervention (server starting up, in
- * recovery, shutting down). 57014 (query_canceled) covers the
- * "canceling authentication due to timeout" seen in the incident.
+ * recovery, shutting down).
+ *
+ * 57014 (query_canceled) is deliberately NOT in this set: the DB config
+ * applies a 30s statement_timeout, so a slow migration or invariant
+ * query also surfaces as 57014 — retrying that for the full budget would
+ * mask a real problem. It is treated as transient only when the message
+ * matches the incident's specific "canceling authentication due to
+ * timeout" shape (see isTransientDbConnectError).
  */
 const TRANSIENT_SQLSTATE_PREFIXES = ["08", "53"];
-const TRANSIENT_SQLSTATE_CODES = new Set(["57P01", "57P02", "57P03", "57014"]);
+const TRANSIENT_SQLSTATE_CODES = new Set(["57P01", "57P02", "57P03"]);
 
 export function isTransientDbConnectError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
@@ -70,6 +76,10 @@ export function isTransientDbConnectError(err: unknown): boolean {
     if (TRANSIENT_SQLSTATE_PREFIXES.some((p) => code.length === 5 && code.startsWith(p))) {
       return true;
     }
+    // 57014 = query_canceled. Transient only in its connection-phase form
+    // ("canceling authentication due to timeout", the 2026-07-02 shape);
+    // a statement_timeout on a real query must stay fatal.
+    if (code === "57014" && /authenticat/i.test(err.message)) return true;
   }
 
   // Fallback: postgres-js sometimes surfaces timeouts as bare Errors
@@ -151,10 +161,16 @@ export async function withStartupDbRetry<T>(
       const delayMs = Math.min(baseDelayMs * 2 ** (attempt - 1), maxDelayMs);
       const elapsedMs = now() - startedAt;
 
-      if (elapsedMs + delayMs > budgetMs) {
+      // >= so a delay ending exactly on the deadline doesn't schedule one
+      // more attempt. Note the budget caps the SCHEDULING of retries, not
+      // the duration of the final in-flight attempt — a connect/statement
+      // timeout on the last try can run past the nominal budget by up to
+      // its own timeout. That slack is acceptable; the cap exists to bound
+      // the retry loop, not to be a hard wall-clock guarantee.
+      if (elapsedMs + delayMs >= budgetMs) {
         logWarn(
           "startup-db-retry-exhausted",
-          `${label}: transient DB error persisted past retry budget — giving up`,
+          `${label}: database still unreachable after ${Math.round(elapsedMs / 1000)}s of automatic retries — giving up`,
           {
             label,
             attempt,
@@ -170,7 +186,7 @@ export async function withStartupDbRetry<T>(
 
       logWarn(
         "startup-db-retry",
-        `${label}: transient DB connect error — retrying in ${delayMs}ms`,
+        `${label}: database temporarily unreachable — retrying automatically in ${Math.round(delayMs / 1000)}s (attempt ${attempt}); no action needed yet`,
         {
           label,
           attempt,
