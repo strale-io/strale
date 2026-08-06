@@ -20,7 +20,7 @@ to agent-ecosystem repos. Each subdirectory is one platform:
 
 These are separate from the three plugin submissions whose worktrees were
 discarded on the same day (Flowise, LangFlow, Windmill Hub — all live
-upstream per `PRE_RESOLUTION_INVESTIGATION.md`).
+upstream per `sessions/PRE_RESOLUTION_INVESTIGATION.md`).
 
 ### `growth-ops/`
 

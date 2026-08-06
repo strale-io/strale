@@ -4,7 +4,7 @@
 
 ## Why
 
-The published package contained a generic HTTP client (`StraleClient`) rather than a Pydantic-AI-specific `StraleToolset` class. The package name implied a tighter integration than the code delivered. This was caught by a Pydantic-AI maintainer in a public review and has been voluntarily deprecated rather than retrofitted. See the `CONTAINMENT_REPORT.md` at the repo root for the full writeup.
+The published package contained a generic HTTP client (`StraleClient`) rather than a Pydantic-AI-specific `StraleToolset` class. The package name implied a tighter integration than the code delivered. This was caught by a Pydantic-AI maintainer in a public review and has been voluntarily deprecated rather than retrofitted. See `archive/sessions/CONTAINMENT_REPORT.md` for the full writeup.
 
 ## What to use instead
 

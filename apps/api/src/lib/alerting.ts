@@ -68,33 +68,50 @@ export function assertAlertingConfigured(): void {
   }
 }
 
+/**
+ * Returns true only when Resend accepted the email. Resend reports most
+ * failures IN-BAND as `{ error }` on a resolved promise (invalid key,
+ * quota exhausted, unverified sender domain) rather than by throwing —
+ * ignoring that field logs "alerting-sent" for emails that never left.
+ * Callers that page on this (fatal startup) rely on the distinction.
+ */
 export async function sendAlert(opts: {
   subject: string;
   body: string;
   severity: "info" | "warning" | "critical";
-}): Promise<void> {
+}): Promise<boolean> {
   const { subject, body, severity } = opts;
 
   const resend = getResend();
   if (!resend) {
     logWarn("alerting-no-api-key", "RESEND_API_KEY missing; would have sent alert", { severity, subject });
-    return;
+    return false;
   }
 
   const recipients = getRecipients();
 
   try {
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: "Strale Alerts <noreply@strale.io>",
       to: recipients,
       subject: `[Strale ${severity.toUpperCase()}] ${subject}`,
       text: body,
     });
+    if (error) {
+      logError(
+        "alerting-send-failed",
+        new Error(`Resend rejected the email: ${error.message ?? JSON.stringify(error)}`),
+        { severity, subject, recipients_count: recipients.length, resend_error_name: error.name },
+      );
+      return false;
+    }
     log.info(
       { label: "alerting-sent", severity, subject, recipients_count: recipients.length },
       "alerting-sent",
     );
+    return true;
   } catch (err) {
     logError("alerting-send-failed", err, { severity, subject, recipients_count: recipients.length });
+    return false;
   }
 }

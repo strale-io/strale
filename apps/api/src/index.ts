@@ -14,13 +14,19 @@ async function main() {
   // (app.ts previously did this via synchronous side-effect imports)
   await autoRegisterCapabilities();
 
-  // Health gate: refuse to start if registration catastrophically failed
+  // Health gate: refuse to start if registration catastrophically failed.
+  // Throws instead of exiting so main().catch can page the operator —
+  // direct process.exit here would reproduce the 2026-07-02 silent-death mode.
   const count = getRegisteredCount();
   if (count < MIN_EXPECTED_EXECUTORS) {
-    console.error(`[FATAL] Only ${count} executors registered (expected >= ${MIN_EXPECTED_EXECUTORS}). Server will not start.`);
-    console.error(`[FATAL] This usually means the auto-register file filter is broken.`);
-    console.error(`[FATAL] Check auto-register.ts for file extension filtering issues.`);
-    process.exit(1);
+    const { StartupFatalError } = await import("./lib/startup-fatal.js");
+    throw new StartupFatalError(
+      `Only ${count} executors registered (expected >= ${MIN_EXPECTED_EXECUTORS}). ` +
+        `This usually means the auto-register file filter is broken — check auto-register.ts.`,
+      `The API refused to start because most of its capabilities failed to load. ` +
+        `This is a code problem from the latest deploy, not an outage that heals itself. ` +
+        `Roll back: Railway dashboard -> Deployments -> pick the previous working deploy -> Redeploy.`,
+    );
   }
   console.log(`[startup] Health gate passed: ${count} executors registered`);
 
@@ -70,13 +76,39 @@ async function main() {
   // before the API listens. Replaces the previously-dead
   // apps/api/scripts/apply-migrations.ts (excluded from build by
   // tsconfig and never invoked by the Dockerfile CMD).
+  //
+  // 2026-07-02 outage: this is the boot's first DB touchpoint, and a
+  // transient CONNECT_TIMEOUT here used to be instantly fatal — Railway's
+  // restartPolicyMaxRetries=10 burned through in minutes and left the
+  // service CRASHED for hours after Postgres recovered. Transient
+  // connectivity errors at the three pre-listen DB touchpoints now
+  // wait-and-retry in-process. `startedAt` is shared across all three
+  // wraps so the budget (default 10 min, STARTUP_DB_RETRY_BUDGET_MS to
+  // override) is per BOOT, not per call site. Only thrown connectivity
+  // errors are retried — invariant failures (schema mismatch, cost-class
+  // STRICT) throw StartupFatalError and abort immediately via
+  // main().catch, and real migration failures still abort immediately.
+  //
+  // PLATFORM CONSTRAINT: this retry loop runs BEFORE the server listens.
+  // The Railway service currently has healthcheckPath: null (verified
+  // 2026-07-02), so nothing kills a slow boot. If a deploy healthcheck is
+  // ever configured on /health, its timeout MUST exceed
+  // STARTUP_DB_RETRY_BUDGET_MS (Railway's default healthcheck timeout is
+  // 300s < our 600s budget) or deploys during DB degradation get killed
+  // mid-retry and the budget silently never applies.
+  const { withStartupDbRetry } = await import("./lib/startup-db-retry.js");
   const { runStartupMigrations } = await import("./lib/startup-migrations.js");
-  await runStartupMigrations();
+  const dbRetryStartedAt = Date.now();
+  await withStartupDbRetry("startup-migrations", () => runStartupMigrations(), {
+    startedAt: dbRetryStartedAt,
+  });
 
   // Schema validation: fail fast if DB is missing columns the code expects.
   // Runs AFTER migrations so it sees the post-migration state.
   const { validateSchema } = await import("./lib/schema-validator.js");
-  await validateSchema();
+  await withStartupDbRetry("schema-validation", () => validateSchema(), {
+    startedAt: dbRetryStartedAt,
+  });
 
   // Phase A0b cost-class taxonomy invariant. Runs AFTER validateSchema
   // because the column must exist before the query reads it. GRACE
@@ -87,7 +119,11 @@ async function main() {
   const { assertCostClassTaxonomy, resolveCostClassMode } = await import(
     "./lib/cost-class-invariant.js"
   );
-  await assertCostClassTaxonomy({ mode: resolveCostClassMode(process.env.COST_CLASS_MODE) });
+  await withStartupDbRetry(
+    "cost-class-invariant",
+    () => assertCostClassTaxonomy({ mode: resolveCostClassMode(process.env.COST_CLASS_MODE) }),
+    { startedAt: dbRetryStartedAt },
+  );
 
   // Import app after executors are registered
   const { app, warmCatalog } = await import("./app.js");
@@ -162,7 +198,54 @@ async function main() {
   installShutdownHandlers();
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error("Fatal startup error:", err);
+
+  // 2026-07-02 outage: the process died silently 10 times and nobody was
+  // paged. Best-effort email before exit (production only; RESEND_API_KEY
+  // is set on Railway). Race against a 10s cap so a hung network can't
+  // keep a dead process alive.
+  //
+  // This catch is the ONLY fatal-startup path — startup guards throw
+  // (StartupFatalError where they have operator guidance) rather than
+  // calling process.exit directly, so every boot death sends this page.
+  if ((process.env.NODE_ENV ?? "").toLowerCase() === "production") {
+    try {
+      const { sendAlert } = await import("./lib/alerting.js");
+      const { isTransientDbConnectError } = await import("./lib/startup-db-retry.js");
+      const { StartupFatalError } = await import("./lib/startup-fatal.js");
+      const guidance =
+        err instanceof StartupFatalError
+          ? err.operatorGuidance
+          : isTransientDbConnectError(err)
+            ? `This looks like TRANSIENT DB CONNECTIVITY (retry budget exhausted, DB likely still ` +
+              `degraded). Check Postgres in the Railway dashboard (project: Strale). ` +
+              `Once the DB is healthy, if the service shows CRASHED, run: railway redeploy --service strale`
+            : `This does NOT look like a transient DB issue. Likely causes: a broken deploy ` +
+              `(bad migration, missing env var, or a code/import error). What to do: ` +
+              `1) Open Railway deploy logs for the strale service. ` +
+              `2) If this started right after a deploy, roll back: Railway dashboard -> ` +
+              `Deployments -> previous working deploy -> Redeploy. ` +
+              `3) If nothing was deployed recently, keep this email — the stack trace below ` +
+              `is what a debugging session needs.`;
+      await Promise.race([
+        sendAlert({
+          subject: "API failed to start",
+          severity: "critical",
+          body:
+            `Strale API startup aborted with a fatal error. Railway restarts it per the ` +
+            `service restart policy (default: up to 10 times), then the service stays ` +
+            `CRASHED until redeployed.\n\n` +
+            `${guidance}\n\n` +
+            `Dashboard: https://railway.com/project/16920e2f-8258-47db-86c0-60ec9d7edc13\n\n` +
+            `Error: ${err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err)}`,
+        }),
+        new Promise<void>((r) => setTimeout(r, 10_000)),
+      ]);
+    } catch {
+      // Alerting must never mask the original fatal error.
+    }
+  }
+
   process.exit(1);
 });
