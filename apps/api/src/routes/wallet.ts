@@ -82,8 +82,8 @@ walletRoute.post("/topup", async (c) => {
       user_id: user.id,
       amount_cents: String(amountCents),
     },
-    success_url: `${FRONTEND_URL}/?topup=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${FRONTEND_URL}/?topup=cancelled`,
+    success_url: `${FRONTEND_URL}/topup?status=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${FRONTEND_URL}/topup?status=cancelled`,
   });
 
   // F-0-013: drop email from the log. user.id + session.id are the
