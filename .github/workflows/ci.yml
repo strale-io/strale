@@ -49,7 +49,7 @@ jobs:
       # DEC-20260422-A: every framework-named *-strale package must contain
       # at least one real import from the framework it claims to integrate
       # with. Blocks the "hollow package" class of incident that surfaced
-      # with pydantic-ai on 2026-04-21. See CONTAINMENT_REPORT.md.
+      # with pydantic-ai on 2026-04-21. See archive/sessions/CONTAINMENT_REPORT.md.
       - run: node apps/api/scripts/check-framework-packages.mjs
       # Cert-audit C6 follow-up: every fetch() must be timeout-bounded.
       # Pre-existing offenders are tracked in fetch-timeout-allowlist.txt;

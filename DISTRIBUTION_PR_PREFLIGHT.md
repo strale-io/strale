@@ -1,6 +1,6 @@
 # Distribution PR pre-flight checklist
 
-**Use this before opening any PR to a third-party repo that references a Strale package or integration.** Every item must be verified and checked off. The checklist exists because on 2026-04-21 a pydantic-ai PR was closed by the maintainer with "Shame on you" after he discovered the PR's code example imported a class that didn't exist in the published package. See `CONTAINMENT_REPORT.md`.
+**Use this before opening any PR to a third-party repo that references a Strale package or integration.** Every item must be verified and checked off. The checklist exists because on 2026-04-21 a pydantic-ai PR was closed by the maintainer with "Shame on you" after he discovered the PR's code example imported a class that didn't exist in the published package. See `archive/sessions/CONTAINMENT_REPORT.md`.
 
 ---
 
