@@ -68,6 +68,40 @@ const SOCIAL_PATTERNS: Record<string, RegExp> = {
 };
 
 /**
+ * Decode JSON `\uXXXX` escape sequences into the characters they represent.
+ *
+ * Modern sites embed markup inside JSON payloads (Next.js flight data, inlined
+ * state, script-tag JSON). In that form a `>` is not a `>` — it is the six
+ * literal characters backslash, u, 0, 0, 3, e. That escaped text sits in the
+ * HTML we parse, and none of our extractors understand it.
+ *
+ * The concrete failure: a production call for stripe.com returned
+ * `role_emails: ["u003esales@stripe.com"]`. The page contained the escaped
+ * form immediately before the address. EMAIL_RE's local-part class accepts
+ * letters and digits but not backslashes, so the match began at the `u` of the
+ * escape and swallowed `u003e` into the local part.
+ *
+ * This is region-dependent and was invisible locally: Railway (US East) is
+ * served the escaped variant, while the same URL fetched from Sweden returns a
+ * literal `>`. Decoding here — once, at the single point where fetched bytes
+ * enter the capability — means every downstream extractor sees the same text
+ * the browser would, regardless of which variant the origin served.
+ *
+ * Linear, no backtracking. Surrogate pairs decode correctly because each half
+ * is converted independently and concatenated.
+ */
+export function decodeJsonUnicodeEscapes(s: string): string {
+  if (!s.includes("\\u")) return s;
+  return s.replace(/\\u([0-9a-fA-F]{4})/g, (whole, hex: string) => {
+    const code = parseInt(hex, 16);
+    // Leave C0 controls encoded — decoding them would inject raw control
+    // characters into text we hand back to callers, and nothing we extract
+    // needs them.
+    return code < 0x20 ? whole : String.fromCharCode(code);
+  });
+}
+
+/**
  * Read a fetch Response body capped at `maxBytes`, streaming so an
  * oversized response never gets fully buffered in memory first.
  */
@@ -309,7 +343,9 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
     if (!resp.ok) {
       throw new Error(`domain-contact-extract: ${hostname} returned HTTP ${resp.status}`);
     }
-    homepageHtml = await readCapped(resp);
+    // Decode at the boundary so every extractor below sees one canonical
+    // form, whichever variant the origin served this region.
+    homepageHtml = decodeJsonUnicodeEscapes(await readCapped(resp));
     fetchedUrls.push(homepageUrl);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -341,7 +377,7 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
         timeoutMs: FETCH_TIMEOUT_MS,
       });
       if (resp.ok) {
-        contactHtml = await readCapped(resp);
+        contactHtml = decodeJsonUnicodeEscapes(await readCapped(resp));
         fetchedUrls.push(contactPageUrl);
       }
     } catch {

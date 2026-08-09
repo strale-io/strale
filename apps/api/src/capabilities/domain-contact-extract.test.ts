@@ -37,7 +37,17 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { EMAIL_RE, extractPhones } from "./domain-contact-extract.js";
+import { EMAIL_RE, extractPhones, decodeJsonUnicodeEscapes } from "./domain-contact-extract.js";
+
+// Built from char codes so nothing in the toolchain can silently interpret the
+// escape sequences this module exists to handle.
+const BACKSLASH = String.fromCharCode(92);
+const ESCAPED_GT = BACKSLASH + "u003e";
+const ESCAPED_LT = BACKSLASH + "u003c";
+const ESCAPED_NUL = BACKSLASH + "u0000";
+const ESCAPED_EMOJI = BACKSLASH + "ud83d" + BACKSLASH + "ude00";
+const EMOJI = String.fromCharCode(0xd83d, 0xde00);
+
 
 function timeSync(fn: () => unknown): number {
   const t0 = process.hrtime.bigint();
@@ -150,5 +160,44 @@ describe("extractPhones — authoritative markup only", () => {
   it("still returns tel: links even when digit noise is present alongside", () => {
     const html = `<p>72-9098-2766</p><a href="tel:+46812345678">real</a>`;
     expect(extractPhones(html)).toEqual(["+46812345678"]);
+  });
+});
+
+describe("decodeJsonUnicodeEscapes", () => {
+  const emails = (s: string) => s.match(new RegExp(EMAIL_RE.source, EMAIL_RE.flags)) ?? [];
+
+  it("fixes the exact production failure", () => {
+    // Railway (US East) is served the escaped form immediately before the
+    // address; the same URL fetched from Sweden has a literal ">".
+    const html = "<p>" + ESCAPED_GT + "sales@stripe.com</p>";
+
+    // Without decoding, the bug reproduces — this is what shipped to prod.
+    expect(emails(html)).toEqual(["u003esales@stripe.com"]);
+
+    // With decoding, the address is clean.
+    expect(emails(decodeJsonUnicodeEscapes(html))).toEqual(["sales@stripe.com"]);
+  });
+
+  it("is a no-op on content with no escapes", () => {
+    const plain = '<a href="mailto:sales@stripe.com">sales@stripe.com</a>';
+    expect(decodeJsonUnicodeEscapes(plain)).toBe(plain);
+  });
+
+  it("decodes several escapes in one pass", () => {
+    const html = ESCAPED_LT + "div" + ESCAPED_GT + "hi" + ESCAPED_LT + "/div" + ESCAPED_GT;
+    expect(decodeJsonUnicodeEscapes(html)).toBe("<div>hi</div>");
+  });
+
+  it("leaves C0 control escapes encoded", () => {
+    expect(decodeJsonUnicodeEscapes(ESCAPED_NUL)).toBe(ESCAPED_NUL);
+  });
+
+  it("decodes surrogate pairs back into the original character", () => {
+    expect(decodeJsonUnicodeEscapes(ESCAPED_EMOJI)).toBe(EMOJI);
+  });
+
+  it("ignores malformed escapes", () => {
+    const malformed = BACKSLASH + "u12";
+    expect(decodeJsonUnicodeEscapes(malformed)).toBe(malformed);
   });
 });
