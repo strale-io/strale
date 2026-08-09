@@ -1,0 +1,134 @@
+slug: email-validate-bulk
+name: Bulk Email Validation
+description: >-
+  Validate up to 100 email addresses in one call. Checks format, MX records, disposable domain detection, and role-based
+  address detection per address, plus an aggregate summary. No email is sent.
+category: validation
+cost_class: free_unlimited
+quota_window: none
+price_cents: 15
+# email-validate (single-address) measures 500ms avg (DNS-bound). Bulk fans MX
+# lookups out per-domain at concurrency 10 with a domain-level cache, so a
+# typical few-domain batch stays close to single-lookup latency; larger
+# batches with many unique domains take longer. 1500ms is a conservative
+# batch-weighted estimate pending real production latency data.
+avg_latency_ms: 1500
+input_schema:
+  type: object
+  properties:
+    emails:
+      type: array
+      items:
+        type: string
+      description: Array of email addresses to validate (max 100, deduplicated)
+    email_addresses:
+      type: array
+      items:
+        type: string
+      description: Alias for 'emails'
+    text:
+      type: string
+      description: Newline- or comma-separated string of email addresses (alias for 'emails')
+output_schema:
+  type: object
+  example:
+    total: 2
+    valid_count: 1
+    invalid_count: 1
+    results:
+      - email: test@google.com
+        valid: true
+        domain: google.com
+        format_valid: true
+        has_mx_records: true
+        mx_records:
+          - smtp.google.com
+        is_disposable: false
+        is_role_address: false
+        is_free_provider: false
+      - email: not-an-email
+        valid: false
+        format_valid: false
+        reason: Invalid email format.
+    summary:
+      by_domain:
+        google.com:
+          total: 1
+          valid: 1
+      disposable_count: 0
+      role_address_count: 0
+      free_provider_count: 0
+  properties:
+    total:
+      type: number
+    valid_count:
+      type: number
+    invalid_count:
+      type: number
+    results:
+      type: array
+    summary:
+      type: object
+data_source: Algorithmic (syntax) + DNS protocol (MX record verification)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - email
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      emails:
+        - test@google.com
+        - clearly-invalid
+    expected_fields:
+      - field: total
+        operator: not_null
+        reliability: guaranteed
+      - field: valid_count
+        operator: not_null
+        reliability: guaranteed
+      - field: invalid_count
+        operator: not_null
+        reliability: guaranteed
+      - field: results
+        operator: not_null
+        reliability: guaranteed
+      - field: summary
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    emails:
+      - test@google.com
+      - clearly-invalid
+output_field_reliability:
+  total: guaranteed
+  valid_count: guaranteed
+  invalid_count: guaranteed
+  results: guaranteed
+  summary: guaranteed
+limitations:
+  - title: Batch size capped at 100 addresses per call
+    text: >-
+      A single call accepts at most 100 unique email addresses (after deduplication). Larger lists must be split into
+      multiple calls.
+    category: coverage
+    severity: info
+    workaround: Split lists over 100 addresses into batches of 100 or fewer and issue multiple calls.
+  - title: MX-record existence is not proof of mailbox existence
+    text: >-
+      A domain having valid MX records means the domain accepts mail — it does not confirm the specific mailbox exists.
+      Catch-all domains will show as valid even for non-existent addresses at that domain.
+    category: accuracy
+    severity: info
+    workaround: For high-stakes sends, follow up with a verification email/click-through on addresses marked valid.
+  - title: Disposable domain list covers major providers only
+    text: >-
+      Disposable/temporary email domain detection covers well-known providers; newly registered throwaway domains may
+      not be flagged.
+    category: coverage
+    severity: info
+    workaround: Supplement with a domain age check for suspicious traffic.

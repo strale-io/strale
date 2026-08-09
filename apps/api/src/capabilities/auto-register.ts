@@ -30,6 +30,28 @@ import { getExecutor } from "./index.js";
 
 const DEACTIVATED = new Map<string, string>([
   ["amazon-price", "Amazon CAPTCHA blocks datacenter IPs"],
+  // email-finder: built and pipeline-verified 2026-08-09 (19/19 structural,
+  // 11/11 smoke), then shelved before activation on a value finding, not a
+  // technical one. The capability infers a person's work address from a
+  // domain's published email-format conventions. Independent testing against
+  // two real domains drawn from our own 90-day traffic (lampin.com,
+  // markforged.com) found ZERO published addresses on either — so the
+  // evidence branch never fires, confidence is pinned at "low", and the
+  // ranking degenerates to a generic convention list. It actively mis-ranks
+  // lampin.com: it proposes keith.slowik@ when the real pattern is
+  // keithslowik@, disproved by 12 addresses in our own transaction logs.
+  // Root cause: modern corporate sites publish contact forms, not addresses.
+  // Vendors like Hunter rely on a large harvested address corpus we do not
+  // have.
+  // DO NOT "fix" this by mining our own transactions table for addresses:
+  // addresses submitted by customers for validation cannot be repurposed for
+  // discovery (GDPR purpose limitation, Art. 5(1)(b)) — that is precisely the
+  // failure mode CNIL fined Kaspr EUR 240k for in Dec 2023.
+  // Reactivation requires a lawfully-sourced evidence corpus, not a code fix.
+  [
+    "email-finder",
+    "shelved 2026-08-09: evidence branch never fires on real domains (0 published addresses on 2 tested), so output degenerates to unevidenced permutations and mis-ranks known cases; needs a lawful evidence corpus, not a code fix",
+  ],
   [
     "ecb-interest-rates",
     // ECB SDW API is geo-restricted: Railway US East egress IPs receive

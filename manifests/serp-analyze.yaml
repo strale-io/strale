@@ -180,10 +180,6 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: array
-      - field: featured_snippet
-        operator: type
-        reliability: guaranteed
-        value: object
   health_check_input:
     country: US
     keyword: test
@@ -191,7 +187,16 @@ output_field_reliability:
   serp_features: guaranteed
   organic_results: guaranteed
   people_also_ask: guaranteed
-  featured_snippet: guaranteed
+  # `common`, not `guaranteed`: the executor sets featured_snippet to null
+  # whenever Google returns no answerBox for the query, which is the majority
+  # of queries. It was previously annotated `guaranteed`, which generated a
+  # `type: object` assertion in the known_answer suite that failed on any
+  # snippet-less query. Caught 2026-08-09 by the first live fixture check this
+  # capability has ever had — paid_prepaid capabilities are never proactively
+  # tested (ALLOW_MATRIX refuses internal_test), so it sat undetected.
+  # This is the "expected non-null on optional field" class that broke 8 EU
+  # registries; see the field-reliability rules in CLAUDE.md.
+  featured_snippet: common
 limitations:
   - title: SERP analysis is a point-in-time snapshot — rankings change frequently with Google algorithm updates
     text: Analyzes search results at a point in time — SERP rankings change frequently based on Google algorithm updates
