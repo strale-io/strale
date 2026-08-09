@@ -97,16 +97,30 @@ describe.each(CAPABILITIES)("$slug — country validation", ({ slug, baseInput }
 });
 
 describe("gl parameter", () => {
+  /**
+   * Drive the executor far enough to capture the outbound request body.
+   *
+   * The fetch spy always throws, so every call here rejects — asserting that
+   * explicitly (rather than swallowing with a bare `.catch`) both satisfies
+   * the F-0-009 lint guard and pins that we reached the network boundary,
+   * which is precisely what proves validation let the input through.
+   */
+  async function captureRequestBody(
+    run: ReturnType<typeof getExecutor>,
+    input: CapabilityInput,
+  ): Promise<Record<string, unknown>> {
+    fetchSpy.mockClear();
+    await expect(run!(input, {} as never)).rejects.toThrow(/fetch called/);
+    return JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+  }
+
   it.each(CAPABILITIES)(
     "$slug sends lowercase alpha-2 regardless of the input form",
     async ({ slug, baseInput }) => {
       const run = getExecutor(slug)!;
 
       for (const country of ["MEX", "Mexico", "484", 484, "mx"]) {
-        fetchSpy.mockClear();
-        await run({ ...baseInput, country }, {} as never).catch(() => {});
-
-        const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+        const body = await captureRequestBody(run, { ...baseInput, country });
         expect(body.gl, `input ${JSON.stringify(country)}`).toBe("mx");
       }
     },
@@ -117,19 +131,18 @@ describe("gl parameter", () => {
     async ({ slug, baseInput }) => {
       // The only accepted input whose wire value differs from what was sent —
       // worth asserting the transformation actually reaches Serper.
-      const run = getExecutor(slug)!;
-      await run({ ...baseInput, country: "uk" }, {} as never).catch(() => {});
-
-      const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+      const body = await captureRequestBody(getExecutor(slug), {
+        ...baseInput,
+        country: "uk",
+      });
       expect(body.gl).toBe("gb");
     },
   );
 
   it("google-search omits gl entirely when no country is given", async () => {
-    const run = getExecutor("google-search")!;
-    await run({ query: "phone contact" }, {} as never).catch(() => {});
-
-    const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+    const body = await captureRequestBody(getExecutor("google-search"), {
+      query: "phone contact",
+    });
     expect(body).not.toHaveProperty("gl");
   });
 
@@ -138,10 +151,7 @@ describe("gl parameter", () => {
   it.each(CAPABILITIES.filter((c) => c.slug !== "google-search"))(
     "$slug defaults to gl=us when no country is given",
     async ({ slug, baseInput }) => {
-      const run = getExecutor(slug)!;
-      await run(baseInput, {} as never).catch(() => {});
-
-      const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+      const body = await captureRequestBody(getExecutor(slug), baseInput);
       expect(body.gl).toBe("us");
     },
   );
