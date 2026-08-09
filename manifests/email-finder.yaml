@@ -1,0 +1,229 @@
+slug: email-finder
+name: Email Finder
+description: >-
+  Infer a person's most likely work email address from their name and a company domain, ranked by confidence.
+  Evidence-linked, never claims verification.
+category: web-intelligence
+cost_class: free_unlimited
+quota_window: none
+price_cents: 5
+input_schema:
+  type: object
+  required:
+    - first_name
+    - last_name
+    - domain
+  properties:
+    first_name:
+      type: string
+      description: Person's first name
+    last_name:
+      type: string
+      description: Person's last name
+    name:
+      type: string
+      description: Alias — full name "First Last", split into first_name/last_name if those aren't given
+    full_name:
+      type: string
+      description: Alias for name
+    domain:
+      type: string
+      description: Company domain (e.g. stripe.com)
+    company_domain:
+      type: string
+      description: Alias for domain
+    website:
+      type: string
+      description: Alias for domain
+    url:
+      type: string
+      description: Alias for domain — full URL, hostname is extracted
+output_schema:
+  type: object
+  properties:
+    domain:
+      type: string
+    accepts_email:
+      type: boolean
+    email_provider:
+      type:
+        - string
+        - "null"
+    first_name:
+      type: string
+    last_name:
+      type: string
+    best_candidate:
+      type:
+        - object
+        - "null"
+      properties:
+        email:
+          type: string
+        pattern:
+          type: string
+        confidence:
+          type: string
+          enum:
+            - high
+            - medium
+            - low
+        basis:
+          type: string
+    candidates:
+      type: array
+      items:
+        type: object
+        properties:
+          email:
+            type: string
+          pattern:
+            type: string
+          confidence:
+            type: string
+            enum:
+              - high
+              - medium
+              - low
+          basis:
+            type: string
+    evidence:
+      type: object
+      properties:
+        published_addresses_found:
+          type: array
+        inferred_pattern:
+          type:
+            - string
+            - "null"
+        corroborating_count:
+          type: integer
+    disclaimer:
+      type: string
+data_source: DNS MX records + company's own public homepage/contact page (direct HTTP fetch, no vendor)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+avg_latency_ms: 1500
+processes_personal_data: true
+personal_data_categories:
+  - name
+  - email
+gdpr_art_22_classification: data_lookup
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      first_name: Jane
+      last_name: Doe
+      domain: stripe.com
+    expected_fields:
+      - field: domain
+        operator: equals
+        reliability: guaranteed
+        value: stripe.com
+      - field: accepts_email
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: first_name
+        operator: equals
+        reliability: guaranteed
+        value: Jane
+      - field: last_name
+        operator: equals
+        reliability: guaranteed
+        value: Doe
+      - field: candidates
+        operator: not_null
+        reliability: guaranteed
+      - field: evidence
+        operator: not_null
+        reliability: guaranteed
+      - field: disclaimer
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    first_name: Jane
+    last_name: Doe
+    domain: stripe.com
+output_field_reliability:
+  domain: guaranteed
+  accepts_email: guaranteed
+  first_name: guaranteed
+  last_name: guaranteed
+  candidates: guaranteed
+  disclaimer: guaranteed
+  best_candidate: common
+  email_provider: common
+  evidence: guaranteed
+limitations:
+  - title: Addresses are inferred, never verified — no mailbox existence check is performed
+    text: >-
+      email-finder never connects to the target mail server to test whether a mailbox exists (no SMTP callback, VRFY, or
+      RCPT-TO probing). The only mail-server signal used is domain-level MX record existence. Every returned address is
+      a pattern-based guess, ranked by how much public evidence supports it — none are confirmed deliverable. Callers
+      must not present any candidate as "verified" or "confirmed."
+    category: accuracy
+    severity: warning
+    workaround: >-
+      Use email-validate on a shortlisted candidate for format/MX-level checks, and treat any outreach as best-effort
+      until a reply is received.
+  - title: Accuracy is much lower for domains that publish no addresses
+    text: >-
+      Confidence is evidence-linked: it is only "high" or "medium" when the domain's homepage or contact page publishes
+      an address that is, or corroborates the format of, a generated candidate. Most company websites publish no
+      personal (firstname.lastname-style) addresses at all — only role addresses like info@ or sales@, which are
+      explicitly excluded from pattern inference. For the majority of domains, every candidate returned is "low"
+      confidence: a generic convention guess with the basis field saying so explicitly.
+    category: accuracy
+    severity: warning
+    workaround: >-
+      Treat low-confidence output as a starting hypothesis, not a lead-ready address. Prioritize domains where evidence
+      was found.
+  - title: Catch-all domains accept any address, so a valid-looking address proves nothing
+    text: >-
+      Many mail servers are configured as "catch-all" — they accept mail (or return no bounce) for any local part at the
+      domain, valid or not. accepts_email:true only means the domain has MX records; it says nothing about whether a
+      specific candidate mailbox exists on a catch-all-configured server. A syntactically valid, MX-backed address is
+      not evidence the address is real.
+    category: accuracy
+    severity: warning
+    workaround: >-
+      Do not treat accepts_email:true as address-level confirmation. Rely on the per-candidate confidence/basis fields,
+      which are scoped to pattern evidence, not deliverability.
+  - title: Caller is responsible for lawful basis under applicable data-protection law
+    text: >-
+      This capability processes personal data (a name plus inferred contact details). email-finder itself performs no
+      outreach and does not determine or record a legal basis for processing. The caller is responsible for establishing
+      and documenting a lawful basis (e.g. GDPR Art. 6 legitimate interest, with the required balancing test and opt-out
+      mechanism) before using the output for outreach or any other processing purpose.
+    category: coverage
+    severity: warning
+    workaround: >-
+      Confirm a documented lawful basis for the intended use before calling this capability, and honor opt-out/erasure
+      requests against any address sourced from it.
+  - title: Contact-page discovery is a single best-effort follow, not a crawl
+    text: >-
+      At most one additional page is fetched beyond the homepage — the first same-host link whose href or link text
+      matches /contact|kontakt|contact-us|get-in-touch/i. Sites that bury contact info deeper in navigation, behind a
+      JS-only menu, or under an unmatched URL/label contribute no extra evidence even if a contact page with published
+      addresses exists.
+    category: coverage
+    severity: info
+  - title: No JavaScript rendering — client-rendered content is invisible
+    text: >-
+      This is a plain HTTP fetch of the raw HTML response, not a headless browser. Addresses injected client-side by a
+      JavaScript framework (React/Vue SPA footers, cookie-gated widgets, etc.) will not be seen, reducing evidence
+      availability on such sites regardless of what a human visiting the page would see.
+    category: coverage
+    severity: info
+  - title: Multi-part and hyphenated surnames use simplifying heuristics
+    text: >-
+      Multi-part surnames (e.g. "van der Berg") use only the final whitespace-separated token as the surname. Hyphenated
+      surnames (e.g. "Smith-Jones") generate both a joined ("smithjones") and a hyphen-preserved ("smith-jones")
+      candidate variant. Other conventions some organisations use (e.g. keeping the middle "van"/"der" particle, or
+      using a maiden-name variant) are not modeled.
+    category: coverage
+    severity: info

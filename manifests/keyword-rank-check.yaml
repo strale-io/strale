@@ -1,0 +1,136 @@
+slug: keyword-rank-check
+name: Keyword Rank Check
+description: >-
+  Check where a domain ranks in Google search results for a keyword. Returns the position, page, matching
+  result, and the competitors ranking above it within the scanned depth.
+category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
+price_cents: 15
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+    - keyword
+  properties:
+    domain:
+      type: string
+      description: "Domain to check ranking for (e.g. stripe.com). Aliases: url, site."
+    keyword:
+      type: string
+      description: "Search term to check ranking for. Aliases: query, search, term."
+    country:
+      type: string
+      description: Google country code (gl parameter). Defaults to "us".
+    language:
+      type: string
+      description: Google language code (hl parameter). Defaults to "en".
+    depth:
+      type: integer
+      description: Number of results to scan (Serper "num" parameter). Defaults to 10, max 100.
+output_schema:
+  type: object
+  example:
+    domain: wikipedia.org
+    keyword: wikipedia
+    country: us
+    language: en
+    found: true
+    position: 1
+    page: 1
+    url: https://en.wikipedia.org/wiki/Main_Page
+    title: Wikipedia, the free encyclopedia
+    snippet: >-
+      Wikipedia is a free online encyclopedia, created and edited by volunteers around the world.
+    results_scanned: 10
+    scan_depth_requested: 10
+    competitors_above: []
+  properties:
+    found:
+      type: boolean
+    position:
+      type:
+        - integer
+        - "null"
+    page:
+      type:
+        - integer
+        - "null"
+    competitors_above:
+      type: array
+data_source: Serper.dev API (Google SERP, organic results)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: commercial-stable-api
+avg_latency_ms: 2000
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      domain: wikipedia.org
+      keyword: wikipedia
+      country: us
+      language: en
+    expected_fields:
+      - field: found
+        operator: not_null
+        reliability: guaranteed
+      - field: found
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: results_scanned
+        operator: not_null
+        reliability: guaranteed
+      - field: results_scanned
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: scan_depth_requested
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    domain: wikipedia.org
+    keyword: wikipedia
+output_field_reliability:
+  domain: guaranteed
+  keyword: guaranteed
+  country: guaranteed
+  language: guaranteed
+  found: guaranteed
+  results_scanned: guaranteed
+  scan_depth_requested: guaranteed
+  competitors_above: guaranteed
+  position: common
+  page: common
+  url: common
+  title: common
+  snippet: common
+limitations:
+  - title: Point-in-time sample, not an average
+    text: >-
+      Each call reflects a single snapshot of Google's results at the moment of the request. Rankings fluctuate
+      with algorithm updates, personalization signals stripped out of the API call, and time of day. Do not treat
+      one call as a stable ranking — sample repeatedly over time for trend analysis.
+    category: accuracy
+    severity: info
+    workaround: Call periodically (e.g. daily/weekly) and track position over time rather than relying on a single result.
+  - title: Location is approximated by country/language, not exact geo
+    text: >-
+      Serper's gl/hl parameters approximate a country-level search context. They do not reproduce city-level local
+      pack results or a specific searcher's true location, device, or personalization/history, which can shift
+      real-world rankings the caller sees.
+    category: coverage
+    severity: info
+  - title: Scan depth is bounded and explicit
+    text: >-
+      Only the top `depth` results (default 10, max 100) are scanned for a match. A domain ranking below the
+      scanned depth is reported as not found (found: false, position: null) — this is distinct from "does not
+      rank at all". Increase `depth` to search further down the results page.
+    category: coverage
+    severity: info
+    workaround: Increase the depth parameter (up to 100) if the domain is expected to rank beyond position 10.
