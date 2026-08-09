@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatFI } from "../lib/vat-derivation.js";
+import { firstString } from "./lib/input-aliases.js";
+import { classifyNameMatch } from "../lib/company-name-match.js";
 
 // PRH (Finnish Patent and Registration Office) open data API — new v3 endpoint
 const PRH_API = "https://avoindata.prh.fi/opendata-ytj-api/v3/companies";
@@ -46,7 +48,17 @@ async function extractCompanyName(naturalLanguage: string): Promise<string> {
 }
 
 async function searchPrh(name: string): Promise<string> {
-  const url = `${PRH_API}?name=${encodeURIComponent(name)}&totalResults=false&maxResults=1`;
+  // PRH's `name=` parameter is a FUZZY search across every historical name a
+  // company has ever held, and results come back ordered by business ID, not
+  // by relevance. Taking companies[0] blindly returns an unrelated legal
+  // entity: searching "Nokia" yields Fysios Mehiläinen Oy, Tikkurila Oyj and
+  // Nokian Vuokrakodit — Nokia Oyj (0112038-9) is not among them at all.
+  //
+  // Returning a confidently-wrong company from a KYB lookup is worse than
+  // returning nothing: the caller has no way to detect it. So we pull a page
+  // of candidates and only accept one whose name actually matches, reusing the
+  // same classifier us-company-data uses to refuse weak SEC EDGAR matches.
+  const url = `${PRH_API}?name=${encodeURIComponent(name)}&totalResults=false&maxResults=20`;
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(10000),
@@ -57,7 +69,32 @@ async function searchPrh(name: string): Promise<string> {
   if (!companies || companies.length === 0) {
     throw new Error(`No Finnish company found matching "${name}".`);
   }
-  return companies[0].businessId?.value || companies[0].businessId;
+
+  // Each company carries every name it has held; score against all of them and
+  // keep the best. `exact` wins outright; otherwise `high` is the floor.
+  let best: { id: string; name: string; confidence: string } | null = null;
+  for (const c of companies) {
+    const id = c.businessId?.value ?? c.businessId;
+    if (!id) continue;
+    for (const n of (c.names ?? []) as Array<{ name?: string }>) {
+      if (!n?.name) continue;
+      const { match_confidence } = classifyNameMatch(name, n.name);
+      if (match_confidence === "exact") return id;
+      if (match_confidence === "high" && !best) best = { id, name: n.name, confidence: match_confidence };
+    }
+  }
+  if (best) return best.id;
+
+  const sample = companies
+    .slice(0, 3)
+    .map((c: any) => (c.names ?? [])[0]?.name)
+    .filter(Boolean)
+    .join(", ");
+  throw new Error(
+    `No confident Finnish registry match for "${name}". PRH's name search is fuzzy and ` +
+      `returned only unrelated entities${sample ? ` (closest: ${sample})` : ""}. ` +
+      `Provide the Business ID directly (e.g. 0112038-9) for an exact lookup.`,
+  );
 }
 
 async function fetchCompany(businessId: string): Promise<Record<string, unknown>> {
@@ -134,9 +171,19 @@ async function fetchCompany(businessId: string): Promise<Record<string, unknown>
 }
 
 registerCapability("finnish-company-data", async (input: CapabilityInput) => {
-  const rawInput = (input.business_id as string) ?? (input.org_number as string) ?? (input.task as string) ?? "";
-  if (typeof rawInput !== "string" || !rawInput.trim()) {
-    throw new Error("'business_id' is required. Provide a Finnish Business ID (e.g. 0112038-9) or company name.");
+  // See the note in danish-company-data.ts: the error promised company-name
+  // support and the name path existed, but the field was never read. Two calls
+  // for "Nokia" were lost in the 90 days to 2026-08-09.
+  const rawInput = firstString(
+    input,
+    "business_id", "org_number",
+    "company_name", "name", "query", "task",
+  );
+  if (!rawInput) {
+    throw new Error(
+      "A Finnish company identifier or name is required. Provide 'business_id' (e.g. 0112038-9) " +
+        "or 'company_name'. Aliases accepted: org_number, name, query, task.",
+    );
   }
 
   const trimmed = rawInput.trim();

@@ -10,6 +10,7 @@ import {
   searchBrregByName,
   type BrregRollerResponse,
 } from "../lib/brreg-fetch.js";
+import { firstString } from "./lib/input-aliases.js";
 
 async function extractCompanyName(naturalLanguage: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -120,9 +121,18 @@ function shapeBrregOutput(data: Record<string, unknown>): Record<string, unknown
 }
 
 registerCapability("norwegian-company-data", async (input: CapabilityInput) => {
-  const rawInput = (input.org_number as string) ?? (input.company_number as string) ?? "";
-  if (typeof rawInput !== "string" || !rawInput.trim()) {
-    throw new Error("'org_number' is required. Provide a Norwegian org number (9 digits) or company name.");
+  // Same latent defect as danish/finnish — no production failures observed yet
+  // only because callers happened to send org numbers. Fixed alongside them.
+  const rawInput = firstString(
+    input,
+    "org_number", "company_number",
+    "company_name", "name", "query", "task",
+  );
+  if (!rawInput) {
+    throw new Error(
+      "A Norwegian company identifier or name is required. Provide 'org_number' (9 digits) " +
+        "or 'company_name'. Aliases accepted: company_number, name, query, task.",
+    );
   }
 
   const trimmed = rawInput.trim();

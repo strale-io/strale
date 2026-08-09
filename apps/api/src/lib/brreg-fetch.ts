@@ -8,6 +8,8 @@
  * Source: data.brreg.no, NLOD 2.0 license, free, no auth.
  */
 
+import { classifyNameMatch } from "./company-name-match.js";
+
 export const BRREG_API = "https://data.brreg.no/enhetsregisteret/api";
 export const BRREG_ORG_NUMBER_RE = /^\d{9}$/;
 
@@ -48,7 +50,16 @@ export function findOrgNumberInText(input: string): string | null {
  * ordering). Throws on no results.
  */
 export async function searchBrregByName(name: string): Promise<string> {
-  const url = `${BRREG_API}/enheter?navn=${encodeURIComponent(name)}&size=1`;
+  // Brreg's `navn=` search is fuzzy and ordered ALPHABETICALLY, not by
+  // relevance. Taking the first hit returns the wrong legal entity for most
+  // real queries: "Telenor" yields NITO TELENOR (a union chapter) ahead of
+  // TELENOR ASA, "Norsk Hydro" yields NORSK HYDROGENBILFORENING, and
+  // "Statoil" yields NEGOTIA STATOIL. EQUINOR ASA resolved correctly only by
+  // alphabetical luck.
+  //
+  // A wrong company from a KYB lookup is undetectable by the caller, so pull a
+  // page of candidates and accept one only if its name actually matches.
+  const url = `${BRREG_API}/enheter?navn=${encodeURIComponent(name)}&size=25`;
   const res = await fetch(url, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(10000),
@@ -56,13 +67,29 @@ export async function searchBrregByName(name: string): Promise<string> {
   if (!res.ok) {
     throw new Error(`Brønnøysundregistrene search returned HTTP ${res.status}`);
   }
-  const data = (await res.json()) as { _embedded?: { enheter?: Array<{ organisasjonsnummer?: string | number }> } };
+  const data = (await res.json()) as {
+    _embedded?: { enheter?: Array<{ organisasjonsnummer?: string | number; navn?: string }> };
+  };
   const entities = data?._embedded?.enheter ?? [];
-  const first = entities[0];
-  if (!first) {
+  if (entities.length === 0) {
     throw new Error(`No Norwegian company found matching "${name}".`);
   }
-  return String(first.organisasjonsnummer);
+
+  let best: string | null = null;
+  for (const e of entities) {
+    if (!e.organisasjonsnummer || !e.navn) continue;
+    const { match_confidence } = classifyNameMatch(name, e.navn);
+    if (match_confidence === "exact") return String(e.organisasjonsnummer);
+    if (match_confidence === "high" && best === null) best = String(e.organisasjonsnummer);
+  }
+  if (best !== null) return best;
+
+  const closest = entities.slice(0, 3).map((e) => e.navn).filter(Boolean).join(", ");
+  throw new Error(
+    `No confident Norwegian registry match for "${name}". Brønnøysundregistrene's name search ` +
+      `is fuzzy and alphabetically ordered, and returned only unrelated entities` +
+      `${closest ? ` (closest: ${closest})` : ""}. Provide the org number (9 digits) for an exact lookup.`,
+  );
 }
 
 /**
