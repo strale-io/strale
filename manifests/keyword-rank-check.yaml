@@ -22,7 +22,10 @@ input_schema:
       description: "Search term to check ranking for. Aliases: query, search, term."
     country:
       type: string
-      description: Google country code (gl parameter). Defaults to "us".
+      description: >-
+        Market to check the ranking in, as an ISO 3166-1 alpha-2 code (SE), alpha-3 code (SWE), numeric code (752), or
+        exact country name (Sweden). "UK" is accepted as an alias for GB. Unrecognised values are rejected before the
+        search runs rather than silently ignored. Sent to Google as the gl parameter. Defaults to "us".
     language:
       type: string
       description: Google language code (hl parameter). Defaults to "en".

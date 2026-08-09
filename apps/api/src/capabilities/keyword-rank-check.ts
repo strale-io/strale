@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 
 registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
   const rawDomain = (
@@ -57,7 +58,11 @@ registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
     throw new Error("'keyword' must be at least 2 characters.");
   }
 
-  const country = ((input.country as string) ?? "us").trim().toLowerCase();
+  // Validate before spending a Serper call. Serper silently ignores an
+  // unrecognised `gl`, so an unresolvable country used to buy an unscoped
+  // search while the response echoed the caller's bogus value back — and here
+  // that also means the reported rank is for the wrong market.
+  const country = resolveCountryOrThrow(input.country, { fallback: "us" }).toLowerCase();
   const language = ((input.language as string) ?? "en").trim().toLowerCase();
 
   let depth = 10;
