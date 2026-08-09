@@ -89,6 +89,35 @@ Extract up to 10 recent reviews. Use null for any fields you cannot determine. S
   const output = JSON.parse(jsonMatch[0]);
   output.url = fullUrl;
 
+  // Refuse to bill for an empty extraction.
+  //
+  // The prompt above tells the model to "use null for any fields you cannot
+  // determine", so a page that renders its reviews client-side, or serves a
+  // bot-detection interstitial, yields a well-formed object in which every
+  // review field is null — and this used to return it as `status: completed`.
+  // The customer was charged the full price for a response whose own
+  // sentiment_summary read "No review data available on the provided page
+  // text". DEC-14 is explicit that we deduct only on success, and an
+  // extraction that found no reviews is not a success.
+  //
+  // Surfaced by the 2026-08-09 ALLOW_MATRIX sweep: this capability's fixture
+  // failed 0/6 while the call itself reported success.
+  const hasAnyReviewSignal =
+    output.average_rating != null ||
+    output.review_count != null ||
+    (Array.isArray(output.recent_reviews) && output.recent_reviews.length > 0) ||
+    (Array.isArray(output.common_pros) && output.common_pros.length > 0) ||
+    (Array.isArray(output.common_cons) && output.common_cons.length > 0);
+
+  if (!hasAnyReviewSignal) {
+    throw new Error(
+      `No review data could be extracted from ${domain}. The page was fetched successfully but ` +
+        `contained no readable reviews — this usually means the reviews are rendered client-side, ` +
+        `sit behind a bot-detection interstitial, or the URL is not a product page. ` +
+        `You were not charged. Try a product page whose reviews are visible in the raw HTML.`,
+    );
+  }
+
   return {
     output,
     provenance: {
