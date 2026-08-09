@@ -54,7 +54,7 @@ const MAX_BODY_BYTES = 300_000; // cap parsed HTML per request to 300KB
 // unambiguous and there is nothing to backtrack over. Same matches on real
 // content (verified), 14ms at 32KB. Bounds follow RFC 5321 (64-char local
 // part, 63-char labels).
-const EMAIL_RE = /[a-zA-Z0-9._%+-]{1,64}@(?:[a-zA-Z0-9-]{1,63}\.){1,8}[a-zA-Z]{2,24}/g;
+export const EMAIL_RE = /[a-zA-Z0-9._%+-]{1,64}@(?:[a-zA-Z0-9-]{1,63}\.){1,8}[a-zA-Z]{2,24}/g;
 const CONTACT_LINK_RE = /contact-us|get-in-touch|contact|kontakt/i;
 // firstname.lastname / firstname_lastname / firstname-lastname style local part.
 const PERSONAL_NAME_LOCAL_PART_RE = /^[a-z]{2,}[._-][a-z]{2,}$/i;
@@ -163,7 +163,7 @@ function stripToVisibleText(html: string): string {
  * the same quote-awareness the regex provided. Measured at 300KB of the
  * pathological input: sub-millisecond.
  */
-function stripTags(html: string): string {
+export function stripTags(html: string): string {
   let out = "";
   let i = 0;
   const n = html.length;
