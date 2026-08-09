@@ -25,6 +25,9 @@ input_schema:
         search runs rather than silently ignored. Omit for unscoped global results.
     language:
       type: string
+      description: >-
+        Language for results, as an ISO 639-1 code ("en"), optionally with a region ("pt-BR"). Validated for shape and
+        rejected before the search runs if malformed, rather than silently ignored. Omit for Google's default.
     num_results:
       type: integer
       description: Number of results (default 10, max 20)

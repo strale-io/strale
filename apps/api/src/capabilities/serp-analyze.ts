@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
+import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
 registerCapability("serp-analyze", async (input: CapabilityInput) => {
   const keyword = (
@@ -15,7 +16,7 @@ registerCapability("serp-analyze", async (input: CapabilityInput) => {
   // unrecognised `gl`, so an unresolvable country used to buy an unscoped
   // search while the response echoed the caller's bogus value back.
   const country = resolveCountryOrThrow(input.country, { fallback: "us" }).toLowerCase();
-  const language = ((input.language as string) ?? "en").trim().toLowerCase();
+  const language = resolveLanguageOrThrow(input.language, { fallback: "en" });
 
   const serperKey = process.env.SERPER_API_KEY;
   if (!serperKey) throw new Error("SERPER_API_KEY is required.");

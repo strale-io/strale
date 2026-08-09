@@ -215,3 +215,47 @@ describe("resolveCountryOrThrow", () => {
     expect(() => resolveCountryOrThrow("墨西")).toThrow(/墨西/);
   });
 });
+
+describe("resolveCountryAlpha2 — accent and alias handling", () => {
+  it("resolves accented names typed without their accents", () => {
+    expect(resolveCountryAlpha2("Cote d'Ivoire")).toBe("CI");
+    expect(resolveCountryAlpha2("Côte d'Ivoire")).toBe("CI");
+    expect(resolveCountryAlpha2("Aland Islands")).toBe("AX");
+    expect(resolveCountryAlpha2("Åland Islands")).toBe("AX");
+    expect(resolveCountryAlpha2("Saint Barthelemy")).toBe("BL");
+  });
+
+  it("resolves real-world names ISO does not use", () => {
+    expect(resolveCountryAlpha2("Czechia")).toBe("CZ");
+    expect(resolveCountryAlpha2("Türkiye")).toBe("TR");
+    expect(resolveCountryAlpha2("Turkiye")).toBe("TR");
+    expect(resolveCountryAlpha2("UAE")).toBe("AE");
+    expect(resolveCountryAlpha2("Holland")).toBe("NL");
+    expect(resolveCountryAlpha2("Ivory Coast")).toBe("CI");
+    expect(resolveCountryAlpha2("Cape Verde")).toBe("CV");
+    expect(resolveCountryAlpha2("Swaziland")).toBe("SZ");
+    expect(resolveCountryAlpha2("Burma")).toBe("MM");
+    expect(resolveCountryAlpha2("Macedonia")).toBe("MK");
+    expect(resolveCountryAlpha2("Vatican")).toBe("VA");
+  });
+
+  it("maps the UK's constituent countries to GB, which is what gl accepts", () => {
+    for (const name of ["England", "Scotland", "Wales", "Northern Ireland", "Britain", "Great Britain"]) {
+      expect(resolveCountryAlpha2(name), name).toBe("GB");
+    }
+  });
+
+  it("still refuses names that need a guess", () => {
+    // Adding aliases must not quietly widen into ambiguity.
+    expect(resolveCountryAlpha2("Korea")).toBeNull();
+    expect(resolveCountryAlpha2("Congo")).toBeNull();
+    expect(resolveCountryAlpha2("America")).toBeNull();
+  });
+
+  it("lets a real ISO code win over any alias key", () => {
+    // Precedence guard: code lookup runs before the alias map, so a future
+    // alias whose key collides with an assigned code cannot shadow it.
+    expect(resolveCountryAlpha2("CD")).toBe("CD");
+    expect(resolveCountryAlpha2("VA")).toBe("VA");
+  });
+});

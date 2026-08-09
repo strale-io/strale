@@ -1,6 +1,6 @@
 /**
- * Cross-capability regression test for country validation on the three
- * Serper-backed capabilities.
+ * Cross-capability regression tests for caller-input validation on the three
+ * Serper-backed capabilities (country and language).
  *
  * Incident: on 2026-08-09 an x402 caller sent 50 consecutive `google-search`
  * calls with `country: "墨西"`. Serper silently ignores an unrecognised `gl`,
@@ -153,6 +153,53 @@ describe("gl parameter", () => {
     async ({ slug, baseInput }) => {
       const body = await captureRequestBody(getExecutor(slug), baseInput);
       expect(body.gl).toBe("us");
+    },
+  );
+});
+
+describe("language validation", () => {
+  const REJECTED_LANGUAGES = ["中文", "English", "墨西", "e", "en_US!"];
+
+  describe.each(CAPABILITIES)("$slug", ({ slug, baseInput }) => {
+    it.each(REJECTED_LANGUAGES)("rejects %j without spending a Serper call", async (language) => {
+      const run = getExecutor(slug)!;
+
+      await expect(
+        run({ ...baseInput, language }, {} as never),
+      ).rejects.toThrow(/'language' must be a two-letter ISO 639-1 code/);
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it("sends a valid tag through to hl, lowercased", async () => {
+      const run = getExecutor(slug)!;
+      await expect(
+        run({ ...baseInput, language: "pt-BR" }, {} as never),
+      ).rejects.toThrow(/fetch called/);
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+      expect(body.hl).toBe("pt-br");
+    });
+  });
+
+  it("google-search omits hl entirely when no language is given", async () => {
+    const run = getExecutor("google-search")!;
+    await expect(
+      run({ query: "phone contact" }, {} as never),
+    ).rejects.toThrow(/fetch called/);
+
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+    expect(body).not.toHaveProperty("hl");
+  });
+
+  it.each(CAPABILITIES.filter((c) => c.slug !== "google-search"))(
+    "$slug defaults to hl=en when no language is given",
+    async ({ slug, baseInput }) => {
+      const run = getExecutor(slug)!;
+      await expect(run(baseInput, {} as never)).rejects.toThrow(/fetch called/);
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+      expect(body.hl).toBe("en");
     },
   );
 });

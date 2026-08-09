@@ -352,40 +352,91 @@ const resolveAlpha2 = new Map<string, string>();
 const resolveAlpha3 = new Map<string, string>();
 const resolveNumeric = new Map<string, string>();
 const resolveName = new Map<string, string>();
+
+/**
+ * Fold a country name to a comparison key: lowercase, diacritics stripped.
+ *
+ * Callers type "Cote d'Ivoire", "Aland Islands" and "Saint Barthelemy" without
+ * the accents far more often than with them, and an LLM emitting JSON may drop
+ * them entirely. Folding both sides once here is better than carrying one
+ * alias per accented character.
+ */
+function foldName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
 for (const c of ALL_ISO_IDENTIFIERS) {
   resolveAlpha2.set(c.alpha_2, c.alpha_2);
   resolveAlpha3.set(c.alpha_3, c.alpha_2);
   resolveNumeric.set(c.numeric, c.alpha_2);
-  resolveName.set(c.name.toLowerCase(), c.alpha_2);
+  resolveName.set(foldName(c.name), c.alpha_2);
 }
 
 // ─── Strict resolver for upstream-API country parameters ────────────────────
 
 /**
- * Non-ISO codes that callers pass often enough to be worth accepting. `uk` is
- * the big one: it is not ISO 3166-1 (the code is `GB`) but Google's own `gl`
- * parameter accepts it, so rejecting it would break callers who are otherwise
- * doing nothing wrong.
+ * Names and codes callers pass that ISO does not list, keyed by folded name.
+ *
+ * The traffic here is LLM-authored, so the common failure is not a typo — it
+ * is a real-world name the standard happens not to use: the endonym
+ * ("Türkiye"), the renamed state ("Czechia", "Swaziland"), the constituent
+ * country ("Scotland"), the colloquial ("Holland"), or the abbreviation
+ * ("UAE"). Each of these is a call we would otherwise reject and bill nothing
+ * for, but which the caller meant unambiguously.
+ *
+ * `uk` earns its place for a different reason: it is not ISO 3166-1 (the code
+ * is `GB`) but Google's own `gl` accepts it, so rejecting it would break
+ * callers doing nothing wrong.
+ *
+ * Deliberately absent: "Korea" (North or South?), "America" (the US, or the
+ * continents?), "Congo" (two countries). Anything that needs a guess belongs
+ * in the error message, not in this map — silently picking one is the failure
+ * mode this whole module exists to prevent.
  */
 const ALIASES: Record<string, string> = {
-  UK: "GB",
+  uk: "GB",
+  britain: "GB",
+  "great britain": "GB",
+  england: "GB",
+  scotland: "GB",
+  wales: "GB",
+  "northern ireland": "GB",
+  czechia: "CZ",
+  turkiye: "TR", // folded form of "Türkiye"
+  uae: "AE",
+  holland: "NL",
+  "ivory coast": "CI",
+  "cape verde": "CV",
+  swaziland: "SZ",
+  burma: "MM",
+  macedonia: "MK",
+  vatican: "VA",
+  "u.s.": "US",
+  "u.s.a.": "US",
+  "congo-kinshasa": "CD",
+  drc: "CD",
+  "congo-brazzaville": "CG",
 };
 
 /**
  * Resolve a caller-supplied country to a canonical ISO 3166-1 alpha-2 code,
  * or `null` if it cannot be resolved unambiguously.
  *
- * Accepts alpha-2, alpha-3, numeric, an exact country name (case-insensitive),
- * and the aliases above. Unlike `searchCountries` this deliberately does NOT
- * do substring name matching — "Guinea" matches four different countries, and
- * silently picking one to hand to an upstream API is worse than refusing.
+ * Accepts alpha-2, alpha-3, numeric, a country name (case- and accent-
+ * insensitive), and the aliases above. Unlike `searchCountries` this
+ * deliberately does NOT do substring name matching — "Guinea" matches four
+ * different countries, and silently picking one to hand to an upstream API is
+ * worse than refusing.
  */
 export function resolveCountryAlpha2(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
 
   const upper = trimmed.toUpperCase();
-  if (ALIASES[upper]) return ALIASES[upper];
 
   // Numeric codes are canonically three digits. Accepting shorter input and
   // zero-padding it would silently turn a caller's dialling code into an
@@ -396,7 +447,8 @@ export function resolveCountryAlpha2(raw: string): string | null {
     (/^\d{3}$/.test(upper) ? resolveNumeric.get(upper) : undefined);
   if (byCode) return byCode;
 
-  return resolveName.get(trimmed.toLowerCase()) ?? null;
+  const folded = foldName(trimmed);
+  return resolveName.get(folded) ?? ALIASES[folded] ?? null;
 }
 
 /**
