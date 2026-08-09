@@ -19,6 +19,10 @@ input_schema:
       description: Search query
     country:
       type: string
+      description: >-
+        Country to scope results to, as an ISO 3166-1 alpha-2 code (MX), alpha-3 code (MEX), numeric code (484), or
+        exact country name (Mexico). "UK" is accepted as an alias for GB. Unrecognised values are rejected before the
+        search runs rather than silently ignored. Omit for unscoped global results.
     language:
       type: string
     num_results:
@@ -114,7 +118,7 @@ output_schema:
     knowledge_graph: null
     people_also_ask: []
     search_parameters:
-      country: US
+      country: us
       language: null
   properties:
     query:

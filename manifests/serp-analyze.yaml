@@ -18,6 +18,10 @@ input_schema:
   properties:
     country:
       type: string
+      description: >-
+        Market to analyse the SERP for, as an ISO 3166-1 alpha-2 code (SE), alpha-3 code (SWE), numeric code (752), or
+        exact country name (Sweden). "UK" is accepted as an alias for GB. Unrecognised values are rejected before the
+        search runs rather than silently ignored. Sent to Google as the gl parameter. Defaults to "us".
     keyword:
       type: string
     language:
