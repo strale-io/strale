@@ -97,123 +97,14 @@ async function readCapped(resp: Response, maxBytes = MAX_BODY_BYTES): Promise<st
 }
 
 /**
- * `readCapped` truncates the response body at MAX_BODY_BYTES, and that cut
- * can land mid-block — e.g. inside an `<svg>...</svg>` icon sprite, leaving
- * an opening tag with no matching close anywhere in the truncated string.
- * The close-tag-based strip below can't remove a block it never finds the
- * end of, so the dangling fragment (dense SVG path-coordinate digits, in
- * practice) leaks through as if it were visible text. Drop everything from
- * the last unclosed script/style/svg open tag onward before stripping —
- * we can't safely parse past a truncation boundary anyway.
- */
-function dropTrailingUnclosedBlock(html: string, tag: string): string {
-  const openRe = new RegExp(`<${tag}[\\s>]`, "gi");
-  let lastOpenIdx = -1;
-  let m: RegExpExecArray | null;
-  while ((m = openRe.exec(html))) lastOpenIdx = m.index;
-  if (lastOpenIdx === -1) return html;
-  const closeRe = new RegExp(`</${tag}>`, "i");
-  const hasCloseAfter = closeRe.test(html.slice(lastOpenIdx));
-  return hasCloseAfter ? html : html.slice(0, lastOpenIdx);
-}
-
-/**
- * Strip script/style/svg blocks, comments, and all remaining tags to get a
- * plain-text view of the page. Inline SVG `<path d="M59.6 14.2 ...">` data
- * is the dominant false-positive source for a raw-HTML phone regex — it is
- * dense with digit/space/dash/dot sequences that pass any digit-count
- * heuristic. Restricting the text-fallback regex to visible text (never
- * attribute values) eliminates that class of noise entirely.
- */
-function stripToVisibleText(html: string): string {
-  let cleaned = html;
-  for (const tag of ["script", "style", "svg"]) {
-    cleaned = dropTrailingUnclosedBlock(cleaned, tag);
-  }
-  return stripTags(
-    cleaned
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
-      .replace(/<!--[\s\S]*?-->/g, " ")
-      .replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, " "),
-  );
-}
-
-/**
- * Strip HTML tags in a single linear pass.
+ * Phone-number extraction from AUTHORITATIVE MARKUP ONLY.
  *
- * This deliberately is NOT a regex. The previous implementation was
- *   /<(?:[^>"']|"[^"]*"|'[^']*')*>/g
- * which handled the real requirement correctly — a naive `<[^>]+>` breaks on
- * tags whose attribute VALUE contains a literal "<" or ">" (e.g. a data-URI
- * SVG inside a `style` attribute), leaking raw SVG path digits into what
- * should be visible text, which is what made phone extraction hallucinate
- * numbers. But it was catastrophically backtracking: `[^>"']` can itself
- * match "<", so on a run of unclosed "<" the engine re-explores the
- * alternation from every offset. Measured on a run of "<" characters:
- *   16K → 0.39s, 64K → 10.9s, 300K → 243s.
- * MAX_BODY_BYTES is 300_000 and we parse up to two pages, so an attacker
- * serving a page of "<"*300000 from their own domain could block the Node
- * event loop for minutes on a single 5-cent call. The hard-timeout guard in
- * routes/do.ts cannot save us — its setTimeout can't fire while the loop is
- * blocked.
- *
- * A hand-written scanner has no backtracking at all: one pass, O(n), with
- * the same quote-awareness the regex provided. Measured at 300KB of the
- * pathological input: sub-millisecond.
+ * Two sources, both of which are the page author explicitly declaring "this
+ * string is a phone number": `tel:` links, and schema.org `telephone` in
+ * JSON-LD or microdata. There is no free-text fallback — see the long note
+ * inside the function for why one cannot work here.
  */
-export function stripTags(html: string): string {
-  let out = "";
-  let i = 0;
-  const n = html.length;
-  while (i < n) {
-    const lt = html.indexOf("<", i);
-    if (lt === -1) {
-      out += html.slice(i);
-      break;
-    }
-    out += html.slice(i, lt);
-    // Walk to the matching ">", treating quoted attribute values as opaque
-    // so an embedded ">" inside them doesn't close the tag early.
-    let j = lt + 1;
-    let quote: string | null = null;
-    while (j < n) {
-      const ch = html[j];
-      if (quote) {
-        if (ch === quote) quote = null;
-      } else if (ch === '"' || ch === "'") {
-        quote = ch;
-      } else if (ch === ">") {
-        break;
-      }
-      j++;
-    }
-    if (j >= n) {
-      // No closing ">" anywhere — this "<" is not a tag at all, it is literal
-      // text (e.g. prose containing "5 < 10, call 555-1234"). Emit the
-      // remainder verbatim and stop. This matches the old regex, which simply
-      // failed to match here and left the text in place; dropping it instead
-      // would silently lose any contact details appearing after a stray "<".
-      out += html.slice(lt);
-      break;
-    }
-    out += " ";
-    i = j + 1;
-  }
-  return out;
-}
-
-/**
- * Phone-number extraction. Prefers `tel:` links (unambiguous — the page
- * author marked it as a phone number). Falls back to a text heuristic only
- * when no tel: links exist, scoped to visible text only (see
- * stripToVisibleText), and requires real phone-like structure (a leading
- * "+" or at least two separator characters) to avoid matching decimal-
- * looking numbers, prices, and tracking IDs that happen to fall in the
- * 7-15 digit range.
- */
-function extractPhones(html: string): string[] {
+export function extractPhones(html: string): string[] {
   const results: string[] = [];
   const seen = new Set<string>();
 
@@ -225,29 +116,92 @@ function extractPhones(html: string): string[] {
     seen.add(num);
     results.push(num);
   }
-  if (results.length > 0) return results.slice(0, 10);
-
-  const visibleText = stripToVisibleText(html);
-  // "." deliberately excluded from the allowed character class: decimal
-  // numbers, prices, and version strings vastly outnumber dot-formatted
-  // phone numbers on real pages and were the single biggest false-positive
-  // source observed during onboarding (e.g. "41056.391").
-  const candidates = visibleText.match(/\+?[\d][\d\s()-]{6,18}\d/g) || [];
-  for (const raw of candidates) {
-    const trimmed = raw.trim().replace(/\s+/g, " ");
-    const digits = trimmed.replace(/[^\d]/g, "");
-    // Real phone numbers are 7-15 digits (ITU-T E.164 max).
+  // Second authoritative source: schema.org `telephone`, in JSON-LD or
+  // microdata. Like a tel: link, this is the site author explicitly declaring
+  // "this string is a phone number" — not us inferring it from shape.
+  for (const num of extractSchemaTelephones(html)) {
+    const digits = num.replace(/[^\d]/g, "");
     if (digits.length < 7 || digits.length > 15) continue;
-    const startsWithPlus = trimmed.startsWith("+");
-    const separatorCount = (trimmed.match(/[\s()-]/g) || []).length;
-    // Bare digit blobs are the other dominant false-positive shape —
-    // require a leading "+" or >=2 separators.
-    if (!startsWithPlus && separatorCount < 2) continue;
-    if (seen.has(trimmed)) continue;
-    seen.add(trimmed);
-    results.push(trimmed);
+    if (seen.has(num)) continue;
+    seen.add(num);
+    results.push(num);
   }
+
+  // DELIBERATELY NO FREE-TEXT FALLBACK.
+  //
+  // There used to be one: it scanned visible text for digit runs that looked
+  // phone-shaped (7-15 digits, plus a leading "+" or >=2 separators). It was
+  // tightened twice during onboarding — first to exclude "." so decimals and
+  // version strings stopped matching, then to require real separator
+  // structure — and it still shipped false positives to production on its
+  // first real call. Against stripe.com it returned "72-9098-2766" and
+  // "24155-3298-4"; neither digit sequence appears anywhere on the page.
+  //
+  // The mechanism: under our bot User-Agent the site serves different markup
+  // than a browser, `readCapped` truncates it at MAX_BODY_BYTES mid-document,
+  // and the heuristic reads the resulting fragment as numbers. No amount of
+  // additional shape-tightening fixes that, because the input itself is
+  // garbage — the heuristic is being asked to distinguish a phone number from
+  // arbitrary truncated markup using only digit grouping, which is not
+  // decidable.
+  //
+  // Returning invented contact details is strictly worse than returning none:
+  // an empty `phones` array is honest and the caller can act on it, whereas a
+  // plausible-looking wrong number is acted on and fails silently. On a
+  // platform selling verified data, that trade is not close. If a site
+  // publishes a phone number without tel: markup or schema.org, we report
+  // nothing and say so in the manifest limitations.
   return results.slice(0, 10);
+}
+
+/**
+ * Pull `telephone` values out of schema.org markup — JSON-LD blocks first,
+ * then microdata attributes. Mirrors extractPostalAddress's approach.
+ */
+function extractSchemaTelephones(html: string): string[] {
+  const found: string[] = [];
+
+  const jsonLdBlocks = html.matchAll(
+    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  );
+  for (const block of jsonLdBlocks) {
+    try {
+      collectTelephoneNodes(JSON.parse(block[1]), found);
+    } catch {
+      // Malformed JSON-LD on the page — skip, not our job to fix their markup.
+    }
+  }
+
+  for (const m of html.matchAll(/itemprop=["']telephone["'][^>]*>([^<]+)</gi)) {
+    const v = m[1]?.trim();
+    if (v) found.push(v);
+  }
+  // Also the attribute form: <meta itemprop="telephone" content="...">
+  for (const m of html.matchAll(
+    /itemprop=["']telephone["'][^>]*content=["']([^"']+)["']/gi,
+  )) {
+    const v = m[1]?.trim();
+    if (v) found.push(v);
+  }
+
+  return found;
+}
+
+/** Recursively collect schema.org `telephone` string values. */
+function collectTelephoneNodes(node: unknown, out: string[], depth = 0): void {
+  if (depth > 4 || node == null || typeof node !== "object") return;
+  if (Array.isArray(node)) {
+    for (const item of node) collectTelephoneNodes(item, out, depth + 1);
+    return;
+  }
+  const obj = node as Record<string, unknown>;
+  if (typeof obj.telephone === "string" && obj.telephone.trim()) {
+    out.push(obj.telephone.trim());
+  }
+  for (const key of Object.keys(obj)) {
+    const val = obj[key];
+    if (val && typeof val === "object") collectTelephoneNodes(val, out, depth + 1);
+  }
 }
 
 /** Recursively search parsed JSON-LD for a schema.org PostalAddress node. */

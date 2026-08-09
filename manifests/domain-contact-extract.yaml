@@ -118,11 +118,19 @@ limitations:
       show has_contact_page: false even if a contact page exists.
     category: coverage
     severity: info
-  - title: Phone and address extraction are heuristic, not validated
+  - title: Phone numbers come only from explicit markup — plain-text numbers are not extracted
     text: >-
-      Phone numbers are matched by digit-count heuristics (7-15 digits) and can include false positives from tracking
-      IDs, prices, or other digit strings that happen to look phone-shaped. Postal address relies on the page publishing
-      schema.org JSON-LD or microdata markup; sites without structured markup return postal_address: null even if an
-      address is visible in plain text on the page.
-    category: accuracy
+      A phone number is returned only when the site declares it as one: a tel: link, or a schema.org telephone value in
+      JSON-LD or microdata. A number that appears only as visible text is NOT extracted, so phones can be empty on a
+      page a human would say clearly shows a phone number. This is deliberate. An earlier version inferred numbers from
+      digit shape and returned fabricated values in production (digit sequences that appeared nowhere on the page),
+      because sites serve different markup to bots and the response is truncated at 300KB mid-document. An empty result
+      you can act on is worth more than a plausible wrong number you cannot detect.
+    category: coverage
+    severity: warning
+  - title: Postal address requires structured markup
+    text: >-
+      Postal address relies on the page publishing schema.org JSON-LD or microdata markup; sites without structured
+      markup return postal_address: null even if an address is visible in plain text on the page.
+    category: coverage
     severity: info
