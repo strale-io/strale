@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
+import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
 // Uses Serper.dev API (free tier: 2,500 queries/month, no CAPTCHA issues)
 // Requires SERPER_API_KEY env var
@@ -9,7 +10,9 @@ registerCapability("google-search", async (input: CapabilityInput) => {
   if (query.length < 2) throw new Error("'query' must be at least 2 characters.");
 
   const numResults = Math.min((input.num_results as number) ?? 10, 20);
-  const language = ((input.language as string) ?? "").trim();
+  // Same silent-ignore behaviour as `country` below — Google drops an
+  // unrecognised `hl` and bills the call anyway.
+  const language = resolveLanguageOrThrow(input.language);
 
   // Validate before spending a Serper call. An unresolvable country used to be
   // forwarded verbatim as `gl`, which Serper ignores — the caller paid for a

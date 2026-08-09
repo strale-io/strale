@@ -28,7 +28,9 @@ input_schema:
         search runs rather than silently ignored. Sent to Google as the gl parameter. Defaults to "us".
     language:
       type: string
-      description: Google language code (hl parameter). Defaults to "en".
+      description: >-
+        Language for results, as an ISO 639-1 code ("en"), optionally with a region ("pt-BR"). Validated for shape and
+        rejected before the search runs if malformed, rather than silently ignored. Sent to Google as the hl parameter. Defaults to "en".
     depth:
       type: integer
       description: Number of results to scan (Serper "num" parameter). Defaults to 10, max 100.

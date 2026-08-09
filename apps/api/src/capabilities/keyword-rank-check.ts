@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
+import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
 registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
   const rawDomain = (
@@ -63,7 +64,7 @@ registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
   // search while the response echoed the caller's bogus value back — and here
   // that also means the reported rank is for the wrong market.
   const country = resolveCountryOrThrow(input.country, { fallback: "us" }).toLowerCase();
-  const language = ((input.language as string) ?? "en").trim().toLowerCase();
+  const language = resolveLanguageOrThrow(input.language, { fallback: "en" });
 
   let depth = 10;
   if (input.depth !== undefined && input.depth !== null) {

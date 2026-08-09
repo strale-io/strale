@@ -26,6 +26,9 @@ input_schema:
       type: string
     language:
       type: string
+      description: >-
+        Language for results, as an ISO 639-1 code ("en"), optionally with a region ("pt-BR"). Validated for shape and
+        rejected before the search runs if malformed, rather than silently ignored. Defaults to "en".
 output_schema:
   type: object
   example:
