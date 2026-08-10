@@ -64,6 +64,14 @@ jobs:
       # time, and with onboard.ts verifyFixtures which fires at manifest
       # authoring time.
       - run: node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict
+      # Manifest PII guard. scrubFixture()/PII_ARRAY_FIELDS run at CAPTURE time
+      # on executor output; manifests are hand-authored, so an example pasted
+      # from a live response ships real people's names and no machinery ever
+      # looks at it. That is how five manifests came to carry real board
+      # members and partners for ~3 months after the 2026-05-18 fixture audit
+      # flagged two of them. Enforces that PII-bearing arrays in manifest
+      # examples are empty, null, or explicitly synthetic.
+      - run: node apps/api/scripts/check-manifest-pii.mjs --strict
       # Phase 1 tier-coverage gate (WARN-ONLY). For each manifest with a
       # captured response fixture at apps/api/tests/fixtures/tier-coverage/
       # <slug>.json, compares empirical wire-shape against manifest

@@ -35,8 +35,11 @@ output_schema:
     revenue_sek: 108131545000
     company_name: Spotify AB
     dividend_sek: null
+    # Placeholder name. The live capability returns real board members; this
+    # example must not, since manifests are hand-authored and never pass
+    # through the fixture scrubber. Format preserved: Name (Roll).
     board_members:
-      - Carl Peter Christian Luiga (Ordförande)
+      - Exempel Förste Ledamot (Ordförande)
     total_assets_sek: 91250324000
     number_of_employees: 1397
     operating_profit_sek: null
