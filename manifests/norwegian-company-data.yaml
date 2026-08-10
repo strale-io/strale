@@ -13,12 +13,27 @@ price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - org_number
+  # No field is individually required: an org number OR a company name is
+  # enough, and the executor enforces that ("at least one of") itself with a
+  # message naming every accepted alias. Listing org_number as `required` made
+  # the ROUTE reject {"company_name": "Telenor"} with
+  # "Missing required input fields: org_number" before the executor ever ran —
+  # so the capability's own name-resolution path was unreachable from the API
+  # even after the executor was fixed. Danish and Finnish already use required: [].
+  required: []
   properties:
     org_number:
       type: string
-      description: Norwegian org number (9 digits) or company name
+      description: Norwegian org number, 9 digits (e.g. 923609016)
+    company_name:
+      type: string
+      description: >-
+        Company name (e.g. "Telenor"). Resolved against Brønnøysundregistrene and
+        accepted only on a confident name match — an ambiguous name is refused
+        rather than resolved to the wrong legal entity.
+    company_number:
+      type: string
+      description: Alias for org_number
 output_schema:
   type: object
   example:
