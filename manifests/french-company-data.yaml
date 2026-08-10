@@ -27,10 +27,13 @@ output_schema:
     siret: "54205118000066"
     status: active
     address: LA DEFENSE 6 2 PLACE JEAN MILLIER 92400 COURBEVOIE
+    # Placeholder names. The live capability returns real directors; this
+    # example must not, since manifests are hand-authored and never pass
+    # through the fixture scrubber. Format preserved: NAME (Role).
     directors:
-      - JACQUES ANDRE ASCHENBROICH (Administrateur)
-      - MARIE CHRISTINE COISNE (Administrateur)
-      - LISE CROTEAU (Administrateur)
+      - EXEMPLE PREMIER DIRIGEANT (Administrateur)
+      - EXEMPLE DEUXIEME DIRIGEANT (Administrateur)
+      - EXEMPLE TROISIEME DIRIGEANT (Administrateur)
     postal_code: "92400"
     company_name: TOTALENERGIES SE (TOTALENERGIE SE)
     activity_code: 70.10Z
