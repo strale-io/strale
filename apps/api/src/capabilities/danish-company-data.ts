@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatDK } from "../lib/vat-derivation.js";
+import { firstString } from "./lib/input-aliases.js";
 
 // CVR API — Danish Central Business Register
 // NOTE: cvrapi.dk free tier has aggressive quota limits that trigger QUOTA_EXCEEDED
@@ -111,9 +112,21 @@ async function fetchCompany(
 }
 
 registerCapability("danish-company-data", async (input: CapabilityInput) => {
-  const rawInput = (input.cvr_number as string) ?? (input.org_number as string) ?? (input.company_number as string) ?? "";
-  if (typeof rawInput !== "string" || !rawInput.trim()) {
-    throw new Error("'cvr_number' is required. Provide a Danish CVR number (8 digits) or company name.");
+  // `company_name` is accepted because the error below has always promised it
+  // and the name path beneath already works — the field simply was never read,
+  // so every {"company_name": "LEGO"} call was rejected by a capability fully
+  // able to answer it. Four such calls were lost in the 90 days to 2026-08-09
+  // (LEGO, Novo Nordisk x2, Maersk).
+  const rawInput = firstString(
+    input,
+    "cvr_number", "org_number", "company_number",
+    "company_name", "name", "query", "task",
+  );
+  if (!rawInput) {
+    throw new Error(
+      "A Danish company identifier or name is required. Provide 'cvr_number' (8 digits) " +
+        "or 'company_name'. Aliases accepted: org_number, company_number, name, query, task.",
+    );
   }
 
   const trimmed = rawInput.trim();
