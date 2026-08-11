@@ -26,13 +26,20 @@ Intent: Add admin stats endpoint, signup webhook, and transaction milestone aler
 **Set ADMIN_SECRET on Railway:**
 The env var needs to be set via the Railway dashboard (CLI wasn't authenticated).
 
+> **2026-08-10:** this section originally contained the live `ADMIN_SECRET`
+> value in plaintext, and it sat in a tracked file for ~5.5 months. The
+> secret was rotated on 2026-08-10 (old value verified rejected with 401,
+> new value 200), so the committed string is now worthless — but it remains
+> in git history permanently, which is why rotation rather than redaction is
+> the actual fix. Never paste a live credential into a handoff file.
+
 ```
-ADMIN_SECRET=7e95e1cdce0931e4c43295819ac3664ddde614064d6c9d364735a2be8a48cfe4
+ADMIN_SECRET=<generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))">
 ```
 
 Once set, test with:
 ```
-curl -H "Authorization: Bearer 7e95e1cdce0931e4c43295819ac3664ddde614064d6c9d364735a2be8a48cfe4" \
+curl -H "Authorization: Bearer $ADMIN_SECRET" \
   https://api.strale.io/v1/admin/stats
 ```
 
