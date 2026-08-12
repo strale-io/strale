@@ -18,6 +18,11 @@ on:
 jobs:
   sweep:
     runs-on: ubuntu-latest
+    # Minimal token scope: the job now carries a prod DB credential, so the
+    # GITHUB_TOKEN is pinned to exactly what the issue-opening step needs.
+    permissions:
+      contents: read
+      issues: write
     env:
       AUDIT_HMAC_SECRET: ci-placeholder-secret-at-least-32-chars-long-0123456789
       FRONTEND_URL: https://strale.dev
@@ -97,6 +102,20 @@ jobs:
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
+      # TOAST-readability scan over compliance-critical JSONB columns.
+      # Added after the 2026-08-12 incident: a lost TOAST chunk in
+      # transactions.audit_trail sat undetected for four months. A weekly
+      # full-detoast pass bounds detection latency to days.
+      - id: toast-readability
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set +e
+          set -o pipefail
+          node apps/api/scripts/check-audit-trail-readability.mjs 2>&1 | tee /tmp/toast-readability.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
       # Aggregate report. Step fails (and triggers issue creation) if
       # ANY upstream sweep reported drift.
       - id: aggregate
@@ -128,6 +147,11 @@ jobs:
             echo '```'
             cat /tmp/audit-record-shape.txt
             echo '```'
+            echo ""
+            echo "## TOAST readability (audit/compliance JSONB columns)"
+            echo '```'
+            cat /tmp/toast-readability.txt
+            echo '```'
           } > /tmp/report.md
           cat /tmp/report.md
 
@@ -137,7 +161,8 @@ jobs:
           FT=${{ steps.fetch-timeout.outputs.exit }}
           VR=${{ steps.vendor-roster.outputs.exit }}
           AR=${{ steps.audit-record-shape.outputs.exit }}
-          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ]; then
+          TR=${{ steps.toast-readability.outputs.exit }}
+          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ] || [ "$TR" != "0" ]; then
             echo "::warning::One or more drift sweeps reported findings — see report"
             exit 1
           fi
