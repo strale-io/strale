@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
@@ -32,6 +33,9 @@ registerCapability("html-to-pdf", async (input: CapabilityInput) => {
     // F-0-006: Browserless fetches the URL from its own network; validateUrl
     // refuses private-IP / bad-scheme URLs before the forward.
     await validateUrl(fullUrl);
+    // ToS gate before forwarding to Browserless /pdf (it fetches from its own
+    // network — safeFetch cannot cover this path; legal audit 2026-08-12).
+    assertTargetAllowed(fullUrl);
     bodyObj.url = fullUrl;
     bodyObj.gotoOptions = { waitUntil: "networkidle0", timeout: 25000 };
   } else {

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 // Lightweight text extraction — HTTP GET only, no Browserless
@@ -9,12 +10,12 @@ registerCapability("url-to-text", async (input: CapabilityInput) => {
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
   await validateUrl(fullUrl);
 
-  const response = await fetch(fullUrl, {
+  const response = await safeFetch(fullUrl, {
     headers: {
       "User-Agent": "Strale/1.0 (text extractor; admin@strale.io)",
       Accept: "text/html,application/xhtml+xml,*/*",
     },
-    redirect: "follow",
+    // redirect handling: safeFetch follows up to 3 hops with per-hop re-validation
     signal: AbortSignal.timeout(15000),
   });
 

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
@@ -8,6 +9,9 @@ registerCapability("landing-page-roast", async (input: CapabilityInput) => {
   if (!url) throw new Error("'url' is required.");
 
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
+  // ToS gate BEFORE the screenshot leg — it fired ahead of the gated render
+  // path (legal audit 2026-08-12).
+  assertTargetAllowed(fullUrl);
 
   // Get screenshot via Browserless
   const { url: blessUrl, key } = getBrowserlessConfig();

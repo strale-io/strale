@@ -43,6 +43,12 @@ export interface ProhibitedTarget {
    * google.com/search is ToS-prohibited for scraping, google.com is not.
    */
   pathPrefix?: string;
+  /**
+   * When set, matches the hostname by regex instead of exact/subdomain
+   * equality — for rulings covering a domain FAMILY (google ccTLDs). `host`
+   * then serves only as the display placeholder.
+   */
+  hostRe?: RegExp;
   /** Human-readable site name, used in the caller-facing message. */
   site: string;
   /** Governing decision. Internal provenance — never sent to callers. */
@@ -81,6 +87,17 @@ export const PROHIBITED_TARGETS: readonly ProhibitedTarget[] = [
   },
   {
     host: "google.com",
+    pathPrefix: "/search",
+    site: "Google Search",
+    decision: "DEC-20260427-H-4",
+    alternatives: "Use the google-search capability, which runs on a licensed search API.",
+  },
+  {
+    // Money-integrity 2026-08-12: the H-4 ruling covers Google Search, not
+    // one hostname — google.se/.de/.co.uk /search were still executable
+    // (product-search exploited exactly this). ccTLD family, same path rule.
+    hostRe: /^(?:www\.)?google\.(?:[a-z]{2,3})(?:\.[a-z]{2})?$/,
+    host: "google.<ccTLD>",
     pathPrefix: "/search",
     site: "Google Search",
     decision: "DEC-20260427-H-4",
@@ -152,7 +169,9 @@ export function findProhibitedTarget(rawUrl: string): ProhibitedTarget | null {
   const hostname = parsed.hostname.toLowerCase().replace(/\.$/, "");
 
   for (const rule of PROHIBITED_TARGETS) {
-    const hostMatches = hostname === rule.host || hostname.endsWith(`.${rule.host}`);
+    const hostMatches = rule.hostRe
+      ? rule.hostRe.test(hostname)
+      : hostname === rule.host || hostname.endsWith(`.${rule.host}`);
     if (!hostMatches) continue;
     if (rule.pathPrefix && !parsed.pathname.startsWith(rule.pathPrefix)) continue;
     return rule;

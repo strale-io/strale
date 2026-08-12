@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 // F-0-006 Bucket D: the user URL is filtered by regex to ensure it
 // matches linkedin.com before any fetch. A non-LinkedIn URL is rejected
@@ -81,14 +82,14 @@ async function checkAccessibility(
   url: string,
 ): Promise<{ accessible: boolean; statusCode: number | null }> {
   try {
-    const response = await fetch(url, {
+    const response = await safeFetch(url, {
       method: "HEAD",
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         Accept: "text/html",
       },
-      redirect: "follow",
+      // safeFetch follows up to 3 hops with per-hop re-validation
       signal: AbortSignal.timeout(10000),
     });
     // LinkedIn often returns 999 for bot detection
@@ -106,7 +107,7 @@ async function checkAccessibility(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           Accept: "text/html",
         },
-        redirect: "follow",
+        // safeFetch follows up to 3 hops with per-hop re-validation
         signal: AbortSignal.timeout(10000),
       });
       return {

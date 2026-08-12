@@ -1,10 +1,14 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 
 // F-0-006 Bucket D: user URL is url-encoded and sent to the HARDCODED
 // Google PageSpeed API endpoint. We never fetch the user's URL directly —
 // Google does, from their network.
 registerCapability("page-speed-test", async (input: CapabilityInput) => {
   const rawUrl = ((input.url as string) ?? (input.task as string) ?? "").trim();
+  // ToS gate: sending a prohibited URL to a vendor/API to fetch on our
+  // behalf is the same policy violation by proxy (money-integrity 2026-08-12).
+  assertTargetAllowed(rawUrl);
   if (!rawUrl) throw new Error("'url' is required. Provide a URL to test page speed.");
 
   const url = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;

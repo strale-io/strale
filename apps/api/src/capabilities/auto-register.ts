@@ -30,6 +30,10 @@ import { getExecutor } from "./index.js";
 
 const DEACTIVATED = new Map<string, string>([
   ["amazon-price", "Amazon CAPTCHA blocks datacenter IPs"],
+  [
+    "product-search",
+    "deactivated 2026-08-12 (money-integrity batch): its only source is a Strale-operated Google Shopping scrape — the exact target DEC-20260427-H-4 prohibits (it evaded the blocklist via ccTLDs, now closed). No compliant source exists; sibling price-compare kept its licensed PriceRunner path, this capability has none. Reactivate only with a licensed product-search API.",
+  ],
   // email-finder: built and pipeline-verified 2026-08-09 (19/19 structural,
   // 11/11 smoke), then shelved before activation on a value finding, not a
   // technical one. The capability infers a person's work address from a

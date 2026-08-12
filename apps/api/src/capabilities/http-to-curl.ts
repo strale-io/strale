@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 
 // F-0-006 Bucket D: generates a curl/fetch code snippet as a STRING.
 // This capability performs NO network I/O itself. The 'fetch(' occurrences
@@ -7,6 +8,9 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 registerCapability("http-to-curl", async (input: CapabilityInput) => {
   const method = ((input.method as string) ?? "GET").trim().toUpperCase();
   const url = ((input.url as string) ?? "").trim();
+  // ToS gate: sending a prohibited URL to a vendor/API to fetch on our
+  // behalf is the same policy violation by proxy (money-integrity 2026-08-12).
+  assertTargetAllowed(url);
   const headers = (input.headers as Record<string, string>) ?? {};
   const body = input.body;
   const auth = input.auth as { type: string; token?: string; username?: string; password?: string } | undefined;

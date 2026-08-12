@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 
@@ -99,7 +100,7 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
   let pageHtml: string | null = null;
 
   try {
-    const pageRes = await fetch(ytUrl, {
+    const pageRes = await safeFetch(ytUrl, {
       headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Accept-Language": "en-US,en;q=0.9" },
       signal: AbortSignal.timeout(10000),
     });

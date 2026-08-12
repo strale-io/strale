@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import Anthropic from "@anthropic-ai/sdk";
 
 // F-0-006 Bucket D: user input is an owner/repo pair; requests go to
@@ -7,6 +8,9 @@ import Anthropic from "@anthropic-ai/sdk";
 
 registerCapability("github-repo-analyze", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.repo as string) ?? (input.task as string) ?? "").trim();
+  // ToS gate: sending a prohibited URL to a vendor/API to fetch on our
+  // behalf is the same policy violation by proxy (money-integrity 2026-08-12).
+  assertTargetAllowed(url);
   if (!url) throw new Error("'url' is required. Provide a GitHub repo URL (e.g. https://github.com/owner/repo).");
 
   // Extract owner/repo

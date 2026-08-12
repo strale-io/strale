@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("sitemap-parse", async (input: CapabilityInput) => {
@@ -13,7 +14,7 @@ registerCapability("sitemap-parse", async (input: CapabilityInput) => {
   }
   await validateUrl(url);
 
-  const response = await fetch(url, {
+  const response = await safeFetch(url, {
     signal: AbortSignal.timeout(15000),
     headers: { "User-Agent": "StraleBot/1.0", Accept: "application/xml, text/xml, */*" },
   });

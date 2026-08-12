@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 
@@ -98,6 +99,9 @@ registerCapability("company-enrich", async (input: CapabilityInput) => {
 
   const domain = normalizeDomain(rawInput);
   const websiteUrl = `https://${domain}`;
+  // ToS gate before any Browserless-forwarded scrape of the caller's domain
+  // (customer-directed LinkedIn scraping was reachable; legal audit 2026-08-12).
+  assertTargetAllowed(websiteUrl);
 
   // Scrape the company website
   const websiteText = await scrapeUrl(websiteUrl);

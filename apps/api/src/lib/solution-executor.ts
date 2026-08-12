@@ -28,6 +28,23 @@ import { sanitizeFailureReason } from "./sanitize.js";
 import { enrichCompanyOutput } from "../capabilities/lib/enrich-company-output.js";
 import { logWarn } from "./log.js";
 
+/**
+ * True iff a step's recorded value is real capability output — not an error,
+ * not skipped-for-missing-inputs, not unavailable.
+ *
+ * Money-integrity 2026-08-12: this predicate is the billing boundary. The
+ * wallet path used `step_count - errors.length`, which counted SKIPPED steps
+ * as successes — a solution whose step 1 failed (starving every downstream
+ * step's inputs) billed full price for zero executed checks. The x402 path
+ * already refused settlement on this exact predicate; both rails now share
+ * it. DEC-14: no successful step ⇒ no charge.
+ */
+export function isSuccessfulStepOutput(v: unknown): boolean {
+  if (!v || typeof v !== "object") return false;
+  const obj = v as Record<string, unknown>;
+  return !("error" in obj) && !("skipped" in obj) && !("unavailable" in obj);
+}
+
 // ─── Input reference resolution ─────────────────────────────────────────────
 
 const INPUT_REF = /^\$input\.(.+)$/;
@@ -272,6 +289,15 @@ export async function executeSolution(
       const executor = getExecutor(step.capabilitySlug);
       if (!executor) {
         stepErrors.push(`${step.capabilitySlug}: executor unavailable`);
+        // Money-integrity 2026-08-12: the step must still APPEAR — a bare
+        // return made deactivated steps vanish from the audit trail entirely
+        // (a solution advertising 14 steps audited 13 with no gap marker).
+        stepResults[step.capabilitySlug] = {
+          unavailable: true,
+          reason: "capability unavailable (deactivated or not deployed) — this step did not run",
+        };
+        completedSteps[stepIndex.get(step)!] = {};
+        stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: 0 });
         return;
       }
 
@@ -291,6 +317,13 @@ export async function executeSolution(
           err instanceof BudgetExhaustedError
         ) {
           stepErrors.push(`${step.capabilitySlug}: ${err.message}`);
+          // Same audit-visibility rule as the executor-unavailable branch.
+          stepResults[step.capabilitySlug] = {
+            unavailable: true,
+            reason: sanitizeFailureReason(err.message),
+          };
+          completedSteps[stepIndex.get(step)!] = {};
+          stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: 0 });
           return;
         }
         throw err;

@@ -35,7 +35,7 @@ import {
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
-import { executeSolution } from "../lib/solution-executor.js";
+import { executeSolution, isSuccessfulStepOutput } from "../lib/solution-executor.js";
 import { logError } from "../lib/log.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import { getProcessingLocation } from "../lib/processing-location.js";
@@ -982,14 +982,9 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
 
   // Settle only if at least one step produced output. All-steps-failed returns
   // a 4xx-shaped response and the caller keeps their USDC authorization.
-  // `result.steps` is a Record<slug, output | {error} | {skipped}>. A step
-  // counts as successful when its value is an object with neither `error` nor
-  // `skipped` set.
-  const anyStepSucceeded = Object.values(result.steps).some((v) => {
-    if (!v || typeof v !== "object") return false;
-    const obj = v as Record<string, unknown>;
-    return !("error" in obj) && !("skipped" in obj);
-  });
+  // Shared predicate with the wallet path (money-integrity 2026-08-12) — it
+  // also covers the new `unavailable` marker for deactivated steps.
+  const anyStepSucceeded = Object.values(result.steps).some(isSuccessfulStepOutput);
   if (!anyStepSucceeded) {
     return c.json(
       {
