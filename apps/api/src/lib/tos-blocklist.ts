@@ -46,9 +46,12 @@ export interface ProhibitedTarget {
   /**
    * When set, matches the hostname by regex instead of exact/subdomain
    * equality — for rulings covering a domain FAMILY (google ccTLDs). `host`
-   * then serves only as the display placeholder.
+   * then serves only as the display placeholder. Matches ALL subdomains —
+   * hostname variation is the evasion this rule class exists to close.
    */
   hostRe?: RegExp;
+  /** Concrete example hostname for hostRe rules — used by the integrity tests. */
+  testHost?: string;
   /** Human-readable site name, used in the caller-facing message. */
   site: string;
   /** Governing decision. Internal provenance — never sent to callers. */
@@ -96,7 +99,8 @@ export const PROHIBITED_TARGETS: readonly ProhibitedTarget[] = [
     // Money-integrity 2026-08-12: the H-4 ruling covers Google Search, not
     // one hostname — google.se/.de/.co.uk /search were still executable
     // (product-search exploited exactly this). ccTLD family, same path rule.
-    hostRe: /^(?:www\.)?google\.(?:[a-z]{2,3})(?:\.[a-z]{2})?$/,
+    hostRe: /^(?:[a-z0-9-]+\.)*google\.[a-z]{2,3}(?:\.[a-z]{2})?$/,
+    testHost: "www.google.se",
     host: "google.<ccTLD>",
     pathPrefix: "/search",
     site: "Google Search",

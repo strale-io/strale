@@ -15,6 +15,7 @@ registerCapability("landing-page-roast", async (input: CapabilityInput) => {
 
   // Get screenshot via Browserless
   const { url: blessUrl, key } = getBrowserlessConfig();
+  // unguarded-fetch-ok: our Browserless /screenshot endpoint; caller URL gated by assertTargetAllowed above
   const screenshotRes = await fetch(`${blessUrl}/screenshot?token=${key}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

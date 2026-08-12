@@ -86,7 +86,7 @@ async function checkAccessibility(
       method: "HEAD",
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Mozilla/5.0 (compatible; StraleBot/1.0; +https://strale.dev)",
         Accept: "text/html",
       },
       // safeFetch follows up to 3 hops with per-hop re-validation
@@ -100,7 +100,7 @@ async function checkAccessibility(
   } catch {
     // Try GET as fallback (some servers don't support HEAD well)
     try {
-      const response = await fetch(url, {
+      const response = await safeFetch(url, {
         method: "GET",
         headers: {
           "User-Agent":

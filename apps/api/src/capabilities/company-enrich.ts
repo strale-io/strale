@@ -41,6 +41,7 @@ async function scrapeUrl(url: string): Promise<string> {
   // LAUNCH_ARGS env var is deprecated/ignored. See lib/browserless-launch.ts.
   const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
   const contentUrl = buildBrowserlessRequestUrl(browserlessUrl, "/content", browserlessKey);
+  // unguarded-fetch-ok: our Browserless endpoint; caller URL gated by assertTargetAllowed above
   const response = await fetch(contentUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -86,6 +86,7 @@ registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
   // https://google.serper.dev/search endpoint, which is not caller-influenced,
   // so there is no SSRF surface to guard. Same shape as google-search.ts and
   // serp-analyze.ts, which call the identical fixed endpoint.
+  // unguarded-fetch-ok: fixed licensed Serper API host
   const resp = await fetch("https://google.serper.dev/search", {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },

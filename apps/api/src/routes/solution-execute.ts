@@ -312,12 +312,11 @@ solutionExecuteRoute.post(
     // trail that says "14 steps" must list 14 steps.
     const stepAuditEntries = Object.entries(execResult.steps).map(([capSlug, output], index) => {
       const obj = (output && typeof output === "object" ? output : {}) as Record<string, unknown>;
-      const isError = "error" in obj || execResult.errors.some((e) => e.startsWith(`${capSlug}:`));
       const status = isSuccessfulStepOutput(output)
         ? "completed"
-        : "skipped" in obj
+        : obj.skipped === true
           ? "skipped"
-          : "unavailable" in obj
+          : obj.unavailable === true
             ? "unavailable"
             : "failed";
       const timing = execResult.stepTimings.find((t) => t.capabilitySlug === capSlug);
@@ -326,9 +325,14 @@ solutionExecuteRoute.post(
         capabilitySlug: capSlug,
         status,
         latencyMs: timing?.latencyMs ?? 0,
-        error: isError && status === "failed"
-          ? sanitizeFailureReason(execResult.errors.find((e) => e.startsWith(`${capSlug}:`))?.split(": ").slice(1).join(": ") ?? null)
-          : typeof obj.reason === "string" ? obj.reason : null,
+        // error is populated only for real executor failures; the reason slot
+        // covers skipped/unavailable. A completed soft verdict (valid:false)
+        // carries neither (review H-1/L-1).
+        error: status === "failed"
+          ? sanitizeFailureReason(execResult.errors.find((e) => e.startsWith(`${capSlug}:`))?.split(": ").slice(1).join(": ") ?? (typeof obj.error === "string" ? obj.error : null))
+          : status === "skipped" || status === "unavailable"
+            ? (typeof obj.reason === "string" ? obj.reason : null)
+            : null,
       };
     });
 

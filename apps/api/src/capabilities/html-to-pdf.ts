@@ -42,6 +42,7 @@ registerCapability("html-to-pdf", async (input: CapabilityInput) => {
     bodyObj.html = html;
   }
 
+  // unguarded-fetch-ok: our Browserless /pdf endpoint; caller URL gated by assertTargetAllowed above
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

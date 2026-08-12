@@ -42,7 +42,14 @@ import { logWarn } from "./log.js";
 export function isSuccessfulStepOutput(v: unknown): boolean {
   if (!v || typeof v !== "object") return false;
   const obj = v as Record<string, unknown>;
-  return !("error" in obj) && !("skipped" in obj) && !("unavailable" in obj);
+  // Executor markers ONLY (review H-1): capabilities legitimately return
+  // soft verdicts like {valid:false, error:"Invalid IBAN checksum"} — that
+  // is the purchased answer, not a failure. The executor's own failure
+  // marker is EXACTLY {error: string} (single key, written in the catch
+  // block above); skipped/unavailable carry their boolean flags.
+  if (obj.skipped === true || obj.unavailable === true) return false;
+  if (Object.keys(obj).length === 1 && typeof obj.error === "string") return false;
+  return true;
 }
 
 // ─── Input reference resolution ─────────────────────────────────────────────

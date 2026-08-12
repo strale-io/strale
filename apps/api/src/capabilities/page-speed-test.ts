@@ -25,6 +25,7 @@ registerCapability("page-speed-test", async (input: CapabilityInput) => {
     apiUrl += `&key=${apiKey}`;
   }
 
+  // unguarded-fetch-ok: fixed googleapis.com PSI host; caller URL gated by assertTargetAllowed above
   const resp = await fetch(apiUrl, {
     headers: { "User-Agent": "Strale/1.0" },
     signal: AbortSignal.timeout(60000), // PSI can be slow

@@ -28,6 +28,7 @@ registerCapability("phishing-site-check", async (input: CapabilityInput) => {
   assertTargetAllowed(url);
 
   const apiUrl = `${API}?url=${encodeURIComponent(url)}`;
+  // unguarded-fetch-ok: fixed api.gopluslabs.io host; caller URL gated by assertTargetAllowed above
   const response = await fetch(apiUrl, {
     headers: { "User-Agent": "Strale/1.0" },
     signal: AbortSignal.timeout(10000),

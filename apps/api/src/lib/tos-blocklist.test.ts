@@ -131,7 +131,7 @@ describe("blocklist integrity", () => {
     for (const rule of PROHIBITED_TARGETS) {
       // hostRe rules use `host` as a display placeholder, not a real
       // hostname — probe them with a representative concrete host instead.
-      const host = rule.hostRe ? "www.google.se" : rule.host;
+      const host = rule.hostRe ? rule.testHost! : rule.host;
       const url = `https://${host}${rule.pathPrefix ?? "/"}`;
       expect(() => assertTargetAllowed(url), url).toThrow(TOS_REFUSAL_MARKER);
     }

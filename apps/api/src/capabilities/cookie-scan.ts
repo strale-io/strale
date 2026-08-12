@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import {
   fetchRenderedHtml,
@@ -143,9 +144,9 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
   // Step 1: HTTP fetch to capture Set-Cookie headers
   const cookies: CookieInfo[] = [];
   try {
-    const httpResponse = await fetch(url, {
+    const httpResponse = await safeFetch(url, {
       method: "GET",
-      redirect: "follow",
+      // safeFetch follows up to 3 hops with per-hop re-validation
       signal: AbortSignal.timeout(15000),
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",

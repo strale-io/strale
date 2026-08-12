@@ -49,6 +49,7 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
   const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
   const contentUrl = buildBrowserlessRequestUrl(browserlessUrl, "/content", browserlessKey);
 
+  // unguarded-fetch-ok: our Browserless endpoint; caller URL gated by assertTargetAllowed above
   const renderResponse = await fetch(contentUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
