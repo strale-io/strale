@@ -7,16 +7,20 @@
  * causes — and, critically, so failures CAUSED BY THE CALLER never count
  * against a capability's completion rate.
  *
- * Distinct from lib/failure-classifier.ts, which classifies TEST-RESULT
- * failures for the test-intelligence system (7 verdicts, test-suite inputs).
- * This module is for production transactions: different inputs, different
- * consumers, deliberately separate.
+ * Distinct from lib/failure-classifier.ts (TEST-result verdicts) AND from
+ * circuit-breaker.ts's user-input list. Review H-2 (2026-08-12) proved the
+ * breaker list cannot be reused wholesale here: it answers "should this trip
+ * the breaker?" and deliberately includes target-site 5xx ("URL returned
+ * HTTP 5", "returned a server error") — correct for breakers (the TARGET
+ * site's outage isn't the capability's fault either), but fatal for the
+ * floor: counting a month-long upstream outage as caller fault would report
+ * 100% completion while every customer call fails. This module carries its
+ * own curated caller-attributable list; upstream/timeout checks run BEFORE
+ * the generic caller patterns.
  *
- * Pure string classification. Ordering matters: earlier, more specific
- * classes win. Patterns lean on the platform's own stable error phrasings —
- * when one changes, its test here fails loudly.
+ * Pure string classification, no imports beyond the ToS marker constant.
+ * Ordering matters and is pinned by tests both directions.
  */
-import { isUserInputError } from "./circuit-breaker.js";
 import { TOS_REFUSAL_MARKER } from "./tos-blocklist.js";
 
 export type TransactionFailureClass =
@@ -35,22 +39,54 @@ export const CALLER_ATTRIBUTABLE: ReadonlySet<TransactionFailureClass> = new Set
 
 // ENV-var-shaped names (OPENREGISTER_API_KEY, COURTLISTENER_API_TOKEN,
 // BROWSERLESS_URL…) — tight on purpose: env-key errors also contain the
-// generic "is required" that the caller-input pattern list matches, so
-// config MUST be checked first with a shape only our env errors have.
-const CONFIG_RE = /\b[A-Z][A-Z0-9]+(?:_[A-Z0-9]+)*_(?:KEY|TOKEN|SECRET|GUID|URL|PASSWORD)\b|not configured|rejected the (?:api )?key|missing credential/;
-// Route-level validation phrasings that the circuit-breaker's pattern list
-// (built for executor-thrown errors) does not carry.
-const ROUTE_INPUT_RE = /missing required (?:input )?fields?|provide one of:|looks like you (?:passed|placed)/i;
+// generic "is required", so config MUST be checked before caller patterns
+// with a shape only our env errors have. Case-sensitive env-var shape,
+// case-insensitive phrasings.
+const CONFIG_ENV_RE = /\b[A-Z][A-Z0-9]+(?:_[A-Z0-9]+)*_(?:KEY|TOKEN|SECRET|GUID|URL|PASSWORD)\b/;
+const CONFIG_PHRASE_RE = /not configured|rejected the (?:api )?(?:key|token)|missing credential/i;
+
 const TIMEOUT_RE = /timed? ?out|timeout|deadline|aborted due to timeout|operation was aborted/i;
-const UPSTREAM_RE = /HTTP 5\d\d|upstream|unavailable|rate.?limit|too many requests|429|quota|service.*(?:down|error)|ECONNRESET|ECONNREFUSED|ENOTFOUND|socket hang up|anti-bot challenge/i;
+
+// Upstream/vendor failure. Checked BEFORE the caller-input patterns so
+// target-site 5xx phrasings ("URL returned HTTP 503", "registry returned a
+// server error (HTTP 503)") land here, not in caller_input (review H-2).
+const UPSTREAM_RE = /HTTP 5\d\d|upstream|unavailable|rate.?limit(?:ed)?|too many requests|\b429\b|quota|service.*(?:down|error)|returned a server error|ECONNRESET|ECONNREFUSED|ENOTFOUND|socket hang up|anti-bot challenge/i;
+
+// Curated caller-attributable patterns. Route-level validation phrasings plus
+// the subset of the circuit-breaker's user-input list that is genuinely the
+// caller's doing. Deliberately ABSENT (they classify upstream above):
+// "URL returned HTTP 5", "returned a server error", "could not be loaded".
+const CALLER_INPUT_RE = new RegExp(
+  [
+    "missing required (?:input )?fields?",
+    "provide one of:",
+    "looks like you (?:passed|placed)",
+    "is required",
+    "invalid input",
+    "must provide",
+    "no dns records found",
+    "domain may not exist",
+    "url returned http 4",           // 4xx from the caller's own target URL
+    "this site exists but blocks",
+    "blocks automated access",
+    "not found",
+    "this url returns json",
+    "this url points to a pdf",
+    "this url points to an image",
+    "could not repair json",
+    "no confident .* match",         // scored name resolution refusals
+    "distinct .* entities match",    // tie refusals
+  ].join("|"),
+  "i",
+);
 
 export function classifyTransactionFailure(error: string | null | undefined): TransactionFailureClass {
   const msg = (error ?? "").trim();
   if (!msg) return "internal";
   if (msg.includes(TOS_REFUSAL_MARKER)) return "tos_policy";
-  if (CONFIG_RE.test(msg)) return "config";
-  if (ROUTE_INPUT_RE.test(msg) || isUserInputError(msg)) return "caller_input";
+  if (CONFIG_ENV_RE.test(msg) || CONFIG_PHRASE_RE.test(msg)) return "config";
   if (TIMEOUT_RE.test(msg)) return "timeout";
   if (UPSTREAM_RE.test(msg)) return "upstream";
+  if (CALLER_INPUT_RE.test(msg)) return "caller_input";
   return "internal";
 }
