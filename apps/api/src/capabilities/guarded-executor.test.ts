@@ -44,6 +44,7 @@ import {
   assertGuardedAllow,
   computeWindowStart,
   computeBudgetCap,
+  seedCostMetaForOnboarding,
   __resetCostMetaCacheForTests,
   CapabilityNotClassifiedError,
   CapabilityInvocationRefusedError,
@@ -416,5 +417,93 @@ describe("budget-counter bind shapes (DEC-20260504-A)", () => {
         expect(containsDate(arg)).toBe(false);
       }
     }
+  });
+});
+
+// ─── Onboarding pre-insert seed (chicken-and-egg regression) ────────────────
+//
+// Per DEC-20260504-A: regression tests for the 2026-08-12 finding that
+// `onboard.ts --strict` could never pass for a NEW capability. Fixture
+// verification runs before persistCapability, so the gate read cost_class
+// from a DB row that didn't exist yet and refused internal_test even when
+// the manifest correctly declared cost_class. The fix seeds the cost-meta
+// cache from the manifest before verification. Against the un-applied fix,
+// the "seeded" test below fails (no seed function → refusal); the
+// "unseeded" test pins that fail-closed behavior is preserved.
+
+describe("seedCostMetaForOnboarding (pre-insert verification)", () => {
+  it("un-fixed ordering (pinned): no DB row + no seed → internal_test refused", async () => {
+    // No capabilities row for this slug — SELECT returns zero rows.
+    mockDbExecute.mockImplementationOnce(async () => []);
+    await expect(guardedExecute("brand-new-cap", {}, internalCtx())).rejects.toBeInstanceOf(
+      CapabilityNotClassifiedError,
+    );
+    expect(mockExecutor).not.toHaveBeenCalled();
+  });
+
+  it("seeded manifest cost_class → internal_test allowed with no DB row", async () => {
+    // The regression test proper: fails against the un-applied fix.
+    seedCostMetaForOnboarding({
+      slug: "brand-new-cap",
+      cost_class: "free_unlimited",
+      quota_window: null,
+      quota_cap: null,
+      quota_reset_dom: null,
+    });
+    mockExecutor.mockResolvedValueOnce({ output: { ok: true }, provenance: { source: "x", fetched_at: "" } });
+    await expect(guardedExecute("brand-new-cap", {}, internalCtx())).resolves.toBeDefined();
+    expect(mockExecutor).toHaveBeenCalledTimes(1);
+    // The cache hit must have prevented the DB lookup entirely.
+    expect(mockDbExecute).not.toHaveBeenCalled();
+  });
+
+  it("seed still enforces the ALLOW_MATRIX — paid_prepaid seed refuses internal_test", async () => {
+    seedCostMetaForOnboarding({
+      slug: "paid-new-cap",
+      cost_class: "paid_prepaid",
+      quota_window: null,
+      quota_cap: null,
+      quota_reset_dom: null,
+    });
+    await expect(guardedExecute("paid-new-cap", {}, internalCtx())).rejects.toBeInstanceOf(
+      CapabilityInvocationRefusedError,
+    );
+    expect(mockExecutor).not.toHaveBeenCalled();
+  });
+
+  it("fail-closed: seeding null or invalid cost_class throws instead of defaulting", () => {
+    expect(() =>
+      seedCostMetaForOnboarding({
+        slug: "x",
+        cost_class: null,
+        quota_window: null,
+        quota_cap: null,
+        quota_reset_dom: null,
+      }),
+    ).toThrow(/invalid cost_class/);
+    expect(() =>
+      seedCostMetaForOnboarding({
+        slug: "x",
+        // Simulates a typo'd manifest value sneaking past YAML parsing.
+        cost_class: "free_unlimted" as never,
+        quota_window: null,
+        quota_cap: null,
+        quota_reset_dom: null,
+      }),
+    ).toThrow(/invalid cost_class/);
+  });
+
+  it("seed is per-slug — other slugs still fail closed", async () => {
+    seedCostMetaForOnboarding({
+      slug: "seeded-cap",
+      cost_class: "free_unlimited",
+      quota_window: null,
+      quota_cap: null,
+      quota_reset_dom: null,
+    });
+    mockDbExecute.mockImplementationOnce(async () => []);
+    await expect(guardedExecute("different-cap", {}, internalCtx())).rejects.toBeInstanceOf(
+      CapabilityNotClassifiedError,
+    );
   });
 });
