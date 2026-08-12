@@ -61,7 +61,16 @@ async function searchCompany(name: string): Promise<string> {
   return items[0].company_number;
 }
 
-async function fetchOfficers(companyNumber: string): Promise<Array<{ name: string; role: string; start_date: string | null }>> {
+interface UkOfficer {
+  type: "person" | "organisation";
+  name: string;
+  role: string;
+  role_code: string;
+  start_date: string | null;
+  date_of_birth: null;
+}
+
+async function fetchOfficers(companyNumber: string): Promise<UkOfficer[]> {
   const key = getApiKey();
   const url = `${API}/company/${companyNumber}/officers?items_per_page=100`;
   const response = await fetch(url, {
@@ -77,9 +86,18 @@ async function fetchOfficers(companyNumber: string): Promise<Array<{ name: strin
   return items
     .filter((o) => !o.resigned_on)
     .map((o) => ({
+      // Companies House marks corporate officers via the officer_role token
+      // (e.g. "corporate-director", "corporate-secretary").
+      type: String(o.officer_role ?? "").startsWith("corporate") ? "organisation" as const : "person" as const,
       name: o.name ?? "",
       role: o.officer_role ?? "",
+      role_code: o.officer_role ?? "",
       start_date: o.appointed_on ?? null,
+      // Companies House supplies partial DOB (year+month) for people; we
+      // deliberately emit null for canonical-shape parity with NO/CZ/EE and
+      // data minimization. The richer uk-companies-house-officers capability
+      // carries the partial DOB for callers who need it.
+      date_of_birth: null,
     }));
 }
 
@@ -170,8 +188,14 @@ registerCapability("uk-company-data", async (input: CapabilityInput) => {
     if (o.registered_address === undefined) o.registered_address = (o.address ?? o.office_address);
     if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
     if (o.legal_representatives === undefined) o.legal_representatives = officers;
-    o.tier_2_available = true;
-    o.tier_2_available_reason = "Legal representatives extracted from UK Companies House Officers register.";
+    o.total_legal_representatives = officers.length;
+    // Length-gated (was hardcoded true): an entity with no active officers
+    // in the response must not claim representative data is available.
+    o.tier_2_available = officers.length > 0;
+    o.tier_2_available_reason =
+      officers.length > 0
+        ? "Legal representatives extracted from UK Companies House Officers register."
+        : "No active officers returned by Companies House for this company.";
     o.ubo_availability = "available";
     o.ubo_availability_reason = "Beneficial ownership data available via UK PSC register.";
   }
