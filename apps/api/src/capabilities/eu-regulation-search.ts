@@ -22,10 +22,25 @@ registerCapability("eu-regulation-search", async (input: CapabilityInput) => {
   if (type) searchParams += `&qid=${Date.now()}`;
 
   const url = `${EURLEX_SEARCH}${searchParams}`;
-  const html = await fetchRenderedHtml(url);
-  const text = htmlToText(html);
+  // EUR-Lex serves a JS challenge to plain fetchers (P2 triage 2026-08-12) and
+  // the real page is heavy: the render must go to the browser tier and needs
+  // more than the default budgets (observed ~32s). networkidle2 instead of
+  // networkidle0 — EUR-Lex keeps long-polling trackers open that never idle.
+  const html = await fetchRenderedHtml(url, {
+    waitUntil: "networkidle2",
+    pageTimeout: 40_000,
+    fetchTimeout: 55_000,
+  });
 
-  if (text.length < 200) {
+  // Text the RESULTS region, not the whole document: EUR-Lex spends its first
+  // ~15K chars of text on nav and filter widgets, so texting from the top
+  // truncated the actual results away (the model then honestly reported
+  // "no results in the provided excerpt" — P2 triage 2026-08-12). Result rows
+  // are <div class="SearchResult"> blocks; slice from the first one.
+  const resultsStart = html.indexOf('class="SearchResult"');
+  const text = htmlToText(resultsStart >= 0 ? html.slice(Math.max(0, resultsStart - 200)) : html);
+
+  if (text.length < 200 || resultsStart < 0) {
     throw new Error(`No EU regulations found for "${query}".`);
   }
 

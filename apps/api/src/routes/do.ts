@@ -35,6 +35,7 @@ import { getShareableUrl } from "../lib/audit-token.js";
 import { getAiDescription, getDataSourceUrl } from "../lib/audit-helpers.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
+import { validateX402Input } from "../lib/x402-input-validation.js";
 import { logError, logWarn } from "../lib/log.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
 import { trackBackgroundTask } from "../lib/shutdown.js";
@@ -926,6 +927,44 @@ doRoute.post(
             missing_fields: missingFields,
             expected_fields: Object.keys(inputSchema.properties),
             ...(hint ? { hint } : {}),
+          },
+        ),
+        400,
+      );
+    }
+  }
+
+  // anyOf/oneOf required-group parity with the x402 surface (the PR #171
+  // incident class): the classic check above cannot see branch groups, so an
+  // either/or capability declared via anyOf was unvalidated on the wallet
+  // path and leaked its executor's raw error. Reuses the same pure validator
+  // both x402 handlers use — one contract, two surfaces. The classic-required
+  // path above is deliberately untouched (its misplacement hints and
+  // failure-type analytics are established behavior); this only adds the
+  // group rule that path cannot express.
+  {
+    const groupCheck = validateX402Input(executionInput, inputSchema as Record<string, unknown> | null);
+    if (!groupCheck.ok) {
+      const gIp = getClientIp(c);
+      fireAndForget(
+        () =>
+          db.insert(failedRequests).values({
+            userId: user?.id ?? null,
+            ipHash: gIp !== "unknown" ? hashIp(gIp) : null,
+            task: capabilitySlug ?? task ?? "",
+            failureType: "input_group_unsatisfied",
+            errorDetail: groupCheck.error.slice(0, 255),
+            userAgent: (c.req.header("user-agent") ?? "").slice(0, 255) || null,
+          }),
+        { label: "failed-request-log", context: { failureType: "input_group_unsatisfied", userId: user?.id ?? null } },
+      );
+      return c.json(
+        apiError(
+          "invalid_request",
+          groupCheck.error,
+          {
+            expected_fields: inputSchema?.properties ? Object.keys(inputSchema.properties) : [],
+            input_schema: inputSchema ?? undefined,
           },
         ),
         400,
