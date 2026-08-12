@@ -78,6 +78,40 @@ SI unscored — wrong-company risk), gate-5 dual-fixture model (a multi-path cap
 can only fixture-cover one path today; german has the inverse gap),
 BE/EE/DK name-path fixtures.
 
+## Approved decision batch — SHIPPED ([#186](https://github.com/strale-io/strale/pull/186))
+
+Petter approved all recommendations; executed: (1) **Quality floor ARMED**
+(`QUALITY_FLOOR_ENFORCE=true` on Railway; first enforce tick 20:18Z quarantined
+screenshot-url 55% / brazilian 59% / us-company-data 64% — exactly the dry-run
+predictions — url-to-text deferred by the 7d recovery override; flags verified
+visible=false/x402=false with is_active preserved for auto-promote).
+(2) settings.json key: DEAD (not in prod DB, 401 live) and the file is
+gitignored — never in git history; 86 stale entries scrubbed locally.
+(3) DK CVR email drafted (`2026-08-12-dk-cvr-s2s-email-draft.md` — Petter fills
+org number + sends). (4) hs-code-lookup honesty relabel (review caught that
+'computed' → capability_type=deterministic would have poisoned the floor via
+the failure classifier; shipped as ai_assisted + reference-data + HS-edition
+limitation + real fixture). (5) CA/JP: both have OFFICIAL free APIs
+(ca-jp-tos-verification.md) — migrations retire the scrapes; JP needs a 5-min
+form (Petter), CA needed nothing (done below). Doctrine ruling evidence ready;
+GR is the only sharp case left.
+
+## Officer-extraction sweep + CA migration — SHIPPED ([#187](https://github.com/strale-io/strale/pull/187), `585e096`, prod-verified)
+
+Mapper finding: NO/CZ/EE already extracted officers; UK had it twice; **Latvia
+was the only real gap**. Shipped: LV board members from the UR officers dataset
+(CC0 1.0; null-not-zero on query failure + logged swallow — review-caught);
+SK enriched to structured reps (role/start_date were fetched and discarded;
+`directors` keeps natural-persons-only semantics); UK type/role_code + total +
+length-gated tier_2 (was hardcoded true, same fix SK); CA numeric lookups on
+the official Corporations Canada JSON API (manifest honesty: api + mixed,
+name-path limitation; fixture off a personal residence onto corp 1007).
+Prod-verified: TESCO 11 typed officers; airBaltic 2 board members; Abbotsford
+via API. Follow-ups queued: shared LegalRepresentative type + role_group enum
+(NO/CZ still emit native tokens), coverage-matrix tier-2 legend + LV/SK counts,
+UK tier fixture recapture in a keyed env, SK corporate-konateľ shape probe,
+ES via OpenMercantil, remaining ~50 anyOf blocks.
+
 ## Read next session, in order
 
 1. `audit-output/parallel-audits-2026-08-12/SYNTHESIS.md` — the merged prioritized
