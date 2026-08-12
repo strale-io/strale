@@ -31,21 +31,19 @@ import { config } from "dotenv";
 import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { autoRegisterCapabilities } from "../src/capabilities/auto-register.js";
+// guarded-executor-exempt: deliberate operator-supervised paid sweep. The
+// ALLOW_MATRIX correctly refuses paid execution from internal_test/ci/
+// health_probe; this script IS the sanctioned manual bypass (see file header:
+// run by an operator, one call per capability, DENYLIST for metered vendors).
+// Routing through guardedExecute would defeat its purpose.
 import { getExecutor } from "../src/capabilities/index.js";
 
 const postgres = (await import("postgres")).default;
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
 
 // Metered or expensive vendors — deliberately NOT swept. Reported as skipped.
-const DENYLIST = new Map<string, string>([
-  ["us-company-data-cobalt", "Cobalt Intelligence, €2.00/call"],
-  ["us-ein-match", "€0.75/call"],
-  ["us-sec-filings-extended", "€0.25/call, paired with the Cobalt stack"],
-  ["uk-cop-check", "Pay.UK CoP via eSortcode — metered scheme access"],
-  ["pep-check", "Dilisense — informal Starter-tier grace, do not burn quota"],
-  ["sanctions-check", "Dilisense — same"],
-  ["adverse-media-check", "Dilisense — same"],
-]);
+// Shared with sweep-prod-catalog.ts via lib/sweep-denylist.ts.
+import { SWEEP_DENYLIST as DENYLIST } from "./lib/sweep-denylist.js";
 
 const PER_CAP_TIMEOUT_MS = 45_000;
 const CONCURRENCY = 4;

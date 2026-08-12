@@ -2,18 +2,32 @@ slug: estonian-company-data
 name: Estonian Company Data
 description: Look up Estonian company data from the e-Business Register. Accepts registry code (8 digits) or fuzzy company name. Returns legal_representatives[] from RIK Ariregister Open Data (CC BY 4.0).
 category: data-extraction
-cost_class: free_unlimited
+# paid_prepaid, not free_unlimited: the name path runs a Claude Haiku extraction
+# (ANTHROPIC_API_KEY) and Railway-origin calls route through the Browserless EU
+# proxy (ariregister 403s US East IPs). Matches finnish-company-data. Scheduler
+# must not invoke this hourly — cert lint check-cost-class-coherence enforces.
+cost_class: paid_prepaid
 quota_window: none
 price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - registry_code
+  # No field is individually required: an identifier OR a company name is
+  # enough, and the executor enforces that itself. Listing the identifier as
+  # `required` made the ROUTE reject a company_name call with "Missing required
+  # input fields" before the executor ran, leaving the name path unreachable
+  # from the API. Same defect fixed for norwegian-company-data in PR #168.
+  required: []
   properties:
     registry_code:
       type: string
-      description: Estonian registry code (8 digits) or company name
+      description: Estonian registry code, 8 digits (e.g. 10238429)
+    company_name:
+      type: string
+      description: >-
+        Company name. Resolved against the Business Register and accepted only on a
+        confident name match — an ambiguous name is refused rather than resolved to
+        the wrong legal entity.
 output_schema:
   type: object
   example:

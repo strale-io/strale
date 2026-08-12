@@ -8,7 +8,7 @@ import {
   getActiveVendorNames,
   getStaleVendorNames,
 } from "./platform-facts.js";
-import { TRANSACTION_RETENTION_DAYS } from "./data-retention.js";
+import { TRANSACTION_RETENTION_DAYS, PII_RETENTION_DAYS } from "./data-retention.js";
 
 describe("platform-facts STATIC_FACTS", () => {
   it("retention_days_default mirrors TRANSACTION_RETENTION_DAYS", () => {
@@ -16,6 +16,19 @@ describe("platform-facts STATIC_FACTS", () => {
     // will display a number that doesn't match what the retention sweep
     // actually does. The cert audit found this at exactly 36x off.
     expect(STATIC_FACTS.retention_days_default).toBe(TRANSACTION_RETENTION_DAYS);
+  });
+
+  it("pii_retention_days mirrors PII_RETENTION_DAYS", () => {
+    // Guards the public claim: if the sweep window moves, the number we
+    // publish to data subjects has to move with it.
+    expect(STATIC_FACTS.pii_retention_days).toBe(PII_RETENTION_DAYS);
+  });
+
+  it("PII columns are dropped no later than the compliance skeleton", () => {
+    // A PII window longer than the compliance window would mean the personal
+    // data outlived the record it belongs to — nonsensical, and the sweep
+    // would never reach it.
+    expect(PII_RETENTION_DAYS).toBeLessThanOrEqual(TRANSACTION_RETENTION_DAYS);
   });
 
   it("retention_days_max_configurable is at least retention_days_default", () => {
