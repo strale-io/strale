@@ -29,28 +29,26 @@ registerCapability("price-compare", async (input: CapabilityInput) => {
   let pageText = "";
   let sourceUsed = "";
 
-  // Try PriceRunner first for Nordic countries
-  if (isNordic) {
-    const prTld = getPriceRunnerTld(country);
-    if (prTld) {
-      try {
-        const prUrl = `https://www.pricerunner.${prTld}/search?q=${encodeURIComponent(product)}`;
-        const html = await fetchRenderedHtml(prUrl);
-        pageText = htmlToText(html).slice(0, 12000);
-        sourceUsed = `pricerunner.${prTld}`;
-      } catch {
-        // Fall through to Google Shopping
-      }
-    }
+  // The former Google Shopping fallback is GONE (P2 review H-2, 2026-08-12):
+  // google.com/search is on the ToS blocklist (DEC-20260427-H-4), and the
+  // fetch-layer gate now refuses it — keeping the branch would have made
+  // every non-Nordic call a silent, breaker-invisible failure. Coverage is
+  // honestly Nordic-only until a licensed price source is added; the
+  // manifest limitation says so.
+  if (!isNordic) {
+    throw new Error(
+      `Price comparison currently covers Nordic countries only (SE/NO/DK/FI) via PriceRunner. ` +
+        `"${country}" is not supported — no licensed price source exists for it yet.`,
+    );
   }
-
-  // Fallback to Google Shopping
-  if (!pageText) {
-    const gsUrl = `https://www.google.com/search?q=${encodeURIComponent(product)}&tbm=shop`;
-    const html = await fetchRenderedHtml(gsUrl);
-    pageText = htmlToText(html).slice(0, 12000);
-    sourceUsed = "google.com/shopping";
+  const prTld = getPriceRunnerTld(country);
+  if (!prTld) {
+    throw new Error(`No PriceRunner site for country "${country}". Supported: SE, NO, DK, FI.`);
   }
+  const prUrl = `https://www.pricerunner.${prTld}/search?q=${encodeURIComponent(product)}`;
+  const html = await fetchRenderedHtml(prUrl);
+  pageText = htmlToText(html).slice(0, 12000);
+  sourceUsed = `pricerunner.${prTld}`;
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");

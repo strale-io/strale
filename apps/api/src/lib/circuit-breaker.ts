@@ -169,7 +169,7 @@ const USER_INPUT_ERROR_PATTERNS = [
   "This URL points to a PDF",    // url-to-markdown: PDF file
   "This URL points to an image", // url-to-markdown: image file
   "Could not repair JSON",       // json-repair: unrecoverable input
-  // capabilities/lib/tos-blocklist.ts: the caller asked for a site whose ToS
+  // lib/tos-blocklist.ts: the caller asked for a site whose ToS
   // forbids automated access. The executor worked correctly and declined, so
   // this must not trip the breaker — otherwise a burst of Trustpilot URLs
   // (28 arrived in 16 days) would take the capability down for everyone.

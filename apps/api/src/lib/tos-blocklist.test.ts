@@ -19,7 +19,11 @@ import {
   PROHIBITED_TARGETS,
   TOS_REFUSAL_MARKER,
 } from "./tos-blocklist.js";
-import { isUserInputError } from "../../lib/circuit-breaker.js";
+import { isUserInputError } from "./circuit-breaker.js";
+// P2 (2026-08-12): the blocklist is enforced at the fetch layer itself, not
+// only in capabilities that remember to call it — three had shipped ungated.
+import { safeFetch } from "./safe-fetch.js";
+import { fetchPage } from "../capabilities/lib/web-provider.js";
 
 describe("findProhibitedTarget", () => {
   it("blocks the exact URL shape customers were retrying (the bug case)", () => {
@@ -142,5 +146,31 @@ describe("blocklist integrity", () => {
       message = (e as Error).message;
     }
     expect(isUserInputError(message)).toBe(true);
+  });
+});
+
+
+describe("fetch-layer enforcement", () => {
+  it("safeFetch refuses a prohibited host before any network I/O", async () => {
+    await expect(safeFetch("https://www.trustpilot.com/review/example.com"))
+      .rejects.toThrow(TOS_REFUSAL_MARKER);
+  });
+
+  it("the rendering pipeline (fetchPage) refuses a prohibited host", async () => {
+    await expect(fetchPage("https://www.glassdoor.com/Reviews/anything"))
+      .rejects.toThrow(TOS_REFUSAL_MARKER);
+  });
+
+  it("scheme casing cannot bypass the gate (review H-1)", () => {
+    // Case-sensitive startsWith("http") once made "HTTPS://" parse with
+    // hostname "https", sailing past every enforcement point.
+    for (const u of [
+      "HTTPS://www.linkedin.com/company/foo",
+      "HtTp://www.trustpilot.com/review/x",
+      "https://WWW.LINKEDIN.COM/in/someone",
+      "linkedin.com/in/someone",
+    ]) {
+      expect(() => assertTargetAllowed(u), u).toThrow(TOS_REFUSAL_MARKER);
+    }
   });
 });

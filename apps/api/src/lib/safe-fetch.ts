@@ -27,6 +27,7 @@ import { Agent as HttpsAgent } from "node:https";
 import { Agent as HttpAgent } from "node:http";
 import { lookup as dnsLookup, type LookupOptions } from "node:dns";
 import { isBlockedIp, validateUrl } from "./url-validator.js";
+import { assertTargetAllowed, findProhibitedTarget } from "./tos-blocklist.js";
 import { logWarn } from "./log.js";
 
 // ─── Custom lookup that re-applies isBlockedIp ────────────────────────────────
@@ -141,6 +142,13 @@ export async function safeFetch(
 ): Promise<Response> {
   const { maxRedirects = DEFAULT_MAX_REDIRECTS, timeoutMs, ...init } = opts;
 
+  // Per-source ToS policy is enforced at the fetch layer, not only in the
+  // capabilities that remember to call it (P2, 2026-08-12 — three separate
+  // capabilities had shipped ungated). Pure string check, throws with
+  // TOS_REFUSAL_MARKER so breakers classify it as caller error and DEC-14
+  // leaves the caller unbilled. Redirect hops re-check below.
+  assertTargetAllowed(String(url));
+
   // Cert-audit C6: ensure every safeFetch caller is timeout-bounded so a
   // stuck upstream can't pin a connection or pool slot indefinitely.
   // Caller's own signal wins if provided; otherwise apply DEFAULT_TIMEOUT_MS.
@@ -204,11 +212,21 @@ export async function followRedirects(
         start: url,
         hops: hop,
       });
+      // Cancel the unconsumed 3xx body — throwing with it open pins the
+      // keep-alive connection until GC (review L-1).
+      await response.body?.cancel().catch((err) => logWarn("redirect-body-cancel-failed", "3xx body cancel failed (connection may pin until GC)", { err: String(err) }));
       throw new Error(
         `Too many redirects (>${maxRedirects}) — refusing to follow further. Starting URL: ${url}.`,
       );
     }
 
     current = new URL(location, current).toString();
+    // A redirect into a ToS-prohibited host is the same policy violation as
+    // fetching it directly (bit.ly → linkedin.com must not slip through).
+    // Cancel the unconsumed 3xx body before a potential throw (review L-1).
+    if (findProhibitedTarget(current)) {
+      await response.body?.cancel().catch((err) => logWarn("redirect-body-cancel-failed", "3xx body cancel failed (connection may pin until GC)", { err: String(err) }));
+    }
+    assertTargetAllowed(current);
   }
 }

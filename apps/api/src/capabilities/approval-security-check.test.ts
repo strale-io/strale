@@ -1,15 +1,14 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { autoRegisterCapabilities } from "./auto-register.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+// Side-effect import registers just this executor — a full
+// autoRegisterCapabilities() here (313 dynamic imports) starved parallel
+// collection and file-level-failed the suite on loaded machines.
+import "./approval-security-check.js";
 import { getExecutor } from "./index.js";
 
 // GoPlus sends message:null for several error codes (2029 observed for
 // addresses with pathological approval counts); the previous error text
 // collapsed that to "unknown error" and hid a week of diagnosis (P1
 // 2026-08-12). The numeric code must always surface.
-
-beforeAll(async () => {
-  await autoRegisterCapabilities();
-});
 
 afterEach(() => {
   vi.restoreAllMocks();
