@@ -10,12 +10,21 @@ price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - uid
+  # No field is individually required: an identifier OR a company name is
+  # enough, and the executor enforces that itself. Listing the identifier as
+  # `required` made the ROUTE reject a company_name call with "Missing required
+  # input fields" before the executor ran, leaving the name path unreachable
+  # from the API. Same defect fixed for norwegian-company-data in PR #168.
+  required: []
   properties:
     uid:
       type: string
-      description: Swiss UID (e.g. CHE-101.602.521), EHRAID, or company name
+      description: Swiss UID (CHE-xxx.xxx.xxx) or EHRAID
+    company_name:
+      type: string
+      description: >-
+        Company name. Zefix matches diacritics literally, so use the exact registered
+        spelling (e.g. "Nestlé"). Accepted only on a confident name match.
 output_schema:
   type: object
   example:

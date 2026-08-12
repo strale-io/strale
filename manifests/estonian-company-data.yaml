@@ -8,12 +8,22 @@ price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - registry_code
+  # No field is individually required: an identifier OR a company name is
+  # enough, and the executor enforces that itself. Listing the identifier as
+  # `required` made the ROUTE reject a company_name call with "Missing required
+  # input fields" before the executor ran, leaving the name path unreachable
+  # from the API. Same defect fixed for norwegian-company-data in PR #168.
+  required: []
   properties:
     registry_code:
       type: string
-      description: Estonian registry code (8 digits) or company name
+      description: Estonian registry code, 8 digits (e.g. 10238429)
+    company_name:
+      type: string
+      description: >-
+        Company name. Resolved against the Business Register and accepted only on a
+        confident name match — an ambiguous name is refused rather than resolved to
+        the wrong legal entity.
 output_schema:
   type: object
   example:
