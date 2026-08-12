@@ -17,4 +17,8 @@ export const EXCLUDED_INTERNAL_EMAILS = [
   "test2@strale.io",
   "system@strale.internal",
   "test@example.com",
+  // Petter's personal account — was excluded only by the daily digest's
+  // separate EXTRA_EXCLUDED_EMAILS list (scripts survey found the divergence,
+  // 2026-08-12); the floor must not count founder test calls as customers.
+  "petterlindstrom@hotmail.com",
 ];
