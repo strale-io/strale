@@ -112,6 +112,45 @@ via API. Follow-ups queued: shared LegalRepresentative type + role_group enum
 UK tier fixture recapture in a keyed env, SK corporate-konateľ shape probe,
 ES via OpenMercantil, remaining ~50 anyOf blocks.
 
+## ES OpenMercantil + Bazaar + strategy docs — SHIPPED (late session, into 08-13)
+
+**spanish-company-data reactivated ([#189](https://github.com/strale-io/strale/pull/189), prod-verified):**
+OpenMercantil (BORME-derived, free 200/day, CC0-adjacent statutory open data,
+officers included). Root cause of the ES outage: the Openapi path was gated on
+a never-countersigned resale addendum. Review-caught fabrication fixed pre-merge
+(date_incorporated fell back to the 2009 coverage floor). Prod: Amenabar by NIF
+(22 officers, 5 registral-referenced acts, €0.05) + Mercadona by name. The 3 ES
+solutions re-enabled (solution_promoted events, reversal noted); kyb-essentials-es
+end-to-end: 3/4 steps green, lei-lookup honestly no-LEI, all-skip runs bill €0.
+Known gap: IBEX listed PARENTS absent (documented warning limitation).
+BONUS FIX shipped in the same PR: windowStart Date-bind in guarded-executor
+broke every free_quota cap's internal-test budget path (PR-43 class,
+DEC-20260504-A test added).
+
+**Bazaar facilitator switch ([#190](https://github.com/strale-io/strale/pull/190), merged):**
+Discovery surfaces now advertise the REAL facilitator. Key discovery at boot:
+prod was ALREADY settling through CDP (mode=auto resolved cdp — keys present) —
+so the catalog/well-known surfaces had been advertising x402.org falsely, now
+fixed (both verified showing api.cdp.coinbase.com, 332 endpoints). Remaining:
+verify Bazaar indexing actually appears (first suspect if not: the
+buildBazaarDiscovery v2-extension hedge); optional ranking metadata.
+Petter: optionally pin X402_FACILITATOR=cdp explicitly.
+
+**Strategy docs (audit-output/parallel-audits-2026-08-12/):**
+- `catalog-buildout-strategy.md` — revenue is €249/90d, 53% one SEO/SERP-buying
+  wallet; €42 died on broken EXISTING caps; screenshot-url (just quarantined) is
+  400-ing the top customer (Browserless v1 waitForSelector — FIX FIRST next
+  session); 14-idea build list on free sources; 7 declines recorded; floor
+  false-positive concern (verify against the shipped taxonomy — caller_input IS
+  excluded); **TOAST corruption in transactions.audit_trail (URGENT — EU AI Act
+  artifact + hash chain; "missing chunk number 0 for toast value 32384")**.
+- `traffic-generation-plan.md` — strale.dev robots.txt blocks AI crawlers at
+  the Cloudflare CDN layer (Petter: turn off Managed Content block);
+  pydantic-ai-strale/openai-agents-strale/google-adk-strale were NEVER yanked
+  on PyPI despite DEPRECATED.md claiming so (DEC-20260504-C class, the April
+  incident axis — yank for real); all drafted submission copy has stale counts;
+  attribution instrumentation must precede submissions.
+
 ## Read next session, in order
 
 1. `audit-output/parallel-audits-2026-08-12/SYNTHESIS.md` — the merged prioritized
