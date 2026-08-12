@@ -134,6 +134,13 @@ async function main() {
   const { startInvariantChecker } = await import("./jobs/invariant-checker.js");
   startInvariantChecker();
 
+  // DEC-20260812-A quality floor (Readiness P3): daily tick quarantining
+  // capabilities below the real-traffic completion floor. Self-throttled to
+  // 3 quarantines/run; deactivation is proposal-only. 15-min startup delay;
+  // advisory lock 20260812 dedups across instances.
+  const { startQualityFloor } = await import("./jobs/quality-floor.js");
+  startQualityFloor();
+
   const { startActivationDrip } = await import("./jobs/activation-drip.js");
   startActivationDrip();
 
