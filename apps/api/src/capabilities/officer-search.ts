@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { loadSecTickerMap, type SecTickerMap } from "../lib/sec-ticker-map.js";
 
 /**
  * Officer Search — find company directors and officers from public registries.
@@ -60,18 +61,28 @@ async function searchUkOfficers(companyNumber: string): Promise<{ company: strin
 }
 
 async function searchUsOfficers(query: string): Promise<{ company: string; officers: Officer[] } | null> {
-  // Load tickers list to resolve company name to CIK
-  const tickersResp = await fetch("https://www.sec.gov/files/company_tickers.json", {
-    headers: { "User-Agent": UA },
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!tickersResp.ok) return null;
-  const tickers = await tickersResp.json() as Record<string, { cik_str: string; ticker: string; title: string }>;
+  // Load tickers list to resolve company name to CIK (shared loader —
+  // ../lib/sec-ticker-map.ts — also used by sec-filing-events.ts and
+  // us-company-data.ts).
+  //
+  // A load failure must SURFACE as unavailability, not fall through to the
+  // "No officers found" message — that message is an asserted negative that
+  // feeds KYB/UBO flows, and asserting it because SEC was unreachable is
+  // the DEC-20260428-B failure mode (never assert a fact not in the input).
+  let tickers: SecTickerMap;
+  try {
+    tickers = await loadSecTickerMap();
+  } catch {
+    throw new Error(
+      "US officer lookup is temporarily unavailable (SEC ticker directory unreachable). " +
+        "This is an upstream availability issue, not a no-results answer — retry shortly.",
+    );
+  }
 
   const queryLower = query.toLowerCase();
-  let match: { cik_str: string; title: string } | null = null;
+  let match: SecTickerMap[string] | null = null;
   for (const v of Object.values(tickers)) {
-    if (v.ticker.toLowerCase() === queryLower || v.title.toLowerCase().includes(queryLower)) {
+    if (v.ticker?.toLowerCase() === queryLower || v.title?.toLowerCase().includes(queryLower)) {
       match = v;
       break;
     }
@@ -156,7 +167,7 @@ registerCapability("officer-search", async (input: CapabilityInput) => {
     throw new Error(
       `No officers found for "${query}"${country ? ` in ${country}` : ""}. ` +
         "officer-search currently covers UK (Companies House) and US (SEC EDGAR) only. " +
-        "EU coverage was removed under DEC-20260427-I and will be reinstated when a licensed source lands.",
+        "EU coverage is not available and will be reinstated when a licensed source lands.",
     );
   }
 

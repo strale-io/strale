@@ -41,6 +41,7 @@ import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import { getProcessingLocation } from "../lib/processing-location.js";
 import { getShareableUrl } from "../lib/audit-token.js";
 import { TRANSACTION_RETENTION_DAYS } from "../lib/data-retention.js";
+import { validateX402Input } from "../lib/x402-input-validation.js";
 import { createHash } from "node:crypto";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -269,8 +270,31 @@ function generateExampleFromSchema(
   const props = (schema as any).properties;
   if (!props) return {};
 
+  // Agents treat the example as a request template and substitute their own
+  // values into it, so it must be a VALID minimal request, not a field tour:
+  //
+  //  - When the schema declares anyOf/oneOf required-groups (either/or
+  //    capabilities), emit only the first branch's fields. Emitting every
+  //    alternative at once ({url, domain}) contradicts the "Provide one of"
+  //    error it ships alongside.
+  //  - Booleans without a declared default are OMITTED, not set to true.
+  //    Emitting `true` for opt-in flags taught agents to set them — for
+  //    us-company-data that meant handing every 400 recipient
+  //    `allow_low_confidence: true`, the exact bypass of the wrong-company
+  //    guard this capability exists to enforce.
+  const branches = ((schema as any).anyOf ?? (schema as any).oneOf) as
+    | Array<{ required?: string[] }>
+    | undefined;
+  const firstBranch = Array.isArray(branches)
+    ? branches.find((b) => Array.isArray(b?.required) && b.required.length > 0)
+    : undefined;
+  const includeKeys = firstBranch?.required
+    ? new Set(firstBranch.required)
+    : null;
+
   const example: Record<string, unknown> = {};
   for (const [key, prop] of Object.entries(props)) {
+    if (includeKeys && !includeKeys.has(key)) continue;
     const p = prop as any;
     if (p.enum && p.enum.length > 0) {
       example[key] = p.enum[0];
@@ -281,7 +305,7 @@ function generateExampleFromSchema(
     } else if (p.type === "number" || p.type === "integer") {
       example[key] = 0;
     } else if (p.type === "boolean") {
-      example[key] = true;
+      continue; // no default declared — omit rather than teach agents to flip flags
     } else if (p.type === "object") {
       example[key] = {};
     } else if (p.type === "array") {
@@ -465,6 +489,39 @@ function build402(
   ).toString("base64");
 
   return { body, headerPayload, paymentRequirement };
+}
+
+// ─── Shared 400 envelope ────────────────────────────────────────────────────
+//
+// Every schema-related 400 on the x402 surface carries the same shape:
+// the specific error, the capability/solution's input_schema, a generated
+// example, and the catalog hint. One builder so the envelope can't drift
+// between the three call sites (solutions validation, capability validation,
+// executor-failure catch).
+//
+// `error_code` (DEC-19 stable enum, same values as /v1/do) is the
+// discriminator agents branch on: "invalid_request" = fix your input and
+// resend; "execution_failed" = the input may be fine and the upstream
+// failed — retry with backoff instead of mutating the request. `charged` is
+// always false here: these 400s happen after verify but before settle, so
+// the signed authorization expires unused (DEC-14).
+function schemaBadRequest(
+  c: any,
+  error: string | undefined,
+  inputSchema: Record<string, unknown> | null,
+  errorCode: "invalid_request" | "execution_failed" = "invalid_request",
+) {
+  return c.json(
+    {
+      error,
+      error_code: errorCode,
+      charged: false,
+      input_schema: inputSchema,
+      example: generateExampleFromSchema(inputSchema),
+      hint: `${BASE_URL}/x402/catalog`,
+    },
+    400,
+  );
 }
 
 // ─── Cert-audit C9: payment-header dedup ────────────────────────────────────
@@ -903,6 +960,15 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
     return c.json({ error: "Invalid request body. Expected JSON." }, 400);
   }
 
+  // Same input-validation guard as the wildcard capability handler. The
+  // solutions handler previously had NO input validation at all — a bad
+  // or empty body ran straight into executeSolution() and surfaced
+  // whichever step's raw error came back first.
+  const solValidation = validateX402Input(inputs, sol.inputSchema);
+  if (!solValidation.ok) {
+    return schemaBadRequest(c, solValidation.error, sol.inputSchema);
+  }
+
   // Execute solution steps via shared orchestration module
   const result = await executeSolution(sol.id, inputs);
 
@@ -1107,17 +1173,16 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
     return c.json({ error: "Invalid request body. Expected JSON." }, 400);
   }
 
-  const schema = cap.inputSchema as any;
-  if (schema?.required) {
-    const missing = (schema.required as string[]).filter(
-      (f: string) => inputs[f] === undefined || inputs[f] === null || inputs[f] === "",
-    );
-    if (missing.length > 0) {
-      return c.json(
-        { error: `Missing required fields: ${missing.join(", ")}`, input_schema: cap.inputSchema },
-        400,
-      );
-    }
+  // validateX402Input handles classic `required: [...]`, anyOf/oneOf
+  // required-groups (either/or capabilities like tech-stack-detect and
+  // image-to-text), and wholly-empty input against a properties-only
+  // schema that declares no `required` at all — see
+  // lib/x402-input-validation.ts for the full rationale. Runs after verify
+  // (per the Bazaar-indexing constraint above) and before settle (bad
+  // input never costs the caller).
+  const validation = validateX402Input(inputs, cap.inputSchema);
+  if (!validation.ok) {
+    return schemaBadRequest(c, validation.error, cap.inputSchema);
   }
 
   // Execute capability
@@ -1191,7 +1256,14 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
     } catch (recordErr) {
       logError("x402-failure-record-failed", recordErr, { slug: cap.slug });
     }
-    return c.json({ error: sanitized }, 400);
+    // Attach input_schema/example even on an executor-thrown error — an
+    // agent that got a validation-shaped message from inside the executor
+    // (e.g. "Provide 'url' or 'domain'") should still learn the schema
+    // instead of guessing from prose. error_code "execution_failed" tells
+    // the agent this may be an upstream failure, not necessarily bad input
+    // — so it can back off instead of mutating a valid request and paying
+    // to retry it.
+    return schemaBadRequest(c, sanitized, cap.inputSchema, "execution_failed");
   }
 
   const latencyMs = Date.now() - startMs;

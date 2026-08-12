@@ -13,18 +13,42 @@ price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - company
+  required: []
   properties:
     company:
       type: string
-      description: CIK number, ticker symbol, or company name
+      description: >-
+        CIK number, ticker symbol, or company name. Resolution order: exact CIK match, then exact ticker
+        match, then exact company-name match (both via the SEC ticker/title map — no LLM call), then a
+        best-effort LLM name extraction + SEC full-text filing search as a last resort (gated by
+        match_confidence / allow_low_confidence below).
+    cik:
+      type: string
+      description: SEC CIK number. Alternate to 'company' — same resolution rules apply.
+    company_name:
+      type: string
+      description: US company name. Alternate to 'company' — same resolution rules apply.
+    ticker:
+      type: string
+      description: Stock ticker symbol. Alternate to 'company' — same resolution rules apply.
     allow_low_confidence:
       type: boolean
       description: >-
         If true, return the best-effort match even when the name could not be confidently resolved
         (match_confidence "low"). Default false — a low-confidence name lookup errors instead of returning
-        a possibly-wrong company identity, so it can't silently feed downstream screening.
+        a possibly-wrong company identity, so it can't silently feed downstream screening. Only relevant to
+        the LLM+full-text-search fallback path; exact CIK/ticker/title-map resolutions are always
+        match_confidence "exact" and are never gated by this flag.
+  # Either/or contract: exactly one identifying field is needed. Same anyOf
+  # pattern as tech-stack-detect / image-to-text so validateX402Input's
+  # required-group branch names the alternatives precisely — without this,
+  # `{ "allow_low_confidence": true }` alone would pass the generic
+  # any-property-present check despite carrying no identifying field.
+  anyOf:
+    - required: [company]
+    - required: [cik]
+    - required: [company_name]
+    - required: [ticker]
 output_schema:
   type: object
   example:
@@ -107,6 +131,7 @@ output_field_reliability:
   fiscal_year_end: guaranteed
   match_confidence: guaranteed
   is_exact_match: guaranteed
+  resolution_method: guaranteed
   searched_name: common
 limitations:
   - title: SEC coverage varies by state — some states have limited registry data
