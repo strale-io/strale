@@ -36,19 +36,55 @@ export type MatchConfidence = "exact" | "high" | "low";
 // English word and stripping it would corrupt unrelated names. "Telenor AS"
 // still resolves, via the two-token Jaccard path rather than suffix stripping.
 const CORP_SUFFIX_RE =
-  /\b(incorporated|inc|corporation|corp|company|co|llc|ltd|limited|lp|plc|holdings?|group|the|asa|oyj|oy|ab|aps|gmbh|ag|nv|bv|sa|sas|sarl|srl|spa|kft)\b/gi;
+  /\b(incorporated|inc|corporation|corp|company|co|llc|ltd|limited|lp|plc|holdings?|group|the|asa|oyj|oy|abp|ab|aps|gmbh|ag|nv|bv|sa|sas|sarl|srl|spa|kft)\b/gi;
 
 /**
  * Normalize a company name for fuzzy comparison: lowercase, flatten punctuation
  * to spaces, drop common corporate suffixes, collapse whitespace.
  */
-export function normalizeCompanyName(s: string): string {
+/**
+ * Fold diacritics and the Nordic/continental letters that Unicode
+ * decomposition does not cover.
+ *
+ * Registries return the legal name with its native spelling while callers type
+ * ASCII: "Nestle" for Nestlé S.A., "Orsted" for Ørsted A/S, "Mehilainen" for
+ * Mehiläinen. Without folding, those score as non-matches and a valid query is
+ * refused. NFD + stripping combining marks handles é/ä/å; ø, æ, œ, ß, ł and đ
+ * are single code points with no decomposition, so they need explicit mapping.
+ */
+const LETTER_FOLD: Record<string, string> = {
+  ø: "o", æ: "ae", œ: "oe", ß: "ss", ł: "l", đ: "d", ð: "d", þ: "th",
+};
+
+function foldDiacritics(s: string): string {
   return s
-    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}+/gu, "")
+    .replace(/[øæœßłđðþ]/g, (c) => LETTER_FOLD[c] ?? c);
+}
+
+export function normalizeCompanyName(s: string): string {
+  return foldDiacritics(s.toLowerCase())
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(CORP_SUFFIX_RE, " ")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    // Punctuated legal forms shatter into single letters once punctuation is
+    // flattened: "Nestlé S.A." -> "nestle s a", "Ørsted A/S" -> "orsted a s",
+    // "Heineken N.V." -> "heineken n v". Those stray letters are never part of
+    // the distinguishing name, and leaving them in turns an exact match into a
+    // partial one, so a valid query gets refused.
+    //
+    // Only dropped when at least one multi-character token survives — a company
+    // genuinely named a single letter keeps it rather than normalising to "".
+    .split(" ")
+    .reduce<string[]>((acc, tok, _i, all) => {
+      const hasLongToken = all.some((t) => t.length > 1);
+      if (tok.length === 1 && hasLongToken) return acc;
+      acc.push(tok);
+      return acc;
+    }, [])
+    .join(" ");
 }
 
 /**

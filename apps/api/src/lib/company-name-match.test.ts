@@ -108,3 +108,50 @@ describe("classifyNameMatch — edge cases", () => {
     expect(classifyNameMatch("Oyj", "ASA").match_confidence).toBe("low");
   });
 });
+
+describe("normalizeCompanyName — diacritics and punctuated legal forms", () => {
+  // Registries return the native spelling; callers type ASCII. Without folding,
+  // "Nestle" vs "Nestlé S.A." scores as a non-match and a valid query is refused.
+  const folds: Array<[string, string]> = [
+    ["Nestlé S.A.", "nestle"],
+    ["Ørsted A/S", "orsted"],
+    ["Mehiläinen Oy", "mehilainen"],
+    ["Ålandsbanken Abp", "alandsbanken"],
+    ["Heineken N.V.", "heineken"],
+    ["Société Générale", "societe generale"],
+  ];
+  for (const [input, expected] of folds) {
+    it(`"${input}" -> "${expected}"`, () => {
+      expect(normalizeCompanyName(input)).toBe(expected);
+    });
+  }
+
+  it("keeps a single-letter name rather than normalising it away", () => {
+    // The stray-letter cleanup only fires when a longer token survives, so a
+    // company genuinely named one character does not become "".
+    expect(normalizeCompanyName("X")).toBe("x");
+  });
+
+  it("keeps an alphanumeric short name", () => {
+    expect(normalizeCompanyName("3M Company")).toBe("3m");
+  });
+});
+
+describe("classifyNameMatch — ASCII query against native spelling", () => {
+  const resolves: Array<[string, string]> = [
+    ["Nestle", "Nestlé S.A."],
+    ["Orsted", "Ørsted A/S"],
+    ["Mehilainen", "Mehiläinen Oy"],
+  ];
+  for (const [query, registryName] of resolves) {
+    it(`"${query}" matches "${registryName}"`, () => {
+      expect(classifyNameMatch(query, registryName).match_confidence).toBe("exact");
+    });
+  }
+
+  it("folding does not make unrelated entities match", () => {
+    // Guard against over-folding: these must still be refused.
+    expect(classifyNameMatch("Nokia", "Fysios Mehiläinen Oy").match_confidence).toBe("low");
+    expect(classifyNameMatch("Norsk Hydro", "NORSK HYDROGENBILFORENING").match_confidence).toBe("low");
+  });
+});
