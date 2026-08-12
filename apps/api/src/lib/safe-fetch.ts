@@ -214,7 +214,7 @@ export async function followRedirects(
       });
       // Cancel the unconsumed 3xx body — throwing with it open pins the
       // keep-alive connection until GC (review L-1).
-      await response.body?.cancel().catch(() => {});
+      await response.body?.cancel().catch((err) => logWarn("redirect-body-cancel-failed", "3xx body cancel failed (connection may pin until GC)", { err: String(err) }));
       throw new Error(
         `Too many redirects (>${maxRedirects}) — refusing to follow further. Starting URL: ${url}.`,
       );
@@ -225,7 +225,7 @@ export async function followRedirects(
     // fetching it directly (bit.ly → linkedin.com must not slip through).
     // Cancel the unconsumed 3xx body before a potential throw (review L-1).
     if (findProhibitedTarget(current)) {
-      await response.body?.cancel().catch(() => {});
+      await response.body?.cancel().catch((err) => logWarn("redirect-body-cancel-failed", "3xx body cancel failed (connection may pin until GC)", { err: String(err) }));
     }
     assertTargetAllowed(current);
   }
