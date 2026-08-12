@@ -1,12 +1,13 @@
 # Strale — Platform Readiness & Self-Operation Program
 
 **Date:** 2026-08-12
-**Status:** Proposed.
+**Status:** ADOPTED 2026-08-12 — DEC-20260812-A (Notion Decisions DB
+`3ba67c87-082c-8129-86c6-c35d82bc986f`). All five §4 decisions confirmed by Petter with
+suggested defaults; §4 below records the taken values.
 **Relationship to prior work:** This is the execution vehicle for Part One of the
-2026-08-05 Direction Plan (`docs/strategy/2026-08-05-direction-plan.md`), which is still
-formally "Proposed". Adopting this program implies adopting that plan's Part One framing
-(the library is the product; x402 is the primary rail; compliance is a separate business
-gated on customer discovery).
+2026-08-05 Direction Plan (`docs/strategy/2026-08-05-direction-plan.md`), adopted by the
+same DEC (the library is the product; x402 is the primary rail; compliance is a separate
+business gated on customer discovery).
 
 ---
 
@@ -75,6 +76,11 @@ evidence, not inspection.
 
 **1a. Production verification sweep.** Every active capability gets at least one real
 production call with declared fixtures asserted against actual output values.
+*(P0 note: the sweep shipped as `scripts/sweep-prod-catalog.ts` + `build-disposition.ts` —
+recurring operator tools until the P3 platform doctor absorbs their role, at which point
+they fold into the WS2 script rationalization. The `dishonest-output` class — well-formed
+empty success — is NOT detectable by fixture assertions and is deferred to P1, which is
+why real-traffic completion sits beside the sweep verdict in every disposition.)*
 `sweep-paid-fixtures.ts` is the prototype; it needs (i) a prod-context execution path
 (it currently runs locally, where env keys and region-dependent content diverge from
 Railway US East), (ii) a per-run budget cap, (iii) the vendor denylist honored (extend,
@@ -248,20 +254,18 @@ parallel, no code, trigger conditions as written there.
 
 ---
 
-## 4. Decisions needed from Petter (the full list — deliberately short)
+## 4. Decisions taken (Petter, 2026-08-12 — all five confirmed with suggested defaults)
 
-1. **Adopt the 2026-08-05 direction plan Part One + this program.** This is the
-   supersession confirmation the Contradiction Protocol requires (it retires
-   DEC-20260502-A and DEC-20260503-A as the 08-05 plan §6 specifies).
-2. **Budget cap for the production verification sweep** (real paid self-calls;
-   suggest €25 with the vendor denylist honored).
-3. **Approve the escalation contract shape** (WS3) — the explicit list of what stays
-   human. Everything else becomes the platform's job.
-4. **Quality-floor thresholds** (suggest: quarantine <70%, deactivate <30%, on ≥10
-   real calls / 30 days — tune in P3).
-5. **Whether the factory may dark-launch zero-maintenance capabilities without
-   per-capability approval** (suggest: yes, invisible + non-x402 until first green
-   week; activation stays a human click initially).
+1. **Adopted:** the 2026-08-05 direction plan Part One + this program. DEC-20260502-A
+   and DEC-20260503-A superseded per the Contradiction Protocol (recorded in Notion +
+   CLAUDE.md).
+2. **Sweep budget cap:** €25 external cost per full-catalog run, vendor denylist honored.
+3. **Escalation contract approved** as specified in WS3 — the enumerated list is the
+   complete set of human decisions; everything else is the platform's job.
+4. **Quality-floor thresholds:** quarantine <70%, deactivate <30%, on ≥10 real calls /
+   30 days; auto-promote on recovery. Tunable in P3 with recorded rationale.
+5. **Factory dark-launch: yes** for the zero-maintenance class — invisible + non-x402
+   until first green week; activation stays a human click initially.
 
 ---
 
@@ -270,7 +274,7 @@ parallel, no code, trigger conditions as written there.
 | Metric | Today | Target |
 |---|---|---|
 | Catalog completion rate (real traffic) | ~85% | >95% |
-| Capabilities listed vs prod-verified | 339 / unknown | N / N (every listed one verified) |
+| Capabilities listed vs prod-verified | 299 active / 273 verified (P0 sweep, 2026-08-12) | N / N (every listed one verified) |
 | False claims on machine surfaces | unknown (>0) | 0, guard-enforced |
 | Judgment calls escalated to Petter / month | unmeasured | enumerated, then falling |
 | MTT-quarantine for a failing capability | manual (days) | <1 hour, automatic |

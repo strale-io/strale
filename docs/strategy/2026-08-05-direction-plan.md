@@ -1,7 +1,10 @@
 # Strale — Direction Plan
 
 **Date:** 2026-08-05
-**Status:** Proposed. Supersedes DEC-20260502-A and DEC-20260503-A if adopted (see §4).
+**Status:** Part One ADOPTED 2026-08-12 via DEC-20260812-A (with the Platform Readiness &
+Self-Operation Program, `2026-08-12-platform-readiness-program.md`, as its execution
+vehicle). DEC-20260502-A and DEC-20260503-A superseded per §4/§6. Part Two (compliance as
+a separate brand) remains gated on the §4.5 trigger conditions.
 **Basis:** Full read-only audit of backend, frontend, repo research corpus, Notion, production database, and vendor correspondence, conducted 2026-08-05.
 
 ---

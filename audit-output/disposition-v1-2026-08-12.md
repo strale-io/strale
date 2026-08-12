@@ -8,15 +8,32 @@ Readiness P0 exit artifact (DEC-20260812-A). Source: production sweep (prod-swee
 declared assertions passing.** The catalog is materially healthier than the failure-rate
 narrative suggested — but the remaining 9% contains every class of defect the program predicted.
 
+*Methodology caveat: the 91% measures one canned known-good input per capability against its
+declared assertions. It is a different metric from the ~85% real-traffic completion rate (which
+reflects the inputs customers actually send), and it cannot see the `dishonest-output` class
+(well-formed empty success) at all — `product-reviews-extract` passes the sweep at 12% real
+completion, which is the proof. Both numbers are needed; neither substitutes for the other.*
+
+> **Authoritative table:** the bucket tables below were generated with a 90-day window before
+> the floor rule was aligned to DEC-20260812-A verbatim (≥10 calls/**30d**). The corrected,
+> regenerated table is `disposition-generated-2026-08-12.md` — use that for P1 actions. Under
+> the corrected rule: quarantine proposals are screenshot-url (55%), brazilian-company-data
+> (59%), url-to-text (54%); the sole deactivate proposal is product-reviews-extract (12% on 43
+> calls/30d); charity-lookup-uk, gdpr-fine-lookup and image-resize fall below the ≥10-calls/30d
+> bar and get no floor verdict (watch list, not action list). This annotated file remains the
+> narrative record.
+
 **Persistent execution failures (8):**
 - `danish-company-data` — known vendor quota exhaustion (cvrapi.dk free tier); the fix is the
   official datacvr.virk.dk access application, already on the backlog.
 - `image-to-text`, `us-company-data` — stale fixtures (dead URL / "Google"-vs-EDGAR), both filed
   2026-08-09; us-company-data's resolution also changes in open PR #171.
-- `base64-encode-url`, `llm-cost-calculate`, `approval-security-check` — **fixture-input-specific
-  failures with healthy real traffic** (92% / 67% / 100% real completion). base64-encode-url's
-  fixture depends on httpbin.org (notoriously flaky); llm-cost-calculate's fixture likely names a
-  model absent from its price table. Fixture defects wearing capability-defect costumes.
+- `base64-encode-url` — fixture-input-specific: its fixture depends on httpbin.org (flaky).
+  Verified healthy with a clean URL post-sweep (92% real completion); breaker deliberately closed
+  via one known-good call. Fixture fix only.
+- `llm-cost-calculate`, `approval-security-check` — **fail their own health_check inputs too**
+  (verified post-sweep), so these are genuine capability defects despite historical real-traffic
+  success. Breakers left open deliberately. P1 triage.
 - `eu-regulation-search`, `us-court-search` — genuine failures, need P1 triage.
 
 **Fixture-defect classes among FIXTURE_FAIL (9):**

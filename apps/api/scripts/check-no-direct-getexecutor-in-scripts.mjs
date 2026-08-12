@@ -16,6 +16,14 @@ import { join, resolve } from "node:path";
 
 const SCRIPTS_DIR = resolve(import.meta.dirname, ".");
 const EXEMPT_MARKER = "guarded-executor-exempt";
+// Operator tools that invoke executors deliberately, under documented cost
+// controls (denylist / budget cap / flag-gating). The marker alone does NOT
+// exempt an invoking script — the filename must ALSO be on this list, so
+// adding a new bypass is a visible diff to this guard, not just a comment.
+const OPERATOR_TOOL_ALLOWLIST = new Set([
+  "sweep-paid-fixtures.ts",
+  "capture-tier-fixtures.ts",
+]);
 const GUARDED_IMPORT_RE = /from\s+["']\.\.\/src\/capabilities\/guarded-executor(\.js)?["']/;
 const GET_EXECUTOR_IMPORT_RE =
   /import\s*\{[^}]*\bgetExecutor\b[^}]*\}\s*from\s+["']\.\.\/src\/capabilities\/(index(\.js)?)["']/;
@@ -43,8 +51,15 @@ for (const file of listTsFiles(SCRIPTS_DIR)) {
   // Has getExecutor import. OK if also imports the guarded helper.
   if (GUARDED_IMPORT_RE.test(content)) continue;
 
-  // OK if the file is marked exempt (e.g. existence-check only).
-  if (content.includes(EXEMPT_MARKER)) continue;
+  // OK if the file is marked exempt AND either (a) it only does existence
+  // checks, or (b) it is a pinned operator tool. `executor(` / direct call
+  // detection is unreliable statically, so the allowlist is the gate for
+  // invoking scripts — a marker alone does not clear a new invoker.
+  const fileName = file.split(/[\\/]/).pop();
+  if (content.includes(EXEMPT_MARKER)) {
+    const invokes = /getExecutor\([^)]*\)\s*(?:as\s+\w+\s*)?[;,)]?[\s\S]*?\b(?:executor|fn)\s*\(/.test(content);
+    if (!invokes || OPERATOR_TOOL_ALLOWLIST.has(fileName)) continue;
+  }
 
   offenders.push(file);
 }
@@ -63,8 +78,9 @@ console.error("[lint]   (a) import { guardedExecute } from '../src/capabilities/
 console.error("[lint]       and route every executor invocation through it, OR");
 console.error("[lint]   (b) add a `// guarded-executor-exempt: <reason>` comment near the import");
 console.error("[lint]       if the file only does existence checks (no executor() calls), OR");
-console.error("[lint]   (c) add the same marker if the file is a deliberate operator-supervised");
-console.error("[lint]       tool whose header documents its cost controls (denylist, budget cap,");
-console.error("[lint]       flag-gating). The gate exists to stop SILENT bypasses, not sanctioned");
-console.error("[lint]       manual tools — the reason text must say why the bypass is safe.");
+console.error("[lint]   (c) for a deliberate operator-supervised tool that DOES invoke executors:");
+console.error("[lint]       add the marker AND add the filename to OPERATOR_TOOL_ALLOWLIST in this");
+console.error("[lint]       guard, with documented cost controls (denylist, budget cap, flag-gating)");
+console.error("[lint]       in the tool's header. The allowlist makes each new bypass a reviewed");
+console.error("[lint]       diff to this guard, not just a comment in the offending file.");
 process.exit(1);
