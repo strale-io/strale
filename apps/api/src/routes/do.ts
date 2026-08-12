@@ -942,7 +942,16 @@ doRoute.post(
   // path above is deliberately untouched (its misplacement hints and
   // failure-type analytics are established behavior); this only adds the
   // group rule that path cannot express.
-  {
+  // Only schemas that DECLARE branch groups enter this check — running the
+  // full validator unconditionally would re-execute the classic-required rule
+  // with stricter blank semantics ("" / null counted as missing), silently
+  // changing established behavior and mislabeling those failures as
+  // group-unsatisfied (review M-2). Classic required stays the block above's
+  // job, verbatim.
+  const declaresGroups =
+    Array.isArray((inputSchema as Record<string, unknown> | null)?.anyOf) ||
+    Array.isArray((inputSchema as Record<string, unknown> | null)?.oneOf);
+  if (declaresGroups) {
     const groupCheck = validateX402Input(executionInput, inputSchema as Record<string, unknown> | null);
     if (!groupCheck.ok) {
       const gIp = getClientIp(c);

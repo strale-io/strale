@@ -22,6 +22,7 @@
 
 import { buildBrowserlessRequestUrl } from "../../lib/browserless-launch.js";
 import { safeFetch } from "../../lib/safe-fetch.js";
+import { assertTargetAllowed } from "../../lib/tos-blocklist.js";
 
 /**
  * Detect JS-challenge / anti-bot interstitials that come back with HTTP 200
@@ -33,11 +34,14 @@ import { safeFetch } from "../../lib/safe-fetch.js";
  */
 export function looksLikeJsChallenge(html: string): boolean {
   const head = html.slice(0, 6000);
+  // NOTE: no bare `_Incapsula_Resource` marker — Imperva injects that script
+  // tag into NORMALLY SERVED pages too, so it false-positives on good content
+  // (review M-1). `__cf_chl_` / `cf-browser-verification` are challenge-only.
   return (
     /verify that you'?re not a robot/i.test(head) ||
     /enable javascript and then reload/i.test(head) ||
     /checking your browser before accessing/i.test(head) ||
-    /__cf_chl_|cf-browser-verification|_Incapsula_Resource/i.test(head)
+    /__cf_chl_|cf-browser-verification/i.test(head)
   );
 }
 
@@ -189,7 +193,6 @@ export async function fetchPage(
   // Per-source ToS policy enforced at the pipeline entry (P2, 2026-08-12):
   // tiers 2/3 (Jina, Browserless) never touch safeFetch, so its gate alone
   // would leave the rendering path open. Pure string check, runs before DNS.
-  const { assertTargetAllowed } = await import("../../lib/tos-blocklist.js");
   assertTargetAllowed(targetUrl);
 
   // SSRF protection — validate URL before fetching

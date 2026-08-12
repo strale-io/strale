@@ -129,7 +129,12 @@ function toUrl(rawUrl: string): URL | null {
   const trimmed = rawUrl.trim();
   if (!trimmed) return null;
   try {
-    return new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
+    // Scheme match MUST be case-insensitive: `new URL()` and fetch()
+    // normalize "HTTPS://" but a case-sensitive startsWith("http") would
+    // prepend a second scheme, making the hostname parse as "https" and the
+    // gate pass a prohibited host (P2 review H-1 — this one-character-class
+    // defect bypassed every enforcement point).
+    return new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
   } catch {
     return null;
   }

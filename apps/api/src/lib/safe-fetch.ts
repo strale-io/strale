@@ -27,7 +27,7 @@ import { Agent as HttpsAgent } from "node:https";
 import { Agent as HttpAgent } from "node:http";
 import { lookup as dnsLookup, type LookupOptions } from "node:dns";
 import { isBlockedIp, validateUrl } from "./url-validator.js";
-import { assertTargetAllowed } from "./tos-blocklist.js";
+import { assertTargetAllowed, findProhibitedTarget } from "./tos-blocklist.js";
 import { logWarn } from "./log.js";
 
 // ─── Custom lookup that re-applies isBlockedIp ────────────────────────────────
@@ -212,6 +212,9 @@ export async function followRedirects(
         start: url,
         hops: hop,
       });
+      // Cancel the unconsumed 3xx body — throwing with it open pins the
+      // keep-alive connection until GC (review L-1).
+      await response.body?.cancel().catch(() => {});
       throw new Error(
         `Too many redirects (>${maxRedirects}) — refusing to follow further. Starting URL: ${url}.`,
       );
@@ -220,6 +223,10 @@ export async function followRedirects(
     current = new URL(location, current).toString();
     // A redirect into a ToS-prohibited host is the same policy violation as
     // fetching it directly (bit.ly → linkedin.com must not slip through).
+    // Cancel the unconsumed 3xx body before a potential throw (review L-1).
+    if (findProhibitedTarget(current)) {
+      await response.body?.cancel().catch(() => {});
+    }
     assertTargetAllowed(current);
   }
 }
