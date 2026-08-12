@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import {
   fetchRenderedHtml,
   htmlToText,
@@ -133,6 +134,8 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     url = `https://${url}`;
   }
+  // Per-source ToS policy gates every arbitrary-URL fetch path (P1 review, 2026-08-12).
+  assertTargetAllowed(url);
 
   const parsedUrl = new URL(url);
   const domain = parsedUrl.hostname;

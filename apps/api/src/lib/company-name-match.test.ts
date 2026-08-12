@@ -155,3 +155,35 @@ describe("classifyNameMatch — ASCII query against native spelling", () => {
     expect(classifyNameMatch("Norsk Hydro", "NORSK HYDROGENBILFORENING").match_confidence).toBe("low");
   });
 });
+
+describe("normalizeCompanyName — German legal forms (P1 2026-08-12)", () => {
+  it("strips German forms so bare queries match full legal names", () => {
+    expect(classifyNameMatch("SAP", "SAP SE").match_confidence).toBe("exact");
+    expect(classifyNameMatch("RATIONAL Aktiengesellschaft", "RATIONAL Aktiengesellschaft").match_confidence).toBe("exact");
+  });
+
+  it("a name made entirely of suffix-list tokens must not normalize to empty", () => {
+    // A company literally named "SE" (or any all-suffix-token name) must not
+    // normalize to "" — an empty side classifies `low` forever, making the
+    // company unresolvable on every registry. Fallback keeps the raw form.
+    expect(normalizeCompanyName("SE")).toBe("se");
+  });
+
+  it("sibling German entities must NOT collapse into a false exact match", () => {
+    // "Muster GmbH" and "Muster GmbH & Co. KG" are two distinct legal
+    // registrations. Review caught that stripping "kg" made them normalize
+    // identically → exact → silent wrong-company. They must stay ambiguous.
+    expect(classifyNameMatch("Muster GmbH", "Muster GmbH & Co. KG").match_confidence).toBe("low");
+    // Bare "ev" must not be stripped: real names begin with it.
+    expect(classifyNameMatch("Metals Group", "EV Metals Group").match_confidence).not.toBe("exact");
+    // But the punctuated e.V. still normalizes away via the single-letter drop.
+    expect(normalizeCompanyName("Musikverein e.V.")).toBe("musikverein");
+  });
+
+  it("leading suffix-shaped tokens in real names survive comparison", () => {
+    // "kg" is not stripped, so both sides keep it and still match exactly.
+    expect(classifyNameMatch("KG Knutsson", "KG Knutsson AB").match_confidence).toBe("exact");
+    // Fresenius-style SE & Co. KGaA: se/kgaa/co strip, kg is not present.
+    expect(classifyNameMatch("Fresenius", "Fresenius SE & Co. KGaA").match_confidence).not.toBe("low");
+  });
+});

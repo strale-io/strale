@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import {
   fetchRenderedHtml,
   htmlToText,
@@ -92,6 +93,8 @@ registerCapability("terms-of-service-extract", async (input: CapabilityInput) =>
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     url = `https://${url}`;
   }
+  // Per-source ToS policy gates every arbitrary-URL fetch path (P1 review, 2026-08-12).
+  assertTargetAllowed(url);
 
   const { url: tosUrl, text } = await findTosPage(url);
 

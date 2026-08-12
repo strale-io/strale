@@ -57,23 +57,28 @@ personal_data_categories:
 geography: global
 test_fixtures:
   known_answer:
+    # Fixture address: Binance 14 hot wallet — indexed by GoPlus and returns
+    # code 1 with populated results (verified live 2026-08-12). The previous
+    # fixture (vitalik.eth) triggered GoPlus code 2029, observed for addresses
+    # with pathological approval counts. If this address ever hits the same
+    # limit, swap to a mid-activity EOA and re-verify live before committing.
     input:
       address: "0x28C6c06298d514Db089934071355E5743bf21d60"
       chain_id: "1"
     expected_fields:
       - field: total_approvals
         operator: not_null
-        reliability: common
+        reliability: guaranteed
       - field: risk_level
         operator: not_null
-        reliability: common
+        reliability: guaranteed
 output_field_reliability:
   address: common
   chain_id: common
   approvals: common
-  risk_level: common
+  risk_level: guaranteed
   risky_approvals: common
-  total_approvals: common
+  total_approvals: guaranteed
 limitations:
   - title: null
     text: >-

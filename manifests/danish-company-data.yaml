@@ -2,6 +2,13 @@
 # Review and adjust before using as onboarding template
 
 slug: danish-company-data
+# QUARANTINED 2026-08-12 (DEC-20260812-A escalation contract, first floor
+# action): 0% completion on 11 external calls/90d — cvrapi.dk free tier is
+# exhausted and fails even identifier lookups. Delisted from catalog + x402
+# (DB: visible=false, x402_enabled=false); /v1/do by explicit slug stays
+# reachable and unbilled on failure. Unblock: official datacvr.virk.dk access
+# (Petter action), then flip visible back and re-verify via prod sweep.
+visible: false
 name: Danish Company Data
 description: >-
   Look up Danish company data from the Central Business Register (CVR). Accepts CVR number (8 digits) or fuzzy company

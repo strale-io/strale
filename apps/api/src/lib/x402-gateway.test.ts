@@ -38,4 +38,15 @@ describe("eurCentsToUsdcAtomic", () => {
     expect(eurCentsToUsdcAtomic(5)).toBe("54000");
     expect(eurCentsToUsdcAtomic(1)).toBe("10800");
   });
+
+  it("survives the route-layer float round-trip (usd → ×1e6 → round) exactly", () => {
+    // The v2 route carries price as a float USD and reconverts to atomic
+    // (usdToUsdcAtomic / priceUsdOverride). Review caught that ceil() there
+    // re-created the +1 artifact for ~3% of cent values through float error;
+    // both sites now use round(), whose exactness this pins for every price.
+    for (let cents = 1; cents <= 400; cents++) {
+      expect(String(Math.round(eurCentsToUsd(cents) * 1_000_000)), `round-trip for ${cents}c`)
+        .toBe(eurCentsToUsdcAtomic(cents));
+    }
+  });
 });
