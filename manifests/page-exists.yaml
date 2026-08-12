@@ -1,0 +1,173 @@
+slug: page-exists
+name: Page Exists
+description: >-
+  Check whether a URL still exists — catches hard 404s, soft-404 pages, dead links, and removed listings that
+  still return HTTP 200.
+category: monitoring
+cost_class: free_unlimited
+quota_window: none
+price_cents: 2
+is_free_tier: false
+avg_latency_ms: 800
+input_schema:
+  type: object
+  required:
+    - url
+  properties:
+    url:
+      type: string
+      description: URL to check for content-level existence
+    timeout_ms:
+      type: integer
+      description: Request timeout in milliseconds (clamped to 1000-30000, default 10000)
+output_schema:
+  type: object
+  example:
+    url: https://example.com
+    exists: true
+    confidence: medium
+    reason: ok
+    signals: []
+    status_code: 200
+    final_url: https://example.com/
+    redirected: false
+    title: Example Domain
+    content_length: 559
+    checked_at: "2026-08-12T12:00:00.000Z"
+  properties:
+    url:
+      type: string
+    exists:
+      type: [boolean, "null"]
+      description: >-
+        Three-state. true = page appears to exist; false = page appears gone (hard or soft 404);
+        null = indeterminate (blocked by bot detection, server error, or network failure) — treat as
+        "unknown", not as either answer.
+    confidence:
+      type: [string, "null"]
+      enum: [high, medium, low, null]
+      description: null whenever exists is null. Do not act on "low" alone.
+    reason:
+      type: string
+      enum:
+        - ok
+        - non_html_content
+        - hard_404
+        - soft_404_title
+        - soft_404_body
+        - soft_404_body_and_redirect
+        - redirected_to_generic
+        - thin_content
+        - access_blocked
+        - server_error
+        - unexpected_status
+        - timeout
+        - redirect_loop
+        - dns_error
+        - network_error
+    signals:
+      type: array
+      description: Every heuristic that fired, independent of the final verdict.
+      items:
+        type: string
+        enum: [soft_404_title, soft_404_body, redirected_to_generic, thin_content]
+    status_code:
+      type: [integer, "null"]
+    final_url:
+      type: [string, "null"]
+    redirected:
+      type: boolean
+      description: Compared against the normalized input URL, so trailing-slash/fragment normalization does not count as a redirect.
+    title:
+      type: [string, "null"]
+    content_length:
+      type: [integer, "null"]
+      description: >-
+        Decoded bytes actually fetched, capped at 20000 — exact for small pages, a lower bound for
+        larger ones. Not the Content-Length header.
+    checked_at:
+      type: string
+    error:
+      type: string
+      description: Present only on network/timeout failures.
+data_source: HTTP fetch + content heuristics
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+gdpr_art_22_classification: data_lookup
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      url: https://example.com
+    expected_fields:
+      - field: url
+        operator: not_null
+        reliability: guaranteed
+      - field: reason
+        operator: not_null
+        reliability: guaranteed
+      - field: signals
+        operator: not_null
+        reliability: guaranteed
+      - field: signals
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: redirected
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: checked_at
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    url: https://example.com
+output_field_reliability:
+  url: guaranteed
+  reason: guaranteed
+  signals: guaranteed
+  redirected: guaranteed
+  checked_at: guaranteed
+  exists: common
+  confidence: common
+  status_code: common
+  final_url: common
+  title: common
+  content_length: common
+  error: rare
+limitations:
+  - title: Client-rendered SPAs may look alive regardless of the specific page
+    text: >-
+      Sites that render content client-side (e.g. Resy) serve the same generic 200 HTML shell for every path,
+      including removed listings. The server-side heuristics see real content and report exists:true even when the
+      specific listing is gone — this is why a clean 200 is reported at confidence medium, never high.
+    category: coverage
+    severity: warning
+    workaround: For known SPA domains, corroborate with a rendered check (screenshot-url) before trusting exists:true.
+  - title: Soft-404 phrase heuristics are English-only
+    text: >-
+      The title/body phrase scan (e.g. "no longer available", "has been removed") matches English phrasing only.
+      Non-English removal/error pages may be misclassified as existing content.
+    category: coverage
+    severity: info
+    workaround: For non-English sites, verify the returned title and final_url yourself rather than trusting exists alone.
+  - title: Bot-blocking sites return an unknown result, and the call is still billed
+    text: >-
+      Sites that 401/403 automated requests (bot detection, auth walls) return exists:null with reason
+      access_blocked rather than a true/false determination. The execution completed, so it is billed normally —
+      on bot-heavy domains null may be the common outcome, not the edge case.
+    category: coverage
+    severity: info
+    workaround: Treat exists:null as "unknown" and fall back to a manual check or a different data source for these domains.
+  - title: Low-confidence negatives can misread live pages
+    text: >-
+      The redirect-to-generic and thin-content signals fire on some legitimate pages (canonicalization redirects,
+      genuinely minimal pages), producing exists:false at confidence:low for a page that is actually live. Low
+      confidence means exactly that — corroborate before acting.
+    category: accuracy
+    severity: info
+    workaround: Only act automatically on confidence high/medium; route confidence:low results to a secondary check.

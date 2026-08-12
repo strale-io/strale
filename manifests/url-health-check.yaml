@@ -100,4 +100,4 @@ limitations:
     text: Checks HTTP response status and basic connectivity — does not assess content correctness or page rendering
     category: coverage
     severity: info
-    workaround: Combine with screenshot-url for visual verification or structured-scrape for content validation
+    workaround: Use page-exists for content-level existence (soft-404 detection), or screenshot-url for visual verification

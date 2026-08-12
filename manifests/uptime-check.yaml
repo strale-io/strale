@@ -88,3 +88,11 @@ limitations:
     category: accuracy
     severity: info
     workaround: Schedule periodic checks and compute uptime percentage over time rather than relying on a single probe
+  - title: Status-code only — reports "up" for soft-404 and removed pages
+    text: >-
+      Only the HTTP status code is inspected. A removed listing or soft-404 page served with HTTP 200 (or even a
+      literal 404 response) is reported as status "up" — this capability answers "does the server respond?", not
+      "does this page still exist?".
+    category: coverage
+    severity: info
+    workaround: Use page-exists to check whether a specific page still resolves to real content.
