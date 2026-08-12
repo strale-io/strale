@@ -2,7 +2,11 @@ slug: estonian-company-data
 name: Estonian Company Data
 description: Look up Estonian company data from the e-Business Register. Accepts registry code (8 digits) or fuzzy company name. Returns legal_representatives[] from RIK Ariregister Open Data (CC BY 4.0).
 category: data-extraction
-cost_class: free_unlimited
+# paid_prepaid, not free_unlimited: the name path runs a Claude Haiku extraction
+# (ANTHROPIC_API_KEY) and Railway-origin calls route through the Browserless EU
+# proxy (ariregister 403s US East IPs). Matches finnish-company-data. Scheduler
+# must not invoke this hourly — cert lint check-cost-class-coherence enforces.
+cost_class: paid_prepaid
 quota_window: none
 price_cents: 5
 is_free_tier: false
