@@ -50,7 +50,9 @@ registerCapability("http-to-curl", async (input: CapabilityInput) => {
   if (bodyStr) fetchOpts.push(`  body: ${typeof body === "string" ? `\`${bodyStr}\`` : `JSON.stringify(${JSON.stringify(body)})`},`);
 
   const fetchCode = fetchOpts.length > 0
+    // unguarded-fetch-ok: generated code string — this capability performs no network I/O
     ? `const response = await fetch("${url}", {\n${fetchOpts.join("\n")}\n});`
+    // unguarded-fetch-ok: generated code string — this capability performs no network I/O
     : `const response = await fetch("${url}");`;
 
   // Build axios equivalent

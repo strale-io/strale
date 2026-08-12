@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 
@@ -17,6 +18,7 @@ registerCapability("youtube-summarize", async (input: CapabilityInput) => {
   // Fetch video metadata via oEmbed
   let title = "", channel = "";
   try {
+    // unguarded-fetch-ok: fixed youtube.com oembed endpoint; video id regex-extracted
     const oembedRes = await fetch(
       `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
       { signal: AbortSignal.timeout(5000) },
@@ -99,8 +101,8 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
   let pageHtml: string | null = null;
 
   try {
-    const pageRes = await fetch(ytUrl, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Accept-Language": "en-US,en;q=0.9" },
+    const pageRes = await safeFetch(ytUrl, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; StraleBot/1.0; +https://strale.dev)", "Accept-Language": "en-US,en;q=0.9" },
       signal: AbortSignal.timeout(10000),
     });
     if (pageRes.ok) {
@@ -128,6 +130,7 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
   if (!urlMatch) return null;
 
   const captionUrl = urlMatch[1].replace(/\\u0026/g, "&");
+  // unguarded-fetch-ok: captionUrl regex-constrained to youtube.com/api/timedtext
   const captionRes = await fetch(captionUrl, { signal: AbortSignal.timeout(10000) });
   if (!captionRes.ok) return null;
 

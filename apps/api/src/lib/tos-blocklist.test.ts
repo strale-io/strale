@@ -129,9 +129,25 @@ describe("blocklist integrity", () => {
     // If this drifts, a policy refusal starts counting as a capability
     // failure and a burst of blocked URLs trips the breaker for everyone.
     for (const rule of PROHIBITED_TARGETS) {
-      const url = `https://${rule.host}${rule.pathPrefix ?? "/"}`;
-      expect(() => assertTargetAllowed(url)).toThrow(TOS_REFUSAL_MARKER);
+      // hostRe rules use `host` as a display placeholder, not a real
+      // hostname — probe them with a representative concrete host instead.
+      const host = rule.hostRe ? rule.testHost! : rule.host;
+      const url = `https://${host}${rule.pathPrefix ?? "/"}`;
+      expect(() => assertTargetAllowed(url), url).toThrow(TOS_REFUSAL_MARKER);
     }
+  });
+
+  it("the H-4 ruling covers Google ccTLDs, not just google.com (money-integrity 2026-08-12)", () => {
+    for (const url of [
+      "https://www.google.se/search?q=iphone&tbm=shop",
+      "https://google.de/search?q=x",
+      "https://www.google.co.uk/search?q=x",
+    ]) {
+      expect(() => assertTargetAllowed(url), url).toThrow(TOS_REFUSAL_MARKER);
+    }
+    // Non-search Google properties and lookalike hosts stay allowed.
+    expect(() => assertTargetAllowed("https://www.google.se/maps")).not.toThrow();
+    expect(() => assertTargetAllowed("https://notgoogle.se/search")).not.toThrow();
   });
 
   it("the circuit breaker actually classifies a refusal as user-input, not a fault", () => {

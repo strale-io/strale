@@ -124,6 +124,7 @@ async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
   // buildBrowserlessRequestUrl also appends ?launch= per-request, required by
   // Browserless v2 (LAUNCH_ARGS env var is deprecated). See lib/browserless-launch.ts.
   const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
+  // unguarded-fetch-ok: our Browserless EU proxy; target is the fixed ariregister API host
   const resp = await fetch(buildBrowserlessRequestUrl(url, "/content", key), {
     method: "POST",
     headers: {
@@ -148,6 +149,7 @@ async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
 async function fetchApi(path: string): Promise<unknown> {
   const url = `${API}${path}`;
   try {
+    // unguarded-fetch-ok: fixed ariregister.rik.ee API host, not a caller URL
     const resp = await fetch(url, {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(10000),

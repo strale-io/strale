@@ -33,6 +33,9 @@ jobs:
       - run: npm --workspace=packages/mcp-server run build
       - run: npm run typecheck
       - run: npm --workspace=apps/api run lint:no-bare-catch
+      # Money-integrity 2026-08-12: caller-URL capabilities must use safeFetch
+      # or the ToS gate — raw fetch shipped as blocklist side doors ten times.
+      - run: npm --workspace=apps/api run lint:no-unguarded-user-fetch
       # The SSRF inventory guard hardcodes its walk root relative to the
       # repo root (`apps/api/src/capabilities`); invoking it via the
       # workspace wrapper sets cwd to `apps/api/` and ENOENTs. Call it

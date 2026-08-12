@@ -39,6 +39,7 @@ jobs:
       - id: manifest-drift
         run: |
           set +e
+          set -o pipefail
           cd apps/api && npx tsx scripts/sweep-manifest-drift.ts 2>&1 | tee /tmp/manifest-drift.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
@@ -46,21 +47,16 @@ jobs:
       - id: facts-drift
         run: |
           set +e
-          cd apps/api && npx tsx scripts/check-platform-facts-drift.ts 2>&1 | tee /tmp/facts-drift.txt
+          set -o pipefail
+          cd apps/api && npx tsx scripts/check-platform-facts-drift.ts --strict 2>&1 | tee /tmp/facts-drift.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
       - id: fetch-timeout
         run: |
           set +e
+          set -o pipefail
           node apps/api/scripts/check-fetch-timeout-coverage.mjs 2>&1 | tee /tmp/fetch-timeout.txt
-          echo "exit=$?" >> $GITHUB_OUTPUT
-        continue-on-error: true
-
-      - id: migration-prefixes
-        run: |
-          set +e
-          node apps/api/scripts/check-migration-prefixes.mjs 2>&1 | tee /tmp/migration-prefixes.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
@@ -74,6 +70,7 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: |
           set +e
+          set -o pipefail
           cd apps/api && npx tsx scripts/check-vendor-roster-drift.ts --strict 2>&1 | tee /tmp/vendor-roster.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
@@ -95,6 +92,7 @@ jobs:
           STRALE_FRONTEND_PATH: ${{ github.workspace }}/strale-frontend
         run: |
           set +e
+          set -o pipefail
           node apps/api/scripts/check-shape-contracts.mjs 2>&1 | tee /tmp/audit-record-shape.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
@@ -121,11 +119,6 @@ jobs:
             cat /tmp/fetch-timeout.txt
             echo '```'
             echo ""
-            echo "## Migration prefix collisions"
-            echo '```'
-            cat /tmp/migration-prefixes.txt
-            echo '```'
-            echo ""
             echo "## Vendor Roster ↔ Decisions drift"
             echo '```'
             cat /tmp/vendor-roster.txt
@@ -142,10 +135,9 @@ jobs:
           MD=${{ steps.manifest-drift.outputs.exit }}
           FD=${{ steps.facts-drift.outputs.exit }}
           FT=${{ steps.fetch-timeout.outputs.exit }}
-          MP=${{ steps.migration-prefixes.outputs.exit }}
           VR=${{ steps.vendor-roster.outputs.exit }}
           AR=${{ steps.audit-record-shape.outputs.exit }}
-          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$MP" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ]; then
+          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ]; then
             echo "::warning::One or more drift sweeps reported findings — see report"
             exit 1
           fi

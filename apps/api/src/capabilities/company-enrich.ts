@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 
@@ -40,6 +41,7 @@ async function scrapeUrl(url: string): Promise<string> {
   // LAUNCH_ARGS env var is deprecated/ignored. See lib/browserless-launch.ts.
   const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
   const contentUrl = buildBrowserlessRequestUrl(browserlessUrl, "/content", browserlessKey);
+  // unguarded-fetch-ok: our Browserless endpoint; caller URL gated by assertTargetAllowed above
   const response = await fetch(contentUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -98,6 +100,9 @@ registerCapability("company-enrich", async (input: CapabilityInput) => {
 
   const domain = normalizeDomain(rawInput);
   const websiteUrl = `https://${domain}`;
+  // ToS gate before any Browserless-forwarded scrape of the caller's domain
+  // (customer-directed LinkedIn scraping was reachable; legal audit 2026-08-12).
+  assertTargetAllowed(websiteUrl);
 
   // Scrape the company website
   const websiteText = await scrapeUrl(websiteUrl);

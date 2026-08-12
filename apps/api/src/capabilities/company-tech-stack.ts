@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import * as dns from "node:dns/promises";
 import Anthropic from "@anthropic-ai/sdk";
@@ -19,7 +20,7 @@ registerCapability("company-tech-stack", async (input: CapabilityInput) => {
   // Extract HTTP headers by doing a HEAD request
   let headers: Record<string, string> = {};
   try {
-    const headRes = await fetch(fullUrl, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(10000) });
+    const headRes = await safeFetch(fullUrl, { method: "HEAD", signal: AbortSignal.timeout(10000) });
     headRes.headers.forEach((v, k) => { headers[k] = v; });
   } catch { /* ignore */ }
 
