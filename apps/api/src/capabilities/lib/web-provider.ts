@@ -253,11 +253,17 @@ export async function fetchPage(
           }
         }
         // HTTP response received but not usable HTML — fall through to Browserless
-      } else if (plainResp.status >= 400 && plainResp.status < 500) {
-        // 4xx errors (404, 403, etc.) are permanent — don't retry via Browserless.
-        // Prefix with "URL returned HTTP" so the catch block below recognizes it as fatal.
+      } else if ([404, 410, 401, 407].includes(plainResp.status)) {
+        // Genuinely permanent 4xx: missing (404/410) or auth-gated (401/407) —
+        // don't waste a 30s+ Browserless render. Prefix with "URL returned
+        // HTTP" so the catch block below recognizes it as fatal.
         throw new Error(`URL returned HTTP ${plainResp.status}. ${humanizeBrowserlessStatus(plainResp.status, targetUrl)}`);
       }
+      // Other 4xx (400/403/429) are routinely BOT-GATING, not permanent:
+      // EUR-Lex serves HTTP 400 to datacenter IPs and a 202-empty challenge
+      // to residential ones (observed live, Railway US East vs Sweden,
+      // 2026-08-12) — a rendered browser still succeeds. Fall through to
+      // Jina/Browserless like 5xx.
       // 5xx errors: fall through to Browserless (server might render differently)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
