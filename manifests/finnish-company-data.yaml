@@ -13,12 +13,38 @@ price_cents: 5
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - business_id
+  # No field is individually required: a business ID OR a company name is
+  # enough, and the executor enforces that itself (firstString alias chain).
+  # Listing business_id as `required` made the ROUTE reject
+  # {"company_name": "Nokia"} before the executor's name path (fixed
+  # 2026-08-09) could ever run. Same defect class as PR #168 (norwegian).
+  required: []
   properties:
     business_id:
       type: string
-      description: Finnish Business ID (e.g. 0112038-9) or company name
+      description: Finnish Business ID (e.g. 0112038-9)
+    org_number:
+      type: string
+      description: Alias for business_id
+    company_name:
+      type: string
+      description: Finnish company name (resolved via scored PRH search)
+    name:
+      type: string
+      description: Alias for company_name
+    query:
+      type: string
+      description: Free-text alias — business ID or company name
+    task:
+      type: string
+      description: Free-text alias — business ID or company name
+  anyOf:
+    - required: [business_id]
+    - required: [org_number]
+    - required: [company_name]
+    - required: [name]
+    - required: [query]
+    - required: [task]
 output_schema:
   type: object
   example:
@@ -71,13 +97,20 @@ personal_data_categories:
   - professional
 geography: nordic
 test_fixtures:
+  # known_answer exercises the NAME path (Gate 5 SECONDARY); schema_check runs
+  # on health_check_input below and keeps the ID path covered.
   known_answer:
     input:
-      business_id: 0112038-9
+      company_name: Nokia Oyj
     expected_fields:
       - field: company_name
-        operator: not_null
+        operator: contains
         reliability: guaranteed
+        value: Nokia
+      - field: business_id
+        operator: equals
+        reliability: guaranteed
+        value: 0112038-9
   health_check_input:
     business_id: 0112038-9
 output_field_reliability:
@@ -91,6 +124,9 @@ output_field_reliability:
   registration_date: guaranteed
   vat_number: guaranteed
   website: rare
+  # Present only when the lookup resolved via the name path (not on ID lookups).
+  match_confidence: rare
+  matched_registry_name: rare
 limitations:
   - title: Does not cover sole traders without a separate business ID — about 10%
     text: Does not cover sole traders (toiminimi) without separate business ID
@@ -102,3 +138,13 @@ limitations:
     category: freshness
     severity: info
     workaround: Check the report_date field and query PRH's financial statement database for the most recent filing
+  - title: Name search requires native Finnish spelling (diacritics are significant)
+    text: PRH's name search does not fold diacritics — "Mehilainen" finds nothing while "Mehiläinen" matches. ASCII-typed names for companies with ä/ö/å in their registered name will be refused rather than resolved.
+    category: coverage
+    severity: info
+    workaround: Type the company name with its native spelling, or provide the Business ID directly (e.g. 0112038-9)
+  - title: Bare brand names only resolve when they equal the registered name minus its legal form
+    text: Name matching is deliberately conservative — a single-word query only resolves when the registered name normalizes to exactly that word ("Nokia" → Nokia Oyj works; "Nordea" is refused because the registered name is "Nordea Bank Abp"). Companies whose legal name carries descriptive words beyond the brand are refused from a bare brand query rather than guessed.
+    category: coverage
+    severity: info
+    workaround: Provide more of the legal name ("Nordea Bank") or the Business ID directly

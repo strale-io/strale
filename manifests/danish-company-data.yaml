@@ -24,12 +24,42 @@ quota_window: daily
 quota_cap: 50
 input_schema:
   type: object
-  required:
-    - cvr_number
+  # No field is individually required: a CVR number OR a company name is
+  # enough, and the executor enforces that itself (firstString alias chain).
+  # Listing cvr_number as `required` made the ROUTE reject
+  # {"company_name": "Novo Nordisk"} before the executor's name path
+  # (fixed 2026-08-09) could ever run. Same defect class as PR #168 (norwegian).
+  required: []
   properties:
     cvr_number:
       type: string
-      description: Danish CVR number (8 digits) or company name
+      description: Danish CVR number (8 digits)
+    org_number:
+      type: string
+      description: Alias for cvr_number
+    company_number:
+      type: string
+      description: Alias for cvr_number
+    company_name:
+      type: string
+      description: Danish company name (resolved via scored registry search)
+    name:
+      type: string
+      description: Alias for company_name
+    query:
+      type: string
+      description: Free-text alias — CVR number or company name
+    task:
+      type: string
+      description: Free-text alias — CVR number or company name
+  anyOf:
+    - required: [cvr_number]
+    - required: [org_number]
+    - required: [company_number]
+    - required: [company_name]
+    - required: [name]
+    - required: [query]
+    - required: [task]
 output_schema:
   type: object
   example:

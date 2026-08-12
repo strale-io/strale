@@ -28,6 +28,23 @@ input_schema:
         Company name. Resolved against the Business Register and accepted only on a
         confident name match — an ambiguous name is refused rather than resolved to
         the wrong legal entity.
+    name:
+      type: string
+      description: Alias for company_name
+    query:
+      type: string
+      description: Free-text alias — registry code or company name
+    task:
+      type: string
+      description: Free-text alias — registry code or company name
+  # anyOf makes "at least one identifying field" visible to callers and lets
+  # the route reject {} before billing, instead of billing-then-erroring.
+  anyOf:
+    - required: [registry_code]
+    - required: [company_name]
+    - required: [name]
+    - required: [query]
+    - required: [task]
 output_schema:
   type: object
   example:

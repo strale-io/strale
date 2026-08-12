@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { and, eq, isNull } from "drizzle-orm";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { firstString } from "./lib/input-aliases.js";
 import { getBrowserlessConfig, htmlToText } from "./lib/browserless-extract.js";
 import { getDb } from "../db/index.js";
 import { eeDirectors, eeDirectorsSync } from "../db/schema.js";
@@ -251,9 +252,18 @@ async function searchCompany(query: string, isRegCode: boolean): Promise<Record<
 }
 
 registerCapability("estonian-company-data", async (input: CapabilityInput) => {
-  const raw = (input.registry_code as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
-  if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'registry_code' or 'company_name' is required. Provide an Estonian registry code (8 digits) or company name.");
+  // firstString skips blank strings, so an empty identifier field alongside a
+  // real company_name resolves via the name instead of erroring on input the
+  // route's anyOf already accepted. Alias surface matches the Nordic siblings.
+  const raw = firstString(
+    input,
+    "registry_code", "company_name", "name", "query", "task",
+  );
+  if (!raw) {
+    throw new Error(
+      "'registry_code' or 'company_name' is required. Provide an Estonian registry code (8 digits) " +
+        "or company name. Aliases accepted: name, query, task.",
+    );
   }
 
   const trimmed = raw.trim();

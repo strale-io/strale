@@ -75,14 +75,28 @@ export async function searchBrregByName(name: string): Promise<string> {
     throw new Error(`No Norwegian company found matching "${name}".`);
   }
 
-  let best: string | null = null;
+  // Ties are refused, not first-hit-resolved: two distinct entities scoring
+  // equally means the bare name cannot identify one legal entity, and the
+  // manifest promises "an ambiguous name is refused rather than resolved to
+  // the wrong legal entity". Same doctrine as finnish-company-data.
+  const exact = new Map<string, string>();
+  const high = new Map<string, string>();
   for (const e of entities) {
     if (!e.organisasjonsnummer || !e.navn) continue;
     const { match_confidence } = classifyNameMatch(name, e.navn);
-    if (match_confidence === "exact") return String(e.organisasjonsnummer);
-    if (match_confidence === "high" && best === null) best = String(e.organisasjonsnummer);
+    if (match_confidence === "exact") exact.set(String(e.organisasjonsnummer), e.navn);
+    else if (match_confidence === "high") high.set(String(e.organisasjonsnummer), e.navn);
   }
-  if (best !== null) return best;
+  const refuseTie = (bucket: Map<string, string>, label: string): string => {
+    if (bucket.size === 1) return bucket.keys().next().value!;
+    const listing = [...bucket.entries()].slice(0, 5).map(([id, n]) => `${n} (${id})`).join("; ");
+    throw new Error(
+      `Ambiguous Norwegian company name "${name}": ${bucket.size} distinct registered ` +
+        `entities are ${label} matches — ${listing}. Provide the org number (9 digits) to disambiguate.`,
+    );
+  };
+  if (exact.size > 0) return refuseTie(exact, "exact");
+  if (high.size > 0) return refuseTie(high, "close");
 
   const closest = entities.slice(0, 3).map((e) => e.navn).filter(Boolean).join(", ");
   throw new Error(
