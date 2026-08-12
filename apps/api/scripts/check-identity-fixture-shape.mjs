@@ -120,9 +120,13 @@ const NAME_FIELDS = new Set([
 // own canonical formats.
 const INPUT_REGEX_BY_SLUG = {
   "swedish-company-data":    { fields: ["org_number"],      regex: /^\d{6}-\d{4}$/ },
-  "norwegian-company-data":  { fields: ["org_number"],      regex: /^\d{9}$/ },
+  // NO + FI known_answer fixtures deliberately exercise the NAME path since
+  // PR #184 (Gate 5 SECONDARY coverage — the path that actually broke in
+  // prod); the ID path is exercised by schema_check/dependency_health via
+  // health_check_input. Same free-text treatment as german-company-data.
+  "norwegian-company-data":  { fields: ["company_name", "org_number"], regex: null },
   "danish-company-data":     { fields: ["cvr_number"],      regex: /^\d{8}$/ },
-  "finnish-company-data":    { fields: ["business_id"],     regex: /^\d{7}-\d$/ },
+  "finnish-company-data":    { fields: ["company_name", "business_id"], regex: null },
   "uk-company-data":         { fields: ["company_number"],  regex: /^[A-Z0-9]{8}$/ },
   "irish-company-data":      { fields: ["cro_number"],      regex: /^\d{4,7}$/ },
   "french-company-data":     { fields: ["siren"],           regex: /^\d{9}(\d{5})?$/ },
