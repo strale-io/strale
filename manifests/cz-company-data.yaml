@@ -24,6 +24,10 @@ input_schema:
 output_schema:
   type: object
   properties:
+    ubo_availability:
+      type: string
+    ubo_availability_reason:
+      type: string
     ico:
       type: string
     company_name:

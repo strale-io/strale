@@ -34,6 +34,10 @@ output_schema:
     dissolution_date: null
     incorporation_date: "2017-06-30"
   properties:
+    ubo_availability:
+      type: string
+    ubo_availability_reason:
+      type: string
     status:
       type: string
     address:

@@ -48,6 +48,12 @@ output_schema:
     jurisdiction: CA
     tier_2_available: false
   properties:
+    tier_2_available_reason:
+      type: string
+    ubo_availability:
+      type: string
+    ubo_availability_reason:
+      type: string
     status:
       type: string
     company_name:

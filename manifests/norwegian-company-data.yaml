@@ -65,6 +65,10 @@ output_schema:
     registration_date: "1995-03-12"
     industry_description: Utvinning av råolje
   properties:
+    ubo_availability:
+      type: string
+    ubo_availability_reason:
+      type: string
     status:
       type: string
     address:
