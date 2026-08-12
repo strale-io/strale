@@ -378,3 +378,43 @@ describe("budget race", () => {
     expect(exhausted).toBe(40);
   });
 });
+
+// ─── Bind-parameter shape (DEC-20260504-A) ──────────────────────────────────
+//
+// Regression for the PR #43 bind-encoder bug class, re-surfaced 2026-08-12 by
+// the first free_quota smoke run: a Date instance inside db.execute(sql``)
+// queryChunks reaches the postgres-js encoder as a raw object and throws
+// "argument must be of type string ... Received an instance of Date".
+// windowStart must be bound as an ISO string. This test fails against the
+// un-applied fix (windowStart as Date) and passes with it.
+describe("budget-counter bind shapes (DEC-20260504-A)", () => {
+  // Scope note: this observes the binds of the INSERT ... ON CONFLICT path
+  // only — the threshold-alert UPDATEs run behind a fire-and-forget promise
+  // and don't fire at test_count=1, so their windowStart binds are protected
+  // by the parameter's string type, not by this assertion.
+  function containsDate(value: unknown, seen = new Set<unknown>()): boolean {
+    if (value instanceof Date) return true;
+    if (value === null || typeof value !== "object") return false;
+    if (seen.has(value)) return false;
+    seen.add(value);
+    // Object.values covers array elements too — no separate array branch.
+    for (const v of Object.values(value as Record<string, unknown>)) {
+      if (containsDate(v, seen)) return true;
+    }
+    return false;
+  }
+
+  it("no Date instance reaches db.execute() on the free_quota budget path", async () => {
+    stubMeta({ slug: "x", cost_class: "free_quota", quota_window: "daily", quota_cap: 200 });
+    mockDbExecute.mockResolvedValueOnce([
+      { test_count: 1, budget_cap: 40, alert_30_fired_at: null, alert_50_fired_at: null, alert_80_fired_at: null, hard_stop_fired_at: null },
+    ]);
+    mockExecutor.mockResolvedValueOnce({ output: {}, provenance: { source: "x", fetched_at: "" } });
+    await guardedExecute("x", {}, internalCtx());
+    for (const call of mockDbExecute.mock.calls) {
+      for (const arg of call) {
+        expect(containsDate(arg)).toBe(false);
+      }
+    }
+  });
+});
