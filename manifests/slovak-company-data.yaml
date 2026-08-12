@@ -30,6 +30,33 @@ input_schema:
 output_schema:
   type: object
   properties:
+    legal_representatives:
+      type: array
+      description: Current statutory-body members with type (person/organisation), role, role_code, start_date
+    total_legal_representatives:
+      type: integer
+    tier_2_available:
+      type: boolean
+    tier_2_available_reason:
+      type: string
+    legal_name:
+      type: string
+    primary_registration_id:
+      type:
+        - string
+        - "null"
+    registered_address:
+      type:
+        - string
+        - "null"
+    date_incorporated:
+      type:
+        - string
+        - "null"
+    ubo_availability:
+      type: string
+    ubo_availability_reason:
+      type: string
     ico:
       type: string
     company_name:
@@ -165,3 +192,14 @@ output_field_reliability:
   directors: common
   last_updated: common
   jurisdiction: guaranteed
+  legal_representatives: common
+  total_legal_representatives: guaranteed
+  tier_2_available: guaranteed
+  tier_2_available_reason: guaranteed
+  ubo_availability: guaranteed
+  ubo_availability_reason: guaranteed
+  # Evidence-Tier canonical aliases (always assigned in the output block).
+  legal_name: guaranteed
+  primary_registration_id: common
+  registered_address: guaranteed
+  date_incorporated: common

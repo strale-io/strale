@@ -24,6 +24,10 @@ input_schema:
 output_schema:
   type: object
   properties:
+    ubo_availability:
+      type: string
+    ubo_availability_reason:
+      type: string
     ico:
       type: string
     company_name:
@@ -70,6 +74,7 @@ output_schema:
       type: boolean
     tier_2_available_reason:
       type: string
+geography: eu
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -154,3 +159,5 @@ output_field_reliability:
   signing_authority: common
   tier_2_available: guaranteed
   tier_2_available_reason: guaranteed
+  ubo_availability: guaranteed
+  ubo_availability_reason: guaranteed

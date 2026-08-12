@@ -34,6 +34,10 @@ output_schema:
     dissolution_date: null
     incorporation_date: "2017-06-30"
   properties:
+    ubo_availability:
+      type: string
+    ubo_availability_reason:
+      type: string
     status:
       type: string
     address:
@@ -56,6 +60,15 @@ output_schema:
         type: string
     has_charges:
       type: boolean
+    legal_representatives:
+      type: array
+      description: Active officers with type (person/organisation), role, role_code, start_date; date_of_birth deliberately null (see uk-companies-house-officers for partial DOB)
+    total_legal_representatives:
+      type: integer
+    tier_2_available:
+      type: boolean
+    tier_2_available_reason:
+      type: string
 data_source: Companies House (UK Government)
 data_source_type: api
 transparency_tag: ai_generated
@@ -113,6 +126,11 @@ output_field_reliability:
   jurisdiction: guaranteed
   sic_codes: common
   has_charges: guaranteed
+  legal_representatives: common
+  tier_2_available: guaranteed
+  tier_2_available_reason: guaranteed
+  ubo_availability: guaranteed
+  ubo_availability_reason: guaranteed
 limitations:
   - title: Companies House API includes LLPs but sole traders and unregistered partnerships are not covered
     text: >-
