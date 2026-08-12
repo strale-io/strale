@@ -36,7 +36,18 @@ export type MatchConfidence = "exact" | "high" | "low";
 // English word and stripping it would corrupt unrelated names. "Telenor AS"
 // still resolves, via the two-token Jaccard path rather than suffix stripping.
 const CORP_SUFFIX_RE =
-  /\b(incorporated|inc|corporation|corp|company|co|llc|ltd|limited|lp|plc|holdings?|group|the|asa|oyj|oy|abp|ab|aps|gmbh|ag|nv|bv|sa|sas|sarl|srl|spa|kft)\b/gi;
+  // German forms added 2026-08-12 (P1, german-company-data scoring): se, ug,
+  // kgaa, ohg, mbh. Two candidates were deliberately REJECTED in review, like
+  // bare "as" before them:
+  //   - "kg": stripping it makes "Muster GmbH" and "Muster GmbH & Co. KG"
+  //     normalize identically — those are two DISTINCT legal entities (the
+  //     GmbH is the KG's Komplementär; standard German mid-market structure).
+  //     Unstripped, the pair scores `low` and is correctly refused as
+  //     ambiguous. It also eats leading tokens ("KG Hansen Transport").
+  //   - "ev": the punctuated form "e.V." already normalizes away via the
+  //     single-letter drop below; a bare "ev" token only broke real names
+  //     ("EV Metals Group" vs "Metals Group" → false exact).
+  /\b(incorporated|inc|corporation|corp|company|co|llc|ltd|limited|lp|plc|holdings?|group|the|asa|oyj|oy|abp|ab|aps|gmbh|ag|nv|bv|sa|sas|sarl|srl|spa|kft|se|ug|kgaa|ohg|mbh)\b/gi;
 
 /**
  * Normalize a company name for fuzzy comparison: lowercase, flatten punctuation
@@ -64,11 +75,17 @@ function foldDiacritics(s: string): string {
 }
 
 export function normalizeCompanyName(s: string): string {
-  return foldDiacritics(s.toLowerCase())
+  const base = foldDiacritics(s.toLowerCase())
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
-    .replace(CORP_SUFFIX_RE, " ")
     .replace(/\s+/g, " ")
-    .trim()
+    .trim();
+  const stripped = base.replace(CORP_SUFFIX_RE, " ").replace(/\s+/g, " ").trim();
+  // A name that consists ONLY of suffix-list tokens ("EV Group", "KG
+  // Knutsson"'s leading token, a company literally named "SE") must not
+  // normalize to "" — an empty side always classifies `low`, which would make
+  // such companies permanently unresolvable on every registry. Fall back to
+  // the unstripped form; comparison still works, just without suffix removal.
+  return (stripped || base)
     // Punctuated legal forms shatter into single letters once punctuation is
     // flattened: "Nestlé S.A." -> "nestle s a", "Ørsted A/S" -> "orsted a s",
     // "Heineken N.V." -> "heineken n v". Those stray letters are never part of

@@ -110,10 +110,13 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: array
+  # Field names must match the executor contract: prompt_tokens /
+  # completion_tokens (input_tokens/output_tokens are silently unknown and made
+  # the capability reject its own health input — P1 finding 2026-08-12).
   health_check_input:
     model: claude-3-sonnet
-    input_tokens: 1000
-    output_tokens: 500
+    prompt_tokens: 1000
+    completion_tokens: 500
 output_field_reliability:
   cost_usd: guaranteed
   input_tokens: guaranteed

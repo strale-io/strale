@@ -53,7 +53,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      image_url: https://httpbin.org/image/jpeg
+      image_url: https://upload.wikimedia.org/wikipedia/commons/a/a9/Example.jpg
     expected_fields:
       - field: confidence
         operator: not_null
@@ -63,7 +63,7 @@ test_fixtures:
         reliability: guaranteed
         value: string
   health_check_input:
-    image_url: https://httpbin.org/image/jpeg
+    image_url: https://upload.wikimedia.org/wikipedia/commons/a/a9/Example.jpg
 output_field_reliability:
   text: guaranteed
   text_type: guaranteed

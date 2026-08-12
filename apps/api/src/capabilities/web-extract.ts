@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
+import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 
 registerCapability("web-extract", async (input: CapabilityInput) => {
   const url = input.url as string | undefined;
@@ -18,6 +19,15 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
   // rejects the URL we never pass it along. Private IP / carrier-grade
   // NAT / cloud metadata / non-http schemes are refused here before
   // Browserless is even contacted.
+  // Per-source ToS policy applies to EVERY fetch path, not only the purpose-
+  // built extractors. Observed bypass (2026-08-12 activity analysis): a caller
+  // refused on Trustpilot via product-reviews-extract re-ran the identical
+  // extraction through web-extract with a raw prompt. Same blocklist, same
+  // refusal, same compliant-alternative hint — closing the side door
+  // commit 87b84db already flagged once for domain-contact-extract.
+  // (Pure string check — runs before the DNS-touching validateUrl.)
+  assertTargetAllowed(url);
+
   await validateUrl(url);
 
   const browserlessUrl = process.env.BROWSERLESS_URL;

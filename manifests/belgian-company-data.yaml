@@ -103,10 +103,12 @@ test_fixtures:
       - field: establishments_count
         operator: not_null
         reliability: guaranteed
+      # Upstream CBE changed this entity's abbreviation ("A.P.I." → "AB Inbev",
+      # observed in the 2026-08-12 P0 prod sweep). Company-controlled attributes
+      # must not be equals-pinned.
       - field: abbreviation
-        operator: equals
+        operator: not_null
         reliability: guaranteed
-        value: A.P.I.
       - field: jurisdiction
         operator: equals
         reliability: guaranteed

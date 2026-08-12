@@ -207,7 +207,11 @@ const USDC_CONTRACTS: Record<string, string> = {
 const USDC_ADDRESS = USDC_CONTRACTS[NETWORK] ?? USDC_CONTRACTS["base-sepolia"];
 
 function usdToUsdcAtomic(usd: number): string {
-  return Math.ceil(usd * 1_000_000).toString();
+  // `usd` always originates from eurCentsToUsd (an exact multiple of 1e-6);
+  // round() inverts the /1e6 exactly. ceil() here re-created the +1
+  // atomic-unit artifact through float error (ceil(n/1e6*1e6) = n+1 for ~3%
+  // of cent values) — the P1 pricing fix's review caught the round-trip.
+  return Math.round(usd * 1_000_000).toString();
 }
 
 // ─── Input extraction ───────────────────────────────────────────────────────

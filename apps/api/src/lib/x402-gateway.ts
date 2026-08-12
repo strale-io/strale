@@ -28,6 +28,23 @@ const WALLET_ADDRESS = process.env.X402_WALLET_ADDRESS ?? "";
 const NETWORK = process.env.X402_NETWORK ?? "base-sepolia";
 const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://x402.org/facilitator";
 const EUR_USD_RATE = parseFloat(process.env.EUR_USD_RATE ?? "1.08");
+if (!Number.isFinite(EUR_USD_RATE) || EUR_USD_RATE <= 0) {
+  // Fail fast at module load: a malformed env value ("1,085", "") would
+  // otherwise emit maxAmountRequired: "NaN" on every 402.
+  throw new Error(`EUR_USD_RATE is not a positive number: "${process.env.EUR_USD_RATE}"`);
+}
+// Integer micro-USD rate for exact conversion. Float arithmetic on the raw
+// rate produced machine-surface artifacts (catalog `price_usd:
+// 0.21600000000000003`) and a systematic +1 atomic-unit overcharge in
+// settlement (ceil(216000.00000000003) = 216001). All conversions below go
+// through integer micro-USD so advertised price and settled amount agree
+// exactly. P1 machine-surface audit finding, 2026-08-12.
+const EUR_USD_RATE_MICRO = Math.round(EUR_USD_RATE * 1_000_000);
+
+/** EUR cents → integer micro-USD (= USDC atomic units), rounded up. */
+function eurCentsToMicroUsd(eurCents: number): number {
+  return Math.ceil((eurCents * EUR_USD_RATE_MICRO) / 100);
+}
 
 // USDC contract addresses
 const USDC_CONTRACTS: Record<string, string> = {
@@ -75,21 +92,26 @@ function getFacilitator(): HTTPFacilitatorClient {
 // wallet path, converted at this single rate. See those decisions before
 // reintroducing any per-channel discount.
 
-/** Numeric USD value for a EUR-cent capability price. */
+/** Numeric USD value for a EUR-cent capability price (exact at 6 decimals). */
 export function eurCentsToUsd(eurCents: number): number {
-  return (eurCents / 100) * EUR_USD_RATE;
+  return eurCentsToMicroUsd(eurCents) / 1_000_000;
 }
 
 /**
  * Convert EUR cents to USDC atomic units (6 decimals).
- * USDC is pegged to USD, so we convert EUR → USD → atomic.
+ * USDC is pegged to USD, so we convert EUR → USD → atomic. Identical integer
+ * value to eurCentsToUsd × 1e6 by construction — advertised and settled
+ * amounts cannot diverge.
  */
 export function eurCentsToUsdcAtomic(eurCents: number): string {
-  return Math.ceil(eurCentsToUsd(eurCents) * 1_000_000).toString();
+  return eurCentsToMicroUsd(eurCents).toString();
 }
 
 export function eurCentsToUsdString(eurCents: number): string {
-  return `$${eurCentsToUsd(eurCents).toFixed(4)}`;
+  // 6 decimals (micro-USD precision, matching the atomic amount exactly),
+  // trailing zeros trimmed: 20c → "$0.216", 3c @1.085 → "$0.03255".
+  const s = eurCentsToUsd(eurCents).toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
+  return `$${s}`;
 }
 
 // ─── 402 Response builder ───────────────────────────────────────────────────
@@ -234,7 +256,9 @@ export async function verifyX402PaymentOnly(
 
     const priceAtomic =
       priceUsdOverride !== undefined
-        ? Math.ceil(priceUsdOverride * 1_000_000).toString()
+        // round, not ceil: the override is an exact micro-USD multiple from
+        // eurCentsToUsd; ceil turned float round-trip error into +1 atomic.
+        ? Math.round(priceUsdOverride * 1_000_000).toString()
         : eurCentsToUsdcAtomic(priceCentsEur);
     const requirements: Record<string, unknown> = {
       scheme: "exact",

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
@@ -122,6 +123,8 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
   // F-0-006: Browserless fetches the URL from its own network. validateUrl
   // is the only layer we own — refuse private-IP / bad-scheme before forwarding.
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
+  // Per-source ToS policy gates every arbitrary-URL fetch path (P1 review, 2026-08-12).
+  assertTargetAllowed(fullUrl);
   await validateUrl(fullUrl);
 
   const { url: blessUrl, key } = getBrowserlessConfig();
