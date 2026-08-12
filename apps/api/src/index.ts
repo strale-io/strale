@@ -53,6 +53,16 @@ async function main() {
     console.log("[startup] All provider env vars present.");
   }
 
+  // x402 facilitator selection — logged at boot so a flag flip is verifiable
+  // from the deploy log (DEC-20260504-C: confirm the deploy produced the
+  // expected effect, don't assume). The import also forces
+  // resolveFacilitatorSelection's fail-fast to run before traffic is served.
+  const { getFacilitatorSelection } = await import("./lib/x402-gateway.js");
+  const facilitatorSelection = getFacilitatorSelection();
+  console.log(
+    `[startup] x402 facilitator: ${facilitatorSelection.kind} (mode=${facilitatorSelection.mode}) ${facilitatorSelection.url}`,
+  );
+
   // Manifest hygiene: unauthenticated providers must either declare a pool of
   // fallback base URLs (so one throttled endpoint doesn't trip the probe) or
   // explicitly accept the risk. This enforces the lesson from the publicnode

@@ -26,7 +26,6 @@ const WALLET_ADDRESS = process.env.X402_WALLET_ADDRESS ?? "";
 // x402 v1 simple network names ("base", "base-sepolia") for compatibility
 // with the canonical x402-fetch client. See x402-gateway-v2.ts for rationale.
 const NETWORK = process.env.X402_NETWORK ?? "base-sepolia";
-const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://x402.org/facilitator";
 const EUR_USD_RATE = parseFloat(process.env.EUR_USD_RATE ?? "1.08");
 if (!Number.isFinite(EUR_USD_RATE) || EUR_USD_RATE <= 0) {
   // Fail fast at module load: a malformed env value ("1,085", "") would
@@ -59,27 +58,162 @@ export function isX402Configured(): boolean {
   return WALLET_ADDRESS.length > 0;
 }
 
+// ─── Facilitator selection ──────────────────────────────────────────────────
+//
+// Which facilitator processes verify/settle is a money-path decision, so it is
+// an explicit, reviewable config switch rather than an implicit consequence of
+// which credentials happen to be present.
+//
+// `X402_FACILITATOR` selects the mode:
+//
+//   auto    (default) — Base mainnet + CDP keys present → CDP; otherwise the
+//                       HTTP facilitator at X402_FACILITATOR_URL. This is the
+//                       historical behaviour, kept as the default so deploying
+//                       this change alone moves no traffic.
+//   cdp               — always Coinbase's CDP facilitator. Requires
+//                       CDP_API_KEY_ID + CDP_API_KEY_SECRET; refuses to start
+//                       without them (see below). This is the rollout target.
+//   legacy            — always the HTTP facilitator at X402_FACILITATOR_URL,
+//                       even when CDP keys are present. This is the rollback
+//                       lever: flipping back does not require deleting keys.
+//
+// Why the rollout matters (2026-08-12 distribution audit): the CDP Bazaar —
+// the discovery index behind Agentic.Market and several downstream
+// aggregators — catalogues a resource when *its own facilitator* processes a
+// PaymentPayload carrying the bazaar extension. Strale already emits a
+// complete `extensions.bazaar` block on every 402 (see buildBazaarDiscovery in
+// routes/x402-gateway-v2.ts), but it is emitted into a facilitator that does
+// not catalogue it. Routing settlement through CDP makes the whole paid
+// catalog self-index off organic traffic.
+//
+// This switch changes only WHICH facilitator is called. It does not touch the
+// verify → execute → settle ordering (DEC-14); both callers below are
+// unchanged, and x402-gateway-v2.settlement-order.test.ts still pins the
+// ordering at the route layer.
+
+/** Coinbase CDP facilitator base URL, from @coinbase/x402's createFacilitatorConfig. */
+export const CDP_FACILITATOR_URL = "https://api.cdp.coinbase.com/platform/v2/x402";
+
+/** Facilitator used when no X402_FACILITATOR_URL is configured. */
+export const DEFAULT_LEGACY_FACILITATOR_URL = "https://x402.org/facilitator";
+
+export type FacilitatorMode = "auto" | "cdp" | "legacy";
+
+export interface FacilitatorSelection {
+  /** The facilitator the payment path will actually call. */
+  kind: "cdp" | "legacy";
+  /** Its URL — also what discovery surfaces must advertise. */
+  url: string;
+  /** The configured mode that produced this selection. */
+  mode: FacilitatorMode;
+}
+
+/** Env slice the selection depends on. Passed explicitly so it is testable. */
+export interface FacilitatorEnv {
+  X402_FACILITATOR?: string;
+  X402_FACILITATOR_URL?: string;
+  X402_NETWORK?: string;
+  CDP_API_KEY_ID?: string;
+  CDP_API_KEY_SECRET?: string;
+}
+
+const FACILITATOR_MODES: readonly FacilitatorMode[] = ["auto", "cdp", "legacy"];
+
+function isMainnetNetwork(network: string): boolean {
+  return network === "base" || network === "eip155:8453";
+}
+
+/**
+ * Resolve which facilitator to use from environment configuration.
+ *
+ * Pure — no module state, no side effects — so the selection matrix can be
+ * unit-tested without touching process.env or constructing a client.
+ *
+ * @throws if X402_FACILITATOR is set to an unknown value, or is set to "cdp"
+ *   without both CDP credentials. Failing loudly is deliberate: @coinbase/x402
+ *   builds an unauthenticated config when keys are absent, so a silent fallback
+ *   would produce 401s from CDP on every paid call — or, worse, look like a
+ *   successful cutover while nothing indexes.
+ */
+export function resolveFacilitatorSelection(env: FacilitatorEnv): FacilitatorSelection {
+  const raw = (env.X402_FACILITATOR ?? "").trim().toLowerCase();
+  const mode = (raw === "" ? "auto" : raw) as FacilitatorMode;
+  if (!FACILITATOR_MODES.includes(mode)) {
+    throw new Error(
+      `X402_FACILITATOR must be one of ${FACILITATOR_MODES.join(" | ")}, got "${env.X402_FACILITATOR}"`,
+    );
+  }
+
+  const legacyUrl = env.X402_FACILITATOR_URL?.trim() || DEFAULT_LEGACY_FACILITATOR_URL;
+  const hasCdpKeys = Boolean(env.CDP_API_KEY_ID?.trim() && env.CDP_API_KEY_SECRET?.trim());
+
+  if (mode === "legacy") {
+    return { kind: "legacy", url: legacyUrl, mode };
+  }
+
+  if (mode === "cdp") {
+    if (!hasCdpKeys) {
+      throw new Error(
+        "X402_FACILITATOR=cdp requires both CDP_API_KEY_ID and CDP_API_KEY_SECRET. " +
+          "Set them, or use X402_FACILITATOR=legacy.",
+      );
+    }
+    // Deliberately not gated on mainnet: running mode=cdp against
+    // base-sepolia is the supported way to rehearse the switch before
+    // pointing production traffic at it.
+    return { kind: "cdp", url: CDP_FACILITATOR_URL, mode };
+  }
+
+  // auto — the pre-switch rule, preserved exactly.
+  const network = env.X402_NETWORK ?? "base-sepolia";
+  if (isMainnetNetwork(network) && hasCdpKeys) {
+    return { kind: "cdp", url: CDP_FACILITATOR_URL, mode };
+  }
+  return { kind: "legacy", url: legacyUrl, mode };
+}
+
+// Resolve once at module load so a misconfiguration surfaces at boot rather
+// than on the first paid call. Mirrors the EUR_USD_RATE fail-fast above: a
+// config error that only appears mid-payment is far more expensive than one
+// that stops the deploy.
+// Cast: ProcessEnv is an index-signature type, so TS's weak-type check rejects
+// it against FacilitatorEnv's all-optional shape. The value shapes match
+// (string | undefined), and every field is read defensively above.
+const FACILITATOR_SELECTION = resolveFacilitatorSelection(process.env as FacilitatorEnv);
+
+/** The facilitator selection this process is running with. */
+export function getFacilitatorSelection(): FacilitatorSelection {
+  return FACILITATOR_SELECTION;
+}
+
+/**
+ * The facilitator URL discovery surfaces must advertise.
+ *
+ * `/x402/catalog` and `/.well-known/x402.json` previously hardcoded
+ * X402_FACILITATOR_URL, which would have advertised x402.org while payments
+ * actually settled through CDP. Both now read this.
+ */
+export function getFacilitatorUrl(): string {
+  return FACILITATOR_SELECTION.url;
+}
+
 // ─── Facilitator client (lazy init) ─────────────────────────────────────────
 
-// Base mainnet requires Coinbase's CDP facilitator (JWT-auth, paid).
-// Base Sepolia (and other testnets) work with the free x402.org facilitator.
-// Selection is network-based: any "base" network with CDP keys → CDP; else → X402_FACILITATOR_URL.
 let _facilitator: HTTPFacilitatorClient | null = null;
 
 function getFacilitator(): HTTPFacilitatorClient {
   if (_facilitator) return _facilitator;
 
-  const cdpKeyId = process.env.CDP_API_KEY_ID;
-  const cdpKeySecret = process.env.CDP_API_KEY_SECRET;
-  const isMainnet = NETWORK === "base" || NETWORK === "eip155:8453";
-
-  if (isMainnet && cdpKeyId && cdpKeySecret) {
-    // Use CDP facilitator for Base mainnet
-    const config = createFacilitatorConfig(cdpKeyId, cdpKeySecret);
+  if (FACILITATOR_SELECTION.kind === "cdp") {
+    // createFacilitatorConfig supplies the CDP base URL plus a JWT
+    // createAuthHeaders hook; the keys are known present (validated above).
+    const config = createFacilitatorConfig(
+      process.env.CDP_API_KEY_ID,
+      process.env.CDP_API_KEY_SECRET,
+    );
     _facilitator = new HTTPFacilitatorClient(config);
   } else {
-    // Testnet or missing CDP keys → free x402.org facilitator
-    _facilitator = new HTTPFacilitatorClient({ url: FACILITATOR_URL });
+    _facilitator = new HTTPFacilitatorClient({ url: FACILITATOR_SELECTION.url });
   }
   return _facilitator;
 }
