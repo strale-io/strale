@@ -31,6 +31,7 @@ import {
   eurCentsToUsdcAtomic,
   eurCentsToUsdString,
   encodePaymentResponseHeader,
+  getFacilitatorUrl,
   type X402VerifiedPayment,
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
@@ -855,7 +856,9 @@ x402GatewayV2.get("/catalog", async (c) => {
   return c.json({
     x402: true,
     network: NETWORK,
-    facilitator: process.env.X402_FACILITATOR_URL ?? "https://x402.org/facilitator",
+    // Must reflect the facilitator payments actually settle through, not the
+    // legacy URL env var — see getFacilitatorUrl in lib/x402-gateway.ts.
+    facilitator: getFacilitatorUrl(),
     wallet: WALLET_ADDRESS || null,
     capabilities: caps,
     solutions: sols,
@@ -1370,7 +1373,8 @@ export async function getX402Manifest(): Promise<{
 
   return {
     x402: true,
-    facilitator: process.env.X402_FACILITATOR_URL ?? "https://x402.org/facilitator",
+    // Advertise the facilitator that actually processes verify/settle.
+    facilitator: getFacilitatorUrl(),
     network: NETWORK,
     wallet: WALLET_ADDRESS || null,
     endpoints,
