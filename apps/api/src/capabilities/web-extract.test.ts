@@ -1,5 +1,7 @@
-import { beforeAll, describe, expect, it } from "vitest";
-import { autoRegisterCapabilities } from "./auto-register.js";
+import { describe, expect, it } from "vitest";
+// Side-effect import registers just this executor (see
+// approval-security-check.test.ts for why not autoRegisterCapabilities).
+import "./web-extract.js";
 import { getExecutor } from "./index.js";
 import { TOS_REFUSAL_MARKER } from "./lib/tos-blocklist.js";
 
@@ -9,10 +11,6 @@ import { TOS_REFUSAL_MARKER } from "./lib/tos-blocklist.js";
 // refused on a prohibited source could re-run the identical extraction with a
 // raw prompt. The assertion runs before any env/Browserless access, so this
 // test needs no credentials and makes no network calls.
-
-beforeAll(async () => {
-  await autoRegisterCapabilities();
-});
 
 describe("web-extract ToS enforcement", () => {
   it("refuses a blocklisted source with the standard refusal marker", async () => {
