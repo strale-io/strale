@@ -34,6 +34,24 @@ input_schema:
     company_number:
       type: string
       description: Alias for org_number
+    name:
+      type: string
+      description: Alias for company_name
+    query:
+      type: string
+      description: Free-text alias — org number or company name
+    task:
+      type: string
+      description: Free-text alias — org number or company name
+  # anyOf makes "at least one identifying field" visible to callers and lets
+  # the route reject {} before billing, instead of billing-then-erroring.
+  anyOf:
+    - required: [org_number]
+    - required: [company_number]
+    - required: [company_name]
+    - required: [name]
+    - required: [query]
+    - required: [task]
 output_schema:
   type: object
   example:
@@ -105,13 +123,20 @@ personal_data_categories:
   - professional
 geography: nordic
 test_fixtures:
+  # known_answer exercises the NAME path (Gate 5 SECONDARY); schema_check runs
+  # on health_check_input below and keeps the ID path covered.
   known_answer:
     input:
-      org_number: "984851006"
+      company_name: Equinor
     expected_fields:
       - field: company_name
-        operator: not_null
+        operator: contains
         reliability: guaranteed
+        value: EQUINOR
+      - field: org_number
+        operator: equals
+        reliability: guaranteed
+        value: "923609016"
   health_check_input:
     org_number: "923609016"
 output_field_reliability:
