@@ -67,6 +67,7 @@ output_schema:
     searched_name: null
     match_confidence: exact
     is_exact_match: true
+    resolution_method: ticker
   properties:
     status:
       type:
