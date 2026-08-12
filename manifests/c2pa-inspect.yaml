@@ -87,9 +87,10 @@ test_fixtures:
       - field: manifest_count
         operator: not_null
         reliability: guaranteed
-      - field: active_manifest
-        operator: not_null
-        reliability: guaranteed
+      # active_manifest is `common` in output_field_reliability (nullable in
+      # output_schema) — asserting not_null contradicted the manifest's own
+      # declaration and failed the P0 prod sweep. Common fields are not
+      # asserted in known_answer checks (CLAUDE.md field-reliability rules).
   health_check_input:
     url: "https://raw.githubusercontent.com/contentauth/c2pa-rs/main/sdk/tests/fixtures/CA.jpg"
 output_field_reliability:

@@ -28,7 +28,7 @@ input_schema:
 output_schema:
   type: object
   example:
-    address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    address: "0x28C6c06298d514Db089934071355E5743bf21d60"
     chain_id: "1"
     approvals: []
     risk_level: none
@@ -58,7 +58,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+      address: "0x28C6c06298d514Db089934071355E5743bf21d60"
       chain_id: "1"
     expected_fields:
       - field: total_approvals

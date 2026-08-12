@@ -36,7 +36,10 @@ export type MatchConfidence = "exact" | "high" | "low";
 // English word and stripping it would corrupt unrelated names. "Telenor AS"
 // still resolves, via the two-token Jaccard path rather than suffix stripping.
 const CORP_SUFFIX_RE =
-  /\b(incorporated|inc|corporation|corp|company|co|llc|ltd|limited|lp|plc|holdings?|group|the|asa|oyj|oy|abp|ab|aps|gmbh|ag|nv|bv|sa|sas|sarl|srl|spa|kft)\b/gi;
+  // German forms added 2026-08-12 (P1, german-company-data scoring): se, ug,
+  // kgaa, ohg, kg, mbh, ev. Like the deliberate exclusion of bare "as"
+  // (ordinary English word), none of these collide with common English tokens.
+  /\b(incorporated|inc|corporation|corp|company|co|llc|ltd|limited|lp|plc|holdings?|group|the|asa|oyj|oy|abp|ab|aps|gmbh|ag|nv|bv|sa|sas|sarl|srl|spa|kft|se|ug|kgaa|ohg|kg|mbh|ev)\b/gi;
 
 /**
  * Normalize a company name for fuzzy comparison: lowercase, flatten punctuation
