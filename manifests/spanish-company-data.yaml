@@ -1,126 +1,213 @@
 slug: spanish-company-data
 name: Spanish Company Data
 description: >-
-  Look up Spanish company data via Openapi.com ES-Advanced (Tier-3 vendor aggregator). Accepts Spanish CIF/NIF
-  (letter + 7 digits + check char). Returns name, registration number, status, registered address, registration
-  date, LEI, primary NACE code, last filing date (from balance-sheet data), and last-update timestamp. Directors
-  are not returned at the *-Advanced tier (Italian product line only).
+  Look up Spanish company data from the BORME-derived OpenMercantil register. Accepts CIF/NIF or company
+  name. Returns identity, status, legal form, current officers (cargos) with roles, and BORME activity
+  history for 2.8M+ Spanish companies.
 category: company-data
-cost_class: paid_per_call
-price_cents: 6
+# OpenMercantil free tier: 200 requests/day without auth. Each lookup costs
+# 2 upstream calls (search + company), so ~100 lookups/day headroom.
+cost_class: free_quota
+quota_window: daily
+# Authored in CAPABILITY-CALL units (review M-5): the vendor allows 200
+# requests/day and each lookup consumes 2 (search + company), so 100
+# lookups/day. computeBudgetCap takes 10% of this for internal tests —
+# 10 lookups = 20 vendor requests = 10% of the vendor quota, as intended.
+quota_cap: 100
+price_cents: 5
 is_free_tier: false
-avg_latency_ms: 2400
+avg_latency_ms: 900
 input_schema:
   type: object
-  required:
-    - vat_number
+  # No field is individually required: a CIF/NIF OR a company name is enough,
+  # and the executor enforces that itself (firstString alias chain).
+  required: []
   properties:
+    nif:
+      type: string
+      description: Spanish CIF/NIF (letter + 7 digits + check char, e.g. A28015865); ES-prefixed VAT accepted
+    cif:
+      type: string
+      description: Alias for nif
     vat_number:
       type: string
-      description: Spanish CIF/NIF (letter + 7 digits + check char, e.g. A28015865) or ES-prefix VAT (ESA28015865).
+      description: Alias for nif — ES-prefix VAT format accepted (ESA28015865)
+    identifier:
+      type: string
+      description: Alias for nif
+    company_name:
+      type: string
+      description: Spanish company name (scored match — ambiguous names are refused, never guessed)
+    name:
+      type: string
+      description: Alias for company_name
+    query:
+      type: string
+      description: Free-text alias — CIF/NIF or company name
+    task:
+      type: string
+      description: Free-text alias — CIF/NIF or company name
+  anyOf:
+    - required: [nif]
+    - required: [cif]
+    - required: [vat_number]
+    - required: [identifier]
+    - required: [company_name]
+    - required: [name]
+    - required: [query]
+    - required: [task]
 output_schema:
   type: object
   example:
-    company_name: Telefonica, SA
-    native_company_name: null
-    registration_number: A28015865
-    vat_number: ESA28015865
-    country_code: ES
-    legal_form: null
+    company_name: CONSTRUCCIONES AMENABAR SA
+    nif: A20072302
+    vat_number: ESA20072302
+    company_type: S.A.
     status: active
-    is_active: true
-    registered_date: "1924-04-19"
-    registered_address: "Calle Gran Via, 28 5 28, 28013, Madrid, ES"
-    lei_code: 549300EEJH4FEPDBBR25
-    nace_codes:
-      - code: "6190"
-        description: Other telecommunications activities
-    company_size: null
-    source_as_of: "2026-05-10T14:33:21.000Z"
-    last_filing_date: "2024-12-31"
+    status_raw: Activa
+    address: null
+    province: Gipuzkoa
+    registration_date: null
+    first_borme_activity: "2009-04-16"
+    last_borme_activity: "2026-01-15"
+    borme_acts_count: 79
+    total_legal_representatives: 22
+    tier_2_available: true
+    jurisdiction: ES
   properties:
     company_name: { type: string }
-    native_company_name: { type: ["string", "null"] }
-    registration_number: { type: string }
-    vat_number: { type: string }
-    country_code: { type: string }
+    nif:
+      type: ["string", "null"]
+      description: CIF; can be null on name-path lookups when the BORME record carries no published CIF
+    vat_number: { type: ["string", "null"] }
+    company_type: { type: ["string", "null"] }
+    status:
+      type: ["string", "null"]
+      enum: [active, inactive, unknown, null]
+    status_raw:
+      type: ["string", "null"]
+      description: Native Spanish register status (Activa, Extinguida, ...)
+    address: { type: ["string", "null"] }
+    province:
+      type: ["string", "null"]
+      description: Province with the most BORME filings for this company — an activity-location proxy, NOT the registered office
+    recent_borme_acts:
+      type: array
+      description: Most recent BORME acts with per-act registral references (Sección/Hoja/Inscripción) — the primary-source trace for officer and status facts
+    registration_date: { type: ["string", "null"] }
+    first_borme_activity: { type: ["string", "null"] }
+    last_borme_activity: { type: ["string", "null"] }
+    borme_acts_count: { type: ["integer", "null"] }
+    legal_representatives:
+      type: ["array", "null"]
+      description: >-
+        Current officers (cargos vigentes) with type (person/organisation), native Spanish role
+        (Apoderado, Adm. Unico, Consejero...), role_group (management_board/procuration/liquidation/other),
+        and start date. Null (not empty) when the officers block was unavailable on this call.
+    total_legal_representatives: { type: ["integer", "null"] }
+    tier_2_available: { type: boolean }
+    tier_2_available_reason: { type: string }
+    ubo_availability: { type: string }
+    ubo_availability_reason: { type: string }
+    legal_name: { type: string }
+    primary_registration_id: { type: ["string", "null"] }
     legal_form: { type: ["string", "null"] }
-    status: { type: string, enum: [active, inactive, unknown] }
-    is_active: { type: boolean }
-    registered_date: { type: ["string", "null"] }
     registered_address: { type: ["string", "null"] }
-    lei_code: { type: ["string", "null"] }
-    nace_codes: { type: array }
-    company_size: { type: ["string", "null"] }
-    source_as_of: { type: ["string", "null"] }
-    last_filing_date: { type: ["string", "null"] }
-data_source: Openapi.com ES-Advanced (Tier-3 vendor aggregator; Spanish company-data product line)
+    date_incorporated: { type: ["string", "null"] }
+    jurisdiction: { type: string }
+data_source: OpenMercantil.es — BORME-derived register (Agencia Estatal BOE primary source), Tier-2 vendor aggregation
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: commercial-stable-api
+maintenance_class: free-stable-api
 gdpr_art_22_classification: data_lookup
 processes_personal_data: true
 personal_data_categories:
   - name
-  - address
   - professional
 geography: eu
 test_fixtures:
   known_answer:
     input:
-      vat_number: A28015865
+      nif: A20072302
     expected_fields:
-      - { field: company_name, operator: not_null, reliability: guaranteed }
-      - { field: country_code, operator: equals, reliability: guaranteed, value: ES }
-      - { field: status, operator: equals, reliability: guaranteed, value: active }
-      - { field: is_active, operator: equals, reliability: guaranteed, value: true }
-      - { field: registered_address, operator: not_null, reliability: guaranteed }
-      - { field: registration_number, operator: not_null, reliability: guaranteed }
-      - { field: nace_codes, operator: not_null, reliability: guaranteed }
-      - { field: last_filing_date, operator: not_null, reliability: guaranteed }
+      - { field: company_name, operator: contains, reliability: guaranteed, value: AMENABAR }
+      - { field: nif, operator: equals, reliability: guaranteed, value: A20072302 }
+      - { field: status, operator: not_null, reliability: guaranteed }
+      - { field: jurisdiction, operator: equals, reliability: guaranteed, value: ES }
+      - { field: tier_2_available, operator: not_null, reliability: guaranteed }
   health_check_input:
-    vat_number: A28015865
+    nif: A20072302
 output_field_reliability:
   company_name: guaranteed
-  native_company_name: rare
-  registration_number: guaranteed
-  vat_number: guaranteed
-  country_code: guaranteed
-  legal_form: rare
+  # common, not guaranteed: name-path lookups can hit BORME records with no
+  # published CIF (nif/vat_number/primary_registration_id null then).
+  nif: common
+  vat_number: common
+  recent_borme_acts: common
+  company_type: common
   status: guaranteed
-  is_active: guaranteed
-  registered_date: guaranteed
-  registered_address: guaranteed
-  lei_code: common
-  nace_codes: guaranteed
-  company_size: rare
-  source_as_of: guaranteed
-  last_filing_date: guaranteed
+  status_raw: common
+  address: rare
+  province: common
+  registration_date: rare
+  first_borme_activity: common
+  last_borme_activity: common
+  borme_acts_count: common
+  # Null (not asserted) when the vendor response carried no officers block —
+  # "0 officers" and "block unavailable" are different KYB answers.
+  legal_representatives: common
+  total_legal_representatives: common
+  tier_2_available: guaranteed
+  tier_2_available_reason: guaranteed
+  ubo_availability: guaranteed
+  ubo_availability_reason: guaranteed
+  legal_name: guaranteed
+  primary_registration_id: common
+  legal_form: common
+  registered_address: rare
+  date_incorporated: common
+  jurisdiction: guaranteed
 limitations:
-  - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
+  - title: Coverage starts with 2009 BORME activity — some listed parent entities are absent
     text: >-
-      Strale's resale of Openapi.com data requires the addendum issued via Openapi case 151296 (2026-05-08) to be
-      countersigned. Until then, OPENAPI_ENABLED stays false in production and this capability returns
-      capability-unavailable. price_cents flips from 6 to 5 (€0.061 → €0.05 net) when Moonlighter AB VAT confirms.
-    category: availability
+      The register is accumulated from BORME gazette acts from ~2009 onward. Companies with no BORME
+      activity in that window are absent — verified to include several IBEX-listed PARENT entities
+      (Telefónica SA, Banco Santander SA, Inditex SA) even though their operating subsidiaries
+      (Telefónica Móviles España, Santander Consumer Finance, ...) are covered. The 2.8M-company SME and
+      operating-company population — the usual KYB target — is the covered set. Absent companies are
+      refused, never guessed.
+    category: coverage
     severity: warning
-  - title: Legal form not returned at ES-Advanced tier
-    text: Openapi ES-Advanced does not return Spanish legal form (S.A., S.L., etc.).
-    category: coverage
-    severity: info
-  - title: Directors not available at ES-Advanced tier
+    workaround: For listed parents, use lei-lookup (GLEIF) or the CNMV's public issuer registry
+  - title: Not an official source — normalized by a third party from official BORME acts
     text: >-
-      Directors / officers / shareholders are NOT returned at ES-Advanced — the directors-gap closure is IT-only
-      via Openapi IT-Full. Direct Registradores / opendata.registradores.org integration queued as v1.1 quality
-      upgrade per DEC-20260507-C.
-    category: coverage
+      OpenMercantil self-describes as not an official source. Every fact derives from official BORME
+      gazette publications (per-act registral references are preserved), but the normalization layer is a
+      small third-party project — treat as Tier-2 vendor aggregation, not registry ground truth.
+    category: accuracy
     severity: info
-  - title: Share capital not returned at ES-Advanced tier
+    workaround: Confirm critical facts against the BORME act cited in the record or a Registro Mercantil extract
+  - title: Officer list reflects BORME appointment/cessation acts, not a maintained register snapshot
     text: >-
-      Despite the Matrix's "share capital via balanceSheets" claim, the ES-Advanced response contains employees /
-      netWorth / operatingRevenue / equity / totalAssets per year, but NOT a dedicated shareCapital field. Tier 3
-      coverage is 2/6 (NACE + last_filing_date), not 3/6. Matrix needs reconciliation; documented for chat to
-      address separately. Only IT-Advanced surfaces shareCapital.
-    category: coverage
+      Current officers are derived from appointment (Nombramientos), re-election and cessation acts. An
+      officer whose cessation was never published, or whose appointment predates coverage, may be listed
+      incorrectly. Dates of birth are never available (BORME does not publish them).
+    category: accuracy
     severity: info
+  - title: Single-operator vendor — no SLA, no contract, no indemnification
+    text: >-
+      OpenMercantil is a small single-operator project offering a free unauthenticated API. There is no
+      service agreement, uptime commitment, or indemnification. The underlying facts are statutory open
+      data (BORME, Ley 37/2007 reuse right), so the legal exposure is the normalization layer's
+      availability and accuracy, not the data's redistributability. Durability risk is accepted and
+      monitored; a registry-direct or paid-tier fallback is the upgrade path if the service degrades.
+    category: availability
+    severity: info
+  - title: Free-tier quota is 200 upstream requests/day (~100 lookups)
+    text: >-
+      The vendor's free tier allows 200 requests/day; each lookup consumes two (search + company fetch).
+      Quota exhaustion returns a clear retry-later error, never a partial answer.
+    category: throughput
+    severity: info
+    workaround: Vendor's Profesional tier (5,000/day, €57/mo) is the upgrade path if ES volume materializes
