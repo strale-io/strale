@@ -54,9 +54,15 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       url,
-      gotoOptions: { waitUntil: "networkidle0", timeout: 20000 },
+      // 25s matches every other Browserless caller (annual-report-extract,
+      // html-to-pdf, screenshot-url) and web-provider's default pageTimeout.
+      // Was 20s, the odd one out. Note this only helps pages that are slow but
+      // alive — an unreachable host burns the whole budget either way.
+      gotoOptions: { waitUntil: "networkidle0", timeout: 25000 },
     }),
-    signal: AbortSignal.timeout(30000),
+    // Outer budget stays 10s above the navigation timeout so Browserless gets
+    // to return its own structured error instead of us aborting the socket.
+    signal: AbortSignal.timeout(35000),
   });
 
   if (!renderResponse.ok) {

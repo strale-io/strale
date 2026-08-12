@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { loadSecTickerMap } from "../lib/sec-ticker-map.js";
 
 /**
  * SEC Filing Events — company events from SEC EDGAR 8-K filings.
@@ -59,25 +60,12 @@ function categorizeItems(items: string[]): string[] {
   return Array.from(new Set(categories));
 }
 
-// Cache the tickers list (updates rarely, ~700KB)
-let tickersCache: Record<string, { cik_str: string; ticker: string; title: string }> | null = null;
-let tickersCacheAt = 0;
-const TICKERS_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-async function loadTickers(): Promise<Record<string, { cik_str: string; ticker: string; title: string }>> {
-  if (tickersCache && Date.now() - tickersCacheAt < TICKERS_TTL_MS) return tickersCache;
-  const resp = await fetch("https://www.sec.gov/files/company_tickers.json", {
-    headers: { "User-Agent": UA },
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!resp.ok) throw new Error("Could not load SEC company tickers list.");
-  tickersCache = await resp.json() as any;
-  tickersCacheAt = Date.now();
-  return tickersCache!;
-}
-
+// Ticker/CIK/title map loading now lives in ../lib/sec-ticker-map.ts (shared
+// with officer-search.ts and us-company-data.ts). This function preserves
+// this capability's own (more permissive — prefix/contains) resolution
+// behaviour, unchanged.
 async function resolveCompanyToCik(query: string): Promise<{ cik: string; name: string; ticker: string } | null> {
-  const tickers = await loadTickers();
+  const tickers = await loadSecTickerMap();
   const queryLower = query.toLowerCase().trim();
 
   // Try exact ticker match first
