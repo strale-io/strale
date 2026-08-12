@@ -23,6 +23,22 @@ export { normalizeCompanyName, classifyNameMatch } from "../lib/company-name-mat
 export type { MatchConfidence } from "../lib/company-name-match.js";
 import { classifyNameMatch } from "../lib/company-name-match.js";
 import type { MatchConfidence } from "../lib/company-name-match.js";
+import { resolveByTicker, resolveByTitle } from "../lib/sec-ticker-map.js";
+
+// A ticker is normally 1-5 chars, but don't hard-fail longer ones — just try
+// the map and fall through on a miss. Deliberately NO case coercion: only
+// input that is ALREADY all-uppercase counts as ticker-shaped. Coercing
+// ("Ford".toUpperCase() → "FORD") made ordinary company names hijackable by
+// unrelated tickers — FORD is Forward Industries, Inc., not Ford Motor Co —
+// and the hit was stamped match_confidence "exact", bypassing the
+// DEC-20260428-B low-confidence gate with a confidently-wrong identity.
+// Mixed/lower-case ticker input is still served via the explicit `ticker`
+// input field (unambiguous caller intent) or the LLM+EFTS fallback.
+const TICKER_SHAPE_RE = /^[A-Z0-9.]{1,10}$/;
+
+function looksLikeTicker(input: string): boolean {
+  return TICKER_SHAPE_RE.test(input);
+}
 
 /**
  * Fetch a SEC endpoint, retrying once on transient upstream failure.
@@ -133,26 +149,87 @@ async function fetchCompany(cik: string): Promise<Record<string, unknown>> {
 registerCapability("us-company-data", async (input: CapabilityInput) => {
   const raw = (input.cik as string) ?? (input.company as string) ?? (input.company_name as string) ?? (input.ticker as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'cik' or 'company_name' is required. Provide a CIK number or US company name.");
+    throw new Error(
+      "Provide one of: 'company' (CIK, ticker, or company name), 'cik', 'company_name', or 'ticker'.",
+    );
   }
 
   const trimmed = raw.trim();
   let cik = findCik(trimmed);
   // Null when the caller supplied a CIK directly (an authoritative, exact
-  // lookup with no name-matching ambiguity); set to the resolved name when we
-  // had to search EDGAR for it.
+  // lookup with no name-matching ambiguity); set to the resolved name/ticker
+  // whenever we had to resolve one (ticker map, title map, or EDGAR search).
   let searchedName: string | null = null;
+  // Pre-computed match when resolution came from the exact ticker/title map
+  // rather than EDGAR full-text filing search — set below, skips the
+  // post-fetchCompany classification (and, more importantly, skips the
+  // Anthropic call entirely).
+  let preResolvedMatch: { match_confidence: MatchConfidence; is_exact_match: boolean } | null = null;
+  // Which path produced the identity — surfaced in the output so a KYB
+  // consumer can audit HOW "exact" was established (DEC-20260428-B:
+  // per-fact traceability). "cik" | "ticker" | "title" | "search".
+  let resolutionMethod: "cik" | "ticker" | "title" | "search" = cik ? "cik" : "search";
+
+  // Explicit `ticker` field = unambiguous caller intent; any casing accepted.
+  const explicitTicker =
+    typeof input.ticker === "string" && input.ticker.trim() ? input.ticker.trim() : null;
+  if (!cik && explicitTicker) {
+    const tickerHit = await resolveByTicker(explicitTicker);
+    if (tickerHit) {
+      cik = tickerHit.cik;
+      searchedName = explicitTicker;
+      resolutionMethod = "ticker";
+      preResolvedMatch = { match_confidence: "exact", is_exact_match: true };
+    }
+  }
+
+  // Title map BEFORE ticker map for generic input: an exact normalized-title
+  // hit is the strongest identity signal a name-like string can produce, and
+  // checking it first stops name/ticker collisions ("HP" the company vs "HP"
+  // the Helmerich & Payne ticker) from short-circuiting to the wrong filer.
+  if (!cik) {
+    const titleHit = await resolveByTitle(trimmed);
+    if (titleHit) {
+      cik = titleHit.cik;
+      searchedName = trimmed;
+      resolutionMethod = "title";
+      // resolveByTitle only ever returns a hit on unambiguous normalized-
+      // title equality, so this is always "exact" in practice — routing it
+      // through classifyNameMatch (rather than hardcoding "exact") keeps the
+      // confidence computation in one place and stays correct even if
+      // resolveByTitle's matching rules loosen in the future.
+      preResolvedMatch = classifyNameMatch(trimmed, titleHit.title);
+    }
+  }
+
+  // Ticker map for generic input ONLY when the raw string is already
+  // all-uppercase ticker shape (see looksLikeTicker — no case coercion).
+  if (!cik && looksLikeTicker(trimmed)) {
+    const tickerHit = await resolveByTicker(trimmed);
+    if (tickerHit) {
+      cik = tickerHit.cik;
+      searchedName = trimmed;
+      resolutionMethod = "ticker";
+      preResolvedMatch = { match_confidence: "exact", is_exact_match: true };
+    }
+  }
+
+  // Fallback: LLM name extraction + SEC full-text filing search. Only
+  // reached when the input isn't a CIK and didn't resolve via the exact
+  // ticker/title map — i.e. exactly the cases the map can't answer.
   if (!cik) {
     searchedName = await extractCompanyName(trimmed);
     cik = await searchEdgar(searchedName);
+    resolutionMethod = "search";
   }
 
   const company = await fetchCompany(cik);
 
   const match =
-    searchedName === null
+    preResolvedMatch ??
+    (searchedName === null
       ? { match_confidence: "exact" as MatchConfidence, is_exact_match: true }
-      : classifyNameMatch(searchedName, String(company.company_name ?? ""));
+      : classifyNameMatch(searchedName, String(company.company_name ?? "")));
 
   // Refuse to *assert* a low-confidence identity by default. A name search
   // resolves via SEC full-text filing search, so a private company with no
@@ -176,6 +253,7 @@ registerCapability("us-company-data", async (input: CapabilityInput) => {
     searched_name: searchedName,
     match_confidence: match.match_confidence,
     is_exact_match: match.is_exact_match,
+    resolution_method: resolutionMethod,
   };
 
   return {

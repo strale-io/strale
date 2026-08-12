@@ -46,9 +46,15 @@ async function main() {
   `;
   console.log(`Signups: ${signups[0].total}`);
 
+  // Same internal-account exclusion as the transactions queries above —
+  // without the users join this counted founder/test-account curl runs as
+  // customer signal (same bug fixed in since-last-ext.ts, 2026-08-11).
   const fr = await sql`
-    SELECT COUNT(*)::int AS total FROM failed_requests
-    WHERE created_at >= (NOW() AT TIME ZONE 'Europe/Berlin')::date
+    SELECT COUNT(*)::int AS total
+    FROM failed_requests f
+    LEFT JOIN users u ON u.id = f.user_id
+    WHERE f.created_at >= (NOW() AT TIME ZONE 'Europe/Berlin')::date
+      AND (u.email IS NULL OR u.email NOT IN ${sql(INTERNAL_EMAILS)})
   `;
   console.log(`Failed request logs: ${fr[0].total}`);
 
