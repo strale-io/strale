@@ -204,6 +204,49 @@ describe("build402 (gateway challenge builder)", () => {
   });
 });
 
+describe("PAYMENT-REQUIRED header contract (v2 paths)", () => {
+  // @x402/core's client reads the PAYMENT-REQUIRED header first and its
+  // body fallback is v1-only (client/index.js getPaymentRequiredResponse):
+  // a header-less v2 challenge throws "Invalid payment required response"
+  // in every canonical v2 client. Found live-verifying the x402 example
+  // template (2026-08-13). This pins that our encoded header round-trips
+  // through the SDK's own client-side reader.
+  it("the SDK client accepts the encoded v2 challenge via the header path", { timeout: 60_000 }, async () => {
+    const { build402 } = await loadRoutes();
+    const { encodePaymentRequiredHeader } = await import("@x402/core/http");
+    const { x402HTTPClient, x402Client } = await import("@x402/core/client");
+    const { body } = build402(
+      "IBAN Validate", "Validate an IBAN.", 0.054,
+      "https://api.strale.io/x402/v2/iban-validate",
+      null, "GET", null,
+      2,
+    );
+    const encoded = encodePaymentRequiredHeader(body as never);
+    const httpClient = new x402HTTPClient(new x402Client());
+    const parsed = httpClient.getPaymentRequiredResponse(
+      (name: string) => (name.toUpperCase() === "PAYMENT-REQUIRED" ? encoded : null),
+      undefined,
+    );
+    expect(parsed.x402Version).toBe(2);
+    expect(parsed.accepts).toHaveLength(1);
+    expect((parsed.accepts[0] as Record<string, unknown>).amount).toBeDefined();
+  });
+
+  it("the SDK client still parses the legacy v1 body without any header", { timeout: 60_000 }, async () => {
+    const { build402 } = await loadRoutes();
+    const { x402HTTPClient, x402Client } = await import("@x402/core/client");
+    const { body } = build402(
+      "IBAN Validate", "Validate an IBAN.", 0.054,
+      "https://api.strale.io/x402/iban-validate",
+      null, "GET", null,
+      1,
+    );
+    const httpClient = new x402HTTPClient(new x402Client());
+    const parsed = httpClient.getPaymentRequiredResponse(() => null, body as never);
+    expect(parsed.x402Version).toBe(1);
+  });
+});
+
 describe("verifyX402PaymentOnly version branching", () => {
   it("v1 payload → v1-shaped requirements (bare network, maxAmountRequired)", async () => {
     const { verifyX402PaymentOnly } = await loadGateway();
