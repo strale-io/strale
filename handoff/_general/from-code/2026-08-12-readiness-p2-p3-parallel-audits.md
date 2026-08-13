@@ -259,3 +259,38 @@ domain) verified fully enforced.
 - Clocks: JP app ID ~Aug 20; DK CVR nudge Aug 27 if quiet; AT/BMJ reply unknown.
 - Queued: Greece build (doctrine-cleared; record ToS check per DEC-20260813-A(b)),
   floor x402 catch-22 design patch, remaining catalog ideas.
+
+---
+
+## Addendum (2026-08-13 PM): x402 v2 migration shipped (task #31, PR #200)
+
+Petter signed off #31; shipped same day. **Design changed mid-flight after an
+empirical check**: the planned "hybrid body" (one 402 serving both protocol
+generations) is provably impossible — x402-fetch v1 zod-parses every accepts[]
+entry against a strict bare-name network ENUM ("base"), v2 validators require
+CAIP-2 ("eip155:8453") on the same field. Verified against the published
+x402-fetch@0.8.0 / x402@0.8.0 tarballs, not guessed.
+
+**Shipped design (zero revenue bet):**
+- Legacy paths (`/x402/:slug`, `/v1/do`) serve byte-identical v1 — the
+  ~400-600 settlements/week of unknown-version payers see no change.
+- New `/x402/v2/:slug` + `/x402/v2/solutions/:slug` aliases always serve v2;
+  all discovery surfaces (well-known ×2, openapi, catalog paths) now advertise
+  the v2 paths.
+- Verify/settle accepts BOTH payload generations everywhere (version-branched
+  requirements; CAIP-2 echo normalization).
+- `X402_CHALLENGE_VERSION=2` = legacy-path cutover switch, gated on the new
+  `x402-payment-payload-version` log counter reaching zero v1 volume.
+- New `x402-settlement-watch` job (6h): pages with rollback instructions if
+  24h settlements < 50% of trailing-7d baseline (a v1 die-off is otherwise
+  invisible — client fails before any X-PAYMENT retry).
+- Verify-failure 402s now return spec-shaped PaymentRequired bodies.
+
+**Prod-verified post-deploy:** `/x402/v2/vat-validate|sanctions-check|
+solutions/kyb-essentials-se` all 402 + validate against the real
+`@x402/core` PaymentRequiredV2 zod schema; legacy path still v1; discovery
+fan-out lists 334 v2 URLs.
+
+**Open:** (1) real v2-payload settle against CDP untested — no funded payer
+key in .env; needs Petter's wallet or a funded test key (M-2). (2) x402scan
+re-submission in progress at close. (3) Deferred LOWs in PR #200 body.
