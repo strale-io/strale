@@ -232,7 +232,7 @@ export class Strale {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.apiKey}`,
       // Channel attribution: identifies this SDK on the API side.
-      "X-Strale-Client": "straleio-js/0.1.2",
+      "X-Strale-Client": "straleio-js/0.1.3",
       ...extraHeaders,
     };
 
