@@ -7,6 +7,7 @@
  */
 
 import { Hono } from "hono";
+import { recordDiscoveryHit } from "../lib/attribution.js";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
@@ -215,6 +216,7 @@ async function withFallback<T>(fn: () => Promise<T>, fallback: T | null): Promis
 }
 
 llmsTxtRoute.get("/llms.txt", async (c) => {
+  recordDiscoveryHit("/llms.txt", c.req, { src: c.req.query("src"), ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip") });
   const text = await withFallback(buildShortText, cachedShort?.text ?? null);
   if (text == null) return c.text("Service temporarily unavailable", 503);
   c.header("Cache-Control", "public, max-age=3600");
@@ -223,6 +225,7 @@ llmsTxtRoute.get("/llms.txt", async (c) => {
 });
 
 llmsTxtRoute.get("/llms-full.txt", async (c) => {
+  recordDiscoveryHit("/llms-full.txt", c.req, { src: c.req.query("src"), ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip") });
   const text = await withFallback(buildFullText, cachedFull?.text ?? null);
   if (text == null) return c.text("Service temporarily unavailable", 503);
   c.header("Cache-Control", "public, max-age=3600");

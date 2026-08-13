@@ -17,6 +17,7 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { extractClientMeta } from "../lib/attribution.js";
 import { solutions, wallets, walletTransactions, transactions } from "../db/schema.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
@@ -141,6 +142,10 @@ solutionExecuteRoute.post(
             capabilityId: null,
             solutionSlug: sol.slug,
             status: "executing",
+            clientMeta: extractClientMeta(c.req, {
+              src: c.req.query("src"),
+              ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
+            }) ?? null,
             input: inputs as Record<string, unknown>,
             priceCents: sol.priceCents,
             transparencyMarker: sol.transparencyTag ?? "mixed",

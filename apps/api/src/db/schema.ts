@@ -4,6 +4,7 @@ import {
   varchar,
   text,
   integer,
+  bigserial,
   boolean,
   timestamp,
   date,
@@ -295,6 +296,14 @@ export const transactions = pgTable(
     // the audit_trail JSONB still carries the same value for record
     // completeness.
     clientIpHash: varchar("client_ip_hash", { length: 16 }),
+    // Channel attribution (migration 0081, design doc 2026-08-12): weak-but-
+    // joinable signals per call — {ua, referer, src, client_header,
+    // ip_day_hash (daily-salted; the ONLY join key against discovery_hits —
+    // client_ip_hash below is a different, unsalted keyspace),
+    // mcp_client_info}. Write-only at execution time; read by the weekly
+    // attribution rollup, never on the hot path. Retention: rides the
+    // transactions row (TRANSACTION_RETENTION_DAYS).
+    clientMeta: jsonb("client_meta"),
     // x402 payment tracking
     paymentMethod: varchar("payment_method", { length: 20 }).notNull().default("wallet"),
     x402SettlementId: text("x402_settlement_id"),
@@ -905,3 +914,25 @@ export const cyDirectorsSync = pgTable("cy_directors_sync", {
   lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
   rowCount: integer("row_count"),
 });
+
+// ─── discovery_hits ─────────────────────────────────────────────────────────
+// Channel attribution (migration 0081): one row per discovery-surface fetch
+// (/x402/catalog, /.well-known/x402.json, agent-card, llms.txt). src_tag
+// comes from tagged directory-submission URLs (?src=bazaar). ip_hash is
+// DAILY-salted (cross-day correlation deliberately impossible); 90-day
+// retention via db-retention RULES. Read only by the attribution rollup.
+export const discoveryHits = pgTable(
+  "discovery_hits",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    endpoint: text("endpoint").notNull(),
+    srcTag: text("src_tag"),
+    ua: text("ua"),
+    ipHash: text("ip_hash"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("discovery_hits_created_at_idx").on(table.createdAt),
+    index("discovery_hits_src_tag_idx").on(table.srcTag).where(sql`src_tag IS NOT NULL`),
+  ],
+);
