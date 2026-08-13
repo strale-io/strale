@@ -232,7 +232,7 @@ Grounded in `failed_requests` + top-customer purchase patterns
 1. **google-news-search** (10¢) — Serper `/news`; time-range map validated pre-call;
    `num_results` must be integer ≥1 *before* the Serper call (review M-1: NaN
    previously would have sliced to empty and still billed).
-2. **serp-related-questions** (5¢) — Serper `/search` → peopleAlsoAsk +
+2. **serp-related-questions** (10¢) — Serper `/search` → peopleAlsoAsk +
    relatedSearches; empty arrays documented as real answers; priced/described as a
    delta vs google-search.
 3. **email-auth-check** (3¢) — pure-DNS SPF/DMARC/MX/DKIM posture. Full rewrite after
