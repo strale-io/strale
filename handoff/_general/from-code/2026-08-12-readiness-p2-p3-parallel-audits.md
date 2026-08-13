@@ -151,6 +151,33 @@ Petter: optionally pin X402_FACILITATOR=cdp explicitly.
   incident axis — yank for real); all drafted submission copy has stale counts;
   attribution instrumentation must precede submissions.
 
+## 2026-08-13 morning — screenshot-url resolved + attribution live
+
+**screenshot-url:** the catalog agent's "top customer being 400'd" was a stale
+30-day window — the Aug-5 dialect fix (#150) already worked (zero wait-key
+400s since; ~24-28 customer ok/day). The REAL problem was the quarantine
+itself: it cut x402 access, removing the eligible calls auto-promote needs
+(catch-22 for x402-only consumers — floor design note). Manually promoted
+with evidence (capability_promoted event); prod-verified with the exact
+failing shape (wait_for on strale.dev → 654KB, €0.05). Top customer restored.
+
+**Attribution ([#194](https://github.com/strale-io/strale/pull/194), `8a281a7`, prod-verified end-to-end):**
+migration 0081 (client_meta + discovery_hits, 90d retention), capture at
+/v1/do + x402 (3 paths) + solution rail + all discovery surfaces + MCP
+initialize clientInfo; SDK X-Strale-Client headers (straleio-js /
+straleio-python / strale-mcp — PUBLISHES PENDING, Petter); rollup script.
+Review caught a genuine HIGH pre-merge: a scripted edit put clientMeta incl.
+ip_day_hash into the async 202 RESPONSE BODY — a same-day hash oracle.
+Key invariant: joins use client_meta.ip_day_hash (daily-salted) — NEVER
+transactions.client_ip_hash (unsalted MED-10 keyspace). Discovery endpoints
+now rate-limited 120/min. Prod-verified: tagged catalog fetch → discovery_hits
+row; X-Strale-Client → client_meta; rollup executes (first organic wallet
+visible, unattributed as expected).
+
+**Tagged submission URLs are now usable** (`/x402/catalog?src=<surface>`) —
+directory submissions remain Petter-gated with the corrected copy (see
+traffic-generation-plan.md: live numbers, not the stale 456/24 claims).
+
 ## Read next session, in order
 
 1. `audit-output/parallel-audits-2026-08-12/SYNTHESIS.md` — the merged prioritized
