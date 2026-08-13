@@ -1,6 +1,12 @@
 import { promises as dns } from "node:dns";
 import { registerCapability, type CapabilityInput } from "./index.js";
 
+// F-0-006 Bucket C: pure DNS resolution (TXT/MX) on a user-supplied
+// domain. No HTTP fetch; no socket open to any resolved IP. `node:dns`
+// does not follow URLs, so there is no private-IP exfiltration surface
+// beyond the resolver's own traffic (outside our threat model).
+// validateHost is unnecessary here — same class as dns-lookup/mx-lookup.
+
 // Email authentication posture for a domain: SPF, DMARC, MX, and optional
 // DKIM selector probing — pure DNS, no vendor, no cost. Complements
 // email-validate (mailbox syntax/deliverability) with the domain-side
