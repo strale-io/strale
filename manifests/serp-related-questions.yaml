@@ -1,0 +1,98 @@
+slug: serp-related-questions
+name: SERP Related Questions
+description: >-
+  "People Also Ask" questions and related searches for a query, via a licensed SERP API. The
+  content-research primitive for SEO and topic-expansion agents.
+category: web-scraping
+cost_class: paid_prepaid
+quota_window: none
+price_cents: 10
+is_free_tier: false
+avg_latency_ms: 1500
+data_source: Serper.dev (licensed Google SERP API)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: commercial-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: global
+input_schema:
+  type: object
+  required: []
+  properties:
+    query:
+      type: string
+      description: Search query to expand (min 2 chars)
+    q:
+      type: string
+      description: Alias for query
+    keyword:
+      type: string
+      description: Alias for query
+    task:
+      type: string
+      description: Free-text alias for query
+    country:
+      type: string
+      description: Optional ISO 3166 country to scope results
+    language:
+      type: string
+      description: Optional interface language
+  anyOf:
+    - required: [query]
+    - required: [q]
+    - required: [keyword]
+    - required: [task]
+output_schema:
+  type: object
+  example:
+    query: how to register a company in sweden
+    country: null
+    related_questions:
+      - question: "How much does it cost to register a company in Sweden?"
+        answer_snippet: "The registration fee is..."
+        source_title: "Bolagsverket"
+        source_url: "https://bolagsverket.se/..."
+    related_searches:
+      - "register company sweden cost"
+    question_count: 4
+  properties:
+    query: { type: string }
+    country: { type: ["string", "null"] }
+    related_questions:
+      type: array
+      description: '"People Also Ask" entries — empty array means Google shows no PAA box for this query (a real answer, not a failure)'
+    related_searches: { type: array }
+    question_count: { type: integer }
+test_fixtures:
+  known_answer:
+    input:
+      query: how to register a company in sweden
+    expected_fields:
+      - { field: query, operator: not_null, reliability: guaranteed }
+      - { field: related_questions, operator: not_null, reliability: guaranteed }
+      - { field: related_questions, operator: type, reliability: guaranteed, value: array }
+      - { field: related_searches, operator: type, reliability: guaranteed, value: array }
+      - { field: question_count, operator: not_null, reliability: guaranteed }
+  health_check_input:
+    query: what is an api
+output_field_reliability:
+  query: guaranteed
+  country: guaranteed
+  related_questions: guaranteed
+  related_searches: guaranteed
+  question_count: guaranteed
+limitations:
+  - title: Empty results are a real answer, not a failure
+    text: >-
+      Google shows no "People Also Ask" box for many queries — an empty related_questions array
+      means exactly that. The call is still billed; it answered the question asked.
+    category: coverage
+    severity: info
+  - title: Question sets vary by locale and over time
+    text: >-
+      PAA content follows Google's live ranking for the query/locale — re-running the same query can
+      return a different question set.
+    category: freshness
+    severity: info

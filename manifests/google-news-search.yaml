@@ -1,0 +1,108 @@
+slug: google-news-search
+name: Google News Search
+description: >-
+  Search Google News via a licensed SERP API. Returns ranked news results with source, relative
+  publish time, snippet and image, with optional country/language scoping and time-range filters.
+category: web-scraping
+cost_class: paid_prepaid
+quota_window: none
+price_cents: 10
+is_free_tier: false
+avg_latency_ms: 1500
+data_source: Serper.dev (licensed Google SERP API) — Google News vertical
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: commercial-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: global
+input_schema:
+  type: object
+  required: []
+  properties:
+    query:
+      type: string
+      description: News search query (min 2 chars)
+    q:
+      type: string
+      description: Alias for query
+    search:
+      type: string
+      description: Alias for query
+    task:
+      type: string
+      description: Free-text alias for query
+    num_results:
+      type: number
+      description: "Max results to return (default 10, cap 20)"
+    time_range:
+      type: string
+      description: "Optional recency filter: hour | day | week | month | year. Omit for all time."
+    country:
+      type: string
+      description: Optional ISO 3166 country to scope results (e.g. "se", "Sweden")
+    language:
+      type: string
+      description: Optional interface language (e.g. "en", "sv")
+  anyOf:
+    - required: [query]
+    - required: [q]
+    - required: [search]
+    - required: [task]
+output_schema:
+  type: object
+  example:
+    query: artificial intelligence
+    time_range: null
+    country: null
+    result_count: 5
+    results:
+      - position: 1
+        title: "AI breakthrough announced"
+        url: "https://news.example.com/article"
+        source: "Example News"
+        published: "2 hours ago"
+        snippet: "Researchers today announced..."
+        image_url: null
+  properties:
+    query: { type: string }
+    time_range: { type: ["string", "null"] }
+    country: { type: ["string", "null"] }
+    result_count: { type: integer }
+    results:
+      type: array
+      description: Ranked news results (title, url, source, relative publish time, snippet, image_url)
+test_fixtures:
+  known_answer:
+    input:
+      query: artificial intelligence
+      num_results: 5
+    expected_fields:
+      - { field: query, operator: equals, reliability: guaranteed, value: artificial intelligence }
+      - { field: result_count, operator: not_null, reliability: guaranteed }
+      - { field: results, operator: not_null, reliability: guaranteed }
+      - { field: results, operator: type, reliability: guaranteed, value: array }
+  health_check_input:
+    query: technology news
+    num_results: 3
+output_field_reliability:
+  query: guaranteed
+  time_range: guaranteed
+  country: guaranteed
+  result_count: guaranteed
+  results: guaranteed
+limitations:
+  - title: Publish times are relative strings, not timestamps
+    text: >-
+      Google News returns relative publish times ("2 hours ago", "3 days ago") which are passed
+      through verbatim — no fabricated ISO timestamps. Callers needing exact times should fetch the
+      article.
+    category: accuracy
+    severity: info
+  - title: Result mix depends on Google News ranking, not a stable corpus
+    text: >-
+      Coverage and ordering follow Google News's own ranking for the query/locale; re-running the
+      same query can return different results. This is a discovery surface, not an archive.
+    category: freshness
+    severity: info
