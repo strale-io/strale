@@ -1,0 +1,181 @@
+# DRAFT — NOT FOR THE ONBOARDING PIPELINE
+#
+# Queue rank 3. Demand: the retail-intelligence recipe is real and entirely broken.
+# Adjacency 30d: barcode-lookup -> google-search 20 pairs, serp-analyze -> barcode-lookup 13,
+# serp-analyze -> price-compare 12, url-to-markdown -> price-compare 6.
+# Completion 30d: product-search 0/5, price-compare 4/8, product-reviews-extract 5/42.
+# EUR10.60 of list price destroyed in 30d, dominated by HTTP 403 bot-blocks and 429s.
+# See docs/strategy/2026-08-demand-mined-build-queue.md §2.2 / §5 Rank 0.2.
+#
+# The point of this capability is DOCTRINAL as much as commercial: it replaces three
+# scraping-based capabilities that are failing against bot protection with one licensed
+# SERP call. Per DEC-20260428-A the preference order is official API > licensed bulk >
+# Tier-2 vendor > per-call parsing; Serper is a licensed SERP vendor already live in prod
+# and already backing google-search, so this moves the retail leg UP the preference order.
+#
+# VERIFICATION DEBT — close before building:
+#   1. The /shopping response shape has NOT been captured. Field names below are inferred
+#      from the /search and /news shapes already in the codebase. Capture a real response
+#      and let onboard.ts --discover regenerate expected_fields.
+#   2. Confirm /shopping is included in the current Serper plan and check its per-call
+#      cost — google-search economics do not automatically transfer. If /shopping bills
+#      differently, revisit price_cents.
+#   3. Merchant/pricing data is a Google-surfaced aggregation. Confirm the Serper terms
+#      permit re-serving it to customers, same check that was done for google-search.
+#   4. Decide the relationship to price-compare and product-search. If this ships, those
+#      two are delisting candidates (2026-08-12 §3d), not siblings. Do not run all three.
+
+slug: product-offers-lookup
+name: Product Offers Lookup
+description: >-
+  Find current retail offers for a product across merchants via a licensed SERP API. Returns
+  merchant, price, currency, rating and product link — no site scraping, no bot-blocked fetches.
+category: data-extraction
+cost_class: paid_prepaid
+quota_window: none
+price_cents: 10
+is_free_tier: false
+avg_latency_ms: 1500
+data_source: Serper.dev (licensed Google SERP API) — Shopping vertical
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: commercial-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: global
+
+input_schema:
+  type: object
+  required: []
+  properties:
+    query:
+      type: string
+      description: Product name, model or search phrase (min 2 chars)
+    q:
+      type: string
+      description: Alias for query
+    product:
+      type: string
+      description: Alias for query
+    task:
+      type: string
+      description: Free-text alias for query
+    barcode:
+      type: string
+      description: >-
+        Optional UPC/EAN. When supplied without a query, it is used as the search term —
+        pairs with barcode-lookup, which is the observed upstream capability in this recipe.
+    country:
+      type: string
+      description: Optional ISO 3166 country to scope offers (e.g. "us", "se"). Affects currency.
+    language:
+      type: string
+      description: Optional interface language (e.g. "en", "sv")
+    num_results:
+      type: number
+      description: "Max offers to return (default 10, cap 20)"
+  anyOf:
+    - required: [query]
+    - required: [q]
+    - required: [product]
+    - required: [task]
+    - required: [barcode]
+
+output_schema:
+  type: object
+  example:
+    query: Sony WH-1000XM5
+    country: us
+    result_count: 2
+    currency_note: Currencies follow the scoped country and may differ between offers
+    offers:
+      - position: 1
+        title: Sony WH-1000XM5 Wireless Headphones
+        merchant: Example Electronics
+        price: 328.0
+        currency: USD
+        price_raw: "$328.00"
+        delivery: Free delivery
+        rating: 4.6
+        rating_count: 12043
+        url: https://example.com/p/wh1000xm5
+        image_url: null
+    price_range:
+      min: 328.0
+      max: 399.99
+      currency: USD
+  properties:
+    query: { type: string }
+    country: { type: ["string", "null"] }
+    result_count: { type: integer }
+    offers:
+      type: array
+      description: Ranked retail offers as surfaced by the Shopping vertical
+    price_range:
+      type: ["object", "null"]
+      description: Min/max across returned offers, only when all offers share one currency
+
+test_fixtures:
+  # DRAFT fixture — capture a real /shopping response first, then let --discover rewrite this.
+  # Do NOT assert on price values: they change hourly by design.
+  known_answer:
+    input:
+      query: Sony WH-1000XM5
+      num_results: 5
+    expected_fields:
+      - { field: query, operator: equals, reliability: guaranteed, value: Sony WH-1000XM5 }
+      - { field: result_count, operator: not_null, reliability: guaranteed }
+      - { field: offers, operator: type, reliability: guaranteed, value: array }
+  health_check_input:
+    query: usb c cable
+    num_results: 3
+
+output_field_reliability:
+  query: guaranteed
+  country: guaranteed
+  result_count: guaranteed
+  offers: guaranteed
+  currency_note: guaranteed
+  "offers[].title": guaranteed
+  "offers[].url": guaranteed
+  "offers[].position": guaranteed
+  "offers[].merchant": common
+  "offers[].price": common
+  "offers[].currency": common
+  "offers[].price_raw": common
+  "offers[].delivery": rare
+  "offers[].rating": rare
+  "offers[].rating_count": rare
+  "offers[].image_url": rare
+  price_range: common
+
+limitations:
+  - title: Prices are a point-in-time snapshot, not a quote
+    text: >-
+      Offers reflect what the Shopping vertical surfaced at call time. Prices, availability
+      and delivery terms change continuously and may already differ at the merchant. Never
+      present these as a binding price.
+    category: freshness
+    severity: warning
+  - title: Merchant coverage follows Google's index, not a complete market
+    text: >-
+      Only merchants participating in Google Shopping for the scoped country appear.
+      Absence of a merchant is not evidence they do not sell the product, and ordering
+      reflects Google's ranking rather than lowest price.
+    category: coverage
+    severity: warning
+  - title: Currencies can be mixed within one response
+    text: >-
+      When offers span countries the response can contain more than one currency. No
+      conversion is performed and `price_range` is omitted unless all offers share a
+      currency. Use currency-convert if a single basis is needed.
+    category: accuracy
+    severity: warning
+  - title: Not a replacement for merchant-site detail
+    text: >-
+      Returns the offer as listed, not product specifications, stock levels, variant-level
+      pricing, or reviews. It deliberately does not fetch merchant pages, which is why it
+      does not suffer the bot-blocking that affects page-fetch capabilities.
+    category: coverage
+    severity: info
