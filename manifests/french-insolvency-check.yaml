@@ -1,0 +1,119 @@
+slug: french-insolvency-check
+name: French Insolvency Check
+description: >-
+  Check a French company for formal insolvency proceedings (redressement or liquidation judiciaire) via BODACC,
+  the official French legal gazette. Search by SIREN or company name. Returns judgment dates, court, and nature.
+category: compliance
+cost_class: free_unlimited
+quota_window: none
+price_cents: 8
+is_free_tier: false
+input_schema:
+  type: object
+  required: []
+  anyOf:
+    - required: [siren]
+    - required: [company_name]
+    - required: [task]
+  properties:
+    siren:
+      type: string
+      description: 9-digit French company identifier (SIREN)
+    company_name:
+      type: string
+      description: French company name to search for (alternative to SIREN)
+    task:
+      type: string
+      description: Free-text alias — SIREN or company name
+output_schema:
+  type: object
+  example:
+    query:
+      siren: "345086177"
+      company_name: null
+    result_count: 8
+    insolvency_notices:
+      - id: A20200165944
+        publication_date: "2020-08-26"
+        company_name: CAMAIEU INTERNATIONAL
+        siren: "345086177"
+        court: TRIBUNAL DE COMMERCE DE LILLE MÉTROPOLE
+        department: "59"
+        department_name: Nord
+        notice_type: Avis initial
+        judgment:
+          famille: Extrait de jugement
+          nature: Jugement arrêtant un plan de cession
+          date: "2020-08-17"
+          type: initial
+        url: https://www.bodacc.fr/pages/annonces-commerciales-detail/?q.id=id:A20200165944
+  properties:
+    query:
+      type: object
+    result_count:
+      type: integer
+    insolvency_notices:
+      type: array
+data_source: BODACC (Bulletin officiel des annonces civiles et commerciales, DILA / French government)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: fr
+test_fixtures:
+  known_answer:
+    input:
+      siren: "345086177"
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: query
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: result_count
+        operator: not_null
+        reliability: guaranteed
+      - field: result_count
+        operator: gt
+        reliability: guaranteed
+        value: 0
+      - field: insolvency_notices
+        operator: not_null
+        reliability: guaranteed
+      - field: insolvency_notices
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    siren: "345086177"
+output_field_reliability:
+  query: guaranteed
+  result_count: guaranteed
+  insolvency_notices: guaranteed
+limitations:
+  - title: Only formal collective proceedings — not general company filings
+    text: >-
+      Scoped to familleavis="collective" (redressement judiciaire, liquidation judiciaire, sauvegarde,
+      procédure de rétablissement professionnel). Company creation, deregistration, and annual account
+      filings are out of scope — use french-company-data for general registry lookup.
+    category: coverage
+    severity: info
+  - title: A zero-result answer means no matching notice was found, not a clean-bill-of-health guarantee
+    text: >-
+      BODACC coverage begins in the 2000s in this open dataset; older proceedings, and any procedure not
+      published to BODACC, will not appear. An empty result does not affirmatively prove the company has never
+      been insolvent.
+    category: accuracy
+    severity: warning
+    workaround: Cross-check company_name search results manually — company names are not deduplicated across
+      SIREN in BODACC's own data
+  - title: company_name search uses substring matching, not fuzzy/normalized matching
+    text: >-
+      The 'like' filter on commercant is a literal substring match against BODACC's stored company name, which is
+      not accent- or legal-form-normalized. Prefer 'siren' when known for an exact match.
+    category: accuracy
+    severity: info

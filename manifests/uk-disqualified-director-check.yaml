@@ -1,0 +1,121 @@
+slug: uk-disqualified-director-check
+name: UK Disqualified Director Check
+description: >-
+  Search the UK Companies House Disqualified Officers register by name, or fetch full disqualification detail
+  by officer_id. Returns disqualification dates, court, reason, and companies involved.
+category: compliance
+cost_class: free_quota
+quota_window: daily
+quota_cap: 600
+price_cents: 10
+is_free_tier: false
+input_schema:
+  type: object
+  required: []
+  anyOf:
+    - required: [name]
+    - required: [officer_id]
+    - required: [task]
+  properties:
+    name:
+      type: string
+      description: Individual's name to search for in the disqualified officers register
+    officer_id:
+      type: string
+      description: Companies House disqualified-officer ID (from a prior search's candidates[].officer_id) — fetches full disqualification detail
+    task:
+      type: string
+      description: Free-text alias for name
+output_schema:
+  type: object
+  example:
+    mode: search
+    query: Smith
+    total_results: 42
+    candidates:
+      - officer_id: AbC123xYZ
+        name: SMITH, John
+        date_of_birth: "1970-01"
+        address_snippet: "123 Example Street, London"
+        snippet: null
+  properties:
+    mode:
+      type: string
+    query:
+      type: string
+    total_results:
+      type: integer
+    candidates:
+      type: array
+data_source: UK Companies House (Disqualified Officers register)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+gdpr_art_22_classification: screening_signal
+geography: uk
+test_fixtures:
+  known_answer:
+    input:
+      name: Smith
+    expected_fields:
+      - field: mode
+        operator: not_null
+        reliability: guaranteed
+      - field: mode
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: candidates
+        operator: not_null
+        reliability: guaranteed
+      - field: candidates
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    name: Smith
+output_field_reliability:
+  mode: guaranteed
+  query: guaranteed
+  total_results: guaranteed
+  candidates: guaranteed
+  officer_id: guaranteed
+  found: guaranteed
+  name: guaranteed
+  disqualification_count: rare
+  disqualifications: rare
+limitations:
+  - title: Search mode returns candidates only — never auto-picks "the" match
+    text: >-
+      Disqualified-officer names are not unique. Search mode deliberately returns a candidate list (name, date
+      of birth, address snippet) rather than guessing which candidate is the subject — misattributing a
+      disqualification finding to the wrong person is a serious error class. Disambiguate using date_of_birth
+      or address, then re-call with the chosen officer_id for full detail.
+    category: accuracy
+    severity: warning
+    workaround: Always confirm date_of_birth or address before treating a search candidate as a confirmed match
+  - title: UK only, and only disqualifications on the Companies House public register
+    text: >-
+      Covers formal director disqualifications recorded by UK Companies House / the Insolvency Service.
+      Disqualifications or equivalent sanctions under other jurisdictions' regimes are out of scope.
+    category: coverage
+    severity: info
+  - title: Requires COMPANIES_HOUSE_API_KEY (existing platform credential, free registration)
+    text: >-
+      Uses the same Companies House API key already provisioned for insolvency-check, officer-search, and
+      uk-company-data — no new vendor relationship, but the capability will error without that env var set.
+    category: coverage
+    severity: info
