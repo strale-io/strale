@@ -211,3 +211,51 @@ Tree on `docs/parallel-audits-2026-08-12`. Other sessions' untracked files untou
 shared tree against instructions (disclosed, state restored); cross-provider independent
 review remains unavailable in-harness — all review passes were same-provider adversarial
 (disclosed in every PR body).
+
+---
+
+## Addendum (2026-08-13): Revenue track — Rank-0 triage + demand-driven builds (task #29, PR #196)
+
+### Rank-0 "failures" were stale-window ghosts — no fixes needed
+
+- **pdf-extract**: the June 0/5 window was callers 404-ing on made-up URLs, not a
+  capability defect. Current behaviour verified correct.
+- **screenshot-url**: the Browserless-v1 dialect bug was already fixed Aug 5; the
+  residual harm was the quarantine itself (x402-only cap can't earn the eligible
+  calls auto-promote needs — the floor catch-22, documented earlier). Cleared.
+
+### Three demand-grounded capabilities shipped dark (PR #196, main `2a88407`)
+
+Grounded in `failed_requests` + top-customer purchase patterns
+(catalog-buildout-strategy.md):
+
+1. **google-news-search** (10¢) — Serper `/news`; time-range map validated pre-call;
+   `num_results` must be integer ≥1 *before* the Serper call (review M-1: NaN
+   previously would have sliced to empty and still billed).
+2. **serp-related-questions** (5¢) — Serper `/search` → peopleAlsoAsk +
+   relatedSearches; empty arrays documented as real answers; priced/described as a
+   delta vs google-search.
+3. **email-auth-check** (3¢) — pure-DNS SPF/DMARC/MX/DKIM posture. Full rewrite after
+   review: pct< 100 → `partially_enforced`; RFC-tolerant tag parsing; RFC 7489
+   §6.6.3 org-domain fallback (mail.google.com → effective reject, inherited_from
+   google.com); empty `p=` DKIM counted as revoked per RFC 6376; multi-record SPF/
+   DMARC → invalid_multiple. F-0-006 Bucket C acknowledgment added (pure DNS, same
+   class as dns-lookup) — that comment was the only CI failure on the PR.
+
+All three: review-hardened (all H/M/L findings fixed, incl. H-1 fabricated DKIM
+example in the manifest), validate-capability clean, live-verified. Dark per
+DEC-20260812-A factory rule: `visible=false`, non-x402 until first green week.
+
+### Side-finding
+
+strale.dev has no SPF record — website-only domain, harmless. strale.io (the mail
+domain) verified fully enforced.
+
+### Next up
+
+- Promote the three caps after first green week (manual: visible=true + x402_enabled).
+- Petter-pending: PyPI yanks (3 framework stubs), SDK publishes with attribution
+  headers, distribution submission batch approval.
+- Clocks: JP app ID ~Aug 20; DK CVR nudge Aug 27 if quiet; AT/BMJ reply unknown.
+- Queued: Greece build (doctrine-cleared; record ToS check per DEC-20260813-A(b)),
+  floor x402 catch-22 design patch, remaining catalog ideas.
