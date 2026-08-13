@@ -26,6 +26,19 @@ const WALLET_ADDRESS = process.env.X402_WALLET_ADDRESS ?? "";
 // x402 v1 simple network names ("base", "base-sepolia") for compatibility
 // with the canonical x402-fetch client. See x402-gateway-v2.ts for rationale.
 const NETWORK = process.env.X402_NETWORK ?? "base-sepolia";
+
+// x402 v2 uses CAIP-2 network identifiers; v1 uses bare names. The zod
+// schemas enforce this split (NetworkSchemaV2 requires a ":"), so the two
+// challenge/payload generations cannot share a network string.
+const CAIP2_BY_NETWORK: Record<string, string> = {
+  base: "eip155:8453",
+  "base-sepolia": "eip155:84532",
+};
+
+export function networkToCaip2(network: string): string {
+  if (network.includes(":")) return network;
+  return CAIP2_BY_NETWORK[network] ?? network;
+}
 const EUR_USD_RATE = parseFloat(process.env.EUR_USD_RATE ?? "1.08");
 if (!Number.isFinite(EUR_USD_RATE) || EUR_USD_RATE <= 0) {
   // Fail fast at module load: a malformed env value ("1,085", "") would
@@ -251,7 +264,25 @@ export function eurCentsToUsdString(eurCents: number): string {
 // ─── 402 Response builder ───────────────────────────────────────────────────
 
 /**
+ * Which challenge generation the 402 bodies advertise. "2" (default) emits
+ * the x402 v2 PaymentRequired shape with merged legacy v1 fields; setting
+ * X402_CHALLENGE_VERSION=1 reverts to the pure v1 body — the instant
+ * rollback path if a payer client chokes on the v2 shape. Read at call time
+ * so a redeploy with the env var flipped takes effect without code changes.
+ */
+export function x402ChallengeVersion(): 1 | 2 {
+  return process.env.X402_CHALLENGE_VERSION === "1" ? 1 : 2;
+}
+
+/**
  * Build an x402 Payment Required response for a capability.
+ *
+ * v2-shape body (x402Version 2, top-level ResourceInfo, CAIP-2 network,
+ * `amount`) with the legacy v1 fields merged into the accepts entry so
+ * v1-only clients that read accepts[0] directly still find
+ * maxAmountRequired / resource / description. The v2 zod schemas are
+ * non-strict, so the extra keys do not break v2 validation. A pure v1
+ * mirror rides under the legacy `paymentRequirements` key.
  */
 export function build402Response(capability: {
   slug: string;
@@ -262,26 +293,54 @@ export function build402Response(capability: {
   body: Record<string, unknown>;
 } {
   const priceUsd = eurCentsToUsdString(capability.priceCents);
+  const atomic = eurCentsToUsdcAtomic(capability.priceCents);
+  const description = `${capability.name}. Strale: the trust layer for AI agents.`;
+  const error = `Payment required. ${capability.name} costs ${priceUsd} USDC per call.`;
+
+  const v1Requirement = {
+    scheme: "exact",
+    network: NETWORK,
+    maxAmountRequired: atomic,
+    resource: "/v1/do",
+    description,
+    payTo: WALLET_ADDRESS,
+    mimeType: "application/json",
+    asset: USDC_ADDRESS,
+    maxTimeoutSeconds: 300,
+    extra: { name: "USD Coin", version: "2" },
+  };
+
+  if (x402ChallengeVersion() === 1) {
+    return {
+      status: 402,
+      body: { x402Version: 1, accepts: [v1Requirement], error },
+    };
+  }
+
+  const mergedRequirement = {
+    scheme: "exact",
+    network: networkToCaip2(NETWORK),
+    amount: atomic,
+    asset: USDC_ADDRESS,
+    payTo: WALLET_ADDRESS,
+    maxTimeoutSeconds: 300,
+    extra: { name: "USD Coin", version: "2" },
+    // Legacy v1 fields for old clients that read accepts[0] directly:
+    maxAmountRequired: atomic,
+    resource: "/v1/do",
+    description,
+    mimeType: "application/json",
+  };
 
   return {
     status: 402,
     body: {
-      x402Version: 1,
-      accepts: [
-        {
-          scheme: "exact",
-          network: NETWORK,
-          maxAmountRequired: eurCentsToUsdcAtomic(capability.priceCents),
-          resource: "/v1/do",
-          description: `${capability.name}. Strale: the trust layer for AI agents.`,
-          payTo: WALLET_ADDRESS,
-          mimeType: "application/json",
-          asset: USDC_ADDRESS,
-          maxTimeoutSeconds: 300,
-          extra: { name: "USD Coin", version: "2" },
-        },
-      ],
-      error: `Payment required. ${capability.name} costs ${priceUsd} USDC per call.`,
+      x402Version: 2,
+      error,
+      resource: { url: "/v1/do", description, mimeType: "application/json" },
+      accepts: [mergedRequirement],
+      // Legacy mirror in pure v1 shape (bare network name).
+      paymentRequirements: [v1Requirement],
     },
   };
 }
@@ -394,19 +453,49 @@ export async function verifyX402PaymentOnly(
         // eurCentsToUsd; ceil turned float round-trip error into +1 atomic.
         ? Math.round(priceUsdOverride * 1_000_000).toString()
         : eurCentsToUsdcAtomic(priceCentsEur);
-    const requirements: Record<string, unknown> = {
-      scheme: "exact",
-      network: NETWORK,
-      maxAmountRequired: priceAtomic,
-      resource: requirementOverrides?.resource ?? "/v1/do",
-      description: requirementOverrides?.description ?? "Strale capability call",
-      mimeType: "application/json",
-      payTo: WALLET_ADDRESS,
-      maxTimeoutSeconds: 300,
-      asset: USDC_ADDRESS,
-      extra: { name: "USD Coin", version: "2" },
-    };
-    if (requirementOverrides?.outputSchema) {
+
+    // The facilitator accepts both payload generations, but the requirements
+    // we send must match the payload's x402Version: v1 pairs with the bare
+    // network name + maxAmountRequired, v2 with CAIP-2 + amount (resource /
+    // description / outputSchema live on the top-level ResourceInfo in v2,
+    // not on the requirement).
+    const isV2Payload = payload.x402Version === 2;
+
+    // A v1 client that picked the merged accepts entry off the v2 challenge
+    // echoes its CAIP-2 network. Normalize back to the bare v1 name before
+    // verify: the network field is envelope routing metadata — the signed
+    // EIP-712 authorization binds the chain via its domain separator, so
+    // this rewrite cannot change what the payer authorized.
+    if (!isV2Payload) {
+      const p = payload as { network?: string };
+      if (p.network === networkToCaip2(NETWORK)) {
+        p.network = NETWORK;
+      }
+    }
+
+    const requirements: Record<string, unknown> = isV2Payload
+      ? {
+          scheme: "exact",
+          network: networkToCaip2(NETWORK),
+          amount: priceAtomic,
+          asset: USDC_ADDRESS,
+          payTo: WALLET_ADDRESS,
+          maxTimeoutSeconds: 300,
+          extra: { name: "USD Coin", version: "2" },
+        }
+      : {
+          scheme: "exact",
+          network: NETWORK,
+          maxAmountRequired: priceAtomic,
+          resource: requirementOverrides?.resource ?? "/v1/do",
+          description: requirementOverrides?.description ?? "Strale capability call",
+          mimeType: "application/json",
+          payTo: WALLET_ADDRESS,
+          maxTimeoutSeconds: 300,
+          asset: USDC_ADDRESS,
+          extra: { name: "USD Coin", version: "2" },
+        };
+    if (!isV2Payload && requirementOverrides?.outputSchema) {
       requirements.outputSchema = requirementOverrides.outputSchema;
     }
 

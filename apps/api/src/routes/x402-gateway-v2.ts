@@ -32,6 +32,8 @@ import {
   eurCentsToUsdString,
   encodePaymentResponseHeader,
   getFacilitatorUrl,
+  networkToCaip2,
+  x402ChallengeVersion,
   type X402VerifiedPayment,
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
@@ -429,7 +431,7 @@ function buildBazaarDiscovery(
 
 // ─── 402 Response builder ───────────────────────────────────────────────────
 
-function build402(
+export function build402(
   name: string,
   description: string,
   priceUsd: number,
@@ -458,6 +460,8 @@ function build402(
       ? `${description.slice(0, DESCRIPTION_MAX - 1).trimEnd()}…`
       : description;
 
+  const payTo = WALLET_ADDRESS || "0x0000000000000000000000000000000000000001";
+
   const paymentRequirement: Record<string, unknown> = {
     scheme: "exact",
     network: NETWORK,
@@ -465,7 +469,7 @@ function build402(
     resource: resourceUrl,
     description: finalDescription,
     mimeType: "application/json",
-    payTo: WALLET_ADDRESS || "0x0000000000000000000000000000000000000001",
+    payTo,
     maxTimeoutSeconds: 300,
     asset: USDC_ADDRESS,
     extra: { name: "USD Coin", version: "2" },
@@ -473,22 +477,59 @@ function build402(
     outputSchema: v1OutputSchema,
   };
 
-  const body = {
-    x402Version: 1,
-    error: `Payment required. ${name} costs $${priceUsd.toFixed(4)} USDC per call.`,
-    resource: {
-      url: resourceUrl,
-      description: finalDescription,
-      mimeType: "application/json",
-    },
-    accepts: [paymentRequirement],
-    // Legacy field name some older clients looked for — safe to keep
-    paymentRequirements: [paymentRequirement],
-    // v2 discovery path: top-level `extensions` per PaymentRequired schema.
-    // v2 clients relay this into paymentPayload.extensions; the facilitator's
-    // extractDiscoveryInfo reads paymentPayload.extensions.bazaar at settle.
-    extensions: v2Extensions,
+  const error = `Payment required. ${name} costs $${priceUsd.toFixed(4)} USDC per call.`;
+  const resourceInfo = {
+    url: resourceUrl,
+    description: finalDescription,
+    mimeType: "application/json",
   };
+
+  // Challenge body. Default (v2): x402Version 2 with CAIP-2 network and
+  // `amount`, per the PaymentRequiredV2 schema — this is what x402scan and
+  // v2 clients validate. The legacy v1 fields are merged into the accepts
+  // entry (the v2 zod schemas are non-strict, so extra keys survive
+  // validation) for v1-only clients that read accepts[0] directly, and a
+  // pure v1 mirror rides under the legacy `paymentRequirements` key with
+  // the bare network name. X402_CHALLENGE_VERSION=1 reverts to the pure v1
+  // body (money-path rollback lever — see x402ChallengeVersion()).
+  const body =
+    x402ChallengeVersion() === 1
+      ? {
+          x402Version: 1,
+          error,
+          resource: resourceInfo,
+          accepts: [paymentRequirement],
+          paymentRequirements: [paymentRequirement],
+          extensions: v2Extensions,
+        }
+      : {
+          x402Version: 2,
+          error,
+          resource: resourceInfo,
+          accepts: [
+            {
+              scheme: "exact",
+              network: networkToCaip2(NETWORK),
+              amount: maxAmount,
+              asset: USDC_ADDRESS,
+              payTo,
+              maxTimeoutSeconds: 300,
+              extra: { name: "USD Coin", version: "2" },
+              // Legacy v1 fields for old clients reading accepts[0] directly:
+              maxAmountRequired: maxAmount,
+              resource: resourceUrl,
+              description: finalDescription,
+              mimeType: "application/json",
+              outputSchema: v1OutputSchema,
+            },
+          ],
+          // Legacy mirror in pure v1 shape (bare network name).
+          paymentRequirements: [paymentRequirement],
+          // v2 discovery path: top-level `extensions` per PaymentRequired
+          // schema. v2 clients relay this into paymentPayload.extensions; the
+          // facilitator's extractDiscoveryInfo reads it at settle.
+          extensions: v2Extensions,
+        };
 
   // v1 backward-compat header
   const headerPayload = Buffer.from(
