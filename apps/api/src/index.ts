@@ -184,6 +184,13 @@ async function main() {
   const { startCyDirectorsIngest } = await import("./jobs/ingest-cy-directors.js");
   startCyDirectorsIngest();
 
+  // x402 settlement-volume tripwire — companion to the v2 challenge
+  // migration (task #31). A v1-payer die-off is invisible from our side
+  // except as falling settlement volume; this watches it and pages with
+  // the rollback instructions.
+  const { startX402SettlementWatch } = await import("./jobs/x402-settlement-watch.js");
+  startX402SettlementWatch();
+
   const port = parseInt(process.env.PORT || "3000", 10);
 
   const server = serve({ fetch: app.fetch, port }, (info) => {
