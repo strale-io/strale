@@ -439,7 +439,9 @@ export function build402(
   inputSchema?: Record<string, unknown> | null,
   method?: string,
   outputSchema?: Record<string, unknown> | null,
+  challengeVersion?: 1 | 2,
 ) {
+  const version = challengeVersion ?? x402ChallengeVersion();
   const maxAmount = usdToUsdcAtomic(priceUsd);
 
   const httpMethod = (method ?? "POST").toUpperCase();
@@ -484,16 +486,17 @@ export function build402(
     mimeType: "application/json",
   };
 
-  // Challenge body. Default (v2): x402Version 2 with CAIP-2 network and
-  // `amount`, per the PaymentRequiredV2 schema — this is what x402scan and
-  // v2 clients validate. The legacy v1 fields are merged into the accepts
-  // entry (the v2 zod schemas are non-strict, so extra keys survive
-  // validation) for v1-only clients that read accepts[0] directly, and a
-  // pure v1 mirror rides under the legacy `paymentRequirements` key with
-  // the bare network name. X402_CHALLENGE_VERSION=1 reverts to the pure v1
-  // body (money-path rollback lever — see x402ChallengeVersion()).
+  // Challenge body. The /x402/v2/* alias paths always get the v2 shape
+  // (x402Version 2, CAIP-2 network, `amount`, per PaymentRequiredV2 — what
+  // x402scan and v2 clients validate), with the legacy v1 fields merged
+  // into the accepts entry as extra keys (the v2 zod schemas are non-strict)
+  // and a pure v1 mirror under the legacy `paymentRequirements` key. The
+  // legacy paths serve x402ChallengeVersion() (v1 until cutover) because
+  // canonical v1 clients zod-parse accepts[].network against a strict
+  // bare-name enum and hard-fail on any v2 body — see the schemas note on
+  // x402ChallengeVersion().
   const body =
-    x402ChallengeVersion() === 1
+    version === 1
       ? {
           x402Version: 1,
           error,
@@ -918,8 +921,14 @@ x402GatewayV2.get("/catalog", rateLimitByIp(120, 60_000), async (c) => {
 
 // ─── Solution execution: /x402/solutions/:slug ──────────────────────────────
 
-x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
+x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], async (c) => {
   const slug = c.req.param("slug");
+  // /x402/v2/* aliases always serve the v2 challenge generation; the legacy
+  // path serves x402ChallengeVersion() (v1 until cutover). Discovery
+  // surfaces advertise the v2 paths; existing payers keep the legacy ones.
+  const isV2Path = c.req.path.startsWith("/x402/v2/");
+  const challengeVersion: 1 | 2 = isV2Path ? 2 : x402ChallengeVersion();
+  const resourceUrl = `${BASE_URL}${c.req.path}`;
   await ensureCache();
 
   const sol = _solCache.get(slug);
@@ -947,10 +956,11 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
       }
       const { body } = build402(
         sol.name, sol.description, sol.x402PriceUsd,
-        `${BASE_URL}/x402/solutions/${slug}`,
+        resourceUrl,
         sol.inputSchema, "POST", sol.outputSchema,
+        challengeVersion,
       );
-      // No Payment-Required header: v1 body is the canonical source. Emitting a
+      // No Payment-Required header: the body is the canonical source. Emitting a
       // v1-encoded header trips v2-only header decoders (e.g. @agentcash/discovery)
       // which never fall back to body parsing once any header is present.
       return c.json(body, 402);
@@ -962,21 +972,28 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
 
     const solRebuild = build402(
       sol.name, sol.description, sol.x402PriceUsd,
-      `${BASE_URL}/x402/solutions/${slug}`,
+      resourceUrl,
       sol.inputSchema, "POST", sol.outputSchema,
+      challengeVersion,
     );
     const verification = await verifyX402PaymentOnly(
       paymentHeader,
       sol.priceCents,
       sol.x402PriceUsd,
       {
-        resource: solRebuild.paymentRequirement.resource as string,
+        resource: resourceUrl,
         description: solRebuild.paymentRequirement.description as string,
         outputSchema: solRebuild.paymentRequirement.outputSchema as Record<string, unknown>,
       },
     );
     if (!verification.valid || !verification.verified) {
-      return c.json({ error: "Payment verification failed", detail: verification.error }, 402);
+      // Spec-shaped failure: a full PaymentRequired body hands the client
+      // fresh requirements to re-sign against, with the facilitator's
+      // reason in the standard `error` field (v2 clients parse 402 bodies
+      // strictly and would otherwise surface a parse error instead).
+      const failBody = { ...solRebuild.body } as Record<string, unknown>;
+      failBody.error = `Payment verification failed: ${verification.error ?? "unknown reason"}`;
+      return c.json(failBody, 402);
     }
     verified = verification.verified;
 
@@ -1109,10 +1126,15 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
 
 // ─── Wildcard capability handler: /x402/:slug ───────────────────────────────
 
-x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
+x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   const slug = c.req.param("slug");
   // Skip reserved paths handled by explicit routes above
-  if (slug === "catalog" || slug === "solutions") return c.notFound();
+  if (slug === "catalog" || slug === "solutions" || slug === "v2") return c.notFound();
+
+  // See the solutions handler: /x402/v2/* always serves the v2 challenge.
+  const isV2Path = c.req.path.startsWith("/x402/v2/");
+  const challengeVersion: 1 | 2 = isV2Path ? 2 : x402ChallengeVersion();
+  const resourceUrl = `${BASE_URL}${c.req.path}`;
 
   await ensureCache();
 
@@ -1149,8 +1171,9 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
       }
       const { body } = build402(
         cap.name, cap.description, cap.x402PriceUsd,
-        `${BASE_URL}/x402/${slug}`,
+        resourceUrl,
         cap.inputSchema, cap.x402Method, cap.outputSchema,
+        challengeVersion,
       );
       // See note on the solutions handler above — no Payment-Required header.
       return c.json(body, 402);
@@ -1165,24 +1188,25 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
     // The same handle is reused at settle time below.
     const capRebuild = build402(
       cap.name, cap.description, cap.x402PriceUsd,
-      `${BASE_URL}/x402/${slug}`,
+      resourceUrl,
       cap.inputSchema, cap.x402Method, cap.outputSchema,
+      challengeVersion,
     );
     const verification = await verifyX402PaymentOnly(
       paymentHeader,
       cap.priceCents,
       cap.x402PriceUsd,
       {
-        resource: capRebuild.paymentRequirement.resource as string,
+        resource: resourceUrl,
         description: capRebuild.paymentRequirement.description as string,
         outputSchema: capRebuild.paymentRequirement.outputSchema as Record<string, unknown>,
       },
     );
     if (!verification.valid || !verification.verified) {
-      return c.json(
-        { error: "Payment verification failed", detail: verification.error },
-        402,
-      );
+      // Spec-shaped failure — see the solutions handler.
+      const failBody = { ...capRebuild.body } as Record<string, unknown>;
+      failBody.error = `Payment verification failed: ${verification.error ?? "unknown reason"}`;
+      return c.json(failBody, 402);
     }
     verified = verification.verified;
 
@@ -1416,7 +1440,7 @@ export async function getX402Manifest(): Promise<{
   // is `eurCentsToUsd(priceCents)` per DEC-20260502-A.
   const endpoints = [
     ...[..._capCache.values()].map((cap) => ({
-      path: `/x402/${cap.slug}`,
+      path: `/x402/v2/${cap.slug}`,
       method: cap.x402Method,
       price: cap.x402PriceUsd.toFixed(2),
       currency: "USDC",
@@ -1424,7 +1448,7 @@ export async function getX402Manifest(): Promise<{
       description: cap.description,
     })),
     ...[..._solCache.values()].map((sol) => ({
-      path: `/x402/solutions/${sol.slug}`,
+      path: `/x402/v2/solutions/${sol.slug}`,
       method: "POST",
       price: sol.x402PriceUsd.toFixed(2),
       currency: "USDC",
@@ -1450,8 +1474,11 @@ export async function getX402Manifest(): Promise<{
 export async function getX402WellKnownResources(): Promise<{ version: number; resources: string[] }> {
   await ensureCache();
   const resources = [
-    ...[..._capCache.values()].filter((cap) => cap.x402PriceUsd > 0).map((cap) => `${BASE_URL}/x402/${cap.slug}`),
-    ...[..._solCache.values()].filter((sol) => sol.x402PriceUsd > 0).map((sol) => `${BASE_URL}/x402/solutions/${sol.slug}`),
+    // v2 alias paths: new discovery consumers (x402scan requires the v2
+    // challenge shape) get the v2-serving endpoints; existing payers keep
+    // the legacy /x402/:slug paths, which are no longer advertised here.
+    ...[..._capCache.values()].filter((cap) => cap.x402PriceUsd > 0).map((cap) => `${BASE_URL}/x402/v2/${cap.slug}`),
+    ...[..._solCache.values()].filter((sol) => sol.x402PriceUsd > 0).map((sol) => `${BASE_URL}/x402/v2/solutions/${sol.slug}`),
   ];
   return { version: 1, resources };
 }
@@ -1469,7 +1496,7 @@ export async function getX402OpenApiPaths(): Promise<Record<string, unknown>> {
   for (const cap of _capCache.values()) {
     if (cap.x402PriceUsd <= 0) continue;
     const method = (cap.x402Method || "GET").toLowerCase();
-    paths[`/x402/${cap.slug}`] = {
+    paths[`/x402/v2/${cap.slug}`] = {
       [method]: buildX402Operation({
         summary: `${cap.name} (x402)`,
         description: cap.description,
@@ -1483,7 +1510,7 @@ export async function getX402OpenApiPaths(): Promise<Record<string, unknown>> {
 
   for (const sol of _solCache.values()) {
     if (sol.x402PriceUsd <= 0) continue;
-    paths[`/x402/solutions/${sol.slug}`] = {
+    paths[`/x402/v2/solutions/${sol.slug}`] = {
       post: buildX402Operation({
         summary: `${sol.name} (x402 solution)`,
         description: sol.description,

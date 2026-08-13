@@ -18,7 +18,7 @@
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { parsePaymentPayload } from "@x402/core/schemas";
 import { createFacilitatorConfig } from "@coinbase/x402";
-import { logError } from "./log.js";
+import { log, logError } from "./log.js";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -264,25 +264,41 @@ export function eurCentsToUsdString(eurCents: number): string {
 // ─── 402 Response builder ───────────────────────────────────────────────────
 
 /**
- * Which challenge generation the 402 bodies advertise. "2" (default) emits
- * the x402 v2 PaymentRequired shape with merged legacy v1 fields; setting
- * X402_CHALLENGE_VERSION=1 reverts to the pure v1 body — the instant
- * rollback path if a payer client chokes on the v2 shape. Read at call time
- * so a redeploy with the env var flipped takes effect without code changes.
+ * Which challenge generation the LEGACY paths (/x402/:slug, /v1/do) emit by
+ * default. Defaults to 1: the schemas make a both-generations body
+ * impossible — x402-fetch v1 zod-parses every accepts[] entry against a
+ * strict bare-name network enum, while v2 validators require CAIP-2 — so
+ * the legacy paths keep serving exactly what today's unknown-version payers
+ * already parse, and the new /x402/v2/* alias paths serve v2. Setting
+ * X402_CHALLENGE_VERSION=2 is the eventual cutover switch for the legacy
+ * paths, to be flipped once verify-time version logging shows v1 payload
+ * volume at zero. Read at call time so a redeploy with the env var flipped
+ * takes effect without code changes.
  */
 export function x402ChallengeVersion(): 1 | 2 {
-  return process.env.X402_CHALLENGE_VERSION === "1" ? 1 : 2;
+  const raw = (process.env.X402_CHALLENGE_VERSION ?? "").trim();
+  if (raw === "2" || raw.toLowerCase() === "v2") return 2;
+  if (raw !== "" && raw !== "1" && raw.toLowerCase() !== "v1") {
+    // Cutover switch: an unrecognized value silently changing the money
+    // path would be worse than noise — log every call while it's set wrong.
+    logError(
+      "x402-challenge-version-unrecognized",
+      new Error(`X402_CHALLENGE_VERSION="${raw}" not recognized; serving v1 on legacy paths`),
+    );
+  }
+  return 1;
 }
 
 /**
- * Build an x402 Payment Required response for a capability.
+ * Build an x402 Payment Required response for a capability (/v1/do path).
  *
- * v2-shape body (x402Version 2, top-level ResourceInfo, CAIP-2 network,
- * `amount`) with the legacy v1 fields merged into the accepts entry so
- * v1-only clients that read accepts[0] directly still find
- * maxAmountRequired / resource / description. The v2 zod schemas are
- * non-strict, so the extra keys do not break v2 validation. A pure v1
- * mirror rides under the legacy `paymentRequirements` key.
+ * Serves the generation selected by x402ChallengeVersion() (v1 today). The
+ * v2 branch emits the v2 shape (x402Version 2, top-level ResourceInfo,
+ * CAIP-2 network, `amount`) with the legacy v1 fields merged into the
+ * accepts entry as extra keys (the v2 zod schemas are non-strict, so they
+ * survive v2 validation) plus a pure v1 mirror under the legacy
+ * `paymentRequirements` key — a hedge for hand-rolled v1 readers, though
+ * canonical v1 libraries cannot parse any v2 body (strict network enum).
  */
 export function build402Response(capability: {
   slug: string;
@@ -446,6 +462,15 @@ export async function verifyX402PaymentOnly(
       return { valid: false, error: `Invalid payment payload: ${parsed.error.message}` };
     }
     const payload = parsed.data;
+
+    // Migration telemetry (2026-08-13): the v1→v2 challenge cutover for the
+    // legacy paths is gated on this counter — flip X402_CHALLENGE_VERSION=2
+    // only once v1 payload volume is zero. Also the only signal that a
+    // pinned v1 payer population exists at all.
+    log.info(
+      { label: "x402-payment-payload-version", x402_version: payload.x402Version },
+      "x402-payment-payload-version",
+    );
 
     const priceAtomic =
       priceUsdOverride !== undefined

@@ -2,18 +2,21 @@
  * Regression tests for the x402 v2 challenge migration (task #31, 2026-08-13).
  *
  * Background: x402scan's register crawl rejected all 354 Strale endpoints
- * with "x402 v1 response detected — migrate to v2 spec". ~400-600 x402
- * settlements/week ride on the 402 body shape and the payer client versions
- * are unknown (UA capture only started 2026-08-12), so the migration is a
- * hybrid: the body must validate as pure x402 v2 (what x402scan and v2
- * clients check) while still carrying every legacy v1 field an old client
- * reads off `accepts[0]` or `paymentRequirements[0]`.
+ * with "x402 v1 response detected — migrate to v2 spec", while ~400-600
+ * USDC settlements/week ride on the 402 body with unknown client versions.
+ * A both-generations body is provably impossible: canonical v1 clients
+ * (x402-fetch 0.x) zod-parse every accepts[] entry against a strict
+ * bare-name network ENUM, while v2 validators require CAIP-2 network
+ * strings — one field, two incompatible schemas. So the design is dual
+ * paths: legacy /x402/:slug keeps serving v1 (until the
+ * X402_CHALLENGE_VERSION=2 cutover, gated on v1 payload volume reaching
+ * zero per the x402-payment-payload-version log counter), and the
+ * /x402/v2/* aliases always serve the v2 shape, which is what the
+ * discovery surfaces now advertise.
  *
- * These tests pin both halves against the REAL zod schemas from @x402/core —
- * the exact validation x402scan's probe runs. They fail against the pre-fix
- * v1-only body (x402Version: 1 fails the V2 discriminant) and fail if a
- * future edit drops the legacy fields (v1-client compat) or the rollback
- * lever.
+ * These tests pin the v2 body against the REAL zod schemas from
+ * @x402/core — the exact validation x402scan's probe runs — plus the
+ * legacy-field hedge, the version-branched verify path, and the default.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
@@ -101,83 +104,96 @@ describe("networkToCaip2", () => {
   });
 });
 
+describe("x402ChallengeVersion (legacy-path default / cutover switch)", () => {
+  it("defaults to v1 — legacy paths must not change under existing payers", async () => {
+    const { x402ChallengeVersion } = await loadGateway();
+    expect(x402ChallengeVersion()).toBe(1);
+  });
+
+  it("flips to v2 only on the explicit cutover values", async () => {
+    const { x402ChallengeVersion } = await loadGateway();
+    process.env.X402_CHALLENGE_VERSION = "2";
+    expect(x402ChallengeVersion()).toBe(2);
+    process.env.X402_CHALLENGE_VERSION = "v2";
+    expect(x402ChallengeVersion()).toBe(2);
+    // Unrecognized values stay on the safe side (v1)
+    process.env.X402_CHALLENGE_VERSION = "yes";
+    expect(x402ChallengeVersion()).toBe(1);
+  });
+});
+
 describe("build402Response (/v1/do challenge)", () => {
-  it("emits a body that validates against the real x402 v2 schema", async () => {
-    const { build402Response } = await loadGateway();
-    const { body } = build402Response({ slug: "iban-validate", name: "IBAN Validate", priceCents: 5 });
-    const parsed = parsePaymentRequired(body);
-    expect(parsed.success, JSON.stringify((parsed as { error?: unknown }).error)).toBe(true);
-    if (parsed.success) expect(parsed.data.x402Version).toBe(2);
-  });
-
-  it("keeps every legacy v1 field on accepts[0] for old clients", async () => {
-    const { build402Response } = await loadGateway();
-    const { body } = build402Response({ slug: "iban-validate", name: "IBAN Validate", priceCents: 5 });
-    const entry = (body.accepts as Record<string, unknown>[])[0];
-    expect(entry.maxAmountRequired).toBe(entry.amount);
-    expect(entry.resource).toBe("/v1/do");
-    expect(typeof entry.description).toBe("string");
-    expect(entry.mimeType).toBe("application/json");
-    // v2 fields present too
-    expect(entry.network).toBe("eip155:8453");
-    expect(typeof entry.amount).toBe("string");
-  });
-
-  it("mirrors a pure v1 requirement (bare network) under paymentRequirements", async () => {
-    const { build402Response } = await loadGateway();
-    const { body } = build402Response({ slug: "iban-validate", name: "IBAN Validate", priceCents: 5 });
-    const legacy = (body.paymentRequirements as Record<string, unknown>[])[0];
-    expect(legacy.network).toBe("base");
-    expect(legacy.maxAmountRequired).toBeDefined();
-    expect(legacy.amount).toBeUndefined();
-  });
-
-  it("X402_CHALLENGE_VERSION=1 rolls back to a valid pure v1 body", async () => {
-    process.env.X402_CHALLENGE_VERSION = "1";
+  it("serves the pre-migration v1 body by default", async () => {
     const { build402Response } = await loadGateway();
     const { body } = build402Response({ slug: "iban-validate", name: "IBAN Validate", priceCents: 5 });
     expect(body.x402Version).toBe(1);
     const parsed = parsePaymentRequired(body);
     expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.x402Version).toBe(1);
+    const entry = (body.accepts as Record<string, unknown>[])[0];
+    expect(entry.network).toBe("base");
+    expect(entry.maxAmountRequired).toBeDefined();
+  });
+
+  it("after cutover (env=2) emits a body that validates against the real v2 schema", async () => {
+    process.env.X402_CHALLENGE_VERSION = "2";
+    const { build402Response } = await loadGateway();
+    const { body } = build402Response({ slug: "iban-validate", name: "IBAN Validate", priceCents: 5 });
+    const parsed = parsePaymentRequired(body);
+    expect(parsed.success, JSON.stringify((parsed as { error?: unknown }).error)).toBe(true);
+    if (parsed.success) expect(parsed.data.x402Version).toBe(2);
+    // Legacy hedge fields survive on the raw object
+    const entry = (body.accepts as Record<string, unknown>[])[0];
+    expect(entry.maxAmountRequired).toBe(entry.amount);
+    expect(entry.network).toBe("eip155:8453");
+    const legacy = (body.paymentRequirements as Record<string, unknown>[])[0];
+    expect(legacy.network).toBe("base");
   });
 });
 
-describe("build402 (gateway /x402/:slug challenge)", () => {
+describe("build402 (gateway challenge builder)", () => {
   // The routes module drags in the app's full import graph; first load can
   // exceed the 10s default. Functional behavior is unaffected.
-  it("emits a body that validates against the real x402 v2 schema", { timeout: 60_000 }, async () => {
+  it("explicit v2 emits a body that validates against the real v2 schema", { timeout: 60_000 }, async () => {
     const { build402 } = await loadRoutes();
     const { body } = build402(
       "IBAN Validate", "Validate an IBAN.", 0.054,
-      "https://api.strale.io/x402/iban-validate",
+      "https://api.strale.io/x402/v2/iban-validate",
       { type: "object", properties: { iban: { type: "string" } } }, "GET", null,
+      2,
     );
     const parsed = parsePaymentRequired(body as Record<string, unknown>);
     expect(parsed.success, JSON.stringify((parsed as { error?: unknown }).error)).toBe(true);
     if (parsed.success) expect(parsed.data.x402Version).toBe(2);
-  });
-
-  it("keeps legacy v1 fields (incl. Bazaar v1 outputSchema) on accepts[0]", async () => {
-    const { build402 } = await loadRoutes();
-    const { body } = build402(
-      "IBAN Validate", "Validate an IBAN.", 0.054,
-      "https://api.strale.io/x402/iban-validate",
-      { type: "object", properties: { iban: { type: "string" } } }, "GET", null,
-    );
-    const entry = ((body as Record<string, unknown>).accepts as Record<string, unknown>[])[0];
+    // Legacy hedge + v2 discovery extensions both present on the raw body
+    const b = body as Record<string, unknown>;
+    const entry = (b.accepts as Record<string, unknown>[])[0];
     expect(entry.maxAmountRequired).toBe(entry.amount);
-    expect(entry.resource).toBe("https://api.strale.io/x402/iban-validate");
+    expect(entry.resource).toBe("https://api.strale.io/x402/v2/iban-validate");
     expect(entry.outputSchema).toBeDefined();
     expect(entry.network).toBe("eip155:8453");
-    // v1 mirror + v2 extensions both present
-    const b = body as Record<string, unknown>;
     expect((b.paymentRequirements as Record<string, unknown>[])[0].network).toBe("base");
     expect(b.extensions).toBeDefined();
   });
 
-  it("X402_CHALLENGE_VERSION=1 rolls back to the v1 body", async () => {
-    process.env.X402_CHALLENGE_VERSION = "1";
+  it("explicit v1 (legacy paths) reproduces the pre-migration body shape", async () => {
+    const { build402 } = await loadRoutes();
+    const { body } = build402(
+      "IBAN Validate", "Validate an IBAN.", 0.054,
+      "https://api.strale.io/x402/iban-validate",
+      null, "GET", null,
+      1,
+    );
+    const b = body as Record<string, unknown>;
+    expect(b.x402Version).toBe(1);
+    const entry = (b.accepts as Record<string, unknown>[])[0];
+    expect(entry.network).toBe("base");
+    expect(entry.maxAmountRequired).toBeDefined();
+    expect(entry.amount).toBeUndefined();
+    const parsed = parsePaymentRequired(b);
+    expect(parsed.success).toBe(true);
+  });
+
+  it("defaults to the legacy-path setting (v1) when no version is passed", async () => {
     const { build402 } = await loadRoutes();
     const { body } = build402(
       "IBAN Validate", "Validate an IBAN.", 0.054,
@@ -214,7 +230,7 @@ describe("verifyX402PaymentOnly version branching", () => {
     expect(req.outputSchema).toBeUndefined();
   });
 
-  it("normalizes a v1 payload that echoed the CAIP-2 network off the merged entry", async () => {
+  it("normalizes a v1 payload that echoed a CAIP-2 network off a v2 body", async () => {
     const { verifyX402PaymentOnly } = await loadGateway();
     const echoed = { ...V1_PAYLOAD, network: "eip155:8453" };
     const result = await verifyX402PaymentOnly(encodePayload(echoed), 5);

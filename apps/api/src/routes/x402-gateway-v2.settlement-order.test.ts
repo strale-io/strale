@@ -181,7 +181,7 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
     beforeAll(() => {
       body = extractHandlerBody(
         source,
-        'x402GatewayV2.on(["GET", "POST"], "/:slug"',
+        'x402GatewayV2.on(["GET", "POST"], ["/:slug"',
       );
     });
 
@@ -233,7 +233,7 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
     beforeAll(() => {
       body = extractHandlerBody(
         source,
-        'x402GatewayV2.on(["GET", "POST"], "/solutions/:slug"',
+        'x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug"',
       );
     });
 
