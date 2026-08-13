@@ -35,6 +35,8 @@ import {
   type X402VerifiedPayment,
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
+import { extractClientMeta, recordDiscoveryHit } from "../lib/attribution.js";
+import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { executeSolution, isSuccessfulStepOutput } from "../lib/solution-executor.js";
 import { logError } from "../lib/log.js";
@@ -579,6 +581,8 @@ interface RecordX402Args {
   settlementId?: string;
   payerAddress?: string | null;
   error?: string;
+  /** Channel attribution signals captured at the route (design 2026-08-12). */
+  clientMeta?: object | null;
   // CRIT-8: when present, the rich buildX402AuditTrail builder uses these
   // cap-side fields to produce a full-shape audit body. Capability path
   // populates this from the X402Capability cache; solution path leaves
@@ -727,6 +731,7 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       capabilityId: args.capabilityId,
       solutionSlug: args.solutionSlug,
       status: args.error ? "failed" : "completed",
+      clientMeta: args.clientMeta ?? null,
       input: args.inputs,
       output: args.output ?? undefined,
       error: args.error ?? null,
@@ -829,7 +834,11 @@ x402GatewayV2.use(
 
 // ─── Discovery: /x402/catalog ───────────────────────────────────────────────
 
-x402GatewayV2.get("/catalog", async (c) => {
+x402GatewayV2.get("/catalog", rateLimitByIp(120, 60_000), async (c) => {
+  recordDiscoveryHit("/x402/catalog", c.req, {
+    src: c.req.query("src"),
+    ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
+  });
   await ensureCache();
 
   const caps = [..._capCache.values()].map((cap) => ({
@@ -1024,6 +1033,10 @@ x402GatewayV2.on(["GET", "POST"], "/solutions/:slug", async (c) => {
   // LLM reach derived from transparencyTag.
   const solPayerAddress = verified ? extractPayerAddress(verified) : null;
   await recordX402Transaction({
+    clientMeta: extractClientMeta(c.req, {
+      src: c.req.query("src"),
+      ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
+    }) ?? null,
     capabilityId: null,
     solutionSlug: sol.slug,
     slug: sol.slug,
@@ -1228,6 +1241,10 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
     const sanitized = sanitizeFailureReason(message);
     try {
       await recordX402Transaction({
+    clientMeta: extractClientMeta(c.req, {
+      src: c.req.query("src"),
+      ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
+    }) ?? null,
         capabilityId: cap.id,
         solutionSlug: null,
         slug: cap.slug,
@@ -1294,6 +1311,10 @@ x402GatewayV2.on(["GET", "POST"], "/:slug", async (c) => {
   // compliance shape (was a 7-field stub previously).
   const payerAddress = verified ? extractPayerAddress(verified) : null;
   await recordX402Transaction({
+    clientMeta: extractClientMeta(c.req, {
+      src: c.req.query("src"),
+      ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
+    }) ?? null,
     capabilityId: cap.id,
     solutionSlug: null,
     slug: cap.slug,

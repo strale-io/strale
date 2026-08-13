@@ -10,6 +10,7 @@
  */
 
 import { Hono } from "hono";
+import { recordDiscoveryHit } from "../lib/attribution.js";
 import { eq, and, isNull } from "drizzle-orm";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
@@ -229,6 +230,7 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
 export const agentCardRoute = new Hono();
 
 agentCardRoute.get("/", async (c) => {
+  recordDiscoveryHit("/.well-known/agent-card.json", c.req, { src: c.req.query("src"), ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip") });
   const { card, etag } = await buildAgentCard();
 
   // Conditional request support (304 Not Modified)

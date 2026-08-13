@@ -31,6 +31,7 @@ import { triggerOnFailure } from "../lib/event-triggers.js";
 import { recordPiggybackResult } from "../lib/piggyback-monitor.js";
 import { TRANSACTION_RETENTION_DAYS } from "../lib/data-retention.js";
 import { createHash } from "node:crypto";
+import { extractClientMeta } from "../lib/attribution.js";
 import { getShareableUrl } from "../lib/audit-token.js";
 import { getAiDescription, getDataSourceUrl } from "../lib/audit-helpers.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
@@ -404,6 +405,13 @@ doRoute.post(
 
   // Capture request context for attribution tracking (stored in audit trail)
   const userAgent = c.req.header("user-agent") ?? null;
+  // Channel attribution (design 2026-08-12): weak-but-joinable signals,
+  // persisted on the transaction row for the weekly rollup. ?src= comes from
+  // tagged directory-submission URLs.
+  c.set("clientMeta" as any, extractClientMeta(c.req, {
+    src: c.req.query("src"),
+    ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
+  }) ?? null);
   const requestContext = {
     referer: c.req.header("referer") ?? c.req.header("referrer") ?? null,
     origin: c.req.header("origin") ?? null,
@@ -1202,6 +1210,7 @@ async function executeFreeTier(
       userId: null,
       capabilityId: capability.id,
       status: "executing",
+      clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
       input: executionInput,
       priceCents: 0,
       transparencyMarker: marker,
@@ -1407,6 +1416,7 @@ async function executeFreeTierAuthenticated(
       capabilityId: capability.id,
       idempotencyKey,
       status: "executing",
+      clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
       input: executionInput,
       priceCents: 0,
       transparencyMarker: marker,
@@ -1685,6 +1695,7 @@ async function executeSync(
         capabilityId: capability.id,
         idempotencyKey,
         status: "executing",
+      clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
         input: executionInput,
         priceCents: capability.priceCents,
         transparencyMarker: marker,
@@ -2061,6 +2072,7 @@ async function executeAsync(
         capabilityId: capability.id,
         idempotencyKey,
         status: "executing",
+      clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
         input: executionInput,
         priceCents: capability.priceCents,
         transparencyMarker: marker,

@@ -68,6 +68,10 @@ export interface StraleClientOptions {
   version?: string;
 }
 
+// Attribution client identifier — package name/version, sent as
+// X-Strale-Client on every API call this package makes.
+const STRALE_CLIENT_ID = "strale-mcp/0.2.4";
+
 // ─── HTTP helpers ───────────────────────────────────────────────────────────
 
 export async function straleGet<T>(
@@ -76,6 +80,8 @@ export async function straleGet<T>(
 ): Promise<T> {
   const headers: Record<string, string> = {
     Accept: "application/json",
+    // Channel attribution: identifies the MCP rail on the API side.
+    "X-Strale-Client": STRALE_CLIENT_ID,
   };
   if (opts.apiKey) {
     headers.Authorization = `Bearer ${opts.apiKey}`;
@@ -97,6 +103,8 @@ export async function stralePost<T>(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
+    // Channel attribution: identifies the MCP rail on the API side.
+    "X-Strale-Client": STRALE_CLIENT_ID,
   };
   if (opts.apiKey) {
     headers.Authorization = `Bearer ${opts.apiKey}`;
