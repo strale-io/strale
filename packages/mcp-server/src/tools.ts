@@ -70,7 +70,7 @@ export interface StraleClientOptions {
 
 // Attribution client identifier — package name/version, sent as
 // X-Strale-Client on every API call this package makes.
-const STRALE_CLIENT_ID = "strale-mcp/0.2.4";
+const STRALE_CLIENT_ID = "strale-mcp/0.2.5";
 
 // ─── HTTP helpers ───────────────────────────────────────────────────────────
 

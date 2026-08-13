@@ -62,7 +62,7 @@ class Strale:
             headers={
                 "Authorization": f"Bearer {self._api_key}",
                 # Channel attribution: identifies this SDK on the API side.
-                "X-Strale-Client": "straleio-python/0.1.3",
+                "X-Strale-Client": "straleio-python/0.1.4",
             },
         )
 
