@@ -21,7 +21,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { normalizeCompanyName, classifyNameMatch } from "./company-name-match.js";
+import { normalizeCompanyName, classifyNameMatch, pickByName } from "./company-name-match.js";
 
 describe("normalizeCompanyName", () => {
   it("strips English corporate suffixes", () => {
@@ -185,5 +185,74 @@ describe("normalizeCompanyName — German legal forms (P1 2026-08-12)", () => {
     expect(classifyNameMatch("KG Knutsson", "KG Knutsson AB").match_confidence).toBe("exact");
     // Fresenius-style SE & Co. KGaA: se/kgaa/co strip, kg is not present.
     expect(classifyNameMatch("Fresenius", "Fresenius SE & Co. KGaA").match_confidence).not.toBe("low");
+  });
+});
+
+// Shared generic scoring-and-refuse primitive used by officer-search.ts and
+// uk-filing-events.ts (both Companies House name-search callers, 2026-08-14
+// same wrong-company class as #161). Candidates are plain objects here; the
+// callers themselves supply getName/getId accessors for their own shapes.
+describe("pickByName", () => {
+  type Candidate = { title: string; number: string };
+  const byTitle = (c: Candidate) => c.title;
+  const byNumber = (c: Candidate) => c.number;
+  const opts = { subjectLabel: "UK Companies House", disambiguationHint: "Provide the Companies House number (8 digits) to disambiguate." };
+
+  it("resolves an unambiguous exact match", () => {
+    const candidates: Candidate[] = [
+      { title: "HSBC Holdings plc", number: "00617987" },
+      { title: "Totally Unrelated Ltd", number: "99999999" },
+    ];
+    const r = pickByName("HSBC Holdings plc", candidates, byTitle, byNumber, opts);
+    expect(r).toEqual({ id: "00617987", matchedName: "HSBC Holdings plc", matchConfidence: "exact" });
+  });
+
+  it("refuses when two distinct entities tie at the same confidence", () => {
+    const candidates: Candidate[] = [
+      { title: "Acme Consulting Ltd", number: "11111111" },
+      { title: "Acme Consulting Ltd", number: "22222222" },
+    ];
+    expect(() => pickByName("Acme Consulting", candidates, byTitle, byNumber, opts)).toThrow(
+      /Ambiguous UK Companies House name "Acme Consulting": 2 distinct/,
+    );
+  });
+
+  it("a duplicate listing of the SAME id is not a tie", () => {
+    const candidates: Candidate[] = [
+      { title: "HSBC Holdings plc", number: "00617987" },
+      { title: "HSBC Holdings plc", number: "00617987" },
+    ];
+    const r = pickByName("HSBC Holdings plc", candidates, byTitle, byNumber, opts);
+    expect(r.id).toBe("00617987");
+  });
+
+  it("refuses a single-token partial overlap (Stripe-vs-Stripe-Holdings guard)", () => {
+    const candidates: Candidate[] = [{ title: "Stripe Financial Holdings Ltd", number: "44444444" }];
+    expect(() => pickByName("Stripe", candidates, byTitle, byNumber, opts)).toThrow(
+      /No confident UK Companies House match for "Stripe"/,
+    );
+  });
+
+  it("refuses when nothing in the page matches, naming the closest and the disambiguator", () => {
+    const candidates: Candidate[] = [{ title: "Totally Unrelated Ltd", number: "55555555" }];
+    expect(() => pickByName("Nokia", candidates, byTitle, byNumber, opts)).toThrow(
+      /No confident UK Companies House match for "Nokia".*Totally Unrelated Ltd.*Companies House number \(8 digits\)/s,
+    );
+  });
+
+  it("accepts a high-confidence multi-token match", () => {
+    const candidates: Candidate[] = [{ title: "Novo Nordisk Pharma UK Ltd", number: "66666666" }];
+    const r = pickByName("Novo Nordisk Pharma", candidates, byTitle, byNumber, opts);
+    expect(r.matchConfidence).toBe("high");
+    expect(r.id).toBe("66666666");
+  });
+
+  it("skips candidates missing a name or id rather than throwing", () => {
+    const candidates: Candidate[] = [
+      { title: "", number: "77777777" },
+      { title: "HSBC Holdings plc", number: "00617987" },
+    ];
+    const r = pickByName("HSBC Holdings plc", candidates, byTitle, byNumber, opts);
+    expect(r.id).toBe("00617987");
   });
 });
