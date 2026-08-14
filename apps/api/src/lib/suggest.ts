@@ -191,6 +191,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           category: solutions.category,
           priceCents: solutions.priceCents,
           geography: solutions.geography,
+          searchTags: solutions.searchTags,
         })
         .from(solutions)
         .where(eq(solutions.isActive, true))
@@ -222,10 +223,17 @@ async function loadCatalog(): Promise<CatalogItem[]> {
         const stepNames = steps
           .map((s) => s.capabilityName ?? s.capabilitySlug)
           .join(", ");
+        // search_tags are hand-authored vocabulary bridges (the words agents
+        // actually type, which don't always appear in the name/description
+        // prose) — fold them into both the embedding text and the token set
+        // so they influence ranking rather than sitting unused in the API
+        // response. See suggest.ts capItems mapping below for the same fix
+        // on the capability side.
+        const tagText = sol.searchTags && sol.searchTags.length > 0 ? sol.searchTags.join(", ") : "";
         const embeddingText = sol.agentDescription
-          ? `${sol.name}. ${sol.agentDescription}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.`
-          : `${sol.name}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.`;
-        const tokenText = `${sol.name} ${sol.description} ${sol.agentDescription ?? ""} ${sol.category} ${sol.geography} ${sol.slug} ${steps.map((s) => s.capabilitySlug).join(" ")}`;
+          ? `${sol.name}. ${sol.agentDescription}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.${tagText ? ` Also known as: ${tagText}.` : ""}`
+          : `${sol.name}. ${sol.description}. Category: ${sol.category}. Geography: ${sol.geography}. Includes: ${stepNames}.${tagText ? ` Also known as: ${tagText}.` : ""}`;
+        const tokenText = `${sol.name} ${sol.description} ${sol.agentDescription ?? ""} ${sol.category} ${sol.geography} ${sol.slug} ${steps.map((s) => s.capabilitySlug).join(" ")} ${tagText}`;
 
         return {
           type: "solution" as const,
@@ -259,6 +267,7 @@ async function loadCatalog(): Promise<CatalogItem[]> {
           priceCents: capabilities.priceCents,
           isFreeTier: capabilities.isFreeTier,
           geography: capabilities.geography,
+          searchTags: capabilities.searchTags,
         })
         .from(capabilities)
         .where(
@@ -274,8 +283,16 @@ async function loadCatalog(): Promise<CatalogItem[]> {
 
       const capItems: CatalogItem[] = capRows.map((cap) => {
         const slugWords = cap.slug.replace(/-/g, " ");
-        const embeddingText = `${cap.name}. ${cap.description}. Category: ${cap.category}. Also known as: ${slugWords}.`;
-        const tokenText = `${cap.name} ${cap.description} ${cap.category} ${cap.slug}`;
+        // search_tags (manifest field `search_tags`) previously flowed all
+        // the way to the API response and to this catalog item but was never
+        // read by embeddingText/tokenText — a capability's discoverability
+        // depended on name+description+category+slug only, so hand-authored
+        // vocabulary bridges (e.g. "email address", "phone number", "KYB")
+        // had zero effect on ranking. Fold them in here.
+        const tagWords = cap.searchTags && cap.searchTags.length > 0 ? cap.searchTags.join(", ") : "";
+        const alsoKnownAs = tagWords ? `${slugWords}, ${tagWords}` : slugWords;
+        const embeddingText = `${cap.name}. ${cap.description}. Category: ${cap.category}. Also known as: ${alsoKnownAs}.`;
+        const tokenText = `${cap.name} ${cap.description} ${cap.category} ${cap.slug} ${tagWords}`;
 
         return {
           type: "capability" as const,
