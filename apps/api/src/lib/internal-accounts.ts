@@ -28,8 +28,10 @@ export const INTERNAL_EMAIL_SUFFIXES = [
 /**
  * The account the test runner books its own executions against.
  *
- * Exported so the writer and the exclusion rule cannot drift apart. That
- * coupling is load-bearing in a way that is easy to miss: the scheduler's
+ * Exported so the writer — `test-runner.ts`, which creates the account and
+ * books against it — shares a definition with the exclusion rule below rather
+ * than repeating the address. That one coupling is load-bearing in a way that
+ * is easy to miss: the scheduler's
  * executions land in `transactions` as ordinary `status='failed'` rows —
  * including the ALLOW_MATRIX refusals the dispatcher gate raises when it
  * correctly declines to spend vendor credits on a paid capability from a test
@@ -42,6 +44,17 @@ export const INTERNAL_EMAIL_SUFFIXES = [
  * address to something outside INTERNAL_EMAIL_SUFFIXES and the floor starts
  * quarantining paid capabilities for a cost-control policy working exactly as
  * intended — silently, since nothing else would look wrong.
+ *
+ * Wiring the writer is not the same as removing the literal everywhere. The
+ * address is still hardcoded, unconnected to this constant, in
+ * `routes/capabilities.ts` (:68, :181) and `lib/daily-digest/fetch-platform.ts`
+ * (:22) as inline SQL, in `routes/admin.ts` (:298), and in
+ * `scripts/since-last-ext.ts` / `scripts/window-inputs.ts`. None of those is a
+ * scoring or quarantine consumer — the capabilities.ts pair filter
+ * `status='completed'`, admin.ts dumps raw activity, the scripts are operator
+ * tooling — so renaming the account would skew reporting rather than trip the
+ * floor. Still worth a dedup pass; the point of naming them here is that this
+ * constant does not yet make them safe.
  */
 export const SYSTEM_ACCOUNT_EMAIL = "system@strale.internal";
 

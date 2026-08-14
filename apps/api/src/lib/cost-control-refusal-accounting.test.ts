@@ -81,6 +81,15 @@ describe("no customer-facing path can produce one of these refusals", () => {
     // Flip any customer_paid cell to "refuse" or "budget_check" and a real
     // caller starts generating rows that survive the floor's internal filter.
     // That is the change this test exists to stop.
+    //
+    // Which leaves `internal_test` as the only context that actually produces
+    // these rows today — from the scheduler, the regression runner, and the
+    // admin recalibration endpoint at routes/internal-tests.ts:1061 (that one
+    // writes no transactions row at all, so it is inert). The `health_probe`
+    // and `ci` columns also contain refusals, but no production call site
+    // passes either kind; they are reachable only from guarded-executor's own
+    // tests. If one ever gains a caller, it needs the same question asked of
+    // it: which account does it book against?
     const { describeAllowMatrix } = await import("../capabilities/guarded-executor.js");
     for (const [costClass, decision] of Object.entries(describeAllowMatrix("customer_paid"))) {
       expect(decision, `cost_class=${costClass} under customer_paid`).toBe("allow");
