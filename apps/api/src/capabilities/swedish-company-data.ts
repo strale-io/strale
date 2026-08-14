@@ -233,7 +233,7 @@ registerCapability(
       "";
     if (typeof rawInput !== "string" || !rawInput.trim()) {
       throw new Error(
-        "'org_number' is required. Provide a 10-digit Swedish organisationsnummer (e.g. 556703-7485).",
+        "'org_number' is required. Provide a 10-digit Swedish organisationsnummer (e.g. 556703-7485). Name lookup is not supported by Bolagsverket's HVD API; look one up by company name at the official Swedish Companies Registration Office: https://www.bolagsverket.se/.",
       );
     }
 
@@ -245,7 +245,7 @@ registerCapability(
 
     if (!normalised) {
       throw new Error(
-        `'${trimmed}' is not a valid Swedish organisationsnummer. Provide 10 digits, optionally with a hyphen (e.g. 556703-7485). Name lookup is not supported by Bolagsverket's HVD API.`,
+        `'${trimmed}' is not a valid Swedish organisationsnummer. Provide 10 digits, optionally with a hyphen (e.g. 556703-7485). Name lookup is not supported by Bolagsverket's HVD API; look one up by company name at https://www.bolagsverket.se/.`,
       );
     }
 

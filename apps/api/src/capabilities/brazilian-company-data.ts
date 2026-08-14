@@ -72,14 +72,18 @@ async function fetchByCnpj(cnpj: string): Promise<Record<string, unknown>> {
 registerCapability("brazilian-company-data", async (input: CapabilityInput) => {
   const raw = (input.cnpj as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'cnpj' is required. Provide a CNPJ number (14 digits). Name search is not supported — use a CNPJ.");
+    throw new Error(
+      "'cnpj' is required. Provide a CNPJ number (14 digits, e.g. 11222333000181). Neither ReceitaWS nor Brazil's official registry supports name search — the CNPJ is printed on the company's invoices, contracts, or NF-e documents; verify a candidate at Receita Federal's public consultation page: https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/cnpjreva_solicitacao.asp.",
+    );
   }
 
   const trimmed = raw.trim();
   const cnpj = findCnpj(trimmed);
 
   if (!cnpj) {
-    throw new Error("A valid CNPJ number is required (14 digits, e.g. 11222333000181). Name search is not supported by ReceitaWS.");
+    throw new Error(
+      "A valid CNPJ number is required (14 digits, e.g. 11222333000181). Name search is not supported by ReceitaWS or Brazil's official registry — find the CNPJ on the company's invoices/contracts, or verify a candidate at Receita Federal's public consultation page: https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/cnpjreva_solicitacao.asp.",
+    );
   }
 
   const output = await fetchByCnpj(cnpj);

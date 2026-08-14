@@ -31,13 +31,13 @@ registerCapability("hungarian-company-data", async (input: CapabilityInput) => {
     "";
   if (typeof rawInput !== "string" || !rawInput.trim()) {
     throw new Error(
-      "'vat_number' is required. Provide a Hungarian VAT (HU + 8 digits, e.g. HU10537914). Cégjegyzékszám is not accepted by the upstream API.",
+      "'vat_number' is required. Provide a Hungarian VAT (HU + 8 digits, e.g. HU10537914). Cégjegyzékszám is not accepted by the upstream API; look up the VAT by company name at the official company registry search: https://www.e-cegjegyzek.hu/.",
     );
   }
   const normalised = normaliseHuIdentifier(rawInput.trim());
   if (!normalised) {
     throw new Error(
-      `'${rawInput.trim()}' is not a valid Hungarian VAT. Expected format: HU + 8 digits (e.g. HU10537914).`,
+      `'${rawInput.trim()}' is not a valid Hungarian VAT. Expected format: HU + 8 digits (e.g. HU10537914). Look one up by company name at https://www.e-cegjegyzek.hu/.`,
     );
   }
   const __etResult = await executeOpenapiCapability(
