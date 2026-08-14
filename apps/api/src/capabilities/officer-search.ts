@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { loadSecTickerMap, type SecTickerMap } from "../lib/sec-ticker-map.js";
+import { pickByName } from "../lib/company-name-match.js";
 
 /**
  * Officer Search — find company directors and officers from public registries.
@@ -124,7 +125,7 @@ async function searchCompanyHouseByName(name: string): Promise<string | null> {
   const apiKey = process.env.COMPANIES_HOUSE_API_KEY;
   if (!apiKey) return null;
   const resp = await fetch(
-    `https://api.company-information.service.gov.uk/search/companies?q=${encodeURIComponent(name)}&items_per_page=1`,
+    `https://api.company-information.service.gov.uk/search/companies?q=${encodeURIComponent(name)}&items_per_page=20`,
     {
       headers: { Authorization: `Basic ${Buffer.from(apiKey + ":").toString("base64")}` },
       signal: AbortSignal.timeout(10000),
@@ -132,7 +133,22 @@ async function searchCompanyHouseByName(name: string): Promise<string | null> {
   );
   if (!resp.ok) return null;
   const data = await resp.json() as any;
-  return data?.items?.[0]?.company_number || null;
+  const items: any[] = Array.isArray(data?.items) ? data.items : [];
+  if (items.length === 0) return null;
+  // Companies House name search does not rank by legal-entity relevance
+  // (see company-name-match.ts) — score every candidate and refuse rather
+  // than silently return an arbitrary (possibly wrong) company.
+  const resolved = pickByName(
+    name,
+    items,
+    (i) => i.title,
+    (i) => i.company_number,
+    {
+      subjectLabel: "UK Companies House",
+      disambiguationHint: "Provide the Companies House number (8 digits) to disambiguate.",
+    },
+  );
+  return resolved.id;
 }
 
 registerCapability("officer-search", async (input: CapabilityInput) => {
