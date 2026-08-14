@@ -1,11 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import {
-  fetchRenderedHtml,
-  htmlToText,
-  extractCompanyFromText,
-  extractCompanyName,
-} from "./lib/browserless-extract.js";
-import { assertSingleResultMatch } from "../lib/company-name-match.js";
+import { extractCompanyName } from "./lib/browserless-extract.js";
+import { safeFetch } from "../lib/safe-fetch.js";
+import { classifyNameMatch } from "../lib/company-name-match.js";
 
 // Canada — Corporations Canada (ISED)
 //
@@ -21,10 +17,22 @@ import { assertSingleResultMatch } from "../lib/company-name-match.js";
 // DEC-20260428-A/DEC-20260518-F question pending Petter's ruling, so
 // tier_2_available stays false with an honest reason.
 //
-// The name-search path still Browserless-renders the site search (the API
-// has no name search — probed 2026-08-12, non-JSON 302). Same page as
-// before this migration; it is the remaining doctrine-gated surface here.
+// Name-search path (rebuilt 2026-08-14, see #224 follow-up): the site's
+// GET `V_SEARCH.*` query-string params (used pre-migration) do nothing —
+// they render the empty search form for every query, silently producing
+// all-null LLM-extracted output. The form is actually a POST:
+//   <form id="verticalForm" action="/cc/lgcy/fdrlCrpSrch.html?lang=eng" method="post">
+// Verified live 2026-08-14 with `corpName=Shopify`: returns 6 real rows
+// including SHOPIFY INC. (corpId 4261607) and Shopify Commerce Inc.
+// (corpId 4368525). A cookie jar from a prior GET is NOT required — a bare
+// POST with no prior request returns byte-identical results (also verified
+// live). This is a plain HTTP POST via safeFetch, not Browserless — no
+// JavaScript execution needed, so no rendering step and no per-result LLM
+// extraction: candidates are parsed structurally (name + corpId + status)
+// and the winner's full record comes from the same official JSON API used
+// by the numeric path (fetchCorporationJson), not from page text.
 const CORP_API = "https://ised-isde.canada.ca/cc/lgcy/api/corporations";
+const NAME_SEARCH_URL = "https://ised-isde.canada.ca/cc/lgcy/fdrlCrpSrch.html?lang=eng";
 
 // Corporation IDs are NOT fixed-width: modern CBCA corps have 7 digits but
 // older federal corps have shorter IDs (corp 1007 = Abbotsford Chamber of
@@ -140,16 +148,123 @@ async function fetchCorporationJson(registryNumber: string): Promise<Record<stri
   };
 }
 
-async function lookupByName(query: string): Promise<Record<string, unknown>> {
-  const searchUrl = `https://ised-isde.canada.ca/cc/lgcy/fdrlCrpSrch.html?V_SEARCH.command=search&V_SEARCH.docsStart=0&V_SEARCH.docsCount=10&V_SEARCH.srchNm=${encodeURIComponent(query)}`;
-  const html = await fetchRenderedHtml(searchUrl);
-  const text = htmlToText(html);
+export interface CaNameCandidate {
+  corpId: string;
+  name: string;
+  status: string;
+}
 
-  if (text.includes("No results") || text.includes("no records") || text.length < 200) {
+export interface CaNameResolution {
+  corpId: string;
+  matchedName: string;
+  matchConfidence: "exact" | "high";
+}
+
+/**
+ * Each search hit renders as one `<li class="pad-md row ...">` block
+ * containing the corporation-detail link (name + corpId in the query
+ * string) and a "Status: ..." span. Structural parse, no LLM — verified
+ * live 2026-08-14 against the `corpName=Shopify` response (6 rows).
+ */
+export function parseNameSearchResults(html: string): CaNameCandidate[] {
+  const blocks = html.split(/<li class="pad-md row/).slice(1);
+  const out: CaNameCandidate[] = [];
+  for (const block of blocks) {
+    const nameMatch = block.match(/<a href="fdrlCrpDtls\.html\?[^"]*corpId=(\d+)[^"]*"[^>]*>([^<]+)<\/a>/);
+    if (!nameMatch) continue;
+    const statusMatch = block.match(/Status:\s*([\s\S]*?)<\/span>/);
+    out.push({
+      corpId: nameMatch[1],
+      name: nameMatch[2].trim(),
+      status: statusMatch ? statusMatch[1].replace(/\s+/g, " ").trim() : "",
+    });
+  }
+  return out;
+}
+
+/**
+ * Field set matches `<form id="verticalForm" ... method="post">` on the
+ * federal corporation search page exactly (verified live 2026-08-14):
+ * corpName/corpNumber/busNumber/corpAct/corpProvince/corpStatus are the
+ * visible filter fields, `_page`/`_pageFlowMap` are hidden state fields
+ * (empty on a fresh, cookie-less request — see NAME_SEARCH_URL comment),
+ * and `buttonNext=Search` is the submit button's name/value pair the
+ * server's controller dispatches on.
+ */
+export function buildNameSearchBody(query: string): URLSearchParams {
+  return new URLSearchParams({
+    corpName: query,
+    corpNumber: "",
+    busNumber: "",
+    corpAct: "",
+    corpProvince: "",
+    corpStatus: "",
+    _page: "",
+    _pageFlowMap: "",
+    buttonNext: "Search",
+  });
+}
+
+async function searchByName(query: string): Promise<CaNameCandidate[]> {
+  const response = await safeFetch(NAME_SEARCH_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: buildNameSearchBody(query).toString(),
+    timeoutMs: 15000,
+  });
+  if (!response.ok) {
+    throw new Error(`Corporations Canada name search returned HTTP ${response.status}.`);
+  }
+  const html = await response.text();
+  const candidates = parseNameSearchResults(html);
+  if (candidates.length === 0) {
     throw new Error(`No Canadian company found matching "${query}".`);
   }
+  return candidates;
+}
 
-  return extractCompanyFromText(text, "Canadian", query);
+/**
+ * The site search returns a page of candidates, not a single best guess —
+ * same discipline as uk-company-data.ts's pickByName (the #161 wrong-company
+ * class): score every candidate by name, refuse when several distinct
+ * corporations tie at the same confidence, and refuse when nothing genuinely
+ * matches rather than silently returning the first row.
+ */
+export function pickByName(query: string, candidates: CaNameCandidate[]): CaNameResolution {
+  const exact = new Map<string, string>();
+  const high = new Map<string, string>();
+  for (const c of candidates) {
+    if (!c.corpId || !c.name) continue;
+    const { match_confidence } = classifyNameMatch(query, c.name);
+    if (match_confidence === "exact" && !exact.has(c.corpId)) exact.set(c.corpId, c.name);
+    else if (match_confidence === "high" && !high.has(c.corpId)) high.set(c.corpId, c.name);
+  }
+
+  const pickUnambiguous = (bucket: Map<string, string>, label: "exact" | "high"): CaNameResolution | null => {
+    if (bucket.size === 0) return null;
+    if (bucket.size === 1) {
+      const [corpId, matchedName] = bucket.entries().next().value!;
+      return { corpId, matchedName, matchConfidence: label };
+    }
+    const listing = [...bucket.entries()].slice(0, 5).map(([id, n]) => `${n} (${id})`).join("; ");
+    throw new Error(
+      `Ambiguous Canadian company name "${query}": ${bucket.size} distinct registered ` +
+        `entities are ${label === "exact" ? "exact" : "close"} matches — ${listing}. ` +
+        `Provide the corporation number (older corporations have fewer than 7 digits) or the ` +
+        `9-digit business number to disambiguate.`,
+    );
+  };
+
+  const winner = pickUnambiguous(exact, "exact") ?? pickUnambiguous(high, "high");
+  if (winner) return winner;
+
+  const closest = candidates.slice(0, 3).map((c) => c.name).filter(Boolean).join(", ");
+  throw new Error(
+    `No confident Canadian federal registry match for "${query}". The Corporations Canada site ` +
+      `search is fuzzy and returned only unrelated entities${closest ? ` (closest: ${closest})` : ""}. ` +
+      `Provide the corporation number (older corporations have fewer than 7 digits) or the ` +
+      `9-digit business number for an exact lookup.`,
+  );
 }
 
 registerCapability("canadian-company-data", async (input: CapabilityInput) => {
@@ -163,38 +278,26 @@ registerCapability("canadian-company-data", async (input: CapabilityInput) => {
     // Principle B: never reach the paid LLM/Browserless path on junk input.
     throw new Error("Input must be at least 2 characters.");
   }
-  const registryNumber = findRegistryNumber(trimmed);
-
-  let output: Record<string, unknown>;
-  let viaApi = false;
-  if (registryNumber) {
-    output = await fetchCorporationJson(registryNumber);
-    viaApi = true;
-  } else {
+  let registryNumber = findRegistryNumber(trimmed);
+  let nameResolution: CaNameResolution | null = null;
+  if (!registryNumber) {
     const name = await extractCompanyName(trimmed, "Canadian");
-    output = await lookupByName(name);
+    const candidates = await searchByName(name);
+    nameResolution = pickByName(name, candidates);
+    registryNumber = nameResolution.corpId;
+  }
 
-    // Name path: the Corporations Canada site search has no JSON API (probed
-    // 2026-08-12 — non-JSON 302), so this renders the search page and has an
-    // LLM extract the record it judges best from the page text. That
-    // extraction step already made an implicit "which row is the answer"
-    // choice with no ranking guarantee — the #161 wrong-company class applies
-    // here too, just one layer further from the raw registry data than the
-    // JSON-API registries. Classify the extracted name against what was
-    // asked and refuse when it doesn't genuinely match, same discipline as
-    // the sibling registries.
-    const returnedName = typeof output.company_name === "string" ? output.company_name : "";
-    output.match_confidence = assertSingleResultMatch(name, returnedName, {
-      jurisdictionLabel: "Canadian",
-      sourceDescription: "The Corporations Canada site search",
-      // Not "(7-9 digits)" — older federal corporations have fewer than 7
-      // digits (e.g. corp 1007), and that hint would push a retrying caller
-      // toward zero-padding a legitimate short ID into a wrong, not-found
-      // one. Matches the wording already used by fetchCorporationJson's own
-      // not-found error above.
-      disambiguationHint:
-        "Provide the corporation number (older corporations have fewer than 7 digits) or the 9-digit business number for an exact lookup.",
-    });
+  const output = await fetchCorporationJson(registryNumber);
+
+  if (nameResolution) {
+    // Surface how the name resolved so callers can gate on fuzzy resolution
+    // (same pattern as uk-company-data / finnish-company-data). The winning
+    // candidate's full record still comes from the official JSON API, same
+    // as the numeric path — only the corpId was resolved via the search
+    // page, so this is now a fully structured lookup with no per-result LLM
+    // extraction step.
+    output.match_confidence = nameResolution.matchConfidence;
+    output.matched_registry_name = nameResolution.matchedName;
   }
 
   // Evidence Tier canonical aliases + honest Tier-2/UBO posture.
@@ -215,19 +318,28 @@ registerCapability("canadian-company-data", async (input: CapabilityInput) => {
       "not exposed via the public JSON API";
   }
 
+  // Both paths now end in the same official JSON API call for the actual
+  // record (fetchCorporationJson) — the name path only used the site search
+  // POST to resolve which corpId to ask the API for. source_note documents
+  // that resolution step honestly without diluting acquisition_method, which
+  // describes how the returned DATA was obtained.
+  const recordUrl = `${CORP_API}/${encodeURIComponent(registryNumber)}.json?lang=eng`;
   return {
     output,
-    provenance: viaApi
-      ? {
-          source: "ised-isde.canada.ca (Corporations Canada JSON API)",
-          source_url: `${CORP_API}/${encodeURIComponent(registryNumber!)}.json?lang=eng`,
-          fetched_at: new Date().toISOString(),
-          acquisition_method: "direct_api" as const,
-          primary_source_reference: `${CORP_API}/${encodeURIComponent(registryNumber!)}.json?lang=eng`,
-        }
-      : {
-          source: "ised-isde.canada.ca",
-          fetched_at: new Date().toISOString(),
-        },
+    provenance: {
+      source: "ised-isde.canada.ca (Corporations Canada JSON API)",
+      source_url: recordUrl,
+      fetched_at: new Date().toISOString(),
+      acquisition_method: "direct_api" as const,
+      primary_source_reference: recordUrl,
+      ...(nameResolution
+        ? {
+            source_note:
+              "Corporation identified via a structured POST to the Corporations Canada federal " +
+              "corporation search (name + status parsed from the results page, no LLM extraction); " +
+              "the returned record itself was fetched from the official JSON API.",
+          }
+        : {}),
+    },
   };
 });
