@@ -16,6 +16,45 @@ import {
 import { determineBadge } from "./trust-helpers.js";
 import { log, logError, logWarn } from "./log.js";
 
+/**
+ * Ranking boost for bundled solutions, applied only when solutions already lead
+ * or tie the capabilities on raw match quality. Large relative to raw token
+ * scores (which top out near 3) — that is deliberate, and is why it has to be
+ * conditional rather than unconditional. See the application sites.
+ */
+const SOLUTION_BONUS = 3;
+
+/**
+ * Apply the solutions-first ranking bonus, but only when solutions already lead
+ * or tie the capabilities on raw match quality. Mutates `scored` in place.
+ *
+ * The bonus used to be unconditional. Raw token scores top out around 3, so it
+ * was larger than the signal it was added to: a solution matching one word beat
+ * a capability matching every word, and `/v1/suggest` returned solutions and
+ * nothing else. Live examples before the fix — "validate an IBAN" resolved to
+ * the payment-validate solution rather than iban-validate, and "look up a
+ * Swedish company" to verify-us-company.
+ *
+ * Gating on raw merit keeps the original intent (a caller describing a workflow
+ * should be handed the bundle rather than made to assemble it) while letting a
+ * caller who names one function reach it. Ties still go to the solution.
+ */
+export function applyConditionalSolutionBonus<
+  T extends { item: { type: "solution" | "capability" }; score: number },
+>(scored: T[]): void {
+  const topOf = (wantSolution: boolean) =>
+    scored.reduce(
+      (best, s) => ((s.item.type === "solution") === wantSolution ? Math.max(best, s.score) : best),
+      0,
+    );
+
+  if (topOf(true) < topOf(false)) return;
+
+  for (const s of scored) {
+    if (s.item.type === "solution") s.score += SOLUTION_BONUS;
+  }
+}
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface TrustSummary {
@@ -574,8 +613,8 @@ export async function typeahead(
       }
     }
 
-    // Solutions-first: +3 bonus
-    if (item.type === "solution" && score > 0) score += 3;
+    // Solutions-first bonus is applied after the loop — it depends on how the
+    // whole field scored, not on this item alone. See below.
 
     // Geography boost: +1 if geo param matches
     if (geo && score > 0 && item.geography) {
@@ -593,6 +632,8 @@ export async function typeahead(
       scored.push({ item, score, snippet });
     }
   }
+
+  applyConditionalSolutionBonus(scored);
 
   scored.sort((a, b) => b.score - a.score);
 
@@ -949,10 +990,35 @@ function suggestKeyword(
       else if (item.tokens.has(term)) score += ALIAS_SECONDARY_WEIGHT;
     }
     if (queryTokens.has(item.slug)) score += 2;
-    if (item.type === "solution" && score > 0) score += 3;
+
+    // Prefix matching on name and description, mirroring `typeahead`. Tokens
+    // are exact-match only, so without this the scorers disagree: a developer
+    // asking whether an email address "is valid" never reaches email-validate,
+    // because "valid" is not the token "validate". The best match then falls to
+    // whichever unrelated item happened to share a common word — live, that
+    // query returned eori-validate, a customs identifier.
+    const nameWords = item.name.toLowerCase().split(/[\s\-—]+/);
+    const descWords = item.description.toLowerCase().split(/[\s\-—]+/);
+    for (const qw of queryTokens) {
+      if (item.tokens.has(qw)) continue; // already counted as an exact match
+      if (nameWords.some((w) => w.startsWith(qw))) score++;
+      if (descWords.some((w) => w.startsWith(qw))) score++;
+    }
+
+    // Identity match: the query names every word of this item's slug, so it is
+    // asking for this thing by name ("validate an IBAN" → iban-validate). Type
+    // -neutral — a solution named in full earns it too. Without this, naming a
+    // capability exactly only ties the broader solution that shares one word,
+    // and the tie goes to the solution.
+    const slugTokens = item.slug.split("-").filter((t) => t.length > 2);
+    if (slugTokens.length > 1 && slugTokens.every((t) => queryTokens.has(t))) {
+      score += 2;
+    }
 
     if (score > 0) scored.push({ item, score });
   }
+
+  applyConditionalSolutionBonus(scored);
 
   scored.sort((a, b) => b.score - a.score);
 
