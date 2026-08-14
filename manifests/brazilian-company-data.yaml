@@ -7,8 +7,9 @@ description: >-
   Look up Brazilian company data from the Receita Federal CNPJ register via the ReceitaWS JSON wrapper. Requires CNPJ
   (14 digits). Returns company name, trade name, status, address, activity codes, and partners.
 category: company-data
-cost_class: free_unlimited
-quota_window: none
+cost_class: free_quota
+quota_window: daily
+quota_cap: 180
 price_cents: 5
 is_free_tier: false
 input_schema:
