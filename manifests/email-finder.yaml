@@ -4,6 +4,14 @@ description: >-
   Infer a person's most likely work email address from their name and a company domain, ranked by confidence.
   Evidence-linked, never claims verification.
 category: web-intelligence
+search_tags:
+  - find email
+  - get email address
+  - person email address
+  - work email finder
+  - guess email address
+  - email address format
+  - find someone's email
 cost_class: free_unlimited
 quota_window: none
 price_cents: 5
