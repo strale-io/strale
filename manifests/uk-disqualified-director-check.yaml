@@ -47,6 +47,13 @@ output_schema:
       type: integer
     candidates:
       type: array
+    # Detail-mode (officer_id input) top-level fields — absent in search mode
+    officer_id:
+      type: string
+    found:
+      type: boolean
+    name:
+      type: string
 data_source: UK Companies House (Disqualified Officers register)
 data_source_type: api
 transparency_tag: algorithmic
@@ -92,9 +99,10 @@ output_field_reliability:
   query: guaranteed
   total_results: guaranteed
   candidates: guaranteed
-  officer_id: guaranteed
-  found: guaranteed
-  name: guaranteed
+  # Present only in detail mode (officer_id input): common, not guaranteed
+  officer_id: common
+  found: common
+  name: common
   disqualification_count: rare
   disqualifications: rare
 limitations:
