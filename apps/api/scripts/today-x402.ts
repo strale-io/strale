@@ -2,7 +2,7 @@ async function main() {
   const postgres = (await import("postgres")).default;
   const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
   const rows = await sql`
-    SELECT t.created_at, c.slug, t.status, t.input
+    SELECT t.created_at, c.slug, t.solution_slug, t.status, t.input
     FROM transactions t
     LEFT JOIN capabilities c ON c.id = t.capability_id
     LEFT JOIN users u ON u.id = t.user_id
@@ -13,7 +13,8 @@ async function main() {
   `;
   console.log(`x402 calls today: ${rows.length}`);
   for (const r of rows) {
-    console.log(`${r.created_at.toISOString()}  ${r.slug}  [${r.status}]`);
+    const label = r.slug || (r.solution_slug ? `solution:${r.solution_slug}` : 'unknown');
+    console.log(`${r.created_at.toISOString()}  ${label}  [${r.status}]`);
     console.log(`   input: ${JSON.stringify(r.input)}`);
   }
   await sql.end();

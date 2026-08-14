@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
 
 // Swedish org numbers: 10 digits, optionally with hyphen after 6th digit
 const ORG_NUMBER_RE = /^(\d{6})-?(\d{4})$/;
@@ -260,18 +261,17 @@ registerCapability(
     const text =
       response.content[0].type === "text" ? response.content[0].text : "";
 
-    const jsonStr = text
-      .trim()
-      .replace(/^```(?:json)?\s*\n?/i, "")
-      .replace(/\n?```\s*$/i, "")
-      .trim();
-
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(jsonStr);
-    } catch {
+    const parsed = extractJsonObject(text);
+    if (!parsed) {
       throw new Error(
         `Failed to parse annual report extraction result. Raw response: ${text.slice(0, 300)}`,
+      );
+    }
+
+    if (isEmptyExtraction(parsed)) {
+      throw new Error(
+        `No financial data could be extracted from the annual report for ${orgNumber}. The ` +
+          `document may be a scanned image, or may not contain a financial statement.`,
       );
     }
 

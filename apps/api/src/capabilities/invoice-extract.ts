@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
 
 const EXTRACTION_PROMPT = `You are an expert invoice data extraction system specializing in European invoices.
 
@@ -159,19 +160,17 @@ registerCapability("invoice-extract", async (input: CapabilityInput) => {
   const text =
     response.content[0].type === "text" ? response.content[0].text : "";
 
-  // Strip markdown code fences if present
-  const jsonStr = text
-    .trim()
-    .replace(/^```(?:json)?\s*\n?/i, "")
-    .replace(/\n?```\s*$/i, "")
-    .trim();
-
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(jsonStr);
-  } catch {
+  const parsed = extractJsonObject(text);
+  if (!parsed) {
     throw new Error(
       `Failed to parse extraction result as JSON. Raw response: ${text.slice(0, 300)}`,
+    );
+  }
+
+  if (isEmptyExtraction(parsed)) {
+    throw new Error(
+      `No invoice data could be extracted. The document may not be an invoice, or may be ` +
+        `too low-resolution to read.`,
     );
   }
 
