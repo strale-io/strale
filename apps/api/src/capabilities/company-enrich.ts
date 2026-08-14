@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
+import { extractJsonObject } from "./lib/llm-json.js";
 
 const EXTRACTION_PROMPT = `You are a company intelligence extraction system.
 
@@ -22,7 +23,41 @@ From the provided web page content, extract as much of the following as possible
   "website": "string"
 }
 
-Return ONLY valid JSON. If a field cannot be determined, use null.`;
+Return ONLY valid JSON. If a field cannot be determined, use null.
+Do not add any explanation before or after the JSON — if the page contains
+nothing usable, return the object with every field null and say nothing else.`;
+
+/**
+ * The fields `manifests/company-enrich.yaml` declares `guaranteed`. If the
+ * model returns null for every one of them the extraction found nothing, and
+ * returning the shell would bill €0.50 for an object of nulls that also
+ * violates the declared not_null contract. Fail loudly instead — the executor
+ * throws, and DEC-14 means an execution that throws is never charged.
+ *
+ * Keep this list in sync with that manifest's `output_field_reliability`.
+ * Duplicating it here is a stopgap: `lib/null-field-ratio.ts` already derives
+ * the same thing generically from `capability.outputFieldReliability`, but it
+ * is wired into the test runner only, not the live execute path in do.ts.
+ * Generalising that guard would cover every AI-synthesis capability at once.
+ */
+const SUBSTANTIVE_FIELDS = [
+  "company_name",
+  "industry",
+  "description",
+  "hq_location",
+  "employee_estimate",
+  "tech_stack",
+] as const;
+
+export function hasSubstance(parsed: Record<string, unknown>): boolean {
+  return SUBSTANTIVE_FIELDS.some((field) => {
+    const value = parsed[field];
+    if (value === null || value === undefined) return false;
+    if (typeof value === "string") return value.trim().length > 0;
+    if (Array.isArray(value)) return value.length > 0;
+    return true;
+  });
+}
 
 async function scrapeUrl(url: string): Promise<string> {
   // F-0-006: Browserless fetches the URL from its own network, so our
@@ -138,17 +173,20 @@ registerCapability("company-enrich", async (input: CapabilityInput) => {
 
   const responseText =
     response.content[0].type === "text" ? response.content[0].text : "";
-  const jsonStr = responseText
-    .trim()
-    .replace(/^```(?:json)?\s*\n?/i, "")
-    .replace(/\n?```\s*$/i, "")
-    .trim();
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(jsonStr);
-  } catch {
-    throw new Error(`Failed to parse enrichment result. Raw: ${responseText.slice(0, 300)}`);
+  const parsed = extractJsonObject(responseText);
+  if (!parsed) {
+    throw new Error(
+      `Failed to parse enrichment result for ${domain}. Raw: ${responseText.slice(0, 300)}`,
+    );
+  }
+
+  if (!hasSubstance(parsed)) {
+    throw new Error(
+      `No company information could be extracted from ${websiteUrl}. The page was ` +
+        `reachable but contained no usable company details — it may be JavaScript-only, ` +
+        `bot-protected, or a placeholder. Retrying will not help for this domain.`,
+    );
   }
 
   // Ensure website field
