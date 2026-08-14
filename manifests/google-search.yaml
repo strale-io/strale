@@ -19,102 +19,111 @@ input_schema:
       description: Search query
     country:
       type: string
+      description: >-
+        Country to scope results to, as an ISO 3166-1 alpha-2 code (MX), alpha-3 code (MEX), numeric code (484), or
+        exact country name (Mexico). "UK" is accepted as an alias for GB. Unrecognised values are rejected before the
+        search runs rather than silently ignored. Omit for unscoped global results.
     language:
       type: string
+      description: >-
+        Language for results, as an ISO 639-1 code ("en"), optionally with a region ("pt-BR"). Validated for shape and
+        rejected before the search runs if malformed, rather than silently ignored. Omit for Google's default.
     num_results:
       type: integer
       description: Number of results (default 10, max 20)
 output_schema:
   type: object
   example:
-    query: test
+    query: Stripe payment processing
     results:
-      - url: https://www.speedtest.net/
+      - url: https://stripe.com/payments
         date: null
-        title: Speedtest by Ookla - The Global Broadband Speed Test
+        title: Stripe Payments | Global Payment Processing Platform
         snippet: >-
-          Speedtest is better with the app. Download the Speedtest app for more metrics, video testing, mobile coverage
-          maps, and more. Get it on Google Play.
+          Accept payments online, in person, and around the world with a payments solution built for any business—from
+          scaling startups to global enterprises ...
         position: 1
-        sitelinks: null
-      - url: https://fast.com/
-        date: null
-        title: "Fast.com: Internet Speed Test"
-        snippet: >-
-          How fast is your download speed? In seconds, FAST.com's simple Internet speed test will estimate your ISP
-          speed.
+        sitelinks:
+          - link: https://stripe.com/guides/introduction-to-online-payments
+            title: Collecting online payments
+          - link: https://stripe.com/payments/payment-methods
+            title: Stripe Payment Methods
+          - link: https://docs.stripe.com/payments
+            title: Payments
+          - link: https://stripe.com/payments/features
+            title: Features
+          - link: https://stripe.com/resources/more/card-payments
+            title: Card payments explained
+      - url: https://stripe.com/resources/more/payment-processing-explained
+        date: Jan 21, 2025
+        title: How payment processing works | Stripe
+        snippet: Payment processing is the sequence of actions that securely transfer funds between a payer and a payee.
         position: 2
         sitelinks: null
-      - url: https://en.wikipedia.org/wiki/Test
+      - url: https://stripe.com/
         date: null
-        title: Test - Wikipedia
+        title: Stripe | Financial Infrastructure to Grow Your Revenue
         snippet: >-
-          Test(s), testing, or TEST may refer to: Test (assessment), an educational assessment intended to measure the
-          respondents' knowledge or other abilities ...
+          Stripe is a financial services platform that helps all types of businesses accept payments, build flexible
+          billing models, and manage money movement.
         position: 3
         sitelinks: null
-      - url: https://play.google.com/store/apps/details?id=org.zwanoo.android.speedtest&hl=en_US
+      - url: https://stripe.com/pricing
         date: null
-        title: Speedtest by Ookla - Apps on Google Play
+        title: Pricing & Fees - Stripe
         snippet: >-
-          Test your download and upload speeds as well as three measures of latency to check a slow connection or use
-          the app to make sure your network is ready for a ...
+          Find Stripe fees and pricing information. Find our processing fees for credit cards, pricing models and
+          pay-as-you-go fees for businesses.
         position: 4
         sitelinks: null
-      - url: https://speedtest.xfinity.com/
-        date: null
-        title: Xfinity Speed Test - Check Your Internet Speed
+      - url: https://stripe.com/resources/more/payment-processor-vs-payment-gateway
+        date: Jan 23, 2025
+        title: Payment processor vs. payment gateway | Stripe
         snippet: >-
-          Test your connection fast with Xfinity's internet speed test tool and get tips on how to improve your internet
-          performance.
+          Payment processors and payment gateways play different but complementary roles in facilitating secure and
+          efficient electronic transactions for businesses and ...
         position: 5
         sitelinks: null
-      - url: https://www.att.com/support/speedtest/
-        date: null
-        title: Internet Speed Test – AT&T Official Site
+      - url: https://stripe.com/resources/more/how-payment-transaction-processing-works
+        date: Jan 22, 2025
+        title: 'How payment transaction processing works: A quick guide - Stripe'
         snippet: >-
-          Internet speed tests. Check the upload and download speeds of your connected devices and AT&T All-Fi Hub® or
-          Wi-Fi Gateway.
+          Payment transaction processing is the series of steps that occur when a customer initiates a financial
+          transaction with a business.
         position: 6
         sitelinks: null
-      - url: https://test.io/
-        date: null
-        title: "Test IO: Home"
-        snippet: Test IO delivers a full range of web, mobile, and IoT testing, delivered as a service.
+      - url: https://www.nerdwallet.com/business/software/learn/what-is-stripe
+        date: Mar 20, 2026
+        title: What Is Stripe, and How Does It Work to Accept Payments?
+        snippet: >-
+          Stripe is a payment service provider that accepts credit cards, digital wallets and many other payment
+          methods.
         position: 7
         sitelinks: null
-      - url: https://fiber.google.com/speedtest/
-        date: null
-        title: Internet Speed Test | Check Broadband Speed - Google Fiber
-        snippet: >-
-          Test your current internet speed, and find out how fast your broadband wi-fi handles uploads and downloads.
-          See Google Fiber plan options for faster ...
-        position: 8
-        sitelinks: null
-      - url: https://satsuite.collegeboard.org/sat
-        date: null
-        title: The SAT – SAT Suite | College Board
-        snippet: >-
-          Find tips on how to study for the SAT using full-length practice tests on Bluebook, downloadable forms if
-          you're approved to test on paper, and Official SAT ...
-        position: 9
-        sitelinks: null
-    answer_box:
-      link: https://www.merriam-webster.com/dictionary/test
-      title: TEST Definition & Meaning - Merriam-Webster
-      snippet: >-
-        (1) : something (such as a series of questions or exercises) for measuring the skill, knowledge, intelligence,
-        capacities, or aptitudes of an individual or group. (2) : a procedure, reaction, or reagent used to identify or
-        characterize a substance or constituent.
-      snippetHighlighted:
-        - >-
-          something (such as a series of questions or exercises) for measuring the skill, knowledge, intelligence,
-          capacities, or aptitudes of an individual or group
-    result_count: 9
+    answer_box: null
+    result_count: 7
     knowledge_graph: null
-    people_also_ask: []
+    people_also_ask:
+      - link: https://tipalti.com/resources/learn/stripe-fee-calculator/
+        snippet: |-
+          Stripe Fee Examples Transaction Amount Fee $10 $0.59 $50 $1.75 $100 $3.20
+          Transaction Amount
+          Fee
+          $10
+          $0.59
+          $50
+          $1.75
+          $100
+          $3.20
+        question: How much is the Stripe fee for $100?
+      - link: https://en.wikipedia.org/wiki/Stripe,_Inc.
+        snippet: >-
+          In May 2011, Stripe received a $2 million investment from venture capitalists Peter Thiel, Elon Musk, Sequoia
+          Capital, SV Angel, and Andreessen Horowitz. Stripe launched publicly in September 2011 after an extensive
+          private beta.
+        question: Is Stripe owned by Elon Musk?
     search_parameters:
-      country: US
+      country: null
       language: null
   properties:
     query:

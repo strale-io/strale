@@ -141,13 +141,13 @@ registerCapability("cypriot-company-data", async (input: CapabilityInput) => {
     "";
   if (typeof rawInput !== "string" || !rawInput.trim()) {
     throw new Error(
-      "'vat_number' or 'identifier' is required. Provide a Cypriot VAT (CY-prefix or bare 8-digit-plus-letter) or company number (C-prefix, e.g. C165).",
+      "'vat_number' or 'identifier' is required. Provide a Cypriot VAT (CY-prefix or bare 8-digit-plus-letter) or company number (C-prefix, e.g. C165). Look one up by company name at the Registrar of Companies (DRCOR) public search: https://efiling.drcor.mcit.gov.cy/DrcorPublic/SearchForm.aspx?sc=1&lang=EN.",
     );
   }
   const normalised = normaliseCyIdentifier(rawInput.trim());
   if (!normalised) {
     throw new Error(
-      `'${rawInput.trim()}' is not a valid Cypriot identifier. Expected: CY + 8 digits + 1 letter (VAT), 8 digits + 1 letter (bare VAT), or C + digits (company number).`,
+      `'${rawInput.trim()}' is not a valid Cypriot identifier. Expected: CY + 8 digits + 1 letter (VAT), 8 digits + 1 letter (bare VAT), or C + digits (company number). Look one up by company name at https://efiling.drcor.mcit.gov.cy/DrcorPublic/SearchForm.aspx?sc=1&lang=EN.`,
     );
   }
   const __etResult = await executeOpenapiCapability(

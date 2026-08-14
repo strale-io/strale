@@ -31,13 +31,13 @@ registerCapability("maltese-company-data", async (input: CapabilityInput) => {
     "";
   if (typeof rawInput !== "string" || !rawInput.trim()) {
     throw new Error(
-      "'vat_number' is required. Provide a Maltese VAT (MT + 8 digits, e.g. MT12826209). MFSA C-prefix company numbers are not accepted by the upstream API.",
+      "'vat_number' is required. Provide a Maltese VAT (MT + 8 digits, e.g. MT12826209). MFSA C-prefix company numbers are not accepted by the upstream API; look up the VAT by company name at the Malta Business Registry: https://mbr.mt/.",
     );
   }
   const normalised = normaliseMtIdentifier(rawInput.trim());
   if (!normalised) {
     throw new Error(
-      `'${rawInput.trim()}' is not a valid Maltese VAT. Expected format: MT + 8 digits (e.g. MT12826209).`,
+      `'${rawInput.trim()}' is not a valid Maltese VAT. Expected format: MT + 8 digits (e.g. MT12826209). Look one up by company name at https://mbr.mt/.`,
     );
   }
   const __etResult = await executeOpenapiCapability(

@@ -90,6 +90,7 @@ function classifyField(fieldName: string, fieldDescription?: string): PathType |
     return null;
   }
 
+
   // Check field name against ID patterns first
   if (ID_FIELD_PATTERNS.some((p) => p.test(fieldName))) {
     return "PRIMARY";
@@ -146,8 +147,18 @@ export function enumerateEntryPoints(
   const fieldNames = Object.keys(properties);
 
   for (const fieldName of fieldNames) {
-    const prop = properties[fieldName];
-    const desc = prop?.description ?? "";
+    const prop: { type?: string; description?: string } | undefined = properties[fieldName];
+    const desc: string = prop?.description ?? "";
+
+    // Alias fields funnel into the same firstString dispatch chain as their
+    // canonical field — not separate handler paths, so requiring a fixture
+    // per alias would demand N duplicate fixtures of the same code path.
+    // "Alias for X" only declassifies when X actually exists in this schema:
+    // prose alone cannot remove the last entry point of a path. "Free-text"
+    // catch-alls (task/query) are declared funnels to the canonical dispatch.
+    const aliasTarget = /^alias for ([a-z0-9_]+)/i.exec(desc.trim())?.[1];
+    if (aliasTarget && properties[aliasTarget]) continue;
+    if (/^free-text/i.test(desc.trim())) continue;
 
     if (isDualPurposeField(fieldName, desc)) {
       entryPoints.push({

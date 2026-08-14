@@ -25,7 +25,7 @@ const ROOT = "packages";
 
 // Packages with a DEPRECATED.md at their root are skipped entirely — the
 // source has been yanked upstream (PyPI / npm) and the directory is
-// kept only as a forwarding address. See YANK_LIST.md for the 2026-04-22
+// kept only as a forwarding address. See archive/sessions/YANK_LIST.md for the 2026-04-22
 // deprecation of pydantic-ai-strale, google-adk-strale, openai-agents-strale.
 import { existsSync } from "node:fs";
 
@@ -197,7 +197,7 @@ console.error(
   `\nframework-packages check FAILED: ${failures.length} of ${checked} active package(s) do not import from the framework implied by their name.\n\n` +
     `A package named 'X-strale' must contain at least one 'from X import ...' (or equivalent) in its source tree.\n` +
     `Packages that don't satisfy this are misleading: their name promises framework integration that the code doesn't deliver.\n` +
-    `See the 2026-04-21 pydantic-ai incident in CONTAINMENT_REPORT.md for why this rule exists.\n\nOffenders:`,
+    `See the 2026-04-21 pydantic-ai incident in archive/sessions/CONTAINMENT_REPORT.md for why this rule exists.\n\nOffenders:`,
 );
 for (const f of failures) {
   console.error(`  ${f.pkg}`);

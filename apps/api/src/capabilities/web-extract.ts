@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
+import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 
 registerCapability("web-extract", async (input: CapabilityInput) => {
   const url = input.url as string | undefined;
@@ -18,6 +19,15 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
   // rejects the URL we never pass it along. Private IP / carrier-grade
   // NAT / cloud metadata / non-http schemes are refused here before
   // Browserless is even contacted.
+  // Per-source ToS policy applies to EVERY fetch path, not only the purpose-
+  // built extractors. Observed bypass (2026-08-12 activity analysis): a caller
+  // refused on Trustpilot via product-reviews-extract re-ran the identical
+  // extraction through web-extract with a raw prompt. Same blocklist, same
+  // refusal, same compliant-alternative hint — closing the side door
+  // commit 87b84db already flagged once for domain-contact-extract.
+  // (Pure string check — runs before the DNS-touching validateUrl.)
+  assertTargetAllowed(url);
+
   await validateUrl(url);
 
   const browserlessUrl = process.env.BROWSERLESS_URL;
@@ -39,14 +49,21 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
   const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
   const contentUrl = buildBrowserlessRequestUrl(browserlessUrl, "/content", browserlessKey);
 
+  // unguarded-fetch-ok: our Browserless endpoint; caller URL gated by assertTargetAllowed above
   const renderResponse = await fetch(contentUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       url,
-      gotoOptions: { waitUntil: "networkidle0", timeout: 20000 },
+      // 25s matches every other Browserless caller (annual-report-extract,
+      // html-to-pdf, screenshot-url) and web-provider's default pageTimeout.
+      // Was 20s, the odd one out. Note this only helps pages that are slow but
+      // alive — an unreachable host burns the whole budget either way.
+      gotoOptions: { waitUntil: "networkidle0", timeout: 25000 },
     }),
-    signal: AbortSignal.timeout(30000),
+    // Outer budget stays 10s above the navigation timeout so Browserless gets
+    // to return its own structured error instead of us aborting the socket.
+    signal: AbortSignal.timeout(35000),
   });
 
   if (!renderResponse.ok) {

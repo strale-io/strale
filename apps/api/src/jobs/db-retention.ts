@@ -77,6 +77,7 @@ export const RULES: readonly RetentionRule[] = [
   { table: "failed_requests",       column: "created_at",   days: 90,  idCols: "id",                       orderClause: "created_at, id" },
   { table: "test_run_log",          column: "started_at",   days: 180, idCols: "id",                       orderClause: "started_at, id" },
   { table: "rate_limit_counters",   column: "window_start", days: 7,   idCols: "bucket_key, window_start", orderClause: "window_start, bucket_key" },
+  { table: "discovery_hits",        column: "created_at",   days: 90,  idCols: "id",                       orderClause: "created_at, id" },
 ] as const;
 
 let _running = false;

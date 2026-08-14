@@ -37,13 +37,13 @@ registerCapability("bulgarian-company-data", async (input: CapabilityInput) => {
     "";
   if (typeof rawInput !== "string" || !rawInput.trim()) {
     throw new Error(
-      "'vat_number' is required. Provide a Bulgarian UIC/EIK (9 digits, optionally BG-prefixed; e.g. 831902088 or BG831902088).",
+      "'vat_number' is required. Provide a Bulgarian UIC/EIK (9 digits, optionally BG-prefixed; e.g. 831902088 or BG831902088). Look one up by company name at the official Commercial Register: https://portal.registryagency.bg/.",
     );
   }
   const normalised = normaliseBgIdentifier(rawInput.trim());
   if (!normalised) {
     throw new Error(
-      `'${rawInput.trim()}' is not a valid Bulgarian UIC/EIK. Expected format: 9 digits, optionally with BG prefix (e.g. 831902088).`,
+      `'${rawInput.trim()}' is not a valid Bulgarian UIC/EIK. Expected format: 9 digits, optionally with BG prefix (e.g. 831902088). Look one up by company name at https://portal.registryagency.bg/.`,
     );
   }
   const __etResult = await executeOpenapiCapability(

@@ -1,11 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { and, eq, isNull } from "drizzle-orm";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { firstString } from "./lib/input-aliases.js";
 import { getBrowserlessConfig, htmlToText } from "./lib/browserless-extract.js";
 import { getDb } from "../db/index.js";
 import { eeDirectors, eeDirectorsSync } from "../db/schema.js";
 
 // Estonian company data via ariregister.rik.ee — FREE, no auth
+import { classifyNameMatch } from "../lib/company-name-match.js";
+
 const API = "https://ariregister.rik.ee/est/api";
 
 interface LegalRepresentative {
@@ -122,6 +125,7 @@ async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
   // buildBrowserlessRequestUrl also appends ?launch= per-request, required by
   // Browserless v2 (LAUNCH_ARGS env var is deprecated). See lib/browserless-launch.ts.
   const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
+  // unguarded-fetch-ok: our Browserless EU proxy; target is the fixed ariregister API host
   const resp = await fetch(buildBrowserlessRequestUrl(url, "/content", key), {
     method: "POST",
     headers: {
@@ -146,6 +150,7 @@ async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
 async function fetchApi(path: string): Promise<unknown> {
   const url = `${API}${path}`;
   try {
+    // unguarded-fetch-ok: fixed ariregister.rik.ee API host, not a caller URL
     const resp = await fetch(url, {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(10000),
@@ -159,14 +164,56 @@ async function fetchApi(path: string): Promise<unknown> {
   }
 }
 
-async function searchCompany(query: string): Promise<Record<string, unknown>> {
+/**
+ * @param query      registry code or company name
+ * @param isRegCode  true when `query` is an 8-digit registry code. A code is an
+ *                   exact identifier, so the single result is authoritative. A
+ *                   NAME is not: the autocomplete endpoint is fuzzy and ordered
+ *                   by its own relevance, which is not ours — searching
+ *                   "Tallink" returns "Tallink - City Spordiklubi" (a sports
+ *                   club, reg 80405811) ahead of "Aktsiaselts Tallink Grupp"
+ *                   (10238429). Taking results[0] on a name therefore hands the
+ *                   caller a different legal entity with no signal that it did.
+ */
+async function searchCompany(query: string, isRegCode: boolean): Promise<Record<string, unknown>> {
   const data = (await fetchApi(`/autocomplete?q=${encodeURIComponent(query)}`)) as any;
   const results = data?.data;
   if (!results || results.length === 0) {
-    throw new Error(`No Estonian company found matching "${query}".`);
+    throw new Error(
+      isRegCode
+        ? `No Estonian company found for registry code "${query}". The code is well-formed but is ` +
+          `not in the Business Register — it may belong to a deregistered entity, or be a typo. ` +
+          `Search by company_name instead if you are unsure of the code.`
+        : `No Estonian company found matching "${query}".`,
+    );
   }
 
-  const c = results[0];
+  let c = results[0];
+  if (!isRegCode) {
+    // Score every candidate and accept only a real match, mirroring the
+    // discipline in finnish/norwegian-company-data and us-company-data.
+    let best: any = null;
+    for (const cand of results) {
+      const nm = cand?.name;
+      if (typeof nm !== "string" || !nm) continue;
+      const { match_confidence } = classifyNameMatch(query, nm);
+      if (match_confidence === "exact") { best = cand; break; }
+      if (match_confidence === "high" && !best) best = cand;
+    }
+    if (!best) {
+      const closest = results
+        .slice(0, 3)
+        .map((r: any) => r?.name)
+        .filter(Boolean)
+        .join(", ");
+      throw new Error(
+        `No confident Estonian registry match for "${query}". The Business Register's search is ` +
+          `fuzzy and returned only unrelated entities${closest ? ` (closest: ${closest})` : ""}. ` +
+          `Provide the 8-digit registry code for an exact lookup.`,
+      );
+    }
+    c = best;
+  }
   // EE registry returns two code systems for legal_form depending on entity vintage:
   // legacy `liik` (1, 2, 3) and modern codes (4-10). Map both to canonical
   // human-readable labels so the wire shape is consistent across entities.
@@ -205,15 +252,24 @@ async function searchCompany(query: string): Promise<Record<string, unknown>> {
 }
 
 registerCapability("estonian-company-data", async (input: CapabilityInput) => {
-  const raw = (input.registry_code as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
-  if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'registry_code' or 'company_name' is required. Provide an Estonian registry code (8 digits) or company name.");
+  // firstString skips blank strings, so an empty identifier field alongside a
+  // real company_name resolves via the name instead of erroring on input the
+  // route's anyOf already accepted. Alias surface matches the Nordic siblings.
+  const raw = firstString(
+    input,
+    "registry_code", "company_name", "name", "query", "task",
+  );
+  if (!raw) {
+    throw new Error(
+      "'registry_code' or 'company_name' is required. Provide an Estonian registry code (8 digits) " +
+        "or company name. Aliases accepted: name, query, task.",
+    );
   }
 
   const trimmed = raw.trim();
   const regCode = findRegCode(trimmed);
-  const query = regCode || await extractCompanyName(trimmed);
-  const output = await searchCompany(query);
+  const query = regCode || (await extractCompanyName(trimmed));
+  const output = await searchCompany(query, !!regCode);
 
   const regCodeForRef = (output.registry_code as string) || "";
   const primarySourceUrl = regCodeForRef

@@ -38,6 +38,16 @@ interface RpoLegalForm extends ValidityWindow {
 
 interface RpoStatutoryBody extends ValidityWindow {
   personName?: { formatedName?: string };
+  // Verified live 2026-08-12 (ico 36674141): RPO also returns the role
+  // ("Konateľ" + code) and the membership start date per statutory-body
+  // member — previously collapsed away into a name-only string.
+  stakeholderType?: { value?: string; code?: string };
+  // Corporate statutory bodies: the exact shape is UNVERIFIED live (the
+  // probed entity had a natural-person konateľ only). RPO's entity root uses
+  // windowed fullNames[] arrays, so both a scalar and the windowed-array
+  // shape are accepted defensively.
+  fullName?: string;
+  fullNames?: Array<ValidityWindow & { value?: string }>;
 }
 
 interface RpoSearchResultEntry {
@@ -145,7 +155,9 @@ function deriveStatus(
 registerCapability("slovak-company-data", async (input: CapabilityInput) => {
   const raw = ((input.ico as string) ?? (input.company_number as string) ?? "").toString().trim();
   if (!raw) {
-    throw new Error("'ico' is required. Provide a Slovak IČO (8 digits).");
+    throw new Error(
+      "'ico' is required. Provide a Slovak IČO (8 digits). Look one up by company name at the official Register of Legal Persons (RPO) search: https://rpo.statistics.sk/.",
+    );
   }
   // normalizeIco zero-pads 1-7 digit numeric input to 8. Real Slovak IČOs go
   // as low as 5 significant digits (e.g. 00151653), so we tolerate short
@@ -154,7 +166,7 @@ registerCapability("slovak-company-data", async (input: CapabilityInput) => {
   const ico = normalizeIco(raw);
   if (!ico || stripped.length < 4) {
     throw new Error(
-      `'${raw}' is not a valid IČO. Slovak IČO is 8 digits (zero-padded).`,
+      `'${raw}' is not a valid IČO. Slovak IČO is 8 digits (zero-padded). Look one up by company name at https://rpo.statistics.sk/.`,
     );
   }
 
@@ -167,9 +179,32 @@ registerCapability("slovak-company-data", async (input: CapabilityInput) => {
   const currentIdentifier = pickCurrent(entity.identifiers);
   const currentRegOffice = pickCurrent(entity.sourceRegister?.registrationOffices);
   const currentRegNumber = pickCurrent(entity.sourceRegister?.registrationNumbers);
-  const directors = (entity.statutoryBodies ?? []).flatMap((b) =>
-    !b.validTo && b.personName?.formatedName ? [b.personName.formatedName] : [],
-  );
+  // Structured representatives (NO/CZ/EE canonical shape with a type
+  // discriminator); `directors` stays as the legacy name-only array and
+  // keeps its ORIGINAL semantics — natural persons only — so consumers
+  // screening directors as individuals (PEP/adverse-media) never receive a
+  // company name in it.
+  const representatives = (entity.statutoryBodies ?? []).flatMap((b) => {
+    if (b.validTo) return [];
+    const personName = b.personName?.formatedName;
+    const corpName = personName
+      ? null
+      : b.fullName ?? pickCurrent(b.fullNames)?.value ?? null;
+    const name = personName ?? corpName;
+    if (!name) return [];
+    return [
+      {
+        type: personName ? ("person" as const) : ("organisation" as const),
+        name,
+        role: b.stakeholderType?.value ?? "Statutory body member",
+        role_code: b.stakeholderType?.code ?? null,
+        role_group: "statutory_body",
+        start_date: b.validFrom ?? null,
+        date_of_birth: null,
+      },
+    ];
+  });
+  const directors = representatives.filter((r) => r.type === "person").map((r) => r.name);
 
   return {
     output: {
@@ -193,10 +228,16 @@ registerCapability("slovak-company-data", async (input: CapabilityInput) => {
       primary_registration_id: currentRegNumber?.value ?? null,
       registered_address: formatAddress(currentAddress),
       date_incorporated: entity.establishment ?? null,
-      legal_representatives: directors,
-      // Evidence Tier framework labels (DEC-20260518-A)
-      tier_2_available: true,
-      tier_2_available_reason: "Legal representatives extracted from Slovak Register of Legal Persons (RPO).",
+      legal_representatives: representatives,
+      total_legal_representatives: representatives.length,
+      // Evidence Tier framework labels (DEC-20260518-A). Length-gated, not
+      // hardcoded true: an entity with zero current statutory-body members
+      // must not claim representative data is available.
+      tier_2_available: representatives.length > 0,
+      tier_2_available_reason:
+        representatives.length > 0
+          ? "Legal representatives (role, start date) extracted from the Slovak Register of Legal Persons (RPO)."
+          : "No current statutory-body members listed for this entity in RPO.",
       ubo_availability: "unavailable_no_registry",
       ubo_availability_reason: "RPVS (Register partnerov verejného sektora) not accessible for foreign users at v1; verification pending public-source confirmation",
     },

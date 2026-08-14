@@ -10,12 +10,14 @@
  */
 
 import { Hono } from "hono";
+import { recordDiscoveryHit } from "../lib/attribution.js";
 import { eq, and, isNull } from "drizzle-orm";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, transactions, users } from "../db/schema.js";
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
-import { suggest } from "../lib/suggest.js";
+import { suggest, MAX_SUGGEST_QUERY_CHARS } from "../lib/suggest.js";
+import { rateLimitByIp } from "../lib/rate-limit.js";
 import { computePlatformFacts } from "../lib/platform-facts.js";
 import type { AppEnv } from "../types.js";
 
@@ -229,6 +231,7 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
 export const agentCardRoute = new Hono();
 
 agentCardRoute.get("/", async (c) => {
+  recordDiscoveryHit("/.well-known/agent-card.json", c.req, { src: c.req.query("src"), ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip") });
   const { card, etag } = await buildAgentCard();
 
   // Conditional request support (304 Not Modified)
@@ -253,6 +256,13 @@ agentCardRoute.get("/", async (c) => {
 // ─── A2A JSON-RPC endpoint ──────────────────────────────────────────────────
 
 export const a2aRoute = new Hono<AppEnv>();
+
+// IP rate limiting — 60 requests/minute per IP, matching the MCP endpoint.
+// Both are unauthenticated protocol surfaces reaching the same catalog engine,
+// and this one had no limiter at all: a single caller could drive unbounded
+// catalog scans, and billed embedding + re-rank calls whenever embeddings are
+// active. The 256 KB body limit in app.ts bounds one request, not the rate.
+a2aRoute.use("*", rateLimitByIp(60, 60_000));
 
 a2aRoute.post("/", async (c) => {
   const body = await c.req.json().catch(() => null);
@@ -334,6 +344,24 @@ async function handleMessageSend(
     } else if (partKind === "data" && part.data) {
       inputs = part.data as Record<string, unknown>;
     }
+  }
+
+  // Refuse an oversized natural-language task explicitly. The suggest engine
+  // enforces the same ceiling itself, but its throw would be swallowed by the
+  // catch below and surface as "could not determine a skill", which tells the
+  // caller nothing about what to change.
+  if (!skillId && task && task.length > MAX_SUGGEST_QUERY_CHARS) {
+    return c.json({
+      jsonrpc: "2.0",
+      error: {
+        code: -32602,
+        message:
+          `Invalid params: text part must be under ${MAX_SUGGEST_QUERY_CHARS} characters ` +
+          `when no skillId is given (received ${task.length}). Send a shorter description, ` +
+          `or name the skill directly with skillId.`,
+      },
+      id,
+    });
   }
 
   // If no skillId provided, use the suggest engine to match natural language

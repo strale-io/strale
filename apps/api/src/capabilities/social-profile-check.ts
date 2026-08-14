@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 
 interface PlatformResult {
   platform: string;
@@ -25,14 +26,15 @@ async function checkPlatform(
 ): Promise<PlatformResult> {
   const url = platform.urlTemplate(username);
   try {
-    const resp = await fetch(url, {
+    const resp = await safeFetch(url, {
       method: "GET",
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        // Honest bot UA (money-integrity 2026-08-12): the previous spoofed
+        // Chrome UA was the disguised-access pattern the legal audit flagged.
+        "User-Agent": "Mozilla/5.0 (compatible; StraleBot/1.0; +https://strale.dev)",
         Accept: "text/html,application/xhtml+xml,*/*",
       },
-      redirect: "follow",
+      // redirect handling: safeFetch follows up to 3 hops with per-hop re-validation
       signal: AbortSignal.timeout(5000),
     });
 

@@ -1,0 +1,219 @@
+slug: email-auth-check
+name: Email Authentication Check
+description: >-
+  A domain's email authentication posture from live DNS: SPF, DMARC policy, MX hosts, and DKIM selector probing — the
+  pre-send deliverability check for outreach agents.
+category: validation
+cost_class: free_unlimited
+quota_window: none
+price_cents: 3
+is_free_tier: false
+avg_latency_ms: 600
+data_source: Live DNS (TXT/MX lookups)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: global
+input_schema:
+  type: object
+  required: []
+  properties:
+    domain:
+      type: string
+      description: Domain to check (e.g. example.com)
+    email:
+      type: string
+      description: Alias — a full email address; its domain is checked
+    dkim_selector:
+      type: string
+      description: Optional exact DKIM selector to probe (otherwise common selectors are tried)
+    task:
+      type: string
+      description: Free-text alias — domain or email address
+  anyOf:
+    - required:
+        - domain
+    - required:
+        - email
+    - required:
+        - task
+output_schema:
+  type: object
+  example:
+    domain: google.com
+    has_mx: true
+    mx_hosts:
+      - smtp.google.com
+    spf_status: present
+    spf_record: v=spf1 include:_spf.google.com ~all
+    dmarc_present: true
+    dmarc_record: v=DMARC1; p=reject; rua=mailto:...
+    dmarc_policy: reject
+    dmarc_status: present
+    dmarc_effective_policy: reject
+    dmarc_inherited_from: null
+    dmarc_subdomain_policy: null
+    dmarc_pct: null
+    dkim_checked_selectors:
+      - default
+      - google
+      - selector1
+      - selector2
+      - k1
+      - s1
+      - dkim
+    dkim_found:
+      - selector: google
+        record_present: true
+    dkim_note: >-
+      DKIM probed via common selectors only — a miss does not prove the domain has no DKIM; pass dkim_selector for an
+      exact check
+    auth_summary: enforced
+  properties:
+    domain:
+      type: string
+    has_mx:
+      type: boolean
+    mx_hosts:
+      type: array
+    spf_status:
+      type: string
+      enum:
+        - present
+        - missing
+        - invalid_multiple
+    spf_record:
+      type:
+        - string
+        - "null"
+    dmarc_present:
+      type: boolean
+    dmarc_record:
+      type:
+        - string
+        - "null"
+    dmarc_policy:
+      type:
+        - string
+        - "null"
+    dmarc_status:
+      type: string
+      enum:
+        - present
+        - missing
+        - invalid_multiple
+    dmarc_effective_policy:
+      type:
+        - string
+        - "null"
+      description: The policy actually governing this domain's mail — includes RFC 7489 organizational-domain inheritance for subdomains (sp= aware)
+    dmarc_inherited_from:
+      type:
+        - string
+        - "null"
+      description: Set when DMARC was inherited from a parent (organizational) domain
+    dkim_checked_selectors:
+      type: array
+    dkim_found:
+      type: array
+    dkim_note:
+      type:
+        - string
+        - "null"
+    auth_summary:
+      type: string
+      enum:
+        - enforced
+        - partially_enforced
+        - configured_monitor_only
+        - incomplete
+test_fixtures:
+  known_answer:
+    input:
+      domain: google.com
+    expected_fields:
+      - field: domain
+        operator: equals
+        reliability: guaranteed
+        value: google.com
+      - field: has_mx
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: mx_hosts
+        operator: not_null
+        reliability: guaranteed
+      - field: spf_status
+        operator: equals
+        reliability: guaranteed
+        value: present
+      - field: spf_record
+        operator: not_null
+        reliability: guaranteed
+      - field: dmarc_status
+        operator: equals
+        reliability: guaranteed
+        value: present
+      - field: dmarc_present
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: dmarc_record
+        operator: not_null
+        reliability: guaranteed
+      - field: dmarc_policy
+        operator: equals
+        reliability: guaranteed
+        value: reject
+      - field: dkim_checked_selectors
+        operator: not_null
+        reliability: guaranteed
+      - field: dkim_found
+        operator: not_null
+        reliability: guaranteed
+      - field: dkim_note
+        operator: not_null
+        reliability: guaranteed
+      - field: auth_summary
+        operator: equals
+        reliability: guaranteed
+        value: enforced
+  health_check_input:
+    domain: google.com
+output_field_reliability:
+  domain: guaranteed
+  has_mx: guaranteed
+  mx_hosts: guaranteed
+  spf_status: guaranteed
+  spf_record: common
+  dmarc_present: guaranteed
+  dmarc_record: common
+  dmarc_policy: common
+  dmarc_subdomain_policy: rare
+  dmarc_pct: rare
+  dkim_checked_selectors: guaranteed
+  dkim_found: guaranteed
+  dkim_note: common
+  auth_summary: guaranteed
+  dmarc_status: guaranteed
+  # common, not guaranteed: null for domains with no (valid) DMARC.
+  dmarc_effective_policy: common
+  dmarc_inherited_from: rare
+limitations:
+  - title: DKIM probing covers common selectors only — a miss is not proof of absence
+    text: >-
+      Without a dkim_selector input, only common selectors (default, google, selector1/2, k1, s1, dkim) are probed. DKIM
+      published under a custom selector will not be found; the output says "not found via common selectors", never
+      "domain has no DKIM".
+    category: coverage
+    severity: info
+    workaround: Pass dkim_selector for an exact check (find it in a received message's DKIM-Signature s= tag)
+  - title: SPF is presence/shape-checked, not fully evaluated
+    text: >-
+      The check verifies a single valid-looking v=spf1 record exists (and flags the RFC 7208 multiple-record failure)
+      but does not recursively evaluate includes or compute the effective pass set.
+    category: accuracy
+    severity: info

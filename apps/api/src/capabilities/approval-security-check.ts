@@ -30,7 +30,10 @@ registerCapability("approval-security-check", async (input: CapabilityInput) => 
   const now = new Date().toISOString();
 
   if (data.code !== 1 && data.code !== "1") {
-    throw new Error(`GoPlus API error: ${data.message ?? "unknown error"}`);
+    // Always surface the numeric code — GoPlus sends message:null for several
+    // codes (e.g. 2029, observed for addresses with pathological approval
+    // counts), and "unknown error" hid the diagnosis for a week (P1 2026-08-12).
+    throw new Error(`GoPlus API error code ${data.code}${data.message ? `: ${data.message}` : ""} (see docs.gopluslabs.io status codes)`);
   }
 
   const result = data.result ?? {};

@@ -22,6 +22,28 @@
 
 import { buildBrowserlessRequestUrl } from "../../lib/browserless-launch.js";
 import { safeFetch } from "../../lib/safe-fetch.js";
+import { assertTargetAllowed } from "../../lib/tos-blocklist.js";
+
+/**
+ * Detect JS-challenge / anti-bot interstitials that come back with HTTP 200
+ * and enough bytes to pass the "substantial content" heuristics. Observed
+ * live: EUR-Lex's "verify that you're not a robot … Enable JavaScript and
+ * then reload" shell (2KB, HTTP 200/202). Markers are deliberately narrow —
+ * a real article MENTIONING robots must not trip this — so each pattern
+ * targets interstitial phrasing, not topic words.
+ */
+export function looksLikeJsChallenge(html: string): boolean {
+  const head = html.slice(0, 6000);
+  // NOTE: no bare `_Incapsula_Resource` marker — Imperva injects that script
+  // tag into NORMALLY SERVED pages too, so it false-positives on good content
+  // (review M-1). `__cf_chl_` / `cf-browser-verification` are challenge-only.
+  return (
+    /verify that you'?re not a robot/i.test(head) ||
+    /enable javascript and then reload/i.test(head) ||
+    /checking your browser before accessing/i.test(head) ||
+    /__cf_chl_|cf-browser-verification/i.test(head)
+  );
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -168,6 +190,11 @@ export async function fetchPage(
     skipCache = false,
   } = options ?? {};
 
+  // Per-source ToS policy enforced at the pipeline entry (P2, 2026-08-12):
+  // tiers 2/3 (Jina, Browserless) never touch safeFetch, so its gate alone
+  // would leave the rendering path open. Pure string check, runs before DNS.
+  assertTargetAllowed(targetUrl);
+
   // SSRF protection — validate URL before fetching
   const { validateUrl } = await import("../../lib/url-validator.js");
   await validateUrl(targetUrl);
@@ -204,21 +231,39 @@ export async function fetchPage(
         const contentType = plainResp.headers.get("content-type") ?? "";
         if (contentType.includes("text/html") || contentType.includes("xhtml")) {
           const html = await plainResp.text();
-          // Heuristic: if body has substantial text content, skip Browserless
+          // Heuristic: if body has substantial text content, skip Browserless.
+          // Style content is stripped like scripts — embedded CSS inflated
+          // bodyText past the bar on EUR-Lex's 2KB challenge page.
           const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-          const bodyText = bodyMatch ? bodyMatch[1].replace(/<[^>]+>/g, "").trim() : "";
-          if (html.length > 2000 && bodyText.length > 200) {
+          const bodyText = bodyMatch
+            ? bodyMatch[1]
+                .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+                .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+                .replace(/<[^>]+>/g, "")
+                .trim()
+            : "";
+          // A JS-challenge interstitial ("enable JavaScript and reload") is
+          // not content — a real browser (tier 3) executes the JS and gets
+          // the actual page. Accepting it here is how eu-regulation-search
+          // silently returned "no results" for weeks (P2 triage, 2026-08-12).
+          if (!looksLikeJsChallenge(html) && html.length > 2000 && bodyText.length > 200) {
             const fetchTimeMs = Date.now() - start;
             if (!skipCache) setCache(targetUrl, html);
             return { html, cached: false, fetchTimeMs, attempt: 0 };
           }
         }
         // HTTP response received but not usable HTML — fall through to Browserless
-      } else if (plainResp.status >= 400 && plainResp.status < 500) {
-        // 4xx errors (404, 403, etc.) are permanent — don't retry via Browserless.
-        // Prefix with "URL returned HTTP" so the catch block below recognizes it as fatal.
+      } else if ([404, 410, 401, 407].includes(plainResp.status)) {
+        // Genuinely permanent 4xx: missing (404/410) or auth-gated (401/407) —
+        // don't waste a 30s+ Browserless render. Prefix with "URL returned
+        // HTTP" so the catch block below recognizes it as fatal.
         throw new Error(`URL returned HTTP ${plainResp.status}. ${humanizeBrowserlessStatus(plainResp.status, targetUrl)}`);
       }
+      // Other 4xx (400/403/429) are routinely BOT-GATING, not permanent:
+      // EUR-Lex serves HTTP 400 to datacenter IPs and a 202-empty challenge
+      // to residential ones (observed live, Railway US East vs Sweden,
+      // 2026-08-12) — a rendered browser still succeeds. Fall through to
+      // Jina/Browserless like 5xx.
       // 5xx errors: fall through to Browserless (server might render differently)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -266,7 +311,7 @@ export async function fetchPage(
 
       if (jinaResp.ok) {
         const html = await jinaResp.text();
-        if (html.length > 500) {
+        if (html.length > 500 && !looksLikeJsChallenge(html)) {
           const fetchTimeMs = Date.now() - start;
           if (!skipCache) setCache(targetUrl, html);
           return { html, cached: false, fetchTimeMs, attempt: 0 };
@@ -334,6 +379,17 @@ export async function fetchPage(
           throw new Error("Browserless returned empty or too-short HTML response.");
         }
 
+        // If even a real rendered browser gets the anti-bot interstitial, the
+        // site is actively refusing automation. Fail honestly — Strale does
+        // not attempt to defeat bot walls (same posture as the ToS blocklist).
+        if (looksLikeJsChallenge(html)) {
+          throw new Error(
+            `${new URL(targetUrl).hostname} served an anti-bot challenge to the rendered ` +
+              `browser as well. The site is refusing automated access; this is not retryable. ` +
+              `If an official API exists for this source, that is the correct path.`,
+          );
+        }
+
         // Cache the result
         if (!skipCache) {
           setCache(targetUrl, html);
@@ -368,8 +424,8 @@ export async function fetchPage(
  * Drop-in replacement for the old fetchRenderedHtml().
  * Uses cache + retry by default.
  */
-export async function fetchRenderedHtml(targetUrl: string): Promise<string> {
-  const result = await fetchPage(targetUrl);
+export async function fetchRenderedHtml(targetUrl: string, options?: WebProviderOptions): Promise<string> {
+  const result = await fetchPage(targetUrl, options);
   return result.html;
 }
 

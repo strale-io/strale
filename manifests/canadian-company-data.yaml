@@ -11,28 +11,49 @@ price_cents: 80
 is_free_tier: false
 input_schema:
   type: object
-  required:
-    - corporation_number
+  # No field is individually required: a corporation/business number OR a
+  # company name is enough, and the executor enforces that itself. The old
+  # schema's required: [corporation_number] blocked the name path at the
+  # route — the #168/#173 defect class.
+  required: []
   properties:
     corporation_number:
       type: string
-      description: Canadian corporation number or company name
+      description: Federal corporation number (older corporations have fewer than 7 digits) or 9-digit business number
+    company_name:
+      type: string
+      description: Company name (resolved via the Corporations Canada site search)
+    task:
+      type: string
+      description: Free-text alias — corporation number or company name
+  anyOf:
+    - required: [corporation_number]
+    - required: [company_name]
+    - required: [task]
 output_schema:
   type: object
   example:
-    status: unknown
-    address: null
+    status: Active
+    address: 207 - 32900 SOUTH FRASER WAY, ABBOTSFORD BC, V2S 5A1, CA
+    company_name: Abbotsford Chamber of Commerce
+    business_type: Boards of Trade Act - Part II
+    corporation_number: "1007"
+    registration_number: "1007"
+    business_number: "106679285"
+    registration_date: "1947-01-10"
+    name_history: []
+    director_limits: { minimum: 3, maximum: 30 }
+    latest_annual_return_year: "2026"
     industry: null
-    directors: null
-    company_name: null
-    business_type: null
-    registration_date: null
-    registration_number: null
+    jurisdiction: CA
+    tier_2_available: false
   properties:
-    vat_number:
-      type:
-        - string
-        - "null"
+    tier_2_available_reason:
+      type: string
+    ubo_availability:
+      type: string
+    ubo_availability_reason:
+      type: string
     status:
       type: string
     company_name:
@@ -41,9 +62,28 @@ output_schema:
       type: string
     corporation_number:
       type: string
-data_source: Corporations Canada / Provincial registries
-data_source_type: scrape
-transparency_tag: ai_generated
+    registration_number:
+      type: string
+    business_number:
+      type:
+        - string
+        - "null"
+    name_history:
+      type: array
+    director_limits:
+      type:
+        - object
+        - "null"
+data_source: Corporations Canada (ISED) official JSON API — numeric lookups; site search for name lookups
+# api, not scrape: the numeric path (the dominant, health-checked path) is a
+# direct keyless government JSON API. The name-search path still renders the
+# site search — documented in the limitation below.
+data_source_type: api
+# mixed, not ai_generated: numeric lookups are a verbatim JSON mapping with
+# zero LLM involvement (algorithmic); name-path lookups use AI extraction
+# from rendered HTML. One scalar cannot be exact for both — mixed is the
+# honest label, with the split documented in limitations.
+transparency_tag: mixed
 freshness_category: live-fetch
 maintenance_class: scraping-stable-target
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
@@ -54,27 +94,103 @@ personal_data_categories:
   - professional
 geography: global
 test_fixtures:
+  # known_answer is array-form: one fixture per entry point, satisfying
+  # Gate 5's PRIMARY (corporation_number) + SECONDARY (company_name)
+  # requirement (DEC-20260411-B, gate5-path-coverage.ts). The company_name
+  # entry became coverable 2026-08-14 when the name path was rebuilt on a
+  # real POST to the Corporations Canada site search (previously the GET
+  # V_SEARCH.* params were inert and always rendered the empty search
+  # form, so no live name-path fixture could ever be verified). Both
+  # entries verified live 2026-08-14.
   known_answer:
-    input:
-      corporation_number: "2408951"
-    expected_fields:
-      - field: status
-        operator: not_null
-        reliability: guaranteed
-      - field: status
-        operator: type
-        reliability: guaranteed
-        value: string
+    # Fixture corp swapped 2026-08-12: 2408951 is not resolvable via the
+    # official JSON API (pre-migration scrape-era fixture). 1007 (Abbotsford
+    # Chamber of Commerce, Active since 1947) chosen over a numbered company:
+    # health checks re-fetch this record repeatedly and personal holding
+    # companies registered at private residences don't belong in fixtures.
+    - input:
+        corporation_number: "1007"
+      expected_fields:
+        - field: status
+          operator: not_null
+          reliability: guaranteed
+        - field: status
+          operator: type
+          reliability: guaranteed
+          value: string
+    # "Shopify" search resolves unambiguously (single exact match after
+    # normalization) to SHOPIFY INC., corpId 4261607, Active since
+    # incorporation 2004-09-28 — verified live 2026-08-14 via a POST to
+    # fdrlCrpSrch.html?lang=eng (6 candidates returned; only this one
+    # normalizes to "shopify") followed by the official JSON API.
+    - input:
+        company_name: Shopify
+      expected_fields:
+        - field: company_name
+          operator: contains
+          reliability: guaranteed
+          value: SHOPIFY
+        - field: corporation_number
+          operator: equals
+          reliability: guaranteed
+          value: "4261607"
+        - field: status
+          operator: equals
+          reliability: guaranteed
+          value: Active
+        - field: match_confidence
+          operator: equals
+          reliability: rare
+          value: exact
   health_check_input:
-    corporation_number: "2408951"
+    corporation_number: "1007"
 output_field_reliability:
   status: guaranteed
   company_name: guaranteed
   business_type: guaranteed
   corporation_number: guaranteed
+  registration_number: guaranteed
+  business_number: common
+  address: common
+  registration_date: common
+  name_history: common
+  director_limits: common
+  latest_annual_return_year: common
+  industry: rare
+  tier_2_available: guaranteed
+  tier_2_available_reason: guaranteed
+  ubo_availability: guaranteed
+  ubo_availability_reason: guaranteed
+  # Only set on the name-search path (never on the corporation_number
+  # identifier path) — mirrors finnish-company-data's convention. See #161
+  # wrong-company class fix, 2026-08-14.
+  match_confidence: rare
 limitations:
   - title: Covers federally incorporated Canadian companies — provincially registered businesses may have limited data
     text: Covers federally incorporated companies — provincially registered businesses may have limited information
     category: coverage
     severity: info
     workaround: For provincial companies, supplement with the relevant provincial registry (e.g., Ontario ONBIS, BC Registry)
+  - title: Named directors are not exposed by the Corporations Canada JSON API
+    text: >-
+      The official JSON API returns director count limits (minimum/maximum) but not director names.
+      director_limits is a governance constraint from the articles, NOT a count of current directors.
+      Named-director extraction from the web UI is paused pending a sourcing-doctrine ruling.
+    category: coverage
+    severity: info
+    workaround: Order a corporate profile from Corporations Canada, or check the corporation's own filings
+  - title: Transparency differs by lookup path — numeric lookups are algorithmic, name lookups use AI extraction
+    text: >-
+      Corporation/business-number lookups read the official JSON API verbatim (no AI involved). Company-name
+      lookups render the Corporations Canada site search and extract results with an LLM, and may return
+      looser fields. The transparency_tag "mixed" reflects this split.
+    category: accuracy
+    severity: info
+    workaround: Provide the corporation number for a fully algorithmic answer
+  - title: name_history may be empty even when a name change is on record
+    text: >-
+      The JSON API's corporationNames array sometimes carries only the current name even when the
+      activities feed records a name-change event. An empty name_history is not proof no rename occurred.
+    category: coverage
+    severity: info
+    workaround: Check the corporation's activity history on Corporations Canada for name-change events

@@ -38,6 +38,7 @@ import { x402GatewayV2, getX402Manifest, getX402WellKnownResources, getX402OpenA
 import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
+import { recordDiscoveryHit } from "./lib/attribution.js";
 import { platformFactsRoute } from "./routes/platform-facts.js";
 import { disputeRoute } from "./routes/dispute.js";
 import { openApiSpec } from "./openapi.js";
@@ -225,6 +226,12 @@ app.use("/v1/audit/*", publicCors);
 app.use("/.well-known/*", publicCors);
 app.use("/llms.txt", publicCors);
 app.use("/llms-full.txt", publicCors);
+// Discovery endpoints now do a (fire-and-forget) attribution INSERT per hit —
+// rate-limit like their /v1/public neighbors so an unauthenticated crawl
+// burst can't queue writes against the shared pool (review M-1).
+app.use("/llms.txt", rateLimitByIp(120, 60_000));
+app.use("/llms-full.txt", rateLimitByIp(120, 60_000));
+app.use("/.well-known/*", rateLimitByIp(120, 60_000));
 app.use("/openapi.json", publicCors);
 app.use("/robots.txt", publicCors);
 app.use("/sitemap.xml", publicCors);
@@ -477,6 +484,7 @@ app.route("/x402", x402GatewayV2);
 
 // x402 manifest — DB-driven machine-readable list of x402-enabled endpoints
 app.get("/.well-known/x402.json", async (c) => {
+  recordDiscoveryHit("/.well-known/x402.json", c.req, { src: c.req.query("src"), ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip") });
   c.header("Cache-Control", "public, max-age=300");
   const manifest = await getX402Manifest();
   return c.json(manifest);

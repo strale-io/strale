@@ -69,6 +69,14 @@ output_field_reliability:
   markdown: guaranteed
   word_count: guaranteed
 limitations:
+  - title: Sources whose Terms of Service forbid automated access are rejected
+    text: >-
+      URLs on sites whose Terms of Service prohibit automated access (Trustpilot, Glassdoor,
+      LinkedIn, Google Search and the major social platforms) are rejected before any fetch is
+      attempted, returning a policy error with compliant alternatives where they exist. Retrying
+      will not succeed. Strale adds a source back only under a licensed API agreement.
+    category: coverage
+    severity: warning
   - title: JavaScript-heavy single-page applications may not render completely before content is extracted
     text: JavaScript-heavy single-page applications may not render completely
     category: coverage

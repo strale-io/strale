@@ -181,7 +181,7 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
     beforeAll(() => {
       body = extractHandlerBody(
         source,
-        'x402GatewayV2.on(["GET", "POST"], "/:slug"',
+        'x402GatewayV2.on(["GET", "POST"], ["/:slug"',
       );
     });
 
@@ -204,8 +204,14 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
       expect(catchBlock).not.toMatch(/settleX402Payment\s*\(/);
     });
 
-    it("'Missing required fields' validation precedes every settle call", () => {
-      assertValidationPrecedesEverySettle(body, "Missing required fields", "validation branch must exist");
+    it("validateX402Input(...) guard precedes every settle call", () => {
+      // 2026-08-11 refactor: the inline `if (schema?.required)` block (which
+      // matched literal text "Missing required fields") moved into the pure
+      // lib/x402-input-validation.ts helper so it could cover anyOf/oneOf
+      // and wholly-empty-input cases too. The marker check moves with it —
+      // the invariant being guarded (validation precedes settle) is
+      // unchanged.
+      assertValidationPrecedesEverySettle(body, "validateX402Input(", "validation call must exist");
     });
 
     it("'Invalid request body' validation precedes every settle call", () => {
@@ -227,7 +233,7 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
     beforeAll(() => {
       body = extractHandlerBody(
         source,
-        'x402GatewayV2.on(["GET", "POST"], "/solutions/:slug"',
+        'x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug"',
       );
     });
 
@@ -253,6 +259,14 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
 
     it("'Invalid request body' validation precedes every settle call", () => {
       assertValidationPrecedesEverySettle(body, "Invalid request body", "JSON-parse validation branch must exist");
+    });
+
+    it("validateX402Input(...) guard precedes every settle call", () => {
+      // 2026-08-11: the solutions handler previously had NO input
+      // validation at all — a bad/empty body ran straight into
+      // executeSolution(). This asserts the newly-added guard is wired in
+      // and, like every other validation branch here, sits before settle.
+      assertValidationPrecedesEverySettle(body, "validateX402Input(", "validation call must exist");
     });
 
     it("no catch block in the solutions handler calls settleX402Payment", () => {

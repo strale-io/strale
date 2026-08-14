@@ -1,0 +1,124 @@
+slug: us-product-recall-search
+name: US Product Recall Search
+description: >-
+  Search official US CPSC consumer product recalls by keyword or manufacturer. Returns recall title, date,
+  hazard description, affected products, and manufacturer for supplier and product due-diligence checks.
+category: data-extraction
+cost_class: free_unlimited
+quota_window: none
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required: []
+  anyOf:
+    - required: [query]
+    - required: [manufacturer]
+    - required: [task]
+  properties:
+    query:
+      type: string
+      description: Product or recall title keyword to search for
+    manufacturer:
+      type: string
+      description: Manufacturer name to filter by (alternative or complement to query)
+    task:
+      type: string
+      description: Free-text alias for query
+    date_from:
+      type: string
+      description: ISO date (YYYY-MM-DD) — only recalls on or after this date
+    date_to:
+      type: string
+      description: ISO date (YYYY-MM-DD) — only recalls on or before this date
+output_schema:
+  type: object
+  example:
+    query:
+      text: hoverboard
+      manufacturer: null
+      date_from: null
+      date_to: null
+    result_count: 1
+    recalls:
+      - recall_id: 9806
+        recall_number: "24065"
+        recall_date: "2023-12-21T00:00:00"
+        title: DGL Group Recalls Hover-1 Helix Hoverboards Due to Fire Hazard
+        description: This recall involves certain Hover-1 Helix hoverboards.
+        hazard: Fire hazard
+        manufacturers:
+          - DGL Group
+        products:
+          - name: Hover-1 Helix hoverboards
+            model: null
+            units: About 25,000
+        url: https://www.cpsc.gov/Recalls/2024/DGL-Group-Recalls-Hover-1-Helix-Hoverboards-Due-to-Fire-Hazard
+  properties:
+    query:
+      type: object
+    result_count:
+      type: integer
+    recalls:
+      type: array
+data_source: U.S. Consumer Product Safety Commission (CPSC) Recalls API
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: us
+test_fixtures:
+  known_answer:
+    input:
+      query: hoverboard
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: query
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: result_count
+        operator: not_null
+        reliability: guaranteed
+      - field: result_count
+        operator: gt
+        reliability: guaranteed
+        value: 0
+      - field: recalls
+        operator: not_null
+        reliability: guaranteed
+      - field: recalls
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    query: recall
+output_field_reliability:
+  query: guaranteed
+  result_count: guaranteed
+  recalls: guaranteed
+limitations:
+  - title: US recalls only, keyword search is a title substring match
+    text: >-
+      Covers CPSC-jurisdiction consumer products in the US only. RecallTitle matching is a substring search
+      against the recall's published title, not a semantic or product-category search — synonyms and typos
+      won't match.
+    category: coverage
+    severity: info
+    workaround: Try both a product-type keyword (e.g. "crib") and a brand/manufacturer name
+  - title: Does not cover food, drug, or vehicle recalls
+    text: >-
+      CPSC jurisdiction excludes food (FDA/USDA), pharmaceuticals (FDA), and motor vehicles (NHTSA) — those
+      have their own separate recall systems not covered by this capability.
+    category: coverage
+    severity: info
+  - title: Results capped at 25 per call, most-relevant-first ordering is the API's own
+    text: >-
+      The CPSC API does not document a stable relevance or recency sort order for its default response;
+      results are returned as-is and truncated to 25 records here.
+    category: coverage
+    severity: info

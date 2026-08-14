@@ -69,6 +69,42 @@ output_schema:
       type: string
     jurisdiction:
       type: string
+    legal_representatives:
+      type:
+        - array
+        - "null"
+      description: Current board members / representation-entitled persons (UR officers dataset); null when the officers query failed
+    total_legal_representatives:
+      type:
+        - integer
+        - "null"
+      description: True total from the registry (may exceed the returned array's length of 50); null when the officers query failed
+    tier_2_available:
+      type: boolean
+    tier_2_available_reason:
+      type: string
+    legal_name:
+      type: string
+    primary_registration_id:
+      type:
+        - string
+        - "null"
+    registered_address:
+      type:
+        - string
+        - "null"
+    date_incorporated:
+      type:
+        - string
+        - "null"
+    ubo_availability:
+      type: string
+    ubo_availability_reason:
+      type: string
+    legal_form:
+      type:
+        - string
+        - "null"
 data_source: Latvian Open Data Portal (data.gov.lv) — Uzņēmumu reģistra atvērtie dati CKAN datastore_search API
 data_source_type: api
 transparency_tag: algorithmic
@@ -147,7 +183,30 @@ output_field_reliability:
   atvk_code: common
   vat_number: common
   jurisdiction: guaranteed
+  # Both null (not asserted) when the officers query fails — "0 officers"
+  # and "lookup failed" are different KYB answers.
+  legal_representatives: common
+  total_legal_representatives: common
+  tier_2_available: guaranteed
+  tier_2_available_reason: guaranteed
+  ubo_availability: guaranteed
+  ubo_availability_reason: guaranteed
+  # Evidence-Tier canonical aliases (always assigned by the alias block).
+  legal_name: guaranteed
+  primary_registration_id: guaranteed
+  legal_form: guaranteed
+  registered_address: guaranteed
+  date_incorporated: guaranteed
 limitations:
+  - title: Officer data lists current representation-entitled persons only — no historical officers, no birth data
+    text: >-
+      The UR officers dataset (data.gov.lv, CC0 1.0) lists persons currently entitled to represent the
+      entity (board members, chair). Resigned or historical officers are not included. The upstream dataset
+      publishes birth dates and masked personal codes, but Strale deliberately never reads them (data
+      minimization) — date_of_birth is always null by choice, not upstream absence.
+    category: coverage
+    severity: info
+    workaround: For historical officer data, order an extract from the Latvian Enterprise Register (info.ur.gov.lv)
   - title: Daily snapshot — sub-day filings may not be reflected immediately
     text: >-
       The Latvian Open Data Portal publishes a daily snapshot. Filings submitted today may not be reflected in the API

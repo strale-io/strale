@@ -1,19 +1,18 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { promisify } from "node:util";
-import { resolve as dnsResolve } from "node:dns";
-
-const resolveMx = promisify(dnsResolve).bind(null) as unknown as (
-  hostname: string,
-  rrtype: "MX",
-) => Promise<Array<{ exchange: string; priority: number }>>;
+import { resolveMx } from "node:dns/promises";
 
 // Comprehensive email regex (RFC 5322 simplified)
-const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+// Exported so email-validate-bulk can pre-extract domains for MX caching
+// using the exact same format rule — no forked/duplicated validation logic.
+export const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
 import { DISPOSABLE_DOMAINS } from "../lib/disposable-domains.js";
 
 // Common role-based prefixes
-const ROLE_PREFIXES = new Set([
+// Exported for reuse by domain-contact-extract.ts, which classifies
+// organisation-published addresses against this same list rather than
+// maintaining a second copy.
+export const ROLE_PREFIXES = new Set([
   "admin", "administrator", "hostmaster", "info", "noc", "noreply",
   "no-reply", "postmaster", "support", "webmaster", "abuse", "sales",
   "contact", "help", "office", "billing", "security", "feedback",
@@ -66,15 +65,9 @@ function suggestDomain(domain: string): string | null {
   return bestMatch;
 }
 
-async function checkMx(domain: string): Promise<{ has_mx: boolean; mx_records: string[] }> {
+export async function checkMx(domain: string): Promise<{ has_mx: boolean; mx_records: string[] }> {
   try {
-    const { resolve: dnsResolveFn } = await import("node:dns");
-    const { promisify: promisifyFn } = await import("node:util");
-    const resolveMxFn = promisifyFn(dnsResolveFn.bind(null, domain, "MX") as any) as any;
-
-    // Use dns.promises instead
-    const dns = await import("node:dns/promises");
-    const records = await dns.resolveMx(domain);
+    const records = await resolveMx(domain);
     const exchanges = records
       .sort((a, b) => a.priority - b.priority)
       .map((r) => r.exchange);
@@ -84,26 +77,47 @@ async function checkMx(domain: string): Promise<{ has_mx: boolean; mx_records: s
   }
 }
 
-registerCapability("email-validate", async (input: CapabilityInput) => {
-  const raw = (input.email as string) ?? (input.email_address as string) ?? "";
-  if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'email' is required. Provide an email address to validate.");
-  }
+const FREE_PROVIDERS = new Set([
+  "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com",
+  "icloud.com", "mail.com", "protonmail.com", "proton.me", "zoho.com",
+]);
 
-  const email = raw.trim().toLowerCase();
+export interface EmailValidationResult {
+  valid: boolean;
+  email: string;
+  format_valid: boolean;
+  reason?: string;
+  domain?: string;
+  has_mx_records?: boolean;
+  mx_records?: string[];
+  is_disposable?: boolean;
+  is_role_address?: boolean;
+  is_free_provider?: boolean;
+  did_you_mean?: string;
+}
+
+/**
+ * Shared single-email validation logic. Used directly by email-validate and
+ * per-address by email-validate-bulk. Callers own MX-result caching if they
+ * want to dedupe DNS lookups across a batch that shares domains — this
+ * function always performs (or awaits) the MX lookup itself unless a
+ * pre-fetched `mxOverride` is supplied.
+ */
+export async function validateOneEmail(
+  rawEmail: string,
+  mxOverride?: { has_mx: boolean; mx_records: string[] },
+): Promise<EmailValidationResult> {
+  const email = rawEmail.trim().toLowerCase();
 
   // Format check
   const formatValid = EMAIL_RE.test(email) && email.length <= 254;
 
   if (!formatValid) {
     return {
-      output: {
-        valid: false,
-        email,
-        format_valid: false,
-        reason: "Invalid email format.",
-      },
-      provenance: { source: "algorithmic", fetched_at: new Date().toISOString() },
+      valid: false,
+      email,
+      format_valid: false,
+      reason: "Invalid email format.",
     };
   }
 
@@ -116,30 +130,40 @@ registerCapability("email-validate", async (input: CapabilityInput) => {
   const isRole = ROLE_PREFIXES.has(localPart.split("+")[0]);
 
   // Check free provider
-  const freeProviders = new Set(["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com", "icloud.com", "mail.com", "protonmail.com", "proton.me", "zoho.com"]);
-  const isFree = freeProviders.has(domain);
+  const isFree = FREE_PROVIDERS.has(domain);
 
-  // MX record check
-  const mx = await checkMx(domain);
+  // MX record check (or reuse a caller-supplied result for the domain)
+  const mx = mxOverride ?? (await checkMx(domain));
 
   // Typo suggestion for common provider misspellings
   const suggestion = !mx.has_mx ? suggestDomain(domain) : null;
 
   return {
-    output: {
-      valid: formatValid && mx.has_mx && !isDisposable,
-      email,
-      format_valid: formatValid,
-      domain,
-      has_mx_records: mx.has_mx,
-      mx_records: mx.mx_records,
-      is_disposable: isDisposable,
-      is_role_address: isRole,
-      is_free_provider: isFree,
-      ...(suggestion ? { did_you_mean: `${localPart}@${suggestion}` } : {}),
-    },
+    valid: formatValid && mx.has_mx && !isDisposable,
+    email,
+    format_valid: formatValid,
+    domain,
+    has_mx_records: mx.has_mx,
+    mx_records: mx.mx_records,
+    is_disposable: isDisposable,
+    is_role_address: isRole,
+    is_free_provider: isFree,
+    ...(suggestion ? { did_you_mean: `${localPart}@${suggestion}` } : {}),
+  };
+}
+
+registerCapability("email-validate", async (input: CapabilityInput) => {
+  const raw = (input.email as string) ?? (input.email_address as string) ?? "";
+  if (typeof raw !== "string" || !raw.trim()) {
+    throw new Error("'email' is required. Provide an email address to validate.");
+  }
+
+  const result = await validateOneEmail(raw);
+
+  return {
+    output: result as unknown as Record<string, unknown>,
     provenance: {
-      source: "algorithmic+dns",
+      source: result.format_valid ? "algorithmic+dns" : "algorithmic",
       fetched_at: new Date().toISOString(),
     },
   };

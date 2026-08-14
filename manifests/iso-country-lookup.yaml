@@ -64,13 +64,16 @@ test_fixtures:
         reliability: common
   health_check_input:
     query: land
+# Top-level response fields only. `name`, `alpha_2`, `region` etc. are NOT
+# top-level — the executor nests them inside `match` (single hit) or inside
+# each element of `matches` (zero or several hits). Declaring them here made
+# the smoke test assert not-null on fields that never appear at the top level,
+# so step 3 failed on every run.
 output_field_reliability:
-  name: guaranteed
-  region: guaranteed
-  alpha_2: guaranteed
-  alpha_3: guaranteed
-  schengen: guaranteed
-  eu_member: guaranteed
+  query: guaranteed
+  match: common
+  matches: common
+  total_matches: common
 limitations:
   - title: Country data is based on ISO 3166-1 — newly created or renamed countries may not yet be reflected
     text: Country data based on ISO 3166-1 standard — newly created or renamed countries may take time to be reflected

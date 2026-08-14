@@ -59,7 +59,11 @@ class Strale:
         self._client = httpx.Client(
             base_url=self._base_url,
             timeout=self._timeout,
-            headers={"Authorization": f"Bearer {self._api_key}"},
+            headers={
+                "Authorization": f"Bearer {self._api_key}",
+                # Channel attribution: identifies this SDK on the API side.
+                "X-Strale-Client": "straleio-python/0.1.4",
+            },
         )
 
     def close(self) -> None:

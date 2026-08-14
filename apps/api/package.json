@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint:no-bare-catch": "node scripts/check-no-bare-catch.mjs src",
+    "lint:no-unguarded-user-fetch": "node scripts/check-no-unguarded-user-fetch.mjs",
     "lint:ssrf-inventory": "node scripts/check-ssrf-inventory.mjs",
     "lint:no-new-console": "node scripts/check-no-new-console.mjs",
     "lint:no-external-column-access": "node scripts/check-no-external-column-access.mjs",

@@ -4,8 +4,8 @@
 slug: hs-code-lookup
 name: HS Code Lookup
 description: >-
-  Classify a product into Harmonized System (HS) commodity codes. Returns primary HS code, chapter, section, and
-  alternative classifications with confidence levels.
+  AI-suggested HS commodity codes for a product description, with alternatives and confidence.
+  Not an official customs classification.
 category: trade
 cost_class: paid_prepaid
 quota_window: none
@@ -23,17 +23,19 @@ output_schema:
   type: object
   example:
     notes: >-
-      The query 'test_value' is a placeholder or test string and does not describe an actual product or commodity. A
-      valid product description is required for HS classification. Please provide a specific product name or detailed
-      description (e.g., 'cotton t-shirt', 'aluminum wire', 'frozen chicken breast', etc.).
-    query: test_value
-    chapter: N/A
-    section: N/A
-    confidence: N/A
-    primary_hs_code: Unable to classify
-    alternative_codes: []
-    chapter_description: N/A
-    primary_description: Not a valid product description
+      Knitted cotton T-shirts classify under 6109.10. Blended-fabric shirts may fall under 6109.90
+      depending on fibre composition. Verify with binding tariff information for customs filings.
+    query: cotton t-shirt
+    chapter: "61"
+    section: Section XI — Textiles and textile articles
+    confidence: high
+    primary_hs_code: "6109.10"
+    alternative_codes:
+      - hs_code: "6109.90"
+        description: T-shirts of other textile materials (if not pure cotton)
+        confidence: medium
+    chapter_description: Articles of apparel and clothing accessories, knitted or crocheted
+    primary_description: T-shirts, singlets and other vests, knitted or crocheted, of cotton
   properties:
     chapter:
       type: string
@@ -45,18 +47,31 @@ output_schema:
       type: array
     primary_description:
       type: string
-data_source: Harmonized System nomenclature database (WCO)
-data_source_type: api
+# Honest sourcing (2026-08-12, Petter-approved relabel): there is no WCO
+# database behind this capability — the classification is LLM recall of HS
+# nomenclature. Claiming "WCO database" was a machine-surface lie.
+# data_source_type ai_assisted (NOT computed): computed maps to
+# capability_type=deterministic, which disables retry, makes the failure
+# classifier rewrite Anthropic outages as capability bugs (poisoning the
+# quality floor), and drops the cap out of the Anthropic upstream-health
+# gate. Review-caught before it could land.
+data_source: Claude Haiku (Anthropic API) — LLM classification, no WCO database
+data_source_type: ai_assisted
 transparency_tag: ai_generated
-freshness_category: live-fetch
+# reference-data, not computed: HS nomenclature IS a data dependency with a
+# real staleness axis (~5-year revision cycle; model recall pinned to its
+# training cutoff). "Computed (no data dependency)" would be a new lie.
+freshness_category: reference-data
 maintenance_class: requires-domain-expertise
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: false
 geography: global
 test_fixtures:
   known_answer:
+    # A real product, not a placeholder: with 'test_value' the model refused
+    # and the test only proved four strings were non-null on garbage input.
     input:
-      product: test_value
+      product: cotton t-shirt
     expected_fields:
       - field: chapter
         operator: not_null
@@ -104,3 +119,11 @@ limitations:
     category: accuracy
     severity: warning
     workaround: Use the suggested HS code as a starting point and verify with your customs broker or national tariff database
+  - title: HS edition tracking is not guaranteed — nomenclature revises on a ~5-year cycle
+    text: >-
+      Classifications come from the model's knowledge of HS nomenclature, which is pinned to its training
+      cutoff. Codes changed in the most recent HS revision (HS2022 → HS2028 cycle) may be suggested in
+      their older form.
+    category: freshness
+    severity: info
+    workaround: Cross-check the suggested code against your national tariff database's current edition

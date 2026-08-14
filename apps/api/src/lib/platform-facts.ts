@@ -34,7 +34,7 @@
 
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { TRANSACTION_RETENTION_DAYS } from "./data-retention.js";
+import { TRANSACTION_RETENTION_DAYS, PII_RETENTION_DAYS } from "./data-retention.js";
 import { getStraleJurisdiction, getProcessingLocation } from "./processing-location.js";
 
 // ─── Static facts (compile-time constants) ──────────────────────────────────
@@ -73,6 +73,21 @@ export const STATIC_FACTS = {
    * data-retention.ts; the platform-facts test asserts they're equal.
    */
   retention_days_default: TRANSACTION_RETENTION_DAYS,
+
+  /**
+   * How long the PERSONAL-DATA columns of a transaction are kept, in days,
+   * for capabilities flagged `processes_personal_data`.
+   *
+   * Published separately because `retention_days_default` alone would
+   * overstate what we hold: the Art. 30 record-of-processing skeleton lives
+   * for the full 1095 days, but input/output/error/audit_trail/provenance are
+   * zeroed at 90. Claiming only the 1095 figure would tell a data subject we
+   * keep their data three times longer than we do.
+   *
+   * Must match `PII_RETENTION_DAYS` in data-retention.ts; the platform-facts
+   * test asserts they're equal.
+   */
+  pii_retention_days: PII_RETENTION_DAYS,
 
   /**
    * Maximum the retention period can be configured to under enterprise

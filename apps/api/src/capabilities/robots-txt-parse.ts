@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
@@ -11,7 +12,7 @@ registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   const robotsUrl = `${base.protocol}//${base.hostname}/robots.txt`;
   await validateUrl(robotsUrl);
 
-  const response = await fetch(robotsUrl, {
+  const response = await safeFetch(robotsUrl, {
     signal: AbortSignal.timeout(10000),
     headers: { "User-Agent": "StraleBot/1.0" },
   });

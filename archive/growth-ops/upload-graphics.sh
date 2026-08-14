@@ -1,5 +1,9 @@
 #!/bin/bash
-TYPEFULLY_MCP="https://mcp.typefully.com/mcp?TYPEFULLY_API_KEY=dced9NYbgoQdgbqrADTF70g7AuwYWCJz"
+# 2026-08-10: the live Typefully API key was committed here in plaintext on
+# 2026-04-18. Read it from the environment instead. NOTE: redacting this line
+# does not undo the exposure — the value is in git history permanently, so the
+# key must be rotated in Typefully. Track that separately from this edit.
+TYPEFULLY_MCP="https://mcp.typefully.com/mcp?TYPEFULLY_API_KEY=${TYPEFULLY_API_KEY:?set TYPEFULLY_API_KEY}"
 GRAPHICS_DIR="/c/Users/pette/Projects/strale/growth-plan/graphics"
 
 upload_and_attach() {

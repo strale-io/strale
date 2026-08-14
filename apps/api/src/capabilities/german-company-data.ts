@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { classifyNameMatch } from "../lib/company-name-match.js";
 
 // German company data via OpenRegister (https://api.openregister.de).
 // Replaces the deactivated northdata.com scraper (DEC-20260427-I) with a
@@ -21,7 +22,7 @@ const TIMEOUT_MS = 10_000;
 const COMPANY_ID_RE = /^DE-(HRB|HRA|GnR|PR|VR|GsR)-[A-Z0-9]+-\d+$/i;
 const HRB_RE = /^(HRB|HRA|GnR|PR|VR|GsR)\s*\d+$/i;
 
-interface AutocompleteResult {
+export interface AutocompleteResult {
   company_id: string;
   name: string;
   country: string;
@@ -136,7 +137,7 @@ function classifyHttp(status: number, body: unknown): never {
   );
 }
 
-async function autocomplete(query: string): Promise<AutocompleteResult> {
+async function autocomplete(query: string): Promise<AutocompleteResult[]> {
   const url = `${API}/v1/autocomplete/company?query=${encodeURIComponent(query)}`;
   const r = await fetch(url, { headers: authHeaders(), signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!r.ok) {
@@ -144,11 +145,112 @@ async function autocomplete(query: string): Promise<AutocompleteResult> {
     classifyHttp(r.status, body);
   }
   const data = (await r.json()) as AutocompleteResponse;
-  const top = data.results?.[0];
-  if (!top || !top.company_id) {
+  const results = (data.results ?? []).filter((c) => !!c?.company_id);
+  if (results.length === 0) {
     throw new Error(`No German company found matching "${query}".`);
   }
-  return top;
+  return results;
+}
+
+/**
+ * Name path: OpenRegister's autocomplete is fuzzy and ordered by its own
+ * relevance, which is not ours — the P0 sweep (2026-08-12) observed
+ * "HRB 2001 <court>" resolving to a company literally NAMED "HRB TREUHAND
+ * GMBH". Taking results[0] on a name hands the caller a different legal
+ * entity with no signal that it did (the #161 wrong-company class, fixed for
+ * FI/NO/EE/CH — this brings DE in line). Score every candidate and refuse
+ * when nothing genuinely matches.
+ */
+export function pickByName(query: string, results: AutocompleteResult[]): AutocompleteResult {
+  const exact: AutocompleteResult[] = [];
+  const high: AutocompleteResult[] = [];
+  for (const cand of results) {
+    if (typeof cand.name !== "string" || !cand.name) continue;
+    const { match_confidence } = classifyNameMatch(query, cand.name);
+    if (match_confidence === "exact") exact.push(cand);
+    else if (match_confidence === "high") high.push(cand);
+  }
+  // Suffix stripping makes German SIBLING entities normalize identically —
+  // "Otto GmbH" and "Otto GmbH & Co KG" are separate registrations with
+  // separate register numbers and separate liability. When more than one
+  // distinct entity ties at the same confidence, choosing one silently is the
+  // wrong-company class again; refuse and make the caller disambiguate.
+  const pickUnambiguous = (bucket: AutocompleteResult[]): AutocompleteResult | null => {
+    const ids = new Set(bucket.map((c) => c.company_id));
+    if (ids.size === 1) return bucket[0];
+    if (ids.size > 1) {
+      const listing = bucket
+        .slice(0, 4)
+        .map((c) => `${c.name} (${c.register_type} ${c.register_number}, ${c.company_id})`)
+        .join("; ");
+      throw new Error(
+        `${ids.size} distinct German entities match "${query}" equally well: ${listing}. ` +
+          `These are separate legal registrations — pass the intended company_id, or the full ` +
+          `registered name including its legal form (GmbH / SE / GmbH & Co. KG / …).`,
+      );
+    }
+    return null;
+  };
+
+  const winner = pickUnambiguous(exact) ?? pickUnambiguous(high);
+  if (!winner) {
+    const closest = results.slice(0, 3).map((r) => r.name).filter(Boolean).join(", ");
+    // Multi-word inputs that score low are usually free-text sentences, not
+    // company names — say so instead of blaming the registry.
+    const sentenceHint = query.trim().split(/\s+/).length > 6
+      ? ` The query looks like free text — pass the company name alone in 'company_name'.`
+      : "";
+    throw new Error(
+      `No confident German registry match for "${query}". OpenRegister's search is fuzzy and ` +
+        `returned only unrelated entities${closest ? ` (closest: ${closest})` : ""}.` +
+        sentenceHint +
+        ` Provide the OpenRegister company_id (e.g. "DE-HRB-F1103-719915" for SAP SE) or the ` +
+        `exact registered name, or hrb_number + court for a register-number lookup.`,
+    );
+  }
+  return winner;
+}
+
+/**
+ * Register-number path: the query is an identifier, so the answer must carry
+ * that identifier. Fuzzy autocomplete can match the register token as NAME
+ * text (see pickByName's incident); accept only candidates whose
+ * register_type + digits equal the requested ones, and refuse otherwise —
+ * a wrong legal entity from a KYB lookup is strictly worse than an error.
+ */
+/** Court names compare loosely: case, punctuation, and the "Amtsgericht" prefix vary. */
+function normCourt(s: string): string {
+  return s.toLowerCase().replace(/amtsgericht/g, "").replace(/[^a-zäöüß0-9]/g, "");
+}
+
+export function pickByRegisterNumber(hrbNumber: string, court: string, results: AutocompleteResult[]): AutocompleteResult {
+  const m = hrbNumber.match(/^(HRB|HRA|GnR|PR|VR|GsR)\s*(\d+)$/i);
+  if (!m) {
+    throw new Error(`Unparseable German register number "${hrbNumber}". Expected e.g. "HRB 2001".`);
+  }
+  const wantType = m[1].toUpperCase();
+  const wantNum = m[2];
+  // German register numbers are per-COURT, not globally unique (the manifest's
+  // own limitation says so) — the same HRB number at a different Amtsgericht
+  // is a different company. All three dimensions must match; review caught
+  // that the first version checked type+number but only CLAIMED the court.
+  const wantCourt = normCourt(court);
+  const hit = results.find((c) => {
+    const type = (c.register_type ?? "").toUpperCase().trim();
+    const num = (c.register_number ?? "").replace(/\D/g, "");
+    if (type !== wantType || num !== wantNum) return false;
+    const candCourt = normCourt(c.register_court ?? "");
+    return !!wantCourt && !!candCourt && (candCourt.includes(wantCourt) || wantCourt.includes(candCourt));
+  });
+  if (!hit) {
+    const closest = results.slice(0, 3).map((r) => `${r.name} (${r.register_type} ${r.register_number}, ${r.register_court})`).join(", ");
+    throw new Error(
+      `No German company with ${wantType} ${wantNum} at "${court}" in OpenRegister's index. ` +
+        `The search returned only entities with other register numbers or courts` +
+        `${closest ? ` (closest: ${closest})` : ""}. Check the number and the Registergericht spelling.`,
+    );
+  }
+  return hit;
 }
 
 async function fetchCompany(companyId: string): Promise<CompanyV1> {
@@ -248,8 +350,8 @@ registerCapability("german-company-data", async (input: CapabilityInput) => {
       );
     }
     const courtName = court.replace(/^Amtsgericht\s+/i, "").trim();
-    const top = await autocomplete(`${hrbNumber} ${courtName}`);
-    resolvedId = top.company_id;
+    const results = await autocomplete(`${hrbNumber} ${courtName}`);
+    resolvedId = pickByRegisterNumber(hrbNumber, court, results).company_id;
   } else {
     const query = companyName || hrbNumber || task;
     if (!query) {
@@ -257,8 +359,8 @@ registerCapability("german-company-data", async (input: CapabilityInput) => {
         "'company_id', 'hrb_number' (with 'court'), or 'company_name' is required.",
       );
     }
-    const top = await autocomplete(query);
-    resolvedId = top.company_id;
+    const results = await autocomplete(query);
+    resolvedId = pickByName(query, results).company_id;
   }
 
   const company = await fetchCompany(resolvedId);

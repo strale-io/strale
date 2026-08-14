@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
+import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 // F-0-006 Bucket D: the user URL is encoded into a query string and
 // sent to the HARDCODED api.gopluslabs.io endpoint. We never fetch the
 // user's URL directly.
@@ -22,8 +23,12 @@ registerCapability("phishing-site-check", async (input: CapabilityInput) => {
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     url = `https://${url}`;
   }
+  // ToS gate: sending a prohibited URL to a vendor to assess on our behalf
+  // is the same policy violation by proxy (money-integrity 2026-08-12).
+  assertTargetAllowed(url);
 
   const apiUrl = `${API}?url=${encodeURIComponent(url)}`;
+  // unguarded-fetch-ok: fixed api.gopluslabs.io host; caller URL gated by assertTargetAllowed above
   const response = await fetch(apiUrl, {
     headers: { "User-Agent": "Strale/1.0" },
     signal: AbortSignal.timeout(10000),

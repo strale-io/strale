@@ -1,0 +1,166 @@
+# DRAFT — NOT FOR THE ONBOARDING PIPELINE
+#
+# Queue rank 4. Demand: the email cluster is the volume leader and the only
+# month-over-month grower. 30d: email-validate 422 calls / 100%, email-deliverability-check
+# 136 / 100%, lead-email-verify the #1 solution (57 calls, EUR11.40). Adjacency
+# keyword-suggest -> email-validate 13 pairs.
+# See docs/strategy/2026-08-demand-mined-build-queue.md §5 rank 4.
+#
+# Zero-maintenance class (DNS only, no vendor, no key, no external cost) — therefore a
+# candidate for factory dark-launch under DEC-20260812-A: invisible + non-x402 until the
+# first green week.
+#
+# VERIFICATION DEBT — close before building:
+#   1. The provider fingerprint list is the entire product and is NOT yet sourced. It must
+#      be a versioned, in-repo table of MX-suffix -> provider with a stated last-reviewed
+#      date, not a hardcoded if-chain. Decide where it lives and who reviews it.
+#   2. Decide the unknown-provider contract. Recommendation: return provider "unknown"
+#      with the raw MX hosts, never a guess. A wrong provider label is worse than none.
+#   3. Confirm reuse of the existing mx-lookup primitive rather than a second DNS path.
+#   4. Check overlap with email-deliverability-check — if that capability already returns
+#      MX hosts, this must be positioned as the classification layer, not a duplicate.
+#      If the overlap is total, this becomes a field addition, not a new capability.
+
+slug: domain-email-provider-detect
+name: Domain Email Provider Detect
+description: >-
+  Identify which email platform a domain uses by classifying its MX records — Google Workspace,
+  Microsoft 365, Proofpoint, Mimecast, Zoho, self-hosted and others — with the raw records shown.
+category: web-intelligence
+cost_class: free_computed
+quota_window: none
+price_cents: 3
+is_free_tier: false
+avg_latency_ms: 250
+data_source: Public DNS MX records (no vendor, no external cost)
+data_source_type: computed
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: zero-maintenance
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: global
+
+input_schema:
+  type: object
+  required: []
+  properties:
+    domain:
+      type: string
+      description: Domain to inspect (e.g. "example.com"). Bare domain or URL.
+    url:
+      type: string
+      description: Alias for domain — the host is extracted
+    email:
+      type: string
+      description: Alias — the domain part after "@" is used. The local part is discarded, never stored.
+    query:
+      type: string
+      description: Alias for domain
+    task:
+      type: string
+      description: Free-text alias for domain
+  anyOf:
+    - required: [domain]
+    - required: [url]
+    - required: [email]
+    - required: [query]
+    - required: [task]
+
+output_schema:
+  type: object
+  example:
+    domain: example.com
+    provider: Google Workspace
+    provider_key: google_workspace
+    category: cloud_mailbox
+    confidence: high
+    mx_hosts:
+      - host: aspmx.l.google.com
+        priority: 1
+      - host: alt1.aspmx.l.google.com
+        priority: 5
+    has_mx: true
+    security_gateway: null
+    fingerprint_version: "2026-08-13"
+  properties:
+    domain: { type: string }
+    provider: { type: ["string", "null"] }
+    provider_key: { type: ["string", "null"] }
+    category:
+      type: ["string", "null"]
+      description: 'cloud_mailbox | security_gateway | hosting_bundled | self_hosted | none | unknown'
+    confidence:
+      type: string
+      description: 'high | medium | unknown. "unknown" means the MX suffix matched no fingerprint.'
+    mx_hosts:
+      type: array
+      description: Raw MX records with priorities, always returned so the caller can audit the call
+    has_mx: { type: boolean }
+    security_gateway:
+      type: ["string", "null"]
+      description: Set when a filtering layer fronts the mailbox provider (e.g. Proofpoint, Mimecast)
+    fingerprint_version: { type: string }
+
+test_fixtures:
+  # DRAFT fixture. google.com is stable but any large provider's MX can change —
+  # prefer asserting on shape (has_mx, mx_hosts array) over the provider string.
+  # A second fixture for a domain with NO MX records is mandatory before launch.
+  known_answer:
+    input:
+      domain: google.com
+    expected_fields:
+      - { field: domain, operator: equals, reliability: guaranteed, value: google.com }
+      - { field: has_mx, operator: not_null, reliability: guaranteed }
+      - { field: mx_hosts, operator: type, reliability: guaranteed, value: array }
+      - { field: confidence, operator: not_null, reliability: guaranteed }
+  health_check_input:
+    domain: example.com
+
+output_field_reliability:
+  domain: guaranteed
+  has_mx: guaranteed
+  mx_hosts: guaranteed
+  confidence: guaranteed
+  fingerprint_version: guaranteed
+  category: guaranteed
+  provider: common
+  provider_key: common
+  security_gateway: rare
+
+limitations:
+  - title: Says nothing about deliverability or authentication
+    text: >-
+      This identifies the mail platform only. It does not check SPF, DKIM or DMARC, does not
+      score deliverability, and does not verify that any mailbox exists. Use email-auth-check
+      for authentication posture and email-deliverability-check for deliverability.
+    category: coverage
+    severity: warning
+  - title: Unknown is a real answer, not a failure
+    text: >-
+      When the MX suffix matches no entry in the fingerprint table the response returns
+      `provider: null` and `confidence: "unknown"` with the raw MX hosts. It will not guess
+      a provider from a partial match.
+    category: accuracy
+    severity: warning
+  - title: A security gateway can mask the mailbox provider
+    text: >-
+      Domains fronted by a filtering service publish the gateway's MX records, not the
+      underlying mailbox platform's. In that case `security_gateway` is populated and
+      `provider` may be null — the real mailbox host is not visible in DNS.
+    category: accuracy
+    severity: warning
+  - title: Fingerprint table ages
+    text: >-
+      Classification depends on a maintained MX-suffix table, whose version is returned as
+      `fingerprint_version`. New or rebranded providers are unrecognised until the table is
+      reviewed.
+    category: freshness
+    severity: info
+  - title: No MX does not mean no email
+    text: >-
+      A domain with no MX records may still receive mail at its A record under legacy
+      fallback behaviour, or may simply not be used for mail. `has_mx: false` reports the
+      DNS fact and draws no conclusion.
+    category: accuracy
+    severity: info

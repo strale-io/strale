@@ -27,8 +27,11 @@ output_schema:
     type: MATRIZ
     status: ATIVA
     address: R GARIBALDI, 070, VILA RICA, 95.760-000 SAO SEBASTIAO DO CAI, RS
+    # Placeholder name. The live capability returns real partners; this example
+    # must not, since manifests are hand-authored and never pass through the
+    # fixture scrubber. Shape preserved: { name, role }.
     partners:
-      - name: CLAUDIA KICH DA SILVA
+      - name: EXEMPLO PRIMEIRO SOCIO
         role: 16-Presidente
     trade_name: CAIXA ESCOLA DA ESCOLA ESTADUAL DE ENSINO FUNDAMENTAL J
     company_name: CAIXA ESCOLAR DA ESCOLA ESTADUAL DE ENSINO FUNDAMENTAL JOSEFINA JACQUES NORONHA

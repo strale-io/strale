@@ -143,6 +143,11 @@ personal_data_categories:
   - nationality
   - political_affiliation
 geography: global
+# GDPR Art. 22 (Bucket C): match results the customer uses to decide —
+# the canonical screening_signal case (CLAUDE.md names this capability as the
+# example). Was defaulting to data_lookup, which put the wrong gdpr block and
+# dispute framing on the audit body (P0, legal audit 2026-08-12).
+gdpr_art_22_classification: screening_signal
 test_fixtures:
   known_answer:
     input:

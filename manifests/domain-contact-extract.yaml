@@ -1,0 +1,151 @@
+slug: domain-contact-extract
+name: Domain Contact Extract
+description: >-
+  Find a company's contact info — email address, phone number, and mailing address — by extracting it from the
+  company's own website given its domain. Returns role emails (info@, sales@, support@), phone numbers, postal
+  address, contact-page URL, and social links. Organisation-level contacts only, not a specific person's email
+  address (see email-finder) and not employee discovery.
+category: web-intelligence
+search_tags:
+  - contact info
+  - company email
+  - company contact
+  - find email
+  - find phone number
+  - get email address
+  - get phone number
+  - business contact details
+  - contact page
+  - website scrape
+  - extract emails from website
+  - company phone number
+cost_class: free_unlimited
+quota_window: none
+price_cents: 5
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+      description: Company domain (e.g. stripe.com)
+    url:
+      type: string
+      description: Alias for domain — full URL, hostname is extracted
+    website:
+      type: string
+      description: Alias for domain
+    site:
+      type: string
+      description: Alias for domain
+output_schema:
+  type: object
+  properties:
+    domain:
+      type: string
+    fetched_urls:
+      type: array
+    role_emails:
+      type: array
+    published_personal_addresses:
+      type: array
+    phones:
+      type: array
+    social_links:
+      type: object
+    contact_page_url:
+      type: string
+    postal_address:
+      type: string
+    has_contact_page:
+      type: boolean
+data_source: Company's own public website (direct HTTP fetch, no vendor)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+avg_latency_ms: 1500
+processes_personal_data: true
+personal_data_categories:
+  - email
+  - phone
+  - address
+gdpr_art_22_classification: data_lookup
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      domain: stripe.com
+    expected_fields:
+      # Only guaranteed fields get asserted (CLAUDE.md field-reliability rule).
+      # role_emails / phones / social_links / contact_page_url / postal_address
+      # / published_personal_addresses are hand-corrected below to common/rare —
+      # --discover marked them "guaranteed" from a single stripe.com run, which
+      # is not honest: most sites publish none, some, or a different subset of
+      # these fields.
+      - field: domain
+        operator: equals
+        reliability: guaranteed
+        value: stripe.com
+      - field: fetched_urls
+        operator: not_null
+        reliability: guaranteed
+      - field: has_contact_page
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    domain: stripe.com
+output_field_reliability:
+  domain: guaranteed
+  fetched_urls: guaranteed
+  has_contact_page: guaranteed
+  role_emails: common
+  social_links: common
+  phones: rare
+  published_personal_addresses: rare
+  contact_page_url: rare
+  postal_address: rare
+limitations:
+  - title: Organisation-level contacts only — personnel discovery is out of scope
+    text: >-
+      This capability extracts contact channels a company publishes about itself (info@, sales@, support@, phone,
+      address, social links). It does not accept a person's name as input, does not generate or guess candidate personal
+      email addresses, and does not enumerate employees. Any personal-looking address (firstname.lastname@) is returned
+      only if literally published on the company's own site, in the separate `published_personal_addresses` field, and
+      is never expanded or used to infer a pattern. See email-pattern-discover (currently suspended) for the boundary
+      this capability stays inside of.
+    category: coverage
+    severity: info
+  - title: No JavaScript rendering — client-rendered content is invisible
+    text: >-
+      This is a plain HTTP fetch of the raw HTML response, not a headless browser. Contact details injected client-side
+      by a JavaScript framework (React/Vue SPA footers, cookie-gated contact widgets, etc.) will not be seen. Sites that
+      render their contact info this way will return empty or partial results even though a human visiting the page
+      would see it.
+    category: coverage
+    severity: warning
+  - title: Contact-page discovery is a single best-effort follow, not a crawl
+    text: >-
+      At most one additional page is fetched — the first link on the homepage whose href or link text matches
+      /contact|kontakt|contact-us|get-in-touch/i, and only if it resolves to the same hostname. Sites that bury their
+      contact page deeper in navigation, behind a menu that requires JS to expand, or under an unmatched URL/label will
+      show has_contact_page: false even if a contact page exists.
+    category: coverage
+    severity: info
+  - title: Phone numbers come only from explicit markup — plain-text numbers are not extracted
+    text: >-
+      A phone number is returned only when the site declares it as one: a tel: link, or a schema.org telephone value in
+      JSON-LD or microdata. A number that appears only as visible text is NOT extracted, so phones can be empty on a
+      page a human would say clearly shows a phone number. This is deliberate. An earlier version inferred numbers from
+      digit shape and returned fabricated values in production (digit sequences that appeared nowhere on the page),
+      because sites serve different markup to bots and the response is truncated at 300KB mid-document. An empty result
+      you can act on is worth more than a plausible wrong number you cannot detect.
+    category: coverage
+    severity: warning
+  - title: Postal address requires structured markup
+    text: >-
+      Postal address relies on the page publishing schema.org JSON-LD or microdata markup; sites without structured
+      markup return postal_address: null even if an address is visible in plain text on the page.
+    category: coverage
+    severity: info

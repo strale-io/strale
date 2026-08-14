@@ -120,9 +120,13 @@ const NAME_FIELDS = new Set([
 // own canonical formats.
 const INPUT_REGEX_BY_SLUG = {
   "swedish-company-data":    { fields: ["org_number"],      regex: /^\d{6}-\d{4}$/ },
-  "norwegian-company-data":  { fields: ["org_number"],      regex: /^\d{9}$/ },
+  // NO + FI known_answer fixtures deliberately exercise the NAME path since
+  // PR #184 (Gate 5 SECONDARY coverage — the path that actually broke in
+  // prod); the ID path is exercised by schema_check/dependency_health via
+  // health_check_input. Same free-text treatment as german-company-data.
+  "norwegian-company-data":  { fields: ["company_name", "org_number"], regex: null },
   "danish-company-data":     { fields: ["cvr_number"],      regex: /^\d{8}$/ },
-  "finnish-company-data":    { fields: ["business_id"],     regex: /^\d{7}-\d$/ },
+  "finnish-company-data":    { fields: ["company_name", "business_id"], regex: null },
   "uk-company-data":         { fields: ["company_number"],  regex: /^[A-Z0-9]{8}$/ },
   "irish-company-data":      { fields: ["cro_number"],      regex: /^\d{4,7}$/ },
   "french-company-data":     { fields: ["siren"],           regex: /^\d{9}(\d{5})?$/ },
@@ -179,42 +183,60 @@ function findExpectedField(expectedFields, fieldName, operator) {
   );
 }
 
+// known_answer accepts either a single fixture object (legacy shape) or an
+// array of fixtures, one per entry point (Gate 5 multi-path coverage,
+// DEC-20260411-B — see src/lib/capability-manifest-types.ts
+// getKnownAnswerFixtures, the TS-side equivalent of this normalizer).
+// norwegian-company-data is the first array-form manifest in IDENTITY_SLUGS.
+function getKnownAnswerEntries(manifest) {
+  const ka = manifest.test_fixtures?.known_answer;
+  if (!ka) return [];
+  return Array.isArray(ka) ? ka : [ka];
+}
+
 function checkIsBranch(manifest, findings) {
-  const expectedFields = manifest.test_fixtures?.known_answer?.expected_fields;
-  const ef = findExpectedField(expectedFields, "is_branch", "equals");
-  if (!ef) return; // No assertion on is_branch — fine, only ~GR has the concept.
-  if (ef.value === true || ef.value === "true") {
-    findings.push({
-      criterion: "is_branch",
-      detail: `known_answer.expected_fields asserts is_branch equals true — fixture must reference a parent entity, not a branch (DEC-20260513-F)`,
-    });
+  // Flag if ANY entry point's fixture asserts is_branch equals true.
+  for (const entry of getKnownAnswerEntries(manifest)) {
+    const ef = findExpectedField(entry?.expected_fields, "is_branch", "equals");
+    if (!ef) continue; // No assertion on is_branch — fine, only ~GR has the concept.
+    if (ef.value === true || ef.value === "true") {
+      findings.push({
+        criterion: "is_branch",
+        detail: `known_answer.expected_fields asserts is_branch equals true — fixture must reference a parent entity, not a branch (DEC-20260513-F)`,
+      });
+    }
   }
 }
 
 function checkStatus(manifest, findings) {
   if (isExempt(manifest.slug, "status")) return;
-  const expectedFields = manifest.test_fixtures?.known_answer?.expected_fields;
-  const ef = findExpectedField(expectedFields, "status", "equals");
-  if (!ef) return; // No equals-assertion on status — `not_null` is fine.
-  if (!ACTIVE_STATUS_VALUES.has(ef.value)) {
-    findings.push({
-      criterion: "status",
-      detail: `known_answer.expected_fields asserts status equals "${ef.value}" — must be one of ACTIVE_STATUS_VALUES (fixture should reference an active entity)`,
-    });
+  // Flag if ANY entry point's fixture asserts a non-canonical status value.
+  for (const entry of getKnownAnswerEntries(manifest)) {
+    const ef = findExpectedField(entry?.expected_fields, "status", "equals");
+    if (!ef) continue; // No equals-assertion on status — `not_null` is fine.
+    if (!ACTIVE_STATUS_VALUES.has(ef.value)) {
+      findings.push({
+        criterion: "status",
+        detail: `known_answer.expected_fields asserts status equals "${ef.value}" — must be one of ACTIVE_STATUS_VALUES (fixture should reference an active entity)`,
+      });
+    }
   }
 }
 
 function checkNameField(manifest, findings) {
-  const expectedFields = manifest.test_fixtures?.known_answer?.expected_fields;
-  if (!Array.isArray(expectedFields)) {
+  const entries = getKnownAnswerEntries(manifest);
+  if (entries.length === 0) {
     findings.push({
       criterion: "name",
       detail: "known_answer.expected_fields missing entirely — cannot verify name-field presence",
     });
     return;
   }
-  const hasName = expectedFields.some(
-    (ef) => ef && NAME_FIELDS.has(ef.field),
+  // At least one entry point (typically the name-search / SECONDARY path)
+  // must assert a recognised name field — not necessarily every entry
+  // (the ID/PRIMARY-path entry legitimately has no name assertion).
+  const hasName = entries.some(
+    (entry) => Array.isArray(entry?.expected_fields) && entry.expected_fields.some((ef) => ef && NAME_FIELDS.has(ef.field)),
   );
   if (!hasName) {
     findings.push({
@@ -228,18 +250,21 @@ function checkInputRegex(manifest, findings) {
   const cfg = INPUT_REGEX_BY_SLUG[manifest.slug];
   if (!cfg) return; // No regex defined for this slug.
   if (cfg.regex === null) return; // Free-text input, regex check skipped.
-  const input = manifest.test_fixtures?.known_answer?.input;
-  if (!input || typeof input !== "object") {
+  const entries = getKnownAnswerEntries(manifest);
+  if (entries.length === 0) {
     findings.push({
       criterion: "input_regex",
       detail: "known_answer.input missing entirely — cannot verify identifier shape",
     });
     return;
   }
-  const matched = cfg.fields.some((f) => {
-    const v = input[f];
-    if (typeof v !== "string") return false;
-    return cfg.regex.test(v);
+  // At least one entry point (typically the ID/PRIMARY path) must match
+  // the canonical identifier regex — the name-search entry legitimately
+  // won't.
+  const matched = entries.some((entry) => {
+    const input = entry?.input;
+    if (!input || typeof input !== "object") return false;
+    return cfg.fields.some((f) => typeof input[f] === "string" && cfg.regex.test(input[f]));
   });
   if (!matched) {
     findings.push({

@@ -1,4 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { resolveCountryOrThrow } from "./lib/iso-3166.js";
+import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
 registerCapability("serp-analyze", async (input: CapabilityInput) => {
   const keyword = (
@@ -10,8 +12,11 @@ registerCapability("serp-analyze", async (input: CapabilityInput) => {
   if (!keyword) throw new Error("'keyword' is required. Provide a search query to analyze.");
   if (keyword.length < 2) throw new Error("'keyword' must be at least 2 characters.");
 
-  const country = ((input.country as string) ?? "us").trim().toLowerCase();
-  const language = ((input.language as string) ?? "en").trim().toLowerCase();
+  // Validate before spending a Serper call. Serper silently ignores an
+  // unrecognised `gl`, so an unresolvable country used to buy an unscoped
+  // search while the response echoed the caller's bogus value back.
+  const country = resolveCountryOrThrow(input.country, { fallback: "us" }).toLowerCase();
+  const language = resolveLanguageOrThrow(input.language, { fallback: "en" });
 
   const serperKey = process.env.SERPER_API_KEY;
   if (!serperKey) throw new Error("SERPER_API_KEY is required.");
