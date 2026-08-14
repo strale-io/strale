@@ -141,6 +141,26 @@ const NULL_DECISIONS: Record<InvocationContext["kind"], Decision> = {
 
 // ─── Error classes ──────────────────────────────────────────────────────────
 
+/**
+ * Read-only view of the matrix for one invocation context, including the
+ * unclassified (`cost_class IS NULL`) row.
+ *
+ * Exported for tests. The `customer_paid` column being `allow` throughout is
+ * what makes a cost-control refusal unreachable from customer traffic — every
+ * customer-facing entry point passes that context — so it is worth pinning
+ * rather than leaving as a property nobody checks.
+ */
+export function describeAllowMatrix(
+  kind: InvocationContext["kind"],
+): Record<string, Decision> {
+  const out: Record<string, Decision> = {};
+  for (const [costClass, byKind] of Object.entries(ALLOW_MATRIX)) {
+    out[costClass] = byKind[kind];
+  }
+  out["(unclassified)"] = NULL_DECISIONS[kind];
+  return out;
+}
+
 export class CapabilityNotClassifiedError extends Error {
   constructor(public slug: string, public ctx: InvocationContext) {
     super(

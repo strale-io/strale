@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { classifyNameMatch } from "../lib/company-name-match.js";
 
 /**
  * Irish company data via the CRO Open Data Portal CKAN datastore API.
@@ -78,19 +79,64 @@ async function lookupByCroNumber(croNumber: string): Promise<CroRecord> {
   return records[0];
 }
 
-async function lookupByName(name: string): Promise<CroRecord> {
-  const records = await callDatastore(new URLSearchParams({ q: name, limit: "10" }));
+/**
+ * Name path: the CKAN datastore_search `q=` full-text query does return a
+ * Postgres ts_rank score per record, but rank reflects term frequency, not
+ * entity identity — searching "Kerry" ranks WEST KERRY DEVELOPMENTS LIMITED
+ * (dissolved 2010) and WEST KERRY BUILDERS LIMITED identically and neither
+ * is a name match at all. Taking the top-ranked (or, previously, the first
+ * Live-status) result hands the caller a different legal entity with no
+ * signal that it did — the #161 wrong-company class already fixed for
+ * NO/FI/EE/DE/CH. Score every candidate by name and refuse when nothing
+ * genuinely matches; a status preference is not a substitute for a name
+ * match, so it is not applied as a tiebreaker.
+ */
+export interface IeNameResolution {
+  record: CroRecord;
+  matchConfidence: "exact" | "high";
+}
+
+export function pickByName(name: string, records: CroRecord[]): IeNameResolution {
+  const exact = new Map<number, CroRecord>();
+  const high = new Map<number, CroRecord>();
+  for (const r of records) {
+    if (typeof r?.company_name !== "string" || !r.company_name) continue;
+    const { match_confidence } = classifyNameMatch(name, r.company_name);
+    if (match_confidence === "exact" && !exact.has(r.company_num)) exact.set(r.company_num, r);
+    else if (match_confidence === "high" && !high.has(r.company_num)) high.set(r.company_num, r);
+  }
+
+  const pickUnambiguous = (bucket: Map<number, CroRecord>, label: "exact" | "high"): IeNameResolution | null => {
+    if (bucket.size === 0) return null;
+    if (bucket.size === 1) return { record: bucket.values().next().value!, matchConfidence: label };
+    const listing = [...bucket.values()].slice(0, 5).map((r) => `${r.company_name} (${r.company_num})`).join("; ");
+    throw new Error(
+      `Ambiguous Irish company name "${name}": ${bucket.size} distinct registered ` +
+        `entities are ${label === "exact" ? "exact" : "close"} matches — ${listing}. ` +
+        `Provide the CRO number (5-6 digits) to disambiguate.`,
+    );
+  };
+
+  const winner = pickUnambiguous(exact, "exact") ?? pickUnambiguous(high, "high");
+  if (winner) return winner;
+
+  const closest = records.slice(0, 3).map((r) => r.company_name).filter(Boolean).join(", ");
+  throw new Error(
+    `No confident Irish registry match for "${name}". The CRO Open Data Portal's search is fuzzy ` +
+      `and returned only unrelated entities${closest ? ` (closest: ${closest})` : ""}. ` +
+      `Provide the CRO number (5-6 digits) for an exact lookup.`,
+  );
+}
+
+// Fetches the candidate page and delegates to pickByName above for the
+// actual scoring — see that function's doc comment for the ts_rank/Kerry
+// rationale.
+async function lookupByName(name: string): Promise<IeNameResolution> {
+  const records = await callDatastore(new URLSearchParams({ q: name, limit: "25" }));
   if (!records.length) {
     throw new Error(`No Irish company found matching "${name}".`);
   }
-  // Prefer Live/Normal status when multiple matches.
-  const liveStatuses = new Set(["Live", "Normal", "Active"]);
-  const sorted = [...records].sort((a, b) => {
-    const aLive = liveStatuses.has(a.company_status) ? 0 : 1;
-    const bLive = liveStatuses.has(b.company_status) ? 0 : 1;
-    return aLive - bLive;
-  });
-  return sorted[0];
+  return pickByName(name, records);
 }
 
 function formatAddress(r: CroRecord): string | null {
@@ -130,9 +176,17 @@ registerCapability("irish-company-data", async (input: CapabilityInput) => {
   }
 
   const cro = findCro(trimmed);
-  const record = cro ? await lookupByCroNumber(cro) : await lookupByName(trimmed);
+  let record: CroRecord;
+  let matchConfidence: "exact" | "high" | null = null;
+  if (cro) {
+    record = await lookupByCroNumber(cro);
+  } else {
+    const resolved = await lookupByName(trimmed);
+    record = resolved.record;
+    matchConfidence = resolved.matchConfidence;
+  }
 
-  const output = {
+  const output: Record<string, unknown> = {
     company_name: clean(record.company_name) ?? record.company_name,
     cro_number: String(record.company_num),
     company_type: clean(record.company_type),
@@ -149,6 +203,7 @@ registerCapability("irish-company-data", async (input: CapabilityInput) => {
     principal_object_code: clean(record.princ_object_code),
     jurisdiction: "IE",
   };
+  if (matchConfidence) output.match_confidence = matchConfidence;
 
   const filterRef = encodeURIComponent(JSON.stringify({ company_num: record.company_num }));
   const primarySourceUrl = `${CRO_DATASTORE_API}?resource_id=${CRO_RESOURCE_ID}&filters=${filterRef}`;
