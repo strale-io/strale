@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { internalAccountEmailExclusionSql } from "./internal-accounts.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -122,6 +123,14 @@ async function computeCapabilityQuality(
       WHERE c.slug = ${capabilitySlug}
         AND tq.deleted_at IS NULL
     ),
+    -- success_rate / schema_conformance_rate / avg_field_completeness_pct
+    -- below do NOT exclude internal traffic (unlike recent_latency's
+    -- p95/avg further down). Safe today only because nothing reads them —
+    -- do.ts:849 is the sole caller of getCapabilityQuality and reads only
+    -- p95ResponseTimeMs; getSolutionQuality has no callers at all. Wiring
+    -- either of those to a new consumer needs the same internal-account
+    -- exclusion first (as zero-weight, not a WHERE — see the refusal CASE
+    -- below for why a WHERE here regressed the query plan).
     aggregated AS (
       SELECT
         CASE WHEN SUM(weight) > 0
@@ -143,12 +152,36 @@ async function computeCapabilityQuality(
       FROM quality_rows
     ),
     recent_latency AS (
+      -- Excluded via WHERE, not zero-weighted like the refusal CASE above —
+      -- safe here specifically because this CTE has no supporting index on
+      -- tq.created_at, so the unfiltered baseline already sorts the
+      -- capability's ENTIRE transaction_quality history to find the newest
+      -- 50 rows; filtering internal traffic out first (~98%+ of rows on
+      -- most capabilities, via the hourly free-tier test scheduler) shrinks
+      -- that candidate set instead of growing it. Verified against
+      -- production with EXPLAIN ANALYZE across the 8 busiest capabilities:
+      -- cut execution time 3.6x-13.5x (vat-validate 161.7ms -> 44.4ms,
+      -- ecb-interest-rates 111.3ms -> 8.2ms), never regressed. Also affects
+      -- /v1/verify and /v1/transactions per the incident the refusal CASE
+      -- documents — this CTE was not exempt from that risk, just measured
+      -- separately (see PR body for full before/after numbers).
+      --
+      -- No response_time_ms > 0 filter: the only writer of 0ms rows is
+      -- test-runner.ts's recordTestQuality, which always books against the
+      -- system account (getSystemUserId(), @strale.internal) — already
+      -- caught by internalAccountEmailExclusionSql() below. 0ms is also a
+      -- legitimate (if boundary) value for a near-instant pure-algorithmic
+      -- capability, so filtering it independently would misrepresent real
+      -- latency for those.
       SELECT tq.response_time_ms
       FROM transaction_quality tq
       JOIN transactions t ON t.id = tq.transaction_id
       JOIN capabilities c ON c.id = t.capability_id
       WHERE c.slug = ${capabilitySlug}
         AND tq.deleted_at IS NULL
+        AND (t.user_id IS NULL OR t.user_id NOT IN (
+          SELECT id FROM users WHERE ${internalAccountEmailExclusionSql()}
+        ))
       ORDER BY tq.created_at DESC
       LIMIT 50
     ),

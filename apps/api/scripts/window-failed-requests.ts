@@ -7,7 +7,7 @@ if (!from || !to) {
 const postgres = (await import("postgres")).default;
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
 const r = await sql`
-  SELECT task, category, max_price_cents, created_at
+  SELECT task, category, max_price_cents, failure_type, error_detail, created_at
   FROM failed_requests
   WHERE created_at >= ${from} AND created_at <= ${to}
   ORDER BY created_at DESC

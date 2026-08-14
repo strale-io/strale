@@ -50,13 +50,33 @@ async function main() {
   // without the users join this counted founder/test-account curl runs as
   // customer signal (same bug fixed in since-last-ext.ts, 2026-08-11).
   const fr = await sql`
-    SELECT COUNT(*)::int AS total
+    SELECT f.failure_type, COUNT(*)::int AS n
     FROM failed_requests f
     LEFT JOIN users u ON u.id = f.user_id
     WHERE f.created_at >= (NOW() AT TIME ZONE 'Europe/Berlin')::date
       AND (u.email IS NULL OR u.email NOT IN ${sql(INTERNAL_EMAILS)})
+    GROUP BY f.failure_type
+    ORDER BY n DESC
   `;
-  console.log(`Failed request logs: ${fr[0].total}`);
+  if (fr.length > 0) {
+    // Gloss the DB enums so the report stays readable at a glance
+    const gloss: Record<string, string> = {
+      no_match: "no capability matched",
+      missing_fields: "required inputs missing",
+      input_confusion: "sent /v1/do body as inputs",
+      input_misplaced: "inputs at top level",
+    };
+    const total = fr.reduce((sum, r) => sum + r.n, 0);
+    const breakdown = fr
+      .map(r => {
+        const key = r.failure_type ?? "unknown";
+        return `${key}${gloss[key] ? ` — ${gloss[key]}` : ""}: ${r.n}`;
+      })
+      .join(', ');
+    console.log(`Failed request logs: ${total}  (${breakdown})`);
+  } else {
+    console.log(`Failed request logs: 0`);
+  }
 
   await sql.end();
 }

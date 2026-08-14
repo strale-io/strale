@@ -59,7 +59,12 @@ import { validateFixture } from "../src/lib/fixture-quality.js";
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { getExecutor } from "../src/capabilities/index.js";
-import { guardedExecute } from "../src/capabilities/guarded-executor.js";
+import {
+  guardedExecute,
+  seedCostMetaForOnboarding,
+  COST_CLASSES,
+  type CostClass,
+} from "../src/capabilities/guarded-executor.js";
 // Phase 3a runtime sentinel (PR #109): strict-missing-only assertion on
 // guaranteed fields. Reused here at onboard time so the same gate fires
 // before a manifest can be committed.
@@ -221,6 +226,55 @@ async function runOrchestrator(
 
 // ─── Execute-and-Verify (Enhancement 1) ─────────────────────────────────────
 
+/**
+ * Chicken-and-egg fix: verifyFixtures and discoverFixtures both execute the
+ * capability BEFORE persistCapability, so a new capability has no DB row and
+ * the guarded executor would read cost_class NULL → refuse internal_test —
+ * making --strict (and --discover on new capabilities) impossible even with
+ * cost_class correctly declared in the manifest. The manifest is the
+ * authoring surface for cost_class, so seed the gate's cache with the
+ * declared value; the DB row written moments later carries the identical
+ * value.
+ *
+ * Scope: this only helps cost classes the ALLOW_MATRIX permits from
+ * internal_test (free_unlimited, free_quota, paid_with_free_tier).
+ * paid_prepaid / paid_subscription are still refused — by design: onboard
+ * verification must never burn paid vendor credits. For those, hand-write
+ * known_answer fixtures and verify via production traffic / piggyback.
+ *
+ * Fail-closed: no declared cost_class → no seed → same refusal as before.
+ * An unknown value (e.g. the legacy 'paid_per_call' in some older
+ * manifests) warns and skips the seed rather than dying mid-run — the
+ * behavior is then identical to pre-fix (refused as unclassified), and
+ * the warning names the file to correct.
+ *
+ * INSERT-MODE ONLY. The caller (onboard()) seeds only when no DB row
+ * exists. On the backfill path the row is authoritative and manifest↔DB
+ * cost_class drift is a standing condition (238-cap drift audit) — seeding
+ * there would let a drifted YAML value (e.g. free_unlimited over the DB's
+ * paid_prepaid) launder a paid capability past the ALLOW_MATRIX into live
+ * vendor spend, the exact 2026-05-11 failure Phase A0b exists to prevent.
+ */
+function seedGateFromManifest(manifest: Manifest): void {
+  if (manifest.cost_class == null) return;
+  if (!COST_CLASSES.includes(manifest.cost_class as CostClass)) {
+    console.log(
+      `  ⚠ manifests/${manifest.slug}.yaml declares unknown cost_class '${String(manifest.cost_class)}' — ` +
+        `valid values: ${COST_CLASSES.join(", ")}. Not seeding the gate; ` +
+        `execution will be refused as unclassified until the manifest is corrected.`,
+    );
+    return;
+  }
+  seedCostMetaForOnboarding({
+    slug: manifest.slug,
+    cost_class: manifest.cost_class as CostClass,
+    quota_window: manifest.quota_window ?? null,
+    quota_cap: manifest.quota_cap ?? null,
+    quota_reset_dom: manifest.quota_reset_dom ?? null,
+  });
+  console.log(`  Seeded cost_class=${manifest.cost_class} from manifest (pre-insert verification gate)`);
+}
+
 async function executeCapability(
   slug: string,
   input: Record<string, unknown>,
@@ -232,8 +286,10 @@ async function executeCapability(
 
   try {
     // Phase A0b dispatcher gate. onboard.ts execute is an internal_test/manual
-    // diagnostic — refuses if the capability hasn't been classified yet,
-    // which is the intended workflow (classify in manifest, then onboard).
+    // diagnostic. For a new capability the DB row doesn't exist yet, so
+    // verifyFixtures seeds the gate's cost-meta cache from the manifest's
+    // declared cost_class before calling this; an unclassified manifest
+    // (no cost_class) is still refused — fail-closed.
     const result = await Promise.race([
       guardedExecute(slug, input, {
         kind: "internal_test",
@@ -552,7 +608,17 @@ async function verifyKnownAnswerEntry(
       console.log("  ✗ --strict mode: aborting onboarding");
       return { passed: false, manifest };
     }
-    console.log("  Continuing without verification (transient failure)");
+    // A gate refusal is a permanent policy decision, not weather — saying
+    // "transient" here told the operator the opposite of the truth.
+    if (/cost_class|refuses invocation|unclassified/i.test(error)) {
+      console.log(
+        "  Continuing without verification (policy refusal — the cost-class gate blocks " +
+          "internal_test for this capability; quality signals will come from production " +
+          "traffic and piggyback suites instead)",
+      );
+    } else {
+      console.log("  Continuing without verification (transient failure)");
+    }
     return { passed: true, manifest };
   }
 
@@ -657,7 +723,7 @@ async function verifyKnownAnswerEntry(
 async function discoverFixtures(
   manifest: Manifest,
   manifestPath: string,
-): Promise<Manifest> {
+): Promise<{ manifest: Manifest; discoveryFailed: boolean }> {
   // Array-form known_answer (Gate 5 multi-path fixtures, DEC-20260411-B) is
   // human-curated per entry point — the discovery flow below only knows how
   // to write the single-fixture shape, so it must never overwrite an array
@@ -675,7 +741,7 @@ async function discoverFixtures(
     } else {
       console.log("  ✗ Cannot discover: no health_check_input or known_answer.input");
     }
-    return manifest;
+    return { manifest, discoveryFailed: true };
   }
 
   console.log("\n─── Fixture Discovery ───────────────────────────────────────");
@@ -685,7 +751,7 @@ async function discoverFixtures(
 
   if (error) {
     console.log(`  ✗ Cannot discover — execution failed: ${error}`);
-    return manifest;
+    return { manifest, discoveryFailed: true };
   }
 
   console.log(`  Output: ${Object.keys(output).length} fields`);
@@ -712,7 +778,7 @@ async function discoverFixtures(
     console.log("    Only output_field_reliability was merged from this discovery run.");
     writeManifest(manifestPath, manifest);
     console.log(`  ✓ Manifest updated (output_field_reliability only): ${manifestPath}`);
-    return manifest;
+    return { manifest, discoveryFailed: false };
   }
 
   // Generate expected_fields (single-fixture shape only)
@@ -738,7 +804,25 @@ async function discoverFixtures(
   console.log(`  ✓ Manifest updated: ${manifestPath}`);
   console.log("  Review generated expected_fields and adjust reliability levels as needed.");
 
-  return manifest;
+  return { manifest, discoveryFailed: false };
+}
+
+/**
+ * Shared handling for both discoverFixtures call sites. Under --strict a
+ * failed discovery must abort: without it, discovery failure left
+ * known_answer fixtures empty, verifyFixtures hit its "no fixtures" early
+ * return, and --strict onboarded the capability with zero verified
+ * fixtures and exit code 0 — silently bypassing the flag on the exact
+ * path (--discover) the docs recommend.
+ */
+function abortIfDiscoveryFailedUnderStrict(
+  discoveryFailed: boolean,
+  strict: boolean,
+): void {
+  if (discoveryFailed && strict) {
+    console.log("  ✗ --strict mode: aborting — discovery failed, so there are no verified fixtures to onboard with");
+    process.exit(1);
+  }
 }
 
 // ─── Manifest file helpers ──────────────────────────────────────────────────
@@ -798,9 +882,19 @@ async function onboard(
     console.log("(Continuing in dry-run mode for preview)\n");
   }
 
+  // Insert-mode only: no DB row exists yet, so the guarded executor would
+  // read cost_class NULL and refuse the discover/verify executions below.
+  // Backfill never seeds — there the DB row is authoritative (see the
+  // seedGateFromManifest doc comment).
+  if (!existing) {
+    seedGateFromManifest(manifest);
+  }
+
   // Discover fixtures from live execution (Enhancement 3)
   if (flags.discover) {
-    manifest = await discoverFixtures(manifest, manifestPath);
+    const disc = await discoverFixtures(manifest, manifestPath);
+    manifest = disc.manifest;
+    abortIfDiscoveryFailedUnderStrict(disc.discoveryFailed, flags.strict);
   }
 
   const capType = dataSourceTypeToCapType(manifest.data_source_type);
@@ -1075,7 +1169,9 @@ async function backfill(
 
   // Discover fixtures from live execution (Enhancement 3)
   if (flags.discover) {
-    manifest = await discoverFixtures(manifest, manifestPath);
+    const disc = await discoverFixtures(manifest, manifestPath);
+    manifest = disc.manifest;
+    abortIfDiscoveryFailedUnderStrict(disc.discoveryFailed, flags.strict);
   }
 
   // Execute-and-verify (Enhancement 1)
