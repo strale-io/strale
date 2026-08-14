@@ -1,8 +1,8 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.strale-io/strale",
-  "title": "Strale - 290+ API capabilities for AI agents",
-  "description": "290+ quality-scored API capabilities for AI agents across 27 countries via MCP.",
+  "title": "Strale - business data and compliance APIs for AI agents",
+  "description": "Independently tested business data and compliance capabilities for AI agents: company registry lookups, KYB and sanctions screening, VAT/IBAN/LEI validation, document extraction. Audit record on every call.",
   "repository": {
     "url": "https://github.com/strale-io/strale",
     "source": "github"
