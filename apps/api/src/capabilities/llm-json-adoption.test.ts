@@ -16,9 +16,14 @@
  *    for all five swapped files at once.
  * 2. Behavioural tests through the real executors, for the three capabilities
  *    that reach the parse step without any network call. web-extract and
- *    annual-report-extract both fetch through Browserless before parsing, so
- *    they are covered by the source guard plus lib/llm-json.test.ts rather
- *    than by a mocked round trip.
+ *    annual-report-extract both render through Browserless first, so they are
+ *    covered by the source guard plus lib/llm-json.test.ts rather than by a
+ *    mocked round trip.
+ *
+ * The guards are not uniform, and that is the point: pii-redact checks its own
+ * redacted_text, web-extract has no guard at all, and the rest use the generic
+ * emptiness check. Each asymmetry is asserted below so it cannot be quietly
+ * "corrected" into consistency.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -38,8 +43,11 @@ import "./pii-redact.js";
 import "./pdf-extract.js";
 import "./invoice-extract.js";
 
-/** The exact strip the incident traced to. */
-const ANCHORED_FENCE_STRIP = /replace\(\/\\?\^```/;
+// Matches any regex literal anchored to a leading fence — `/^```…` with or
+// without leading whitespace tolerance. Deliberately broader than the exact
+// text the incident traced to, so a reintroduction spelled slightly
+// differently (prettier line break before the arg, `/^\s*```/`) still trips.
+const ANCHORED_FENCE_STRIP = /\/\^(\\s\*)?```/;
 
 describe("source guard — the anchored fence strip is gone", () => {
   const dir = join(import.meta.dirname, ".");
@@ -84,8 +92,28 @@ describe("source guard — the anchored fence strip is gone", () => {
         'from "./lib/llm-json.js"',
       );
       expect(src, `${f} should call extractJsonObject`).toContain("extractJsonObject(");
-      expect(src, `${f} should guard empty extractions`).toContain("isEmptyExtraction(");
     }
+  });
+
+  it("guards empty extractions everywhere a bare shell would be billed", () => {
+    // web-extract is intentionally absent: `extract` is a free-text ask, so
+    // "not on this page" is an answer, and page_title still populates. It
+    // carries a comment saying so — assert that, or the omission reads as an
+    // oversight and someone will "fix" it.
+    const guarded = ["pdf-extract.ts", "invoice-extract.ts", "annual-report-extract.ts"];
+    for (const f of guarded) {
+      expect(readFileSync(join(dir, f), "utf8"), f).toContain("isEmptyExtraction(");
+    }
+
+    // pii-redact guards its own field instead — the generic check cannot see
+    // a blank redaction behind the prompt's zeroed entity_counts.
+    const pii = readFileSync(join(dir, "pii-redact.ts"), "utf8");
+    expect(pii).toContain("redacted_text");
+    expect(pii).not.toContain("isEmptyExtraction(");
+
+    expect(readFileSync(join(dir, "web-extract.ts"), "utf8")).toContain(
+      "Deliberately no empty-extraction guard",
+    );
   });
 });
 
@@ -151,14 +179,40 @@ describe("executors refuse to bill for an empty extraction", () => {
 
   afterEach(() => vi.clearAllMocks());
 
-  it("pii-redact throws rather than returning blank redacted text", async () => {
+  it("pii-redact throws on blank redacted text behind zeroed counts", async () => {
+    // The realistic shape: REDACTION_PROMPT asks for all nine entity_counts
+    // keys, so they are present and zero even when nothing was found. Zero is
+    // information, so a generic emptiness check passes this — only a
+    // redacted_text-specific guard catches it.
     messagesCreate.mockResolvedValue(
-      reply('{"redacted_text":null,"entities":[],"entity_counts":{}}'),
+      reply(
+        '{"redacted_text":null,"entities":[],"entity_counts":' +
+          '{"PERSON_NAME":0,"EMAIL":0,"PHONE":0,"SSN":0,"ADDRESS":0,' +
+          '"IBAN":0,"CREDIT_CARD":0,"PASSPORT":0,"ID_NUMBER":0}}',
+      ),
     );
 
     await expect(
       getDirectExecutor("pii-redact")!({ text: "Call 555-0100" }),
-    ).rejects.toThrow(/not redacted|empty result/i);
+    ).rejects.toThrow(/Redaction returned no text/i);
+  });
+
+  it("pii-redact still returns text that legitimately contained no PII", async () => {
+    // The no-PII case must stay a success: redacted_text echoes the input.
+    messagesCreate.mockResolvedValue(
+      reply(
+        '{"redacted_text":"The weather is fine.","entities":[],"entity_counts":' +
+          '{"PERSON_NAME":0,"EMAIL":0,"PHONE":0,"SSN":0,"ADDRESS":0,' +
+          '"IBAN":0,"CREDIT_CARD":0,"PASSPORT":0,"ID_NUMBER":0}}',
+      ),
+    );
+
+    const result = await getDirectExecutor("pii-redact")!({
+      text: "The weather is fine.",
+    });
+    expect((result.output as Record<string, unknown>).redacted_text).toBe(
+      "The weather is fine.",
+    );
   });
 
   it("pdf-extract throws rather than returning an empty data object", async () => {

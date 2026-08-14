@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
+import { extractJsonObject } from "./lib/llm-json.js";
 
 const REDACTION_PROMPT = `You are a PII (Personally Identifiable Information) redaction system.
 
@@ -75,13 +75,17 @@ registerCapability("pii-redact", async (input: CapabilityInput) => {
     throw new Error(`Failed to parse redaction result as JSON. Raw: ${responseText.slice(0, 300)}`);
   }
 
-  // An empty result here would mean the redacted text came back blank, which
-  // must never be returned as a success — the caller would treat it as
-  // "redacted output" and lose their input.
-  if (isEmptyExtraction(parsed)) {
+  // Guard on redacted_text specifically, not isEmptyExtraction: the prompt
+  // asks for entity_counts with all nine keys present, zeroed. Zero is
+  // information, so the generic "nothing anywhere" check would pass a
+  // response whose redacted_text came back blank — the one shape that must
+  // never be returned as a success, because the caller would treat empty
+  // output as clean output and lose their input.
+  const redactedText = parsed.redacted_text;
+  if (typeof redactedText !== "string" || !redactedText.trim()) {
     throw new Error(
-      `Redaction returned an empty result. The input text was not redacted — do not treat ` +
-        `this as clean output.`,
+      `Redaction returned no text. The input was not redacted — do not treat this as ` +
+        `clean output. Retry, or fall back to manual review.`,
     );
   }
 

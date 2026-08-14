@@ -89,8 +89,8 @@ registerCapability("pdf-extract", async (input: CapabilityInput) => {
 
   if (isEmptyExtraction(parsed)) {
     throw new Error(
-      `No data could be extracted from this PDF. It may be a scanned image without a text ` +
-        `layer, or contain nothing matching the requested extraction.`,
+      `No data could be extracted from this PDF. It may be unreadable (scanned or ` +
+        `low-quality), or contain nothing matching the requested extraction.`,
     );
   }
 

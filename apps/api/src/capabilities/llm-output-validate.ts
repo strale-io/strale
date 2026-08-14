@@ -53,6 +53,9 @@ registerCapability("llm-output-validate", async (input: CapabilityInput) => {
       // ("{...}\n\nNote: use {x}"). The scanner is brace-balanced and
       // string-aware, so it recovers that shape. Object-only by design —
       // the greedy branch above still owns top-level arrays.
+      // No empty-extraction guard here, unlike the paid extractors: this
+      // capability is free, and `{}` is a perfectly valid thing to ask it to
+      // validate. Reporting on empty input is the product, not a failure.
       if (parsed === null) {
         const scanned = extractJsonObject(llmOutput);
         if (scanned !== null) {

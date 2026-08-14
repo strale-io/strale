@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
-import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
+import { extractJsonObject } from "./lib/llm-json.js";
 
 registerCapability("web-extract", async (input: CapabilityInput) => {
   const url = input.url as string | undefined;
@@ -151,12 +151,13 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences. Just the JS
     );
   }
 
-  if (isEmptyExtraction(parsed)) {
-    throw new Error(
-      `No data could be extracted from this page. The page was fetched successfully but ` +
-        `contained nothing matching the requested extraction.`,
-    );
-  }
+  // Deliberately no empty-extraction guard here, unlike the sibling
+  // extractors. `extract` is a free-text instruction, so "the field you asked
+  // for is not on this page" is a legitimate negative answer rather than a
+  // failure — and the response still carries `page_title`, so both fields the
+  // manifest declares guaranteed are populated even when `data` is empty.
+  // Throwing would turn a billed 200 into an error for a single-field ask
+  // that legitimately found nothing.
 
   return {
     output: {
