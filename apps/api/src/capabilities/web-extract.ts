@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
+import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
 
 registerCapability("web-extract", async (input: CapabilityInput) => {
   const url = input.url as string | undefined;
@@ -143,19 +144,17 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences. Just the JS
   const responseText =
     response.content[0].type === "text" ? response.content[0].text : "";
 
-  // Strip code fences if present
-  const jsonStr = responseText
-    .trim()
-    .replace(/^```(?:json)?\s*\n?/i, "")
-    .replace(/\n?```\s*$/i, "")
-    .trim();
-
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(jsonStr);
-  } catch {
+  const parsed = extractJsonObject(responseText);
+  if (!parsed) {
     throw new Error(
       `Failed to parse extraction result as JSON. Raw response: ${responseText.slice(0, 300)}`,
+    );
+  }
+
+  if (isEmptyExtraction(parsed)) {
+    throw new Error(
+      `No data could be extracted from this page. The page was fetched successfully but ` +
+        `contained nothing matching the requested extraction.`,
     );
   }
 

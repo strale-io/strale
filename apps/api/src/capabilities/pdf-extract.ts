@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
 
 registerCapability("pdf-extract", async (input: CapabilityInput) => {
   const url = input.url as string | undefined;
@@ -81,17 +82,16 @@ registerCapability("pdf-extract", async (input: CapabilityInput) => {
   const responseText =
     response.content[0].type === "text" ? response.content[0].text : "";
 
-  const jsonStr = responseText
-    .trim()
-    .replace(/^```(?:json)?\s*\n?/i, "")
-    .replace(/\n?```\s*$/i, "")
-    .trim();
-
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(jsonStr);
-  } catch {
+  const parsed = extractJsonObject(responseText);
+  if (!parsed) {
     throw new Error(`Failed to parse extraction result as JSON. Raw: ${responseText.slice(0, 300)}`);
+  }
+
+  if (isEmptyExtraction(parsed)) {
+    throw new Error(
+      `No data could be extracted from this PDF. It may be a scanned image without a text ` +
+        `layer, or contain nothing matching the requested extraction.`,
+    );
   }
 
   return {

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { extractJsonObject } from "./lib/llm-json.js";
 
 registerCapability("llm-output-validate", async (input: CapabilityInput) => {
   const llmOutput = ((input.llm_output as string) ?? (input.output as string) ?? (input.task as string) ?? "").trim();
@@ -44,7 +45,21 @@ registerCapability("llm-output-validate", async (input: CapabilityInput) => {
           parsed = JSON.parse(extracted);
           autoFixed = true;
           parseError = null;
-        } catch { /* give up */ }
+        } catch { /* fall through to the balanced-brace scanner */ }
+      }
+
+      // Last resort: the greedy match above runs to the LAST bracket in the
+      // input, so it over-captures when prose after the JSON contains one
+      // ("{...}\n\nNote: use {x}"). The scanner is brace-balanced and
+      // string-aware, so it recovers that shape. Object-only by design —
+      // the greedy branch above still owns top-level arrays.
+      if (parsed === null) {
+        const scanned = extractJsonObject(llmOutput);
+        if (scanned !== null) {
+          parsed = scanned;
+          autoFixed = true;
+          parseError = null;
+        }
       }
     }
   }
