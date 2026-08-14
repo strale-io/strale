@@ -17,6 +17,7 @@
  * re-exports for operator tooling. fetch-platform.ts's local copy is a P2
  * dedup item.
  */
+import { sql, type SQL } from "drizzle-orm";
 
 export const INTERNAL_EMAIL_SUFFIXES = [
   "@strale.io",
@@ -65,6 +66,33 @@ export const EXTRA_EXCLUDED_EMAILS = [
 
 /** SQL LIKE patterns for the suffix rule (postgres `LIKE ANY(...)`). */
 export const INTERNAL_EMAIL_LIKE_PATTERNS = INTERNAL_EMAIL_SUFFIXES.map((s) => `%${s}`);
+
+/**
+ * Do not interpolate INTERNAL_EMAIL_LIKE_PATTERNS / EXTRA_EXCLUDED_EMAILS
+ * into a drizzle-orm `sql` template as `... ANY(${array})`. drizzle's sql
+ * tag does not serialize a JS array as a single Postgres array bind
+ * parameter for ANY() — it expands to a row-value tuple `ANY(($1, $2))`,
+ * which Postgres rejects with "op ANY/ALL (array) requires array on right
+ * side". Confirmed root cause of a prior production outage (commit
+ * 4bf58d0, crashed loadCatalog on every /v1/suggest request) and repeated
+ * since (auto-register.ts, test-scheduler.ts). Use
+ * internalAccountEmailExclusionSql() below instead, which builds a
+ * parameterized OR-list via sql.join(...) once so nobody has to
+ * re-remember this per call site.
+ *
+ * jobs/quality-floor.ts's `LIKE ANY(${array})` is safe ONLY because it
+ * runs through the `postgres` package's own tag (import postgres from
+ * "postgres"), not drizzle's — different serialization behind the
+ * same-looking syntax. Do not copy that shape into a drizzle
+ * db.execute(sql\`\`) call.
+ */
+export function internalAccountEmailExclusionSql(): SQL {
+  const conditions: SQL[] = [
+    ...INTERNAL_EMAIL_LIKE_PATTERNS.map((pattern) => sql`email LIKE ${pattern}`),
+    ...EXTRA_EXCLUDED_EMAILS.map((email) => sql`email = ${email}`),
+  ];
+  return sql.join(conditions, sql` OR `);
+}
 
 export function isInternalAccountEmail(email: string | null | undefined): boolean {
   if (!email) return false;
