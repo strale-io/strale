@@ -584,10 +584,22 @@ export function extractPayerAddress(verified: X402VerifiedPayment): string | nul
 
 /**
  * Extract the x402 payment header from a request.
- * Checks both X-PAYMENT (standard) and Payment (legacy) headers.
+ *
+ * Header names by protocol generation (@x402/core client,
+ * encodePaymentSignatureHeader): v2 clients send PAYMENT-SIGNATURE, v1
+ * clients send X-PAYMENT ("Payment" is a pre-v1 legacy name). Missing
+ * PAYMENT-SIGNATURE made every canonical v2 payment invisible — the paid
+ * retry just received a fresh challenge. Found by the first real-wallet
+ * v2 settlement test (2026-08-14); the payload generations are
+ * disambiguated downstream by parsePaymentPayload, not by header name.
  */
 export function extractPaymentHeader(headers: Headers): string | null {
-  return headers.get("x-payment") ?? headers.get("payment") ?? null;
+  return (
+    headers.get("payment-signature") ??
+    headers.get("x-payment") ??
+    headers.get("payment") ??
+    null
+  );
 }
 
 /**
