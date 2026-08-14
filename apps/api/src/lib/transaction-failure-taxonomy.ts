@@ -22,6 +22,7 @@
  * Ordering matters and is pinned by tests both directions.
  */
 import { TOS_REFUSAL_MARKER } from "./tos-blocklist.js";
+import { REFUSAL_MESSAGE_PATTERNS } from "./capability-refusal.js";
 
 export type TransactionFailureClass =
   | "caller_input"   // bad/missing input, wrong identifier, unresolvable name
@@ -74,8 +75,18 @@ const CALLER_INPUT_RE = new RegExp(
     "this url points to a pdf",
     "this url points to an image",
     "could not repair json",
-    "no confident .* match",         // scored name resolution refusals
-    "distinct .* entities match",    // tie refusals
+    // Registry name-search refusals. Sourced from capability-refusal.ts so
+    // this list, the circuit breaker's and the throw sites cannot drift apart
+    // — they are three consumers of one definition.
+    //
+    // These were partly here already, but "distinct .* entities match" never
+    // fired: the message reads "N distinct registered entities are exact
+    // matches", so there is no literal "entities match" for it to hit. Every
+    // ambiguity refusal was therefore classified `internal` — "OUR bug until
+    // proven otherwise" — and counted against the capability's completion
+    // rate, which is what the quality floor quarantines on. Verified against
+    // the real strings, not the intent.
+    ...REFUSAL_MESSAGE_PATTERNS.map((p) => p.trim()),
   ].join("|"),
   "i",
 );
