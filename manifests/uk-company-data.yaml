@@ -131,6 +131,11 @@ output_field_reliability:
   tier_2_available_reason: guaranteed
   ubo_availability: guaranteed
   ubo_availability_reason: guaranteed
+  # Only set on the name-search path (never on the company_number identifier
+  # path) — mirrors finnish-company-data's convention. See #161 wrong-company
+  # class fix, 2026-08-14.
+  match_confidence: rare
+  matched_registry_name: rare
 limitations:
   - title: Companies House API includes LLPs but sole traders and unregistered partnerships are not covered
     text: >-
