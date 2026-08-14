@@ -3,6 +3,7 @@ import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import { htmlToCleanMarkdown } from "./lib/readability-convert.js";
 import { fetchViaJina } from "./lib/jina-reader.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 
 /** Thrown when the target responded definitively — no point trying Jina/Browserless. */
 class DefinitiveFetchError extends Error {
@@ -237,6 +238,12 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   const includeLinks = input.include_links !== false;
   const includeImages = input.include_images !== false;
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
+
+  // Per-source ToS policy gates EVERY arbitrary-URL fetch path (P1 review H1,
+  // 2026-08-12): this capability is free-tier and Browserless-backed, which
+  // made it the cheapest bypass around refusals on the purpose-built
+  // extractors. Same blocklist, same compliant-alternative hints.
+  assertTargetAllowed(fullUrl);
 
   // ── Layer 1: Plain fetch + Readability/Turndown (~200ms for static sites) ──
   const plainHtml = await tryPlainFetch(fullUrl);

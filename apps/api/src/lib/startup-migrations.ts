@@ -1347,6 +1347,164 @@ export async function runMigration0078_transactionsCapabilityIdCreatedAtIdx(
   };
 }
 
+// ─── Block 0079: ee_directors + ee_directors_sync tables ────────────────────
+//
+// Estonian directors/representatives cache, populated by the nightly
+// `ingest-ee-directors.ts` job from the RIK Ariregister CC BY 4.0 open-data
+// dump. PK is `kirje_id` from upstream (unique per registry-card filing);
+// queries filter by `entity_reg_code` and `end_date IS NULL` for active
+// representatives. `ee_directors_sync` is a single-row marker tracking the
+// upstream Last-Modified header so the ingest can skip on no-op days.
+//
+// Idempotency: CREATE TABLE IF NOT EXISTS + CREATE INDEX IF NOT EXISTS.
+// Re-runs on a healthy DB are no-ops.
+
+export async function runMigration0079_eeDirectors(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS ee_directors (
+      kirje_id INTEGER PRIMARY KEY,
+      entity_reg_code TEXT NOT NULL,
+      person_type TEXT NOT NULL,
+      role_code TEXT NOT NULL,
+      role_text TEXT NOT NULL,
+      first_name TEXT,
+      last_name TEXT,
+      isikukood_hash TEXT,
+      foreign_code TEXT,
+      foreign_country_code TEXT,
+      foreign_country_text TEXT,
+      address_text TEXT,
+      address_country_code TEXT,
+      start_date DATE,
+      end_date DATE,
+      last_synced_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS ee_directors_entity_idx
+      ON ee_directors (entity_reg_code)
+  `);
+
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS ee_directors_last_synced_idx
+      ON ee_directors (last_synced_at)
+  `);
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS ee_directors_sync (
+      id INTEGER PRIMARY KEY,
+      last_modified_upstream TEXT,
+      last_success_at TIMESTAMP WITH TIME ZONE,
+      last_attempt_at TIMESTAMP WITH TIME ZONE,
+      row_count INTEGER
+    )
+  `);
+
+  // CHECK constraint guarded against re-add. Pinning id=1 keeps the marker
+  // a single-row table without needing a separate enum / UUID.
+  const checkExists = await tx.execute(sql`
+    SELECT count(*)::text AS cnt FROM pg_constraint
+    WHERE conname = 'ee_directors_sync_singleton_chk'
+      AND conrelid = 'ee_directors_sync'::regclass
+  `);
+  const rows = Array.isArray(checkExists)
+    ? checkExists
+    : (checkExists as { rows?: unknown[] })?.rows ?? [];
+  if ((rows[0] as { cnt?: string })?.cnt === "0") {
+    await tx.execute(sql`
+      ALTER TABLE ee_directors_sync
+        ADD CONSTRAINT ee_directors_sync_singleton_chk CHECK (id = 1)
+    `);
+  }
+
+  return {
+    block: "0079_ee_directors",
+    outcome: "ee_directors + ee_directors_sync tables + indexes ensured",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0080: cy_directors + cy_directors_sync tables ────────────────────
+//
+// Cyprus directors/officers cache, populated by the monthly
+// `ingest-cy-directors.ts` job from the data.gov.cy DRCOR open-data CSV
+// (`organisation_officials_83.csv`, CC BY 4.0). DRCOR has no stable per-row
+// identifier upstream, so the natural composite PK is (entity_reg_code,
+// person_or_organisation_name, official_position) — directly mirroring the
+// uniqueness semantics of one (person × position) per company. Queries filter
+// by entity_reg_code; the sweep DELETE relies on last_synced_at for the
+// retire-stale-rows pass.
+//
+// Idempotency: CREATE TABLE IF NOT EXISTS + CREATE INDEX IF NOT EXISTS.
+// The composite PK is created in-line with the table, so it lands once and
+// re-runs are no-ops.
+
+export async function runMigration0080_cyDirectors(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS cy_directors (
+      entity_reg_code TEXT NOT NULL,
+      person_or_organisation_name TEXT NOT NULL,
+      official_position TEXT NOT NULL,
+      organisation_name TEXT,
+      organisation_type_code TEXT,
+      organisation_type TEXT,
+      role_standardized TEXT NOT NULL,
+      last_synced_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (entity_reg_code, person_or_organisation_name, official_position)
+    )
+  `);
+
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS cy_directors_entity_idx
+      ON cy_directors (entity_reg_code)
+  `);
+
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS cy_directors_last_synced_idx
+      ON cy_directors (last_synced_at)
+  `);
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS cy_directors_sync (
+      id INTEGER PRIMARY KEY,
+      last_modified_upstream TEXT,
+      last_success_at TIMESTAMP WITH TIME ZONE,
+      last_attempt_at TIMESTAMP WITH TIME ZONE,
+      row_count INTEGER
+    )
+  `);
+
+  const checkExists = await tx.execute(sql`
+    SELECT count(*)::text AS cnt FROM pg_constraint
+    WHERE conname = 'cy_directors_sync_singleton_chk'
+      AND conrelid = 'cy_directors_sync'::regclass
+  `);
+  const rows = Array.isArray(checkExists)
+    ? checkExists
+    : (checkExists as { rows?: unknown[] })?.rows ?? [];
+  if ((rows[0] as { cnt?: string })?.cnt === "0") {
+    await tx.execute(sql`
+      ALTER TABLE cy_directors_sync
+        ADD CONSTRAINT cy_directors_sync_singleton_chk CHECK (id = 1)
+    `);
+  }
+
+  return {
+    block: "0080_cy_directors",
+    outcome: "cy_directors + cy_directors_sync tables + indexes ensured",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
 // ─── Orchestrator ───────────────────────────────────────────────────────────
 
 /**
@@ -1379,7 +1537,53 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0076_classifyNonAnthropicPaidPrepaid,
   runMigration0077_classifyFreeQuotaOverrides,
   runMigration0078_transactionsCapabilityIdCreatedAtIdx,
+  runMigration0079_eeDirectors,
+  runMigration0080_cyDirectors,
+  runMigration0081_attribution,
 ];
+
+/**
+ * Block 0081 — channel attribution (design doc 2026-08-12).
+ * client_meta JSONB on transactions (write-only at execution time) and the
+ * discovery_hits table (90-day retention via db-retention RULES). New table
+ * starts empty — DEC-20260504-B backlog-drain does not apply.
+ */
+export async function runMigration0081_attribution(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  await tx.execute(sql`
+    ALTER TABLE transactions ADD COLUMN IF NOT EXISTS client_meta JSONB
+  `);
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS discovery_hits (
+      id BIGSERIAL PRIMARY KEY,
+      endpoint TEXT NOT NULL,
+      src_tag TEXT,
+      ua TEXT,
+      ip_hash TEXT,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS discovery_hits_created_at_idx
+      ON discovery_hits (created_at)
+  `);
+
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS discovery_hits_src_tag_idx
+      ON discovery_hits (src_tag) WHERE src_tag IS NOT NULL
+  `);
+
+  return {
+    block: "0081_attribution",
+    outcome: "client_meta column + discovery_hits table ensured (idempotent)",
+    duration_ms: Date.now() - startedAt,
+  };
+}
 
 /**
  * Run every registered migration block, in order. Throws on first

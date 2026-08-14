@@ -37,7 +37,8 @@ import {
   GateViolationError,
   type ValidationContext,
 } from "../src/lib/onboarding-gates.js";
-import type { Manifest, ManifestExpectedField, ManifestLimitation } from "../src/lib/capability-manifest-types.js";
+import type { Manifest, ManifestExpectedField, ManifestLimitation, ManifestKnownAnswerFixture } from "../src/lib/capability-manifest-types.js";
+import { getKnownAnswerFixtures } from "../src/lib/capability-manifest-types.js";
 import { getDb as getDbForValidation } from "../src/db/index.js";
 import { capabilities as capabilitiesTable } from "../src/db/schema.js";
 import { logWarn } from "../src/lib/log.js";
@@ -471,16 +472,61 @@ async function verifyFixtures(
   flags: { strict: boolean; fix: boolean },
   manifestPath: string,
 ): Promise<{ passed: boolean; manifest: Manifest }> {
-  const input = manifest.test_fixtures?.known_answer?.input;
-  const expectedFields = manifest.test_fixtures?.known_answer?.expected_fields;
+  const entries = getKnownAnswerFixtures(manifest);
 
-  if (!input || !expectedFields?.length) {
+  if (entries.length === 0) {
     console.log("\n─── Fixture Verification ─────────────────────────────────────");
     console.log("  Skipped (no known_answer fixtures)");
     return { passed: true, manifest };
   }
 
   console.log("\n─── Fixture Verification ─────────────────────────────────────");
+
+  // Single-fixture manifests (the ~300-manifest legacy shape): identical
+  // behavior to before, including auto-fix-and-rewrite (applyFixToManifest
+  // targets manifest.test_fixtures.known_answer.expected_fields directly,
+  // which only exists in this single-object shape).
+  if (entries.length === 1) {
+    return verifyKnownAnswerEntry(manifest, entries[0], flags, manifestPath, { allowAutoFix: true });
+  }
+
+  // Array-form manifests (Gate 5 multi-path fixture coverage,
+  // DEC-20260411-B) — verify every entry point's fixture independently.
+  // No auto-fix-and-rewrite here: applyFixToManifest has no notion of
+  // "which array index", so --fix only reports suggestions for array
+  // entries; a human edits the manifest. --strict still aborts on any
+  // entry's mismatch, same as the single-fixture path.
+  let allPassed = true;
+  for (let i = 0; i < entries.length; i++) {
+    console.log(`\n  [known_answer entry ${i + 1}/${entries.length}] input=${JSON.stringify(entries[i].input)}`);
+    const result = await verifyKnownAnswerEntry(manifest, entries[i], flags, manifestPath, { allowAutoFix: false });
+    if (!result.passed) allPassed = false;
+  }
+
+  return { passed: allPassed, manifest };
+}
+
+/**
+ * Verify one known_answer fixture entry against live execution. Shared by
+ * both the single-fixture and array-form paths in verifyFixtures() — this
+ * is the original single-entry verification body, parameterized on which
+ * entry to check instead of always reading manifest.test_fixtures.known_answer
+ * directly.
+ */
+async function verifyKnownAnswerEntry(
+  manifest: Manifest,
+  entry: ManifestKnownAnswerFixture,
+  flags: { strict: boolean; fix: boolean },
+  manifestPath: string,
+  opts: { allowAutoFix: boolean },
+): Promise<{ passed: boolean; manifest: Manifest }> {
+  const input = entry?.input;
+  const expectedFields = entry?.expected_fields;
+
+  if (!input || !expectedFields?.length) {
+    console.log("  Skipped (fixture missing input or expected_fields)");
+    return { passed: true, manifest };
+  }
 
   // Fixture-quality gate: reject placeholder / schema-invalid fixtures before
   // they're written to test_suites and leak out to the public capability page.
@@ -567,8 +613,8 @@ async function verifyFixtures(
     }
   }
 
-  // Apply auto-fixes if --fix
-  if (flags.fix && autoFixes.length > 0) {
+  // Apply auto-fixes if --fix (single-fixture manifests only — see opts doc)
+  if (opts.allowAutoFix && flags.fix && autoFixes.length > 0) {
     console.log("\n  Applying auto-corrections...");
     let updated = manifest;
     for (const m of autoFixes) {
@@ -582,7 +628,7 @@ async function verifyFixtures(
     console.log(`  ✓ Manifest updated: ${manifestPath}`);
 
     // Re-verify
-    const expectedNow = updated.test_fixtures?.known_answer?.expected_fields ?? [];
+    const expectedNow = getKnownAnswerFixtures(updated)[0]?.expected_fields ?? [];
     let repass = true;
     for (const ef of expectedNow) {
       const check = checkFieldAssertion(output, ef);
@@ -612,11 +658,23 @@ async function discoverFixtures(
   manifest: Manifest,
   manifestPath: string,
 ): Promise<Manifest> {
-  const input = manifest.test_fixtures?.health_check_input
-    ?? manifest.test_fixtures?.known_answer?.input;
+  // Array-form known_answer (Gate 5 multi-path fixtures, DEC-20260411-B) is
+  // human-curated per entry point — the discovery flow below only knows how
+  // to write the single-fixture shape, so it must never overwrite an array
+  // with a single discovered object. Fall back to health_check_input only.
+  const isArrayForm = Array.isArray(manifest.test_fixtures?.known_answer);
+  const singleKnownAnswerInput = isArrayForm
+    ? undefined
+    : (manifest.test_fixtures?.known_answer as ManifestKnownAnswerFixture | undefined)?.input;
+  const input = manifest.test_fixtures?.health_check_input ?? singleKnownAnswerInput;
 
   if (!input) {
-    console.log("  ✗ Cannot discover: no health_check_input or known_answer.input");
+    if (isArrayForm) {
+      console.log("  ✗ Cannot discover: known_answer is array-form (multi-entry-point) and no health_check_input is set.");
+      console.log("    --discover only writes the single-fixture shape; author array entries by hand and verify them live.");
+    } else {
+      console.log("  ✗ Cannot discover: no health_check_input or known_answer.input");
+    }
     return manifest;
   }
 
@@ -636,14 +694,31 @@ async function discoverFixtures(
     console.log(`    ${k}: ${display}`);
   }
 
-  // Generate expected_fields
+  // Generate field reliability — safe to merge regardless of known_answer
+  // shape (additive-only: only fills fields not already annotated).
+  const fieldReliability = generateFieldReliability(output);
+  console.log(`  Generated ${Object.keys(fieldReliability).length} field reliability entries`);
+  if (!manifest.output_field_reliability) {
+    manifest.output_field_reliability = {};
+  }
+  for (const [field, level] of Object.entries(fieldReliability)) {
+    if (!manifest.output_field_reliability[field]) {
+      manifest.output_field_reliability[field] = level;
+    }
+  }
+
+  if (isArrayForm) {
+    console.log("  ⚠ known_answer is array-form (multi-entry-point) — leaving it untouched.");
+    console.log("    Only output_field_reliability was merged from this discovery run.");
+    writeManifest(manifestPath, manifest);
+    console.log(`  ✓ Manifest updated (output_field_reliability only): ${manifestPath}`);
+    return manifest;
+  }
+
+  // Generate expected_fields (single-fixture shape only)
   const looseAssertions = isAiCapability(manifest);
   const expectedFields = generateExpectedFields(output, looseAssertions);
   console.log(`\n  Generated ${expectedFields.length} expected_fields${looseAssertions ? " (loose — AI capability)" : ""}`);
-
-  // Generate field reliability
-  const fieldReliability = generateFieldReliability(output);
-  console.log(`  Generated ${Object.keys(fieldReliability).length} field reliability entries`);
 
   // Merge discovered data into manifest
   if (!manifest.test_fixtures) {
@@ -655,18 +730,8 @@ async function discoverFixtures(
       expected_fields: [],
     };
   }
-  manifest.test_fixtures.known_answer.input = input;
-  manifest.test_fixtures.known_answer.expected_fields = expectedFields;
-
-  // Merge field reliability (keep existing entries, add new ones)
-  if (!manifest.output_field_reliability) {
-    manifest.output_field_reliability = {};
-  }
-  for (const [field, level] of Object.entries(fieldReliability)) {
-    if (!manifest.output_field_reliability[field]) {
-      manifest.output_field_reliability[field] = level;
-    }
-  }
+  (manifest.test_fixtures.known_answer as ManifestKnownAnswerFixture).input = input;
+  (manifest.test_fixtures.known_answer as ManifestKnownAnswerFixture).expected_fields = expectedFields;
 
   // Write updated manifest
   writeManifest(manifestPath, manifest);
@@ -679,11 +744,16 @@ async function discoverFixtures(
 // ─── Manifest file helpers ──────────────────────────────────────────────────
 
 function applyFixToManifest(manifest: Manifest, fix: FixtureMismatch): Manifest {
-  if (!fix.corrected_expected || !manifest.test_fixtures?.known_answer?.expected_fields) {
+  // Only the single-fixture shape is addressable here — callers (see
+  // verifyFixtures' allowAutoFix gate) only invoke this when
+  // known_answer isn't array-form, but guard defensively anyway since
+  // the type is a union.
+  const ka = manifest.test_fixtures?.known_answer;
+  if (!fix.corrected_expected || !ka || Array.isArray(ka) || !ka.expected_fields) {
     return manifest;
   }
 
-  const fields = manifest.test_fixtures.known_answer.expected_fields;
+  const fields = ka.expected_fields;
   const idx = fields.findIndex((f) => f.field === fix.field);
   if (idx >= 0) {
     fields[idx] = fix.corrected_expected;
@@ -829,48 +899,79 @@ function buildTestSuites(manifest: Manifest) {
   }> = [];
 
   const slug = manifest.slug;
-  const knownAnswer = manifest.test_fixtures?.known_answer;
+  const knownAnswerEntries = getKnownAnswerFixtures(manifest);
   const healthInput = manifest.test_fixtures?.health_check_input;
 
-  // 1. known_answer test
-  if (knownAnswer?.expected_fields?.length) {
+  const schemaCheckRules = {
+    checks: Object.keys(
+      (manifest.output_schema?.properties as Record<string, unknown>) ?? {},
+    )
+      .slice(0, 5)
+      .map((field) => ({ field, operator: "not_null" })),
+  };
+
+  // 1 & 2. known_answer + schema_check — one pair per entry point.
+  //
+  // Single-fixture manifests (the ~300-manifest legacy shape) produce
+  // exactly one of each, with the original unsuffixed test names — this
+  // loop body is byte-for-byte what the old single-object code produced
+  // when knownAnswerEntries.length === 1.
+  //
+  // Array-form manifests (Gate 5 multi-path fixture coverage,
+  // DEC-20260411-B — gate5-path-coverage.ts requires a known_answer or
+  // schema_check fixture per PRIMARY/SECONDARY entry point) produce one
+  // pair per array entry, suffixed by position (`-2`, `-3`, ...) so each
+  // entry point gets its own DB row instead of silently overwriting the
+  // first.
+  knownAnswerEntries.forEach((entry, i) => {
+    const suffix = i === 0 ? "" : `-${i + 1}`;
+
+    if (entry?.expected_fields?.length) {
+      suites.push({
+        capabilitySlug: slug,
+        testName: `${slug}-known-answer${suffix}`,
+        testType: "known_answer",
+        input: entry.input,
+        validationRules: {
+          checks: entry.expected_fields.map((ef) => {
+            const check: Record<string, unknown> = {
+              field: ef.field,
+              operator: ef.operator,
+            };
+            if (ef.value !== undefined) check.value = ef.value;
+            if (ef.values !== undefined) check.values = ef.values;
+            return check;
+          }),
+        },
+        scheduleTier: "B",
+        estimatedCostCents: manifest.price_cents,
+      });
+    }
+
     suites.push({
       capabilitySlug: slug,
-      testName: `${slug}-known-answer`,
-      testType: "known_answer",
-      input: knownAnswer.input,
-      validationRules: {
-        checks: knownAnswer.expected_fields.map((ef) => {
-          const check: Record<string, unknown> = {
-            field: ef.field,
-            operator: ef.operator,
-          };
-          if (ef.value !== undefined) check.value = ef.value;
-          if (ef.values !== undefined) check.values = ef.values;
-          return check;
-        }),
-      },
-      scheduleTier: "B",
-      estimatedCostCents: manifest.price_cents,
+      testName: `${slug}-schema-check${suffix}`,
+      testType: "schema_check",
+      input: entry?.input ?? healthInput ?? {},
+      validationRules: schemaCheckRules,
+      scheduleTier: "A",
+      estimatedCostCents: 0,
+    });
+  });
+
+  // No known_answer fixtures at all: still emit a single schema_check
+  // suite from health_check_input — matches pre-array-support behavior.
+  if (knownAnswerEntries.length === 0) {
+    suites.push({
+      capabilitySlug: slug,
+      testName: `${slug}-schema-check`,
+      testType: "schema_check",
+      input: healthInput ?? {},
+      validationRules: schemaCheckRules,
+      scheduleTier: "A",
+      estimatedCostCents: 0,
     });
   }
-
-  // 2. schema_check test (dry-run test that validates schema structure)
-  suites.push({
-    capabilitySlug: slug,
-    testName: `${slug}-schema-check`,
-    testType: "schema_check",
-    input: knownAnswer?.input ?? healthInput ?? {},
-    validationRules: {
-      checks: Object.keys(
-        (manifest.output_schema?.properties as Record<string, unknown>) ?? {},
-      )
-        .slice(0, 5)
-        .map((field) => ({ field, operator: "not_null" })),
-    },
-    scheduleTier: "A",
-    estimatedCostCents: 0,
-  });
 
   // 3. negative test (empty input)
   suites.push({
@@ -906,7 +1007,7 @@ function buildTestSuites(manifest: Manifest) {
     capabilitySlug: slug,
     testName: `${slug}-dependency-health`,
     testType: "dependency_health",
-    input: healthInput ?? knownAnswer?.input ?? {},
+    input: healthInput ?? knownAnswerEntries[0]?.input ?? {},
     validationRules: {
       checks: [{ field: "status", operator: "not_null" }],
     },
@@ -986,15 +1087,43 @@ async function backfill(
     }
   }
 
-  // Check which test types already exist
+  // Check which test types already exist.
+  //
+  // Dedup is COUNT-based per test type, not Set-membership — needed so a
+  // multi-entry-point manifest (Gate 5 array-form known_answer,
+  // DEC-20260411-B) can add its 2nd/3rd fixture as a genuinely new suite,
+  // instead of being silently dropped because *a* known_answer row of
+  // *some* content already exists (the bug this backfill path had before:
+  // Set(testType).has("known_answer") is true after the very first row,
+  // so every later array entry was filtered out of `missing` and never
+  // inserted). For the single-fixture legacy shape (the ~300-manifest
+  // majority), buildTestSuites emits exactly one suite per type, so this
+  // reduces to the original check bit-for-bit: existing>=1 → skip.
+  //
+  // Only ACTIVE rows count toward "already covered" — matches Gate 5's own
+  // active-only fixture accounting (gate5-path-coverage.ts
+  // traceFixtureCoverage queries `active = true`), so a fully
+  // quarantined/deactivated type doesn't block backfill from restoring it.
   const existingTests = await db
-    .select({ testType: testSuites.testType })
+    .select({ testType: testSuites.testType, active: testSuites.active })
     .from(testSuites)
     .where(eq(testSuites.capabilitySlug, manifest.slug));
 
-  const existingTypes = new Set(existingTests.map((t) => t.testType));
+  const existingTypes = new Set(existingTests.map((t) => t.testType)); // display only
+  const existingActiveCountByType = new Map<string, number>();
+  for (const t of existingTests) {
+    if (!t.active) continue;
+    existingActiveCountByType.set(t.testType, (existingActiveCountByType.get(t.testType) ?? 0) + 1);
+  }
+
   const allSuites = buildTestSuites(manifest);
-  const missing = allSuites.filter((s) => !existingTypes.has(s.testType));
+  const generatedSeenByType = new Map<string, number>();
+  const missing = allSuites.filter((s) => {
+    const already = existingActiveCountByType.get(s.testType) ?? 0;
+    const seen = generatedSeenByType.get(s.testType) ?? 0;
+    generatedSeenByType.set(s.testType, seen + 1);
+    return seen >= already;
+  });
 
   console.log(`\n─── Backfill: ${manifest.slug} ────────────────────────────────`);
   console.log(`  Existing test types: ${[...existingTypes].join(", ") || "(none)"}`);
@@ -1003,6 +1132,7 @@ async function backfill(
   // Check if known_answer needs updating (e.g., after --discover or --fix)
   const hasKnownAnswerUpdate = flags.discover || flags.fix;
   const existingKnownAnswer = existingTypes.has("known_answer");
+  const isArrayForm = Array.isArray(manifest.test_fixtures?.known_answer);
 
   // Field reliability
   const fields = Object.entries(manifest.output_field_reliability);
@@ -1043,7 +1173,18 @@ async function backfill(
   // test_mode='live' so the next run executes and recaptures fresh baseline.
   // Also applies to schema_check and dependency_health which share input
   // derivation with known_answer via buildTestSuites.
-  if (hasKnownAnswerUpdate && existingKnownAnswer) {
+  //
+  // Scoped to the single-fixture shape: this UPDATE has no testName filter
+  // (matches every known_answer row for the slug), which is fine when
+  // there's exactly one row to mean. For array-form (multi-entry-point)
+  // manifests there's no unambiguous 1:1 mapping from "the corrected
+  // fixture" to "which of N existing known_answer rows to overwrite" — a
+  // blind blast-update would stomp every entry point's row with the same
+  // single input. discoverFixtures() already refuses to mutate an
+  // array-form known_answer for the same reason; --fix's auto-apply is
+  // similarly disabled for arrays in verifyFixtures(). Skip here too and
+  // tell the operator to hand-edit.
+  if (hasKnownAnswerUpdate && existingKnownAnswer && !isArrayForm) {
     const knownAnswerSuite = allSuites.find((s) => s.testType === "known_answer");
     if (knownAnswerSuite) {
       await db
@@ -1065,6 +1206,11 @@ async function backfill(
       console.log(`  ✓ Updated known_answer test suite with corrected fixtures`);
       console.log(`    (baseline cleared — next test run will recapture)`);
     }
+  } else if (hasKnownAnswerUpdate && existingKnownAnswer && isArrayForm) {
+    console.log(
+      "  ⚠ Skipping known_answer row update — known_answer is array-form (multiple entry points). " +
+        "Re-run with --dry-run to review, then hand-edit the specific DB row or re-onboard that entry point.",
+    );
   }
 
   // Cluster 2 Phase 3 C2: consolidate the backfill UPDATE fragments

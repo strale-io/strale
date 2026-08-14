@@ -27,10 +27,13 @@ output_schema:
     siret: "54205118000066"
     status: active
     address: LA DEFENSE 6 2 PLACE JEAN MILLIER 92400 COURBEVOIE
+    # Placeholder names. The live capability returns real directors; this
+    # example must not, since manifests are hand-authored and never pass
+    # through the fixture scrubber. Format preserved: NAME (Role).
     directors:
-      - JACQUES ANDRE ASCHENBROICH (Administrateur)
-      - MARIE CHRISTINE COISNE (Administrateur)
-      - LISE CROTEAU (Administrateur)
+      - EXEMPLE PREMIER DIRIGEANT (Administrateur)
+      - EXEMPLE DEUXIEME DIRIGEANT (Administrateur)
+      - EXEMPLE TROISIEME DIRIGEANT (Administrateur)
     postal_code: "92400"
     company_name: TOTALENERGIES SE (TOTALENERGIE SE)
     activity_code: 70.10Z
@@ -124,6 +127,10 @@ output_field_reliability:
   directors: guaranteed
   company_name: guaranteed
   activity_code: guaranteed
+  # Only set on the name-search path (never on the SIREN/SIRET identifier
+  # path) — mirrors finnish-company-data's convention. See #161 wrong-company
+  # class fix, 2026-08-14.
+  match_confidence: rare
 limitations:
   - title: Data from INSEE/SIRENE via api.gouv.fr — financial statements require separate access to INPI
     text: Data from api.gouv.fr (INSEE/SIRENE) — financial statements require separate access to INPI or Societe.com

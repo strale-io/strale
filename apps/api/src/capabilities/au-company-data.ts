@@ -153,14 +153,14 @@ registerCapability("au-company-data", async (input: CapabilityInput) => {
     (input.abn as string) ?? (input.task as string) ?? "";
   if (typeof rawInput !== "string" || !rawInput.trim()) {
     throw new Error(
-      "'abn' is required. Provide an Australian Business Number (11 digits).",
+      "'abn' is required. Provide an 11-digit Australian Business Number. Look one up by company name at the official ABN Lookup search: https://abr.business.gov.au/.",
     );
   }
 
   const abn = cleanAbn(rawInput.trim());
   if (!abn) {
     throw new Error(
-      `Invalid ABN format: "${rawInput.trim()}". ABN must be exactly 11 digits.`,
+      `Invalid ABN format: "${rawInput.trim()}". ABN must be exactly 11 digits — look one up by company name at the official ABN Lookup search: https://abr.business.gov.au/.`,
     );
   }
 

@@ -143,13 +143,17 @@ async function fetchDetail(
 registerCapability("croatian-company-data", async (input: CapabilityInput) => {
   const raw = (input.oib as string) ?? (input.mbs as string) ?? (input.task as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'oib' (11 digits) or 'mbs' (court registry number) is required.");
+    throw new Error(
+      "'oib' (11 digits) or 'mbs' (court registry number) is required. Look one up by company name at the Croatian Court Register public search: https://sudreg.pravosudje.hr/registar/.",
+    );
   }
 
   const trimmed = raw.trim();
   const identifier = extractOibOrMbs(trimmed);
   if (!identifier) {
-    throw new Error(`'${trimmed}' is not a valid Croatian OIB (11 digits) or MBS (numeric court registry number).`);
+    throw new Error(
+      `'${trimmed}' is not a valid Croatian OIB (11 digits) or MBS (numeric court registry number). Look one up by company name at https://sudreg.pravosudje.hr/registar/.`,
+    );
   }
 
   const token = await getAccessToken();

@@ -12,9 +12,9 @@ Trust and quality infrastructure for AI agents.
 
 ## What is Strale
 
-Strale is a capability marketplace for AI agents. Agents call `strale.do()` at runtime to access 290+ verified capabilities — company lookups, compliance checks, financial validation, Web3 security, and more — plus 100 bundled solutions for multi-step workflows like full KYB checks or company due diligence. No hardcoded integrations or credential management.
+Strale is a capability marketplace for AI agents. Agents call `strale.do()` at runtime to access verified capabilities — company registry lookups, compliance checks, financial validation, Web3 security, and more — plus bundled solutions for multi-step workflows like full KYB checks or company due diligence. No hardcoded integrations or credential management.
 
-Every capability is continuously tested and assigned a Strale Quality Score (SQS): a 0-100 confidence score derived from two independent profiles — a Quality Profile (code correctness, schema compliance, error handling, edge cases) and a Reliability Profile (current availability, rolling success, upstream health, latency) — combined via a published matrix. Agents get reliable, scored tools. You get observability into what your agent is actually doing.
+Every capability is continuously tested against real upstreams, and every call returns an audit record with cryptographic chain hashing. You get observability into what your agent is actually doing.
 
 ## Quick Start: MCP Server
 
@@ -86,7 +86,7 @@ result = strale.do("eu-vat-validate", {"vat_number": "SE556000000001"})
 
 | Package | Registry | Description |
 |---|---|---|
-| [`strale-mcp`](https://www.npmjs.com/package/strale-mcp) | npm | MCP server — 290+ capabilities via Claude, Cursor, any MCP host |
+| [`strale-mcp`](https://www.npmjs.com/package/strale-mcp) | npm | MCP server — the full capability catalog via Claude, Cursor, any MCP host |
 | [`straleio`](https://www.npmjs.com/package/straleio) | npm | TypeScript/JavaScript SDK |
 | [`straleio`](https://pypi.org/project/straleio/) | PyPI | Python SDK |
 | [`langchain-strale`](https://pypi.org/project/langchain-strale/) | PyPI | LangChain toolkit — 250+ tools via `StraleToolkit` |
@@ -102,22 +102,29 @@ result = strale.do("eu-vat-validate", {"vat_number": "SE556000000001"})
 GET https://api.strale.io/x402/catalog
 ```
 
-## Quality Scoring (SQS)
+## Quality and testing
 
-Every capability has a Strale Quality Score (SQS) from 0 to 100, built on a dual-profile model:
+Capabilities are continuously tested against their real upstreams. Each one
+carries a suite of automated tests — known-answer, schema, negative, edge-case,
+and dependency-health — plus piggyback checks fed by real production traffic.
+Results drive a lifecycle state (`draft` → `validating` → `probation` → `active`
+→ `degraded` → `suspended`) and an enforced quality floor: a capability that
+falls below the floor on real traffic is quarantined automatically, and
+recovers the same way.
 
-- **Quality Profile (QP):** Measures code-level quality across four factors — correctness (50%), schema compliance (31%), error handling (13%), and edge case coverage (6%). Upstream failures are excluded.
-- **Reliability Profile (RP):** Measures operational dependability — upstream availability, latency consistency, error recovery, and degradation handling. Factor weights vary by capability type (API-dependent, algorithmic, mixed).
-
-The two profiles combine via a published 5x5 matrix with interpolation into the final SQS score. Grades run A through E (A >= 90, B >= 75, C >= 50, D >= 25, E < 25), computed over a recency-weighted rolling 10-run window.
-
-Scores are public. Check any capability:
+Strale deliberately publishes **no single numeric quality score**. An earlier
+0-100 composite (SQS) was retired in May 2026 — it compressed unrelated
+failure modes into one number that looked more precise than it was. What is
+exposed instead is the raw evidence: lifecycle state, last-tested timestamp,
+recent test history, known limitations, and the data source behind each
+capability.
 
 ```
-GET https://api.strale.io/v1/quality/eu-vat-validate
+GET https://api.strale.io/v1/capabilities/vat-validate
 ```
 
-Agents can set a `min_sqs` threshold on any `POST /v1/do` call — requests are rejected if the capability's current score falls below the threshold.
+Every capability publishes its limitations honestly, including coverage gaps.
+Methodology: [strale.dev/quality](https://strale.dev/quality).
 
 ## Links
 

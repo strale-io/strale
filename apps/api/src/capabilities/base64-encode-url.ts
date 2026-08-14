@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("base64-encode-url", async (input: CapabilityInput) => {
@@ -8,9 +9,9 @@ registerCapability("base64-encode-url", async (input: CapabilityInput) => {
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
   await validateUrl(fullUrl);
 
-  const response = await fetch(fullUrl, {
+  const response = await safeFetch(fullUrl, {
     headers: { "User-Agent": "Strale/1.0 (encoder; admin@strale.io)" },
-    redirect: "follow",
+    // safeFetch follows up to 3 hops with per-hop re-validation
     signal: AbortSignal.timeout(15000),
   });
 

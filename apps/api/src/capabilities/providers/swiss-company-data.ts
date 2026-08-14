@@ -11,6 +11,7 @@
  */
 
 import { registerChain } from "../../lib/data-provider.js";
+import { classifyNameMatch } from "../../lib/company-name-match.js";
 
 const ZEFIX_API = "https://www.zefix.admin.ch/ZefixPublicREST/api/v1";
 
@@ -146,20 +147,75 @@ registerChain({
           const data = await res.json();
           company = Array.isArray(data) ? data[0] : data;
         } else {
-          // Name search
-          const res = await fetch(
-            `${ZEFIX_API}/company/search?name=${encodeURIComponent(raw)}&languageKey=en&maxEntries=1`,
-            { headers, signal: AbortSignal.timeout(10000) },
-          );
+          // Name search.
+          //
+          // MUST be POST. Zefix's /company/search accepts a JSON body and
+          // returns 405 Method Not Allowed for GET — which is exactly what
+          // production returned for {"uid": "Swisscom"} before this fix, twice.
+          // The 405 was surfaced raw to the caller as "Zefix API error: HTTP
+          // 405", which reads like an outage rather than our bug.
+          const res = await fetch(`${ZEFIX_API}/company/search`, {
+            method: "POST",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify({ name: raw, languageKey: "en", maxEntries: 20 }),
+            signal: AbortSignal.timeout(10000),
+          });
           if (!res.ok) {
             throw new Error(`Zefix API error: HTTP ${res.status} for name "${raw}"`);
           }
           const data = await res.json();
-          company = Array.isArray(data) ? data[0] : data;
+          const candidates: Array<Record<string, unknown>> = Array.isArray(data) ? data : [data];
+
+          // Score candidates rather than trusting the first. Zefix's search is
+          // fuzzy, and a name query that lands on a different legal entity is
+          // undetectable by the caller — the same failure class fixed in
+          // finnish/norwegian-company-data.
+          let best: Record<string, unknown> | null = null;
+          for (const cand of candidates) {
+            const nm = cand?.name;
+            if (typeof nm !== "string" || !nm) continue;
+            const { match_confidence } = classifyNameMatch(raw, nm);
+            if (match_confidence === "exact") { best = cand; break; }
+            if (match_confidence === "high" && !best) best = cand;
+          }
+          if (!best) {
+            // Two distinct failures, and conflating them sends the caller the
+            // wrong way. Zefix matches diacritics LITERALLY and does no folding
+            // of its own: "Nestle" returns 0 results while "Nestlé" returns 15
+            // including Nestlé AG. So an empty result set usually means the
+            // accent is missing, not that the company is absent.
+            if (candidates.length === 0) {
+              throw new Error(
+                `Zefix returned no companies for "${raw}". Its name search matches accented ` +
+                  `characters literally — try the exact registered spelling (e.g. "Nestlé" rather ` +
+                  `than "Nestle"), or provide the UID (CHE-xxx.xxx.xxx) for an exact lookup.`,
+              );
+            }
+            const closest = candidates
+              .slice(0, 3)
+              .map((c) => c?.name)
+              .filter((n): n is string => typeof n === "string")
+              .join(", ");
+            throw new Error(
+              `No confident Swiss registry match for "${raw}". Zefix's name search is fuzzy and ` +
+                `returned only unrelated entities${closest ? ` (closest: ${closest})` : ""}. ` +
+                `Provide the UID (CHE-xxx.xxx.xxx) for an exact lookup.`,
+            );
+          }
+          company = best;
         }
 
         if (!company) {
-          throw new Error(`No Swiss company found for "${raw}"`);
+          // Zefix answers an unknown-but-well-formed UID with 200 [] rather
+          // than 404, so this is the not-found path for exact lookups. Say so
+          // plainly: three production calls for CHE-105.805.977 landed here,
+          // and "no company found" alone does not tell the caller whether the
+          // identifier is wrong or the register is incomplete.
+          throw new Error(
+            `No Swiss company found for "${raw}". The identifier is well-formed but is not in ` +
+              `Zefix — it may belong to a deregistered entity, or be a typo. Search by ` +
+              `company_name instead if you are unsure of the UID.`,
+          );
         }
 
         return {

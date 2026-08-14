@@ -43,7 +43,12 @@ geography: eu
 test_fixtures:
   known_answer:
     input:
-      query: SELECT * FROM users WHERE active = true LIMIT 10
+      # Must be a real trademark that genuinely resolves. This previously held
+      # a SQL-injection probe string ("SELECT * FROM users WHERE ..."), which is
+      # an edge-case input miscategorised as a correctness fixture: EUIPO
+      # legitimately returns nothing for it, so the test asserted on an empty
+      # result set and could never have detected a real regression.
+      query: Nike
     expected_fields:
       - field: trademarks
         operator: not_null
@@ -52,22 +57,15 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: array
-      - field: total_results
-        operator: not_null
-        reliability: guaranteed
-      - field: total_results
-        operator: type
-        reliability: guaranteed
-        value: number
-      - field: total_results
-        operator: gt
-        reliability: guaranteed
-        value: -1
   health_check_input:
     query: test
 output_field_reliability:
   trademarks: guaranteed
-  total_results: guaranteed
+  # `common`, not `guaranteed`: the extractor returns null whenever EUIPO does
+  # not surface a count (empty result sets, and some result pages). Annotating
+  # it guaranteed generated not_null/type assertions that fail on any query
+  # with no hits — the same class that broke 8 EU registries.
+  total_results: common
 limitations:
   - title: Searches EUIPO database for EU trademarks only — national trademark registrations are not included
     text: Searches EUIPO database for EU trademarks — national trademark registrations are not included

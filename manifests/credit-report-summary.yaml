@@ -28,8 +28,11 @@ output_schema:
     fiscal_year: 2024-12
     revenue_sek: 108131545
     company_name: Spotify AB
+    # Placeholder name. The live capability returns real board members; this
+    # example must not, since manifests are hand-authored and never pass
+    # through the fixture scrubber.
     board_members:
-      - Carl Peter Christian Luiga
+      - Exempel Förste Ledamot
     credit_rating: null
     risk_indicator: null
     credit_limit_sek: null

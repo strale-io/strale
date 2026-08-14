@@ -27,6 +27,15 @@ export interface ManifestLimitation {
   workaround?: string | null;
 }
 
+/**
+ * A single known_answer fixture: a real input plus the assertions to run
+ * against its live output.
+ */
+export interface ManifestKnownAnswerFixture {
+  input: Record<string, unknown>;
+  expected_fields: ManifestExpectedField[];
+}
+
 export interface Manifest {
   slug: string;
   name: string;
@@ -42,10 +51,14 @@ export interface Manifest {
   freshness_category?: string;
   geography?: string;
   test_fixtures: {
-    known_answer?: {
-      input: Record<string, unknown>;
-      expected_fields: ManifestExpectedField[];
-    };
+    // Single fixture object (the ~300-manifest legacy shape, unchanged) OR
+    // an array of fixtures — one per entry point — for multi-path
+    // capabilities that need PRIMARY (ID lookup) and SECONDARY (name
+    // search) coverage for Gate 5 (DEC-20260411-B). Use
+    // `getKnownAnswerFixtures()` below to read this field; don't access
+    // `.input` / `.expected_fields` directly, since those don't exist on
+    // the array form.
+    known_answer?: ManifestKnownAnswerFixture | ManifestKnownAnswerFixture[];
     health_check_input?: Record<string, unknown>;
   };
   output_field_reliability: Record<string, string>;
@@ -86,4 +99,22 @@ export interface Manifest {
   quota_cap?: number | null;
   // Day-of-month reset for monthly window (1..31). NULL for daily/none.
   quota_reset_dom?: number | null;
+}
+
+/**
+ * Normalize `test_fixtures.known_answer` to an array of fixtures.
+ *
+ * Single object in → array-of-one out (the legacy shape, unchanged
+ * semantics). Already-array in → returned as-is. Absent → empty array.
+ * Every reader of known_answer fixtures (onboarding-gates.ts validation,
+ * onboard.ts's buildTestSuites/verifyFixtures/discoverFixtures) should go
+ * through this helper rather than accessing `.input` / `.expected_fields`
+ * directly, since those don't exist on the array form.
+ */
+export function getKnownAnswerFixtures(
+  m: Pick<Manifest, "test_fixtures">,
+): ManifestKnownAnswerFixture[] {
+  const ka = m.test_fixtures?.known_answer;
+  if (!ka) return [];
+  return Array.isArray(ka) ? ka : [ka];
 }

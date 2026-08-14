@@ -262,3 +262,51 @@ describe("resolveInputRef", () => {
     });
   });
 });
+
+// ── Money-integrity 2026-08-12: the billing boundary ─────────────────────────
+// The wallet path billed `step_count - errors.length`, counting SKIPPED and
+// UNAVAILABLE steps as successes — a solution whose step 1 failed (starving
+// downstream inputs) charged full price for ZERO executed checks. Both rails
+// now share isSuccessfulStepOutput. Review H-1 refinement: only the
+// executor's own markers are non-success — a capability's soft verdict
+// ({valid:false, error:"…"} alongside other fields) IS the purchased answer.
+
+import { isSuccessfulStepOutput } from "./solution-executor.js";
+
+describe("isSuccessfulStepOutput (the billing boundary)", () => {
+  it("real output counts, including soft negative verdicts", () => {
+    expect(isSuccessfulStepOutput({ company_name: "LEGO A/S", status: "active" })).toBe(true);
+    // iban-validate's checksum-failure answer is a SUCCESSFUL execution:
+    expect(isSuccessfulStepOutput({ valid: false, error: "Invalid IBAN checksum", country: "DE" })).toBe(true);
+    // uptime-check reporting a site down is the deliverable, not a failure:
+    expect(isSuccessfulStepOutput({ status: "down", error: "timeout" })).toBe(true);
+    expect(isSuccessfulStepOutput({})).toBe(true);
+  });
+
+  it("the executor's own failure marker (exactly {error: string}) does NOT count", () => {
+    expect(isSuccessfulStepOutput({ error: "HTTP 503 from registry" })).toBe(false);
+  });
+
+  it("input-starved skips do NOT count — the charge-for-nothing case", () => {
+    expect(isSuccessfulStepOutput({ skipped: true, reason: "All required inputs were not provided" })).toBe(false);
+  });
+
+  it("unavailable (deactivated) steps do NOT count and are no longer invisible", () => {
+    expect(isSuccessfulStepOutput({ unavailable: true, reason: "capability unavailable" })).toBe(false);
+  });
+
+  it("non-objects do not count", () => {
+    expect(isSuccessfulStepOutput(null)).toBe(false);
+    expect(isSuccessfulStepOutput(undefined)).toBe(false);
+    expect(isSuccessfulStepOutput("string")).toBe(false);
+  });
+
+  it("the all-steps-starved scenario bills nothing", () => {
+    const steps = {
+      "danish-company-data": { error: "cvrapi.dk quota exhausted" },
+      "vat-validate": { skipped: true, reason: "All required inputs were not provided" },
+      "sanctions-check": { skipped: true, reason: "All required inputs were not provided" },
+    };
+    expect(Object.values(steps).some(isSuccessfulStepOutput)).toBe(false);
+  });
+});

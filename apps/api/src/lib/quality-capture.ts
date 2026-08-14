@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { logError } from "./log.js";
+import { isCapabilityRefusal } from "./capability-refusal.js";
 
 /**
  * Quality signal data collected during capability execution.
@@ -119,13 +120,22 @@ function validateSchema(
 /**
  * Categorize an error into a standard error_type bucket.
  */
-function categorizeError(
+/** Exported for testing — the refusal branch is the one worth pinning down,
+ *  since misclassifying it feeds the quarantine/deactivation floor. */
+export function categorizeError(
   error: Error | string | null | undefined,
 ): string | null {
   if (!error) return null;
 
   const msg =
     typeof error === "string" ? error.toLowerCase() : error.message.toLowerCase();
+
+  // Checked before the fault buckets: a refusal often mentions the entity the
+  // caller asked about, and an unlucky company name would otherwise land in
+  // one of them ("Timeout Ltd" is a real kind of name).
+  if (isCapabilityRefusal(error)) {
+    return "capability_refusal";
+  }
 
   if (msg.includes("timeout") || msg.includes("timed out") || msg.includes("etimedout")) {
     return "upstream_timeout";

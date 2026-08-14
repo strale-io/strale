@@ -4,6 +4,7 @@ import {
   varchar,
   text,
   integer,
+  bigserial,
   boolean,
   timestamp,
   date,
@@ -295,6 +296,14 @@ export const transactions = pgTable(
     // the audit_trail JSONB still carries the same value for record
     // completeness.
     clientIpHash: varchar("client_ip_hash", { length: 16 }),
+    // Channel attribution (migration 0081, design doc 2026-08-12): weak-but-
+    // joinable signals per call — {ua, referer, src, client_header,
+    // ip_day_hash (daily-salted; the ONLY join key against discovery_hits —
+    // client_ip_hash below is a different, unsalted keyspace),
+    // mcp_client_info}. Write-only at execution time; read by the weekly
+    // attribution rollup, never on the hot path. Retention: rides the
+    // transactions row (TRANSACTION_RETENTION_DAYS).
+    clientMeta: jsonb("client_meta"),
     // x402 payment tracking
     paymentMethod: varchar("payment_method", { length: 20 }).notNull().default("wallet"),
     x402SettlementId: text("x402_settlement_id"),
@@ -810,3 +819,120 @@ export const digestSnapshots = pgTable("digest_snapshots", {
     .notNull()
     .defaultNow(),
 });
+
+// ─── ee_directors ───────────────────────────────────────────────────────────
+// Estonian directors/representatives cache. Daily ingest of the RIK Ariregister
+// CC BY 4.0 open-data dump (`kaardile_kantud_isikud.json.zip`) — see
+// `apps/api/src/jobs/ingest-ee-directors.ts`. Primary key is `kirje_id` from
+// upstream (unique per registry-card filing). PIDs are redacted by RIK at
+// source since 2024-11-01; the hashed UUID lands in `isikukood_hash`. Names
+// + roles + start/end dates are retained.
+export const eeDirectors = pgTable(
+  "ee_directors",
+  {
+    kirjeId: integer("kirje_id").primaryKey(),
+    entityRegCode: text("entity_reg_code").notNull(),
+    personType: text("person_type").notNull(), // 'F' (natural) | 'J' (legal entity)
+    roleCode: text("role_code").notNull(), // JUHL, NOOK, PROK, LIK, etc.
+    roleText: text("role_text").notNull(), // localised label, e.g. "Juhatuse liige"
+    firstName: text("first_name"),
+    lastName: text("last_name"), // also business name when person_type='J'
+    isikukoodHash: text("isikukood_hash"),
+    foreignCode: text("foreign_code"),
+    foreignCountryCode: text("foreign_country_code"),
+    foreignCountryText: text("foreign_country_text"),
+    addressText: text("address_text"),
+    addressCountryCode: text("address_country_code"),
+    startDate: date("start_date"),
+    endDate: date("end_date"),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("ee_directors_entity_idx").on(table.entityRegCode),
+    index("ee_directors_last_synced_idx").on(table.lastSyncedAt),
+  ],
+);
+
+// ─── ee_directors_sync ──────────────────────────────────────────────────────
+// Single-row marker for the EE directors ingest. Tracks the upstream
+// `Last-Modified` header so the ingest can skip when there's no new data.
+// `id = 1` is the only valid row (CHECK constraint enforced by the migration).
+export const eeDirectorsSync = pgTable("ee_directors_sync", {
+  id: integer("id").primaryKey(),
+  lastModifiedUpstream: text("last_modified_upstream"),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+  rowCount: integer("row_count"),
+});
+
+// ─── cy_directors ───────────────────────────────────────────────────────────
+// Cyprus directors/officers cache. Monthly ingest of the data.gov.cy DRCOR
+// open-data CSV (`organisation_officials_83.csv`, CC BY 4.0) — see
+// `apps/api/src/jobs/ingest-cy-directors.ts`. DRCOR publishes no stable per-row
+// identifier, so the natural composite key is (entity_reg_code,
+// person_or_organisation_name, official_position). The CSV does NOT include
+// per-row appointment/cessation dates — all rows are treated as currently-active
+// per the snapshot semantics of the upstream file. Greek role labels are stored
+// verbatim plus a normalized English `role_standardized` for handler ergonomics.
+export const cyDirectors = pgTable(
+  "cy_directors",
+  {
+    entityRegCode: text("entity_reg_code").notNull(),
+    personOrOrganisationName: text("person_or_organisation_name").notNull(),
+    officialPosition: text("official_position").notNull(),
+    organisationName: text("organisation_name"),
+    organisationTypeCode: text("organisation_type_code"),
+    organisationType: text("organisation_type"),
+    roleStandardized: text("role_standardized").notNull(),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [
+        table.entityRegCode,
+        table.personOrOrganisationName,
+        table.officialPosition,
+      ],
+    }),
+    index("cy_directors_entity_idx").on(table.entityRegCode),
+    index("cy_directors_last_synced_idx").on(table.lastSyncedAt),
+  ],
+);
+
+// ─── cy_directors_sync ──────────────────────────────────────────────────────
+// Single-row marker for the CY directors ingest. Tracks the upstream
+// `Last-Modified` header so the weekly ingest can skip when the monthly
+// DRCOR refresh hasn't fired yet. `id = 1` only (CHECK constraint).
+export const cyDirectorsSync = pgTable("cy_directors_sync", {
+  id: integer("id").primaryKey(),
+  lastModifiedUpstream: text("last_modified_upstream"),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+  rowCount: integer("row_count"),
+});
+
+// ─── discovery_hits ─────────────────────────────────────────────────────────
+// Channel attribution (migration 0081): one row per discovery-surface fetch
+// (/x402/catalog, /.well-known/x402.json, agent-card, llms.txt). src_tag
+// comes from tagged directory-submission URLs (?src=bazaar). ip_hash is
+// DAILY-salted (cross-day correlation deliberately impossible); 90-day
+// retention via db-retention RULES. Read only by the attribution rollup.
+export const discoveryHits = pgTable(
+  "discovery_hits",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    endpoint: text("endpoint").notNull(),
+    srcTag: text("src_tag"),
+    ua: text("ua"),
+    ipHash: text("ip_hash"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("discovery_hits_created_at_idx").on(table.createdAt),
+    index("discovery_hits_src_tag_idx").on(table.srcTag).where(sql`src_tag IS NOT NULL`),
+  ],
+);

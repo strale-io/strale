@@ -14,6 +14,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { log } from "./log.js";
+import { StartupFatalError } from "./startup-fatal.js";
 
 const REQUIRED_COLUMNS: Array<{
   table: string;
@@ -138,5 +139,13 @@ export async function validateSchema(): Promise<void> {
     "SCHEMA MISMATCH — DB is missing required columns. See missing_by_migration.",
   );
 
-  process.exit(1);
+  // Throw (not process.exit) so index.ts main().catch pages the operator —
+  // a direct exit here bypasses the fatal-startup alert (2026-07-02 class).
+  const missingList = [...byMigration.values()].flat().join(", ");
+  throw new StartupFatalError(
+    `Schema validation failed — DB is missing required columns: ${missingList}`,
+    `The database is missing columns the deployed code expects (${missingList}). ` +
+      `This is a deploy/code problem, not an outage that heals itself — restarting won't fix it. ` +
+      `Roll back: Railway dashboard -> Deployments -> previous working deploy -> Redeploy.`,
+  );
 }

@@ -1,10 +1,17 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { safeFetch } from "../lib/safe-fetch.js";
 
-// F-0-006 Bucket D: the image URL is passed to Anthropic's vision API
-// as a 'type: url' source. Anthropic fetches it from their network, not
-// ours. We do not have a way to constrain that — accept the residual
-// risk (Anthropic has their own policies).
+// URL inputs are fetched by US via safeFetch and sent to Anthropic as base64.
+// Two reasons (P1, 2026-08-12): (a) Anthropic's own URL fetcher fails on
+// hosts that gate unknown UAs (observed: upload.wikimedia.org → "Unable to
+// download the file"), which made results depend on a third party's fetch
+// policy; (b) the previous 'type: url' source meant Anthropic fetched from
+// their network, outside our SSRF controls — the old F-0-006 Bucket D
+// residual risk, now closed instead of accepted.
+
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // Claude base64 limit is ~5MB; margin.
+const ALLOWED_MEDIA = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 
 registerCapability("image-to-text", async (input: CapabilityInput) => {
   const imageUrl = (input.image_url as string) ?? (input.url as string) ?? undefined;
@@ -38,9 +45,32 @@ registerCapability("image-to-text", async (input: CapabilityInput) => {
       source: { type: "base64", media_type: mediaType, data },
     };
   } else {
+    const resp = await safeFetch(imageUrl!, {
+      headers: { Accept: "image/*" },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!resp.ok) {
+      throw new Error(`Could not fetch image: HTTP ${resp.status} from the provided image_url.`);
+    }
+    const rawType = (resp.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+    if (!ALLOWED_MEDIA.has(rawType)) {
+      throw new Error(
+        `image_url returned '${rawType || "unknown"}', not a supported image type (png/jpeg/gif/webp).`,
+      );
+    }
+    const buf = Buffer.from(await resp.arrayBuffer());
+    if (buf.byteLength > MAX_IMAGE_BYTES) {
+      throw new Error(
+        `Image is ${(buf.byteLength / 1024 / 1024).toFixed(1)}MB — the limit is ${MAX_IMAGE_BYTES / 1024 / 1024}MB. Provide a smaller image.`,
+      );
+    }
     imageContent = {
       type: "image",
-      source: { type: "url", url: imageUrl! },
+      source: {
+        type: "base64",
+        media_type: rawType as "image/png" | "image/jpeg" | "image/gif" | "image/webp",
+        data: buf.toString("base64"),
+      },
     };
   }
 

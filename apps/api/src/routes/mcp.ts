@@ -15,6 +15,7 @@
 
 import { Hono } from "hono";
 import { rateLimitByIp } from "../lib/rate-limit.js";
+import { recordDiscoveryHit } from "../lib/attribution.js";
 import { log, logError } from "../lib/log.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
@@ -139,7 +140,7 @@ async function handleStatelessRequest(
     apiKey,
     clientIp,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
-    version: "0.2.3", // matches strale-mcp npm version — update on publish
+    version: "0.2.4", // matches strale-mcp npm version — update on publish
   }, trustData, solutionTrustData);
 
   const transport = new WebStandardStreamableHTTPServerTransport({
@@ -232,6 +233,28 @@ mcpRoute.all("/", async (c) => {
   if (method === "POST") {
     const apiKey = extractApiKey(req);
     const clientIp = extractClientIp(req);
+    // Channel attribution: MCP initialize carries clientInfo (name/version) —
+    // the only place the calling harness identifies itself in stateless mode
+    // (initialize and tools/call arrive as separate POSTs with no session).
+    // Recorded as a discovery hit; peeked from a clone so the transport
+    // stream is untouched. Failure here must never affect the MCP call.
+    try {
+      const peek = (await req.clone().json().catch(() => null)) as
+        | { method?: string; params?: { clientInfo?: { name?: string; version?: string } } }
+        | null;
+      if (peek?.method === "initialize") {
+        const ci = peek.params?.clientInfo;
+        const uaOverride = ci?.name ? `${ci.name}/${ci.version ?? "?"}` : undefined;
+        recordDiscoveryHit("/mcp:initialize", {
+          header: (n: string) =>
+            n.toLowerCase() === "user-agent" && uaOverride
+              ? uaOverride
+              : req.headers.get(n) ?? undefined,
+        }, { ip: clientIp ?? undefined });
+      }
+    } catch {
+      // best-effort only
+    }
     const response = await handleStatelessRequest(req, apiKey, clientIp);
     return addCorsHeaders(response);
   }

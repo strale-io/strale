@@ -122,6 +122,10 @@ strale/
 - **DEC-20260428-A** (global, active): Third-party scraping doctrine — three-tier framework. Tier 1: Strale itself never operates scrapers (absolute). Tier 2: may consume vendor-scraped data when underlying data is public records by statute, vendor has documented redistribution rights + indemnification, vendor provides primary-source provenance per fact, and Strale discloses sourcing via `provenance.upstream_vendor` / `acquisition_method` / `primary_source_reference`. Tier 3: prefer licensed-bulk over scraping-derived when both are available at compatible economics. Anchored on Meta v. Bright Data (NDCal Jan 2024) and hiQ v. LinkedIn (settled Dec 2022, $500k judgment). Supersedes the implicit absolute no-scraping rule. Full doctrine: Notion Decisions DB (page id `35067c87-082c-810d-b6a4-edf9f14b4446`).
 - **DEC-20260428-B** (global, active): Engineering bar for Strale-built data services (sanctions/PEP, UBO, adverse media, future registry self-builds). Codifies regulatory-grade requirements: versioned dataset with stale-data circuit breaker, source-list manifest per response, Merkle-rooted ingest, match explainability, confidence buckets, dispute endpoint with disposition tracking, replay capability, golden test suite, canary deploys, per-list kill switches, GDPR Art. 22 compliance, threat-model document and public methodology page mandatory before production. AI synthesis steps (e.g. risk-narrative-generate) must require per-flag source citation, "screening checks found" framing, and never assert facts not present in input. Pairs with DEC-20260428-A.
 
+#### Current Decisions (August 2026)
+- **DEC-20260813-A** (global, active): **DEC-20260518-F affirmed as the operative interpretation of DEC-20260428-A.** Tier 1 ("Strale never operates scrapers") targets bulk collection and scraping infrastructure, NOT targeted per-call parsing. Per-call HTML/PDF parsing of statutorily-public registry pages is permitted when ALL four constraints hold: (a) statutorily public, (b) registry ToS permits per-call automated access — verified and recorded in the capability's manifest before launch, (c) per-entity/per-customer-request, never bulk, (d) attribution + provenance preserved. Still absolute: bulk crawling, ToS-prohibited targets (DEC-20260420-H social platforms, DEC-20260427-H-4 Google), robots.txt evasion, CAPTCHA solving, proxy rotation, login-wall circumvention. Preference order: official API > licensed bulk > Tier-2 vendor > per-call parsing — F is the floor, not the default. Opens the Greece per-call path; supersedes the absolutist reading in the 2026-05-18 MT/HU partials. Full text: Notion Decisions DB `3bb67c87-082c-8101-a08a-ddaf92ffb5df`.
+- **DEC-20260812-A** (global, active): **Readiness program adopted.** The 2026-08-05 Direction Plan Part One (library-as-product, x402 primary rail) plus the Platform Readiness & Self-Operation Program (`docs/strategy/2026-08-12-platform-readiness-program.md`) are the operating strategy. Supersedes DEC-20260502-A (Counterparty Assurance rename/ICP) and DEC-20260503-A (dual-domain architecture); the Counterparty Assurance framing is retired as primary product — compliance is a separate track gated on customer discovery. Confirmed defaults: €25 external-cost cap per full-catalog prod sweep (denylist honored); escalation contract (platform acts alone on quarantine/promote, fixture refresh, retries, delisting, refunds, draft PRs — humans decide spend above cap, vendor/license, pricing, deactivating revenue earners, DEC-20260428-B-grade builds, new external claims); quality floor quarantine <70% / deactivate <30% on ≥10 real calls/30d, auto-promote on recovery; factory may dark-launch zero-maintenance-class capabilities (invisible + non-x402 until first green week). Full text: Notion Decisions DB `3ba67c87-082c-8129-86c6-c35d82bc986f`.
+
 ### Capabilities & Quality
 <!-- Reminder: changes to capabilities, SDKs, or integrations require updating public/llms.txt in strale-frontend -->
 290+ capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 100+ bundled solutions across 6 categories. Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions. Counts grow frequently — check `manifests/*.yaml` and recent git log for exact current numbers.
@@ -140,11 +144,11 @@ All capabilities and solutions available via x402 pay-per-use USDC payments on B
 - KYB Complete (×20 countries) — Full compliance check with risk narrative. 11-14 checks, €2.50. Slug: `kyb-complete-{cc}`
 - Invoice Verify (×20 countries) — Invoice fraud detection with risk narrative. 12-14 checks, €2.50. Slug: `invoice-verify-{cc}`
 - Countries: SE, NO, DK, FI, UK, DE, FR, NL, BE, AT, IE, ES, IT, CH, PL, PT, US, CA, AU, SG
-- Deprecated: kyc-sweden, kyc-norway, kyc-denmark, kyc-finland, verify-us-company (isActive: false)
+- Predecessors that overlap the KYB families: kyc-sweden, kyc-norway, kyc-denmark, kyc-finland, verify-us-company. This file previously recorded them as deprecated with `isActive: false`; production contradicted that on 2026-08-14. Status is deliberately not restated here — read `is_active` / `x402_enabled` from the `solutions` table (per the drift-prevention rule below) before acting on them, and do not deactivate any of them on the strength of a line in this file.
 
 SQS scoring engine deleted per DEC-20260503-B (PR1 shipped 2026-05-05). The dual-profile model (QP + RP + 5×5 matrix), the `min_sqs` request parameter on POST /v1/do, the platform floor SQS gate, the floor-aware solution SQS rule, the public `/v1/quality/:slug` endpoint, and the automatic lifecycle transitions (probation→active, active→degraded, degraded→active, degraded→suspended) are all gone. PR2 will drop the residual schema columns (`qp_score`, `rp_score`, `matrix_sqs`, `matrix_sqs_raw`, `trend`, `guidance_*`) and the `sqs_daily_snapshot` table, and rename `capability_health` → `source_health`. Test scheduling is now hourly free-only (DEC-20260503-B): the scheduler ticks every minute and dispatches free capabilities (`external_cost_cents = 0`) whose slug-hash modulo 60 matches the current minute. Paid capabilities are not proactively tested; quality signals come from production observability, piggyback test suites, and any zero-cost auth-less probes the vendor permits. Circuit-breaker logic on `capability_health` survives. Fixture and canary test modes survive.
 
-Free-tier: 5 capabilities (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) require no auth/signup. IP-based daily rate limit (10/day, enforced via DB counter in do.ts using `rateLimitByIp`). Authenticated users calling free-tier capabilities get normal rate limits and no wallet debit.
+Free-tier: 11 capabilities as of 2026-08 (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate, plus 6 crypto address validators: bitcoin/eth/solana/tron/dogecoin/xrp-address-validate) require no auth/signup. Canonical list is `is_free_tier = true` in the capabilities table, surfaced via `GET /v1/platform/facts` (`free_tier_slugs`) — check there before quoting a count. IP-based daily rate limit (10/day, enforced via DB counter in do.ts using `rateLimitByIp`). Authenticated users calling free-tier capabilities get normal rate limits and no wallet debit.
 
 Testing: test_suites table has `test_mode` column: `live` (calls real API), `fixture` (uses saved data, €0 external cost), `canary` (periodic live check at reduced frequency). `external_cost_cents` tracks estimated external API cost per test execution.
 
@@ -293,7 +297,7 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 
 **Trigger:** the session prompt mentions a PR on a framework repo (Pipedream, LangFlow, Flowise, pydantic-ai, langchain, crewAI, agno, composio, semantic-kernel, awesome-list, etc.), OR modifies files under `packages/*-strale/`, OR edits PyPI/npm publication metadata.
 
-**Background:** on 2026-04-21 the pydantic-ai maintainer DouweM closed `pydantic/pydantic-ai#4866` with "Shame on you" after finding that the published `pydantic-ai-strale` package contained zero pydantic-ai-specific code. An audit found two more packages with the same gap (`google-adk-strale`, `openai-agents-strale`). A prior agent session (2026-04-18) had edited the PR to trim promotional prose but did not verify the code example's imports. See `CONTAINMENT_REPORT.md` for the full incident.
+**Background:** on 2026-04-21 the pydantic-ai maintainer DouweM closed `pydantic/pydantic-ai#4866` with "Shame on you" after finding that the published `pydantic-ai-strale` package contained zero pydantic-ai-specific code. An audit found two more packages with the same gap (`google-adk-strale`, `openai-agents-strale`). A prior agent session (2026-04-18) had edited the PR to trim promotional prose but did not verify the code example's imports. See `archive/sessions/CONTAINMENT_REPORT.md` for the full incident.
 
 **Required steps (non-negotiable):**
 
@@ -457,6 +461,44 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 11. Log decisions made (respect authority thresholds)
 12. Save session summary to `handoff/_general/from-code/`
 13. Contradiction check if decisions were made
+
+### Shared-Checkout Rule (concurrency safety)
+
+**This checkout is shared.** Several Claude Code sessions and background agents
+run against the same working tree at once. Git branch switching is not
+concurrency-safe here.
+
+**The failure mode:** an agent runs `git checkout <branch>` in the main tree
+while another process holds file locks (tsc, vitest, npm, an editor). On
+Windows git's delete-then-rewrite sequence fails partway — the old files are
+unlinked, the new ones never written. ~1,000 tracked files vanish from disk
+while the index still lists them, always in `apps/api/**` and `packages/**`
+where node holds handles. Hit three times on 2026-08-14.
+
+**Rules:**
+
+1. **Any agent that edits files MUST be launched with `isolation: "worktree"`.**
+   An agent working in the shared checkout will eventually collide with the
+   main loop or another agent. This is the actual prevention.
+2. **Agents must never `git checkout` a branch in the main tree.** If an agent
+   without worktree isolation needs a branch, it should create its own worktree
+   (`git worktree add`) rather than moving the shared one.
+3. **Before branch-switching in the main tree, check `git status`** for another
+   session's uncommitted work. Uncommitted changes travel across branch
+   switches and can end up staged onto the wrong branch.
+4. **Never "fix" phantom breakage.** If files that are committed suddenly
+   ENOENT, that is this bug, not a real deletion. Run
+   `node scripts/guard-tree-integrity.mjs` (or just any Bash command, if the
+   PostToolUse hook is wired) and re-check before diagnosing further.
+
+The guard at `scripts/guard-tree-integrity.mjs` auto-repairs the damage and is
+wired as a PostToolUse/Bash hook in `.claude/settings.json` (gitignored — each
+machine opts in). It only ever restores tracked-and-deleted paths, so it cannot
+discard work. It is a safety net, not a substitute for rule 1.
+
+### Report Filing Convention
+
+Large investigative/audit/session reports (AUDIT-*, FIX_PHASE_*, SESSION_*, RESOLUTION_REPORT, REVIEW_FINDINGS_*, *_INVENTORY, *_RESEARCH, checklists tied to a specific incident, etc.) route to `archive/sessions/` (flat layout — see existing entries for naming convention), never to the repo root. Root stays reserved for genuine top-level canon (README, CLAUDE.md, LICENSE, WORKTREES.md-style structural docs, live-use checklists still actively referenced). Note: `AGENTS.md` is currently untracked in this repo pending its own resolution — it is not yet part of this convention's tracked surface.
 
 ### Workflow Invariants (Non-Negotiable)
 - NEVER edit Journal entries, Decision content, or Deferred content

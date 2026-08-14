@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 const SECURITY_HEADERS: Array<{
@@ -23,10 +24,10 @@ registerCapability("header-security-check", async (input: CapabilityInput) => {
   const fullUrl = url.startsWith("http") ? url : `https://${url}`;
   await validateUrl(fullUrl);
 
-  const res = await fetch(fullUrl, {
+  const res = await safeFetch(fullUrl, {
     method: "GET",
     signal: AbortSignal.timeout(10000),
-    redirect: "follow",
+    // safeFetch follows up to 3 hops with per-hop re-validation
   });
 
   const present: Array<{ header: string; value: string; status: string }> = [];

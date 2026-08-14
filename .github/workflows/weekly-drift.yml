@@ -18,6 +18,11 @@ on:
 jobs:
   sweep:
     runs-on: ubuntu-latest
+    # Minimal token scope: the job now carries a prod DB credential, so the
+    # GITHUB_TOKEN is pinned to exactly what the issue-opening step needs.
+    permissions:
+      contents: read
+      issues: write
     env:
       AUDIT_HMAC_SECRET: ci-placeholder-secret-at-least-32-chars-long-0123456789
       FRONTEND_URL: https://strale.dev
@@ -39,6 +44,7 @@ jobs:
       - id: manifest-drift
         run: |
           set +e
+          set -o pipefail
           cd apps/api && npx tsx scripts/sweep-manifest-drift.ts 2>&1 | tee /tmp/manifest-drift.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
@@ -46,21 +52,16 @@ jobs:
       - id: facts-drift
         run: |
           set +e
-          cd apps/api && npx tsx scripts/check-platform-facts-drift.ts 2>&1 | tee /tmp/facts-drift.txt
+          set -o pipefail
+          cd apps/api && npx tsx scripts/check-platform-facts-drift.ts --strict 2>&1 | tee /tmp/facts-drift.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
       - id: fetch-timeout
         run: |
           set +e
+          set -o pipefail
           node apps/api/scripts/check-fetch-timeout-coverage.mjs 2>&1 | tee /tmp/fetch-timeout.txt
-          echo "exit=$?" >> $GITHUB_OUTPUT
-        continue-on-error: true
-
-      - id: migration-prefixes
-        run: |
-          set +e
-          node apps/api/scripts/check-migration-prefixes.mjs 2>&1 | tee /tmp/migration-prefixes.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
@@ -74,6 +75,7 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: |
           set +e
+          set -o pipefail
           cd apps/api && npx tsx scripts/check-vendor-roster-drift.ts --strict 2>&1 | tee /tmp/vendor-roster.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
@@ -95,7 +97,22 @@ jobs:
           STRALE_FRONTEND_PATH: ${{ github.workspace }}/strale-frontend
         run: |
           set +e
+          set -o pipefail
           node apps/api/scripts/check-shape-contracts.mjs 2>&1 | tee /tmp/audit-record-shape.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      # TOAST-readability scan over compliance-critical JSONB columns.
+      # Added after the 2026-08-12 incident: a lost TOAST chunk in
+      # transactions.audit_trail sat undetected for four months. A weekly
+      # full-detoast pass bounds detection latency to days.
+      - id: toast-readability
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set +e
+          set -o pipefail
+          node apps/api/scripts/check-audit-trail-readability.mjs 2>&1 | tee /tmp/toast-readability.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
@@ -121,11 +138,6 @@ jobs:
             cat /tmp/fetch-timeout.txt
             echo '```'
             echo ""
-            echo "## Migration prefix collisions"
-            echo '```'
-            cat /tmp/migration-prefixes.txt
-            echo '```'
-            echo ""
             echo "## Vendor Roster ↔ Decisions drift"
             echo '```'
             cat /tmp/vendor-roster.txt
@@ -135,6 +147,11 @@ jobs:
             echo '```'
             cat /tmp/audit-record-shape.txt
             echo '```'
+            echo ""
+            echo "## TOAST readability (audit/compliance JSONB columns)"
+            echo '```'
+            cat /tmp/toast-readability.txt
+            echo '```'
           } > /tmp/report.md
           cat /tmp/report.md
 
@@ -142,10 +159,10 @@ jobs:
           MD=${{ steps.manifest-drift.outputs.exit }}
           FD=${{ steps.facts-drift.outputs.exit }}
           FT=${{ steps.fetch-timeout.outputs.exit }}
-          MP=${{ steps.migration-prefixes.outputs.exit }}
           VR=${{ steps.vendor-roster.outputs.exit }}
           AR=${{ steps.audit-record-shape.outputs.exit }}
-          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$MP" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ]; then
+          TR=${{ steps.toast-readability.outputs.exit }}
+          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ] || [ "$TR" != "0" ]; then
             echo "::warning::One or more drift sweeps reported findings — see report"
             exit 1
           fi

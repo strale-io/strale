@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatLV } from "../lib/vat-derivation.js";
+import { logWarn } from "../lib/log.js";
 
 /**
  * Latvian company data via the data.gov.lv CKAN datastore API.
@@ -17,6 +18,12 @@ import { deriveVatLV } from "../lib/vat-derivation.js";
 const LV_DATASTORE_API = "https://data.gov.lv/dati/api/3/action/datastore_search";
 // Resource ID for "Uzņēmumu reģistra atvērtie dati" on data.gov.lv.
 const LV_RESOURCE_ID = "25e80bf3-f107-4ab4-89ef-251b5b9374e9";
+// Resource ID for the officers dataset ("Tiesību subjekta valdes locekļu,
+// pārstāvēttiesīgo biedru vai citu pārstāvēttiesīgo personu saraksts") —
+// package `officers`, publisher LR Uzņēmumu reģistrs, CC0 1.0, datastore-
+// queryable. Lists CURRENT representation-entitled persons only (no history).
+// Verified live 2026-08-12: airBaltic (40003245752) → 2 board members.
+const LV_OFFICERS_RESOURCE_ID = "e665114a-73c2-4375-9470-55874b4cfa6b";
 
 // Latvian unified registration number: 11 digits.
 const REG_RE = /^\d{11}$/;
@@ -71,6 +78,116 @@ async function callDatastore(qs: URLSearchParams): Promise<LvRecord[]> {
     throw new Error("Latvian Open Data Portal returned success=false");
   }
   return data.result.records ?? [];
+}
+
+interface LvOfficerRecord {
+  name?: string | null;
+  position?: string | null;
+  governing_body?: string | null;
+  entity_type?: string | null;
+  rights_of_representation_type?: string | null;
+  representation_with_at_least?: string | number | null;
+  registered_on?: string | null;
+  // latvian_identity_number_masked exists upstream but is deliberately never
+  // read: even masked national IDs are data minimization we don't need.
+}
+
+interface LegalRepresentative {
+  // Canonical cross-country shape (NO/CZ/EE/CY parity): type discriminator +
+  // date_of_birth always present. DOB is deliberately null here — see the
+  // manifest limitation (a Strale data-minimization choice, not an upstream
+  // absence: the dataset publishes birth_date and masked personal codes,
+  // which this handler never reads).
+  type: "person" | "organisation";
+  name: string;
+  role: string;
+  role_code: string | null;
+  role_group: string;
+  rights_of_representation: string | null;
+  representation_with_at_least: number | null;
+  start_date: string | null;
+  date_of_birth: null;
+}
+
+// Maps (not object literals) to avoid prototype-key collisions on
+// upstream-controlled strings ("constructor" would resolve on an object).
+const LV_POSITION_LABELS = new Map<string, string>([
+  ["BOARD_MEMBER", "Board member"],
+  ["CHAIR_OF_BOARD", "Chair of the board"],
+  ["DEPUTY_CHAIR_OF_BOARD", "Deputy chair of the board"],
+]);
+
+// role_group tokens follow the EE vocabulary (management_board /
+// supervisory_council) so cross-country grouping works; a shared enum for
+// all six countries is queued follow-up work.
+const LV_BODY_GROUPS = new Map<string, string>([
+  ["EXECUTIVE_BOARD", "management_board"],
+  ["SUPERVISORY_BOARD", "supervisory_council"],
+]);
+
+interface LvOfficersResult {
+  representatives: LegalRepresentative[];
+  total: number;
+}
+
+/**
+ * Fetch current representation-entitled persons (board members etc.) for an
+ * entity from the UR officers dataset. Best-effort: a failure here degrades
+ * tier_2_available and yields NULL fields (never a fake empty list — "0
+ * officers" and "lookup failed" are materially different KYB answers), and
+ * the swallow is logged so it is visible in prod (DEC-20260504-A).
+ */
+async function fetchLegalRepresentatives(regcode: string): Promise<LvOfficersResult | null> {
+  try {
+    const filters = JSON.stringify({ at_legal_entity_registration_number: Number(regcode) });
+    const qs = new URLSearchParams({
+      resource_id: LV_OFFICERS_RESOURCE_ID,
+      filters,
+      limit: "50",
+    });
+    const res = await fetch(`${LV_DATASTORE_API}?${qs.toString()}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) {
+      logWarn("lv-officers-fetch", `officers datastore returned HTTP ${res.status}`, { regcode });
+      return null;
+    }
+    const data = (await res.json()) as {
+      success: boolean;
+      result?: { records?: LvOfficerRecord[]; total?: number };
+    };
+    if (!data.success) {
+      logWarn("lv-officers-fetch", "officers datastore returned success=false", { regcode });
+      return null;
+    }
+    const records = data.result?.records ?? [];
+    const representatives = records
+      .filter((r) => clean(r.name ?? null))
+      .map((r): LegalRepresentative => {
+        const position = clean(r.position ?? null);
+        const body = clean(r.governing_body ?? null);
+        const atLeast = r.representation_with_at_least;
+        return {
+          type: clean(r.entity_type ?? null) === "LEGAL_ENTITY" ? "organisation" : "person",
+          name: (r.name as string).trim(),
+          role: (position ? LV_POSITION_LABELS.get(position) : null) ?? position ?? body ?? "Representative",
+          role_code: position,
+          role_group: (body ? LV_BODY_GROUPS.get(body) : null) ?? "representation",
+          rights_of_representation: clean(r.rights_of_representation_type ?? null),
+          representation_with_at_least:
+            atLeast != null && atLeast !== "" && Number.isFinite(Number(atLeast)) ? Number(atLeast) : null,
+          start_date: r.registered_on ? String(r.registered_on).slice(0, 10) : null,
+          date_of_birth: null,
+        };
+      });
+    // CKAN reports the true total; if it exceeds our page the count field
+    // stays honest even though the array is truncated.
+    return { representatives, total: data.result?.total ?? representatives.length };
+  } catch (err) {
+    logWarn("lv-officers-fetch", `officers datastore query failed: ${(err as Error).message}`, { regcode });
+    return null;
+  }
 }
 
 async function lookupByRegcode(regcode: string): Promise<LvRecord> {
@@ -133,6 +250,7 @@ registerCapability("latvian-company-data", async (input: CapabilityInput) => {
   const record = reg ? await lookupByRegcode(reg) : await lookupByName(trimmed);
 
   const regNum = String(record.regcode);
+  const officersResult = await fetchLegalRepresentatives(regNum);
   const output = {
     company_name: clean(record.name),
     reg_number: regNum,
@@ -147,6 +265,10 @@ registerCapability("latvian-company-data", async (input: CapabilityInput) => {
     sepa_creditor_id: clean(record.sepa),
     atvk_code: record.atvk != null ? String(record.atvk) : null,
     vat_number: deriveVatLV(regNum),
+    // null (not []) when the officers query failed: "no officers" is an
+    // affirmative claim this response cannot make in that case.
+    legal_representatives: officersResult?.representatives ?? null,
+    total_legal_representatives: officersResult?.total ?? null,
     jurisdiction: "LV",
   };
 
@@ -167,8 +289,19 @@ registerCapability("latvian-company-data", async (input: CapabilityInput) => {
     if (o.legal_form === undefined) o.legal_form = (o.business_type ?? o.company_type ?? o.entity_type ?? o.legal_form_code ?? o.legal_form_id);
     if (o.registered_address === undefined) o.registered_address = (o.address ?? o.office_address);
     if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
-    o.tier_2_available = false;
-    o.tier_2_available_reason = "handler does not currently extract legal representatives from upstream registry; follow-up extraction task tracked";
+    if (officersResult === null) {
+      o.tier_2_available = false;
+      o.tier_2_available_reason =
+        "officers dataset query failed on this call — representation data temporarily unavailable, retry later";
+    } else if (officersResult.representatives.length === 0) {
+      o.tier_2_available = false;
+      o.tier_2_available_reason =
+        "no current representation-entitled persons listed for this entity in the UR officers dataset";
+    } else {
+      o.tier_2_available = true;
+      o.tier_2_available_reason =
+        "current board members / representation-entitled persons from the UR officers dataset (data.gov.lv, CC0 1.0)";
+    }
     o.ubo_availability = "unavailable_no_registry";
     o.ubo_availability_reason = "Programmatic UBO access not yet operational at v1; verification pending public-source confirmation";
   }

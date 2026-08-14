@@ -78,6 +78,14 @@ output_field_reliability:
   data: guaranteed
   page_title: guaranteed
 limitations:
+  - title: Sources whose Terms of Service forbid automated access are rejected
+    text: >-
+      URLs on sites whose Terms of Service prohibit automated access (Trustpilot, Glassdoor,
+      LinkedIn, Google Search and the major social platforms) are rejected before any fetch is
+      attempted, returning a policy error with compliant alternatives where they exist. Retrying
+      will not succeed. Strale adds a source back only under a licensed API agreement.
+    category: coverage
+    severity: warning
   - title: Pages requiring login, CAPTCHA, or multi-step navigation cannot be accessed via headless browser
     text: Renders pages via headless browser — pages requiring login, CAPTCHA, or multi-step navigation cannot be accessed
     category: coverage

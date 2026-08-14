@@ -58,4 +58,4 @@ __all__ = [
     "strale_web3_guard",
 ]
 
-__version__ = "0.1.1"
+__version__ = "0.1.4"

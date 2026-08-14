@@ -7,5 +7,16 @@
   "status": "active",
   "historical_names": [],
   "registry_url": "https://ariregister.rik.ee/est/company/17449106/Bolt-App-Services-AS",
-  "jurisdiction": "EE"
+  "jurisdiction": "EE",
+  "legal_name": "Bolt App Services AS",
+  "primary_registration_id": "17449106",
+  "legal_form": "AS (Public limited company)",
+  "registered_address": "Harju maakond, Tallinn, Kesklinna linnaosa, Vana-Lõuna tn 15",
+  "date_incorporated": null,
+  "legal_representatives": "[REDACTED]",
+  "total_legal_representatives": 1,
+  "tier_2_available": true,
+  "tier_2_available_reason": "Legal representatives sourced from RIK Ariregister Open Data (ettevotja_rekvisiidid__kaardile_kantud_isikud, CC BY 4.0). Personal ID codes (isikukood) and date of birth are redacted by RIK upstream since 2024-11-01 — fields kept null for canonical-shape parity. Last cache refresh: [CAPTURE_TIMESTAMP].",
+  "ubo_availability": "unavailable_no_registry",
+  "ubo_availability_reason": "Programmatic UBO access not currently exposed by Ariregister at v1; verification pending public-source confirmation"
 }

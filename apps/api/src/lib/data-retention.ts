@@ -16,6 +16,32 @@ const BATCH_DELAY_MS = 100;
 export const TRANSACTION_RETENTION_DAYS = 1095; // 3 years
 
 /**
+ * Retention window for the PII COLUMNS of transactions whose capability is
+ * flagged `processes_personal_data`. Shorter than the compliance window above,
+ * and deliberately so.
+ *
+ * The two are not in conflict because the sweep redacts rather than deletes:
+ * the Art. 30 record-of-processing skeleton (status, capability slug,
+ * jurisdiction, transparency_marker, timestamps, price, latency, and the
+ * integrity-hash chain) survives for the full 1095 days, while the personal
+ * data itself — input, output, error, audit_trail, provenance,
+ * idempotency_key — is zeroed at 90. You keep the proof that processing
+ * happened without keeping the data it happened to, which is what Art. 5(1)(e)
+ * storage limitation actually asks for.
+ *
+ * On the dispute endpoint (`/v1/transactions/{id}/dispute`): after this window
+ * a dispute can still establish THAT a screening ran, when, and against which
+ * capability, but not re-derive its inputs. That is the correct trade. Holding
+ * identifiable personal data for three years *in case* someone might dispute
+ * it is precisely the retention that storage limitation forbids — the dispute
+ * right does not create a lawful basis for indefinite storage.
+ *
+ * 90 days gives roughly three times the one-month response window Art. 12(3)
+ * allows a controller, so a dispute raised in good time is fully evaluable.
+ */
+export const PII_RETENTION_DAYS = 90;
+
+/**
  * Retention policies aligned with regulatory requirements:
  * - Compliance data (transactions, quality): 3 years (Colorado AI Act SB 24-205)
  * - Operational data (test results, events): 90-180 days
@@ -147,10 +173,70 @@ async function purgeHealthMonitorEvents(cutoff: Date): Promise<number> {
 // sqs_daily_snapshot table is dropped in PR2.
 
 /**
+ * Redact the PII columns of transactions belonging to capabilities flagged
+ * `processes_personal_data`, on the shorter PII_RETENTION_DAYS window.
+ *
+ * Identical redaction to purgeTransactions — same columns zeroed, same chain-
+ * preserving semantics, same legal_hold exemption, same already-redacted skip
+ * so re-running is a true no-op. The only difference is WHICH rows it selects
+ * and HOW OLD they must be.
+ *
+ * DEC-20260504-B (Bulk-Operation Deploy Protocol): introducing this window is
+ * a workload-resumption event, not a routine deploy. Audited before merge on
+ * 2026-08-12: 57,345 rows / ~4.6 MB of PII columns would be redacted on the
+ * first run, against 803,489 total transactions with 0 on legal hold. Strategy
+ * chosen: SELF-THROTTLE — the LIMIT/BATCH_SIZE loop with BATCH_DELAY_MS below
+ * bounds each tick to 1000 rows, so the backlog drains over ~58 batches
+ * (~12s) rather than in one statement. No pre-drain script is needed at this
+ * volume, and the cap holds regardless of how large the backlog later grows.
+ *
+ * KNOWN GAP: solution executions have `capability_id IS NULL` (they carry
+ * `solution_slug` instead), so this join cannot see them — 310 such rows are
+ * currently older than the window. A solution that composes a PII capability
+ * therefore keeps its payload for the full 1095 days. Closing that needs a
+ * solution→capability mapping; tracked separately rather than guessed at here,
+ * because over-matching would redact non-PII solution data early.
+ */
+async function purgePiiTransactions(cutoff: Date): Promise<number> {
+  const db = getDb();
+  let redacted = 0;
+  while (true) {
+    const result = await db.execute(sql`
+      UPDATE transactions
+      SET
+        input = '{}'::jsonb,
+        output = NULL,
+        error = NULL,
+        audit_trail = NULL,
+        provenance = NULL,
+        idempotency_key = NULL,
+        deleted_at = NOW(),
+        redacted_at = NOW(),
+        deletion_reason = 'pii_retention_purge'
+      WHERE id IN (
+        SELECT t.id FROM transactions t
+        JOIN capabilities c ON c.id = t.capability_id
+        WHERE c.processes_personal_data = true
+          AND t.created_at < ${cutoff.toISOString()}::timestamptz
+          AND t.legal_hold = false
+          AND t.deleted_at IS NULL
+        LIMIT ${BATCH_SIZE}
+      )
+    `);
+    const count = (result as any).rowCount ?? 0;
+    redacted += count;
+    if (count < BATCH_SIZE) break;
+    await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
+  }
+  return redacted;
+}
+
+/**
  * Run data retention cleanup. Safe to call multiple times — idempotent.
  *
  * Retention windows:
  * - transactions: 3 years (Colorado AI Act compliance)
+ * - transactions with processes_personal_data: PII columns at 90 days
  * - transaction_quality: 3 years (paired with transactions)
  * - test_results: 90 days (operational)
  * - health_monitor_events: 180 days (operational)
@@ -178,6 +264,14 @@ export async function cleanupOldTestData(): Promise<void> {
   // working; the field is renamed to transactions_redacted in the log
   // payload to reflect actual semantics.
   const txRedacted = await purgeTransactions(threeYearsAgo);
+
+  // PII columns go earlier than the compliance skeleton — see
+  // PII_RETENTION_DAYS. Runs after the 3-year sweep so a row old enough for
+  // both is already redacted and skipped here rather than written twice.
+  const piiCutoff = new Date(now);
+  piiCutoff.setDate(piiCutoff.getDate() - PII_RETENTION_DAYS);
+  const piiRedacted = await purgePiiTransactions(piiCutoff);
+
   const eventsDeleted = await purgeHealthMonitorEvents(oneEightyDaysAgo);
 
   log.info(
@@ -186,6 +280,7 @@ export async function cleanupOldTestData(): Promise<void> {
       test_results_deleted: testResultsDeleted,
       transaction_quality_deleted: txQualityDeleted,
       transactions_redacted: txRedacted,
+      pii_transactions_redacted: piiRedacted,
       health_monitor_events_deleted: eventsDeleted,
     },
     "retention-cleanup-done",

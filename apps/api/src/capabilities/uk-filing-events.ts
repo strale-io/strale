@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { pickByName } from "../lib/company-name-match.js";
 
 /**
  * UK Filing Events — company filings from Companies House.
@@ -28,7 +29,7 @@ const FILING_CATEGORIES: Record<string, string> = {
 };
 
 async function searchCompany(query: string, apiKey: string): Promise<{ number: string; name: string } | null> {
-  const url = `${CH_API}/search/companies?q=${encodeURIComponent(query)}&items_per_page=1`;
+  const url = `${CH_API}/search/companies?q=${encodeURIComponent(query)}&items_per_page=20`;
   const resp = await fetch(url, {
     headers: {
       Authorization: `Basic ${Buffer.from(apiKey + ":").toString("base64")}`,
@@ -37,8 +38,22 @@ async function searchCompany(query: string, apiKey: string): Promise<{ number: s
   });
   if (!resp.ok) return null;
   const data = await resp.json() as any;
-  const item = data?.items?.[0];
-  return item ? { number: item.company_number, name: item.title } : null;
+  const items: any[] = Array.isArray(data?.items) ? data.items : [];
+  if (items.length === 0) return null;
+  // Companies House name search does not rank by legal-entity relevance
+  // (see company-name-match.ts) — score every candidate and refuse rather
+  // than silently return an arbitrary (possibly wrong) company.
+  const resolved = pickByName(
+    query,
+    items,
+    (i) => i.title,
+    (i) => i.company_number,
+    {
+      subjectLabel: "UK Companies House",
+      disambiguationHint: "Provide the Companies House number (8 digits) to disambiguate.",
+    },
+  );
+  return { number: resolved.id, name: resolved.matchedName };
 }
 
 registerCapability("uk-filing-events", async (input: CapabilityInput) => {

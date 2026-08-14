@@ -231,6 +231,8 @@ export class Strale {
     const url = `${this.baseUrl}${path}`;
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.apiKey}`,
+      // Channel attribution: identifies this SDK on the API side.
+      "X-Strale-Client": "straleio-js/0.1.3",
       ...extraHeaders,
     };
 

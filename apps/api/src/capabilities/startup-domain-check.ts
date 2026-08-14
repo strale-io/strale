@@ -30,19 +30,27 @@ registerCapability("startup-domain-check", async (input: CapabilityInput) => {
     }),
   );
 
-  // Check social handles and package names
-  const [twitterAvail, githubAvail, npmAvail, pypiAvail] = await Promise.all([
-    checkUrl(`https://x.com/${slug}`, slug),
+  // Check social handles and package names. The former x.com handle probe is
+  // GONE (P2 review M-7): probing x.com for handle existence is exactly the
+  // DEC-20260420-H case that put x.com/twitter.com on the ToS blocklist, and
+  // this capability was the last raw-fetch caller bypassing the fetch-layer
+  // gate. The X handle is reported as unchecked, honestly.
+  const [githubAvail, npmAvail, pypiAvail] = await Promise.all([
     checkUrl(`https://github.com/${slug}`, slug),
     checkUrl(`https://registry.npmjs.org/${slug}`, slug),
     checkUrl(`https://pypi.org/pypi/${slug}/json`, slug),
   ]);
 
   const socialChecks = [
-    { platform: "Twitter/X", handle: `@${slug}`, available: twitterAvail },
-    { platform: "GitHub", handle: slug, available: githubAvail },
-    { platform: "npm", package: slug, available: npmAvail },
-    { platform: "PyPI", package: slug, available: pypiAvail },
+    {
+      platform: "Twitter/X",
+      handle: `@${slug}`,
+      available: null as boolean | null,
+      note: "Not checked — X's Terms of Service prohibit automated access. Verify the handle manually at x.com.",
+    },
+    { platform: "GitHub", handle: slug, available: githubAvail as boolean | null },
+    { platform: "npm", package: slug, available: npmAvail as boolean | null },
+    { platform: "PyPI", package: slug, available: pypiAvail as boolean | null },
   ];
 
   const available = [

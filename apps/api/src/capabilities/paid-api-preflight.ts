@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
@@ -20,13 +21,13 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
   let server: string | null = null;
 
   try {
-    const res = await fetch(fullUrl, {
+    const res = await safeFetch(fullUrl, {
       method: "GET",
       headers: {
         "User-Agent": "Strale/1.0 (paid-api-preflight; admin@strale.io)",
         Accept: "application/json, */*",
       },
-      redirect: "follow",
+      // redirect handling: safeFetch follows up to 3 hops with per-hop re-validation
       signal: AbortSignal.timeout(10000),
     });
 
@@ -248,7 +249,7 @@ function parseMPP(header: string): Record<string, unknown> {
 
 async function checkFacilitator(url: string): Promise<boolean> {
   try {
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method: "HEAD",
       signal: AbortSignal.timeout(2000),
     });

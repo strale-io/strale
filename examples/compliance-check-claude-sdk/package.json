@@ -1,0 +1,21 @@
+{
+  "name": "compliance-check-claude-sdk",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Claude Agent SDK agent with in-process tools wrapping the straleio SDK for a KYB compliance check, printing the full audit trail.",
+  "scripts": {
+    "start": "tsx src/agent.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.231",
+    "straleio": "^0.1.2",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

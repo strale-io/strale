@@ -46,7 +46,7 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      query: SELECT * FROM users WHERE active = true LIMIT 10
+      query: artificial intelligence act
     expected_fields:
       - field: query
         operator: not_null

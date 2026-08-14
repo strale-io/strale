@@ -22,3 +22,5 @@ norwegian-company-data
 polish-company-data
 swedish-company-data
 us-company-data
+# uk: tier fixture capture requires COMPANIES_HOUSE_API_KEY (prod-only); recapture in a keyed environment
+uk-company-data

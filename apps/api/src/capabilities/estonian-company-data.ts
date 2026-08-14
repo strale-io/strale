@@ -1,9 +1,98 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { and, eq, isNull } from "drizzle-orm";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { firstString } from "./lib/input-aliases.js";
 import { getBrowserlessConfig, htmlToText } from "./lib/browserless-extract.js";
+import { getDb } from "../db/index.js";
+import { eeDirectors, eeDirectorsSync } from "../db/schema.js";
 
 // Estonian company data via ariregister.rik.ee — FREE, no auth
+import { classifyNameMatch } from "../lib/company-name-match.js";
+
 const API = "https://ariregister.rik.ee/est/api";
+
+interface LegalRepresentative {
+  type: "person" | "organisation";
+  name: string;
+  role: string;
+  role_code: string;
+  role_group: string;
+  date_of_birth: string | null;
+  start_date: string | null;
+}
+
+// RIK role-code → semantic group. Forward-compat: any code not listed
+// maps to "other". Kept conservative — only the well-known governance
+// codes are explicitly tagged.
+const ROLE_GROUPS: Record<string, string> = {
+  JUHL: "management_board",
+  NOOK: "supervisory_council",
+  PROK: "procuration",
+  LIK: "liquidation",
+  PR: "management_board",
+};
+
+function deriveRoleGroup(roleCode: string): string {
+  return ROLE_GROUPS[roleCode] ?? "other";
+}
+
+function shapeName(personType: string, firstName: string | null, lastName: string | null): string {
+  // For legal-entity directors (personType === "J") the business name
+  // lands in last_name (upstream field `nimi_arinimi` is polymorphic).
+  if (personType === "J") return (lastName ?? "").trim();
+  return [firstName ?? "", lastName ?? ""].filter(Boolean).join(" ").trim();
+}
+
+async function fetchLegalRepresentatives(regCode: string): Promise<{
+  representatives: LegalRepresentative[];
+  lastSyncedAt: Date | null;
+}> {
+  if (!regCode) return { representatives: [], lastSyncedAt: null };
+  const db = getDb();
+  const rows = await db
+    .select({
+      personType: eeDirectors.personType,
+      roleCode: eeDirectors.roleCode,
+      roleText: eeDirectors.roleText,
+      firstName: eeDirectors.firstName,
+      lastName: eeDirectors.lastName,
+      startDate: eeDirectors.startDate,
+      lastSyncedAt: eeDirectors.lastSyncedAt,
+    })
+    .from(eeDirectors)
+    .where(and(eq(eeDirectors.entityRegCode, regCode), isNull(eeDirectors.endDate)));
+  const reps: LegalRepresentative[] = [];
+  let maxSynced: Date | null = null;
+  for (const r of rows) {
+    const name = shapeName(r.personType, r.firstName, r.lastName);
+    if (!name) continue;
+    reps.push({
+      type: r.personType === "J" ? "organisation" : "person",
+      name,
+      role: r.roleText,
+      role_code: r.roleCode,
+      role_group: deriveRoleGroup(r.roleCode),
+      // Always null in practice — RIK redacts DOB upstream since Nov 2024.
+      // Field kept for canonical-shape parity with NO/CZ.
+      date_of_birth: null,
+      start_date: r.startDate ? String(r.startDate) : null,
+    });
+    if (r.lastSyncedAt && (!maxSynced || r.lastSyncedAt > maxSynced)) {
+      maxSynced = r.lastSyncedAt;
+    }
+  }
+  return { representatives: reps, lastSyncedAt: maxSynced };
+}
+
+async function readSyncTimestamp(): Promise<Date | null> {
+  const db = getDb();
+  const rows = await db
+    .select({ lastSuccessAt: eeDirectorsSync.lastSuccessAt })
+    .from(eeDirectorsSync)
+    .where(eq(eeDirectorsSync.id, 1))
+    .limit(1);
+  return rows[0]?.lastSuccessAt ?? null;
+}
 
 // Estonian registry code: 8 digits
 const REG_CODE_RE = /^\d{8}$/;
@@ -36,6 +125,7 @@ async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
   // buildBrowserlessRequestUrl also appends ?launch= per-request, required by
   // Browserless v2 (LAUNCH_ARGS env var is deprecated). See lib/browserless-launch.ts.
   const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
+  // unguarded-fetch-ok: our Browserless EU proxy; target is the fixed ariregister API host
   const resp = await fetch(buildBrowserlessRequestUrl(url, "/content", key), {
     method: "POST",
     headers: {
@@ -60,6 +150,7 @@ async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
 async function fetchApi(path: string): Promise<unknown> {
   const url = `${API}${path}`;
   try {
+    // unguarded-fetch-ok: fixed ariregister.rik.ee API host, not a caller URL
     const resp = await fetch(url, {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(10000),
@@ -73,14 +164,56 @@ async function fetchApi(path: string): Promise<unknown> {
   }
 }
 
-async function searchCompany(query: string): Promise<Record<string, unknown>> {
+/**
+ * @param query      registry code or company name
+ * @param isRegCode  true when `query` is an 8-digit registry code. A code is an
+ *                   exact identifier, so the single result is authoritative. A
+ *                   NAME is not: the autocomplete endpoint is fuzzy and ordered
+ *                   by its own relevance, which is not ours — searching
+ *                   "Tallink" returns "Tallink - City Spordiklubi" (a sports
+ *                   club, reg 80405811) ahead of "Aktsiaselts Tallink Grupp"
+ *                   (10238429). Taking results[0] on a name therefore hands the
+ *                   caller a different legal entity with no signal that it did.
+ */
+async function searchCompany(query: string, isRegCode: boolean): Promise<Record<string, unknown>> {
   const data = (await fetchApi(`/autocomplete?q=${encodeURIComponent(query)}`)) as any;
   const results = data?.data;
   if (!results || results.length === 0) {
-    throw new Error(`No Estonian company found matching "${query}".`);
+    throw new Error(
+      isRegCode
+        ? `No Estonian company found for registry code "${query}". The code is well-formed but is ` +
+          `not in the Business Register — it may belong to a deregistered entity, or be a typo. ` +
+          `Search by company_name instead if you are unsure of the code.`
+        : `No Estonian company found matching "${query}".`,
+    );
   }
 
-  const c = results[0];
+  let c = results[0];
+  if (!isRegCode) {
+    // Score every candidate and accept only a real match, mirroring the
+    // discipline in finnish/norwegian-company-data and us-company-data.
+    let best: any = null;
+    for (const cand of results) {
+      const nm = cand?.name;
+      if (typeof nm !== "string" || !nm) continue;
+      const { match_confidence } = classifyNameMatch(query, nm);
+      if (match_confidence === "exact") { best = cand; break; }
+      if (match_confidence === "high" && !best) best = cand;
+    }
+    if (!best) {
+      const closest = results
+        .slice(0, 3)
+        .map((r: any) => r?.name)
+        .filter(Boolean)
+        .join(", ");
+      throw new Error(
+        `No confident Estonian registry match for "${query}". The Business Register's search is ` +
+          `fuzzy and returned only unrelated entities${closest ? ` (closest: ${closest})` : ""}. ` +
+          `Provide the 8-digit registry code for an exact lookup.`,
+      );
+    }
+    c = best;
+  }
   // EE registry returns two code systems for legal_form depending on entity vintage:
   // legacy `liik` (1, 2, 3) and modern codes (4-10). Map both to canonical
   // human-readable labels so the wire shape is consistent across entities.
@@ -119,20 +252,46 @@ async function searchCompany(query: string): Promise<Record<string, unknown>> {
 }
 
 registerCapability("estonian-company-data", async (input: CapabilityInput) => {
-  const raw = (input.registry_code as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
-  if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("'registry_code' or 'company_name' is required. Provide an Estonian registry code (8 digits) or company name.");
+  // firstString skips blank strings, so an empty identifier field alongside a
+  // real company_name resolves via the name instead of erroring on input the
+  // route's anyOf already accepted. Alias surface matches the Nordic siblings.
+  const raw = firstString(
+    input,
+    "registry_code", "company_name", "name", "query", "task",
+  );
+  if (!raw) {
+    throw new Error(
+      "'registry_code' or 'company_name' is required. Provide an Estonian registry code (8 digits) " +
+        "or company name. Aliases accepted: name, query, task.",
+    );
   }
 
   const trimmed = raw.trim();
   const regCode = findRegCode(trimmed);
-  const query = regCode || await extractCompanyName(trimmed);
-  const output = await searchCompany(query);
+  const query = regCode || (await extractCompanyName(trimmed));
+  const output = await searchCompany(query, !!regCode);
 
   const regCodeForRef = (output.registry_code as string) || "";
   const primarySourceUrl = regCodeForRef
     ? `https://ariregister.rik.ee/eng/company/${regCodeForRef}`
     : "https://ariregister.rik.ee/eng";
+
+  // Fetch legal_representatives from the ee_directors cache populated by
+  // the nightly RIK Open Data ingest (`jobs/ingest-ee-directors.ts`). If
+  // the cache hasn't been populated yet (fresh deploy before first
+  // ingest tick), the query returns empty and we surface that explicitly
+  // via tier_2_available_reason rather than silently dropping the field.
+  let legalReps: LegalRepresentative[] = [];
+  let lastSyncedAt: Date | null = null;
+  let cacheError: string | null = null;
+  try {
+    const result = await fetchLegalRepresentatives(regCodeForRef);
+    legalReps = result.representatives;
+    lastSyncedAt = result.lastSyncedAt ?? (await readSyncTimestamp());
+  } catch (err) {
+    // Cache miss / DB error is non-fatal — tier-1 data still surfaces.
+    cacheError = err instanceof Error ? err.message : String(err);
+  }
 
   // Evidence Tier framework labels + Tier 1 canonical aliases (DEC-20260518-A).
   // Resolves alias keys at runtime; only sets a canonical if not already present.
@@ -148,8 +307,27 @@ registerCapability("estonian-company-data", async (input: CapabilityInput) => {
     if (o.legal_form === undefined) o.legal_form = (o.business_type ?? o.company_type ?? o.entity_type ?? o.legal_form_code ?? o.legal_form_id);
     if (o.registered_address === undefined) o.registered_address = (o.address ?? o.office_address);
     if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
-    o.tier_2_available = false;
-    o.tier_2_available_reason = "handler does not currently extract legal representatives from upstream registry; follow-up extraction task tracked";
+    o.legal_representatives = legalReps;
+    o.total_legal_representatives = legalReps.length;
+    o.tier_2_available = legalReps.length > 0;
+    if (cacheError) {
+      o.tier_2_available_reason = `ee_directors cache query failed (${cacheError}); tier_1 data unaffected.`;
+    } else if (legalReps.length > 0) {
+      const syncedNote = lastSyncedAt
+        ? ` Last cache refresh: ${lastSyncedAt.toISOString()}.`
+        : "";
+      o.tier_2_available_reason =
+        "Legal representatives sourced from RIK Ariregister Open Data " +
+        "(ettevotja_rekvisiidid__kaardile_kantud_isikud, CC BY 4.0). " +
+        "Personal ID codes (isikukood) and date of birth are redacted by RIK " +
+        "upstream since 2024-11-01 — fields kept null for canonical-shape parity." +
+        syncedNote;
+    } else {
+      o.tier_2_available_reason =
+        "ee_directors cache returned no active representatives for this " +
+        "registry code (newly registered entity, all directors resigned, or " +
+        "cache not yet populated by first nightly ingest tick).";
+    }
     o.ubo_availability = "unavailable_no_registry";
     o.ubo_availability_reason = "Programmatic UBO access not currently exposed by Ariregister at v1; verification pending public-source confirmation";
   }
@@ -167,7 +345,7 @@ registerCapability("estonian-company-data", async (input: CapabilityInput) => {
       attribution:
         "Source: e-Business Register (Centre of Registers and Information Systems / RIK), Estonia.",
       source_note:
-        "Estonian e-Business Register open data is published by RIK under CC BY 4.0 via avaandmed.ariregister.rik.ee. Designated as an EU High-Value Dataset under Reg. (EU) 2023/138.",
+        "Estonian e-Business Register open data is published by RIK under CC BY 4.0 via avaandmed.ariregister.rik.ee. Designated as an EU High-Value Dataset under Reg. (EU) 2023/138. legal_representatives[] populated from the daily-refreshed kaardile_kantud_isikud bulk dump per DEC-20260518-E.",
     },
   };
 });

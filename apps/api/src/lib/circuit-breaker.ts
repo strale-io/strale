@@ -5,6 +5,7 @@ import { logHealthEvent } from "./health-monitor.js";
 import { categorizeFailureReason, isRetryableFailure } from "./trust-helpers.js";
 import { fireAndForget } from "./fire-and-forget.js";
 import { log } from "./log.js";
+import { REFUSAL_MESSAGE_PATTERNS } from "./capability-refusal.js";
 
 // Circuit breaker states
 type CircuitState = "closed" | "open" | "half_open";
@@ -169,9 +170,21 @@ const USER_INPUT_ERROR_PATTERNS = [
   "This URL points to a PDF",    // url-to-markdown: PDF file
   "This URL points to an image", // url-to-markdown: image file
   "Could not repair JSON",       // json-repair: unrecoverable input
+  // lib/tos-blocklist.ts: the caller asked for a site whose ToS
+  // forbids automated access. The executor worked correctly and declined, so
+  // this must not trip the breaker — otherwise a burst of Trustpilot URLs
+  // (28 arrived in 16 days) would take the capability down for everyone.
+  // Kept in sync with TOS_REFUSAL_MARKER by tos-blocklist.test.ts.
+  "Terms of Service prohibit automated access",
+  // Registry name-search refusals: the capability reached the upstream and
+  // understood the answer well enough to know it was ambiguous or unmatched.
+  // Kept in sync with the throw sites by capability-refusal.test.ts, which
+  // builds real errors from the real primitives rather than restating strings.
+  ...REFUSAL_MESSAGE_PATTERNS,
 ];
 
-function isUserInputError(reason: string): boolean {
+/** Exported so tests can assert the pattern list stays in sync with its producers. */
+export function isUserInputError(reason: string): boolean {
   return USER_INPUT_ERROR_PATTERNS.some((p) => reason.includes(p));
 }
 

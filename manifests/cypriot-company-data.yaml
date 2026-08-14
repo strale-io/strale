@@ -1,10 +1,10 @@
 slug: cypriot-company-data
 name: Cypriot Company Data
 description: >-
-  Look up Cypriot company data via Openapi.com WW-Top (Tier-3 vendor aggregator). Accepts CY-prefix VAT, bare VAT
-  (8 digits + letter), or C-prefix CRO company number (e.g. C165). Returns name, registration number, status,
-  registered address, registration date, LEI, primary NACE code, and last-update timestamp. PARTIAL coverage —
-  some entities (e.g. Wargaming CY99000230P) return 204 from the Openapi catalog despite valid input shape.
+  Look up Cypriot company data. Tier-1 identity via Openapi.com WW-Top (Tier-3 vendor aggregator). Tier-2
+  legal_representatives[] sourced from data.gov.cy DRCOR open data (CC BY 4.0, monthly refresh) for C-prefix
+  inputs (e.g. C165). Accepts CY-prefix VAT, bare VAT (8 digits + letter), or C-prefix CRO company number.
+  Returns name, registration number, status, registered address, directors + secretaries, and source provenance.
 category: company-data
 cost_class: paid_per_call
 price_cents: 16
@@ -54,7 +54,24 @@ output_schema:
     nace_codes: { type: array }
     company_size: { type: ["string", "null"] }
     source_as_of: { type: ["string", "null"] }
-data_source: Openapi.com WW-Top (Tier-3 vendor aggregator of EU company registries)
+    legal_representatives:
+      type: array
+      description: Canonical legal-representatives shape (DEC-20260518-A). Each entry is { type, name, role, role_code, role_group, date_of_birth, start_date }. date_of_birth + start_date are always null for CY — DRCOR open data does not publish personal IDs or per-row appointment dates.
+    total_legal_representatives:
+      type: integer
+      description: Count of legal_representatives returned from the cy_directors cache. 0 when input was VAT-format (not resolvable against DRCOR) or no rows for this DRCOR registration number.
+    tier_2_available:
+      type: boolean
+      description: True when at least one legal representative is returned. Only C-prefix inputs (e.g. C165) resolve against the DRCOR cache; VAT-format inputs return false.
+    tier_2_available_reason:
+      type: string
+      description: Explanation of tier-2 availability (source + freshness + VAT-not-resolvable caveat) or non-availability.
+    ubo_availability:
+      type: string
+      description: UBO availability flag. CY is unavailable_no_registry — Cyprus UBO Register closed to public access since 2023-01-03 (CJEU C-37/20).
+    ubo_availability_reason:
+      type: string
+data_source: Openapi.com WW-Top (Tier-3) + data.gov.cy DRCOR open-data CSV (Tier-2 legal_representatives via C-prefix lookup)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -94,6 +111,12 @@ output_field_reliability:
   nace_codes: common
   company_size: common
   source_as_of: guaranteed
+  legal_representatives: common
+  total_legal_representatives: common
+  tier_2_available: guaranteed
+  tier_2_available_reason: guaranteed
+  ubo_availability: guaranteed
+  ubo_availability_reason: guaranteed
 limitations:
   - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
     text: >-
@@ -113,7 +136,24 @@ limitations:
     text: Openapi WW-Top does not return Cypriot legal form.
     category: coverage
     severity: info
-  - title: Directors not available at WW-Top tier
-    text: Openapi WW-Top does not return directors / legal representatives. Directors-gap closure is IT-only via Openapi IT-Full.
+  - title: Directors via DRCOR open data — C-prefix lookup only
+    text: >-
+      Openapi WW-Top does not return directors / legal representatives for CY. The gap is closed for C-prefix inputs
+      via data.gov.cy DRCOR open data (CC BY 4.0, monthly refresh) — see jobs/ingest-cy-directors.ts and DEC-20260518-E
+      Phase 6 enumeration. VAT-format inputs (CY-prefix or bare) cannot be resolved against the DRCOR cache because
+      DRCOR indexes by numeric REGISTRATION_NO only, not by VAT.
+    category: coverage
+    severity: info
+  - title: DRCOR open data freshness — monthly snapshot
+    text: >-
+      The cy_directors cache is refreshed from the data.gov.cy monthly bulk CSV. Officer changes filed in the last
+      ~4 weeks may not appear until the next refresh. Per-row appointment dates are not published in the open-data
+      file (start_date is always null in legal_representatives entries).
+    category: freshness
+    severity: info
+  - title: UBO data not available
+    text: >-
+      Cyprus UBO Register closed to public access since 2023-01-03 following CJEU C-37/20. Beneficial-owner data is
+      out of scope at v1.
     category: coverage
     severity: info

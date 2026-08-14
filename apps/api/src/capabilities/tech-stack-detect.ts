@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 
 /**
  * Tech Stack Detection — identify technologies used by a website.
@@ -90,6 +91,12 @@ registerCapability("tech-stack-detect", async (input: CapabilityInput) => {
     throw new Error("Provide 'url' (e.g. https://stripe.com) or 'domain' (e.g. stripe.com) to detect the technology stack.");
   }
   const target = rawTarget.startsWith("http") ? rawTarget : `https://${rawTarget}`;
+
+  // Per-source ToS policy (P1 review H1, 2026-08-12): the tos-blocklist
+  // header documents this exact capability serving 19 linkedin.com fetches
+  // while linkedin-url-validate sat deactivated for that access. Every
+  // arbitrary-URL fetch path carries the same blocklist.
+  assertTargetAllowed(target);
 
   // F-0-006: safeFetch validates + re-validates redirects.
   const resp = await safeFetch(target, {

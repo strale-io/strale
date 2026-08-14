@@ -4,8 +4,8 @@
 slug: product-reviews-extract
 name: Product Reviews Extract
 description: >-
-  Extract product reviews from Amazon, Trustpilot, or any review page. Returns rating distribution, pros/cons,
-  sentiment.
+  Extract product reviews from a product or review page. Returns rating distribution, pros/cons,
+  sentiment. Trustpilot is not supported (their ToS forbids automated access).
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
@@ -18,19 +18,24 @@ input_schema:
   properties:
     url:
       type: string
-      description: Product review page URL
+      description: >-
+        Product or review page URL. Sites whose Terms of Service forbid automated access
+        (Trustpilot, Glassdoor, LinkedIn) are rejected without being fetched.
+# Example reconciled to the DB-canonical value on 2026-08-05 (captured from a
+# real --discover run) so sync-manifest-text-to-db.ts carries only the
+# intentional ToS copy change and does not regress this to a placeholder.
 output_schema:
   type: object
   example:
-    url: https://example.com
-    source: example.com
-    common_cons: []
-    common_pros: []
-    product_name: null
+    url: https://www.amazon.com/dp/B0CHX3QBCH
+    source: amazon.com
+    common_cons: null
+    common_pros: null
+    product_name: Apple iPhone 15 Plus FineWoven Case with MagSafe - Pacific Blue
     review_count: null
     average_rating: null
     recent_reviews: []
-    sentiment_summary: No product review data found on this page
+    sentiment_summary: No customer reviews available on this product page
     rating_distribution:
       1_star: null
       2_star: null
@@ -102,6 +107,17 @@ output_field_reliability:
   average_rating: guaranteed
   rating_distribution: guaranteed
 limitations:
+  - title: Trustpilot, Glassdoor and LinkedIn are not supported — their Terms of Service forbid automated access
+    text: >-
+      Review sites whose Terms of Service prohibit automated access are rejected before any fetch is attempted,
+      and return a policy error rather than review data. This currently covers Trustpilot, Glassdoor, LinkedIn,
+      Google Search and the major social platforms. Retrying will not succeed. Strale will add a source back
+      only under a licensed API agreement.
+    category: coverage
+    severity: warning
+    workaround: >-
+      Use a first-party product page, or a review platform that permits automated access such as Reviews.io,
+      Feefo or Yotpo.
   - title: Extracts visible product page reviews only — hidden, filtered, or paginated reviews may not be captured
     text: >-
       Extracts reviews visible on the product page — filtered/hidden reviews and reviews behind 'load more' may not be
