@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { getAllHealth } from "../circuit-breaker.js";
+import { SYSTEM_ACCOUNT_EMAIL } from "../internal-accounts.js";
 import type { PlatformActivity, PlatformHealth, Scoreboard } from "./types.js";
 
 function toRows(result: unknown): any[] {
@@ -19,7 +20,7 @@ export async function getPlatformActivity(
 
   // Look up system test user to exclude from transaction counts
   const sysRows = await db.execute(sql`
-    SELECT id FROM users WHERE email = 'system@strale.internal' LIMIT 1
+    SELECT id FROM users WHERE email = ${SYSTEM_ACCOUNT_EMAIL} LIMIT 1
   `);
   const systemUserId = toRows(sysRows)[0]?.id ?? "00000000-0000-0000-0000-000000000000";
 
