@@ -150,13 +150,18 @@ export function classifyNameMatch(
 
 /**
  * For registries whose search returns a single best-guess result rather than
- * a ranked candidate pool (cvrapi.dk's `search=` parameter; Corporations
- * Canada's Browserless-rendered site search + LLM extraction) — there is no
+ * a ranked candidate pool (cvrapi.dk's `search=` parameter) — there is no
  * pool to bucket and pick from, but the same discipline still applies:
  * classify what came back against what was asked, and refuse rather than
- * silently hand back an unrelated entity. Shared by danish-company-data.ts
- * and canadian-company-data.ts, which had this exact ~10-line block
- * duplicated with only the wording differing (found in review 2026-08-14).
+ * silently hand back an unrelated entity. Used by danish-company-data.ts.
+ *
+ * canadian-company-data.ts used this too until 2026-08-14, when its name
+ * path was rebuilt on a real POST to the Corporations Canada site search
+ * (previously the GET query-string params were inert and the page returned
+ * was always the empty search form). That search DOES return a ranked-ish
+ * candidate pool, so it moved to the uk-company-data.ts pickByName pattern
+ * (bucket by classifyNameMatch, refuse on ties) instead of this function —
+ * see `pickByName` in canadian-company-data.ts.
  */
 export function assertSingleResultMatch(
   query: string,
