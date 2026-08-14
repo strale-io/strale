@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { logWarn } from "../lib/log.js";
 
 /**
  * page-exists — content-aware existence check.
@@ -112,7 +113,7 @@ async function readBodyCapped(
     text += decoder.decode();
   } finally {
     // Cancel instead of draining — closes the connection early.
-    reader.cancel().catch(() => {});
+    reader.cancel().catch((err) => logWarn("page-exists-reader-cancel-failed", "reader cancel failed (connection may pin until GC)", { err: String(err) }));
   }
   return { text: text.slice(0, cap), bytesRead };
 }
@@ -223,7 +224,7 @@ registerCapability("page-exists", async (input: CapabilityInput) => {
     //    heuristics don't apply. Don't read the body. ──
     const contentType = response.headers.get("content-type") ?? "";
     if (contentType && !/text\/html|application\/xhtml/i.test(contentType)) {
-      response.body?.cancel().catch(() => {});
+      response.body?.cancel().catch((err) => logWarn("page-exists-body-cancel-failed", "non-HTML response body cancel failed (connection may pin until GC)", { err: String(err) }));
       return result({
         ...common,
         exists: true,
