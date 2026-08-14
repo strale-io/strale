@@ -1,7 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { extractCompanyName } from "./lib/browserless-extract.js";
 import { safeFetch } from "../lib/safe-fetch.js";
-import { classifyNameMatch } from "../lib/company-name-match.js";
+import { pickByName as pickByNameShared } from "../lib/company-name-match.js";
 
 // Canada — Corporations Canada (ISED)
 //
@@ -225,46 +225,31 @@ async function searchByName(query: string): Promise<CaNameCandidate[]> {
 
 /**
  * The site search returns a page of candidates, not a single best guess —
- * same discipline as uk-company-data.ts's pickByName (the #161 wrong-company
- * class): score every candidate by name, refuse when several distinct
- * corporations tie at the same confidence, and refuse when nothing genuinely
- * matches rather than silently returning the first row.
+ * same discipline as the shared pickByName (the #161 wrong-company class):
+ * score every candidate by name, refuse when several distinct corporations
+ * tie at the same confidence, and refuse when nothing genuinely matches
+ * rather than silently returning the first row.
+ *
+ * Thin field-mapping wrapper: the bucket/score/refuse logic itself now lives
+ * once in company-name-match.ts (consolidated 2026-08-14, was duplicated
+ * four ways — see that module's pickByName doc comment). Kept as an exported
+ * `pickByName(query, candidates)` two-argument function, same shape as
+ * before, so canadian-company-data.test.ts and the executor below don't need
+ * to change, and so the Canadian-specific wording (which differs from the
+ * other three registries' wording — see the shared function's doc comment)
+ * is declared exactly once, here.
  */
 export function pickByName(query: string, candidates: CaNameCandidate[]): CaNameResolution {
-  const exact = new Map<string, string>();
-  const high = new Map<string, string>();
-  for (const c of candidates) {
-    if (!c.corpId || !c.name) continue;
-    const { match_confidence } = classifyNameMatch(query, c.name);
-    if (match_confidence === "exact" && !exact.has(c.corpId)) exact.set(c.corpId, c.name);
-    else if (match_confidence === "high" && !high.has(c.corpId)) high.set(c.corpId, c.name);
-  }
-
-  const pickUnambiguous = (bucket: Map<string, string>, label: "exact" | "high"): CaNameResolution | null => {
-    if (bucket.size === 0) return null;
-    if (bucket.size === 1) {
-      const [corpId, matchedName] = bucket.entries().next().value!;
-      return { corpId, matchedName, matchConfidence: label };
-    }
-    const listing = [...bucket.entries()].slice(0, 5).map(([id, n]) => `${n} (${id})`).join("; ");
-    throw new Error(
-      `Ambiguous Canadian company name "${query}": ${bucket.size} distinct registered ` +
-        `entities are ${label === "exact" ? "exact" : "close"} matches — ${listing}. ` +
-        `Provide the corporation number (older corporations have fewer than 7 digits) or the ` +
-        `9-digit business number to disambiguate.`,
-    );
-  };
-
-  const winner = pickUnambiguous(exact, "exact") ?? pickUnambiguous(high, "high");
-  if (winner) return winner;
-
-  const closest = candidates.slice(0, 3).map((c) => c.name).filter(Boolean).join(", ");
-  throw new Error(
-    `No confident Canadian federal registry match for "${query}". The Corporations Canada site ` +
-      `search is fuzzy and returned only unrelated entities${closest ? ` (closest: ${closest})` : ""}. ` +
-      `Provide the corporation number (older corporations have fewer than 7 digits) or the ` +
-      `9-digit business number for an exact lookup.`,
-  );
+  const resolved = pickByNameShared(query, candidates, (c) => c.name, (c) => c.corpId, {
+    subjectLabel: "Canadian company",
+    disambiguationHint:
+      "Provide the corporation number (older corporations have fewer than 7 digits) or the 9-digit business number to disambiguate.",
+    noMatchLabel: "Canadian federal registry",
+    searchDescription: "The Corporations Canada site search",
+    noMatchHint:
+      "Provide the corporation number (older corporations have fewer than 7 digits) or the 9-digit business number for an exact lookup.",
+  });
+  return { corpId: resolved.id, matchedName: resolved.matchedName, matchConfidence: resolved.matchConfidence };
 }
 
 registerCapability("canadian-company-data", async (input: CapabilityInput) => {

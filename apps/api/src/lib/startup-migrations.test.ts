@@ -62,6 +62,7 @@ import {
   runMigration0076_classifyNonAnthropicPaidPrepaid,
   runMigration0077_classifyFreeQuotaOverrides,
   runMigration0078_transactionsCapabilityIdCreatedAtIdx,
+  runMigration0082_reclassifyThrottledFreeUnlimited,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1156,7 +1157,7 @@ describe("startup-migrations — phase-b5 slug lists (invariants)", () => {
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 24 blocks in historical order", () => {
+  it("exports the expected 25 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1187,7 +1188,203 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0079_eeDirectors",
       "runMigration0080_cyDirectors",
       "runMigration0081_attribution",
+      "runMigration0082_reclassifyThrottledFreeUnlimited",
     ]);
+  });
+});
+
+describe("startup-migrations — block 0082 (reclassify throttled free_unlimited)", () => {
+  it("first run: single VALUES-CTE UPDATE reclassifies all 19 target slugs", async () => {
+    // Single VALUES-CTE UPDATE (same shape as Block 0072) — one round
+    // trip for all 19 rows, each with its own quota_cap.
+    const stub = makeStub({ queue: [{ count: 19 }] });
+    const result = await runMigration0082_reclassifyThrottledFreeUnlimited(stub);
+    expect(result.rows_affected).toBe(19);
+    expect(result.outcome).toMatch(/reclassified 19 cap/i);
+    expect(stub.captured).toHaveLength(1);
+
+    const sqlText = stub.renderedSql[0].toLowerCase();
+    expect(sqlText).toContain("update capabilities");
+    expect(sqlText).toContain("cost_class = 'free_quota'");
+    expect(sqlText).toContain("quota_window = 'daily'");
+    // Reclassification, not first-time classification: the safety filter
+    // targets the prior (wrong) value, not IS NULL.
+    expect(sqlText).toContain("c.cost_class = 'free_unlimited'");
+    expect(sqlText).not.toContain("cost_class is null");
+    // Per-cap params: VALUES clause must include each (slug, quota_cap) tuple.
+    const { PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY } = await import("./startup-migrations.js");
+    expect(PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY.length).toBe(19);
+    for (const cap of PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY) {
+      expect(sqlText).toContain(`'${cap.slug}'`);
+      expect(sqlText).toMatch(new RegExp(`'${cap.slug}',\\s*${cap.quotaCap}\\b`));
+    }
+  });
+
+  it("second run: idempotent — count=0 once reclassified", async () => {
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    const result = await runMigration0082_reclassifyThrottledFreeUnlimited(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no rows to reclassify/i);
+  });
+
+  it("does not touch a cap already moved off free_unlimited by an operator", async () => {
+    // Pins the safety clause: Block 0082 must only correct rows still
+    // sitting at the (wrong) free_unlimited value, never overwrite a
+    // manual reclassification an operator made in between deploys.
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    await runMigration0082_reclassifyThrottledFreeUnlimited(stub);
+    expect(stub.renderedSql[0].toLowerCase()).toMatch(/where[\s\S]*c\.cost_class\s*=\s*'free_unlimited'/);
+  });
+
+  it("no captured UPDATE binds a Date instance (DEC-20260504-A bind-encoder shape)", async () => {
+    // Per the Audit-Follow-up Test Coverage Protocol: walk every SQL
+    // tag's queryChunks and confirm no raw Date/Buffer reaches the
+    // bind layer — the PR #43 incident class (postgres-js's encoder
+    // cannot serialize a raw Date interpolated via sql``). Block 0082
+    // inlines its slug/quota_cap values via sql.raw (same as Block
+    // 0071/0072/0074's IN-list/VALUES UPDATEs) rather than binding them
+    // as $-placeholders, so there are no interpolated chunks at all to
+    // go wrong — this pins that shape. Mirrors the walker in
+    // db-retention.test.ts / do.spend-cap.test.ts.
+    const stub = makeStub({ queue: [{ count: 19 }] });
+    await runMigration0082_reclassifyThrottledFreeUnlimited(stub);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      const badChunks = chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c));
+      expect(badChunks, "no Date/Buffer chunk reaches the SQL bind layer").toEqual([]);
+    }
+  });
+});
+
+describe("startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants)", () => {
+  it("has exactly 19 entries", async () => {
+    const { PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY } = await import("./startup-migrations.js");
+    expect(PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY.length).toBe(19);
+  });
+
+  it("every entry has a positive integer quota_cap", async () => {
+    const { PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY } = await import("./startup-migrations.js");
+    for (const cap of PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY) {
+      expect(cap.slug.length, `${cap.slug} has a slug`).toBeGreaterThan(0);
+      expect(Number.isInteger(cap.quotaCap), `${cap.slug} quota_cap is an integer`).toBe(true);
+      expect(cap.quotaCap, `${cap.slug} quota_cap is positive`).toBeGreaterThan(0);
+    }
+  });
+
+  it("has no duplicate slugs", async () => {
+    const { PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY } = await import("./startup-migrations.js");
+    const slugs = PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY.map((c: { slug: string }) => c.slug);
+    expect(new Set(slugs).size).toBe(slugs.length);
+  });
+
+  it("does not overlap any prior B1-B5 classification batch", async () => {
+    // These slugs were previously classified free_unlimited by Block 0071
+    // (or, in principle, could collide with a later batch) — this test
+    // pins that Block 0082's target list is disjoint from every
+    // first-time-classification batch, since it's a correction, not a
+    // parallel classification path.
+    const {
+      PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY,
+      PHASE_B2_FREE_QUOTA_HIGH_CONF,
+      PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF,
+      PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS,
+      PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS,
+      PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS,
+    } = await import("./startup-migrations.js");
+    const { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } = await import("./phase-b3-anthropic-paid-prepaid-slugs.js");
+
+    const others = new Set<string>([
+      ...PHASE_B2_FREE_QUOTA_HIGH_CONF.map((c: { slug: string }) => c.slug),
+      ...PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF,
+      ...PHASE_B4_FREE_QUOTA_LOW_CONF_CAPS.map((c: { slug: string }) => c.slug),
+      ...PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS,
+      ...PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS.map((c: { slug: string }) => c.slug),
+      ...PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS,
+    ]);
+    for (const cap of PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY) {
+      expect(others.has(cap.slug), `${cap.slug} unexpectedly also in an earlier batch`).toBe(false);
+    }
+  });
+
+  it("pins the Etherscan family at the vendor's documented 100,000/day literal", async () => {
+    const { PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY } = await import("./startup-migrations.js");
+    const byslug = Object.fromEntries(
+      PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY.map((c: { slug: string; quotaCap: number }) => [c.slug, c.quotaCap]),
+    );
+    for (const slug of [
+      "contract-verify-check",
+      "gas-price-check",
+      "wallet-age-check",
+      "wallet-balance-lookup",
+      "wallet-transactions-lookup",
+    ]) {
+      expect(byslug[slug], slug).toBe(100000);
+    }
+  });
+
+  // ── Follow-up (2026-08-14, same day): derive-from-shared-function ────────
+  // refactor. quotaCap used to be 19 hand-computed integers; it's now
+  // computed via deriveQuotaCapFromRateLimit from a {value, unit,
+  // source_url} citation per cap (PHASE_C1_THROTTLED_UPSTREAM_SOURCE).
+  // These tests pin that the refactor is value-preserving and that the
+  // migration's embedded citations don't drift from the corresponding
+  // manifest's own known_rate_limit field.
+
+  it("every quotaCap equals deriveQuotaCapFromRateLimit(rateLimit) — no hand-computed drift", async () => {
+    const { PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY, PHASE_C1_THROTTLED_UPSTREAM_SOURCE } = await import(
+      "./startup-migrations.js"
+    );
+    const { deriveQuotaCapFromRateLimit } = await import("./capability-manifest-types.js");
+    const bySlug = Object.fromEntries(
+      PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY.map((c: { slug: string; quotaCap: number }) => [c.slug, c.quotaCap]),
+    );
+    for (const source of PHASE_C1_THROTTLED_UPSTREAM_SOURCE as ReadonlyArray<{
+      slug: string;
+      rateLimit: { value: number; unit: "per_second" | "per_minute" | "per_day"; source_url: string };
+    }>) {
+      expect(bySlug[source.slug], source.slug).toBe(deriveQuotaCapFromRateLimit(source.rateLimit));
+    }
+  });
+
+  it("every PHASE_C1_THROTTLED_UPSTREAM_SOURCE entry has a well-formed rateLimit citation", async () => {
+    const { PHASE_C1_THROTTLED_UPSTREAM_SOURCE } = await import("./startup-migrations.js");
+    for (const source of PHASE_C1_THROTTLED_UPSTREAM_SOURCE as ReadonlyArray<{
+      slug: string;
+      rateLimit: { value: number; unit: string; source_url: string };
+    }>) {
+      expect(source.rateLimit.value, `${source.slug} value`).toBeGreaterThan(0);
+      expect(["per_second", "per_minute", "per_day"], `${source.slug} unit`).toContain(source.rateLimit.unit);
+      expect(source.rateLimit.source_url, `${source.slug} source_url`).toMatch(/^https?:\/\//);
+    }
+  });
+
+  it("each reclassified capability's manifest known_rate_limit matches this migration's citation exactly", async () => {
+    // Cross-file drift guard: the manifest is the authoring surface
+    // (check-cost-class-coherence.mjs enforces it against cost_class/
+    // quota_cap at CI time), this migration is what actually writes the
+    // DB row — the two must cite the identical vendor fact. Reading the
+    // manifests directly (not importing capability-manifest-types.ts's
+    // YAML loader, which doesn't exist) mirrors how the CI lint reads
+    // them.
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const yaml = (await import("js-yaml")).default;
+    const { PHASE_C1_THROTTLED_UPSTREAM_SOURCE } = await import("./startup-migrations.js");
+    const manifestsDir = resolve(import.meta.dirname, "../../../../manifests");
+
+    for (const source of PHASE_C1_THROTTLED_UPSTREAM_SOURCE as ReadonlyArray<{
+      slug: string;
+      rateLimit: { value: number; unit: string; source_url: string };
+    }>) {
+      const manifestPath = resolve(manifestsDir, `${source.slug}.yaml`);
+      const manifest = yaml.load(readFileSync(manifestPath, "utf8")) as {
+        known_rate_limit?: { value: number; unit: string; source_url: string };
+      };
+      expect(manifest.known_rate_limit, `${source.slug} manifest has known_rate_limit`).toBeDefined();
+      expect(manifest.known_rate_limit?.value, `${source.slug} value`).toBe(source.rateLimit.value);
+      expect(manifest.known_rate_limit?.unit, `${source.slug} unit`).toBe(source.rateLimit.unit);
+      expect(manifest.known_rate_limit?.source_url, `${source.slug} source_url`).toBe(source.rateLimit.source_url);
+    }
   });
 });
 
