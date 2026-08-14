@@ -86,4 +86,27 @@ describe("conditional solutions bonus", () => {
     const rows: Row[] = [];
     expect(() => applyConditionalSolutionBonus(rows)).not.toThrow();
   });
+
+  it("compares negative scores honestly rather than clamping them to a tie", () => {
+    // Both call sites filter to score > 0 today, so this is unreachable from
+    // them — but the function is exported, and a reduce seeded at 0 would pull
+    // both sides up to 0 here and manufacture a tie, handing the win to the
+    // solution when the capability was ahead.
+    const rows = [row("capability", "iban-validate", -1), row("solution", "payment-validate", -5)];
+    applyConditionalSolutionBonus(rows);
+    expect(rows.find((r) => r.item.slug === "payment-validate")!.score).toBe(-5);
+  });
+
+  it("accepts a caller-supplied bonus for the semantic path's 0-1 scale", () => {
+    const rows = [row("solution", "kyb-essentials-se", 0.62), row("capability", "vat-validate", 0.55)];
+    applyConditionalSolutionBonus(rows, 0.03);
+    expect(rows[0].score).toBeCloseTo(0.65);
+    expect(rows[1].score).toBe(0.55);
+  });
+
+  it("withholds the semantic bonus when a capability leads on similarity", () => {
+    const rows = [row("capability", "dns-lookup", 0.71), row("solution", "domain-security-check", 0.64)];
+    applyConditionalSolutionBonus(rows, 0.03);
+    expect(rows[1].score).toBe(0.64);
+  });
 });

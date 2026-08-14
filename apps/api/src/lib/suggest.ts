@@ -25,6 +25,14 @@ import { log, logError, logWarn } from "./log.js";
 const SOLUTION_BONUS = 3;
 
 /**
+ * The same boost on the semantic path, where scores are cosine similarities in
+ * the 0.3–1.0 band left by the retrieval threshold rather than raw token counts.
+ * Kept as its own constant so a rescale of one path cannot silently mis-scale
+ * the other.
+ */
+const SEMANTIC_SOLUTION_BONUS = 0.03;
+
+/**
  * Apply the solutions-first ranking bonus, but only when solutions already lead
  * or tie the capabilities on raw match quality. Mutates `scored` in place.
  *
@@ -41,17 +49,22 @@ const SOLUTION_BONUS = 3;
  */
 export function applyConditionalSolutionBonus<
   T extends { item: { type: "solution" | "capability" }; score: number },
->(scored: T[]): void {
+>(scored: T[], bonus: number = SOLUTION_BONUS): void {
+  // Seeded with -Infinity, not 0: seeding at 0 would clamp both sides up to 0
+  // for an all-negative field and manufacture a tie, applying the bonus when a
+  // capability was actually ahead. Today's callers only ever pass positive
+  // scores, so that is unreachable — but this is exported, and a caller-side
+  // invariant the type system does not express is not one to lean on.
   const topOf = (wantSolution: boolean) =>
     scored.reduce(
       (best, s) => ((s.item.type === "solution") === wantSolution ? Math.max(best, s.score) : best),
-      0,
+      -Infinity,
     );
 
   if (topOf(true) < topOf(false)) return;
 
   for (const s of scored) {
-    if (s.item.type === "solution") s.score += SOLUTION_BONUS;
+    if (s.item.type === "solution") s.score += bonus;
   }
 }
 
@@ -916,11 +929,15 @@ function fallbackRanking(
   candidates: Array<{ item: CatalogItem; similarity: number }>,
   limit: number,
 ): SuggestResponse {
-  const reranked = candidates.map(({ item, similarity }) => {
-    let score = similarity;
-    if (item.type === "solution" && similarity > 0.3) score += 0.03;
-    return { item, score };
-  });
+  const reranked = candidates.map(({ item, similarity }) => ({ item, score: similarity }));
+
+  // Same rule as the keyword scorers, at this path's scale. The bonus here was
+  // always proportionate — cosine similarity runs 0.3–1.0 after the retrieval
+  // threshold, so 0.03 is a nudge rather than the override the keyword path's
+  // +3 became — but it was still unconditional, and this is the path that runs
+  // when Claude re-ranking is unavailable or has just failed. That is when the
+  // ranking most needs to be defensible, not least.
+  applyConditionalSolutionBonus(reranked, SEMANTIC_SOLUTION_BONUS);
   reranked.sort((a, b) => b.score - a.score);
 
   const best = reranked[0].item;
