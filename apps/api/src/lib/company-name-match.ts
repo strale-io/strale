@@ -148,20 +148,86 @@ export function classifyNameMatch(
     : { match_confidence: "low", is_exact_match: false };
 }
 
+export interface NameSearchResolution {
+  id: string;
+  matchedName: string;
+  matchConfidence: "exact" | "high";
+}
+
+/**
+ * For registries whose search returns a page of candidates that is NOT
+ * ranked by legal-entity relevance (Companies House `/search/companies` does
+ * its own internal weighting, but that weighting is not an identity match —
+ * see this module's header comment) — score every candidate with
+ * classifyNameMatch and refuse rather than take candidates[0].
+ *
+ * uk-company-data.ts independently grew an identically-shaped `pickByName`
+ * (PR #224, branch fix/name-match-confidence, open/unmerged as of
+ * 2026-08-14) for the same Companies House endpoint. That version could not
+ * be imported here: it lives on an unmerged branch, and — more durably —
+ * capability executor files deliberately do not import from one another (see
+ * this module's header: these primitives were lifted out of a capability
+ * file specifically so registry capabilities share them via this lib instead
+ * of reaching across the capability boundary). This is that shared version,
+ * generalized over the candidate shape so officer-search.ts and
+ * uk-filing-events.ts (both Companies House name-search callers) can use it
+ * without duplicating the bucket/refuse logic a third and fourth time. When
+ * #224 lands, uk-company-data.ts's own pickByName can be consolidated onto
+ * this one.
+ */
+export function pickByName<T>(
+  query: string,
+  candidates: T[],
+  getName: (c: T) => string | null | undefined,
+  getId: (c: T) => string | null | undefined,
+  opts: { subjectLabel: string; disambiguationHint: string },
+): NameSearchResolution {
+  const exact = new Map<string, string>();
+  const high = new Map<string, string>();
+  for (const c of candidates) {
+    const name = getName(c);
+    const id = getId(c);
+    if (!name || !id) continue;
+    const { match_confidence } = classifyNameMatch(query, name);
+    if (match_confidence === "exact" && !exact.has(id)) exact.set(id, name);
+    else if (match_confidence === "high" && !high.has(id)) high.set(id, name);
+  }
+
+  const pickUnambiguous = (bucket: Map<string, string>, label: "exact" | "high"): NameSearchResolution | null => {
+    if (bucket.size === 0) return null;
+    if (bucket.size === 1) {
+      const [id, matchedName] = bucket.entries().next().value!;
+      return { id, matchedName, matchConfidence: label };
+    }
+    const listing = [...bucket.entries()].slice(0, 5).map(([id, n]) => `${n} (${id})`).join("; ");
+    throw new Error(
+      `Ambiguous ${opts.subjectLabel} name "${query}": ${bucket.size} distinct registered ` +
+        `entities are ${label === "exact" ? "exact" : "close"} matches — ${listing}. ${opts.disambiguationHint}`,
+    );
+  };
+
+  const winner = pickUnambiguous(exact, "exact") ?? pickUnambiguous(high, "high");
+  if (winner) return winner;
+
+  const closest = candidates.map(getName).filter((n): n is string => !!n).slice(0, 3).join(", ");
+  throw new Error(
+    `No confident ${opts.subjectLabel} match for "${query}". The search is fuzzy and returned only ` +
+      `unrelated entities${closest ? ` (closest: ${closest})` : ""}. ${opts.disambiguationHint}`,
+  );
+}
+
 /**
  * For registries whose search returns a single best-guess result rather than
- * a ranked candidate pool (cvrapi.dk's `search=` parameter) — there is no
- * pool to bucket and pick from, but the same discipline still applies:
- * classify what came back against what was asked, and refuse rather than
- * silently hand back an unrelated entity. Used by danish-company-data.ts.
+ * a ranked candidate pool (cvrapi.dk's `search=` parameter) — there is no pool
+ * to bucket and pick from, but the same discipline still applies: classify
+ * what came back against what was asked, and refuse rather than silently hand
+ * back an unrelated entity. Used by danish-company-data.ts.
  *
- * canadian-company-data.ts used this too until 2026-08-14, when its name
- * path was rebuilt on a real POST to the Corporations Canada site search
- * (previously the GET query-string params were inert and the page returned
- * was always the empty search form). That search DOES return a ranked-ish
- * candidate pool, so it moved to the uk-company-data.ts pickByName pattern
- * (bucket by classifyNameMatch, refuse on ties) instead of this function —
- * see `pickByName` in canadian-company-data.ts.
+ * canadian-company-data.ts shared this until 2026-08-14, when its name path
+ * was rebuilt on a real POST to the Corporations Canada site search — the GET
+ * query-string parameters it had been using were inert, so the page it parsed
+ * was always the empty search form. That POST returns a genuine candidate
+ * pool, so it moved to `pickByName` above and no longer calls this.
  */
 export function assertSingleResultMatch(
   query: string,
