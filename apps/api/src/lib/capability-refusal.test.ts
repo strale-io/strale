@@ -171,6 +171,47 @@ describe("the quality signal does not treat a refusal as a fault", () => {
   });
 });
 
+describe("the quality floor does not count refusals against completion", () => {
+  it("classifies every real refusal as caller-attributable", async () => {
+    const { classifyTransactionFailure, CALLER_ATTRIBUTABLE } = await import(
+      "./transaction-failure-taxonomy.js"
+    );
+    for (const { label, err } of realRefusals()) {
+      const cls = classifyTransactionFailure((err as Error).message);
+      expect(CALLER_ATTRIBUTABLE.has(cls), `${label} classified ${cls}`).toBe(true);
+    }
+  });
+
+  it("classifies the ambiguity refusal the old pattern silently missed", async () => {
+    const { classifyTransactionFailure } = await import("./transaction-failure-taxonomy.js");
+    // The list intended to cover this with "distinct .* entities match", but
+    // the real message says "entities ARE EXACT matches" — no literal
+    // "entities match" to hit — so every ambiguity refusal was landing in
+    // `internal` ("our bug until proven otherwise") and counting against the
+    // completion rate the floor quarantines on.
+    const real =
+      'Ambiguous French company name "Total": 9 distinct registered entities are exact matches — TOTAL (542051180). Provide the SIREN for an exact lookup.';
+    expect(classifyTransactionFailure(real)).toBe("caller_input");
+  });
+
+  it("still counts genuine faults against the capability", async () => {
+    const { classifyTransactionFailure, CALLER_ATTRIBUTABLE } = await import(
+      "./transaction-failure-taxonomy.js"
+    );
+    const faults: Array<[string, string]> = [
+      ["Corporations Canada API returned HTTP 503", "upstream"],
+      ["Request timed out after 10000ms", "timeout"],
+      ["Cannot read properties of undefined (reading 'x')", "internal"],
+      ["Vendor quota exceeded", "upstream"],
+    ];
+    for (const [msg, expected] of faults) {
+      const cls = classifyTransactionFailure(msg);
+      expect(cls, msg).toBe(expected);
+      expect(CALLER_ATTRIBUTABLE.has(cls), `${msg} must still count`).toBe(false);
+    }
+  });
+});
+
 describe("isCapabilityRefusal", () => {
   it("recognises the typed error", () => {
     expect(isCapabilityRefusal(new CapabilityRefusalError("Ambiguous X"))).toBe(true);
