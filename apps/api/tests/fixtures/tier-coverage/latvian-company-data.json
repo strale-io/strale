@@ -12,5 +12,16 @@
   "sepa_creditor_id": "LV78ZZZ40003245752",
   "atvk_code": "807600",
   "vat_number": "LV40003245752",
-  "jurisdiction": "LV"
+  "legal_representatives": "[REDACTED]",
+  "total_legal_representatives": 2,
+  "jurisdiction": "LV",
+  "legal_name": "Air Baltic Corporation AS",
+  "primary_registration_id": "40003245752",
+  "legal_form": "Akciju sabiedrība",
+  "registered_address": "Mārupes nov., Mārupes pag., Lidosta \"Rīga\", Tehnikas iela 3",
+  "date_incorporated": "1995-02-08",
+  "tier_2_available": true,
+  "tier_2_available_reason": "current board members / representation-entitled persons from the UR officers dataset (data.gov.lv, CC0 1.0)",
+  "ubo_availability": "unavailable_no_registry",
+  "ubo_availability_reason": "Programmatic UBO access not yet operational at v1; verification pending public-source confirmation"
 }

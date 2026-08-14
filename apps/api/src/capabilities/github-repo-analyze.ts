@@ -125,6 +125,7 @@ Return JSON:
 
 async function ghFetch(url: string, headers: Record<string, string>): Promise<unknown> {
   try {
+    // unguarded-fetch-ok: fixed api.github.com host; caller supplies only the repo path
     const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
     if (!res.ok) return null;
     return await res.json();
@@ -133,6 +134,7 @@ async function ghFetch(url: string, headers: Record<string, string>): Promise<un
 
 async function ghFetchText(url: string): Promise<string | null> {
   try {
+    // unguarded-fetch-ok: fixed api.github.com host; caller supplies only the repo path
     const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!res.ok) return null;
     return await res.text();

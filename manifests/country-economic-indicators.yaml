@@ -1,0 +1,127 @@
+slug: country-economic-indicators
+name: Country Economic Indicators
+description: >-
+  Macroeconomic country-risk indicators (GDP, growth, inflation, unemployment, population) for any country via
+  the World Bank Indicators API. KYB context for counterparty jurisdiction risk assessment.
+category: finance
+cost_class: free_unlimited
+quota_window: none
+price_cents: 8
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - country_code
+  properties:
+    country_code:
+      type: string
+      description: ISO 2-letter or 3-letter country code (e.g. SE, US, DE, SWE)
+    indicators:
+      type: array
+      description: >-
+        Optional list of indicator keys to fetch instead of the default set. Valid keys: gdp_usd,
+        gdp_growth_percent, gdp_per_capita_usd, inflation_percent, unemployment_percent, population,
+        gni_per_capita_usd, exports_percent_gdp, imports_percent_gdp, fdi_inflow_percent_gdp
+      items:
+        type: string
+    year:
+      type: string
+      description: Optional specific 4-digit year (default is most recent available)
+output_schema:
+  type: object
+  example:
+    country_code: SE
+    requested_year: most_recent
+    indicators:
+      gdp_usd:
+        value: 668998664082.081
+        year: "2025"
+      gdp_growth_percent:
+        value: 1.2
+        year: "2025"
+      inflation_percent:
+        value: 1.9
+        year: "2025"
+      unemployment_percent:
+        value: 8.1
+        year: "2024"
+      population:
+        value: 10521556
+        year: "2023"
+    indicator_codes:
+      gdp_usd: NY.GDP.MKTP.CD
+      gdp_growth_percent: NY.GDP.MKTP.KD.ZG
+      inflation_percent: FP.CPI.TOTL.ZG
+      unemployment_percent: SL.UEM.TOTL.ZS
+      population: SP.POP.TOTL
+  properties:
+    country_code:
+      type: string
+    requested_year:
+      type: string
+    indicators:
+      type: object
+    indicator_codes:
+      type: object
+data_source: World Bank Indicators (WDI) API
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: reference-data
+maintenance_class: free-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      country_code: SE
+    expected_fields:
+      - field: country_code
+        operator: not_null
+        reliability: guaranteed
+      - field: country_code
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: requested_year
+        operator: not_null
+        reliability: guaranteed
+      - field: indicators
+        operator: not_null
+        reliability: guaranteed
+      - field: indicators
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: indicator_codes
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    country_code: SE
+output_field_reliability:
+  country_code: guaranteed
+  requested_year: guaranteed
+  indicators: guaranteed
+  indicator_codes: guaranteed
+limitations:
+  - title: Different indicators report for different years — check each indicator's own 'year' field
+    text: >-
+      World Bank indicators are collected on independent national reporting schedules (GDP may be 2025,
+      unemployment 2024, population 2023 for the same country). Each indicator entry carries its own 'year';
+      there is no single as-of date for the whole response.
+    category: accuracy
+    severity: info
+  - title: Some indicator/country/year combinations have no data
+    text: >-
+      Smaller economies and territories often have gaps in specific series (especially labor and FDI
+      indicators). An indicator with value:null and an unavailable_reason means the World Bank has no
+      observation for that country/period — not that the value is zero.
+    category: coverage
+    severity: warning
+  - title: Curated indicator set, not the full ~16,000-indicator WDI catalog
+    text: >-
+      Only 10 KYB-relevant indicator keys are exposed via the 'indicators' parameter. The World Bank publishes
+      far more series; this capability does not expose arbitrary WDI indicator codes.
+    category: coverage
+    severity: info
+    workaround: For indicators outside this curated set, query api.worldbank.org directly with the desired series code

@@ -65,6 +65,9 @@ const repoRoot = resolve(__dirname, "..", "..", "..");
 // .env lives at the repo root (same convention as smoke-test.ts).
 config({ path: resolve(repoRoot, ".env") });
 
+// guarded-executor-exempt: deliberate operator-supervised capture run for the
+// tier-coverage gate (see file header: costs documented per run, Openapi calls
+// flag-gated behind OPENAPI_ENABLED, scope defaults to --company-data).
 // Auto-registers every capability executor. Must run before getExecutor().
 import { autoRegisterCapabilities } from "../src/capabilities/auto-register.js";
 import { getExecutor } from "../src/capabilities/index.js";
@@ -88,6 +91,7 @@ const PII_ARRAY_FIELDS = new Set([
   "share_holders",
   "managers",
   "officers",
+  "legal_representatives",
 ]);
 
 // Fields whose value is a live wall-clock timestamp from the capture run.

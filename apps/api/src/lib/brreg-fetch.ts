@@ -8,6 +8,8 @@
  * Source: data.brreg.no, NLOD 2.0 license, free, no auth.
  */
 
+import { classifyNameMatch } from "./company-name-match.js";
+
 export const BRREG_API = "https://data.brreg.no/enhetsregisteret/api";
 export const BRREG_ORG_NUMBER_RE = /^\d{9}$/;
 
@@ -48,7 +50,16 @@ export function findOrgNumberInText(input: string): string | null {
  * ordering). Throws on no results.
  */
 export async function searchBrregByName(name: string): Promise<string> {
-  const url = `${BRREG_API}/enheter?navn=${encodeURIComponent(name)}&size=1`;
+  // Brreg's `navn=` search is fuzzy and ordered ALPHABETICALLY, not by
+  // relevance. Taking the first hit returns the wrong legal entity for most
+  // real queries: "Telenor" yields NITO TELENOR (a union chapter) ahead of
+  // TELENOR ASA, "Norsk Hydro" yields NORSK HYDROGENBILFORENING, and
+  // "Statoil" yields NEGOTIA STATOIL. EQUINOR ASA resolved correctly only by
+  // alphabetical luck.
+  //
+  // A wrong company from a KYB lookup is undetectable by the caller, so pull a
+  // page of candidates and accept one only if its name actually matches.
+  const url = `${BRREG_API}/enheter?navn=${encodeURIComponent(name)}&size=25`;
   const res = await fetch(url, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(10000),
@@ -56,13 +67,43 @@ export async function searchBrregByName(name: string): Promise<string> {
   if (!res.ok) {
     throw new Error(`Brønnøysundregistrene search returned HTTP ${res.status}`);
   }
-  const data = (await res.json()) as { _embedded?: { enheter?: Array<{ organisasjonsnummer?: string | number }> } };
+  const data = (await res.json()) as {
+    _embedded?: { enheter?: Array<{ organisasjonsnummer?: string | number; navn?: string }> };
+  };
   const entities = data?._embedded?.enheter ?? [];
-  const first = entities[0];
-  if (!first) {
+  if (entities.length === 0) {
     throw new Error(`No Norwegian company found matching "${name}".`);
   }
-  return String(first.organisasjonsnummer);
+
+  // Ties are refused, not first-hit-resolved: two distinct entities scoring
+  // equally means the bare name cannot identify one legal entity, and the
+  // manifest promises "an ambiguous name is refused rather than resolved to
+  // the wrong legal entity". Same doctrine as finnish-company-data.
+  const exact = new Map<string, string>();
+  const high = new Map<string, string>();
+  for (const e of entities) {
+    if (!e.organisasjonsnummer || !e.navn) continue;
+    const { match_confidence } = classifyNameMatch(name, e.navn);
+    if (match_confidence === "exact") exact.set(String(e.organisasjonsnummer), e.navn);
+    else if (match_confidence === "high") high.set(String(e.organisasjonsnummer), e.navn);
+  }
+  const refuseTie = (bucket: Map<string, string>, label: string): string => {
+    if (bucket.size === 1) return bucket.keys().next().value!;
+    const listing = [...bucket.entries()].slice(0, 5).map(([id, n]) => `${n} (${id})`).join("; ");
+    throw new Error(
+      `Ambiguous Norwegian company name "${name}": ${bucket.size} distinct registered ` +
+        `entities are ${label} matches — ${listing}. Provide the org number (9 digits) to disambiguate.`,
+    );
+  };
+  if (exact.size > 0) return refuseTie(exact, "exact");
+  if (high.size > 0) return refuseTie(high, "close");
+
+  const closest = entities.slice(0, 3).map((e) => e.navn).filter(Boolean).join(", ");
+  throw new Error(
+    `No confident Norwegian registry match for "${name}". Brønnøysundregistrene's name search ` +
+      `is fuzzy and alphabetically ordered, and returned only unrelated entities` +
+      `${closest ? ` (closest: ${closest})` : ""}. Provide the org number (9 digits) for an exact lookup.`,
+  );
 }
 
 /**
@@ -81,6 +122,52 @@ export async function fetchBrregEntity(orgNumber: string): Promise<BrregEntity> 
     throw new Error(`Brønnøysundregistrene returned HTTP ${res.status}`);
   }
   return (await res.json()) as BrregEntity;
+}
+
+/**
+ * Brreg /roller response — `rollegrupper` is an array of role groups (DAGL,
+ * STYR, KOMP, KONT, SIGN, PROK, etc.); each group has `roller[]` with the
+ * actual people. Person identity is name + birth date on the anonymous
+ * endpoint; fnr is only returned via the Maskinporten-authenticated variant.
+ */
+export interface BrregRollePerson {
+  fodselsdato?: string;
+  navn?: { fornavn?: string; etternavn?: string; mellomnavn?: string };
+  erDoed?: boolean;
+}
+export interface BrregRolle {
+  type?: { kode?: string; beskrivelse?: string };
+  person?: BrregRollePerson;
+  enhet?: { navn?: string; organisasjonsnummer?: string | number };
+  fratraadt?: boolean;
+  avregistrert?: boolean;
+  rekkefolge?: number;
+}
+export interface BrregRollegruppe {
+  type?: { kode?: string; beskrivelse?: string };
+  sistEndret?: string;
+  roller?: BrregRolle[];
+}
+export interface BrregRollerResponse {
+  rollegrupper?: BrregRollegruppe[];
+}
+
+/**
+ * Fetch the role groups (board, managing director, signatories, procurists,
+ * etc.) for a Brreg entity. Anonymous endpoint — no auth, name + birth date
+ * only. 404 maps to an empty response (entities exist with no registered
+ * roles, e.g. shell holdings).
+ */
+export async function fetchBrregRoles(orgNumber: string): Promise<BrregRollerResponse> {
+  const res = await fetch(`${BRREG_API}/enheter/${orgNumber}/roller`, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (res.status === 404) return { rollegrupper: [] };
+  if (!res.ok) {
+    throw new Error(`Brønnøysundregistrene /roller returned HTTP ${res.status}`);
+  }
+  return (await res.json()) as BrregRollerResponse;
 }
 
 /**

@@ -68,6 +68,15 @@ output_field_reliability:
   average_price: guaranteed
   highest_price: guaranteed
 limitations:
+  - title: Nordic countries only — the former Google Shopping fallback is retired
+    text: >-
+      Coverage is Sweden, Norway, Denmark and Finland via PriceRunner. The former Google Shopping
+      fallback for other countries was removed 2026-08-12: Google Search is on the ToS blocklist
+      (DEC-20260427-H-4), and serving it would violate the per-source policy the platform enforces
+      at the fetch layer. Non-Nordic requests return a clear unsupported-country error and are not
+      billed. Other countries return when a licensed price source is added.
+    category: coverage
+    severity: warning
   - title: Prices scraped from retailer websites do not include personalized pricing or member discounts
     text: >-
       Prices scraped from retailer websites — results may not include personalized pricing, member discounts, or

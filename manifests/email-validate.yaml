@@ -66,9 +66,26 @@ test_fixtures:
 output_field_reliability:
   email: guaranteed
   valid: guaranteed
+  # format_valid is returned on both code paths (the format-failure early
+  # return and the full path), so it is genuinely guaranteed.
+  format_valid: guaranteed
+  # Everything below is `common`, not `guaranteed`: when the address fails the
+  # format check the executor returns early with only
+  # {valid, email, format_valid, reason} and none of these fields are present.
+  # `domain` in particular was previously absent from this map entirely, which
+  # blocked checkReadiness; annotating it `guaranteed` would have recreated the
+  # "expected non-null on optional field" class that broke 8 EU registries.
   is_disposable: common
   has_mx_records: common
   is_role_address: common
+  is_free_provider: common
+  mx_records: common
+  domain: common
+  # Only ever present on the format-failure path.
+  reason: rare
+  # Only present when the domain has no MX records AND the domain is within
+  # edit distance 2 of a known provider.
+  did_you_mean: rare
 limitations:
   - title: Disposable email detection covers major providers but newly registered throwaway domains may pass
     text: Disposable email detection covers major providers but new throwaway domains may not be flagged

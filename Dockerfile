@@ -1,5 +1,15 @@
 FROM node:20-slim
 
+# `unzip` is required by `apps/api/src/jobs/ingest-ee-directors.ts` — that
+# job streams the RIK Ariregister CC BY 4.0 open-data ZIP and pipes its
+# entry through `unzip -p` rather than carrying a Node ZIP dependency.
+# Without it the nightly ingest would fail at job start and the EE
+# tier-2 cache would never refresh. `apt-get clean` keeps the slim image
+# slim.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends unzip ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy package files first for better layer caching

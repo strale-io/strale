@@ -22,9 +22,38 @@ registerCapability("eu-regulation-search", async (input: CapabilityInput) => {
   if (type) searchParams += `&qid=${Date.now()}`;
 
   const url = `${EURLEX_SEARCH}${searchParams}`;
-  const html = await fetchRenderedHtml(url);
-  const text = htmlToText(html);
+  // EUR-Lex serves a JS challenge to plain fetchers (P2 triage 2026-08-12) and
+  // the real page is heavy: the render must go to the browser tier and needs
+  // more than the default budgets (observed ~32s). networkidle2 instead of
+  // networkidle0 — EUR-Lex keeps long-polling trackers open that never idle.
+  const html = await fetchRenderedHtml(url, {
+    waitUntil: "networkidle2",
+    pageTimeout: 40_000,
+    fetchTimeout: 55_000,
+    // One attempt: this path is always a paid Browserless render holding one
+    // of two global browser slots for up to ~55s — a retry doubles that
+    // exposure for a page whose failures are rarely transient (review M-3).
+    maxRetries: 1,
+  });
 
+  // Text the RESULTS region, not the whole document: EUR-Lex spends its first
+  // ~15K chars of text on nav and filter widgets, so texting from the top
+  // truncated the actual results away (the model then honestly reported
+  // "no results in the provided excerpt" — P2 triage 2026-08-12). Result rows
+  // are SearchResult-classed blocks; match without the closing quote so
+  // additional classes ("SearchResult row") don't break the anchor.
+  const resultsStart = html.indexOf('class="SearchResult');
+  if (resultsStart < 0) {
+    // Parse failure is an infrastructure error, never a "no results" answer —
+    // asserting EUR-Lex has no matching legislation because OUR anchor
+    // disappeared is a manufactured negative (review M-4). This message is
+    // breaker-visible, unlike a caller-input refusal.
+    throw new Error(
+      "Could not locate the results region on the EUR-Lex page — the page layout may have changed. " +
+        "This is a Strale-side parsing issue, not an answer about EU law.",
+    );
+  }
+  const text = htmlToText(html.slice(Math.max(0, resultsStart - 200)));
   if (text.length < 200) {
     throw new Error(`No EU regulations found for "${query}".`);
   }

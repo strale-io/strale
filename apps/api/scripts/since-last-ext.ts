@@ -1,10 +1,11 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SYSTEM_ACCOUNT_EMAIL } from "./lib/internal-accounts.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_FILE = resolve(__dirname, "../../../.claude/state/last-activity-check.json");
-const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", "system@strale.internal", "test@example.com"];
+const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", SYSTEM_ACCOUNT_EMAIL, "test@example.com"];
 
 function fmtCET(d: Date): string {
   const parts = new Intl.DateTimeFormat("sv-SE", {
@@ -94,11 +95,22 @@ async function main() {
     console.log(`  ${fmtCET(r.created_at)}  ${r.email}  balance=${(r.balance_cents / 100).toFixed(2)} EUR`);
   }
 
+  // Excludes internal accounts on the same basis as every other query above —
+  // without the users join this counted our own curl testing as customer signal.
   const failedReqs = await sql`
-    SELECT COUNT(*)::int AS total FROM failed_requests
-    WHERE created_at > ${since.toISOString()}
+    SELECT f.failure_type, COUNT(*)::int AS total
+    FROM failed_requests f
+    LEFT JOIN users u ON u.id = f.user_id
+    WHERE f.created_at > ${since.toISOString()}
+      AND (u.email IS NULL OR u.email <> ALL(${EXCLUDED_EMAILS}))
+    GROUP BY f.failure_type
+    ORDER BY total DESC
   `;
-  console.log(`Failed request logs (no_matching_capability): ${failedReqs[0].total}`);
+  const failedTotal = failedReqs.reduce((n, r) => n + r.total, 0);
+  console.log(`Failed request logs: ${failedTotal}`);
+  for (const r of failedReqs) {
+    console.log(`  ${r.failure_type ?? "unknown"}: ${r.total}`);
+  }
 
   await sql.end();
 

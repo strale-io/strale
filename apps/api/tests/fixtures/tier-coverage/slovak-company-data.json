@@ -13,5 +13,15 @@
   "nace_description": "Nešpecializovaný veľkoobchod",
   "directors": "[REDACTED]",
   "last_updated": "2025-07-07",
-  "jurisdiction": "SK"
+  "jurisdiction": "SK",
+  "legal_name": "SEXES spol. s r. o.",
+  "primary_registration_id": "Sro/42251/B",
+  "registered_address": "Ružová dolina 14, 821 09 Bratislava - mestská časť Ružinov, Slovenská republika",
+  "date_incorporated": "2006-09-13",
+  "legal_representatives": "[REDACTED]",
+  "total_legal_representatives": 1,
+  "tier_2_available": true,
+  "tier_2_available_reason": "Legal representatives (role, start date) extracted from the Slovak Register of Legal Persons (RPO).",
+  "ubo_availability": "unavailable_no_registry",
+  "ubo_availability_reason": "RPVS (Register partnerov verejného sektora) not accessible for foreign users at v1; verification pending public-source confirmation"
 }

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -88,7 +89,7 @@ registerCapability("seo-audit", async (input: CapabilityInput) => {
   let robotsTxt: string | null = null;
   let sitemapFound = false;
   try {
-    const robotsRes = await fetch(`${baseUrl}/robots.txt`, { signal: AbortSignal.timeout(5000) });
+    const robotsRes = await safeFetch(`${baseUrl}/robots.txt`, { signal: AbortSignal.timeout(5000) });
     if (robotsRes.ok) {
       robotsTxt = await robotsRes.text();
       sitemapFound = robotsTxt.toLowerCase().includes("sitemap:");

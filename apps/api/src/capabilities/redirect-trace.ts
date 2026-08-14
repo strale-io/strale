@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { TOS_REFUSAL_MARKER } from "../lib/tos-blocklist.js";
 
 /**
  * F-0-006 special case: redirect-trace exists to FOLLOW and REPORT ON
@@ -28,11 +29,32 @@ registerCapability("redirect-trace", async (input: CapabilityInput) => {
     // safeFetch with maxRedirects: 0 validates + refuses connection-time
     // DNS rebinding but returns the 3xx to us so we can walk the chain.
     const start = Date.now();
-    const response = await safeFetch(currentUrl, {
-      method: "GET",
-      maxRedirects: 0,
-      signal: AbortSignal.timeout(10000),
-    });
+    let response: Response;
+    try {
+      response = await safeFetch(currentUrl, {
+        method: "GET",
+        maxRedirects: 0,
+        signal: AbortSignal.timeout(10000),
+      });
+    } catch (err) {
+      // A hop landing on a ToS-blocklisted host is reported, not fetched —
+      // saying "the chain continues into LinkedIn" is not automated access
+      // to LinkedIn. Without this, the whole traced chain so far was
+      // discarded on marketing shortlinks ending at social sites (review M-5).
+      if (err instanceof Error && err.message.includes(TOS_REFUSAL_MARKER) && chain.length > 0) {
+        chain.push({
+          step,
+          url: currentUrl,
+          status_code: 0,
+          status_text: "not fetched — target's Terms of Service prohibit automated access",
+          location: null,
+          server: null,
+          latency_ms: 0,
+        });
+        break;
+      }
+      throw err;
+    }
     const latency = Date.now() - start;
     const location = response.headers.get("location");
     const server = response.headers.get("server");

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("uptime-check", async (input: CapabilityInput) => {
@@ -17,10 +18,11 @@ registerCapability("uptime-check", async (input: CapabilityInput) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
 
-    const response = await fetch(url, {
+    const response = await safeFetch(url, {
+      maxRedirects: 10,
       method: (input.method as string)?.toUpperCase() ?? "GET",
       signal: controller.signal,
-      redirect: "follow",
+      // redirect handling: safeFetch follows up to 3 hops with per-hop re-validation
     });
 
     clearTimeout(timer);
@@ -36,7 +38,9 @@ registerCapability("uptime-check", async (input: CapabilityInput) => {
         status_code: response.status,
         status_text: response.statusText,
         latency_ms: latencyMs,
-        redirected: response.redirected,
+        // safeFetch follows redirects manually, so Response.redirected is
+      // always false — compare final URL instead (review M-2).
+      redirected: response.url !== url,
         final_url: response.url,
         headers: {
           server: headers["server"] ?? null,

@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatFI } from "../lib/vat-derivation.js";
+import { firstString } from "./lib/input-aliases.js";
+import { classifyNameMatch } from "../lib/company-name-match.js";
 
 // PRH (Finnish Patent and Registration Office) open data API — new v3 endpoint
 const PRH_API = "https://avoindata.prh.fi/opendata-ytj-api/v3/companies";
@@ -45,19 +47,109 @@ async function extractCompanyName(naturalLanguage: string): Promise<string> {
   return name;
 }
 
-async function searchPrh(name: string): Promise<string> {
-  const url = `${PRH_API}?name=${encodeURIComponent(name)}&totalResults=false&maxResults=1`;
+async function prhNameQuery(name: string): Promise<any[]> {
+  // PRH v3 ignores maxResults — a broad query returns a full page (~60
+  // records, 200+KB). The generous timeout is deliberate: this exact call
+  // timed out twice from Railway US East at 10s (once cut mid-body as
+  // "Unterminated string in JSON"), which is what broke the name path in
+  // production on 2026-08-12.
+  const url = `${PRH_API}?name=${encodeURIComponent(name)}&totalResults=false`;
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(20000),
   });
   if (!response.ok) throw new Error(`PRH API search returned HTTP ${response.status}`);
   const data = (await response.json()) as any;
-  const companies = data?.companies;
-  if (!companies || companies.length === 0) {
+  return (data?.companies ?? []) as any[];
+}
+
+export interface PrhNameResolution {
+  businessId: string;
+  matchedName: string;
+  matchConfidence: "exact" | "high";
+}
+
+export function scorePool(
+  searched: string,
+  pool: Map<string, any>,
+): { exact: Map<string, string>; high: Map<string, string> } {
+  // Each company carries every name it has ever held. Names with an endDate
+  // are dead — matching on them resolves defunct entities: "Rovio" used to
+  // return Combiholding Oy via "E E Rovio Oy" (ended 2020) and "Nordea"
+  // returned a branch deregistered in 2018. Only current names identify a
+  // company; a query that matches nothing current is refused, not guessed.
+  const exact = new Map<string, string>();
+  const high = new Map<string, string>();
+  for (const [id, c] of pool) {
+    for (const n of (c.names ?? []) as Array<{ name?: string; endDate?: string | null }>) {
+      if (!n?.name || n.endDate) continue;
+      const { match_confidence } = classifyNameMatch(searched, n.name);
+      if (match_confidence === "exact") {
+        exact.set(id, n.name);
+        high.delete(id);
+      } else if (match_confidence === "high" && !exact.has(id)) {
+        high.set(id, n.name);
+      }
+    }
+  }
+  return { exact, high };
+}
+
+export function pickUnambiguous(
+  searched: string,
+  bucket: Map<string, string>,
+  label: "exact" | "high",
+): PrhNameResolution {
+  if (bucket.size === 1) {
+    const [businessId, matchedName] = bucket.entries().next().value!;
+    return { businessId, matchedName, matchConfidence: label };
+  }
+  const listing = [...bucket.entries()]
+    .slice(0, 5)
+    .map(([id, n]) => `${n} (${id})`)
+    .join("; ");
+  throw new Error(
+    `Ambiguous Finnish company name "${searched}": ${bucket.size} distinct registered ` +
+      `entities are ${label === "exact" ? "exact" : "close"} matches — ${listing}. ` +
+      `Provide the Business ID directly (e.g. 0112038-9) to disambiguate.`,
+  );
+}
+
+async function searchPrh(name: string): Promise<PrhNameResolution> {
+  // PRH's `name=` parameter is a FUZZY substring search across every name a
+  // company has ever held, ordered by business ID and paginated at ~60
+  // records. Page one is stable and does contain the major brands ("Nokia" →
+  // Nokia Oyj at index ~36 of 63), so a single scored pass over it resolves
+  // well-known names — but result order carries no relevance signal, and a
+  // company outside page one is simply not found (refused with guidance).
+  //
+  // Returning a confidently-wrong company from a KYB lookup is worse than
+  // returning nothing (the caller cannot detect it), so acceptance is
+  // scored — exact wins, unique high is the floor, ties are refused — using
+  // the same classifier us-company-data uses for SEC EDGAR.
+  const pool = new Map<string, any>();
+  for (const c of await prhNameQuery(name)) {
+    const id = c.businessId?.value ?? c.businessId;
+    if (id && !pool.has(id)) pool.set(id, c);
+  }
+  if (pool.size === 0) {
     throw new Error(`No Finnish company found matching "${name}".`);
   }
-  return companies[0].businessId?.value || companies[0].businessId;
+
+  const { exact, high } = scorePool(name, pool);
+  if (exact.size > 0) return pickUnambiguous(name, exact, "exact");
+  if (high.size > 0) return pickUnambiguous(name, high, "high");
+
+  const sample = [...pool.values()]
+    .slice(0, 3)
+    .map((c: any) => (c.names ?? [])[0]?.name)
+    .filter(Boolean)
+    .join(", ");
+  throw new Error(
+    `No confident Finnish registry match for "${name}". PRH's name search is fuzzy and ` +
+      `returned only unrelated entities${sample ? ` (closest: ${sample})` : ""}. ` +
+      `Provide the Business ID directly (e.g. 0112038-9) for an exact lookup.`,
+  );
 }
 
 async function fetchCompany(businessId: string): Promise<Record<string, unknown>> {
@@ -134,20 +226,43 @@ async function fetchCompany(businessId: string): Promise<Record<string, unknown>
 }
 
 registerCapability("finnish-company-data", async (input: CapabilityInput) => {
-  const rawInput = (input.business_id as string) ?? (input.org_number as string) ?? (input.task as string) ?? "";
-  if (typeof rawInput !== "string" || !rawInput.trim()) {
-    throw new Error("'business_id' is required. Provide a Finnish Business ID (e.g. 0112038-9) or company name.");
+  // See the note in danish-company-data.ts: the error promised company-name
+  // support and the name path existed, but the field was never read. Two calls
+  // for "Nokia" were lost in the 90 days to 2026-08-09.
+  const rawInput = firstString(
+    input,
+    "business_id", "org_number",
+    "company_name", "name", "query", "task",
+  );
+  if (!rawInput) {
+    throw new Error(
+      "A Finnish company identifier or name is required. Provide 'business_id' (e.g. 0112038-9) " +
+        "or 'company_name'. Aliases accepted: org_number, name, query, task.",
+    );
   }
 
   const trimmed = rawInput.trim();
   let businessId = isBusinessId(trimmed) ?? findBusinessId(trimmed);
+  let nameResolution: PrhNameResolution | null = null;
 
   if (!businessId) {
-    const companyName = await extractCompanyName(trimmed);
-    businessId = await searchPrh(companyName);
+    // company_name/name are DECLARED to be the company name — search them
+    // literally. The LLM extraction step is only for free-text query/task
+    // inputs ("look up Nokia in Finland"), which keeps the declared-name path
+    // deterministic and free of per-call Anthropic cost.
+    const declaredName = firstString(input, "company_name", "name").trim();
+    const companyName = declaredName || (await extractCompanyName(trimmed));
+    nameResolution = await searchPrh(companyName);
+    businessId = nameResolution.businessId;
   }
 
   const output = await fetchCompany(businessId);
+  if (nameResolution) {
+    // Surface how the name resolved so callers can gate on fuzzy resolution
+    // (same pattern as us-company-data's match_confidence).
+    output.match_confidence = nameResolution.matchConfidence;
+    output.matched_registry_name = nameResolution.matchedName;
+  }
 
   // Evidence Tier framework labels + Tier 1 canonical aliases (DEC-20260518-A).
   // Resolves alias keys at runtime; only sets a canonical if not already present.

@@ -6,8 +6,8 @@ Total rows: 48
 
 ## By status
 
-- Live: 30
-- Committed: 18
+- Live: 31
+- Committed: 17
 
 ## By evidence type
 
@@ -35,11 +35,11 @@ Total rows: 48
 | belgian-company-data | BE | Company registry | cbeapi.be | Live | €0.05 | live-verified | 2026-05-15 |
 | bulgarian-company-data | BG | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
 | swiss-company-data | CH | Company registry | Zefix | Live | €0.05 | live-verified | 2026-05-15 |
-| cypriot-company-data | CY | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
-| cz-company-data | CZ | Company registry | ARES | Live | €0.05 | live-verified | 2026-05-15 |
+| cypriot-company-data | CY | Company registry | Openapi.com + DRCOR open data | Live | €0.16 | live-verified | 2026-05-19 |
+| cz-company-data | CZ | Company registry | ARES | Live | €0.05 | live-verified | 2026-05-18 |
 | german-company-data | DE | Company registry | OpenRegister | Live | €0.05 | live-verified | 2026-05-15 |
 | danish-company-data | DK | Company registry | cvrapi.dk | Live | €0.05 | live-verified | 2026-05-15 |
-| estonian-company-data | EE | Company registry | Ariregister | Live | €0.05 | live-verified | 2026-05-15 |
+| estonian-company-data | EE | Company registry | Ariregister | Live | €0.05 | live-verified | 2026-05-18 |
 | spanish-company-data | ES | Company registry | Openapi.com | Committed | €0.06 | live-verified | 2026-05-15 |
 | finnish-company-data | FI | Company registry | PRH | Live | €0.05 | live-verified | 2026-05-15 |
 | french-company-data | FR | Company registry | INSEE | Live | €0.05 | live-verified | 2026-05-15 |
@@ -54,7 +54,7 @@ Total rows: 48
 | latvian-company-data | LV | Company registry | Uznemumu registrs | Live | €0.05 | live-verified | 2026-05-15 |
 | maltese-company-data | MT | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
 | dutch-company-data | NL | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
-| norwegian-company-data | NO | Company registry | Brreg | Live | €0.05 | live-verified | 2026-05-15 |
+| norwegian-company-data | NO | Company registry | Brreg | Live | €0.05 | live-verified | 2026-05-18 |
 | polish-company-data | PL | Company registry | KRS | Live | €0.05 | live-verified | 2026-05-15 |
 | portuguese-company-data | PT | Company registry | Openapi.com | Committed | €0.06 | live-verified | 2026-05-15 |
 | romanian-company-data | RO | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
@@ -134,13 +134,13 @@ Total rows: 48
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| cypriot-company-data | CY | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
+| cypriot-company-data | CY | Company registry | Openapi.com + DRCOR open data | Live | €0.16 | live-verified | 2026-05-19 |
 
 ### CZ (1)
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| cz-company-data | CZ | Company registry | ARES | Live | €0.05 | live-verified | 2026-05-15 |
+| cz-company-data | CZ | Company registry | ARES | Live | €0.05 | live-verified | 2026-05-18 |
 
 ### DE (1)
 
@@ -159,7 +159,7 @@ Total rows: 48
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| estonian-company-data | EE | Company registry | Ariregister | Live | €0.05 | live-verified | 2026-05-15 |
+| estonian-company-data | EE | Company registry | Ariregister | Live | €0.05 | live-verified | 2026-05-18 |
 
 ### ES (1)
 
@@ -263,7 +263,7 @@ Total rows: 48
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | no-bankruptcy-check | NO | Litigation / bankruptcy | Brreg | Live | €0 | — | 2026-04-28 |
-| norwegian-company-data | NO | Company registry | Brreg | Live | €0.05 | live-verified | 2026-05-15 |
+| norwegian-company-data | NO | Company registry | Brreg | Live | €0.05 | live-verified | 2026-05-18 |
 
 ### PL (1)
 

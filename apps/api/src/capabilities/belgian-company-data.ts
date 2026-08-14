@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatBE } from "../lib/vat-derivation.js";
+import { firstString } from "./lib/input-aliases.js";
 
 /**
  * Belgian company data via the CBEAPI.be vendor wrapper of KBO/BCE
@@ -135,14 +136,17 @@ async function lookupViaCbeApi(
 }
 
 registerCapability("belgian-company-data", async (input: CapabilityInput) => {
-  const raw =
-    (input.enterprise_number as string) ??
-    (input.company_name as string) ??
-    (input.task as string) ??
-    "";
-  if (typeof raw !== "string" || !raw.trim()) {
+  // firstString skips blank strings, so {"enterprise_number": "", "company_name": "X"}
+  // resolves via the name instead of dying on the empty field the route's anyOf
+  // already accepted. Alias surface matches the danish/finnish/norwegian siblings.
+  const raw = firstString(
+    input,
+    "enterprise_number", "company_name", "name", "query", "task",
+  );
+  if (!raw) {
     throw new Error(
-      "'enterprise_number' or 'company_name' is required. Provide a KBO/BCE number (e.g. 0404.616.494) or company name.",
+      "'enterprise_number' or 'company_name' is required. Provide a KBO/BCE number (e.g. 0404.616.494) " +
+        "or company name. Aliases accepted: name, query, task.",
     );
   }
 

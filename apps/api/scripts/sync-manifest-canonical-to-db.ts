@@ -88,9 +88,31 @@ if (before.length === 0) {
 const dbRow = before[0];
 const drifts: string[] = [];
 
+/**
+ * Serialise with object keys in a stable order, at every depth.
+ *
+ * Postgres `jsonb` does not preserve insertion order — it stores keys sorted
+ * by length then bytewise. A plain `JSON.stringify` comparison therefore
+ * reports drift forever for any object whose manifest key order differs from
+ * jsonb's, even immediately after a successful write.
+ *
+ * That phantom drift is not cosmetic. This script pushes ALL manifest-canonical
+ * fields in one shot, so a field that always looks dirty is an standing
+ * invitation to re-run it — and a re-run happily overwrites a *genuinely*
+ * newer prod value with a stale manifest one. That near-miss is exactly what
+ * happened with google-search's output_schema during the #160 sync.
+ */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, v) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : v,
+  );
+}
+
 function compare(field: string, dbVal: unknown, manifestVal: unknown) {
-  const a = JSON.stringify(dbVal);
-  const b = JSON.stringify(manifestVal);
+  const a = canonical(dbVal);
+  const b = canonical(manifestVal);
   if (a !== b) {
     drifts.push(field);
     console.log(`\n--- ${field} drift ---`);

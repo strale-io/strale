@@ -17,11 +17,12 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { extractClientMeta } from "../lib/attribution.js";
 import { solutions, wallets, walletTransactions, transactions } from "../db/schema.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
-import { executeSolution } from "../lib/solution-executor.js";
+import { executeSolution, isSuccessfulStepOutput } from "../lib/solution-executor.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { logError } from "../lib/log.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
@@ -141,6 +142,10 @@ solutionExecuteRoute.post(
             capabilityId: null,
             solutionSlug: sol.slug,
             status: "executing",
+            clientMeta: extractClientMeta(c.req, {
+              src: c.req.query("src"),
+              ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
+            }) ?? null,
             input: inputs as Record<string, unknown>,
             priceCents: sol.priceCents,
             transparencyMarker: sol.transparencyTag ?? "mixed",
@@ -286,7 +291,12 @@ solutionExecuteRoute.post(
     const latencyMs = Date.now() - startTime;
     const totalSteps = execResult.step_count;
     const errorCount = execResult.errors.length;
-    const stepsSucceeded = totalSteps - errorCount;
+    // Money-integrity 2026-08-12: success = a step that actually produced
+    // output. The previous `step_count - errors.length` counted SKIPPED and
+    // UNAVAILABLE steps as successes, so a solution whose step 1 failed
+    // (starving every downstream step) billed full price for zero executed
+    // checks. Same predicate the x402 rail settles on (DEC-14).
+    const stepsSucceeded = Object.values(execResult.steps).filter(isSuccessfulStepOutput).length;
     const allFailed = stepsSucceeded === 0;
 
     // /v1/do vocabulary: "completed" or "failed". Partial success maps to "completed"
@@ -301,18 +311,33 @@ solutionExecuteRoute.post(
 
     const finalBalance = allFailed ? walletBalanceBefore : balanceAfter;
 
-    // Build per-step audit breakdown with per-step latency
+    // Build per-step audit breakdown with per-step latency. Every step now
+    // appears (the executor records skipped/unavailable markers instead of
+    // silently omitting them), with an honest four-state status — an audit
+    // trail that says "14 steps" must list 14 steps.
     const stepAuditEntries = Object.entries(execResult.steps).map(([capSlug, output], index) => {
-      const isError = execResult.errors.some((e) => e.startsWith(`${capSlug}:`));
+      const obj = (output && typeof output === "object" ? output : {}) as Record<string, unknown>;
+      const status = isSuccessfulStepOutput(output)
+        ? "completed"
+        : obj.skipped === true
+          ? "skipped"
+          : obj.unavailable === true
+            ? "unavailable"
+            : "failed";
       const timing = execResult.stepTimings.find((t) => t.capabilitySlug === capSlug);
       return {
         index,
         capabilitySlug: capSlug,
-        status: isError ? "failed" : "completed",
+        status,
         latencyMs: timing?.latencyMs ?? 0,
-        error: isError
-          ? sanitizeFailureReason(execResult.errors.find((e) => e.startsWith(`${capSlug}:`))?.split(": ").slice(1).join(": ") ?? null)
-          : null,
+        // error is populated only for real executor failures; the reason slot
+        // covers skipped/unavailable. A completed soft verdict (valid:false)
+        // carries neither (review H-1/L-1).
+        error: status === "failed"
+          ? sanitizeFailureReason(execResult.errors.find((e) => e.startsWith(`${capSlug}:`))?.split(": ").slice(1).join(": ") ?? (typeof obj.error === "string" ? obj.error : null))
+          : status === "skipped" || status === "unavailable"
+            ? (typeof obj.reason === "string" ? obj.reason : null)
+            : null,
       };
     });
 

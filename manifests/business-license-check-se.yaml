@@ -25,8 +25,11 @@ output_schema:
     org_number: 556703-7485
     company_name: Spotify AB
     company_type: AB
+    # Placeholder name. The live capability returns real board members; this
+    # example must not, since manifests are hand-authored and never pass
+    # through the fixture scrubber.
     board_members:
-      - Carl Peter Christian Luiga
+      - Exempel Förste Ledamot
     moms_registered: true
     registered_date: "2006-05-10"
     registered_address: Regeringsgatan 19 5tr, 111 53 Stockholm

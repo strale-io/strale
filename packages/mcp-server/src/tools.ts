@@ -5,7 +5,11 @@
  * It is used by both the stdio transport (server.ts) and the
  * Streamable HTTP transport (apps/api/src/routes/mcp.ts).
  *
- * Phase 3: Dual-profile model — QP + RP + matrix SQS + execution guidance.
+ * Tool descriptions are a machine surface: agents choose tools from them
+ * and treat them as a contract. They must describe only what the API
+ * actually returns — no retired concepts (the SQS scoring engine was
+ * deleted in DEC-20260503-B) and no hardcoded catalog counts, which drift
+ * within days.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -68,6 +72,10 @@ export interface StraleClientOptions {
   version?: string;
 }
 
+// Attribution client identifier — package name/version, sent as
+// X-Strale-Client on every API call this package makes.
+const STRALE_CLIENT_ID = "strale-mcp/0.2.6";
+
 // ─── HTTP helpers ───────────────────────────────────────────────────────────
 
 export async function straleGet<T>(
@@ -76,6 +84,8 @@ export async function straleGet<T>(
 ): Promise<T> {
   const headers: Record<string, string> = {
     Accept: "application/json",
+    // Channel attribution: identifies the MCP rail on the API side.
+    "X-Strale-Client": STRALE_CLIENT_ID,
   };
   if (opts.apiKey) {
     headers.Authorization = `Bearer ${opts.apiKey}`;
@@ -97,6 +107,8 @@ export async function stralePost<T>(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
+    // Channel attribution: identifies the MCP rail on the API side.
+    "X-Strale-Client": STRALE_CLIENT_ID,
   };
   if (opts.apiKey) {
     headers.Authorization = `Bearer ${opts.apiKey}`;
@@ -177,12 +189,25 @@ export function buildInputSchema(
 
 // ─── Free-tier constants ────────────────────────────────────────────────────
 
+// Degraded-path fallback only: used when the caller didn't pass the fetched
+// catalog, so `is_free_tier` (the canonical per-capability flag) isn't
+// available. The authoritative list is `free_tier_slugs` from
+// GET /v1/platform/facts — re-sync this array from there when the free tier
+// changes. Stale entries here mean a genuinely-free capability gets refused
+// for callers with no API key, which is why it can't just be left at the
+// original five.
 const FREE_TIER_SLUGS = [
-  "email-validate",
+  "bitcoin-address-validate",
   "dns-lookup",
-  "json-repair",
-  "url-to-markdown",
+  "dogecoin-address-validate",
+  "email-validate",
+  "eth-address-validate",
   "iban-validate",
+  "json-repair",
+  "solana-address-validate",
+  "tron-address-validate",
+  "url-to-markdown",
+  "xrp-address-validate",
 ];
 
 // ─── Capability execution ───────────────────────────────────────────────────
@@ -206,7 +231,7 @@ export async function executeCapability(
             text: JSON.stringify({
               error: "Authentication required for paid capabilities.",
               fix: "Get a free API key at https://strale.dev/signup — includes €2 free credits, no card needed. Then reconnect with Authorization: Bearer sk_live_YOUR_KEY",
-              tip: "Try a free capability first: email-validate, dns-lookup, json-repair, url-to-markdown, or iban-validate — no API key needed.",
+              tip: "Several capabilities are free with no API key — call strale_search and look for is_free_tier, e.g. email-validate or dns-lookup.",
             }),
           },
         ],
@@ -482,7 +507,7 @@ export function registerStraleTools(
     "strale_execute",
     {
       description:
-        "Executes a Strale capability by slug and returns the result. Use this when you need to perform any verification, validation, lookup, or data extraction from the 271-capability registry. Call strale_search first to find the right slug and required input fields. Returns a result object with the capability output, quality score (SQS), latency, price charged, and data provenance. Five free capabilities work without an API key (10/day limit). Paid capabilities debit from the wallet — check strale_balance first for high-value calls.",
+        "Executes a Strale capability by slug and returns the result. Use this when you need to perform any verification, validation, lookup, or data extraction from the capability registry. Call strale_search first to find the right slug and required input fields. Returns a result object with the capability output, latency, price charged, and data provenance. Several capabilities are free without an API key (10/day limit) — strale_search reports which. Paid capabilities debit from the wallet — check strale_balance first for high-value calls.",
       inputSchema: z.object({
         slug: z
           .string()
@@ -517,7 +542,7 @@ export function registerStraleTools(
     "strale_search",
     {
       description:
-        "Searches the Strale capability registry by keyword, category, or natural language query. Use this when you need to find the right capability for a task but don't know the exact slug. Returns matching capabilities and solutions ranked by relevance, each with slug, name, description, category, price in EUR cents, and current SQS quality score. The registry contains 271 capabilities across compliance, finance, web intelligence, developer tools, and more. No API key required to search.",
+        "Searches the Strale capability registry by keyword, category, or natural language query. Use this when you need to find the right capability for a task but don't know the exact slug. Returns matching capabilities and solutions ranked by relevance, each with slug, name, description, category, and price in EUR cents. The registry spans company data, compliance, finance, web intelligence, and developer tools. No API key required to search.",
       inputSchema: z.object({
         query: z
           .string()
@@ -652,10 +677,15 @@ export function registerStraleTools(
       }
 
       // Match solutions
+      // search_tags are hand-authored vocabulary bridges (the words agents
+      // actually type, which don't always appear in the name/description);
+      // fold them into the matched text so this fallback path — used when
+      // the typeahead API is unreachable or a category filter is set — sees
+      // the same signal the primary /v1/suggest/typeahead path now does.
       const matchedSolutions = solutions
         .filter((s) => {
           if (catFilter && !s.category.toLowerCase().includes(catFilter)) return false;
-          return localMatchScore(`${s.name} ${s.description} ${s.slug} ${s.category}`) > 0;
+          return localMatchScore(`${s.name} ${s.description} ${s.slug} ${s.category} ${(s.search_tags ?? []).join(" ")}`) > 0;
         })
         .map((s) => ({
           type: "solution" as const,
@@ -673,7 +703,7 @@ export function registerStraleTools(
       const matchedCaps = capabilities
         .filter((c) => {
           if (catFilter && !c.category.toLowerCase().includes(catFilter)) return false;
-          return localMatchScore(`${c.name} ${c.description} ${c.slug} ${c.category}`) > 0;
+          return localMatchScore(`${c.name} ${c.description} ${c.slug} ${c.category} ${(c.search_tags ?? []).join(" ")}`) > 0;
         })
         .map((c) => {
           let inputFields = "Accepts: task (string) — describe what you need in natural language";
@@ -836,7 +866,7 @@ REFERENCES
     "strale_trust_profile",
     {
       description:
-        "Returns the trust profile for a capability or solution. Call this before relying on a capability for high-stakes decisions, or when a user asks how reliable a specific check is. Returns SQS score (0-100), Quality grade (A-F), Reliability grade (A-F), execution guidance (direct, retry, queue, or fallback), 30-day test history, known limitations, and cost envelope. No API key required.",
+        "Returns the trust profile for a capability or solution. Call this before relying on a capability for high-stakes decisions, or when a user asks how reliable a specific check is. Returns lifecycle state, last-tested timestamp, recent test history, known limitations, data source and provenance, and cost envelope. Strale deliberately exposes no single numeric quality score — judge from the test history and limitations. No API key required.",
       inputSchema: z.object({
         slug: z
           .string()

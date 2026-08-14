@@ -14,6 +14,7 @@
 # Format: one slug per line, # comments allowed, blank lines ignored.
 
 brazilian-company-data
+cz-company-data
 estonian-company-data
 french-company-data
 japanese-company-data
@@ -21,3 +22,5 @@ norwegian-company-data
 polish-company-data
 swedish-company-data
 us-company-data
+# uk: tier fixture capture requires COMPANIES_HOUSE_API_KEY (prod-only); recapture in a keyed environment
+uk-company-data

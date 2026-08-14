@@ -14,6 +14,7 @@ import { apiError } from "./errors.js";
 //   - POST /v1/do                        rateLimitByIp(60, 60_000)
 //   - POST /v1/do                        rateLimitByKey(10, 1000)
 //   - /mcp all methods                   rateLimitByIp(60, 60_000)
+//   - /a2a all methods                   rateLimitByIp(60, 60_000)
 //   - /v1/wallet/*                       rateLimitByKey(5, 1000)
 //   - /v1/internal/*                     rateLimitByIp(120, 60_000)
 //

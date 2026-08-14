@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("gdpr-website-check", async (input: CapabilityInput) => {
@@ -8,10 +9,10 @@ registerCapability("gdpr-website-check", async (input: CapabilityInput) => {
   if (!url.startsWith("http://") && !url.startsWith("https://")) url = "https://" + url;
   await validateUrl(url);
 
-  const response = await fetch(url, {
+  const response = await safeFetch(url, {
     signal: AbortSignal.timeout(15000),
     headers: { "User-Agent": "Mozilla/5.0 (compatible; StraleBot/1.0)" },
-    redirect: "follow",
+    // redirect handling: safeFetch follows up to 3 hops with per-hop re-validation
   });
 
   if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);

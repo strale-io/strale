@@ -1,5 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { classifyNameMatch } from "../lib/company-name-match.js";
+import { extractCompanyName } from "./lib/browserless-extract.js";
 
 // UK VAT validation is handled by vat-validate.ts (which routes GB → HMRC v2),
 // not by this Identity capability. Companies House (the source for this
@@ -28,23 +29,60 @@ function getApiKey(): string {
   return key;
 }
 
-async function extractCompanyName(text: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
-  const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 100,
-    messages: [{ role: "user", content: `Extract the UK/British company name from this request. Return ONLY the company name, nothing else.\n\nRequest: "${text}"` }],
-  });
-  const name = r.content[0].type === "text" ? r.content[0].text.trim().replace(/^["']|["']$/g, "") : "";
-  if (!name) throw new Error(`Could not identify a company name from: "${text}".`);
-  return name;
+
+export interface UkNameResolution {
+  companyNumber: string;
+  matchedName: string;
+  matchConfidence: "exact" | "high";
 }
 
-async function searchCompany(name: string): Promise<string> {
+/**
+ * Name path: Companies House `/search/companies` applies its own internal
+ * relevance weighting, but it is not an identity match — a generic or
+ * abbreviated query can rank an unrelated company ahead of the intended one
+ * with no signal to the caller that it did (the #161 wrong-company class
+ * already fixed for NO/FI/EE/DE/CH/FR/IE). Pull a page of candidates
+ * (items_per_page=20; Companies House caps at 100) and score every one by
+ * name; refuse when nothing genuinely matches.
+ */
+export function pickByName(query: string, items: Array<{ title?: string; company_number?: string }>): UkNameResolution {
+  const exact = new Map<string, string>();
+  const high = new Map<string, string>();
+  for (const item of items) {
+    if (typeof item.title !== "string" || !item.title || !item.company_number) continue;
+    const { match_confidence } = classifyNameMatch(query, item.title);
+    if (match_confidence === "exact" && !exact.has(item.company_number)) exact.set(item.company_number, item.title);
+    else if (match_confidence === "high" && !high.has(item.company_number)) high.set(item.company_number, item.title);
+  }
+
+  const pickUnambiguous = (bucket: Map<string, string>, label: "exact" | "high"): UkNameResolution | null => {
+    if (bucket.size === 0) return null;
+    if (bucket.size === 1) {
+      const [companyNumber, matchedName] = bucket.entries().next().value!;
+      return { companyNumber, matchedName, matchConfidence: label };
+    }
+    const listing = [...bucket.entries()].slice(0, 5).map(([num, n]) => `${n} (${num})`).join("; ");
+    throw new Error(
+      `Ambiguous UK company name "${query}": ${bucket.size} distinct registered ` +
+        `entities are ${label === "exact" ? "exact" : "close"} matches — ${listing}. ` +
+        `Provide the Companies House number (8 digits) to disambiguate.`,
+    );
+  };
+
+  const winner = pickUnambiguous(exact, "exact") ?? pickUnambiguous(high, "high");
+  if (winner) return winner;
+
+  const closest = items.slice(0, 3).map((i) => i.title).filter(Boolean).join(", ");
+  throw new Error(
+    `No confident Companies House match for "${query}". The search is fuzzy and returned only ` +
+      `unrelated entities${closest ? ` (closest: ${closest})` : ""}. ` +
+      `Provide the Companies House number (8 digits) for an exact lookup.`,
+  );
+}
+
+async function searchCompany(name: string): Promise<UkNameResolution> {
   const key = getApiKey();
-  const url = `${API}/search/companies?q=${encodeURIComponent(name)}&items_per_page=1`;
+  const url = `${API}/search/companies?q=${encodeURIComponent(name)}&items_per_page=20`;
   const response = await fetch(url, {
     headers: {
       Accept: "application/json",
@@ -58,7 +96,47 @@ async function searchCompany(name: string): Promise<string> {
   if (!items || items.length === 0) {
     throw new Error(`No UK company found matching "${name}".`);
   }
-  return items[0].company_number;
+  return pickByName(name, items);
+}
+
+interface UkOfficer {
+  type: "person" | "organisation";
+  name: string;
+  role: string;
+  role_code: string;
+  start_date: string | null;
+  date_of_birth: null;
+}
+
+async function fetchOfficers(companyNumber: string): Promise<UkOfficer[]> {
+  const key = getApiKey();
+  const url = `${API}/company/${companyNumber}/officers?items_per_page=100`;
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      Authorization: `Basic ${Buffer.from(key + ":").toString("base64")}`,
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error(`Companies House officers returned HTTP ${response.status}`);
+  const data = (await response.json()) as any;
+  const items: any[] = Array.isArray(data?.items) ? data.items : [];
+  return items
+    .filter((o) => !o.resigned_on)
+    .map((o) => ({
+      // Companies House marks corporate officers via the officer_role token
+      // (e.g. "corporate-director", "corporate-secretary").
+      type: String(o.officer_role ?? "").startsWith("corporate") ? "organisation" as const : "person" as const,
+      name: o.name ?? "",
+      role: o.officer_role ?? "",
+      role_code: o.officer_role ?? "",
+      start_date: o.appointed_on ?? null,
+      // Companies House supplies partial DOB (year+month) for people; we
+      // deliberately emit null for canonical-shape parity with NO/CZ/EE and
+      // data minimization. The richer uk-companies-house-officers capability
+      // carries the partial DOB for callers who need it.
+      date_of_birth: null,
+    }));
 }
 
 async function fetchCompany(companyNumber: string): Promise<Record<string, unknown>> {
@@ -122,13 +200,24 @@ registerCapability("uk-company-data", async (input: CapabilityInput) => {
 
   const trimmed = raw.trim();
   let companyNumber = findCompanyNumber(trimmed);
+  let nameResolution: UkNameResolution | null = null;
 
   if (!companyNumber) {
-    const name = await extractCompanyName(trimmed);
-    companyNumber = await searchCompany(name);
+    const name = await extractCompanyName(trimmed, "UK");
+    nameResolution = await searchCompany(name);
+    companyNumber = nameResolution.companyNumber;
   }
 
-  const output = await fetchCompany(companyNumber);
+  const [output, officers] = await Promise.all([
+    fetchCompany(companyNumber),
+    fetchOfficers(companyNumber),
+  ]);
+  if (nameResolution) {
+    // Surface how the name resolved so callers can gate on fuzzy resolution
+    // (same pattern as finnish-company-data / us-company-data).
+    output.match_confidence = nameResolution.matchConfidence;
+    output.matched_registry_name = nameResolution.matchedName;
+  }
 
   // Evidence Tier framework labels + Tier 1 canonical aliases (DEC-20260518-A).
   // Resolves alias keys at runtime; only sets a canonical if not already present.
@@ -144,8 +233,15 @@ registerCapability("uk-company-data", async (input: CapabilityInput) => {
     if (o.legal_form === undefined) o.legal_form = (o.business_type ?? o.company_type ?? o.entity_type ?? o.legal_form_code ?? o.legal_form_id);
     if (o.registered_address === undefined) o.registered_address = (o.address ?? o.office_address);
     if (o.date_incorporated === undefined) o.date_incorporated = (o.incorporation_date ?? o.registered_date ?? o.registration_date ?? o.founded ?? o.uen_issue_date ?? o.registered_at);
-    o.tier_2_available = false;
-    o.tier_2_available_reason = "Companies House summary endpoint does not expose officers in current handler implementation; officers extraction is a follow-up labeling task";
+    if (o.legal_representatives === undefined) o.legal_representatives = officers;
+    o.total_legal_representatives = officers.length;
+    // Length-gated (was hardcoded true): an entity with no active officers
+    // in the response must not claim representative data is available.
+    o.tier_2_available = officers.length > 0;
+    o.tier_2_available_reason =
+      officers.length > 0
+        ? "Legal representatives extracted from UK Companies House Officers register."
+        : "No active officers returned by Companies House for this company.";
     o.ubo_availability = "available";
     o.ubo_availability_reason = "Beneficial ownership data available via UK PSC register.";
   }

@@ -141,6 +141,26 @@ const NULL_DECISIONS: Record<InvocationContext["kind"], Decision> = {
 
 // ─── Error classes ──────────────────────────────────────────────────────────
 
+/**
+ * Read-only view of the matrix for one invocation context, including the
+ * unclassified (`cost_class IS NULL`) row.
+ *
+ * Exported for tests. The `customer_paid` column being `allow` throughout is
+ * what makes a cost-control refusal unreachable from customer traffic — every
+ * customer-facing entry point passes that context — so it is worth pinning
+ * rather than leaving as a property nobody checks.
+ */
+export function describeAllowMatrix(
+  kind: InvocationContext["kind"],
+): Record<string, Decision> {
+  const out: Record<string, Decision> = {};
+  for (const [costClass, byKind] of Object.entries(ALLOW_MATRIX)) {
+    out[costClass] = byKind[kind];
+  }
+  out["(unclassified)"] = NULL_DECISIONS[kind];
+  return out;
+}
+
 export class CapabilityNotClassifiedError extends Error {
   constructor(public slug: string, public ctx: InvocationContext) {
     super(
@@ -316,7 +336,12 @@ export async function assertBudgetAvailable(
     );
   }
   const budgetCap = computeBudgetCap(meta);
-  const windowStart = computeWindowStart(meta.quota_window, meta.quota_reset_dom);
+  // Bound as an ISO STRING, never a Date instance: a Date inside
+  // db.execute(sql``) queryChunks hits the postgres-js encoder as a raw
+  // object and throws 'argument must be of type string... Received an
+  // instance of Date' — the PR #43 bind-encoder bug class (DEC-20260504-A).
+  // Surfaced live 2026-08-12 by the first free_quota smoke run.
+  const windowStart = computeWindowStart(meta.quota_window, meta.quota_reset_dom).toISOString();
   const windowKind = meta.quota_window;
 
   const db = getDb();
@@ -371,7 +396,7 @@ async function maybeFireThresholdAlerts(
   slug: string,
   meta: CapabilityCostMeta,
   budgetCap: number,
-  windowStart: Date,
+  windowStart: string, // ISO string — see the bind-encoder note in assertBudgetAvailable
   windowKind: "daily" | "monthly",
 ): Promise<void> {
   const pct = row.test_count / budgetCap;

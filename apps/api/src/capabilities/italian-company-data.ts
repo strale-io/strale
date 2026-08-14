@@ -57,13 +57,13 @@ registerCapability("italian-company-data", async (input: CapabilityInput) => {
     "";
   if (typeof rawInput !== "string" || !rawInput.trim()) {
     throw new Error(
-      "'vat_number' or 'codice_fiscale' is required. Provide an Italian codice fiscale / P.IVA (11 digits, e.g. 00484960588). IT-prefix VAT format is also accepted (e.g. IT00484960588).",
+      "'vat_number' or 'codice_fiscale' is required. Provide an Italian codice fiscale / P.IVA (11 digits, e.g. 00484960588). IT-prefix VAT format is also accepted (e.g. IT00484960588). Look one up by company name at the official Business Register search: https://www.registroimprese.it/.",
     );
   }
   const normalised = normaliseItIdentifier(rawInput.trim());
   if (!normalised) {
     throw new Error(
-      `'${rawInput.trim()}' is not a valid Italian codice fiscale / P.IVA. Expected format: 11 digits (e.g. 00484960588).`,
+      `'${rawInput.trim()}' is not a valid Italian codice fiscale / P.IVA. Expected format: 11 digits (e.g. 00484960588). Look one up by company name at https://www.registroimprese.it/.`,
     );
   }
   const __etResult = await executeOpenapiCapability(

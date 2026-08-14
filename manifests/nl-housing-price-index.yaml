@@ -59,10 +59,11 @@ test_fixtures:
   known_answer:
     input: {}
     expected_fields:
+      # latest_period advances monthly (CBS publishes new data) — an equals pin
+      # goes stale by design and failed the 2026-08-12 P0 prod sweep.
       - field: latest_period
-        operator: equals
+        operator: not_null
         reliability: guaranteed
-        value: 2026-02
       - field: price_index
         operator: not_null
         reliability: guaranteed

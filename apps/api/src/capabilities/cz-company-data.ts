@@ -5,6 +5,11 @@ import { normalizeIco, isValidIcoChecksum } from "../lib/cz-validation.js";
 
 // ARES — Administrativní registr ekonomických subjektů (Czech Ministry of Finance)
 const ARES_API = "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty";
+// VR (Veřejný rejstřík / Public Register) view — adds statutarniOrgany with
+// full member detail (name, DOB, nationality, role, dates). The BE (basic
+// entity) view above doesn't carry person records; both views share the same
+// path prefix and ICO key.
+const ARES_VR_API = "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty-vr";
 
 type AresResponse = {
   ico: string;
@@ -19,6 +24,49 @@ type AresResponse = {
   primarniZdroj?: string;
   seznamRegistraci?: Record<string, string>;
 };
+
+interface AresVrPerson {
+  jmeno?: string;
+  prijmeni?: string;
+  datumNarozeni?: string;
+  statniObcanstvi?: string;
+}
+interface AresVrClen {
+  datumZapisu?: string;
+  datumVymazu?: string;
+  typAngazma?: string;
+  nazevAngazma?: string;
+  clenstvi?: {
+    clenstvi?: { vznikClenstvi?: string; zanikClenstvi?: string };
+    funkce?: { nazev?: string; vznikFunkce?: string; zanikFunkce?: string };
+  };
+  fyzickaOsoba?: AresVrPerson;
+  pravnickaOsoba?: { obchodniJmeno?: string; ico?: string };
+}
+interface AresVrOrgan {
+  nazevOrganu?: string;
+  clenoveOrganu?: AresVrClen[];
+}
+interface AresVrZaznam {
+  primarniZaznam?: boolean;
+  statutarniOrgany?: AresVrOrgan[];
+  zpusobJednani?: Array<{ datumVymazu?: string; zpusobJednani?: string }>;
+}
+interface AresVrResponse {
+  icoId?: string;
+  zaznamy?: AresVrZaznam[];
+}
+
+interface LegalRepresentative {
+  type: "person" | "organisation";
+  name: string;
+  role: string;
+  role_code: string;
+  role_group: string;
+  date_of_birth: string | null;
+  nationality: string | null;
+  start_date: string | null;
+}
 
 type AresSearchResponse = {
   pocetCelkem: number;
@@ -80,6 +128,76 @@ async function fetchByIco(ico: string): Promise<AresResponse> {
   return (await resp.json()) as AresResponse;
 }
 
+// VR view fetch is opportunistic — many ekonomické subjekty (sole traders,
+// associations, foreign branches) are not in the public commercial register
+// at all, so a 404 here just means "no statutory body data, surface T2 as
+// unavailable on this record." Other non-OK statuses surface as a warning
+// but do not fail the whole call.
+async function fetchVrByIco(ico: string): Promise<AresVrResponse | null> {
+  try {
+    const resp = await fetch(`${ARES_VR_API}/${ico}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (resp.status === 404) return null;
+    if (!resp.ok) return null;
+    return (await resp.json()) as AresVrResponse;
+  } catch {
+    return null;
+  }
+}
+
+function shapeRepresentatives(vr: AresVrResponse | null): {
+  representatives: LegalRepresentative[];
+  signing_authority: string | null;
+} {
+  if (!vr || !vr.zaznamy || vr.zaznamy.length === 0) {
+    return { representatives: [], signing_authority: null };
+  }
+  const primary = vr.zaznamy.find((z) => z.primarniZaznam) ?? vr.zaznamy[0];
+  const out: LegalRepresentative[] = [];
+  for (const organ of primary.statutarniOrgany ?? []) {
+    const groupName = organ.nazevOrganu ?? "Statutární orgán";
+    for (const c of organ.clenoveOrganu ?? []) {
+      // datumVymazu on the membership-row means the entry is no longer in
+      // the register (historical). zanikClenstvi on clenstvi means the
+      // membership itself has ended. Both indicate not-currently-active.
+      if (c.datumVymazu) continue;
+      if (c.clenstvi?.clenstvi?.zanikClenstvi) continue;
+      const fo = c.fyzickaOsoba;
+      const po = c.pravnickaOsoba;
+      const isOrg = !!po && !fo;
+      const personName = fo
+        ? [fo.jmeno, fo.prijmeni].filter(Boolean).join(" ").trim()
+        : "";
+      const name = isOrg ? (po?.obchodniJmeno ?? "") : personName;
+      if (!name) continue;
+      const roleName =
+        c.clenstvi?.funkce?.nazev ?? c.nazevAngazma ?? groupName;
+      out.push({
+        type: isOrg ? "organisation" : "person",
+        name,
+        role: roleName,
+        role_code: c.typAngazma ?? "",
+        role_group: groupName,
+        date_of_birth: fo?.datumNarozeni ?? null,
+        nationality: fo?.statniObcanstvi ?? null,
+        start_date:
+          c.clenstvi?.funkce?.vznikFunkce ??
+          c.clenstvi?.clenstvi?.vznikClenstvi ??
+          null,
+      });
+    }
+  }
+  // Company-level signing rule (způsob jednání) — pick the currently active
+  // entry (no datumVymazu). Falls back to null when unset on the record.
+  const signing = (primary.zpusobJednani ?? []).find((z) => !z.datumVymazu);
+  return {
+    representatives: out,
+    signing_authority: signing?.zpusobJednani ?? null,
+  };
+}
+
 function deriveStatus(reg: Record<string, string> | undefined): string {
   if (!reg) return "unknown";
   const ros = reg.stavZdrojeRos;
@@ -108,7 +226,8 @@ registerCapability("cz-company-data", async (input: CapabilityInput) => {
     ico = await resolveNameToIco(name);
   }
 
-  const data = await fetchByIco(ico);
+  const [data, vr] = await Promise.all([fetchByIco(ico), fetchVrByIco(ico)]);
+  const { representatives, signing_authority } = shapeRepresentatives(vr);
 
   return {
     output: {
@@ -129,9 +248,15 @@ registerCapability("cz-company-data", async (input: CapabilityInput) => {
       legal_form: data.pravniForma ?? null,
       registered_address: data.sidlo?.textovaAdresa ?? "",
       date_incorporated: data.datumVzniku ?? null,
+      legal_representatives: representatives,
+      total_legal_representatives: representatives.length,
+      signing_authority,
       // Evidence Tier framework labels (DEC-20260518-A)
-      tier_2_available: false,
-      tier_2_available_reason: "handler does not currently extract legal representatives from upstream registry; follow-up extraction task tracked",
+      tier_2_available: representatives.length > 0,
+      tier_2_available_reason:
+        representatives.length > 0
+          ? "Legal representatives extracted from ARES Veřejný rejstřík (statutární orgán + prokura); excludes supervisory boards (dozorčí rada) which do not legally represent the company."
+          : "ARES VR view returned no active statutory body members for this entity (likely sole trader / association / foreign branch not in the commercial register); tier_2 not bindable on this record.",
       ubo_availability: "restricted",
       ubo_availability_reason: "UBO evidence register access restricted to AML-obliged entities post-CJEU 2022",
     },

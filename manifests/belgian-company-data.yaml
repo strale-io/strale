@@ -20,9 +20,23 @@ input_schema:
     company_name:
       type: string
       description: Belgian company name (fuzzy match)
+    name:
+      type: string
+      description: Alias for company_name
+    query:
+      type: string
+      description: Free-text alias — enterprise number or company name
     task:
       type: string
       description: Free-text input — first matching enterprise number or name is used
+  # anyOf makes "at least one identifying field" visible to callers and lets
+  # the route reject {} before billing, instead of billing-then-erroring.
+  anyOf:
+    - required: [enterprise_number]
+    - required: [company_name]
+    - required: [name]
+    - required: [query]
+    - required: [task]
 output_schema:
   type: object
   example:
@@ -103,10 +117,12 @@ test_fixtures:
       - field: establishments_count
         operator: not_null
         reliability: guaranteed
+      # Upstream CBE changed this entity's abbreviation ("A.P.I." → "AB Inbev",
+      # observed in the 2026-08-12 P0 prod sweep). Company-controlled attributes
+      # must not be equals-pinned.
       - field: abbreviation
-        operator: equals
+        operator: not_null
         reliability: guaranteed
-        value: A.P.I.
       - field: jurisdiction
         operator: equals
         reliability: guaranteed

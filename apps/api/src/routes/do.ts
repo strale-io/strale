@@ -31,10 +31,12 @@ import { triggerOnFailure } from "../lib/event-triggers.js";
 import { recordPiggybackResult } from "../lib/piggyback-monitor.js";
 import { TRANSACTION_RETENTION_DAYS } from "../lib/data-retention.js";
 import { createHash } from "node:crypto";
+import { extractClientMeta } from "../lib/attribution.js";
 import { getShareableUrl } from "../lib/audit-token.js";
 import { getAiDescription, getDataSourceUrl } from "../lib/audit-helpers.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
+import { validateX402Input } from "../lib/x402-input-validation.js";
 import { logError, logWarn } from "../lib/log.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
 import { trackBackgroundTask } from "../lib/shutdown.js";
@@ -403,6 +405,13 @@ doRoute.post(
 
   // Capture request context for attribution tracking (stored in audit trail)
   const userAgent = c.req.header("user-agent") ?? null;
+  // Channel attribution (design 2026-08-12): weak-but-joinable signals,
+  // persisted on the transaction row for the weekly rollup. ?src= comes from
+  // tagged directory-submission URLs.
+  c.set("clientMeta" as any, extractClientMeta(c.req, {
+    src: c.req.query("src"),
+    ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
+  }) ?? null);
   const requestContext = {
     referer: c.req.header("referer") ?? c.req.header("referrer") ?? null,
     origin: c.req.header("origin") ?? null,
@@ -933,6 +942,53 @@ doRoute.post(
     }
   }
 
+  // anyOf/oneOf required-group parity with the x402 surface (the PR #171
+  // incident class): the classic check above cannot see branch groups, so an
+  // either/or capability declared via anyOf was unvalidated on the wallet
+  // path and leaked its executor's raw error. Reuses the same pure validator
+  // both x402 handlers use — one contract, two surfaces. The classic-required
+  // path above is deliberately untouched (its misplacement hints and
+  // failure-type analytics are established behavior); this only adds the
+  // group rule that path cannot express.
+  // Only schemas that DECLARE branch groups enter this check — running the
+  // full validator unconditionally would re-execute the classic-required rule
+  // with stricter blank semantics ("" / null counted as missing), silently
+  // changing established behavior and mislabeling those failures as
+  // group-unsatisfied (review M-2). Classic required stays the block above's
+  // job, verbatim.
+  const declaresGroups =
+    Array.isArray((inputSchema as Record<string, unknown> | null)?.anyOf) ||
+    Array.isArray((inputSchema as Record<string, unknown> | null)?.oneOf);
+  if (declaresGroups) {
+    const groupCheck = validateX402Input(executionInput, inputSchema as Record<string, unknown> | null);
+    if (!groupCheck.ok) {
+      const gIp = getClientIp(c);
+      fireAndForget(
+        () =>
+          db.insert(failedRequests).values({
+            userId: user?.id ?? null,
+            ipHash: gIp !== "unknown" ? hashIp(gIp) : null,
+            task: capabilitySlug ?? task ?? "",
+            failureType: "input_group_unsatisfied",
+            errorDetail: groupCheck.error.slice(0, 255),
+            userAgent: (c.req.header("user-agent") ?? "").slice(0, 255) || null,
+          }),
+        { label: "failed-request-log", context: { failureType: "input_group_unsatisfied", userId: user?.id ?? null } },
+      );
+      return c.json(
+        apiError(
+          "invalid_request",
+          groupCheck.error,
+          {
+            expected_fields: inputSchema?.properties ? Object.keys(inputSchema.properties) : [],
+            input_schema: inputSchema ?? undefined,
+          },
+        ),
+        400,
+      );
+    }
+  }
+
   // x402 paid: on-chain settlement already verified — execute like free-tier (no wallet debit)
   if (!user && (c.get("x402_paid" as any))) {
     return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, freshness);
@@ -1154,6 +1210,7 @@ async function executeFreeTier(
       userId: null,
       capabilityId: capability.id,
       status: "executing",
+      clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
       input: executionInput,
       priceCents: 0,
       transparencyMarker: marker,
@@ -1359,6 +1416,7 @@ async function executeFreeTierAuthenticated(
       capabilityId: capability.id,
       idempotencyKey,
       status: "executing",
+      clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
       input: executionInput,
       priceCents: 0,
       transparencyMarker: marker,
@@ -1637,6 +1695,7 @@ async function executeSync(
         capabilityId: capability.id,
         idempotencyKey,
         status: "executing",
+      clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
         input: executionInput,
         priceCents: capability.priceCents,
         transparencyMarker: marker,
@@ -2013,6 +2072,7 @@ async function executeAsync(
         capabilityId: capability.id,
         idempotencyKey,
         status: "executing",
+      clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
         input: executionInput,
         priceCents: capability.priceCents,
         transparencyMarker: marker,

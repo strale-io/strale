@@ -33,6 +33,9 @@ jobs:
       - run: npm --workspace=packages/mcp-server run build
       - run: npm run typecheck
       - run: npm --workspace=apps/api run lint:no-bare-catch
+      # Money-integrity 2026-08-12: caller-URL capabilities must use safeFetch
+      # or the ToS gate — raw fetch shipped as blocklist side doors ten times.
+      - run: npm --workspace=apps/api run lint:no-unguarded-user-fetch
       # The SSRF inventory guard hardcodes its walk root relative to the
       # repo root (`apps/api/src/capabilities`); invoking it via the
       # workspace wrapper sets cwd to `apps/api/` and ENOENTs. Call it
@@ -49,7 +52,7 @@ jobs:
       # DEC-20260422-A: every framework-named *-strale package must contain
       # at least one real import from the framework it claims to integrate
       # with. Blocks the "hollow package" class of incident that surfaced
-      # with pydantic-ai on 2026-04-21. See CONTAINMENT_REPORT.md.
+      # with pydantic-ai on 2026-04-21. See archive/sessions/CONTAINMENT_REPORT.md.
       - run: node apps/api/scripts/check-framework-packages.mjs
       # Cert-audit C6 follow-up: every fetch() must be timeout-bounded.
       # Pre-existing offenders are tracked in fetch-timeout-allowlist.txt;
@@ -64,6 +67,14 @@ jobs:
       # time, and with onboard.ts verifyFixtures which fires at manifest
       # authoring time.
       - run: node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict
+      # Manifest PII guard. scrubFixture()/PII_ARRAY_FIELDS run at CAPTURE time
+      # on executor output; manifests are hand-authored, so an example pasted
+      # from a live response ships real people's names and no machinery ever
+      # looks at it. That is how five manifests came to carry real board
+      # members and partners for ~3 months after the 2026-05-18 fixture audit
+      # flagged two of them. Enforces that PII-bearing arrays in manifest
+      # examples are empty, null, or explicitly synthetic.
+      - run: node apps/api/scripts/check-manifest-pii.mjs --strict
       # Phase 1 tier-coverage gate (WARN-ONLY). For each manifest with a
       # captured response fixture at apps/api/tests/fixtures/tier-coverage/
       # <slug>.json, compares empirical wire-shape against manifest

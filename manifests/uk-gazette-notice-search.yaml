@@ -1,0 +1,128 @@
+slug: uk-gazette-notice-search
+name: UK Gazette Insolvency Notice Search
+description: >-
+  Search official UK Gazette insolvency notices by name — corporate winding-up, liquidator appointments, and
+  personal bankruptcy. Returns notice text, dates, and links to the statutory public record.
+category: data-extraction
+cost_class: free_unlimited
+quota_window: none
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Company or individual name to search for in Gazette insolvency notices
+    date_from:
+      type: string
+      description: ISO date (YYYY-MM-DD) — only notices published on or after this date
+    date_to:
+      type: string
+      description: ISO date (YYYY-MM-DD) — only notices published on or before this date
+    limit:
+      type: integer
+      description: Maximum number of notices to return (default 10, max 50)
+output_schema:
+  type: object
+  example:
+    query:
+      text: Carillion
+      date_from: null
+      date_to: null
+    total_matches: 3318122
+    returned_count: 2
+    notices:
+      - notice_id: L-58635-471825
+        title: Resolutions for Winding-up
+        category: Resolutions for Winding-up
+        notice_code: "2431"
+        published_date: "2008-03-10T00:00:00"
+        summary: "CARILLION AMT LIMITED"
+        company_number: null
+        url: https://www.thegazette.co.uk/notice/L-58635-471825
+  properties:
+    query:
+      type: object
+    total_matches:
+      type: integer
+    returned_count:
+      type: integer
+    notices:
+      type: array
+data_source: The Gazette (His Majesty's Stationery Office / TSO)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+# SA.2b: per-capability PII classification (F-A-003, F-A-009)
+processes_personal_data: true
+geography: uk
+test_fixtures:
+  known_answer:
+    input:
+      query: Carillion
+      date_from: "2018-01-01"
+      date_to: "2018-12-31"
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: query
+        operator: type
+        reliability: guaranteed
+        value: object
+      - field: total_matches
+        operator: not_null
+        reliability: guaranteed
+      - field: total_matches
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: returned_count
+        operator: not_null
+        reliability: guaranteed
+      - field: returned_count
+        operator: gt
+        reliability: guaranteed
+        value: 0
+      - field: notices
+        operator: not_null
+        reliability: guaranteed
+      - field: notices
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    query: test
+    limit: 1
+output_field_reliability:
+  query: guaranteed
+  total_matches: guaranteed
+  returned_count: guaranteed
+  notices: guaranteed
+limitations:
+  - title: UK insolvency notices only — not a full-text search across all Gazette content
+    text: >-
+      Scoped to the Gazette's "insolvency" publication service (corporate winding-up, liquidator appointments,
+      personal bankruptcy). Deceased-estate notices (wills and probate) and general Gazette notices are out of
+      scope. Coverage is UK only.
+    category: coverage
+    severity: info
+    workaround: Use insolvency-check for a structured, company-number-scoped view of open UK insolvency proceedings
+  - title: Free-text relevance ranking is the Gazette's own, not Strale's
+    text: >-
+      Results are returned in the order the Gazette API provides them (typically publish-date recency within the
+      matched set), not re-ranked by name-match quality. A common name can surface unrelated notices — verify the
+      company_number or notice text before treating a result as confirming a specific entity.
+    category: accuracy
+    severity: warning
+    workaround: Narrow with date_from/date_to, or cross-check the returned company_number against a company-data lookup
+  - title: company_number extraction is best-effort text parsing, not a structured field
+    text: >-
+      The Gazette API returns notice text as free-form HTML; company_number is extracted via regex from that text
+      and is null when the notice doesn't state it in the expected "Company Number: NNNNNNNN" format.
+    category: coverage
+    severity: info

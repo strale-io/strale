@@ -8,7 +8,8 @@
  *     The scheduler and dispatcher already fail-closed for these caps;
  *     this mode just makes the count loud at every boot so the backfill
  *     window doesn't drift unnoticed.
- *   - **STRICT**: boot aborts (process.exit 1) if any active+visible cap
+ *   - **STRICT**: boot aborts (throws StartupFatalError, handled by
+ *     index.ts main().catch → alert + exit 1) if any active+visible cap
  *     lacks cost_class. Flipped after one clean operational cycle.
  *
  * Modeled on `assertAlertingConfigured` (lib/alerting.ts) — same fail-loud
@@ -22,6 +23,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { log, logError } from "./log.js";
+import { StartupFatalError } from "./startup-fatal.js";
 
 export type CostClassMode = "STRICT" | "GRACE";
 
@@ -69,7 +71,15 @@ export async function assertCostClassTaxonomy(opts: { mode: CostClassMode }): Pr
         unclassified: unclassified.map((r) => ({ slug: r.slug, name: r.name })),
       },
     );
-    process.exit(1);
+    // Throw (not process.exit) so index.ts main().catch pages the operator —
+    // a direct exit here bypasses the fatal-startup alert (2026-07-02 class).
+    throw new StartupFatalError(
+      `cost-class STRICT mode: ${unclassified.length} active+visible capabilities lack cost_class`,
+      `The API refused to start because ${unclassified.length} capabilities are missing their ` +
+        `cost_class field (STRICT mode). This is a data/config problem, not an outage — ` +
+        `restarting won't fix it. Either classify the capabilities in their manifests, or set ` +
+        `COST_CLASS_MODE=GRACE on the Railway service to boot while the backfill completes.`,
+    );
   }
 
   // GRACE
