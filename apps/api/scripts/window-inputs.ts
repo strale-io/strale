@@ -1,3 +1,5 @@
+import { SYSTEM_ACCOUNT_EMAIL } from "./lib/internal-accounts.js";
+
 const from = process.argv[2];
 const to = process.argv[3];
 if (!from || !to) {
@@ -5,13 +7,13 @@ if (!from || !to) {
   process.exit(1);
 }
 
-const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", "system@strale.internal", "test@example.com"];
+const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", SYSTEM_ACCOUNT_EMAIL, "test@example.com"];
 
 const postgres = (await import("postgres")).default;
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
 
 const rows = await sql`
-  SELECT c.slug AS capability_slug, t.status, t.input, t.error
+  SELECT c.slug AS capability_slug, t.solution_slug, t.status, t.input, t.error
   FROM transactions t
   LEFT JOIN capabilities c ON c.id = t.capability_id
   LEFT JOIN users u ON u.id = t.user_id
@@ -19,13 +21,14 @@ const rows = await sql`
     AND t.created_at <= ${to}
     AND t.status <> 'health_probe'
     AND (u.email IS NULL OR u.email <> ALL(${EXCLUDED_EMAILS}))
-  ORDER BY c.slug, t.created_at
+  ORDER BY COALESCE(c.slug, t.solution_slug, 'unknown'), t.created_at
 `;
 
 const g: Record<string, any[]> = {};
 for (const row of rows as any[]) {
-  g[row.capability_slug] ||= [];
-  g[row.capability_slug].push(row);
+  const key = row.capability_slug || (row.solution_slug ? `solution:${row.solution_slug}` : 'unknown');
+  g[key] ||= [];
+  g[key].push(row);
 }
 
 console.log('Window:', from, '->', to);

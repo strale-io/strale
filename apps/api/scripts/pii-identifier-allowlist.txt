@@ -1,0 +1,54 @@
+# Escape hatch for apps/api/scripts/check-pii.mjs Detector 2 (high-signal
+# identifier scan: codice fiscale, IBAN — both checksum-gated).
+#
+# Format: one `relative/path/from/repo/root|EXACT_VALUE` pair per line.
+# `#`-prefixed lines and blanks are ignored.
+#
+# Add an entry ONLY when you have manually verified the checksum-valid
+# value is deliberately synthetic (e.g. a generated-but-valid test fixture)
+# and NOT a real person's identifier that merely happens to belong to
+# nobody you recognize. The checksum passing is exactly the signal that it
+# might be real — that's why this list should stay short. Real offenders
+# get fixed at the source (replace with a non-checksum-valid placeholder),
+# not allowlisted.
+
+# Deutsche Bundesbank's official published example IBAN — the canonical
+# "this is what an IBAN looks like" teaching value used in the IBAN
+# specification itself, Wikipedia's IBAN article, and effectively every
+# bank-API tutorial and IBAN-validator test suite worldwide. Checksum-valid
+# by design (it has to validate to be useful as a worked example) but not
+# any real account. Used across manifests/iban-validate.yaml,
+# manifests/iban-to-bank.yaml, seed-kyb-solutions.ts, and several docs/
+# and archive/ writeups that quote the same worked example.
+manifests/iban-validate.yaml|DE89370400440532013000
+manifests/iban-to-bank.yaml|DE89370400440532013000
+apps/api/scripts/seed-kyb-solutions.ts|DE89370400440532013000
+archive/growth-ops/tweets-v2.md|DE89370400440532013000
+archive/sessions/strale-usage-and-conversion-audit-2026-04-08.md|DE89370400440532013000
+archive/sessions/strale-usage-audit-real-users-only-2026-04-08.md|DE89370400440532013000
+archive/submissions/bedrock-agentcore-submission/README.md|DE89370400440532013000
+archive/submissions/ibm-contextforge-submission/strale-integration.md|DE89370400440532013000
+archive/submissions/agentic-community-submission/docs/strale.md|DE89370400440532013000
+archive/submissions/agentic-community-submission/examples/strale-a2a-agent-config.json|DE89370400440532013000
+archive/submissions/docker-mcp-submission/strale/readme.md|DE89370400440532013000
+handoff/_general/from-code/2026-03-19-x402-gateway.md|DE89370400440532013000
+docs/api-quickstart.md|DE89370400440532013000
+docs/claude-md-snippet.md|DE89370400440532013000
+
+# Nordea's published Swedish worked examples (same "textbook IBAN" role as
+# the Bundesbank one above, for the SE format) used in
+# manifests/iban-validate.yaml and the two 2026-04-08 usage-audit writeups.
+manifests/iban-validate.yaml|SE4550000000058398257466
+manifests/iban-validate.yaml|SE3550000000054910000003
+apps/api/scripts/seed-kyb-solutions.ts|SE4550000000058398257466
+archive/sessions/strale-usage-and-conversion-audit-2026-04-08.md|SE4550000000058398257466
+archive/sessions/strale-usage-audit-real-users-only-2026-04-08.md|SE4550000000058398257466
+
+# check-pii.test.ts's own fixtures. QWERTY85M01H501Y is constructed in the
+# test from a keyboard-row letter block specifically so it can't decode to
+# any plausible real Italian surname/name pair, then run through the same
+# check-letter algorithm to make it deliberately checksum-valid — it exists
+# to prove the checksum math works, not to represent a person. The IBAN
+# case is the same Bundesbank worked example allowlisted above.
+apps/api/test/check-pii.test.ts|QWERTY85M01H501Y
+apps/api/test/check-pii.test.ts|DE89370400440532013000

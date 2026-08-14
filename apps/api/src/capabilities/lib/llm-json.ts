@@ -86,3 +86,32 @@ export function extractJsonObject(raw: string): Record<string, unknown> | null {
 
   return null;
 }
+
+/** True when `value` carries no information at all, recursively. */
+function hasAnyValue(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.some(hasAnyValue);
+  if (typeof value === "object") return Object.values(value).some(hasAnyValue);
+  // Numbers and booleans are information — 0 and false included.
+  return true;
+}
+
+/**
+ * True when an extraction produced a well-formed but entirely empty result:
+ * every field null, every string blank, every array empty.
+ *
+ * Tolerant parsing creates a billing hazard. Before it, a model that found
+ * nothing usually also appended an explanatory note, and that note broke the
+ * parse — so the call threw and, per DEC-14, was never charged. Now it parses
+ * cleanly, and the shell of nulls would bill as a success.
+ *
+ * This deliberately does not consult the manifest's `guaranteed` fields:
+ * invoice-extract declares none (every field is `common` or `rare`), so a
+ * manifest-derived rule would not fire there at all. "Nothing anywhere" is
+ * both stricter to trip and universal. company-enrich keeps its own narrower,
+ * manifest-aware guard.
+ */
+export function isEmptyExtraction(parsed: Record<string, unknown>): boolean {
+  return !hasAnyValue(parsed);
+}

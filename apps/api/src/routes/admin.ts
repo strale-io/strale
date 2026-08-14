@@ -5,6 +5,7 @@ import { getDb } from "../db/index.js";
 import { apiError } from "../lib/errors.js";
 import { log, logError } from "../lib/log.js";
 import { persistCapability } from "../lib/capability-persistence.js";
+import { SYSTEM_ACCOUNT_EMAIL } from "../lib/internal-accounts.js";
 import type { AppEnv } from "../types.js";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
@@ -295,7 +296,7 @@ adminRoute.get("/request-analytics", async (c) => {
   `);
 
   const data = (Array.isArray(rows) ? rows : (rows as any).rows ?? []) as any[];
-  const internal = new Set(["petter@strale.io", "test2@strale.io", "test@strale.io", "system@strale.internal"]);
+  const internal = new Set(["petter@strale.io", "test2@strale.io", "test@strale.io", SYSTEM_ACCOUNT_EMAIL]);
   const external = data.filter((r) => !r.email || !internal.has(r.email));
 
   // Aggregate by mcp_client
