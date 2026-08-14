@@ -1,10 +1,11 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SYSTEM_ACCOUNT_EMAIL } from "./lib/internal-accounts.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_FILE = resolve(__dirname, "../../../.claude/state/last-activity-check.json");
-const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", "system@strale.internal", "test@example.com"];
+const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", SYSTEM_ACCOUNT_EMAIL, "test@example.com"];
 
 function fmtCET(d: Date): string {
   const parts = new Intl.DateTimeFormat("sv-SE", {
@@ -63,21 +64,22 @@ async function main() {
   console.log(`  unique users (incl. anon): ${o.unique_users}`);
 
   const byCap = await sql`
-    SELECT c.slug AS capability, t.payment_method, t.is_free_tier, t.status, COUNT(*)::int AS count
+    SELECT c.slug AS capability, t.solution_slug, t.payment_method, t.is_free_tier, t.status, COUNT(*)::int AS count
     FROM transactions t
     LEFT JOIN capabilities c ON c.id = t.capability_id
     LEFT JOIN users u ON u.id = t.user_id
     WHERE t.created_at > ${since.toISOString()}
       AND (u.email IS NULL OR u.email <> ALL(${EXCLUDED_EMAILS}))
       AND t.status <> 'health_probe'
-    GROUP BY c.slug, t.payment_method, t.is_free_tier, t.status
+    GROUP BY c.slug, t.solution_slug, t.payment_method, t.is_free_tier, t.status
     ORDER BY count DESC
   `;
   if (byCap.length > 0) {
     console.log(`\n--- Breakdown by capability ---`);
     for (const r of byCap) {
       const tier = r.is_free_tier ? "free" : (r.payment_method || "wallet");
-      console.log(`  ${r.capability || "unknown"} (${tier}, ${r.status}): ${r.count}`);
+      const label = r.capability || (r.solution_slug ? `solution:${r.solution_slug}` : "unknown");
+      console.log(`  ${label} (${tier}, ${r.status}): ${r.count}`);
     }
   }
 
@@ -97,18 +99,32 @@ async function main() {
   // Excludes internal accounts on the same basis as every other query above —
   // without the users join this counted our own curl testing as customer signal.
   const failedReqs = await sql`
-    SELECT f.failure_type, COUNT(*)::int AS total
+    SELECT f.failure_type, COUNT(*)::int AS n
     FROM failed_requests f
     LEFT JOIN users u ON u.id = f.user_id
     WHERE f.created_at > ${since.toISOString()}
       AND (u.email IS NULL OR u.email <> ALL(${EXCLUDED_EMAILS}))
     GROUP BY f.failure_type
-    ORDER BY total DESC
+    ORDER BY n DESC
   `;
-  const failedTotal = failedReqs.reduce((n, r) => n + r.total, 0);
-  console.log(`Failed request logs: ${failedTotal}`);
-  for (const r of failedReqs) {
-    console.log(`  ${r.failure_type ?? "unknown"}: ${r.total}`);
+  if (failedReqs.length > 0) {
+    // Gloss the DB enums so the report stays readable at a glance
+    const gloss: Record<string, string> = {
+      no_match: "no capability matched",
+      missing_fields: "required inputs missing",
+      input_confusion: "sent /v1/do body as inputs",
+      input_misplaced: "inputs at top level",
+    };
+    const total = failedReqs.reduce((sum, r) => sum + r.n, 0);
+    const breakdown = failedReqs
+      .map(r => {
+        const key = r.failure_type ?? "unknown";
+        return `${key}${gloss[key] ? ` — ${gloss[key]}` : ""}: ${r.n}`;
+      })
+      .join(', ');
+    console.log(`Failed request logs: ${total}  (${breakdown})`);
+  } else {
+    console.log(`Failed request logs: 0`);
   }
 
   await sql.end();

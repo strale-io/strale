@@ -5,8 +5,13 @@ slug: ip-geolocation
 name: IP Geolocation
 description: Look up geographic location, ISP, and network information for an IP address. Detects proxies and hosting providers.
 category: data-extraction
-cost_class: free_unlimited
-quota_window: none
+cost_class: free_quota
+quota_window: daily
+quota_cap: 2700
+known_rate_limit:
+  value: 45
+  unit: per_minute
+  source_url: https://ip-api.com/docs/api:json
 price_cents: 2
 is_free_tier: false
 input_schema:
