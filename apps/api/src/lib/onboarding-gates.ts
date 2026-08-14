@@ -17,6 +17,7 @@ import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { eq, inArray } from "drizzle-orm";
 import { logWarn } from "./log.js";
 import type { Manifest } from "./capability-manifest-types.js";
+import { getKnownAnswerFixtures } from "./capability-manifest-types.js";
 // Cluster 2 Phase 4a: canonical FIELD_CATEGORIES lives in its own module.
 import {
   FIELD_CATEGORIES as AUTHORITY_FIELDS,
@@ -488,17 +489,28 @@ export function validateManifest(m: Manifest, discover: boolean): string[] {
     errors.push("output_schema must have type:'object' and properties");
   }
 
-  // Test fixtures — in --discover mode, expected_fields can be empty
+  // Test fixtures — in --discover mode, expected_fields can be empty.
+  // known_answer accepts either a single fixture object (legacy shape) or
+  // an array of fixtures, one per entry point (Gate 5 multi-path coverage,
+  // DEC-20260411-B) — getKnownAnswerFixtures() normalizes both to an array.
+  const knownAnswerEntries = getKnownAnswerFixtures(m);
   if (!discover) {
-    if (!m.test_fixtures?.known_answer?.input) {
+    if (knownAnswerEntries.length === 0) {
       errors.push("test_fixtures.known_answer.input is required");
-    }
-    if (!m.test_fixtures?.known_answer?.expected_fields?.length) {
-      errors.push("test_fixtures.known_answer.expected_fields must have at least 1 entry");
+    } else {
+      knownAnswerEntries.forEach((entry, i) => {
+        const label = knownAnswerEntries.length > 1 ? ` [known_answer entry ${i + 1}]` : "";
+        if (!entry?.input) {
+          errors.push(`test_fixtures.known_answer.input is required${label}`);
+        }
+        if (!entry?.expected_fields?.length) {
+          errors.push(`test_fixtures.known_answer.expected_fields must have at least 1 entry${label}`);
+        }
+      });
     }
   } else {
     // In discover mode, we need at least health_check_input or known_answer.input
-    if (!m.test_fixtures?.health_check_input && !m.test_fixtures?.known_answer?.input) {
+    if (!m.test_fixtures?.health_check_input && knownAnswerEntries.length === 0) {
       errors.push("--discover requires test_fixtures.health_check_input or test_fixtures.known_answer.input");
     }
   }

@@ -63,54 +63,53 @@ maintenance_class: free-stable-api
 processes_personal_data: false
 geography: fr
 test_fixtures:
-  known_answer:
-    input:
-      siren: "345086177"
-    expected_fields:
-      - field: query
-        operator: not_null
-        reliability: guaranteed
-      - field: query
-        operator: type
-        reliability: guaranteed
-        value: object
-      - field: result_count
-        operator: not_null
-        reliability: guaranteed
-      - field: result_count
-        operator: gt
-        reliability: guaranteed
-        value: 0
-      - field: insolvency_notices
-        operator: not_null
-        reliability: guaranteed
-      - field: insolvency_notices
-        operator: type
-        reliability: guaranteed
-        value: array
-  # Real coverage of the name-search path (the anyOf allows
-  # siren | company_name | task; known_answer covers siren only).
-  # Verified live 2026-08-14: company_name "Camaieu" returned 8 BODACC
-  # procedures collectives notices.
+  # known_answer is array-form: one fixture per entry point, satisfying
+  # Gate 5's PRIMARY (siren) + SECONDARY (company_name) requirement
+  # (DEC-20260411-B, gate5-path-coverage.ts). Entry 2 verified live against
+  # BODACC 2026-08-14: company_name "Camaieu" returns 8 procédures
+  # collectives notices — re-confirmed at the time of this array-form
+  # conversion (previous session's verification pre-dates the pipeline
+  # change that lets this actually count toward the gate).
   #
-  # NOTE: this does NOT satisfy Gate 5, which counts only known_answer and
-  # schema_check suites (see lib/gate5-path-coverage.ts). The manifest format
-  # allows a single known_answer fixture, so no dual-entry-point capability
-  # can currently pass that gate — spanish-company-data and
-  # norwegian-company-data are both live at 19/20 for the same reason.
-  # Fixing that needs a pipeline change (per-entry-point fixture arrays),
-  # tracked separately.
-  edge_case:
-    input:
-      company_name: "Camaieu"
-    expected_fields:
-      - field: result_count
-        operator: not_null
-        reliability: guaranteed
-      - field: query
-        operator: not_null
-        reliability: guaranteed
-
+  # The `type: object` / `type: array` assertions from the original
+  # single-siren fixture are dropped here rather than duplicated: onboard.ts's
+  # checkFieldAssertion uses `typeof actual === ef.value`, and `typeof []`
+  # is "object" in JS — `type: array` can never pass. The not_null
+  # assertion on the same field already covers presence; type-shape is
+  # exercised by schema_check separately.
+  known_answer:
+    - input:
+        siren: "345086177"
+      expected_fields:
+        - field: query
+          operator: not_null
+          reliability: guaranteed
+        - field: result_count
+          operator: not_null
+          reliability: guaranteed
+        - field: result_count
+          operator: gt
+          reliability: guaranteed
+          value: 0
+        - field: insolvency_notices
+          operator: not_null
+          reliability: guaranteed
+    - input:
+        company_name: "Camaieu"
+      expected_fields:
+        - field: query
+          operator: not_null
+          reliability: guaranteed
+        - field: result_count
+          operator: not_null
+          reliability: guaranteed
+        - field: result_count
+          operator: gt
+          reliability: guaranteed
+          value: 0
+        - field: insolvency_notices
+          operator: not_null
+          reliability: guaranteed
   health_check_input:
     siren: "345086177"
 output_field_reliability:
