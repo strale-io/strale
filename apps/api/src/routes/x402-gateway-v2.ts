@@ -37,6 +37,7 @@ import {
   type X402VerifiedPayment,
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
+import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { extractClientMeta, recordDiscoveryHit } from "../lib/attribution.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
@@ -960,9 +961,18 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
         sol.inputSchema, "POST", sol.outputSchema,
         challengeVersion,
       );
-      // No Payment-Required header: the body is the canonical source. Emitting a
-      // v1-encoded header trips v2-only header decoders (e.g. @agentcash/discovery)
-      // which never fall back to body parsing once any header is present.
+      // Legacy paths: no Payment-Required header — the v1 body is the
+      // canonical source, and a v1-encoded header trips v2-only header
+      // decoders (e.g. @agentcash/discovery) which never fall back to body
+      // parsing once any header is present. v2 paths: the header is
+      // REQUIRED — @x402/core's client reads PAYMENT-REQUIRED first and its
+      // body fallback is v1-only, so canonical v2 clients cannot pay a
+      // header-less v2 challenge (found live-verifying the x402 example
+      // template, 2026-08-13). A v2-encoded header doesn't retrigger the
+      // @agentcash issue: that decoder chokes on v1 encodings, not v2.
+      if (challengeVersion === 2) {
+        c.header("PAYMENT-REQUIRED", encodePaymentRequiredHeader(body as never));
+      }
       return c.json(body, 402);
     }
 
@@ -993,6 +1003,9 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
       // strictly and would otherwise surface a parse error instead).
       const failBody = { ...solRebuild.body } as Record<string, unknown>;
       failBody.error = `Payment verification failed: ${verification.error ?? "unknown reason"}`;
+      if (challengeVersion === 2) {
+        c.header("PAYMENT-REQUIRED", encodePaymentRequiredHeader(failBody as never));
+      }
       return c.json(failBody, 402);
     }
     verified = verification.verified;
@@ -1175,7 +1188,10 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         cap.inputSchema, cap.x402Method, cap.outputSchema,
         challengeVersion,
       );
-      // See note on the solutions handler above — no Payment-Required header.
+      // See the solutions handler note: header only on v2 paths.
+      if (challengeVersion === 2) {
+        c.header("PAYMENT-REQUIRED", encodePaymentRequiredHeader(body as never));
+      }
       return c.json(body, 402);
     }
 
@@ -1206,6 +1222,9 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
       // Spec-shaped failure — see the solutions handler.
       const failBody = { ...capRebuild.body } as Record<string, unknown>;
       failBody.error = `Payment verification failed: ${verification.error ?? "unknown reason"}`;
+      if (challengeVersion === 2) {
+        c.header("PAYMENT-REQUIRED", encodePaymentRequiredHeader(failBody as never));
+      }
       return c.json(failBody, 402);
     }
     verified = verification.verified;
