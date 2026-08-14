@@ -139,14 +139,19 @@ describe("check-pii Detector 1 (manifest PII-field name check, unchanged)", () =
   });
 
   it("flags a real-looking name in a PII field", () => {
+    // Name-shaped and unprefixed, so it exercises the heuristic — but NOT the
+    // real individual from the 2026-08-14 incident. Committing that name here
+    // would land real personal data on main via the PR that exists to remove
+    // it, and Detector 2 deliberately does not match names, so nothing would
+    // have caught it.
     const found: Array<{ path: string; name: string }> = [];
     walkPiiFields(
-      { legal_representatives: [{ type: "person", name: "LUCA SCURIATTI" }] },
+      { legal_representatives: [{ type: "person", name: "MARIO ROSSI" }] },
       "output_schema.example",
       found,
     );
     expect(found).toHaveLength(1);
-    expect(found[0].name).toBe("LUCA SCURIATTI");
+    expect(found[0].name).toBe("MARIO ROSSI");
   });
 });
 
