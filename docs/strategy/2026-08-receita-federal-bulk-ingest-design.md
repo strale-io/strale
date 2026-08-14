@@ -718,25 +718,34 @@ all.** They are a fixture bug, not a customer signal.
 `ReceitaWS returned HTTP 429` (11 in 14 days) and one 404. **The actual customer-facing defect is a
 rate limit — and we are the ones consuming it.**
 
-The mechanism is verified, not inferred. `test_suites` for this slug:
+The mechanism, verified against the scheduler source and prod:
 
-| test_type | test_mode | active | `estimated_cost_cents` | `external_cost_cents` |
-| --- | --- | --- | ---: | ---: |
-| known_answer | `live` | true | **80** | **0** |
-| schema_check | `live` | true | **80** | **0** |
-| dependency_health, edge_case, known_bad, negative | `live` | true | 0 | **0** |
-| piggyback | `live` | true | 0 | 0 |
+| | value |
+| --- | --- |
+| `test_suites` for this slug | 7 rows, **all `test_mode='live'`, all `active`, all `scheduled_testing_eligible = TRUE`** |
+| scheduler filter | `ts.scheduled_testing_eligible = TRUE` + slug-hash stagger (`test-scheduler.ts:288,347`) |
+| `capabilities.cost_class` | **`free_unlimited`**, `quota_window = 'none'`, `quota_cap = NULL` |
+| ReceitaWS free tier | ~3 requests/minute |
 
-**`external_cost_cents = 0` is the bug.** Under DEC-20260503-B the scheduler dispatches hourly
-exactly those capabilities whose `external_cost_cents = 0`. Six of the seven suites are schedulable
-(piggyback is excluded by Principle C), all in `live` mode — **6 suites × hourly ≈ 60 calls/day,
-which matches the observed volume precisely.**
+**The bug is the `cost_class`.** ReceitaWS is not `free_unlimited` — it is rate-limited, which is
+precisely the `free_quota` class that `guardedExecute`'s ALLOW_MATRIX exists to budget-check.
+Declaring it unlimited disarms that check: the gate sees no quota to protect, the scheduler sees an
+eligible suite, and six schedulable suites (piggyback is excluded per Principle C) dispatch hourly —
+**≈60 calls/day, matching the observed volume.**
 
-Note that the real cost *was* declared, in `estimated_cost_cents = 80` on two suites. The scheduler
-does not read that column. The capability is therefore classified as free and proactively tested
-against a rate-limited third party ~60×/day, while ReceitaWS's free tier permits roughly 3 requests
-per minute. Strale is rate-limiting itself, and the collateral damage lands on the only people
-paying.
+This is the same incident repeating. `guarded-executor.ts` opens by documenting the 2026-05-11
+finding that 95% of 60-day DE OpenRegister traffic came from the test scheduler and exhausted a
+50/month free tier, with the root cause named as *"scheduler treated `external_cost_cents = 0` as
+'free to test,' conflating 'no per-call cost' with 'no quota'."* The machinery built in response is
+present and working as designed. `brazilian-company-data` simply carries a classification that tells
+it there is nothing to protect.
+
+> **Correction.** An earlier revision of this document (and a PR comment) asserted that the
+> scheduler dispatches on `external_cost_cents = 0`. That is wrong, and it is the exact conflation
+> the 2026-05-11 incident identified. The scheduler reads `scheduled_testing_eligible`;
+> `external_cost_cents` is billing-only (`schema.ts:571-577`). The claim came from CLAUDE.md's
+> simplified paraphrase, which is stale, and I labelled it "verified" without reading the scheduler.
+> The corrected control flow is in §7.3.
 
 ### 7.2 Against the standard the platform already set
 
@@ -749,17 +758,30 @@ document was written to stop.
 
 ### 7.3 Do this instead — roughly two hours
 
-1. **Fix the self-inflicted 429s.** Set `external_cost_cents` to a non-zero value on the
-   `brazilian-company-data` suites so the free-only scheduler stops dispatching them hourly, and/or
-   move them to `test_mode = 'fixture'`. This fixes the only failure real paying customers
-   experience. *Highest value per minute in this entire document.*
+1. **Fix the self-inflicted 429s.** *Highest value per minute in this entire document.* Two changes,
+   and the order of operations matters:
+
+   - **Reclassify** `brazilian-company-data` from `cost_class = 'free_unlimited'` to `'free_quota'`
+     with a real `quota_window` / `quota_cap`. This is the actual defect and it re-arms
+     `guardedExecute`'s budget check for every non-customer context.
+   - **Stop the hourly dispatch.** Set `external_cost_cents` to a non-zero value on the suites —
+     **not** `scheduled_testing_eligible` directly.
+
+   **The trap: do not hand-edit `scheduled_testing_eligible`.** Startup migration Block 0066 runs on
+   *every boot* and executes
+   `UPDATE test_suites SET scheduled_testing_eligible = (external_cost_cents = 0)` as an interim
+   derivation bridge, with a post-condition that **fails boot** if any row disagrees. A manual
+   eligibility flip is silently reverted at the next deploy. `external_cost_cents` is therefore the
+   only durable control knob today — which is confusing, because it is documented as billing-only
+   and the scheduler does not read it. That indirection is worth removing when PR B lands and
+   forces explicit eligibility declarations.
 
    **Then check whether this is systemic.** The failure is not BR-specific: any capability whose
-   upstream is rate-limited but whose `external_cost_cents` is left at the `0` default gets
-   proactively hammered by the hourly scheduler. Worth one query across the catalogue —
-   `external_cost_cents = 0 AND test_mode = 'live'` on capabilities with a metered or throttled
-   dependency — before assuming Brazil is the only one. A rate limit is a cost even when the invoice
-   is €0, and the schema currently has no way to say so.
+   upstream is rate-limited but which is classified `free_unlimited` gets proactively dispatched.
+   Worth one catalogue-wide query joining `cost_class = 'free_unlimited'` against capabilities with a
+   metered or throttled dependency. **A rate limit is a cost even when the invoice is €0** — that is
+   the lesson the 2026-05-11 DE OpenRegister incident already paid for, and this is its second
+   occurrence.
 2. **Fix the `{}` fixture** so the harness stops generating 2,100 fake failures a quarter and
    poisoning the quality signal. Under DEC-20260812-A's quality floor, a 59% "failure rate" that is
    entirely self-generated could quarantine a working capability.
@@ -873,7 +895,11 @@ Everything below was executed on 2026-08-14. Total bulk data downloaded: **< 6 M
 | 22 | Vendor name-search support | primary API docs per vendor | 4 confirmed (§7.4); CNPJ.ws public API, CNPJá open API, OpenCNPJ, Speedio, Econodata v3, Consultar.IO, Infosimples all CNPJ-in only |
 | 23 | Vendor redistribution terms | ToS pages | CNPJ.ws **prohibits resale** (quoted); Casa dos Dados silent; CNPJá unreachable (429 ×8); BigDataCorp marketing page only |
 | 24 | `minha-receita` sizing + name search | project docs + `db/pagination.go` | **~180 GB** (140 GB tables + 10 GB idx + ~30 GB working); RAM/CPU/ingest-time **undocumented**; **no name search, by design**; full monthly reload; project moved to Codeberg |
-| 25 | BR test-suite config | `test_suites WHERE capability_slug='brazilian-company-data'` (read-only) | 7 suites, **all `test_mode='live'`, all `active`, all `external_cost_cents=0`**; `estimated_cost_cents=80` on known_answer + schema_check. 6 schedulable × hourly ≈ 60/day — **matches observed volume**. §7.1 |
+| 25 | BR test-suite config | `test_suites WHERE capability_slug='brazilian-company-data'` (read-only) | 7 suites, **all `test_mode='live'`, `active`, `scheduled_testing_eligible=TRUE`**. 6 schedulable × hourly ≈ 60/day — **matches observed volume** |
+| 26 | Scheduler eligibility filter | `apps/api/src/jobs/test-scheduler.ts:288,347` | `ts.scheduled_testing_eligible = TRUE`. **`external_cost_cents` is billing-only** (`schema.ts:571-577`) — CLAUDE.md's "dispatches capabilities where `external_cost_cents = 0`" is a stale paraphrase |
+| 27 | Cost classification | `capabilities WHERE slug='brazilian-company-data'` (read-only) | **`cost_class='free_unlimited'`, `quota_window='none'`, `quota_cap=NULL`** — wrong for a ~3 req/min vendor; disarms the `guardedExecute` budget check. **The actual defect.** §7.1 |
+| 28 | Eligibility is re-derived at boot | `startup-migrations.ts:564-600` (Block 0066) | `UPDATE test_suites SET scheduled_testing_eligible = (external_cost_cents = 0)` every boot, with a boot-failing post-condition. **A hand-edited eligibility flag is reverted on the next deploy.** §7.3 |
+| 29 | Prior occurrence of the same failure | `guarded-executor.ts:1-31` | 2026-05-11: 95% of 60-day DE OpenRegister traffic came from the scheduler, exhausting a 50/mo free tier. Root cause recorded as conflating "no per-call cost" with "no quota" |
 
 **Estimates, flagged.** Row counts (derived from verified bytes ÷ measured line length, ±5%);
 active-company share ~24 M (±20%, scaled from RF's 2024 figure); all Postgres heap/index sizes
