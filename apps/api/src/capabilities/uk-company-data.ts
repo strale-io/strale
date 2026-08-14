@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { classifyNameMatch } from "../lib/company-name-match.js";
+import { pickByName as pickByNameShared } from "../lib/company-name-match.js";
 import { extractCompanyName } from "./lib/browserless-extract.js";
 
 // UK VAT validation is handled by vat-validate.ts (which routes GB → HMRC v2),
@@ -44,40 +44,21 @@ export interface UkNameResolution {
  * already fixed for NO/FI/EE/DE/CH/FR/IE). Pull a page of candidates
  * (items_per_page=20; Companies House caps at 100) and score every one by
  * name; refuse when nothing genuinely matches.
+ *
+ * Thin field-mapping wrapper: the bucket/score/refuse logic itself now lives
+ * once in company-name-match.ts (consolidated 2026-08-14, was duplicated
+ * four ways — see that module's pickByName doc comment). Kept as an exported
+ * `pickByName(query, items)` two-argument function, same shape as before, so
+ * uk-company-data.test.ts and the executor below don't need to change.
  */
 export function pickByName(query: string, items: Array<{ title?: string; company_number?: string }>): UkNameResolution {
-  const exact = new Map<string, string>();
-  const high = new Map<string, string>();
-  for (const item of items) {
-    if (typeof item.title !== "string" || !item.title || !item.company_number) continue;
-    const { match_confidence } = classifyNameMatch(query, item.title);
-    if (match_confidence === "exact" && !exact.has(item.company_number)) exact.set(item.company_number, item.title);
-    else if (match_confidence === "high" && !high.has(item.company_number)) high.set(item.company_number, item.title);
-  }
-
-  const pickUnambiguous = (bucket: Map<string, string>, label: "exact" | "high"): UkNameResolution | null => {
-    if (bucket.size === 0) return null;
-    if (bucket.size === 1) {
-      const [companyNumber, matchedName] = bucket.entries().next().value!;
-      return { companyNumber, matchedName, matchConfidence: label };
-    }
-    const listing = [...bucket.entries()].slice(0, 5).map(([num, n]) => `${n} (${num})`).join("; ");
-    throw new Error(
-      `Ambiguous UK company name "${query}": ${bucket.size} distinct registered ` +
-        `entities are ${label === "exact" ? "exact" : "close"} matches — ${listing}. ` +
-        `Provide the Companies House number (8 digits) to disambiguate.`,
-    );
-  };
-
-  const winner = pickUnambiguous(exact, "exact") ?? pickUnambiguous(high, "high");
-  if (winner) return winner;
-
-  const closest = items.slice(0, 3).map((i) => i.title).filter(Boolean).join(", ");
-  throw new Error(
-    `No confident Companies House match for "${query}". The search is fuzzy and returned only ` +
-      `unrelated entities${closest ? ` (closest: ${closest})` : ""}. ` +
-      `Provide the Companies House number (8 digits) for an exact lookup.`,
-  );
+  const resolved = pickByNameShared(query, items, (item) => item?.title, (item) => item?.company_number, {
+    subjectLabel: "UK company",
+    disambiguationHint: "Provide the Companies House number (8 digits) to disambiguate.",
+    noMatchLabel: "Companies House",
+    noMatchHint: "Provide the Companies House number (8 digits) for an exact lookup.",
+  });
+  return { companyNumber: resolved.id, matchedName: resolved.matchedName, matchConfidence: resolved.matchConfidence };
 }
 
 async function searchCompany(name: string): Promise<UkNameResolution> {
