@@ -7,6 +7,10 @@ category: validation
 cost_class: free_quota
 quota_window: daily
 quota_cap: 2700
+known_rate_limit:
+  value: 45
+  unit: per_minute
+  source_url: https://ip-api.com/docs/api:json
 price_cents: 3
 is_free_tier: false
 input_schema:

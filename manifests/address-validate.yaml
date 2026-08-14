@@ -7,6 +7,10 @@ category: validation
 cost_class: free_quota
 quota_window: daily
 quota_cap: 240
+known_rate_limit:
+  value: 4
+  unit: per_minute
+  source_url: https://operations.osmfoundation.org/policies/nominatim/
 price_cents: 3
 is_free_tier: false
 input_schema:

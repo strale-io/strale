@@ -9,6 +9,10 @@ description: >-
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
+known_rate_limit:
+  value: 120
+  unit: per_minute
+  source_url: https://developer-specs.company-information.service.gov.uk/guides/rateLimiting
 price_cents: 5
 is_free_tier: false
 input_schema:

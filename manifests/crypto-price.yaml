@@ -10,6 +10,10 @@ category: data-extraction
 cost_class: free_quota
 quota_window: daily
 quota_cap: 300
+known_rate_limit:
+  value: 5
+  unit: per_minute
+  source_url: https://support.coingecko.com/hc/en-us/articles/4538771776153
 price_cents: 5
 is_free_tier: false
 input_schema:

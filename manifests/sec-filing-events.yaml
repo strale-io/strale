@@ -7,6 +7,10 @@ category: company-data
 cost_class: free_quota
 quota_window: daily
 quota_cap: 36000
+known_rate_limit:
+  value: 10
+  unit: per_second
+  source_url: https://www.sec.gov/os/webmaster-faq
 price_cents: 5
 data_source: SEC EDGAR
 data_source_type: api

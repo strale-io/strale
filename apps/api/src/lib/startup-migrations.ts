@@ -42,6 +42,10 @@ import { log } from "./log.js";
 import { BLOCK_0064_SLUGS, BLOCK_0065_SLUGS } from "./llm-capability-costs.js";
 import { PHASE_B1_FREE_UNLIMITED_SLUGS } from "./phase-b1-free-unlimited-slugs.js";
 import { PHASE_B3_ANTHROPIC_PAID_PREPAID_SLUGS } from "./phase-b3-anthropic-paid-prepaid-slugs.js";
+import {
+  deriveQuotaCapFromRateLimit,
+  type ManifestKnownRateLimit,
+} from "./capability-manifest-types.js";
 
 /**
  * Minimal executor surface — matches what `getDb().execute()` returns
@@ -1684,39 +1688,66 @@ export async function runMigration0081_attribution(
 // prior classification (correct or not) is what's being corrected, and
 // once corrected to `free_quota` this predicate naturally stops
 // matching (self-terminating, same as the IS NULL blocks above).
+//
+// Follow-up (2026-08-14, same day): quotaCap below used to be 19
+// hand-computed integers with the arithmetic spelled out only in
+// trailing `//` comments — easy to typo, and nothing checked the
+// comment against the number. Now sourced from the same
+// `{value, unit, source_url}` shape the manifest's `known_rate_limit`
+// field carries (capability-manifest-types.ts) and run through the same
+// `deriveQuotaCapFromRateLimit` both this migration and
+// check-cost-class-coherence.mjs's consistency check use — so a mismatch
+// between what this migration writes to the DB and what the manifest
+// declares is now a lint failure, not just a manually-maintained
+// coincidence. This migration still can't read manifests/*.yaml at
+// deploy time (startup migrations must be self-contained, deterministic
+// SQL — no filesystem dependency on repo layout), so the rate-limit
+// facts are re-declared here rather than imported from YAML; they're
+// the same facts as the corresponding manifest's known_rate_limit,
+// verified equal by startup-migrations.test.ts.
 
 interface ThrottledUpstreamReclassifyCap {
   slug: string;
   quotaCap: number;
 }
 
-// quota_cap below is stored under quota_window='daily' but is NOT the
-// vendor's literal daily allowance for the per-minute/per-second-rate
-// entries — see the full derivation methodology in the block comment
-// above. Short version: rate_per_minute × 60 (a conservative 1-hour
-// sustained figure, not rate × 1440). Only the two Etherscan/Open-Meteo
-// entries (100000, 10000) are the vendor's actual literal daily number.
-export const PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY: ReadonlyArray<ThrottledUpstreamReclassifyCap> = [
-  { slug: "brazilian-company-data",     quotaCap: 180 },    // ReceitaWS 3/min
-  { slug: "address-geocode",            quotaCap: 240 },    // Nominatim 4/min (bulk-use policy)
-  { slug: "address-validate",           quotaCap: 240 },    // Nominatim 4/min (bulk-use policy)
-  { slug: "weather-lookup",             quotaCap: 10000 },  // Open-Meteo documented 10k/day
-  { slug: "ip-geolocation",             quotaCap: 2700 },   // ip-api.com 45/min
-  { slug: "ip-risk-score",              quotaCap: 2700 },   // ip-api.com 45/min
-  { slug: "sec-filing-events",          quotaCap: 36000 },  // SEC EDGAR 10/sec fair-access
-  { slug: "contract-verify-check",      quotaCap: 100000 }, // Etherscan documented 100k/day
-  { slug: "gas-price-check",            quotaCap: 100000 }, // Etherscan documented 100k/day
-  { slug: "wallet-age-check",           quotaCap: 100000 }, // Etherscan documented 100k/day
-  { slug: "wallet-balance-lookup",      quotaCap: 100000 }, // Etherscan documented 100k/day
-  { slug: "wallet-transactions-lookup", quotaCap: 100000 }, // Etherscan documented 100k/day
-  { slug: "barcode-lookup",             quotaCap: 900 },    // Open Food Facts 15/min/IP
-  { slug: "crypto-price",               quotaCap: 300 },    // CoinGecko 5-15/min, conservative low end
-  { slug: "company-news",               quotaCap: 720 },    // GDELT 1 req/5s
-  { slug: "approval-security-check",    quotaCap: 1800 },   // GoPlus Labs 30/min
-  { slug: "phishing-site-check",        quotaCap: 1800 },   // GoPlus Labs 30/min
-  { slug: "token-security-check",       quotaCap: 1800 },   // GoPlus Labs 30/min
-  { slug: "wallet-risk-score",          quotaCap: 1800 },   // GoPlus Labs 30/min
+interface ThrottledUpstreamReclassifySource {
+  slug: string;
+  rateLimit: ManifestKnownRateLimit;
+}
+
+// Vendor rate-limit citations — one entry per reclassified capability,
+// mirrored 1:1 on that capability's manifest known_rate_limit field.
+// quotaCap (below) is derived from these, not hand-computed. Exported so
+// startup-migrations.test.ts can assert this list stays byte-identical
+// to each corresponding manifest's known_rate_limit.
+export const PHASE_C1_THROTTLED_UPSTREAM_SOURCE: ReadonlyArray<ThrottledUpstreamReclassifySource> = [
+  { slug: "brazilian-company-data", rateLimit: { value: 3, unit: "per_minute", source_url: "https://receitaws.com.br/api" } },
+  { slug: "address-geocode", rateLimit: { value: 4, unit: "per_minute", source_url: "https://operations.osmfoundation.org/policies/nominatim/" } },
+  { slug: "address-validate", rateLimit: { value: 4, unit: "per_minute", source_url: "https://operations.osmfoundation.org/policies/nominatim/" } },
+  { slug: "weather-lookup", rateLimit: { value: 10000, unit: "per_day", source_url: "https://open-meteo.com/en/pricing" } },
+  { slug: "ip-geolocation", rateLimit: { value: 45, unit: "per_minute", source_url: "https://ip-api.com/docs/api:json" } },
+  { slug: "ip-risk-score", rateLimit: { value: 45, unit: "per_minute", source_url: "https://ip-api.com/docs/api:json" } },
+  { slug: "sec-filing-events", rateLimit: { value: 10, unit: "per_second", source_url: "https://www.sec.gov/os/webmaster-faq" } },
+  { slug: "contract-verify-check", rateLimit: { value: 100000, unit: "per_day", source_url: "https://docs.etherscan.io/etherscan-v2/rate-limits" } },
+  { slug: "gas-price-check", rateLimit: { value: 100000, unit: "per_day", source_url: "https://docs.etherscan.io/etherscan-v2/rate-limits" } },
+  { slug: "wallet-age-check", rateLimit: { value: 100000, unit: "per_day", source_url: "https://docs.etherscan.io/etherscan-v2/rate-limits" } },
+  { slug: "wallet-balance-lookup", rateLimit: { value: 100000, unit: "per_day", source_url: "https://docs.etherscan.io/etherscan-v2/rate-limits" } },
+  { slug: "wallet-transactions-lookup", rateLimit: { value: 100000, unit: "per_day", source_url: "https://docs.etherscan.io/etherscan-v2/rate-limits" } },
+  { slug: "barcode-lookup", rateLimit: { value: 15, unit: "per_minute", source_url: "https://openfoodfacts.github.io/openfoodfacts-server/api/" } },
+  { slug: "crypto-price", rateLimit: { value: 5, unit: "per_minute", source_url: "https://support.coingecko.com/hc/en-us/articles/4538771776153" } },
+  { slug: "company-news", rateLimit: { value: 12, unit: "per_minute", source_url: "https://blog.gdeltproject.org/ukraine-api-rate-limiting-web-ngrams-3-0/" } },
+  { slug: "approval-security-check", rateLimit: { value: 30, unit: "per_minute", source_url: "https://docs.gopluslabs.io/reference/support" } },
+  { slug: "phishing-site-check", rateLimit: { value: 30, unit: "per_minute", source_url: "https://docs.gopluslabs.io/reference/support" } },
+  { slug: "token-security-check", rateLimit: { value: 30, unit: "per_minute", source_url: "https://docs.gopluslabs.io/reference/support" } },
+  { slug: "wallet-risk-score", rateLimit: { value: 30, unit: "per_minute", source_url: "https://docs.gopluslabs.io/reference/support" } },
 ];
+
+export const PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY: ReadonlyArray<ThrottledUpstreamReclassifyCap> =
+  PHASE_C1_THROTTLED_UPSTREAM_SOURCE.map((c) => ({
+    slug: c.slug,
+    quotaCap: deriveQuotaCapFromRateLimit(c.rateLimit),
+  }));
 
 export async function runMigration0082_reclassifyThrottledFreeUnlimited(
   tx: MigrationExecutor,

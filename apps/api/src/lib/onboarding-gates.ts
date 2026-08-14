@@ -17,7 +17,11 @@ import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { eq, inArray } from "drizzle-orm";
 import { logWarn } from "./log.js";
 import type { Manifest } from "./capability-manifest-types.js";
-import { getKnownAnswerFixtures } from "./capability-manifest-types.js";
+import {
+  getKnownAnswerFixtures,
+  getKnownRateLimits,
+  KNOWN_RATE_LIMIT_UNITS,
+} from "./capability-manifest-types.js";
 // Cluster 2 Phase 4a: canonical FIELD_CATEGORIES lives in its own module.
 import {
   FIELD_CATEGORIES as AUTHORITY_FIELDS,
@@ -552,6 +556,29 @@ export function validateManifest(m: Manifest, discover: boolean): string[] {
       errors.push("personal_data_categories is populated but processes_personal_data is false. Either set processes_personal_data: true, or clear the categories.");
     }
   }
+
+  // known_rate_limit — vendor rate-limit citation(s) (Block 0082
+  // follow-up). Optional field; only its *shape* is validated here
+  // (authoring-time, per-manifest gate). Cross-field consistency against
+  // cost_class/quota_cap is deliberately NOT checked here — that's
+  // check-cost-class-coherence.mjs's job (a repo-wide CI lint that also
+  // has to catch drift in manifests nobody re-ran onboard.ts against),
+  // not this per-manifest authoring gate. Single object or array (a
+  // capability touching multiple throttled vendors) — see
+  // getKnownRateLimits()'s doc comment for the full split rationale.
+  const rateLimitEntries = getKnownRateLimits(m);
+  rateLimitEntries.forEach((rl, i) => {
+    const label = rateLimitEntries.length > 1 ? ` [known_rate_limit entry ${i + 1}]` : "";
+    if (typeof rl.value !== "number" || !Number.isFinite(rl.value) || rl.value <= 0) {
+      errors.push(`known_rate_limit.value must be a positive number${label}`);
+    }
+    if (!(KNOWN_RATE_LIMIT_UNITS as readonly string[]).includes(rl.unit)) {
+      errors.push(`known_rate_limit.unit '${rl.unit}' is not valid. Options: ${KNOWN_RATE_LIMIT_UNITS.join(", ")}${label}`);
+    }
+    if (!rl.source_url || typeof rl.source_url !== "string" || !/^https?:\/\//.test(rl.source_url)) {
+      errors.push(`known_rate_limit.source_url is required and must be an http(s) URL (the vendor doc page the number was read from)${label}`);
+    }
+  });
 
   // Per DEC-20260503-A — marketplace_eligible cross-field rule.
   // Field is optional; omitted/undefined → DB default true applies.

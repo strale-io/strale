@@ -9,6 +9,10 @@ category: compliance
 cost_class: free_quota
 quota_window: daily
 quota_cap: 600
+known_rate_limit:
+  value: 120
+  unit: per_minute
+  source_url: https://developer-specs.company-information.service.gov.uk/guides/rateLimiting
 price_cents: 25
 is_free_tier: false
 input_schema:
