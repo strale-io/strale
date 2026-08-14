@@ -21,7 +21,8 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { applyConditionalSolutionBonus } from "./suggest.js";
+import { applyConditionalSolutionBonus, scoreKeywordMatch, type KeywordScorable } from "./suggest.js";
+import { tokenize } from "./tokenize.js";
 
 type Row = { item: { type: "solution" | "capability"; slug: string }; score: number };
 
@@ -108,5 +109,94 @@ describe("conditional solutions bonus", () => {
     const rows = [row("capability", "dns-lookup", 0.71), row("solution", "domain-security-check", 0.64)];
     applyConditionalSolutionBonus(rows, 0.03);
     expect(rows[1].score).toBe(0.64);
+  });
+
+  it("does not lift a weak solution above a capability that outscored it", () => {
+    // The original bug one rank down: with a blanket bonus, the leading
+    // solution's win drags every other solution up with it, so a solution that
+    // matched one word overtakes a capability that matched two. Visible in the
+    // alternatives list and the typeahead dropdown.
+    const rows = [
+      row("solution", "vendor-onboard", 3),
+      row("capability", "vat-validate", 2),
+      row("solution", "invoice-process", 1),
+    ];
+    applyConditionalSolutionBonus(rows);
+    const byScore = [...rows].sort((a, b) => b.score - a.score).map((r) => r.item.slug);
+    expect(byScore).toEqual(["vendor-onboard", "vat-validate", "invoice-process"]);
+    expect(rows[2].score).toBe(1); // untouched — it was already losing on merit
+  });
+});
+
+describe("keyword item scoring", () => {
+  const item = (
+    slug: string,
+    name: string,
+    description: string,
+    tokens: string[],
+  ): KeywordScorable => ({
+    slug,
+    name,
+    description,
+    tokens: new Set(tokens),
+    primaryTokens: new Set(tokens),
+  });
+
+  const score = (it: KeywordScorable, query: string) =>
+    scoreKeywordMatch(it, tokenize(query), []);
+
+  it("reaches a capability through a word stem the token index misses", () => {
+    // "check if an email address is valid" tokenizes "valid", never "validate".
+    // Before prefix matching, email-validate scored on "email" alone and the
+    // query resolved live to eori-validate, an unrelated customs identifier.
+    const emailValidate = item(
+      "email-validate",
+      "Email Validate",
+      "Validate an email address for syntax and deliverability.",
+      ["email", "validate", "address"],
+    );
+    const eoriValidate = item(
+      "eori-validate",
+      "EORI Validate",
+      "Validate an EU customs EORI number.",
+      ["eori", "validate", "customs"],
+    );
+    const q = "check if an email address is valid";
+    expect(score(emailValidate, q)).toBeGreaterThan(score(eoriValidate, q));
+  });
+
+  it("scores an item the query names in full above one sharing a single word", () => {
+    const ibanValidate = item("iban-validate", "IBAN Validate", "Validate an IBAN.", [
+      "iban",
+      "validate",
+    ]);
+    const paymentValidate = item(
+      "payment-validate",
+      "Payment Validate",
+      "Validate payment details end to end.",
+      ["payment", "validate"],
+    );
+    const q = "validate an iban";
+    expect(score(ibanValidate, q)).toBeGreaterThan(score(paymentValidate, q));
+  });
+
+  it("awards the identity bonus only when every slug word is named", () => {
+    const it1 = item("iban-validate", "IBAN Validate", "Validate an IBAN.", ["iban", "validate"]);
+    // "validate" alone must not earn it — that is a partial name, not an identity.
+    expect(score(it1, "validate")).toBeLessThan(score(it1, "validate iban"));
+  });
+
+  it("gives a single-word slug no identity bonus on top of the exact-slug match", () => {
+    // Guard on slugTokens.length > 1. A one-word slug already earns the
+    // exact-slug +2, so without the guard it would collect the identity +2 as
+    // well and outrank multi-word items on a single common word.
+    const solo = item("weather", "Weather", "Current weather.", ["weather"]);
+    // 1 token match + 2 exact-slug, and no identity bonus on top.
+    expect(score(solo, "weather")).toBe(3);
+  });
+
+  it("returns zero for a query sharing nothing with the item", () => {
+    const dns = item("dns-lookup", "DNS Lookup", "Query DNS records.", ["dns", "lookup", "records"]);
+    expect(score(dns, "sanctions screening")).toBe(0);
   });
 });

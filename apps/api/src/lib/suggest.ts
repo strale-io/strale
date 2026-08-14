@@ -61,10 +61,16 @@ export function applyConditionalSolutionBonus<
       -Infinity,
     );
 
-  if (topOf(true) < topOf(false)) return;
+  const topCapability = topOf(false);
+  if (topOf(true) < topCapability) return;
 
+  // Only solutions that are themselves at least as good as the best capability
+  // are lifted. Boosting the whole field would let a solution that matched one
+  // word overtake a capability that matched two — the original bug in
+  // miniature, one rank further down, where it shows up in the alternatives
+  // list and the typeahead dropdown rather than in the recommendation.
   for (const s of scored) {
-    if (s.item.type === "solution") s.score += bonus;
+    if (s.item.type === "solution" && s.score >= topCapability) s.score += bonus;
   }
 }
 
@@ -975,6 +981,64 @@ function fallbackRanking(
 
 // ─── Keyword fallback (no Voyage) ───────────────────────────────────────────
 
+/** The subset of a catalog item this scorer reads. Narrowed so tests can build
+ *  one without standing up an embedding or a trust summary. */
+export interface KeywordScorable {
+  slug: string;
+  name: string;
+  description: string;
+  tokens: Set<string>;
+  primaryTokens: Set<string>;
+}
+
+/**
+ * Score one catalog item against a tokenized query. Exported for testing — the
+ * ranking rules here decide what a caller discovers, so they are worth pinning
+ * down directly rather than only through the endpoint.
+ */
+export function scoreKeywordMatch(
+  item: KeywordScorable,
+  queryTokens: Set<string>,
+  aliasTerms: Iterable<string>,
+): number {
+  let score = 0;
+
+  for (const token of queryTokens) {
+    if (item.tokens.has(token)) score++;
+  }
+  for (const term of aliasTerms) {
+    if (item.primaryTokens.has(term)) score += ALIAS_PRIMARY_WEIGHT;
+    else if (item.tokens.has(term)) score += ALIAS_SECONDARY_WEIGHT;
+  }
+  if (queryTokens.has(item.slug)) score += 2;
+
+  // Prefix matching on name and description, mirroring `typeahead`. Tokens are
+  // exact-match only, so without this the two scorers disagree: a developer
+  // asking whether an email address "is valid" never reaches email-validate,
+  // because "valid" is not the token "validate". The best match then fell to
+  // whichever unrelated item happened to share a common word — live, that query
+  // returned eori-validate, a customs identifier.
+  const nameWords = item.name.toLowerCase().split(/[\s\-—]+/);
+  const descWords = item.description.toLowerCase().split(/[\s\-—]+/);
+  for (const qw of queryTokens) {
+    if (item.tokens.has(qw)) continue; // already counted as an exact match
+    if (nameWords.some((w) => w.startsWith(qw))) score++;
+    if (descWords.some((w) => w.startsWith(qw))) score++;
+  }
+
+  // Identity match: the query names every word of this item's slug, so it is
+  // asking for this thing by name ("validate an IBAN" → iban-validate). Type-
+  // neutral: a solution named in full earns it too. Without this, naming a
+  // capability exactly only ties the broader solution sharing one word, and the
+  // tie goes to the solution.
+  const slugTokens = item.slug.split("-").filter((t) => t.length > 2);
+  if (slugTokens.length > 1 && slugTokens.every((t) => queryTokens.has(t))) {
+    score += 2;
+  }
+
+  return score;
+}
+
 function suggestKeyword(
   query: string,
   items: CatalogItem[],
@@ -998,40 +1062,7 @@ function suggestKeyword(
   const scored: Array<{ item: CatalogItem; score: number }> = [];
 
   for (const item of items) {
-    let score = 0;
-    for (const token of queryTokens) {
-      if (item.tokens.has(token)) score++;
-    }
-    for (const term of aliasTerms) {
-      if (item.primaryTokens.has(term)) score += ALIAS_PRIMARY_WEIGHT;
-      else if (item.tokens.has(term)) score += ALIAS_SECONDARY_WEIGHT;
-    }
-    if (queryTokens.has(item.slug)) score += 2;
-
-    // Prefix matching on name and description, mirroring `typeahead`. Tokens
-    // are exact-match only, so without this the scorers disagree: a developer
-    // asking whether an email address "is valid" never reaches email-validate,
-    // because "valid" is not the token "validate". The best match then falls to
-    // whichever unrelated item happened to share a common word — live, that
-    // query returned eori-validate, a customs identifier.
-    const nameWords = item.name.toLowerCase().split(/[\s\-—]+/);
-    const descWords = item.description.toLowerCase().split(/[\s\-—]+/);
-    for (const qw of queryTokens) {
-      if (item.tokens.has(qw)) continue; // already counted as an exact match
-      if (nameWords.some((w) => w.startsWith(qw))) score++;
-      if (descWords.some((w) => w.startsWith(qw))) score++;
-    }
-
-    // Identity match: the query names every word of this item's slug, so it is
-    // asking for this thing by name ("validate an IBAN" → iban-validate). Type
-    // -neutral — a solution named in full earns it too. Without this, naming a
-    // capability exactly only ties the broader solution that shares one word,
-    // and the tie goes to the solution.
-    const slugTokens = item.slug.split("-").filter((t) => t.length > 2);
-    if (slugTokens.length > 1 && slugTokens.every((t) => queryTokens.has(t))) {
-      score += 2;
-    }
-
+    const score = scoreKeywordMatch(item, queryTokens, aliasTerms);
     if (score > 0) scored.push({ item, score });
   }
 
