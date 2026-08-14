@@ -1540,6 +1540,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0079_eeDirectors,
   runMigration0080_cyDirectors,
   runMigration0081_attribution,
+  runMigration0082_reclassifyThrottledFreeUnlimited,
 ];
 
 /**
@@ -1581,6 +1582,183 @@ export async function runMigration0081_attribution(
   return {
     block: "0081_attribution",
     outcome: "client_meta column + discovery_hits table ensured (idempotent)",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0082: reclassify throttled-upstream free_unlimited caps ─────────
+//
+// Audit follow-up (2026-08-14). `free_unlimited` disarms the
+// guarded-executor.ts ALLOW_MATRIX entirely ("allow, no constraint" for
+// every invocation context) — the exact conflation the 2026-05-11 DE
+// OpenRegister incident post-mortem named as root cause: "no per-call
+// cost" was read as "no quota." A production audit of all 193
+// `free_unlimited` caps found 19 whose upstream vendor documents a real
+// rate limit or daily cap; the rest (algorithmic, static-table, or
+// arbitrary-customer-target fetches with no vendor account/quota) are
+// correctly free_unlimited and untouched.
+//
+// Quota_cap derivation. Where the vendor documents a literal daily
+// total, that number is used directly (Etherscan 100,000/day; Open-Meteo
+// 10,000/day). Where the vendor documents only a per-minute or
+// per-second rate, quota_cap is the rate's 1-hour-sustained volume
+// (rate_per_minute × 60) — a deliberately conservative fraction of the
+// naive 24h extrapolation, matching the conservative-estimate posture
+// Block 0075/0077 already established for this table. This number only
+// bounds Strale's own internal_test/ci budget (10%/20% of quota_cap per
+// window, per computeBudgetCap) — customer_paid traffic is unaffected
+// per the ALLOW_MATRIX (free_quota × customer_paid = allow). Per-cap
+// vendor citations:
+//
+//   - brazilian-company-data: ReceitaWS free tier, 3 req/min
+//     (https://receitaws.com.br/api; corroborated across public API
+//     directories). quota_cap = 3×60 = 180.
+//   - address-geocode, address-validate: OSM Nominatim Usage Policy
+//     (https://operations.osmfoundation.org/policies/nominatim/) —
+//     "absolute maximum of 1 request per second" for casual use, but
+//     "restricted to a lower limit of 4 requests per minute" for bulk /
+//     regular-interval automated use, which is what a production
+//     capability does. quota_cap = 4×60 = 240. (address-validate.ts
+//     already self-throttles at ~1 req/1.1s in-process; that bounds
+//     burst rate but not cumulative scheduler volume across restarts —
+//     the two protections are complementary, not redundant.)
+//   - weather-lookup: Open-Meteo pricing page
+//     (https://open-meteo.com/en/pricing) — "Daily Limit 10.000 calls /
+//     day" for free non-commercial use. quota_cap = 10000 (literal).
+//   - ip-geolocation, ip-risk-score: ip-api.com docs
+//     (https://ip-api.com/docs/api:json) — "limited to 45 requests per
+//     minute from an IP address" (also already noted in
+//     ip-geolocation.ts's own header comment). quota_cap = 45×60 = 2700.
+//   - sec-filing-events: SEC.gov fair-access policy
+//     (https://www.sec.gov/os/webmaster-faq, in effect since 2021-07-27)
+//     — "no more than 10 requests per second," applies site-wide
+//     including data.sec.gov (used by this executor). quota_cap =
+//     10×60×60 = 36000.
+//   - contract-verify-check, gas-price-check, wallet-age-check,
+//     wallet-balance-lookup, wallet-transactions-lookup: shared
+//     lib/etherscan-client.ts. Etherscan free-tier rate limits
+//     (docs.etherscan.io/etherscan-v2/rate-limits, corroborated via
+//     info.etherscan.com/api-return-errors) — 5 calls/second, 100,000
+//     calls/day. quota_cap = 100000 (literal). The client already
+//     self-throttles to ~4.76 req/s in-process; same complementary
+//     relationship as Nominatim above — it doesn't bound the 100k/day
+//     total across a long-running or multi-instance process.
+//   - barcode-lookup: Open Food Facts API docs
+//     (https://openfoodfacts.github.io/openfoodfacts-server/api/) —
+//     "15 req/min/IP address for all read product queries," which is
+//     the exact endpoint this executor calls. quota_cap = 15×60 = 900.
+//   - crypto-price: CoinGecko official support article
+//     (https://support.coingecko.com/hc/en-us/articles/4538771776153) —
+//     public/keyless plan "5 to 15 calls per minute depending on usage
+//     conditions." Conservative low end used. quota_cap = 5×60 = 300.
+//   - company-news: GDELT Project's own blog
+//     (https://blog.gdeltproject.org/ukraine-api-rate-limiting-web-ngrams-3-0/)
+//     — "one request every 5 seconds" per IP (= 12/min). quota_cap =
+//     12×60 = 720.
+//   - approval-security-check, phishing-site-check, token-security-check,
+//     wallet-risk-score: GoPlus Labs official docs
+//     (https://docs.gopluslabs.io/reference/support) — "the rate limit
+//     is 30 calls/minute" for the free tier without an access token
+//     (none of these 4 executors send one). quota_cap = 30×60 = 1800.
+//
+// Deliberately NOT reclassified (checked, left free_unlimited): DefiLlama
+// (protocol-fees-lookup, protocol-tvl-lookup, stablecoin-flow-check) —
+// vendor docs state no rate limit on the free API. GLEIF (lei-lookup,
+// gleif-l2-children-lookup, gleif-l2-ubo-lookup) — vendor docs state no
+// rate limiting. PyPI (pypi-package-info) — vendor docs state no edge
+// rate limiting. Nager.Date (business-day-check, holiday-calendar,
+// public-holiday-lookup) — vendor docs state unlimited. Docker Hub
+// (docker-hub-info) — the documented 100-pulls/6h limit applies to
+// registry image pulls, not the hub.docker.com/v2/repositories/
+// metadata endpoint this executor actually calls; no rate limit found
+// documented for that endpoint. Zippopotam.us (postal-code-lookup) — no
+// published limit ("no hard limits ... best-effort"). A broader set of
+// ~50 other free_unlimited caps with third-party vendor data sources
+// (e.g. npm-package-info, several EU open-data CKAN company registries,
+// Yahoo Finance-backed caps) were surfaced but not individually
+// re-verified in this pass — see PR body for the full candidate list;
+// left alone per "don't guess" rather than reclassified speculatively.
+//
+// Reclassification (not first-time classification), so the idempotency
+// gate is `cost_class = 'free_unlimited'` per slug, not `IS NULL` — a
+// prior classification (correct or not) is what's being corrected, and
+// once corrected to `free_quota` this predicate naturally stops
+// matching (self-terminating, same as the IS NULL blocks above).
+
+interface ThrottledUpstreamReclassifyCap {
+  slug: string;
+  quotaCap: number;
+}
+
+// quota_cap below is stored under quota_window='daily' but is NOT the
+// vendor's literal daily allowance for the per-minute/per-second-rate
+// entries — see the full derivation methodology in the block comment
+// above. Short version: rate_per_minute × 60 (a conservative 1-hour
+// sustained figure, not rate × 1440). Only the two Etherscan/Open-Meteo
+// entries (100000, 10000) are the vendor's actual literal daily number.
+export const PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY: ReadonlyArray<ThrottledUpstreamReclassifyCap> = [
+  { slug: "brazilian-company-data",     quotaCap: 180 },    // ReceitaWS 3/min
+  { slug: "address-geocode",            quotaCap: 240 },    // Nominatim 4/min (bulk-use policy)
+  { slug: "address-validate",           quotaCap: 240 },    // Nominatim 4/min (bulk-use policy)
+  { slug: "weather-lookup",             quotaCap: 10000 },  // Open-Meteo documented 10k/day
+  { slug: "ip-geolocation",             quotaCap: 2700 },   // ip-api.com 45/min
+  { slug: "ip-risk-score",              quotaCap: 2700 },   // ip-api.com 45/min
+  { slug: "sec-filing-events",          quotaCap: 36000 },  // SEC EDGAR 10/sec fair-access
+  { slug: "contract-verify-check",      quotaCap: 100000 }, // Etherscan documented 100k/day
+  { slug: "gas-price-check",            quotaCap: 100000 }, // Etherscan documented 100k/day
+  { slug: "wallet-age-check",           quotaCap: 100000 }, // Etherscan documented 100k/day
+  { slug: "wallet-balance-lookup",      quotaCap: 100000 }, // Etherscan documented 100k/day
+  { slug: "wallet-transactions-lookup", quotaCap: 100000 }, // Etherscan documented 100k/day
+  { slug: "barcode-lookup",             quotaCap: 900 },    // Open Food Facts 15/min/IP
+  { slug: "crypto-price",               quotaCap: 300 },    // CoinGecko 5-15/min, conservative low end
+  { slug: "company-news",               quotaCap: 720 },    // GDELT 1 req/5s
+  { slug: "approval-security-check",    quotaCap: 1800 },   // GoPlus Labs 30/min
+  { slug: "phishing-site-check",        quotaCap: 1800 },   // GoPlus Labs 30/min
+  { slug: "token-security-check",       quotaCap: 1800 },   // GoPlus Labs 30/min
+  { slug: "wallet-risk-score",          quotaCap: 1800 },   // GoPlus Labs 30/min
+];
+
+export async function runMigration0082_reclassifyThrottledFreeUnlimited(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  // Single VALUES-CTE UPDATE (same shape as Block 0072, which already
+  // solved "19 rows, each with a different quota_cap" in one round trip)
+  // rather than a per-cap loop — at 19 rows this is well past the point
+  // where Block 0075's 8-row "keeps the SQL trivial for chat review"
+  // trade-off still wins. Reclassification, not first-time
+  // classification, so the safety filter is `c.cost_class =
+  // 'free_unlimited'` rather than `IS NULL`. This also means a cap
+  // manually reclassified to something else between deploys (e.g. an
+  // operator moved one to paid_prepaid) is left alone.
+  const valuesRows = PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY.map((c) => {
+    const slug = c.slug.replace(/'/g, "''");
+    return `('${slug}', ${c.quotaCap})`;
+  }).join(",\n      ");
+
+  const result = await tx.execute(sql.raw(`
+    UPDATE capabilities AS c
+       SET cost_class = 'free_quota',
+           quota_window = 'daily',
+           quota_cap = v.quota_cap,
+           quota_reset_dom = NULL,
+           updated_at = NOW()
+      FROM (VALUES
+      ${valuesRows}
+      ) AS v(slug, quota_cap)
+     WHERE c.slug = v.slug
+       AND c.cost_class = 'free_unlimited'
+  `));
+  const updateCount = (result as { count?: number }).count ?? 0;
+
+  return {
+    block: "0082_reclassify_throttled_free_unlimited",
+    outcome:
+      updateCount === 0
+        ? `no rows to reclassify (all ${PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY.length} slugs already non-free_unlimited)`
+        : `reclassified ${updateCount} cap(s) from free_unlimited to free_quota (of ${PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY.length} target slugs)`,
+    rows_affected: updateCount,
     duration_ms: Date.now() - startedAt,
   };
 }
