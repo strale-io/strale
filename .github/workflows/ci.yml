@@ -67,14 +67,23 @@ jobs:
       # time, and with onboard.ts verifyFixtures which fires at manifest
       # authoring time.
       - run: node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict
-      # Manifest PII guard. scrubFixture()/PII_ARRAY_FIELDS run at CAPTURE time
-      # on executor output; manifests are hand-authored, so an example pasted
-      # from a live response ships real people's names and no machinery ever
-      # looks at it. That is how five manifests came to carry real board
-      # members and partners for ~3 months after the 2026-05-18 fixture audit
-      # flagged two of them. Enforces that PII-bearing arrays in manifest
-      # examples are empty, null, or explicitly synthetic.
-      - run: node apps/api/scripts/check-manifest-pii.mjs --strict
+      # PII guard (renamed + widened 2026-08-14, was check-manifest-pii.mjs).
+      # scrubFixture()/PII_ARRAY_FIELDS run at CAPTURE time on executor
+      # output; manifests are hand-authored, so an example pasted from a
+      # live response ships real people's names and no machinery ever looks
+      # at it. That is how five manifests came to carry real board members
+      # and partners for ~3 months after the 2026-05-18 fixture audit
+      # flagged two of them (Detector 1, manifests/ only, unchanged logic).
+      # The 2026-08-14 italian-company-stakeholders incident showed the same
+      # live response duplicated into a scripts/ smoke fixture that this
+      # gate didn't scan — manifests/ was scrubbed, CI went green, the
+      # scripts/ copy shipped. Detector 2 closes that gap with a wider-scope,
+      # checksum-gated scan (codice fiscale, IBAN) across manifests/,
+      # apps/api/scripts/, apps/api/test(s)/, apps/api/coverage-matrix/,
+      # archive/, audit-output/, handoff/, docs/, apps/api/docs/. See the
+      # script header for why identifier-format + checksum was chosen over
+      # a name-shaped heuristic for the wider scope.
+      - run: node apps/api/scripts/check-pii.mjs --strict
       # Phase 1 tier-coverage gate (WARN-ONLY). For each manifest with a
       # captured response fixture at apps/api/tests/fixtures/tier-coverage/
       # <slug>.json, compares empirical wire-shape against manifest
@@ -103,4 +112,11 @@ jobs:
       # this fires for real, with the frontend checked out alongside.
       # Run with --list to see registered contracts.
       - run: node apps/api/scripts/check-shape-contracts.mjs
+      # Phase A0b cost_class coherence + Block 0082 throttled-vendor guard
+      # (2026-08-14): cross-checks manifest cost_class against the vendor
+      # env vars / hostnames the executor actually reads. Existed since
+      # Phase A0b but was never wired into CI; the free_unlimited vs
+      # throttled-upstream audit that produced Block 0082 is exactly the
+      # class of drift this catches, so it goes live here.
+      - run: node apps/api/scripts/check-cost-class-coherence.mjs
       - run: npm test

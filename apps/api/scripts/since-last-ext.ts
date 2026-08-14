@@ -1,10 +1,11 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SYSTEM_ACCOUNT_EMAIL } from "./lib/internal-accounts.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_FILE = resolve(__dirname, "../../../.claude/state/last-activity-check.json");
-const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", "system@strale.internal", "test@example.com"];
+const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", SYSTEM_ACCOUNT_EMAIL, "test@example.com"];
 
 function fmtCET(d: Date): string {
   const parts = new Intl.DateTimeFormat("sv-SE", {

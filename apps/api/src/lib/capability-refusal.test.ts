@@ -82,14 +82,26 @@ function realRefusals(): Array<{ label: string; err: unknown }> {
 }
 
 /**
- * Four capabilities still carry their own `pickByName` rather than the shared
- * one. Their wording happens to match the pattern list today, so they are
- * classified correctly — but nothing was enforcing that, which is the same
- * silence that let the taxonomy's tie pattern sit broken. Swept here until the
- * duplicates are consolidated, so a wording tweak in any of them fails a test
- * instead of quietly re-arming the breaker for that one capability.
+ * canadian-company-data.ts, french-company-data.ts, irish-company-data.ts
+ * and uk-company-data.ts used to each carry a fully independent `pickByName`
+ * — the bucket/score/refuse logic duplicated four ways, throwing a plain
+ * `Error` that was classified correctly only by wording coincidence (nothing
+ * enforced it, the same silence that let the taxonomy's tie pattern sit
+ * broken). Consolidated 2026-08-14 onto the shared `pickByName` in
+ * company-name-match.ts: each of the four capability files now keeps only a
+ * thin field-mapping wrapper — same exported `pickByName(query, candidates)`
+ * signature, same caller-facing wording, but the bucket/score/refuse logic
+ * and the CapabilityRefusalError throw live once, in the shared function.
+ *
+ * Still swept here, but for a different reason than before: not because the
+ * logic is duplicated (it isn't, any more), but because these four wrappers
+ * are the only callers exercising the shared function's `noMatchLabel` /
+ * `searchDescription` / `noMatchHint` overrides end-to-end. A future edit to
+ * any of the four wrappers, or to the shared function's override handling,
+ * fails here instead of only surfacing as a caller-facing wording change in
+ * production.
  */
-async function duplicatedRefusals(): Promise<Array<{ label: string; err: unknown }>> {
+async function consolidatedRegistryRefusals(): Promise<Array<{ label: string; err: unknown }>> {
   const out: Array<{ label: string; err: unknown }> = [];
   const capture = (label: string, fn: () => unknown) => {
     try {
@@ -162,14 +174,25 @@ describe("refusals are recognised as such", () => {
   });
 });
 
-describe("the four un-consolidated duplicates are classified too", () => {
+describe("the four consolidated registries are classified too", () => {
+  it("each still refuses on an ambiguous pair, as the typed error", async () => {
+    const dupes = await consolidatedRegistryRefusals();
+    expect(dupes.length, "all four wrappers must refuse on an ambiguous pair").toBe(4);
+    for (const { label, err } of dupes) {
+      // Pre-consolidation these threw a plain Error, recognised only by
+      // wording. Now they throw the typed error like every other refusal
+      // site — this is the actual point of the consolidation.
+      expect(err, label).toBeInstanceOf(CapabilityRefusalError);
+    }
+  });
+
   it("each is recognised by all three consumers", async () => {
     const { classifyTransactionFailure, CALLER_ATTRIBUTABLE } = await import(
       "./transaction-failure-taxonomy.js"
     );
     const { categorizeError } = await import("./quality-capture.js");
-    const dupes = await duplicatedRefusals();
-    expect(dupes.length, "all four duplicates must refuse on an ambiguous pair").toBe(4);
+    const dupes = await consolidatedRegistryRefusals();
+    expect(dupes.length, "all four wrappers must refuse on an ambiguous pair").toBe(4);
 
     for (const { label, err } of dupes) {
       const msg = (err as Error).message;

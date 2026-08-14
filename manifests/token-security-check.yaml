@@ -10,8 +10,13 @@ description: >-
   Analyze a token contract for security risks: honeypot detection, sell tax, hidden ownership, mint functions, proxy
   status, and holder distribution. Uses GoPlus Security covering 30+ blockchains and 10M+ tokens.
 category: web3
-cost_class: free_unlimited
-quota_window: none
+cost_class: free_quota
+quota_window: daily
+quota_cap: 1800
+known_rate_limit:
+  value: 30
+  unit: per_minute
+  source_url: https://docs.gopluslabs.io/reference/support
 price_cents: 2
 is_free_tier: false
 input_schema:

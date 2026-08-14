@@ -1,3 +1,5 @@
+import { SYSTEM_ACCOUNT_EMAIL } from "./lib/internal-accounts.js";
+
 const from = process.argv[2];
 const to = process.argv[3];
 if (!from || !to) {
@@ -5,7 +7,7 @@ if (!from || !to) {
   process.exit(1);
 }
 
-const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", "system@strale.internal", "test@example.com"];
+const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", SYSTEM_ACCOUNT_EMAIL, "test@example.com"];
 
 const postgres = (await import("postgres")).default;
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
