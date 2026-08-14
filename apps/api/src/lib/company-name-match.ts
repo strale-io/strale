@@ -149,10 +149,18 @@ export function classifyNameMatch(
     : { match_confidence: "low", is_exact_match: false };
 }
 
-export interface NameSearchResolution {
+export interface NameSearchResolution<T = unknown> {
   id: string;
   matchedName: string;
   matchConfidence: "exact" | "high";
+  /**
+   * The winning candidate itself, not just its name/id. Added so callers who
+   * need the full record (french-company-data.ts, irish-company-data.ts —
+   * both keep a `{ company/record, matchConfidence }` return shape) don't
+   * have to re-scan the candidate list a second time to recover it; the
+   * bucket already held the full object while scoring.
+   */
+  candidate: T;
 }
 
 /**
@@ -162,45 +170,73 @@ export interface NameSearchResolution {
  * see this module's header comment) — score every candidate with
  * classifyNameMatch and refuse rather than take candidates[0].
  *
- * uk-company-data.ts independently grew an identically-shaped `pickByName`
- * (PR #224, branch fix/name-match-confidence, open/unmerged as of
- * 2026-08-14) for the same Companies House endpoint. That version could not
- * be imported here: it lives on an unmerged branch, and — more durably —
- * capability executor files deliberately do not import from one another (see
- * this module's header: these primitives were lifted out of a capability
- * file specifically so registry capabilities share them via this lib instead
- * of reaching across the capability boundary). This is that shared version,
- * generalized over the candidate shape so officer-search.ts and
- * uk-filing-events.ts (both Companies House name-search callers) can use it
- * without duplicating the bucket/refuse logic a third and fourth time. When
- * #224 lands, uk-company-data.ts's own pickByName can be consolidated onto
- * this one.
+ * uk-company-data.ts, canadian-company-data.ts, french-company-data.ts and
+ * irish-company-data.ts each grew an identically-shaped local `pickByName`
+ * independently (PR #224, 2026-08-14): the bucket/score/refuse logic was
+ * genuinely duplicated four ways, and each copy threw a plain `Error` rather
+ * than the typed `CapabilityRefusalError` — classified correctly only by
+ * wording coincidence (see capability-refusal.ts's header). Consolidated
+ * onto this function 2026-08-14: each of the four capability files now keeps
+ * only a thin field-mapping wrapper around this — same exported
+ * `pickByName(query, candidates)` two-argument signature its own test file
+ * already exercises, same caller-facing wording, but the bucket/score/refuse
+ * logic and the CapabilityRefusalError throw live here exactly once.
+ * officer-search.ts and uk-filing-events.ts call this directly (no per-file
+ * wrapper needed there — their candidate shape is already Companies House's
+ * raw item shape).
+ *
+ * The four registries' wording is NOT uniform between the two refusal
+ * messages: the "no confident match" refusal names the SOURCE ("Companies
+ * House", "Canadian federal registry", "Irish registry", "French registry")
+ * while the "ambiguous" refusal names the SUBJECT of the search ("UK
+ * company", "Canadian company", ...), and the two messages' trailing hints
+ * differ in suffix ("...to disambiguate." vs "...for an exact lookup.") even
+ * though they name the same identifier. `noMatchLabel` / `searchDescription`
+ * / `noMatchHint` exist so a caller can reproduce that without forking the
+ * function — they default to `subjectLabel` / "The search" /
+ * `disambiguationHint` respectively, which is exactly officer-search.ts's
+ * and uk-filing-events.ts's existing (unchanged) behaviour.
  */
 export function pickByName<T>(
   query: string,
   candidates: T[],
   getName: (c: T) => string | null | undefined,
   getId: (c: T) => string | null | undefined,
-  opts: { subjectLabel: string; disambiguationHint: string },
-): NameSearchResolution {
-  const exact = new Map<string, string>();
-  const high = new Map<string, string>();
+  opts: {
+    subjectLabel: string;
+    disambiguationHint: string;
+    /** Label for the "No confident X match" refusal. Defaults to subjectLabel. */
+    noMatchLabel?: string;
+    /** "${x} is fuzzy and returned only unrelated entities" preamble in the
+     *  no-match refusal. Defaults to "The search". */
+    searchDescription?: string;
+    /** Trailing hint for the no-match refusal. Defaults to disambiguationHint. */
+    noMatchHint?: string;
+  },
+): NameSearchResolution<T> {
+  // Buckets hold the full candidate, not just its name — the winner is
+  // handed back as `candidate` below with no second scan needed to recover
+  // the record a caller like french/irish-company-data.ts actually wants.
+  const exact = new Map<string, T>();
+  const high = new Map<string, T>();
   for (const c of candidates) {
     const name = getName(c);
     const id = getId(c);
     if (!name || !id) continue;
     const { match_confidence } = classifyNameMatch(query, name);
-    if (match_confidence === "exact" && !exact.has(id)) exact.set(id, name);
-    else if (match_confidence === "high" && !high.has(id)) high.set(id, name);
+    if (match_confidence === "exact" && !exact.has(id)) exact.set(id, c);
+    else if (match_confidence === "high" && !high.has(id)) high.set(id, c);
   }
 
-  const pickUnambiguous = (bucket: Map<string, string>, label: "exact" | "high"): NameSearchResolution | null => {
+  const pickUnambiguous = (bucket: Map<string, T>, label: "exact" | "high"): NameSearchResolution<T> | null => {
     if (bucket.size === 0) return null;
     if (bucket.size === 1) {
-      const [id, matchedName] = bucket.entries().next().value!;
-      return { id, matchedName, matchConfidence: label };
+      const [id, candidate] = bucket.entries().next().value!;
+      // getName(candidate) is non-null here — that's exactly the condition
+      // that put it in the bucket above.
+      return { id, matchedName: getName(candidate)!, matchConfidence: label, candidate };
     }
-    const listing = [...bucket.entries()].slice(0, 5).map(([id, n]) => `${n} (${id})`).join("; ");
+    const listing = [...bucket.entries()].slice(0, 5).map(([id, c]) => `${getName(c)} (${id})`).join("; ");
     throw new CapabilityRefusalError(
       `Ambiguous ${opts.subjectLabel} name "${query}": ${bucket.size} distinct registered ` +
         `entities are ${label === "exact" ? "exact" : "close"} matches — ${listing}. ${opts.disambiguationHint}`,
@@ -212,8 +248,11 @@ export function pickByName<T>(
 
   const closest = candidates.map(getName).filter((n): n is string => !!n).slice(0, 3).join(", ");
   throw new CapabilityRefusalError(
-    `No confident ${opts.subjectLabel} match for "${query}". The search is fuzzy and returned only ` +
-      `unrelated entities${closest ? ` (closest: ${closest})` : ""}. ${opts.disambiguationHint}`,
+    `No confident ${opts.noMatchLabel ?? opts.subjectLabel} match for "${query}". ${
+      opts.searchDescription ?? "The search"
+    } is fuzzy and returned only unrelated entities${closest ? ` (closest: ${closest})` : ""}. ${
+      opts.noMatchHint ?? opts.disambiguationHint
+    }`,
   );
 }
 

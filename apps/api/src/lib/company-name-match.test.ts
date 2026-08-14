@@ -209,7 +209,12 @@ describe("pickByName", () => {
       { title: "Totally Unrelated Ltd", number: "99999999" },
     ];
     const r = pickByName("HSBC Holdings plc", candidates, byTitle, byNumber, opts);
-    expect(r).toEqual({ id: "00617987", matchedName: "HSBC Holdings plc", matchConfidence: "exact" });
+    expect(r).toEqual({
+      id: "00617987",
+      matchedName: "HSBC Holdings plc",
+      matchConfidence: "exact",
+      candidate: candidates[0],
+    });
   });
 
   it("refuses when two distinct entities tie at the same confidence", () => {
