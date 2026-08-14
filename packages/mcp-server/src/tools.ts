@@ -677,10 +677,15 @@ export function registerStraleTools(
       }
 
       // Match solutions
+      // search_tags are hand-authored vocabulary bridges (the words agents
+      // actually type, which don't always appear in the name/description);
+      // fold them into the matched text so this fallback path — used when
+      // the typeahead API is unreachable or a category filter is set — sees
+      // the same signal the primary /v1/suggest/typeahead path now does.
       const matchedSolutions = solutions
         .filter((s) => {
           if (catFilter && !s.category.toLowerCase().includes(catFilter)) return false;
-          return localMatchScore(`${s.name} ${s.description} ${s.slug} ${s.category}`) > 0;
+          return localMatchScore(`${s.name} ${s.description} ${s.slug} ${s.category} ${(s.search_tags ?? []).join(" ")}`) > 0;
         })
         .map((s) => ({
           type: "solution" as const,
@@ -698,7 +703,7 @@ export function registerStraleTools(
       const matchedCaps = capabilities
         .filter((c) => {
           if (catFilter && !c.category.toLowerCase().includes(catFilter)) return false;
-          return localMatchScore(`${c.name} ${c.description} ${c.slug} ${c.category}`) > 0;
+          return localMatchScore(`${c.name} ${c.description} ${c.slug} ${c.category} ${(c.search_tags ?? []).join(" ")}`) > 0;
         })
         .map((c) => {
           let inputFields = "Accepts: task (string) — describe what you need in natural language";

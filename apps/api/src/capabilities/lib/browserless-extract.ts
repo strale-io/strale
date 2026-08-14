@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { CapabilityRefusalError } from "../../lib/capability-refusal.js";
 
 /**
  * Shared Browserless scraping + Claude extraction utility for company registries.
@@ -100,7 +101,11 @@ export async function extractCompanyName(
     messages: [
       {
         role: "user",
-        content: `Extract the ${country} company name from this request. Return ONLY the company name, nothing else.\n\nRequest: "${naturalLanguage}"`,
+        content:
+          `Extract the ${country} company name from this request. ` +
+          `Return ONLY the company name, nothing else. ` +
+          `If the request does not name a specific company, return exactly ${NO_NAME_SENTINEL}.` +
+          `\n\nRequest: "${naturalLanguage}"`,
       },
     ],
   });
@@ -109,6 +114,38 @@ export async function extractCompanyName(
     response.content[0].type === "text"
       ? response.content[0].text.trim().replace(/^["']|["']$/g, "")
       : "";
-  if (!name) throw new Error(`Could not identify a company name from: "${naturalLanguage}".`);
+
+  if (!name || name === NO_NAME_SENTINEL || looksLikeRefusal(name)) {
+    throw new CapabilityRefusalError(
+      `Could not identify a specific ${country} company name in the request. ` +
+        `Provide the company's registration number, or a more specific company name.`,
+    );
+  }
   return name;
+}
+
+/** Sentinel the model is asked to return when the request names no company. */
+const NO_NAME_SENTINEL = "NONE";
+
+/**
+ * Does this look like prose rather than a company name?
+ *
+ * The prompt asks for a bare name, but the model sometimes declines in a
+ * sentence instead — "I cannot extract a Canadian company name from this
+ * request. 'Bank' is too generic…". Nothing used to catch that, so the refusal
+ * became the search query and surfaced to the caller quoted inside another
+ * error: `No Canadian company found matching "I cannot extract a…"`. That reads
+ * as a malfunction, leaks that an LLM is in the path, and tells the caller
+ * nothing about what to send instead.
+ *
+ * The sentinel handles the cooperative case; this is the backstop for when the
+ * model ignores it. Deliberately conservative — real names are short and rarely
+ * open with these phrases, and a false positive only costs a clear error where
+ * the lookup would have failed anyway.
+ */
+function looksLikeRefusal(text: string): boolean {
+  if (text.length > 120) return true;
+  return /^(i cannot|i can't|i am unable|i'm unable|sorry|unfortunately|there is no|no specific|the request)/i.test(
+    text,
+  );
 }
