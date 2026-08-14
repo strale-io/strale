@@ -20,28 +20,17 @@
  *   cd apps/api && npx tsx scripts/audit-capability-pairing.ts
  */
 
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import yaml from "js-yaml";
 import { getDeactivatedCapabilities } from "../src/capabilities/auto-register.js";
+import { manifestSlugs as readManifestSlugs } from "./lib/manifest-slugs.js";
 
 const REPO_ROOT = resolve(import.meta.dirname, "..", "..", "..");
 const MANIFESTS_DIR = resolve(REPO_ROOT, "manifests");
 const CAPABILITIES_DIR = resolve(REPO_ROOT, "apps", "api", "src", "capabilities");
 
 function manifestSlugs(): Set<string> {
-  const slugs = new Set<string>();
-  for (const file of readdirSync(MANIFESTS_DIR)) {
-    if (!file.endsWith(".yaml") && !file.endsWith(".yml")) continue;
-    try {
-      const raw = readFileSync(resolve(MANIFESTS_DIR, file), "utf8");
-      const parsed = yaml.load(raw) as { slug?: string } | null;
-      if (typeof parsed?.slug === "string") slugs.add(parsed.slug);
-    } catch {
-      // skip malformed
-    }
-  }
-  return slugs;
+  return readManifestSlugs({ manifestsDir: MANIFESTS_DIR });
 }
 
 function executorSlugs(): Set<string> {

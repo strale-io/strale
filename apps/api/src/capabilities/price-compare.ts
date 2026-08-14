@@ -1,10 +1,17 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
+import { extractJsonObject } from "./lib/llm-json.js";
 import Anthropic from "@anthropic-ai/sdk";
 
 // Price comparison via PriceRunner (Nordic) / Google Shopping + Claude extraction
 
 const NORDIC_COUNTRIES = new Set(["se", "dk", "no", "fi"]);
+
+// A shopping page can yield many offers; 2000 tokens truncated the offer list
+// on busy results (3/3 production failures, x402 traffic 2026-06-17→24). 4000
+// (~16KB JSON) covers a long offer list with headroom while staying well
+// under Haiku 4.5's 64K output limit.
+const MAX_OUTPUT_TOKENS = 4000;
 
 function getPriceRunnerTld(country: string): string | null {
   switch (country) {
@@ -56,7 +63,7 @@ registerCapability("price-compare", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const r = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
+    max_tokens: MAX_OUTPUT_TOKENS,
     messages: [
       {
         role: "user",
@@ -93,11 +100,19 @@ Extract all visible offers. Calculate lowest, highest, average and range from th
     ],
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract price comparison data.");
+  // Truncation surfaced as "Unterminated string in JSON" via the naive
+  // parser (production incident, 2026-06-17→24) — stop_reason catches it
+  // before the parse and gives the caller something actionable to retry on.
+  if (r.stop_reason === "max_tokens") {
+    throw new Error(
+      "The price extractor produced more output than the model's limit allows, so the result was truncated. Retry with a smaller or more focused request.",
+    );
+  }
 
-  const output = JSON.parse(jsonMatch[0]);
+  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
+  const output = extractJsonObject(responseText);
+  if (!output) throw new Error("Failed to extract price comparison data.");
+
   output.source = sourceUsed;
   output.country = country;
 

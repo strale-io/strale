@@ -43,12 +43,16 @@ import {
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-export type CostClass =
-  | "free_unlimited"
-  | "free_quota"
-  | "paid_with_free_tier"
-  | "paid_prepaid"
-  | "paid_subscription";
+/** Canonical enum values, mirroring the Block 0067 DB CHECK constraint. */
+export const COST_CLASSES = [
+  "free_unlimited",
+  "free_quota",
+  "paid_with_free_tier",
+  "paid_prepaid",
+  "paid_subscription",
+] as const;
+
+export type CostClass = (typeof COST_CLASSES)[number];
 
 export type QuotaWindow = "daily" | "monthly" | "none";
 
@@ -215,6 +219,44 @@ const metaCache = new Map<string, { value: CapabilityCostMeta; expiresAt: number
 
 export function __resetCostMetaCacheForTests(): void {
   metaCache.clear();
+}
+
+/**
+ * Pre-insert cost-meta seed for the onboarding pipeline.
+ *
+ * onboard.ts verifies fixtures BEFORE persistCapability(), so a brand-new
+ * capability has no DB row when the gate consults getCapabilityCostMeta —
+ * cost_class reads NULL and internal_test is refused. That made
+ * `onboard.ts --strict` impossible for any new capability, even one whose
+ * manifest correctly declared cost_class (observed 2026-08-12 onboarding
+ * page-exists), while the refusal message instructed the author to do
+ * exactly what they had already done. The manifest is the authoring
+ * surface for cost_class (see normalizeManifestToRow), so during
+ * onboarding the declared value may be seeded into the in-process cache;
+ * persistCapability writes the identical value to the DB moments later.
+ *
+ * Note the seed does NOT bypass the ALLOW_MATRIX: it only supplies the
+ * cost_class the matrix consults. New paid_prepaid / paid_subscription
+ * capabilities are still refused from internal_test — by design, onboard
+ * verification must never burn paid vendor credits.
+ *
+ * Fail-closed is preserved: this function throws on null or invalid
+ * cost_class instead of defaulting (the caller early-returns for
+ * undeclared manifests, so the gate simply stays closed for them). The
+ * same invalid value would be rejected by the Block 0067 CHECK constraint
+ * at insert time anyway.
+ */
+export function seedCostMetaForOnboarding(meta: CapabilityCostMeta): void {
+  if (meta.cost_class === null || !COST_CLASSES.includes(meta.cost_class)) {
+    throw new Error(
+      `seedCostMetaForOnboarding: '${meta.slug}' declared invalid cost_class ` +
+        `'${String(meta.cost_class)}' — must be one of: ${COST_CLASSES.join(", ")}.`,
+    );
+  }
+  metaCache.set(meta.slug, {
+    value: meta,
+    expiresAt: Date.now() + META_CACHE_TTL_MS,
+  });
 }
 
 export async function getCapabilityCostMeta(slug: string): Promise<CapabilityCostMeta> {

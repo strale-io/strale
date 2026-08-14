@@ -10,8 +10,13 @@ description: >-
   Get current gas prices for an EVM chain. Returns safe, proposed, and fast gas prices in Gwei plus the base fee. Useful
   for agents deciding whether to execute a transaction now or wait.
 category: web3
-cost_class: free_unlimited
-quota_window: none
+cost_class: free_quota
+quota_window: daily
+quota_cap: 100000
+known_rate_limit:
+  value: 100000
+  unit: per_day
+  source_url: https://docs.etherscan.io/etherscan-v2/rate-limits
 price_cents: 2
 is_free_tier: false
 input_schema:

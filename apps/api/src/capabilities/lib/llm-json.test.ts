@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { extractJsonObject } from "./llm-json.js";
+import { extractJsonObject, isEmptyExtraction } from "./llm-json.js";
 
 const ALL_NULL_BODY = `{
   "company_name": null,
@@ -126,5 +126,46 @@ describe("extractJsonObject — returns null rather than partial data", () => {
     expect(extractJsonObject('[{"company_name":"Acme"}]')).toEqual({
       company_name: "Acme",
     });
+  });
+});
+
+/**
+ * `isEmptyExtraction` exists because tolerant parsing creates a billing
+ * hazard: the all-null shell that used to break the parse (and so was never
+ * charged, per DEC-14) now parses cleanly and would bill as a success.
+ */
+describe("isEmptyExtraction — treats as empty", () => {
+  it("the all-null shell, including nested nulls", () => {
+    expect(isEmptyExtraction(JSON.parse(ALL_NULL_BODY.replace('"https://openai.com"', "null")))).toBe(true);
+  });
+
+  it("an empty object", () => {
+    expect(isEmptyExtraction({})).toBe(true);
+  });
+
+  it("blank strings, empty arrays and empty nested objects", () => {
+    expect(isEmptyExtraction({ a: "", b: "   ", c: [], d: {}, e: null })).toBe(true);
+  });
+
+  it("arrays and objects that only contain empty values", () => {
+    expect(isEmptyExtraction({ items: [null, "", {}], meta: { x: null } })).toBe(true);
+  });
+});
+
+describe("isEmptyExtraction — treats as substantive", () => {
+  it("any non-blank string anywhere, however deep", () => {
+    expect(isEmptyExtraction({ a: null, b: { c: [{ d: "found" }] } })).toBe(false);
+  });
+
+  it("zero and false, which are information, not absence", () => {
+    expect(isEmptyExtraction({ total: 0 })).toBe(false);
+    expect(isEmptyExtraction({ has_pii: false })).toBe(false);
+  });
+
+  it("the openai.com shell once the executor fills in website", () => {
+    // The real all-null case carries a `website` we set ourselves. The
+    // per-capability guards must not rely on isEmptyExtraction to catch that
+    // one — company-enrich's manifest-aware hasSubstance owns it.
+    expect(isEmptyExtraction(JSON.parse(ALL_NULL_BODY))).toBe(false);
   });
 });

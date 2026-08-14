@@ -9,6 +9,10 @@ description: >-
 category: data-extraction
 cost_class: paid_prepaid
 quota_window: none
+known_rate_limit:
+  value: 10
+  unit: per_second
+  source_url: https://www.sec.gov/os/webmaster-faq
 price_cents: 5
 is_free_tier: false
 input_schema:
