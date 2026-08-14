@@ -95,6 +95,15 @@ async function computeCapabilityQuality(
         tq.error_type,
         tq.created_at,
         CASE
+          -- A refusal carries no weight as health evidence. The capability
+          -- reached its upstream and understood the answer well enough to know
+          -- it was ambiguous — that is not a malfunction, and a refusal has no
+          -- output, so counting it would drag down success rate, schema
+          -- conformance and field completeness alike. Zero weight rather than
+          -- a WHERE filter: filtering changed the query plan badly enough to
+          -- time out /v1/capabilities. This is pure arithmetic on rows already
+          -- scanned. See lib/capability-refusal.ts.
+          WHEN tq.error_type = 'client_refusal' THEN 0
           WHEN tq.created_at >= NOW() - INTERVAL '7 days' THEN 3.0
           ELSE 1.0
         END AS weight
