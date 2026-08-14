@@ -1,0 +1,187 @@
+# DRAFT — NOT FOR THE ONBOARDING PIPELINE
+#
+# Queue rank 5. Demand: us-company-data is the worst-performing capability with real
+# external traffic — 26 calls / 90d, 17 failed (35% completion). Verbatim errors:
+#   `'cik' or 'company_name' is required. Provide a CIK number or US company name.`  (x4)
+#   `No confident SEC EDGAR match for "Apple". The closest filing belongs to a
+#    different entity ("Apple Hospitality REIT, Inc...")`                             (x3)
+# 5 of 26 arrivals carry a name rather than a CIK. US is the weakest identity leg.
+# See docs/strategy/2026-08-demand-mined-build-queue.md §2.4 / §5 rank 5.
+#
+# Relationship to rank 2 (company-name-resolve): this is the US-specific primitive that
+# company-name-resolve would call for jurisdiction == US. Build order matters — if
+# company-name-resolve ships first with a weak US leg it inherits the "Apple" problem.
+# Consider building this one FIRST despite the lower rank.
+#
+# VERIFICATION DEBT — close before building:
+#   1. SEC fair-access policy is MANDATORY and enforced by IP block, not by 429. Requires
+#      a declared User-Agent carrying a real contact address and <=10 req/s. Confirm the
+#      exact current policy text at sec.gov before writing the client, and confirm which
+#      contact address Strale declares (this is a public disclosure — Moonlighter AB /
+#      @strale.io per project_legal_entity.md and project_email_domain.md).
+#   2. efts.sec.gov full-text search covers filings from 2001 onward ONLY. Entities whose
+#      last filing predates 2001 are invisible. Confirm the exact cutoff before writing
+#      the coverage limitation below.
+#   3. Response shape not captured. Field names are inferred; let onboard.ts --discover
+#      regenerate expected_fields from a live call.
+#   4. Decide whether this replaces the name path inside us-company-data or ships beside
+#      it. Shipping beside it without fixing us-company-data leaves the 35%-completion
+#      capability in the catalogue, which the readiness program treats as a broken promise.
+#      Recommendation: this becomes us-company-data's name path, and ships as a fix.
+
+slug: sec-edgar-name-search
+name: SEC EDGAR Name Search
+description: >-
+  Resolve a US company name to its SEC EDGAR identity — CIK, exact registrant name, ticker and
+  recent filing activity — scoring candidates and refusing rather than returning a wrong entity.
+category: company-data
+cost_class: free_official
+quota_window: rate_limited
+price_cents: 5
+is_free_tier: false
+avg_latency_ms: 1200
+data_source: SEC EDGAR full-text search (efts.sec.gov) and company_tickers.json — US government, public domain
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: government-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: US
+
+input_schema:
+  type: object
+  required: []
+  properties:
+    company_name:
+      type: string
+      description: US registrant name to resolve (min 2 chars)
+    name:
+      type: string
+      description: Alias for company_name
+    query:
+      type: string
+      description: Alias for company_name
+    task:
+      type: string
+      description: Free-text alias for company_name
+    ticker:
+      type: string
+      description: Optional ticker symbol — when supplied, used to confirm rather than discover
+    max_results:
+      type: number
+      description: "Max candidates to return (default 10, cap 20)"
+  anyOf:
+    - required: [company_name]
+    - required: [name]
+    - required: [query]
+    - required: [task]
+    - required: [ticker]
+
+output_schema:
+  type: object
+  example:
+    query: Apple
+    confidence: ambiguous
+    resolved: null
+    candidates:
+      - cik: "0000320193"
+        registrant_name: "Apple Inc."
+        ticker: AAPL
+        exchange: Nasdaq
+        score: 0.81
+        last_filing_date: "2026-08-01"
+        last_filing_form: "10-Q"
+      - cik: "0001418121"
+        registrant_name: "Apple Hospitality REIT, Inc."
+        ticker: APLE
+        exchange: NYSE
+        score: 0.74
+        last_filing_date: "2026-07-28"
+        last_filing_form: "10-Q"
+    candidate_count: 2
+    ambiguity_reason: "Two registrants scored within 0.10 — name alone does not disambiguate"
+  properties:
+    query: { type: string }
+    confidence:
+      type: string
+      description: 'high | medium | ambiguous | none. "ambiguous" and "none" leave `resolved` null.'
+    resolved:
+      type: ["object", "null"]
+      description: The single confident registrant, or null when ambiguous/none
+    candidates:
+      type: array
+      description: Scored registrant candidates, always returned
+    candidate_count: { type: integer }
+    ambiguity_reason:
+      type: ["string", "null"]
+      description: Present only when confidence is ambiguous — states why no single match was chosen
+
+test_fixtures:
+  # DRAFT fixture. Use an unambiguous registrant for known_answer.
+  # A SECOND fixture asserting confidence == "ambiguous" for input "Apple" is MANDATORY
+  # before launch — reproducing the recorded production failure is the point of this build.
+  known_answer:
+    input:
+      company_name: Tesla, Inc.
+    expected_fields:
+      - { field: confidence, operator: not_null, reliability: guaranteed }
+      - { field: candidates, operator: type, reliability: guaranteed, value: array }
+      - { field: candidate_count, operator: not_null, reliability: guaranteed }
+  health_check_input:
+    company_name: Microsoft Corporation
+
+output_field_reliability:
+  query: guaranteed
+  confidence: guaranteed
+  candidates: guaranteed
+  candidate_count: guaranteed
+  resolved: common
+  "resolved.cik": common
+  "resolved.registrant_name": common
+  "candidates[].cik": guaranteed
+  "candidates[].registrant_name": guaranteed
+  "candidates[].score": guaranteed
+  "candidates[].ticker": rare
+  "candidates[].exchange": rare
+  "candidates[].last_filing_date": common
+  "candidates[].last_filing_form": common
+  ambiguity_reason: rare
+
+limitations:
+  - title: SEC registrants only — not a US company register
+    text: >-
+      EDGAR contains entities that file with the SEC. The overwhelming majority of US
+      companies — private companies, LLCs, most small businesses — have never filed and do
+      not appear. Absence from EDGAR says nothing about whether a company exists. There is
+      no federal US company register; incorporation is state-level.
+    category: coverage
+    severity: warning
+  - title: Refuses on ambiguity rather than returning the closest name
+    text: >-
+      When two registrants score closely the response is 200 with `confidence: "ambiguous"`,
+      `resolved: null` and `ambiguity_reason`. This exists because EDGAR full-text search
+      ranks filings, not entities, and taking the top hit returns the wrong company — the
+      recorded production case was "Apple" resolving to Apple Hospitality REIT.
+    category: accuracy
+    severity: warning
+  - title: Full-text search covers filings from 2001 onward
+    text: >-
+      The EDGAR full-text index does not reach filings before roughly 2001. A registrant
+      that stopped filing before then may be unreachable by name even though its CIK exists.
+    category: coverage
+    severity: warning
+  - title: Subject to SEC fair-access rate limits
+    text: >-
+      SEC enforces a declared User-Agent and a request-rate ceiling, and blocks by IP rather
+      than returning 429. Under burst load this capability will queue or refuse rather than
+      risk the block, so latency is not guaranteed under concurrency.
+    category: availability
+    severity: warning
+  - title: Ticker and exchange are not always present
+    text: >-
+      Ticker mapping comes from a separate SEC file and covers listed registrants only.
+      Non-listed filers — funds, subsidiaries, private filers of Form D — resolve to a CIK
+      with no ticker.
+    category: coverage
+    severity: info

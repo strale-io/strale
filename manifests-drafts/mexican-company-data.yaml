@@ -1,0 +1,195 @@
+# DRAFT — NOT FOR THE ONBOARDING PIPELINE
+#
+# Queue rank 1. Demand: 50 paid google-search calls in 30d from the top wallet,
+# template `"<CARRIER NAME>" 墨西哥 phone contact`, 100% success, zero Mexican
+# capability in the catalogue. See docs/strategy/2026-08-demand-mined-build-queue.md §2.1.
+#
+# VERIFICATION DEBT — close all of these before building:
+#   1. DENUE publishes NO rate limits and NO terms of use on
+#      https://www.inegi.org.mx/servicios/api_denue.html. Obtain both in writing
+#      (or record their absence) before launch. Same class as the AT Firmenbuch
+#      item in the 2026-08-12 catalogue strategy §5 V1.
+#   2. Field names below are taken from the API documentation page, not from a live
+#      response. Confirm `Telefono` / `Correo_e` / `Sitio_internet` are actually
+#      populated and not near-universally empty — the whole demand case rests on
+#      contact fields being present.
+#   3. Token acquisition is a free registration. Confirm it does not carry
+#      redistribution restrictions that conflict with reselling lookups.
+#   4. PERSONAL-DATA CALL — HUMAN DECISION, NOT ENGINEERING.
+#      DENUE covers ~6M establishments including sole traders ("personas físicas con
+#      actividad empresarial"), where the business phone is frequently a personal
+#      mobile. This is why processes_personal_data is true below. Petter must decide
+#      whether this ships, on the same footing as the standing email-finder refusal.
+#      Do NOT resolve this by reading the manifest.
+#   5. DEC-20260428-A preference order check: this is an official API (tier above
+#      per-call parsing), so no DEC-20260813-A analysis is required. Confirm anyway.
+
+slug: mexican-company-data
+name: Mexican Company Data
+description: >-
+  Look up Mexican businesses in INEGI's official DENUE establishment directory by name or
+  registry ID. Returns legal name, economic activity, size band, address, coordinates and
+  published business contact details.
+category: company-data
+cost_class: free_official
+quota_window: unknown
+price_cents: 5
+is_free_tier: false
+avg_latency_ms: 900
+data_source: INEGI DENUE (Directorio Estadístico Nacional de Unidades Económicas) API
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: government-api
+gdpr_art_22_classification: data_lookup
+processes_personal_data: true
+geography: MX
+
+input_schema:
+  type: object
+  required: []
+  properties:
+    company_name:
+      type: string
+      description: Business or trade name to search (min 3 chars). Uses the DENUE `Nombre` method.
+    name:
+      type: string
+      description: Alias for company_name
+    query:
+      type: string
+      description: Alias for company_name
+    task:
+      type: string
+      description: Free-text alias for company_name
+    denue_id:
+      type: string
+      description: DENUE establishment ID for an exact lookup (uses the `Ficha` method)
+    state:
+      type: string
+      description: >-
+        Optional Mexican state to scope the search — name or INEGI 2-digit code
+        (e.g. "Chihuahua", "08"). Omit to search nationally.
+    max_results:
+      type: number
+      description: "Max establishments to return (default 10, cap 25)"
+  anyOf:
+    - required: [company_name]
+    - required: [name]
+    - required: [query]
+    - required: [task]
+    - required: [denue_id]
+
+output_schema:
+  type: object
+  example:
+    query: AUTOFLETES CHIHUAHUA
+    state: null
+    result_count: 1
+    establishments:
+      - denue_id: "1234567"
+        name: AUTOFLETES CHIHUAHUA
+        legal_name: AUTOFLETES DE CHIHUAHUA SA DE CV
+        activity_class: Transporte de carga general
+        activity_code: "484121"
+        size_band: 51 a 100 personas
+        street: Avenida Tecnologico
+        exterior_number: "3900"
+        neighbourhood: Granjas
+        postal_code: "31160"
+        municipality: Chihuahua
+        state: Chihuahua
+        phone: "+52 614 000 0000"
+        email: contacto@example.mx
+        website: https://example.mx
+        latitude: 28.6353
+        longitude: -106.0889
+        contact_fields_present: true
+  properties:
+    query: { type: ["string", "null"] }
+    state: { type: ["string", "null"] }
+    result_count: { type: integer }
+    establishments:
+      type: array
+      description: >-
+        Matching establishments. Identity and location fields are guaranteed by DENUE;
+        contact fields are self-reported by the establishment and frequently absent.
+
+test_fixtures:
+  # DRAFT fixture — the pipeline regenerates expected_fields via --discover.
+  # Replace the input with a carrier verified present in DENUE before onboarding.
+  known_answer:
+    input:
+      company_name: AUTOFLETES CHIHUAHUA
+      max_results: 5
+    expected_fields:
+      - { field: result_count, operator: not_null, reliability: guaranteed }
+      - { field: establishments, operator: not_null, reliability: guaranteed }
+      - { field: establishments, operator: type, reliability: guaranteed, value: array }
+  health_check_input:
+    company_name: TRANSPORTES
+    state: Chihuahua
+    max_results: 3
+
+output_field_reliability:
+  query: guaranteed
+  state: guaranteed
+  result_count: guaranteed
+  establishments: guaranteed
+  "establishments[].denue_id": guaranteed
+  "establishments[].name": guaranteed
+  "establishments[].activity_class": guaranteed
+  "establishments[].size_band": guaranteed
+  "establishments[].state": guaranteed
+  "establishments[].municipality": guaranteed
+  "establishments[].latitude": common
+  "establishments[].longitude": common
+  "establishments[].legal_name": common
+  "establishments[].postal_code": common
+  "establishments[].phone": rare
+  "establishments[].email": rare
+  "establishments[].website": rare
+  "establishments[].contact_fields_present": guaranteed
+
+limitations:
+  - title: Contact details are self-reported and often missing
+    text: >-
+      Phone, email and website in DENUE are supplied by the establishment during census
+      collection and are absent for a large share of records. `contact_fields_present`
+      states per record whether any were returned. This capability will not find a
+      contact that DENUE does not hold — it does not search the open web to fill gaps.
+    category: coverage
+    severity: warning
+  - title: Establishments, not legal entities
+    text: >-
+      DENUE is a directory of physical establishments, not a company register. One legal
+      entity may appear as many establishments, and DENUE carries no RFC, no incorporation
+      date, no directors and no ownership. For legal-entity identity in Mexico this is not
+      a substitute for the Registro Público de Comercio.
+    category: coverage
+    severity: warning
+  - title: Name search is substring matching, not entity resolution
+    text: >-
+      The DENUE `Nombre` method matches on name text. Common words return many unrelated
+      establishments and abbreviations may miss entirely. Results are candidates for the
+      caller to disambiguate, not a confident single match.
+    category: accuracy
+    severity: warning
+  - title: Very small rural localities are excluded
+    text: >-
+      INEGI documents that DENUE omits establishments in very small rural localities.
+      Absence from DENUE is not evidence that a business does not exist.
+    category: coverage
+    severity: info
+  - title: Update cadence is periodic, not live
+    text: >-
+      DENUE is refreshed on INEGI's own census and update schedule (roughly twice yearly),
+      so records can lag reality by months. The API call is live; the underlying data is not.
+    category: freshness
+    severity: info
+  - title: May contain personal data for sole traders
+    text: >-
+      Establishments operated by sole traders can carry a personal mobile number or personal
+      email in the business contact fields. Callers are responsible for their own lawful
+      basis when processing these records.
+    category: legal
+    severity: warning
