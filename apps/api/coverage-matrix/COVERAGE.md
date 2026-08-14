@@ -50,7 +50,7 @@ Total rows: 47
 | italian-company-data | IT | Company registry | Openapi.com | Committed | €0.12 | live-verified | 2026-05-15 |
 | lithuanian-company-data | LT | Company registry | Registru centras | Live | €0.05 | live-verified | 2026-05-15 |
 | luxembourgish-company-data | LU | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
-| latvian-company-data | LV | Company registry | Uznemumu registrs | Live | €0.05 | live-verified | 2026-05-15 |
+| latvian-company-data | LV | Company registry | Uznemumu registrs | Live | €0.05 | live-verified | 2026-05-18 |
 | maltese-company-data | MT | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
 | dutch-company-data | NL | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
 | norwegian-company-data | NO | Company registry | Brreg | Live | €0.05 | live-verified | 2026-05-15 |
@@ -242,7 +242,7 @@ Total rows: 47
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| latvian-company-data | LV | Company registry | Uznemumu registrs | Live | €0.05 | live-verified | 2026-05-15 |
+| latvian-company-data | LV | Company registry | Uznemumu registrs | Live | €0.05 | live-verified | 2026-05-18 |
 
 ### MT (1)
 
