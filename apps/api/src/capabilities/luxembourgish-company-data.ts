@@ -32,13 +32,13 @@ registerCapability(
       "";
     if (typeof rawInput !== "string" || !rawInput.trim()) {
       throw new Error(
-        "'vat_number' is required. Provide a Luxembourgish VAT (LU + 8 digits, e.g. LU18513414). RCS B-prefix company numbers are not accepted by the upstream API.",
+        "'vat_number' is required. Provide a Luxembourgish VAT (LU + 8 digits, e.g. LU18513414). RCS B-prefix company numbers are not accepted by the upstream API; look up the VAT by company name at the Luxembourg Business Registers public search: https://www.lbr.lu/.",
       );
     }
     const normalised = normaliseLuIdentifier(rawInput.trim());
     if (!normalised) {
       throw new Error(
-        `'${rawInput.trim()}' is not a valid Luxembourgish VAT. Expected format: LU + 8 digits (e.g. LU18513414).`,
+        `'${rawInput.trim()}' is not a valid Luxembourgish VAT. Expected format: LU + 8 digits (e.g. LU18513414). Look one up by company name at https://www.lbr.lu/.`,
       );
     }
     const __etResult = await executeOpenapiCapability(

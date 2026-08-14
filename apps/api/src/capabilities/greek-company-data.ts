@@ -195,7 +195,7 @@ registerCapability("greek-company-data", async (input: CapabilityInput) => {
     (typeof afmInput !== "string" || !afmInput.trim())
   ) {
     throw new Error(
-      "Provide either 'gemi_number' (Greek GEMI registry number) or 'afm' (Greek tax ID, 9 digits).",
+      "Provide either 'gemi_number' (Greek GEMI registry number) or 'afm' (Greek tax ID, 9 digits). Look either one up by company name at the official GEMI public search: https://publicity.businessportal.gr/.",
     );
   }
 
@@ -206,7 +206,7 @@ registerCapability("greek-company-data", async (input: CapabilityInput) => {
     const arGemi = normaliseGemiNumber(gemiInput);
     if (!arGemi) {
       throw new Error(
-        `'gemi_number' must be 6-14 digits. Received: "${gemiInput}".`,
+        `'gemi_number' must be 6-14 digits. Received: "${gemiInput}". Look one up by company name at https://publicity.businessportal.gr/.`,
       );
     }
     company = await fetchByGemiNumber(arGemi);
@@ -216,7 +216,9 @@ registerCapability("greek-company-data", async (input: CapabilityInput) => {
   } else if (typeof afmInput === "string" && afmInput.trim()) {
     const afm = normaliseAfm(afmInput);
     if (!afm) {
-      throw new Error(`'afm' must be exactly 9 digits. Received: "${afmInput}".`);
+      throw new Error(
+        `'afm' must be exactly 9 digits. Received: "${afmInput}". Look one up by company name at https://publicity.businessportal.gr/.`,
+      );
     }
     company = await searchByAfm(afm);
     if (!company) {

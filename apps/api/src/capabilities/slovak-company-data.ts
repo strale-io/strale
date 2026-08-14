@@ -155,7 +155,9 @@ function deriveStatus(
 registerCapability("slovak-company-data", async (input: CapabilityInput) => {
   const raw = ((input.ico as string) ?? (input.company_number as string) ?? "").toString().trim();
   if (!raw) {
-    throw new Error("'ico' is required. Provide a Slovak IČO (8 digits).");
+    throw new Error(
+      "'ico' is required. Provide a Slovak IČO (8 digits). Look one up by company name at the official Register of Legal Persons (RPO) search: https://rpo.statistics.sk/.",
+    );
   }
   // normalizeIco zero-pads 1-7 digit numeric input to 8. Real Slovak IČOs go
   // as low as 5 significant digits (e.g. 00151653), so we tolerate short
@@ -164,7 +166,7 @@ registerCapability("slovak-company-data", async (input: CapabilityInput) => {
   const ico = normalizeIco(raw);
   if (!ico || stripped.length < 4) {
     throw new Error(
-      `'${raw}' is not a valid IČO. Slovak IČO is 8 digits (zero-padded).`,
+      `'${raw}' is not a valid IČO. Slovak IČO is 8 digits (zero-padded). Look one up by company name at https://rpo.statistics.sk/.`,
     );
   }
 

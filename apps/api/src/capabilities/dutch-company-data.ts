@@ -32,13 +32,13 @@ registerCapability("dutch-company-data", async (input: CapabilityInput) => {
     "";
   if (typeof rawInput !== "string" || !rawInput.trim()) {
     throw new Error(
-      "'vat_number' is required. Provide a Dutch VAT/BTW number (NL + 9 digits + B + 2 digits, e.g. NL803441526B01). KvK numbers are not accepted by the upstream API.",
+      "'vat_number' is required. Provide a Dutch VAT/BTW number (NL + 9 digits + B + 2 digits, e.g. NL803441526B01). KvK numbers are not accepted by the upstream API; look up the VAT/BTW number by company name at the official KVK business register search: https://www.kvk.nl/zoeken/.",
     );
   }
   const normalised = normaliseNlIdentifier(rawInput.trim());
   if (!normalised) {
     throw new Error(
-      `'${rawInput.trim()}' is not a valid Dutch VAT/BTW number. Expected format: NL + 9 digits + B + 2 digits (e.g. NL803441526B01).`,
+      `'${rawInput.trim()}' is not a valid Dutch VAT/BTW number. Expected format: NL + 9 digits + B + 2 digits (e.g. NL803441526B01). Look one up by company name at https://www.kvk.nl/zoeken/.`,
     );
   }
   const __etResult = await executeOpenapiCapability(

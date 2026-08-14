@@ -38,13 +38,13 @@ registerCapability("austrian-company-data", async (input: CapabilityInput) => {
     "";
   if (typeof rawInput !== "string" || !rawInput.trim()) {
     throw new Error(
-      "'vat_number' is required. Provide an Austrian UID-Nummer (e.g. ATU14189108). Firmenbuchnummer (FN) is not accepted by the upstream API; use the VAT format.",
+      "'vat_number' is required. Provide an Austrian UID-Nummer (e.g. ATU14189108). Firmenbuchnummer (FN) is not accepted by the upstream API; look up the UID-Nummer by company name at the Austrian Federal Economic Chamber directory: https://firmen.wko.at/.",
     );
   }
   const normalised = normaliseAtIdentifier(rawInput.trim());
   if (!normalised) {
     throw new Error(
-      `'${rawInput.trim()}' is not a valid Austrian UID-Nummer. Expected format: ATU + 8 digits (e.g. ATU14189108).`,
+      `'${rawInput.trim()}' is not a valid Austrian UID-Nummer. Expected format: ATU + 8 digits (e.g. ATU14189108). Look one up by company name at https://firmen.wko.at/.`,
     );
   }
   const __etResult = await executeOpenapiCapability(

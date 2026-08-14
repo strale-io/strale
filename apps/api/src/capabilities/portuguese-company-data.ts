@@ -40,13 +40,13 @@ registerCapability("portuguese-company-data", async (input: CapabilityInput) => 
     "";
   if (typeof rawInput !== "string" || !rawInput.trim()) {
     throw new Error(
-      "'vat_number' or 'nipc' is required. Provide a Portuguese NIPC (9 digits, e.g. 504499777). PT-prefix VAT format is also accepted (e.g. PT504499777).",
+      "'vat_number' or 'nipc' is required. Provide a Portuguese NIPC (9 digits, e.g. 504499777). PT-prefix VAT format is also accepted (e.g. PT504499777). Look one up by company name at the official commercial registry publications portal: https://publicacoes.mj.pt/.",
     );
   }
   const normalised = normalisePtIdentifier(rawInput.trim());
   if (!normalised) {
     throw new Error(
-      `'${rawInput.trim()}' is not a valid Portuguese NIPC. Expected format: 9 digits (e.g. 504499777).`,
+      `'${rawInput.trim()}' is not a valid Portuguese NIPC. Expected format: 9 digits (e.g. 504499777). Look one up by company name at https://publicacoes.mj.pt/.`,
     );
   }
   const __etResult = await executeOpenapiCapability(
