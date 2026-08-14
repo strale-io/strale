@@ -10,8 +10,13 @@ description: >-
   Check a wallet's token approvals for security risks. Identifies unlimited or risky approvals that could allow funds to
   be drained. Covers Ethereum, BSC, Base, and other EVM chains via GoPlus Security.
 category: web3
-cost_class: free_unlimited
-quota_window: none
+cost_class: free_quota
+quota_window: daily
+quota_cap: 1800
+known_rate_limit:
+  value: 30
+  unit: per_minute
+  source_url: https://docs.gopluslabs.io/reference/support
 price_cents: 2
 is_free_tier: false
 input_schema:

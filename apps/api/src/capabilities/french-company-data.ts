@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatFR } from "../lib/vat-derivation.js";
-import { classifyNameMatch } from "../lib/company-name-match.js";
+import { pickByName as pickByNameShared } from "../lib/company-name-match.js";
 import { extractCompanyName } from "./lib/browserless-extract.js";
 
 // French company data via recherche-entreprises.api.gouv.fr — FREE, no auth
@@ -93,48 +93,29 @@ export interface FrNameResolution {
  * wrong-company class already fixed for NO/FI/EE/DE/CH). Score every
  * candidate in the page (max per_page = 25, API-enforced) and refuse when
  * nothing genuinely matches, same discipline as the sibling registries.
+ *
+ * Thin field-mapping wrapper: the bucket/score/refuse logic itself now lives
+ * once in company-name-match.ts (consolidated 2026-08-14, was duplicated
+ * four ways — see that module's pickByName doc comment). The shared function
+ * hands back the winning candidate itself (`resolved.candidate`), so this
+ * wrapper only renames it to the `{ company, matchConfidence }` shape
+ * french-company-data.test.ts already exercises — no second scan needed.
  */
 export function pickByName(query: string, results: any[]): FrNameResolution {
-  const exact = new Map<string, any>();
-  const high = new Map<string, any>();
-  for (const c of results) {
-    const name = c?.nom_complet || c?.nom_raison_sociale;
-    const siren = c?.siren;
-    if (typeof name !== "string" || !name || !siren) continue;
-    const { match_confidence } = classifyNameMatch(query, name);
-    if (match_confidence === "exact" && !exact.has(siren)) exact.set(siren, c);
-    else if (match_confidence === "high" && !high.has(siren)) high.set(siren, c);
-  }
-
-  const pickUnambiguous = (bucket: Map<string, any>, label: "exact" | "high"): FrNameResolution | null => {
-    if (bucket.size === 0) return null;
-    if (bucket.size === 1) {
-      return { company: bucket.values().next().value!, matchConfidence: label };
-    }
-    const listing = [...bucket.values()]
-      .slice(0, 5)
-      .map((c) => `${c.nom_complet || c.nom_raison_sociale} (${c.siren})`)
-      .join("; ");
-    throw new Error(
-      `Ambiguous French company name "${query}": ${bucket.size} distinct registered ` +
-        `entities are ${label === "exact" ? "exact" : "close"} matches — ${listing}. ` +
-        `Provide the SIREN (9 digits) or SIRET (14 digits) to disambiguate.`,
-    );
-  };
-
-  const winner = pickUnambiguous(exact, "exact") ?? pickUnambiguous(high, "high");
-  if (winner) return winner;
-
-  const closest = results
-    .slice(0, 3)
-    .map((c) => c?.nom_complet || c?.nom_raison_sociale)
-    .filter(Boolean)
-    .join(", ");
-  throw new Error(
-    `No confident French registry match for "${query}". recherche-entreprises.api.gouv.fr's search is ` +
-      `fuzzy and returned only unrelated entities${closest ? ` (closest: ${closest})` : ""}. ` +
-      `Provide the SIREN (9 digits) or SIRET (14 digits) for an exact lookup.`,
+  const resolved = pickByNameShared(
+    query,
+    results,
+    (c) => c?.nom_complet || c?.nom_raison_sociale,
+    (c) => c?.siren,
+    {
+      subjectLabel: "French company",
+      disambiguationHint: "Provide the SIREN (9 digits) or SIRET (14 digits) to disambiguate.",
+      noMatchLabel: "French registry",
+      searchDescription: "recherche-entreprises.api.gouv.fr's search",
+      noMatchHint: "Provide the SIREN (9 digits) or SIRET (14 digits) for an exact lookup.",
+    },
   );
+  return { company: resolved.candidate, matchConfidence: resolved.matchConfidence };
 }
 
 async function lookupByName(query: string): Promise<{ output: Record<string, unknown>; matchConfidence: "exact" | "high" }> {

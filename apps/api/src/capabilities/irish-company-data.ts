@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { classifyNameMatch } from "../lib/company-name-match.js";
+import { pickByName as pickByNameShared } from "../lib/company-name-match.js";
 
 /**
  * Irish company data via the CRO Open Data Portal CKAN datastore API.
@@ -90,6 +90,14 @@ async function lookupByCroNumber(croNumber: string): Promise<CroRecord> {
  * NO/FI/EE/DE/CH. Score every candidate by name and refuse when nothing
  * genuinely matches; a status preference is not a substitute for a name
  * match, so it is not applied as a tiebreaker.
+ *
+ * Thin field-mapping wrapper: the bucket/score/refuse logic itself now lives
+ * once in company-name-match.ts (consolidated 2026-08-14, was duplicated
+ * four ways — see that module's pickByName doc comment). The shared function
+ * hands back the winning candidate itself (`resolved.candidate`), so this
+ * wrapper only renames it to the `{ record, matchConfidence }` shape
+ * irish-company-data.test.ts already exercises — no second scan needed. No
+ * status tiebreak is reintroduced here either.
  */
 export interface IeNameResolution {
   record: CroRecord;
@@ -97,35 +105,20 @@ export interface IeNameResolution {
 }
 
 export function pickByName(name: string, records: CroRecord[]): IeNameResolution {
-  const exact = new Map<number, CroRecord>();
-  const high = new Map<number, CroRecord>();
-  for (const r of records) {
-    if (typeof r?.company_name !== "string" || !r.company_name) continue;
-    const { match_confidence } = classifyNameMatch(name, r.company_name);
-    if (match_confidence === "exact" && !exact.has(r.company_num)) exact.set(r.company_num, r);
-    else if (match_confidence === "high" && !high.has(r.company_num)) high.set(r.company_num, r);
-  }
-
-  const pickUnambiguous = (bucket: Map<number, CroRecord>, label: "exact" | "high"): IeNameResolution | null => {
-    if (bucket.size === 0) return null;
-    if (bucket.size === 1) return { record: bucket.values().next().value!, matchConfidence: label };
-    const listing = [...bucket.values()].slice(0, 5).map((r) => `${r.company_name} (${r.company_num})`).join("; ");
-    throw new Error(
-      `Ambiguous Irish company name "${name}": ${bucket.size} distinct registered ` +
-        `entities are ${label === "exact" ? "exact" : "close"} matches — ${listing}. ` +
-        `Provide the CRO number (5-6 digits) to disambiguate.`,
-    );
-  };
-
-  const winner = pickUnambiguous(exact, "exact") ?? pickUnambiguous(high, "high");
-  if (winner) return winner;
-
-  const closest = records.slice(0, 3).map((r) => r.company_name).filter(Boolean).join(", ");
-  throw new Error(
-    `No confident Irish registry match for "${name}". The CRO Open Data Portal's search is fuzzy ` +
-      `and returned only unrelated entities${closest ? ` (closest: ${closest})` : ""}. ` +
-      `Provide the CRO number (5-6 digits) for an exact lookup.`,
+  const resolved = pickByNameShared(
+    name,
+    records,
+    (r) => r?.company_name,
+    (r) => (r?.company_num != null ? String(r.company_num) : undefined),
+    {
+      subjectLabel: "Irish company",
+      disambiguationHint: "Provide the CRO number (5-6 digits) to disambiguate.",
+      noMatchLabel: "Irish registry",
+      searchDescription: "The CRO Open Data Portal's search",
+      noMatchHint: "Provide the CRO number (5-6 digits) for an exact lookup.",
+    },
   );
+  return { record: resolved.candidate, matchConfidence: resolved.matchConfidence };
 }
 
 // Fetches the candidate page and delegates to pickByName above for the

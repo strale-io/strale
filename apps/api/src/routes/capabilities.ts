@@ -5,6 +5,7 @@ import { capabilities, solutions, solutionSteps } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
 import { authMiddleware } from "../lib/middleware.js";
 import { getAllHealth } from "../lib/circuit-breaker.js";
+import { SYSTEM_ACCOUNT_EMAIL } from "../lib/internal-accounts.js";
 import type { AppEnv } from "../types.js";
 
 // Capabilities are public — no auth required (lets developers browse before signing up)
@@ -65,7 +66,7 @@ capabilitiesRoute.get("/", async (c) => {
       FROM transactions t
      WHERE t.status = 'completed'
        AND (t.user_id IS NULL OR t.user_id != (
-         SELECT id FROM users WHERE email = 'system@strale.internal' LIMIT 1
+         SELECT id FROM users WHERE email = ${SYSTEM_ACCOUNT_EMAIL} LIMIT 1
        ))
      GROUP BY t.capability_id
   `);
@@ -178,7 +179,7 @@ capabilitiesRoute.get("/:slug", async (c) => {
      WHERE t.capability_id = ${cap.id}
        AND t.status = 'completed'
        AND (t.user_id IS NULL OR t.user_id != (
-         SELECT id FROM users WHERE email = 'system@strale.internal' LIMIT 1
+         SELECT id FROM users WHERE email = ${SYSTEM_ACCOUNT_EMAIL} LIMIT 1
        ))
   `);
   const lccRows = Array.isArray(lastCustomerCallRows)

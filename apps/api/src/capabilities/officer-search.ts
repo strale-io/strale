@@ -91,6 +91,10 @@ async function searchUsOfficers(query: string): Promise<{ company: string; offic
   if (!match) return null;
 
   const cik = String(match.cik_str).padStart(10, "0");
+  // Rate-limit citation for this host lives on the manifest
+  // (manifests/officer-search.yaml known_rate_limit — this capability
+  // also calls UK Companies House, so it's a 2-entry array; quota_cap is
+  // bounded by the more restrictive of the two).
   const subResp = await fetch(`https://data.sec.gov/submissions/CIK${cik}.json`, {
     headers: { "User-Agent": UA },
     signal: AbortSignal.timeout(10000),
