@@ -82,6 +82,21 @@ export async function sendAlert(opts: {
 }): Promise<boolean> {
   const { subject, body, severity } = opts;
 
+  // Alert fatigue (incident 2026-08-14): a CRITICAL "x402 settlement volume
+  // dropped" page — a full revenue stoppage — arrived in an inbox interleaved
+  // with routine INFO notices like "greek-company-data reached 30% of daily
+  // test budget", and was missed for hours. Informational alerts are not
+  // things to act on at 2am; they belong in the daily digest, which already
+  // reports budget consumption. INFO is therefore logged, not emailed.
+  // Set ALERT_INFO_EMAIL=true to restore the old behaviour.
+  if (severity === "info" && process.env.ALERT_INFO_EMAIL !== "true") {
+    log.info(
+      { label: "alerting-info-suppressed", severity, subject },
+      "alerting-info-suppressed (logged, not emailed — see daily digest)",
+    );
+    return false;
+  }
+
   const resend = getResend();
   if (!resend) {
     logWarn("alerting-no-api-key", "RESEND_API_KEY missing; would have sent alert", { severity, subject });
