@@ -127,20 +127,34 @@ personal_data_categories:
   - professional
 geography: nordic
 test_fixtures:
-  # known_answer exercises the NAME path (Gate 5 SECONDARY); schema_check runs
-  # on health_check_input below and keeps the ID path covered.
+  # known_answer is array-form: one fixture per entry point, satisfying
+  # Gate 5's PRIMARY (org_number) + SECONDARY (company_name) requirement
+  # (DEC-20260411-B, gate5-path-coverage.ts). Both entries verified live
+  # against Brreg 2026-08-14 — company_name "Equinor" and org_number
+  # "923609016" both resolve to EQUINOR ASA.
   known_answer:
-    input:
-      company_name: Equinor
-    expected_fields:
-      - field: company_name
-        operator: contains
-        reliability: guaranteed
-        value: EQUINOR
-      - field: org_number
-        operator: equals
-        reliability: guaranteed
-        value: "923609016"
+    - input:
+        company_name: Equinor
+      expected_fields:
+        - field: company_name
+          operator: contains
+          reliability: guaranteed
+          value: EQUINOR
+        - field: org_number
+          operator: equals
+          reliability: guaranteed
+          value: "923609016"
+    - input:
+        org_number: "923609016"
+      expected_fields:
+        - field: org_number
+          operator: equals
+          reliability: guaranteed
+          value: "923609016"
+        - field: company_name
+          operator: contains
+          reliability: guaranteed
+          value: EQUINOR
   health_check_input:
     org_number: "923609016"
 output_field_reliability:

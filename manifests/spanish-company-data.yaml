@@ -127,15 +127,32 @@ personal_data_categories:
   - professional
 geography: eu
 test_fixtures:
+  # known_answer is array-form: one fixture per entry point, satisfying
+  # Gate 5's PRIMARY (nif) + SECONDARY (company_name) requirement
+  # (DEC-20260411-B, gate5-path-coverage.ts). Entry 2 verified live against
+  # OpenMercantil 2026-08-14 — company_name "Construcciones Amenabar"
+  # resolves to the same entity as the nif lookup (CONSTRUCCIONES AMENABAR
+  # SA / A20072302). nif is NOT asserted on the name-path entry: it's
+  # output_field_reliability: common (not guaranteed) specifically because
+  # name-path matches can land on a BORME record with no published nif —
+  # asserting it here would make this fixture depend on OpenMercantil's
+  # name-match landing on the same record every time.
   known_answer:
-    input:
-      nif: A20072302
-    expected_fields:
-      - { field: company_name, operator: contains, reliability: guaranteed, value: AMENABAR }
-      - { field: nif, operator: equals, reliability: guaranteed, value: A20072302 }
-      - { field: status, operator: not_null, reliability: guaranteed }
-      - { field: jurisdiction, operator: equals, reliability: guaranteed, value: ES }
-      - { field: tier_2_available, operator: not_null, reliability: guaranteed }
+    - input:
+        nif: A20072302
+      expected_fields:
+        - { field: company_name, operator: contains, reliability: guaranteed, value: AMENABAR }
+        - { field: nif, operator: equals, reliability: guaranteed, value: A20072302 }
+        - { field: status, operator: not_null, reliability: guaranteed }
+        - { field: jurisdiction, operator: equals, reliability: guaranteed, value: ES }
+        - { field: tier_2_available, operator: not_null, reliability: guaranteed }
+    - input:
+        company_name: Construcciones Amenabar
+      expected_fields:
+        - { field: company_name, operator: contains, reliability: guaranteed, value: AMENABAR }
+        - { field: status, operator: not_null, reliability: guaranteed }
+        - { field: jurisdiction, operator: equals, reliability: guaranteed, value: ES }
+        - { field: tier_2_available, operator: not_null, reliability: guaranteed }
   health_check_input:
     nif: A20072302
 output_field_reliability:
