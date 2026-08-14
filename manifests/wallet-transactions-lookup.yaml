@@ -10,8 +10,13 @@ description: >-
   Get recent transactions for any wallet address. Returns up to 50 transactions with hash, value, timestamp, and gas
   details. Supports Ethereum and other EVM chains via Etherscan V2.
 category: web3
-cost_class: free_unlimited
-quota_window: none
+cost_class: free_quota
+quota_window: daily
+quota_cap: 100000
+known_rate_limit:
+  value: 100000
+  unit: per_day
+  source_url: https://docs.etherscan.io/etherscan-v2/rate-limits
 price_cents: 2
 is_free_tier: false
 input_schema:
