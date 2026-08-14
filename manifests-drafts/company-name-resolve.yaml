@@ -1,0 +1,183 @@
+# DRAFT — NOT FOR THE ONBOARDING PIPELINE
+#
+# Queue rank 2. Demand: agents arrive holding a NAME, registries index IDENTIFIERS.
+# 45+ name-shaped arrivals across 8 *-company-data capabilities in 90d; us-company-data
+# 17/26 failed; verbatim errors `'cik' or 'company_name' is required` (x4) and
+# `No confident SEC EDGAR match for "Apple"` (x3). Slug guesses in failed_requests:
+# company-lookup (EUR0.50 bid), contact-verify, lead-enrich, solutions/lead-enrich.
+# See docs/strategy/2026-08-demand-mined-build-queue.md §2.4.
+#
+# VERIFICATION DEBT — close before building:
+#   1. Per-registry match thresholds are UNDEFINED. This capability exists precisely
+#      because taking result[0] is wrong — see feedback_registry_name_search_never_ranks.md
+#      (PRH orders by business ID, Brreg alphabetically, EDGAR searches filings not
+#      entities; result[0] returned Fysios for "Nokia"). Every backing registry needs its
+#      own scoring rule and its own refusal threshold before this ships. Do not build a
+#      generic "best match" — build a scorer that refuses.
+#   2. Decide the refusal contract: does an ambiguous result 200 with candidates and
+#      confidence: "ambiguous", or 4xx? Recommendation below is 200-with-candidates,
+#      because a 4xx here reproduces the failure this capability is meant to remove.
+#   3. Confirm which registries are in scope at launch. The draft assumes the ones with
+#      recorded name-shaped demand (UK, US, DE, FR, BE, FI, DK) plus domain resolution.
+#   4. ORGANISATION-LEVEL ONLY. This must never infer or return a person's email or
+#      direct phone. The standing email-finder refusal (auto-register DEACTIVATED map,
+#      CNIL/Kaspr EUR240k) applies. Officer/director names already published by a
+#      registry are a separate question and are OUT of scope for this draft.
+
+slug: company-name-resolve
+name: Company Name Resolve
+description: >-
+  Turn a company name into the identifiers other lookups need — registry number, jurisdiction
+  and official domain — with an explicit confidence band and honest refusal when the name is
+  ambiguous.
+category: company-data
+cost_class: paid_prepaid
+quota_window: none
+price_cents: 5
+is_free_tier: false
+avg_latency_ms: 2000
+data_source: >-
+  Composite — Serper.dev (licensed SERP, already live) for candidate discovery, DNS for
+  domain verification, and the official registry APIs Strale already operates for
+  identifier confirmation
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: composite-internal
+gdpr_art_22_classification: data_lookup
+processes_personal_data: false
+geography: multi
+
+input_schema:
+  type: object
+  required: []
+  properties:
+    company_name:
+      type: string
+      description: Company name as the caller has it (min 2 chars). Legal or trade name.
+    name:
+      type: string
+      description: Alias for company_name
+    query:
+      type: string
+      description: Alias for company_name
+    task:
+      type: string
+      description: Free-text alias for company_name
+    country:
+      type: string
+      description: >-
+        Optional ISO 3166-1 alpha-2 hint (e.g. "GB", "US", "DE"). Strongly recommended —
+        without it, resolution across jurisdictions is materially less confident.
+    domain_hint:
+      type: string
+      description: Optional known domain, used to confirm rather than discover the match
+  anyOf:
+    - required: [company_name]
+    - required: [name]
+    - required: [query]
+    - required: [task]
+
+output_schema:
+  type: object
+  example:
+    query: Monzo Bank
+    country: GB
+    confidence: high
+    resolved:
+      legal_name: MONZO BANK LIMITED
+      jurisdiction: GB
+      registry: UK Companies House
+      registry_id: "09446231"
+      registry_id_type: company_number
+      domain: monzo.com
+      domain_verified: true
+      next_capability: uk-company-data
+    candidates:
+      - legal_name: MONZO BANK LIMITED
+        jurisdiction: GB
+        registry_id: "09446231"
+        score: 0.96
+    candidate_count: 1
+  properties:
+    query: { type: string }
+    country: { type: ["string", "null"] }
+    confidence:
+      type: string
+      description: 'One of: high | medium | ambiguous | none. "ambiguous" and "none" leave `resolved` null.'
+    resolved:
+      type: ["object", "null"]
+      description: The single confident match, or null when confidence is ambiguous/none
+    candidates:
+      type: array
+      description: Scored candidates, always returned so the caller can disambiguate
+    candidate_count: { type: integer }
+
+test_fixtures:
+  # DRAFT fixture. Use a company whose registry ID you have independently verified.
+  # A second fixture asserting confidence == "ambiguous" on a deliberately ambiguous
+  # name (e.g. "Apple") is MANDATORY before launch — the refusal path is the product.
+  known_answer:
+    input:
+      company_name: Monzo Bank
+      country: GB
+    expected_fields:
+      - { field: confidence, operator: not_null, reliability: guaranteed }
+      - { field: candidates, operator: type, reliability: guaranteed, value: array }
+      - { field: candidate_count, operator: not_null, reliability: guaranteed }
+  health_check_input:
+    company_name: Monzo Bank
+    country: GB
+
+output_field_reliability:
+  query: guaranteed
+  country: guaranteed
+  confidence: guaranteed
+  candidates: guaranteed
+  candidate_count: guaranteed
+  resolved: common
+  "resolved.legal_name": common
+  "resolved.jurisdiction": common
+  "resolved.registry_id": common
+  "resolved.registry": common
+  "resolved.domain": rare
+  "resolved.domain_verified": rare
+  "resolved.next_capability": common
+
+limitations:
+  - title: Refuses rather than guesses — ambiguity is a successful outcome
+    text: >-
+      When no candidate clears the per-registry threshold the response is 200 with
+      `confidence: "ambiguous"`, `resolved: null` and the scored candidate list. This is
+      deliberate: registry name searches never rank by relevance, so returning a
+      best-effort single match produces confidently wrong companies. Callers must handle
+      the ambiguous case.
+    category: accuracy
+    severity: warning
+  - title: Country hint materially changes accuracy
+    text: >-
+      Without `country`, candidates are drawn across jurisdictions and the same trade name
+      may exist in several registries. Expect a lower confidence band and more candidates
+      when the hint is omitted.
+    category: accuracy
+    severity: warning
+  - title: Coverage is limited to registries Strale already operates
+    text: >-
+      Resolution can only return identifiers for jurisdictions with a live Strale registry
+      capability. For other countries the response may still resolve a domain but will
+      carry no registry_id.
+    category: coverage
+    severity: warning
+  - title: Organisation-level only — no personal contact data
+    text: >-
+      Returns company identifiers and the official domain. It does not infer, search for,
+      or return any individual's email address or direct phone number, by design.
+    category: legal
+    severity: info
+  - title: Domain verification confirms, it does not prove ownership
+    text: >-
+      `domain_verified` means the domain resolves and its content is consistent with the
+      resolved entity. It is not a trademark check and does not establish that the entity
+      owns the domain.
+    category: accuracy
+    severity: info
