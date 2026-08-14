@@ -189,12 +189,25 @@ export function buildInputSchema(
 
 // ─── Free-tier constants ────────────────────────────────────────────────────
 
+// Degraded-path fallback only: used when the caller didn't pass the fetched
+// catalog, so `is_free_tier` (the canonical per-capability flag) isn't
+// available. The authoritative list is `free_tier_slugs` from
+// GET /v1/platform/facts — re-sync this array from there when the free tier
+// changes. Stale entries here mean a genuinely-free capability gets refused
+// for callers with no API key, which is why it can't just be left at the
+// original five.
 const FREE_TIER_SLUGS = [
-  "email-validate",
+  "bitcoin-address-validate",
   "dns-lookup",
-  "json-repair",
-  "url-to-markdown",
+  "dogecoin-address-validate",
+  "email-validate",
+  "eth-address-validate",
   "iban-validate",
+  "json-repair",
+  "solana-address-validate",
+  "tron-address-validate",
+  "url-to-markdown",
+  "xrp-address-validate",
 ];
 
 // ─── Capability execution ───────────────────────────────────────────────────
@@ -218,7 +231,7 @@ export async function executeCapability(
             text: JSON.stringify({
               error: "Authentication required for paid capabilities.",
               fix: "Get a free API key at https://strale.dev/signup — includes €2 free credits, no card needed. Then reconnect with Authorization: Bearer sk_live_YOUR_KEY",
-              tip: "Try a free capability first: email-validate, dns-lookup, json-repair, url-to-markdown, or iban-validate — no API key needed.",
+              tip: "Several capabilities are free with no API key — call strale_search and look for is_free_tier, e.g. email-validate or dns-lookup.",
             }),
           },
         ],
