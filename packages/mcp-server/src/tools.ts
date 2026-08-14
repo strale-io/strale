@@ -5,7 +5,11 @@
  * It is used by both the stdio transport (server.ts) and the
  * Streamable HTTP transport (apps/api/src/routes/mcp.ts).
  *
- * Phase 3: Dual-profile model — QP + RP + matrix SQS + execution guidance.
+ * Tool descriptions are a machine surface: agents choose tools from them
+ * and treat them as a contract. They must describe only what the API
+ * actually returns — no retired concepts (the SQS scoring engine was
+ * deleted in DEC-20260503-B) and no hardcoded catalog counts, which drift
+ * within days.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -490,7 +494,7 @@ export function registerStraleTools(
     "strale_execute",
     {
       description:
-        "Executes a Strale capability by slug and returns the result. Use this when you need to perform any verification, validation, lookup, or data extraction from the 271-capability registry. Call strale_search first to find the right slug and required input fields. Returns a result object with the capability output, quality score (SQS), latency, price charged, and data provenance. Five free capabilities work without an API key (10/day limit). Paid capabilities debit from the wallet — check strale_balance first for high-value calls.",
+        "Executes a Strale capability by slug and returns the result. Use this when you need to perform any verification, validation, lookup, or data extraction from the capability registry. Call strale_search first to find the right slug and required input fields. Returns a result object with the capability output, latency, price charged, and data provenance. Several capabilities are free without an API key (10/day limit) — strale_search reports which. Paid capabilities debit from the wallet — check strale_balance first for high-value calls.",
       inputSchema: z.object({
         slug: z
           .string()
@@ -525,7 +529,7 @@ export function registerStraleTools(
     "strale_search",
     {
       description:
-        "Searches the Strale capability registry by keyword, category, or natural language query. Use this when you need to find the right capability for a task but don't know the exact slug. Returns matching capabilities and solutions ranked by relevance, each with slug, name, description, category, price in EUR cents, and current SQS quality score. The registry contains 271 capabilities across compliance, finance, web intelligence, developer tools, and more. No API key required to search.",
+        "Searches the Strale capability registry by keyword, category, or natural language query. Use this when you need to find the right capability for a task but don't know the exact slug. Returns matching capabilities and solutions ranked by relevance, each with slug, name, description, category, and price in EUR cents. The registry spans company data, compliance, finance, web intelligence, and developer tools. No API key required to search.",
       inputSchema: z.object({
         query: z
           .string()
@@ -844,7 +848,7 @@ REFERENCES
     "strale_trust_profile",
     {
       description:
-        "Returns the trust profile for a capability or solution. Call this before relying on a capability for high-stakes decisions, or when a user asks how reliable a specific check is. Returns SQS score (0-100), Quality grade (A-F), Reliability grade (A-F), execution guidance (direct, retry, queue, or fallback), 30-day test history, known limitations, and cost envelope. No API key required.",
+        "Returns the trust profile for a capability or solution. Call this before relying on a capability for high-stakes decisions, or when a user asks how reliable a specific check is. Returns lifecycle state, last-tested timestamp, recent test history, known limitations, data source and provenance, and cost envelope. Strale deliberately exposes no single numeric quality score — judge from the test history and limitations. No API key required.",
       inputSchema: z.object({
         slug: z
           .string()
