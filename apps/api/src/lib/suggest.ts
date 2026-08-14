@@ -660,10 +660,41 @@ export async function typeahead(
 
 // ─── Main suggest function ──────────────────────────────────────────────────
 
+/**
+ * Longest query this engine will consider.
+ *
+ * Enforced here rather than only at the route, because a route-level cap
+ * protects one caller and this engine has more than one. `POST /v1/suggest`
+ * capped queries at 500 characters; `POST /a2a` reached the same engine with
+ * whatever text a message part carried, bounded only by a 256 KB body limit.
+ * A query costs a full catalog scan, and when embeddings are active it costs a
+ * billed Voyage embedding plus a billed Anthropic re-rank — so the ceiling
+ * belongs with the work, not with one of the doors to it.
+ */
+export const MAX_SUGGEST_QUERY_CHARS = 500;
+
+/** Thrown when a caller exceeds {@link MAX_SUGGEST_QUERY_CHARS}. Callers map
+ *  this onto whatever their protocol's client-error shape is. */
+export class SuggestQueryTooLongError extends Error {
+  readonly maxChars = MAX_SUGGEST_QUERY_CHARS;
+  constructor(actualChars: number) {
+    super(
+      `Query must be under ${MAX_SUGGEST_QUERY_CHARS} characters (received ${actualChars}).`,
+    );
+    this.name = "SuggestQueryTooLongError";
+  }
+}
+
 export async function suggest(req: {
   query: string;
   limit?: number;
 }): Promise<SuggestResponse> {
+  // Before anything else, including the cache lookup — an oversized query must
+  // not be normalized, hashed or stored, only refused.
+  if (req.query.length > MAX_SUGGEST_QUERY_CHARS) {
+    throw new SuggestQueryTooLongError(req.query.length);
+  }
+
   const normalized = normalizeQuery(req.query);
   const limit = req.limit ?? 3;
 
