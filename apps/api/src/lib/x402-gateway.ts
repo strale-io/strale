@@ -557,16 +557,88 @@ export async function settleX402Payment(
       verified.requirements as any,
     );
     if (!settleResult.success) {
-      return { valid: false, error: settleResult.errorReason ?? "Settlement failed" };
+      const reason = settleResult.errorReason ?? "Settlement failed";
+      reportSettlementFailure(reason);
+      return { valid: false, error: reason };
     }
     return { valid: true, settlementId: settleResult.transaction ?? "settled" };
   } catch (err) {
     logError("x402-settlement-failed", err);
+    reportSettlementFailure(err instanceof Error ? err.message : "Settlement failed");
     return {
       valid: false,
       error: err instanceof Error ? err.message : "Settlement failed",
     };
   }
+}
+
+/**
+ * Settle-failure classes that mean *every* payment is failing, not just this
+ * one. These page immediately; per-payment failures (expired or already-used
+ * authorization, payer balance) are left to the volume tripwire.
+ *
+ * Learned 2026-08-14: Coinbase's facilitator gives 1,000 free settlements per
+ * month, then refuses with `payment-method-required` until a card is on file.
+ * Strale crossed the threshold at settlement 1,009 and every settle failed for
+ * 21 hours. Verify and execute kept succeeding, so nothing looked broken from
+ * the inside — the only symptom was revenue quietly stopping, which the
+ * volume tripwire cannot see until a full 24h window has aged out.
+ */
+const SYSTEMIC_SETTLE_PATTERNS: Array<{ pattern: RegExp; label: string; hint: string }> = [
+  {
+    pattern: /payment[-_ ]?method[-_ ]?required|valid payment method is required/i,
+    label: "facilitator_billing",
+    hint:
+      "Coinbase CDP requires a payment method once the monthly free-settlement allowance is used. " +
+      "Add or fix the card on the CDP entity that owns the API key in CDP_API_KEY_ID: " +
+      "https://portal.cdp.coinbase.com → Billing. Settlement resumes immediately once saved.",
+  },
+  {
+    pattern: /unauthorized|forbidden|invalid api key|authentication|401|403/i,
+    label: "facilitator_auth",
+    hint:
+      "The facilitator rejected our credentials. Check CDP_API_KEY_ID / CDP_API_KEY_SECRET on " +
+      "Railway, and that the key is still Enabled in the CDP portal.",
+  },
+  {
+    pattern: /quota|rate limit|429|exceeded/i,
+    label: "facilitator_quota",
+    hint: "The facilitator is rate-limiting or quota-blocking settlement. Check the CDP portal for limits.",
+  },
+];
+
+/**
+ * Page immediately on settle failures that indicate a platform-wide stoppage.
+ *
+ * Fire-and-forget by design: this sits in the money path and must never add
+ * latency to, or throw into, a payment. Deduplicated by class with a 6h
+ * cooldown that survives restarts (see alert-once).
+ */
+function reportSettlementFailure(reason: string): void {
+  const match = SYSTEMIC_SETTLE_PATTERNS.find((p) => p.pattern.test(reason));
+  if (!match) return;
+
+  void (async () => {
+    try {
+      const { alertOnce } = await import("./alert-once.js");
+      await alertOnce(`x402-settle-${match.label}`, 6 * 60 * 60 * 1000, {
+        severity: "critical",
+        subject: `x402 settlement is failing — ${match.label.replace(/_/g, " ")}`,
+        body:
+          `Every x402 payment is currently failing at the settlement step.\n\n` +
+          `Facilitator reason: ${reason}\n\n` +
+          `What this means: callers are being verified and their capability is executing, ` +
+          `but the on-chain settlement is refused — so they receive an error and are not ` +
+          `charged. Revenue is stopped until this is resolved.\n\n` +
+          `Fix: ${match.hint}\n\n` +
+          `Verify recovery with a real call:\n` +
+          `  curl -s https://api.strale.io/x402/vat-validate?vat_number=SE556703748501\n` +
+          `(expect HTTP 402 with a challenge; a funded x402 client should then get 200).`,
+      });
+    } catch (err) {
+      logError("x402-settle-alert-failed", err);
+    }
+  })();
 }
 
 /**

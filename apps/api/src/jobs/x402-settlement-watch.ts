@@ -25,15 +25,21 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { log, logError } from "../lib/log.js";
-import { sendAlert } from "../lib/alerting.js";
+import { alertOnce } from "../lib/alert-once.js";
 
-const TICK_MS = 6 * 60 * 60 * 1000; // every 6h
+// This is now the BACKSTOP, not the primary signal. Settle failures page
+// immediately from reportSettlementFailure() in lib/x402-gateway.ts; this job
+// catches the cases that produce no failure at all — a payer population
+// quietly disappearing, or a client that stops sending payments. Because the
+// window is a rolling 24h, this can only notice once a full day of good
+// traffic has aged out; that latency is inherent and is exactly why the
+// direct failure signal exists alongside it.
+const TICK_MS = 60 * 60 * 1000; // hourly: cheap query, and the 6h tick added
+                                // up to 6h on top of an already-slow signal
 const STARTUP_DELAY_MS = 5 * 60 * 1000; // let boot settle
 const ALERT_RATIO = 0.5; // alert when 24h volume < 50% of baseline
 const MIN_BASELINE_PER_DAY = 10; // below this, a drop is noise, not signal
 const ALERT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-
-let lastAlertAt = 0;
 
 export async function checkX402SettlementVolume(): Promise<void> {
   const db = getDb();
@@ -65,10 +71,10 @@ export async function checkX402SettlementVolume(): Promise<void> {
 
   if (baselinePerDay < MIN_BASELINE_PER_DAY) return;
   if (last24h >= baselinePerDay * ALERT_RATIO) return;
-  if (Date.now() - lastAlertAt < ALERT_COOLDOWN_MS) return;
 
-  lastAlertAt = Date.now();
-  await sendAlert({
+  // Cooldown lives in the DB, not module memory: redeploys used to reset it,
+  // which sent five identical pages in 90 minutes on 2026-08-14.
+  await alertOnce("x402-settlement-volume-drop", ALERT_COOLDOWN_MS, {
     severity: "critical",
     subject: `x402 settlement volume dropped: ${last24h} in 24h vs ~${Math.round(baselinePerDay)}/day baseline`,
     body:
@@ -78,7 +84,8 @@ export async function checkX402SettlementVolume(): Promise<void> {
       `check the x402-payment-payload-version log counter, and if v1 payloads ` +
       `disappeared at the deploy boundary, set X402_CHALLENGE_VERSION=1 on Railway ` +
       `and redeploy (see x402ChallengeVersion() in lib/x402-gateway.ts). ` +
-      `Other suspects: facilitator outage (getFacilitatorUrl), Base network issues.`,
+      `Other suspects: facilitator billing/auth (a settle-failure page would ` +
+      `have fired separately), facilitator outage, or Base network issues.`,
   });
 }
 
