@@ -1,5 +1,11 @@
 import { Hono } from "hono";
-import { suggest, typeahead, MAX_SUGGEST_QUERY_CHARS } from "../lib/suggest.js";
+import {
+  suggest,
+  typeahead,
+  MAX_SUGGEST_QUERY_CHARS,
+  SuggestQueryTooLongError,
+  assertSuggestQueryLength,
+} from "../lib/suggest.js";
 import { apiError } from "../lib/errors.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { getClientIp, hashIp } from "../lib/middleware.js";
@@ -92,14 +98,13 @@ suggestRoute.post("/suggest", rateLimitByIp(20, 1000), async (c) => {
     );
   }
 
-  if (query.length > MAX_SUGGEST_QUERY_CHARS) {
-    return c.json(
-      apiError(
-        "invalid_request",
-        `'query' must be under ${MAX_SUGGEST_QUERY_CHARS} characters.`,
-      ),
-      400,
-    );
+  try {
+    assertSuggestQueryLength(query);
+  } catch (err) {
+    if (err instanceof SuggestQueryTooLongError) {
+      return c.json(apiError("invalid_request", `'query' ${err.message.toLowerCase()}`), 400);
+    }
+    throw err;
   }
 
   const limit = Math.min(Math.max(body.limit ?? 3, 1), 10);

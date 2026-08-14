@@ -685,15 +685,28 @@ export class SuggestQueryTooLongError extends Error {
   }
 }
 
+/**
+ * Throw unless `query` is within the ceiling.
+ *
+ * Both routes pre-validate so they can answer in their own error shape rather
+ * than let the throw escape, and `suggest()` checks again as its own guard.
+ * That is three call sites, so the comparison itself lives here — the shared
+ * constant keeps the threshold from drifting, but only a shared function keeps
+ * the semantics from drifting (trimmed or not, `>` or `>=`).
+ */
+export function assertSuggestQueryLength(query: string): void {
+  if (query.length > MAX_SUGGEST_QUERY_CHARS) {
+    throw new SuggestQueryTooLongError(query.length);
+  }
+}
+
 export async function suggest(req: {
   query: string;
   limit?: number;
 }): Promise<SuggestResponse> {
   // Before anything else, including the cache lookup — an oversized query must
   // not be normalized, hashed or stored, only refused.
-  if (req.query.length > MAX_SUGGEST_QUERY_CHARS) {
-    throw new SuggestQueryTooLongError(req.query.length);
-  }
+  assertSuggestQueryLength(req.query);
 
   const normalized = normalizeQuery(req.query);
   const limit = req.limit ?? 3;

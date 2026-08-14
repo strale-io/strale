@@ -60,9 +60,17 @@ describe("the cap lives in the engine, so every caller inherits it", () => {
   });
 
   it("accepts a query exactly at the limit", async () => {
-    const { MAX_SUGGEST_QUERY_CHARS } = await import("../lib/suggest.js");
+    const { suggest, MAX_SUGGEST_QUERY_CHARS, SuggestQueryTooLongError } = await import(
+      "../lib/suggest.js"
+    );
     // Boundary is "> max", not ">= max" — the documented limit must itself pass.
-    expect("a".repeat(MAX_SUGGEST_QUERY_CHARS).length).toBe(MAX_SUGGEST_QUERY_CHARS);
+    // It has to reach the catalog to prove that, and the db mock throws there;
+    // any error EXCEPT the length one means the guard let it through.
+    const err = await suggest({ query: "a".repeat(MAX_SUGGEST_QUERY_CHARS) }).catch(
+      (e: Error) => e,
+    );
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toBeInstanceOf(SuggestQueryTooLongError);
   });
 });
 
@@ -88,25 +96,47 @@ describe("/a2a message/send input cap", () => {
     const { MAX_SUGGEST_QUERY_CHARS } = await import("../lib/suggest.js");
 
     // With skillId present the suggest engine is never consulted, so the long
-    // text costs nothing and must not be refused on length grounds. It will
-    // fail later for other reasons (the db mock throws) — the point is that it
-    // is not rejected by the -32602 length guard.
-    const res = await a2aRoute.request(
-      jsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 1,
-          method: "message/send",
-          params: {
-            skillId: "iban-validate",
-            message: { parts: [{ kind: "text", text: "y".repeat(MAX_SUGGEST_QUERY_CHARS + 1) }] },
+    // text costs nothing and must not be refused on length grounds.
+    //
+    // The route proxies to /v1/do once it has a skill, so fetch is stubbed. An
+    // earlier version of this test let that call fail for real, which landed in
+    // a catch block that dereferences a logger the parent app normally
+    // installs. The route then 500'd with a non-JSON body, `body.error` came
+    // back undefined, and `undefined !== -32602` passed no matter what the
+    // guard did. The assertion has to be reachable to mean anything.
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ status: "completed", output: { valid: true } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })) as typeof fetch;
+
+    try {
+      const res = await a2aRoute.request(
+        jsonRpc(
+          {
+            jsonrpc: "2.0",
+            id: 1,
+            method: "message/send",
+            params: {
+              skillId: "iban-validate",
+              message: {
+                parts: [{ kind: "text", text: "y".repeat(MAX_SUGGEST_QUERY_CHARS + 1) }],
+              },
+            },
           },
-        },
-        "203.0.113.11",
-      ),
-    );
-    const body = (await res.json().catch(() => ({}))) as { error?: { code: number } };
-    expect(body.error?.code).not.toBe(-32602);
+          "203.0.113.11",
+        ),
+      );
+
+      // Must be a real JSON-RPC reply, not a crash that trivially satisfies the
+      // assertion below.
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { error?: { code: number } };
+      expect(body.error?.code).not.toBe(-32602);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });
 
