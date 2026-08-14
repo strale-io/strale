@@ -5,6 +5,7 @@ import {
   extractCompanyFromText,
   extractCompanyName,
 } from "./lib/browserless-extract.js";
+import { assertSingleResultMatch } from "../lib/company-name-match.js";
 
 // Canada — Corporations Canada (ISED)
 //
@@ -172,6 +173,28 @@ registerCapability("canadian-company-data", async (input: CapabilityInput) => {
   } else {
     const name = await extractCompanyName(trimmed, "Canadian");
     output = await lookupByName(name);
+
+    // Name path: the Corporations Canada site search has no JSON API (probed
+    // 2026-08-12 — non-JSON 302), so this renders the search page and has an
+    // LLM extract the record it judges best from the page text. That
+    // extraction step already made an implicit "which row is the answer"
+    // choice with no ranking guarantee — the #161 wrong-company class applies
+    // here too, just one layer further from the raw registry data than the
+    // JSON-API registries. Classify the extracted name against what was
+    // asked and refuse when it doesn't genuinely match, same discipline as
+    // the sibling registries.
+    const returnedName = typeof output.company_name === "string" ? output.company_name : "";
+    output.match_confidence = assertSingleResultMatch(name, returnedName, {
+      jurisdictionLabel: "Canadian",
+      sourceDescription: "The Corporations Canada site search",
+      // Not "(7-9 digits)" — older federal corporations have fewer than 7
+      // digits (e.g. corp 1007), and that hint would push a retrying caller
+      // toward zero-padding a legitimate short ID into a wrong, not-found
+      // one. Matches the wording already used by fetchCorporationJson's own
+      // not-found error above.
+      disambiguationHint:
+        "Provide the corporation number (older corporations have fewer than 7 digits) or the 9-digit business number for an exact lookup.",
+    });
   }
 
   // Evidence Tier canonical aliases + honest Tier-2/UBO posture.

@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatDK } from "../lib/vat-derivation.js";
 import { firstString } from "./lib/input-aliases.js";
+import { assertSingleResultMatch } from "../lib/company-name-match.js";
 
 // CVR API — Danish Central Business Register
 // NOTE: cvrapi.dk free tier has aggressive quota limits that trigger QUOTA_EXCEEDED
@@ -138,6 +139,23 @@ registerCapability("danish-company-data", async (input: CapabilityInput) => {
   } else {
     const companyName = await extractCompanyName(trimmed);
     output = await fetchCompany({ name: companyName });
+
+    // Name path: unlike the other registries in this catalog, cvrapi.dk's
+    // `search=` parameter returns a single best-guess object, not a ranked
+    // candidate list — there is no pool to score. A generic query still
+    // returns SOME company with no signal it isn't the intended one
+    // (verified live 2026-08-13: "Consulting" resolves to "Redmark
+    // Consulting ApS", an arbitrary single hit — the #161 wrong-company
+    // class). Classify what came back against what was asked and refuse
+    // when it doesn't genuinely match, same discipline as the sibling
+    // registries that do get a candidate pool.
+    const returnedName = typeof output.company_name === "string" ? output.company_name : "";
+    output.match_confidence = assertSingleResultMatch(companyName, returnedName, {
+      jurisdictionLabel: "Danish",
+      sourceDescription: "cvrapi.dk",
+      extraClause: " with no ranked alternatives to fall back on",
+      disambiguationHint: "Provide the CVR number (8 digits) for an exact lookup.",
+    });
   }
 
   const cvrForRef = (output.cvr_number as string) || "";
