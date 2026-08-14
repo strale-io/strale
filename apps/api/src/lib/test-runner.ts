@@ -1107,6 +1107,7 @@ const NULL_RATIO_RULE_ENABLED = process.env.NULL_RATIO_RULE_ENABLED === "true";
 // Gate 3: Canonical-input sentinel (DEC-20260513-B + DEC-20260513-C).
 // See ./guaranteed-fields-sentinel.ts for the rationale + strict-missing semantics.
 import { checkGuaranteedFieldsPresent } from "./guaranteed-fields-sentinel.js";
+import { SYSTEM_ACCOUNT_EMAIL } from "./internal-accounts.js";
 
 function validateResult(
   suite: typeof testSuites.$inferSelect,
@@ -1478,7 +1479,7 @@ async function getSystemUserId(): Promise<string> {
   const [existing] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.email, "system@strale.internal"))
+    .where(eq(users.email, SYSTEM_ACCOUNT_EMAIL))
     .limit(1);
 
   if (existing) {
@@ -1492,7 +1493,7 @@ async function getSystemUserId(): Promise<string> {
   const [created] = await db
     .insert(users)
     .values({
-      email: "system@strale.internal",
+      email: SYSTEM_ACCOUNT_EMAIL,
       name: "Strale Internal Test Runner",
       apiKeyHash: hash,
       keyPrefix: "sk_sys_",

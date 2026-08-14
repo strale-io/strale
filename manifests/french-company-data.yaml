@@ -127,6 +127,10 @@ output_field_reliability:
   directors: guaranteed
   company_name: guaranteed
   activity_code: guaranteed
+  # Only set on the name-search path (never on the SIREN/SIRET identifier
+  # path) — mirrors finnish-company-data's convention. See #161 wrong-company
+  # class fix, 2026-08-14.
+  match_confidence: rare
 limitations:
   - title: Data from INSEE/SIRENE via api.gouv.fr — financial statements require separate access to INPI
     text: Data from api.gouv.fr (INSEE/SIRENE) — financial statements require separate access to INPI or Societe.com
