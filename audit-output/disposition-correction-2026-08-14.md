@@ -87,13 +87,16 @@ the original ranking.
 
 Both came out of the Receita Federal design work and both sounded right.
 
-**"198 capabilities declare a real cost the scheduler ignores."** 198 capabilities do
-have `estimated_cost_cents > 0` while `external_cost_cents = 0`, but
-`estimated_cost_cents` is set from `cap.priceCents`
+**"198 capabilities declare a real cost the scheduler ignores."** Not as stated.
+198 capabilities do have `estimated_cost_cents > 0` while `external_cost_cents = 0`,
+but `estimated_cost_cents` is set from `cap.priceCents`
 (`apps/api/src/db/generate-schema-tests.ts:151`) — it is our **selling price**, not
-an upstream cost. A free public registry correctly has `external_cost_cents = 0`.
-There is no defect and no column to update. Measured external test spend is
-**€3.64/week**, far under the €25 cap in DEC-20260812-A.
+an upstream cost. A free public registry correctly has `external_cost_cents = 0`, so
+there is no billing defect in those 198 rows and no cost column to update. Measured
+external test spend is **€3.64/week**, far under the €25 cap in DEC-20260812-A.
+
+There is, however, a real defect in a **different** column, and it is worth keeping
+separate from the one above. See the next section.
 
 **"Our test harness causes the ReceitaWS 429s hitting customers."** Disproved as
 stated. Brazil's tests ran 36 calls across 36 distinct minutes in 12 hours — never
@@ -104,6 +107,41 @@ The customer-facing 429s are real (11 of 12 real failures) but the mechanism is
 unexplained. A shared daily quota is the remaining hypothesis and is unverified —
 ReceitaWS does not publish one. Worth a look before anyone changes test scheduling
 on the strength of the earlier claim.
+
+## The real defect: "free" is not the same as "unthrottled"
+
+Separate from the billing question, and verified directly:
+
+`brazilian-company-data` is classified `cost_class = 'free_unlimited'`,
+`quota_window = 'none'`, `quota_cap = NULL`. ReceitaWS permits roughly 3 requests
+per minute. `guardedExecute`'s ALLOW_MATRIX treats `free_unlimited` as
+"allow, no constraint" (`apps/api/src/capabilities/guarded-executor.ts:92`), so the
+budget check built after the 2026-05-11 DE OpenRegister incident is **disarmed** for
+this capability. That incident's own post-mortem names the cause as "conflating 'no
+per-call cost' with 'no quota'." This is the same conflation, recorded in data
+rather than in code.
+
+The label is wrong, not the machinery. The correct fix is to reclassify
+`cost_class` to `free_quota` with a real `quota_window` / `quota_cap`.
+
+**193 of the active capabilities are `free_unlimited`** (against 93 `paid_prepaid`
+and 21 `free_quota`). Any of those sitting on a throttled upstream carries the same
+disarmed guard. That join — `free_unlimited` against known-throttled sources — is
+the sweep worth running, and it is not the same query as the cost-column one above.
+
+### Do not hand-edit `scheduled_testing_eligible`
+
+The scheduler dispatches on `test_suites.scheduled_testing_eligible = TRUE`
+(`apps/api/src/jobs/test-scheduler.ts:288,347`), not on a cost column directly. But
+a startup migration rewrites that flag from scratch on **every boot**:
+`SET scheduled_testing_eligible = (external_cost_cents = 0)`
+(`apps/api/src/lib/startup-migrations.ts:579`). A manual flip of the flag is
+therefore silently reverted at the next deploy, which makes `external_cost_cents`
+the only durable knob over scheduling even though it is documented as billing-only.
+Reclassify first, then set the cost column — in that order.
+
+CLAUDE.md's description of the test scheduler predates this and is stale; it should
+be corrected separately.
 
 ## What this does not change
 
