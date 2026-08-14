@@ -20,11 +20,17 @@
  *   1. `circuit-breaker.ts` — three consecutive trips the breaker and suspends
  *      the capability for everyone. Threshold 3, so three agents each asking
  *      for a generic name is enough.
- *   2. `quality-capture.ts` → `quality-aggregation.ts` → `jobs/quality-floor.ts`
- *      — a refusal was categorised `internal_error`, and success rate counts
- *      any non-null `error_type` against the capability. Below 70% quarantines
- *      it and below 30% deactivates it (DEC-20260812-A). That one is slower
- *      than the breaker and considerably harder to undo.
+ *   2. `jobs/quality-floor.ts` — the quarantine/deactivate engine, which reads
+ *      `transactions.error` directly and classifies it through
+ *      `transaction-failure-taxonomy.ts`. Its `CALLER_ATTRIBUTABLE` set exists
+ *      for exactly this, and half the refusals were already meant to be in it,
+ *      but the tie-refusal pattern never matched the message it was written
+ *      for. Below 70% completion quarantines, below 30% proposes deactivation
+ *      (DEC-20260812-A) — slower than the breaker and much harder to undo.
+ *   3. `quality-capture.ts` → `quality-aggregation.ts` — the trust and quality
+ *      surfaces, where a refusal was categorised `internal_error` and counted
+ *      against success rate. Not the floor: an earlier version of this comment
+ *      claimed it was, which is what hid (2) until the wiring was traced.
  *
  * Nothing here changes what the caller sees. A refusal is still an error, still
  * names the disambiguator, and is still unbilled per DEC-14. Only the health
@@ -80,7 +86,17 @@ export function isCapabilityRefusal(err: unknown): boolean {
   return isRefusalMessage(message);
 }
 
-/** Message-only form, for the paths that never see the error object. */
+/**
+ * Message-only form, for the paths that never see the error object.
+ *
+ * Anchored at the start rather than matched anywhere in the string. Every
+ * refusal site opens with one of these phrases, and several unrelated errors in
+ * the same capabilities quote the caller's query back verbatim — `No French
+ * company found matching "${query}"`. A company name beginning "Ambiguous" is
+ * contrived but not impossible, and would otherwise file an ordinary not-found
+ * as a refusal. Both outcomes happen to be caller-attributable, so nothing
+ * breaks either way; anchoring just keeps the bucket meaning what it says.
+ */
 export function isRefusalMessage(message: string): boolean {
-  return REFUSAL_MESSAGE_PATTERNS.some((p) => message.includes(p));
+  return REFUSAL_MESSAGE_PATTERNS.some((p) => message.startsWith(p));
 }

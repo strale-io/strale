@@ -1,7 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatFR } from "../lib/vat-derivation.js";
 import { classifyNameMatch } from "../lib/company-name-match.js";
+import { extractCompanyName } from "./lib/browserless-extract.js";
 
 // French company data via recherche-entreprises.api.gouv.fr — FREE, no auth
 const API = "https://recherche-entreprises.api.gouv.fr";
@@ -25,19 +25,6 @@ function findSiren(input: string): string | null {
   return match && SIREN_RE.test(match[0]) ? match[0] : null;
 }
 
-async function extractCompanyName(text: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
-  const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 100,
-    messages: [{ role: "user", content: `Extract the French company name from this request. Return ONLY the company name, nothing else.\n\nRequest: "${text}"` }],
-  });
-  const name = r.content[0].type === "text" ? r.content[0].text.trim().replace(/^["']|["']$/g, "") : "";
-  if (!name) throw new Error(`Could not identify a company name from: "${text}".`);
-  return name;
-}
 
 async function fetchResults(query: string, perPage: number): Promise<any[]> {
   const url = `${API}/search?q=${encodeURIComponent(query)}&page=1&per_page=${perPage}`;
@@ -171,7 +158,7 @@ registerCapability("french-company-data", async (input: CapabilityInput) => {
   if (siren) {
     output = await lookupBySiren(siren);
   } else {
-    const query = await extractCompanyName(trimmed);
+    const query = await extractCompanyName(trimmed, "French");
     const resolved = await lookupByName(query);
     output = resolved.output;
     output.match_confidence = resolved.matchConfidence;

@@ -103,7 +103,7 @@ async function computeCapabilityQuality(
           -- a WHERE filter: filtering changed the query plan badly enough to
           -- time out /v1/capabilities. This is pure arithmetic on rows already
           -- scanned. See lib/capability-refusal.ts.
-          WHEN tq.error_type = 'client_refusal' THEN 0
+          WHEN tq.error_type = 'capability_refusal' THEN 0
           WHEN tq.created_at >= NOW() - INTERVAL '7 days' THEN 3.0
           ELSE 1.0
         END AS weight
@@ -136,6 +136,9 @@ async function computeCapabilityQuality(
           THEN ROUND(SUM(field_completeness_pct::numeric * weight) / SUM(weight), 2)
           ELSE NULL
         END AS avg_field_completeness_pct,
+        -- Counts refusals, unlike the weighted rates above. So an all-refusal
+        -- window reads total_30d > 0 with the rates NULL: "we have traffic, and
+        -- none of it is evidence either way" — not "insufficient data".
         COUNT(*)::text AS total_30d
       FROM quality_rows
     ),

@@ -81,6 +81,60 @@ function realRefusals(): Array<{ label: string; err: unknown }> {
   return out;
 }
 
+/**
+ * Four capabilities still carry their own `pickByName` rather than the shared
+ * one. Their wording happens to match the pattern list today, so they are
+ * classified correctly — but nothing was enforcing that, which is the same
+ * silence that let the taxonomy's tie pattern sit broken. Swept here until the
+ * duplicates are consolidated, so a wording tweak in any of them fails a test
+ * instead of quietly re-arming the breaker for that one capability.
+ */
+async function duplicatedRefusals(): Promise<Array<{ label: string; err: unknown }>> {
+  const out: Array<{ label: string; err: unknown }> = [];
+  const capture = (label: string, fn: () => unknown) => {
+    try {
+      fn();
+      throw new Error(`expected ${label} to refuse, but it returned`);
+    } catch (err) {
+      out.push({ label, err });
+    }
+  };
+
+  const ca = await import("../capabilities/canadian-company-data.js");
+  const fr = await import("../capabilities/french-company-data.js");
+  const ie = await import("../capabilities/irish-company-data.js");
+  const uk = await import("../capabilities/uk-company-data.js");
+
+  // Two indistinguishable candidates each — the ambiguity refusal, which is
+  // the shape the taxonomy pattern was missing.
+  capture("canadian pickByName", () =>
+    ca.pickByName("Total", [
+      { name: "TOTAL", corpId: "1" },
+      { name: "Total", corpId: "2" },
+    ] as never),
+  );
+  capture("french pickByName", () =>
+    fr.pickByName("Total", [
+      { nom_complet: "TOTAL", siren: "111111111" },
+      { nom_complet: "Total", siren: "222222222" },
+    ] as never),
+  );
+  capture("irish pickByName", () =>
+    ie.pickByName("Kerry", [
+      { company_name: "KERRY", company_num: "1" },
+      { company_name: "Kerry", company_num: "2" },
+    ] as never),
+  );
+  capture("uk pickByName", () =>
+    uk.pickByName("HSBC", [
+      { title: "HSBC", company_number: "00000001" },
+      { title: "hsbc", company_number: "00000002" },
+    ]),
+  );
+
+  return out;
+}
+
 describe("refusals are recognised as such", () => {
   it("every real refusal site throws the typed error", () => {
     for (const { label, err } of realRefusals()) {
@@ -104,6 +158,27 @@ describe("refusals are recognised as such", () => {
       expect(isUserInputError((err as Error).message), `${label} must not trip the breaker`).toBe(
         true,
       );
+    }
+  });
+});
+
+describe("the four un-consolidated duplicates are classified too", () => {
+  it("each is recognised by all three consumers", async () => {
+    const { classifyTransactionFailure, CALLER_ATTRIBUTABLE } = await import(
+      "./transaction-failure-taxonomy.js"
+    );
+    const { categorizeError } = await import("./quality-capture.js");
+    const dupes = await duplicatedRefusals();
+    expect(dupes.length, "all four duplicates must refuse on an ambiguous pair").toBe(4);
+
+    for (const { label, err } of dupes) {
+      const msg = (err as Error).message;
+      expect(isUserInputError(msg), `${label}: breaker`).toBe(true);
+      expect(
+        CALLER_ATTRIBUTABLE.has(classifyTransactionFailure(msg)),
+        `${label}: quality floor`,
+      ).toBe(true);
+      expect(categorizeError(msg), `${label}: quality signal`).toBe("capability_refusal");
     }
   });
 });
@@ -144,10 +219,10 @@ describe("the circuit breaker ignores refusals but not faults", () => {
 });
 
 describe("the quality signal does not treat a refusal as a fault", () => {
-  it("classifies a refusal as client_refusal, not internal_error", async () => {
+  it("classifies a refusal as capability_refusal, not internal_error", async () => {
     const { categorizeError } = await import("./quality-capture.js");
     for (const { label, err } of realRefusals()) {
-      expect(categorizeError(err as Error), label).toBe("client_refusal");
+      expect(categorizeError(err as Error), label).toBe("capability_refusal");
     }
   });
 
@@ -167,7 +242,7 @@ describe("the quality signal does not treat a refusal as a fault", () => {
     const err = new CapabilityRefusalError(
       'Ambiguous UK company name "Timeout Ltd": 2 distinct registered entities.',
     );
-    expect(categorizeError(err)).toBe("client_refusal");
+    expect(categorizeError(err)).toBe("capability_refusal");
   });
 });
 

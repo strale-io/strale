@@ -134,7 +134,7 @@ export function categorizeError(
   // caller asked about, and an unlucky company name would otherwise land in
   // one of them ("Timeout Ltd" is a real kind of name).
   if (isCapabilityRefusal(error)) {
-    return "client_refusal";
+    return "capability_refusal";
   }
 
   if (msg.includes("timeout") || msg.includes("timed out") || msg.includes("etimedout")) {
