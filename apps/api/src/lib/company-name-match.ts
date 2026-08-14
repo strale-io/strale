@@ -215,3 +215,39 @@ export function pickByName<T>(
       `unrelated entities${closest ? ` (closest: ${closest})` : ""}. ${opts.disambiguationHint}`,
   );
 }
+
+/**
+ * For registries whose search returns a single best-guess result rather than
+ * a ranked candidate pool (cvrapi.dk's `search=` parameter; Corporations
+ * Canada's Browserless-rendered site search + LLM extraction) — there is no
+ * pool to bucket and pick from, but the same discipline still applies:
+ * classify what came back against what was asked, and refuse rather than
+ * silently hand back an unrelated entity. Shared by danish-company-data.ts
+ * and canadian-company-data.ts, which had this exact ~10-line block
+ * duplicated with only the wording differing (found in review 2026-08-14).
+ */
+export function assertSingleResultMatch(
+  query: string,
+  returnedName: string | null | undefined,
+  opts: {
+    /** e.g. "Danish", "Canadian" — used in "No confident {X} registry match". */
+    jurisdictionLabel: string;
+    /** e.g. "cvrapi.dk", "The Corporations Canada site search". */
+    sourceDescription: string;
+    /** Optional trailing clause appended right after "returned an unrelated entity (...)". */
+    extraClause?: string;
+    /** e.g. "Provide the CVR number (8 digits) for an exact lookup." */
+    disambiguationHint: string;
+  },
+): Exclude<MatchConfidence, "low"> {
+  const { match_confidence } = classifyNameMatch(query, returnedName ?? "");
+  if (match_confidence === "low") {
+    const named = returnedName ? ` ("${returnedName}")` : "";
+    throw new Error(
+      `No confident ${opts.jurisdictionLabel} registry match for "${query}". ` +
+        `${opts.sourceDescription} returned an unrelated entity${named}${opts.extraClause ?? ""}. ` +
+        `${opts.disambiguationHint}`,
+    );
+  }
+  return match_confidence;
+}

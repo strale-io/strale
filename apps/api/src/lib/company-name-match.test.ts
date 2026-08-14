@@ -21,7 +21,12 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { normalizeCompanyName, classifyNameMatch, pickByName } from "./company-name-match.js";
+import {
+  normalizeCompanyName,
+  classifyNameMatch,
+  pickByName,
+  assertSingleResultMatch,
+} from "./company-name-match.js";
 
 describe("normalizeCompanyName", () => {
   it("strips English corporate suffixes", () => {
@@ -254,5 +259,64 @@ describe("pickByName", () => {
     ];
     const r = pickByName("HSBC Holdings plc", candidates, byTitle, byNumber, opts);
     expect(r.id).toBe("00617987");
+  });
+});
+
+describe("assertSingleResultMatch", () => {
+  // Shared by danish-company-data.ts and canadian-company-data.ts, whose
+  // upstream searches each return a single best-guess result rather than a
+  // ranked candidate pool — there's nothing to bucket, but the returned name
+  // still has to be checked against what was asked before it's trusted.
+  const dkOpts = {
+    jurisdictionLabel: "Danish",
+    sourceDescription: "cvrapi.dk",
+    extraClause: " with no ranked alternatives to fall back on",
+    disambiguationHint: "Provide the CVR number (8 digits) for an exact lookup.",
+  };
+  const caOpts = {
+    jurisdictionLabel: "Canadian",
+    sourceDescription: "The Corporations Canada site search",
+    disambiguationHint:
+      "Provide the corporation number (older corporations have fewer than 7 digits) or the 9-digit business number for an exact lookup.",
+  };
+
+  it("returns the confidence band on a genuine match", () => {
+    expect(assertSingleResultMatch("Novo Nordisk", "NOVO NORDISK A/S", dkOpts)).toBe("exact");
+  });
+
+  it("refuses a low-confidence single result, naming it and the extra clause (Danish shape)", () => {
+    // Live-verified 2026-08-13: cvrapi.dk's search=Consulting resolves to an
+    // arbitrary single hit ("Redmark Consulting ApS") with zero relevance
+    // signal — the #161 wrong-company class with no candidate pool to score.
+    expect(() => assertSingleResultMatch("Consulting", "Redmark Consulting ApS", dkOpts)).toThrow(
+      'No confident Danish registry match for "Consulting". cvrapi.dk returned an unrelated entity ' +
+        '("Redmark Consulting ApS") with no ranked alternatives to fall back on. ' +
+        "Provide the CVR number (8 digits) for an exact lookup.",
+    );
+  });
+
+  it("refuses a low-confidence single result without the extra clause (Canadian shape)", () => {
+    expect(() => assertSingleResultMatch("Shopify Inc", "Unrelated Holdings Ltd", caOpts)).toThrow(
+      'No confident Canadian registry match for "Shopify Inc". The Corporations Canada site search ' +
+        'returned an unrelated entity ("Unrelated Holdings Ltd"). ' +
+        "Provide the corporation number (older corporations have fewer than 7 digits) or the 9-digit business number for an exact lookup.",
+    );
+  });
+
+  it("refuses cleanly when nothing was extracted at all (empty/null returned name)", () => {
+    // Live-verified 2026-08-13: the Canadian Browserless extraction can come
+    // back with company_name: null (e.g. the rendered page was the search
+    // form, not results) — must refuse, not throw on string ops or emit a
+    // dangling '("null")'.
+    expect(() => assertSingleResultMatch("Abbotsford Chamber of Commerce", "", caOpts)).toThrow(
+      /No confident Canadian registry match for "Abbotsford Chamber of Commerce"\. The Corporations Canada site search returned an unrelated entity\. Provide/,
+    );
+    let nullCaseMessage = "";
+    try {
+      assertSingleResultMatch("Abbotsford Chamber of Commerce", null, caOpts);
+    } catch (err) {
+      nullCaseMessage = err instanceof Error ? err.message : String(err);
+    }
+    expect(nullCaseMessage).not.toContain("null");
   });
 });
