@@ -66,6 +66,28 @@ describe("the account the test runner books against stays internal", () => {
   });
 });
 
+describe("no customer-facing path can produce one of these refusals", () => {
+  it("customer_paid is allow for every cost class, including unclassified", async () => {
+    // The strongest form of the argument, and the reason the ordering of the
+    // gate relative to the transaction insert does not actually matter.
+    //
+    // All three customer-facing entry points pass kind: "customer_paid" —
+    // routes/do.ts:779, routes/x402-gateway-v2.ts:1296, and
+    // lib/solution-executor.ts:315 (per step). If customer_paid is allow
+    // everywhere, a refusal is unreachable from customer traffic no matter
+    // when a row gets written, and the only producers left are the internal
+    // contexts, which book against SYSTEM_ACCOUNT_EMAIL.
+    //
+    // Flip any customer_paid cell to "refuse" or "budget_check" and a real
+    // caller starts generating rows that survive the floor's internal filter.
+    // That is the change this test exists to stop.
+    const { describeAllowMatrix } = await import("../capabilities/guarded-executor.js");
+    for (const [costClass, decision] of Object.entries(describeAllowMatrix("customer_paid"))) {
+      expect(decision, `cost_class=${costClass} under customer_paid`).toBe("allow");
+    }
+  });
+});
+
 describe("cost-control refusals keep their classification", () => {
   it("classifies as internal, and that is deliberate", () => {
     // Pinned, not fixed. See the module comment: the refusal is the platform's
