@@ -18,6 +18,7 @@
  * entity, which a caller cannot detect. Score the candidates and refuse when
  * nothing matches well.
  */
+import { CapabilityRefusalError } from "./capability-refusal.js";
 
 export type MatchConfidence = "exact" | "high" | "low";
 
@@ -200,7 +201,7 @@ export function pickByName<T>(
       return { id, matchedName, matchConfidence: label };
     }
     const listing = [...bucket.entries()].slice(0, 5).map(([id, n]) => `${n} (${id})`).join("; ");
-    throw new Error(
+    throw new CapabilityRefusalError(
       `Ambiguous ${opts.subjectLabel} name "${query}": ${bucket.size} distinct registered ` +
         `entities are ${label === "exact" ? "exact" : "close"} matches — ${listing}. ${opts.disambiguationHint}`,
     );
@@ -210,7 +211,7 @@ export function pickByName<T>(
   if (winner) return winner;
 
   const closest = candidates.map(getName).filter((n): n is string => !!n).slice(0, 3).join(", ");
-  throw new Error(
+  throw new CapabilityRefusalError(
     `No confident ${opts.subjectLabel} match for "${query}". The search is fuzzy and returned only ` +
       `unrelated entities${closest ? ` (closest: ${closest})` : ""}. ${opts.disambiguationHint}`,
   );
@@ -246,7 +247,7 @@ export function assertSingleResultMatch(
   const { match_confidence } = classifyNameMatch(query, returnedName ?? "");
   if (match_confidence === "low") {
     const named = returnedName ? ` ("${returnedName}")` : "";
-    throw new Error(
+    throw new CapabilityRefusalError(
       `No confident ${opts.jurisdictionLabel} registry match for "${query}". ` +
         `${opts.sourceDescription} returned an unrelated entity${named}${opts.extraClause ?? ""}. ` +
         `${opts.disambiguationHint}`,

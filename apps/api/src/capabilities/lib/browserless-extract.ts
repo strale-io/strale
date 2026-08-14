@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { CapabilityRefusalError } from "../../lib/capability-refusal.js";
 
 /**
  * Shared Browserless scraping + Claude extraction utility for company registries.
@@ -115,7 +116,7 @@ export async function extractCompanyName(
       : "";
 
   if (!name || name === NO_NAME_SENTINEL || looksLikeRefusal(name)) {
-    throw new Error(
+    throw new CapabilityRefusalError(
       `Could not identify a specific ${country} company name in the request. ` +
         `Provide the company's registration number, or a more specific company name.`,
     );

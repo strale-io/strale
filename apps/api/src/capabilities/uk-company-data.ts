@@ -1,6 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { classifyNameMatch } from "../lib/company-name-match.js";
+import { extractCompanyName } from "./lib/browserless-extract.js";
 
 // UK VAT validation is handled by vat-validate.ts (which routes GB → HMRC v2),
 // not by this Identity capability. Companies House (the source for this
@@ -29,19 +29,6 @@ function getApiKey(): string {
   return key;
 }
 
-async function extractCompanyName(text: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
-  const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 100,
-    messages: [{ role: "user", content: `Extract the UK/British company name from this request. Return ONLY the company name, nothing else.\n\nRequest: "${text}"` }],
-  });
-  const name = r.content[0].type === "text" ? r.content[0].text.trim().replace(/^["']|["']$/g, "") : "";
-  if (!name) throw new Error(`Could not identify a company name from: "${text}".`);
-  return name;
-}
 
 export interface UkNameResolution {
   companyNumber: string;
@@ -216,7 +203,7 @@ registerCapability("uk-company-data", async (input: CapabilityInput) => {
   let nameResolution: UkNameResolution | null = null;
 
   if (!companyNumber) {
-    const name = await extractCompanyName(trimmed);
+    const name = await extractCompanyName(trimmed, "UK");
     nameResolution = await searchCompany(name);
     companyNumber = nameResolution.companyNumber;
   }
