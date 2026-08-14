@@ -103,4 +103,11 @@ jobs:
       # this fires for real, with the frontend checked out alongside.
       # Run with --list to see registered contracts.
       - run: node apps/api/scripts/check-shape-contracts.mjs
+      # Phase A0b cost_class coherence + Block 0082 throttled-vendor guard
+      # (2026-08-14): cross-checks manifest cost_class against the vendor
+      # env vars / hostnames the executor actually reads. Existed since
+      # Phase A0b but was never wired into CI; the free_unlimited vs
+      # throttled-upstream audit that produced Block 0082 is exactly the
+      # class of drift this catches, so it goes live here.
+      - run: node apps/api/scripts/check-cost-class-coherence.mjs
       - run: npm test
