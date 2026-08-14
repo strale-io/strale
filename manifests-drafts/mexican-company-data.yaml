@@ -4,32 +4,77 @@
 # template `"<CARRIER NAME>" 墨西哥 phone contact`, 100% success, zero Mexican
 # capability in the catalogue. See docs/strategy/2026-08-demand-mined-build-queue.md §2.1.
 #
-# VERIFICATION DEBT — close all of these before building:
-#   1. DENUE publishes NO rate limits and NO terms of use on
-#      https://www.inegi.org.mx/servicios/api_denue.html. Obtain both in writing
-#      (or record their absence) before launch. Same class as the AT Firmenbuch
-#      item in the 2026-08-12 catalogue strategy §5 V1.
-#   2. Field names below are taken from the API documentation page, not from a live
-#      response. Confirm `Telefono` / `Correo_e` / `Sitio_internet` are actually
-#      populated and not near-universally empty — the whole demand case rests on
-#      contact fields being present.
-#   3. Token acquisition is a free registration. Confirm it does not carry
-#      redistribution restrictions that conflict with reselling lookups.
-#   4. PERSONAL-DATA CALL — HUMAN DECISION, NOT ENGINEERING.
+# ============================================================================
+# BUILD BLOCKED 2026-08-14 — DENUE requires a registered API token.
+# No executor was written and nothing was inserted to the DB this session.
+# See handoff/_general/from-code/2026-08-14-mexican-company-data-token-blocked.md
+# for the full session record. Verification findings below; action item for
+# Petter at the bottom.
+# ============================================================================
+#
+# VERIFICATION DEBT — status as of 2026-08-14:
+#   1. CLOSED. Confirmed by direct fetch of https://www.inegi.org.mx/servicios/api_denue.html
+#      (2026-08-14): the page states NO rate limits and NO terms of use / licensing /
+#      redistribution terms for the DENUE API. It is described only as part of INEGI's
+#      "iniciativa de datos de libre acceso" (open-data initiative). Absence recorded,
+#      not obtained in writing — same class as the AT Firmenbuch item in the 2026-08-12
+#      catalogue strategy §5 V1.
+#   2. BLOCKED ON TOKEN. Cannot confirm `Telefono` / `Correo_e` / `Sitio_internet`
+#      population rates without a live authenticated call. An unauthenticated probe
+#      (`curl .../consulta/Nombre/AUTOFLETES/0/1/10/` with no token, 2026-08-14) returns
+#      HTTP 501 "Consulta incorrecta. Por favor, verifica los parámetros del método
+#      solicitado." — confirming the token is enforced, not optional. Re-run this check
+#      once a token exists, before trusting the demand case in the queue doc.
+#   3. HARD STOP — TOKEN REQUIRES REGISTRATION.
+#      DENUE's own documentation: "Número único que permite hacer consultas, el cual se
+#      puede obtener al registrarse" (obtained by registering). Registration is at
+#      https://inegi.org.mx/app/desarrolladores/generatoken/Usuarios/token_Verify and the
+#      token is emailed to the address supplied at signup. Per this session's build
+#      instructions, key registration is founder-gated and this agent must not sign up
+#      for anything. Redistribution-restriction question (original item 3) is therefore
+#      also still open — cannot be answered without registering to read the post-signup
+#      terms.
+#   4. PERSONAL-DATA CALL — RESOLVED BY PETTER (2026-08-14), see decision below.
 #      DENUE covers ~6M establishments including sole traders ("personas físicas con
 #      actividad empresarial"), where the business phone is frequently a personal
-#      mobile. This is why processes_personal_data is true below. Petter must decide
-#      whether this ships, on the same footing as the standing email-finder refusal.
-#      Do NOT resolve this by reading the manifest.
-#   5. DEC-20260428-A preference order check: this is an official API (tier above
-#      per-call parsing), so no DEC-20260813-A analysis is required. Confirm anyway.
+#      mobile. Decision: build it, but exclude contact fields for sole traders where
+#      classification is reliable; omit contact fields entirely where it is not (see
+#      the persona física finding below — that is the branch that applies here).
+#   5. CLOSED. This is an official government API — DEC-20260428-A tier above
+#      per-call parsing — so no DEC-20260813-A per-call-parsing analysis applies.
+#   6. NEW — persona física / persona moral classification finding (2026-08-14):
+#      DENUE's documented response fields (`Nombre`, `Razon_social`, `Clase_actividad`,
+#      `Estrato`, `Telefono`, `Correo_e`, `Sitio_internet`, address, `Latitud`/`Longitud`)
+#      contain NO explicit legal-form flag. The only available signal is an informal
+#      heuristic — checking `Razon_social` for a corporate-suffix token (SA DE CV, S DE
+#      RL, S DE RL DE CV, SC, SAPI DE CV, AC, etc.) — which is pattern-matching on a
+#      free-text field, not a documented classification, and can misfire both ways
+#      (a sole trader can register a `Razon_social` with no suffix that still isn't a
+#      company, and rare legal forms won't match a suffix list). Per this session's
+#      explicit instruction not to guess the classification: the resolution is to omit
+#      `phone` / `email` / `website` for ALL records, not attempt a persona
+#      física/moral split. This is captured in `output_field_reliability` and
+#      `limitations` below. Re-open this only if a future session finds a documented
+#      DENUE field for legal form (not found in the public API docs as of this session).
+#
+# ACTION ITEM FOR PETTER: register at
+# https://inegi.org.mx/app/desarrolladores/generatoken/Usuarios/token_Verify, add the
+# resulting token to the environment (suggest `DENUE_API_TOKEN`), and confirm no
+# redistribution restriction surfaces in the post-signup terms. Once that's done, item 2
+# above needs a live re-check (real phone/email population rates) before this manifest's
+# `price_cents` and contact-field framing can be trusted, then the executor at
+# `apps/api/src/capabilities/mexican-company-data.ts` can be written following the
+# Capability Onboarding Protocol and this manifest.
 
 slug: mexican-company-data
 name: Mexican Company Data
 description: >-
   Look up Mexican businesses in INEGI's official DENUE establishment directory by name or
-  registry ID. Returns legal name, economic activity, size band, address, coordinates and
-  published business contact details.
+  registry ID. Returns legal name, economic activity, size band, address and coordinates.
+  Business contact details (phone/email/website) are withheld — see the persona física
+  finding in the header comment; DENUE does not expose a reliable legal-form field to
+  distinguish sole traders from companies, so contact fields are omitted for every record
+  rather than guessed.
 category: company-data
 cost_class: free_official
 quota_window: unknown
@@ -98,12 +143,8 @@ output_schema:
         postal_code: "31160"
         municipality: Chihuahua
         state: Chihuahua
-        phone: "+52 614 000 0000"
-        email: contacto@example.mx
-        website: https://example.mx
         latitude: 28.6353
         longitude: -106.0889
-        contact_fields_present: true
   properties:
     query: { type: ["string", "null"] }
     state: { type: ["string", "null"] }
@@ -111,8 +152,11 @@ output_schema:
     establishments:
       type: array
       description: >-
-        Matching establishments. Identity and location fields are guaranteed by DENUE;
-        contact fields are self-reported by the establishment and frequently absent.
+        Matching establishments. Identity and location fields are guaranteed by DENUE.
+        `phone` / `email` / `website` are deliberately not returned — DENUE mixes sole
+        traders and companies with no documented legal-form field, so contact data (which
+        is personal data for sole traders) is withheld for every record rather than
+        guessed at classification. See limitations.
 
 test_fixtures:
   # DRAFT fixture — the pipeline regenerates expected_fields via --discover.
@@ -145,19 +189,23 @@ output_field_reliability:
   "establishments[].longitude": common
   "establishments[].legal_name": common
   "establishments[].postal_code": common
-  "establishments[].phone": rare
-  "establishments[].email": rare
-  "establishments[].website": rare
-  "establishments[].contact_fields_present": guaranteed
+  # phone / email / website intentionally absent from output — see limitations
+  # "Contact fields withheld for all records" below. Do not re-add without a
+  # documented DENUE legal-form field to gate them on.
 
 limitations:
-  - title: Contact details are self-reported and often missing
+  - title: Contact fields withheld for all records
     text: >-
-      Phone, email and website in DENUE are supplied by the establishment during census
-      collection and are absent for a large share of records. `contact_fields_present`
-      states per record whether any were returned. This capability will not find a
-      contact that DENUE does not hold — it does not search the open web to fill gaps.
-    category: coverage
+      DENUE includes sole traders ("personas físicas con actividad empresarial") whose
+      business phone/email is frequently a personal number, alongside registered
+      companies. DENUE's API exposes no documented field that reliably distinguishes the
+      two — the only available signal is pattern-matching `Razon_social` for a corporate
+      suffix (SA DE CV, S DE RL, SC, etc.), which is a guess, not a classification, and
+      was rejected on that basis. This capability therefore never returns `Telefono` /
+      `Correo_e` / `Sitio_internet` for any establishment, sole trader or company. Use
+      `denue_id` with the source `Ficha` method directly against INEGI if you need
+      contact fields and can make your own lawful-basis determination.
+    category: legal
     severity: warning
   - title: Establishments, not legal entities
     text: >-
@@ -186,10 +234,3 @@ limitations:
       so records can lag reality by months. The API call is live; the underlying data is not.
     category: freshness
     severity: info
-  - title: May contain personal data for sole traders
-    text: >-
-      Establishments operated by sole traders can carry a personal mobile number or personal
-      email in the business contact fields. Callers are responsible for their own lawful
-      basis when processing these records.
-    category: legal
-    severity: warning

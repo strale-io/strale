@@ -7,6 +7,14 @@ description: >-
   Enrich company data from a domain, email, or company name. Scrapes the company website to extract: industry, employee
   estimate, HQ location, description, social links, tech stack.
 category: data-extraction
+search_tags:
+  - company info
+  - company lookup
+  - company profile
+  - find company details
+  - company background
+  - company research
+  - tech stack lookup
 cost_class: paid_prepaid
 quota_window: none
 price_cents: 50
