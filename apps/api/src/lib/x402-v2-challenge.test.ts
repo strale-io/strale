@@ -247,6 +247,20 @@ describe("PAYMENT-REQUIRED header contract (v2 paths)", () => {
   });
 });
 
+describe("extractPaymentHeader header-name coverage", () => {
+  // v2 clients send PAYMENT-SIGNATURE (@x402/core encodePaymentSignatureHeader
+  // switches on payload.x402Version); v1 sends X-PAYMENT. Missing the v2
+  // name made every canonical v2 payment invisible — the paid retry got a
+  // fresh challenge. Found by the first real-wallet settlement test.
+  it("reads PAYMENT-SIGNATURE (v2), X-PAYMENT (v1), and legacy Payment", async () => {
+    const { extractPaymentHeader } = await loadGateway();
+    expect(extractPaymentHeader(new Headers({ "PAYMENT-SIGNATURE": "abc" }))).toBe("abc");
+    expect(extractPaymentHeader(new Headers({ "X-PAYMENT": "def" }))).toBe("def");
+    expect(extractPaymentHeader(new Headers({ Payment: "ghi" }))).toBe("ghi");
+    expect(extractPaymentHeader(new Headers())).toBeNull();
+  });
+});
+
 describe("verifyX402PaymentOnly version branching", () => {
   it("v1 payload → v1-shaped requirements (bare network, maxAmountRequired)", async () => {
     const { verifyX402PaymentOnly } = await loadGateway();
