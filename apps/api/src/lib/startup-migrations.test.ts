@@ -1321,6 +1321,71 @@ describe("startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invaria
       expect(byslug[slug], slug).toBe(100000);
     }
   });
+
+  // ── Follow-up (2026-08-14, same day): derive-from-shared-function ────────
+  // refactor. quotaCap used to be 19 hand-computed integers; it's now
+  // computed via deriveQuotaCapFromRateLimit from a {value, unit,
+  // source_url} citation per cap (PHASE_C1_THROTTLED_UPSTREAM_SOURCE).
+  // These tests pin that the refactor is value-preserving and that the
+  // migration's embedded citations don't drift from the corresponding
+  // manifest's own known_rate_limit field.
+
+  it("every quotaCap equals deriveQuotaCapFromRateLimit(rateLimit) — no hand-computed drift", async () => {
+    const { PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY, PHASE_C1_THROTTLED_UPSTREAM_SOURCE } = await import(
+      "./startup-migrations.js"
+    );
+    const { deriveQuotaCapFromRateLimit } = await import("./capability-manifest-types.js");
+    const bySlug = Object.fromEntries(
+      PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY.map((c: { slug: string; quotaCap: number }) => [c.slug, c.quotaCap]),
+    );
+    for (const source of PHASE_C1_THROTTLED_UPSTREAM_SOURCE as ReadonlyArray<{
+      slug: string;
+      rateLimit: { value: number; unit: "per_second" | "per_minute" | "per_day"; source_url: string };
+    }>) {
+      expect(bySlug[source.slug], source.slug).toBe(deriveQuotaCapFromRateLimit(source.rateLimit));
+    }
+  });
+
+  it("every PHASE_C1_THROTTLED_UPSTREAM_SOURCE entry has a well-formed rateLimit citation", async () => {
+    const { PHASE_C1_THROTTLED_UPSTREAM_SOURCE } = await import("./startup-migrations.js");
+    for (const source of PHASE_C1_THROTTLED_UPSTREAM_SOURCE as ReadonlyArray<{
+      slug: string;
+      rateLimit: { value: number; unit: string; source_url: string };
+    }>) {
+      expect(source.rateLimit.value, `${source.slug} value`).toBeGreaterThan(0);
+      expect(["per_second", "per_minute", "per_day"], `${source.slug} unit`).toContain(source.rateLimit.unit);
+      expect(source.rateLimit.source_url, `${source.slug} source_url`).toMatch(/^https?:\/\//);
+    }
+  });
+
+  it("each reclassified capability's manifest known_rate_limit matches this migration's citation exactly", async () => {
+    // Cross-file drift guard: the manifest is the authoring surface
+    // (check-cost-class-coherence.mjs enforces it against cost_class/
+    // quota_cap at CI time), this migration is what actually writes the
+    // DB row — the two must cite the identical vendor fact. Reading the
+    // manifests directly (not importing capability-manifest-types.ts's
+    // YAML loader, which doesn't exist) mirrors how the CI lint reads
+    // them.
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const yaml = (await import("js-yaml")).default;
+    const { PHASE_C1_THROTTLED_UPSTREAM_SOURCE } = await import("./startup-migrations.js");
+    const manifestsDir = resolve(import.meta.dirname, "../../../../manifests");
+
+    for (const source of PHASE_C1_THROTTLED_UPSTREAM_SOURCE as ReadonlyArray<{
+      slug: string;
+      rateLimit: { value: number; unit: string; source_url: string };
+    }>) {
+      const manifestPath = resolve(manifestsDir, `${source.slug}.yaml`);
+      const manifest = yaml.load(readFileSync(manifestPath, "utf8")) as {
+        known_rate_limit?: { value: number; unit: string; source_url: string };
+      };
+      expect(manifest.known_rate_limit, `${source.slug} manifest has known_rate_limit`).toBeDefined();
+      expect(manifest.known_rate_limit?.value, `${source.slug} value`).toBe(source.rateLimit.value);
+      expect(manifest.known_rate_limit?.unit, `${source.slug} unit`).toBe(source.rateLimit.unit);
+      expect(manifest.known_rate_limit?.source_url, `${source.slug} source_url`).toBe(source.rateLimit.source_url);
+    }
+  });
 });
 
 describe("startup-migrations — block 0078 (transactions capability_id index)", () => {

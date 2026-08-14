@@ -10,6 +10,10 @@ category: company-data
 cost_class: free_quota
 quota_window: daily
 quota_cap: 180
+known_rate_limit:
+  value: 3
+  unit: per_minute
+  source_url: https://receitaws.com.br/api
 price_cents: 5
 is_free_tier: false
 input_schema:

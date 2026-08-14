@@ -28,6 +28,102 @@ export interface ManifestLimitation {
 }
 
 /**
+ * A capability's documented upstream vendor rate limit — the canonical
+ * home for "how much can we call this vendor before it throttles us."
+ *
+ * Follow-up to Block 0082 (2026-08-14, PR #235): that PR's post-review
+ * note found the same ~10 vendor rate-limit facts encoded independently
+ * in three places (the migration's per-cap citations, the CI lint's
+ * THROTTLED_HOST_RULES `reason` prose, and the manifest's already-derived
+ * `quota_cap`) with no structural link between them — nothing forces the
+ * lint's rule text to be revisited when a vendor changes its limit.
+ *
+ * This field is the fix: the manifest carries the raw vendor fact (value,
+ * unit, citation) as data, not prose. `check-cost-class-coherence.mjs`
+ * cross-checks it against `cost_class`/`quota_cap` for internal
+ * consistency. Deliberately NOT the detector for undeclared throttling —
+ * that stays a separate hardcoded host list
+ * (`check-cost-class-coherence.mjs`'s `THROTTLED_HOST_RULES`) that names
+ * *which* hosts are known-throttled without carrying the number, so a
+ * capability that hits a known-throttled host with no `known_rate_limit`
+ * at all still gets caught (the host list can't go stale to zero — it's a
+ * detector, not a value store). See that script's file header for the
+ * full split rationale.
+ */
+export interface ManifestKnownRateLimit {
+  /** The vendor-documented numeric rate or daily cap. */
+  value: number;
+  unit: "per_second" | "per_minute" | "per_day";
+  /** Citation — the vendor doc page the number was read from. */
+  source_url: string;
+}
+
+export const KNOWN_RATE_LIMIT_UNITS = ["per_second", "per_minute", "per_day"] as const;
+
+/**
+ * Derive a **ceiling** `quota_cap` from a single vendor-documented rate
+ * limit.
+ *
+ * For `per_second`/`per_minute` rates, the result is the rate's
+ * **1-hour-sustained volume** (rate × 3600 or rate × 60) — a deliberately
+ * conservative fraction of the naive 24h extrapolation (see Block 0082's
+ * header comment in startup-migrations.ts for the original rationale:
+ * e.g. SEC EDGAR's cap is 36,000, not the theoretical 864,000/day the
+ * 10 req/sec rate would imply if sustained all day). For `per_day`, the
+ * vendor's literal daily figure is used directly (e.g. Etherscan's
+ * documented 100,000 calls/day).
+ *
+ * The result is stored under `quota_window: "daily"` regardless of which
+ * unit produced it — that's an existing Block 0082 convention, not
+ * something this function decides.
+ *
+ * This is a ceiling, not a target: `check-cost-class-coherence.mjs`'s
+ * consistency check requires `quota_cap <= deriveQuotaCapFromRateLimit(...)`,
+ * not equality. A manifest is free to declare a more conservative
+ * `quota_cap` than the vendor technically permits (e.g. officer-search's
+ * UK Companies House citation derives a 7,200/hr ceiling, but its
+ * `quota_cap: 600` uses the vendor's own literal 5-minute window figure
+ * directly, well under the ceiling) — that's a legitimate operator
+ * choice, not drift. Only *exceeding* the derived ceiling is a bug (a
+ * spend/traffic budget bigger than the vendor actually grants). Equality
+ * is not required for a second reason too: it would force a manifest
+ * edit every time a vendor restates the same underlying limit in
+ * different units.
+ */
+export function deriveQuotaCapFromRateLimit(rateLimit: ManifestKnownRateLimit): number {
+  switch (rateLimit.unit) {
+    case "per_second":
+      return rateLimit.value * 3600;
+    case "per_minute":
+      return rateLimit.value * 60;
+    case "per_day":
+      return rateLimit.value;
+    default: {
+      const exhaustive: never = rateLimit.unit;
+      throw new Error(`Unknown known_rate_limit.unit: ${exhaustive as string}`);
+    }
+  }
+}
+
+/**
+ * Derive the ceiling `quota_cap` for a capability that touches MULTIPLE
+ * throttled vendors (e.g. officer-search: UK Companies House + SEC
+ * EDGAR) — the minimum (most restrictive) of each vendor's individually
+ * derived ceiling. A capability's actual call volume is bounded by
+ * whichever vendor throttles hardest, not their sum or their average.
+ *
+ * Throws on an empty array — callers should check `rateLimits.length` (or
+ * use `getKnownRateLimits()`, which returns `[]` for "not declared") before
+ * calling this; an empty array has no ceiling to derive.
+ */
+export function deriveQuotaCapFromRateLimits(rateLimits: readonly ManifestKnownRateLimit[]): number {
+  if (rateLimits.length === 0) {
+    throw new Error("deriveQuotaCapFromRateLimits requires at least one rate limit");
+  }
+  return Math.min(...rateLimits.map(deriveQuotaCapFromRateLimit));
+}
+
+/**
  * A single known_answer fixture: a real input plus the assertions to run
  * against its live output.
  */
@@ -99,6 +195,18 @@ export interface Manifest {
   quota_cap?: number | null;
   // Day-of-month reset for monthly window (1..31). NULL for daily/none.
   quota_reset_dom?: number | null;
+  // Vendor-documented rate limit citation(s). Optional — most capabilities
+  // have no third-party vendor quota (algorithmic, static-table, or
+  // arbitrary-customer-target fetches). Required (by
+  // check-cost-class-coherence.mjs, not this type) for any capability
+  // whose executor calls a host on that script's THROTTLED_HOST_RULES
+  // list. Single object (the common case, one vendor) OR an array (a
+  // capability touching multiple throttled vendors, e.g. officer-search:
+  // UK Companies House + SEC EDGAR) — same single-or-array convention as
+  // `test_fixtures.known_answer` above. Use `getKnownRateLimits()` below
+  // to read this field. See ManifestKnownRateLimit's doc comment for the
+  // full context.
+  known_rate_limit?: ManifestKnownRateLimit | ManifestKnownRateLimit[] | null;
 }
 
 /**
@@ -117,4 +225,22 @@ export function getKnownAnswerFixtures(
   const ka = m.test_fixtures?.known_answer;
   if (!ka) return [];
   return Array.isArray(ka) ? ka : [ka];
+}
+
+/**
+ * Normalize `known_rate_limit` to an array of citations.
+ *
+ * Single object in → array-of-one out. Already-array in → returned
+ * as-is. Absent → empty array (the "no vendor quota" / "not yet
+ * declared" case — callers should treat `[]` as "nothing to derive," not
+ * as an error). Mirrors `getKnownAnswerFixtures()` above; every reader of
+ * `known_rate_limit` should go through this rather than accessing the
+ * field directly, since the raw field can be an object OR an array.
+ */
+export function getKnownRateLimits(
+  m: Pick<Manifest, "known_rate_limit">,
+): ManifestKnownRateLimit[] {
+  const rl = m.known_rate_limit;
+  if (!rl) return [];
+  return Array.isArray(rl) ? rl : [rl];
 }

@@ -10,6 +10,10 @@ category: data-extraction
 cost_class: free_quota
 quota_window: daily
 quota_cap: 900
+known_rate_limit:
+  value: 15
+  unit: per_minute
+  source_url: https://openfoodfacts.github.io/openfoodfacts-server/api/
 price_cents: 5
 is_free_tier: false
 input_schema:
