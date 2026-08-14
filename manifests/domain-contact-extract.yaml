@@ -1,9 +1,24 @@
 slug: domain-contact-extract
 name: Domain Contact Extract
 description: >-
-  Extract a company's public organisational contact channels (role emails, phone numbers, address, social links) from
-  its own website. No personnel discovery.
+  Find a company's contact info — email address, phone number, and mailing address — by extracting it from the
+  company's own website given its domain. Returns role emails (info@, sales@, support@), phone numbers, postal
+  address, contact-page URL, and social links. Organisation-level contacts only, not a specific person's email
+  address (see email-finder) and not employee discovery.
 category: web-intelligence
+search_tags:
+  - contact info
+  - company email
+  - company contact
+  - find email
+  - find phone number
+  - get email address
+  - get phone number
+  - business contact details
+  - contact page
+  - website scrape
+  - extract emails from website
+  - company phone number
 cost_class: free_unlimited
 quota_window: none
 price_cents: 5

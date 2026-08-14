@@ -120,6 +120,10 @@ output_field_reliability:
   business_type: guaranteed
   industry_code: guaranteed
   employee_range: guaranteed
+  # Only set on the name-search path (never on the cvr_number identifier
+  # path) — mirrors finnish-company-data's convention. See #161 wrong-company
+  # class fix, 2026-08-14.
+  match_confidence: rare
 limitations:
   - title: Financial data comes from annual reports and can be up to 12 months old
     text: Financial data from annual reports — can be up to 12 months old

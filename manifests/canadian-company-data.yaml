@@ -94,22 +94,54 @@ personal_data_categories:
   - professional
 geography: global
 test_fixtures:
-  # Fixture corp swapped 2026-08-12: 2408951 is not resolvable via the
-  # official JSON API (pre-migration scrape-era fixture). 1007 (Abbotsford
-  # Chamber of Commerce, Active since 1947) chosen over a numbered company:
-  # health checks re-fetch this record repeatedly and personal holding
-  # companies registered at private residences don't belong in fixtures.
+  # known_answer is array-form: one fixture per entry point, satisfying
+  # Gate 5's PRIMARY (corporation_number) + SECONDARY (company_name)
+  # requirement (DEC-20260411-B, gate5-path-coverage.ts). The company_name
+  # entry became coverable 2026-08-14 when the name path was rebuilt on a
+  # real POST to the Corporations Canada site search (previously the GET
+  # V_SEARCH.* params were inert and always rendered the empty search
+  # form, so no live name-path fixture could ever be verified). Both
+  # entries verified live 2026-08-14.
   known_answer:
-    input:
-      corporation_number: "1007"
-    expected_fields:
-      - field: status
-        operator: not_null
-        reliability: guaranteed
-      - field: status
-        operator: type
-        reliability: guaranteed
-        value: string
+    # Fixture corp swapped 2026-08-12: 2408951 is not resolvable via the
+    # official JSON API (pre-migration scrape-era fixture). 1007 (Abbotsford
+    # Chamber of Commerce, Active since 1947) chosen over a numbered company:
+    # health checks re-fetch this record repeatedly and personal holding
+    # companies registered at private residences don't belong in fixtures.
+    - input:
+        corporation_number: "1007"
+      expected_fields:
+        - field: status
+          operator: not_null
+          reliability: guaranteed
+        - field: status
+          operator: type
+          reliability: guaranteed
+          value: string
+    # "Shopify" search resolves unambiguously (single exact match after
+    # normalization) to SHOPIFY INC., corpId 4261607, Active since
+    # incorporation 2004-09-28 — verified live 2026-08-14 via a POST to
+    # fdrlCrpSrch.html?lang=eng (6 candidates returned; only this one
+    # normalizes to "shopify") followed by the official JSON API.
+    - input:
+        company_name: Shopify
+      expected_fields:
+        - field: company_name
+          operator: contains
+          reliability: guaranteed
+          value: SHOPIFY
+        - field: corporation_number
+          operator: equals
+          reliability: guaranteed
+          value: "4261607"
+        - field: status
+          operator: equals
+          reliability: guaranteed
+          value: Active
+        - field: match_confidence
+          operator: equals
+          reliability: rare
+          value: exact
   health_check_input:
     corporation_number: "1007"
 output_field_reliability:
@@ -129,6 +161,10 @@ output_field_reliability:
   tier_2_available_reason: guaranteed
   ubo_availability: guaranteed
   ubo_availability_reason: guaranteed
+  # Only set on the name-search path (never on the corporation_number
+  # identifier path) — mirrors finnish-company-data's convention. See #161
+  # wrong-company class fix, 2026-08-14.
+  match_confidence: rare
 limitations:
   - title: Covers federally incorporated Canadian companies — provincially registered businesses may have limited data
     text: Covers federally incorporated companies — provincially registered businesses may have limited information

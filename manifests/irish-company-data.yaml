@@ -118,6 +118,10 @@ output_field_reliability:
   nace_v2_code: rare
   principal_object_code: common
   jurisdiction: guaranteed
+  # Only set on the name-search path (never on the cro_number identifier
+  # path) — mirrors finnish-company-data's convention. See #161 wrong-company
+  # class fix, 2026-08-14.
+  match_confidence: rare
 limitations:
   - title: Eircode (postal code) is not present for older or dissolved entities
     text: >-

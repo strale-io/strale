@@ -1,6 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { deriveVatFR } from "../lib/vat-derivation.js";
+import { classifyNameMatch } from "../lib/company-name-match.js";
+import { extractCompanyName } from "./lib/browserless-extract.js";
 
 // French company data via recherche-entreprises.api.gouv.fr — FREE, no auth
 const API = "https://recherche-entreprises.api.gouv.fr";
@@ -24,34 +25,19 @@ function findSiren(input: string): string | null {
   return match && SIREN_RE.test(match[0]) ? match[0] : null;
 }
 
-async function extractCompanyName(text: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
-  const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 100,
-    messages: [{ role: "user", content: `Extract the French company name from this request. Return ONLY the company name, nothing else.\n\nRequest: "${text}"` }],
-  });
-  const name = r.content[0].type === "text" ? r.content[0].text.trim().replace(/^["']|["']$/g, "") : "";
-  if (!name) throw new Error(`Could not identify a company name from: "${text}".`);
-  return name;
-}
 
-async function searchCompany(query: string): Promise<Record<string, unknown>> {
-  const url = `${API}/search?q=${encodeURIComponent(query)}&page=1&per_page=1`;
+async function fetchResults(query: string, perPage: number): Promise<any[]> {
+  const url = `${API}/search?q=${encodeURIComponent(query)}&page=1&per_page=${perPage}`;
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(10000),
   });
   if (!response.ok) throw new Error(`French API returned HTTP ${response.status}`);
   const data = (await response.json()) as any;
-  const results = data?.results;
-  if (!results || results.length === 0) {
-    throw new Error(`No French company found matching "${query}".`);
-  }
+  return Array.isArray(data?.results) ? data.results : [];
+}
 
-  const c = results[0];
+function shapeCompany(c: any): Record<string, unknown> {
   const siege = c.siege || {};
 
   // company_name and siren: null instead of "" when missing — empty string
@@ -83,6 +69,83 @@ async function searchCompany(query: string): Promise<Record<string, unknown>> {
   };
 }
 
+/** Identifier path — SIREN/SIRET is an exact key, so the single hit is authoritative. Unchanged behaviour. */
+async function lookupBySiren(siren: string): Promise<Record<string, unknown>> {
+  const results = await fetchResults(siren, 1);
+  if (results.length === 0) {
+    throw new Error(`No French company found matching "${siren}".`);
+  }
+  return shapeCompany(results[0]);
+}
+
+export interface FrNameResolution {
+  company: any;
+  matchConfidence: "exact" | "high";
+}
+
+/**
+ * Name path: recherche-entreprises.api.gouv.fr's `/search` does its own
+ * relevance scoring, but that relevance is not identity — searching "Total"
+ * returns the small SAS literally named TOTAL ahead of any oil-major
+ * subsidiary, and a generic query can surface an unrelated entity with a
+ * partially-matching name. Taking results[0] unconditionally hands the
+ * caller a different legal entity with no signal that it did (the #161
+ * wrong-company class already fixed for NO/FI/EE/DE/CH). Score every
+ * candidate in the page (max per_page = 25, API-enforced) and refuse when
+ * nothing genuinely matches, same discipline as the sibling registries.
+ */
+export function pickByName(query: string, results: any[]): FrNameResolution {
+  const exact = new Map<string, any>();
+  const high = new Map<string, any>();
+  for (const c of results) {
+    const name = c?.nom_complet || c?.nom_raison_sociale;
+    const siren = c?.siren;
+    if (typeof name !== "string" || !name || !siren) continue;
+    const { match_confidence } = classifyNameMatch(query, name);
+    if (match_confidence === "exact" && !exact.has(siren)) exact.set(siren, c);
+    else if (match_confidence === "high" && !high.has(siren)) high.set(siren, c);
+  }
+
+  const pickUnambiguous = (bucket: Map<string, any>, label: "exact" | "high"): FrNameResolution | null => {
+    if (bucket.size === 0) return null;
+    if (bucket.size === 1) {
+      return { company: bucket.values().next().value!, matchConfidence: label };
+    }
+    const listing = [...bucket.values()]
+      .slice(0, 5)
+      .map((c) => `${c.nom_complet || c.nom_raison_sociale} (${c.siren})`)
+      .join("; ");
+    throw new Error(
+      `Ambiguous French company name "${query}": ${bucket.size} distinct registered ` +
+        `entities are ${label === "exact" ? "exact" : "close"} matches — ${listing}. ` +
+        `Provide the SIREN (9 digits) or SIRET (14 digits) to disambiguate.`,
+    );
+  };
+
+  const winner = pickUnambiguous(exact, "exact") ?? pickUnambiguous(high, "high");
+  if (winner) return winner;
+
+  const closest = results
+    .slice(0, 3)
+    .map((c) => c?.nom_complet || c?.nom_raison_sociale)
+    .filter(Boolean)
+    .join(", ");
+  throw new Error(
+    `No confident French registry match for "${query}". recherche-entreprises.api.gouv.fr's search is ` +
+      `fuzzy and returned only unrelated entities${closest ? ` (closest: ${closest})` : ""}. ` +
+      `Provide the SIREN (9 digits) or SIRET (14 digits) for an exact lookup.`,
+  );
+}
+
+async function lookupByName(query: string): Promise<{ output: Record<string, unknown>; matchConfidence: "exact" | "high" }> {
+  const results = await fetchResults(query, 25);
+  if (results.length === 0) {
+    throw new Error(`No French company found matching "${query}".`);
+  }
+  const resolved = pickByName(query, results);
+  return { output: shapeCompany(resolved.company), matchConfidence: resolved.matchConfidence };
+}
+
 registerCapability("french-company-data", async (input: CapabilityInput) => {
   const raw = (input.siren as string) ?? (input.company_name as string) ?? (input.task as string) ?? "";
   if (typeof raw !== "string" || !raw.trim()) {
@@ -91,8 +154,15 @@ registerCapability("french-company-data", async (input: CapabilityInput) => {
 
   const trimmed = raw.trim();
   const siren = findSiren(trimmed);
-  const query = siren || await extractCompanyName(trimmed);
-  const output = await searchCompany(query);
+  let output: Record<string, unknown>;
+  if (siren) {
+    output = await lookupBySiren(siren);
+  } else {
+    const query = await extractCompanyName(trimmed, "French");
+    const resolved = await lookupByName(query);
+    output = resolved.output;
+    output.match_confidence = resolved.matchConfidence;
+  }
 
   // Evidence Tier framework labels + Tier 1 canonical aliases (DEC-20260518-A).
   // Resolves alias keys at runtime; only sets a canonical if not already present.
