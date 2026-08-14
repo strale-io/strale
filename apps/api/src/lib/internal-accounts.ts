@@ -25,6 +25,26 @@ export const INTERNAL_EMAIL_SUFFIXES = [
   "@example.com",
 ];
 
+/**
+ * The account the test runner books its own executions against.
+ *
+ * Exported so the writer and the exclusion rule cannot drift apart. That
+ * coupling is load-bearing in a way that is easy to miss: the scheduler's
+ * executions land in `transactions` as ordinary `status='failed'` rows —
+ * including the ALLOW_MATRIX refusals the dispatcher gate raises when it
+ * correctly declines to spend vendor credits on a paid capability from a test
+ * context. 91 such rows in the last 30 days.
+ *
+ * Those rows classify as `internal` — the "our bug until proven otherwise"
+ * bucket — and would count against the completion rate the quality floor uses
+ * to quarantine and propose deactivation (DEC-20260812-A). The only reason
+ * they don't is that the floor filters this address out by suffix. Change the
+ * address to something outside INTERNAL_EMAIL_SUFFIXES and the floor starts
+ * quarantining paid capabilities for a cost-control policy working exactly as
+ * intended — silently, since nothing else would look wrong.
+ */
+export const SYSTEM_ACCOUNT_EMAIL = "system@strale.internal";
+
 export const EXTRA_EXCLUDED_EMAILS = [
   // Founder personal account (Railway CLI, ad-hoc testing).
   "petterlindstrom@hotmail.com",
@@ -51,7 +71,7 @@ export const EXCLUDED_INTERNAL_EMAILS = [
   "petter@strale.io",
   "test@strale.io",
   "test2@strale.io",
-  "system@strale.internal",
+  SYSTEM_ACCOUNT_EMAIL,
   "test@example.com",
   ...EXTRA_EXCLUDED_EMAILS,
 ];
