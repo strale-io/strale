@@ -1157,7 +1157,7 @@ describe("startup-migrations — phase-b5 slug lists (invariants)", () => {
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 25 blocks in historical order", () => {
+  it("exports the expected 26 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1189,7 +1189,33 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0080_cyDirectors",
       "runMigration0081_attribution",
       "runMigration0082_reclassifyThrottledFreeUnlimited",
+      "runMigration0083_x402PayerHash",
     ]);
+  });
+});
+
+describe("startup-migrations — block 0083 (x402 payer hash)", () => {
+  it("adds the column and index idempotently (IF NOT EXISTS markers present)", async () => {
+    const { runMigration0083_x402PayerHash } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{}, {}] });
+    const result = await runMigration0083_x402PayerHash(stub);
+    expect(stub.captured).toHaveLength(2);
+    const [alterSql, indexSql] = stub.renderedSql.map((s) => s.toLowerCase());
+    expect(alterSql).toContain("add column if not exists x402_payer_hash");
+    expect(indexSql).toContain("create index if not exists");
+    expect(indexSql).toContain("x402_payer_hash");
+    expect(result.block).toBe("0083_x402_payer_hash");
+  });
+
+  it("no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)", async () => {
+    const { runMigration0083_x402PayerHash } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{}, {}] });
+    await runMigration0083_x402PayerHash(stub);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      const badChunks = chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c));
+      expect(badChunks, "no Date/Buffer chunk reaches the SQL bind layer").toEqual([]);
+    }
   });
 });
 
