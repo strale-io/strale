@@ -52,3 +52,54 @@ One session: 1 migration (`client_meta` column + `discovery_hits` table), 4 capt
 2 package releases (SDK header), rollup script. DEC-20260504-C applies (migration must be
 verified against the actual deploy mechanism — `runStartupMigrations()` in `index.ts`);
 DEC-20260504-B does not (no backlog drain — new tables start empty).
+
+## Addendum (2026-08-15) — MCP funnel + x402 payer hash (migration 0083)
+
+176 agents/week hit `/mcp:initialize`; essentially none convert, and until this addendum
+`discovery_hits` only ever recorded `:initialize` for MCP — no visibility into `tools/list`,
+`tools/call`, or where a call gets rejected. Two additions, both write-only at execution
+time (no hot-path query cost), both landed with regression tests:
+
+1. **MCP funnel capture — no schema change.** `discovery_hits.endpoint` already carries
+   enough information as a plain string; funnel step + tool name + rejection reason are
+   encoded into it (`/mcp:tools/list`, `/mcp:tools/call:{tool}`,
+   `/mcp:reject:{auth_rejected|payment_rejected|rate_limited}:{tool}`), extending the
+   `/mcp:initialize` pattern this table already used. Two capture paths:
+   - Pre-dispatch: `routes/mcp.ts`'s `classifyMcpRequest` peeks the JSON-RPC method the
+     same way the original `/mcp:initialize` capture did. Records that a step was
+     *reached*.
+   - Outcome: `packages/mcp-server/src/tools.ts` gained an optional `onFunnelEvent` hook
+     on `StraleClientOptions`, fired from inside `strale_execute` / `strale_balance` /
+     `strale_transaction` at their existing auth-check and `error_code` branches. Only the
+     HTTP transport (`routes/mcp.ts`) passes a callback; the published stdio server
+     (`server.ts`, what `npx strale-mcp` installs) never does, so this is a no-op for every
+     external install — no DB dependency leaks into the npm package.
+2. **x402 payer identity — new column, not a new signal.** The raw payer address was
+   already flowing through `extractPayerAddress` into `audit_trail->>'payer_address'`
+   (needed there, unhashed, for refund/reconciliation — see `x402_orphan_settlements`).
+   `transactions.x402_payer_hash` (migration 0083) adds a STABLE (non-rotating) keyed hash
+   of that address — `hashX402Payer` in `lib/attribution.ts`, a sibling of `saltedIpHash`
+   with the opposite lifecycle: `saltedIpHash` rotates daily *on purpose* (cross-day
+   correlation must be impossible); `hashX402Payer` must NOT rotate, because the entire
+   point is answering "is this the same wallet as last week" (distinct-payer, repeat-rate).
+   Keyed (HMAC via `AUDIT_HMAC_SECRET`, not plain sha256 like `client_ip_hash`) because a
+   curated dictionary of wallet addresses (block-explorer tag databases) is a realistic
+   attack the much-larger address space doesn't rule out the way IPv4's small space makes
+   moot for `client_ip_hash`. Lowercased before hashing so EIP-55 checksum-casing
+   differences between clients don't split one payer into two.
+
+**Known blind spots (explicit, not fixed by this addendum):**
+- No true per-agent funnel. The MCP HTTP transport is stateless — no session id exists to
+  join "this initialize" to "this tools/call" from the same agent. "Distinct agents" can
+  only be approximated via UA string (imprecise both directions) since `ip_hash`'s daily
+  rotation makes it unusable for anything wider than a 24h window.
+- `x402_payer_hash` is NULL on every x402 transaction recorded before this migration, and
+  on any row where verification didn't yield a parseable payer address — distinct-payer
+  counts from the rollup script are a lower bound, not exact.
+- Rejection capture only covers `strale_execute`, `strale_balance`, and
+  `strale_transaction` — the three tools with an auth-or-payment-shaped rejection branch
+  today. A future paid meta-tool needs its own `emitFunnelEvent` call site.
+
+Rollup: `apps/api/scripts/attribution-rollup.ts` gained an "MCP funnel" and an "x402
+payers" section (run weekly by a human, same as the rest of the report — this was not
+built as a dashboard).

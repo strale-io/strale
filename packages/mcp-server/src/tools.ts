@@ -64,12 +64,49 @@ export interface SolutionTrustEntry {
   badge_label: string | null;
 }
 
+/**
+ * MCP funnel telemetry — fired on auth-or-payment rejections a tool
+ * surfaces to the caller. Optional and side-effect-free from this
+ * package's point of view: the stdio server (server.ts, used by every
+ * external `npx strale-mcp` install) never sets it, so this stays a no-op
+ * there. Only the HTTP transport (apps/api/src/routes/mcp.ts) — which runs
+ * inside Strale's own API process and has a database to write to — passes
+ * a callback, wiring it to the discovery_hits table via
+ * lib/attribution.ts's recordDiscoveryHit. Keeping the hook here rather
+ * than duplicating each tool's rejection logic in the HTTP transport is
+ * why "each tools/call" and "auth-or-payment rejection" can both be
+ * observed without adding any latency: onFunnelEvent is called
+ * synchronously but the HTTP transport's implementation is itself
+ * fire-and-forget (mirrors recordDiscoveryHit's own contract).
+ */
+export type McpFunnelEventType = "auth_rejected" | "payment_rejected" | "rate_limited";
+
+export interface McpFunnelEvent {
+  type: McpFunnelEventType;
+  /** Tool name, e.g. "strale_execute". */
+  tool: string;
+  /** Capability slug, when the rejection happened mid-execution. */
+  slug?: string;
+  /** error_code from the API response, when available. */
+  detail?: string;
+}
+
 export interface StraleClientOptions {
   baseUrl: string;
   apiKey: string;
   maxPriceCents: number;
   clientIp?: string;
   version?: string;
+  onFunnelEvent?: (event: McpFunnelEvent) => void;
+}
+
+/** Call onFunnelEvent without letting a throwing hook break tool execution. */
+function emitFunnelEvent(opts: StraleClientOptions, event: McpFunnelEvent): void {
+  try {
+    opts.onFunnelEvent?.(event);
+  } catch {
+    // A telemetry hook must never break the tool call it's observing.
+  }
 }
 
 // Attribution client identifier — package name/version, sent as
@@ -224,6 +261,7 @@ export async function executeCapability(
 
   if (!opts.apiKey) {
     if (!isFreeTier) {
+      emitFunnelEvent(opts, { type: "auth_rejected", tool: "strale_execute", slug });
       return {
         content: [
           {
@@ -269,6 +307,7 @@ export async function executeCapability(
 
   if (status === 429) {
     const retryAfter = (data as any).retry_after_seconds;
+    emitFunnelEvent(opts, { type: "rate_limited", tool: "strale_execute", slug });
     return {
       content: [
         {
@@ -287,9 +326,19 @@ export async function executeCapability(
     const errorCode = (data as any).error_code ?? "unknown_error";
     const message = (data as any).message ?? "Unknown error";
     const details = (data as any).details;
+    const isInsufficientBalance = errorCode === "insufficient_balance";
+
+    // Auth-or-payment rejection funnel signal — only these two error_codes,
+    // not every 4xx (a bad slug or malformed input is a usage error, not a
+    // rejection the funnel report cares about).
+    if (isInsufficientBalance) {
+      emitFunnelEvent(opts, { type: "payment_rejected", tool: "strale_execute", slug, detail: errorCode });
+    } else if (status === 401 || errorCode === "unauthorized" || errorCode === "invalid_api_key") {
+      emitFunnelEvent(opts, { type: "auth_rejected", tool: "strale_execute", slug, detail: errorCode });
+    }
 
     let errorText = `Error (${errorCode}): ${message}`;
-    if (errorCode === "insufficient_balance") {
+    if (isInsufficientBalance) {
       errorText += `\n\nTop up your wallet at: ${opts.baseUrl}/v1/wallet/topup`;
     }
     if (errorCode === "capability_unavailable" && details?.next_retry_at) {
@@ -770,6 +819,7 @@ export function registerStraleTools(
     },
     async () => {
       if (!opts.apiKey) {
+        emitFunnelEvent(opts, { type: "auth_rejected", tool: "strale_balance" });
         return {
           content: [
             {
@@ -979,6 +1029,7 @@ REFERENCES
         }
 
         if (resp.status === 401) {
+          emitFunnelEvent(opts, { type: "auth_rejected", tool: "strale_transaction" });
           return {
             content: [
               {
