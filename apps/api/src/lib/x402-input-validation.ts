@@ -47,12 +47,18 @@ function fieldPresent(inputs: Record<string, unknown>, field: string): boolean {
   return !isBlank(inputs[field]);
 }
 
-function requiredOf(schema: unknown): string[] {
+/**
+ * Exported so other schema consumers (task-value-hints.ts's
+ * unsatisfiedGroupFields) parse anyOf/oneOf branches through the same walker
+ * instead of re-implementing it — two independent walkers of the same schema
+ * shape drift silently (reuse review, 2026-08-15).
+ */
+export function requiredOf(schema: unknown): string[] {
   const req = (schema as JsonSchema | undefined)?.required;
   return Array.isArray(req) ? (req.filter((f): f is string => typeof f === "string")) : [];
 }
 
-function branchesOf(schema: JsonSchema): unknown[] | null {
+export function branchesOf(schema: JsonSchema): unknown[] | null {
   if (Array.isArray(schema.anyOf) && schema.anyOf.length > 0) return schema.anyOf as unknown[];
   if (Array.isArray(schema.oneOf) && schema.oneOf.length > 0) return schema.oneOf as unknown[];
   return null;
