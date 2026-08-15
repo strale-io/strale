@@ -1,5 +1,5 @@
 /**
- * Block 0083 — the test scheduler must not be entitled to a vendor's entire
+ * Block 0084 — the test scheduler must not be entitled to a vendor's entire
  * free allowance.
  *
  * cvrapi.dk documents 50 free lookups per day. quota_cap was also 50, so the
@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { runMigration0083_danishQuotaHeadroom } from "./startup-migrations.js";
+import { runMigration0084_danishQuotaHeadroom } from "./startup-migrations.js";
 
 function makeStub(count: number) {
   const captured: unknown[] = [];
@@ -24,24 +24,24 @@ function makeStub(count: number) {
   };
 }
 
-describe("Block 0083 — danish-company-data quota headroom", () => {
+describe("Block 0084 — danish-company-data quota headroom", () => {
   it("cuts the test budget and reports the reservation", async () => {
     const stub = makeStub(1);
-    const r = await runMigration0083_danishQuotaHeadroom(stub as never);
+    const r = await runMigration0084_danishQuotaHeadroom(stub as never);
     expect(r.rows_affected).toBe(1);
     expect(r.outcome).toMatch(/50 to 20/);
   });
 
   it("is idempotent — a redeploy after retuning is a no-op", async () => {
     const stub = makeStub(0);
-    const r = await runMigration0083_danishQuotaHeadroom(stub as never);
+    const r = await runMigration0084_danishQuotaHeadroom(stub as never);
     expect(r.rows_affected).toBe(0);
     expect(r.outcome).toMatch(/no change/);
   });
 
   it("guards on the old value so an operator's retune survives", async () => {
     const stub = makeStub(1);
-    await runMigration0083_danishQuotaHeadroom(stub as never);
+    await runMigration0084_danishQuotaHeadroom(stub as never);
     const text = JSON.stringify(stub.captured[0]);
     expect(text).toContain("quota_cap");
     expect(text, "must only touch rows still at the old value").toContain("50");
@@ -49,7 +49,7 @@ describe("Block 0083 — danish-company-data quota headroom", () => {
 
   it("binds no Date or Buffer (DEC-20260504-A bind-encoder shape)", async () => {
     const stub = makeStub(1);
-    await runMigration0083_danishQuotaHeadroom(stub as never);
+    await runMigration0084_danishQuotaHeadroom(stub as never);
     for (const q of stub.captured) {
       const chunks = (q as { queryChunks?: unknown[] }).queryChunks ?? [];
       expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);

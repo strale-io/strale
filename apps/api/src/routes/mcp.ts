@@ -15,7 +15,7 @@
 
 import { Hono } from "hono";
 import { rateLimitByIp } from "../lib/rate-limit.js";
-import { recordDiscoveryHit } from "../lib/attribution.js";
+import { recordDiscoveryHit, type HeaderReader } from "../lib/attribution.js";
 import { log, logError } from "../lib/log.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
@@ -29,6 +29,7 @@ import {
   type Solution,
   type TrustBatchEntry,
   type SolutionTrustEntry,
+  type McpFunnelEvent,
 } from "strale-mcp/tools";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -121,6 +122,90 @@ getCatalog().then(() => {
   logError("mcp-http-prewarm-failed", err);
 });
 
+// ─── MCP funnel instrumentation (readiness P0, 2026-08-15) ─────────────────
+//
+// "Strale can see agents arriving and can see revenue, but nothing in
+// between." Reuses discovery_hits UNMODIFIED (see migration 0083's comment
+// for why extending the schema wasn't necessary): funnel step + tool name +
+// rejection reason are all encoded into the existing `endpoint` text
+// column, the same pattern `/mcp:initialize` already established before
+// this change. Every write goes through recordDiscoveryHit, which is
+// fire-and-forget and never throws (DEC-20260504-A visibility discipline:
+// the swallow is logged there, not here) — so none of this can add latency
+// or a failure mode to the highest-traffic endpoint on the platform.
+//
+// Two capture paths, deliberately different in what they observe:
+//   1. classifyMcpRequest — PRE-dispatch peek of the JSON-RPC body. Records
+//      that a funnel step was REACHED (initialize / tools/list / a named
+//      tools/call). Cheap and stateless-safe: no correlation with anything
+//      that happens after this request's own response.
+//   2. funnelEventEndpoint — the OUTCOME side, fired from inside tool
+//      execution via registerStraleTools' `onFunnelEvent` hook
+//      (packages/mcp-server/src/tools.ts). This is the only way to observe
+//      an auth-or-payment rejection, because that decision happens deep
+//      inside a specific tool's handler (e.g. strale_execute checking
+//      opts.apiKey, or the /v1/do response's error_code) — not visible from
+//      the pre-dispatch peek, which only sees the request.
+
+/**
+ * Strip a client-supplied string down to a safe token before it becomes
+ * part of `endpoint` — defends the analytics surface against an oversized
+ * or oddly-charactered tool name (MCP tool names are developer-chosen
+ * strings, not a closed enum Strale controls).
+ */
+function sanitizeFunnelToken(raw: string | undefined): string {
+  if (!raw) return "unknown";
+  const cleaned = raw.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64);
+  return cleaned || "unknown";
+}
+
+interface McpPeekBody {
+  method?: string;
+  params?: {
+    clientInfo?: { name?: string; version?: string };
+    name?: string;
+  };
+}
+
+/**
+ * Map a peeked JSON-RPC request body to the discovery_hits endpoint label
+ * for the funnel step it represents. Returns null for methods the funnel
+ * doesn't track (notifications/*, ping, resources/*, …) — the caller skips
+ * the write entirely rather than recording a meaningless hit.
+ *
+ * Pure and exported for unit testing — no request/DB access, so this can be
+ * tested without a Hono app or a database.
+ */
+export function classifyMcpRequest(
+  peek: McpPeekBody | null,
+): { endpoint: string; uaOverride?: string } | null {
+  if (!peek?.method) return null;
+
+  if (peek.method === "initialize") {
+    // clientInfo (name/version) is the only place a stateless-mode caller
+    // identifies itself — used as a UA override since real UA headers are
+    // often generic (undici, node-fetch) or absent entirely.
+    const ci = peek.params?.clientInfo;
+    const uaOverride = ci?.name ? `${ci.name}/${ci.version ?? "?"}` : undefined;
+    return { endpoint: "/mcp:initialize", uaOverride };
+  }
+
+  if (peek.method === "tools/list") {
+    return { endpoint: "/mcp:tools/list" };
+  }
+
+  if (peek.method === "tools/call") {
+    return { endpoint: `/mcp:tools/call:${sanitizeFunnelToken(peek.params?.name)}` };
+  }
+
+  return null;
+}
+
+/** Endpoint label for an auth-or-payment rejection surfaced during tool execution. */
+export function funnelEventEndpoint(event: McpFunnelEvent): string {
+  return `/mcp:reject:${event.type}:${sanitizeFunnelToken(event.tool)}`;
+}
+
 // ─── Create a stateless MCP handler ─────────────────────────────────────────
 
 async function handleStatelessRequest(
@@ -135,12 +220,21 @@ async function handleStatelessRequest(
 
   const { capabilities, solutions, trustData, solutionTrustData } = await getCatalog();
 
+  // Same HeaderReader shape the initialize peek below uses — real headers,
+  // no UA override (rejections happen well after any clientInfo we saw at
+  // this request's own peek, and stateless mode has no session to carry it
+  // forward through).
+  const headerReader: HeaderReader = { header: (n: string) => req.headers.get(n) ?? undefined };
+
   registerStraleTools(server, capabilities, solutions, {
     baseUrl: STRALE_BASE_URL,
     apiKey,
     clientIp,
     maxPriceCents: DEFAULT_MAX_PRICE_CENTS,
     version: "0.2.4", // matches strale-mcp npm version — update on publish
+    onFunnelEvent: (event) => {
+      recordDiscoveryHit(funnelEventEndpoint(event), headerReader, { ip: clientIp ?? undefined });
+    },
   }, trustData, solutionTrustData);
 
   const transport = new WebStandardStreamableHTTPServerTransport({
@@ -233,22 +327,20 @@ mcpRoute.all("/", async (c) => {
   if (method === "POST") {
     const apiKey = extractApiKey(req);
     const clientIp = extractClientIp(req);
-    // Channel attribution: MCP initialize carries clientInfo (name/version) —
-    // the only place the calling harness identifies itself in stateless mode
-    // (initialize and tools/call arrive as separate POSTs with no session).
-    // Recorded as a discovery hit; peeked from a clone so the transport
-    // stream is untouched. Failure here must never affect the MCP call.
+    // MCP funnel arrival tracking (initialize / tools/list / tools/call):
+    // peeked from a clone so the transport stream is untouched. Failure here
+    // must never affect the MCP call — see classifyMcpRequest's docstring
+    // above for what this captures and what it deliberately doesn't
+    // (rejection outcomes, which come from the onFunnelEvent hook inside
+    // handleStatelessRequest instead).
     try {
-      const peek = (await req.clone().json().catch(() => null)) as
-        | { method?: string; params?: { clientInfo?: { name?: string; version?: string } } }
-        | null;
-      if (peek?.method === "initialize") {
-        const ci = peek.params?.clientInfo;
-        const uaOverride = ci?.name ? `${ci.name}/${ci.version ?? "?"}` : undefined;
-        recordDiscoveryHit("/mcp:initialize", {
+      const peek = (await req.clone().json().catch(() => null)) as McpPeekBody | null;
+      const classified = classifyMcpRequest(peek);
+      if (classified) {
+        recordDiscoveryHit(classified.endpoint, {
           header: (n: string) =>
-            n.toLowerCase() === "user-agent" && uaOverride
-              ? uaOverride
+            n.toLowerCase() === "user-agent" && classified.uaOverride
+              ? classified.uaOverride
               : req.headers.get(n) ?? undefined,
         }, { ip: clientIp ?? undefined });
       }
