@@ -40,6 +40,7 @@ interface Manifest {
   output_field_reliability?: unknown;
   processes_personal_data?: unknown;
   personal_data_categories?: unknown[];
+  input_schema?: unknown;
 }
 
 interface Drift {
@@ -73,7 +74,7 @@ for (const file of manifestFiles) {
   const rows = await sql`
     SELECT slug, data_source, maintenance_class, transparency_tag, freshness_category,
            output_field_reliability, processes_personal_data, personal_data_categories,
-           gdpr_art_22_classification
+           gdpr_art_22_classification, input_schema
     FROM capabilities
     WHERE slug = ${slug}
   `;
@@ -112,6 +113,18 @@ for (const file of manifestFiles) {
   compare("processes_personal_data", dbRow.processes_personal_data, manifest.processes_personal_data);
   compare("personal_data_categories", dbRow.personal_data_categories, manifest.personal_data_categories);
   compare("gdpr_art_22_classification", dbRow.gdpr_art_22_classification, manifest.gdpr_art_22_classification);
+  // input_schema is the customer-facing contract: it's what MCP tool
+  // definitions, /v1/capabilities, and the x402 catalog serve. Drift here is
+  // how three capabilities spent months advertising "nothing required" while
+  // their executors demanded input (2026-08-15 incident — real x402 payers
+  // sent {} and hit refusals the schema said couldn't happen). A DB value
+  // stored as a JSON *string* (double-encoding) serves zero properties and
+  // is flagged as drift regardless of content.
+  compare(
+    "input_schema",
+    typeof dbRow.input_schema === "string" ? "<DOUBLE-ENCODED JSON STRING>" : dbRow.input_schema,
+    manifest.input_schema,
+  );
 
   if (fields.length === 0) {
     cleanCount++;
