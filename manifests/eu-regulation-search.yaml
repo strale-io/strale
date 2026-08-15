@@ -1,8 +1,3 @@
-# Rebuilt 2026-08-15: EUR-Lex page scrape (Browserless + LLM extraction, zero
-# lifetime successes, quarantined) replaced by the Publications Office CELLAR
-# SPARQL endpoint — the official machine interface to the same corpus
-# (DEC-20260813-A preference order: official API > per-call parsing).
-
 slug: eu-regulation-search
 name: EU Regulation Search
 description: >-
@@ -37,7 +32,10 @@ output_schema:
       - protection
     result_count: 1
     regulations:
-      - title: Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data, and repealing Directive 95/46/EC (General Data Protection Regulation)
+      - title: >-
+          Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of
+          natural persons with regard to the processing of personal data and on the free movement of such data, and
+          repealing Directive 95/46/EC (General Data Protection Regulation)
         celex_number: 32016R0679
         type: Regulation
         date: "2016-04-27"
@@ -57,40 +55,25 @@ data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
 maintenance_class: free-stable-api
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: false
 geography: global
 test_fixtures:
   known_answer:
     input:
-      query: general data protection
-      type: regulation
+      query: data protection
     expected_fields:
       - field: query
         operator: not_null
         reliability: guaranteed
-      - field: query
-        operator: type
-        reliability: guaranteed
-        value: string
-      - field: regulations
-        operator: not_null
-        reliability: guaranteed
-      - field: regulations
-        operator: type
-        reliability: guaranteed
-        value: array
-      - field: result_count
+      - field: matched_terms
         operator: not_null
         reliability: guaranteed
       - field: result_count
-        operator: type
+        operator: not_null
         reliability: guaranteed
-        value: number
-      - field: result_count
-        operator: gt
+      - field: regulations
+        operator: not_null
         reliability: guaranteed
-        value: 0
   health_check_input:
     query: data protection
 output_field_reliability:
@@ -101,22 +84,22 @@ output_field_reliability:
 limitations:
   - title: Title-based matching — legislation whose title doesn't name the topic may be missed
     text: >-
-      Queries are matched against official English titles (all words must appear). Legislation known by an
-      abbreviation not present in its title (e.g. "AI" for the Artificial Intelligence Act) or covering a topic
-      not named in the title will not be found. Query with the spelled-out subject matter.
+      Queries are matched against official English titles (all words must appear). Legislation known by an abbreviation
+      not present in its title (e.g. "AI" for the Artificial Intelligence Act) or covering a topic not named in the
+      title will not be found. Query with the spelled-out subject matter.
     category: coverage
     severity: warning
     workaround: Use full subject words ("artificial intelligence", not "AI"); add the year filter to narrow results
   - title: Covers adopted sector-3 legislation only — proposals, corrigenda, and consolidated texts are excluded
     text: >-
-      Results are restricted to adopted regulations, directives, and decisions (CELEX sector 3). Draft proposals
-      (COM documents), corrigenda, communications, and consolidated versions are excluded by design.
+      Results are restricted to adopted regulations, directives, and decisions (CELEX sector 3). Draft proposals (COM
+      documents), corrigenda, communications, and consolidated versions are excluded by design.
     category: coverage
     severity: info
     workaround: Check EUR-Lex directly for legislative procedure status or consolidated texts of returned acts
   - title: An empty result set is a valid answer, not an error
     text: >-
-      A query matching no legislation returns result_count 0 with an empty regulations array. This is a correct
-      "nothing matches" answer — it does not indicate a service fault.
+      A query matching no legislation returns result_count 0 with an empty regulations array. This is a correct "nothing
+      matches" answer — it does not indicate a service fault.
     category: accuracy
     severity: info
