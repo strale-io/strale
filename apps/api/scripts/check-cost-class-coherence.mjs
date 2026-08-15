@@ -137,6 +137,10 @@ const THROTTLED_HOST_RULES = [
   { host: "api.gdeltproject.org", reason: "GDELT enforces a documented per-IP request interval." },
   { host: "api.gopluslabs.io", reason: "GoPlus Labs' free tier (no access token) is rate-limited." },
   {
+    host: "cvrapi.dk",
+    reason: "cvrapi.dk's unauthenticated free tier has a documented daily lookup quota.",
+  },
+  {
     host: "api.company-information.service.gov.uk",
     reason: "UK Companies House's public API is rate-limited.",
   },
