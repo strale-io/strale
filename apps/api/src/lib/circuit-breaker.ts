@@ -183,6 +183,40 @@ const USER_INPUT_ERROR_PATTERNS = [
   ...REFUSAL_MESSAGE_PATTERNS,
 ];
 
+/**
+ * Refusals the PLATFORM issued, as distinct from bad caller input.
+ *
+ * These are the three `guarded-executor.ts` error classes — the dispatcher gate
+ * declining to spend vendor credits from a non-customer context, an
+ * unclassified capability failing closed, and an exhausted test budget. Every
+ * one of them means the gate worked. None is evidence the capability or its
+ * upstream is unhealthy, so none may open the breaker.
+ *
+ * Until now nothing routed them here: `test-runner.ts` never called
+ * `recordFailure`, which is what made them inert (and what the cost-control
+ * accounting tests rely on). The DK hardening changes that — it deliberately
+ * wires test failures with an `unknown`/`upstream_transient` verdict into the
+ * breaker, and an ALLOW_MATRIX refusal classifies as `unknown`. Without this
+ * guard, every paid capability's scheduled test would trip its own breaker and
+ * suspend it for real customers: 91 such refusals across 8 capabilities in the
+ * last 30 days.
+ *
+ * Kept separate from USER_INPUT_ERROR_PATTERNS on purpose. A refusal here is
+ * not caller-attributable — nobody asked for it — so folding it into the
+ * user-input list would misreport whose fault it was everywhere else that list
+ * is read.
+ */
+const PLATFORM_REFUSAL_PATTERNS = [
+  "refuses invocation from context kind", // CapabilityInvocationRefusedError
+  "Non-customer invocations are refused", // CapabilityNotClassifiedError
+  "test budget", // BudgetExhaustedError ("has exhausted its <window> test budget")
+];
+
+/** Exported so tests can assert the pattern list stays in sync with its producers. */
+export function isPlatformRefusal(reason: string): boolean {
+  return PLATFORM_REFUSAL_PATTERNS.some((p) => reason.includes(p));
+}
+
 /** Exported so tests can assert the pattern list stays in sync with its producers. */
 export function isUserInputError(reason: string): boolean {
   return USER_INPUT_ERROR_PATTERNS.some((p) => reason.includes(p));
@@ -201,6 +235,12 @@ export function isUserInputError(reason: string): boolean {
 export async function recordFailure(slug: string, failureReason?: string): Promise<void> {
   // Skip circuit breaker for user-input errors — the capability is healthy
   if (failureReason && isUserInputError(failureReason)) {
+    return;
+  }
+
+  // The platform declined to run it. The gate working is not the capability
+  // failing — see PLATFORM_REFUSAL_PATTERNS.
+  if (failureReason && isPlatformRefusal(failureReason)) {
     return;
   }
 

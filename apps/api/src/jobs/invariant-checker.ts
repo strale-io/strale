@@ -12,7 +12,7 @@
  * Rate limit: max 20 items processed per check per run.
  */
 
-import { sql, eq, and, or, inArray, asc, isNull, desc } from "drizzle-orm";
+import { sql, eq, and, or, inArray, asc, isNull, isNotNull, desc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps, testResults, testSuites, capabilityHealth, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
@@ -140,6 +140,14 @@ export async function runInvariantChecks(): Promise<void> {
     checked += r12.checked;
   } catch (err) {
     jobLog.error({ label: "invariant-check-12-failed", check: "compliance-profile-completeness", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-12-failed");
+  }
+
+  try {
+    const r13 = await checkLyingBreakers();
+    alerts += r13.alerts;
+    checked += r13.checked;
+  } catch (err) {
+    jobLog.error({ label: "invariant-check-13-failed", check: "lying-breakers", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-13-failed");
   }
 
   // Log provider outage summary if any capabilities were skipped
@@ -948,5 +956,97 @@ async function checkComplianceProfileCompleteness(): Promise<{ alerts: number; c
     details: { check: 'compliance_profile_completeness', incomplete },
   });
   return { alerts: 1, checked: caps.length };
+}
+
+// ─── CHECK 13: Lying breaker (Tier 2 — ALERT ONLY) ──────────────────────────
+// A capability_health row in state='closed' with last_success_at set but
+// total_successes=0 is structurally incoherent: the only writer that produces
+// that combination is `recordTestEvidence` (sets lastSuccessAt without
+// incrementing totalSuccesses). If recordSuccess had ever fired for the slug,
+// total_successes would be > 0. So a lying-breaker row is a row where
+// recordTestEvidence transitioned the breaker to closed without any real
+// successful execution ever having happened.
+//
+// Phase 3 Harden — this check exists because the Phase 2 incident
+// (memo: docs/research/2026-05-07-dk-phase2-understand.md, branch
+// investigation/dk-phase-2-understand) found the DK row in this exact
+// shape and DEC-20260506-D's mental model couldn't see it. Fix A + Fix B
+// prevent NEW lying-breaker rows; this check surfaces ANY remaining ones
+// (e.g., the DK row itself until operator-applied cleanup runs).
+//
+// No auto-heal — surface for human attention. Auto-heal would require
+// deciding whether to roll back to "open" or trust the test signal, and
+// either choice has trade-offs that warrant a human eye.
+
+/**
+ * Pure predicate: does this capability_health row shape match the
+ * lying-breaker pattern? Exported for unit testing.
+ */
+export function isLyingBreakerRow(row: {
+  state: string;
+  lastSuccessAt: Date | null;
+  totalSuccesses: number;
+}): boolean {
+  return row.state === "closed" && row.lastSuccessAt !== null && row.totalSuccesses === 0;
+}
+
+async function checkLyingBreakers(): Promise<{ alerts: number; checked: number }> {
+  const db = getDb();
+
+  const lying = await db
+    .select({
+      slug: capabilityHealth.capabilitySlug,
+      state: capabilityHealth.state,
+      lastSuccessAt: capabilityHealth.lastSuccessAt,
+      totalSuccesses: capabilityHealth.totalSuccesses,
+      totalFailures: capabilityHealth.totalFailures,
+      lastFailureAt: capabilityHealth.lastFailureAt,
+      updatedAt: capabilityHealth.updatedAt,
+    })
+    .from(capabilityHealth)
+    .where(
+      and(
+        eq(capabilityHealth.state, "closed"),
+        isNotNull(capabilityHealth.lastSuccessAt),
+        eq(capabilityHealth.totalSuccesses, 0),
+      ),
+    );
+
+  if (lying.length === 0) return { alerts: 0, checked: 1 };
+
+  const slugs = lying.map((r) => r.slug);
+
+  logWarn(
+    "invariant-check-13-lying-breaker",
+    "capability_health rows have lying-breaker shape (closed + last_success_at set + total_successes=0)",
+    {
+      count: lying.length,
+      slugs,
+      detail: "recordTestEvidence transitioned breaker to closed without a real successful execution",
+    },
+  );
+
+  await logHealthEvent({
+    eventType: "invariant_alert",
+    tier: 2,
+    actionTaken: `${lying.length} capability_health row(s) have lying-breaker shape (closed + last_success_at set + total_successes=0): ${slugs.join(", ")}`,
+    details: {
+      check: "lying_breaker",
+      slugs,
+      rows: lying.map((r) => ({
+        slug: r.slug,
+        state: r.state,
+        last_success_at: r.lastSuccessAt?.toISOString() ?? null,
+        total_successes: r.totalSuccesses,
+        total_failures: r.totalFailures,
+        last_failure_at: r.lastFailureAt?.toISOString() ?? null,
+        updated_at: r.updatedAt.toISOString(),
+      })),
+      remediation:
+        "Reset the row by hand: UPDATE capability_health SET state='closed', last_success_at=NULL, last_failure_at=NOW(), total_failures = total_failures + 1, consecutive_failures = 0, updated_at=NOW() WHERE capability_slug='<slug>'. Only do this AFTER Fix A + Fix B have shipped to prod (otherwise the next 2-hour test batch re-creates the lying state).",
+    },
+  });
+
+  return { alerts: 1, checked: lying.length };
 }
 
