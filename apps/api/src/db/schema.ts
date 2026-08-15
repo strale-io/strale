@@ -314,6 +314,22 @@ export const transactions = pgTable(
     // proxy, or an attacker trying to double-charge during the
     // verify-then-settle window). Null on wallet-paid rows.
     x402PaymentHash: varchar("x402_payment_hash", { length: 32 }),
+    // MCP funnel P0 (migration 0083, 2026-08-15): stable (non-rotating)
+    // secret-salted sha256 over (AUDIT_HMAC_SECRET || lowercased payer address),
+    // truncated to
+    // 16 hex chars — see hashX402Payer in lib/attribution.ts. Deliberately
+    // NOT daily-salted like discovery_hits.ip_hash / client_meta.ip_day_hash:
+    // those rotate on purpose so cross-day correlation is impossible, but a
+    // payer hash exists precisely to answer "is this the same wallet as last
+    // week" (distinct-payer and repeat-rate questions) — a rotating hash
+    // would make that unanswerable. The raw payer address already lives
+    // unhashed in audit_trail->>'payer_address' (needed for refund/
+    // reconciliation — see x402_orphan_settlements.payer_address) and is
+    // NOT duplicated here; this column is the pseudonymous, low-sensitivity
+    // surface the weekly rollup and any future analytics should read
+    // instead of extracting the raw address from JSONB. Null on wallet-paid
+    // rows and on x402 rows recorded before this migration.
+    x402PayerHash: varchar("x402_payer_hash", { length: 16 }),
     priceUsd: decimal("price_usd", { precision: 10, scale: 4 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -342,6 +358,12 @@ export const transactions = pgTable(
     uniqueIndex("transactions_x402_payment_hash_unique")
       .on(table.x402PaymentHash)
       .where(sql`x402_payment_hash IS NOT NULL`),
+    // MCP funnel P0: distinct-payer / repeat-rate rollup queries filter on
+    // payment_method='x402' and group by this column — not unique (a repeat
+    // payer is expected to produce many rows with the same hash).
+    index("transactions_x402_payer_hash_idx")
+      .on(table.x402PayerHash)
+      .where(sql`x402_payer_hash IS NOT NULL`),
   ],
 );
 
