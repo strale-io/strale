@@ -12,6 +12,11 @@
  * discovery_hits table is pruned at 90 days (db-retention rule); client_meta
  * rides the transactions row and follows TRANSACTION_RETENTION_DAYS (3y) —
  * pseudonymous, low-sensitivity signals only (ua/referer/salted hash).
+ *
+ * MCP funnel + x402 payer hashing (2026-08-15 addendum, migration 0083):
+ * `hashX402Payer` below is a STABLE (non-rotating) sibling of `saltedIpHash`
+ * — see its docstring for why a wallet-address hash must NOT rotate the way
+ * the IP hash deliberately does.
  */
 
 import { createHash } from "node:crypto";
@@ -86,27 +91,67 @@ export function extractClientMeta(
 }
 
 /**
+ * Shared secret gate for every hash in this module. An empty/weak secret
+ * would make the digest rainbow-tableable, defeating the privacy property
+ * either function exists for — refuse to hash rather than hash weakly, and
+ * warn once (shared flag) so the misconfiguration is visible without log
+ * spam across both call sites.
+ */
+let warnedWeakSalt = false;
+
+function requireHmacSecret(): string | undefined {
+  const secret = process.env.AUDIT_HMAC_SECRET ?? "";
+  if (secret.length < 32) {
+    if (!warnedWeakSalt) {
+      warnedWeakSalt = true;
+      logWarn("attribution-weak-salt", "AUDIT_HMAC_SECRET missing/short — attribution hashing disabled");
+    }
+    return undefined;
+  }
+  return secret;
+}
+
+/**
  * Daily-salted IP hash: HMAC-ish sha256 over (UTC day || secret || ip),
  * truncated. Same IP hashes identically within a UTC day (enough for the
  * 24h discovery→first-call join) and differently across days.
  */
-let warnedWeakSalt = false;
-
 export function saltedIpHash(ip: string | undefined, now: Date = new Date()): string | undefined {
   if (!ip) return undefined;
-  const secret = process.env.AUDIT_HMAC_SECRET ?? "";
-  if (secret.length < 32) {
-    // An empty/weak salt would make the digest rainbow-tableable, defeating
-    // the privacy property. Refuse to hash rather than hash weakly; warn
-    // once so the misconfiguration is visible without log spam.
-    if (!warnedWeakSalt) {
-      warnedWeakSalt = true;
-      logWarn("attribution-weak-salt", "AUDIT_HMAC_SECRET missing/short — ip hashing disabled");
-    }
-    return undefined;
-  }
+  const secret = requireHmacSecret();
+  if (!secret) return undefined;
   const day = now.toISOString().slice(0, 10);
   return createHash("sha256").update(`${day}|${secret}|${ip}`).digest("hex").slice(0, 16);
+}
+
+/**
+ * Stable (NON-rotating) secret-salted sha256 of an x402 payer wallet address,
+ * truncated to 16 hex chars — same shape as saltedIpHash, deliberately
+ * different lifecycle: this hash must stay identical across days so the
+ * weekly rollup can answer "how many distinct payers" and "how many are
+ * repeat payers" (see transactions.x402PayerHash in db/schema.ts for the
+ * full rationale on why daily rotation would defeat the purpose here).
+ *
+ * Secret-salted — the same HMAC-ish construction as saltedIpHash above, not
+ * a true HMAC — rather than following client_ip_hash's
+ * unsalted precedent: IPv4 is a small enumerable space (~4B) so an unsalted
+ * hash is already a weak protection there, but it's cheap to enumerate
+ * either way. Wallet addresses are drawn from a 2^160 space that can't be
+ * brute-forced directly — the real risk is a dictionary attack against a
+ * CURATED list (every address a block explorer / Dune / Etherscan-style tag
+ * database has ever labelled), which a keyed hash defeats for free using
+ * the same secret already validated above. Lowercased before hashing:
+ * EIP-55 checksum casing is display-only, and two clients that send the
+ * same address with different casing must collapse to one payer, not two.
+ */
+export function hashX402Payer(address: string | undefined | null): string | undefined {
+  if (!address) return undefined;
+  const secret = requireHmacSecret();
+  if (!secret) return undefined;
+  return createHash("sha256")
+    .update(`x402-payer|${secret}|${address.toLowerCase()}`)
+    .digest("hex")
+    .slice(0, 16);
 }
 
 /**

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockExecute = vi.fn().mockResolvedValue([]);
 vi.mock("../db/index.js", () => ({ getDb: () => ({ execute: mockExecute }) }));
 
-import { extractClientMeta, recordDiscoveryHit, saltedIpHash } from "./attribution.js";
+import { extractClientMeta, recordDiscoveryHit, saltedIpHash, hashX402Payer } from "./attribution.js";
 
 function reader(headers: Record<string, string>) {
   return { header: (n: string) => headers[n.toLowerCase()] };
@@ -87,6 +87,71 @@ describe("saltedIpHash", () => {
     const h = saltedIpHash("203.0.113.77")!;
     expect(h).not.toContain("203");
     expect(h).toHaveLength(16);
+  });
+});
+
+describe("hashX402Payer", () => {
+  it("is stable across days — unlike saltedIpHash, this hash must NOT rotate", () => {
+    const addr = "0xAbCdEf0123456789abcdef0123456789ABCDEF01";
+    const h1 = hashX402Payer(addr);
+    // saltedIpHash would differ across a day boundary; hashX402Payer takes
+    // no `now` argument at all — there's no rotation to test against,
+    // which is itself the point. Re-hashing the same input twice must
+    // agree.
+    expect(hashX402Payer(addr)).toBe(h1);
+  });
+
+  it("is case-insensitive — same wallet, different EIP-55 checksum casing, same hash", () => {
+    const lower = "0xabcdef0123456789abcdef0123456789abcdef01";
+    const checksummed = "0xAbCdEf0123456789abcdef0123456789ABCDEF01";
+    expect(hashX402Payer(lower)).toBe(hashX402Payer(checksummed));
+  });
+
+  it("different addresses hash differently", () => {
+    const a = hashX402Payer("0x1111111111111111111111111111111111111111".slice(0, 42));
+    const b = hashX402Payer("0x2222222222222222222222222222222222222222".slice(0, 42));
+    expect(a).not.toBe(b);
+  });
+
+  it("never emits the raw address, and is 16 hex chars (same shape as saltedIpHash)", () => {
+    const h = hashX402Payer("0x000000000000000000000000000000deadbeef")!;
+    expect(h).not.toContain("deadbeef");
+    expect(h).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it("digest depends on the secret, not just the address (keyed HMAC, not plain sha256)", () => {
+    const addr = "0x000000000000000000000000000000deadbeef";
+    const h1 = hashX402Payer(addr);
+    const prev = process.env.AUDIT_HMAC_SECRET;
+    process.env.AUDIT_HMAC_SECRET = "another-secret-that-is-32-chars-long!!";
+    try {
+      expect(hashX402Payer(addr)).not.toBe(h1);
+    } finally {
+      process.env.AUDIT_HMAC_SECRET = prev;
+    }
+  });
+
+  it("refuses to hash with a weak/missing secret instead of hashing weakly", () => {
+    const prev = process.env.AUDIT_HMAC_SECRET;
+    process.env.AUDIT_HMAC_SECRET = "short";
+    try {
+      expect(hashX402Payer("0x000000000000000000000000000000deadbeef")).toBeUndefined();
+    } finally {
+      process.env.AUDIT_HMAC_SECRET = prev;
+    }
+  });
+
+  it("returns undefined for null/undefined/empty address", () => {
+    expect(hashX402Payer(undefined)).toBeUndefined();
+    expect(hashX402Payer(null)).toBeUndefined();
+    expect(hashX402Payer("")).toBeUndefined();
+  });
+
+  it("does not collide with saltedIpHash's namespace for the same raw string", () => {
+    // Both are 16-hex HMACs off the same secret; the `x402-payer|` / day
+    // prefixes must actually separate the two hash spaces.
+    const value = "0x000000000000000000000000000000deadbeef";
+    expect(hashX402Payer(value)).not.toBe(saltedIpHash(value));
   });
 });
 

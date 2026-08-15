@@ -17,11 +17,31 @@ category: data-extraction
 price_cents: 5
 is_free_tier: false
 # Phase A0b cost-class: cvrapi.dk unauthenticated free tier, IP-quota-limited.
-# Empirical floor ~50/day; documented limit higher but conservative cap chosen
-# until we observe one clean cycle. See apps/api/src/capabilities/danish-company-data.ts:5-10.
+#
+# The previous note here read "empirical floor ~50/day; documented limit higher
+# but conservative cap chosen". That had it backwards. cvrapi.dk documents
+# exactly 50 free lookups per day — "Du har 50 gratis opslag om dagen" — so a
+# cap of 50 was not conservative, it allocated the entire vendor allowance to
+# our own test scheduler and left nothing for paying callers.
+#
+# That is what happened. In the week to 2026-08-15 the scheduler ran 12-31
+# upstream-consuming executions a day, our own budget refused 12-15 of them,
+# and cvrapi.dk still returned "quota exceeded" 2-4 times a day. The one
+# genuinely external call in the 30-day window failed with exactly that error.
+# Tests and customers draw on the same 50; only tests are budget-checked
+# (customer_paid is always ALLOW in the ALLOW_MATRIX), so tests can consume the
+# lot and customers meet the wall.
+#
+# The cap now reserves headroom rather than claiming the whole allowance: 20
+# for testing against a documented 50, leaving 30/day for real callers. 20 sits
+# comfortably above the observed 12/day baseline for a full suite cycle.
+known_rate_limit:
+  value: 50
+  unit: per_day
+  source_url: https://cvrapi.dk/documentation
 cost_class: free_quota
 quota_window: daily
-quota_cap: 50
+quota_cap: 20
 input_schema:
   type: object
   # No field is individually required: a CVR number OR a company name is

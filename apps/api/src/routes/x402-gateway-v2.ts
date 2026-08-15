@@ -38,7 +38,7 @@ import {
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { encodePaymentRequiredHeader } from "@x402/core/http";
-import { extractClientMeta, recordDiscoveryHit } from "../lib/attribution.js";
+import { extractClientMeta, recordDiscoveryHit, hashX402Payer } from "../lib/attribution.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { executeSolution, isSuccessfulStepOutput } from "../lib/solution-executor.js";
@@ -789,6 +789,11 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       paymentMethod: "x402",
       x402SettlementId: args.settlementId ?? null,
       x402PaymentHash: args.paymentHash ?? null,
+      // MCP funnel P0: stable pseudonymous payer identity for distinct-payer
+      // / repeat-rate analytics — see hashX402Payer's docstring. The raw
+      // address stays in auditTrail.payer_address (above) for refund/
+      // reconciliation; this column is the surface the weekly rollup reads.
+      x402PayerHash: hashX402Payer(args.payerAddress) ?? null,
       priceUsd: args.priceUsd.toFixed(4),
       completedAt: new Date(),
     }).returning({ id: transactions.id });

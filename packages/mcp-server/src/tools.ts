@@ -64,12 +64,49 @@ export interface SolutionTrustEntry {
   badge_label: string | null;
 }
 
+/**
+ * MCP funnel telemetry — fired on auth-or-payment rejections a tool
+ * surfaces to the caller. Optional and side-effect-free from this
+ * package's point of view: the stdio server (server.ts, used by every
+ * external `npx strale-mcp` install) never sets it, so this stays a no-op
+ * there. Only the HTTP transport (apps/api/src/routes/mcp.ts) — which runs
+ * inside Strale's own API process and has a database to write to — passes
+ * a callback, wiring it to the discovery_hits table via
+ * lib/attribution.ts's recordDiscoveryHit. Keeping the hook here rather
+ * than duplicating each tool's rejection logic in the HTTP transport is
+ * why "each tools/call" and "auth-or-payment rejection" can both be
+ * observed without adding any latency: onFunnelEvent is called
+ * synchronously but the HTTP transport's implementation is itself
+ * fire-and-forget (mirrors recordDiscoveryHit's own contract).
+ */
+export type McpFunnelEventType = "auth_rejected" | "payment_rejected" | "rate_limited";
+
+export interface McpFunnelEvent {
+  type: McpFunnelEventType;
+  /** Tool name, e.g. "strale_execute". */
+  tool: string;
+  /** Capability slug, when the rejection happened mid-execution. */
+  slug?: string;
+  /** error_code from the API response, when available. */
+  detail?: string;
+}
+
 export interface StraleClientOptions {
   baseUrl: string;
   apiKey: string;
   maxPriceCents: number;
   clientIp?: string;
   version?: string;
+  onFunnelEvent?: (event: McpFunnelEvent) => void;
+}
+
+/** Call onFunnelEvent without letting a throwing hook break tool execution. */
+function emitFunnelEvent(opts: StraleClientOptions, event: McpFunnelEvent): void {
+  try {
+    opts.onFunnelEvent?.(event);
+  } catch {
+    // A telemetry hook must never break the tool call it's observing.
+  }
 }
 
 // Attribution client identifier — package name/version, sent as
@@ -224,14 +261,31 @@ export async function executeCapability(
 
   if (!opts.apiKey) {
     if (!isFreeTier) {
+      emitFunnelEvent(opts, { type: "auth_rejected", tool: "strale_execute", slug });
       return {
         content: [
           {
             type: "text",
             text: JSON.stringify({
               error: "Authentication required for paid capabilities.",
-              fix: "Get a free API key at https://strale.dev/signup — includes €2 free credits, no card needed. Then reconnect with Authorization: Bearer sk_live_YOUR_KEY",
-              tip: "Several capabilities are free with no API key — call strale_search and look for is_free_tier, e.g. email-validate or dns-lookup.",
+              // Ordering is deliberate. This message is read by an autonomous
+              // agent, and the only path it used to offer was a web signup
+              // form — something an agent cannot complete. In the seven days
+              // to 2026-08-15, 176 distinct agents opened an MCP session and
+              // zero signups resulted, while 653 x402 calls arrived from
+              // agents that had found the pay-per-call route some other way.
+              // The machine-actionable option goes first.
+              pay_per_call: {
+                how: "No signup. POST to the x402 endpoint below, settle the 402 challenge it returns in USDC on Base, and replay the request — the payment is the authentication.",
+                endpoint: `${opts.baseUrl}/x402/${slug}`,
+                catalog: `${opts.baseUrl}/x402/catalog`,
+                discovery: `${opts.baseUrl}/.well-known/x402.json`,
+              },
+              api_key: {
+                how: "If a human can complete a web form, https://strale.dev/signup issues a key with €2 of credit and no card.",
+                then: "Reconnect with Authorization: Bearer sk_live_YOUR_KEY",
+              },
+              free_without_either: `${FREE_TIER_SLUGS.length} capabilities need no key and no payment (10/day per IP): ${FREE_TIER_SLUGS.join(", ")}.`,
             }),
           },
         ],
@@ -269,6 +323,7 @@ export async function executeCapability(
 
   if (status === 429) {
     const retryAfter = (data as any).retry_after_seconds;
+    emitFunnelEvent(opts, { type: "rate_limited", tool: "strale_execute", slug });
     return {
       content: [
         {
@@ -287,9 +342,19 @@ export async function executeCapability(
     const errorCode = (data as any).error_code ?? "unknown_error";
     const message = (data as any).message ?? "Unknown error";
     const details = (data as any).details;
+    const isInsufficientBalance = errorCode === "insufficient_balance";
+
+    // Auth-or-payment rejection funnel signal — only these two error_codes,
+    // not every 4xx (a bad slug or malformed input is a usage error, not a
+    // rejection the funnel report cares about).
+    if (isInsufficientBalance) {
+      emitFunnelEvent(opts, { type: "payment_rejected", tool: "strale_execute", slug, detail: errorCode });
+    } else if (status === 401 || errorCode === "unauthorized" || errorCode === "invalid_api_key") {
+      emitFunnelEvent(opts, { type: "auth_rejected", tool: "strale_execute", slug, detail: errorCode });
+    }
 
     let errorText = `Error (${errorCode}): ${message}`;
-    if (errorCode === "insufficient_balance") {
+    if (isInsufficientBalance) {
       errorText += `\n\nTop up your wallet at: ${opts.baseUrl}/v1/wallet/topup`;
     }
     if (errorCode === "capability_unavailable" && details?.next_retry_at) {
@@ -313,7 +378,7 @@ export async function executeCapability(
   if (r.wallet_balance_cents != null) meta.wallet_balance_cents = r.wallet_balance_cents;
   if (r.provenance) meta.provenance = r.provenance;
 
-  // Dual-profile quality data (lives in meta block now)
+  // Quality signals, when the API returns them (lives in meta block now)
   if (m.quality) meta.quality = m.quality;
   if (m.execution_guidance) meta.execution_guidance = m.execution_guidance;
 
@@ -323,7 +388,7 @@ export async function executeCapability(
   // Next-steps guidance on every successful execution
   meta.next_steps = [
     `Transaction ID recorded. Call strale_transaction with id "${r.transaction_id ?? ""}" to retrieve the full audit record.`,
-    `Call strale_trust_profile with slug "${slug}" to see its dual-profile quality assessment.`,
+    `Call strale_trust_profile with slug "${slug}" to see how this source is tested and evidenced.`,
     "Call strale_search to find related capabilities.",
   ];
 
@@ -475,26 +540,72 @@ export function registerStraleTools(
     "strale_getting_started",
     {
       description:
-        "Lists the free capabilities available without an API key and explains how to get started. Call this on first connection to see what you can do immediately. Returns 5 free capability slugs (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate) with descriptions, example inputs, and instructions for accessing the full registry of 271 paid capabilities. No API key required.",
+        "Explains how to start using Strale and what is available without credentials. Call this on first connection. Returns the current free-tier capability list with example inputs, the pay-per-call (x402) route that needs no signup, and how to reach the full registry. No API key required.",
       inputSchema: z.object({}),
     },
     async () => {
+      // Counts and the free-tier list are read live rather than hardcoded.
+      // The previous version of this response claimed "256 capabilities, 81
+      // solutions", listed 5 free capabilities when there were 11, and
+      // advertised "dual-profile quality scores" — the SQS engine, deleted in
+      // May under DEC-20260503-B. All of it was the first thing an agent saw.
+      // Per CLAUDE.md's drift-prevention rule, /v1/platform/facts is the
+      // canonical source; this reads from it and degrades to the shipped
+      // constants if the call fails rather than printing a stale number.
+      let capabilityCount: number | null = null;
+      let solutionCount: number | null = null;
+      let freeSlugs: string[] = FREE_TIER_SLUGS;
+      try {
+        const data = await straleGet<{
+          capability_counts?: { active_visible?: number; free_tier_slugs?: string[] };
+          solution_count_active?: number;
+        }>("/v1/platform/facts", opts);
+        capabilityCount = data?.capability_counts?.active_visible ?? null;
+        solutionCount = data?.solution_count_active ?? null;
+        if (data?.capability_counts?.free_tier_slugs?.length) {
+          freeSlugs = data.capability_counts.free_tier_slugs;
+        }
+      } catch {
+        // Fall through to the shipped constants — a first-contact response
+        // that works with slightly stale counts beats one that errors.
+      }
+
+      const EXAMPLES: Record<string, Record<string, unknown>> = {
+        "email-validate": { email: "test@example.com" },
+        "dns-lookup": { domain: "example.com" },
+        "json-repair": { json: '{"name": "test"' },
+        "url-to-markdown": { url: "https://example.com" },
+        "iban-validate": { iban: "DE89370400440532013000" },
+        "bitcoin-address-validate": { address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" },
+        "eth-address-validate": { address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" },
+      };
+
       return {
         content: [
           {
             type: "text" as const,
             text: JSON.stringify({
-              welcome: "Strale is the trust layer for AI agents. 256 verified data capabilities and 81 bundled solutions with dual-profile quality scores.",
-              free_capabilities: [
-                { slug: "email-validate", description: "Validate any email address", example_input: { email: "test@example.com" } },
-                { slug: "dns-lookup", description: "DNS records for any domain", example_input: { domain: "example.com" } },
-                { slug: "json-repair", description: "Fix malformed JSON", example_input: { json: '{"name": "test"' } },
-                { slug: "url-to-markdown", description: "Convert any URL to markdown", example_input: { url: "https://example.com" } },
-                { slug: "iban-validate", description: "Validate IBAN numbers", example_input: { iban: "DE89370400440532013000" } },
-              ],
-              try_now: "Call strale_execute with any free capability above — no API key needed (10/day limit).",
-              full_access: "Sign up at https://strale.dev/signup for 256 capabilities and 81 solutions (KYB, Invoice Verify). Free €2 credits, no card needed.",
-              learn_more: "Call strale_methodology for quality scoring details, or strale_search to browse all capabilities.",
+              welcome:
+                "Strale is the data layer for AI agents — independently tested, audit-logged data sources" +
+                (capabilityCount ? `. ${capabilityCount} capabilities` : "") +
+                (solutionCount ? ` and ${solutionCount} bundled solutions` : "") +
+                " available.",
+              free_capabilities: freeSlugs.map((slug) => ({
+                slug,
+                ...(EXAMPLES[slug] ? { example_input: EXAMPLES[slug] } : {}),
+              })),
+              try_now:
+                "Call strale_execute with any free capability above — no API key, no payment (10/day per IP).",
+              // The route an agent can actually take on its own.
+              pay_per_call_no_signup: {
+                how: "POST to /x402/{slug}, settle the 402 challenge it returns in USDC on Base, replay the request. The payment is the authentication — no account, no key.",
+                catalog: `${opts.baseUrl}/x402/catalog`,
+                discovery: `${opts.baseUrl}/.well-known/x402.json`,
+              },
+              api_key_alternative:
+                "If a human can complete a web form: https://strale.dev/signup issues a key with €2 of credit, no card.",
+              learn_more:
+                "Call strale_search to browse capabilities, or strale_methodology for how sources are tested and evidenced.",
             }, null, 2),
           },
         ],
@@ -770,6 +881,7 @@ export function registerStraleTools(
     },
     async () => {
       if (!opts.apiKey) {
+        emitFunnelEvent(opts, { type: "auth_rejected", tool: "strale_balance" });
         return {
           content: [
             {
@@ -979,6 +1091,7 @@ REFERENCES
         }
 
         if (resp.status === 401) {
+          emitFunnelEvent(opts, { type: "auth_rejected", tool: "strale_transaction" });
           return {
             content: [
               {
