@@ -17,7 +17,7 @@ export const TRANSACTION_RETENTION_DAYS = 1095; // 3 years
 
 /**
  * Retention window for the PII COLUMNS of transactions whose capability is
- * flagged `processes_personal_data`. Shorter than the compliance window above,
+ * every transaction, whatever the capability. Shorter than the compliance window above,
  * and deliberately so.
  *
  * The two are not in conflict because the sweep redacts rather than deletes:
@@ -174,7 +174,7 @@ async function purgeHealthMonitorEvents(cutoff: Date): Promise<number> {
 
 /**
  * Redact the PII columns of transactions belonging to capabilities flagged
- * `processes_personal_data`, on the shorter PII_RETENTION_DAYS window.
+ * every transaction, on the shorter PII_RETENTION_DAYS window.
  *
  * Identical redaction to purgeTransactions — same columns zeroed, same chain-
  * preserving semantics, same legal_hold exemption, same already-redacted skip
@@ -190,14 +190,42 @@ async function purgeHealthMonitorEvents(cutoff: Date): Promise<number> {
  * (~12s) rather than in one statement. No pre-drain script is needed at this
  * volume, and the cap holds regardless of how large the backlog later grows.
  *
- * KNOWN GAP: solution executions have `capability_id IS NULL` (they carry
- * `solution_slug` instead), so this join cannot see them — 310 such rows are
- * currently older than the window. A solution that composes a PII capability
- * therefore keeps its payload for the full 1095 days. Closing that needs a
- * solution→capability mapping; tracked separately rather than guessed at here,
- * because over-matching would redact non-PII solution data early.
+ * 2026-08-15 — WIDENED FROM PII-FLAGGED CAPABILITIES TO ALL TRANSACTIONS.
+ *
+ * The original selector joined `capabilities` and required
+ * `processes_personal_data = true`, which redacted 90 of 307 active
+ * capabilities and left the other 217 holding their payload for the full
+ * 1095 days. That equated *personal data* with *customer data*, and they are
+ * not the same thing. A `translate` input is not personal data about a data
+ * subject — it is another company's confidential text. An `image-to-text`
+ * input is the asset URLs of their pipeline. A `google-search` input is what
+ * they are researching and therefore what they are building.
+ *
+ * Found because that retained content was used to identify a paying customer
+ * by name during an audit: their inputs carried an internal project label and
+ * their own asset hostnames. Nothing was leaked, but we were holding six
+ * months of other companies' operational data with no reason to and no
+ * intention to. The narrower rule was not protecting them; it was protecting
+ * one legal category while ignoring the obligation underneath it.
+ *
+ * Dropping the join also closes the previously-documented solution gap for
+ * free: solution executions have `capability_id IS NULL` (they carry
+ * `solution_slug`), so the join could never see them. 27 such rows were past
+ * the window at the time of this change. No solution→capability mapping is
+ * needed, because capability identity no longer decides anything.
+ *
+ * What survives redaction is unchanged and deliberate: the integrity-hash
+ * chain, the fact that a given customer called a given capability at a given
+ * price, and every column an audit needs. The trade stays what it always was
+ * — prove what happened, do not re-derive what was said.
+ *
+ * DEC-20260504-B re-audit for the widened window, 2026-08-15: 3,032 rows /
+ * ~9.6 MB of payload on the first run, 0 on legal hold. The existing
+ * LIMIT/BATCH_SIZE self-throttle bounds each tick to 1000 rows, so the
+ * backlog drains over ~4 batches. Strategy unchanged: SELF-THROTTLE, no
+ * pre-drain script needed at this volume.
  */
-async function purgePiiTransactions(cutoff: Date): Promise<number> {
+async function purgeCustomerContent(cutoff: Date): Promise<number> {
   const db = getDb();
   let redacted = 0;
   while (true) {
@@ -215,9 +243,7 @@ async function purgePiiTransactions(cutoff: Date): Promise<number> {
         deletion_reason = 'pii_retention_purge'
       WHERE id IN (
         SELECT t.id FROM transactions t
-        JOIN capabilities c ON c.id = t.capability_id
-        WHERE c.processes_personal_data = true
-          AND t.created_at < ${cutoff.toISOString()}::timestamptz
+        WHERE t.created_at < ${cutoff.toISOString()}::timestamptz
           AND t.legal_hold = false
           AND t.deleted_at IS NULL
         LIMIT ${BATCH_SIZE}
@@ -236,7 +262,8 @@ async function purgePiiTransactions(cutoff: Date): Promise<number> {
  *
  * Retention windows:
  * - transactions: 3 years (Colorado AI Act compliance)
- * - transactions with processes_personal_data: PII columns at 90 days
+ * - transactions: customer content columns (input/output/error/audit_trail/
+ *   provenance) redacted at 90 days, whatever the capability
  * - transaction_quality: 3 years (paired with transactions)
  * - test_results: 90 days (operational)
  * - health_monitor_events: 180 days (operational)
@@ -270,7 +297,7 @@ export async function cleanupOldTestData(): Promise<void> {
   // both is already redacted and skipped here rather than written twice.
   const piiCutoff = new Date(now);
   piiCutoff.setDate(piiCutoff.getDate() - PII_RETENTION_DAYS);
-  const piiRedacted = await purgePiiTransactions(piiCutoff);
+  const piiRedacted = await purgeCustomerContent(piiCutoff);
 
   const eventsDeleted = await purgeHealthMonitorEvents(oneEightyDaysAgo);
 
