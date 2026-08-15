@@ -87,3 +87,12 @@ Until today none of this was attributable — 1 of 2,196 hits carried a source.
 Source is now derived from crawler identity and referrer (PR #261), so from
 this point each venue's contribution is countable, and unrecognised referrers
 are kept as `ref:<host>` to surface venues we do not yet know about.
+
+## Data-use boundary applies here (added 2026-08-15)
+
+The charter's customer-data rule governs this file. Prospect and account names
+recorded here must come from public product research, or from a customer who
+registered with us and thereby chose to be contactable. **Names inferred from
+transaction logs, wallet activity or request contents do not belong in this
+document and are not leads** — including any that an audit surfaces as a side
+effect. See CHARTER.md § What we may do with customer data.

@@ -133,12 +133,24 @@ describe("bind-parameter shapes (DEC-20260504-A)", () => {
 });
 
 describe("PII sweep selection scope", () => {
-  it("restricts to capabilities flagged processes_personal_data", async () => {
+  it("covers every transaction, not only PII-flagged capabilities", async () => {
+    // Inverted 2026-08-15. This test previously asserted the opposite — that
+    // the sweep joined `capabilities` and required
+    // `processes_personal_data = true`. That restriction was the defect: it
+    // covered 90 of 307 active capabilities and left the other 217 holding
+    // customer inputs for the full three years, because it treated "personal
+    // data" and "customer data" as the same thing. They are not. A `translate`
+    // input is another company's confidential text; a `google-search` input is
+    // what they are building.
+    //
+    // Dropping the join also fixed the gap the old implementation documented
+    // but could not close: solution executions carry `solution_slug` with a
+    // NULL `capability_id`, so an inner join could never see them.
     await cleanupOldTestData();
-    const pii = statements().find((s) => s.includes("pii_retention_purge"));
-    expect(pii, "PII sweep statement was not emitted").toBeDefined();
-    expect(pii).toContain("processes_personal_data");
-    expect(pii).toContain("JOIN capabilities");
+    const sweep = statements().find((s) => s.includes("pii_retention_purge"));
+    expect(sweep, "content sweep statement was not emitted").toBeDefined();
+    expect(sweep).not.toContain("processes_personal_data");
+    expect(sweep).not.toMatch(/JOIN\s+capabilities/i);
   });
 
   it("never touches rows on legal hold", async () => {
