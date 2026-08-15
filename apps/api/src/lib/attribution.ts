@@ -23,6 +23,7 @@ import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { logWarn } from "./log.js";
+import { resolveDiscoverySource } from "./discovery-source.js";
 
 export interface ClientMeta {
   ua?: string;
@@ -167,7 +168,19 @@ export function recordDiscoveryHit(
 ): void {
   try {
     const ua = clip(req.header("user-agent")) ?? null;
-    const src = clip(opts?.src) ?? null;
+    // Source is derived, not merely accepted. Before 2026-08-15 this read only
+    // `?src=`, which we can add to links we submit ourselves and nothing else —
+    // the result was 1 tagged hit out of 2,196. Referer and crawler identity
+    // are what callers actually send, so those are consulted too, and the
+    // basis is recorded alongside so a weak signal is never mistaken for a
+    // strong one. `null` still means unknown; it is never guessed.
+    const resolved = resolveDiscoverySource({
+      src: opts?.src ?? null,
+      referer: req.header("referer") ?? req.header("referrer") ?? null,
+      userAgent: ua,
+    });
+    const src = clip(resolved?.tag) ?? null;
+    const srcBasis = resolved?.basis ?? null;
     const ipHash = saltedIpHash(opts?.ip) ?? null;
     // getDb() throws synchronously when DATABASE_URL is unset — the whole
     // body is guarded so a discovery endpoint can never fail on attribution.
@@ -175,8 +188,8 @@ export function recordDiscoveryHit(
     void db
 
     .execute(
-      sql`INSERT INTO discovery_hits (endpoint, src_tag, ua, ip_hash)
-          VALUES (${endpoint}, ${src}, ${ua}, ${ipHash})`,
+      sql`INSERT INTO discovery_hits (endpoint, src_tag, src_basis, ua, ip_hash)
+          VALUES (${endpoint}, ${src}, ${srcBasis}, ${ua}, ${ipHash})`,
       )
       .catch((err) => {
         logWarn("discovery-hit-write-failed", `discovery_hits insert failed: ${(err as Error).message}`, {
