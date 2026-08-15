@@ -105,6 +105,60 @@ reversibility, which was the earlier draft's conceptual error:
 If an item's class is unclear, it is `approval_required`. Every entry carries
 an explicit UTC deadline, an owner, and — once acted on — what was done.
 
+## What we may do with customer data (approved by Petter 2026-08-15)
+
+Customers send us their work. A `translate` call carries another company's
+confidential text; an `image-to-text` call carries their asset URLs; a
+`google-search` call reveals what they are building. On x402 they do this
+without an account, without a contract, and — reasonably — without expecting to
+be identified.
+
+**How this rule came about.** An audit on 2026-08-15 identified a paying
+customer by name from data we had retained: their inputs carried an internal
+project label and their own hostnames. Nothing leaked and no one acted on it,
+but it was possible, and nobody had decided it was allowed. The rule below is
+that decision, taken deliberately rather than by default.
+
+### The boundary
+
+1. **No outreach derived from transaction evidence.** We never contact a
+   company because our logs suggest they are a customer. Not to sell, not to
+   offer help, not to "check in". Inference from usage is not a relationship.
+2. **Telemetry produces anonymous insight only.** Usage data may inform which
+   capabilities to build, price, fix or retire, and which *kinds* of workload
+   we serve. It may not produce a named prospect.
+3. **Prospecting runs on public sources, independently.** Named accounts come
+   from public product research, or from a relationship the customer created
+   themselves by registering with us. A prospect list entry must be traceable
+   to one of those two, and never to a wallet, an input, or a traffic pattern.
+4. **A registration is a relationship; a payment is not.** Someone who signed
+   up gave us their contact details knowing what we are. An anonymous wallet
+   deliberately did not.
+5. **Content is not kept.** Inputs, outputs, errors, audit bodies and
+   provenance are redacted 90 days after the call, on every capability — see
+   `lib/data-retention.ts`. What survives proves *that* a call happened, never
+   *what was said*.
+6. **Changing any of the above is Petter's decision**, taken explicitly and
+   with privacy advice if the change would widen permitted use. Silence is not
+   consent, and neither is commercial pressure.
+
+### How it is enforced rather than merely stated
+
+- Every named account in any prospect list carries its source. An entry whose
+  only provenance is our own telemetry is removed, not investigated further.
+- Retention is a code path with tests that fail if the sweep narrows
+  (`data-retention-coverage.test.ts`), not a policy anyone has to remember.
+- The identity spine resolves to keyed hashes, never to raw wallet addresses,
+  and there is deliberately no device or IP fingerprint —
+  `lib/actor-identity.ts` explains why.
+- If an audit or agent surfaces a customer identity as a side effect, that is
+  reported and dropped. It is not a lead.
+
+**The trade this makes.** It is slower. Knowing exactly who our best customer
+is and calling them would be the fastest path to a second one. We are choosing
+not to, because a data layer that quietly profiles the products built on it has
+sold the thing it was selling.
+
 ## Budget
 
 - **External spend: €50/week** — vendor APIs, settlement fees, anything that
