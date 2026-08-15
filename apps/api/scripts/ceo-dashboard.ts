@@ -116,17 +116,36 @@ async function main() {
     : 0;
   const payerTrustworthy = payerDays >= 6;
 
-  // Monitoring infrastructure is split out rather than counted. See
-  // src/lib/probe-agents.ts — reporting probes as arrivals invented a
-  // conversion problem on 2026-08-15 when the real problem is no demand.
+  // Two guards, both learned on 2026-08-15.
+  //
+  // 1. Monitoring infrastructure is split out rather than counted — see
+  //    src/lib/probe-agents.ts.
+  // 2. The window starts when the LAST step's instrumentation started writing,
+  //    not when the first did. tools/list only began recording at 11:00 that
+  //    day; comparing it against two days of initialize produced a "92% of
+  //    agents never look at the catalogue" finding that was purely an artifact
+  //    of mismatched windows. Measured over one window the same agents that
+  //    connect do look. A funnel whose steps cover different periods is not a
+  //    funnel, so it is computed here or not shown at all.
   const isProbe = sql`(dh.ua ILIKE ANY(${PROBE_UA_SQL_PATTERNS}))`;
-  const funnel = await sql`
+  const starts = await sql`SELECT endpoint, MIN(created_at) AS t FROM discovery_hits
+    WHERE endpoint LIKE '/mcp:%' GROUP BY 1`;
+  const startOf = (prefix: string) => (starts as any[])
+    .filter((r) => r.endpoint.startsWith(prefix))
+    .reduce((min: Date | null, r) => (!min || r.t < min ? r.t : min), null as Date | null);
+  const stepStarts = ["/mcp:initialize", "/mcp:tools/list"].map(startOf).filter(Boolean) as Date[];
+  const funnelFrom = stepStarts.length === 2
+    ? new Date(Math.max(...stepStarts.map((d) => d.getTime())))
+    : null;
+  const funnelHours = funnelFrom ? (Date.now() - funnelFrom.getTime()) / 3_600_000 : 0;
+
+  const funnel = funnelFrom ? await sql`
     SELECT dh.endpoint,
            COUNT(*) FILTER (WHERE NOT ${isProbe})::int AS n,
            COUNT(DISTINCT dh.ip_hash) FILTER (WHERE NOT ${isProbe})::int AS ips,
            COUNT(DISTINCT dh.ip_hash) FILTER (WHERE ${isProbe})::int AS probe_ips
-    FROM discovery_hits dh WHERE dh.created_at > now() - interval '7 days'
-      AND dh.endpoint LIKE '/mcp:%' GROUP BY 1 ORDER BY 2 DESC`;
+    FROM discovery_hits dh WHERE dh.created_at >= ${funnelFrom}
+      AND dh.endpoint LIKE '/mcp:%' GROUP BY 1 ORDER BY 2 DESC` : [];
   const fget = (like: string) =>
     (funnel as any[]).filter((r) => r.endpoint.startsWith(like))
       .reduce((a, r) => ({ n: a.n + r.n, ips: a.ips + r.ips, probes: a.probes + r.probe_ips }),
@@ -135,6 +154,14 @@ async function main() {
   const fList = fget("/mcp:tools/list");
   const fCall = fget("/mcp:tools/call");
   const fRej = fget("/mcp:reject");
+
+  // Arrivals are counted over the full 7 days — that instrument is old enough.
+  const arrivals = await sql`SELECT
+      COUNT(DISTINCT dh.ip_hash) FILTER (WHERE NOT ${isProbe})::int AS real,
+      COUNT(DISTINCT dh.ip_hash) FILTER (WHERE ${isProbe})::int AS probes
+    FROM discovery_hits dh WHERE dh.endpoint = '/mcp:initialize'
+      AND dh.created_at > now() - interval '7 days'`;
+  const arr = arrivals[0] as any;
 
   const topCaps = await sql`
     SELECT c.slug, c.category, COUNT(*)::int AS calls,
@@ -356,8 +383,8 @@ async function main() {
 
       <div class="kpi">
         <div class="krow"><span class="klabel">AI agents that found us</span>${icon("inbound", "i-neutral")}</div>
-        <div class="kval">${fInit.ips}<span class="unit"> this week</span></div>
-        <div class="kfoot">${fInit.probes} monitoring services also check on us — not counted here</div>
+        <div class="kval">${arr.real}<span class="unit"> this week</span></div>
+        <div class="kfoot">${arr.probes} monitoring services also check on us — not counted here</div>
       </div>
 
       <div class="kpi">
@@ -396,18 +423,19 @@ async function main() {
 
       <section class="card" id="funnel">
         <div class="chead"><span class="ctitle">Turning visitors into customers</span></div>
-        <div class="csub">Real agents only. Health checkers and directory scanners are excluded.</div>
+        <div class="csub">Real agents only, over the last ${funnelHours < 48 ? `${Math.round(funnelHours)} hours` : `${Math.round(funnelHours / 24)} days`}</div>
         <div class="cbody">
           ${fRow("Found us", fInit.n, fInit.n, `${fInit.ips} agents`)}
           ${fRow("Looked around", fList.n, fInit.n, `${fList.ips} agents`)}
           ${fRow("Tried something", fCall.n, fInit.n, `${fCall.ips} agents`)}
           ${fRow("Turned away", fRej.n, fInit.n, "no account or payment")}
           ${payerTrustworthy ? fRow("Paid us", payerRow.n, fInit.ips, "different buyers") : ""}
-          <div class="note">Corrected 15 August. These counts used to include the
-          ${fInit.probes} monitoring services that check we are alive — one of them called
-          us 200 times in a day. Counting those as visitors made it look like we had
-          plenty of interest and a conversion problem. We do not. We have very little
-          genuine demand, which is a different problem and needs different work.</div>
+          <div class="note">Short window on purpose: we only started recording the
+          middle steps at 11:00 on 15 August, and a funnel whose steps cover different
+          periods is misleading rather than incomplete. Health checkers are excluded —
+          ${arr.probes} of them check on us weekly, one over 200 times in a single day.
+          The step that matters is the last one: agents do look at what we offer, and
+          then mostly do not buy.</div>
         </div>
       </section>
     </div>
