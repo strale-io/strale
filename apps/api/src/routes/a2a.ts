@@ -11,13 +11,17 @@
 
 import { Hono } from "hono";
 import { recordDiscoveryHit } from "../lib/attribution.js";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql as sqlRaw } from "drizzle-orm";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, transactions, users } from "../db/schema.js";
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { suggest, MAX_SUGGEST_QUERY_CHARS } from "../lib/suggest.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
+import {
+  INTERNAL_EMAIL_LIKE_PATTERNS,
+  EXTRA_EXCLUDED_EMAILS,
+} from "../lib/internal-accounts.js";
 import { computePlatformFacts } from "../lib/platform-facts.js";
 import type { AppEnv } from "../types.js";
 
@@ -86,7 +90,59 @@ function generateExamples(
 
 // ─── Build Agent Card ───────────────────────────────────────────────────────
 
-async function buildAgentCard(): Promise<{ card: object; etag: string }> {
+/**
+ * Base URL used in per-skill payment pointers. The card is fetched by agents
+ * that may never visit any other Strale surface, so every skill must carry an
+ * absolute URL it can act on.
+ */
+const PUBLIC_API_BASE = "https://api.strale.io";
+
+/**
+ * External revenue per slug over the last 28 days, used to order the card.
+ *
+ * Why ordering matters: this card is Strale's most-read machine surface
+ * (~520 fetches/week — 5× the x402 discovery file), and it listed 406 skills
+ * in near-arbitrary order. An agent skimming the top saw whatever happened to
+ * come first, not what other agents actually buy. Revenue order puts the
+ * proven sellers where a shallow reader lands.
+ *
+ * Excludes internal accounts via the canonical filter — the test harness is
+ * ~98% of traffic and would otherwise rank the catalog by what WE test, which
+ * is the exact wrong-population mistake catalogued in docs/company/MEASUREMENT.md.
+ */
+async function externalRevenueBySlug(): Promise<Map<string, number>> {
+  const db = getDb();
+  const likeAny = sqlRaw.join(
+    INTERNAL_EMAIL_LIKE_PATTERNS.map((p) => sqlRaw`email LIKE ${p}`), sqlRaw` OR `);
+  const eqAny = sqlRaw.join(
+    EXTRA_EXCLUDED_EMAILS.map((e) => sqlRaw`email = ${e}`), sqlRaw` OR `);
+  const rows = (await db.execute(sqlRaw`
+    SELECT c.slug, COALESCE(SUM(t.price_cents), 0)::int AS cents
+    FROM transactions t JOIN capabilities c ON c.id = t.capability_id
+    WHERE t.status = 'completed' AND t.price_cents > 0
+      AND t.created_at > now() - interval '28 days'
+      AND (t.user_id IS NULL OR t.user_id NOT IN (
+        SELECT id FROM users WHERE (${likeAny}) OR (${eqAny})))
+    GROUP BY 1`)) as unknown as Array<{ slug: string; cents: number }>;
+  return new Map(rows.map((r) => [r.slug, Number(r.cents)]));
+}
+
+/**
+ * Internal artifacts must never reach the public card. A solution named
+ * `test-solution-delete-me` was live on it until 2026-08-15 — a storefront
+ * showing the shop's own scaffolding. Belt (this filter) and braces (the DB
+ * cleanup) rather than either alone.
+ */
+export function isInternalArtifact(slug: string): boolean {
+  // Deliberately narrow. A first draft matched any `test-` prefix, which the
+  // unit test caught silently dropping `test-case-generate` — a real, sellable
+  // service — from the storefront. Matching the scaffolding *conventions*
+  // (delete-me suffixes, zzz- probes, test-solution names) rather than the
+  // word "test" keeps real services safe.
+  return /-delete-me$|^zzz-|test-solution/.test(slug);
+}
+
+export async function buildAgentCard(): Promise<{ card: object; etag: string }> {
   const now = Date.now();
   if (cachedCard && cachedETag && now - cachedAt < CACHE_TTL_MS) {
     return { card: cachedCard, etag: cachedETag };
@@ -125,26 +181,63 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
     .from(solutions)
     .where(eq(solutions.isActive, true));
 
-  // Build capability skills
-  const capSkills = capRows.map((cap) => {
-    const freeStr = cap.isFreeTier ? " FREE — no API key required." : "";
-    return {
-      id: cap.slug,
-      name: cap.name,
-      description: `${cap.description}${freeStr}`,
-      tags: categoryToTags(cap.category, cap.slug),
-      examples: generateExamples(cap.slug, cap.name, cap.description),
-    };
-  });
+  const revenue = await externalRevenueBySlug();
 
-  // Build solution skills
-  const solSkills = solRows.map((sol) => ({
-    id: `solution-${sol.slug}`,
-    name: sol.name,
-    description: sol.description,
-    tags: ["solution", sol.category],
-    examples: [sol.description.split(/\.\s/)[0].replace(/\.$/, "")],
-  }));
+  // Build capability skills. Every paid skill carries its price and an
+  // absolute pay-per-call URL — before 2026-08-15, 396 of 406 skills had no
+  // price and 404 never mentioned x402, so a payment-capable agent reading
+  // this card had no way to act on it without visiting other surfaces first.
+  // Price goes in BOTH a structured field (for parsers) and the description
+  // (for agents that only read text); A2A consumers ignore unknown fields.
+  const capSkills = capRows
+    .filter((cap) => !isInternalArtifact(cap.slug))
+    .map((cap) => {
+      const priceStr = cap.isFreeTier
+        ? " FREE — no API key, no payment, no signup."
+        : ` €${((cap.priceCents ?? 0) / 100).toFixed(2)} per call — pay per use` +
+          ` with USDC (x402) at POST ${PUBLIC_API_BASE}/x402/${cap.slug}, no signup needed.`;
+      return {
+        id: cap.slug,
+        name: cap.name,
+        description: `${cap.description}${priceStr}`,
+        tags: categoryToTags(cap.category, cap.slug),
+        examples: generateExamples(cap.slug, cap.name, cap.description),
+        // Extension fields (ignored by strict A2A parsers, actionable by the rest)
+        price_cents: cap.isFreeTier ? 0 : cap.priceCents ?? 0,
+        currency: "EUR",
+        x402_endpoint: cap.isFreeTier ? undefined : `${PUBLIC_API_BASE}/x402/${cap.slug}`,
+      };
+    });
+
+  // Build solution skills — same treatment.
+  const solSkills = solRows
+    .filter((sol) => !isInternalArtifact(sol.slug))
+    .map((sol) => ({
+      id: `solution-${sol.slug}`,
+      name: sol.name,
+      description: `${sol.description} €${((sol.priceCents ?? 0) / 100).toFixed(2)}` +
+        ` per call — pay per use with USDC (x402) at POST ${PUBLIC_API_BASE}/x402/${sol.slug},` +
+        ` no signup needed.`,
+      tags: ["solution", sol.category],
+      examples: [sol.description.split(/\.\s/)[0].replace(/\.$/, "")],
+      price_cents: sol.priceCents ?? 0,
+      currency: "EUR",
+      x402_endpoint: `${PUBLIC_API_BASE}/x402/${sol.slug}`,
+    }));
+
+  // Order: proven sellers first (28-day external revenue), then the free tier
+  // (an agent's cheapest first step), then the rest alphabetically. A shallow
+  // reader now lands on what other agents actually buy.
+  const revOf = (skill: { id: string }) =>
+    revenue.get(skill.id.replace(/^solution-/, "")) ?? 0;
+  const bySales = <T extends { id: string; price_cents?: number }>(skills: T[]): T[] =>
+    [...skills].sort((a, b) => {
+      const ra = revOf(a), rb = revOf(b);
+      if (ra !== rb) return rb - ra;
+      const fa = a.price_cents === 0 ? 0 : 1, fb = b.price_cents === 0 ? 0 : 1;
+      if (fa !== fb) return fa - fb;
+      return a.id.localeCompare(b.id);
+    });
 
   const productSkills = [
     {
@@ -181,7 +274,7 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
     },
   ];
 
-  const skills = [...productSkills, ...capSkills, ...solSkills];
+  const skills = [...productSkills, ...bySales(capSkills), ...bySales(solSkills)];
 
   // Cert-audit Y-2: capability count and country count are computed from
   // PLATFORM_FACTS rather than hardcoded. Hardcoding "250+" / "27 countries"
@@ -208,6 +301,20 @@ async function buildAgentCard(): Promise<{ card: object; etag: string }> {
     },
     authentication: {
       schemes: ["apiKey", "x402"],
+    },
+    // Extension block (non-standard, ignored by strict A2A parsers): how to
+    // pay without an account. The one thing an autonomous agent needs and the
+    // one thing this card never said. Skills below also carry per-skill
+    // price_cents and x402_endpoint.
+    payments: {
+      x402: {
+        network: "base",
+        currency: "USDC",
+        catalog: `${PUBLIC_API_BASE}/x402/catalog`,
+        discovery: `${PUBLIC_API_BASE}/.well-known/x402.json`,
+        how: "POST the skill's x402_endpoint, settle the 402 challenge in USDC on Base, replay. Payment is the authentication — no signup.",
+      },
+      api_key: { signup: "https://strale.dev/signup", trial_credits_eur: 2 },
     },
     defaultInputModes: ["application/json", "text/plain"],
     defaultOutputModes: ["application/json"],
