@@ -60,6 +60,30 @@ Everything else is mine. If an item is genuinely borderline, I take it, do the
 reversible version, and say so — a decision I can undo is not worth his
 attention.
 
+### Shipping is never Petter's decision (added 2026-08-15, at his request)
+
+Petter: *"you keep deferring decisions about merging and deploying to me,
+without me most times even understanding what it is that we're deploying…
+can we move these decisions away from me structurally?"*
+
+Merging and deploying are **execution, not decisions**. The decision-shaped
+questions (pricing, legal, one-way public acts) are gated on *what* ships,
+never on *whether someone presses the button*. Therefore:
+
+1. **The session that opens a PR merges it.** Green gates → merge → report in
+   plain English *afterwards*. "CI is running, I'll merge when green" is not a
+   status for Petter — it is my to-do list, and it stays out of his view.
+2. **No PR outlives the day unowned.** Every morning check-in sweeps all open
+   PRs and dirty branches and disposes of each one: merge it, finish it,
+   close it, or name its owner and deadline. "Still open" is not a state —
+   it is a missed sweep.
+3. **Petter hears about shipping in exactly one place**: the dashboard's
+   "What I finished recently", in business language. If he cannot tell what a
+   change did for the business from that line, the line is the bug.
+4. **Deploys verify themselves.** Merged work is confirmed live by checking
+   the served artifact, in the same session. A merge without its verification
+   is unfinished work, not shipped work.
+
 **Founder-gated** (unchanged): spend above caps, vendor/license commitments,
 pricing changes, deactivating revenue earners, DEC-20260428-B-grade builds, new
 external claims, anything outward-facing (publishing packages, directory
