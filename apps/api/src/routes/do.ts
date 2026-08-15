@@ -37,7 +37,7 @@ import { getAiDescription, getDataSourceUrl } from "../lib/audit-helpers.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { validateX402Input } from "../lib/x402-input-validation.js";
-import { recoverValuesFromTask, recoveredValuesHint } from "../lib/task-value-hints.js";
+import { recoverValuesFromTask, recoveredValuesHint, unsatisfiedGroupFields } from "../lib/task-value-hints.js";
 import { logError, logWarn } from "../lib/log.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
 import { trackBackgroundTask } from "../lib/shutdown.js";
@@ -915,12 +915,9 @@ doRoute.post(
       // ("validate this IBAN DE89…" with empty inputs — 2026-08-08 incident,
       // three retries never converged). Recover recognizable values so the
       // 400 shows the exact corrected call. Hint only, never auto-executed.
-      const recovered = topLevelMatches.length === 0
-        ? recoverValuesFromTask(task, missingFields)
-        : {};
       const hint = topLevelMatches.length > 0
         ? ` It looks like you placed ${topLevelMatches.map((f) => `'${f}'`).join(", ")} at the top level — wrap them inside "inputs": { ${topLevelMatches.map((f) => `"${f}": ...`).join(", ")} }.`
-        : recoveredValuesHint(recovered);
+        : recoveredValuesHint(recoverValuesFromTask(task, missingFields), executionInput);
       const fType = topLevelMatches.length > 0 ? "input_misplaced" : "missing_fields";
       const mIp = getClientIp(c);
       fireAndForget(
@@ -972,12 +969,14 @@ doRoute.post(
     if (!groupCheck.ok) {
       // Same value-in-task recovery as the classic-required path: an
       // either/or capability (url-or-domain etc.) whose caller sent {} but
-      // named the target in the task gets a retry-ready hint.
+      // named the target in the task gets a retry-ready hint. Only fields
+      // that would actually satisfy the unsatisfied group are considered —
+      // never unrelated optional properties.
       const groupRecovered = recoverValuesFromTask(
         task,
-        inputSchema?.properties ? Object.keys(inputSchema.properties) : [],
+        unsatisfiedGroupFields(inputSchema as Record<string, unknown> | null, executionInput),
       );
-      const groupHint = recoveredValuesHint(groupRecovered);
+      const groupHint = recoveredValuesHint(groupRecovered, executionInput);
       const gIp = getClientIp(c);
       fireAndForget(
         () =>

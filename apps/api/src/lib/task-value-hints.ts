@@ -19,6 +19,8 @@
  * hint rather than a wrong one.
  */
 
+import { branchesOf, requiredOf } from "./x402-input-validation.js";
+
 /** Strip whitespace and uppercase; IBANs are case- and grouping-insensitive. */
 function normalizeIban(raw: string): string {
   return raw.replace(/\s+/g, "").toUpperCase();
@@ -32,9 +34,16 @@ function normalizeIban(raw: string): string {
  */
 const IBAN_RE =
   /\b[A-Za-z]{2}\d{2}(?:[A-Za-z0-9]{11,30}|(?: [A-Za-z0-9]{4}){2,7}(?: [A-Za-z0-9]{1,4})?)\b/g;
-const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b/g;
+// Same bounded-quantifier shape as capabilities/domain-contact-extract.ts's
+// EMAIL_RE, which carries the ReDoS regression suite for this pattern class
+// (7.9s catastrophic backtracking on a 32KB body pre-fix). Duplicated rather
+// than imported because that module registers its capability on import — a
+// side effect a pure lib must not drag in. If a third copy appears, hoist
+// one canonical export into lib/.
+const EMAIL_RE = /[a-zA-Z0-9._%+-]{1,64}@(?:[a-zA-Z0-9-]{1,63}\.){1,8}[a-zA-Z]{2,24}/g;
 const URL_RE = /\bhttps?:\/\/[^\s"'<>)\]]+/gi;
-const DOMAIN_RE = /\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}\b/gi;
+// Label count and TLD length bounded for the same backtracking reason.
+const DOMAIN_RE = /\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){1,8}[a-z]{2,24}\b/gi;
 
 function distinct(matches: string[]): string | undefined {
   const set = new Set(matches);
@@ -74,6 +83,14 @@ const RECOGNIZERS: Record<string, (task: string) => string | undefined> = {
 };
 
 /**
+ * Recognizers only ever scan this much of the task. A legitimate task that
+ * names a value does so in the first sentence; an adversarial multi-megabyte
+ * task must not buy quadratic regex backtracking on an unauthenticated 400
+ * path (cross-provider review finding, 2026-08-15).
+ */
+const MAX_SCAN_CHARS = 2000;
+
+/**
  * For each named field with a known recognizer, return the single
  * high-confidence value found in the task text. Fields without a recognizer,
  * or with zero/ambiguous candidates, are simply absent from the result.
@@ -84,25 +101,49 @@ export function recoverValuesFromTask(
 ): Record<string, string> {
   const recovered: Record<string, string> = {};
   if (!task) return recovered;
+  const scanText = task.slice(0, MAX_SCAN_CHARS);
   for (const field of fieldNames) {
     const recognize = RECOGNIZERS[field.toLowerCase()];
     if (!recognize) continue;
-    const value = recognize(task);
+    const value = recognize(scanText);
     if (value !== undefined) recovered[field] = value;
   }
   return recovered;
 }
 
 /**
+ * The fields a caller could still supply to satisfy an unsatisfied
+ * anyOf/oneOf group: the union of the branches' required lists, minus what
+ * they already sent. Recognizers must only run over these — offering an
+ * unrelated optional field as "the fix" would contradict the declared
+ * contract (cross-provider review finding, 2026-08-15).
+ */
+export function unsatisfiedGroupFields(
+  schema: Record<string, unknown> | null | undefined,
+  existingInputs: Record<string, unknown>,
+): string[] {
+  const fields = new Set<string>();
+  for (const branch of (schema ? branchesOf(schema) : null) ?? []) {
+    for (const field of requiredOf(branch)) {
+      if (!(field in existingInputs)) fields.add(field);
+    }
+  }
+  return [...fields];
+}
+
+/**
  * Render the recovered values as a retry-ready hint sentence, or undefined
- * when nothing was recovered.
+ * when nothing was recovered. The example merges the caller's existing
+ * inputs so following it verbatim never loses fields they already sent,
+ * and is JSON.stringify-encoded so recovered values can't break the example.
  */
 export function recoveredValuesHint(
   recovered: Record<string, string>,
+  existingInputs: Record<string, unknown> = {},
 ): string | undefined {
   const entries = Object.entries(recovered);
   if (entries.length === 0) return undefined;
-  const inputsJson = `{ ${entries.map(([f, v]) => `"${f}": "${v}"`).join(", ")} }`;
+  const inputsJson = JSON.stringify({ ...existingInputs, ...recovered });
   return ` Your task text appears to already contain ${entries
     .map(([f]) => `'${f}'`)
     .join(", ")} — retry with "inputs": ${inputsJson}.`;

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { recoverValuesFromTask, recoveredValuesHint } from "./task-value-hints.js";
+import {
+  recoverValuesFromTask,
+  recoveredValuesHint,
+  unsatisfiedGroupFields,
+} from "./task-value-hints.js";
 
 describe("recoverValuesFromTask", () => {
   it("recovers the 2026-08-08 incident IBAN from the task text", () => {
@@ -59,12 +63,56 @@ describe("recoverValuesFromTask", () => {
     expect(recoverValuesFromTask(null, ["iban"])).toEqual({});
     expect(recoverValuesFromTask("", ["iban"])).toEqual({});
   });
+
+  it("never scans past the cap, so adversarial megabyte tasks stay cheap", () => {
+    // Value placed beyond the 2000-char scan window is not recovered…
+    const far = "x".repeat(3000) + " DE89370400440532013000";
+    expect(recoverValuesFromTask(far, ["iban"])).toEqual({});
+    // …and a hostile dotted string doesn't hang the recognizers.
+    const hostile = ("a".repeat(60) + ".").repeat(50_000) + "!";
+    const start = Date.now();
+    recoverValuesFromTask(hostile, ["domain", "email", "url"]);
+    expect(Date.now() - start).toBeLessThan(500);
+  });
+});
+
+describe("unsatisfiedGroupFields", () => {
+  const schema = {
+    anyOf: [{ required: ["url"] }, { required: ["domain"] }],
+    properties: { url: {}, domain: {}, verbose: {} },
+  };
+
+  it("returns only fields from the group branches, not all properties", () => {
+    expect(unsatisfiedGroupFields(schema, {}).sort()).toEqual(["domain", "url"]);
+  });
+
+  it("excludes fields the caller already sent", () => {
+    expect(unsatisfiedGroupFields(schema, { url: "https://x.com" })).toEqual(["domain"]);
+  });
+
+  it("handles schemas without groups", () => {
+    expect(unsatisfiedGroupFields({ properties: { a: {} } }, {})).toEqual([]);
+    expect(unsatisfiedGroupFields(null, {})).toEqual([]);
+  });
 });
 
 describe("recoveredValuesHint", () => {
   it("renders a retry-ready inputs object", () => {
     const hint = recoveredValuesHint({ iban: "DE89370400440532013000" });
-    expect(hint).toContain('"inputs": { "iban": "DE89370400440532013000" }');
+    expect(hint).toContain('"inputs": {"iban":"DE89370400440532013000"}');
+  });
+
+  it("merges the caller's existing inputs so following the hint loses nothing", () => {
+    const hint = recoveredValuesHint(
+      { url: "https://stripe.com" },
+      { verbose: true },
+    );
+    expect(hint).toContain('{"verbose":true,"url":"https://stripe.com"}');
+  });
+
+  it("JSON-encodes recovered values so they cannot break the example", () => {
+    const hint = recoveredValuesHint({ url: 'https://x.com/a"b\\' });
+    expect(hint).toContain(JSON.stringify({ url: 'https://x.com/a"b\\' }));
   });
 
   it("is undefined when nothing was recovered", () => {
