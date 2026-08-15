@@ -24,6 +24,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { execSync } from "node:child_process";
 import postgres from "postgres";
 import { DESIGN_SYSTEM_CSS } from "./lib/design-system.js";
+import { PROBE_UA_SQL_PATTERNS } from "../src/lib/probe-agents.js";
 import {
   INTERNAL_EMAIL_LIKE_PATTERNS,
   EXTRA_EXCLUDED_EMAILS,
@@ -115,13 +116,21 @@ async function main() {
     : 0;
   const payerTrustworthy = payerDays >= 6;
 
+  // Monitoring infrastructure is split out rather than counted. See
+  // src/lib/probe-agents.ts — reporting probes as arrivals invented a
+  // conversion problem on 2026-08-15 when the real problem is no demand.
+  const isProbe = sql`(dh.ua ILIKE ANY(${PROBE_UA_SQL_PATTERNS}))`;
   const funnel = await sql`
-    SELECT endpoint, COUNT(*)::int AS n, COUNT(DISTINCT ip_hash)::int AS ips
-    FROM discovery_hits WHERE created_at > now() - interval '7 days'
-      AND endpoint LIKE '/mcp:%' GROUP BY 1 ORDER BY 2 DESC`;
+    SELECT dh.endpoint,
+           COUNT(*) FILTER (WHERE NOT ${isProbe})::int AS n,
+           COUNT(DISTINCT dh.ip_hash) FILTER (WHERE NOT ${isProbe})::int AS ips,
+           COUNT(DISTINCT dh.ip_hash) FILTER (WHERE ${isProbe})::int AS probe_ips
+    FROM discovery_hits dh WHERE dh.created_at > now() - interval '7 days'
+      AND dh.endpoint LIKE '/mcp:%' GROUP BY 1 ORDER BY 2 DESC`;
   const fget = (like: string) =>
     (funnel as any[]).filter((r) => r.endpoint.startsWith(like))
-      .reduce((a, r) => ({ n: a.n + r.n, ips: a.ips + r.ips }), { n: 0, ips: 0 });
+      .reduce((a, r) => ({ n: a.n + r.n, ips: a.ips + r.ips, probes: a.probes + r.probe_ips }),
+              { n: 0, ips: 0, probes: 0 });
   const fInit = fget("/mcp:initialize");
   const fList = fget("/mcp:tools/list");
   const fCall = fget("/mcp:tools/call");
@@ -348,7 +357,7 @@ async function main() {
       <div class="kpi">
         <div class="krow"><span class="klabel">AI agents that found us</span>${icon("inbound", "i-neutral")}</div>
         <div class="kval">${fInit.ips}<span class="unit"> this week</span></div>
-        <div class="kfoot">${fInit.n.toLocaleString("en")} visits · ${weekCalls} things bought</div>
+        <div class="kfoot">${fInit.probes} monitoring services also check on us — not counted here</div>
       </div>
 
       <div class="kpi">
@@ -387,17 +396,18 @@ async function main() {
 
       <section class="card" id="funnel">
         <div class="chead"><span class="ctitle">Turning visitors into customers</span></div>
-        <div class="csub">Where AI agents give up before paying</div>
+        <div class="csub">Real agents only. Health checkers and directory scanners are excluded.</div>
         <div class="cbody">
           ${fRow("Found us", fInit.n, fInit.n, `${fInit.ips} agents`)}
           ${fRow("Looked around", fList.n, fInit.n, `${fList.ips} agents`)}
           ${fRow("Tried something", fCall.n, fInit.n, `${fCall.ips} agents`)}
           ${fRow("Turned away", fRej.n, fInit.n, "no account or payment")}
           ${payerTrustworthy ? fRow("Paid us", payerRow.n, fInit.ips, "different buyers") : ""}
-          <div class="note">We started measuring this on 15 August, so the first week is
-          incomplete. "Turned away" is the step we are trying to fix. Until this week we
-          asked every AI agent to fill in a signup form, which a robot cannot do. Now we
-          offer them a way to simply pay and carry on.</div>
+          <div class="note">Corrected 15 August. These counts used to include the
+          ${fInit.probes} monitoring services that check we are alive — one of them called
+          us 200 times in a day. Counting those as visitors made it look like we had
+          plenty of interest and a conversion problem. We do not. We have very little
+          genuine demand, which is a different problem and needs different work.</div>
         </div>
       </section>
     </div>
