@@ -37,6 +37,7 @@ import {
   type X402VerifiedPayment,
 } from "../lib/x402-gateway.js";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
+import { sellerRevenueBySlug, rankBySales } from "../lib/seller-rank.js";
 import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { extractClientMeta, recordDiscoveryHit, hashX402Payer } from "../lib/attribution.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
@@ -1462,8 +1463,17 @@ export async function getX402Manifest(): Promise<{
   // /.well-known/x402.json. The canonical numeric value is always
   // available server-side as `priceCents` (EUR) and the live USD figure
   // is `eurCentsToUsd(priceCents)` per DEC-20260502-A.
+  // Ordered by what agents actually pay for, not by database order. This file
+  // is fetched ~40 times a month by distinct agents; before 2026-08-15 they
+  // landed on exchange-rate and token-security-check while our proven sellers
+  // (email-validate, google-search) sat somewhere in a list of 334.
+  const revenue = await sellerRevenueBySlug();
+  const caps = rankBySales(
+    [..._capCache.values()], revenue, (c) => c.slug, (c) => c.x402PriceUsd === 0);
+  const sols = rankBySales([..._solCache.values()], revenue, (s) => s.slug);
+
   const endpoints = [
-    ...[..._capCache.values()].map((cap) => ({
+    ...caps.map((cap) => ({
       path: `/x402/v2/${cap.slug}`,
       method: cap.x402Method,
       price: cap.x402PriceUsd.toFixed(2),
@@ -1471,7 +1481,7 @@ export async function getX402Manifest(): Promise<{
       network: NETWORK,
       description: cap.description,
     })),
-    ...[..._solCache.values()].map((sol) => ({
+    ...sols.map((sol) => ({
       path: `/x402/v2/solutions/${sol.slug}`,
       method: "POST",
       price: sol.x402PriceUsd.toFixed(2),
