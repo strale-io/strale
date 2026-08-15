@@ -36,3 +36,4 @@ apps/spike/
 
 # Raw sweep evidence (may embed production output values) stays local
 audit-output/*.jsonl
+docs/company/ceo-dashboard.html
