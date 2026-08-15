@@ -191,6 +191,12 @@ async function main() {
   const { startX402SettlementWatch } = await import("./jobs/x402-settlement-watch.js");
   startX402SettlementWatch();
 
+  // Revenue concentration is ~99% in one wallet. The settlement watch above
+  // catches the payment rail breaking; this catches the money stopping for any
+  // other reason — including the customer simply leaving.
+  const { startRevenueHeartbeat } = await import("./jobs/revenue-heartbeat.js");
+  startRevenueHeartbeat();
+
   const port = parseInt(process.env.PORT || "3000", 10);
 
   const server = serve({ fetch: app.fetch, port }, (info) => {
