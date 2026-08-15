@@ -70,41 +70,6 @@ export function shouldRecordTestEvidence(
   return passed && testType === "known_answer" && executionError === null;
 }
 
-/**
- * Decide whether a failed test should feed `recordFailure` (negative health
- * signal to the circuit breaker).
- *
- * Fires only on:
- *   - testType in {known_answer, dependency_health} — these probe upstream
- *     reachability + correctness. Other types (negative/edge_case/regression/
- *     schema_check/known_bad/piggyback) either reflect test design or do not
- *     prove upstream health.
- *   - verdict in {upstream_transient, unknown} — upstream-side failures
- *     and uncategorized failures (which empirically are usually upstream
- *     issues the categorizer hasn't pattern-matched yet, e.g., the DK CVR
- *     quota error). Suppressed: capability_bug, test_design,
- *     test_infrastructure, stale_input, upstream_changed, upstream_degraded.
- *
- * Throttling to one recordFailure per slug per runTests invocation is the
- * caller's responsibility (strategy b — bounded blast radius on first
- * deploy). See the call site in runSingleTest for the Set-backed throttle.
- *
- * Phase 3 Harden Fix B. Wires test-runner failures into the operational
- * substrate (capability_health). Without this, real upstream failures are
- * invisible to the breaker until a customer call arrives at /v1/do — a
- * pathway that doesn't fire for low-traffic capabilities like
- * danish-company-data (no /v1/do traffic since 2026-04-10 yet 30+ hours
- * of continuous test failures).
- */
-export function shouldRecordFailureFromTest(
-  passed: boolean,
-  testType: string,
-  verdict: string,
-): boolean {
-  if (passed) return false;
-  if (testType !== "known_answer" && testType !== "dependency_health") return false;
-  return verdict === "upstream_transient" || verdict === "unknown";
-}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -248,7 +213,6 @@ export async function runTests(
   // bounding the blast radius on first deploy. See the audit summary in the
   // PR body and docs/research/2026-05-07-dk-phase2-understand.md (branch
   // investigation/dk-phase-2-understand) for the strategy choice.
-  const recordFailureFiredForSlugs = new Set<string>();
 
   for (let i = 0; i < suites.length; i++) {
     const suite = suites[i];
@@ -278,7 +242,6 @@ export async function runTests(
       fieldReliabilityMap,
       capabilityTypeMap,
       outputSchemaMap,
-      recordFailureFiredForSlugs,
     );
 
     // ── Self-healing: attempt remediation on failures ──────────────────
@@ -492,7 +455,6 @@ async function runSingleTest(
   fieldReliabilityMap?: Map<string, Record<string, string>>,
   capabilityTypeMap?: Map<string, string>,
   outputSchemaMap?: Map<string, Record<string, unknown>>,
-  recordFailureFiredForSlugs?: Set<string>,
 ): Promise<SingleTestResult> {
   const db = getDb();
   const startTime = Date.now();
@@ -657,26 +619,23 @@ async function runSingleTest(
       { label: "health-event-log", context: { slug: suite.capabilitySlug, event: "classification" } },
     );
 
-    // Phase 3 Harden Fix B — feed test failures into the circuit breaker.
-    // Throttled to one recordFailure per slug per runTests invocation so a
-    // backlog of chronically-failing capabilities doesn't cascade-trip on
-    // the first cron tick after deploy (strategy (b) per audit step (f)).
-    if (
-      shouldRecordFailureFromTest(passed, suite.testType, classification.verdict)
-      && !recordFailureFiredForSlugs?.has(suite.capabilitySlug)
-    ) {
-      recordFailureFiredForSlugs?.add(suite.capabilitySlug);
-      fireAndForget(
-        async () => {
-          const { recordFailure } = await import("./circuit-breaker.js");
-          return recordFailure(suite.capabilitySlug, failureReason ?? undefined);
-        },
-        {
-          label: "circuit-breaker-record-failure-from-test",
-          context: { slug: suite.capabilitySlug, verdict: classification.verdict },
-        },
-      );
-    }
+    // Phase 3 Harden Fix B — feeding test failures into the circuit breaker
+    // — is deliberately NOT wired here. The original PR routed a failing
+    // known_answer/dependency_health suite with an unknown/upstream_transient
+    // verdict into recordFailure, throttled to one call per slug per run.
+    //
+    // The throttle bounds a single tick, not successive ones: three
+    // consecutive hourly ticks still open the breaker. Measured against
+    // production, that would have suspended 32 capabilities in a week — and
+    // most of them are healthy for customers. vat-validate succeeded on 7 of
+    // 7 real calls while failing tests because a member state's tax authority
+    // was down; weather-lookup succeeded on 35 of 37 while failing on an
+    // Open-Meteo 429 our own scheduler provoked.
+    //
+    // The breaker is a customer-facing, immediate actuator and should be
+    // driven by customer traffic. Test signal already has one built for it —
+    // the quality floor (DEC-20260812-A), with a >=10-real-call minimum,
+    // thresholds, dry-run and reversibility. Route it there instead.
   } else if (shouldRecordTestEvidence(passed, suite.testType, executionError)) {
     // Test passed with real execution — feed evidence to circuit breaker.
     fireAndForget(
