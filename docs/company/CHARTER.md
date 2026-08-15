@@ -1,9 +1,14 @@
 # Operating Charter — DEC-20260815-A
 
-**Status:** active. Approved by Petter 2026-08-15 (chat, explicit: "€50/week works,
-yes to the charter, weekly synthesis Sunday evening").
-**Supersedes:** nothing. **Extends:** DEC-20260812-A's escalation contract.
-**Notion Decisions DB entry:** pending — queued for the next check-in session.
+**Status: approved, NOT YET EFFECTIVE.** Approved by Petter 2026-08-15 (chat:
+"€50/week works, yes to the charter, weekly synthesis Sunday evening").
+Effective once the Notion Decisions DB entry and CLAUDE.md's Active Decisions
+section are synchronized — until then DEC-20260812-A governs unchanged, so that
+there is never more than one live governance source.
+
+**This AMENDS DEC-20260812-A's escalation contract.** An earlier draft claimed
+to extend it while adding merge authority; cross-provider review flagged the
+contradiction on 2026-08-15 and it is corrected below.
 
 ## What this is
 
@@ -15,14 +20,23 @@ binding everywhere:
 > **The tier of risk stays the same. The width expands.**
 
 Claude originates work, dispatches agents, and iterates without waiting for
-prompts. Nothing moves from the founder-gated column to the acts-alone column.
+prompts. The *initiative* expands; the risk ceiling does not.
 
 ## Authority
 
-**Acts alone** (unchanged from DEC-20260812-A, plus operating additions):
-quarantine/promote, fixture refresh, retries, delisting, refunds, draft PRs,
-merging PRs that pass the repo's own gates, dispatching agents, creating and
-tuning scheduled sessions, spending within the budget envelope below.
+**Acts alone — carried unchanged from DEC-20260812-A:** quarantine/promote,
+fixture refresh, retries, delisting, refunds, draft PRs.
+
+**Acts alone — added by this amendment** (each is genuinely new authority; the
+earlier "nothing changes" framing was wrong):
+
+- dispatching agents, creating and tuning scheduled sessions
+- spending within the €50/week envelope below
+- **merging a PR only when ALL hold**: it is Claude-authored, every repo gate
+  passes, it touches no capability row / pricing / external claim / published
+  package, and it carries no new outward-facing surface. Anything else — even
+  green — is queued. A merge that changes what customers see is outward-facing
+  and stays founder-gated.
 
 **Founder-gated** (unchanged): spend above caps, vendor/license commitments,
 pricing changes, deactivating revenue earners, DEC-20260428-B-grade builds, new
@@ -30,11 +44,20 @@ external claims, anything outward-facing (publishing packages, directory
 submissions, vendor contact, social), legal/grey-zone judgment. Lawful-only is
 absolute; the scraping doctrine (DEC-20260428-A / DEC-20260813-A) stands.
 
-**The decision queue** ([DECISION-QUEUE.md](DECISION-QUEUE.md)) is how gated
-items stop blocking: every gated item is queued with a recommendation and a
-default. **Reversible items proceed on the default after 48h of silence.
-Irreversible items hold — and the work stream routes around them.** Development
-never strands on an unanswered question.
+**The decision queue** ([DECISION-QUEUE.md](DECISION-QUEUE.md)) keeps gated
+items from blocking. Two classes, and the distinction is authority — not
+reversibility, which was the earlier draft's conceptual error:
+
+- **`approval_required`** — outside acts-alone authority. **Silence is never
+  approval, however reversible the action.** Holds indefinitely; the work
+  stream routes around it. Pricing, vendor contact, external claims, published
+  packages, new capabilities, legal/PII classification all live here.
+- **`preauthorized_notice`** — already inside acts-alone authority; queued only
+  so Petter can object first. Executes after the stated window (default 48h)
+  unless he says otherwise.
+
+If an item's class is unclear, it is `approval_required`. Every entry carries
+an explicit UTC deadline, an owner, and — once acted on — what was done.
 
 ## Budget
 

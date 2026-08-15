@@ -48,10 +48,21 @@ async function main() {
   const weekCents = revDays.reduce((a: number, r: any) => a + r.cents, 0);
   const weekUsd = (weekCents / 100) * EUR_TO_USD;
 
+  // Payer identity, with the same external filter every other money number
+  // uses. `since` is the age of the instrument: x402_payer_hash shipped
+  // 2026-08-15, so for the first week a low count means "new column", not
+  // "few customers" — the dashboard must say which, or it invites exactly the
+  // wrong conclusion.
   const payers = await sql`
-    SELECT COUNT(DISTINCT t.x402_payer_hash)::int AS n
+    SELECT COUNT(DISTINCT t.x402_payer_hash)::int AS n,
+           MIN(t.created_at) AS since
     FROM transactions t WHERE t.x402_payer_hash IS NOT NULL
-      AND t.created_at > now() - interval '7 days'`;
+      AND t.created_at > now() - interval '7 days' AND ${ext}`;
+  const payerRow = payers[0] as any;
+  const payerDays = payerRow.since
+    ? (Date.now() - new Date(payerRow.since).getTime()) / 86_400_000
+    : 0;
+  const payerTrustworthy = payerDays >= 6;
   const funnel = await sql`
     SELECT endpoint, COUNT(*)::int AS n, COUNT(DISTINCT ip_hash)::int AS ips
     FROM discovery_hits WHERE created_at > now() - interval '7 days'
@@ -77,11 +88,20 @@ async function main() {
   const settle = await sql`
     SELECT COUNT(*)::int AS n FROM transactions
     WHERE x402_settlement_id IS NOT NULL AND created_at > now() - interval '7 days'`;
+  // Forecast, not actuals — we have no invoice feed. Test-harness cost is
+  // derived from each suite's own declared external cost times its runs in the
+  // window; an earlier version hardcoded a measured constant, which would have
+  // reported the same figure every week forever.
+  const harness = await sql`
+    SELECT COALESCE(SUM(ts.external_cost_cents), 0)::int AS cents
+    FROM test_results tr JOIN test_suites ts ON ts.id = tr.test_suite_id
+    WHERE tr.executed_at > now() - interval '7 days'`;
   await sql.end();
 
   const h: any = health[0];
   const settleFeeEur = ((settle[0] as any).n * 0.001) / EUR_TO_USD;
-  const spentEur = 3.64 + settleFeeEur; // test-harness measured + fees; see BUDGET.md gaps
+  const harnessEur = (harness[0] as any).cents / 100;
+  const spentEur = harnessEur + settleFeeEur;
   const nextMilestone = MILESTONES.find((m) => m > weekUsd) ?? WEEKLY_TARGET_USD;
 
   let queue: string[] = [];
@@ -177,8 +197,11 @@ ul{margin:0;padding-left:18px}li{margin:3px 0;font-size:13.5px}
 <div class="tile"><div class="n">$${weekUsd.toFixed(0)}<span style="font-size:15px;color:var(--mut)">/wk</span></div>
 <div class="l">gross, external callers, 7d</div>
 <div class="s ${weekUsd >= nextMilestone ? "ok" : ""}">next milestone: $${nextMilestone}/wk</div></div>
-<div class="tile"><div class="n">${(payers[0] as any).n || "—"}</div><div class="l">distinct paying wallets, 7d</div>
-<div class="s">collecting since 2026-08-15</div></div>
+<div class="tile"><div class="n">${payerTrustworthy ? payerRow.n : "—"}</div>
+<div class="l">distinct paying wallets, 7d</div>
+<div class="s ${payerTrustworthy ? "" : "warn"}">${payerTrustworthy
+  ? `${payerRow.n === 1 ? "all revenue from one wallet" : "spread across wallets"}`
+  : `not yet measurable — instrument is ${payerDays.toFixed(1)}d old (needs 7)`}</div></div>
 <div class="tile"><div class="n">${fInit.ips}</div><div class="l">agents arrived via MCP, 7d</div></div>
 <div class="tile"><div class="n ${h.breakers > 0 ? "warn" : "ok"}">${h.breakers}</div>
 <div class="l">circuit breakers open</div><div class="s">${h.caps} capabilities active · ${h.quarantined} quarantined</div></div>
@@ -197,7 +220,7 @@ ${fRow("initialize", fInit.n, fInit.n, `${fInit.ips} agents`)}
 ${fRow("tools/list", fList.n, fInit.n, `${fList.ips} agents`)}
 ${fRow("tools/call", fCall.n, fInit.n, `${fCall.ips} agents`)}
 ${fRow("rejected", fRej.n, fInit.n, "auth/payment")}
-${fRow("paying", (payers[0] as any).n, fInit.ips, "distinct wallets")}
+${payerTrustworthy ? fRow("paying", payerRow.n, fInit.ips, "distinct wallets") : ""}
 <div class="gen" style="margin-top:8px">instrumented 2026-08-15 — early counts are partial-week</div></section>
 </div>
 
@@ -208,11 +231,11 @@ ${(topCaps as any[]).map((r) => `<tr><td>${esc(r.slug)}</td><td class="num">${r.
 <td class="num">${eur(r.cents)}</td></tr>`).join("")}
 </table></div>
 <div class="gen" style="margin-top:8px">${h.unmet} unmet demand requests (failed_requests, 7d)</div></section>
-<section class="card"><h2>Budget — €${BUDGET_ENVELOPE_EUR}/wk envelope</h2>
+<section class="card"><h2>Budget — €${BUDGET_ENVELOPE_EUR}/wk envelope (forecast)</h2>
 <div class="benv"><span style="width:${Math.min(100, Math.round((spentEur / BUDGET_ENVELOPE_EUR) * 100))}%"></span></div>
 <div class="rlbl"><span>≈ €${spentEur.toFixed(2)} committed</span><span>€${BUDGET_ENVELOPE_EUR}</span></div>
 <ul style="margin-top:10px">
-<li>test-harness external APIs ≈ €3.64 (measured)</li>
+<li>test-harness external APIs ≈ €${harnessEur.toFixed(2)} (from suite cost × runs)</li>
 <li>x402 settlement fees ≈ €${settleFeeEur.toFixed(2)} (${(settle[0] as any).n} settlements)</li>
 <li>compute rides the Claude plan — optimized, not billed here</li></ul></section>
 </div>
@@ -228,7 +251,7 @@ ${queue.length ? `<ul>${queue.map((q) => `<li>${esc(q)}</li>`).join("")}</ul>` :
   const out = resolve(REPO, "docs/company/ceo-dashboard.html");
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, html);
-  console.log(`wrote ${out} (${(html.length / 1024).toFixed(1)} KB) — week $${weekUsd.toFixed(2)}, payers ${(payers[0] as any).n}`);
+  console.log(`wrote ${out} (${(html.length / 1024).toFixed(1)} KB) — week €${(weekCents/100).toFixed(2)}, payers ${payerTrustworthy ? payerRow.n : "n/a (instrument too new)"}`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
