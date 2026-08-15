@@ -54,7 +54,10 @@ export function tokenizeQuery(query: string): string[] {
   const tokens = query
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter((t) => t.length >= 2 && !DROP_WORDS.has(t));
+    // Length-capped as well as count-capped: an unbounded token would ride
+    // into the SPARQL GET URL and turn caller input into an upstream 414
+    // misread as a service failure (cross-provider review, 2026-08-15).
+    .filter((t) => t.length >= 2 && t.length <= 40 && !DROP_WORDS.has(t));
   return [...new Set(tokens)].slice(0, 6);
 }
 
@@ -118,7 +121,17 @@ registerCapability("eu-regulation-search", async (input: CapabilityInput) => {
   }
 
   const data = (await response.json()) as { results?: { bindings?: SparqlBinding[] } };
-  const bindings = data.results?.bindings ?? [];
+  // A response that parses but lacks the SPARQL results shape is an
+  // endpoint/protocol failure, not a zero-result answer — defaulting it to
+  // [] would manufacture a valid-looking "nothing matches" (cross-provider
+  // review, 2026-08-15). Only a real bindings array may say "no results".
+  if (!Array.isArray(data.results?.bindings)) {
+    throw new Error(
+      "EU Publications Office SPARQL endpoint returned an unexpected response shape — " +
+        "this is a service fault, not an answer about EU law.",
+    );
+  }
+  const bindings = data.results.bindings;
 
   const regulations = bindings
     .filter((b) => b.celex?.value && b.title?.value)

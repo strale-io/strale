@@ -26,6 +26,10 @@ describe("tokenizeQuery", () => {
     expect(new Set(tokens).size).toBe(tokens.length);
     expect(tokens.length).toBeLessThanOrEqual(6);
   });
+
+  it("drops oversized tokens so caller input cannot inflate the GET URL", () => {
+    expect(tokenizeQuery("x".repeat(500) + " protection")).toEqual(["protection"]);
+  });
 });
 
 describe("executor input refusals (no network)", () => {
