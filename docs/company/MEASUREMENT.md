@@ -11,10 +11,26 @@ presented, each from correctly-executed SQL:
 |---|---|---|---|
 | 1 | "~$115/week baseline" | a 30-day total relabelled as weekly | **window mislabelled** |
 | 2 | "1 paying customer" | `x402_payer_hash` was one day old | **instrument younger than window** |
-| 3 | "92% of agents never view the catalogue" | 2 days of `initialize` compared against 3 hours of `tools/list` | **steps measured over different windows** |
+| 3 | "92% of agents never view the catalogue" | 2 days of `initialize` compared against 3 hours of `tools/list` (PR #245 deployed the middle steps at 11:00 that day) | **steps measured over different windows** |
 
 A fourth was near-miss: counting `glimind-probe` and `mcpbeat` as prospective
 customers — **population not defined**.
+
+A fifth happened while writing this document. Investigating error 3, I grepped
+`apps/api/src/routes/mcp.ts` in my working tree, found only `/mcp:initialize`
+being recorded, and concluded the funnel instrumentation "is not wired at all".
+It is: `onFunnelEvent` and `classifyMcpRequest` are both live on `origin/main`
+(mcp.ts:235, mcp.ts:340). My branch predated PR #245, which shipped that
+instrumentation at ~11:00 that morning. **Read a stale checkout, reported it as
+production.** The conclusion happened to survive — the data really does start at
+11:00, because that is when #245 deployed — but the stated reason was wrong, and
+it was wrong in a way that would have justified rebuilding something that
+already existed.
+
+This is the failure mode the project's own notes already warn about
+("verify against `origin/main`, not the working tree"). A written warning did
+not prevent it, which is the strongest argument in this document for putting
+the check in code rather than in prose.
 
 None was a SQL bug. Every query returned exactly what it asked for. The failures
 were all in the *framing* — which rows count, over what period, against an
@@ -105,3 +121,7 @@ this first.
    would make an instrument look older than it is?
 3. What is the correct primary metric at ~€48/week with one known buyer?
 4. What is the cheapest identity spine that does not create a privacy problem?
+5. Should the system verify against deployed code rather than the working tree —
+   e.g. a check that refuses to reason about instrumentation the local branch is
+   behind on? Error 5 above suggests yes, but it may be cheaper to always read
+   `git show origin/main:<path>` when reasoning about what production does.
