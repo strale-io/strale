@@ -11,6 +11,7 @@ optimized, not billed here.
 | Test-harness external API spend | ~€3.64 | `test_suites.external_cost_cents` × runs | measured 2026-08-14 |
 | CDP settlement fees | ~$0.65 est. | settlements past 1,000/mo free tier × $0.001 | ~650 settlements/wk |
 | Vendor API overage | €0 | — | free tiers, quota-guarded |
+| Dashboard plain-English rewrite | <€0.01/wk | Haiku, ~6 lines × 14 runs | added 2026-08-15 |
 | **Total vs envelope** | **≈ €4.30 / €50** | | comfortable |
 
 ## Standing rules (CFO enforces)
