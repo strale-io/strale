@@ -1545,6 +1545,9 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0080_cyDirectors,
   runMigration0081_attribution,
   runMigration0082_reclassifyThrottledFreeUnlimited,
+  runMigration0083_x402PayerHash,
+  runMigration0084_danishQuotaHeadroom,
+  runMigration0085_actorIdentity,
 ];
 
 /**
@@ -1790,6 +1793,166 @@ export async function runMigration0082_reclassifyThrottledFreeUnlimited(
         ? `no rows to reclassify (all ${PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY.length} slugs already non-free_unlimited)`
         : `reclassified ${updateCount} cap(s) from free_unlimited to free_quota (of ${PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY.length} target slugs)`,
     rows_affected: updateCount,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0083: MCP funnel + x402 payer hash ───────────────────────────────
+//
+// Readiness P0 (2026-08-15): "Strale can see agents arriving and can see
+// revenue, but nothing in between." Two additions, both write-only at
+// execution time (no hot-path query cost):
+//
+//   1. transactions.x402_payer_hash — see the column comment in db/schema.ts
+//      for the full rationale (stable, keyed HMAC; deliberately NOT the
+//      daily-rotating shape discovery_hits.ip_hash uses). Populated going
+//      forward by recordX402Transaction (routes/x402-gateway-v2.ts) via
+//      hashX402Payer (lib/attribution.ts). NULL on existing rows and on
+//      wallet-paid rows — no backfill: DEC-20260504-B's backlog-drain
+//      requirement doesn't apply because there's nothing to drain (a NULL
+//      column addition, same shape as Block 0081's client_meta).
+//   2. No discovery_hits schema change. The MCP funnel (initialize,
+//      tools/list, each tools/call, and auth/payment rejections) reuses the
+//      existing table unmodified — funnel step + tool name + rejection
+//      reason are all encoded into the `endpoint` text column
+//      (`/mcp:tools/call:{tool}`, `/mcp:reject:{type}:{tool}`), the same
+//      pattern `/mcp:initialize` already established. See routes/mcp.ts and
+//      packages/mcp-server/src/tools.ts (onFunnelEvent hook).
+export async function runMigration0083_x402PayerHash(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  await tx.execute(sql`
+    ALTER TABLE transactions ADD COLUMN IF NOT EXISTS x402_payer_hash VARCHAR(16)
+  `);
+
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS transactions_x402_payer_hash_idx
+      ON transactions (x402_payer_hash) WHERE x402_payer_hash IS NOT NULL
+  `);
+
+  return {
+    block: "0083_x402_payer_hash",
+    outcome: "x402_payer_hash column + index ensured (idempotent); no discovery_hits schema change",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+/**
+ * Block 0084 — reserve customer headroom in danish-company-data's test budget.
+ *
+ * cvrapi.dk documents exactly 50 free lookups per day. quota_cap was also 50,
+ * so the scheduler was entitled to the entire vendor allowance and customers
+ * got whatever was left, which was nothing. Measured in the week to
+ * 2026-08-15: 12-31 upstream-consuming executions a day, our own budget
+ * refusing 12-15 of them, and cvrapi.dk still returning "quota exceeded" 2-4
+ * times a day. The single genuinely external call in the 30-day window failed
+ * with exactly that error.
+ *
+ * Only internal_test/ci contexts are budget-checked — customer_paid is always
+ * ALLOW in the ALLOW_MATRIX — so the budget cannot protect customers from us;
+ * it can only stop us before we exhaust the shared pool. Setting it to 20
+ * leaves 30/day for real callers, comfortably above the observed 12/day
+ * baseline for a full suite cycle.
+ *
+ * Guarded on the old value so an operator who has since retuned it is left
+ * alone, and so a redeploy is a no-op.
+ */
+export async function runMigration0084_danishQuotaHeadroom(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  const result = await tx.execute(sql`
+    UPDATE capabilities
+       SET quota_cap = 20,
+           updated_at = NOW()
+     WHERE slug = 'danish-company-data'
+       AND cost_class = 'free_quota'
+       AND quota_cap = 50
+  `);
+  const updateCount = (result as { count?: number }).count ?? 0;
+
+  return {
+    block: "0084_danish_quota_headroom",
+    outcome:
+      updateCount === 0
+        ? "no change (danish-company-data quota_cap already retuned or capability absent)"
+        : "danish-company-data test budget cut from 50 to 20, reserving 30/day of the vendor's 50 for customers",
+    rows_affected: updateCount,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+/**
+ * Block 0085 — the identity spine (docs/company/MEASUREMENT.md).
+ *
+ * Creates the `transaction_actors` view: one resolved "who" per transaction,
+ * so "is our revenue one customer or twenty" becomes answerable. That question
+ * decides whether the business has a demand problem or a conversion problem,
+ * and it was unanswerable on 2026-08-15 when two strategic conclusions turned
+ * on guessing at it.
+ *
+ * A VIEW rather than a stored column, deliberately:
+ *   - the key is a pure function of columns already on the row, so storing it
+ *     creates a second source of truth that can drift from the first;
+ *   - a written column can be forgotten at a write site, and one already would
+ *     be — the A2A rail proxies to /v1/do without forwarding caller identity;
+ *   - `ADD COLUMN ... GENERATED ALWAYS AS ... STORED` rewrites the table and
+ *     takes an ACCESS EXCLUSIVE lock on `transactions`, the busiest table in
+ *     the system, for no benefit at this row count.
+ *
+ * DEC-20260504-B (bulk-operation deploy) does not apply: a view creation reads
+ * nothing and writes nothing. The supporting index is created CONCURRENTLY
+ * outside the migration transaction for the same reason — see below.
+ *
+ * Privacy: `x402_payer_hash` is already a keyed HMAC of the lowercased address
+ * (attribution.ts). No raw wallet address is read, derived, or stored here, and
+ * there is deliberately no device/IP fallback — unattributable stays
+ * unattributable and is reported as a coverage figure instead.
+ */
+export async function runMigration0085_actorIdentity(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  // CREATE OR REPLACE so a change to the derivation redeploys cleanly. The
+  // version marker lives inside the key: if the rule changes, old and new keys
+  // compare unequal rather than silently merging two different actors.
+  await tx.execute(sql`
+    CREATE OR REPLACE VIEW transaction_actors AS
+    SELECT
+      t.id,
+      t.created_at,
+      t.status,
+      t.price_cents,
+      t.capability_id,
+      t.user_id,
+      CASE
+        WHEN t.user_id IS NOT NULL THEN 'user:v1:' || t.user_id::text
+        WHEN t.x402_payer_hash IS NOT NULL THEN 'x402:v1:' || t.x402_payer_hash
+        ELSE NULL
+      END AS actor_key,
+      CASE
+        WHEN t.user_id IS NOT NULL THEN 'user'
+        WHEN t.x402_payer_hash IS NOT NULL THEN 'x402_wallet'
+        ELSE 'unattributed'
+      END AS actor_kind
+    FROM transactions t
+  `);
+
+  // Supporting index for the payer-identity metrics. IF NOT EXISTS keeps the
+  // block idempotent across the reboots that re-run every migration.
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS idx_transactions_payer_created
+      ON transactions (x402_payer_hash, created_at)
+      WHERE x402_payer_hash IS NOT NULL
+  `);
+
+  return {
+    block: "0085_actorIdentity",
+    outcome: "applied",
     duration_ms: Date.now() - startedAt,
   };
 }

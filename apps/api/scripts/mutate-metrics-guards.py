@@ -12,7 +12,8 @@ API = r'C:\Users\pette\Projects\strale\apps\api'
 INST = API + r'\src\lib\metrics\instruments.ts'
 POP = API + r'\src\lib\metrics\populations.ts'
 TYP = API + r'\src\lib\metrics\types.ts'
-BASELINE = 'Tests  14 passed'
+ACT = API + '/src/lib/metrics/actor-identity.ts'
+BASELINE = 'Tests  24 passed'
 
 MUTATIONS = [
     (INST, 'return spec.enabledAt <= from ? { ok: true } : { ok: false, enabledAt: spec.enabledAt };',
@@ -30,10 +31,18 @@ MUTATIONS = [
      'substring matching restored -> would discard a real company-registry-bot'),
     (TYP, 'trustworthy: false,\n      };', 'trustworthy: true,\n      };',
      'estimates presented as observed'),
+    (ACT,
+     '  if (row.userId) return { key: `user:${ACTOR_KEY_VERSION}:${row.userId}`, kind: "user" };',
+     '  if (row.x402PayerHash) return { key: `x402:${ACTOR_KEY_VERSION}:${row.x402PayerHash}`, kind: "x402_wallet" };',
+     'identity precedence flipped -> wallet beats account'),
+    (ACT,
+     '  return { key: null, kind: "unattributed" };',
+     '  return { key: "anon:v1:shared", kind: "unattributed" };',
+     'unattributable calls given a shared invented identity'),
 ]
 
 def run():
-    r = subprocess.run(['npx', 'vitest', 'run', 'src/lib/metrics/metrics.test.ts'],
+    r = subprocess.run(['npx', 'vitest', 'run', 'src/lib/metrics/'],
                        cwd=API, capture_output=True, text=True, shell=True,
                        encoding='utf-8', errors='replace')
     return (r.stdout or '') + (r.stderr or '')
