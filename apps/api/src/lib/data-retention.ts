@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { CUSTOMER_CONTENT_CLEAR_SQL } from "./customer-content.js";
 import { log } from "./log.js";
 
 const BATCH_SIZE = 1000;
@@ -124,12 +125,7 @@ async function purgeTransactions(cutoff: Date): Promise<number> {
     const result = await db.execute(sql`
       UPDATE transactions
       SET
-        input = '{}'::jsonb,
-        output = NULL,
-        error = NULL,
-        audit_trail = NULL,
-        provenance = NULL,
-        idempotency_key = NULL,
+        ${CUSTOMER_CONTENT_CLEAR_SQL},
         deleted_at = NOW(),
         redacted_at = NOW(),
         deletion_reason = 'retention_purge'
@@ -232,12 +228,7 @@ async function purgeCustomerContent(cutoff: Date): Promise<number> {
     const result = await db.execute(sql`
       UPDATE transactions
       SET
-        input = '{}'::jsonb,
-        output = NULL,
-        error = NULL,
-        audit_trail = NULL,
-        provenance = NULL,
-        idempotency_key = NULL,
+        ${CUSTOMER_CONTENT_CLEAR_SQL},
         deleted_at = NOW(),
         redacted_at = NOW(),
         deletion_reason = 'pii_retention_purge'
