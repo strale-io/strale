@@ -125,14 +125,15 @@ export function saltedIpHash(ip: string | undefined, now: Date = new Date()): st
 }
 
 /**
- * Stable (NON-rotating) HMAC-SHA256 hash of an x402 payer wallet address,
+ * Stable (NON-rotating) secret-salted sha256 of an x402 payer wallet address,
  * truncated to 16 hex chars — same shape as saltedIpHash, deliberately
  * different lifecycle: this hash must stay identical across days so the
  * weekly rollup can answer "how many distinct payers" and "how many are
  * repeat payers" (see transactions.x402PayerHash in db/schema.ts for the
  * full rationale on why daily rotation would defeat the purpose here).
  *
- * Keyed (HMAC, not plain sha256) rather than following client_ip_hash's
+ * Secret-salted — the same HMAC-ish construction as saltedIpHash above, not
+ * a true HMAC — rather than following client_ip_hash's
  * unsalted precedent: IPv4 is a small enumerable space (~4B) so an unsalted
  * hash is already a weak protection there, but it's cheap to enumerate
  * either way. Wallet addresses are drawn from a 2^160 space that can't be

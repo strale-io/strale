@@ -315,7 +315,8 @@ export const transactions = pgTable(
     // verify-then-settle window). Null on wallet-paid rows.
     x402PaymentHash: varchar("x402_payment_hash", { length: 32 }),
     // MCP funnel P0 (migration 0083, 2026-08-15): stable (non-rotating)
-    // HMAC-SHA256(AUDIT_HMAC_SECRET, lowercased payer address), truncated to
+    // secret-salted sha256 over (AUDIT_HMAC_SECRET || lowercased payer address),
+    // truncated to
     // 16 hex chars — see hashX402Payer in lib/attribution.ts. Deliberately
     // NOT daily-salted like discovery_hits.ip_hash / client_meta.ip_day_hash:
     // those rotate on purpose so cross-day correlation is impossible, but a
