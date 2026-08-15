@@ -15,9 +15,16 @@ import { INTERNAL_EMAIL_LIKE_PATTERNS, EXTRA_EXCLUDED_EMAILS } from "../internal
 /** Excludes our own accounts. ~98% of platform traffic is the test harness. */
 export function externalCustomers(alias = "t"): SQL {
   const a = sql.raw(alias);
+  // OR-chains rather than `LIKE ANY(array)`: a JS array does not bind as a
+  // Postgres array through drizzle's sql template, and the driver rejects it
+  // with "op ANY/ALL (array) requires array on right side". Explicit chains
+  // are portable across both call styles and read the same in a query log.
+  const likeAny = sql.join(
+    INTERNAL_EMAIL_LIKE_PATTERNS.map((p) => sql`email LIKE ${p}`), sql` OR `);
+  const eqAny = sql.join(
+    EXTRA_EXCLUDED_EMAILS.map((e) => sql`email = ${e}`), sql` OR `);
   return sql`(${a}.user_id IS NULL OR ${a}.user_id NOT IN (
-    SELECT id FROM users WHERE email LIKE ANY(${INTERNAL_EMAIL_LIKE_PATTERNS})
-      OR email = ANY(${EXTRA_EXCLUDED_EMAILS})))`;
+    SELECT id FROM users WHERE (${likeAny}) OR (${eqAny})))`;
 }
 
 export type CallerCategory = "known_monitor" | "known_indexer" | "customer_candidate" | "unknown";
@@ -48,7 +55,9 @@ export function categorise(ua: string | null | undefined): CallerCategory {
  * 2026-08-15 silently removed those rows from both populations at once.
  */
 function anyOf(alias: string, needles: string[]): SQL {
-  return sql`(${sql.raw(alias)}.ua IS NOT NULL AND ${sql.raw(alias)}.ua ILIKE ANY(${needles.map((n) => `%${n}%`)}))`;
+  const a = sql.raw(alias);
+  const chain = sql.join(needles.map((n) => sql`${a}.ua ILIKE ${`%${n}%`}`), sql` OR `);
+  return sql`(${a}.ua IS NOT NULL AND (${chain}))`;
 }
 export const isKnownMonitor = (a = "dh") => anyOf(a, KNOWN_MONITORS);
 export const isKnownIndexer = (a = "dh") => anyOf(a, KNOWN_INDEXERS);

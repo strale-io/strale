@@ -1,57 +1,54 @@
 /**
- * CEO dashboard generator — DEC-20260815-A.
+ * CEO dashboard generator.
  *
- * Emits a single self-contained HTML file from live production data, produced at
- * every check-in so Petter has one place that answers: is the business on track,
- * where does it need attention, what is being spent. Read-only against the
- * database; writes nothing but the HTML.
+ * This script computes NO business numbers. Every figure comes from
+ * src/lib/metrics, which owns the window, the population and the instrument
+ * guard for each one. Before that module existed those decisions were remade
+ * in each script, and on 2026-08-15 that produced five different wrong answers
+ * in one afternoon.
+ *
+ * What remains here is presentation: turning `Measurement<T>` values into a
+ * page. The rule that matters is that an unavailable measurement has no value
+ * to render — `renderMeasurement` returns a placeholder and an explanation, and
+ * there is no way to reach past it to a number.
  *
  * Run:  npx tsx scripts/ceo-dashboard.ts
  * Out:  docs/company/ceo-dashboard.html (gitignored)
- *
- * Two rules this file exists to enforce, both learned the hard way:
- *   1. Every revenue/usage number goes through the canonical internal-account
- *      exclusion. ~98% of traffic is our own test harness, and a hand-rolled
- *      filter has twice produced a confidently wrong strategic conclusion.
- *   2. A metric whose instrument is younger than its window is not reported.
- *      A one-day-old payer column rendered as "1" reads as "we have one
- *      customer" when it means "we started counting yesterday".
  */
 import { config } from "dotenv";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { execSync } from "node:child_process";
-import postgres from "postgres";
-import { DESIGN_SYSTEM_CSS } from "./lib/design-system.js";
-import { PROBE_UA_SQL_PATTERNS } from "../src/lib/probe-agents.js";
-import {
-  INTERNAL_EMAIL_LIKE_PATTERNS,
-  EXTRA_EXCLUDED_EMAILS,
-} from "../src/lib/internal-accounts.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../../..");
+// Loaded before the metrics module, which opens a database connection on import.
 config({ path: resolve(REPO, ".env") });
 
-/** Milestones in EUR, matching docs/company/GOALS.md. The ledger is EUR; USD is display-only. */
+const { DESIGN_SYSTEM_CSS } = await import("./lib/design-system.js");
+const {
+  revenueCents, payingActors, mcpFunnel, monitorVisitDays, identityCoverage,
+  topSellers, platformHealth, externalSpend, windowOf,
+} = await import("../src/lib/metrics/metrics.js");
+const { renderMeasurement } = await import("../src/lib/metrics/types.js");
+const { closeDbPool } = await import("../src/db/index.js");
+
+/** Milestones in EUR, matching docs/company/GOALS.md. */
 const MILESTONES = [230, 550, 1100, 1850];
 const BUDGET_ENVELOPE_EUR = 50;
 
 /**
- * Commit subjects are written for engineers ("fix(mcp): scope the bonus to
- * qualifying solutions"). This dashboard is read by one non-technical person,
- * so the shipped list is rewritten into ordinary sentences before display.
- *
- * The rewrite is best-effort: without a key, on any API error, or if the model
- * returns the wrong number of lines, it falls back to stripping the
- * conventional-commit prefix. A wrong-length response is treated as failure
- * rather than zipped up, because a misaligned list would attach the wrong
- * description to the wrong change — worse than leaving the jargon in.
+ * Commit subjects are written for engineers. This page has one non-technical
+ * reader, so the shipped list is rewritten into ordinary sentences. Best-effort:
+ * without a key, on any error, or if the model returns the wrong number of
+ * lines, it falls back to stripping the conventional-commit prefix. A
+ * wrong-length response is treated as failure rather than zipped up, because a
+ * misaligned list would attach the wrong description to the wrong change.
  */
 async function toPlainEnglish(subjects: string[]): Promise<string[]> {
-  const fallback = subjects.map((s) =>
-    s.replace(/^\w+(\([^)]*\))?!?:\s*/, "").replace(/^./, (c) => c.toUpperCase()));
+  const fallback = subjects.map((x) =>
+    x.replace(/^\w+(\([^)]*\))?!?:\s*/, "").replace(/^./, (c) => c.toUpperCase()));
   if (!process.env.ANTHROPIC_API_KEY || subjects.length === 0) return fallback;
   try {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
@@ -69,10 +66,9 @@ async function toPlainEnglish(subjects: string[]): Promise<string[]> {
       }],
     });
     const lines = res.content
-      .filter((b): b is { type: "text"; text: string } => b.type === "text")
-      .map((b) => b.text).join("")
-      .trim().split("\n").map((l) => l.replace(/^[-*\d.)\s]+/, "").trim())
-      .filter(Boolean);
+      .flatMap((b) => (b.type === "text" ? [b.text] : []))
+      .join("").trim().split("\n")
+      .map((l) => l.replace(/^[-*\d.)\s]+/, "").trim()).filter(Boolean);
     return lines.length === subjects.length ? lines : fallback;
   } catch {
     return fallback;
@@ -80,145 +76,42 @@ async function toPlainEnglish(subjects: string[]): Promise<string[]> {
 }
 
 async function main() {
-  const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
-  const ext = sql`(t.user_id IS NULL OR t.user_id NOT IN (
-    SELECT id FROM users WHERE email LIKE ANY(${INTERNAL_EMAIL_LIKE_PATTERNS})
-      OR email = ANY(${EXTRA_EXCLUDED_EMAILS})))`;
+  const week = windowOf(7);
+  const priorWeek = {
+    from: new Date(Date.now() - 14 * 86_400_000),
+    to: new Date(Date.now() - 7 * 86_400_000),
+    label: "the week before",
+  };
 
-  const revDays = await sql`
-    SELECT date_trunc('day', t.created_at)::date::text AS d,
-           COALESCE(SUM(t.price_cents),0)::int AS cents, COUNT(*)::int AS calls
-    FROM transactions t
-    WHERE t.status='completed' AND t.created_at > now() - interval '7 days' AND ${ext}
-    GROUP BY 1 ORDER BY 1`;
-  const weekCents = revDays.reduce((a: number, r: any) => a + r.cents, 0);
-  const weekEur = weekCents / 100;
+  const [revenue, prior, actors, funnel, monitors, coverage, sellers, health, spend] =
+    await Promise.all([
+      revenueCents(week), revenueCents(priorWeek), payingActors(windowOf(28)),
+      mcpFunnel(week), monitorVisitDays(week), identityCoverage(week),
+      topSellers(week), platformHealth(), externalSpend(week),
+    ]);
 
-  // Prior 7-day window, so the headline can carry a real delta rather than an
-  // adjective.
-  const prev = await sql`
-    SELECT COALESCE(SUM(t.price_cents),0)::int AS cents, COUNT(*)::int AS calls
-    FROM transactions t WHERE t.status='completed'
-      AND t.created_at BETWEEN now() - interval '14 days' AND now() - interval '7 days'
-      AND ${ext}`;
-  const prevEur = (prev[0] as any).cents / 100;
-  const weekCalls = revDays.reduce((a: number, r: any) => a + r.calls, 0);
-
-  // Payer identity, through the same external filter as every other money
-  // number. `since` is the age of the instrument (see rule 2 above).
-  const payers = await sql`
-    SELECT COUNT(DISTINCT t.x402_payer_hash)::int AS n, MIN(t.created_at) AS since
-    FROM transactions t WHERE t.x402_payer_hash IS NOT NULL
-      AND t.created_at > now() - interval '7 days' AND ${ext}`;
-  const payerRow = payers[0] as any;
-  const payerDays = payerRow.since
-    ? (Date.now() - new Date(payerRow.since).getTime()) / 86_400_000
-    : 0;
-  const payerTrustworthy = payerDays >= 6;
-
-  // Two guards, both learned on 2026-08-15.
-  //
-  // 1. Monitoring infrastructure is split out rather than counted — see
-  //    src/lib/probe-agents.ts.
-  // 2. The window starts when the LAST step's instrumentation started writing,
-  //    not when the first did. tools/list only began recording at 11:00 that
-  //    day; comparing it against two days of initialize produced a "92% of
-  //    agents never look at the catalogue" finding that was purely an artifact
-  //    of mismatched windows. Measured over one window the same agents that
-  //    connect do look. A funnel whose steps cover different periods is not a
-  //    funnel, so it is computed here or not shown at all.
-  const isProbe = sql`(dh.ua IS NOT NULL AND dh.ua ILIKE ANY(${PROBE_UA_SQL_PATTERNS}))`;
-  const starts = await sql`SELECT endpoint, MIN(created_at) AS t FROM discovery_hits
-    WHERE endpoint LIKE '/mcp:%' GROUP BY 1`;
-  const startOf = (prefix: string) => (starts as any[])
-    .filter((r) => r.endpoint.startsWith(prefix))
-    .reduce((min: Date | null, r) => (!min || r.t < min ? r.t : min), null as Date | null);
-  const stepStarts = ["/mcp:initialize", "/mcp:tools/list"].map(startOf).filter(Boolean) as Date[];
-  const weekAgo = Date.now() - 7 * 86_400_000;
-  const funnelFrom = stepStarts.length === 2
-    ? new Date(Math.max(...stepStarts.map((d) => d.getTime()), weekAgo))
-    : null;
-  const funnelHours = funnelFrom ? (Date.now() - funnelFrom.getTime()) / 3_600_000 : 0;
-
-  const funnel = funnelFrom ? await sql`
-    SELECT dh.endpoint,
-           COUNT(*) FILTER (WHERE NOT ${isProbe})::int AS n,
-           COUNT(DISTINCT dh.ip_hash) FILTER (WHERE NOT ${isProbe})::int AS ips,
-           COUNT(DISTINCT dh.ip_hash) FILTER (WHERE ${isProbe})::int AS probe_ips
-    FROM discovery_hits dh WHERE dh.created_at >= ${funnelFrom}
-      AND dh.endpoint LIKE '/mcp:%' GROUP BY 1 ORDER BY 2 DESC` : [];
-  const fget = (like: string) =>
-    (funnel as any[]).filter((r) => r.endpoint.startsWith(like))
-      .reduce((a, r) => ({ n: a.n + r.n, ips: a.ips + r.ips, probes: a.probes + r.probe_ips }),
-              { n: 0, ips: 0, probes: 0 });
-  const fInit = fget("/mcp:initialize");
-  const fList = fget("/mcp:tools/list");
-  const fCall = fget("/mcp:tools/call");
-  const fRej = fget("/mcp:reject");
-
-  // Arrivals are counted over the full 7 days — that instrument is old enough.
-  const arrivals = await sql`SELECT
-      COUNT(DISTINCT dh.ip_hash) FILTER (WHERE NOT ${isProbe})::int AS real,
-      COUNT(DISTINCT dh.ip_hash) FILTER (WHERE ${isProbe})::int AS probes
-    FROM discovery_hits dh WHERE dh.endpoint = '/mcp:initialize'
-      AND dh.created_at > now() - interval '7 days'`;
-  const arr = arrivals[0] as any;
-
-  const topCaps = await sql`
-    SELECT c.slug, c.category, COUNT(*)::int AS calls,
-           COALESCE(SUM(t.price_cents),0)::int AS cents
-    FROM transactions t JOIN capabilities c ON c.id=t.capability_id
-    WHERE t.status='completed' AND t.price_cents > 0
-      AND t.created_at > now() - interval '7 days' AND ${ext}
-    GROUP BY 1,2 ORDER BY 4 DESC LIMIT 6`;
-  const health = await sql`
-    SELECT (SELECT COUNT(*)::int FROM capability_health WHERE state <> 'closed') AS breakers,
-           (SELECT COUNT(*)::int FROM capabilities WHERE is_active) AS caps,
-           (SELECT COUNT(*)::int FROM capabilities WHERE is_active AND lifecycle_state='quarantined') AS quarantined,
-           (SELECT COUNT(*)::int FROM failed_requests WHERE created_at > now() - interval '7 days') AS unmet`;
-  const settle = await sql`
-    SELECT COUNT(*)::int AS n FROM transactions
-    WHERE x402_settlement_id IS NOT NULL AND created_at > now() - interval '7 days'`;
-  // Forecast, not actuals — there is no invoice feed. Harness cost is each
-  // suite's declared external cost times its runs in the window; an earlier
-  // version hardcoded a measured constant and would have reported the same
-  // figure every week forever.
-  const harness = await sql`
-    SELECT COALESCE(SUM(ts.external_cost_cents), 0)::int AS cents
-    FROM test_results tr JOIN test_suites ts ON ts.id = tr.test_suite_id
-    WHERE tr.executed_at > now() - interval '7 days'`;
-  await sql.end();
-
-  const h: any = health[0];
-  const settleFeeEur = (settle[0] as any).n * 0.001 / 1.09;
-  const harnessEur = (harness[0] as any).cents / 100;
-  const spentEur = harnessEur + settleFeeEur;
-  const nextMilestone = MILESTONES.find((m) => m > weekEur) ?? MILESTONES[MILESTONES.length - 1];
-  const milestoneIdx = MILESTONES.indexOf(nextMilestone);
-
+  // Presentation-only reads: the contents of two files and the git log. Not
+  // measurements of the business, so not in the metrics module.
   interface QueueField { label: string; text: string }
   interface QueueItem { id: string; cls: string; owner: string; text: string; fields: QueueField[] }
   let queue: QueueItem[] = [];
   try {
     const dq = readFileSync(resolve(REPO, "docs/company/DECISION-QUEUE.md"), "utf8");
-    const open = dq.split("## OPEN")[1]?.split("## RESOLVED")[0] ?? "";
-    // Each entry is: a header line, a plain-English summary that may wrap over
-    // several lines, then any number of *Label:* fields. The summary is what
-    // shows collapsed; the fields fill the expanded panel, so the row can be
-    // acted on without opening the repo.
+    const open = dq.split("## OPEN")[1]?.split(/\n## /)[0] ?? "";
     queue = open.split(/\n(?=\*\*DQ-)/).flatMap((block) => {
       const head = block.match(/\*\*(DQ-\d+)\*\*\s*·\s*`([a-z_]+)`\s*·\s*owner ([^·]+)·[^\n]*\n/);
       if (!head) return [];
       const body = block.slice(head[0].length);
       const clean = (t: string) => t.replace(/\s+/g, " ").replace(/[`*]/g, "").trim();
-      const summary = clean(body.split(/\n\s*\*[A-Z]/)[0].split(/\n\s*\n/)[0]);
-      const fields = [...body.matchAll(/\*([A-Z][^*:]*):\*\s*([\s\S]*?)(?=\n\s*\*[A-Z][^*:]*:\*|$)/g)]
-        .map((f) => ({ label: f[1].trim(), text: clean(f[2]) }))
-        .filter((f) => f.text.length > 0);
-      return [{ id: head[1], cls: head[2], owner: head[3].trim(), text: summary, fields }];
+      return [{
+        id: head[1], cls: head[2], owner: head[3].trim(),
+        text: clean(body.split(/\n\s*\*[A-Z]/)[0].split(/\n\s*\n/)[0]),
+        fields: [...body.matchAll(/\*([A-Z][^*:]*):\*\s*([\s\S]*?)(?=\n\s*\*[A-Z][^*:]*:\*|$)/g)]
+          .map((f) => ({ label: f[1].trim(), text: clean(f[2]) }))
+          .filter((f) => f.text.length > 0),
+      }];
     });
-  } catch { /* queue file optional */ }
-
+  } catch { /* optional */ }
 
   interface Worker { name: string; when: string; does: string; reports: string; status: string }
   let workers: Worker[] = [];
@@ -227,7 +120,7 @@ async function main() {
     const flat = (t: string) => t.replace(/\s+/g, " ").replace(/[`*]/g, "").trim();
     workers = wf.split(/\n### /).slice(1).map((block) => {
       const [heading, ...rest] = block.split("\n");
-      const [name, when] = heading.split("\u00b7");
+      const [name, when] = heading.split("·");
       const body = rest.join("\n");
       const field = (label: string) => {
         const m = body.match(new RegExp("\\*\\*" + label + ":\\*\\*([\\s\\S]*?)(?=\\n\\*\\*|$)"));
@@ -238,37 +131,56 @@ async function main() {
         does: field("Does"), reports: field("Reports"), status: field("Status"),
       };
     }).filter((w) => w.name);
-  } catch { /* workforce file optional */ }
+  } catch { /* optional */ }
 
   let ships: Array<{ text: string; when: string }> = [];
   try {
     const raw = execSync('git log -6 origin/main --date=relative --format=%s%x1f%ad',
       { cwd: REPO, encoding: "utf8" })
       .trim().split("\n").map((l) => {
-        const [text, when] = l.split("\u001f");
+        const [text, when] = l.split("");
         return { text: text.replace(/\s*\(#\d+\)$/, ""), when };
       });
     const plain = await toPlainEnglish(raw.map((r) => r.text));
     ships = raw.map((r, i) => ({ text: plain[i], when: r.when }));
   } catch { /* offline ok */ }
 
-  const now = new Date();
-  const gen = now.toISOString().slice(0, 16).replace("T", " ") + " UTC";
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const eur = (c: number) => `€${(c / 100).toFixed(2)}`;
-  const pct = (a: number, b: number) => (b === 0 ? null : ((a - b) / b) * 100);
+  // ── formatting ──────────────────────────────────────────────────────────
+  const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const eur = (cents: number) => `€${(cents / 100).toFixed(2)}`;
+  const gen = new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC";
 
-  const revDelta = pct(weekEur, prevEur);
-  const deltaChip = (v: number | null, suffix = "") =>
-    v === null ? `<span class="chip chip-flat">nothing to compare with yet</span>`
-      : `<span class="chip ${v >= 0 ? "chip-up" : "chip-down"}">
-          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-            <path d="${v >= 0 ? "M2 7L5 3l3 4" : "M2 3l3 4 3-4"}" fill="none"
-              stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>${v >= 0 ? "+" : ""}${v.toFixed(1)}%${suffix}</span>`;
+  const rev = renderMeasurement(revenue, eur);
+  const priorRev = renderMeasurement(prior, eur);
+  const weekCents = revenue.status === "observed" ? revenue.value : 0;
+  const priorCents = prior.status === "observed" ? prior.value : 0;
+  const weekEur = weekCents / 100;
+  const nextMilestone = MILESTONES.find((m) => m > weekEur) ?? MILESTONES[MILESTONES.length - 1];
 
-  // ── icons (16px, 1.5 stroke — matched to the card label size)
-  const ico: Record<string, string> = {
+  const delta = priorCents > 0 ? ((weekCents - priorCents) / priorCents) * 100 : null;
+  const deltaChip = delta === null
+    ? `<span class="chip chip-flat">nothing to compare with yet</span>`
+    : `<span class="chip ${delta >= 0 ? "chip-up" : "chip-down"}">
+        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path
+          d="${delta >= 0 ? "M2 7L5 3l3 4" : "M2 3l3 4 3-4"}" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>${
+        delta >= 0 ? "+" : ""}${delta.toFixed(1)}%</span>`;
+
+  const buyers = renderMeasurement(actors, (v) => String(v.total));
+  const buyersNote = actors.status === "observed"
+    ? (actors.value.total === 1
+        ? `<span class="chip chip-warn">all from one buyer</span> we need more`
+        : `${actors.value.returning} came back · biggest is ${(actors.value.topShare * 100).toFixed(0)}% of the money`)
+    : esc(buyers.note);
+
+  const cov = renderMeasurement(coverage, (v) => `${(v * 100).toFixed(1)}%`);
+  const hv = health.status === "observed"
+    ? health.value : { breakersOpen: 0, active: 0, quarantined: 0 };
+  const sp = spend.status === "estimated" || spend.status === "observed"
+    ? spend.value : { harnessCents: 0, settlementCents: 0, totalCents: 0 };
+  const budgetPct = Math.min(100, (sp.totalCents / 100 / BUDGET_ENVELOPE_EUR) * 100);
+
+  const icons: Record<string, string> = {
     wallet: `<path d="M2.5 5.5A1.5 1.5 0 014 4h8a1.5 1.5 0 011.5 1.5v5A1.5 1.5 0 0112 12H4a1.5 1.5 0 01-1.5-1.5z"/><path d="M10.5 8h1.5"/>`,
     users: `<circle cx="6" cy="6" r="2.2"/><path d="M2.5 13c0-2 1.6-3.3 3.5-3.3S9.5 11 9.5 13"/><path d="M10.8 4.2a2 2 0 010 3.6M11.5 12.8c0-1.4-.5-2.4-1.3-3"/>`,
     inbound: `<path d="M8 2.5v7"/><path d="M5 7l3 3 3-3"/><path d="M3 12.5h10"/>`,
@@ -278,188 +190,124 @@ async function main() {
   const icon = (k: string, cls: string) =>
     `<span class="ibadge ${cls}"><svg viewBox="0 0 16 16" width="16" height="16" fill="none"
       stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-      aria-hidden="true">${ico[k]}</svg></span>`;
+      aria-hidden="true">${icons[k]}</svg></span>`;
 
-  // ── revenue chart: bars, dashed gridlines, quiet axes, last day emphasised
-  const CH = { w: 560, h: 170, pl: 42, pr: 8, pt: 12, pb: 26 };
-  const plotW = CH.w - CH.pl - CH.pr, plotH = CH.h - CH.pt - CH.pb;
-  const rawMax = Math.max(1, ...revDays.map((r: any) => r.cents));
-  const step = Math.pow(10, Math.floor(Math.log10(rawMax || 1)));
-  const yMax = Math.max(step, Math.ceil(rawMax / step) * step);
-  const slot = plotW / Math.max(1, revDays.length);
-  const barW = Math.min(38, slot * 0.52);
-  const grid = [0, 0.25, 0.5, 0.75, 1].map((f) => {
-    const y = CH.pt + plotH - f * plotH;
-    return `<line x1="${CH.pl}" y1="${y}" x2="${CH.w - CH.pr}" y2="${y}" class="grid"/>
-      <text x="${CH.pl - 8}" y="${y + 3.5}" class="ytick">${eur(yMax * f)}</text>`;
-  }).join("");
-  const bars = (revDays as any[]).map((r, i) => {
-    const bh = Math.max(2, (r.cents / yMax) * plotH);
-    const x = CH.pl + i * slot + (slot - barW) / 2;
-    const y = CH.pt + plotH - bh;
-    const last = i === revDays.length - 1;
-    const day = new Date(r.d + "T00:00:00Z")
-      .toLocaleDateString("en", { weekday: "short", timeZone: "UTC" });
-    return `<g class="barg"><title>${r.d} · ${eur(r.cents)} · ${r.calls} calls</title>
-      <rect x="${CH.pl + i * slot}" y="${CH.pt}" width="${slot}" height="${plotH}" class="hit"/>
-      <path d="M${x},${y + 3} a3,3 0 013-3 h${barW - 6} a3,3 0 013,3 v${bh - 3} h-${barW} z"
-        class="bar${last ? " bar-last" : ""}"/>
-      <text x="${x + barW / 2}" y="${CH.h - 8}" class="xtick${last ? " xtick-last" : ""}">${day}</text>
-    </g>`;
-  }).join("");
+  const steps = funnel.status === "observed" ? funnel.value : [];
+  const stepMax = Math.max(1, ...steps.map((s) => s.events));
+  const funnelRows = steps.map((s) => `
+    <div class="frow"><span class="flabel">${esc(s.label)}</span>
+      <span class="ftrack"><span class="ffill" style="width:${Math.max(1.5, (s.events / stepMax) * 100)}%"></span></span>
+      <span class="fval">${s.events.toLocaleString("en")}</span>
+      <span class="fnote">${s.visitDays} visit-days</span></div>`).join("");
+  const funnelWindow = funnel.status === "observed" ? funnel.window.label : "";
+  const funnelNote = funnel.status === "observed"
+    ? (funnel.caveat ?? "")
+    : renderMeasurement(funnel, () => "").note;
 
-  const fRow = (label: string, v: number, max: number, note: string) => `
-    <div class="frow">
-      <span class="flabel">${label}</span>
-      <span class="ftrack"><span class="ffill" style="width:${Math.max(1.5, (v / Math.max(1, max)) * 100)}%"></span></span>
-      <span class="fval">${v.toLocaleString("en")}</span>
-      <span class="fnote">${note}</span>
-    </div>`;
-
-  const capMax = Math.max(1, ...(topCaps as any[]).map((c) => c.cents));
-  const budgetPct = Math.min(100, (spentEur / BUDGET_ENVELOPE_EUR) * 100);
+  const sellersList = sellers.status === "observed" ? sellers.value : [];
+  const capMax = Math.max(1, ...sellersList.map((c) => c.cents));
 
   const html = `<title>Strale — CEO Dashboard</title>
 <style>${DESIGN_SYSTEM_CSS}</style>
-
 <div class="app">
 <aside class="side">
-  <div class="brand">
-    <span class="blogo">S</span>
-    <span><span class="bname">Strale</span><div class="bsub">Business overview</div></span>
-  </div>
-
-  <div>
-    <div class="navgroup">Overview</div>
-    <nav class="nav">
-      <a class="on" href="#revenue"><span class="dot"></span>Money</a>
-      <a href="#funnel"><span class="dot"></span>Getting customers</a>
-      <a href="#selling"><span class="dot"></span>Best sellers<span class="count">${topCaps.length}</span></a>
-    </nav>
-  </div>
-
-  <div>
-    <div class="navgroup">Operations</div>
-    <nav class="nav">
-      <a href="#budget"><span class="dot"></span>Spending</a>
-      <a href="#workforce"><span class="dot"></span>Who is working</a>
-      <a href="#decisions"><span class="dot"></span>Decisions<span class="count">${queue.length}</span></a>
-      <a href="#ships"><span class="dot"></span>Finished work</a>
-    </nav>
-  </div>
-
-  <div class="usercard">
-    <span class="avatar">PL</span>
-    <span><div class="uname">Petter Lindström</div><div class="urole">Founder · Moonlighter AB</div></span>
-  </div>
+  <div class="brand"><span class="blogo">S</span>
+    <span><span class="bname">Strale</span><div class="bsub">Business overview</div></span></div>
+  <div><div class="navgroup">Overview</div><nav class="nav">
+    <a class="on" href="#revenue"><span class="dot"></span>Money</a>
+    <a href="#funnel"><span class="dot"></span>Getting customers</a>
+    <a href="#selling"><span class="dot"></span>Best sellers<span class="count">${sellersList.length}</span></a>
+  </nav></div>
+  <div><div class="navgroup">Operations</div><nav class="nav">
+    <a href="#budget"><span class="dot"></span>Spending</a>
+    <a href="#workforce"><span class="dot"></span>Who is working</a>
+    <a href="#decisions"><span class="dot"></span>Decisions<span class="count">${queue.length}</span></a>
+    <a href="#ships"><span class="dot"></span>Finished work</a>
+  </nav></div>
+  <div class="usercard"><span class="avatar">PL</span>
+    <span><div class="uname">Petter Lindström</div><div class="urole">Founder · Moonlighter AB</div></span></div>
 </aside>
 
 <div class="main">
-  <header class="topbar">
-    <span class="ttl">Dashboard</span>
+  <header class="topbar"><span class="ttl">Dashboard</span>
     <div class="topmeta">
       <span class="pill">Last 7 days</span>
       <span class="pill">Next goal <b>€${nextMilestone}</b> a week</span>
       <span class="pill">${gen}</span>
-    </div>
-  </header>
+    </div></header>
 
   <div class="content">
-
     <div class="kpis">
-      <div class="kpi">
-        <div class="krow"><span class="klabel">Money made this week</span>${icon("wallet", "i-acc")}</div>
-        <div class="kval">€${weekEur.toFixed(2)}</div>
-        <div class="kfoot">${deltaChip(revDelta)} compared with the week before (€${prevEur.toFixed(2)})</div>
-      </div>
+      <div class="kpi"><div class="krow"><span class="klabel">Money made this week</span>${icon("wallet", "i-acc")}</div>
+        <div class="kval">${rev.text}</div>
+        <div class="kfoot">${deltaChip} compared with the week before (${priorRev.text})</div></div>
 
-      <div class="kpi">
-        <div class="krow"><span class="klabel">Paying customers</span>${icon("users", payerTrustworthy ? "i-good" : "i-warn")}</div>
-        <div class="kval">${payerTrustworthy ? payerRow.n : "—"}</div>
-        <div class="kfoot">${payerTrustworthy
-          ? (payerRow.n === 1
-            ? `<span class="chip chip-warn">all from one buyer</span> we need more`
-            : `different buyers paid us`)
-          : `<span class="chip chip-warn">too early to say</span> we only started counting ${payerDays.toFixed(1)} days ago`}</div>
-      </div>
+      <div class="kpi"><div class="krow"><span class="klabel">Paying customers</span>${
+        icon("users", actors.status === "observed" ? "i-good" : "i-warn")}</div>
+        <div class="kval">${buyers.text}</div>
+        <div class="kfoot">${buyersNote}</div></div>
 
-      <div class="kpi">
-        <div class="krow"><span class="klabel">AI agent visits</span>${icon("inbound", "i-neutral")}</div>
-        <div class="kval">${arr.real}<span class="unit"> visit-days</span></div>
-        <div class="kfoot">One agent visiting daily counts as 7 — we cannot follow anyone across days by design. ${arr.probes} monitor visit-days excluded.</div>
-      </div>
+      <div class="kpi"><div class="krow"><span class="klabel">Can we tell who bought?</span>${
+        icon("inbound", coverage.status === "observed" && coverage.value > 0.5 ? "i-good" : "i-warn")}</div>
+        <div class="kval">${cov.text}</div>
+        <div class="kfoot">${esc(cov.note || "of calls can be traced back to a buyer")}</div></div>
 
-      <div class="kpi">
-        <div class="krow"><span class="klabel">Services with problems</span>${icon("pulse", h.breakers > 0 ? "i-warn" : "i-good")}</div>
-        <div class="kval">${h.breakers}<span class="unit"> switched off</span></div>
-        <div class="kfoot">${h.caps} data services working · ${h.quarantined} paused</div>
-      </div>
+      <div class="kpi"><div class="krow"><span class="klabel">Services with problems</span>${
+        icon("pulse", hv.breakersOpen > 0 ? "i-warn" : "i-good")}</div>
+        <div class="kval">${hv.breakersOpen}<span class="unit"> switched off</span></div>
+        <div class="kfoot">${hv.active} data services working · ${hv.quarantined} paused</div></div>
 
-      <div class="kpi">
-        <div class="krow"><span class="klabel">Money spent this week</span>${icon("coin", budgetPct > 80 ? "i-warn" : "i-good")}</div>
-        <div class="kval">€${spentEur.toFixed(2)}<span class="unit"> / €${BUDGET_ENVELOPE_EUR}</span></div>
-        <div class="kfoot">${budgetPct.toFixed(0)}% of the weekly limit · estimate</div>
-      </div>
+      <div class="kpi"><div class="krow"><span class="klabel">Money spent this week</span>${
+        icon("coin", budgetPct > 80 ? "i-warn" : "i-good")}</div>
+        <div class="kval">${eur(sp.totalCents)}<span class="unit"> / €${BUDGET_ENVELOPE_EUR}</span></div>
+        <div class="kfoot">${budgetPct.toFixed(0)}% of the weekly limit · estimate</div></div>
     </div>
 
     <div class="row row-2">
       <section class="card" id="revenue">
-        <div class="chead"><span class="ctitle">Money made each day</span>
-          <span class="pill" style="margin-left:auto">${weekCalls} sold</span></div>
+        <div class="chead"><span class="ctitle">Progress towards the goal</span>
+          <span class="pill" style="margin-left:auto">${rev.text} this week</span></div>
         <div class="csub">Real customers only. Our own testing is never counted.</div>
         <div class="cbody">
-          <div class="chartwrap">
-            <svg class="chart" viewBox="0 0 ${CH.w} ${CH.h}" role="img"
-              aria-label="Money made each day, last seven days">${grid}${bars}</svg>
-          </div>
-          <div class="ladder">
-            ${MILESTONES.map((m) => {
-              const f = Math.min(100, (weekEur / m) * 100);
-              return `<span class="rung${f >= 100 ? " done" : ""}"><i style="width:${f}%"></i></span>`;
-            }).join("")}
-          </div>
-          <div class="rlabels">${MILESTONES.map((m, i) =>
-            `<span>M${i + 1} · €${m}</span>`).join("")}</div>
+          <div class="ladder">${MILESTONES.map((m) => {
+            const f = Math.min(100, (weekEur / m) * 100);
+            return `<span class="rung${f >= 100 ? " done" : ""}"><i style="width:${f}%"></i></span>`;
+          }).join("")}</div>
+          <div class="rlabels">${MILESTONES.map((m, i) => `<span>M${i + 1} · €${m}</span>`).join("")}</div>
+          <div class="note">We are ${
+            weekEur > 0 ? `${((weekEur / MILESTONES[3]) * 100).toFixed(1)}%` : "0%"
+          } of the way to the final goal. Getting there is about finding more buyers rather
+          than persuading one buyer to spend more — which is why the number beside this one
+          matters more than this one does.</div>
         </div>
       </section>
 
       <section class="card" id="funnel">
-        <div class="chead"><span class="ctitle">Turning visitors into customers</span></div>
-        <div class="csub">Visit-days, not agents — see the note below. Last ${funnelHours < 48 ? `${Math.round(funnelHours)} hours` : `${Math.round(funnelHours / 24)} days`}.</div>
+        <div class="chead"><span class="ctitle">Turning visitors into customers</span>
+          ${funnelWindow ? `<span class="pill" style="margin-left:auto">${esc(funnelWindow)}</span>` : ""}</div>
+        <div class="csub">Real agents only. Health checkers and directory scanners are excluded.</div>
         <div class="cbody">
-          ${fRow("Found us", fInit.n, fInit.n, `${fInit.ips} visit-days`)}
-          ${fRow("Looked around", fList.n, fInit.n, `${fList.ips} visit-days`)}
-          ${fRow("Tried something", fCall.n, fInit.n, `${fCall.ips} visit-days`)}
-          ${fRow("Turned away", fRej.n, fInit.n, "no account or payment")}
-          ${payerTrustworthy ? fRow("Paid us", payerRow.n, fInit.ips, "different buyers") : ""}
-          <div class="note">Read these as visits, not visitors. We deliberately cannot
-          recognise the same agent on two different days — the identifier is scrambled
-          fresh each day so we never build a profile of anyone. That protects privacy
-          and costs us the ability to count individuals, and until 15 August this page
-          called these numbers "agents", which overstated them. Window is short on
-          purpose: we only began recording the middle steps at 11:00 on 15 August, and
-          a funnel whose steps cover different periods misleads rather than informs.
-          Monitors excluded. The step that matters is the last: agents do look at what
-          we offer, then mostly do not buy.</div>
+          ${funnelRows || `<div class="qtext">${esc(funnelNote)}</div>`}
+          <div class="note">${esc(funnelNote)}${
+            monitors.status === "observed"
+              ? ` Separately, ${monitors.value} monitoring services check we are alive; they are never counted as interest.`
+              : ""}</div>
         </div>
       </section>
     </div>
 
     <div class="row row-2">
       <section class="card" id="selling">
-        <div class="chead"><span class="ctitle">What people are buying</span>
-          <span class="pill" style="margin-left:auto">${h.unmet} unanswered (includes our own tests)</span></div>
-        <div class="csub">Our best sellers over the last seven days</div>
+        <div class="chead"><span class="ctitle">What people are buying</span></div>
+        <div class="csub">Our best sellers over the last seven days. Free calls are not sales.</div>
         <div class="cbody"><div class="tablewrap">
-          <table>
-            <thead><tr><th>What it does</th><th class="num">Times sold</th>
-              <th>Share</th><th class="num">Money made</th></tr></thead>
-            <tbody>${(topCaps as any[]).map((c) => `<tr>
-              <td><div class="slug">${esc(c.slug)}</div><div class="cat">${esc(c.category ?? "")}</div></td>
-              <td class="num">${c.calls.toLocaleString("en")}</td>
-              <td><span class="mini"><i style="width:${(c.cents / capMax) * 100}%"></i></span></td>
-              <td class="num">${eur(c.cents)}</td></tr>`).join("")}</tbody>
-          </table>
+          <table><thead><tr><th>What it does</th><th class="num">Times sold</th>
+            <th>Share</th><th class="num">Money made</th></tr></thead>
+          <tbody>${sellersList.map((c) => `<tr>
+            <td><div class="slug">${esc(c.slug)}</div><div class="cat">${esc(c.category ?? "")}</div></td>
+            <td class="num">${c.calls.toLocaleString("en")}</td>
+            <td><span class="mini"><i style="width:${(c.cents / capMax) * 100}%"></i></span></td>
+            <td class="num">${eur(c.cents)}</td></tr>`).join("")}</tbody></table>
         </div></div>
       </section>
 
@@ -469,40 +317,35 @@ async function main() {
         <div class="csub">What we pay other companies each week</div>
         <div class="cbody">
           <div class="benv"><i style="width:${budgetPct}%"></i></div>
-          <div class="rlabels"><span>€${spentEur.toFixed(2)} spent</span>
-            <span>€${(BUDGET_ENVELOPE_EUR - spentEur).toFixed(2)} left</span></div>
+          <div class="rlabels"><span>${eur(sp.totalCents)} spent</span>
+            <span>€${(BUDGET_ENVELOPE_EUR - sp.totalCents / 100).toFixed(2)} left</span></div>
           <div class="blines">
             <div class="bline"><span class="bkey" style="background:var(--acc)"></span>
-              Our own automatic testing<span class="amt">€${harnessEur.toFixed(2)}</span></div>
+              Our own automatic testing<span class="amt">${eur(sp.harnessCents)}</span></div>
             <div class="bline"><span class="bkey" style="background:var(--acc-line)"></span>
-              Payment processing fees<span class="amt">€${settleFeeEur.toFixed(2)}</span></div>
+              Payment processing fees<span class="amt">${eur(sp.settlementCents)}</span></div>
             <div class="bline"><span class="bkey" style="background:var(--line)"></span>
               My thinking time<span class="amt">included in your plan</span></div>
           </div>
-          <div class="note">These are estimates, not real invoices. We work them out from
-          what each test is known to cost and the standard payment fee. Worth checking
-          against the real bills once a month.</div>
+          <div class="note">${esc(renderMeasurement(spend, () => "").note)}</div>
         </div>
       </section>
     </div>
 
     <section class="card" id="workforce">
       <div class="chead"><span class="ctitle">Who is working on this</span>
-        <span class="pill" style="margin-left:auto">${workers.filter((w) => w.status.startsWith("running")).length} of ${workers.length} running</span></div>
+        <span class="pill" style="margin-left:auto">${
+          workers.filter((w) => w.status.startsWith("running")).length} of ${workers.length} running</span></div>
       <div class="csub">The jobs that run on a schedule without anyone starting them</div>
       <div class="cbody"><div class="tablewrap">
-        <table>
-          <thead><tr><th>Job</th><th>When</th><th>What it does</th><th>State</th></tr></thead>
-          <tbody>${workers.map((w) => {
-            const on = w.status.startsWith("running");
-            return `<tr>
-              <td><div class="slug">${esc(w.name)}</div><div class="cat">${esc(w.reports)}</div></td>
-              <td style="white-space:nowrap;color:var(--muted)">${esc(w.when)}</td>
-              <td style="max-width:430px">${esc(w.does)}</td>
-              <td><span class="tag ${on ? "t-auto" : "t-hold"}">${on ? "Running" : "Not yet"}</span></td>
-            </tr>`;
-          }).join("")}</tbody>
-        </table>
+        <table><thead><tr><th>Job</th><th>When</th><th>What it does</th><th>State</th></tr></thead>
+        <tbody>${workers.map((w) => {
+          const on = w.status.startsWith("running");
+          return `<tr><td><div class="slug">${esc(w.name)}</div><div class="cat">${esc(w.reports)}</div></td>
+            <td style="white-space:nowrap;color:var(--muted)">${esc(w.when)}</td>
+            <td style="max-width:430px">${esc(w.does)}</td>
+            <td><span class="tag ${on ? "t-auto" : "t-hold"}">${on ? "Running" : "Not yet"}</span></td></tr>`;
+        }).join("")}</tbody></table>
       </div></div>
     </section>
 
@@ -511,41 +354,29 @@ async function main() {
         <div class="chead"><span class="ctitle">Things I need you to decide</span>
           <span class="pill" style="margin-left:auto">${queue.length} waiting</span></div>
         <div class="csub">Click any line to see the detail. Nothing is stuck waiting.</div>
-        <div class="cbody">
-          ${queue.length ? queue.map((q) => `<details class="qitem">
-            <summary>
-              <span class="qid">${q.id}</span>
-              <span class="qmain">
-                <span class="qtext">${esc(q.text)}</span>
-                <span class="qmeta">
-                  <span class="tag ${q.cls === "your_call" ? "t-hold" : "t-auto"}">${
-                    q.cls === "your_call" ? "Needs your yes" : "Done — tell me if you disagree"}</span>
-                  <span class="qowner">${esc(q.owner)}</span>
-                </span>
-              </span>
-              <span class="qchev" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12"
-                fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
-                stroke-linejoin="round"><path d="M3 4.5L6 7.5l3-3"/></svg></span>
-            </summary>
-            <div class="qbody">${q.fields.map((f) => `<div class="qfield">
-              <span class="qflabel">${esc(f.label)}</span>
-              <span class="qftext">${esc(f.text)}</span></div>`).join("")}</div>
-          </details>`).join("")
-            : `<div class="qtext">Nothing needs you right now.</div>`}
-        </div>
+        <div class="cbody">${queue.length ? queue.map((q) => `<details class="qitem">
+          <summary><span class="qid">${q.id}</span>
+            <span class="qmain"><span class="qtext">${esc(q.text)}</span>
+              <span class="qmeta"><span class="tag ${q.cls === "your_call" ? "t-hold" : "t-auto"}">${
+                q.cls === "your_call" ? "Needs your yes" : "Done — tell me if you disagree"}</span>
+                <span class="qowner">${esc(q.owner)}</span></span></span>
+            <span class="qchev" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12"
+              fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+              stroke-linejoin="round"><path d="M3 4.5L6 7.5l3-3"/></svg></span></summary>
+          <div class="qbody">${q.fields.map((f) => `<div class="qfield">
+            <span class="qflabel">${esc(f.label)}</span>
+            <span class="qftext">${esc(f.text)}</span></div>`).join("")}</div>
+        </details>`).join("") : `<div class="qtext">Nothing needs you right now.</div>`}</div>
       </section>
 
       <section class="card" id="ships">
         <div class="chead"><span class="ctitle">What I finished recently</span></div>
         <div class="csub">Merged — usually live within minutes, but this reads the code history, not the server</div>
-        <div class="cbody">
-          ${ships.map((s) => `<div class="ship"><span class="sdot"></span>
-            <span class="stext">${esc(s.text)}</span>
-            <span class="swhen">${esc(s.when)}</span></div>`).join("")}
-        </div>
+        <div class="cbody">${ships.map((s) => `<div class="ship"><span class="sdot"></span>
+          <span class="stext">${esc(s.text)}</span>
+          <span class="swhen">${esc(s.when)}</span></div>`).join("")}</div>
       </section>
     </div>
-
   </div>
 </div>
 </div>`;
@@ -554,9 +385,14 @@ async function main() {
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, html);
   console.log(
-    `wrote ${out} (${(html.length / 1024).toFixed(1)} KB) — week €${weekEur.toFixed(2)}` +
-    ` (prior €${prevEur.toFixed(2)}), payers ${payerTrustworthy ? payerRow.n : "n/a — instrument too new"}`,
+    `wrote ${out} (${(html.length / 1024).toFixed(1)} KB)\n` +
+    `  revenue   ${revenue.status}: ${rev.text}\n` +
+    `  buyers    ${actors.status}: ${buyers.text}${buyers.note ? ` — ${buyers.note}` : ""}\n` +
+    `  funnel    ${funnel.status}${funnel.status === "observed" ? ` over ${funnel.window.label}` : ""}\n` +
+    `  identity  ${coverage.status}: ${cov.text}\n` +
+    `  spend     ${spend.status}: ${eur(sp.totalCents)}`,
   );
+  await closeDbPool();
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
