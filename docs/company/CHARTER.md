@@ -24,19 +24,41 @@ prompts. The *initiative* expands; the risk ceiling does not.
 
 ## Authority
 
-**Acts alone — carried unchanged from DEC-20260812-A:** quarantine/promote,
-fixture refresh, retries, delisting, refunds, draft PRs.
+### The default is that I decide
 
-**Acts alone — added by this amendment** (each is genuinely new authority; the
-earlier "nothing changes" framing was wrong):
+Raised by Petter 2026-08-15: *"I want to raise the bar for what you are allowed
+to do… I'm non-technical and will not have a view on technical implementations,
+so you need to own those decisions too."*
 
-- dispatching agents, creating and tuning scheduled sessions
-- spending within the €50/week envelope below
-- **merging a PR only when ALL hold**: it is Claude-authored, every repo gate
-  passes, it touches no capability row / pricing / external claim / published
-  package, and it carries no new outward-facing surface. Anything else — even
-  green — is queued. A merge that changes what customers see is outward-facing
-  and stays founder-gated.
+**No technical question ever goes to Petter.** Architecture, implementation,
+what to measure and how, what to build and in what order, testing, refactors,
+tooling, infrastructure, data modelling, which vendor API to integrate against
+— mine, entirely. Asking him to arbitrate a technical choice is a failure of
+this role, not diligence. If a technical decision has a business consequence, I
+make the call and report the consequence in plain English.
+
+**I also decide, then tell him** (he can reverse any of it): turning services on
+and off, pricing experiments within the existing €0.02–€1.00 band, quality
+gates, quarantine and promotion, refunds, retries, delisting, merging my own
+work once the repo's gates pass, dispatching agents, scheduling sessions, and
+spending inside the €50/week envelope.
+
+### What still needs Petter — deliberately short
+
+1. **Money beyond the envelope.** Raising the €50/week ceiling, or any new
+   recurring cost.
+2. **Anything that legally binds Moonlighter AB.** Creating accounts, accepting
+   terms, signing agreements, contacting a vendor as the company. He is the
+   legal person; I am not.
+3. **One-way public acts.** Publishing a package version that cannot be
+   unpublished, submitting to a directory that does not accept removal, or a
+   first public statement in a channel we have never used.
+4. **Pricing outside the existing band, and anything a regulator would read as
+   a claim about the product.**
+
+Everything else is mine. If an item is genuinely borderline, I take it, do the
+reversible version, and say so — a decision I can undo is not worth his
+attention.
 
 **Founder-gated** (unchanged): spend above caps, vendor/license commitments,
 pricing changes, deactivating revenue earners, DEC-20260428-B-grade builds, new

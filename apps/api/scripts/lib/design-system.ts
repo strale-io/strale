@@ -28,9 +28,10 @@ export const TOKENS = {
   ink2: "#3D4453",
   muted: "#767E8E",
   // One accent, used only for the primary data series and the active state.
-  accent: "#5A57D6",
-  accentSoft: "#EDECFC",
-  accentLine: "#C9C7F4",
+  // Blue, matched to the reference UI Petter selected 2026-08-15.
+  accent: "#2563EB",
+  accentSoft: "#E7F0FE",
+  accentLine: "#A8C7FA",
   // Status colours are reserved for state and never reused as a data series.
   good: "#177245",
   goodSoft: "#E6F4EC",
@@ -187,13 +188,30 @@ tbody tr:hover{background:var(--raised)}
 .cat{font-size:11.5px;color:var(--muted)}
 
 /* ── lists ───────────────────────────────────────────────────────────── */
-.qitem{display:flex;gap:11px;padding:11px 0;border-top:1px solid var(--line-soft)}
-.qitem:first-child{border-top:0;padding-top:2px}
+.qitem{border-top:1px solid var(--line-soft)}
+.qitem:first-child{border-top:0}
+.qitem summary{display:flex;gap:11px;align-items:flex-start;padding:11px 0;cursor:pointer;
+  list-style:none;border-radius:8px}
+.qitem summary::-webkit-details-marker{display:none}
+.qitem summary:hover .qtext{color:var(--ink)}
 .qid{font-size:11.5px;font-weight:650;color:var(--muted);font-variant-numeric:tabular-nums;
   padding-top:2px;flex:none;width:42px}
+.qmain{flex:1;min-width:0}
 .qtext{font-size:13px;color:var(--ink-2);line-height:1.45}
 .qmeta{display:flex;align-items:center;gap:7px;margin-top:5px;flex-wrap:wrap}
 .qowner{font-size:11.5px;color:var(--muted)}
+.qchev{flex:none;color:var(--muted);display:grid;place-items:center;width:22px;height:22px;
+  border:1px solid var(--line);border-radius:6px;transition:transform .15s ease}
+.qitem[open] .qchev{transform:rotate(180deg)}
+.qitem summary:hover .qchev{background:var(--raised);color:var(--ink-2)}
+.qbody{padding:2px 0 14px 53px;display:flex;flex-direction:column;gap:11px}
+.qfield{display:flex;flex-direction:column;gap:3px}
+.qflabel{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted)}
+.qftext{font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.qftext code{background:var(--raised);border:1px solid var(--line);border-radius:4px;
+  padding:1px 4px;font-size:11.5px}
+@media(prefers-reduced-motion:reduce){.qchev{transition:none}}
 .ship{display:flex;gap:11px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line-soft)}
 .ship:first-child{border-top:0;padding-top:2px}
 .sdot{width:6px;height:6px;border-radius:50%;background:var(--acc-line);flex:none;position:relative;top:-1px}

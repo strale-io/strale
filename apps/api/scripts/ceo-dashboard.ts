@@ -158,24 +158,49 @@ async function main() {
   const nextMilestone = MILESTONES.find((m) => m > weekEur) ?? MILESTONES[MILESTONES.length - 1];
   const milestoneIdx = MILESTONES.indexOf(nextMilestone);
 
-  interface QueueItem { id: string; cls: string; owner: string; text: string }
+  interface QueueField { label: string; text: string }
+  interface QueueItem { id: string; cls: string; owner: string; text: string; fields: QueueField[] }
   let queue: QueueItem[] = [];
   try {
     const dq = readFileSync(resolve(REPO, "docs/company/DECISION-QUEUE.md"), "utf8");
     const open = dq.split("## OPEN")[1]?.split("## RESOLVED")[0] ?? "";
-    // Each entry's plain-English summary runs from the header line down to the
-    // first italic field (*Detail:*, *My recommendation:* …). Taking only the
-    // first physical line truncated it mid-sentence, since the summary wraps.
+    // Each entry is: a header line, a plain-English summary that may wrap over
+    // several lines, then any number of *Label:* fields. The summary is what
+    // shows collapsed; the fields fill the expanded panel, so the row can be
+    // acted on without opening the repo.
     queue = open.split(/\n(?=\*\*DQ-)/).flatMap((block) => {
       const head = block.match(/\*\*(DQ-\d+)\*\*\s*·\s*`([a-z_]+)`\s*·\s*owner ([^·]+)·[^\n]*\n/);
       if (!head) return [];
-      const summary = block.slice(head[0].length)
-        .split(/\n\s*\*[A-Z]/)[0]          // stop at the first *Field:* line
-        .split(/\n\s*\n/)[0]               // …or a blank line, whichever comes first
-        .replace(/\s+/g, " ").replace(/[`*]/g, "").trim();
-      return [{ id: head[1], cls: head[2], owner: head[3].trim(), text: summary }];
+      const body = block.slice(head[0].length);
+      const clean = (t: string) => t.replace(/\s+/g, " ").replace(/[`*]/g, "").trim();
+      const summary = clean(body.split(/\n\s*\*[A-Z]/)[0].split(/\n\s*\n/)[0]);
+      const fields = [...body.matchAll(/\*([A-Z][^*:]*):\*\s*([\s\S]*?)(?=\n\s*\*[A-Z][^*:]*:\*|$)/g)]
+        .map((f) => ({ label: f[1].trim(), text: clean(f[2]) }))
+        .filter((f) => f.text.length > 0);
+      return [{ id: head[1], cls: head[2], owner: head[3].trim(), text: summary, fields }];
     });
   } catch { /* queue file optional */ }
+
+
+  interface Worker { name: string; when: string; does: string; reports: string; status: string }
+  let workers: Worker[] = [];
+  try {
+    const wf = readFileSync(resolve(REPO, "docs/company/WORKFORCE.md"), "utf8");
+    const flat = (t: string) => t.replace(/\s+/g, " ").replace(/[`*]/g, "").trim();
+    workers = wf.split(/\n### /).slice(1).map((block) => {
+      const [heading, ...rest] = block.split("\n");
+      const [name, when] = heading.split("\u00b7");
+      const body = rest.join("\n");
+      const field = (label: string) => {
+        const m = body.match(new RegExp("\\*\\*" + label + ":\\*\\*([\\s\\S]*?)(?=\\n\\*\\*|$)"));
+        return m ? flat(m[1]) : "";
+      };
+      return {
+        name: (name ?? "").trim(), when: (when ?? "").trim(),
+        does: field("Does"), reports: field("Reports"), status: field("Status"),
+      };
+    }).filter((w) => w.name);
+  } catch { /* workforce file optional */ }
 
   let ships: Array<{ text: string; when: string }> = [];
   try {
@@ -279,6 +304,7 @@ async function main() {
     <div class="navgroup">Operations</div>
     <nav class="nav">
       <a href="#budget"><span class="dot"></span>Spending</a>
+      <a href="#workforce"><span class="dot"></span>Who is working</a>
       <a href="#decisions"><span class="dot"></span>Decisions<span class="count">${queue.length}</span></a>
       <a href="#ships"><span class="dot"></span>Finished work</a>
     </nav>
@@ -417,20 +443,51 @@ async function main() {
       </section>
     </div>
 
+    <section class="card" id="workforce">
+      <div class="chead"><span class="ctitle">Who is working on this</span>
+        <span class="pill" style="margin-left:auto">${workers.filter((w) => w.status.startsWith("running")).length} of ${workers.length} running</span></div>
+      <div class="csub">The jobs that run on a schedule without anyone starting them</div>
+      <div class="cbody"><div class="tablewrap">
+        <table>
+          <thead><tr><th>Job</th><th>When</th><th>What it does</th><th>State</th></tr></thead>
+          <tbody>${workers.map((w) => {
+            const on = w.status.startsWith("running");
+            return `<tr>
+              <td><div class="slug">${esc(w.name)}</div><div class="cat">${esc(w.reports)}</div></td>
+              <td style="white-space:nowrap;color:var(--muted)">${esc(w.when)}</td>
+              <td style="max-width:430px">${esc(w.does)}</td>
+              <td><span class="tag ${on ? "t-auto" : "t-hold"}">${on ? "Running" : "Not yet"}</span></td>
+            </tr>`;
+          }).join("")}</tbody>
+        </table>
+      </div></div>
+    </section>
+
     <div class="row row-even">
       <section class="card" id="decisions">
         <div class="chead"><span class="ctitle">Things I need you to decide</span>
           <span class="pill" style="margin-left:auto">${queue.length} waiting</span></div>
-        <div class="csub">Nothing is stuck. I have carried on with everything else.</div>
+        <div class="csub">Click any line to see the detail. Nothing is stuck waiting.</div>
         <div class="cbody">
-          ${queue.length ? queue.map((q) => `<div class="qitem">
-            <span class="qid">${q.id}</span>
-            <span><div class="qtext">${esc(q.text)}</div>
-              <div class="qmeta">
-                <span class="tag ${q.cls === "approval_required" ? "t-hold" : "t-auto"}">${
-                  q.cls === "approval_required" ? "Needs your yes" : "I will do this unless you say no"}</span>
-                <span class="qowner">${esc(q.owner)}</span>
-              </div></span></div>`).join("")
+          ${queue.length ? queue.map((q) => `<details class="qitem">
+            <summary>
+              <span class="qid">${q.id}</span>
+              <span class="qmain">
+                <span class="qtext">${esc(q.text)}</span>
+                <span class="qmeta">
+                  <span class="tag ${q.cls === "your_call" ? "t-hold" : "t-auto"}">${
+                    q.cls === "your_call" ? "Needs your yes" : "Done — tell me if you disagree"}</span>
+                  <span class="qowner">${esc(q.owner)}</span>
+                </span>
+              </span>
+              <span class="qchev" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12"
+                fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                stroke-linejoin="round"><path d="M3 4.5L6 7.5l3-3"/></svg></span>
+            </summary>
+            <div class="qbody">${q.fields.map((f) => `<div class="qfield">
+              <span class="qflabel">${esc(f.label)}</span>
+              <span class="qftext">${esc(f.text)}</span></div>`).join("")}</div>
+          </details>`).join("")
             : `<div class="qtext">Nothing needs you right now.</div>`}
         </div>
       </section>
