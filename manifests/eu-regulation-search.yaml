@@ -1,13 +1,15 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
+# Rebuilt 2026-08-15: EUR-Lex page scrape (Browserless + LLM extraction, zero
+# lifetime successes, quarantined) replaced by the Publications Office CELLAR
+# SPARQL endpoint — the official machine interface to the same corpus
+# (DEC-20260813-A preference order: official API > per-call parsing).
 
 slug: eu-regulation-search
 name: EU Regulation Search
 description: >-
-  Search EU regulations, directives, and decisions on EUR-Lex. Returns matching legislation with titles, CELEX numbers,
-  dates, and summaries.
+  Search EU regulations, directives, and decisions by topic. Official Publications Office data with titles, CELEX
+  numbers, dates, in-force status, and EUR-Lex links.
 category: compliance
-cost_class: paid_prepaid
+cost_class: free_unlimited
 quota_window: none
 price_cents: 30
 is_free_tier: false
@@ -16,37 +18,53 @@ input_schema:
   required:
     - query
   properties:
-    type:
-      type: string
-      description: Regulation type filter (regulation/directive/decision)
     query:
       type: string
-      description: Search topic or keywords
+      description: Search topic or keywords (e.g. "artificial intelligence", "data protection")
+    type:
+      type: string
+      description: Optional filter — regulation, directive, or decision
+    year:
+      type: string
+      description: Optional 4-digit year of adoption (e.g. "2024")
 output_schema:
   type: object
   example:
-    query: ;
-    regulations: []
-    result_count: 0
+    query: general data protection
+    matched_terms:
+      - general
+      - data
+      - protection
+    result_count: 1
+    regulations:
+      - title: Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data, and repealing Directive 95/46/EC (General Data Protection Regulation)
+        celex_number: 32016R0679
+        type: Regulation
+        date: "2016-04-27"
+        in_force: true
+        eur_lex_url: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679
   properties:
     query:
       type: string
-    regulations:
+    matched_terms:
       type: array
     result_count:
       type: integer
-data_source: EUR-Lex (Official Journal of the European Union)
-data_source_type: scrape
-transparency_tag: ai_generated
+    regulations:
+      type: array
+data_source: EU Publications Office CELLAR (SPARQL)
+data_source_type: api
+transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: scraping-stable-target
+maintenance_class: free-stable-api
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: false
 geography: global
 test_fixtures:
   known_answer:
     input:
-      query: artificial intelligence act
+      query: general data protection
+      type: regulation
     expected_fields:
       - field: query
         operator: not_null
@@ -72,21 +90,33 @@ test_fixtures:
       - field: result_count
         operator: gt
         reliability: guaranteed
-        value: -1
+        value: 0
   health_check_input:
-    query: test
+    query: data protection
 output_field_reliability:
   query: guaranteed
-  regulations: guaranteed
+  matched_terms: guaranteed
   result_count: guaranteed
+  regulations: guaranteed
 limitations:
-  - title: Searches published EU regulations only — draft proposals and pending amendments are not included
-    text: Searches published EU regulations — draft proposals and pending amendments may not be included
-    category: freshness
-    severity: info
-    workaround: Check EUR-Lex directly for the latest legislative procedure status on regulations returned in results
-  - title: AI relevance ranking means returned regulations should be verified against official EUR-Lex text
-    text: AI-assisted relevance ranking — returned regulations should be verified against the official EUR-Lex text
-    category: accuracy
+  - title: Title-based matching — legislation whose title doesn't name the topic may be missed
+    text: >-
+      Queries are matched against official English titles (all words must appear). Legislation known by an
+      abbreviation not present in its title (e.g. "AI" for the Artificial Intelligence Act) or covering a topic
+      not named in the title will not be found. Query with the spelled-out subject matter.
+    category: coverage
     severity: warning
-    workaround: Use the regulation reference numbers from results to retrieve the canonical text from eur-lex.europa.eu
+    workaround: Use full subject words ("artificial intelligence", not "AI"); add the year filter to narrow results
+  - title: Covers adopted sector-3 legislation only — proposals, corrigenda, and consolidated texts are excluded
+    text: >-
+      Results are restricted to adopted regulations, directives, and decisions (CELEX sector 3). Draft proposals
+      (COM documents), corrigenda, communications, and consolidated versions are excluded by design.
+    category: coverage
+    severity: info
+    workaround: Check EUR-Lex directly for legislative procedure status or consolidated texts of returned acts
+  - title: An empty result set is a valid answer, not an error
+    text: >-
+      A query matching no legislation returns result_count 0 with an empty regulations array. This is a correct
+      "nothing matches" answer — it does not indicate a service fault.
+    category: accuracy
+    severity: info
