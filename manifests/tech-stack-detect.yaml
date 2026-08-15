@@ -1,11 +1,13 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
+# Auto-generated from database on 2026-03-17; description/output example
+# refreshed from the live DB row on 2026-08-15 when the anyOf input contract
+# was synced to prod (the DB had drifted to required:[] with no anyOf, so
+# paying agents sent {} and hit a runtime refusal the schema said couldn't happen).
 
 slug: tech-stack-detect
 name: Tech Stack Detection
 description: >-
-  Detect the technology stack of a website. Identifies frontend framework, CSS framework, CMS, analytics, hosting, CDN,
-  and other technologies.
+  Detect technologies used by a website. Identifies CMS, frameworks, analytics, CDN, payment providers and
+  marketing tools from HTTP headers and HTML patterns.
 category: web-intelligence
 cost_class: free_unlimited
 quota_window: none
@@ -29,21 +31,20 @@ input_schema:
 output_schema:
   type: object
   example:
-    cdn: Google Static (gstatic.com)
+    cdn: null
     cms: null
     url: https://google.com
     hosting: null
     analytics:
       - Google Analytics
-    confidence: high
+    confidence: low
     css_framework: null
     meta_framework: null
     frontend_framework: null
     other_technologies:
-      - Vanilla JavaScript
-      - Google XJS (custom JavaScript framework)
+      - Custom JavaScript
       - Schema.org markup
-      - Service Worker capable
+      - Nonce-based CSP
   properties:
     cms:
       type: string
