@@ -127,15 +127,16 @@ async function main() {
   //    of mismatched windows. Measured over one window the same agents that
   //    connect do look. A funnel whose steps cover different periods is not a
   //    funnel, so it is computed here or not shown at all.
-  const isProbe = sql`(dh.ua ILIKE ANY(${PROBE_UA_SQL_PATTERNS}))`;
+  const isProbe = sql`(dh.ua IS NOT NULL AND dh.ua ILIKE ANY(${PROBE_UA_SQL_PATTERNS}))`;
   const starts = await sql`SELECT endpoint, MIN(created_at) AS t FROM discovery_hits
     WHERE endpoint LIKE '/mcp:%' GROUP BY 1`;
   const startOf = (prefix: string) => (starts as any[])
     .filter((r) => r.endpoint.startsWith(prefix))
     .reduce((min: Date | null, r) => (!min || r.t < min ? r.t : min), null as Date | null);
   const stepStarts = ["/mcp:initialize", "/mcp:tools/list"].map(startOf).filter(Boolean) as Date[];
+  const weekAgo = Date.now() - 7 * 86_400_000;
   const funnelFrom = stepStarts.length === 2
-    ? new Date(Math.max(...stepStarts.map((d) => d.getTime())))
+    ? new Date(Math.max(...stepStarts.map((d) => d.getTime()), weekAgo))
     : null;
   const funnelHours = funnelFrom ? (Date.now() - funnelFrom.getTime()) / 3_600_000 : 0;
 
@@ -167,7 +168,8 @@ async function main() {
     SELECT c.slug, c.category, COUNT(*)::int AS calls,
            COALESCE(SUM(t.price_cents),0)::int AS cents
     FROM transactions t JOIN capabilities c ON c.id=t.capability_id
-    WHERE t.status='completed' AND t.created_at > now() - interval '7 days' AND ${ext}
+    WHERE t.status='completed' AND t.price_cents > 0
+      AND t.created_at > now() - interval '7 days' AND ${ext}
     GROUP BY 1,2 ORDER BY 4 DESC LIMIT 6`;
   const health = await sql`
     SELECT (SELECT COUNT(*)::int FROM capability_health WHERE state <> 'closed') AS breakers,
@@ -382,9 +384,9 @@ async function main() {
       </div>
 
       <div class="kpi">
-        <div class="krow"><span class="klabel">AI agents that found us</span>${icon("inbound", "i-neutral")}</div>
-        <div class="kval">${arr.real}<span class="unit"> this week</span></div>
-        <div class="kfoot">${arr.probes} monitoring services also check on us — not counted here</div>
+        <div class="krow"><span class="klabel">AI agent visits</span>${icon("inbound", "i-neutral")}</div>
+        <div class="kval">${arr.real}<span class="unit"> visit-days</span></div>
+        <div class="kfoot">One agent visiting daily counts as 7 — we cannot follow anyone across days by design. ${arr.probes} monitor visit-days excluded.</div>
       </div>
 
       <div class="kpi">
@@ -423,19 +425,22 @@ async function main() {
 
       <section class="card" id="funnel">
         <div class="chead"><span class="ctitle">Turning visitors into customers</span></div>
-        <div class="csub">Real agents only, over the last ${funnelHours < 48 ? `${Math.round(funnelHours)} hours` : `${Math.round(funnelHours / 24)} days`}</div>
+        <div class="csub">Visit-days, not agents — see the note below. Last ${funnelHours < 48 ? `${Math.round(funnelHours)} hours` : `${Math.round(funnelHours / 24)} days`}.</div>
         <div class="cbody">
-          ${fRow("Found us", fInit.n, fInit.n, `${fInit.ips} agents`)}
-          ${fRow("Looked around", fList.n, fInit.n, `${fList.ips} agents`)}
-          ${fRow("Tried something", fCall.n, fInit.n, `${fCall.ips} agents`)}
+          ${fRow("Found us", fInit.n, fInit.n, `${fInit.ips} visit-days`)}
+          ${fRow("Looked around", fList.n, fInit.n, `${fList.ips} visit-days`)}
+          ${fRow("Tried something", fCall.n, fInit.n, `${fCall.ips} visit-days`)}
           ${fRow("Turned away", fRej.n, fInit.n, "no account or payment")}
           ${payerTrustworthy ? fRow("Paid us", payerRow.n, fInit.ips, "different buyers") : ""}
-          <div class="note">Short window on purpose: we only started recording the
-          middle steps at 11:00 on 15 August, and a funnel whose steps cover different
-          periods is misleading rather than incomplete. Health checkers are excluded —
-          ${arr.probes} of them check on us weekly, one over 200 times in a single day.
-          The step that matters is the last one: agents do look at what we offer, and
-          then mostly do not buy.</div>
+          <div class="note">Read these as visits, not visitors. We deliberately cannot
+          recognise the same agent on two different days — the identifier is scrambled
+          fresh each day so we never build a profile of anyone. That protects privacy
+          and costs us the ability to count individuals, and until 15 August this page
+          called these numbers "agents", which overstated them. Window is short on
+          purpose: we only began recording the middle steps at 11:00 on 15 August, and
+          a funnel whose steps cover different periods misleads rather than informs.
+          Monitors excluded. The step that matters is the last: agents do look at what
+          we offer, then mostly do not buy.</div>
         </div>
       </section>
     </div>
@@ -443,7 +448,7 @@ async function main() {
     <div class="row row-2">
       <section class="card" id="selling">
         <div class="chead"><span class="ctitle">What people are buying</span>
-          <span class="pill" style="margin-left:auto">${h.unmet} we could not answer</span></div>
+          <span class="pill" style="margin-left:auto">${h.unmet} unanswered (includes our own tests)</span></div>
         <div class="csub">Our best sellers over the last seven days</div>
         <div class="cbody"><div class="tablewrap">
           <table>
@@ -532,7 +537,7 @@ async function main() {
 
       <section class="card" id="ships">
         <div class="chead"><span class="ctitle">What I finished recently</span></div>
-        <div class="csub">Changes that are now live</div>
+        <div class="csub">Merged — usually live within minutes, but this reads the code history, not the server</div>
         <div class="cbody">
           ${ships.map((s) => `<div class="ship"><span class="sdot"></span>
             <span class="stext">${esc(s.text)}</span>
