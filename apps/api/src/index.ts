@@ -151,6 +151,14 @@ async function main() {
   const { startQualityFloor } = await import("./jobs/quality-floor.js");
   startQualityFloor();
 
+  // The floor's counterpart: publishes capabilities that have earned a green
+  // week but have no code path back onto the catalog (the SQS lifecycle engine
+  // that used to do this was deleted 2026-05-05). Self-throttled to 3
+  // promotions/run; 20-min startup delay so it never races the floor on boot;
+  // advisory lock 20260816.
+  const { startCapabilityPromotion } = await import("./jobs/capability-promotion.js");
+  startCapabilityPromotion();
+
   const { startActivationDrip } = await import("./jobs/activation-drip.js");
   startActivationDrip();
 
