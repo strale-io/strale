@@ -34,6 +34,7 @@ import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { log, logError, logWarn } from "../lib/log.js";
 import { sendAlert } from "../lib/alerting.js";
+import { alertOnce } from "../lib/alert-once.js";
 import {
   type CapabilityExecutor,
   type CapabilityInput,
@@ -74,6 +75,14 @@ export type InvocationContext =
   | { kind: "internal_test"; suiteId: string; reason: "scheduled" | "manual" }
   | { kind: "health_probe"; probeId: string }
   | { kind: "ci"; workflowRunId: string };
+
+/**
+ * How long before the same budget alert may reach an inbox again. Seven days:
+ * long enough that a daily-resetting window cannot produce a daily email, short
+ * enough that a genuinely new or worsening situation still surfaces within a
+ * week.
+ */
+const ALERT_COOLDOWN_DAYS = 7;
 
 type Decision = "allow" | "refuse" | "budget_check";
 
@@ -450,18 +459,33 @@ async function maybeFireThresholdAlerts(
   ): Promise<void> => {
     if (alreadyFired) return;
     if (pct < threshold / 100) return;
-    await sendAlert({
-      subject: `[budget] ${slug} reached ${threshold}% of ${meta.quota_window} test budget`,
-      body:
-        `Capability: ${slug}\n` +
-        `Cost class: ${meta.cost_class}\n` +
-        `Quota window: ${meta.quota_window}\n` +
-        `Quota cap: ${meta.quota_cap}\n` +
-        `Budget cap (this window): ${budgetCap}\n` +
-        `Test count so far: ${row.test_count}\n` +
-        `Percentage: ${(pct * 100).toFixed(1)}%`,
-      severity: threshold === 80 ? "warning" : "info",
-    });
+    // A daily budget window resets every day, so a harness that reliably
+    // consumes 80% of it produces an identical WARNING every morning. Four
+    // arrived overnight on 2026-08-16, for capabilities whose caps were doing
+    // exactly what they exist to do. Recurrence is not news — the first one is,
+    // and the ones after it teach the reader to ignore the channel. The
+    // per-window database flags below are unchanged, so the full history stays
+    // queryable even when the email is suppressed.
+    await alertOnce(
+      `budget-threshold:${slug}:${threshold}`,
+      ALERT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000,
+      {
+        subject: `[budget] ${slug} reached ${threshold}% of ${meta.quota_window} test budget`,
+        body:
+          `Capability: ${slug}\n` +
+          `Cost class: ${meta.cost_class}\n` +
+          `Quota window: ${meta.quota_window}\n` +
+          `Quota cap: ${meta.quota_cap}\n` +
+          `Budget cap (this window): ${budgetCap}\n` +
+          `Test count so far: ${row.test_count}\n` +
+          `Percentage: ${(pct * 100).toFixed(1)}%\n\n` +
+          `This is our own test harness consuming a vendor free allowance, not a\n` +
+          `customer problem: the cap exists so customer traffic is never starved\n` +
+          `by our testing, and it is working. Repeats within ${ALERT_COOLDOWN_DAYS} days are logged\n` +
+          `but not emailed.`,
+        severity: threshold === 80 ? "warning" : "info",
+      },
+    );
     // Mark fired so subsequent calls don't re-alert. Composite-PK UPDATE
     // is atomic; if two callers race, only the first NULL→NOW() wins.
     if (column === "alert_30_fired_at") {
@@ -498,7 +522,15 @@ async function fireBudgetHardStopAlert(
   budgetCap: number,
   ctx: InvocationContext,
 ): Promise<void> {
-  await sendAlert({
+  // Rate-limited for the same reason as the thresholds, and more so: a
+  // capability whose harness exhausts a daily budget does it again tomorrow.
+  // `swedish-company-data` hit its cap on three consecutive days in August.
+  // The refusal still happens and is still logged every time — only the email
+  // is throttled.
+  await alertOnce(
+    `budget-hard-stop:${slug}`,
+    ALERT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000,
+    {
     subject: `[budget-hard-stop] ${slug} exhausted ${meta.quota_window} test budget`,
     body:
       `Capability: ${slug}\n` +
@@ -508,9 +540,12 @@ async function fireBudgetHardStopAlert(
       `Budget cap (this window): ${budgetCap}\n` +
       `Refused context: ${ctx.kind}\n` +
       `Customer traffic is unaffected. Strale's own test/CI usage paused ` +
-      `until next ${meta.quota_window} window.`,
+      `until next ${meta.quota_window} window.\n\n` +
+      `Repeats within ${ALERT_COOLDOWN_DAYS} days are logged but not emailed — the refusal ` +
+      `still happens every time.`,
     severity: "critical",
-  });
+    },
+  );
 }
 
 // ─── The gate ───────────────────────────────────────────────────────────────
