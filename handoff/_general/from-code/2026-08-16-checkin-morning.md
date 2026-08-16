@@ -126,10 +126,23 @@ floor interlock — it would have re-listed `brazilian-company-data` and
 
 Caught it, verified against prod that no `capability_promotion` events existed
 yet and all three slugs were still `visible=false`, and landed the review fixes
-as PR #273 inside that window. Verified `CAPABILITY_PROMOTION_ENFORCE` is on
-main; deploy verification was still running at the end of the session — **the
-next session must confirm the deployed SHA is `cc45f65` or later and that the
-first tick logged `dry_run` with no catalog change.**
+as PR #273 inside that window.
+
+**Closed out before the session ended.** `cc45f65` deployed and equal to main's
+tip, and the first tick fired at 07:24:00 UTC doing exactly what was predicted
+for it in the PR body — verified by effect, not by log line (DEC-20260504-C):
+
+```
+07:24:00  tick_complete       (mode: dry_run)
+07:24:00  flagged_for_human   url-to-text
+07:24:00  flagged_for_human   brazilian-company-data
+07:24:00  flagged_for_human   screenshot-url
+FLAGS: all three still visible=false, x402_enabled=false
+```
+
+Three flags, zero promotions, no catalog change. Without the interlock that
+same tick would have re-listed `url-to-text` and `brazilian-company-data` and
+opened x402 on both.
 
 The failure mode is repeatable and not bad luck: a PR that can merge at its
 first commit while review is in flight will do it again. Options are to open
@@ -181,8 +194,7 @@ Nothing in the queue matured for auto-execution today.
 
 ## Next session should pick up, in order
 
-1. **Confirm the deploy** — SHA `cc45f65`+ live, and the first promotion tick
-   logged `dry_run` with three `flagged_for_human` rows and no catalog change.
+1. ~~Confirm the deploy and the first tick.~~ **Done in-session** — see above.
 2. **Fix the failure taxonomy** (E3). `Invalid URL format.`,
    `This URL targets a restricted address.`, `No X found matching "…"`, and
    registry `HTTP 404` must classify as caller-attributable. This is a
