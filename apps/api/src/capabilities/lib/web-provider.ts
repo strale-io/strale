@@ -68,6 +68,14 @@ export interface WebProviderOptions {
    * fetch that never ran the page's scripts.
    */
   skipFallback?: boolean;
+  /**
+   * Minimum accepted HTML length in bytes for the Browserless tier (default:
+   * 100). Below this, the response is treated as empty/broken and retried
+   * (or thrown after the last attempt). Callers with a looser pre-existing
+   * contract can lower this explicitly rather than silently inheriting the
+   * shared default.
+   */
+  minHtmlLength?: number;
 }
 
 export interface WebProviderResult {
@@ -92,29 +100,66 @@ const MAX_CACHE_ENTRIES = 200;
 
 const cache = new Map<string, CacheEntry>();
 
-function getCached(url: string): string | null {
-  const entry = cache.get(url);
+/**
+ * Cache-key namespace for a given call's rendering semantics.
+ *
+ * BLOCKER fix (external review, 2026-08-16): the cache used to be keyed by
+ * URL alone, shared across every tier and every `waitUntil`. That let a
+ * `skipFallback` caller (web-extract, whose contract promises full JS
+ * rendering) read back plain-fetch or Jina HTML cached by an unrelated
+ * caller for the same URL — and let a non-default `waitUntil` render (e.g.
+ * fetchCompanyPage's `domcontentloaded`) get served to a caller that
+ * expected `networkidle0`. Namespacing by (skipFallback, waitUntil)
+ * partitions the cache so:
+ *   - a `skipFallback: true` call only ever reads/writes entries also
+ *     written by a `skipFallback: true` call at the same `waitUntil` (i.e.
+ *     genuine Browserless-only renders — tiers 1/2 never run when
+ *     skipFallback is set, so they can never populate this namespace);
+ *   - a call with a non-default `waitUntil` never reads/writes an entry
+ *     produced under a different `waitUntil`.
+ * Tiers 1 (plain fetch) and 2 (Jina) only ever run for the default
+ * `networkidle0`/unset case with `skipFallback` false, so they always land
+ * in the same namespace as a same-shaped Browserless render — preserving
+ * the pre-existing "any tier is interchangeable for an equivalent call"
+ * caching behavior for the 47+ non-skipFallback callers.
+ */
+function cacheNamespace(skipFallback: boolean, waitUntil: string): string {
+  return `${skipFallback ? "skipFallback" : "default"}:${waitUntil}`;
+}
+
+function cacheKey(namespace: string, url: string): string {
+  return `${namespace}::${url}`;
+}
+
+function getCached(namespace: string, url: string): string | null {
+  const key = cacheKey(namespace, url);
+  const entry = cache.get(key);
   if (!entry) return null;
   if (Date.now() - entry.createdAt > DEFAULT_TTL_MS) {
-    cache.delete(url);
+    cache.delete(key);
     return null;
   }
   return entry.html;
 }
 
-function setCache(url: string, html: string): void {
+function setCache(namespace: string, url: string, html: string): void {
+  const key = cacheKey(namespace, url);
   // Evict oldest entries if cache is full
   if (cache.size >= MAX_CACHE_ENTRIES) {
     const oldest = cache.keys().next().value;
     if (oldest !== undefined) cache.delete(oldest);
   }
-  cache.set(url, { html, createdAt: Date.now() });
+  cache.set(key, { html, createdAt: Date.now() });
 }
 
 // ─── Retry with exponential backoff + jitter ────────────────────────────────
 
+// MAJOR fix (external review, 2026-08-16): 408 (Request Timeout) is exactly
+// the class of failure this layer exists to absorb — Browserless returns it
+// for slow-but-alive target pages — but it was missing from the transient
+// set, so a 408 never got the retry that would likely have recovered it.
 function isTransient(status: number): boolean {
-  return status === 429 || status >= 500;
+  return status === 408 || status === 429 || status >= 500;
 }
 
 /** Map a non-OK Browserless response status into an honest, actionable message. */
@@ -199,7 +244,13 @@ export async function fetchPage(
     maxRetries = 2,
     skipCache = false,
     skipFallback = false,
+    minHtmlLength = 100,
   } = options ?? {};
+
+  // See cacheNamespace() — partitions the cache so skipFallback callers
+  // never read/write a fallback-tier entry, and different waitUntil
+  // renders never collide.
+  const renderMode = cacheNamespace(skipFallback, waitUntil);
 
   // Per-source ToS policy enforced at the pipeline entry (P2, 2026-08-12):
   // tiers 2/3 (Jina, Browserless) never touch safeFetch, so its gate alone
@@ -212,7 +263,7 @@ export async function fetchPage(
 
   // Check cache first (before acquiring browser slot)
   if (!skipCache) {
-    const cached = getCached(targetUrl);
+    const cached = getCached(renderMode, targetUrl);
     if (cached) {
       return { html: cached, cached: true, fetchTimeMs: 0, attempt: 0 };
     }
@@ -259,7 +310,7 @@ export async function fetchPage(
           // silently returned "no results" for weeks (P2 triage, 2026-08-12).
           if (!looksLikeJsChallenge(html) && html.length > 2000 && bodyText.length > 200) {
             const fetchTimeMs = Date.now() - start;
-            if (!skipCache) setCache(targetUrl, html);
+            if (!skipCache) setCache(renderMode, targetUrl, html);
             return { html, cached: false, fetchTimeMs, attempt: 0 };
           }
         }
@@ -324,7 +375,7 @@ export async function fetchPage(
         const html = await jinaResp.text();
         if (html.length > 500 && !looksLikeJsChallenge(html)) {
           const fetchTimeMs = Date.now() - start;
-          if (!skipCache) setCache(targetUrl, html);
+          if (!skipCache) setCache(renderMode, targetUrl, html);
           return { html, cached: false, fetchTimeMs, attempt: 0 };
         }
       }
@@ -382,7 +433,7 @@ export async function fetchPage(
         const html = await response.text();
         const fetchTimeMs = Date.now() - start;
 
-        if (!html || html.length < 100) {
+        if (!html || html.length < minHtmlLength) {
           if (attempt < maxRetries - 1) {
             lastError = new Error("Browserless returned empty or too-short HTML.");
             continue;
@@ -403,7 +454,7 @@ export async function fetchPage(
 
         // Cache the result
         if (!skipCache) {
-          setCache(targetUrl, html);
+          setCache(renderMode, targetUrl, html);
         }
 
         return { html, cached: false, fetchTimeMs, attempt: attempt + 1 };

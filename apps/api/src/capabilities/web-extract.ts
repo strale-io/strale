@@ -49,11 +49,17 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
   // both the extracted content and the <title> this capability parses out.
   // waitUntil/pageTimeout/fetchTimeout reproduce the previous bare-fetch call
   // exactly (networkidle0, 25s nav timeout, 35s outer budget).
+  // minHtmlLength: 50 reproduces web-extract's own pre-existing threshold —
+  // the shared layer's default (100) would otherwise silently tighten it
+  // (external review finding, 2026-08-16). The redundant local length guard
+  // right below is kept as a defense-in-depth backstop, not the enforcement
+  // point.
   let html = await fetchRenderedHtml(url, {
     waitUntil: "networkidle0",
     pageTimeout: 25000,
     fetchTimeout: 35000,
     skipFallback: true,
+    minHtmlLength: 50,
   });
 
   if (!html || html.length < 50) {
