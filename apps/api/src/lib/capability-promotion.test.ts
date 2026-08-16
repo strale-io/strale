@@ -1,15 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, afterEach } from "vitest";
 import {
   evaluatePromotion,
   DEFAULT_PROMOTION_CONFIG,
   type PromotionStats,
 } from "./capability-promotion.js";
-import { toPromotionStats, type PromotionEvidenceRow } from "../jobs/capability-promotion.js";
+import {
+  toPromotionStats,
+  isEnforceMode,
+  PROMOTION_EVIDENCE_SQL,
+  type PromotionEvidenceRow,
+} from "../jobs/capability-promotion.js";
 
-// Promotion semantics pinned both directions (DEC-20260504-A). Every test here
-// is written to fail against the pre-fix state, which was "no promotion code
-// exists at all" — so the discriminating property is that each one asserts a
-// specific gate, not merely that a decision list is returned.
+// Promotion semantics pinned both directions (DEC-20260504-A). Each test
+// asserts one specific gate, so breaking that gate breaks that test — verified
+// by mutation, see the PR body.
 
 function cap(partial: Partial<PromotionStats>): PromotionStats {
   return {
@@ -23,16 +27,34 @@ function cap(partial: Partial<PromotionStats>): PromotionStats {
     deactivationReason: null,
     hasX402Method: true,
     breakerState: "closed",
+    wasDelisted: false,
+    delistingReason: null,
     totalTests: 100,
     passedTests: 100,
     distinctTestDays: 7,
     knownAnswerTotal: 20,
     knownAnswerPassed: 20,
+    latestKnownAnswerPassed: true,
+    recentTotal: 14,
+    recentPassed: 14,
+    piggybackTotal: 0,
+    piggybackPassed: 0,
     ...partial,
   };
 }
 
 const only = (rows: PromotionStats[]) => evaluatePromotion(rows)[0];
+
+function row(partial: Partial<PromotionEvidenceRow>): PromotionEvidenceRow {
+  return {
+    slug: "s", lifecycle_state: "validating", visible: false, x402_enabled: false,
+    is_free_tier: false, maintenance_class: "free-stable-api", marketplace_eligible: true,
+    deactivation_reason: null, has_x402_method: true, breaker_state: "closed",
+    last_listing_event: null, total_tests: 100, passed_tests: 100, distinct_test_days: 7,
+    ka_total: 20, ka_passed: 20, latest_ka_passed: true, recent_total: 14, recent_passed: 14,
+    piggyback_total: 0, piggyback_passed: 0, ...partial,
+  };
+}
 
 describe("evaluatePromotion — the happy path", () => {
   it("promotes a delisted capability with a green week and opens x402", () => {
@@ -62,32 +84,84 @@ describe("evaluatePromotion — evidence gates", () => {
   });
 
   it("holds when a whole week of results landed on too few calendar days", () => {
-    // 100 green results in a single day is a burst, not a week.
     expect(evaluatePromotion([cap({ distinctTestDays: 1 })])).toEqual([]);
   });
 
   it("refuses when liveness is green but correctness is failing", () => {
-    // The case an aggregate pass rate hides: schema/negative/dependency suites
-    // carry the average while every known_answer assertion fails.
     const d = only([cap({ totalTests: 100, passedTests: 96, knownAnswerTotal: 20, knownAnswerPassed: 4 })]);
     expect(d.action).toBe("none");
     expect(d.reason).toContain("failing correctness");
   });
 
   it("refuses when there is no known_answer evidence at all", () => {
-    const d = only([cap({ knownAnswerTotal: 0, knownAnswerPassed: 0 })]);
+    const d = only([cap({ knownAnswerTotal: 0, knownAnswerPassed: 0, latestKnownAnswerPassed: null })]);
     expect(d.action).toBe("none");
     expect(d.reason).toContain("correctness unproven");
   });
 });
 
-describe("evaluatePromotion — human intent is never overridden", () => {
+describe("evaluatePromotion — the week's average must not outvote today", () => {
+  it("refuses when the most recent known_answer result failed", () => {
+    // 95 passes then a fresh failure still averages 95%. Promotion is a claim
+    // about now.
+    const d = only([cap({ latestKnownAnswerPassed: false })]);
+    expect(d.action).toBe("none");
+    expect(d.reason).toContain("broken now");
+  });
+
+  it("refuses when the trailing 24h is degrading, however green the week", () => {
+    const d = only([cap({ recentTotal: 10, recentPassed: 5 })]);
+    expect(d.action).toBe("none");
+    expect(d.reason).toContain("currently degrading");
+  });
+
+  it("refuses when the last 24h carries too little evidence to judge", () => {
+    const d = only([cap({ recentTotal: 1, recentPassed: 1 })]);
+    expect(d.action).toBe("none");
+    expect(d.reason).toContain("last 24h");
+  });
+});
+
+describe("evaluatePromotion — real customers outrank our own harness", () => {
+  it("refuses when piggyback (real paid calls) is failing under a green harness", () => {
+    // ~98% of platform traffic is the harness. Averaging 2 real failures into
+    // 100 harness passes erases the only evidence that matters.
+    const d = only([cap({ totalTests: 102, passedTests: 100, piggybackTotal: 2, piggybackPassed: 0 })]);
+    expect(d.action).toBe("none");
+    expect(d.reason).toContain("the customers are the ones who count");
+  });
+
+  it("promotes when piggyback evidence exists and is green", () => {
+    expect(only([cap({ piggybackTotal: 4, piggybackPassed: 4 })]).action).toBe("promote");
+  });
+});
+
+describe("evaluatePromotion — human and floor decisions are never overturned", () => {
   it("never promotes a capability that carries a deactivation reason", () => {
     expect(evaluatePromotion([cap({ deactivationReason: "CourtListener token expired" })])).toEqual([]);
   });
 
   it("never promotes a marketplace-ineligible capability", () => {
     expect(evaluatePromotion([cap({ marketplaceEligible: false })])).toEqual([]);
+  });
+
+  it("flags rather than promotes something the quality floor took down", () => {
+    // The floor delists on real paid traffic and leaves lifecycle_state
+    // 'active' with no deactivation_reason — indistinguishable from a dark
+    // launch except for this signal. Without it the two jobs would fight
+    // nightly, and the harness would win an argument it cannot see.
+    const d = only([cap({ wasDelisted: true, delistingReason: "quarantined" })]);
+    expect(d.action).toBe("flag");
+    expect(d.reason).toContain("taken down, not merely never listed");
+  });
+
+  it("flags rather than promotes something an operator unpublished", () => {
+    expect(only([cap({ wasDelisted: true, delistingReason: "Unpublished: removed from catalog" })]).action).toBe("flag");
+  });
+
+  it("still promotes a capability whose last listing event was a promotion", () => {
+    // "promoted" is not a takedown — this is the re-run case, not a reinstatement.
+    expect(only([cap({ wasDelisted: false, delistingReason: null })]).action).toBe("promote");
   });
 
   it("flags rather than promotes a fragile maintenance class", () => {
@@ -108,7 +182,10 @@ describe("evaluatePromotion — safety interlocks", () => {
     }
   });
 
-  it("treats a missing breaker row as healthy", () => {
+  it("treats a missing breaker row as permitted", () => {
+    // 14 active capabilities have no capability_health row; rows are created
+    // lazily on first incident, so requiring one would exclude everything that
+    // has never failed. The pass-rate and recency gates carry the weight.
     expect(only([cap({ breakerState: null })]).action).toBe("promote");
   });
 
@@ -125,11 +202,39 @@ describe("evaluatePromotion — safety interlocks", () => {
     expect(decisions.find((d) => d.slug === "middle")?.reason).toContain("budget");
   });
 
-  it("publishes to the catalog but not to x402 when the rail is inapplicable", () => {
+  it("publishes to the catalog but closes x402 when the rail is inapplicable", () => {
+    // enableX402 false is written, not omitted — it has to clear a stale true.
     expect(only([cap({ isFreeTier: true })]).enableX402).toBe(false);
     expect(only([cap({ hasX402Method: false })]).enableX402).toBe(false);
-    // …and still publishes, because catalog visibility is the point.
     expect(only([cap({ hasX402Method: false })]).action).toBe("promote");
+  });
+});
+
+describe("the job's enforcement gate", () => {
+  const original = process.env.CAPABILITY_PROMOTION_ENFORCE;
+  afterEach(() => {
+    if (original === undefined) delete process.env.CAPABILITY_PROMOTION_ENFORCE;
+    else process.env.CAPABILITY_PROMOTION_ENFORCE = original;
+  });
+
+  it("is dry-run unless explicitly armed", () => {
+    delete process.env.CAPABILITY_PROMOTION_ENFORCE;
+    expect(isEnforceMode()).toBe(false);
+    process.env.CAPABILITY_PROMOTION_ENFORCE = "1";
+    expect(isEnforceMode()).toBe(false); // only the exact string arms it
+    process.env.CAPABILITY_PROMOTION_ENFORCE = "true";
+    expect(isEnforceMode()).toBe(true);
+  });
+});
+
+describe("the evidence query", () => {
+  it("only ever considers active, delisted capabilities", () => {
+    expect(PROMOTION_EVIDENCE_SQL).toContain("c.is_active = true");
+    expect(PROMOTION_EVIDENCE_SQL).toContain("c.visible = false");
+  });
+
+  it("scopes the aggregate to the promotion window rather than all history", () => {
+    expect(PROMOTION_EVIDENCE_SQL).toContain("tr.executed_at > NOW() - INTERVAL '7 days'");
   });
 });
 
@@ -137,24 +242,7 @@ describe("toPromotionStats", () => {
   it("maps every SQL column to the field the core reads", () => {
     // Guards the swap that would matter most: ka_passed read as passed_tests
     // would report correctness as green on the strength of liveness tests.
-    const row: PromotionEvidenceRow = {
-      slug: "s",
-      lifecycle_state: "validating",
-      visible: false,
-      x402_enabled: false,
-      is_free_tier: true,
-      maintenance_class: "free-stable-api",
-      marketplace_eligible: true,
-      deactivation_reason: null,
-      has_x402_method: true,
-      breaker_state: "closed",
-      total_tests: 90,
-      passed_tests: 89,
-      distinct_test_days: 6,
-      ka_total: 10,
-      ka_passed: 3,
-    };
-    expect(toPromotionStats([row])[0]).toEqual({
+    expect(toPromotionStats([row({ is_free_tier: true, total_tests: 90, passed_tests: 89, distinct_test_days: 6, ka_total: 10, ka_passed: 3, recent_total: 9, recent_passed: 8, piggyback_total: 2, piggyback_passed: 1 })])[0]).toEqual({
       slug: "s",
       lifecycleState: "validating",
       visible: false,
@@ -165,21 +253,29 @@ describe("toPromotionStats", () => {
       deactivationReason: null,
       hasX402Method: true,
       breakerState: "closed",
+      wasDelisted: false,
+      delistingReason: null,
       totalTests: 90,
       passedTests: 89,
       distinctTestDays: 6,
       knownAnswerTotal: 10,
       knownAnswerPassed: 3,
+      latestKnownAnswerPassed: true,
+      recentTotal: 9,
+      recentPassed: 8,
+      piggybackTotal: 2,
+      piggybackPassed: 1,
     });
   });
 
+  it("reads a takedown from the last listing event, and a promotion as not one", () => {
+    expect(toPromotionStats([row({ last_listing_event: "quarantined" })])[0].wasDelisted).toBe(true);
+    expect(toPromotionStats([row({ last_listing_event: "Unpublished: removed from catalog" })])[0].wasDelisted).toBe(true);
+    expect(toPromotionStats([row({ last_listing_event: "promoted_with_x402" })])[0].wasDelisted).toBe(false);
+    expect(toPromotionStats([row({ last_listing_event: null })])[0].wasDelisted).toBe(false);
+  });
+
   it("carries a correctness failure through the mapping into a refusal", () => {
-    const row: PromotionEvidenceRow = {
-      slug: "s", lifecycle_state: "validating", visible: false, x402_enabled: false,
-      is_free_tier: false, maintenance_class: "free-stable-api", marketplace_eligible: true,
-      deactivation_reason: null, has_x402_method: true, breaker_state: "closed",
-      total_tests: 100, passed_tests: 97, distinct_test_days: 7, ka_total: 10, ka_passed: 1,
-    };
-    expect(only(toPromotionStats([row])).action).toBe("none");
+    expect(only(toPromotionStats([row({ passed_tests: 97, ka_total: 10, ka_passed: 1 })])).action).toBe("none");
   });
 });
