@@ -101,3 +101,11 @@ JSON parse failure (ours, ~€1.50/90d). Smithery crawls us but the public URL
   first honest read.
 - Do not add another discovery surface before that data lands. The bottleneck is
   conversion, not presence.
+
+## Filed in Notion
+
+- Decision DEC-20260815-A: https://app.notion.com/p/3be67c87082c8143b70dc6503893ba73
+- Journal entry: https://app.notion.com/p/3be67c87082c815f8265d93ca4c8a6af
+
+Notion was unreachable earlier in the session and reachable at close, so both were
+filed then rather than deferred to the next session.
