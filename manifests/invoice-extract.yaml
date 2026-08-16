@@ -43,19 +43,42 @@ output_schema:
     total_amount: null
     invoice_number: null
     payment_reference: null
+  # Matches the executor's extraction schema. `date`, `total` and `vendor`
+  # were declared here and never returned; the real names are invoice_date,
+  # total_amount and vendor_name. See output_field_reliability below.
   properties:
-    date:
+    vendor_name:
       type: string
-    total:
-      type: number
-    vendor:
+    vendor_vat:
+      type: string
+    buyer_name:
+      type: string
+    buyer_vat:
+      type: string
+    invoice_number:
+      type: string
+    invoice_date:
+      type: string
+    due_date:
       type: string
     currency:
       type: string
-    line_items:
-      type: array
+    subtotal:
+      type: number
     vat_amount:
       type: number
+    vat_rate:
+      type: number
+    total_amount:
+      type: number
+    iban:
+      type: string
+    payment_reference:
+      type: string
+    line_items:
+      type: array
+    confidence:
+      type: object
 data_source: Claude API (document analysis and data extraction)
 data_source_type: api
 transparency_tag: ai_generated
@@ -75,24 +98,49 @@ test_fixtures:
     expected_fields:
       # Invoice-extract tested with a non-invoice image (smoke fixture).
       # Assert structural type only — AI extraction may return nulls on non-invoice input.
-      - field: date
+      - field: invoice_date
         operator: type
         value: string
         reliability: common
-      - field: vendor
+      - field: vendor_name
         operator: type
         value: string
         reliability: common
   health_check_input:
     url: https://httpbin.org/image/jpeg
+# Corrected 2026-08-16. The previous list declared `date`, `total` and
+# `vendor` — three fields this capability has never returned. The executor's
+# extraction schema names them `invoice_date`, `total_amount` and
+# `vendor_name`, and returns eleven more besides. The fiction went unnoticed
+# because all three were `common`, and common fields are type-checked rather
+# than asserted non-null, so an absent field always passed.
+#
+# It stopped being harmless when a bundle tried to use the real fields:
+# invoice-process maps $steps[0].iban and $steps[0].total_amount, both of
+# which the capability genuinely returns, and the onboarding gate rejected the
+# whole solution because the declaration did not know about them. That gate
+# failure aborted every seed run since roughly 2026-04-12.
+#
+# Everything below is `common` rather than `guaranteed`: the extractor returns
+# the full object shape on every call, but an LLM reading a real invoice
+# routinely leaves individual fields null.
 output_field_reliability:
-  date: common
-  total: common
-  vendor: common
   currency: common
-  line_items: rare
-  vat_amount: rare
+  due_date: common
+  subtotal: common
+  vat_rate: common
+  buyer_vat: common
+  buyer_name: common
+  vat_amount: common
+  vendor_vat: common
+  vendor_name: common
+  invoice_date: common
+  total_amount: common
   invoice_number: common
+  payment_reference: common
+  iban: common
+  confidence: rare
+  line_items: rare
 limitations:
   - title: Best results with standard invoice layouts — handwritten or heavily stylized invoices have lower accuracy
     text: >-
