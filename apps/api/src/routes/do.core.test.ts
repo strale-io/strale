@@ -1,7 +1,6 @@
 /**
  * Route-level regression tests for POST /v1/do — the core execution
- * endpoint (Phase 1 / T1.2 of the Codebase Quality Program,
- * docs/strategy/2026-08-16-codebase-quality-program.md).
+ * endpoint (Phase 1 / T1.2 of the Codebase Quality Program).
  *
  * Scope: the authenticated, paid-capability sync path (executeSync).
  * do.spend-cap.test.ts already covers the in-tx spend-cap re-check at
@@ -10,40 +9,65 @@
  * spend-cap branch is skipped entirely.
  *
  * Harness: mounts `doRoute` directly on a bare Hono app (not the full
- * app.ts) — do.ts's own try/catch blocks build every structured error
- * response the tests below assert on (apiError(...)), so app.ts's
- * top-level onError is not in the path being tested. This also avoids
- * pulling in the rest of app.ts's route graph (mcp.js, admin routes,
- * etc.), keeping the mock surface to what do.ts itself imports.
+ * app.ts). Only one response in the paths under test is actually a
+ * try/catch product — the execution_failed branch, built from the
+ * executor's thrown error. The rest (no_matching_capability,
+ * insufficient_balance, spend_cap_exceeded, dry_run, the idempotency
+ * replay) are ordinary route branches / early returns built the same
+ * way regardless of which app the route is mounted on, so app.ts's
+ * top-level onError is not load-bearing for what these tests assert;
+ * mounting doRoute directly (instead of the whole app.ts route graph)
+ * keeps the mock surface to what do.ts itself imports.
  *
- * Module boundaries mocked (matching the "mock at module boundaries"
- * convention used by transactions.test.ts / internal-auth.test.ts):
- *   - ../db/index.js — getDb(). Outer db.select() is a FIFO queue (each
- *     test pushes exactly the rows each SELECT in the request path will
- *     consume, in call order); db.transaction() invokes a hand-built
- *     mock tx object; db.insert() records every insert for assertion
+ * DB mock fidelity:
+ *   - Outer db.select() is a FIFO row queue (each test pushes exactly
+ *     the rows each SELECT in the request path will consume, in call
+ *     order) that also RECORDS, per call, the `table` passed to
+ *     `.from()` and the real Drizzle condition object passed to
+ *     `.where()` — `eq`/`and`/`isNull` are the real drizzle-orm
+ *     functions, never mocked. `whereReferences()` below walks the
+ *     condition's `queryChunks` (the shape do.spend-cap.test.ts's
+ *     `findDateChunks` already walks) to answer structurally "does this
+ *     where-clause reference table.column [= value | IS NULL]?" — so a
+ *     mutation that drops a scoping predicate (e.g. the idempotency
+ *     lookup losing its user-id scope, which would replay a DIFFERENT
+ *     user's transaction) is caught instead of silently passing through
+ *     a mock that answers every query with the same fixture regardless
+ *     of what was asked.
+ *   - db.transaction() invokes a hand-built mock tx object whose
+ *     `select().from().where()` is deliberately NOT awaitable on its
+ *     own — it exposes only `.for(mode)`, which is the only shape the
+ *     exercised code path (the wallet-lock read) actually calls. This
+ *     means a code change that drops `.for("update")` (the DEC-8
+ *     double-spend lock) breaks at await-time (destructuring a
+ *     non-iterable) rather than silently succeeding against a mock that
+ *     is thenable either way; `.for` calls are also recorded on
+ *     `tx.__forCalls` and asserted on directly in the happy-path and
+ *     DEC-14 tests.
+ *   - db.insert() records every insert (table + values) for assertion
  *     (used for the failed_requests no_match logging path).
- *   - ../lib/matching.js (matchCapability) — fully controlled per test.
- *   - ../capabilities/index.js (getExecutor) — fully controlled per test.
- *   - ../capabilities/guarded-executor.js — assertGuardedAllow forced to
- *     allow (real error classes kept via importOriginal so `instanceof`
- *     checks in do.ts still work if ever exercised).
- *   - ../lib/circuit-breaker.js, quality-capture.js, event-triggers.js,
- *     piggyback-monitor.js, quality-aggregation.js, x402-gateway.js,
- *     progressive-unlock.js, milestones.js, activation-hook.js — all
- *     no-op stubs. These are fire-and-forget telemetry/side-channel
- *     concerns in the paths under test; real implementations touch DB
- *     tables (capability_health, cost budgets, etc.) this harness does
- *     not model.
  *
- * Left real (pure, no DB, no env-gated throw beyond what
- * test-env-setup.ts already satisfies): lib/rate-limit.ts (in-memory;
- * each test uses a fresh random user id so rateLimitByKey's 10 req/sec
- * bucket never collides across tests), lib/middleware.ts
- * (optionalAuthMiddleware — exercised for real against the mocked
- * `users` row), lib/attribution.ts, lib/audit-token.ts,
- * lib/audit-helpers.ts, lib/sanitize.ts, lib/provenance-builder.ts,
- * lib/processing-location.ts, lib/trust-grade.ts, lib/errors.ts.
+ * Module boundaries mocked: ../lib/matching.js (matchCapability),
+ * ../capabilities/index.js (getExecutor) — fully controlled per test.
+ * ../capabilities/guarded-executor.js — assertGuardedAllow forced to
+ * allow (real error classes kept via importOriginal so `instanceof`
+ * checks in do.ts still work if ever exercised). ../lib/circuit-
+ * breaker.js, quality-capture.js, event-triggers.js, piggyback-
+ * monitor.js, quality-aggregation.js, x402-gateway.js, progressive-
+ * unlock.js, milestones.js, activation-hook.js — all no-op stubs.
+ * These are fire-and-forget telemetry/side-channel concerns in the
+ * paths under test; real implementations touch DB tables (capability_
+ * health, cost budgets, etc.) this harness does not model.
+ *
+ * Left real (pure, no DB, no env-gated throw beyond what test-env-
+ * setup.ts already satisfies): lib/rate-limit.ts (in-memory; each test
+ * uses a fresh random user id so rateLimitByKey's 10 req/sec bucket
+ * never collides across tests), lib/middleware.ts (optionalAuth
+ * Middleware — exercised for real against the mocked `users` row,
+ * scoped-query-checked the same as everything else), lib/attribution.ts,
+ * lib/audit-token.ts, lib/audit-helpers.ts, lib/sanitize.ts, lib/
+ * provenance-builder.ts, lib/processing-location.ts, lib/trust-grade.ts,
+ * lib/errors.ts.
  *
  * Uncovered paths (documented per the task's instruction not to fake
  * coverage): executeAsync / executeInBackground (async execution,
@@ -62,12 +86,13 @@ import { randomUUID } from "node:crypto";
 import { Hono } from "hono";
 
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
-import { wallets, transactions, walletTransactions } from "../db/schema.js";
+import { users, wallets, transactions, walletTransactions, failedRequests } from "../db/schema.js";
 
 // ─── Hoisted mutable mock state (referenced from vi.mock factories) ───────────
 
 const mocks = vi.hoisted(() => ({
   outerSelectQueue: [] as unknown[][],
+  recordedSelects: [] as Array<{ table: unknown; cond: unknown }>,
   outerInserts: [] as Array<{ table: unknown; vals: unknown }>,
   dbTransactionCalls: 0,
   // Set per-test before the request; consumed by db.transaction(cb).
@@ -75,17 +100,18 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../db/index.js", () => {
-  function chainableFromQueue() {
+  function chainableFromQueue(table: unknown, cond: unknown) {
+    mocks.recordedSelects.push({ table, cond });
     const rows = (mocks.outerSelectQueue.shift() as unknown[]) ?? [];
-    const p = Promise.resolve(rows) as Promise<unknown[]> & {
-      limit?: (n: number) => Promise<unknown[]>;
-    };
-    (p as any).limit = (n: number) => Promise.resolve(rows.slice(0, n));
+    const p = Promise.resolve(rows) as any;
+    p.limit = (n: number) => Promise.resolve(rows.slice(0, n));
     return p;
   }
   return {
     getDb: () => ({
-      select: () => ({ from: () => ({ where: () => chainableFromQueue() }) }),
+      select: () => ({
+        from: (table: unknown) => ({ where: (cond: unknown) => chainableFromQueue(table, cond) }),
+      }),
       insert: (table: unknown) => ({
         values: (vals: unknown) => {
           mocks.outerInserts.push({ table, vals });
@@ -142,6 +168,61 @@ vi.mock("../lib/progressive-unlock.js", () => ({
 vi.mock("../lib/milestones.js", () => ({ checkMilestone: vi.fn() }));
 vi.mock("../lib/activation-hook.js", () => ({ onFirstTransaction: vi.fn().mockResolvedValue(undefined) }));
 
+// ─── Drizzle condition introspection ───────────────────────────────────────
+// Same technique as wallet.test.ts (kept file-local rather than shared, to
+// match the house style of self-contained test files).
+
+function sqlChunksOf(node: unknown): unknown[] | null {
+  if (!node || typeof node !== "object") return null;
+  const chunks = (node as { queryChunks?: unknown[] }).queryChunks;
+  return Array.isArray(chunks) ? chunks : null;
+}
+
+function isColumnChunk(c: unknown): c is { name: string; table: unknown } {
+  return (
+    !!c &&
+    typeof c === "object" &&
+    typeof (c as any).name === "string" &&
+    "table" in (c as any) &&
+    (c as any).table !== undefined
+  );
+}
+
+function isParamChunk(c: unknown): c is { value: unknown } {
+  return !!c && typeof c === "object" && (c as any).constructor?.name === "Param";
+}
+
+function isStringChunk(c: unknown): c is { value: string[] } {
+  return !!c && typeof c === "object" && (c as any).constructor?.name === "StringChunk";
+}
+
+/**
+ * True if the Drizzle condition tree `cond` contains `table.columnName = value`
+ * (pass `{ eq: value }`) or `table.columnName IS NULL` (pass `"is_null"`).
+ * `table` must be the actual imported schema table object — Column chunks
+ * carry a direct reference to it, so the check is by identity.
+ */
+function whereReferences(cond: unknown, table: unknown, columnName: string, match: { eq: unknown } | "is_null"): boolean {
+  const chunks = sqlChunksOf(cond);
+  if (!chunks) return false;
+  for (let i = 0; i < chunks.length; i++) {
+    const c = chunks[i];
+    if (isColumnChunk(c) && c.table === table && c.name === columnName) {
+      if (match === "is_null") {
+        const next = chunks[i + 1];
+        if (isStringChunk(next) && next.value.join("").toLowerCase().includes("is null")) return true;
+      } else {
+        const paramChunk = chunks[i + 2];
+        if (isParamChunk(paramChunk) && paramChunk.value === match.eq) return true;
+      }
+    }
+  }
+  for (const c of chunks) {
+    if (whereReferences(c, table, columnName, match)) return true;
+  }
+  return false;
+}
+
 // ─── Test helpers ──────────────────────────────────────────────────────────
 
 const TEST_API_KEY = "sk_live_" + "b".repeat(56);
@@ -165,25 +246,38 @@ function authHeaders(extra: Record<string, string> = {}) {
   };
 }
 
-function chainablePromise(rows: unknown[]) {
-  const p = Promise.resolve(rows) as any;
-  p.limit = (n: number) => Promise.resolve(rows.slice(0, n));
-  p.for = () => Promise.resolve(rows);
-  p.orderBy = () => chainablePromise(rows);
-  return p;
-}
-
-/** Builds the tx object handed to db.transaction(cb) inside executeSync. */
+/**
+ * Builds the tx object handed to db.transaction(cb) inside executeSync.
+ *
+ * The wallet-lock select is deliberately shaped so `.where()` alone is
+ * NOT awaitable — only `.for(mode)` resolves to rows. Production code
+ * always calls `.for("update")` immediately after `.where()`; if that
+ * call were ever dropped, `await tx.select()...where(...)` would await a
+ * plain `{ for }` object (a no-op — non-Promise objects pass through
+ * `await` unchanged) and the subsequent `const [wallet] = ...`
+ * destructure would throw (plain objects aren't iterable), surfacing as
+ * a 500 in the tests below. `.for` calls are also recorded on
+ * `__forCalls` so the happy-path/DEC-14 tests can assert
+ * `.for("update")` fired exactly once, independent of that crash-based
+ * signal.
+ */
 function buildMockTx(opts: { walletRow: Record<string, unknown> | null; transactionId: string }) {
   const insertCalls: Array<{ table: unknown; vals: unknown }> = [];
   const updateCalls: Array<{ table: unknown; vals: unknown }> = [];
+  const forCalls: string[] = [];
   return {
     __insertCalls: insertCalls,
     __updateCalls: updateCalls,
+    __forCalls: forCalls,
     execute: vi.fn(async () => []),
     select: vi.fn(() => ({
       from: vi.fn(() => ({
-        where: vi.fn(() => chainablePromise(opts.walletRow ? [opts.walletRow] : [])),
+        where: vi.fn(() => ({
+          for: vi.fn((mode: string) => {
+            forCalls.push(mode);
+            return Promise.resolve(opts.walletRow ? [opts.walletRow] : []);
+          }),
+        })),
       })),
     })),
     insert: vi.fn((table: unknown) => ({
@@ -250,6 +344,7 @@ const mockGetExecutor = getExecutor as unknown as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   mocks.outerSelectQueue = [];
+  mocks.recordedSelects = [];
   mocks.outerInserts = [];
   mocks.dbTransactionCalls = 0;
   mocks.txRef.current = null;
@@ -309,7 +404,15 @@ describe("POST /v1/do — happy path (authenticated, paid capability, sync)", ()
     expect(executorFn).toHaveBeenCalledTimes(1);
     expect(executorFn).toHaveBeenCalledWith({ value: "hello" });
 
+    // MAJOR 2/3: the auth lookup itself is scoped by key_prefix — not
+    // "the mock answers with whichever user row it's holding".
+    const authSelect = mocks.recordedSelects[0];
+    expect(authSelect.table).toBe(users);
+    expect(whereReferences(authSelect.cond, users, "key_prefix", { eq: getKeyPrefix(TEST_API_KEY) })).toBe(true);
+
     const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
+    // MAJOR 4 (DEC-8): the wallet row was read under FOR UPDATE, exactly once.
+    expect(tx.__forCalls).toEqual(["update"]);
     // Wallet debited by exactly the capability price.
     const walletUpdate = tx.__updateCalls.find((c) => c.table === wallets);
     expect(walletUpdate).toBeTruthy();
@@ -350,6 +453,9 @@ describe("POST /v1/do — no matching capability", () => {
 
     await flushMicrotasks();
     expect(mocks.outerInserts.length).toBe(1);
+    // MINOR 6: the insert actually targets failed_requests, not just "some
+    // insert with the right-looking values".
+    expect(mocks.outerInserts[0].table).toBe(failedRequests);
     expect((mocks.outerInserts[0].vals as any).failureType).toBe("no_match");
     expect((mocks.outerInserts[0].vals as any).userId).toBe(user.id);
 
@@ -358,11 +464,15 @@ describe("POST /v1/do — no matching capability", () => {
 });
 
 describe("POST /v1/do — insufficient balance", () => {
-  it("returns 402 insufficient_balance without creating a transaction record or debiting", async () => {
+  it("returns 402 insufficient_balance without ever invoking the executor, creating a transaction record, or debiting", async () => {
     const user = buildUserRow();
     mocks.outerSelectQueue.push([user]);
     mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE }); // price 5 cents
-    mockGetExecutor.mockReturnValue(vi.fn());
+    // MAJOR 5: capture the spy so we can assert it. Codex's scenario: the
+    // executor running before the balance check gives away a free external
+    // call even though the customer gets a 402.
+    const executorSpy = vi.fn(async () => ({ output: {}, provenance: { source: "x", fetched_at: "now" } }));
+    mockGetExecutor.mockReturnValue(executorSpy);
 
     mocks.txRef.current = buildMockTx({
       walletRow: { id: randomUUID(), userId: user.id, balanceCents: 2 }, // less than priceCents (5)
@@ -387,14 +497,17 @@ describe("POST /v1/do — insufficient balance", () => {
     expect(body.details.required_cents).toBe(CAPABILITY_FIXTURE.priceCents);
     expect(body.error).toBeUndefined();
 
+    expect(executorSpy).not.toHaveBeenCalled();
+
     const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
+    expect(tx.__forCalls).toEqual(["update"]); // the lock is still taken to read the balance
     expect(tx.__insertCalls.length).toBe(0); // no transaction row created
     expect(tx.__updateCalls.length).toBe(0); // no debit
   });
 });
 
 describe("POST /v1/do — idempotency replay", () => {
-  it("returns the stored result for a repeated Idempotency-Key without re-executing or re-matching", async () => {
+  it("returns the stored result for a repeated Idempotency-Key without re-executing or re-matching, scoped to the requesting user", async () => {
     const user = buildUserRow();
     const existingTxn = {
       id: randomUUID(),
@@ -434,6 +547,17 @@ describe("POST /v1/do — idempotency replay", () => {
     expect(mockMatchCapability).not.toHaveBeenCalled();
     expect(mockGetExecutor).not.toHaveBeenCalled();
     expect(mocks.dbTransactionCalls).toBe(0);
+
+    // MAJOR 2/3: the idempotency lookup's where-clause must scope by BOTH
+    // the idempotency key AND the requesting user's id, AND exclude
+    // soft-deleted rows. Codex's scenario: a lookup that drops the
+    // user-id scope would replay a DIFFERENT user's transaction for
+    // anyone who guesses/reuses their Idempotency-Key value.
+    const idempotencySelect = mocks.recordedSelects[1];
+    expect(idempotencySelect.table).toBe(transactions);
+    expect(whereReferences(idempotencySelect.cond, transactions, "idempotency_key", { eq: "replay-key-1" })).toBe(true);
+    expect(whereReferences(idempotencySelect.cond, transactions, "user_id", { eq: user.id })).toBe(true);
+    expect(whereReferences(idempotencySelect.cond, transactions, "deleted_at", "is_null")).toBe(true);
   });
 });
 
@@ -470,6 +594,10 @@ describe("POST /v1/do — dry_run", () => {
 
     expect(executorFn).not.toHaveBeenCalled();
     expect(mocks.dbTransactionCalls).toBe(0);
+
+    const balanceSelect = mocks.recordedSelects[1];
+    expect(balanceSelect.table).toBe(wallets);
+    expect(whereReferences(balanceSelect.cond, wallets, "user_id", { eq: user.id })).toBe(true);
   });
 });
 
@@ -511,9 +639,13 @@ describe("POST /v1/do — execution failure shape + DEC-14 ordering", () => {
     expect(body.details.error).toBe("mock executor rejected the request");
     expect(body.details.wallet_balance_cents).toBe(startingBalance);
 
+    // DEC-8: the wallet was still read under FOR UPDATE before anything
+    // else happened.
+    const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
+    expect(tx.__forCalls).toEqual(["update"]);
+
     // DEC-14: lock → execute → deduct on success. Execution failed, so no
     // debit and no wallet_transactions ledger entry.
-    const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
     const walletUpdate = tx.__updateCalls.find((c) => c.table === wallets);
     expect(walletUpdate).toBeUndefined();
     const walletTxInsert = tx.__insertCalls.find((c) => c.table === walletTransactions);

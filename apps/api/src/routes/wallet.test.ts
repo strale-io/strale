@@ -1,29 +1,44 @@
 /**
  * Route-level regression tests for /v1/wallet/* (Phase 1 / T1.1 of the
- * Codebase Quality Program, docs/strategy/2026-08-16-codebase-quality-
- * program.md). wallet.ts had zero test coverage before this file.
+ * Codebase Quality Program). wallet.ts had zero test coverage before this
+ * file.
  *
  * Covers: POST /topup (Stripe Checkout session creation — amount,
- * currency, user linkage, success/cancel URLs), invalid-amount 400s,
- * unauthenticated 401, a Stripe API failure surfacing as a structured
- * error rather than a raw exception; GET /balance (integer-cents wire
- * shape, missing-wallet fallback); GET /transactions (shape, LIMIT 100
- * pagination, missing-wallet fallback).
+ * currency, user linkage, exact success/cancel URLs), invalid-amount
+ * 400s, unauthenticated 401, a Stripe API failure surfacing through
+ * app.ts's real onError handler as a structured error rather than a raw
+ * exception; GET /balance (integer-cents wire shape, missing-wallet
+ * fallback, query scoped to the authenticated user); GET /transactions
+ * (shape, LIMIT-100 result-size cap, missing-wallet fallback that
+ * verifiably skips the wallet_transactions query, query scoped to the
+ * authenticated user).
  *
- * Harness: mounts `walletRoute` directly on a bare Hono app plus a
- * minimal onError mirroring app.ts's structured 500 response (wallet.ts
- * has no try/catch of its own around the Stripe call — the "structured
- * error, not raw exception" contract lives in app.ts's app.onError, so
- * the test harness reproduces exactly that handler rather than the
- * whole app.ts import graph).
+ * Harness: most tests mount `walletRoute` directly on a bare Hono app
+ * (plus the real `requestContext()` middleware — wallet.ts calls
+ * `c.get("log").info(...)` unguarded, so the request-scoped child logger
+ * must exist). One test (the Stripe-failure structured-error case) loads
+ * the real `app` from app.ts instead, per external review: wallet.ts has
+ * no try/catch of its own around the Stripe call, so "structured error,
+ * not raw exception" is a claim about app.ts's app.onError (app.ts:114),
+ * not about wallet.ts — pinning it against a hand-copied onError would
+ * silently stop catching a drift between the two. `./mcp.js` is mocked
+ * for that one import because it pulls in the `strale-mcp/tools`
+ * workspace package (same pattern as transactions.test.ts /
+ * internal-auth.test.ts); nothing in this file exercises `/mcp`.
  *
- * Module boundaries mocked: ../db/index.js (getDb — FIFO row queue
- * matching each SELECT's call order: auth lookup first, then whatever
- * the handler itself queries) and ../lib/stripe.js (getStripe —
- * checkout.sessions.create is a vi.fn asserted on directly). Auth runs
- * for real (authMiddleware, hashApiKey/getKeyPrefix) against the mocked
- * `users` row returned by the queue, exercising the real API-key
- * hashing/matching logic rather than stubbing auth out.
+ * DB mock fidelity: ../db/index.js's getDb() is a FIFO row queue keyed to
+ * call order (auth lookup first, then whatever the handler itself
+ * queries), but it also RECORDS, per select call, the `table` passed to
+ * `.from()` and the real Drizzle condition object passed to `.where()`
+ * (not a stub — `eq`/`and`/`isNull` are the real drizzle-orm functions).
+ * `whereReferences()` below walks the condition's `queryChunks` (the same
+ * shape do.spend-cap.test.ts's `findDateChunks` walks) to answer
+ * structurally "does this where-clause reference table.column [= value |
+ * IS NULL]?" — so a mutation that drops a scoping predicate (e.g. a
+ * lookup that stops filtering by the authenticated user's id) is caught
+ * by an assertion instead of silently passing through a mock that
+ * ignores the condition entirely and answers every query with the same
+ * canned fixture.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -31,39 +46,109 @@ import { randomUUID } from "node:crypto";
 import { Hono } from "hono";
 
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
+import { users, wallets, walletTransactions } from "../db/schema.js";
 
 // ─── Hoisted mutable mock state ────────────────────────────────────────────
 
 const mocks = vi.hoisted(() => ({
   selectQueue: [] as unknown[][],
+  recordedSelects: [] as Array<{ table: unknown; cond: unknown }>,
   stripeCreate: vi.fn(),
 }));
 
-vi.mock("../db/index.js", () => {
-  function chainableFromQueue() {
-    const rows = (mocks.selectQueue.shift() as unknown[]) ?? [];
-    const p = Promise.resolve(rows) as any;
-    p.limit = (n: number) => Promise.resolve(rows.slice(0, n));
-    p.orderBy = () => {
-      const inner = Promise.resolve(rows) as any;
-      inner.limit = (n: number) => Promise.resolve(rows.slice(0, n));
-      return inner;
-    };
-    return p;
-  }
-  return {
-    getDb: () => ({
-      select: () => ({ from: () => ({ where: () => chainableFromQueue() }) }),
+vi.mock("../db/index.js", () => ({
+  getDb: () => ({
+    select: () => ({
+      from: (table: unknown) => ({
+        where: (cond: unknown) => {
+          mocks.recordedSelects.push({ table, cond });
+          const rows = (mocks.selectQueue.shift() as unknown[]) ?? [];
+          const p = Promise.resolve(rows) as any;
+          p.limit = (n: number) => Promise.resolve(rows.slice(0, n));
+          p.orderBy = () => {
+            const inner = Promise.resolve(rows) as any;
+            inner.limit = (n: number) => Promise.resolve(rows.slice(0, n));
+            return inner;
+          };
+          return p;
+        },
+      }),
     }),
-  };
-});
+  }),
+}));
 
 vi.mock("../lib/stripe.js", () => ({
   getStripe: () => ({ checkout: { sessions: { create: mocks.stripeCreate } } }),
 }));
 
+// Only needed for the one test that loads the real app.ts (MAJOR 1 fix
+// below) — app.ts imports mcp.js, which pulls in the strale-mcp/tools
+// workspace package. Same stub as transactions.test.ts / internal-auth.
+// test.ts. No test in this file exercises /mcp.
+vi.mock("./mcp.js", () => {
+  const { Hono: HonoCtor } = require("hono");
+  return { mcpRoute: new HonoCtor() };
+});
+
 import { walletRoute } from "./wallet.js";
 import { requestContext } from "../middleware/request-context.js";
+
+// ─── Drizzle condition introspection ───────────────────────────────────────
+// `eq`/`and`/`isNull` used by wallet.ts (and by any test data built here)
+// are the real drizzle-orm functions — never mocked — so the `cond` object
+// captured above is a genuine Drizzle SQL condition tree, not a string.
+
+function sqlChunksOf(node: unknown): unknown[] | null {
+  if (!node || typeof node !== "object") return null;
+  const chunks = (node as { queryChunks?: unknown[] }).queryChunks;
+  return Array.isArray(chunks) ? chunks : null;
+}
+
+function isColumnChunk(c: unknown): c is { name: string; table: unknown } {
+  return (
+    !!c &&
+    typeof c === "object" &&
+    typeof (c as any).name === "string" &&
+    "table" in (c as any) &&
+    (c as any).table !== undefined
+  );
+}
+
+function isParamChunk(c: unknown): c is { value: unknown } {
+  return !!c && typeof c === "object" && (c as any).constructor?.name === "Param";
+}
+
+function isStringChunk(c: unknown): c is { value: string[] } {
+  return !!c && typeof c === "object" && (c as any).constructor?.name === "StringChunk";
+}
+
+/**
+ * True if the Drizzle condition tree `cond` contains `table.columnName = value`
+ * (pass `{ eq: value }`) or `table.columnName IS NULL` (pass `"is_null"`).
+ * `table` must be the actual imported schema table object — Column chunks
+ * carry a direct reference to it, so the check is by identity, exactly how
+ * Drizzle itself resolves columns.
+ */
+function whereReferences(cond: unknown, table: unknown, columnName: string, match: { eq: unknown } | "is_null"): boolean {
+  const chunks = sqlChunksOf(cond);
+  if (!chunks) return false;
+  for (let i = 0; i < chunks.length; i++) {
+    const c = chunks[i];
+    if (isColumnChunk(c) && c.table === table && c.name === columnName) {
+      if (match === "is_null") {
+        const next = chunks[i + 1];
+        if (isStringChunk(next) && next.value.join("").toLowerCase().includes("is null")) return true;
+      } else {
+        const paramChunk = chunks[i + 2];
+        if (isParamChunk(paramChunk) && paramChunk.value === match.eq) return true;
+      }
+    }
+  }
+  for (const c of chunks) {
+    if (whereReferences(c, table, columnName, match)) return true;
+  }
+  return false;
+}
 
 // ─── Test helpers ──────────────────────────────────────────────────────────
 
@@ -95,17 +180,17 @@ function makeApp() {
   // must be mounted or that throws. Real, pure, no DB — safe to use as-is.
   app.use("*", requestContext());
   app.route("/v1/wallet", walletRoute);
-  // Mirrors app.ts's app.onError exactly (see file header) — wallet.ts's
-  // own topup handler has no try/catch around stripe.checkout.sessions.create,
-  // so the "structured error, not raw exception" contract is enforced here.
-  app.onError((_err, c) =>
-    c.json({ error_code: "internal_error", message: "An unexpected error occurred. Please try again." }, 500),
-  );
+  return app;
+}
+
+async function loadRealApp() {
+  const { app } = await import("../app.js");
   return app;
 }
 
 beforeEach(() => {
   mocks.selectQueue = [];
+  mocks.recordedSelects = [];
   mocks.stripeCreate.mockReset();
 });
 
@@ -114,7 +199,7 @@ afterEach(() => {
 });
 
 describe("POST /v1/wallet/topup", () => {
-  it("creates a Stripe Checkout session with correct amount, currency, user linkage, and redirect URLs", async () => {
+  it("creates a Stripe Checkout session with correct amount, currency, user linkage, and exact redirect URLs", async () => {
     const user = buildUserRow();
     mocks.selectQueue.push([user]); // auth lookup
     mocks.stripeCreate.mockResolvedValue({
@@ -146,10 +231,14 @@ describe("POST /v1/wallet/topup", () => {
     expect(callArg.line_items[0].quantity).toBe(1);
     expect(callArg.metadata.user_id).toBe(user.id);
     expect(callArg.metadata.amount_cents).toBe("2500");
-    expect(callArg.success_url).toContain(process.env.FRONTEND_URL);
-    expect(callArg.success_url).toContain("status=success");
-    expect(callArg.cancel_url).toContain(process.env.FRONTEND_URL);
-    expect(callArg.cancel_url).toContain("status=cancelled");
+    // Pin the FULL URL (including the literal {CHECKOUT_SESSION_ID}
+    // Stripe template token), not a substring — a substring match would
+    // survive a mutation that mangles the query string around a matching
+    // fragment.
+    expect(callArg.success_url).toBe(
+      `${process.env.FRONTEND_URL}/topup?status=success&session_id={CHECKOUT_SESSION_ID}`,
+    );
+    expect(callArg.cancel_url).toBe(`${process.env.FRONTEND_URL}/topup?status=cancelled`);
   });
 
   it("rejects a missing amount_cents with a structured 400", async () => {
@@ -235,13 +324,15 @@ describe("POST /v1/wallet/topup", () => {
     expect(body.error_code).toBe("unauthorized");
     expect(mocks.stripeCreate).not.toHaveBeenCalled();
   });
+});
 
-  it("surfaces a Stripe API failure as a structured error, not a raw exception", async () => {
+describe("POST /v1/wallet/topup — via the real app.ts pipeline (MAJOR 1)", () => {
+  it("a Stripe API failure surfaces via app.ts's real onError as a structured error, not a raw exception", async () => {
     const user = buildUserRow();
     mocks.selectQueue.push([user]);
     mocks.stripeCreate.mockRejectedValue(new Error("stripe unavailable — do not leak this"));
 
-    const app = makeApp();
+    const app = await loadRealApp();
     const res = await app.request("/v1/wallet/topup", {
       method: "POST",
       headers: authHeaders(),
@@ -250,15 +341,17 @@ describe("POST /v1/wallet/topup", () => {
 
     expect(res.status).toBe(500);
     const body = await res.json();
-    expect(typeof body.error_code).toBe("string");
-    expect(typeof body.message).toBe("string");
-    // The raw Stripe error text must not reach the client.
+    // Pins app.ts's actual app.onError contract (app.ts:114), not a
+    // hand-copied stand-in — this is the production handler, reached via
+    // the real app.ts route graph.
+    expect(body.error_code).toBe("internal_error");
+    expect(body.message).toBe("An unexpected error occurred. Please try again.");
     expect(JSON.stringify(body)).not.toContain("stripe unavailable");
   });
 });
 
 describe("GET /v1/wallet/balance", () => {
-  it("returns balance_cents as an integer (wire-shape rule), not a formatted string", async () => {
+  it("returns balance_cents as an integer (wire-shape rule), scoped to the authenticated user", async () => {
     const user = buildUserRow();
     mocks.selectQueue.push([user], [{ balanceCents: 4321 }]);
 
@@ -271,6 +364,18 @@ describe("GET /v1/wallet/balance", () => {
     expect(typeof body.balance_cents).toBe("number");
     expect(res.headers.get("X-Credits-Remaining")).toBe("4321");
     expect(res.headers.get("X-Credits-Currency")).toBe("EUR");
+
+    // MAJOR 2/3: the auth lookup itself is scoped by key_prefix, and the
+    // balance lookup is a real Drizzle where-clause query against
+    // `wallets`, scoped to THIS user's id — not just "some row from a
+    // fixture the mock hands back regardless of the query".
+    const authSelect = mocks.recordedSelects[0];
+    expect(authSelect.table).toBe(users);
+    expect(whereReferences(authSelect.cond, users, "key_prefix", { eq: getKeyPrefix(TEST_API_KEY) })).toBe(true);
+
+    const balanceSelect = mocks.recordedSelects[1];
+    expect(balanceSelect.table).toBe(wallets);
+    expect(whereReferences(balanceSelect.cond, wallets, "user_id", { eq: user.id })).toBe(true);
   });
 
   it("returns balance_cents 0 when no wallet row exists yet", async () => {
@@ -293,8 +398,9 @@ describe("GET /v1/wallet/balance", () => {
 });
 
 describe("GET /v1/wallet/transactions", () => {
-  it("returns the transaction list with integer-cents shape", async () => {
+  it("returns the transaction list with integer-cents shape, scoped to the authenticated user's wallet", async () => {
     const user = buildUserRow();
+    const walletId = randomUUID();
     const rows = [
       {
         id: "t1",
@@ -311,7 +417,7 @@ describe("GET /v1/wallet/transactions", () => {
         created_at: new Date("2026-07-01T00:00:00Z"),
       },
     ];
-    mocks.selectQueue.push([user], [{ id: "wallet-1" }], rows);
+    mocks.selectQueue.push([user], [{ id: walletId }], rows);
 
     const app = makeApp();
     const res = await app.request("/v1/wallet/transactions", { headers: authHeaders() });
@@ -322,6 +428,17 @@ describe("GET /v1/wallet/transactions", () => {
     expect(body.transactions[0]).toMatchObject({ id: "t1", amount_cents: -5, type: "purchase" });
     expect(typeof body.transactions[0].amount_cents).toBe("number");
     expect(typeof body.transactions[1].amount_cents).toBe("number");
+
+    // MAJOR 2/3: the wallet-id lookup is scoped to this user; the
+    // transaction-list lookup is scoped to that specific wallet id —
+    // not "any wallet_transactions row the mock happens to be holding".
+    const walletLookup = mocks.recordedSelects[1];
+    expect(walletLookup.table).toBe(wallets);
+    expect(whereReferences(walletLookup.cond, wallets, "user_id", { eq: user.id })).toBe(true);
+
+    const txListLookup = mocks.recordedSelects[2];
+    expect(txListLookup.table).toBe(walletTransactions);
+    expect(whereReferences(txListLookup.cond, walletTransactions, "wallet_id", { eq: walletId })).toBe(true);
   });
 
   it("caps the result at 100 rows (regression: .limit(100) in the query)", async () => {
@@ -344,7 +461,7 @@ describe("GET /v1/wallet/transactions", () => {
     expect(body.transactions).toHaveLength(100);
   });
 
-  it("returns an empty list when no wallet row exists yet, without querying wallet_transactions", async () => {
+  it("returns an empty list when no wallet row exists yet, and does not issue a second query for wallet_transactions", async () => {
     const user = buildUserRow();
     mocks.selectQueue.push([user], []);
 
@@ -354,6 +471,12 @@ describe("GET /v1/wallet/transactions", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({ transactions: [] });
+
+    // Exactly 2 selects: the auth lookup and the wallet-id lookup. If the
+    // handler still queried wallet_transactions after finding no wallet,
+    // a 3rd entry would show up here.
+    expect(mocks.recordedSelects).toHaveLength(2);
+    expect(mocks.recordedSelects.some((s) => s.table === walletTransactions)).toBe(false);
   });
 
   it("returns 401 without an Authorization header", async () => {
