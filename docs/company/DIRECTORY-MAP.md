@@ -105,3 +105,50 @@ registered with us and thereby chose to be contactable. **Names inferred from
 transaction logs, wallet activity or request contents do not belong in this
 document and are not leads** — including any that an audit surfaces as a side
 effect. See CHARTER.md § What we may do with customer data.
+
+## Growth initiatives tested 2026-08-15 — results
+
+Four ideas were run down the same evening. Two are closed, one is instrumented,
+one is not a lever yet. Recorded so none of them gets re-proposed as new.
+
+### 1. Unmet demand on the paying rail — SHIPPED
+
+`failed_requests` only ever recorded misses from `/v1/do`. x402 is ~99% of
+revenue, so the rail that earns recorded nothing and the table filled with our
+own probes — which is why "unmet demand" was never usable as a build signal.
+Three x402 rejection sites now record, splitting *unknown slug* (a catalogue
+signal: build it) from *rejected input* (a product signal: our schema or error
+text failed them). No customer content is stored. First readings should be
+usable within a week.
+
+### 2. `company-enrich` parse bug — ALREADY FIXED, no work needed
+
+Reported earlier as ~€1.50/90d of recoverable revenue. It was fixed in PR #214,
+which adopted a tolerant JSON extractor across five executors. The single
+failure was 2026-08-14, before the fix; it has succeeded since with no repeat.
+Verifying took ten minutes and saved building a fix for a fixed bug.
+
+### 3. Other x402 registries — MOSTLY NOT A LEVER
+
+- **x402scan** — one mention of Strale on the site; presence plausible but
+  unconfirmed. Most x402 scanners mirror the CDP facilitator index, which we
+  now know is settlement-derived, so they would inherit the same property:
+  earned by sales, not acquirable by submission.
+- **ZeroClick** — reachable, no mention of us. Submission path unknown.
+- **agent402.tools** — did not resolve.
+
+Worth one more pass only if a scanner is found that accepts submissions
+directly rather than mirroring the facilitator. Do not assume any of them can
+be pushed.
+
+### 4. Free tier as a funnel — NOT A LEVER TODAY
+
+Over 90 days, **2 external actors used a free capability at all**. One went on
+to pay, one did not; four paid without ever touching the free tier. At n=2 the
+conversion question is unanswerable, and the finding that matters is different:
+**almost nobody uses the free tier.** It is not a funnel because it is not
+being found.
+
+The storefront now names all eleven free capabilities explicitly, on both the
+agent card and the x402 discovery file, which it did not before 2026-08-15.
+Re-measure after that has been live a fortnight before drawing any conclusion.
