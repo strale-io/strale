@@ -1,8 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { validateUrl } from "../lib/url-validator.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import { extractJsonObject } from "./lib/llm-json.js";
+import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 
 registerCapability("web-extract", async (input: CapabilityInput) => {
   const url = input.url as string | undefined;
@@ -14,22 +14,15 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
     );
   }
 
-  // F-0-006: the URL is forwarded to Browserless, which does the fetch
-  // from its own network. Our `safeFetch` dispatcher cannot protect that
-  // outbound call. The only layer we control is THIS validator: if it
-  // rejects the URL we never pass it along. Private IP / carrier-grade
-  // NAT / cloud metadata / non-http schemes are refused here before
-  // Browserless is even contacted.
   // Per-source ToS policy applies to EVERY fetch path, not only the purpose-
   // built extractors. Observed bypass (2026-08-12 activity analysis): a caller
   // refused on Trustpilot via product-reviews-extract re-ran the identical
   // extraction through web-extract with a raw prompt. Same blocklist, same
   // refusal, same compliant-alternative hint — closing the side door
   // commit 87b84db already flagged once for domain-contact-extract.
-  // (Pure string check — runs before the DNS-touching validateUrl.)
+  // (Pure string check — runs before fetchRenderedHtml's DNS-touching
+  // validateUrl, same ordering rationale as every other web-provider caller.)
   assertTargetAllowed(url);
-
-  await validateUrl(url);
 
   const browserlessUrl = process.env.BROWSERLESS_URL;
   const browserlessKey = process.env.BROWSERLESS_API_KEY;
@@ -44,37 +37,44 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
     throw new Error("ANTHROPIC_API_KEY is required for web-extract.");
   }
 
-  // Step 1: Render page with Browserless
-  // buildBrowserlessRequestUrl appends ?launch= per-request — Browserless v2's
-  // LAUNCH_ARGS env var is deprecated/ignored. See lib/browserless-launch.ts.
-  const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
-  const contentUrl = buildBrowserlessRequestUrl(browserlessUrl, "/content", browserlessKey);
-
-  // unguarded-fetch-ok: our Browserless endpoint; caller URL gated by assertTargetAllowed above
-  const renderResponse = await fetch(contentUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url,
-      // 25s matches every other Browserless caller (annual-report-extract,
-      // html-to-pdf, screenshot-url) and web-provider's default pageTimeout.
-      // Was 20s, the odd one out. Note this only helps pages that are slow but
-      // alive — an unreachable host burns the whole budget either way.
-      gotoOptions: { waitUntil: "networkidle0", timeout: 25000 },
-    }),
-    // Outer budget stays 10s above the navigation timeout so Browserless gets
-    // to return its own structured error instead of us aborting the socket.
-    signal: AbortSignal.timeout(35000),
+  // Step 1: Render page via the shared web-provider layer (lib/web-provider.ts)
+  // — retry with exponential backoff and a concurrency limiter on top of
+  // Browserless, the same resilience the other 47+ Browserless-backed
+  // capabilities get. web-extract's output contract promises full
+  // JavaScript rendering (manifest: "Handles SPAs, dynamic content, and
+  // pages that require JS to load", data_source: "Headless browser
+  // rendering via Browserless.io"), so skipFallback bypasses web-provider's
+  // plain-fetch and Jina Reader tiers — neither runs the page's JS, and
+  // Jina reformats the document, which would silently change both the
+  // extracted content and the <title> this capability parses out.
+  // waitUntil/pageTimeout/fetchTimeout reproduce the previous bare-fetch call
+  // exactly (networkidle0, 25s nav timeout, 35s outer budget).
+  // minHtmlLength: 50 reproduces web-extract's own pre-existing threshold —
+  // the shared layer's default (100) would otherwise silently tighten it
+  // (external review finding, 2026-08-16). The redundant local length guard
+  // right below is kept as a defense-in-depth backstop, not the enforcement
+  // point.
+  // skipCache: true — this capability's manifest declares
+  // freshness_category: live-fetch and stamps provenance.fetched_at at
+  // return time unconditionally. A cache hit would return HTML rendered up
+  // to 5 minutes earlier stamped with a fresh timestamp — fabricated
+  // provenance on every repeat call within the TTL (six-lens review,
+  // HIGH, 2026-08-16). The retry/backoff resilience is the value of this
+  // whole change, not the cache, so this capability opts out of caching
+  // entirely rather than reconciling the timestamp with cache age.
+  // maxRetries: 2 (one retry, matching the shared default — see the
+  // "maxRetries" note in the fix report for why this is 2, not 1) bounds
+  // the Browserless leg's worst case at 2 attempts × 35s fetchTimeout +
+  // ~1-1.5s backoff between ≈ 71.5s.
+  let html = await fetchRenderedHtml(url, {
+    waitUntil: "networkidle0",
+    pageTimeout: 25000,
+    fetchTimeout: 35000,
+    skipFallback: true,
+    minHtmlLength: 50,
+    skipCache: true,
+    maxRetries: 2,
   });
-
-  if (!renderResponse.ok) {
-    const errText = await renderResponse.text().catch(() => "");
-    throw new Error(
-      `Failed to render page: Browserless returned HTTP ${renderResponse.status}: ${errText.slice(0, 200)}`,
-    );
-  }
-
-  let html = await renderResponse.text();
 
   if (!html || html.length < 50) {
     throw new Error("Page returned empty or too-short content.");

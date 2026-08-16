@@ -58,6 +58,24 @@ export interface WebProviderOptions {
   maxRetries?: number;
   /** Skip the response cache (default: false). */
   skipCache?: boolean;
+  /**
+   * Skip the plain-fetch and Jina Reader tiers and go straight to Browserless
+   * (default: false). Tiers 1/2 substitute non-rendered HTML (tier 1) or a
+   * reformatted document (Jina, tier 2) for what a real headless-Chrome
+   * render would produce. Callers whose output contract promises actual
+   * rendered-DOM content (e.g. web-extract's "full JavaScript rendering")
+   * must set this so a JS-heavy page never silently falls back to a plain
+   * fetch that never ran the page's scripts.
+   */
+  skipFallback?: boolean;
+  /**
+   * Minimum accepted HTML length in bytes for the Browserless tier (default:
+   * 100). Below this, the response is treated as empty/broken and retried
+   * (or thrown after the last attempt). Callers with a looser pre-existing
+   * contract can lower this explicitly rather than silently inheriting the
+   * shared default.
+   */
+  minHtmlLength?: number;
 }
 
 export interface WebProviderResult {
@@ -82,33 +100,120 @@ const MAX_CACHE_ENTRIES = 200;
 
 const cache = new Map<string, CacheEntry>();
 
-function getCached(url: string): string | null {
-  const entry = cache.get(url);
+/**
+ * Cache-key namespace for a given call's rendering semantics.
+ *
+ * BLOCKER fix (external review, 2026-08-16): the cache used to be keyed by
+ * URL alone, shared across every tier and every `waitUntil`. That let a
+ * `skipFallback` caller (web-extract, whose contract promises full JS
+ * rendering) read back plain-fetch or Jina HTML cached by an unrelated
+ * caller for the same URL — and let a non-default `waitUntil` render (e.g.
+ * fetchCompanyPage's `domcontentloaded`) get served to a caller that
+ * expected `networkidle0`. Namespacing by (skipFallback, waitUntil)
+ * partitions the cache so:
+ *   - a `skipFallback: true` call only ever reads/writes entries also
+ *     written by a `skipFallback: true` call at the same `waitUntil` (i.e.
+ *     genuine Browserless-only renders — tiers 1/2 never run when
+ *     skipFallback is set, so they can never populate this namespace);
+ *   - a call with a non-default `waitUntil` never reads/writes an entry
+ *     produced under a different `waitUntil`.
+ * Tiers 1 (plain fetch) and 2 (Jina) only ever run for the default
+ * `networkidle0`/unset case with `skipFallback` false, so they always land
+ * in the same namespace as a same-shaped Browserless render — preserving
+ * the pre-existing "any tier is interchangeable for an equivalent call"
+ * caching behavior for the 47+ non-skipFallback callers.
+ */
+function cacheNamespace(skipFallback: boolean, waitUntil: string): string {
+  return `${skipFallback ? "skipFallback" : "default"}:${waitUntil}`;
+}
+
+function cacheKey(namespace: string, url: string): string {
+  return `${namespace}::${url}`;
+}
+
+function getCached(namespace: string, url: string): string | null {
+  const key = cacheKey(namespace, url);
+  const entry = cache.get(key);
   if (!entry) return null;
   if (Date.now() - entry.createdAt > DEFAULT_TTL_MS) {
-    cache.delete(url);
+    cache.delete(key);
     return null;
   }
   return entry.html;
 }
 
-function setCache(url: string, html: string): void {
+function setCache(namespace: string, url: string, html: string): void {
+  const key = cacheKey(namespace, url);
   // Evict oldest entries if cache is full
   if (cache.size >= MAX_CACHE_ENTRIES) {
     const oldest = cache.keys().next().value;
     if (oldest !== undefined) cache.delete(oldest);
   }
-  cache.set(url, { html, createdAt: Date.now() });
+  cache.set(key, { html, createdAt: Date.now() });
 }
 
 // ─── Retry with exponential backoff + jitter ────────────────────────────────
 
+// MAJOR fix (external review, 2026-08-16): 408 (Request Timeout) is exactly
+// the class of failure this layer exists to absorb — Browserless returns it
+// for slow-but-alive target pages — but it was missing from the transient
+// set, so a 408 never got the retry that would likely have recovered it.
 function isTransient(status: number): boolean {
-  return status === 429 || status >= 500;
+  return status === 408 || status === 429 || status >= 500;
+}
+
+/**
+ * Chrome/Browserless navigation-level net-error patterns embedded in a
+ * response body — Browserless wraps these in a 5xx HTTP status when Chrome
+ * itself fails to navigate (DNS doesn't resolve, TCP connection refused,
+ * TLS cert invalid). This is a different failure class from "the target's
+ * server errored", and it is NOT transient: retrying does not change DNS
+ * resolution, TCP refusal, or a broken certificate.
+ *
+ * Shared between the retry-decision site in the Browserless loop below
+ * (skip the retry — classify immediately) and netErrorMessage() (construct
+ * the user-facing message), so the two can never drift out of sync: a
+ * six-lens review round (2026-08-16) flagged that the message said
+ * "retrying will not help" while the code retried once anyway.
+ */
+function isPermanentNetError(bodyText: string): boolean {
+  // Anchored on Chrome's canonical `net::` prefix (round-5 review): an error
+  // body that merely *mentions* a bare token in prose should not suppress a
+  // retry; real Chrome navigation failures always surface as `net::ERR_*`.
+  return (
+    /net::ERR_NAME_NOT_RESOLVED/.test(bodyText) ||
+    /net::ERR_CONNECTION_REFUSED/.test(bodyText) ||
+    /net::ERR_CERT_[A-Z_]+/.test(bodyText)
+  );
+}
+
+/**
+ * Build the permanent-failure message for a body matched by
+ * isPermanentNetError(). Six-lens review finding Medium 2b (2026-08-16):
+ * these were getting the 5xx branch's "usually transient — try again"
+ * advice, which is actively wrong for a domain that will never resolve.
+ * Returns null when no known net-error pattern matches. Fixed strings only —
+ * no upstream bytes are echoed into the message. Round-5 review caught the
+ * previous version interpolating the matched ERR_CERT_* token (unbounded,
+ * body-controlled — `net::ERR_CERT_FAKE_SECRET` would have been echoed
+ * verbatim); the cert branch is now a fixed string like every other branch.
+ */
+function netErrorMessage(bodyText: string, domain: string): string | null {
+  if (!isPermanentNetError(bodyText)) return null;
+  if (/net::ERR_NAME_NOT_RESOLVED/.test(bodyText)) {
+    return `The domain${domain} does not resolve. This is a permanent failure — retrying will not help.`;
+  }
+  if (/net::ERR_CONNECTION_REFUSED/.test(bodyText)) {
+    return `The connection to the target site${domain} was refused. This is a permanent failure — retrying will not help.`;
+  }
+  if (/net::ERR_CERT_[A-Z_]+/.test(bodyText)) {
+    return `The target site${domain}'s TLS certificate is invalid. This is a permanent failure — retrying will not help.`;
+  }
+  return null;
 }
 
 /** Map a non-OK Browserless response status into an honest, actionable message. */
-function humanizeBrowserlessStatus(status: number, targetUrl: string): string {
+function humanizeBrowserlessStatus(status: number, targetUrl: string, bodyText = ""): string {
   let hostname = "";
   try { hostname = new URL(targetUrl).hostname; } catch { /* ignore */ }
   const domain = hostname ? ` (${hostname})` : "";
@@ -129,11 +234,19 @@ function humanizeBrowserlessStatus(status: number, targetUrl: string): string {
     return `This page requires authentication (HTTP ${status})${domain}. Only publicly available pages can be scraped.`;
   }
   if (status === 403) {
-    return `The site${domain} blocks automated access (HTTP 403 Forbidden). This is bot protection on the target site, not a Strale issue.`;
+    return `The site${domain} blocks automated access (HTTP 403 Forbidden). This is bot protection on the target site, not a Strale issue. Retrying will not help.`;
   }
   if (status >= 500) {
+    const netErr = netErrorMessage(bodyText, domain);
+    if (netErr) return netErr;
     return `The target site${domain} returned a server error (HTTP ${status}). This is usually transient — try again in a few minutes.`;
   }
+  // Six-lens review finding HIGH (2026-08-16, round 3): a prior version of
+  // this branch appended a sanitized snippet of the upstream response body
+  // to this message. A denylist sanitizer (strip markup/control chars)
+  // cannot be made secret-safe — a token, signed URL, or credential in a
+  // Browserless error body would survive markup-stripping untouched. Fixed
+  // string, HTTP status only. No upstream bytes reach the caller here.
   return `The web page${domain} could not be loaded (HTTP ${status}).`;
 }
 
@@ -188,7 +301,14 @@ export async function fetchPage(
     fetchTimeout = 35000,
     maxRetries = 2,
     skipCache = false,
+    skipFallback = false,
+    minHtmlLength = 100,
   } = options ?? {};
+
+  // See cacheNamespace() — partitions the cache so skipFallback callers
+  // never read/write a fallback-tier entry, and different waitUntil
+  // renders never collide.
+  const renderMode = cacheNamespace(skipFallback, waitUntil);
 
   // Per-source ToS policy enforced at the pipeline entry (P2, 2026-08-12):
   // tiers 2/3 (Jina, Browserless) never touch safeFetch, so its gate alone
@@ -201,8 +321,17 @@ export async function fetchPage(
 
   // Check cache first (before acquiring browser slot)
   if (!skipCache) {
-    const cached = getCached(targetUrl);
-    if (cached) {
+    const cached = getCached(renderMode, targetUrl);
+    // Six-lens review finding Medium 3 (2026-08-16): a cache entry is
+    // written under whatever minHtmlLength the writer used, but a later
+    // caller in the same namespace with a stricter minHtmlLength has no
+    // guarantee the cached HTML actually clears ITS bar — getCached()
+    // returns whatever was stored regardless of length. Treat a
+    // too-short hit as a miss and fall through to a fresh fetch rather
+    // than silently handing back HTML this caller would have rejected
+    // from a live response. The stale-short entry is left in place —
+    // another caller with a looser minHtmlLength may still want it.
+    if (cached && cached.length >= minHtmlLength) {
       return { html: cached, cached: true, fetchTimeMs: 0, attempt: 0 };
     }
   }
@@ -213,7 +342,7 @@ export async function fetchPage(
   // Browserless if the response looks like an SPA shell or is too short.
   // IMPORTANT: DNS failures and connection refused are fatal — don't waste
   // 30+ seconds on Browserless for a URL that doesn't resolve.
-  if (!options?.waitUntil || options.waitUntil === "networkidle0") {
+  if (!skipFallback && (!options?.waitUntil || options.waitUntil === "networkidle0")) {
     try {
       const start = Date.now();
       // F-0-006: safeFetch validates, re-validates every redirect, and
@@ -248,7 +377,7 @@ export async function fetchPage(
           // silently returned "no results" for weeks (P2 triage, 2026-08-12).
           if (!looksLikeJsChallenge(html) && html.length > 2000 && bodyText.length > 200) {
             const fetchTimeMs = Date.now() - start;
-            if (!skipCache) setCache(targetUrl, html);
+            if (!skipCache) setCache(renderMode, targetUrl, html);
             return { html, cached: false, fetchTimeMs, attempt: 0 };
           }
         }
@@ -292,7 +421,7 @@ export async function fetchPage(
   // Jina converts URLs to clean text/HTML. Free at 200 RPM with API key.
   // Skip Jina for non-default waitUntil (caller needs specific rendering behavior)
   // and for URLs that need full browser features (screenshot, PDF, cookie analysis).
-  if (!options?.waitUntil || options.waitUntil === "networkidle0") {
+  if (!skipFallback && (!options?.waitUntil || options.waitUntil === "networkidle0")) {
     try {
       const start = Date.now();
       const jinaUrl = `https://r.jina.ai/${targetUrl}`;
@@ -313,7 +442,7 @@ export async function fetchPage(
         const html = await jinaResp.text();
         if (html.length > 500 && !looksLikeJsChallenge(html)) {
           const fetchTimeMs = Date.now() - start;
-          if (!skipCache) setCache(targetUrl, html);
+          if (!skipCache) setCache(renderMode, targetUrl, html);
           return { html, cached: false, fetchTimeMs, attempt: 0 };
         }
       }
@@ -358,20 +487,39 @@ export async function fetchPage(
 
         if (!response.ok) {
           const errText = await response.text().catch(() => "");
-          if (isTransient(response.status) && attempt < maxRetries - 1) {
+          // Six-lens review finding Medium (2026-08-16, round 3): a
+          // Chrome/Browserless net-error (DNS doesn't resolve, connection
+          // refused, bad cert) arrives wrapped in a 5xx/408/429 status that
+          // isTransient() would otherwise retry — making the resulting
+          // "retrying will not help" message a lie for the one internal
+          // retry's worth of time it takes to find that out.
+          // isPermanentNetError() gates the retry decision on the SAME
+          // patterns netErrorMessage() uses to build that message, so
+          // "classified transient" and "worded as permanent" can't diverge.
+          // Scoped to >=500 (round-5 review): Browserless wraps Chrome
+          // navigation failures in 5xx — that is where a net-error body means
+          // "this will never work". A 408/429 keeps its own retry semantics
+          // (timeout / rate-limit) regardless of what the body text mentions,
+          // matching humanizeBrowserlessStatus, which only consults
+          // netErrorMessage() inside its >=500 branch.
+          if (
+            isTransient(response.status) &&
+            !(response.status >= 500 && isPermanentNetError(errText)) &&
+            attempt < maxRetries - 1
+          ) {
             lastError = new Error(
               `Browserless HTTP ${response.status}: ${errText.slice(0, 200)}`,
             );
             continue;
           }
-          const humanMsg = humanizeBrowserlessStatus(response.status, targetUrl);
+          const humanMsg = humanizeBrowserlessStatus(response.status, targetUrl, errText);
           throw new Error(humanMsg);
         }
 
         const html = await response.text();
         const fetchTimeMs = Date.now() - start;
 
-        if (!html || html.length < 100) {
+        if (!html || html.length < minHtmlLength) {
           if (attempt < maxRetries - 1) {
             lastError = new Error("Browserless returned empty or too-short HTML.");
             continue;
@@ -392,7 +540,7 @@ export async function fetchPage(
 
         // Cache the result
         if (!skipCache) {
-          setCache(targetUrl, html);
+          setCache(renderMode, targetUrl, html);
         }
 
         return { html, cached: false, fetchTimeMs, attempt: attempt + 1 };
