@@ -5,6 +5,33 @@ import { log } from "./log.js";
 
 const BATCH_SIZE = 1000;
 const BATCH_DELAY_MS = 100;
+/**
+ * DEC-20260504-B: a hard per-invocation ceiling, so no single sweep can run
+ * unbounded however large the backlog has grown. 50 × 1000 = 50,000 rows and
+ * ~5s of deliberate pause. Whatever is left is picked up by the next sweep.
+ */
+const MAX_BATCHES_PER_RUN = 50;
+
+/**
+ * Rows affected by a `db.execute()`.
+ *
+ * postgres-js returns a `RowList` whose affected-row count is `.count`. Every
+ * loop in this file read `.rowCount` — a node-postgres name this driver never
+ * sets — so the value was `undefined`, coalesced to 0, and:
+ *
+ *  - `if (count < BATCH_SIZE) break` fired on the **first** iteration, so each
+ *    sweep processed at most one batch and the backlog never drained;
+ *  - every counter in the summary log reported 0 forever, which is exactly the
+ *    silent-failure shape DEC-20260504-A exists to catch — in the file whose
+ *    own comments cite it.
+ *
+ * `db-retention.ts:152` and 15 sites in `startup-migrations.ts` already read
+ * `.count`; this file was the un-fixed twin. Centralised here so there is one
+ * place to be wrong.
+ */
+function affected(result: unknown): number {
+  return (result as { count?: number }).count ?? 0;
+}
 
 /**
  * Transaction retention window for GDPR Art. 30 record-of-processing
@@ -54,6 +81,7 @@ export const PII_RETENTION_DAYS = 90;
 async function purgeTestResults(cutoff: Date): Promise<number> {
   const db = getDb();
   let deleted = 0;
+  let batches = 0;
   while (true) {
     const result = await db.execute(sql`
       DELETE FROM test_results
@@ -63,9 +91,9 @@ async function purgeTestResults(cutoff: Date): Promise<number> {
         LIMIT ${BATCH_SIZE}
       )
     `);
-    const count = (result as any).rowCount ?? 0;
+    const count = affected(result);
     deleted += count;
-    if (count < BATCH_SIZE) break;
+    if (count < BATCH_SIZE || ++batches >= MAX_BATCHES_PER_RUN) break;
     await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
   }
   return deleted;
@@ -74,6 +102,7 @@ async function purgeTestResults(cutoff: Date): Promise<number> {
 async function purgeTransactionQuality(cutoff: Date): Promise<number> {
   const db = getDb();
   let deleted = 0;
+  let batches = 0;
   while (true) {
     // Skip transaction_quality rows linked to transactions with legal_hold
     const result = await db.execute(sql`
@@ -86,9 +115,9 @@ async function purgeTransactionQuality(cutoff: Date): Promise<number> {
         LIMIT ${BATCH_SIZE}
       )
     `);
-    const count = (result as any).rowCount ?? 0;
+    const count = affected(result);
     deleted += count;
-    if (count < BATCH_SIZE) break;
+    if (count < BATCH_SIZE || ++batches >= MAX_BATCHES_PER_RUN) break;
     await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
   }
   return deleted;
@@ -97,6 +126,7 @@ async function purgeTransactionQuality(cutoff: Date): Promise<number> {
 async function purgeTransactions(cutoff: Date): Promise<number> {
   const db = getDb();
   let redacted = 0;
+  let batches = 0;
   while (true) {
     // NEVER touch transactions with legal_hold = true.
     //
@@ -137,9 +167,9 @@ async function purgeTransactions(cutoff: Date): Promise<number> {
         LIMIT ${BATCH_SIZE}
       )
     `);
-    const count = (result as any).rowCount ?? 0;
+    const count = affected(result);
     redacted += count;
-    if (count < BATCH_SIZE) break;
+    if (count < BATCH_SIZE || ++batches >= MAX_BATCHES_PER_RUN) break;
     await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
   }
   return redacted;
@@ -148,6 +178,7 @@ async function purgeTransactions(cutoff: Date): Promise<number> {
 async function purgeHealthMonitorEvents(cutoff: Date): Promise<number> {
   const db = getDb();
   let deleted = 0;
+  let batches = 0;
   while (true) {
     const result = await db.execute(sql`
       DELETE FROM health_monitor_events
@@ -157,9 +188,9 @@ async function purgeHealthMonitorEvents(cutoff: Date): Promise<number> {
         LIMIT ${BATCH_SIZE}
       )
     `);
-    const count = (result as any).rowCount ?? 0;
+    const count = affected(result);
     deleted += count;
-    if (count < BATCH_SIZE) break;
+    if (count < BATCH_SIZE || ++batches >= MAX_BATCHES_PER_RUN) break;
     await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
   }
   return deleted;
@@ -216,33 +247,60 @@ async function purgeHealthMonitorEvents(cutoff: Date): Promise<number> {
  * — prove what happened, do not re-derive what was said.
  *
  * DEC-20260504-B re-audit for the widened window, 2026-08-15: 3,032 rows /
- * ~9.6 MB of payload on the first run, 0 on legal hold. The existing
- * LIMIT/BATCH_SIZE self-throttle bounds each tick to 1000 rows, so the
- * backlog drains over ~4 batches. Strategy unchanged: SELF-THROTTLE, no
- * pre-drain script needed at this volume.
+ * ~9.6 MB of payload on the first run, 0 on legal hold. Strategy: SELF-THROTTLE
+ * — BATCH_SIZE rows per statement, BATCH_DELAY_MS between statements, and
+ * MAX_BATCHES_PER_RUN as the per-invocation ceiling. (An earlier version of
+ * this note said the batch loop "bounds each tick to 1000 rows". It did not:
+ * the loop drained the whole backlog in one invocation, rate-limited but not
+ * capped. MAX_BATCHES_PER_RUN is what makes the claim true.)
+ *
+ * 2026-08-16 — STOPPED SETTING `deleted_at`.
+ *
+ * This is a *content* redaction, and `deleted_at` does not mean that. Per
+ * schema.ts: "deletedAt marks the row logically gone; redactedAt marks
+ * input/output/audit_trail zeroed." Setting both meant every customer read
+ * path — the transaction list, transaction detail, the audit-record endpoint
+ * behind every shareable audit URL, and the A2A task lookup, all of which
+ * filter `deleted_at IS NULL` — dropped the row entirely at 90 days.
+ *
+ * Under the old narrow selector that hit the ~90 personal-data capabilities.
+ * Widening it to all transactions on 2026-08-15 quietly turned it into: every
+ * customer loses their whole history, and every audit record stops resolving,
+ * at 90 days. Audit Trail is a product we sell. The docstring above says the
+ * Art. 30 skeleton "survives for the full 1095 days" — true in the table,
+ * false through the API, which is the only place a customer can see it.
+ *
+ * Masked at the time by the `.rowCount` bug above, which capped each sweep at
+ * one batch. Fixing that without this would have detonated it.
+ *
+ * `redacted_at` alone now marks these rows, and the chain walker in
+ * routes/verify.ts classifies on either column — see the note there. The
+ * hard-deletion path at TRANSACTION_RETENTION_DAYS (1095) still sets
+ * `deleted_at`, because there the row genuinely is gone.
  */
 async function purgeCustomerContent(cutoff: Date): Promise<number> {
   const db = getDb();
   let redacted = 0;
+  let batches = 0;
   while (true) {
     const result = await db.execute(sql`
       UPDATE transactions
       SET
         ${CUSTOMER_CONTENT_CLEAR_SQL},
-        deleted_at = NOW(),
         redacted_at = NOW(),
-        deletion_reason = 'pii_retention_purge'
+        deletion_reason = 'content_retention_purge'
       WHERE id IN (
         SELECT t.id FROM transactions t
         WHERE t.created_at < ${cutoff.toISOString()}::timestamptz
           AND t.legal_hold = false
+          AND t.redacted_at IS NULL
           AND t.deleted_at IS NULL
         LIMIT ${BATCH_SIZE}
       )
     `);
-    const count = (result as any).rowCount ?? 0;
+    const count = affected(result);
     redacted += count;
-    if (count < BATCH_SIZE) break;
+    if (count < BATCH_SIZE || ++batches >= MAX_BATCHES_PER_RUN) break;
     await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
   }
   return redacted;

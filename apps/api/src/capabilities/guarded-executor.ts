@@ -33,7 +33,6 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { log, logError, logWarn } from "../lib/log.js";
-import { sendAlert } from "../lib/alerting.js";
 import { alertOnce } from "../lib/alert-once.js";
 import {
   type CapabilityExecutor,
@@ -472,13 +471,12 @@ async function maybeFireThresholdAlerts(
       {
         subject: `[budget] ${slug} reached ${threshold}% of ${meta.quota_window} test budget`,
         body:
-          `Capability: ${slug}\n` +
-          `Cost class: ${meta.cost_class}\n` +
-          `Quota window: ${meta.quota_window}\n` +
-          `Quota cap: ${meta.quota_cap}\n` +
-          `Budget cap (this window): ${budgetCap}\n` +
-          `Test count so far: ${row.test_count}\n` +
-          `Percentage: ${(pct * 100).toFixed(1)}%\n\n` +
+          // Written for Petter, who is non-technical. The raw enum values
+          // (cost_class, quota_window, ctx.kind) stay out of the email; the
+          // slug stays in because it is the one token he can search for.
+          `Data service: ${slug}\n` +
+          `Our own testing has used ${row.test_count} of the ${budgetCap} daily calls we allow ` +
+          `ourselves against this supplier (${(pct * 100).toFixed(1)}%).\n\n` +
           `This is our own test harness consuming a vendor free allowance, not a\n` +
           `customer problem: the cap exists so customer traffic is never starved\n` +
           `by our testing, and it is working. Repeats within ${ALERT_COOLDOWN_DAYS} days are logged\n` +
@@ -533,14 +531,12 @@ async function fireBudgetHardStopAlert(
     {
     subject: `[budget-hard-stop] ${slug} exhausted ${meta.quota_window} test budget`,
     body:
-      `Capability: ${slug}\n` +
-      `Cost class: ${meta.cost_class}\n` +
-      `Quota window: ${meta.quota_window}\n` +
-      `Quota cap: ${meta.quota_cap}\n` +
-      `Budget cap (this window): ${budgetCap}\n` +
-      `Refused context: ${ctx.kind}\n` +
-      `Customer traffic is unaffected. Strale's own test/CI usage paused ` +
-      `until next ${meta.quota_window} window.\n\n` +
+      `Data service: ${slug}\n` +
+      `Our own testing has used its entire ${meta.quota_window} allowance with this ` +
+      `supplier (${budgetCap} calls), so further testing of it is paused until the ` +
+      `allowance resets.\n\n` +
+      `Customers are unaffected — this only stops Strale testing itself. ` +
+      `Nothing needs doing unless you see it every week.\n\n` +
       `Repeats within ${ALERT_COOLDOWN_DAYS} days are logged but not emailed — the refusal ` +
       `still happens every time.`,
     severity: "critical",

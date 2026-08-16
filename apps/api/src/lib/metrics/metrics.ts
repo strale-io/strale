@@ -211,10 +211,24 @@ export async function identityCoverage(w: Window): Promise<Measurement<number>> 
  *
  * Rolling 28 days by default: at this volume a weekly count is dominated by
  * one buyer's schedule rather than by anything we did.
+ *
+ * **Instrument age is handled, not ignored.** Half the actor key comes from
+ * `user_id`, which is as old as the table; the other half from
+ * `x402_payer_hash`, enabled 2026-08-15. While that half is younger than the
+ * window the wallet side is truncated — some x402 revenue is unattributable
+ * only because the column did not exist yet, and *no* actor can have been
+ * first seen before the window opened, so `returning` would be a structural
+ * zero rather than a measurement.
+ *
+ * So: `estimated` (not `observed`) with the truncation stated, and `returning`
+ * is `null` — "we cannot tell yet" — rather than 0. Reporting a one-day-old
+ * instrument as a 28-day fact is the 2026-08-15 "1 paying customer" error, and
+ * this metric is the one the dashboard actually calls.
  */
 export async function payingActors(
   w: Window,
-): Promise<Measurement<{ total: number; returning: number; topShare: number; byKind: Record<string, number> }>> {
+): Promise<Measurement<{ total: number; returning: number | null; topShare: number; unattributedCents: number; byKind: Record<string, number> }>> {
+  const guard = coversWindow("x402_payer_identity", w.from);
   const r = await rows<{ actor_key: string; actor_kind: string; cents: string; first_seen: string }>(sql`
     SELECT ${sql.raw(ACTOR_KEY_SQL)} AS actor_key,
            ${sql.raw(ACTOR_KIND_SQL)} AS actor_kind,
@@ -230,23 +244,49 @@ export async function payingActors(
     return { status: "unavailable", population: "external_customers", requestedWindow: w,
              reason: { kind: "no_data" } };
   }
-  const totalCents = identified.reduce((a, x) => a + Number(x.cents), 0);
+  const identifiedCents = identified.reduce((a, x) => a + Number(x.cents), 0);
+  // Revenue we could not attribute to anyone. `topShare` MUST be a share of
+  // all external revenue, not of the attributed slice: dividing by the slice
+  // turns "one wallet, plus a lot we cannot see" into a confident 100%.
+  const unattributedCents = r
+    .filter((x) => x.actor_key === null)
+    .reduce((a, x) => a + Number(x.cents), 0);
+  const totalCents = identifiedCents + unattributedCents;
   const byKind: Record<string, number> = {};
   for (const x of identified) byKind[x.actor_kind] = (byKind[x.actor_kind] ?? 0) + 1;
+  const topShare = totalCents === 0 ? 0
+    : Math.max(...identified.map((x) => Number(x.cents))) / totalCents;
+  const caveat = identified.length === 1
+    ? (unattributedCents > 0
+        ? "One identified buyer, and money we cannot yet trace to anyone."
+        : "All of it from a single buyer.")
+    : undefined;
+  const value = {
+    total: identified.length,
+    // "Returning" = first seen before this window opened, which is only
+    // answerable once the identity instrument is older than the window.
+    returning: guard.ok
+      ? identified.filter((x) => new Date(x.first_seen) < w.from).length
+      : null,
+    topShare,
+    unattributedCents,
+    byKind,
+  };
+  if (!guard.ok) {
+    return {
+      status: "estimated", value, window: w, population: "external_customers",
+      methodology:
+        "A lower bound. Wallet identity has only been recorded since " +
+        (guard.enabledAt ? guard.enabledAt.toISOString().slice(0, 10) : "recently") +
+        ", so buyers active earlier in this window are not counted, and whether " +
+        "anyone came back cannot be answered yet",
+      instruments: evidenceFor(["x402_payer_identity"]),
+      caveat,
+    };
+  }
   return {
-    status: "observed",
-    value: {
-      total: identified.length,
-      // "Returning" means first seen before this window opened — so it is only
-      // meaningful once the identity instrument is older than the window.
-      returning: identified.filter((x) => new Date(x.first_seen) < w.from).length,
-      topShare: totalCents === 0 ? 0
-        : Math.max(...identified.map((x) => Number(x.cents))) / totalCents,
-      byKind,
-    },
-    window: w, population: "external_customers",
-    instruments: evidenceFor(["x402_payer_identity"]),
-    caveat: identified.length === 1 ? "All of it from a single buyer." : undefined,
+    status: "observed", value, window: w, population: "external_customers",
+    instruments: evidenceFor(["x402_payer_identity"]), caveat,
   };
 }
 

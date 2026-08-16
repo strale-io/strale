@@ -255,6 +255,32 @@ describe("classifyChainLink — F-AUDIT-13/16 redacted-aware verify", () => {
     expect(result).toBe("redacted");
   });
 
+  it("classifies as 'redacted' when only redactedAt is set (90-day content sweep)", async () => {
+    // 2026-08-16: the 90-day customer-content sweep stopped setting deleted_at
+    // - it is a content redaction, and deleted_at means "the row is gone",
+    // which hid every customer's history and every audit record at 90 days.
+    // The classifier has to honour redactedAt, or dropping deleted_at would
+    // report every row past the window as a BROKEN link. Broken must stay
+    // reserved for tamper.
+    const { classifyChainLink } = await import("./verify.js");
+    expect(
+      classifyChainLink({
+        deletedAt: null,
+        redactedAt: new Date("2026-05-18T10:00:00Z"),
+        integrityHash: "abc123",
+        recomputedHash: "def456",
+      }),
+    ).toBe("redacted");
+  });
+
+  it("buckets both retention reasons as retention, never as 'other'", async () => {
+    const { isRetentionReason } = await import("./verify.js");
+    expect(isRetentionReason("retention_purge")).toBe(true);
+    expect(isRetentionReason("content_retention_purge")).toBe(true);
+    expect(isRetentionReason("user_request")).toBe(false);
+    expect(isRetentionReason(null)).toBe(false);
+  });
+
   it("classifies as 'verified' when hash matches and not deleted", async () => {
     const { classifyChainLink } = await import("./verify.js");
     const result = classifyChainLink({
