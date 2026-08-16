@@ -13,7 +13,10 @@
  *      capability, with the known_answer subset, the piggyback subset, the
  *      trailing-24h subset and the last listing-state event broken out, plus
  *      the circuit-breaker state.
- *   2. evaluatePromotion() → at most maxPromotionsPerRun promotions/tick.
+ *   2. evaluatePromotion() → at most maxPromotionsPerRun promotions/tick. A
+ *      quality-floor quarantine that clears every gate is auto-reversed here
+ *      ("promotion grace" fix, 2026-08-16 — DEC-20260812-A auto-promote-on-
+ *      recovery); a human/operator takedown still only ever gets flagged.
  *   3. Apply: lifecycle_state='active', visible=true, x402_enabled set to the
  *      decision's value — inside a transaction with its event.
  *   4. Always emit per-decision events plus a tick_complete heartbeat.
@@ -90,7 +93,15 @@ export interface PromotionEvidenceRow {
  *
  * `last_listing_event` collapses to the two things the core needs: was this a
  * takedown, and what was it. A capability that has never been listed has no
- * such event and is a dark launch, not a reinstatement.
+ * such event and is a dark launch, not a reinstatement. `wasFloorQuarantine`
+ * narrows further: 'quarantined' is written only by
+ * `jobs/quality-floor.ts`'s enforce-mode apply path (event_type
+ * 'quality_floor', action_taken 'quarantined' — see PROMOTION_EVIDENCE_SQL's
+ * lateral join below), so it can never collide with a human/operator
+ * lifecycle_transition action_taken ('Unpublished...', 'Suspended...',
+ * 'Published...'). This is the signal that lets evaluatePromotion
+ * auto-reverse a floor takedown while still refusing to touch a human one
+ * ("promotion grace" fix, 2026-08-16).
  */
 export function toPromotionStats(rows: PromotionEvidenceRow[]): PromotionStats[] {
   return rows.map((r) => {
@@ -108,6 +119,7 @@ export function toPromotionStats(rows: PromotionEvidenceRow[]): PromotionStats[]
       breakerState: r.breaker_state,
       wasDelisted,
       delistingReason: wasDelisted ? r.last_listing_event : null,
+      wasFloorQuarantine: wasDelisted && r.last_listing_event === "quarantined",
       totalTests: r.total_tests,
       passedTests: r.passed_tests,
       distinctTestDays: r.distinct_test_days,

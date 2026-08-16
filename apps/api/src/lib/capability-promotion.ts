@@ -55,16 +55,29 @@
  * reason several gates exist that a reading of DEC-20260812-A alone would not
  * suggest:
  *
- * 1. **A floor quarantine must not be undone by harness evidence.** The floor
- *    delists on real paid traffic and leaves `lifecycle_state='active'`,
- *    `deactivation_reason` NULL — which is exactly the shape of a promotable
- *    dark launch. Without an interlock this job would re-list a capability
- *    every day that the floor delists every night, on evidence from a harness
- *    that never sees the failing customer calls. `wasDelisted` distinguishes
- *    "never listed" (a dark launch, promotable) from "taken down" (a floor
- *    quarantine, a human unpublish, or a suspension — flagged, never
- *    auto-promoted). The floor has really quarantined 6 times, so this is not
- *    hypothetical.
+ * 1. **A floor quarantine must not be undone by harness evidence — unless the
+ *    floor itself now agrees.** The floor delists on real paid traffic and
+ *    leaves `lifecycle_state='active'`, `deactivation_reason` NULL — which is
+ *    exactly the shape of a promotable dark launch. Without an interlock this
+ *    job would re-list a capability every day that the floor delists every
+ *    night, on evidence from a harness that never sees the failing customer
+ *    calls. `wasDelisted` distinguishes "never listed" (a dark launch,
+ *    promotable) from "taken down" (a floor quarantine, a human unpublish, or
+ *    a suspension). A human/operator takedown (`wasDelisted &&
+ *    !wasFloorQuarantine`) is still flagged, never auto-promoted — this job
+ *    does not overturn a person's decision. A *floor* takedown
+ *    (`wasFloorQuarantine`) is different as of the 2026-08-16 "promotion
+ *    grace" fix: DEC-20260812-A lists "auto-promote on recovery" as a
+ *    platform-acts-alone action, and `jobs/quality-floor.ts` now clamps its
+ *    own evidence window to since-last-promotion — so if this job reverses a
+ *    floor quarantine wrongly, the floor re-quarantines on fresh
+ *    post-promotion traffic instead of replaying the same contaminated 30d
+ *    window that caused the original bounce (screenshot-url,
+ *    2026-08-13T07:34 → re-quarantined 07:47 on stale pre-fix data). Every
+ *    other gate in this function — correctness, recency, piggyback — still
+ *    applies before a floor takedown is reversed; only the flag-instead-of-
+ *    promote branch is skipped. The floor has really quarantined 6 times, so
+ *    this is not hypothetical.
  * 2. **Harness volume must not outvote real customers.** ~98% of platform
  *    traffic is our own harness. A capability with 100 green harness results
  *    and 2 failing piggyback results — piggyback being real customer calls —
@@ -121,6 +134,14 @@ export interface PromotionStats {
   wasDelisted: boolean;
   /** What that takedown was, for the flag message. */
   delistingReason: string | null;
+  /**
+   * True when `wasDelisted` and the takedown specifically was the quality
+   * floor's own quarantine (`health_monitor_events.action_taken =
+   * 'quarantined'`) — never true for a human unpublish/suspend. This is the
+   * only class of takedown DEC-20260812-A permits this job to auto-reverse;
+   * see the "promotion grace" note in the module header (finding 1).
+   */
+  wasFloorQuarantine: boolean;
   totalTests: number;
   passedTests: number;
   /** Distinct calendar days carrying at least one result — the "week" in "green week". */
@@ -262,9 +283,16 @@ export function evaluatePromotion(
       }
     }
 
-    // A takedown is a decision, and this job does not overturn decisions
-    // (review finding 1). Never having been listed is not a takedown.
-    if (r.wasDelisted) {
+    // A human/operator takedown is a decision, and this job does not
+    // overturn decisions (review finding 1). Never having been listed is not
+    // a takedown. A *floor* takedown (wasFloorQuarantine) is the one
+    // exception DEC-20260812-A carves out — "promotion grace" fix,
+    // 2026-08-16: it falls through to the normal promote path below instead
+    // of being flagged, because every gate above it (correctness, recency,
+    // piggyback) already had to pass, and jobs/quality-floor.ts now clamps
+    // its own window to since-last-promotion so a wrong reversal gets caught
+    // on fresh evidence rather than replayed stale evidence.
+    if (r.wasDelisted && !r.wasFloorQuarantine) {
       decisions.push({
         slug: r.slug, action: "flag", enableX402: false,
         passRate: r.passRate, totalTests: r.totalTests,
@@ -293,13 +321,22 @@ export function evaluatePromotion(
     // marketplace-eligible goes onto x402 with the promotion: DEC-20260812-A
     // dark-launches "invisible + non-x402", and one green week ends both.
     const enableX402 = r.hasX402Method && !r.isFreeTier;
+    // "Promotion grace" fix (2026-08-16): a floor takedown that reaches here
+    // cleared every gate above, including piggyback (real customer traffic)
+    // when there was any — so this is an auto-reversal of the quarantine, not
+    // a first listing. Named explicitly in the reason and cited to the DEC
+    // clause that authorizes it, so a `health_monitor_events` reader can tell
+    // the two apart without cross-referencing the floor's own log.
+    const recoveryNote = r.wasFloorQuarantine
+      ? ` — was quarantined by the quality floor ("${r.delistingReason}"); auto-reversed on recovery per DEC-20260812-A`
+      : "";
     decisions.push({
       slug: r.slug,
       action: "promote",
       enableX402,
       passRate: r.passRate,
       totalTests: r.totalTests,
-      reason: `${pct(r.passRate)} over ${r.totalTests} results across ${r.distinctTestDays} days, known_answer ${pct(kaRate)} (${r.knownAnswerPassed}/${r.knownAnswerTotal}), last 24h ${pct(recentRate)}, breaker ${r.breakerState ?? "no row"} — green week met${enableX402 ? "; x402 opened" : r.isFreeTier ? "; free tier, x402 stays closed" : "; no x402 method, catalog only"}`,
+      reason: `${pct(r.passRate)} over ${r.totalTests} results across ${r.distinctTestDays} days, known_answer ${pct(kaRate)} (${r.knownAnswerPassed}/${r.knownAnswerTotal}), last 24h ${pct(recentRate)}, breaker ${r.breakerState ?? "no row"} — green week met${enableX402 ? "; x402 opened" : r.isFreeTier ? "; free tier, x402 stays closed" : "; no x402 method, catalog only"}${recoveryNote}`,
     });
   }
 

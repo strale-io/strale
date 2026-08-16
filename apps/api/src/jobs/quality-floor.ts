@@ -11,10 +11,25 @@
  * boot.
  *
  * Per tick:
- *   1. Aggregate 30d external PAID traffic per active/degraded capability
- *      (internal accounts excluded by the canonical suffix rule; free-tier
- *      rows excluded — anonymous €0 traffic is the cheapest failure-
- *      fabrication vector, review H-1; soft-deleted rows excluded, M-8).
+ *   1. Aggregate external PAID traffic per active/degraded capability over a
+ *      window that is 30d, CLAMPED to since-last-promotion when that's more
+ *      recent ("promotion grace" fix, 2026-08-16). Without the clamp, a
+ *      capability promoted mid-window still carries its pre-promotion
+ *      failures in the same 30d completion rate, so the very next tick could
+ *      re-quarantine it on stale evidence — observed in prod on
+ *      screenshot-url: promoted 2026-08-13 07:34, re-quarantined 07:47 by
+ *      contaminated-window arithmetic, even though the underlying bug had
+ *      been fixed on 2026-08-05. The clamp reads the latest *enforce-mode*
+ *      `capability_promoted`/`promoted_with_x402` event per slug from
+ *      `health_monitor_events` (dry_run events never move the window — a
+ *      promotion that was never applied must not grant a grace period) and
+ *      only counts traffic from that timestamp forward. The existing
+ *      `minCalls` (≥10) eligibility gate then acts as the grace period itself:
+ *      a freshly promoted capability simply has no verdict until 10 NEW
+ *      eligible calls land post-promotion (internal accounts excluded by the
+ *      canonical suffix rule; free-tier rows excluded — anonymous €0 traffic
+ *      is the cheapest failure-fabrication vector, review H-1; soft-deleted
+ *      rows excluded, M-8).
  *   2. Classify failures (lib/transaction-failure-taxonomy.ts); caller-
  *      attributable ones don't count. Distinct failure days feed the pure
  *      core's burst guard.
@@ -28,8 +43,14 @@
  *      even on a zero-decision tick (M-3).
  *
  * Deactivation is NEVER applied here — proposals only (escalation contract).
- * Promotion/recovery is doctor-driven in v1. Solution-step traffic is out of
- * scope (M-6; see lib/quality-floor.ts header).
+ * Promotion/recovery is handled by jobs/capability-promotion.ts, which is
+ * explicitly allowed to auto-reverse a floor quarantine on recovery
+ * (DEC-20260812-A "auto-promote on recovery" is a platform-acts-alone
+ * action) — this clamp is what makes that safe: if an auto-reversal turns
+ * out wrong, the floor re-quarantines on fresh post-promotion evidence
+ * rather than replaying the same contaminated window that caused the
+ * original bounce. Solution-step traffic is out of scope (M-6; see
+ * lib/quality-floor.ts header).
  */
 import postgres from "postgres";
 import { getDb } from "../db/index.js";
@@ -126,6 +147,13 @@ export async function runQualityFloorOnce(): Promise<{
 
     const mode = isEnforceMode() ? "enforce" : "dry_run";
     try {
+      // `lp.promoted_at`: the latest ENFORCE-mode promotion for this slug,
+      // per the "promotion grace" fix (2026-08-16). Dry-run promotions never
+      // wrote a real listing change, so they must never move the window —
+      // filtered via `details->>'mode' = 'enforce'`. GREATEST() keeps the
+      // window's upper bound at 30d when there is no promotion (or it is
+      // older than 30d): the clamp can only ever narrow the window, never
+      // widen it past the DEC-20260812-A default.
       const rows = await sql<FloorTrafficRow[]>`
         SELECT c.slug, c.lifecycle_state, c.visible, c.x402_enabled,
                t.status, t.error, t.price_cents,
@@ -133,9 +161,20 @@ export async function runQualityFloorOnce(): Promise<{
                (t.created_at > NOW() - INTERVAL '7 days') AS recent,
                COUNT(*)::int AS n
         FROM capabilities c
+        LEFT JOIN LATERAL (
+          SELECT MAX(e.created_at) AS promoted_at
+          FROM health_monitor_events e
+          WHERE e.capability_slug = c.slug
+            AND e.event_type = 'capability_promotion'
+            AND e.action_taken LIKE 'promoted%'
+            AND e.details->>'mode' = 'enforce'
+        ) lp ON true
         JOIN transactions t ON t.capability_id = c.id
         WHERE c.is_active = true
-          AND t.created_at > NOW() - INTERVAL '30 days'
+          AND t.created_at > GREATEST(
+                NOW() - INTERVAL '30 days',
+                COALESCE(lp.promoted_at, '-infinity'::timestamptz)
+              )
           AND t.status IN ('completed', 'failed')
           AND t.deleted_at IS NULL
           AND COALESCE(t.is_free_tier, false) = false

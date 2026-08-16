@@ -29,6 +29,7 @@ function cap(partial: Partial<PromotionStats>): PromotionStats {
     breakerState: "closed",
     wasDelisted: false,
     delistingReason: null,
+    wasFloorQuarantine: false,
     totalTests: 100,
     passedTests: 100,
     distinctTestDays: 7,
@@ -136,7 +137,7 @@ describe("evaluatePromotion — real customers outrank our own harness", () => {
   });
 });
 
-describe("evaluatePromotion — human and floor decisions are never overturned", () => {
+describe("evaluatePromotion — human takedowns are never overturned; floor takedowns can be, on recovery", () => {
   it("never promotes a capability that carries a deactivation reason", () => {
     expect(evaluatePromotion([cap({ deactivationReason: "CourtListener token expired" })])).toEqual([]);
   });
@@ -145,18 +146,37 @@ describe("evaluatePromotion — human and floor decisions are never overturned",
     expect(evaluatePromotion([cap({ marketplaceEligible: false })])).toEqual([]);
   });
 
-  it("flags rather than promotes something the quality floor took down", () => {
-    // The floor delists on real paid traffic and leaves lifecycle_state
-    // 'active' with no deactivation_reason — indistinguishable from a dark
-    // launch except for this signal. Without it the two jobs would fight
-    // nightly, and the harness would win an argument it cannot see.
-    const d = only([cap({ wasDelisted: true, delistingReason: "quarantined" })]);
+  // "Promotion grace" fix (2026-08-16): a quality-floor quarantine that
+  // clears every gate above it (correctness, recency, piggyback) is now
+  // auto-reversed rather than flagged — DEC-20260812-A lists "auto-promote
+  // on recovery" as a platform-acts-alone action, and jobs/quality-floor.ts's
+  // window clamp (since-last-promotion) is what makes a wrong reversal safe
+  // to make: it gets caught on fresh evidence, not stale evidence. This is
+  // the screenshot-url case verified in prod 2026-08-16: quarantined
+  // 2026-08-12 for real completion driven by a bug fixed 2026-08-05, then
+  // 100% over 520 harness runs across 7 days.
+  it("auto-reverses (promotes) a quality-floor quarantine that clears the bar", () => {
+    const d = only([cap({ wasDelisted: true, wasFloorQuarantine: true, delistingReason: "quarantined" })]);
+    expect(d.action).toBe("promote");
+    expect(d.reason).toContain("auto-reversed on recovery per DEC-20260812-A");
+    expect(d.reason).toContain("quarantined");
+  });
+
+  it("still flags rather than promotes something an operator unpublished (not a floor quarantine)", () => {
+    const d = only([cap({ wasDelisted: true, wasFloorQuarantine: false, delistingReason: "Unpublished: removed from catalog" })]);
     expect(d.action).toBe("flag");
     expect(d.reason).toContain("taken down, not merely never listed");
   });
 
-  it("flags rather than promotes something an operator unpublished", () => {
-    expect(only([cap({ wasDelisted: true, delistingReason: "Unpublished: removed from catalog" })]).action).toBe("flag");
+  it("a human deactivation_reason refuses promotion even for an otherwise-eligible floor quarantine", () => {
+    // deactivation_reason is checked before wasDelisted/wasFloorQuarantine
+    // are ever consulted — a human "no" always wins, regardless of how the
+    // capability was taken down or what the harness now says about it.
+    expect(
+      evaluatePromotion([
+        cap({ wasDelisted: true, wasFloorQuarantine: true, deactivationReason: "Petter: shut off pending vendor review" }),
+      ]),
+    ).toEqual([]);
   });
 
   it("still promotes a capability whose last listing event was a promotion", () => {
@@ -166,6 +186,12 @@ describe("evaluatePromotion — human and floor decisions are never overturned",
 
   it("flags rather than promotes a fragile maintenance class", () => {
     const d = only([cap({ slug: "screenshot-url", maintenanceClass: "scraping-fragile-target" })]);
+    expect(d.action).toBe("flag");
+    expect(d.enableX402).toBe(false);
+  });
+
+  it("a fragile maintenance class still refuses auto-reversal of a floor quarantine", () => {
+    const d = only([cap({ slug: "screenshot-url", wasDelisted: true, wasFloorQuarantine: true, delistingReason: "quarantined", maintenanceClass: "scraping-fragile-target" })]);
     expect(d.action).toBe("flag");
     expect(d.enableX402).toBe(false);
   });
@@ -236,6 +262,10 @@ describe("the evidence query", () => {
   it("scopes the aggregate to the promotion window rather than all history", () => {
     expect(PROMOTION_EVIDENCE_SQL).toContain("tr.executed_at > NOW() - INTERVAL '7 days'");
   });
+
+  it("the last-listing-event lateral pins 'quarantined' to quality_floor only — the string wasFloorQuarantine relies on", () => {
+    expect(PROMOTION_EVIDENCE_SQL).toContain("e.event_type = 'quality_floor'        AND e.action_taken = 'quarantined'");
+  });
 });
 
 describe("toPromotionStats", () => {
@@ -255,6 +285,7 @@ describe("toPromotionStats", () => {
       breakerState: "closed",
       wasDelisted: false,
       delistingReason: null,
+      wasFloorQuarantine: false,
       totalTests: 90,
       passedTests: 89,
       distinctTestDays: 6,
@@ -273,6 +304,17 @@ describe("toPromotionStats", () => {
     expect(toPromotionStats([row({ last_listing_event: "Unpublished: removed from catalog" })])[0].wasDelisted).toBe(true);
     expect(toPromotionStats([row({ last_listing_event: "promoted_with_x402" })])[0].wasDelisted).toBe(false);
     expect(toPromotionStats([row({ last_listing_event: null })])[0].wasDelisted).toBe(false);
+  });
+
+  it("narrows wasFloorQuarantine to exactly the quality-floor's own 'quarantined' event", () => {
+    // 'quarantined' is written only by jobs/quality-floor.ts's enforce apply
+    // path — no lifecycle_transition (human) action_taken can ever equal it,
+    // so this signal cannot be spoofed by an operator unpublish/suspend.
+    expect(toPromotionStats([row({ last_listing_event: "quarantined" })])[0].wasFloorQuarantine).toBe(true);
+    expect(toPromotionStats([row({ last_listing_event: "Unpublished: removed from catalog" })])[0].wasFloorQuarantine).toBe(false);
+    expect(toPromotionStats([row({ last_listing_event: "Suspended: breaker open" })])[0].wasFloorQuarantine).toBe(false);
+    expect(toPromotionStats([row({ last_listing_event: "promoted_with_x402" })])[0].wasFloorQuarantine).toBe(false);
+    expect(toPromotionStats([row({ last_listing_event: null })])[0].wasFloorQuarantine).toBe(false);
   });
 
   it("carries a correctness failure through the mapping into a refusal", () => {
