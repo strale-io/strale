@@ -1,10 +1,10 @@
 # Operating Charter — DEC-20260815-A
 
-**Status: approved, NOT YET EFFECTIVE.** Approved by Petter 2026-08-15 (chat:
-"€50/week works, yes to the charter, weekly synthesis Sunday evening").
-Effective once the Notion Decisions DB entry and CLAUDE.md's Active Decisions
-section are synchronized — until then DEC-20260812-A governs unchanged, so that
-there is never more than one live governance source.
+**Status: ACTIVE.** Approved by Petter 2026-08-15 and recorded in CLAUDE.md's
+Active Decisions as DEC-20260815-A, which makes it operative. The Notion
+Decisions DB entry is still outstanding — Notion was not reachable during the
+session that adopted this — so **CLAUDE.md is the operative record until that is
+filed**, and filing it must not restate the charter differently.
 
 **This AMENDS DEC-20260812-A's escalation contract.** An earlier draft claimed
 to extend it while adding merge authority; cross-provider review flagged the

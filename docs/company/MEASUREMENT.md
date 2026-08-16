@@ -1,6 +1,10 @@
 # Measurement system — design
 
-**Status:** proposed 2026-08-15, pending cross-provider review.
+**Status: BUILT AND IN USE (2026-08-15).** Reviewed by Codex (cross-provider),
+revised where the review was right, and shipped as `apps/api/src/lib/metrics/`.
+The dashboard computes no business numbers of its own. Where the text below
+describes a design that was rejected during review, it is marked; the review
+itself is kept verbatim in `measurement-review-codex-2026-08-15.md`.
 
 ## Why this exists
 
@@ -68,18 +72,22 @@ src/lib/metrics/
   coverage.ts      how complete each instrument is right now
 ```
 
-Every metric returns:
+Every metric returns a **discriminated union**, not the flagged-value shape
+this document originally proposed:
 
 ```ts
-interface Measured<T> {
-  value: T;
-  window: { from: Date; to: Date; label: string };
-  trustworthy: boolean;      // false when an instrument is younger than the window
-  caveat?: string;           // plain English, rendered verbatim to Petter
-  coverage?: number;         // 0–1, when the metric depends on optional fields
-  instruments: string[];     // what it was computed from
-}
+type Measurement<T> =
+  | { status: "observed";    value: T; window; population; instruments; caveat? }
+  | { status: "estimated";   value: T; methodology: string; ... }
+  | { status: "unavailable"; reason: UnavailableReason; requestedWindow; ... };
 ```
+
+**Why the original was rejected.** The first draft returned
+`{ value, trustworthy: false }`. Cross-provider review pointed out that this
+enforces nothing: `value` is always present, so a caller renders it and never
+reads the flag — which is exactly how a one-day-old payer count reached a
+dashboard. On the `unavailable` arm there is no `value` at all, so rendering a
+number you were not entitled to requires deliberately inventing one.
 
 Consumers — the dashboard, check-ins, any future report — read `trustworthy`
 and `caveat` and are expected to surface them. The dashboard already does this
@@ -87,9 +95,14 @@ by hand for two metrics; this makes it structural for all of them.
 
 ## The identity gap — the thing we most need and least have
 
-Client identity is captured on **~0.2% of transactions** (107,605 of ~108,000
-carry nothing). On x402, which is nearly all revenue, 62 of 1,971 transactions
-in 30 days carry payer identity.
+Client identity is captured on **~21% of external transactions**.
+
+> The figure first reported here was 0.2%. That divided by *all* transactions,
+> including ~108,000 rows of our own test harness — the same wrong-population
+> error this document catalogues, made while writing the document that
+> catalogues it. Filtered to real customers it is ~21%: about one call in five
+> can be traced to a buyer. Still the largest gap we have, and a hundredfold
+> different from the first answer.
 
 Consequence: **we cannot answer "is our revenue one customer or twenty".** That
 single fact decides whether the business has a demand problem or a conversion
@@ -98,7 +111,10 @@ conclusions were possible at all.
 
 So the system needs an identity spine: one resolved "who" per transaction,
 derived in priority order from the authenticated user, then the x402 payer hash,
-then a client fingerprint, and recorded on every rail rather than some of them.
+and otherwise **left unattributed**. A device/IP fingerprint was proposed here
+and rejected on review: it is unnecessary for counting paying customers and
+would build exactly the cross-session profile our daily-rotating IP salt exists
+to prevent. Shipped as migration 0085's `transaction_actors` view.
 With that, retention, concentration and repeat-purchase become answerable —
 none of which we can currently compute.
 
@@ -113,7 +129,21 @@ This is the metric the milestone ladder in GOALS.md was rewritten around, and
 the one we currently cannot measure — which is itself the argument for building
 this first.
 
-## Open questions for review
+## How the open questions were answered
+
+1. `Measured<T>` — replaced by the discriminated union above.
+2. `MIN(created_at)` — rejected as unsound (a backfill makes a new instrument
+   look old). Activation is now declared in `instruments.ts` against the commit
+   that shipped it; `firstObserved()` remains as corroboration only.
+3. Primary metric — **rolling 28-day distinct paying actors**, split new vs
+   returning, with revenue secondary and largest-buyer share as a guardrail.
+   A weekly count at this volume tracks one buyer's schedule, not our work.
+4. Identity spine — `actor_key`: the user id when authenticated, a keyed hash of
+   the wallet otherwise, `NULL` when neither. No fingerprint.
+5. Verify against deployed code — yes: read the SHA from `GET /health`, or at
+   minimum `git show origin/main:<path>`. Never the local working tree.
+
+## Original open questions (kept for the record)
 
 1. Is `Measured<T>` the right contract, or should untrustworthy metrics throw
    rather than return a flagged value?
