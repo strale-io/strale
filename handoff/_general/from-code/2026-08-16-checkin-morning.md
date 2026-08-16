@@ -194,19 +194,34 @@ Nothing in the queue matured for auto-execution today.
 
 ## Next session should pick up, in order
 
-1. ~~Confirm the deploy and the first tick.~~ **Done in-session** — see above.
-2. **Fix the failure taxonomy** (E3). `Invalid URL format.`,
-   `This URL targets a restricted address.`, `No X found matching "…"`, and
-   registry `HTTP 404` must classify as caller-attributable. This is a
-   money/compliance path, so it needs its own regression tests that fail against
-   the un-fixed state per DEC-20260504-A. Then re-run the floor's evaluation and
-   see how many capabilities it would stop quarantining.
-3. **Fix `screenshot-url`'s `waitForSelector` request bug** — 23 paid failures
-   from one parameter we should not be sending.
-4. **Arm `CAPABILITY_PROMOTION_ENFORCE`** once a tick of dry-run evidence reads
+Items 1 and 2 as originally written were both completed in this session — the
+deploy/tick confirmation and the failure-taxonomy fix (E3). What remains:
+
+1. **Re-list `us-company-data`.** The one capability the taxonomy fix proves was
+   delisted wrongly: the floor quarantined it at 64% on 2026-08-12, and under
+   the corrected taxonomy that window is 100% (7/7). Neither job will do it —
+   the floor never promotes, and the promotion job correctly refuses to overturn
+   a takedown — so it needs a deliberate publish.
+2. **Fix `screenshot-url`'s `waitForSelector` request bug** — 23 paid failures
+   from one parameter we should not be sending. Still the cheapest revenue fix
+   on the list, and now also the last remaining cause behind that capability's
+   quarantine.
+3. **Arm `CAPABILITY_PROMOTION_ENFORCE`** once a tick of dry-run evidence reads
    correctly. The five real dark launches cross the five-day evidence threshold
    around 2026-08-18/19.
-5. **Continue the graveyard** — next ten oldest.
+4. **Reword two refusals at the throw site** so they can be excused:
+   `schema-infer`'s "CSV must have at least a header row" and
+   `charity-lookup-uk`'s "Name search is not available via free APIs" both now
+   count against their capability, because no shape separates them from an
+   internal failure phrased identically. Leading with the quoted field, as the
+   rest of the house style does, fixes both. 6 calls in 90 days — low priority,
+   but it is a one-line change in each.
+5. **Consider tightening `TIMEOUT_RE`** — the taxonomy review's one unaddressed
+   finding. `'timeout' must be between 1 and 30 seconds` classifies as `timeout`
+   rather than caller input. Pre-existing, over-counting direction, no observed
+   instance; it reclassifies existing production strings so it wants its own
+   change and its own measurement.
+6. **Continue the graveyard** — next ten oldest.
 
 ## Notes for whoever runs the next session
 
@@ -223,3 +238,93 @@ Nothing in the queue matured for auto-execution today.
   `dispatch.mjs` as well as `--author-provider anthropic` on `select.mjs`;
   without it the gate blocks with "requires the current/orchestrator provider
   provenance" and returns an empty result that looks like a hung dispatch.
+
+---
+
+# Addendum: the failure taxonomy, fixed the same day (`f19f9f8`)
+
+Petter asked for E3 immediately rather than next session, so it shipped here.
+
+## What was wrong
+
+The quality floor excludes caller-caused failures from a capability's
+completion rate. The type already said `caller_input` covers "bad/missing
+input, wrong identifier, unresolvable name" — but the patterns only implemented
+the phrasings that existed when they were written. A census of **every** distinct
+external failure string over 90 days (188 strings, 491 calls) found 106 calls
+landing in `internal`, which the module documents as "OUR bug until proven
+otherwise", including our own SSRF guard refusing a caller-supplied address.
+
+The line now drawn, and worth reusing: a failure is **the caller's** when the
+capability did its job and the answer is "your input is malformed" or "your
+input matches nothing"; it is **ours** whenever we could not complete the
+operation, whatever the cause.
+
+## Result
+
+19 distinct strings / 55 calls change class over the floor's own 30-day window,
+**all** `internal` → `caller_input`, none the other way.
+
+| capability | before | after |
+|---|---|---|
+| `us-company-data` | 64% (7/11) — quarantinable | **100%** (7/7) |
+| `tech-stack-detect` | 78% (162/207) | 94% (162/172) |
+| `github-repo-analyze` | 94% (32/34) | 100% (32/32) |
+| `url-to-text` | 40% (6/15) | 60% (6/10) — **still quarantinable** |
+| `price-compare` | 44% (4/9) | 50% (4/8) — still below |
+
+The two that stay below the floor are the reassuring part: the fix removes
+misattribution without whitewashing capabilities that really fail.
+
+## The methodological lesson, which is the durable bit
+
+**The tests were written from the same census as the patterns, so they could not
+see the patterns' blind spot.** Both my own hazard probe and the cross-provider
+review found over-broad rules that the 52-test suite passed happily:
+
+| pattern | what it wrongly excused |
+|---|---|
+| `must be ` | `Response validation failed: output must be an object` |
+| `fetch … HTTP 40[34]` | `Could not fetch internal config (HTTP 404)` |
+| `invalid \w+ format` | `Invalid response format` |
+| `is not supported` | `Digest method is not supported` |
+| `not available for\|via` | `Service is temporarily not available via API` |
+
+Every one is the shape a **systematically broken** capability takes: identical
+failure on every call, all of them excused, and the floor stops seeing the
+capability at all. That is worse than the bug being fixed.
+
+What caught them was **inventing failure strings that did not exist yet** and
+checking the patterns against those. Writing tests from observed data proves you
+handled the past; only invented adversarial cases probe the rule itself. Same
+for mutation testing — the upstream/caller ordering mutation initially passed
+because no tested string matched both lists, and the fix was to find a real
+`HTTP 429` string that does. "Mutation-verified" is worth nothing if the
+mutations are the ones you already knew you would catch.
+
+## Verification
+
+- 59 tests, 29 of which fail against `origin/main`. Full suite 1640 green; every
+  CI gate clean; CI green on the reviewed commit before merge.
+- Mutation-verified in the dangerous direction: disabling the raw-payload guard,
+  widening 403/404 to all 4xx, dropping the scope-refusal or not-found patterns,
+  and swapping the upstream/caller check order each fail the suite.
+- Cross-provider review (sol@high): 3 HIGH + 1 MEDIUM. Three applied, one
+  deferred with a stated reason.
+- **Post-deploy verified by effect, not by SHA**: 14 behaviour assertions run
+  against the code as it exists on `origin/main` (= deployed `f19f9f8`), all
+  correct. The first attempt at this verification read the local working tree,
+  which sits on `ops/company-scaffold` and is days behind — it reported 5 false
+  failures. That is the fifth time that specific trap has been hit; the rule is
+  `git show origin/main:<path>`, never the working copy.
+
+## Deliberate costs, recorded so they are not rediscovered as mysteries
+
+- Two real refusals are no longer excused (see item 4 above). 6 calls in 90 days.
+- The review's MEDIUM `TIMEOUT_RE` finding is not addressed (see item 5).
+
+## Process change adopted
+
+This PR was opened as a **draft** and only marked ready after the review
+returned. #269 auto-merging at its first commit mid-review this morning is what
+prompted it, and drafts are the cheap structural fix.
