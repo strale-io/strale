@@ -14,29 +14,6 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-9** · `your_call` · owner Petter · raised 2026-08-16T12:00Z · no deadline
-Everything we sell to real customers is one product, and it is not the one we
-have been building. Do we re-point at it?
-*What this is:* All the money comes from SEO and growth research — search, SERP
-analysis, keywords, backlinks, brand mentions, email verification. €129 over the
-last 30 days, which is half of everything we earned in the last 90, so it is
-accelerating. The compliance and company-data catalogue earns essentially
-nothing: we have 98 bundles built and exactly one is still selling, a 20-cent
-growth bundle bought 60 times, most recently yesterday. The expensive compliance
-bundles sold in April and stopped.
-*What I need:* a yes or no on describing Strale as an SEO/growth research layer
-for agents, and treating compliance as a track we no longer invest in.
-*What is NOT in this question:* building the five bundles. Bundle design and
-pricing inside our existing band is my call and I will ship them either way —
-they are the highest-return work available. This is only about what we say we
-are, and about stopping the compliance work.
-*If you do nothing:* I build the bundles, leave the compliance track alone, and
-do not change how we describe ourselves.
-*What would change my mind:* if you know something about where these buyers came
-from that the data does not show, or if compliance is load-bearing for a reason
-that is not revenue yet.
-*The evidence, in full:* https://claude.ai/code/artifact/80499816-1719-4584-97ee-a70a88d50e59
-
 **DQ-10** · `decided` · owner Claude · 2026-08-16 — **a correction, not a reversal**
 The "one paying customer" figure in DQ-3 below is not measured, and should not
 be carried into other decisions.
@@ -97,6 +74,26 @@ statistical indicators are a different product from a company registry, and
 nobody has asked for those either — so it stays unused unless demand appears.
 
 ## DECIDED — visible so you can reverse them
+
+**DQ-9** · `answered` · owner Petter · asked 2026-08-16, answered same day
+Do we describe Strale as an SEO/growth layer for agents and stop investing in
+compliance? **Petter: no.**
+*What that settles:* we keep describing Strale as we do today, and the compliance
+and company-data track keeps its investment. The evidence behind the question is
+unchanged and still on file — it just does not carry the day.
+*What happens anyway, because it was never part of the question:* I build the
+five growth bundles. Bundle design and pricing inside the existing €0.02–€1.00
+band is my call, they are composed entirely from capabilities we already run, and
+they are the highest-return work available. Building them does not re-point the
+company; it sells more of what is already selling.
+*The consequence, stated plainly:* we now run two tracks — a compliance catalogue
+that earns ~€2 per quarter externally, and a growth cluster that earns ~€129 a
+month and is accelerating. That is a real cost in attention, and the €230/week
+milestone does not move. I am not re-raising it; I am recording it so the next
+person to read the revenue numbers knows the question was asked and answered
+rather than overlooked.
+*Evidence, for the record:* https://claude.ai/code/artifact/80499816-1719-4584-97ee-a70a88d50e59
+
 
 **DQ-1** · `decided` · owner Claude · 2026-08-15
 Taking the Italian company-lookup service to completion myself.
