@@ -81,8 +81,15 @@ Two fixes, both merged:
 
 ## Open, and who owns it
 
-**Petter:** send the Coinbase email (`docs/company/coinbase-bazaar-email.md`) —
-8× shelf presence on the only venue where our customer type shops. Talk to
+**Petter:** ~~send the Coinbase email~~ — **withdrawn 2026-08-15 after
+verification.** He asked whether the 41-of-334 figure was real before sending.
+It was not: a complete walk of all 14,946 index entries finds 95 listed, and
+the email's own "not indexed" example was indexed. The mechanism is now
+established — the Bazaar lists exactly what settled an x402 payment in the
+trailing 30 days, exact fit both directions — so listing is earned by sales
+and expires when they stop. There is no gap to raise and no lever to pull;
+treat the listing count as a trailing indicator of revenue. Details in
+`docs/company/coinbase-bazaar-email.md`, kept unsent. Talk to
 Talentino, Gryhat or Pave — the three accounts that registered and are therefore
 contactable under our own rule. Mexico's INEGI key when convenient. Confirm the
 90-day retention window if disputes need longer.

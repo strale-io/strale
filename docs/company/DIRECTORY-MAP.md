@@ -49,12 +49,20 @@ Each implies a completed submission at some point:
   directories.
 - **x402scan** — no public API at the URL tried; presence unconfirmed.
 
-## Coinbase x402 Bazaar
+## Coinbase x402 Bazaar — resolved 2026-08-15, no action needed
 
-41 of 334 endpoints indexed. Investigated in
-[DISTRIBUTION-FINDINGS.md](DISTRIBUTION-FINDINGS.md) — not our bug, and the
-draft email in [coinbase-bazaar-email.md](coinbase-bazaar-email.md) is the next
-step. Biggest single lever available.
+**95 of our resources are listed** (verified against a complete walk of all
+14,946 index entries). An earlier figure of 41 was a partial scan reported as a
+total.
+
+**Listing is earned by settlement, not by advertising.** The index contains
+exactly those resources that settled an x402 payment in the trailing 30 days —
+exact fit in both directions, zero exceptions, sharp boundary. Our 164 unlisted
+capabilities are unlisted because nobody bought them last month.
+
+This makes the Bazaar a **trailing indicator of our revenue, not a lever on
+it**. There is nothing to submit, nothing to fix, and no email to send; the
+draft in `coinbase-bazaar-email.md` is marked DO NOT SEND with the reasoning.
 
 ## The gap that matters more than any missing directory
 
@@ -76,7 +84,8 @@ cheap, mine to do, and probably worth more than adding an eleventh directory.
 ## What to do, in order
 
 1. **Rewrite the listing copy** to lead with what sells. Mine — next session.
-2. **Send the Coinbase email.** Petter's. 8× shelf presence on the largest venue.
+2. ~~Send the Coinbase email~~ — withdrawn. Bazaar listing is earned by
+   settlement, so there is no gap to raise. See above.
 3. **Find the real Smithery URL** and confirm the listing is published.
 4. **Only then** consider new directories. Ten venues already crawl us; an
    eleventh is worth less than fixing what the existing ten display.

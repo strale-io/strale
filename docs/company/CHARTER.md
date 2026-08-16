@@ -136,7 +136,9 @@ that decision, taken deliberately rather than by default.
 5. **Content is not kept.** Inputs, outputs, errors, audit bodies and
    provenance are redacted 90 days after the call, on every capability — see
    `lib/data-retention.ts`. What survives proves *that* a call happened, never
-   *what was said*.
+   *what was said*. **The 90-day window was confirmed by Petter on 2026-08-15**
+   after being proposed as a default; it is a ratified decision, not an
+   engineering guess, and shortening or lengthening it is his call.
 6. **Changing any of the above is Petter's decision**, taken explicitly and
    with privacy advice if the change would widen permitted use. Silence is not
    consent, and neither is commercial pressure.
