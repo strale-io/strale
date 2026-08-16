@@ -177,10 +177,13 @@ function isTransient(status: number): boolean {
  * "retrying will not help" while the code retried once anyway.
  */
 function isPermanentNetError(bodyText: string): boolean {
+  // Anchored on Chrome's canonical `net::` prefix (round-5 review): an error
+  // body that merely *mentions* a bare token in prose should not suppress a
+  // retry; real Chrome navigation failures always surface as `net::ERR_*`.
   return (
-    /ERR_NAME_NOT_RESOLVED/.test(bodyText) ||
-    /ERR_CONNECTION_REFUSED/.test(bodyText) ||
-    /ERR_CERT_[A-Z_]+/.test(bodyText)
+    /net::ERR_NAME_NOT_RESOLVED/.test(bodyText) ||
+    /net::ERR_CONNECTION_REFUSED/.test(bodyText) ||
+    /net::ERR_CERT_[A-Z_]+/.test(bodyText)
   );
 }
 
@@ -189,21 +192,22 @@ function isPermanentNetError(bodyText: string): boolean {
  * isPermanentNetError(). Six-lens review finding Medium 2b (2026-08-16):
  * these were getting the 5xx branch's "usually transient — try again"
  * advice, which is actively wrong for a domain that will never resolve.
- * Returns null when no known net-error pattern matches. Fixed strings only
- * — no upstream bytes are echoed into the message (the ERR_CERT_* match is
- * itself a fixed, narrow token pattern, not free text from the body).
+ * Returns null when no known net-error pattern matches. Fixed strings only —
+ * no upstream bytes are echoed into the message. Round-5 review caught the
+ * previous version interpolating the matched ERR_CERT_* token (unbounded,
+ * body-controlled — `net::ERR_CERT_FAKE_SECRET` would have been echoed
+ * verbatim); the cert branch is now a fixed string like every other branch.
  */
 function netErrorMessage(bodyText: string, domain: string): string | null {
   if (!isPermanentNetError(bodyText)) return null;
-  if (/ERR_NAME_NOT_RESOLVED/.test(bodyText)) {
+  if (/net::ERR_NAME_NOT_RESOLVED/.test(bodyText)) {
     return `The domain${domain} does not resolve. This is a permanent failure — retrying will not help.`;
   }
-  if (/ERR_CONNECTION_REFUSED/.test(bodyText)) {
+  if (/net::ERR_CONNECTION_REFUSED/.test(bodyText)) {
     return `The connection to the target site${domain} was refused. This is a permanent failure — retrying will not help.`;
   }
-  const certMatch = bodyText.match(/ERR_CERT_[A-Z_]+/);
-  if (certMatch) {
-    return `The target site${domain}'s TLS certificate is invalid (${certMatch[0]}). This is a permanent failure — retrying will not help.`;
+  if (/net::ERR_CERT_[A-Z_]+/.test(bodyText)) {
+    return `The target site${domain}'s TLS certificate is invalid. This is a permanent failure — retrying will not help.`;
   }
   return null;
 }
@@ -492,9 +496,15 @@ export async function fetchPage(
           // isPermanentNetError() gates the retry decision on the SAME
           // patterns netErrorMessage() uses to build that message, so
           // "classified transient" and "worded as permanent" can't diverge.
+          // Scoped to >=500 (round-5 review): Browserless wraps Chrome
+          // navigation failures in 5xx — that is where a net-error body means
+          // "this will never work". A 408/429 keeps its own retry semantics
+          // (timeout / rate-limit) regardless of what the body text mentions,
+          // matching humanizeBrowserlessStatus, which only consults
+          // netErrorMessage() inside its >=500 branch.
           if (
             isTransient(response.status) &&
-            !isPermanentNetError(errText) &&
+            !(response.status >= 500 && isPermanentNetError(errText)) &&
             attempt < maxRetries - 1
           ) {
             lastError = new Error(

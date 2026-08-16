@@ -254,6 +254,7 @@ describe("web-extract shared resilience", () => {
   it("the generic-status branch never echoes upstream body content into the message — no secrets/tokens/markup can leak (six-lens review, HIGH, round 3: a denylist sanitizer cannot be made secret-safe, so the appended-detail approach was removed entirely)", async () => {
     const bodyWithSecrets =
       `<html><body><script>alert(1)</script>Bearer sk_live_FAKESECRETTOKEN1234 ` +
+      `net::ERR_CERT_FAKE_SECRET_IN_TOKEN ` +
       `signed_url=https://internal.example/secret?token=abc123 ${"padding ".repeat(20)}</body></html>`;
     fetchMock.mockResolvedValueOnce(new Response(bodyWithSecrets, { status: 422 }));
 
@@ -268,6 +269,7 @@ describe("web-extract shared resilience", () => {
     expect(message).toContain("422");
     // Fixed string, status only — none of the upstream body survives.
     expect(message).not.toMatch(/sk_live_FAKESECRETTOKEN1234/);
+    expect(message).not.toMatch(/ERR_CERT_FAKE_SECRET_IN_TOKEN/);
     expect(message).not.toMatch(/internal\.example/);
     expect(message).not.toMatch(/token=abc123/);
     expect(message).not.toMatch(/<script|<html|<body|padding/i);
@@ -344,12 +346,33 @@ describe("web-extract shared resilience", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(message).toMatch(/TLS certificate is invalid/i);
-    expect(message).toMatch(/ERR_CERT_AUTHORITY_INVALID/);
+    // Round-5 review HIGH: the matched ERR_CERT_* token is body-controlled
+    // and must NOT be echoed — the message is a fixed string.
+    expect(message).not.toMatch(/ERR_CERT_AUTHORITY_INVALID/);
     expect(message).toMatch(/retrying will not help/i);
     expect(message).not.toMatch(/usually transient/i);
   }, 10000);
 
-  it("a subsequent non-skipFallback fetchPage call for the same URL still fetches fresh after two web-extract calls (six-lens review, LOW coverage gap c — confirms nothing about web-extract's skipCache change corrupted the shared cache's normal operation for other callers)", async () => {
+  it("a 429 whose body mentions a net-error token still gets its retry — the permanent-failure short-circuit is scoped to 5xx (round-5 review, MEDIUM)", async () => {
+    const RENDERED_HTML = `<html><head><title>Recovered After 429</title></head><body>${"Recovered content after a rate-limited first attempt. ".repeat(30)}</body></html>`;
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response("rate limited — see also net::ERR_NAME_NOT_RESOLVED docs", { status: 429 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(RENDERED_HTML, { status: 200, headers: { "content-type": "text/html" } }),
+      );
+
+    const result = await fetchPage("https://example.com/scoped-shortcircuit-test", {
+      skipFallback: true,
+    });
+
+    // 429 keeps its own retry semantics regardless of body text.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.html).toContain("Recovered After 429");
+  }, 10000);
+
+  it("a cache-enabled call in web-extract's own namespace still fetches fresh after two web-extract calls — proving skipCache suppressed the writes, not just the reads (round-5 review, LOW)", async () => {
     const url = "https://example.com/no-cache-writeback-test";
 
     fetchMock
@@ -360,19 +383,23 @@ describe("web-extract shared resilience", () => {
     await exec()({ url, extract: "headline" });
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    // A plain (non-skipFallback, default networkidle0) caller for the SAME
-    // url — a different capability's typical call shape, landing in the
-    // "default:networkidle0" namespace web-extract never touches.
-    const FRESH_PLAIN_HTML = `<html><head><title>Fresh Plain Fetch</title></head><body>${"Fresh plain-fetch content, unrelated to web-extract's renders. ".repeat(
+    // Round-5 review LOW: to prove web-extract WROTE nothing, the probe must
+    // read from the SAME namespace web-extract's calls would have written to
+    // (skipFallback + networkidle0) — a different-namespace probe would fetch
+    // fresh even if web-extract had polluted its own namespace. This is a
+    // cache-enabled direct call in that exact namespace: a cache hit here
+    // would mean web-extract's skipCache leaked a write.
+    const FRESH_RENDER_HTML = `<html><head><title>Fresh Same-Namespace Render</title></head><body>${"Fresh render proving the namespace holds no entry from web-extract. ".repeat(
       40,
     )}</body></html>`;
     fetchMock.mockResolvedValueOnce(
-      new Response(FRESH_PLAIN_HTML, { status: 200, headers: { "content-type": "text/html" } }),
+      new Response(FRESH_RENDER_HTML, { status: 200, headers: { "content-type": "text/html" } }),
     );
-    const third = await fetchRenderedHtml(url);
+    const third = await fetchPage(url, { skipFallback: true, waitUntil: "networkidle0" });
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(third).toContain("Fresh Plain Fetch");
+    expect(third.html).toContain("Fresh Same-Namespace Render");
+    expect(third.cached).toBe(false);
   }, 10000);
 
   it("appends 'Retrying will not help.' to the 403 message for consistency with the other permanent-failure statuses (six-lens review, LOW)", async () => {
