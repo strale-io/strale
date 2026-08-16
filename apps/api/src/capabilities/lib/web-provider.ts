@@ -58,6 +58,16 @@ export interface WebProviderOptions {
   maxRetries?: number;
   /** Skip the response cache (default: false). */
   skipCache?: boolean;
+  /**
+   * Skip the plain-fetch and Jina Reader tiers and go straight to Browserless
+   * (default: false). Tiers 1/2 substitute non-rendered HTML (tier 1) or a
+   * reformatted document (Jina, tier 2) for what a real headless-Chrome
+   * render would produce. Callers whose output contract promises actual
+   * rendered-DOM content (e.g. web-extract's "full JavaScript rendering")
+   * must set this so a JS-heavy page never silently falls back to a plain
+   * fetch that never ran the page's scripts.
+   */
+  skipFallback?: boolean;
 }
 
 export interface WebProviderResult {
@@ -188,6 +198,7 @@ export async function fetchPage(
     fetchTimeout = 35000,
     maxRetries = 2,
     skipCache = false,
+    skipFallback = false,
   } = options ?? {};
 
   // Per-source ToS policy enforced at the pipeline entry (P2, 2026-08-12):
@@ -213,7 +224,7 @@ export async function fetchPage(
   // Browserless if the response looks like an SPA shell or is too short.
   // IMPORTANT: DNS failures and connection refused are fatal — don't waste
   // 30+ seconds on Browserless for a URL that doesn't resolve.
-  if (!options?.waitUntil || options.waitUntil === "networkidle0") {
+  if (!skipFallback && (!options?.waitUntil || options.waitUntil === "networkidle0")) {
     try {
       const start = Date.now();
       // F-0-006: safeFetch validates, re-validates every redirect, and
@@ -292,7 +303,7 @@ export async function fetchPage(
   // Jina converts URLs to clean text/HTML. Free at 200 RPM with API key.
   // Skip Jina for non-default waitUntil (caller needs specific rendering behavior)
   // and for URLs that need full browser features (screenshot, PDF, cookie analysis).
-  if (!options?.waitUntil || options.waitUntil === "networkidle0") {
+  if (!skipFallback && (!options?.waitUntil || options.waitUntil === "networkidle0")) {
     try {
       const start = Date.now();
       const jinaUrl = `https://r.jina.ai/${targetUrl}`;

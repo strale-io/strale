@@ -108,7 +108,7 @@ export const PROVIDERS: DependencyProvider[] = [
       "html-to-pdf",             // requires real Chromium PDF rendering
       "landing-page-roast",      // direct Browserless screenshot
       "screenshot-url",          // requires real Chromium screenshots
-      "web-extract",             // direct Browserless call for extraction
+      "web-extract",             // web-provider.ts with skipFallback: true — no plain-fetch/Jina tier, so still requires Browserless
     ],
     tier: "self-hosted",
   },
