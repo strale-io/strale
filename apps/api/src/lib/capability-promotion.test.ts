@@ -7,6 +7,7 @@ import {
 import {
   toPromotionStats,
   isEnforceMode,
+  isListingStateEvent,
   PROMOTION_EVIDENCE_SQL,
   LISTING_EVENT_MATCH_SQL,
   type PromotionEvidenceRow,
@@ -176,11 +177,10 @@ describe("evaluatePromotion — human takedowns are never overturned; floor take
 
   // Round-2 fix (2026-08-16, Codex blocker #1b — oscillation). The floor's
   // own candidate filter requires visible=true to quarantine at all, so a
-  // SECOND enforce quarantine can only happen after an intervening promotion
-  // re-listed this exact slug: floorQuarantineCount >= 2 is proof a prior
-  // auto-reversal already bounced back on real customer traffic. Even
-  // genuinely fresh, post-quarantine, harness-green evidence must not
-  // auto-reverse a second time.
+  // SECOND enforce quarantine can only happen after an intervening RE-LIST of
+  // this exact slug: floorQuarantineCount >= 2 is proof it was re-listed and
+  // re-quarantined at least once before. Even genuinely fresh, post-
+  // quarantine, harness-green evidence must not auto-reverse a second time.
   it("refuses to auto-reverse a REPEAT floor quarantine — flags for human instead", () => {
     const d = only([cap({
       wasDelisted: true, wasFloorQuarantine: true, delistingReason: "quarantined",
@@ -196,6 +196,19 @@ describe("evaluatePromotion — human takedowns are never overturned; floor take
     const d = only([cap({ wasDelisted: true, wasFloorQuarantine: true, floorQuarantineCount: 5 })]);
     expect(d.action).toBe("flag");
     expect(d.reason).toContain("quarantined 5 times");
+  });
+
+  // Round-3 fix (2026-08-16, Codex MINOR). floorQuarantineCount >= 2 proves
+  // an intervening RE-LIST — the admin publish endpoint can do that
+  // manually, not only this job's own auto-reversal — so the recorded
+  // reason must say "re-listed and re-quarantined" and must NOT claim a
+  // prior auto-reversal specifically failed. The refusal itself is
+  // unchanged (still conservative); only the claim in the text is narrowed.
+  it("the repeat-bounce reason says re-listed-and-re-quarantined, and does not claim the prior re-list was this job's own auto-reversal", () => {
+    const d = only([cap({ wasDelisted: true, wasFloorQuarantine: true, floorQuarantineCount: 2 })]);
+    expect(d.reason).toContain("re-listed and re-quarantined");
+    expect(d.reason).not.toContain("auto-reversal already failed");
+    expect(d.reason).not.toMatch(/prior auto-reversal/i);
   });
 
   it("a human deactivation_reason refuses promotion even for an otherwise-eligible floor quarantine", () => {
@@ -324,6 +337,15 @@ describe("the evidence query", () => {
     it("PROMOTION_EVIDENCE_SQL embeds the shared constant verbatim rather than a copy that can drift", () => {
       expect(PROMOTION_EVIDENCE_SQL).toContain(LISTING_EVENT_MATCH_SQL);
     });
+
+    // Round-3 (Codex MAJOR): the SQL side of the arrow-form fix. The
+    // isListingStateEvent producer-coverage suite below proves the JS
+    // mirror's BEHAVIOR against real strings; this proves the actual SQL
+    // constant carries the equivalent pattern, so the two can't silently
+    // diverge (one fixed, the other not).
+    it("the lifecycle_transition branch also matches the arrow ('→') shape the real producers write, not just literal prefixes", () => {
+      expect(LISTING_EVENT_MATCH_SQL).toContain("e.action_taken LIKE '%→%'");
+    });
   });
 
   // Round-2 fix (2026-08-16, Codex blocker #1a — oscillation). Without this,
@@ -362,6 +384,63 @@ describe("the evidence query", () => {
         /FROM health_monitor_events e\s+WHERE e\.capability_slug = c\.slug\s+AND e\.event_type = 'quality_floor'\s+AND e\.action_taken = 'quarantined'\s+AND e\.details->>'mode' = 'enforce'/,
       );
     });
+  });
+});
+
+// Round-3 fix (2026-08-16, Codex MAJOR). The round-2 tests above assert on
+// LISTING_EVENT_MATCH_SQL's own text — they prove the SQL contains a
+// pattern, not that the pattern matches what the real event producers
+// actually write. These fixtures are the LITERAL strings each real emit
+// site constructs, copied from source as of this fix:
+//   - lib/lifecycle.ts:121 (canonical writer, arbitrary toState)
+//   - routes/internal-health-monitor.ts:94 (restore for re-validation)
+//   - routes/internal-health-monitor.ts:408 (suspend)
+//   - routes/internal-health-monitor.ts:463 (suspended → validating)
+//   - routes/reply-webhook.ts:368 (restore via email reply)
+// The old prefix-only matcher (`'Unpublished%' OR 'Suspended%' OR
+// 'Published%'`) matched NONE of these five — every real suspend/restore
+// transition would have failed the TOCTOU listing-event-identity re-check
+// silently, since a suspend→revalidate cycle between evidence collection
+// and the promotion write would leave the (wrongly unmatched) most-recent
+// listing event unchanged from the job's perspective.
+describe("isListingStateEvent — producer coverage (Codex round-3 MAJOR)", () => {
+  const realProducerFixtures: Array<{ site: string; actionTaken: string }> = [
+    { site: "lib/lifecycle.ts:121 (canonical writer)", actionTaken: "active → degraded: circuit breaker opened" },
+    { site: "routes/internal-health-monitor.ts:94 (restore for re-validation)", actionTaken: "active → validating: restored for re-validation" },
+    { site: "routes/internal-health-monitor.ts:408 (suspend)", actionTaken: "active → suspended: repeated dependency failures" },
+    { site: "routes/internal-health-monitor.ts:463 (suspended → validating)", actionTaken: "suspended → validating: re-entered onboarding pipeline" },
+    { site: "routes/reply-webhook.ts:368 (restore via email reply)", actionTaken: "suspended → validating: restored via email reply" },
+  ];
+
+  it.each(realProducerFixtures)("matches the real string from $site", ({ actionTaken }) => {
+    expect(isListingStateEvent("lifecycle_transition", actionTaken, null)).toBe(true);
+  });
+
+  it("still matches the two literal-prefix producers (publish/unpublish) that are NOT arrow-form", () => {
+    expect(isListingStateEvent("lifecycle_transition", "Published: now visible in catalog", null)).toBe(true);
+    expect(
+      isListingStateEvent(
+        "lifecycle_transition",
+        "Unpublished: removed from catalog (lifecycle_state remains 'active')",
+        null,
+      ),
+    ).toBe(true);
+  });
+
+  it("negative fixture: an unrelated lifecycle_transition-shaped string with no arrow and no known prefix does NOT match", () => {
+    // Deliberately NOT one of the six known shapes — proves the matcher
+    // isn't accidentally matching event_type alone.
+    expect(isListingStateEvent("lifecycle_transition", "Reindexed test_suite ordering", null)).toBe(false);
+  });
+
+  it("event_type scopes the arrow-shape match — a '→' in an unrelated event_type never matches", () => {
+    // Codex's caution: "be careful not to over-match unrelated event rows;
+    // scope by the event_type(s) these producers write". A quality_floor or
+    // capability_promotion row that happened to contain '→' in its reason
+    // text (neither producer does this today, but nothing stops a future
+    // one) must still fail unless it independently satisfies ITS OWN branch.
+    expect(isListingStateEvent("quality_floor", "quarantined: escalated → reviewed", "enforce")).toBe(false);
+    expect(isListingStateEvent("capability_promotion", "held: passRate → 0.94", "enforce")).toBe(false);
   });
 });
 

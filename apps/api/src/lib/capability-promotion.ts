@@ -155,14 +155,16 @@ export interface PromotionStats {
   lastListingEventId: string | null;
   /**
    * How many times the quality floor has EVER enforce-quarantined this slug.
-   * A second quarantine can only happen after an intervening promotion
-   * re-listed the capability (the floor's own candidate filter requires
-   * visible=true), so >=2 is unambiguous proof of a prior auto-reversal that
-   * bounced back. evaluatePromotion refuses to retry the auto-reversal when
-   * this holds (round-2 fix, Codex blocker #1b) — a repeat bounce is itself
-   * evidence the harness isn't measuring what customers experience for this
-   * specific slug (see module header, "Why the test harness is the
-   * instrument here").
+   * A second quarantine can only happen after an intervening RE-LIST of the
+   * capability (the floor's own candidate filter requires visible=true), so
+   * >=2 is proof the slug was re-listed and re-quarantined at least once
+   * before — NOT specifically proof this job's own auto-reversal caused the
+   * re-listing (the admin publish endpoint can re-list a slug manually too;
+   * corrected round-3, Codex MINOR — the reason text previously overclaimed
+   * this). evaluatePromotion refuses to retry the auto-reversal when this
+   * holds regardless of which re-listing path fired (round-2 fix, Codex
+   * blocker #1b) — a slug with this history is not one this job keeps
+   * guessing on, whatever put it back on the shelf the first time.
    */
   floorQuarantineCount: number;
   totalTests: number;
@@ -339,22 +341,27 @@ export function evaluatePromotion(
         continue;
       }
 
-      // Repeat-bounce refusal (round-2 fix, Codex blocker #1b). The floor's
-      // own candidate filter requires visible=true to quarantine at all, so
-      // a SECOND enforce quarantine can only happen after an intervening
-      // promotion re-listed this exact slug — i.e. floorQuarantineCount >= 2
-      // is proof a prior auto-reversal already bounced back. Post-dating
-      // evidence to the quarantine (#1a) closes the *stale-evidence* half of
-      // the oscillation; this closes the other half: even genuinely-NEW
-      // harness-green evidence has already been wrong once for this slug,
-      // which is direct proof the harness isn't measuring what customers
-      // experience for it (module header, "why the test harness is the
-      // instrument here"). Auto-reversal is not tried again; human call.
+      // Repeat-bounce refusal (round-2 fix, Codex blocker #1b; reason text
+      // corrected round-3 — Codex MINOR). The floor's own candidate filter
+      // requires visible=true to quarantine at all, so a SECOND enforce
+      // quarantine can only happen after an intervening RE-LIST of this
+      // exact slug — i.e. floorQuarantineCount >= 2 is proof the slug was
+      // re-listed and re-quarantined at least once before. That re-listing
+      // is NOT necessarily this job's own auto-reversal: the admin publish
+      // endpoint (routes/internal-health-monitor.ts) can re-list a slug
+      // manually too, and the evidence available here cannot distinguish the
+      // two. The refusal itself stays conservative either way — auto-
+      // reversal is not tried again on a slug with this history, human call
+      // — but the recorded reason must not claim more than the evidence
+      // supports. Post-dating evidence to the quarantine (#1a) closes the
+      // *stale-evidence* half of the oscillation; this closes the other
+      // half: a slug that has already cycled through quarantine once before
+      // is not one this job gets to keep guessing on.
       if (r.floorQuarantineCount >= 2) {
         decisions.push({
           slug: r.slug, action: "flag", enableX402: false,
           passRate: r.passRate, totalTests: r.totalTests,
-          reason: `clears the bar (${pct(r.passRate)} over ${r.totalTests}) on evidence since the latest quarantine, but this slug has bounced before — quarantined ${r.floorQuarantineCount} times total, meaning a prior auto-reversal already failed on real customer traffic. The harness has already been wrong once for this specific capability; human call`,
+          reason: `clears the bar (${pct(r.passRate)} over ${r.totalTests}) on evidence since the latest quarantine, but this slug has bounced before — quarantined ${r.floorQuarantineCount} times total, meaning it was re-listed and re-quarantined at least once already. Auto-reversal is not tried again for a capability with this history; human call`,
           lifecycleState: r.lifecycleState, maintenanceClass: r.maintenanceClass,
           lastListingEventId: r.lastListingEventId,
         });

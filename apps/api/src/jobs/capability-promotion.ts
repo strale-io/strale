@@ -171,12 +171,62 @@ export function isEnforceMode(): boolean {
  * dry_run rows with the same action_taken shape, and ad-hoc/manual ops
  * writes with the same shape exist in repo history (screenshot-url's actual
  * 2026-08-13 reinstatement event has no `mode` key at all).
+ *
+ * The lifecycle_transition branch matches on the arrow ('→') shape, not an
+ * enumerated prefix list (round-3 fix, 2026-08-16 — Codex MAJOR): the
+ * canonical writer (lib/lifecycle.ts) and four other emit sites
+ * (routes/internal-health-monitor.ts ×3, routes/reply-webhook.ts) all write
+ * `${fromState} → ${toState}: ${reason}` — none of them start with
+ * "Suspended", so the old prefix-only match silently never caught a real
+ * suspend/restore transition. `Unpublished%`/`Published%` stay as literal
+ * prefixes because those two emit sites (internal-health-monitor.ts publish/
+ * unpublish) genuinely write that literal text, not arrow-form. ADDING A NEW
+ * EMIT SITE for event_type='lifecycle_transition'? Its action_taken string
+ * MUST match one of these four shapes, or extend both this constant AND
+ * `isListingStateEvent` below (kept in sync by hand) — the "producer
+ * coverage" describe block in capability-promotion.test.ts is fixture-driven
+ * from the real strings each site emits and will catch a sixth format that
+ * bypasses one but not the other.
  */
 export const LISTING_EVENT_MATCH_SQL = `(   (e.event_type = 'quality_floor'        AND e.action_taken = 'quarantined' AND e.details->>'mode' = 'enforce')
         OR (e.event_type = 'capability_promotion' AND e.action_taken LIKE 'promoted%' AND e.details->>'mode' = 'enforce')
         OR (e.event_type = 'lifecycle_transition' AND (e.action_taken LIKE 'Unpublished%'
                                                     OR e.action_taken LIKE 'Suspended%'
-                                                    OR e.action_taken LIKE 'Published%')))`;
+                                                    OR e.action_taken LIKE 'Published%'
+                                                    OR e.action_taken LIKE '%→%')))`;
+
+/**
+ * Pure JS mirror of LISTING_EVENT_MATCH_SQL's boolean logic. Exists ONLY to
+ * make the matcher's actual behavior testable against real producer output
+ * (round-3 fix — Codex's critique of round 2 was that the tests asserted the
+ * SQL's own text, which proves the pattern exists, not that it matches what
+ * the real emit sites actually write). There is no shared runtime between
+ * Postgres LIKE and JS string matching, so this MUST be kept in exact sync
+ * with LISTING_EVENT_MATCH_SQL by hand — see the comment there. Not used by
+ * the actual query (Postgres evaluates LISTING_EVENT_MATCH_SQL server-side);
+ * used only by capability-promotion.test.ts's producer-coverage suite.
+ */
+export function isListingStateEvent(
+  eventType: string,
+  actionTaken: string,
+  detailsMode: string | null,
+): boolean {
+  if (eventType === "quality_floor") {
+    return actionTaken === "quarantined" && detailsMode === "enforce";
+  }
+  if (eventType === "capability_promotion") {
+    return actionTaken.startsWith("promoted") && detailsMode === "enforce";
+  }
+  if (eventType === "lifecycle_transition") {
+    return (
+      actionTaken.startsWith("Unpublished")
+      || actionTaken.startsWith("Suspended")
+      || actionTaken.startsWith("Published")
+      || actionTaken.includes("→")
+    );
+  }
+  return false;
+}
 
 /**
  * The evidence query, shared with scripts/preview-promotions.ts so the preview
