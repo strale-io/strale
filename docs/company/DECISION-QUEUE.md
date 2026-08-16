@@ -14,22 +14,33 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-3** · `your_call` · owner Petter · raised 2026-08-15T10:00Z · no deadline
-Mexico needs an access key that only a person can sign up for. Would you register?
-*What this is:* The Mexican business register (INEGI) issues DENUE API tokens to
-an email address. Creating accounts is one of the few things I don't do.
-*Exact steps (verified 2026-08-15):*
-1. Open https://www.inegi.org.mx/app/desarrolladores/generatoken/Usuarios/token_Verify
-2. Enter an email address — that is the only field the form asks for. Use
-   petter@strale.io so the token lands somewhere we both consider durable.
-3. Submit. INEGI emails the token to that address.
-4. Send me the token, or add it to Railway as `DENUE_API_TOKEN`. I'll wire and
-   test it.
-*Sanity check for step 4:* a working token answers
-`https://www.inegi.org.mx/app/api/denue/v1/consulta/Buscar/restaurantes/21.857/-102.284/300/<TOKEN>`
-with JSON rather than an error.
-*Worth it?* Mexico is a large market but no customer has asked for it. Low
-urgency — do it when you have a spare ten minutes, not before.
+**DQ-3** · `your_call` · owner Petter · raised 2026-08-15 · **token received, not working**
+The Mexico token you sent does not authenticate. One thing to check at INEGI.
+*Where it stands:* Token `d7cd…078d` received 2026-08-15 and stored in the local
+environment. It reaches INEGI — an incorrectly-shaped query returns a proper
+parameter error, which proves the request arrives — but every correctly-shaped
+query returns a malformed `HTTP/1.1 000` status line. Confirmed with two
+independent HTTP clients, so this is INEGI's server answering, not our network.
+Parameter validation runs before the token check, which is why the wrong shape
+looked more promising than the right one.
+*Most likely cause:* the token needs an activation step, or the copy is
+incomplete. INEGI mails the token; some issuances also mail a confirmation link.
+*What would help:* check the INEGI email for an activation link, and confirm the
+token in the mail matches character-for-character. If it does and it still
+fails, the token may need reissuing at
+https://www.inegi.org.mx/app/desarrolladores/generatoken/Usuarios/token_Verify
+*Why the build stopped:* the onboarding protocol requires a verified
+known-answer test against a real response. I have never seen this API return
+data, so writing an executor and a manifest around it would produce a capability
+that has never been tested against the thing it claims to query. Once one query
+answers, the build is roughly half an hour — the API shapes are already
+established below.
+*Established and ready to use:*
+- base `https://www.inegi.org.mx/app/api/denue/v1/consulta/`
+- by name: `Nombre/{name}/{entity}/{start}/{end}/{token}` — entity `00` is nationwide
+- by id: `Ficha/{id}/{token}`
+- nearby: `Buscar/{term}/{lat},{lon}/{metres}/{token}`
+- the token is always the final path segment
 
 ## DECIDED — visible so you can reverse them
 
