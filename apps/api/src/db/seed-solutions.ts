@@ -352,6 +352,7 @@ async function seed() {
           canParallel: step.canParallel,
           parallelGroup: step.parallelGroup,
           inputMap: step.inputMap,
+            gateCondition: step.gateCondition ?? null,
         })),
       );
 

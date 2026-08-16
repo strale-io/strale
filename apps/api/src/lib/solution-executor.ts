@@ -218,6 +218,44 @@ export interface SolutionExecutionResult {
   latency_ms: number;
   step_count: number;
   stepTimings: StepTiming[];
+  /**
+   * Set when a gate step's precondition tripped. The remaining steps were not
+   * executed and the caller must not be charged: the bundle could not do the
+   * work it was sold for. The answer it CAN give is still in `steps`.
+   */
+  gated?: { capabilitySlug: string; field: string; observed: unknown; reason: string };
+}
+
+/** A step's optional precondition. Deliberately a literal comparison and not
+ *  an expression language — the value comes from a seeded definition, and a
+ *  bundle definition is not a place to accept arbitrary code. */
+export interface GateCondition {
+  field: string;
+  equals: unknown;
+  /** Caller-facing sentence explaining why the rest was skipped. */
+  reason?: string;
+}
+
+/** Parse a persisted gate_condition. Anything malformed is treated as absent —
+ *  a broken gate must not silently start blocking a working bundle. */
+export function parseGateCondition(raw: unknown): GateCondition | null {
+  const obj = typeof raw === "string" ? safeJson(raw) : raw;
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
+  const g = obj as Record<string, unknown>;
+  if (typeof g.field !== "string" || !g.field) return null;
+  if (!("equals" in g)) return null;
+  return { field: g.field, equals: g.equals, reason: typeof g.reason === "string" ? g.reason : undefined };
+}
+
+function safeJson(s: string): unknown {
+  try { return JSON.parse(s); } catch { return null; }
+}
+
+/** Does this step's output trip its gate? */
+export function gateTrips(output: unknown, gate: GateCondition): boolean {
+  if (!output || typeof output !== "object" || Array.isArray(output)) return false;
+  const value = (output as Record<string, unknown>)[gate.field];
+  return value === gate.equals;
 }
 
 /**
@@ -239,6 +277,7 @@ export async function executeSolution(
       inputMap: solutionSteps.inputMap,
       canParallel: solutionSteps.canParallel,
       parallelGroup: solutionSteps.parallelGroup,
+      gateCondition: solutionSteps.gateCondition,
     })
     .from(solutionSteps)
     .where(eq(solutionSteps.solutionId, solutionId))
@@ -251,6 +290,7 @@ export async function executeSolution(
   const startMs = Date.now();
   const stepResults: Record<string, unknown> = {};
   const stepErrors: string[] = [];
+  let gated: SolutionExecutionResult["gated"] = undefined;
   // F-B-016: Preallocate by sorted-steps length and assign by each step's
   // index in the sorted array (stepOrder-sorted, see `orderBy` above).
   // Previously this was `.push(output)` inside a Promise.all map callback,
@@ -400,6 +440,37 @@ export async function executeSolution(
 
     await Promise.all(executions);
 
+    // Gate evaluation, after the group settles. A tripped gate stops the run:
+    // the remaining steps are recorded as skipped-by-gate rather than executed,
+    // and the caller is refunded upstream (routes/solution-execute.ts). Without
+    // this, a bundle whose first step legitimately reports "there is nothing
+    // here" ran and billed for every step behind it.
+    for (const step of groupSteps) {
+      const gate = parseGateCondition(step.gateCondition);
+      if (!gate) continue;
+      const output = completedSteps[stepIndex.get(step)!];
+      if (!gateTrips(output, gate)) continue;
+
+      gated = {
+        capabilitySlug: step.capabilitySlug,
+        field: gate.field,
+        observed: (output as Record<string, unknown>)[gate.field],
+        reason: gate.reason
+          ?? `${step.capabilitySlug} reported ${gate.field}=${JSON.stringify(gate.equals)}; the remaining checks could not be performed.`,
+      };
+      logWarn("solution-executor-gated", "gate condition tripped; skipping remaining steps", {
+        capability_slug: step.capabilitySlug, field: gate.field,
+      });
+      break;
+    }
+    if (gated) {
+      for (const step of steps) {
+        if (step.capabilitySlug in stepResults) continue;
+        stepResults[step.capabilitySlug] = { skipped: true, reason: `Not run — ${gated.reason}` };
+      }
+      break;
+    }
+
     // After first group completes, extract entity context for downstream propagation
     if (entityContext && Object.keys(entityContext).length === 0 && completedSteps[0] != null) {
       const step0 = completedSteps[0];
@@ -422,5 +493,6 @@ export async function executeSolution(
     latency_ms: latencyMs,
     step_count: steps.length,
     stepTimings,
+    ...(gated ? { gated } : {}),
   };
 }

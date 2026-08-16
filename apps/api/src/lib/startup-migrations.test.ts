@@ -1157,7 +1157,7 @@ describe("startup-migrations — phase-b5 slug lists (invariants)", () => {
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 29 blocks in historical order", () => {
+  it("exports the expected 30 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1193,6 +1193,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0084_danishQuotaHeadroom",
       "runMigration0085_actorIdentity",
       "runMigration0086_srcBasis",
+      "runMigration0087_solutionGateCondition",
     ]);
   });
 });
