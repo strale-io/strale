@@ -130,9 +130,19 @@ verifyRoute.get("/:transactionId", async (c) => {
   // policy purge (system-initiated). Pre-fix, both rendered the same
   // generic "redacted under GDPR Art. 17" text — wrong for retention rows.
   function redactionReasonText(reason: string | null): string {
-    if (reason === "retention_purge") {
+    // isRetentionReason, not an equality check. Renaming the 90-day sweep's
+    // reason to 'content_retention_purge' updated the structured tally and
+    // left this prose behind, so a live verify response said "deletion_reason
+    // unknown — flagged for operator review" in the same body where
+    // `deletion_reason` read `content_retention_purge`. A public integrity
+    // endpoint contradicting itself is worse than one that says less.
+    if (isRetentionReason(reason)) {
       return (
-        "Row redacted by Strale's retention policy after the configured retention window. " +
+        (reason === "content_retention_purge"
+          ? "Row content redacted by Strale's 90-day customer-content retention policy. The record " +
+            "itself is intact and still readable — what was removed is the payload (input, output, " +
+            "provenance and audit detail). "
+          : "Row redacted by Strale's retention policy after the configured retention window. ") +
         "Original chain hash is preserved for chain continuity; per-row content hash no longer matches " +
         "because the row's input/output/audit_trail were zeroed by design. This is routine and not tampering."
       );

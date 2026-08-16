@@ -11,7 +11,7 @@
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, transactions, x402OrphanSettlements } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
@@ -927,6 +927,38 @@ x402GatewayV2.get("/catalog", rateLimitByIp(120, 60_000), async (c) => {
   });
 });
 
+/**
+ * Does this slug name anything we sell, on any rail?
+ *
+ * Cached for the same reason the catalogue caches: this runs on an
+ * unauthenticated route that discovery crawlers hammer, and it must not turn
+ * every stray 404 into a database round-trip. A miss on the cache is a single
+ * indexed lookup; the cache itself is rebuilt lazily.
+ */
+const KNOWN_SLUG_TTL_MS = 15 * 60 * 1000;
+let _knownSlugs: Set<string> | null = null;
+let _knownSlugsAt = 0;
+
+async function isKnownSlug(slug: string): Promise<boolean> {
+  const now = Date.now();
+  if (!_knownSlugs || now - _knownSlugsAt > KNOWN_SLUG_TTL_MS) {
+    try {
+      const rows = (await getDb().execute(sql`
+        SELECT slug FROM capabilities
+        UNION ALL
+        SELECT slug FROM solutions`)) as unknown as Array<{ slug: string }>;
+      _knownSlugs = new Set(rows.map((r) => r.slug));
+      _knownSlugsAt = now;
+    } catch {
+      // Fail toward the safer classification: an unclassified miss recorded as
+      // "unknown" is a false build signal, so treat a lookup failure as
+      // "probably known" and keep it out of the build queue.
+      return true;
+    }
+  }
+  return _knownSlugs.has(slug);
+}
+
 // ─── Solution execution: /x402/solutions/:slug ──────────────────────────────
 
 x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], async (c) => {
@@ -941,8 +973,10 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
 
   const sol = _solCache.get(slug);
   if (!sol) {
-    recordX402Miss({ slug, kind: "x402_unknown_slug",
-      detail: "no such x402 solution", ...{ userAgent: c.req.header("user-agent") ?? null,
+    const known = await isKnownSlug(slug);
+    recordX402Miss({ slug, kind: known ? "x402_not_on_rail" : "x402_unknown_slug",
+      detail: known ? "known solution, not enabled for x402" : "no such x402 solution",
+      ...{ userAgent: c.req.header("user-agent") ?? null,
         ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
           ?? c.req.header("cf-connecting-ip") ?? null } });
     return c.json(
@@ -1164,9 +1198,13 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
 
   const cap = _capCache.get(slug);
   if (!cap) {
-    // Demand signal: a paying-capable agent asked for something we do not sell.
-    recordX402Miss({ slug, kind: "x402_unknown_slug",
-      detail: "no such x402 capability", ...{ userAgent: c.req.header("user-agent") ?? null,
+    // Two very different things wear the same 404. Distinguish them before
+    // recording, or the demand table fills with "someone wanted X" for every
+    // X we already sell — see X402MissKind.
+    const known = await isKnownSlug(slug);
+    recordX402Miss({ slug, kind: known ? "x402_not_on_rail" : "x402_unknown_slug",
+      detail: known ? "known capability, not enabled for x402" : "no such x402 capability",
+      ...{ userAgent: c.req.header("user-agent") ?? null,
         ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
           ?? c.req.header("cf-connecting-ip") ?? null } });
     return c.json(
