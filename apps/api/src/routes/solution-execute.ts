@@ -385,15 +385,18 @@ solutionExecuteRoute.post(
           transaction_id: transactionId,
           solution_slug: slug,
           all_failed: allFailed,
+          gated: gated !== undefined,
           err: e instanceof Error ? { message: e.message, stack: e.stack } : e,
         },
         "solutions-tx-update-failed",
       );
 
-      // allFailed path already refunded at line ~270. Non-allFailed means
-      // wallet is still debited; refund now so the customer isn't left
-      // paying for a transaction we can't confirm.
-      if (!allFailed) {
+      // Anything on the refundRequired path already refunded above. Guarding
+      // on `allFailed` alone was correct until gates existed: a gated run has
+      // allFailed === false (the gate step succeeded), so it would have been
+      // refunded here a SECOND time. Caught by auditing the whole route rather
+      // than only the block being edited.
+      if (!refundRequired) {
         await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "phase2 update failed");
       }
 

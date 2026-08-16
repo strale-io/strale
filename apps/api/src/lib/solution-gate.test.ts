@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { parseGateCondition, gateTrips } from "./solution-executor.js";
+import { parseGateCondition, gateTrips, evaluateGates, markSkippedByGate } from "./solution-executor.js";
 import { SOLUTIONS } from "../db/solution-catalogue.js";
 import { runMigration0087_solutionGateCondition } from "./startup-migrations.js";
 import { sql, type SQL } from "drizzle-orm";
@@ -39,6 +40,12 @@ describe("parseGateCondition", () => {
     [{ field: "", equals: false }, "empty field"],
     [{ equals: false }, "no field"],
     [[{ field: "is_up", equals: false }], "an array, not an object"],
+    // `equals` must be a JSON scalar. A structured value is accepted-looking
+    // but useless: the persisted JSONB and the step output are deserialized
+    // separately, so === between two structurally-equal objects is always
+    // false. Such a gate would protect nothing while looking like protection.
+    [{ field: "state", equals: { reachable: false } }, "object equals"],
+    [{ field: "codes", equals: [1, 2] }, "array equals"],
   ])("treats %s as no gate (%s)", (raw) => {
     // A malformed gate must read as ABSENT, never as "trips". A gate that
     // fails open leaves one bundle billing wrongly; a gate that fails closed
@@ -137,5 +144,105 @@ describe("migration block 0087", () => {
       fs.readFileSync(new URL("./startup-migrations.ts", import.meta.url), "utf8"));
     const registry = src.slice(src.indexOf("const BLOCKS"), src.indexOf("];", src.indexOf("const BLOCKS")));
     expect(registry).toContain("runMigration0087_solutionGateCondition");
+  });
+});
+
+describe("the refund path, structurally", () => {
+  // No route-level harness exists (CLAUDE.md test-harness exemption), so this
+  // pins the property that actually broke: the late "transaction could not be
+  // finalized" refund guards on `allFailed`, and a GATED run has
+  // allFailed === false because the gate step succeeded. Guarding on
+  // `allFailed` there refunds a gated caller twice.
+  const src = readFileSync(
+    new URL("../routes/solution-execute.ts", import.meta.url), "utf8");
+
+  it("guards the late refund on refundRequired, not allFailed", () => {
+    expect(src).toContain("if (!refundRequired) {");
+    expect(src).not.toMatch(/if \(!allFailed\) \{\s*\n\s*await refundWallet/);
+  });
+
+  it("refunds a gated run exactly once", () => {
+    // One refund call on the main path, and it covers both reasons.
+    expect(src).toContain("const refundRequired = allFailed || gated !== undefined;");
+    expect(src).toContain("if (refundRequired) {");
+  });
+
+  it("charges nothing when the gate trips", () => {
+    expect(src).toContain("const chargedPrice = refundRequired ? 0 : sol.priceCents;");
+  });
+
+  it("tells the caller they were not charged", () => {
+    expect(src).toContain("charged: false");
+  });
+});
+
+describe("evaluateGates — enforcement, not just comparison", () => {
+  const gate = { field: "is_up", equals: false, reason: "down. You were not charged." };
+
+  it("returns the tripped gate with what it observed", () => {
+    const g = evaluateGates([
+      { capabilitySlug: "url-health-check", gateCondition: gate, output: { is_up: false, status_code: 0 } },
+    ]);
+    expect(g).toMatchObject({ capabilitySlug: "url-health-check", field: "is_up", observed: false });
+    expect(g!.reason).toContain("not charged");
+  });
+
+  it("returns null when nothing trips — the ordinary path", () => {
+    expect(evaluateGates([
+      { capabilitySlug: "url-health-check", gateCondition: gate, output: { is_up: true } },
+    ])).toBeNull();
+    expect(evaluateGates([
+      { capabilitySlug: "meta-extract", gateCondition: null, output: { title: "x" } },
+    ])).toBeNull();
+  });
+
+  it("does not trip on a step that errored or never produced output", () => {
+    expect(evaluateGates([
+      { capabilitySlug: "url-health-check", gateCondition: gate, output: { error: "boom" } },
+    ])).toBeNull();
+    expect(evaluateGates([
+      { capabilitySlug: "url-health-check", gateCondition: gate, output: null },
+    ])).toBeNull();
+  });
+
+  it("returns the FIRST trip when a group carries two gates", () => {
+    const g = evaluateGates([
+      { capabilitySlug: "a", gateCondition: { field: "ok", equals: false }, output: { ok: false } },
+      { capabilitySlug: "b", gateCondition: { field: "ok", equals: false }, output: { ok: false } },
+    ]);
+    expect(g!.capabilitySlug).toBe("a");
+  });
+
+  it("synthesises a reason when the definition omits one", () => {
+    const g = evaluateGates([
+      { capabilitySlug: "url-health-check", gateCondition: { field: "is_up", equals: false }, output: { is_up: false } },
+    ]);
+    expect(g!.reason).toContain("url-health-check");
+    expect(g!.reason).toContain("is_up");
+  });
+});
+
+describe("markSkippedByGate", () => {
+  it("fills only the steps that never ran", () => {
+    const results: Record<string, unknown> = { "url-health-check": { is_up: false } };
+    markSkippedByGate(["url-health-check", "meta-extract", "og-image-check"], results, "page is down");
+    expect(results["url-health-check"]).toEqual({ is_up: false });   // untouched
+    expect(results["meta-extract"]).toEqual({ skipped: true, reason: "Not run — page is down" });
+    expect(results["og-image-check"]).toEqual({ skipped: true, reason: "Not run — page is down" });
+  });
+
+  it("never overwrites a result that already exists, even a failed one", () => {
+    // A gate stops what is left; it does not rewrite history. Overwriting a
+    // recorded error would hide a real failure behind a skip marker.
+    const results: Record<string, unknown> = { a: { error: "real failure" } };
+    markSkippedByGate(["a", "b"], results, "stopped");
+    expect(results.a).toEqual({ error: "real failure" });
+  });
+
+  it("accounts for every step, so an audit trail claiming N steps lists N", () => {
+    const results: Record<string, unknown> = {};
+    const slugs = ["a", "b", "c", "d"];
+    markSkippedByGate(slugs, results, "stopped");
+    expect(Object.keys(results).sort()).toEqual(slugs);
   });
 });

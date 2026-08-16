@@ -231,9 +231,21 @@ export interface SolutionExecutionResult {
  *  bundle definition is not a place to accept arbitrary code. */
 export interface GateCondition {
   field: string;
-  equals: unknown;
+  /**
+   * A JSON SCALAR. Objects and arrays are rejected at parse time rather than
+   * supported: the persisted value and the step's output are deserialized
+   * separately, so `===` between two structurally-equal objects is always
+   * false. Such a gate would be accepted, stored, and then silently never
+   * trip — protecting nothing while looking like protection.
+   */
+  equals: string | number | boolean | null;
   /** Caller-facing sentence explaining why the rest was skipped. */
   reason?: string;
+}
+
+/** JSON scalars are the only values `===` can compare meaningfully here. */
+export function isGateScalar(v: unknown): v is string | number | boolean | null {
+  return v === null || ["string", "number", "boolean"].includes(typeof v);
 }
 
 /** Parse a persisted gate_condition. Anything malformed is treated as absent —
@@ -244,11 +256,60 @@ export function parseGateCondition(raw: unknown): GateCondition | null {
   const g = obj as Record<string, unknown>;
   if (typeof g.field !== "string" || !g.field) return null;
   if (!("equals" in g)) return null;
+  if (!isGateScalar(g.equals)) return null;
   return { field: g.field, equals: g.equals, reason: typeof g.reason === "string" ? g.reason : undefined };
 }
 
 function safeJson(s: string): unknown {
   try { return JSON.parse(s); } catch { return null; }
+}
+
+/** A step as the gate evaluator needs to see it. */
+export interface GateEvaluable {
+  capabilitySlug: string;
+  gateCondition: unknown;
+  output: Record<string, unknown> | null;
+}
+
+/**
+ * Pure gate evaluation over one settled group. Extracted from the execution
+ * loop so enforcement — not just parsing and comparison — is testable without
+ * a database. Cross-provider review pointed out that the first version of
+ * these tests would still pass if the whole enforcement block were deleted.
+ *
+ * Returns the first tripped gate in group order, or null.
+ */
+export function evaluateGates(
+  group: GateEvaluable[],
+): SolutionExecutionResult["gated"] | null {
+  for (const step of group) {
+    const gate = parseGateCondition(step.gateCondition);
+    if (!gate) continue;
+    if (!gateTrips(step.output, gate)) continue;
+    return {
+      capabilitySlug: step.capabilitySlug,
+      field: gate.field,
+      observed: (step.output as Record<string, unknown>)[gate.field],
+      reason: gate.reason
+        ?? `${step.capabilitySlug} reported ${gate.field}=${JSON.stringify(gate.equals)}; the remaining checks could not be performed.`,
+    };
+  }
+  return null;
+}
+
+/**
+ * Fill in the steps a tripped gate prevented. Never overwrites a step that
+ * already ran — a gate stops what is left, it does not rewrite history.
+ */
+export function markSkippedByGate(
+  allSlugs: string[],
+  stepResults: Record<string, unknown>,
+  reason: string,
+): void {
+  for (const slug of allSlugs) {
+    if (slug in stepResults) continue;
+    stepResults[slug] = { skipped: true, reason: `Not run — ${reason}` };
+  }
 }
 
 /** Does this step's output trip its gate? */
@@ -445,29 +506,16 @@ export async function executeSolution(
     // and the caller is refunded upstream (routes/solution-execute.ts). Without
     // this, a bundle whose first step legitimately reports "there is nothing
     // here" ran and billed for every step behind it.
-    for (const step of groupSteps) {
-      const gate = parseGateCondition(step.gateCondition);
-      if (!gate) continue;
-      const output = completedSteps[stepIndex.get(step)!];
-      if (!gateTrips(output, gate)) continue;
-
-      gated = {
-        capabilitySlug: step.capabilitySlug,
-        field: gate.field,
-        observed: (output as Record<string, unknown>)[gate.field],
-        reason: gate.reason
-          ?? `${step.capabilitySlug} reported ${gate.field}=${JSON.stringify(gate.equals)}; the remaining checks could not be performed.`,
-      };
-      logWarn("solution-executor-gated", "gate condition tripped; skipping remaining steps", {
-        capability_slug: step.capabilitySlug, field: gate.field,
-      });
-      break;
-    }
+    gated = evaluateGates(groupSteps.map((step) => ({
+      capabilitySlug: step.capabilitySlug,
+      gateCondition: step.gateCondition,
+      output: completedSteps[stepIndex.get(step)!],
+    }))) ?? undefined;
     if (gated) {
-      for (const step of steps) {
-        if (step.capabilitySlug in stepResults) continue;
-        stepResults[step.capabilitySlug] = { skipped: true, reason: `Not run — ${gated.reason}` };
-      }
+      logWarn("solution-executor-gated", "gate condition tripped; skipping remaining steps", {
+        capability_slug: gated.capabilitySlug, field: gated.field,
+      });
+      markSkippedByGate(steps.map((s) => s.capabilitySlug), stepResults, gated.reason);
       break;
     }
 
