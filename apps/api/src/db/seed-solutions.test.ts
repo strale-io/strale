@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SOLUTIONS } from "./solution-catalogue.js";
 
@@ -171,5 +172,36 @@ describe("the growth bundles keep the shape that actually sells", () => {
     for (const step of b.steps.slice(1)) {
       expect(step.inputMap.domain).toBe("$steps[0].domain");
     }
+  });
+});
+
+describe("the seed script's --dry-run flag", () => {
+  // No Postgres harness exists for the seed (CLAUDE.md test-harness
+  // exemption), so this asserts the structural property that failed in
+  // production: the guard must wrap the UPSERT, not only the quality-gate
+  // writes further down. The first version guarded the gate alone, printed
+  // "DRY RUN — no writes", and wrote 45 solutions across three runs.
+  //
+  // Verified by effect at the time of writing: row count and max(updated_at)
+  // on `solutions` were identical either side of a --dry-run invocation
+  // against production.
+  const src = readFileSync(new URL("./seed-solutions.ts", import.meta.url), "utf8");
+
+  it("returns before the upsert transaction, not after it", () => {
+    const guard = src.indexOf("if (DRY_RUN) {");
+    const upsert = src.indexOf("await db.transaction(async (tx) => {");
+    expect(guard).toBeGreaterThan(-1);
+    expect(upsert).toBeGreaterThan(-1);
+    expect(guard, "the DRY_RUN early-return must precede the upsert transaction").toBeLessThan(upsert);
+  });
+
+  it("guards every write path the script has", () => {
+    // One early-return for the upsert, plus the two quality-gate flips.
+    expect(src.match(/if \(!DRY_RUN\) \{/g) ?? []).toHaveLength(2);
+    expect(src).toContain("if (DRY_RUN) {");
+  });
+
+  it("never overwrites a live price unless explicitly asked", () => {
+    expect(src).toContain("existing && !ALLOW_PRICE_CHANGES ? existing.priceCents : sol.priceCents");
   });
 });
