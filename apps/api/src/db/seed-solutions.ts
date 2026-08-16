@@ -148,8 +148,16 @@ import { validateSolution, enforceGates } from "../lib/onboarding-gates.js";
 
 // ─── Seed logic ─────────────────────────────────────────────────────────────
 
+/** €0.02–€1.00 (charter § Authority). Outside it is a founder decision. */
+const PRICE_BAND_MIN_CENTS = 2;
+const PRICE_BAND_MAX_CENTS = 100;
+
+const DRY_RUN = process.argv.includes("--dry-run");
+const ALLOW_PRICE_CHANGES = process.argv.includes("--allow-price-changes");
+
 async function seed() {
   const db = getDb();
+  if (DRY_RUN) console.log("DRY RUN — no writes.");
 
   // Collect all capability slugs referenced by solutions (steps + extendsWith)
   const allSlugs = [
@@ -172,6 +180,9 @@ async function seed() {
 
   let seeded = 0;
   let skipped = 0;
+  const priceDrift: string[] = [];
+  const outOfBand: string[] = [];
+  const gateFailed: string[] = [];
 
   for (const sol of SOLUTIONS) {
     // Check if any step references a missing capability
@@ -188,21 +199,84 @@ async function seed() {
 
     const complianceCoverage = buildComplianceCoverage(sol);
 
-    // Gate checks: validate solution before writing
+    // Gate checks: validate solution before writing.
+    //
+    // One bad definition used to abort the whole run: enforceGates throws, and
+    // because each solution is written in its own transaction rather than the
+    // run being atomic, the catalogue was left half-updated. `kyc-denmark` has
+    // carried a bad step reference for months, which is why production stopped
+    // tracking these definitions around 2026-04-12 — every run since died on
+    // it. A failing definition now skips itself and the run continues, with
+    // everything skipped reported at the end.
     const gateViolations = await validateSolution(
       sol.slug,
       sol.inputSchema,
       sol.steps.map((s) => ({ capabilitySlug: s.capabilitySlug, stepOrder: s.stepOrder, inputMap: s.inputMap })),
     );
-    enforceGates(gateViolations);
+    try {
+      enforceGates(gateViolations);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message.replace(/\s+/g, " ").slice(0, 200) : String(err);
+      console.warn(`  SKIP ${sol.slug} — gate violation: ${detail}`);
+      gateFailed.push(`${sol.slug}: ${detail}`);
+      skipped++;
+      continue;
+    }
+
+    // The EUR0.02-1.00 band is the CAPABILITY pricing framework
+    // (DEC-20260302-A). Bundles are priced above it by design — the KYB
+    // families sell at EUR2.50 — so an out-of-band solution price is worth
+    // surfacing, not refusing. A first draft refused them outright and
+    // thereby excluded 13 live solutions from ever being updated again;
+    // caught in a dry run.
+    //
+    // The protection that actually matters is below: an existing solution's
+    // live price is never overwritten without --allow-price-changes.
+    if (sol.priceCents < PRICE_BAND_MIN_CENTS || sol.priceCents > PRICE_BAND_MAX_CENTS) {
+      outOfBand.push(`${sol.slug} @ EUR${(sol.priceCents / 100).toFixed(2)}`);
+    }
+
+    if (DRY_RUN) {
+      // The guard has to sit HERE, around the upsert, and not only around the
+      // quality-gate writes further down. The first version guarded the gate
+      // alone, printed "DRY RUN — no writes", and then wrote 45 solutions to
+      // production across three runs. Nothing was damaged — the price and
+      // is_active guards held — but the flag was lying, which is worse than
+      // not having it.
+      const [live] = await db
+        .select({ id: solutions.id, priceCents: solutions.priceCents })
+        .from(solutions)
+        .where(eq(solutions.slug, sol.slug))
+        .limit(1);
+      if (!live) {
+        console.log(`  would INSERT ${sol.slug} @ EUR${(sol.priceCents / 100).toFixed(2)} (${sol.steps.length} steps)`);
+      } else {
+        if (live.priceCents !== sol.priceCents) {
+          priceDrift.push(`${sol.slug}: live EUR${(live.priceCents / 100).toFixed(2)} vs defined EUR${(sol.priceCents / 100).toFixed(2)}`);
+        }
+        console.log(`  would UPDATE ${sol.slug} (${sol.steps.length} steps)`);
+      }
+      seeded++;
+      continue;
+    }
 
     await db.transaction(async (tx) => {
       // Upsert solution
       const [existing] = await tx
-        .select({ id: solutions.id })
+        .select({ id: solutions.id, priceCents: solutions.priceCents })
         .from(solutions)
         .where(eq(solutions.slug, sol.slug))
         .limit(1);
+
+      // Prices on EXISTING solutions are left alone unless explicitly asked
+      // for. Production has drifted from these definitions — a seed run on
+      // 2026-08-16 would have moved eight prices, three of them past the
+      // band ceiling, including a solution with real sales. A script whose
+      // job is "add the new bundles" must not silently reprice the catalogue.
+      if (existing && existing.priceCents !== sol.priceCents) {
+        priceDrift.push(`${sol.slug}: live EUR${(existing.priceCents / 100).toFixed(2)} vs defined EUR${(sol.priceCents / 100).toFixed(2)}`);
+      }
+      const priceToWrite = existing && !ALLOW_PRICE_CHANGES ? existing.priceCents : sol.priceCents;
 
       let solutionId: string;
 
@@ -216,7 +290,7 @@ async function seed() {
             longDescription: sol.longDescription ?? null,
             agentDescription: sol.agentDescription ?? null,
             category: sol.category,
-            priceCents: sol.priceCents,
+            priceCents: priceToWrite,
             componentSumCents: sol.componentSumCents,
             valueTier: sol.valueTier,
             maintenanceLevel: sol.maintenanceLevel,
@@ -250,7 +324,7 @@ async function seed() {
             longDescription: sol.longDescription ?? null,
             agentDescription: sol.agentDescription ?? null,
             category: sol.category,
-            priceCents: sol.priceCents,
+            priceCents: priceToWrite,
             componentSumCents: sol.componentSumCents,
             valueTier: sol.valueTier,
             maintenanceLevel: sol.maintenanceLevel,
@@ -313,10 +387,24 @@ async function seed() {
 
     if (steps.length === 0) continue;
 
-    // SQS-based qualification gate retired (DEC-20260503-B). Per the new
-    // model, a solution auto-activates when every step capability has at
-    // least one passing test_result in the last 30 days; the seed script
-    // mirrors the live test-scheduler gate.
+    // SQS-based qualification gate retired (DEC-20260503-B). The replacement
+    // asked for "at least one passing test_result in the last 30 days" per
+    // step capability — and that rule is wrong for anything we deliberately
+    // do not test.
+    //
+    // Scheduled testing was narrowed to zero-external-cost capabilities, so a
+    // paid capability has NO scheduled suites and therefore can never satisfy
+    // a "recent passing test" condition. As of 2026-08-16, `sanctions-check`
+    // (0 of 9 suites scheduled) and `adverse-media-check` (0 of 14) sit in
+    // exactly that position with healthy closed breakers — and between them
+    // they appear in 68 active solutions. A seed run under the old rule would
+    // have deactivated the entire compliance catalogue in one pass, hours
+    // after the decision to keep investing in it. Simulated before running,
+    // which is why it was caught rather than shipped.
+    //
+    // Absence of tests is absence of evidence, not evidence of failure. A step
+    // qualifies when it is active AND either (a) it has passed recently, or
+    // (b) we never schedule it and its breaker is not open.
     const stepSlugs = steps.map((s) => s.capabilitySlug);
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -331,24 +419,70 @@ async function seed() {
       ((Array.isArray(passingRows) ? passingRows : (passingRows as any)?.rows ?? []) as { capability_slug: string }[])
         .map((r) => r.capability_slug),
     );
-    const unqualified = stepSlugs.filter((slug) => !passingSet.has(slug));
+    // Capabilities we never schedule, plus their breaker state and active flag.
+    const capStateRows = await db.execute(sql`
+      SELECT c.slug,
+             c.is_active,
+             COALESCE((SELECT bool_or(ts.scheduled_testing_eligible)
+                       FROM test_suites ts WHERE ts.capability_slug = c.slug), false) AS ever_scheduled,
+             COALESCE((SELECT h.state FROM capability_health h
+                       WHERE h.capability_slug = c.slug), 'closed') AS breaker
+      FROM capabilities c
+      WHERE c.slug IN (${sql.join(stepSlugs.map((x) => sql`${x}`), sql`, `)})
+    `);
+    const capState = new Map(
+      ((Array.isArray(capStateRows) ? capStateRows : (capStateRows as any)?.rows ?? []) as
+        { slug: string; is_active: boolean; ever_scheduled: boolean; breaker: string }[])
+        .map((r) => [r.slug, r]),
+    );
+
+    const unqualified = stepSlugs.filter((slug) => {
+      const st = capState.get(slug);
+      if (!st || !st.is_active) return true;       // gone or switched off — genuinely unqualified
+      if (passingSet.has(slug)) return false;      // passed recently — qualified
+      if (st.ever_scheduled) return true;          // we DO test it and it has not passed — unqualified
+      return st.breaker === "open";                // never tested: trust it unless the breaker is open
+    });
 
     if (unqualified.length > 0 && sol.isActive) {
-      await db.update(solutions)
-        .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(solutions.id, sol.id));
-      console.log(`  GATED: ${sol.slug} — unqualified: ${unqualified.join(', ')}`);
+      if (!DRY_RUN) {
+        await db.update(solutions)
+          .set({ isActive: false, updatedAt: new Date() })
+          .where(eq(solutions.id, sol.id));
+      }
+      console.log(`  ${DRY_RUN ? "would GATE" : "GATED"}: ${sol.slug} — unqualified: ${unqualified.join(', ')}`);
       gated++;
     } else if (unqualified.length === 0 && !sol.isActive) {
-      await db.update(solutions)
-        .set({ isActive: true, updatedAt: new Date() })
-        .where(eq(solutions.id, sol.id));
-      console.log(`  ACTIVATED: ${sol.slug} — all steps qualified`);
+      if (!DRY_RUN) {
+        await db.update(solutions)
+          .set({ isActive: true, updatedAt: new Date() })
+          .where(eq(solutions.id, sol.id));
+      }
+      console.log(`  ${DRY_RUN ? "would ACTIVATE" : "ACTIVATED"}: ${sol.slug} — all steps qualified`);
       activated++;
     }
   }
 
   console.log(`Quality gate: ${gated} gated, ${activated} activated`);
+
+  if (priceDrift.length) {
+    console.log(`
+--- Price drift: ${priceDrift.length} solution(s) differ from their definition ---`);
+    for (const d of priceDrift) console.log(`  ${d}`);
+    console.log(ALLOW_PRICE_CHANGES
+      ? "  (--allow-price-changes was set: the defined prices were written.)"
+      : "  Live prices were LEFT ALONE. Re-run with --allow-price-changes to apply them.");
+  }
+  if (outOfBand.length) {
+    console.log(`
+--- Priced above the EUR0.02-1.00 capability band (normal for bundles, listed for visibility) ---`);
+    console.log(`  ${outOfBand.join(", ")}`);
+  }
+  if (gateFailed.length) {
+    console.log(`
+--- Skipped on gate violations: ${gateFailed.length} ---`);
+    for (const g of gateFailed) console.log(`  ${g}`);
+  }
   process.exit(0);
 }
 
