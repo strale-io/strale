@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SOLUTIONS } from "./seed-solutions.js";
+import { SOLUTIONS } from "./solution-catalogue.js";
 
 /**
  * Structural invariants over the bundle catalogue, checkable without a
@@ -60,16 +60,43 @@ describe("every bundle, structurally", () => {
     for (const slug of NEW_BUNDLES) expect(over).not.toContain(slug);
   });
 
+  it("numbers its steps uniquely and contiguously from 1", () => {
+    // $steps[N] resolves by sorted stepOrder, not by array position
+    // (solution-executor.ts: "Preallocation to steps.length lets $steps[N]
+    // resolve by authoring order (= stepOrder)"). A gap or a duplicate makes
+    // that index mean something different from what the author intended.
+    for (const sol of SOLUTIONS) {
+      const orders = sol.steps.map((s) => s.stepOrder).sort((a, b) => a - b);
+      expect(orders, `${sol.slug} step numbering`).toEqual(
+        Array.from({ length: sol.steps.length }, (_, i) => i + 1),
+      );
+    }
+  });
+
   it("never references a step's output before that step runs", () => {
     for (const sol of SOLUTIONS) {
-      sol.steps.forEach((step, i) => {
+      // Compare against EXECUTION order, not array position. Reordering the
+      // array while leaving stepOrder alone must not be able to slip a
+      // forward reference past this — the array is authoring convenience,
+      // stepOrder is what the runtime obeys.
+      const executionOrder = [...sol.steps].sort((a, b) => a.stepOrder - b.stepOrder);
+      executionOrder.forEach((step, position) => {
         for (const expr of Object.values(step.inputMap)) {
           const m = /^\$steps\[(\d+)\]/.exec(expr);
           if (!m) continue;
+          const refIdx = Number(m[1]);
           expect(
-            Number(m[1]),
-            `${sol.slug} step ${i + 1} (${step.capabilitySlug}) reads $steps[${m[1]}] before it runs`,
-          ).toBeLessThan(i);
+            refIdx,
+            `${sol.slug} step ${step.stepOrder} (${step.capabilitySlug}) reads $steps[${refIdx}] before it runs`,
+          ).toBeLessThan(position);
+          // …and must not be racing it in the same parallel group.
+          const source = executionOrder[refIdx];
+          if (source && step.canParallel && source.canParallel) {
+            expect(
+              step.parallelGroup === source.parallelGroup && step.parallelGroup !== null,
+              `${sol.slug}: ${step.capabilitySlug} shares parallel group ${step.parallelGroup} with the step it depends on (${source.capabilitySlug})`,
+            ).toBe(false);
+          }
         }
       });
     }
