@@ -32,12 +32,20 @@
  * the normal brake: dry-run until a human has read a tick's worth of
  * `dry_run_would_promote` events.
  *
- * RACE HANDLING (review finding 5): the evidence query and the write are not
- * atomic — a floor quarantine, an operator unpublish, or a breaker trip can
- * land in between. The UPDATE therefore re-asserts every eligibility
- * precondition in its WHERE clause and the transaction is rolled back unless
- * exactly one row changed. A promotion recorded against a stale snapshot would
- * silently overwrite a newer safety decision.
+ * RACE HANDLING (review finding 5, hardened round-2 2026-08-16 — Codex
+ * blocker #3): the evidence query and the write are not atomic — a floor
+ * quarantine, an operator unpublish, or a breaker trip can land in between.
+ * The UPDATE re-asserts isActive/visible/lifecycle_state/deactivation_reason/
+ * maintenance_class exactly as evaluated, AND re-derives "the latest
+ * listing-state event for this slug" at write time via the same
+ * LISTING_EVENT_MATCH_SQL the evidence query used, requiring it to still be
+ * the exact event (by id) this decision was evaluated against. The original
+ * version only re-checked isActive/visible/deactivation_reason/breaker —
+ * a human suspension, a maintenance_class change, or a fresh floor quarantine
+ * landing after evidence collection but before the write would have been
+ * silently overwritten back to active/visible. The transaction is rolled
+ * back unless exactly one row changed. A promotion recorded against a stale
+ * snapshot would silently overwrite a newer safety decision.
  *
  * Bulk-operation note (DEC-20260504-B): the first enforcing tick is a
  * workload-resumption event — a backlog accumulated since May 2026, not a
@@ -73,6 +81,12 @@ export interface PromotionEvidenceRow {
   has_x402_method: boolean;
   breaker_state: string | null;
   last_listing_event: string | null;
+  /** uuid of the matched event, for the write-time TOCTOU re-check (round-2 fix, Codex blocker #3). */
+  last_listing_event_id: string | null;
+  /** `details->>'mode'` of the matched event — structured provenance (Codex blocker #2), not inferred from the action string alone. */
+  last_listing_event_mode: string | null;
+  /** How many times the floor has EVER enforce-quarantined this slug (Codex blocker #1b — repeat-bounce refusal). */
+  floor_quarantine_count: number;
   total_tests: number;
   passed_tests: number;
   distinct_test_days: number;
@@ -93,19 +107,24 @@ export interface PromotionEvidenceRow {
  *
  * `last_listing_event` collapses to the two things the core needs: was this a
  * takedown, and what was it. A capability that has never been listed has no
- * such event and is a dark launch, not a reinstatement. `wasFloorQuarantine`
- * narrows further: 'quarantined' is written only by
- * `jobs/quality-floor.ts`'s enforce-mode apply path (event_type
- * 'quality_floor', action_taken 'quarantined' — see PROMOTION_EVIDENCE_SQL's
- * lateral join below), so it can never collide with a human/operator
- * lifecycle_transition action_taken ('Unpublished...', 'Suspended...',
- * 'Published...'). This is the signal that lets evaluatePromotion
- * auto-reverse a floor takedown while still refusing to touch a human one
- * ("promotion grace" fix, 2026-08-16).
+ * such event and is a dark launch, not a reinstatement.
+ *
+ * `wasFloorQuarantine` (round-2 fix, 2026-08-16 — Codex blocker #2) requires
+ * BOTH the action_taken string AND the matched event's own recorded mode to
+ * be 'enforce'. The SQL's `le` lateral already filters the quality_floor
+ * branch on `details->>'mode' = 'enforce'`, so `last_listing_event_mode`
+ * check here is structured provenance, not the sole gate — defense in depth
+ * against a future query edit that drops the WHERE-clause filter, or an
+ * ad-hoc/manual health_monitor_events insert with action_taken='quarantined'
+ * and no mode field (the real screenshot-url reinstatement event on
+ * 2026-08-13 was exactly this shape: 'capability_promoted', no `mode` key —
+ * proof this class of row exists in prod, not a hypothetical).
  */
 export function toPromotionStats(rows: PromotionEvidenceRow[]): PromotionStats[] {
   return rows.map((r) => {
     const wasDelisted = r.last_listing_event !== null && !r.last_listing_event.startsWith("promoted");
+    const wasFloorQuarantine =
+      wasDelisted && r.last_listing_event === "quarantined" && r.last_listing_event_mode === "enforce";
     return {
       slug: r.slug,
       lifecycleState: r.lifecycle_state,
@@ -119,7 +138,9 @@ export function toPromotionStats(rows: PromotionEvidenceRow[]): PromotionStats[]
       breakerState: r.breaker_state,
       wasDelisted,
       delistingReason: wasDelisted ? r.last_listing_event : null,
-      wasFloorQuarantine: wasDelisted && r.last_listing_event === "quarantined",
+      wasFloorQuarantine,
+      lastListingEventId: r.last_listing_event_id,
+      floorQuarantineCount: r.floor_quarantine_count,
       totalTests: r.total_tests,
       passedTests: r.passed_tests,
       distinctTestDays: r.distinct_test_days,
@@ -139,6 +160,25 @@ export function isEnforceMode(): boolean {
 }
 
 /**
+ * The event_type/action_taken/mode conditions that identify "a listing-state
+ * change" for a capability. Shared VERBATIM between PROMOTION_EVIDENCE_SQL's
+ * `le` lateral below (reads the latest such event per candidate) and the
+ * promotion write's TOCTOU re-check in runCapabilityPromotionOnce (round-2
+ * fix, Codex blocker #3) — the two must never drift, or the write could
+ * silently accept a listing-event identity the evidence query would have
+ * rejected. Requires `details->>'mode' = 'enforce'` on the quality_floor and
+ * capability_promotion branches (Codex blocker #2): the floor also emits
+ * dry_run rows with the same action_taken shape, and ad-hoc/manual ops
+ * writes with the same shape exist in repo history (screenshot-url's actual
+ * 2026-08-13 reinstatement event has no `mode` key at all).
+ */
+export const LISTING_EVENT_MATCH_SQL = `(   (e.event_type = 'quality_floor'        AND e.action_taken = 'quarantined' AND e.details->>'mode' = 'enforce')
+        OR (e.event_type = 'capability_promotion' AND e.action_taken LIKE 'promoted%' AND e.details->>'mode' = 'enforce')
+        OR (e.event_type = 'lifecycle_transition' AND (e.action_taken LIKE 'Unpublished%'
+                                                    OR e.action_taken LIKE 'Suspended%'
+                                                    OR e.action_taken LIKE 'Published%')))`;
+
+/**
  * The evidence query, shared with scripts/preview-promotions.ts so the preview
  * cannot drift from what the job will actually decide.
  *
@@ -147,6 +187,25 @@ export function isEnforceMode(): boolean {
  * it cannot fan the aggregate out or split a capability across grouped rows
  * (verified against prod 2026-08-16 — max 1 row/slug over 298 rows).
  * `test_suites` joins on the result's own suite id, one-to-one by primary key.
+ *
+ * Round-2 fix (2026-08-16, external review of the "promotion grace" fix —
+ * Codex blockers #1 and #2):
+ *   - `le` now filters on `LISTING_EVENT_MATCH_SQL` (enforce-mode only) and
+ *     exposes the matched event's id and mode as structured provenance.
+ *   - `le.quarantined_at` — the matched event's timestamp, but ONLY when it
+ *     resolved to the floor's own quarantine — clamps the `tr` join and the
+ *     `lk` lateral to evidence dated AFTER that quarantine. Without this, a
+ *     capability that was harness-green WHILE customer traffic was failing
+ *     (the exact pre-quarantine state) could supply its own "recovery"
+ *     evidence from before it was ever quarantined, oscillating forever:
+ *     quarantine -> promote on stale-but-in-window evidence -> new customer
+ *     failures -> quarantine -> promote again on the same leftover evidence.
+ *   - `fq` counts every enforce-mode quarantine this slug has ever had. A
+ *     second quarantine can only happen after an intervening promotion
+ *     re-listed the capability (the floor's own candidate filter requires
+ *     visible=true), so floor_quarantine_count >= 2 is unambiguous proof of
+ *     a prior auto-reversal that bounced back — evaluatePromotion refuses to
+ *     retry it (see lib/capability-promotion.ts).
  */
 export const PROMOTION_EVIDENCE_SQL = `
   SELECT c.slug,
@@ -160,6 +219,9 @@ export const PROMOTION_EVIDENCE_SQL = `
          (c.x402_method IS NOT NULL)             AS has_x402_method,
          h.state                                 AS breaker_state,
          le.action_taken                         AS last_listing_event,
+         le.id                                   AS last_listing_event_id,
+         le.mode                                 AS last_listing_event_mode,
+         COALESCE(fq.n, 0)::int                  AS floor_quarantine_count,
          COUNT(tr.id)::int                                          AS total_tests,
          COUNT(tr.id) FILTER (WHERE tr.passed)::int                 AS passed_tests,
          COUNT(DISTINCT date_trunc('day', tr.executed_at))::int     AS distinct_test_days,
@@ -172,31 +234,45 @@ export const PROMOTION_EVIDENCE_SQL = `
          COUNT(tr.id) FILTER (WHERE ts.test_type = 'piggyback' AND tr.passed)::int    AS piggyback_passed
   FROM capabilities c
   LEFT JOIN capability_health h ON h.capability_slug = c.slug
-  LEFT JOIN test_results tr
-         ON tr.capability_slug = c.slug
-        AND tr.executed_at > NOW() - INTERVAL '7 days'
-  LEFT JOIN test_suites ts ON ts.id = tr.test_suite_id
   -- The most recent event that changed whether this capability was listed.
   -- Distinguishes "never listed" (dark launch) from "taken down".
   LEFT JOIN LATERAL (
-    SELECT e.action_taken
+    SELECT e.id, e.action_taken, e.details->>'mode' AS mode,
+           CASE WHEN e.event_type = 'quality_floor' AND e.action_taken = 'quarantined'
+                THEN e.created_at END AS quarantined_at
     FROM health_monitor_events e
     WHERE e.capability_slug = c.slug
-      AND (   (e.event_type = 'quality_floor'        AND e.action_taken = 'quarantined')
-           OR (e.event_type = 'capability_promotion' AND e.action_taken LIKE 'promoted%')
-           OR (e.event_type = 'lifecycle_transition' AND (e.action_taken LIKE 'Unpublished%'
-                                                       OR e.action_taken LIKE 'Suspended%'
-                                                       OR e.action_taken LIKE 'Published%')))
+      AND ${LISTING_EVENT_MATCH_SQL}
     ORDER BY e.created_at DESC
     LIMIT 1
   ) le ON true
-  -- Did the single most recent known_answer result pass? An average survives a
-  -- fresh break; this does not.
+  -- How many times the floor has EVER enforce-quarantined this slug — see
+  -- floor_quarantine_count doc above.
+  LEFT JOIN LATERAL (
+    SELECT COUNT(*)::int AS n
+    FROM health_monitor_events e
+    WHERE e.capability_slug = c.slug
+      AND e.event_type = 'quality_floor'
+      AND e.action_taken = 'quarantined'
+      AND e.details->>'mode' = 'enforce'
+  ) fq ON true
+  LEFT JOIN test_results tr
+         ON tr.capability_slug = c.slug
+        AND tr.executed_at > GREATEST(
+              NOW() - INTERVAL '7 days',
+              COALESCE(le.quarantined_at, '-infinity'::timestamptz)
+            )
+  LEFT JOIN test_suites ts ON ts.id = tr.test_suite_id
+  -- Did the single most recent known_answer result pass? An average survives
+  -- a fresh break; this does not. Also bounded to since-quarantine, same
+  -- reason as the tr join above — a stale pre-quarantine pass must not stand
+  -- in for "broken now".
   LEFT JOIN LATERAL (
     SELECT tr2.passed
     FROM test_results tr2
     JOIN test_suites ts2 ON ts2.id = tr2.test_suite_id
     WHERE tr2.capability_slug = c.slug AND ts2.test_type = 'known_answer'
+      AND tr2.executed_at > COALESCE(le.quarantined_at, '-infinity'::timestamptz)
     ORDER BY tr2.executed_at DESC
     LIMIT 1
   ) lk ON true
@@ -204,7 +280,7 @@ export const PROMOTION_EVIDENCE_SQL = `
     AND c.visible = false
   GROUP BY c.slug, c.lifecycle_state, c.visible, c.x402_enabled, c.is_free_tier,
            c.maintenance_class, c.marketplace_eligible, c.deactivation_reason,
-           c.x402_method, h.state, le.action_taken, lk.passed`;
+           c.x402_method, h.state, le.id, le.action_taken, le.mode, fq.n, lk.passed`;
 
 export async function runCapabilityPromotionOnce(): Promise<{
   outcome: string;
@@ -248,9 +324,13 @@ export async function runCapabilityPromotionOnce(): Promise<{
         };
 
         if (d.action === "promote" && mode === "enforce") {
-          // Conditional write (review finding 5). Every precondition the
-          // decision rested on is re-asserted here, so a quarantine or
-          // unpublish that landed after the evidence query wins the race
+          // Conditional write (review finding 5, hardened round-2 — Codex
+          // blocker #3). Every precondition the decision rested on is
+          // re-asserted here, including lifecycle_state and maintenance_class
+          // (exact match to what was evaluated — IS NOT DISTINCT FROM handles
+          // the null case) and the listing-event identity check below, so a
+          // quarantine, an unpublish, a maintenance_class change, or a fresh
+          // takedown that landed after the evidence query wins the race
           // rather than being silently overwritten. Anything other than
           // exactly one affected row rolls the event back with it.
           let applied = false;
@@ -271,11 +351,29 @@ export async function runCapabilityPromotionOnce(): Promise<{
                   eq(capabilities.slug, d.slug),
                   eq(capabilities.isActive, true),
                   eq(capabilities.visible, false),
+                  eq(capabilities.lifecycleState, d.lifecycleState),
                   isNull(capabilities.deactivationReason),
+                  dsql`${capabilities.maintenanceClass} IS NOT DISTINCT FROM ${d.maintenanceClass}`,
                   dsql`NOT EXISTS (
                     SELECT 1 FROM capability_health h
                     WHERE h.capability_slug = ${d.slug} AND h.state <> 'closed'
                   )`,
+                  // Listing-event identity (Codex blocker #3): re-derive "the
+                  // latest listing-state event for this slug" using the exact
+                  // same match the evidence query used, and require it to
+                  // still be the event (by id) this decision was evaluated
+                  // against. A human suspension or a fresh floor quarantine
+                  // inserted between evidence collection and this write
+                  // changes the answer, so the write is rejected (raced)
+                  // instead of overwriting a decision made after ours.
+                  dsql`(
+                    SELECT e.id
+                    FROM health_monitor_events e
+                    WHERE e.capability_slug = ${d.slug}
+                      AND ${dsql.raw(LISTING_EVENT_MATCH_SQL)}
+                    ORDER BY e.created_at DESC
+                    LIMIT 1
+                  ) IS NOT DISTINCT FROM ${d.lastListingEventId}::uuid`,
                 ),
               );
             const affected = (res as unknown as { count?: number; rowCount?: number }).count

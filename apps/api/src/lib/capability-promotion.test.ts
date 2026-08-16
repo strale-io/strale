@@ -8,6 +8,7 @@ import {
   toPromotionStats,
   isEnforceMode,
   PROMOTION_EVIDENCE_SQL,
+  LISTING_EVENT_MATCH_SQL,
   type PromotionEvidenceRow,
 } from "../jobs/capability-promotion.js";
 
@@ -30,6 +31,8 @@ function cap(partial: Partial<PromotionStats>): PromotionStats {
     wasDelisted: false,
     delistingReason: null,
     wasFloorQuarantine: false,
+    lastListingEventId: null,
+    floorQuarantineCount: 0,
     totalTests: 100,
     passedTests: 100,
     distinctTestDays: 7,
@@ -51,7 +54,8 @@ function row(partial: Partial<PromotionEvidenceRow>): PromotionEvidenceRow {
     slug: "s", lifecycle_state: "validating", visible: false, x402_enabled: false,
     is_free_tier: false, maintenance_class: "free-stable-api", marketplace_eligible: true,
     deactivation_reason: null, has_x402_method: true, breaker_state: "closed",
-    last_listing_event: null, total_tests: 100, passed_tests: 100, distinct_test_days: 7,
+    last_listing_event: null, last_listing_event_id: null, last_listing_event_mode: null,
+    floor_quarantine_count: 0, total_tests: 100, passed_tests: 100, distinct_test_days: 7,
     ka_total: 20, ka_passed: 20, latest_ka_passed: true, recent_total: 14, recent_passed: 14,
     piggyback_total: 0, piggyback_passed: 0, ...partial,
   };
@@ -156,7 +160,9 @@ describe("evaluatePromotion — human takedowns are never overturned; floor take
   // 2026-08-12 for real completion driven by a bug fixed 2026-08-05, then
   // 100% over 520 harness runs across 7 days.
   it("auto-reverses (promotes) a quality-floor quarantine that clears the bar", () => {
-    const d = only([cap({ wasDelisted: true, wasFloorQuarantine: true, delistingReason: "quarantined" })]);
+    // floorQuarantineCount: 1 — this is the capability's FIRST quarantine
+    // (the count includes the current/most-recent one), not a repeat.
+    const d = only([cap({ wasDelisted: true, wasFloorQuarantine: true, delistingReason: "quarantined", floorQuarantineCount: 1 })]);
     expect(d.action).toBe("promote");
     expect(d.reason).toContain("auto-reversed on recovery per DEC-20260812-A");
     expect(d.reason).toContain("quarantined");
@@ -166,6 +172,30 @@ describe("evaluatePromotion — human takedowns are never overturned; floor take
     const d = only([cap({ wasDelisted: true, wasFloorQuarantine: false, delistingReason: "Unpublished: removed from catalog" })]);
     expect(d.action).toBe("flag");
     expect(d.reason).toContain("taken down, not merely never listed");
+  });
+
+  // Round-2 fix (2026-08-16, Codex blocker #1b — oscillation). The floor's
+  // own candidate filter requires visible=true to quarantine at all, so a
+  // SECOND enforce quarantine can only happen after an intervening promotion
+  // re-listed this exact slug: floorQuarantineCount >= 2 is proof a prior
+  // auto-reversal already bounced back on real customer traffic. Even
+  // genuinely fresh, post-quarantine, harness-green evidence must not
+  // auto-reverse a second time.
+  it("refuses to auto-reverse a REPEAT floor quarantine — flags for human instead", () => {
+    const d = only([cap({
+      wasDelisted: true, wasFloorQuarantine: true, delistingReason: "quarantined",
+      floorQuarantineCount: 2,
+    })]);
+    expect(d.action).toBe("flag");
+    expect(d.reason).toContain("bounced before");
+    expect(d.reason).toContain("quarantined 2 times");
+    expect(d.enableX402).toBe(false);
+  });
+
+  it("a third-plus repeat is refused the same way, and the count is named in the reason", () => {
+    const d = only([cap({ wasDelisted: true, wasFloorQuarantine: true, floorQuarantineCount: 5 })]);
+    expect(d.action).toBe("flag");
+    expect(d.reason).toContain("quarantined 5 times");
   });
 
   it("a human deactivation_reason refuses promotion even for an otherwise-eligible floor quarantine", () => {
@@ -191,7 +221,7 @@ describe("evaluatePromotion — human takedowns are never overturned; floor take
   });
 
   it("a fragile maintenance class still refuses auto-reversal of a floor quarantine", () => {
-    const d = only([cap({ slug: "screenshot-url", wasDelisted: true, wasFloorQuarantine: true, delistingReason: "quarantined", maintenanceClass: "scraping-fragile-target" })]);
+    const d = only([cap({ slug: "screenshot-url", wasDelisted: true, wasFloorQuarantine: true, delistingReason: "quarantined", floorQuarantineCount: 1, maintenanceClass: "scraping-fragile-target" })]);
     expect(d.action).toBe("flag");
     expect(d.enableX402).toBe(false);
   });
@@ -260,11 +290,78 @@ describe("the evidence query", () => {
   });
 
   it("scopes the aggregate to the promotion window rather than all history", () => {
-    expect(PROMOTION_EVIDENCE_SQL).toContain("tr.executed_at > NOW() - INTERVAL '7 days'");
+    // Round-2 fix (2026-08-16): the flat 7-day window is now the upper bound
+    // of a GREATEST(), clamped down to since-the-quarantine when relevant —
+    // see "evidence is clamped to since-the-quarantine" below for that half.
+    expect(PROMOTION_EVIDENCE_SQL).toContain("NOW() - INTERVAL '7 days'");
   });
 
   it("the last-listing-event lateral pins 'quarantined' to quality_floor only — the string wasFloorQuarantine relies on", () => {
     expect(PROMOTION_EVIDENCE_SQL).toContain("e.event_type = 'quality_floor'        AND e.action_taken = 'quarantined'");
+  });
+
+  // Round-2 fix (2026-08-16, Codex blocker #2): matching action_taken='quarantined'
+  // alone is not enough — the floor also emits dry_run rows with the same
+  // shape, and ad-hoc/manual writes with the same shape exist in prod (the
+  // real screenshot-url reinstatement event had no `mode` key at all).
+  describe("LISTING_EVENT_MATCH_SQL requires enforce mode (Codex blocker #2)", () => {
+    it("the quality_floor branch requires details->>'mode' = 'enforce'", () => {
+      expect(LISTING_EVENT_MATCH_SQL).toContain(
+        "e.event_type = 'quality_floor'        AND e.action_taken = 'quarantined' AND e.details->>'mode' = 'enforce'",
+      );
+    });
+
+    it("the capability_promotion branch also requires enforce mode", () => {
+      expect(LISTING_EVENT_MATCH_SQL).toContain(
+        "e.event_type = 'capability_promotion' AND e.action_taken LIKE 'promoted%' AND e.details->>'mode' = 'enforce'",
+      );
+    });
+
+    it("exactly two branches carry the mode filter — lifecycle_transition (human events) is unfiltered", () => {
+      expect((LISTING_EVENT_MATCH_SQL.match(/details->>'mode' = 'enforce'/g) ?? []).length).toBe(2);
+    });
+
+    it("PROMOTION_EVIDENCE_SQL embeds the shared constant verbatim rather than a copy that can drift", () => {
+      expect(PROMOTION_EVIDENCE_SQL).toContain(LISTING_EVENT_MATCH_SQL);
+    });
+  });
+
+  // Round-2 fix (2026-08-16, Codex blocker #1a — oscillation). Without this,
+  // a capability that was harness-green WHILE customer traffic was failing
+  // (the exact pre-quarantine state) could supply its own "recovery"
+  // evidence from before it was ever quarantined.
+  describe("evidence is clamped to since-the-quarantine (Codex blocker #1a)", () => {
+    it("the test_results join is bounded by GREATEST(7d, since-quarantine)", () => {
+      expect(PROMOTION_EVIDENCE_SQL).toMatch(
+        /GREATEST\(\s*NOW\(\) - INTERVAL '7 days',\s*COALESCE\(le\.quarantined_at, '-infinity'::timestamptz\)\s*\)/,
+      );
+    });
+
+    it("the latest-known_answer lateral is bounded the same way, so a stale pre-quarantine pass can't stand in for 'broken now'", () => {
+      expect(PROMOTION_EVIDENCE_SQL).toContain(
+        "tr2.executed_at > COALESCE(le.quarantined_at, '-infinity'::timestamptz)",
+      );
+    });
+
+    it("quarantined_at resolves ONLY for the floor's own quarantine, never a promotion or human takedown", () => {
+      expect(PROMOTION_EVIDENCE_SQL).toContain(
+        "CASE WHEN e.event_type = 'quality_floor' AND e.action_taken = 'quarantined'",
+      );
+    });
+  });
+
+  // Round-2 fix (2026-08-16, Codex blocker #1b — repeat-bounce refusal).
+  describe("floor_quarantine_count counts every enforce quarantine ever, for this slug", () => {
+    it("is exposed as a dedicated column, defaulted to 0 rather than left null", () => {
+      expect(PROMOTION_EVIDENCE_SQL).toContain("COALESCE(fq.n, 0)::int");
+      expect(PROMOTION_EVIDENCE_SQL).toContain("AS floor_quarantine_count");
+    });
+
+    it("counts enforce-mode quarantine events only", () => {
+      expect(PROMOTION_EVIDENCE_SQL).toMatch(
+        /FROM health_monitor_events e\s+WHERE e\.capability_slug = c\.slug\s+AND e\.event_type = 'quality_floor'\s+AND e\.action_taken = 'quarantined'\s+AND e\.details->>'mode' = 'enforce'/,
+      );
+    });
   });
 });
 
@@ -286,6 +383,8 @@ describe("toPromotionStats", () => {
       wasDelisted: false,
       delistingReason: null,
       wasFloorQuarantine: false,
+      lastListingEventId: null,
+      floorQuarantineCount: 0,
       totalTests: 90,
       passedTests: 89,
       distinctTestDays: 6,
@@ -306,15 +405,41 @@ describe("toPromotionStats", () => {
     expect(toPromotionStats([row({ last_listing_event: null })])[0].wasDelisted).toBe(false);
   });
 
-  it("narrows wasFloorQuarantine to exactly the quality-floor's own 'quarantined' event", () => {
+  it("narrows wasFloorQuarantine to exactly the quality-floor's own ENFORCE-mode 'quarantined' event", () => {
     // 'quarantined' is written only by jobs/quality-floor.ts's enforce apply
     // path — no lifecycle_transition (human) action_taken can ever equal it,
     // so this signal cannot be spoofed by an operator unpublish/suspend.
-    expect(toPromotionStats([row({ last_listing_event: "quarantined" })])[0].wasFloorQuarantine).toBe(true);
-    expect(toPromotionStats([row({ last_listing_event: "Unpublished: removed from catalog" })])[0].wasFloorQuarantine).toBe(false);
-    expect(toPromotionStats([row({ last_listing_event: "Suspended: breaker open" })])[0].wasFloorQuarantine).toBe(false);
-    expect(toPromotionStats([row({ last_listing_event: "promoted_with_x402" })])[0].wasFloorQuarantine).toBe(false);
+    expect(toPromotionStats([row({ last_listing_event: "quarantined", last_listing_event_mode: "enforce" })])[0].wasFloorQuarantine).toBe(true);
+    expect(toPromotionStats([row({ last_listing_event: "Unpublished: removed from catalog", last_listing_event_mode: "enforce" })])[0].wasFloorQuarantine).toBe(false);
+    expect(toPromotionStats([row({ last_listing_event: "Suspended: breaker open", last_listing_event_mode: "enforce" })])[0].wasFloorQuarantine).toBe(false);
+    expect(toPromotionStats([row({ last_listing_event: "promoted_with_x402", last_listing_event_mode: "enforce" })])[0].wasFloorQuarantine).toBe(false);
     expect(toPromotionStats([row({ last_listing_event: null })])[0].wasFloorQuarantine).toBe(false);
+  });
+
+  // Round-2 fix (2026-08-16, Codex blocker #2). This is the actual failure
+  // mode named in the finding: the floor emits a dry_run row with
+  // action_taken='quarantined' on every tick it's NOT armed to enforce, and
+  // an ad-hoc/manual health_monitor_events insert could carry the same
+  // action_taken with no mode key at all (the real screenshot-url
+  // reinstatement event on 2026-08-13 was exactly this shape).
+  it("a dry_run quarantine event does NOT set wasFloorQuarantine, even with the right action_taken string", () => {
+    expect(
+      toPromotionStats([row({ last_listing_event: "quarantined", last_listing_event_mode: "dry_run" })])[0].wasFloorQuarantine,
+    ).toBe(false);
+  });
+
+  it("a 'quarantined' event with no recorded mode (ad-hoc/manual write) does NOT set wasFloorQuarantine", () => {
+    expect(
+      toPromotionStats([row({ last_listing_event: "quarantined", last_listing_event_mode: null })])[0].wasFloorQuarantine,
+    ).toBe(false);
+  });
+
+  it("maps last_listing_event_id and floor_quarantine_count straight through", () => {
+    const mapped = toPromotionStats([
+      row({ last_listing_event_id: "11111111-1111-1111-1111-111111111111", floor_quarantine_count: 3 }),
+    ])[0];
+    expect(mapped.lastListingEventId).toBe("11111111-1111-1111-1111-111111111111");
+    expect(mapped.floorQuarantineCount).toBe(3);
   });
 
   it("carries a correctness failure through the mapping into a refusal", () => {
