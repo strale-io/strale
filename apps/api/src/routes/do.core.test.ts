@@ -41,9 +41,16 @@
  *     means a code change that drops `.for("update")` (the DEC-8
  *     double-spend lock) breaks at await-time (destructuring a
  *     non-iterable) rather than silently succeeding against a mock that
- *     is thenable either way; `.for` calls are also recorded on
- *     `tx.__forCalls` and asserted on directly in the happy-path and
- *     DEC-14 tests.
+ *     is thenable either way. The table passed to `.from()` and the real
+ *     Drizzle condition passed to `.where()` are ALSO recorded (on
+ *     `tx.__selectCalls`, alongside the `.for()` mode) — not just the
+ *     lock mode — so the happy-path and DEC-14 tests can assert the
+ *     locked select actually targeted `wallets` with a where-clause
+ *     scoped to the authenticated user's id, the same fidelity the outer
+ *     db mock has. Recording only the mode (an earlier version of this
+ *     file did) left a gap: mutating do.ts's wallet-lock condition from
+ *     `eq(wallets.userId, user.id)` to `eq(wallets.id, user.id)` still
+ *     returned the canned wallet row and every lock-path test passed.
  *   - db.insert() records every insert (table + values) for assertion
  *     (used for the failed_requests no_match logging path).
  *
@@ -212,8 +219,19 @@ function whereReferences(cond: unknown, table: unknown, columnName: string, matc
         const next = chunks[i + 1];
         if (isStringChunk(next) && next.value.join("").toLowerCase().includes("is null")) return true;
       } else {
+        // MEDIUM (residual): verify the chunk BETWEEN the column and the
+        // param is actually the equality operator, not just that a column
+        // ref and a matching param happen to be two slots apart. Without
+        // this, eq(col, v) → ne(col, v) is invisible: ne() emits the exact
+        // same [Column, StringChunk(" <> "), Param] shape at these indices,
+        // just with " <> " instead of " = " — an eq→ne swap leaves the
+        // column ref and the param VALUE both unchanged, only the operator
+        // text differs.
+        const opChunk = chunks[i + 1];
         const paramChunk = chunks[i + 2];
-        if (isParamChunk(paramChunk) && paramChunk.value === match.eq) return true;
+        const opText = isStringChunk(opChunk) ? opChunk.value.join("") : "";
+        const isEqualityOperator = opText.includes("=") && !opText.includes("<>") && !opText.includes("!=");
+        if (isEqualityOperator && isParamChunk(paramChunk) && paramChunk.value === match.eq) return true;
       }
     }
   }
@@ -256,25 +274,37 @@ function authHeaders(extra: Record<string, string> = {}) {
  * plain `{ for }` object (a no-op — non-Promise objects pass through
  * `await` unchanged) and the subsequent `const [wallet] = ...`
  * destructure would throw (plain objects aren't iterable), surfacing as
- * a 500 in the tests below. `.for` calls are also recorded on
- * `__forCalls` so the happy-path/DEC-14 tests can assert
- * `.for("update")` fired exactly once, independent of that crash-based
- * signal.
+ * a 500 in the tests below. The `table`/`cond`/`mode` triple is recorded
+ * on `__selectCalls` at the point `.for()` fires, so the happy-path/
+ * DEC-14 tests can assert both that `.for("update")` fired exactly once
+ * AND that the locked select actually targeted `wallets` with a
+ * where-clause scoped to `wallets.userId = <the authenticated user>` —
+ * independent of the crash-based signal above, which only catches a
+ * *dropped* lock, not a *mistargeted* one.
  */
 function buildMockTx(opts: { walletRow: Record<string, unknown> | null; transactionId: string }) {
   const insertCalls: Array<{ table: unknown; vals: unknown }> = [];
   const updateCalls: Array<{ table: unknown; vals: unknown }> = [];
-  const forCalls: string[] = [];
+  // MAJOR (residual): previously only `.for(mode)` was recorded — the
+  // table passed to `.from()` and the condition passed to `.where()` were
+  // both discarded, so a mutation on do.ts ~1668 that swapped
+  // eq(wallets.userId, user.id) for eq(wallets.id, user.id) still handed
+  // back the canned wallet row and every lock-path test passed. Recorded
+  // exactly like the outer db mock now: table + cond + mode, all captured
+  // at the point `.for()` actually fires (the only call shape the
+  // exercised code path uses — see the file-header note on the FOR-UPDATE
+  // gating this select provides).
+  const selectCalls: Array<{ table: unknown; cond: unknown; mode: string }> = [];
   return {
     __insertCalls: insertCalls,
     __updateCalls: updateCalls,
-    __forCalls: forCalls,
+    __selectCalls: selectCalls,
     execute: vi.fn(async () => []),
     select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        where: vi.fn(() => ({
+      from: vi.fn((table: unknown) => ({
+        where: vi.fn((cond: unknown) => ({
           for: vi.fn((mode: string) => {
-            forCalls.push(mode);
+            selectCalls.push({ table, cond, mode });
             return Promise.resolve(opts.walletRow ? [opts.walletRow] : []);
           }),
         })),
@@ -411,8 +441,13 @@ describe("POST /v1/do — happy path (authenticated, paid capability, sync)", ()
     expect(whereReferences(authSelect.cond, users, "key_prefix", { eq: getKeyPrefix(TEST_API_KEY) })).toBe(true);
 
     const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
-    // MAJOR 4 (DEC-8): the wallet row was read under FOR UPDATE, exactly once.
-    expect(tx.__forCalls).toEqual(["update"]);
+    // MAJOR 4 (DEC-8), residual fix: the wallet row was read under FOR
+    // UPDATE, exactly once, AND the lock targeted the `wallets` table
+    // scoped to THIS user's id — not just "some FOR UPDATE call happened".
+    expect(tx.__selectCalls).toHaveLength(1);
+    expect(tx.__selectCalls[0].mode).toBe("update");
+    expect(tx.__selectCalls[0].table).toBe(wallets);
+    expect(whereReferences(tx.__selectCalls[0].cond, wallets, "user_id", { eq: user.id })).toBe(true);
     // Wallet debited by exactly the capability price.
     const walletUpdate = tx.__updateCalls.find((c) => c.table === wallets);
     expect(walletUpdate).toBeTruthy();
@@ -500,7 +535,12 @@ describe("POST /v1/do — insufficient balance", () => {
     expect(executorSpy).not.toHaveBeenCalled();
 
     const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
-    expect(tx.__forCalls).toEqual(["update"]); // the lock is still taken to read the balance
+    // The lock is still taken to read the balance, and targets THIS
+    // user's wallet row — not just "a FOR UPDATE call happened".
+    expect(tx.__selectCalls).toHaveLength(1);
+    expect(tx.__selectCalls[0].mode).toBe("update");
+    expect(tx.__selectCalls[0].table).toBe(wallets);
+    expect(whereReferences(tx.__selectCalls[0].cond, wallets, "user_id", { eq: user.id })).toBe(true);
     expect(tx.__insertCalls.length).toBe(0); // no transaction row created
     expect(tx.__updateCalls.length).toBe(0); // no debit
   });
@@ -640,9 +680,12 @@ describe("POST /v1/do — execution failure shape + DEC-14 ordering", () => {
     expect(body.details.wallet_balance_cents).toBe(startingBalance);
 
     // DEC-8: the wallet was still read under FOR UPDATE before anything
-    // else happened.
+    // else happened, scoped to THIS user's wallet row.
     const tx = mocks.txRef.current as ReturnType<typeof buildMockTx>;
-    expect(tx.__forCalls).toEqual(["update"]);
+    expect(tx.__selectCalls).toHaveLength(1);
+    expect(tx.__selectCalls[0].mode).toBe("update");
+    expect(tx.__selectCalls[0].table).toBe(wallets);
+    expect(whereReferences(tx.__selectCalls[0].cond, wallets, "user_id", { eq: user.id })).toBe(true);
 
     // DEC-14: lock → execute → deduct on success. Execution failed, so no
     // debit and no wallet_transactions ledger entry.

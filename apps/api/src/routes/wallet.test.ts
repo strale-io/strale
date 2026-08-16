@@ -139,8 +139,19 @@ function whereReferences(cond: unknown, table: unknown, columnName: string, matc
         const next = chunks[i + 1];
         if (isStringChunk(next) && next.value.join("").toLowerCase().includes("is null")) return true;
       } else {
+        // MEDIUM (residual): verify the chunk BETWEEN the column and the
+        // param is actually the equality operator, not just that a column
+        // ref and a matching param happen to be two slots apart. Without
+        // this, eq(col, v) → ne(col, v) is invisible: ne() emits the exact
+        // same [Column, StringChunk(" <> "), Param] shape at these indices,
+        // just with " <> " instead of " = " — an eq→ne swap leaves the
+        // column ref and the param VALUE both unchanged, only the operator
+        // text differs.
+        const opChunk = chunks[i + 1];
         const paramChunk = chunks[i + 2];
-        if (isParamChunk(paramChunk) && paramChunk.value === match.eq) return true;
+        const opText = isStringChunk(opChunk) ? opChunk.value.join("") : "";
+        const isEqualityOperator = opText.includes("=") && !opText.includes("<>") && !opText.includes("!=");
+        if (isEqualityOperator && isParamChunk(paramChunk) && paramChunk.value === match.eq) return true;
       }
     }
   }
