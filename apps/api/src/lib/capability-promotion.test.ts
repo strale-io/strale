@@ -338,13 +338,25 @@ describe("the evidence query", () => {
       expect(PROMOTION_EVIDENCE_SQL).toContain(LISTING_EVENT_MATCH_SQL);
     });
 
-    // Round-3 (Codex MAJOR): the SQL side of the arrow-form fix. The
-    // isListingStateEvent producer-coverage suite below proves the JS
-    // mirror's BEHAVIOR against real strings; this proves the actual SQL
-    // constant carries the equivalent pattern, so the two can't silently
-    // diverge (one fixed, the other not).
-    it("the lifecycle_transition branch also matches the arrow ('→') shape the real producers write, not just literal prefixes", () => {
-      expect(LISTING_EVENT_MATCH_SQL).toContain("e.action_taken LIKE '%→%'");
+    // Round-3/4 (Codex MAJOR, twice): the SQL side of the arrow-form fix.
+    // The isListingStateEvent producer-coverage suite below proves the JS
+    // mirror's BEHAVIOR against real strings; this pins the COMPLETE grouped
+    // lifecycle branch of the SQL constant (whitespace-normalized) — the
+    // event-type scoping, all three literal prefixes, AND the arrow clause
+    // together. Round 3's pin only asserted the arrow clause existed
+    // somewhere, so dropping a prefix, or moving the arrow clause outside
+    // the lifecycle_transition scope, would have left every test green while
+    // SQL and mirror disagreed. Now any edit inside this branch breaks the
+    // pin, forcing a matching update to isListingStateEvent (and vice versa
+    // via the fixture suite).
+    it("the lifecycle_transition branch carries the complete grouped clause: event-type scope, all three prefixes, and the arrow shape", () => {
+      const normalize = (s: string) => s.replace(/\s+/g, " ");
+      expect(normalize(LISTING_EVENT_MATCH_SQL)).toContain(
+        normalize(`(e.event_type = 'lifecycle_transition' AND (e.action_taken LIKE 'Unpublished%'
+                                                    OR e.action_taken LIKE 'Suspended%'
+                                                    OR e.action_taken LIKE 'Published%'
+                                                    OR e.action_taken LIKE '%→%')))`),
+      );
     });
   });
 

@@ -251,11 +251,13 @@ export function isListingStateEvent(
  *     quarantine -> promote on stale-but-in-window evidence -> new customer
  *     failures -> quarantine -> promote again on the same leftover evidence.
  *   - `fq` counts every enforce-mode quarantine this slug has ever had. A
- *     second quarantine can only happen after an intervening promotion
- *     re-listed the capability (the floor's own candidate filter requires
- *     visible=true), so floor_quarantine_count >= 2 is unambiguous proof of
- *     a prior auto-reversal that bounced back — evaluatePromotion refuses to
- *     retry it (see lib/capability-promotion.ts).
+ *     second quarantine can only happen after an intervening re-list —
+ *     whether this job's own auto-reversal or a manual/admin publish (the
+ *     floor's candidate filter requires visible=true) — so
+ *     floor_quarantine_count >= 2 proves the capability was re-listed and
+ *     re-quarantined, without asserting the re-list was automatic.
+ *     evaluatePromotion refuses to auto-retry and flags for human review
+ *     (see lib/capability-promotion.ts).
  */
 export const PROMOTION_EVIDENCE_SQL = `
   SELECT c.slug,
