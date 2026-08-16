@@ -55,16 +55,29 @@
  * reason several gates exist that a reading of DEC-20260812-A alone would not
  * suggest:
  *
- * 1. **A floor quarantine must not be undone by harness evidence.** The floor
- *    delists on real paid traffic and leaves `lifecycle_state='active'`,
- *    `deactivation_reason` NULL — which is exactly the shape of a promotable
- *    dark launch. Without an interlock this job would re-list a capability
- *    every day that the floor delists every night, on evidence from a harness
- *    that never sees the failing customer calls. `wasDelisted` distinguishes
- *    "never listed" (a dark launch, promotable) from "taken down" (a floor
- *    quarantine, a human unpublish, or a suspension — flagged, never
- *    auto-promoted). The floor has really quarantined 6 times, so this is not
- *    hypothetical.
+ * 1. **A floor quarantine must not be undone by harness evidence — unless the
+ *    floor itself now agrees.** The floor delists on real paid traffic and
+ *    leaves `lifecycle_state='active'`, `deactivation_reason` NULL — which is
+ *    exactly the shape of a promotable dark launch. Without an interlock this
+ *    job would re-list a capability every day that the floor delists every
+ *    night, on evidence from a harness that never sees the failing customer
+ *    calls. `wasDelisted` distinguishes "never listed" (a dark launch,
+ *    promotable) from "taken down" (a floor quarantine, a human unpublish, or
+ *    a suspension). A human/operator takedown (`wasDelisted &&
+ *    !wasFloorQuarantine`) is still flagged, never auto-promoted — this job
+ *    does not overturn a person's decision. A *floor* takedown
+ *    (`wasFloorQuarantine`) is different as of the 2026-08-16 "promotion
+ *    grace" fix: DEC-20260812-A lists "auto-promote on recovery" as a
+ *    platform-acts-alone action, and `jobs/quality-floor.ts` now clamps its
+ *    own evidence window to since-last-promotion — so if this job reverses a
+ *    floor quarantine wrongly, the floor re-quarantines on fresh
+ *    post-promotion traffic instead of replaying the same contaminated 30d
+ *    window that caused the original bounce (screenshot-url,
+ *    2026-08-13T07:34 → re-quarantined 07:47 on stale pre-fix data). Every
+ *    other gate in this function — correctness, recency, piggyback — still
+ *    applies before a floor takedown is reversed; only the flag-instead-of-
+ *    promote branch is skipped. The floor has really quarantined 6 times, so
+ *    this is not hypothetical.
  * 2. **Harness volume must not outvote real customers.** ~98% of platform
  *    traffic is our own harness. A capability with 100 green harness results
  *    and 2 failing piggyback results — piggyback being real customer calls —
@@ -121,6 +134,39 @@ export interface PromotionStats {
   wasDelisted: boolean;
   /** What that takedown was, for the flag message. */
   delistingReason: string | null;
+  /**
+   * True when `wasDelisted` and the takedown specifically was the quality
+   * floor's own ENFORCE-mode quarantine (`health_monitor_events.action_taken
+   * = 'quarantined'`, `details->>'mode' = 'enforce'`) — never true for a
+   * human unpublish/suspend, a dry-run quarantine, or an ad-hoc/manual event
+   * with the same action_taken string but no (or a different) mode. This is
+   * the only class of takedown DEC-20260812-A permits this job to
+   * auto-reverse; see the "promotion grace" note in the module header
+   * (finding 1).
+   */
+  wasFloorQuarantine: boolean;
+  /**
+   * uuid of the matched listing-state event (see jobs/capability-promotion.ts
+   * LISTING_EVENT_MATCH_SQL), or null when the capability has never been
+   * listed. Carried through to PromotionDecision so the write can re-derive
+   * "is this still the latest listing event" at write time — the TOCTOU
+   * close (round-2 fix, Codex blocker #3).
+   */
+  lastListingEventId: string | null;
+  /**
+   * How many times the quality floor has EVER enforce-quarantined this slug.
+   * A second quarantine can only happen after an intervening RE-LIST of the
+   * capability (the floor's own candidate filter requires visible=true), so
+   * >=2 is proof the slug was re-listed and re-quarantined at least once
+   * before — NOT specifically proof this job's own auto-reversal caused the
+   * re-listing (the admin publish endpoint can re-list a slug manually too;
+   * corrected round-3, Codex MINOR — the reason text previously overclaimed
+   * this). evaluatePromotion refuses to retry the auto-reversal when this
+   * holds regardless of which re-listing path fired (round-2 fix, Codex
+   * blocker #1b) — a slug with this history is not one this job keeps
+   * guessing on, whatever put it back on the shelf the first time.
+   */
+  floorQuarantineCount: number;
   totalTests: number;
   passedTests: number;
   /** Distinct calendar days carrying at least one result — the "week" in "green week". */
@@ -180,6 +226,14 @@ export interface PromotionDecision {
   passRate: number;
   totalTests: number;
   reason: string;
+  /**
+   * Carried through from PromotionStats purely so the job's write can
+   * re-assert them at write time (TOCTOU close, round-2 fix, Codex blocker
+   * #3) — not used in this module's own decision logic beyond pass-through.
+   */
+  lifecycleState: string;
+  maintenanceClass: string | null;
+  lastListingEventId: string | null;
 }
 
 /** Breaker states that permit promotion. `null` = no breaker row recorded yet. */
@@ -218,6 +272,8 @@ export function evaluatePromotion(
       decisions.push({
         slug: r.slug, action: "none", enableX402: false,
         passRate: r.passRate, totalTests: r.totalTests, reason,
+        lifecycleState: r.lifecycleState, maintenanceClass: r.maintenanceClass,
+        lastListingEventId: r.lastListingEventId,
       });
 
     // Correctness gate. An aggregate pass rate is dominated by schema,
@@ -262,15 +318,55 @@ export function evaluatePromotion(
       }
     }
 
-    // A takedown is a decision, and this job does not overturn decisions
-    // (review finding 1). Never having been listed is not a takedown.
+    // A human/operator takedown is a decision, and this job does not
+    // overturn decisions (review finding 1). Never having been listed is not
+    // a takedown. A *floor* takedown (wasFloorQuarantine) is the one
+    // exception DEC-20260812-A carves out — "promotion grace" fix,
+    // 2026-08-16: it falls through to the normal promote path below instead
+    // of being flagged, because every gate above it (correctness, recency,
+    // piggyback) already had to pass on evidence dated strictly AFTER the
+    // quarantine (jobs/quality-floor.ts's `le.quarantined_at` clamp — round-2
+    // fix, Codex blocker #1a), and jobs/quality-floor.ts's own window is
+    // clamped to since-last-promotion so a wrong reversal gets caught on
+    // fresh evidence rather than replayed stale evidence.
     if (r.wasDelisted) {
-      decisions.push({
-        slug: r.slug, action: "flag", enableX402: false,
-        passRate: r.passRate, totalTests: r.totalTests,
-        reason: `clears the bar (${pct(r.passRate)} over ${r.totalTests}) but was taken down, not merely never listed — "${r.delistingReason}". Re-listing after a takedown needs the evidence that the takedown was wrong, which the harness cannot supply; human call`,
-      });
-      continue;
+      if (!r.wasFloorQuarantine) {
+        decisions.push({
+          slug: r.slug, action: "flag", enableX402: false,
+          passRate: r.passRate, totalTests: r.totalTests,
+          reason: `clears the bar (${pct(r.passRate)} over ${r.totalTests}) but was taken down, not merely never listed — "${r.delistingReason}". Re-listing after a takedown needs the evidence that the takedown was wrong, which the harness cannot supply; human call`,
+          lifecycleState: r.lifecycleState, maintenanceClass: r.maintenanceClass,
+          lastListingEventId: r.lastListingEventId,
+        });
+        continue;
+      }
+
+      // Repeat-bounce refusal (round-2 fix, Codex blocker #1b; reason text
+      // corrected round-3 — Codex MINOR). The floor's own candidate filter
+      // requires visible=true to quarantine at all, so a SECOND enforce
+      // quarantine can only happen after an intervening RE-LIST of this
+      // exact slug — i.e. floorQuarantineCount >= 2 is proof the slug was
+      // re-listed and re-quarantined at least once before. That re-listing
+      // is NOT necessarily this job's own auto-reversal: the admin publish
+      // endpoint (routes/internal-health-monitor.ts) can re-list a slug
+      // manually too, and the evidence available here cannot distinguish the
+      // two. The refusal itself stays conservative either way — auto-
+      // reversal is not tried again on a slug with this history, human call
+      // — but the recorded reason must not claim more than the evidence
+      // supports. Post-dating evidence to the quarantine (#1a) closes the
+      // *stale-evidence* half of the oscillation; this closes the other
+      // half: a slug that has already cycled through quarantine once before
+      // is not one this job gets to keep guessing on.
+      if (r.floorQuarantineCount >= 2) {
+        decisions.push({
+          slug: r.slug, action: "flag", enableX402: false,
+          passRate: r.passRate, totalTests: r.totalTests,
+          reason: `clears the bar (${pct(r.passRate)} over ${r.totalTests}) on evidence since the latest quarantine, but this slug has bounced before — quarantined ${r.floorQuarantineCount} times total, meaning it was re-listed and re-quarantined at least once already. Auto-reversal is not tried again for a capability with this history; human call`,
+          lifecycleState: r.lifecycleState, maintenanceClass: r.maintenanceClass,
+          lastListingEventId: r.lastListingEventId,
+        });
+        continue;
+      }
     }
 
     if (r.maintenanceClass !== null && config.manualReviewClasses.includes(r.maintenanceClass)) {
@@ -278,6 +374,8 @@ export function evaluatePromotion(
         slug: r.slug, action: "flag", enableX402: false,
         passRate: r.passRate, totalTests: r.totalTests,
         reason: `clears the bar (${pct(r.passRate)} over ${r.totalTests}, known_answer ${pct(kaRate)}) but maintenance_class '${r.maintenanceClass}' is never auto-promoted — a fragile target passing all week is the one that breaks next week; human call`,
+        lifecycleState: r.lifecycleState, maintenanceClass: r.maintenanceClass,
+        lastListingEventId: r.lastListingEventId,
       });
       continue;
     }
@@ -293,13 +391,24 @@ export function evaluatePromotion(
     // marketplace-eligible goes onto x402 with the promotion: DEC-20260812-A
     // dark-launches "invisible + non-x402", and one green week ends both.
     const enableX402 = r.hasX402Method && !r.isFreeTier;
+    // "Promotion grace" fix (2026-08-16): a floor takedown that reaches here
+    // cleared every gate above, including piggyback (real customer traffic)
+    // when there was any — so this is an auto-reversal of the quarantine, not
+    // a first listing. Named explicitly in the reason and cited to the DEC
+    // clause that authorizes it, so a `health_monitor_events` reader can tell
+    // the two apart without cross-referencing the floor's own log.
+    const recoveryNote = r.wasFloorQuarantine
+      ? ` — was quarantined by the quality floor ("${r.delistingReason}"); auto-reversed on recovery per DEC-20260812-A`
+      : "";
     decisions.push({
       slug: r.slug,
       action: "promote",
       enableX402,
       passRate: r.passRate,
       totalTests: r.totalTests,
-      reason: `${pct(r.passRate)} over ${r.totalTests} results across ${r.distinctTestDays} days, known_answer ${pct(kaRate)} (${r.knownAnswerPassed}/${r.knownAnswerTotal}), last 24h ${pct(recentRate)}, breaker ${r.breakerState ?? "no row"} — green week met${enableX402 ? "; x402 opened" : r.isFreeTier ? "; free tier, x402 stays closed" : "; no x402 method, catalog only"}`,
+      reason: `${pct(r.passRate)} over ${r.totalTests} results across ${r.distinctTestDays} days, known_answer ${pct(kaRate)} (${r.knownAnswerPassed}/${r.knownAnswerTotal}), last 24h ${pct(recentRate)}, breaker ${r.breakerState ?? "no row"} — green week met${enableX402 ? "; x402 opened" : r.isFreeTier ? "; free tier, x402 stays closed" : "; no x402 method, catalog only"}${recoveryNote}`,
+      lifecycleState: r.lifecycleState, maintenanceClass: r.maintenanceClass,
+      lastListingEventId: r.lastListingEventId,
     });
   }
 
