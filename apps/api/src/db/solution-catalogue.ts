@@ -24,6 +24,13 @@ export interface SolutionStep {
   canParallel: boolean;
   parallelGroup: number | null;
   inputMap: Record<string, string>;
+  /**
+   * Optional precondition. If this step's output matches, the remaining steps
+   * are not executed and the caller is refunded — the bundle could not do the
+   * work it was sold for. A literal comparison rather than an expression, on
+   * purpose: a bundle definition is not a place to accept arbitrary code.
+   */
+  gateCondition?: { field: string; equals: unknown; reason?: string };
 }
 
 export interface SolutionDef {
@@ -2888,19 +2895,23 @@ export const SOLUTIONS: SolutionDef[] = [
       status_code: 200,
     },
     steps: [
-      // Availability runs alone and first. There is no conditional-step
-      // support, so an unreachable page still runs the other three and still
-      // bills — but ordering it first guarantees `is_up`/`status_code` are in
-      // the merged result rather than racing three slower checks that will
-      // all fail. The wider gap (skip-and-refund on an unreachable target) is
-      // a platform limitation, recorded in the PR, not something a bundle
-      // definition can fix.
+      // Availability runs alone and first, and gates the rest. If the page is
+      // not reachable there is nothing to analyse: metadata, social preview
+      // and performance would each fail, and — because the platform refunds
+      // only when EVERY step fails — this one success was enough to bill the
+      // caller €0.30 for four failures. The gate stops the run and refunds.
+      // This bundle is why gate conditions exist (migration block 0087).
       {
         capabilitySlug: "url-health-check",
         stepOrder: 1,
         canParallel: false,
         parallelGroup: null,
         inputMap: { url: "$input.url" },
+        gateCondition: {
+          field: "is_up",
+          equals: false,
+          reason: "The page is not reachable, so nothing further could be checked. You were not charged.",
+        },
       },
       {
         capabilitySlug: "meta-extract",

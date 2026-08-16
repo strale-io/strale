@@ -548,6 +548,13 @@ export const solutionSteps = pgTable(
     canParallel: boolean("can_parallel").notNull().default(false),
     parallelGroup: integer("parallel_group"),
     inputMap: jsonb("input_map").notNull(),
+    /**
+     * Optional precondition. When this step's output matches, the rest of the
+     * solution is skipped and the caller is refunded — the bundle could not do
+     * the work it was paid for. Shape: {field, equals}. See
+     * lib/solution-executor.ts and migration block 0087.
+     */
+    gateCondition: jsonb("gate_condition"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

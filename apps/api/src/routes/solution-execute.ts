@@ -299,17 +299,27 @@ solutionExecuteRoute.post(
     const stepsSucceeded = Object.values(execResult.steps).filter(isSuccessfulStepOutput).length;
     const allFailed = stepsSucceeded === 0;
 
-    // /v1/do vocabulary: "completed" or "failed". Partial success maps to "completed"
-    // with per-step detail in audit_trail.
-    const txStatus = allFailed ? "failed" : "completed";
-    const chargedPrice = allFailed ? 0 : sol.priceCents;
+    // A tripped gate is NOT a failure — the gate step did its job and returned
+    // a true answer ("the page is down"). It is a refund, because the bundle
+    // could not perform the work it was sold for. Before gates existed the
+    // caller paid in full here: the gate step counts as a success, one success
+    // is enough to bill, and the steps behind it had already run and failed.
+    const gated = execResult.gated;
+    const refundRequired = allFailed || gated !== undefined;
 
-    // Full failure — refund
-    if (allFailed) {
-      await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "all steps failed");
+    // /v1/do vocabulary: "completed" or "failed". Partial success maps to "completed"
+    // with per-step detail in audit_trail. A gated run completed — it answered.
+    const txStatus = allFailed ? "failed" : "completed";
+    const chargedPrice = refundRequired ? 0 : sol.priceCents;
+
+    if (refundRequired) {
+      await refundWallet(
+        db, walletId, walletBalanceBefore, sol.priceCents, sol.slug,
+        gated ? `gate tripped: ${gated.capabilitySlug}.${gated.field}` : "all steps failed",
+      );
     }
 
-    const finalBalance = allFailed ? walletBalanceBefore : balanceAfter;
+    const finalBalance = refundRequired ? walletBalanceBefore : balanceAfter;
 
     // Build per-step audit breakdown with per-step latency. Every step now
     // appears (the executor records skipped/unavailable markers instead of
@@ -375,15 +385,18 @@ solutionExecuteRoute.post(
           transaction_id: transactionId,
           solution_slug: slug,
           all_failed: allFailed,
+          gated: gated !== undefined,
           err: e instanceof Error ? { message: e.message, stack: e.stack } : e,
         },
         "solutions-tx-update-failed",
       );
 
-      // allFailed path already refunded at line ~270. Non-allFailed means
-      // wallet is still debited; refund now so the customer isn't left
-      // paying for a transaction we can't confirm.
-      if (!allFailed) {
+      // Anything on the refundRequired path already refunded above. Guarding
+      // on `allFailed` alone was correct until gates existed: a gated run has
+      // allFailed === false (the gate step succeeded), so it would have been
+      // refunded here a SECOND time. Caught by auditing the whole route rather
+      // than only the block being edited.
+      if (!refundRequired) {
         await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "phase2 update failed");
       }
 
@@ -426,6 +439,20 @@ solutionExecuteRoute.post(
         latency_ms: latencyMs,
         price_cents: chargedPrice,
         wallet_balance_cents: finalBalance,
+        // Present only when a precondition stopped the run. Says which step
+        // stopped it, what it saw, and — because the caller's next question is
+        // always "was I charged?" — that they were not.
+        ...(gated
+          ? {
+              gated: {
+                stopped_at: gated.capabilitySlug,
+                field: gated.field,
+                observed: gated.observed,
+                reason: gated.reason,
+                charged: false,
+              },
+            }
+          : {}),
       },
       meta: {
         solution_used: sol.slug,
