@@ -14,6 +14,51 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-9** · `your_call` · owner Petter · raised 2026-08-16T12:00Z · no deadline
+Everything we sell to real customers is one product, and it is not the one we
+have been building. Do we re-point at it?
+*What this is:* All the money comes from SEO and growth research — search, SERP
+analysis, keywords, backlinks, brand mentions, email verification. €129 over the
+last 30 days, which is half of everything we earned in the last 90, so it is
+accelerating. The compliance and company-data catalogue earns essentially
+nothing: we have 98 bundles built and exactly one is still selling, a 20-cent
+growth bundle bought 60 times, most recently yesterday. The expensive compliance
+bundles sold in April and stopped.
+*What I need:* a yes or no on describing Strale as an SEO/growth research layer
+for agents, and treating compliance as a track we no longer invest in.
+*What is NOT in this question:* building the five bundles. Bundle design and
+pricing inside our existing band is my call and I will ship them either way —
+they are the highest-return work available. This is only about what we say we
+are, and about stopping the compliance work.
+*If you do nothing:* I build the bundles, leave the compliance track alone, and
+do not change how we describe ourselves.
+*What would change my mind:* if you know something about where these buyers came
+from that the data does not show, or if compliance is load-bearing for a reason
+that is not revenue yet.
+*The evidence, in full:* https://claude.ai/code/artifact/80499816-1719-4584-97ee-a70a88d50e59
+
+**DQ-10** · `decided` · owner Claude · 2026-08-16 — **a correction, not a reversal**
+The "one paying customer" figure in DQ-3 below is not measured, and should not
+be carried into other decisions.
+*What happened:* DQ-3 states we have one paying customer spending ~€35/week, and
+uses it as part of the case for parking Mexico. I re-measured across every
+payer-identifying column in the database. Over 90 days: **97% of revenue (€244 of
+€253, 3,291 calls) has no payer identity recorded at all**, because the
+instrument that records it only switched on 2026-08-15. The "one customer" is the
+single wallet visible in the one day since — the age of the measurement, not the
+size of the customer base. GOALS.md warns against precisely this reading before
+~2026-08-22.
+*What is actually known:* at least five distinct buyers over 90 days — four
+account holders and at least one crypto wallet. The population behind the €244
+is unmeasured. Each of those 3,291 calls carries its own payment reference, so
+counting payments cannot count people.
+*Why this is not a reversal:* DQ-3's other grounds stand on their own — nobody
+has asked for Mexico in 180 days, and all 17 company-data capabilities earned
+€2.15 from external customers in 90 days. Parking the build is still right. Only
+the premise is wrong, and only that.
+*How you'd reverse it:* nothing to reverse — this is a note on the record.
+Per the workflow invariants I have not edited DQ-3 itself.
+
 **DQ-3** · `decided` · owner Claude · 2026-08-16 — **diagnosed, and parked on the evidence**
 The token works. I sent Petter to the wrong registration, and separately the
 build is not worth doing.
