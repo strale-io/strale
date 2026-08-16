@@ -161,7 +161,7 @@ describe("PII sweep selection scope", () => {
     // but could not close: solution executions carry `solution_slug` with a
     // NULL `capability_id`, so an inner join could never see them.
     await cleanupOldTestData();
-    const sweep = statements().find((s) => s.includes("pii_retention_purge"));
+    const sweep = statements().find((s) => s.includes("content_retention_purge"));
     expect(sweep, "content sweep statement was not emitted").toBeDefined();
     expect(sweep).not.toContain("processes_personal_data");
     expect(sweep).not.toMatch(/JOIN\s+capabilities/i);
@@ -177,15 +177,33 @@ describe("PII sweep selection scope", () => {
   it("skips already-redacted rows so a re-run is a no-op", async () => {
     await cleanupOldTestData();
     for (const s of statements().filter((x) => x.includes("deletion_reason"))) {
-      expect(s).toContain("deleted_at IS NULL");
+      expect(s).toMatch(/deleted_at IS NULL|redacted_at IS NULL/);
     }
+  });
+
+  it("the 90-day content sweep never marks a row logically deleted", async () => {
+    // `deleted_at` means "the row is gone" and every customer read path filters
+    // on it — the transaction list, transaction detail, the audit-record
+    // endpoint behind every shareable audit URL. A content redaction that set
+    // it took the customer's whole history and every audit record away at 90
+    // days, while the docstring promised the Art. 30 skeleton survived 1095.
+    await cleanupOldTestData();
+    const content = statements().find((x) => x.includes("content_retention_purge"))!;
+    expect(content).not.toContain("deleted_at = ");
+    expect(content).toContain("redacted_at = ");
+
+    // The 1095-day sweep still does, because there the row really is gone.
+    const hard = statements().find(
+      (x) => x.includes("'retention_purge'") && !x.includes("content_retention_purge"),
+    )!;
+    expect(hard).toContain("deleted_at = ");
   });
 
   it("self-throttles with a LIMIT rather than one unbounded statement", async () => {
     // DEC-20260504-B: the first run after introducing a window is a
     // workload-resumption event. The LIMIT is what bounds it.
     await cleanupOldTestData();
-    const pii = statements().find((s) => s.includes("pii_retention_purge"));
+    const pii = statements().find((s) => s.includes("content_retention_purge"));
     expect(pii).toContain("LIMIT");
   });
 
@@ -194,13 +212,13 @@ describe("PII sweep selection scope", () => {
     // have different justifications and different review consequences.
     await cleanupOldTestData();
     const all = statements().join(" | ");
-    expect(all).toContain("pii_retention_purge");
+    expect(all).toContain("content_retention_purge");
     expect(all).toContain("retention_purge");
   });
 
   it("zeroes every PII column, not just input", async () => {
     await cleanupOldTestData();
-    const pii = statements().find((s) => s.includes("pii_retention_purge"))!;
+    const pii = statements().find((s) => s.includes("content_retention_purge"))!;
     for (const col of ["input", "output", "error", "audit_trail", "provenance", "idempotency_key"]) {
       expect(pii).toContain(col);
     }
@@ -210,7 +228,7 @@ describe("PII sweep selection scope", () => {
     // A hard DELETE here broke the integrity-hash chain once already (CRIT-7).
     // The statement must be an UPDATE, and must not clear the hash columns.
     await cleanupOldTestData();
-    const pii = statements().find((s) => s.includes("pii_retention_purge"))!;
+    const pii = statements().find((s) => s.includes("content_retention_purge"))!;
     expect(pii).toContain("UPDATE transactions");
     expect(pii).not.toContain("DELETE FROM transactions");
     expect(pii).not.toContain("integrity_hash =");

@@ -11,18 +11,15 @@
 
 import { Hono } from "hono";
 import { recordDiscoveryHit } from "../lib/attribution.js";
-import { eq, and, isNull, sql as sqlRaw } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, transactions, users } from "../db/schema.js";
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { suggest, MAX_SUGGEST_QUERY_CHARS } from "../lib/suggest.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
-import {
-  INTERNAL_EMAIL_LIKE_PATTERNS,
-  EXTRA_EXCLUDED_EMAILS,
-} from "../lib/internal-accounts.js";
 import { computePlatformFacts } from "../lib/platform-facts.js";
+import { sellerRevenueBySlug, rankBySales } from "../lib/seller-rank.js";
 import type { AppEnv } from "../types.js";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -98,36 +95,6 @@ function generateExamples(
 const PUBLIC_API_BASE = "https://api.strale.io";
 
 /**
- * External revenue per slug over the last 28 days, used to order the card.
- *
- * Why ordering matters: this card is Strale's most-read machine surface
- * (~520 fetches/week — 5× the x402 discovery file), and it listed 406 skills
- * in near-arbitrary order. An agent skimming the top saw whatever happened to
- * come first, not what other agents actually buy. Revenue order puts the
- * proven sellers where a shallow reader lands.
- *
- * Excludes internal accounts via the canonical filter — the test harness is
- * ~98% of traffic and would otherwise rank the catalog by what WE test, which
- * is the exact wrong-population mistake catalogued in docs/company/MEASUREMENT.md.
- */
-async function externalRevenueBySlug(): Promise<Map<string, number>> {
-  const db = getDb();
-  const likeAny = sqlRaw.join(
-    INTERNAL_EMAIL_LIKE_PATTERNS.map((p) => sqlRaw`email LIKE ${p}`), sqlRaw` OR `);
-  const eqAny = sqlRaw.join(
-    EXTRA_EXCLUDED_EMAILS.map((e) => sqlRaw`email = ${e}`), sqlRaw` OR `);
-  const rows = (await db.execute(sqlRaw`
-    SELECT c.slug, COALESCE(SUM(t.price_cents), 0)::int AS cents
-    FROM transactions t JOIN capabilities c ON c.id = t.capability_id
-    WHERE t.status = 'completed' AND t.price_cents > 0
-      AND t.created_at > now() - interval '28 days'
-      AND (t.user_id IS NULL OR t.user_id NOT IN (
-        SELECT id FROM users WHERE (${likeAny}) OR (${eqAny})))
-    GROUP BY 1`)) as unknown as Array<{ slug: string; cents: number }>;
-  return new Map(rows.map((r) => [r.slug, Number(r.cents)]));
-}
-
-/**
  * Internal artifacts must never reach the public card. A solution named
  * `test-solution-delete-me` was live on it until 2026-08-15 — a storefront
  * showing the shop's own scaffolding. Belt (this filter) and braces (the DB
@@ -140,6 +107,51 @@ export function isInternalArtifact(slug: string): boolean {
   // (delete-me suffixes, zzz- probes, test-solution names) rather than the
   // word "test" keeps real services safe.
   return /-delete-me$|^zzz-|test-solution/.test(slug);
+}
+
+/**
+ * Whether the x402 gateway would actually serve this slug.
+ *
+ * The card and the gateway had different ideas about what is buyable. The card
+ * listed anything `is_active AND marketplace_eligible`; the gateway requires
+ * `x402_enabled` AND a lifecycle state of active/probation, because it refuses
+ * to take money for a capability it knows is degraded. Measured against
+ * production on 2026-08-16, that gap was **66 endpoints** — 47 capabilities and
+ * 19 solutions — each advertised with a price and a POST target that returns
+ * 404 "Capability not found or not available via x402."
+ *
+ * Two harms, and the second is the nastier one. An agent that trusts the card
+ * gets a dead endpoint. And that 404 is recorded as `x402_unknown_slug` in
+ * `failed_requests` — the unmet-demand signal added the same day — so our own
+ * card manufactures "an agent wanted something we do not sell" entries for
+ * capabilities we *do* sell. A build queue fed by that is fed by our own bug.
+ *
+ * Entries that fail this stay on the card: they are real capabilities, still
+ * reachable with an API key. They simply stop claiming a payment route that
+ * does not exist.
+ */
+function payableViaX402(row: {
+  isFreeTier?: boolean;
+  x402Enabled?: boolean | null;
+  lifecycleState?: string | null;
+}): boolean {
+  if (row.isFreeTier) return false; // free tier needs no payment endpoint
+  if (!row.x402Enabled) return false;
+  // Solutions carry no lifecycle column; absence means "not gated on it".
+  if (row.lifecycleState && !["active", "probation"].includes(row.lifecycleState)) return false;
+  return true;
+}
+
+/**
+ * Solutions are NOT served at `/x402/{slug}` — that is the capability
+ * wildcard. The gateway mounts them at `/x402/solutions/{slug}` and
+ * `/x402/v2/solutions/{slug}` (x402-gateway-v2.ts), and the v2 form is what
+ * the discovery file and the OpenAPI paths publish. The card advertised the
+ * capability path for every solution: each one fell through to the wildcard,
+ * 404'd, and logged a false `x402_unknown_slug` demand row.
+ */
+function solutionEndpoint(slug: string): string {
+  return `${PUBLIC_API_BASE}/x402/v2/solutions/${slug}`;
 }
 
 export async function buildAgentCard(): Promise<{ card: object; etag: string }> {
@@ -159,6 +171,10 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
       category: capabilities.category,
       priceCents: capabilities.priceCents,
       isFreeTier: capabilities.isFreeTier,
+      // Needed to decide whether a pay-per-call endpoint may be advertised —
+      // see payableViaX402 below.
+      x402Enabled: capabilities.x402Enabled,
+      lifecycleState: capabilities.lifecycleState,
     })
     .from(capabilities)
     .where(
@@ -177,11 +193,14 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
       description: solutions.description,
       category: solutions.category,
       priceCents: solutions.priceCents,
+      x402Enabled: solutions.x402Enabled,
     })
     .from(solutions)
     .where(eq(solutions.isActive, true));
 
-  const revenue = await externalRevenueBySlug();
+  // Shared ranker: 15-minute cache (this surface is fetched ~520×/week) and
+  // fail-open on a query error, neither of which the private copy had.
+  const revenue = await sellerRevenueBySlug();
 
   // Build capability skills. Every paid skill carries its price and an
   // absolute pay-per-call URL — before 2026-08-15, 396 of 406 skills had no
@@ -192,10 +211,14 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
   const capSkills = capRows
     .filter((cap) => !isInternalArtifact(cap.slug))
     .map((cap) => {
+      const payable = payableViaX402(cap);
       const priceStr = cap.isFreeTier
         ? " FREE — no API key, no payment, no signup."
-        : ` €${((cap.priceCents ?? 0) / 100).toFixed(2)} per call — pay per use` +
-          ` with USDC (x402) at POST ${PUBLIC_API_BASE}/x402/${cap.slug}, no signup needed.`;
+        : payable
+          ? ` €${((cap.priceCents ?? 0) / 100).toFixed(2)} per call — pay per use` +
+            ` with USDC (x402) at POST ${PUBLIC_API_BASE}/x402/${cap.slug}, no signup needed.`
+          : ` €${((cap.priceCents ?? 0) / 100).toFixed(2)} per call via API key.` +
+            ` Pay-per-call is not available for this one.`;
       return {
         id: cap.slug,
         name: cap.name,
@@ -205,7 +228,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
         // Extension fields (ignored by strict A2A parsers, actionable by the rest)
         price_cents: cap.isFreeTier ? 0 : cap.priceCents ?? 0,
         currency: "EUR",
-        x402_endpoint: cap.isFreeTier ? undefined : `${PUBLIC_API_BASE}/x402/${cap.slug}`,
+        x402_endpoint: payable ? `${PUBLIC_API_BASE}/x402/${cap.slug}` : undefined,
       };
     });
 
@@ -215,29 +238,24 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
     .map((sol) => ({
       id: `solution-${sol.slug}`,
       name: sol.name,
-      description: `${sol.description} €${((sol.priceCents ?? 0) / 100).toFixed(2)}` +
-        ` per call — pay per use with USDC (x402) at POST ${PUBLIC_API_BASE}/x402/${sol.slug},` +
-        ` no signup needed.`,
+      description: `${sol.description} €${((sol.priceCents ?? 0) / 100).toFixed(2)} per call` +
+        (payableViaX402(sol)
+          ? ` — pay per use with USDC (x402) at POST ${solutionEndpoint(sol.slug)},` +
+            ` no signup needed.`
+          : ` via API key. Pay-per-call is not available for this one.`),
       tags: ["solution", sol.category],
       examples: [sol.description.split(/\.\s/)[0].replace(/\.$/, "")],
       price_cents: sol.priceCents ?? 0,
       currency: "EUR",
-      x402_endpoint: `${PUBLIC_API_BASE}/x402/${sol.slug}`,
+      x402_endpoint: payableViaX402(sol) ? solutionEndpoint(sol.slug) : undefined,
     }));
 
   // Order: proven sellers first (28-day external revenue), then the free tier
   // (an agent's cheapest first step), then the rest alphabetically. A shallow
   // reader now lands on what other agents actually buy.
-  const revOf = (skill: { id: string }) =>
-    revenue.get(skill.id.replace(/^solution-/, "")) ?? 0;
+  const slugOfSkill = (skill: { id: string }) => skill.id.replace(/^solution-/, "");
   const bySales = <T extends { id: string; price_cents?: number }>(skills: T[]): T[] =>
-    [...skills].sort((a, b) => {
-      const ra = revOf(a), rb = revOf(b);
-      if (ra !== rb) return rb - ra;
-      const fa = a.price_cents === 0 ? 0 : 1, fb = b.price_cents === 0 ? 0 : 1;
-      if (fa !== fb) return fa - fb;
-      return a.id.localeCompare(b.id);
-    });
+    rankBySales(skills, revenue, slugOfSkill, (s) => s.price_cents === 0);
 
   const productSkills = [
     {
@@ -271,6 +289,19 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
         "Gate an inbound x402 buyer before delivering service",
         "Verify a DeFi protocol's audit history and recent exploits",
       ],
+      // Every other entry on this card carries a price and a callable target.
+      // This one carried neither, so an agent parsing the card learned the
+      // product exists and had no way to act on it — a brochure on a machine
+      // surface. There is genuinely no price to quote: the route is
+      // auth-gated and takes no payment (app.ts mounts it at
+      // /v1/web3-assurance behind authMiddleware, with no wallet debit), so
+      // the card says that rather than implying a pay-per-call rail it does
+      // not have.
+      endpoint: `${PUBLIC_API_BASE}/v1/web3-assurance`,
+      mcp_tool: "strale_web3_assurance",
+      price_cents: 0,
+      currency: "EUR",
+      access: "api_key",
     },
   ];
 

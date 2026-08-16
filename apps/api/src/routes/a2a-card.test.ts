@@ -43,13 +43,25 @@ describe("the card itself, built against a stubbed catalogue", () => {
     // sees a small known catalogue instead of production.
     const capRows = [
       { slug: "google-search", name: "Google Search", description: "Search Google.",
-        category: "web", priceCents: 5, isFreeTier: false },
+        category: "web", priceCents: 5, isFreeTier: false,
+        x402Enabled: true, lifecycleState: "active" },
       { slug: "email-validate", name: "Email Validation", description: "Validate email.",
-        category: "validation", priceCents: 0, isFreeTier: true },
+        category: "validation", priceCents: 0, isFreeTier: true,
+        x402Enabled: false, lifecycleState: "active" },
       { slug: "rare-lookup", name: "Rare Lookup", description: "Rarely bought.",
-        category: "data", priceCents: 10, isFreeTier: false },
+        category: "data", priceCents: 10, isFreeTier: false,
+        x402Enabled: true, lifecycleState: "active" },
+      // Real, sellable, on the card — but the gateway would not take money for
+      // it. 66 rows looked like this in production on 2026-08-16.
+      { slug: "api-key-only", name: "Key Only", description: "Paid, but not on x402.",
+        category: "data", priceCents: 20, isFreeTier: false,
+        x402Enabled: false, lifecycleState: "active" },
+      { slug: "degraded-thing", name: "Degraded", description: "Quarantined service.",
+        category: "data", priceCents: 20, isFreeTier: false,
+        x402Enabled: true, lifecycleState: "quarantined" },
       { slug: "test-solution-delete-me", name: "Internal", description: "Scaffolding.",
-        category: "internal", priceCents: 1, isFreeTier: false },
+        category: "internal", priceCents: 1, isFreeTier: false,
+        x402Enabled: true, lifecycleState: "active" },
     ];
     const select = () => ({
       from: (table: unknown) => ({
@@ -86,6 +98,23 @@ describe("the card itself, built against a stubbed catalogue", () => {
     expect(paid.description).toContain("/x402/google-search");
     expect(paid.price_cents).toBe(5);
     expect(paid.x402_endpoint).toContain("/x402/google-search");
+  });
+
+  it("never advertises a payment endpoint the gateway would 404", async () => {
+    // The card filtered on is_active + marketplace_eligible; the gateway
+    // requires x402_enabled AND an active/probation lifecycle. 66 endpoints sat
+    // in that gap in production — each 404'd, and each 404 wrote a false
+    // `x402_unknown_slug` row into the demand table the same session added, so
+    // the card was manufacturing build-signal out of its own bug.
+    const card = await buildStubbed();
+    for (const id of ["api-key-only", "degraded-thing"]) {
+      const skill = card.skills.find((s) => s.id === id)!;
+      expect(skill, `${id} should stay on the card`).toBeDefined();
+      expect(skill.x402_endpoint, `${id} must not advertise x402`).toBeUndefined();
+      expect(skill.description).not.toContain("/x402/");
+      // Still sellable — it just needs an API key.
+      expect(skill.description).toContain("per call");
+    }
   });
 
   it("marks the free tier as free rather than pricing it at €0.00", async () => {

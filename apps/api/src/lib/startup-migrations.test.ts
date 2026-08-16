@@ -63,6 +63,7 @@ import {
   runMigration0077_classifyFreeQuotaOverrides,
   runMigration0078_transactionsCapabilityIdCreatedAtIdx,
   runMigration0082_reclassifyThrottledFreeUnlimited,
+  runMigration0087_unhideRedactedRows,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1156,8 +1157,42 @@ describe("startup-migrations — phase-b5 slug lists (invariants)", () => {
   });
 });
 
+describe("startup-migrations — block 0087 (un-hide content-redacted rows)", () => {
+  it("clears deleted_at only for this sweep's own signature", async () => {
+    // Narrow by construction: a user-requested erasure and the 1095-day hard
+    // purge both legitimately set deleted_at and must survive untouched.
+    const stub = makeStub({ default: { count: 2004 } });
+    const result = await runMigration0087_unhideRedactedRows(stub);
+    const [unhide] = stub.renderedSql;
+    expect(unhide).toMatch(/set "?deleted_at"? = null/i);
+    expect(unhide).toMatch(/redacted_at is not null/i);
+    expect(unhide).toMatch(/pii_retention_purge|content_retention_purge/);
+    expect(unhide).not.toMatch(/user_request/);
+    expect(result.rows_affected).toBeGreaterThan(0);
+  });
+
+  it("un-hides without un-redacting — no payload column is written", async () => {
+    const stub = makeStub({ default: { count: 0 } });
+    await runMigration0087_unhideRedactedRows(stub);
+    for (const s of stub.renderedSql) {
+      for (const col of ["input", "output", "audit_trail", "provenance"]) {
+        expect(s, `payload column ${col} must not be written`).not.toMatch(
+          new RegExp(`"?${col}"?\s*=`, "i"),
+        );
+      }
+    }
+  });
+
+  it("is a no-op on re-run once the repair has landed", async () => {
+    const stub = makeStub({ default: { count: 0 } });
+    const result = await runMigration0087_unhideRedactedRows(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no change/);
+  });
+});
+
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 30 blocks in historical order", () => {
+  it("exports the expected 31 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1193,7 +1228,8 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0084_danishQuotaHeadroom",
       "runMigration0085_actorIdentity",
       "runMigration0086_srcBasis",
-      "runMigration0087_solutionGateCondition",
+      "runMigration0087_unhideRedactedRows",
+      "runMigration0088_solutionGateCondition",
     ]);
   });
 });

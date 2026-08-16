@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseGateCondition, gateTrips, evaluateGates, markSkippedByGate } from "./solution-executor.js";
 import { SOLUTIONS } from "../db/solution-catalogue.js";
-import { runMigration0087_solutionGateCondition } from "./startup-migrations.js";
+import { runMigration0088_solutionGateCondition } from "./startup-migrations.js";
 import { sql, type SQL } from "drizzle-orm";
 
 /**
@@ -124,13 +124,13 @@ describe("the catalogue's use of gates", () => {
   });
 });
 
-describe("migration block 0087", () => {
+describe("migration block 0088", () => {
   it("is idempotent and additive", async () => {
     const executed: string[] = [];
     const stub = { execute: async (q: SQL) => { executed.push(JSON.stringify(q)); return []; } };
-    const first = await runMigration0087_solutionGateCondition(stub);
-    const second = await runMigration0087_solutionGateCondition(stub);
-    expect(first.block).toBe("0087_solutionGateCondition");
+    const first = await runMigration0088_solutionGateCondition(stub);
+    const second = await runMigration0088_solutionGateCondition(stub);
+    expect(first.block).toBe("0088_solutionGateCondition");
     expect(second.outcome).toBe("applied");
     // Idempotency marker present — a re-run on a healthy database is a no-op.
     expect(executed[0]).toContain("ADD COLUMN IF NOT EXISTS");
@@ -143,7 +143,7 @@ describe("migration block 0087", () => {
     const src = await import("node:fs").then((fs) =>
       fs.readFileSync(new URL("./startup-migrations.ts", import.meta.url), "utf8"));
     const registry = src.slice(src.indexOf("const BLOCKS"), src.indexOf("];", src.indexOf("const BLOCKS")));
-    expect(registry).toContain("runMigration0087_solutionGateCondition");
+    expect(registry).toContain("runMigration0088_solutionGateCondition");
   });
 });
 
