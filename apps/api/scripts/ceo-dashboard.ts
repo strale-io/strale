@@ -167,18 +167,33 @@ async function main() {
         delta >= 0 ? "+" : ""}${delta.toFixed(1)}%</span>`;
 
   const buyers = renderMeasurement(actors, (v) => String(v.total));
-  const buyersNote = actors.status === "observed"
-    ? (actors.value.total === 1
-        ? `<span class="chip chip-warn">all from one buyer</span> we need more`
-        : `${actors.value.returning} came back · biggest is ${(actors.value.topShare * 100).toFixed(0)}% of the money`)
-    : esc(buyers.note);
+  // `unavailable` has no value at all, by design — render the reason, never a
+  // fabricated 0. `estimated` has a value but is a lower bound, so it is shown
+  // with the reason attached rather than as a fact.
+  const buyersNote = actors.status === "unavailable"
+    ? esc(buyers.note)
+    : [
+        actors.value.total === 1
+          ? `<span class="chip chip-warn">all from one buyer</span>`
+          : `biggest is ${(actors.value.topShare * 100).toFixed(0)}% of the money`,
+        actors.value.returning === null
+          ? `too early to tell how many came back`
+          : `${actors.value.returning} came back`,
+        actors.status === "estimated" ? esc(buyers.note) : "",
+      ].filter(Boolean).join(" · ");
 
   const cov = renderMeasurement(coverage, (v) => `${(v * 100).toFixed(1)}%`);
-  const hv = health.status === "observed"
-    ? health.value : { breakersOpen: 0, active: 0, quarantined: 0 };
-  const sp = spend.status === "estimated" || spend.status === "observed"
-    ? spend.value : { harnessCents: 0, settlementCents: 0, totalCents: 0 };
-  const budgetPct = Math.min(100, (sp.totalCents / 100 / BUDGET_ENVELOPE_EUR) * 100);
+  // Deliberately nullable rather than zero-filled. A zero here reads as
+  // "nothing is switched off" and "we spent nothing" — both are claims, and
+  // an unavailable measurement entitles us to neither.
+  const hv = health.status === "unavailable" ? null : health.value;
+  const sp = spend.status === "unavailable" ? null : spend.value;
+  const budgetPct = sp === null ? null
+    : Math.min(100, (sp.totalCents / 100 / BUDGET_ENVELOPE_EUR) * 100);
+  const healthNote = health.status === "unavailable"
+    ? esc(renderMeasurement(health, () => "").note) : "";
+  const spendNote = spend.status === "unavailable"
+    ? esc(renderMeasurement(spend, () => "").note) : "";
 
   const icons: Record<string, string> = {
     wallet: `<path d="M2.5 5.5A1.5 1.5 0 014 4h8a1.5 1.5 0 011.5 1.5v5A1.5 1.5 0 0112 12H4a1.5 1.5 0 01-1.5-1.5z"/><path d="M10.5 8h1.5"/>`,
@@ -253,14 +268,19 @@ async function main() {
         <div class="kfoot">${esc(cov.note || "of calls can be traced back to a buyer")}</div></div>
 
       <div class="kpi"><div class="krow"><span class="klabel">Services with problems</span>${
-        icon("pulse", hv.breakersOpen > 0 ? "i-warn" : "i-good")}</div>
-        <div class="kval">${hv.breakersOpen}<span class="unit"> switched off</span></div>
-        <div class="kfoot">${hv.active} data services working · ${hv.quarantined} paused</div></div>
+        icon("pulse", hv && hv.breakersOpen > 0 ? "i-warn" : "i-good")}</div>
+        <div class="kval">${hv ? `${hv.breakersOpen}<span class="unit"> switched off</span>` : "—"}</div>
+        <div class="kfoot">${hv
+          ? `${hv.active} data services working · ${hv.quarantined} paused`
+          : healthNote}</div></div>
 
       <div class="kpi"><div class="krow"><span class="klabel">Money spent this week</span>${
-        icon("coin", budgetPct > 80 ? "i-warn" : "i-good")}</div>
-        <div class="kval">${eur(sp.totalCents)}<span class="unit"> / €${BUDGET_ENVELOPE_EUR}</span></div>
-        <div class="kfoot">${budgetPct.toFixed(0)}% of the weekly limit · estimate</div></div>
+        icon("coin", budgetPct !== null && budgetPct > 80 ? "i-warn" : "i-good")}</div>
+        <div class="kval">${sp
+          ? `${eur(sp.totalCents)}<span class="unit"> / €${BUDGET_ENVELOPE_EUR}</span>` : "—"}</div>
+        <div class="kfoot">${budgetPct !== null
+          ? `${budgetPct.toFixed(0)}% of the weekly limit · estimate`
+          : spendNote}</div></div>
     </div>
 
     <div class="row row-2">
@@ -316,14 +336,15 @@ async function main() {
           <span class="pill" style="margin-left:auto">€${BUDGET_ENVELOPE_EUR}/wk</span></div>
         <div class="csub">What we pay other companies each week</div>
         <div class="cbody">
-          <div class="benv"><i style="width:${budgetPct}%"></i></div>
-          <div class="rlabels"><span>${eur(sp.totalCents)} spent</span>
-            <span>€${(BUDGET_ENVELOPE_EUR - sp.totalCents / 100).toFixed(2)} left</span></div>
+          <div class="benv"><i style="width:${budgetPct ?? 0}%"></i></div>
+          <div class="rlabels"><span>${sp ? `${eur(sp.totalCents)} spent` : spendNote}</span>
+            <span>${sp
+              ? `€${(BUDGET_ENVELOPE_EUR - sp.totalCents / 100).toFixed(2)} left` : ""}</span></div>
           <div class="blines">
             <div class="bline"><span class="bkey" style="background:var(--acc)"></span>
-              Our own automatic testing<span class="amt">${eur(sp.harnessCents)}</span></div>
+              Our own automatic testing<span class="amt">${sp ? eur(sp.harnessCents) : "—"}</span></div>
             <div class="bline"><span class="bkey" style="background:var(--acc-line)"></span>
-              Payment processing fees<span class="amt">${eur(sp.settlementCents)}</span></div>
+              Payment processing fees<span class="amt">${sp ? eur(sp.settlementCents) : "—"}</span></div>
             <div class="bline"><span class="bkey" style="background:var(--line)"></span>
               My thinking time<span class="amt">included in your plan</span></div>
           </div>
@@ -390,7 +411,7 @@ async function main() {
     `  buyers    ${actors.status}: ${buyers.text}${buyers.note ? ` — ${buyers.note}` : ""}\n` +
     `  funnel    ${funnel.status}${funnel.status === "observed" ? ` over ${funnel.window.label}` : ""}\n` +
     `  identity  ${coverage.status}: ${cov.text}\n` +
-    `  spend     ${spend.status}: ${eur(sp.totalCents)}`,
+    `  spend     ${spend.status}: ${sp ? eur(sp.totalCents) : "—"}`,
   );
   await closeDbPool();
 }

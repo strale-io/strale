@@ -44,10 +44,21 @@ export async function sellerRevenueBySlug(windowDays = 28): Promise<Map<string, 
       INTERNAL_EMAIL_LIKE_PATTERNS.map((p) => sql`email LIKE ${p}`), sql` OR `);
     const eqAny = sql.join(
       EXTRA_EXCLUDED_EMAILS.map((e) => sql`email = ${e}`), sql` OR `);
+    // COALESCE, not a JOIN on capabilities.
+    //
+    // The join form was capabilities-only, so every solution scored 0 and
+    // `rankBySales` over a solution catalogue collapsed to an alphabetical
+    // sort wearing a revenue label. Solution executions carry
+    // `solution_slug` with `capability_id IS NULL` (schema.ts:244), so they
+    // could never match the join — the function's own docstring said
+    // "capability/solution slug" while the query could only ever return one
+    // of the two.
     const rows = (await getDb().execute(sql`
-      SELECT c.slug, COALESCE(SUM(t.price_cents), 0)::int AS cents
-      FROM transactions t JOIN capabilities c ON c.id = t.capability_id
+      SELECT COALESCE(t.solution_slug, c.slug) AS slug,
+             COALESCE(SUM(t.price_cents), 0)::int AS cents
+      FROM transactions t LEFT JOIN capabilities c ON c.id = t.capability_id
       WHERE t.status = 'completed' AND t.price_cents > 0
+        AND COALESCE(t.solution_slug, c.slug) IS NOT NULL
         AND t.created_at > now() - (${String(windowDays)} || ' days')::interval
         AND (t.user_id IS NULL OR t.user_id NOT IN (
           SELECT id FROM users WHERE (${likeAny}) OR (${eqAny})))

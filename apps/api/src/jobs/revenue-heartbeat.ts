@@ -26,6 +26,7 @@ import { getDb } from "../db/index.js";
 import { alertOnce } from "../lib/alert-once.js";
 import { log, logWarn } from "../lib/log.js";
 import { externalCustomers } from "../lib/metrics/populations.js";
+import { ACTOR_KEY_SQL } from "../lib/metrics/actor-identity.js";
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly — the gap we care about is hours
 const ALERT_COOLDOWN_MS = 12 * 60 * 60 * 1000;
@@ -39,13 +40,29 @@ const MIN_ACTIVE_DAYS = 5;
 const TRAILING_DAYS = 14;
 
 /**
- * How many times their own typical daily gap must elapse before we care.
- * Set from the observed 177-hour legitimate gap: an established daily caller
- * silent for ~3× their normal cadence is unusual enough to look at, without
- * firing on the ordinary weekend lull.
+ * How many times their own typical gap must elapse before we care. Set from
+ * the observed 177-hour legitimate gap: a caller silent for ~3× their normal
+ * cadence is unusual enough to look at, without firing on an ordinary lull.
  */
 const SILENCE_MULTIPLE = 3;
-const MIN_SILENCE_HOURS = 24;
+
+/**
+ * Floor, so a very chatty caller does not page us over a brief lull.
+ *
+ * Was 24, which made the whole job unable to detect the outage in the
+ * docstring above. The old cadence estimate was `TRAILING_DAYS × 24 ÷
+ * distinct_active_days`; since active days cannot exceed the window's days,
+ * that expression cannot return less than ~24 — so the threshold
+ * `max(24, cadence × 3)` could never drop below ~72 hours, and the 21-hour
+ * settlement outage this job exists to catch would have passed unnoticed. The
+ * floor was unreachable dead code for the same reason.
+ *
+ * Now the cadence is the mean gap BETWEEN CALLS (below), which for the real
+ * wallet is ~0.5h rather than ~22h, so the floor is what actually governs
+ * chatty callers — 6 hours of silence from someone who normally calls every
+ * half hour is worth a look, and is under the 21-hour bar.
+ */
+const MIN_SILENCE_HOURS = 6;
 
 export interface HeartbeatFinding {
   actor: string;
@@ -64,23 +81,28 @@ export async function findSilentPayers(): Promise<HeartbeatFinding[]> {
   const rows = (await getDb().execute(sql`
     WITH paid AS (
       SELECT
-        COALESCE(t.user_id::text, 'x402:' || t.x402_payer_hash) AS actor,
+        ${sql.raw(ACTOR_KEY_SQL)} AS actor,
         t.created_at,
         t.price_cents
       FROM transactions t
       WHERE t.status = 'completed' AND t.price_cents > 0
         AND t.created_at > now() - (${String(TRAILING_DAYS)} || ' days')::interval
-        AND COALESCE(t.user_id::text, t.x402_payer_hash) IS NOT NULL
+        AND ${sql.raw(ACTOR_KEY_SQL)} IS NOT NULL
         AND ${externalCustomers("t")}
     )
     SELECT actor,
            COUNT(DISTINCT date_trunc('day', created_at))::int AS active_days,
            SUM(price_cents)::int                              AS revenue_cents,
            ROUND(EXTRACT(EPOCH FROM (now() - MAX(created_at))) / 3600.0, 1) AS hours_silent,
-           -- Their own rhythm: the trailing window divided by the days they
-           -- actually used us. A five-day-a-week caller expects ~a day.
-           ROUND((${String(TRAILING_DAYS)} * 24.0)
-                 / GREATEST(COUNT(DISTINCT date_trunc('day', created_at)), 1), 1) AS expected_gap_hours
+           -- Their own rhythm: the mean gap BETWEEN CALLS — the span from
+           -- their first to their last call divided by the number of gaps in
+           -- it. A wallet calling every 31 minutes reports ~0.5, which is the
+           -- point: a days-based estimate is floored at ~24h by construction
+           -- and made the alert unable to fire inside a day. Single-call
+           -- actors cannot reach MIN_ACTIVE_DAYS, so the GREATEST guard is
+           -- belt-and-braces against a divide-by-zero, not a real case.
+           ROUND((EXTRACT(EPOCH FROM (MAX(created_at) - MIN(created_at))) / 3600.0)
+                 / GREATEST(COUNT(*) - 1, 1), 2) AS expected_gap_hours
     FROM paid
     GROUP BY actor
     HAVING COUNT(DISTINCT date_trunc('day', created_at)) >= ${MIN_ACTIVE_DAYS}
@@ -125,8 +147,9 @@ async function tick(): Promise<void> {
           `${f.expectedGapHours} hours. They are worth €${(f.revenueCents / 100).toFixed(2)} ` +
           `over that period.\n\n` +
           `This fires for either cause and does not distinguish them: they may have ` +
-          `stopped, or we may be broken. Check x402 settlement health and the ` +
-          `circuit breakers first — a 21-hour settlement outage on 2026-08-14 stopped ` +
+          `stopped, or we may be broken. Check first whether payments are going ` +
+          `through and whether any data service has switched itself off — a 21-hour ` +
+          `payment outage on 2026-08-14 stopped ` +
           `this exact revenue and went unnoticed at the time.\n\n` +
           `Do not contact the customer on the strength of this alert; see the ` +
           `customer-data boundary in docs/company/CHARTER.md.`,

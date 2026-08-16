@@ -67,17 +67,27 @@ describe("it fires when an established customer breaks their own rhythm", () => 
 });
 
 describe("the floor and the multiple both apply", () => {
-  it("never pages before 24 hours, however tight the rhythm", async () => {
-    // A customer calling every 30 minutes has an expected gap under an hour;
-    // without the floor, a two-hour lull would page at 3am for nothing.
+  // The floor was 24 hours until 2026-08-16, which — combined with a cadence
+  // estimate that could not return under ~24h — meant the minimum possible
+  // alert latency was ~72 hours. The 21-hour settlement outage this job was
+  // built for could not have fired it. The floor is now 6.
+  it("does not page a half-hourly customer over a brief lull", async () => {
     execute.mockResolvedValue([
-      row({ expected_gap_hours: 0.5, hours_silent: 6 }),
+      row({ expected_gap_hours: 0.5, hours_silent: 3 }),
     ]);
     expect(await findSilentPayers()).toHaveLength(0);
   });
 
-  it("does page that same customer once a full day has passed", async () => {
-    execute.mockResolvedValue([row({ expected_gap_hours: 0.5, hours_silent: 25 })]);
+  it("pages that customer well inside the 21-hour incident window", async () => {
+    execute.mockResolvedValue([row({ expected_gap_hours: 0.5, hours_silent: 7 })]);
+    expect(await findSilentPayers()).toHaveLength(1);
+  });
+
+  it("still respects the multiple for a genuinely slow caller", async () => {
+    // Daily caller, silent two days: within their own rhythm, no page.
+    execute.mockResolvedValue([row({ expected_gap_hours: 24, hours_silent: 48 })]);
+    expect(await findSilentPayers()).toHaveLength(0);
+    execute.mockResolvedValue([row({ expected_gap_hours: 24, hours_silent: 80 })]);
     expect(await findSilentPayers()).toHaveLength(1);
   });
 });

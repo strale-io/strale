@@ -115,7 +115,12 @@ verifyRoute.get("/:transactionId", async (c) => {
   // F-AUDIT-13/16: target transaction itself may also be redacted.
   // If so, hash_valid is meaningless — the source data is gone — but
   // the chain link itself is preserved.
-  const targetRedacted = txn.deletedAt != null;
+  // Either column means "the source data this hash was computed over is gone":
+  // deletedAt for the 1095-day deletion, redactedAt for the 90-day content
+  // redaction, which deliberately leaves the row readable (data-retention.ts).
+  // Classifying on deletedAt alone would report every 90-day-old row as a
+  // BROKEN link once that purge stopped setting it.
+  const targetRedacted = txn.deletedAt != null || txn.redactedAt != null;
   const targetVerifiedLink = !targetRedacted && hashValid;
   const targetDeletionReason = txn.deletionReason ?? null;
 
@@ -168,8 +173,8 @@ verifyRoute.get("/:transactionId", async (c) => {
       // chain sees how many links are GDPR-erasure vs. retention-purge.
       redacted_by_reason: {
         user_request: chain.redactedByReason.user_request + (targetRedacted && targetDeletionReason === "user_request" ? 1 : 0),
-        retention_purge: chain.redactedByReason.retention_purge + (targetRedacted && targetDeletionReason === "retention_purge" ? 1 : 0),
-        other: chain.redactedByReason.other + (targetRedacted && targetDeletionReason !== "user_request" && targetDeletionReason !== "retention_purge" ? 1 : 0),
+        retention_purge: chain.redactedByReason.retention_purge + (targetRedacted && isRetentionReason(targetDeletionReason) ? 1 : 0),
+        other: chain.redactedByReason.other + (targetRedacted && targetDeletionReason !== "user_request" && !isRetentionReason(targetDeletionReason) ? 1 : 0),
       },
       reaches_genesis: chain.reachesGenesis,
       chain_start_date: chain.startDate,
@@ -268,11 +273,11 @@ export async function walkChain(
     // now will mismatch by design. Treat as a third category — neither
     // verified nor broken. World-class #6: tally by deletion_reason so
     // the response can report user_request vs retention_purge separately.
-    if (prev.deletedAt != null) {
+    if (prev.deletedAt != null || prev.redactedAt != null) {
       redactedLinks++;
       const reason = prev.deletionReason ?? "";
       if (reason === "user_request") redactedByUserRequest++;
-      else if (reason === "retention_purge") redactedByRetentionPurge++;
+      else if (isRetentionReason(reason)) redactedByRetentionPurge++;
       else redactedByOther++;
       startDate = prev.createdAt instanceof Date
         ? prev.createdAt.toISOString().slice(0, 10)
@@ -350,12 +355,23 @@ export async function walkChain(
 // the redacted-vs-broken-vs-verified decision without spinning up a DB.
 export type ChainLinkClassification = "verified" | "redacted" | "broken";
 
+/**
+ * Both retention paths bucket as retention, never as "other": the 1095-day
+ * deletion writes 'retention_purge', the 90-day content redaction writes
+ * 'content_retention_purge'. A regulator walking the chain should see one
+ * retention count, not a mystery bucket.
+ */
+export function isRetentionReason(reason: string | null): boolean {
+  return reason === "retention_purge" || reason === "content_retention_purge";
+}
+
 export function classifyChainLink(prev: {
   deletedAt: Date | null;
+  redactedAt?: Date | null;
   integrityHash: string | null;
   recomputedHash: string | null;
 }): ChainLinkClassification {
-  if (prev.deletedAt != null) return "redacted";
+  if (prev.deletedAt != null || prev.redactedAt != null) return "redacted";
   if (prev.integrityHash != null && prev.recomputedHash === prev.integrityHash) return "verified";
   return "broken";
 }

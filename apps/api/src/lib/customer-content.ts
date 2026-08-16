@@ -107,10 +107,19 @@ export const CUSTOMER_CONTENT_CLEAR_SQL: SQL = sql.raw(
  */
 export function customerContentMatches(pattern: string, alias = "t"): SQL {
   const a = alias ? `${alias}.` : "";
-  return sql.join(
+  // `%` and `_` are ILIKE wildcards. A pattern containing either would silently
+  // over-match, and an audit that over-matches answers "is X in our data?" with
+  // a false yes. Escaped so the caller's string is searched literally.
+  const literal = pattern.replace(/([\\%_])/g, "\\$1");
+  const clauses = sql.join(
     CUSTOMER_CONTENT_COLUMNS.map(
-      (c) => sql`${sql.raw(`${a}${c.column}`)}::text ILIKE ${`%${pattern}%`}`,
+      (c) => sql`${sql.raw(`${a}${c.column}`)}::text ILIKE ${`%${literal}%`} ESCAPE '\\'`,
     ),
     sql` OR `,
   );
+  // Wrapped. Unparenthesised, a caller writing
+  // `WHERE deleted_at IS NULL AND ${customerContentMatches(p)}` gets
+  // `AND a OR b OR c`, and AND binds tighter than OR — the filter silently
+  // stops applying to every column but the first.
+  return sql`(${clauses})`;
 }

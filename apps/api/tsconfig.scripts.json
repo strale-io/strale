@@ -1,0 +1,32 @@
+{
+  // Type-checking only, for the operator scripts that are actively maintained.
+  //
+  // `scripts/` cannot live in tsconfig.json because that config sets
+  // `rootDir: ./src` for the build output — so until now `npx tsc --noEmit
+  // --project tsconfig.json` reported "clean" for changes it had never looked
+  // at. The CEO dashboard is the one Petter reads; it was ungated.
+  //
+  // The include list is deliberately narrow rather than `scripts/**/*`: a
+  // repo-wide sweep reports 127 pre-existing errors (dead archive scripts,
+  // drifted imports, duplicate top-level declarations across one-off files).
+  // Fixing those is its own task; widening this glob before then would produce
+  // a gate that is red on arrival and therefore ignored. Add files here as
+  // they are cleaned up.
+  //
+  // Run as: npx tsc --noEmit --project tsconfig.scripts.json
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["scripts/ceo-dashboard.ts", "scripts/lib/**/*", "src/**/*"],
+  // Same test excludes as tsconfig.json — vitest type-checks its own files, and
+  // several existing tests use casts tsc rejects but vitest accepts.
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/*.test.tsx",
+    "**/*.spec.tsx"
+  ]
+}
