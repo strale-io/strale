@@ -1,7 +1,8 @@
 /**
  * Regression tests for routing web-extract through the shared web-provider
- * layer (T0.3 investigation, 2026-08-16), plus fixes from the external
- * (Codex) review of that change (2026-08-16).
+ * layer (T0.3 investigation, 2026-08-16), plus fixes from two review rounds
+ * on that change (external/Codex review, then a six-lens review round;
+ * both 2026-08-16).
  *
  * Before the original fix, web-extract called Browserless with a bare
  * `fetch()`: one attempt, no retry, no backoff, no cache — unlike the other
@@ -16,6 +17,16 @@
  * (only `@anthropic-ai/sdk` and `url-validator.js` are mocked) so they
  * assert the actual wiring, not a mocked-away stand-in. See the handoff
  * report for the fail-before verification transcript for each test.
+ *
+ * web-extract is a live-fetch capability (manifest: freshness_category:
+ * live-fetch) and opts OUT of the shared cache entirely (skipCache: true —
+ * see web-extract.ts). A cache hit would return HTML rendered up to 5
+ * minutes earlier stamped with a fresh `provenance.fetched_at`, i.e.
+ * fabricated provenance (six-lens review, HIGH). Because of that, tests
+ * that exercise cache BEHAVIOR (namespace isolation, minHtmlLength
+ * revalidation on hit) call `fetchRenderedHtml`/`fetchPage` directly rather
+ * than through the web-extract executor, which never reads or writes the
+ * cache.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -34,7 +45,7 @@ vi.mock("../lib/url-validator.js", () => ({ validateUrl: vi.fn(async () => {}) }
 
 import { getDirectExecutor } from "./index.js";
 import "./web-extract.js";
-import { fetchRenderedHtml } from "./lib/web-provider.js";
+import { fetchPage, fetchRenderedHtml } from "./lib/web-provider.js";
 
 const RENDERED_HTML = `<html><head><title>Example Domain</title></head><body>${"Real page content. ".repeat(20)}</body></html>`;
 
@@ -109,33 +120,41 @@ describe("web-extract shared resilience", () => {
     expect(result.output.page_title).toBe("Example Domain");
   }, 10000);
 
-  it("serves a repeat render of the same URL from the shared TTL cache — one upstream call for two capability calls (bare fetch had no cache and would call Browserless twice)", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(RENDERED_HTML, { status: 200 }));
+  it("never caches — two identical web-extract calls make two independent Browserless renders (six-lens review, HIGH: a cache hit would fabricate provenance.fetched_at on a live-fetch capability)", async () => {
+    const FIRST_RENDER = `<html><head><title>Example Domain</title></head><body>${"First render. ".repeat(30)}</body></html>`;
+    const SECOND_RENDER = `<html><head><title>Example Domain</title></head><body>${"Second render, different bytes. ".repeat(30)}</body></html>`;
+    fetchMock
+      .mockResolvedValueOnce(new Response(FIRST_RENDER, { status: 200 }))
+      .mockResolvedValueOnce(new Response(SECOND_RENDER, { status: 200 }));
 
     const first = await exec()({
-      url: "https://example.com/cache-test",
+      url: "https://example.com/no-cache-test",
       extract: "headline",
     });
     const second = await exec()({
-      url: "https://example.com/cache-test",
+      url: "https://example.com/no-cache-test",
       extract: "headline",
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // Pre-fix (cache enabled), this would be 1 call and both provenance
+    // timestamps would describe the SAME render — the second one lying
+    // about when its (stale) HTML was actually fetched.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expectBrowserlessContentPost(fetchMock.mock.calls[0]);
-    expect(second.output.page_title).toBe(first.output.page_title);
-    expect(second.output.page_title).toBe("Example Domain");
+    expectBrowserlessContentPost(fetchMock.mock.calls[1]);
+    expect(first.provenance.fetched_at).toBeTruthy();
+    expect(second.provenance.fetched_at).toBeTruthy();
   }, 10000);
 
-  it("keeps the skipFallback cache namespace separate from the fallback-tier namespace — a plain-fetch-warmed entry for the same URL is never read by web-extract (external review finding 1, BLOCKER)", async () => {
+  it("keeps the skipFallback cache namespace separate from the fallback-tier namespace at the shared-layer level (external review finding 1, BLOCKER — driven via direct fetchRenderedHtml calls per six-lens review, since web-extract itself no longer reads/writes cache)", async () => {
     const url = "https://example.com/shared-cache-test";
     const PLAIN_FETCH_HTML = `<html><head><title>Plain Fetch Version</title></head><body>${"Plain-fetch content, definitely not what Browserless would render. ".repeat(
       40,
     )}</body></html>`;
 
-    // Warm the cache via a NON-skipFallback call — this is served by tier 1
-    // (plain fetch through safeFetch, which also goes through the stubbed
-    // global fetch), not Browserless.
+    // Warm the cache via a NON-skipFallback call — served by tier 1 (plain
+    // fetch through safeFetch, which also goes through the stubbed global
+    // fetch), not Browserless. Lands in the "default:networkidle0" namespace.
     fetchMock.mockResolvedValueOnce(
       new Response(PLAIN_FETCH_HTML, {
         status: 200,
@@ -145,22 +164,20 @@ describe("web-extract shared resilience", () => {
     const warmed = await fetchRenderedHtml(url);
     expect(warmed).toContain("Plain Fetch Version");
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    // That one call must NOT have been a Browserless render — confirms the
-    // warm-up really went through the fallback tier, not tier 3.
     expect(String(fetchMock.mock.calls[0][0])).not.toContain("/content");
 
-    // web-extract (skipFallback: true) requests the SAME url. Pre-fix, the
-    // single URL-keyed cache would return the plain-fetch HTML above with
-    // zero further fetch calls — silently violating web-extract's "full
-    // JavaScript rendering" contract. Post-fix, the namespaces are disjoint,
-    // so this must make its own Browserless render.
+    // A skipFallback caller for the SAME url, called directly against the
+    // shared layer (not through web-extract). Pre-fix, the single
+    // URL-keyed cache would return the plain-fetch HTML above with zero
+    // further fetch calls. Post-fix, the namespaces are disjoint, so this
+    // must make its own Browserless render.
     fetchMock.mockResolvedValueOnce(new Response(RENDERED_HTML, { status: 200 }));
-    const result = await exec()({ url, extract: "headline" });
+    const rendered = await fetchRenderedHtml(url, { skipFallback: true, maxRetries: 1 });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expectBrowserlessContentPost(fetchMock.mock.calls[1]);
-    expect(result.output.page_title).toBe("Example Domain");
-    expect(result.output.page_title).not.toBe("Plain Fetch Version");
+    expect(rendered).toContain("Example Domain");
+    expect(rendered).not.toContain("Plain Fetch Version");
   }, 10000);
 
   it("accepts a Browserless render between 50 and 100 bytes — web-extract's pre-existing 50-byte floor is preserved via minHtmlLength, not silently tightened to the shared layer's default of 100 (external review finding 4)", async () => {
@@ -183,6 +200,37 @@ describe("web-extract shared resilience", () => {
     expect(result.output.page_title).toBe("Hi");
   }, 10000);
 
+  it("a cache hit shorter than the caller's minHtmlLength is treated as a miss, not silently handed back (six-lens review, Medium 3)", async () => {
+    const url = "https://example.com/min-length-cache-test";
+    const shortHtml = "<html>short</html>"; // 19 bytes
+
+    // A caller with a loose minHtmlLength (10) renders and caches 19 bytes
+    // under the "skipFallback:networkidle0" namespace.
+    fetchMock.mockResolvedValueOnce(new Response(shortHtml, { status: 200 }));
+    const first = await fetchRenderedHtml(url, {
+      skipFallback: true,
+      maxRetries: 1,
+      minHtmlLength: 10,
+    });
+    expect(first).toBe(shortHtml);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // A second caller in the SAME namespace needs at least 100 bytes. Pre-fix,
+    // getCached() would hand back the 19-byte entry regardless — a value
+    // this caller would have rejected from a live response. Post-fix, the
+    // stale-short hit is treated as a miss and a fresh render happens.
+    fetchMock.mockResolvedValueOnce(new Response(RENDERED_HTML, { status: 200 }));
+    const second = await fetchRenderedHtml(url, {
+      skipFallback: true,
+      maxRetries: 1,
+      minHtmlLength: 100,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expectBrowserlessContentPost(fetchMock.mock.calls[1]);
+    expect(second).toContain("Example Domain");
+  }, 10000);
+
   it("maps a permanent Browserless failure (404) to a structured, human-readable error with no raw response body embedded (bare fetch spliced up to 200 raw chars of the body straight into the thrown message)", async () => {
     const rawErrorBody = `<html><body><h1>Not Found</h1><p>${"filler text ".repeat(30)}</p></body></html>`;
     fetchMock.mockResolvedValueOnce(new Response(rawErrorBody, { status: 404 }));
@@ -201,5 +249,75 @@ describe("web-extract shared resilience", () => {
     expect(message).toMatch(/404/);
     // 404 is not a transient status — the shared layer does not retry it.
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  }, 10000);
+
+  it("sanitizes an uncommon-status error body into a bounded, markup-free detail snippet instead of a diagnostically mute generic message (six-lens review, Medium 2a)", async () => {
+    const markupBody = `<html><body><script>alert(1)</script>Field "url" ${"is invalid, ".repeat(20)}</body></html>\x00\x01control-bytes`;
+    fetchMock.mockResolvedValueOnce(new Response(markupBody, { status: 422 }));
+
+    let message = "";
+    await fetchPage("https://example.com/sanitize-test", {
+      skipFallback: true,
+      maxRetries: 1,
+    }).catch((err: unknown) => {
+      message = err instanceof Error ? err.message : String(err);
+    });
+
+    expect(message).toContain("422");
+    // No script/html tags, no control bytes, survived into the message.
+    expect(message).not.toMatch(/<script|<html|<body|\x00|\x01/);
+    expect(message).toMatch(/Field "url" is invalid/);
+    // Capped length: the message shouldn't just re-embed the entire
+    // (much longer) markupBody unbounded.
+    expect(message.length).toBeLessThan(300);
+  }, 10000);
+
+  it("maps a Browserless net-error (ERR_NAME_NOT_RESOLVED) to a non-retryable message, not the 5xx 'usually transient' framing (six-lens review, Medium 2b)", async () => {
+    const netErrorBody = "net::ERR_NAME_NOT_RESOLVED at https://this-domain-does-not-exist.invalid/";
+    fetchMock.mockResolvedValueOnce(new Response(netErrorBody, { status: 502 }));
+
+    let message = "";
+    await fetchPage("https://example.com/net-error-test", {
+      skipFallback: true,
+      maxRetries: 1,
+    }).catch((err: unknown) => {
+      message = err instanceof Error ? err.message : String(err);
+    });
+
+    expect(message).toMatch(/does not resolve/i);
+    expect(message).toMatch(/retrying will not help/i);
+    expect(message).not.toMatch(/usually transient/i);
+  }, 10000);
+
+  it("maps a Browserless connection-refused net-error to a non-retryable message (six-lens review, Medium 2b)", async () => {
+    const netErrorBody = "net::ERR_CONNECTION_REFUSED";
+    fetchMock.mockResolvedValueOnce(new Response(netErrorBody, { status: 502 }));
+
+    let message = "";
+    await fetchPage("https://example.com/net-error-refused-test", {
+      skipFallback: true,
+      maxRetries: 1,
+    }).catch((err: unknown) => {
+      message = err instanceof Error ? err.message : String(err);
+    });
+
+    expect(message).toMatch(/connection.*refused/i);
+    expect(message).toMatch(/retrying will not help/i);
+    expect(message).not.toMatch(/usually transient/i);
+  }, 10000);
+
+  it("appends 'Retrying will not help.' to the 403 message for consistency with the other permanent-failure statuses (six-lens review, LOW)", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("forbidden", { status: 403 }));
+
+    let message = "";
+    await fetchPage("https://example.com/forbidden-test", {
+      skipFallback: true,
+      maxRetries: 1,
+    }).catch((err: unknown) => {
+      message = err instanceof Error ? err.message : String(err);
+    });
+
+    expect(message).toMatch(/403/);
+    expect(message).toMatch(/Retrying will not help\./);
   }, 10000);
 });

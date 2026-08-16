@@ -162,8 +162,51 @@ function isTransient(status: number): boolean {
   return status === 408 || status === 429 || status >= 500;
 }
 
+/**
+ * Strip markup and control characters from an upstream error body and cap
+ * its length, so it's safe to splice into a user-facing message — no raw
+ * HTML/script tags, no ANSI/control bytes, bounded size. Six-lens review
+ * finding Medium 2a (2026-08-16): uncommon statuses (400/405/413/422…) had
+ * no dedicated branch and fell through to a diagnostically mute generic
+ * message. Returns "" when nothing useful survives sanitization.
+ */
+function sanitizeDetail(bodyText: string, maxLen = 120): string {
+  const stripped = bodyText
+    .replace(/<[^>]*>/g, " ")
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x1F\x7F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!stripped) return "";
+  return stripped.length > maxLen ? `${stripped.slice(0, maxLen)}…` : stripped;
+}
+
+/**
+ * Chrome/Browserless navigation-level net errors embedded in the response
+ * body — Browserless wraps these in a 5xx HTTP status when Chrome itself
+ * fails to navigate (DNS doesn't resolve, TCP connection refused, TLS cert
+ * invalid), which is a different failure class from "the target's server
+ * errored" and is NOT transient. Six-lens review finding Medium 2b
+ * (2026-08-16): these were getting the 5xx branch's "usually transient —
+ * try again" advice, which is actively wrong for a domain that will never
+ * resolve. Returns null when no known net-error pattern matches.
+ */
+function netErrorMessage(bodyText: string, domain: string): string | null {
+  if (/ERR_NAME_NOT_RESOLVED/.test(bodyText)) {
+    return `The domain${domain} does not resolve. This is a permanent failure — retrying will not help.`;
+  }
+  if (/ERR_CONNECTION_REFUSED/.test(bodyText)) {
+    return `The connection to the target site${domain} was refused. This is a permanent failure — retrying will not help.`;
+  }
+  const certMatch = bodyText.match(/ERR_CERT_[A-Z_]+/);
+  if (certMatch) {
+    return `The target site${domain}'s TLS certificate is invalid (${certMatch[0]}). This is a permanent failure — retrying will not help.`;
+  }
+  return null;
+}
+
 /** Map a non-OK Browserless response status into an honest, actionable message. */
-function humanizeBrowserlessStatus(status: number, targetUrl: string): string {
+function humanizeBrowserlessStatus(status: number, targetUrl: string, bodyText = ""): string {
   let hostname = "";
   try { hostname = new URL(targetUrl).hostname; } catch { /* ignore */ }
   const domain = hostname ? ` (${hostname})` : "";
@@ -184,12 +227,15 @@ function humanizeBrowserlessStatus(status: number, targetUrl: string): string {
     return `This page requires authentication (HTTP ${status})${domain}. Only publicly available pages can be scraped.`;
   }
   if (status === 403) {
-    return `The site${domain} blocks automated access (HTTP 403 Forbidden). This is bot protection on the target site, not a Strale issue.`;
+    return `The site${domain} blocks automated access (HTTP 403 Forbidden). This is bot protection on the target site, not a Strale issue. Retrying will not help.`;
   }
   if (status >= 500) {
+    const netErr = netErrorMessage(bodyText, domain);
+    if (netErr) return netErr;
     return `The target site${domain} returned a server error (HTTP ${status}). This is usually transient — try again in a few minutes.`;
   }
-  return `The web page${domain} could not be loaded (HTTP ${status}).`;
+  const detail = sanitizeDetail(bodyText);
+  return `The web page${domain} could not be loaded (HTTP ${status}).${detail ? ` ${detail}` : ""}`;
 }
 
 function backoffMs(attempt: number): number {
@@ -264,7 +310,16 @@ export async function fetchPage(
   // Check cache first (before acquiring browser slot)
   if (!skipCache) {
     const cached = getCached(renderMode, targetUrl);
-    if (cached) {
+    // Six-lens review finding Medium 3 (2026-08-16): a cache entry is
+    // written under whatever minHtmlLength the writer used, but a later
+    // caller in the same namespace with a stricter minHtmlLength has no
+    // guarantee the cached HTML actually clears ITS bar — getCached()
+    // returns whatever was stored regardless of length. Treat a
+    // too-short hit as a miss and fall through to a fresh fetch rather
+    // than silently handing back HTML this caller would have rejected
+    // from a live response. The stale-short entry is left in place —
+    // another caller with a looser minHtmlLength may still want it.
+    if (cached && cached.length >= minHtmlLength) {
       return { html: cached, cached: true, fetchTimeMs: 0, attempt: 0 };
     }
   }
@@ -426,7 +481,7 @@ export async function fetchPage(
             );
             continue;
           }
-          const humanMsg = humanizeBrowserlessStatus(response.status, targetUrl);
+          const humanMsg = humanizeBrowserlessStatus(response.status, targetUrl, errText);
           throw new Error(humanMsg);
         }
 

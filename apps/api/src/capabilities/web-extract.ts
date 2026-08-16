@@ -38,15 +38,15 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
   }
 
   // Step 1: Render page via the shared web-provider layer (lib/web-provider.ts)
-  // — retry with exponential backoff, a 5-minute response cache, and a
-  // concurrency limiter on top of Browserless, the same resilience the other
-  // 47+ Browserless-backed capabilities get. web-extract's output contract
-  // promises full JavaScript rendering (manifest: "Handles SPAs, dynamic
-  // content, and pages that require JS to load", data_source: "Headless
-  // browser rendering via Browserless.io"), so skipFallback bypasses
-  // web-provider's plain-fetch and Jina Reader tiers — neither runs the
-  // page's JS, and Jina reformats the document, which would silently change
-  // both the extracted content and the <title> this capability parses out.
+  // — retry with exponential backoff and a concurrency limiter on top of
+  // Browserless, the same resilience the other 47+ Browserless-backed
+  // capabilities get. web-extract's output contract promises full
+  // JavaScript rendering (manifest: "Handles SPAs, dynamic content, and
+  // pages that require JS to load", data_source: "Headless browser
+  // rendering via Browserless.io"), so skipFallback bypasses web-provider's
+  // plain-fetch and Jina Reader tiers — neither runs the page's JS, and
+  // Jina reformats the document, which would silently change both the
+  // extracted content and the <title> this capability parses out.
   // waitUntil/pageTimeout/fetchTimeout reproduce the previous bare-fetch call
   // exactly (networkidle0, 25s nav timeout, 35s outer budget).
   // minHtmlLength: 50 reproduces web-extract's own pre-existing threshold —
@@ -54,12 +54,26 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
   // (external review finding, 2026-08-16). The redundant local length guard
   // right below is kept as a defense-in-depth backstop, not the enforcement
   // point.
+  // skipCache: true — this capability's manifest declares
+  // freshness_category: live-fetch and stamps provenance.fetched_at at
+  // return time unconditionally. A cache hit would return HTML rendered up
+  // to 5 minutes earlier stamped with a fresh timestamp — fabricated
+  // provenance on every repeat call within the TTL (six-lens review,
+  // HIGH, 2026-08-16). The retry/backoff resilience is the value of this
+  // whole change, not the cache, so this capability opts out of caching
+  // entirely rather than reconciling the timestamp with cache age.
+  // maxRetries: 2 (one retry, matching the shared default — see the
+  // "maxRetries" note in the fix report for why this is 2, not 1) bounds
+  // the Browserless leg's worst case at 2 attempts × 35s fetchTimeout +
+  // ~1-1.5s backoff between ≈ 71.5s.
   let html = await fetchRenderedHtml(url, {
     waitUntil: "networkidle0",
     pageTimeout: 25000,
     fetchTimeout: 35000,
     skipFallback: true,
     minHtmlLength: 50,
+    skipCache: true,
+    maxRetries: 2,
   });
 
   if (!html || html.length < 50) {
