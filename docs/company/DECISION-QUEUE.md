@@ -26,6 +26,29 @@ affected — no other work depends on this.
 *Worth it?* Mexico is a large market but no customer has asked for it yet. Low
 urgency. I'd do it when you happen to have a spare ten minutes, not before.
 
+**DQ-6** · `your_call` · owner Petter · raised 2026-08-16T07:00Z · no deadline
+A supplier contract has been sitting unsigned since May, and it is holding ten
+European country lookups off the shelf.
+*What this is:* We buy company data for a batch of European countries from one
+supplier, Openapi. They sent a resale addendum in May (their case 151296) that
+needs your countersignature before we are allowed to serve their data to
+customers. Until it is signed, the code refuses every call by design — Italy,
+Austria, Bulgaria, Cyprus, Romania, Portugal, Netherlands, Hungary, Luxembourg
+and Malta all sit dark.
+*What was blocking it:* the addendum was waiting on a VAT confirmation from
+Skatteverket for Moonlighter AB. Three months on, I don't know whether that
+came back — that's the part only you can check.
+*Why it is yours:* signing a supplier agreement legally binds the company. I
+don't sign things on your behalf, and I don't contact vendors as the company.
+*If you do nothing:* those ten countries stay unavailable indefinitely. Nothing
+breaks — customers simply cannot buy them, and we keep building around the gap.
+*Worth it?* It is the single largest blocked chunk of catalogue we have, and the
+work is already built and paid for. Against that: no customer has asked for
+these countries yet, so it is worth an hour, not a week.
+*Related:* I closed a three-month-old code change today (PR #135, Italian
+directors) that was waiting on this same signature. Nothing lost — it comes back
+when the addendum does.
+
 ## DECIDED — visible so you can reverse them
 
 **DQ-1** · `decided` · owner Claude · 2026-08-15
@@ -58,3 +81,32 @@ returning errors to anyone who tried it. No customer had used it in a month.
 *How you'd reverse it:* Get a fresh key from CourtListener and I'll switch it back on.
 
 **DQ-5** · closed 2026-08-15 — filed here by mistake. It was a task, not a decision.
+
+**DQ-7** · `decided` · owner Claude · 2026-08-16
+Built the missing machinery that puts a service back on the shelf once it has
+proved itself, and left it switched off until I have watched it for a day.
+*What this is:* We had automation that takes a service off the menu when it
+starts failing, and nothing that ever puts one back. So anything taken down, or
+launched quietly for testing, stayed invisible forever. Five services launched
+this week are in exactly that position.
+*Why it is mine:* switching services on and off is my call under the charter.
+*What I did:* wrote the counterpart automation, had it reviewed by the other AI
+provider, and shipped it in "watch only" mode — it records what it would do
+without doing it. I will read a day of that record and then switch it on.
+*The thing it found:* it would have put three services back that our own tests
+score at 100% but that real paying customers fail 39–59% of the time. It now
+refuses to overrule a takedown. That gap between our tests and reality is the
+real problem and it is the top item for the next session.
+*How you'd reverse it:* tell me to leave it in watch-only mode permanently, or
+to delete it.
+
+**DQ-8** · `decided` · owner Claude · 2026-08-16
+Cleared out ten dead code branches, keeping everything of value.
+*What this is:* 96 abandoned branches had accumulated. I went through the ten
+oldest: four were already merged or deliberately abandoned and were deleted;
+five held research notes that existed nowhere else, so I published the notes to
+the main line first and then deleted the branches; one holds real unfinished
+work and stays. Every deleted branch's identifier is recorded so nothing is
+unrecoverable.
+*How you'd reverse it:* any deleted branch can be restored from the identifiers
+in today's handoff.
