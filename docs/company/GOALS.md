@@ -39,6 +39,25 @@ conversion.
   refusal. Measure whether it moves.
 - **x402 buyers buy utility primitives** (google-search, email-validate,
   keyword-suggest, translate), not the KYB wedge. Follow the money.
+- **All revenue is one cluster — SEO and growth research.** Measured 2026-08-16:
+  €129.09 over 30 days, which is half of the last 90 days' €252.73, so it is
+  accelerating. The six biggest earners (`google-search`, `serp-analyze`,
+  `email-validate`, `email-deliverability-check`, `brand-mention-search`,
+  `keyword-suggest`) had **zero** failures. Of 98 active bundles exactly one is
+  still selling — `lead-email-verify`, 60 sales, €0.20 — and it is a growth
+  bundle; the €2.50 compliance bundles sold in April and stopped. Bundling
+  raises revenue per call ~6.7× (`email-validate` €11.01/368 calls vs
+  `lead-email-verify` €12.00/60).
+- **Asked and answered, do not re-raise:** whether to re-point the company at
+  SEO/growth and stop investing in compliance. Petter said **no** on 2026-08-16
+  (DQ-9). Positioning is unchanged and compliance keeps its investment. The
+  growth bundles are being built regardless — that was never part of the
+  question. A future session reading the revenue table will reach the same
+  conclusion I did; it has been put to him already.
+- **Bundles that sell are cheap and narrow.** €0.20 is the only proven price.
+  Everything at €0.27 and above has sold ≤4 times; `competitor-snapshot` at
+  €1.54 has never sold. One question, three cheap steps, ~1.8× markup over
+  parts.
 - **Distinct-payer count is not yet measurable.** `x402_payer_hash` shipped
   2026-08-15; as of that date it holds **1 hash / 2 calls / €0.06** — that is
   the age of the instrument, not the size of the customer base. Any dashboard
