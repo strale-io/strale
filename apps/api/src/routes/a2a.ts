@@ -289,6 +289,19 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
         "Gate an inbound x402 buyer before delivering service",
         "Verify a DeFi protocol's audit history and recent exploits",
       ],
+      // Every other entry on this card carries a price and a callable target.
+      // This one carried neither, so an agent parsing the card learned the
+      // product exists and had no way to act on it — a brochure on a machine
+      // surface. There is genuinely no price to quote: the route is
+      // auth-gated and takes no payment (app.ts mounts it at
+      // /v1/web3-assurance behind authMiddleware, with no wallet debit), so
+      // the card says that rather than implying a pay-per-call rail it does
+      // not have.
+      endpoint: `${PUBLIC_API_BASE}/v1/web3-assurance`,
+      mcp_tool: "strale_web3_assurance",
+      price_cents: 0,
+      currency: "EUR",
+      access: "api_key",
     },
   ];
 
