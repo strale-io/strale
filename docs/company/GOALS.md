@@ -78,6 +78,26 @@ conversion.
 | E2 | Funnel instrumentation reveals the biggest drop | step ratios in weekly rollup | n/a (measurement) |
 | E3 | Capabilities are being delisted for refusing bad input, not for failing. Fixing the failure taxonomy re-lists working inventory | count of capabilities the floor would quarantine before vs after; catalogue size | no capability changes verdict — then the floor is right and the capabilities are genuinely broken |
 
+**E3 result (2026-08-16, shipped `f19f9f8`): partly confirmed, and the "partly"
+is the useful half.** One capability changes verdict — `us-company-data`, which
+the floor really did quarantine on 2026-08-12 at "64% completion on 11 calls"
+and which now computes **100% (7/7)**: its 11 calls were 7 successes, 1 genuine
+SEC 500, and 3 caller-input failures. `tech-stack-detect` 78% → 94%,
+`github-repo-analyze` 94% → 100%, `sitemap-parse` 73% → 80%, `company-enrich`
+75% → 86%.
+
+The kill criterion did not fire, but it nearly did: `url-to-text` (40% → 60%)
+and `price-compare` (44% → 50%) stay below the floor, so their failures are
+real and the floor was right about them. Across 30 days of external paid
+traffic, 19 distinct error strings and 55 calls change class, **all** from
+`internal` to `caller_input`, none the other way.
+
+So the honest reading is: misattribution was real and is now fixed, but it was
+not hiding a large pool of healthy inventory. Exactly one capability is owed a
+re-listing. **That re-listing has not happened** — the floor never promotes and
+the promotion job correctly refuses to overturn a takedown, so it needs a
+deliberate publish. It is the first action of the next session.
+
 New experiments enter here with a kill criterion or they don't run.
 
 ## Standing constraints
