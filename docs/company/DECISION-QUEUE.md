@@ -14,33 +14,42 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-3** · `your_call` · owner Petter · raised 2026-08-15 · **token received, not working**
-The Mexico token you sent does not authenticate. One thing to check at INEGI.
-*Where it stands:* Token `d7cd…078d` received 2026-08-15 and stored in the local
-environment. It reaches INEGI — an incorrectly-shaped query returns a proper
-parameter error, which proves the request arrives — but every correctly-shaped
-query returns a malformed `HTTP/1.1 000` status line. Confirmed with two
-independent HTTP clients, so this is INEGI's server answering, not our network.
-Parameter validation runs before the token check, which is why the wrong shape
-looked more promising than the right one.
-*Most likely cause:* the token needs an activation step, or the copy is
-incomplete. INEGI mails the token; some issuances also mail a confirmation link.
-*What would help:* check the INEGI email for an activation link, and confirm the
-token in the mail matches character-for-character. If it does and it still
-fails, the token may need reissuing at
-https://www.inegi.org.mx/app/desarrolladores/generatoken/Usuarios/token_Verify
-*Why the build stopped:* the onboarding protocol requires a verified
-known-answer test against a real response. I have never seen this API return
-data, so writing an executor and a manifest around it would produce a capability
-that has never been tested against the thing it claims to query. Once one query
-answers, the build is roughly half an hour — the API shapes are already
-established below.
-*Established and ready to use:*
+**DQ-3** · `decided` · owner Claude · 2026-08-16 — **diagnosed, and parked on the evidence**
+The token works. I sent Petter to the wrong registration, and separately the
+build is not worth doing.
+
+*What happened:* The DENUE documentation links its own registration behind a
+link I could not retrieve, so I substituted a generic INEGI developer token page.
+That page issues tokens for the **Indicadores** API — statistics, not the
+business directory. Petter's token is entirely valid: it returns HTTP 200 and
+real data from Indicadores (Mexico's 2020 population, 126,014,024). It returns a
+malformed `HTTP/1.1 000` from DENUE because DENUE is a different service needing
+its own token. My earlier advice — check for an activation link, verify the
+characters — would never have found this, because nothing was wrong with the
+token.
+
+*Why we are not simply registering again:* the evidence says do not build it.
+Zero requests mentioning Mexico in 180 days. We already run 17 company-data
+capabilities and they earned **€2.15 from external customers over 90 days**,
+while our one paying customer — who spends ~€35/week — has never made a single
+company-data call. Mexico would not be the eighteenth capability in a growing
+line; it would be the eighteenth in a line that does not sell.
+
+*What replaces it:* the x402 unmet-demand capture shipped 2026-08-15 records
+every paying agent that asks for a slug we do not have. If anyone asks for
+Mexican company data, it lands in `failed_requests` tagged `x402_unknown_slug`
+and this decision reverses itself on evidence rather than on a spare token.
+
+*If it is ever revived*, the DENUE method shapes are established and the build is
+about half an hour:
 - base `https://www.inegi.org.mx/app/api/denue/v1/consulta/`
-- by name: `Nombre/{name}/{entity}/{start}/{end}/{token}` — entity `00` is nationwide
-- by id: `Ficha/{id}/{token}`
-- nearby: `Buscar/{term}/{lat},{lon}/{metres}/{token}`
-- the token is always the final path segment
+- by name: `Nombre/{name}/{entity}/{start}/{end}/{token}` — entity `00` nationwide
+- by id: `Ficha/{id}/{token}` · nearby: `Buscar/{term}/{lat},{lon}/{metres}/{token}`
+- token is always the final path segment; a DENUE-specific token is required
+
+*Footnote worth keeping:* the Indicadores token is live and unused. Mexican
+statistical indicators are a different product from a company registry, and
+nobody has asked for those either — so it stays unused unless demand appears.
 
 ## DECIDED — visible so you can reverse them
 
