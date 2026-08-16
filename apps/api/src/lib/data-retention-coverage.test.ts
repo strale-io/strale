@@ -47,10 +47,17 @@ describe("the sweep sees every transaction", () => {
     expect(customerContentPurge()).not.toMatch(/JOIN\s+capabilities/i);
   });
 
-  it("redacts every column that can carry customer content", () => {
-    const sweep = customerContentPurge();
+  it("clears the canonical column list rather than a copy of it", async () => {
+    // The column names live in lib/customer-content.ts so that "where does
+    // customer data live?" is a question you can ask instead of one you have
+    // to remember — remembering it wrongly is what left a marker unfound in
+    // `transactions.input` on 2026-08-15. The sweep must consume that list;
+    // restating it here would let the two drift, and one path would then
+    // redact less than the other without any test noticing.
+    const { CUSTOMER_CONTENT_COLUMN_NAMES } = await import("./customer-content.js");
+    expect(customerContentPurge()).toContain("CUSTOMER_CONTENT_CLEAR_SQL");
     for (const col of ["input", "output", "error", "audit_trail", "provenance"]) {
-      expect(sweep, `${col} must be cleared`).toMatch(new RegExp(`${col}\\s*=`));
+      expect(CUSTOMER_CONTENT_COLUMN_NAMES, `${col} must be on the list`).toContain(col);
     }
   });
 });

@@ -48,18 +48,32 @@ vi.mock("../db/index.js", () => ({
       const q = query as { queryChunks?: unknown[] };
       const params: unknown[] = [];
       const strings: string[] = [];
-      for (const chunk of q.queryChunks ?? []) {
-        const isStringChunk =
-          chunk !== null &&
-          typeof chunk === "object" &&
-          Array.isArray((chunk as { value?: unknown }).value) &&
-          ((chunk as { value: unknown[] }).value).every((x) => typeof x === "string");
-        if (isStringChunk) {
-          strings.push(((chunk as { value: string[] }).value).join(""));
-        } else {
-          params.push(chunk);
+      // Recurses into nested SQL fragments. A composed fragment (sql.raw or a
+      // shared clause interpolated with ${}) is itself an object carrying its
+      // own queryChunks — the flat walk classified those as bind parameters
+      // and dropped their text, so a shared clause looked like an empty SET.
+      // Verified against drizzle's own PgDialect: the statement Postgres
+      // receives does contain the clause. A harness that cannot see composed
+      // SQL will both fail correct code and, worse, pass code whose composed
+      // fragment is wrong.
+      const walk = (chunks: unknown[]): void => {
+        for (const chunk of chunks) {
+          const isStringChunk =
+            chunk !== null &&
+            typeof chunk === "object" &&
+            Array.isArray((chunk as { value?: unknown }).value) &&
+            ((chunk as { value: unknown[] }).value).every((x) => typeof x === "string");
+          const nested = (chunk as { queryChunks?: unknown[] } | null)?.queryChunks;
+          if (isStringChunk) {
+            strings.push(((chunk as { value: string[] }).value).join(""));
+          } else if (Array.isArray(nested)) {
+            walk(nested);
+          } else {
+            params.push(chunk);
+          }
         }
-      }
+      };
+      walk(q.queryChunks ?? []);
       captured.push({ strings, params });
       // rowCount 0 ends the batching loop on the first pass.
       return Promise.resolve({ rowCount: 0 });
