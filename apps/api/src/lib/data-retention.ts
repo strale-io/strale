@@ -247,7 +247,22 @@ async function purgeHealthMonitorEvents(cutoff: Date): Promise<number> {
  * — prove what happened, do not re-derive what was said.
  *
  * DEC-20260504-B re-audit for the widened window, 2026-08-15: 3,032 rows /
- * ~9.6 MB of payload on the first run, 0 on legal hold. Strategy: SELF-THROTTLE
+ * ~9.6 MB of payload on the first run, 0 on legal hold.
+ *
+ * **That estimate was wrong by roughly sixty-fold, and production is the
+ * record.** The first sweep after the `.count` fix redacted **173,000 rows**
+ * in a day, with ~8,000 still queued. The 2026-08-12 audit of the *narrower*
+ * selector had said 57,345 — and a widened selector is a strict superset, so
+ * 3,032 could never have been right. The contradiction was flagged in review
+ * and waved through, because the smaller number was the more convenient one.
+ * MAX_BATCHES_PER_RUN is what made the miss survivable: it capped each run at
+ * 50,000 rows regardless of how wrong the estimate was.
+ *
+ * The lesson for the next DEC-20260504-B audit: when two measurements of
+ * nested populations disagree in the wrong direction, the superset is not the
+ * smaller one — re-measure before choosing a deploy strategy.
+ *
+ * Strategy: SELF-THROTTLE
  * — BATCH_SIZE rows per statement, BATCH_DELAY_MS between statements, and
  * MAX_BATCHES_PER_RUN as the per-invocation ceiling. (An earlier version of
  * this note said the batch loop "bounds each tick to 1000 rows". It did not:

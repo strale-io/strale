@@ -30,7 +30,24 @@ import { getDb } from "../db/index.js";
 import { logWarn } from "./log.js";
 import { saltedIpHash } from "./attribution.js";
 
-export type X402MissKind = "x402_unknown_slug" | "x402_bad_input";
+/**
+ * `x402_unknown_slug` — we do not sell this at all. A build signal.
+ * `x402_not_on_rail`  — we sell it, just not for USDC. A pricing/rail signal,
+ *                       and emphatically NOT a request to build anything.
+ * `x402_bad_input`    — we sell it and the caller could not use it.
+ *
+ * The middle kind exists because production disagreed with the first
+ * measurement. After the agent card stopped advertising unservable endpoints
+ * (2026-08-16), the misses did not stop — 202 in 24 hours, and **every single
+ * missed slug was a real capability or solution of ours**, probed by third-
+ * party discovery crawlers (hermes-contact-discovery, 402explorer,
+ * x402-observer, vale-census-probe and friends) walking our public catalogue,
+ * which lists everything regardless of rail. Filed under "unknown slug", those
+ * would have read as overwhelming demand for things we already sell, and a
+ * build queue reading this table would have been steered by a crawler's
+ * enumeration order.
+ */
+export type X402MissKind = "x402_unknown_slug" | "x402_not_on_rail" | "x402_bad_input";
 
 export interface X402MissContext {
   /** What they asked for — the slug from the URL, even if we have no such thing. */
