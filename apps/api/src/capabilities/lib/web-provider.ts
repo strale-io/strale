@@ -163,35 +163,38 @@ function isTransient(status: number): boolean {
 }
 
 /**
- * Strip markup and control characters from an upstream error body and cap
- * its length, so it's safe to splice into a user-facing message — no raw
- * HTML/script tags, no ANSI/control bytes, bounded size. Six-lens review
- * finding Medium 2a (2026-08-16): uncommon statuses (400/405/413/422…) had
- * no dedicated branch and fell through to a diagnostically mute generic
- * message. Returns "" when nothing useful survives sanitization.
+ * Chrome/Browserless navigation-level net-error patterns embedded in a
+ * response body — Browserless wraps these in a 5xx HTTP status when Chrome
+ * itself fails to navigate (DNS doesn't resolve, TCP connection refused,
+ * TLS cert invalid). This is a different failure class from "the target's
+ * server errored", and it is NOT transient: retrying does not change DNS
+ * resolution, TCP refusal, or a broken certificate.
+ *
+ * Shared between the retry-decision site in the Browserless loop below
+ * (skip the retry — classify immediately) and netErrorMessage() (construct
+ * the user-facing message), so the two can never drift out of sync: a
+ * six-lens review round (2026-08-16) flagged that the message said
+ * "retrying will not help" while the code retried once anyway.
  */
-function sanitizeDetail(bodyText: string, maxLen = 120): string {
-  const stripped = bodyText
-    .replace(/<[^>]*>/g, " ")
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\x00-\x1F\x7F]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!stripped) return "";
-  return stripped.length > maxLen ? `${stripped.slice(0, maxLen)}…` : stripped;
+function isPermanentNetError(bodyText: string): boolean {
+  return (
+    /ERR_NAME_NOT_RESOLVED/.test(bodyText) ||
+    /ERR_CONNECTION_REFUSED/.test(bodyText) ||
+    /ERR_CERT_[A-Z_]+/.test(bodyText)
+  );
 }
 
 /**
- * Chrome/Browserless navigation-level net errors embedded in the response
- * body — Browserless wraps these in a 5xx HTTP status when Chrome itself
- * fails to navigate (DNS doesn't resolve, TCP connection refused, TLS cert
- * invalid), which is a different failure class from "the target's server
- * errored" and is NOT transient. Six-lens review finding Medium 2b
- * (2026-08-16): these were getting the 5xx branch's "usually transient —
- * try again" advice, which is actively wrong for a domain that will never
- * resolve. Returns null when no known net-error pattern matches.
+ * Build the permanent-failure message for a body matched by
+ * isPermanentNetError(). Six-lens review finding Medium 2b (2026-08-16):
+ * these were getting the 5xx branch's "usually transient — try again"
+ * advice, which is actively wrong for a domain that will never resolve.
+ * Returns null when no known net-error pattern matches. Fixed strings only
+ * — no upstream bytes are echoed into the message (the ERR_CERT_* match is
+ * itself a fixed, narrow token pattern, not free text from the body).
  */
 function netErrorMessage(bodyText: string, domain: string): string | null {
+  if (!isPermanentNetError(bodyText)) return null;
   if (/ERR_NAME_NOT_RESOLVED/.test(bodyText)) {
     return `The domain${domain} does not resolve. This is a permanent failure — retrying will not help.`;
   }
@@ -234,8 +237,13 @@ function humanizeBrowserlessStatus(status: number, targetUrl: string, bodyText =
     if (netErr) return netErr;
     return `The target site${domain} returned a server error (HTTP ${status}). This is usually transient — try again in a few minutes.`;
   }
-  const detail = sanitizeDetail(bodyText);
-  return `The web page${domain} could not be loaded (HTTP ${status}).${detail ? ` ${detail}` : ""}`;
+  // Six-lens review finding HIGH (2026-08-16, round 3): a prior version of
+  // this branch appended a sanitized snippet of the upstream response body
+  // to this message. A denylist sanitizer (strip markup/control chars)
+  // cannot be made secret-safe — a token, signed URL, or credential in a
+  // Browserless error body would survive markup-stripping untouched. Fixed
+  // string, HTTP status only. No upstream bytes reach the caller here.
+  return `The web page${domain} could not be loaded (HTTP ${status}).`;
 }
 
 function backoffMs(attempt: number): number {
@@ -475,7 +483,20 @@ export async function fetchPage(
 
         if (!response.ok) {
           const errText = await response.text().catch(() => "");
-          if (isTransient(response.status) && attempt < maxRetries - 1) {
+          // Six-lens review finding Medium (2026-08-16, round 3): a
+          // Chrome/Browserless net-error (DNS doesn't resolve, connection
+          // refused, bad cert) arrives wrapped in a 5xx/408/429 status that
+          // isTransient() would otherwise retry — making the resulting
+          // "retrying will not help" message a lie for the one internal
+          // retry's worth of time it takes to find that out.
+          // isPermanentNetError() gates the retry decision on the SAME
+          // patterns netErrorMessage() uses to build that message, so
+          // "classified transient" and "worded as permanent" can't diverge.
+          if (
+            isTransient(response.status) &&
+            !isPermanentNetError(errText) &&
+            attempt < maxRetries - 1
+          ) {
             lastError = new Error(
               `Browserless HTTP ${response.status}: ${errText.slice(0, 200)}`,
             );

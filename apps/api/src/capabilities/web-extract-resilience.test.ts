@@ -251,12 +251,14 @@ describe("web-extract shared resilience", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   }, 10000);
 
-  it("sanitizes an uncommon-status error body into a bounded, markup-free detail snippet instead of a diagnostically mute generic message (six-lens review, Medium 2a)", async () => {
-    const markupBody = `<html><body><script>alert(1)</script>Field "url" ${"is invalid, ".repeat(20)}</body></html>\x00\x01control-bytes`;
-    fetchMock.mockResolvedValueOnce(new Response(markupBody, { status: 422 }));
+  it("the generic-status branch never echoes upstream body content into the message — no secrets/tokens/markup can leak (six-lens review, HIGH, round 3: a denylist sanitizer cannot be made secret-safe, so the appended-detail approach was removed entirely)", async () => {
+    const bodyWithSecrets =
+      `<html><body><script>alert(1)</script>Bearer sk_live_FAKESECRETTOKEN1234 ` +
+      `signed_url=https://internal.example/secret?token=abc123 ${"padding ".repeat(20)}</body></html>`;
+    fetchMock.mockResolvedValueOnce(new Response(bodyWithSecrets, { status: 422 }));
 
     let message = "";
-    await fetchPage("https://example.com/sanitize-test", {
+    await fetchPage("https://example.com/no-body-leak-test", {
       skipFallback: true,
       maxRetries: 1,
     }).catch((err: unknown) => {
@@ -264,46 +266,113 @@ describe("web-extract shared resilience", () => {
     });
 
     expect(message).toContain("422");
-    // No script/html tags, no control bytes, survived into the message.
-    expect(message).not.toMatch(/<script|<html|<body|\x00|\x01/);
-    expect(message).toMatch(/Field "url" is invalid/);
-    // Capped length: the message shouldn't just re-embed the entire
-    // (much longer) markupBody unbounded.
-    expect(message.length).toBeLessThan(300);
+    // Fixed string, status only — none of the upstream body survives.
+    expect(message).not.toMatch(/sk_live_FAKESECRETTOKEN1234/);
+    expect(message).not.toMatch(/internal\.example/);
+    expect(message).not.toMatch(/token=abc123/);
+    expect(message).not.toMatch(/<script|<html|<body|padding/i);
   }, 10000);
 
-  it("maps a Browserless net-error (ERR_NAME_NOT_RESOLVED) to a non-retryable message, not the 5xx 'usually transient' framing (six-lens review, Medium 2b)", async () => {
+  it("pins the retry count to exactly maxRetries attempts — two failing transient (non-net-error) responses make exactly 2 calls then throw (six-lens review, LOW coverage gap a)", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response("server error 1", { status: 500 }))
+      .mockResolvedValueOnce(new Response("server error 2", { status: 500 }));
+
+    let message = "";
+    await fetchPage("https://example.com/two-attempts-pin-test", {
+      skipFallback: true,
+      // default maxRetries = 2
+    }).catch((err: unknown) => {
+      message = err instanceof Error ? err.message : String(err);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(message).toMatch(/HTTP 500/);
+    expect(message).toMatch(/usually transient/i);
+  }, 10000);
+
+  it("maps a Browserless net-error (ERR_NAME_NOT_RESOLVED) to a non-retryable message with exactly 1 call, not the 5xx 'usually transient' framing (six-lens review, Medium 2b + retry-site fix)", async () => {
     const netErrorBody = "net::ERR_NAME_NOT_RESOLVED at https://this-domain-does-not-exist.invalid/";
     fetchMock.mockResolvedValueOnce(new Response(netErrorBody, { status: 502 }));
 
     let message = "";
     await fetchPage("https://example.com/net-error-test", {
       skipFallback: true,
-      maxRetries: 1,
+      // default maxRetries = 2 — proves the net-error short-circuits the
+      // retry budget rather than merely being the only attempt available.
     }).catch((err: unknown) => {
       message = err instanceof Error ? err.message : String(err);
     });
 
+    // Retrying was NOT attempted, even though the retry budget allowed it —
+    // this is what makes "retrying will not help" true.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(message).toMatch(/does not resolve/i);
     expect(message).toMatch(/retrying will not help/i);
     expect(message).not.toMatch(/usually transient/i);
   }, 10000);
 
-  it("maps a Browserless connection-refused net-error to a non-retryable message (six-lens review, Medium 2b)", async () => {
+  it("maps a Browserless connection-refused net-error to a non-retryable message with exactly 1 call (six-lens review, Medium 2b + retry-site fix)", async () => {
     const netErrorBody = "net::ERR_CONNECTION_REFUSED";
     fetchMock.mockResolvedValueOnce(new Response(netErrorBody, { status: 502 }));
 
     let message = "";
     await fetchPage("https://example.com/net-error-refused-test", {
       skipFallback: true,
-      maxRetries: 1,
+      // default maxRetries = 2
     }).catch((err: unknown) => {
       message = err instanceof Error ? err.message : String(err);
     });
 
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(message).toMatch(/connection.*refused/i);
     expect(message).toMatch(/retrying will not help/i);
     expect(message).not.toMatch(/usually transient/i);
+  }, 10000);
+
+  it("maps a Browserless TLS-certificate net-error to the permanent (non-retryable) path with exactly 1 call (six-lens review, LOW coverage gap b)", async () => {
+    const certErrorBody = "net::ERR_CERT_AUTHORITY_INVALID";
+    fetchMock.mockResolvedValueOnce(new Response(certErrorBody, { status: 502 }));
+
+    let message = "";
+    await fetchPage("https://example.com/cert-error-test", {
+      skipFallback: true,
+      // default maxRetries = 2
+    }).catch((err: unknown) => {
+      message = err instanceof Error ? err.message : String(err);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(message).toMatch(/TLS certificate is invalid/i);
+    expect(message).toMatch(/ERR_CERT_AUTHORITY_INVALID/);
+    expect(message).toMatch(/retrying will not help/i);
+    expect(message).not.toMatch(/usually transient/i);
+  }, 10000);
+
+  it("a subsequent non-skipFallback fetchPage call for the same URL still fetches fresh after two web-extract calls (six-lens review, LOW coverage gap c — confirms nothing about web-extract's skipCache change corrupted the shared cache's normal operation for other callers)", async () => {
+    const url = "https://example.com/no-cache-writeback-test";
+
+    fetchMock
+      .mockResolvedValueOnce(new Response(RENDERED_HTML, { status: 200 })) // web-extract call 1
+      .mockResolvedValueOnce(new Response(RENDERED_HTML, { status: 200 })); // web-extract call 2
+
+    await exec()({ url, extract: "headline" });
+    await exec()({ url, extract: "headline" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // A plain (non-skipFallback, default networkidle0) caller for the SAME
+    // url — a different capability's typical call shape, landing in the
+    // "default:networkidle0" namespace web-extract never touches.
+    const FRESH_PLAIN_HTML = `<html><head><title>Fresh Plain Fetch</title></head><body>${"Fresh plain-fetch content, unrelated to web-extract's renders. ".repeat(
+      40,
+    )}</body></html>`;
+    fetchMock.mockResolvedValueOnce(
+      new Response(FRESH_PLAIN_HTML, { status: 200, headers: { "content-type": "text/html" } }),
+    );
+    const third = await fetchRenderedHtml(url);
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(third).toContain("Fresh Plain Fetch");
   }, 10000);
 
   it("appends 'Retrying will not help.' to the 403 message for consistency with the other permanent-failure statuses (six-lens review, LOW)", async () => {
