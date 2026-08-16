@@ -16,38 +16,20 @@ fill the expanded panel.
 
 **DQ-3** · `your_call` · owner Petter · raised 2026-08-15T10:00Z · no deadline
 Mexico needs an access key that only a person can sign up for. Would you register?
-*What this is:* The Mexican business register (INEGI) hands out access keys through
-a signup form. Creating accounts is one of the few things I don't do — the account
-would be in your company's name and I shouldn't enter into that on your behalf.
-*What I need:* Ten minutes on the INEGI site, then drop the key into the
-environment settings. I'll do the rest.
-*If you do nothing:* Mexican company lookups stay off the menu. Nothing else is
-affected — no other work depends on this.
-*Worth it?* Mexico is a large market but no customer has asked for it yet. Low
-urgency. I'd do it when you happen to have a spare ten minutes, not before.
-
-**DQ-6** · `your_call` · owner Petter · raised 2026-08-16T07:00Z · no deadline
-A supplier contract has been sitting unsigned since May, and it is holding ten
-European country lookups off the shelf.
-*What this is:* We buy company data for a batch of European countries from one
-supplier, Openapi. They sent a resale addendum in May (their case 151296) that
-needs your countersignature before we are allowed to serve their data to
-customers. Until it is signed, the code refuses every call by design — Italy,
-Austria, Bulgaria, Cyprus, Romania, Portugal, Netherlands, Hungary, Luxembourg
-and Malta all sit dark.
-*What was blocking it:* the addendum was waiting on a VAT confirmation from
-Skatteverket for Moonlighter AB. Three months on, I don't know whether that
-came back — that's the part only you can check.
-*Why it is yours:* signing a supplier agreement legally binds the company. I
-don't sign things on your behalf, and I don't contact vendors as the company.
-*If you do nothing:* those ten countries stay unavailable indefinitely. Nothing
-breaks — customers simply cannot buy them, and we keep building around the gap.
-*Worth it?* It is the single largest blocked chunk of catalogue we have, and the
-work is already built and paid for. Against that: no customer has asked for
-these countries yet, so it is worth an hour, not a week.
-*Related:* I closed a three-month-old code change today (PR #135, Italian
-directors) that was waiting on this same signature. Nothing lost — it comes back
-when the addendum does.
+*What this is:* The Mexican business register (INEGI) issues DENUE API tokens to
+an email address. Creating accounts is one of the few things I don't do.
+*Exact steps (verified 2026-08-15):*
+1. Open https://www.inegi.org.mx/app/desarrolladores/generatoken/Usuarios/token_Verify
+2. Enter an email address — that is the only field the form asks for. Use
+   petter@strale.io so the token lands somewhere we both consider durable.
+3. Submit. INEGI emails the token to that address.
+4. Send me the token, or add it to Railway as `DENUE_API_TOKEN`. I'll wire and
+   test it.
+*Sanity check for step 4:* a working token answers
+`https://www.inegi.org.mx/app/api/denue/v1/consulta/Buscar/restaurantes/21.857/-102.284/300/<TOKEN>`
+with JSON rather than an error.
+*Worth it?* Mexico is a large market but no customer has asked for it. Low
+urgency — do it when you have a spare ten minutes, not before.
 
 ## DECIDED — visible so you can reverse them
 
