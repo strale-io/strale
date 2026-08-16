@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 config({ path: resolve(import.meta.dirname, "../../../../.env") });
 
@@ -175,7 +176,18 @@ function buildComplianceCoverage(sol: SolutionDef): ComplianceCoverageItem[] {
   return items;
 }
 
-const SOLUTIONS: SolutionDef[] = [
+/**
+ * Exported so the definitions can be validated without running the seed.
+ *
+ * Until 2026-08-16 this module both declared the catalogue AND seeded it on
+ * import — `seed()` was called at the bottom unconditionally, so any `import`
+ * of this file wrote to whatever database DATABASE_URL pointed at. A
+ * throwaway validation script imported it while writing the growth bundles
+ * and only failed to seed production because the specifier happened not to
+ * resolve. The export plus the entry-point guard below turn that from luck
+ * into a property of the file.
+ */
+export const SOLUTIONS: SolutionDef[] = [
   // ── 1. Nordic KYC — Sweden ──
   {
     slug: "kyc-sweden",
@@ -2869,6 +2881,291 @@ const SOLUTIONS: SolutionDef[] = [
       },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Growth bundles, added 2026-08-16.
+  //
+  // Modelled on `lead-email-verify`, which is the only bundle of the 98 we
+  // had built that customers keep buying: 60 purchases, most recent the day
+  // before these were written. Everything about its shape is deliberate here,
+  // because the shape is the only part we have evidence for:
+  //
+  //   - one question a buyer actually asks, not an omnibus report
+  //   - three or four steps, all of them cheap
+  //   - €0.20–€0.30, which is the range that has sold; every bundle we price
+  //     at €0.27 or above has sold four times or fewer, and `competitor-
+  //     snapshot` at €1.54 has never sold at all
+  //   - ~1.8× the component sum, so the margin comes from convenience
+  //
+  // The components are the capabilities that actually earn: google-search,
+  // serp-analyze, email-validate, email-deliverability-check, keyword-suggest
+  // and tech-stack-detect were six of the seven biggest external earners over
+  // the 30 days to 2026-08-16, and the first six of those recorded zero
+  // failures in that window. Bundling raises revenue per call about 6.7×
+  // (email-validate earned €11.01 from 368 calls; lead-email-verify earned
+  // €12.00 from 60), which is the entire reason these exist.
+  //
+  // A fifth was designed and dropped before writing: a sitemap/crawl bundle.
+  // `sitemap-parse` takes a sitemap URL (`…/sitemap.xml`), not a site URL, so
+  // it cannot be fed from a plain `url` input without a discovery step we do
+  // not have. Better to ship four that work.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ── Competitor Read ──
+  {
+    slug: "competitor-read",
+    name: "Competitor Read",
+    marketingName: "Competitor Read",
+    description:
+      "What is this competitor running, and how do they present themselves? Tech stack, page metadata, and social preview in one call.",
+    longDescription:
+      "Detects the CMS, hosting, analytics and frontend framework behind a competitor's site, extracts their page title, description and structured data, and checks how the page renders when shared on social platforms. The quick competitive read an agent can run on any URL before recommending positioning or a content angle.",
+    agentDescription:
+      "what tech does this competitor use, competitor website analysis, what is this site built with, competitor tech stack and messaging, analyse a competitor page",
+    category: "data-research",
+    priceCents: 20,
+    componentSumCents: 11,
+    valueTier: "data-lookup",
+    maintenanceLevel: "near-zero",
+    geography: "us-global",
+    targetAudience:
+      "Developers building competitive-research, positioning, or content-strategy agents",
+    transparencyTag: "algorithmic",
+    extendsWith: ["seo-audit", "pricing-page-extract", "brand-mention-search"],
+    inputSchema: {
+      type: "object",
+      properties: { url: { type: "string", format: "uri" } },
+      required: ["url"],
+    },
+    exampleInput: { url: "https://example.com" },
+    exampleOutput: {
+      cms: "WordPress",
+      frontend_framework: "React",
+      title: "Example — the thing we make",
+      description: "One sentence about the product.",
+      og: { image: "https://example.com/og.png" },
+    },
+    // Every step reads $input.url, so all three run together.
+    steps: [
+      {
+        capabilitySlug: "tech-stack-detect",
+        stepOrder: 1,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$input.url" },
+      },
+      {
+        capabilitySlug: "meta-extract",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$input.url" },
+      },
+      {
+        capabilitySlug: "og-image-check",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$input.url" },
+      },
+    ],
+  },
+
+  // ── Page SEO Check ──
+  {
+    slug: "page-seo-check",
+    name: "Page SEO Check",
+    marketingName: "Page SEO Check",
+    description:
+      "Is this page technically fit to rank? Metadata, social preview, load performance, and availability in one call.",
+    longDescription:
+      "Checks the four things that decide whether a page can rank before its content is even considered: whether the title, description and structured data are present and well-formed; whether the social preview renders; how fast the page loads; and whether it is reachable at all. Returns a per-area grade so an agent can recommend a specific fix rather than a general one.",
+    agentDescription:
+      "is this page SEO ready, on-page SEO check, why is this page not ranking, check page metadata and speed, technical SEO for a URL",
+    category: "data-research",
+    priceCents: 30,
+    componentSumCents: 16,
+    valueTier: "data-lookup",
+    maintenanceLevel: "near-zero",
+    geography: "us-global",
+    targetAudience: "Developers building SEO audit, content-ops, or site-monitoring agents",
+    transparencyTag: "algorithmic",
+    extendsWith: ["seo-audit", "backlink-check", "redirect-trace"],
+    inputSchema: {
+      type: "object",
+      properties: { url: { type: "string", format: "uri" } },
+      required: ["url"],
+    },
+    exampleInput: { url: "https://example.com/pricing" },
+    exampleOutput: {
+      title: "Pricing — Example",
+      description: "Plans and pricing.",
+      performance_score: 87,
+      grade: "B",
+      is_up: true,
+      status_code: 200,
+    },
+    steps: [
+      {
+        capabilitySlug: "meta-extract",
+        stepOrder: 1,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$input.url" },
+      },
+      {
+        capabilitySlug: "og-image-check",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$input.url" },
+      },
+      {
+        capabilitySlug: "page-speed-test",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$input.url" },
+      },
+      {
+        capabilitySlug: "url-health-check",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { url: "$input.url" },
+      },
+    ],
+  },
+
+  // ── Prospect Brief ──
+  {
+    slug: "prospect-brief",
+    name: "Prospect Brief",
+    marketingName: "Prospect Brief",
+    description:
+      "You have a prospect's email — now tell me about their company. Address validity, mail setup, domain reputation, and tech stack from one address.",
+    longDescription:
+      "Starts from a single email address: validates the mailbox, then uses its domain to check SPF/DKIM/DMARC configuration, score the domain's reputation, and detect what the company's site is built with. The step up from Lead Email Verify for agents that need to qualify the company, not just the address.",
+    agentDescription:
+      "tell me about this prospect from their email, enrich a lead from an email address, qualify a prospect company, what does this company use, research a prospect domain",
+    category: "sales-outreach",
+    priceCents: 30,
+    componentSumCents: 16,
+    valueTier: "data-lookup",
+    maintenanceLevel: "near-zero",
+    geography: "us-global",
+    targetAudience: "Developers building outbound sales, lead qualification, or CRM enrichment agents",
+    transparencyTag: "algorithmic",
+    extendsWith: ["company-enrich", "domain-reputation", "brand-mention-search"],
+    inputSchema: {
+      type: "object",
+      properties: { email: { type: "string", format: "email" } },
+      required: ["email"],
+    },
+    exampleInput: { email: "sales@example.com" },
+    exampleOutput: {
+      valid: true,
+      domain: "example.com",
+      dmarc: "pass",
+      grade: "A",
+      reputation_score: 88,
+      cms: "Webflow",
+    },
+    // Steps 2-4 all key off the domain that step 1 resolves, exactly as
+    // lead-email-verify does — that chain is the proven part.
+    steps: [
+      {
+        capabilitySlug: "email-validate",
+        stepOrder: 1,
+        canParallel: false,
+        parallelGroup: null,
+        inputMap: { email: "$input.email" },
+      },
+      {
+        capabilitySlug: "email-deliverability-check",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$steps[0].domain" },
+      },
+      {
+        capabilitySlug: "domain-reputation",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$steps[0].domain" },
+      },
+      {
+        capabilitySlug: "tech-stack-detect",
+        stepOrder: 4,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { domain: "$steps[0].domain" },
+      },
+    ],
+  },
+
+  // ── Keyword Scout ──
+  {
+    slug: "keyword-scout",
+    name: "Keyword Scout",
+    marketingName: "Keyword Scout",
+    description:
+      "Is this keyword worth writing about, and who am I up against? Suggestions, live results, and SERP structure in one call.",
+    longDescription:
+      "Expands a seed keyword into long-tail variants and the questions people actually ask, pulls the live search results, and breaks down the SERP — featured snippets, people-also-ask, and which result types dominate. Everything an agent needs to decide whether a term is worth a piece of content and what shape that content has to take.",
+    agentDescription:
+      "should I target this keyword, keyword research, who ranks for this term, SERP analysis for a keyword, find long tail keywords and competitors",
+    category: "data-research",
+    priceCents: 55,
+    componentSumCents: 28,
+    valueTier: "data-lookup",
+    maintenanceLevel: "near-zero",
+    geography: "us-global",
+    targetAudience: "Developers building SEO research, content-planning, or editorial-calendar agents",
+    transparencyTag: "algorithmic",
+    extendsWith: ["backlink-check", "brand-mention-search", "seo-audit"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        keyword: { type: "string" },
+        country: { type: "string" },
+        language: { type: "string" },
+      },
+      required: ["keyword"],
+    },
+    exampleInput: { keyword: "agent payments" },
+    exampleOutput: {
+      suggestions: ["agent payments api", "ai agent payment rails"],
+      questions: ["how do ai agents pay for things"],
+      total_results_estimate: 41800,
+      featured_snippet: null,
+      serp_features: ["people_also_ask", "organic"],
+    },
+    steps: [
+      {
+        capabilitySlug: "keyword-suggest",
+        stepOrder: 1,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { keyword: "$input.keyword", country: "$input.country", language: "$input.language" },
+      },
+      {
+        capabilitySlug: "google-search",
+        stepOrder: 2,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { query: "$input.keyword", country: "$input.country", language: "$input.language" },
+      },
+      {
+        capabilitySlug: "serp-analyze",
+        stepOrder: 3,
+        canParallel: true,
+        parallelGroup: 1,
+        inputMap: { keyword: "$input.keyword", country: "$input.country", language: "$input.language" },
+      },
+    ],
+  },
 ];
 
 // ─── Seed logic ─────────────────────────────────────────────────────────────
@@ -3077,7 +3374,15 @@ async function seed() {
   process.exit(0);
 }
 
-seed().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+// Only seeds when this file is the process entry point. Importing it — to
+// validate the definitions, or to list them — must never write anything.
+const invokedDirectly =
+  process.argv[1] !== undefined &&
+  pathToFileURL(process.argv[1]).href === import.meta.url;
+
+if (invokedDirectly) {
+  seed().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}
