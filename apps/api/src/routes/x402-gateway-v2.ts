@@ -49,6 +49,7 @@ import { getProcessingLocation } from "../lib/processing-location.js";
 import { getShareableUrl } from "../lib/audit-token.js";
 import { TRANSACTION_RETENTION_DAYS } from "../lib/data-retention.js";
 import { validateX402Input } from "../lib/x402-input-validation.js";
+import { recordX402Miss } from "../lib/x402-demand.js";
 import { createHash } from "node:crypto";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -940,6 +941,10 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
 
   const sol = _solCache.get(slug);
   if (!sol) {
+    recordX402Miss({ slug, kind: "x402_unknown_slug",
+      detail: "no such x402 solution", ...{ userAgent: c.req.header("user-agent") ?? null,
+        ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
+          ?? c.req.header("cf-connecting-ip") ?? null } });
     return c.json(
       { error: "Solution not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
       404,
@@ -1159,6 +1164,11 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
 
   const cap = _capCache.get(slug);
   if (!cap) {
+    // Demand signal: a paying-capable agent asked for something we do not sell.
+    recordX402Miss({ slug, kind: "x402_unknown_slug",
+      detail: "no such x402 capability", ...{ userAgent: c.req.header("user-agent") ?? null,
+        ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
+          ?? c.req.header("cf-connecting-ip") ?? null } });
     return c.json(
       { error: "Capability not found or not available via x402.", hint: `${BASE_URL}/x402/catalog` },
       404,
@@ -1287,6 +1297,12 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   // input never costs the caller).
   const validation = validateX402Input(inputs, cap.inputSchema);
   if (!validation.ok) {
+    // Distinct from the unknown-slug case: we sell this and they could not use
+    // it. A product signal, not a catalogue one.
+    recordX402Miss({ slug, kind: "x402_bad_input", detail: validation.error,
+      ...{ userAgent: c.req.header("user-agent") ?? null,
+        ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
+          ?? c.req.header("cf-connecting-ip") ?? null } });
     return schemaBadRequest(c, validation.error, cap.inputSchema);
   }
 
