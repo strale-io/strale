@@ -37,7 +37,6 @@ describe("refusals are the capability working, not failing", () => {
     ["Country 'ZM' is not supported. Supported: AT, AU, CA, CH, DE, DK, ES, FI, FR, GB, IE, IT, NL, NO, PL, PT, SE, US.", "employment-cost-estimate"],
     ["Tax data not available for 'ZM'. Supported: SE, NO, DK, FI, DE, GB, US, FR, NL, ES, IT, PT, AT, BE, IE, CH, PL, CZ", "country-tax-rates"],
     ['Price comparison currently covers Nordic countries only (SE/NO/DK/FI) via PriceRunner. "us" is not supported — no licensed price source exists for it yet.', "price-compare"],
-    ["Name search is not available via free APIs. To look up a charity by name, visit the register and provide the 'charity_number' for direct lookup.", "charity-lookup-uk"],
     ["Unknown model 'claude-sonnet-4-5'. Supported: gpt-4o, gpt-4o-mini, gpt-4-turbo", "llm-cost-calculate"],
     ["Cannot convert from 'usd' to 'eur'. Supported categories: length, weight, volume, temperature", "unit-convert"],
   ])("asking for something outside declared coverage is a refusal: %s", (msg) => {
@@ -58,11 +57,27 @@ describe("malformed input is the caller's", () => {
     'Invalid label "example_name": underscore allowed only at start',
     "'from' and 'to' must be valid 3-letter ISO 4217 currency codes.",
     "'purpose' must be 'work', 'study', or 'visit'.",
-    "CSV must have at least a header row and one data row.",
     "Could not parse spec as JSON or YAML. Please provide valid OpenAPI spec.",
     "Provide 'url' (e.g. https://example.com) or 'domain' (e.g. example.com) to detect the technology stack.",
   ])("%s", (msg) => {
     expect(classOf(msg)).toBe("caller_input");
+  });
+
+  it.each([
+    // Real refusals that are DELIBERATELY not excused, because no shape
+    // separates them from an internal failure saying the same thing.
+    // "CSV must have at least a header row" vs "Result must have at least one
+    // row"; "Name search is not available via free APIs" vs "Service is
+    // temporarily not available via API". On a path where under-counting
+    // blinds the armed quality floor, the tie goes to counting.
+    //
+    // Both are cheap to fix at the throw site instead: lead with the quoted
+    // field, as the rest of the house style does. Listed here so the cost is
+    // visible rather than discovered later as a mystery.
+    "CSV must have at least a header row and one data row.",
+    "Name search is not available via free APIs. To look up a charity by name, visit the register and provide the 'charity_number' for direct lookup.",
+  ])("deliberately still counted, reword at the throw site to change this: %s", (msg) => {
+    expect(excused(msg)).toBe(false);
   });
 });
 
@@ -136,6 +151,24 @@ describe("our defects stay ours — the direction that blinds the floor", () => 
     "Internal assertion failed: result must be non-null",
     "Config value must be set before use",
   ])("%s", (msg) => {
+    expect(excused(msg)).toBe(false);
+  });
+
+  it.each([
+    // Every string here came from the cross-provider review (sol@high,
+    // 2026-08-16), which found three over-broad patterns the census-derived
+    // tests could not see — because the tests and the patterns were written
+    // from the same source. These are the shapes a SYSTEMATICALLY broken
+    // capability takes: every call fails identically, and if the failure is
+    // excused, the floor stops seeing the capability at all.
+    'The "chunk" argument must be of type string or an instance of Buffer. Received undefined',
+    "Invalid response format",
+    "Failed to fetch company registry API: HTTP 403",
+    "HTTP 403 from Companies House API",
+    "Service is temporarily not available via API",
+    "Digest method is not supported",
+    "Result must have at least one row",
+  ])("review-found hazard stays ours: %s", (msg) => {
     expect(excused(msg)).toBe(false);
   });
 

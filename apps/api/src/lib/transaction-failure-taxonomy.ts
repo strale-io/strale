@@ -111,9 +111,14 @@ const CALLER_INPUT_RE = new RegExp(
     // below is anchored to a string this census actually observed.
 
     // Malformed input. "Invalid URL format.", "Invalid IP address format.",
-    // "Invalid JWT format.", "Invalid ABN format:", "Invalid label ...".
-    "invalid [a-z]{2,20}(?: [a-z]{2,20})? format",
-    "invalid (?:label|value|parameter)",
+    // "Invalid JWT format.", "Invalid ABN format:", "Invalid label …".
+    //
+    // The subject is ENUMERATED rather than matched as `invalid \w+ format`,
+    // and the match is anchored to the start of the message. The general form
+    // also claims "Invalid response format" — a vendor payload we could not
+    // read, which is ours. We know which inputs we validate; guessing from
+    // shape buys nothing and costs the floor its sight.
+    "^invalid (?:url|uri|ip address|ip|jwt|abn|vat|iban|email|domain|date|label|value|parameter|identifier|json)\\b",
     // "'from' and 'to' must be valid 3-letter ISO 4217 currency codes.",
     // "'purpose' must be 'work', 'study', or 'visit'."
     //
@@ -126,8 +131,12 @@ const CALLER_INPUT_RE = new RegExp(
     // internal-error shapes rather than only against the strings they were
     // written from; the tests did not catch it.
     "^'[^']{1,40}'.{0,40}must be ",
-    // "CSV must have at least a header row and one data row."
-    "must have at least",
+    // NOT matched: "CSV must have at least a header row and one data row."
+    // (schema-infer, 5 calls). There is no shape separating it from "Result
+    // must have at least one row", which would be ours, so it stays counted.
+    // If that refusal should be excused, the message needs to lead with its
+    // quoted field the way the rest of the house style does — a cheaper fix
+    // there than a looser rule here.
     // "Provide 'url' (e.g. …) or 'domain' (e.g. …) to detect the technology
     // stack." — a required-field message that never says "is required".
     "^provide ['\"]",
@@ -141,10 +150,19 @@ const CALLER_INPUT_RE = new RegExp(
     "found (?:matching|for) ",
     // Scope refusals: the caller asked for something outside declared
     // coverage. "Country 'ZM' is not supported.", "Tax data not available for
-    // 'ZM'.", "Name search is not available via free APIs.", "… is not
-    // supported — no licensed price source exists for it yet."
-    "is not supported",
-    "not available (?:for|via)",
+    // 'ZM'.", '"us" is not supported — no licensed price source exists for it
+    // yet.'
+    //
+    // A QUOTED SUBJECT is required, because that subject is the caller's
+    // value. Bare `is not supported` also claims "Digest method is not
+    // supported" and bare `not available (?:for|via)` also claims "Service is
+    // temporarily not available via API" — an implementation regression and an
+    // outage respectively, both of which must keep counting. Cost of the
+    // stricter rule: charity-lookup-uk's "Name search is not available via
+    // free APIs." (1 call) is no longer excused. Accepted — on this path,
+    // over-counting is recoverable and under-counting is blindness.
+    "['\"][^'\"]{1,40}['\"] is not supported",
+    "not available (?:for|via) ['\"]",
     // "Unknown model 'claude-sonnet-4-5'. Supported: …",
     // "Cannot convert from 'usd' to 'eur'."
     "unknown (?:model|chain|country|currency|format|type)",
@@ -167,8 +185,13 @@ const CALLER_INPUT_RE = new RegExp(
     // publicly accessible." — the second sentence is the house phrasing for
     // "this was your address", and is unambiguous on its own.
     "check the url is correct",
-    // "HTTP 404 fetching sitemap from …", "HTTP 403 from …", "HTTP 404 from …"
-    "http 40[34] (?:fetching|from) ",
+    // "HTTP 404 fetching sitemap from …" — names the thing fetched.
+    "http 40[34] fetching ",
+    // "HTTP 403 from …", "HTTP 404 from …". The subject must look like a host
+    // or a redacted service marker: "HTTP 403 from Companies House API" is a
+    // vendor WE chose, and a credential expiring there would otherwise excuse
+    // every call the capability makes.
+    "http 40[34] from (?:https?://|\\[service\\]|[a-z0-9-]+\\.[a-z]{2,})",
     // "Failed to fetch invoice from URL: HTTP 404"
     "fetch \\w+ from url",
     // "Could not access repo X. It may be private."
