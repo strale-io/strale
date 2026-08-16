@@ -1884,7 +1884,10 @@ export const SOLUTIONS: SolutionDef[] = [
         stepOrder: 2,
         canParallel: true,
         parallelGroup: 1,
-        inputMap: { vat_number: "$steps[0].vat_number" },
+        // invoice-extract returns the supplier's VAT as `vendor_vat`; there has
+        // never been a `vat_number` field. The map named a field that does not
+        // exist, so this step could only ever receive null.
+        inputMap: { vat_number: "$steps[0].vendor_vat" },
       },
       {
         capabilitySlug: "iban-validate",

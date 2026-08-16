@@ -205,3 +205,42 @@ describe("the seed script's --dry-run flag", () => {
     expect(src).toContain("existing && !ALLOW_PRICE_CHANGES ? existing.priceCents : sol.priceCents");
   });
 });
+
+describe("step references that named fields their source never returned", () => {
+  // Both of these aborted the seed run — `enforceGates` throws, and since each
+  // solution writes in its own transaction rather than the run being atomic,
+  // the catalogue was left half-updated. Production stopped tracking these
+  // definitions around 2026-04-12 because every run since died here.
+  //
+  // Both were declaration failures rather than missing data: the capability
+  // returned the field, the manifest did not know about it. The lesson is that
+  // a `$steps[N].field` reference is only as good as the source manifest, so
+  // these pin the exact names.
+
+  it("invoice-process reads the supplier VAT under the name it is actually returned", () => {
+    // invoice-extract's extraction schema calls it `vendor_vat`. There has
+    // never been a `vat_number` field, so the old map could only pass null.
+    const step = SOLUTIONS.find((s) => s.slug === "invoice-process")!
+      .steps.find((st) => st.capabilitySlug === "vat-validate")!;
+    expect(step.inputMap.vat_number).toBe("$steps[0].vendor_vat");
+  });
+
+  it("invoice-process reads iban and total_amount, which invoice-extract does return", () => {
+    const sol = SOLUTIONS.find((s) => s.slug === "invoice-process")!;
+    expect(sol.steps.find((s) => s.capabilitySlug === "iban-validate")!.inputMap.iban)
+      .toBe("$steps[0].iban");
+    expect(sol.steps.find((s) => s.capabilitySlug === "currency-convert")!.inputMap.amount)
+      .toBe("$steps[0].total_amount");
+  });
+
+  it("kyc-denmark takes the Danish VAT number from the company lookup", () => {
+    // In Denmark the VAT number IS the CVR with a DK prefix — cvrapi.dk even
+    // returns it under the key `vat`. The executor has derived it since
+    // deriveVatDK landed; only the declaration was missing.
+    const step = SOLUTIONS.find((s) => s.slug === "kyc-denmark")!
+      .steps.find((st) => st.capabilitySlug === "vat-validate")!;
+    expect(step.inputMap.vat_number).toBe("$steps[0].vat_number");
+    expect(SOLUTIONS.find((s) => s.slug === "kyc-denmark")!.steps[0].capabilitySlug)
+      .toBe("danish-company-data");
+  });
+});

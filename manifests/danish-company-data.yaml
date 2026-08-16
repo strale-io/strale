@@ -109,6 +109,13 @@ output_schema:
       type: string
     employee_range:
       type: string
+    # Danish VAT registration number. Not a separate lookup: in Denmark the VAT
+    # number IS the CVR number with a DK prefix, and cvrapi.dk literally returns
+    # it under the key `vat`. The executor has derived and returned it since
+    # deriveVatDK landed; the declaration never caught up, so kyc-denmark's
+    # $steps[0].vat_number failed the onboarding gate and aborted every seed run.
+    vat_number:
+      type: string
 data_source: CVR / Danish Business Authority (Erhvervsstyrelsen)
 data_source_type: api
 transparency_tag: mixed
@@ -135,6 +142,10 @@ output_field_reliability:
   status: guaranteed
   address: guaranteed
   cvr_number: guaranteed
+  # `common`, not `guaranteed`: deriveVatDK returns null unless the CVR is
+  # exactly 8 digits, so a malformed upstream value yields null rather than a
+  # string. Only guaranteed fields are asserted non-null.
+  vat_number: common
   start_date: guaranteed
   company_name: guaranteed
   business_type: guaranteed
