@@ -89,3 +89,11 @@ limitations:
     category: accuracy
     severity: info
     workaround: Use extracted terms as a quick screening tool and flag unusual clauses for legal counsel review
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example an unusually long or detailed Terms of Service document.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: This ToS page produced more content than fits in one call — no direct workaround

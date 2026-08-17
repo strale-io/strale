@@ -99,3 +99,11 @@ limitations:
     workaround: >-
       Always review generated migrations in a staging environment and add explicit backfill steps for data
       transformations
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example a large schema diff spanning many tables and columns.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Provide a smaller schema per call

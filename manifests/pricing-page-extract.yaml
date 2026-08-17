@@ -98,3 +98,11 @@ limitations:
     category: accuracy
     severity: info
     workaround: If results appear incomplete, pass the direct pricing page URL rather than the homepage
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~1.5k output tokens) are refused
+      rather than returned truncated — for example a pricing page with an unusually large number of plans.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: This pricing page produced more plans than fit in one call — no direct workaround; retry is unlikely to help

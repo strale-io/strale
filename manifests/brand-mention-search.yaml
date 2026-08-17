@@ -143,3 +143,11 @@ limitations:
     workaround: >-
       For real-time monitoring, set up Google Alerts or use a dedicated media monitoring service alongside periodic
       Strale checks
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~3k output tokens) are refused
+      rather than returned truncated — for example a high max_results value on a heavily-covered brand name.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Reduce max_results to shrink the number of search results analyzed per call

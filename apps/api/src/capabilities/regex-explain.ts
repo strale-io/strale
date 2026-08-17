@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("regex-explain", async (input: CapabilityInput) => {
   const pattern = ((input.regex as string) ?? (input.pattern as string) ?? (input.task as string) ?? "").trim();
@@ -11,13 +12,11 @@ registerCapability("regex-explain", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
-    messages: [
-      {
-        role: "user",
-        content: `Explain this regular expression in detail. Return ONLY valid JSON.
+    maxTokens: 1500,
+    prompt: `Explain this regular expression in detail. Return ONLY valid JSON.
 
 Regex: ${pattern}${testStrings.length > 0 ? `\nTest strings: ${JSON.stringify(testStrings)}` : ""}
 
@@ -30,15 +29,9 @@ Return JSON:
   "common_matches": ["example strings that would match"],
   "common_non_matches": ["example strings that would NOT match"]${testStrings.length > 0 ? ',\n  "test_results": [{"input": "string", "matches": true, "matched_text": "match or null"}]' : ""}
 }`,
-      },
-    ],
+    truncationGuidance: "Provide fewer test_strings per call.",
+    parseFailureError: () => new Error("Failed to explain regex."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to explain regex.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.original_regex = pattern;
 
   return {

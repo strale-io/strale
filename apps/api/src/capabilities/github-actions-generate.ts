@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("github-actions-generate", async (input: CapabilityInput) => {
   const language = ((input.language as string) ?? (input.task as string) ?? "").trim();
@@ -16,13 +17,11 @@ registerCapability("github-actions-generate", async (input: CapabilityInput) => 
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Generate a GitHub Actions CI/CD workflow YAML. Return ONLY valid JSON.
+    maxTokens: 2000,
+    prompt: `Generate a GitHub Actions CI/CD workflow YAML. Return ONLY valid JSON.
 
 Language: ${language}
 Framework: ${framework || "none"}
@@ -47,15 +46,9 @@ Return JSON:
   "secrets_needed": ["list of required GitHub secrets"],
   "triggers_configured": ["list of triggers"]
 }`,
-      },
-    ],
+    truncationGuidance: "Request fewer steps per call.",
+    parseFailureError: () => new Error("Failed to generate workflow."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate workflow.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.language = language;
   output.framework = framework || null;
   output.deploy_target = deployTarget || null;

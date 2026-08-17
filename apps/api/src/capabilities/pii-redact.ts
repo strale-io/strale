@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { extractJsonObject } from "./lib/llm-json.js";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 const REDACTION_PROMPT = `You are a PII (Personally Identifiable Information) redaction system.
 
@@ -56,24 +56,15 @@ registerCapability("pii-redact", async (input: CapabilityInput) => {
   const truncated = text.length > 100000 ? text.slice(0, 100000) : text;
 
   const client = new Anthropic({ apiKey });
-  const response = await client.messages.create({
+  const parsed = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 4000,
-    messages: [
-      {
-        role: "user",
-        content: `${REDACTION_PROMPT}\n\n--- TEXT TO REDACT ---\n${truncated}\n--- END TEXT ---`,
-      },
-    ],
+    maxTokens: 4000,
+    prompt: `${REDACTION_PROMPT}\n\n--- TEXT TO REDACT ---\n${truncated}\n--- END TEXT ---`,
+    truncationGuidance: "Provide a shorter text excerpt per call.",
+    parseFailureError: (responseText) =>
+      new Error(`Failed to parse redaction result as JSON. Raw: ${responseText.slice(0, 300)}`),
   });
-
-  const responseText =
-    response.content[0].type === "text" ? response.content[0].text : "";
-
-  const parsed = extractJsonObject(responseText);
-  if (!parsed) {
-    throw new Error(`Failed to parse redaction result as JSON. Raw: ${responseText.slice(0, 300)}`);
-  }
 
   // Guard on redacted_text specifically, not isEmptyExtraction: the prompt
   // asks for entity_counts with all nine keys present, zeroed. Zero is

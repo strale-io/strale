@@ -62,3 +62,11 @@ limitations:
     category: coverage
     severity: info
     workaround: Include the target market or retailer name in the search query for more relevant results
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — the prompt extracts "as many products as visible" with no fixed cap,
+      so a busy results page can exceed the budget. Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Narrow the search query so fewer products are returned per call

@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("context-window-optimize", async (input: CapabilityInput) => {
   const documents = input.documents as Array<{ id: string; text: string }> | undefined;
@@ -26,13 +27,11 @@ registerCapability("context-window-optimize", async (input: CapabilityInput) => 
   ).join("\n\n");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const ranked = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1000,
-    messages: [
-      {
-        role: "user",
-        content: `Rank these documents by relevance to the query. Return ONLY valid JSON.
+    maxTokens: 1000,
+    prompt: `Rank these documents by relevance to the query. Return ONLY valid JSON.
 
 Query: "${query}"
 Token budget: ${maxTokens}
@@ -44,15 +43,9 @@ Return JSON:
 {
   "rankings": [{"id": "doc id", "relevance_score": <0.0-1.0>, "reason": "brief reason"}]
 }`,
-      },
-    ],
+    truncationGuidance: "Provide fewer documents per call.",
+    parseFailureError: () => new Error("Failed to rank documents."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to rank documents.");
-
-  const ranked = JSON.parse(jsonMatch[0]);
   const rankings = (ranked.rankings as Array<{ id: string; relevance_score: number; reason: string }>) ?? [];
 
   // Select documents fitting within token budget, ordered by relevance

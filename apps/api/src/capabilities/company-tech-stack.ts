@@ -3,6 +3,7 @@ import { safeFetch } from "../lib/safe-fetch.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import * as dns from "node:dns/promises";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("company-tech-stack", async (input: CapabilityInput) => {
   const domain = ((input.domain as string) ?? (input.url as string) ?? (input.task as string) ?? "").trim();
@@ -64,13 +65,11 @@ registerCapability("company-tech-stack", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1000,
-    messages: [
-      {
-        role: "user",
-        content: `Analyze this website's full technology stack. Return ONLY valid JSON.
+    maxTokens: 1000,
+    prompt: `Analyze this website's full technology stack. Return ONLY valid JSON.
 
 Domain: ${cleanDomain}
 Detected framework markers: ${markers.join(", ") || "none"}
@@ -98,15 +97,9 @@ Return JSON:
   "chat_widget": "string or null",
   "detected_technologies": [{"name": "tech", "category": "category", "confidence": "high/medium/low"}]
 }`,
-      },
-    ],
+    truncationGuidance: "This domain's page yielded too much signal for one call — this is unusual and likely means the target page is unusually large.",
+    parseFailureError: () => new Error("Failed to analyze tech stack."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to analyze tech stack.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.dns_records = dnsResults;
   output.http_headers_analyzed = headerSignals;
 

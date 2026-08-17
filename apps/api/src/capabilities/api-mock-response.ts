@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // F-0-006 Bucket D: user URL is passed to Claude as prose for mock
 // generation. Claude does not fetch the URL. No network egress from our
@@ -20,13 +21,11 @@ registerCapability("api-mock-response", async (input: CapabilityInput) => {
     : "No schema provided — generate a plausible response based on the URL pattern.";
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
-    messages: [
-      {
-        role: "user",
-        content: `Generate a realistic mock API response. Return ONLY valid JSON.
+    maxTokens: 1500,
+    prompt: `Generate a realistic mock API response. Return ONLY valid JSON.
 
 Method: ${method}
 URL: ${url}
@@ -40,15 +39,9 @@ Return JSON:
   "body": <realistic response body matching the schema or URL pattern>,
   "content_type": "application/json"
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a smaller response_schema.",
+    parseFailureError: () => new Error("Failed to generate mock response."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate mock response.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.method = method;
   output.url = url;
 

@@ -87,3 +87,11 @@ limitations:
     category: accuracy
     severity: info
     workaround: Consider the sample size in the response and weight results higher when based on 50+ reviews
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example a company with an unusually large volume of review themes.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: This employer's review page produced more content than fits in one call — no direct workaround

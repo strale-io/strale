@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { extractJsonObject } from "./lib/llm-json.js";
 import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
@@ -77,11 +78,9 @@ Return JSON:
     ],
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to analyze landing page.");
-
-  const output = JSON.parse(jsonMatch[0]);
+  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+  const output = extractJsonObject(responseText);
+  if (!output) throw new Error("Failed to analyze landing page.");
   output.url = fullUrl;
   output.disclaimer = "AI-generated analysis. Results reflect automated assessment, not guaranteed conversion outcomes.";
 

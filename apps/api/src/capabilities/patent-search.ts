@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // Google Patents search via Browserless + Claude extraction
 registerCapability("patent-search", async (input: CapabilityInput) => {
@@ -31,13 +32,11 @@ registerCapability("patent-search", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Extract patent search results from this Google Patents page. The search was for: "${query}".
+    maxTokens: 2000,
+    prompt: `Extract patent search results from this Google Patents page. The search was for: "${query}".
 
 Return ONLY valid JSON:
 {
@@ -57,17 +56,11 @@ Return ONLY valid JSON:
 
 Page text:
 ${text.slice(0, 12000)}`,
-      },
-    ],
+    truncationGuidance: "Reduce max_results so fewer patents are returned per call.",
+    parseFailureError: () => new Error("Failed to extract patent results."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract patent results.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.query = query;
-  output.returned_count = output.patents?.length ?? 0;
+  output.returned_count = (output.patents as unknown[] | undefined)?.length ?? 0;
   output.source_url = searchUrl;
 
   return {

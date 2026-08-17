@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("summarize", async (input: CapabilityInput) => {
   const text = ((input.text as string) ?? (input.task as string) ?? "").trim();
@@ -14,13 +15,11 @@ registerCapability("summarize", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1000,
-    messages: [
-      {
-        role: "user",
-        content: `Summarize the following text. Return ONLY valid JSON.
+    maxTokens: 1000,
+    prompt: `Summarize the following text. Return ONLY valid JSON.
 
 Style: ${style} (${style === "bullets" ? "bullet point list" : style === "one_sentence" ? "single sentence" : "paragraph"})
 Maximum length: approximately ${maxLength} words
@@ -35,15 +34,9 @@ Maximum length: approximately ${maxLength} words
 
 Text:
 "${text.slice(0, 15000)}"`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter text excerpt per call.",
+    parseFailureError: () => new Error("Summarization failed."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Summarization failed.");
-
-  const output = JSON.parse(jsonMatch[0]);
 
   return {
     output,

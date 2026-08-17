@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { extractJsonObject } from "./lib/llm-json.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { safeFetch } from "../lib/safe-fetch.js";
 
@@ -102,11 +103,9 @@ If no text is found, return {"text": "", "confidence": "high", "language_detecte
     ],
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("OCR extraction failed.");
-
-  const output = JSON.parse(jsonMatch[0]);
+  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+  const output = extractJsonObject(responseText);
+  if (!output) throw new Error("OCR extraction failed.");
 
   return {
     output,

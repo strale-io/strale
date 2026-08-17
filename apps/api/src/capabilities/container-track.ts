@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // ─── Container tracking — ISO 6346 validation + Browserless scraping ────────
 
@@ -275,13 +276,15 @@ registerCapability("container-track", async (input: CapabilityInput) => {
       if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
       const client = new Anthropic({ apiKey });
-      const r = await client.messages.create({
+      // Note: a truncation refusal or parse failure from the helper is
+      // caught by this function's own outer catch below, same as before —
+      // this LLM step is best-effort and falls back to "tracking_unavailable"
+      // either way, so the specific error text here never reaches the caller.
+      trackingData = await extractJsonWithLlm({
+        client,
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 2000,
-        messages: [
-          {
-            role: "user",
-            content: `Extract container tracking information from this shipping carrier page for container "${validation.container_number}".
+        maxTokens: 2000,
+        prompt: `Extract container tracking information from this shipping carrier page for container "${validation.container_number}".
 
 Return ONLY valid JSON:
 {
@@ -316,15 +319,9 @@ If the page shows an error, no results, or tracking data cannot be found, return
 
 Page text:
 ${text.slice(0, 12000)}`,
-          },
-        ],
+        truncationGuidance: "The carrier page produced more tracking events than fit in one call.",
+        parseFailureError: () => new Error("Failed to parse container tracking data."),
       });
-
-      const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        trackingData = JSON.parse(jsonMatch[0]);
-      }
     }
   } catch {
     // Tracking scrape failed — return validation results with tracking URLs

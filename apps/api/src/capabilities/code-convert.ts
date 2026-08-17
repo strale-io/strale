@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("code-convert", async (input: CapabilityInput) => {
   const code = ((input.code as string) ?? (input.source_code as string) ?? (input.task as string) ?? "").trim();
@@ -13,13 +14,11 @@ registerCapability("code-convert", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 3000,
-    messages: [
-      {
-        role: "user",
-        content: `Convert this code${fromLang ? ` from ${fromLang}` : ""} to ${toLang}. Use idiomatic ${toLang} patterns. Return ONLY valid JSON.
+    maxTokens: 3000,
+    prompt: `Convert this code${fromLang ? ` from ${fromLang}` : ""} to ${toLang}. Use idiomatic ${toLang} patterns. Return ONLY valid JSON.
 
 Source code:
 ${code.slice(0, 5000)}
@@ -33,16 +32,12 @@ Return JSON:
   "conversion_notes": ["caveats or behavior differences"],
   "confidence": "high/medium/low"
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter code snippet per call.",
+    parseFailureError: () => new Error("Failed to convert code."),
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to convert code.");
-
   return {
-    output: JSON.parse(jsonMatch[0]),
+    output,
     provenance: { source: "claude-haiku", fetched_at: new Date().toISOString() },
   };
 });

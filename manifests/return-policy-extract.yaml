@@ -78,3 +78,11 @@ limitations:
     category: accuracy
     severity: info
     workaround: Verify extracted terms against the retailer's full return policy page for product-category-specific conditions
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example a retailer with an unusually long list of conditions and
+      exclusions. Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: This retailer's policy page produced more content than fits in one call — no direct workaround

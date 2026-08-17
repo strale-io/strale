@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("competitor-compare", async (input: CapabilityInput) => {
   const domain1 = ((input.domain1 as string) ?? (input.company1 as string) ?? "").trim();
@@ -23,13 +24,11 @@ registerCapability("competitor-compare", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Compare these two competitor websites. Return ONLY valid JSON.
+    maxTokens: 2000,
+    prompt: `Compare these two competitor websites. Return ONLY valid JSON.
 
 COMPANY A: ${url1}
 ${text1}
@@ -53,15 +52,9 @@ Return JSON:
   "key_differentiators": ["list of main differences"],
   "competitive_advantages": { "company_a": ["advantages"], "company_b": ["advantages"] }
 }`,
-      },
-    ],
+    truncationGuidance: "Compare fewer aspects per call, or two smaller sites.",
+    parseFailureError: () => new Error("Failed to compare competitors."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to compare competitors.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.disclaimer = "AI-generated competitive analysis. Verify specific claims independently.";
 
   return {

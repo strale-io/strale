@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // Uses Serper.dev API for search (avoids CAPTCHA issues from direct Google scraping)
 registerCapability("brand-mention-search", async (input: CapabilityInput) => {
@@ -59,13 +60,16 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  // extractJsonWithLlm's stop_reason check now catches the truncation case
+  // the old try/catch's "response may have been truncated" message was
+  // guessing at — a genuine max_tokens cutoff is refused distinctly, before
+  // parsing is attempted at all, so it no longer needs to be inferred from a
+  // JSON.parse failure downstream.
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 3000,
-    messages: [
-      {
-        role: "user",
-        content: `Analyze these search results for brand mentions. Return ONLY valid JSON.
+    maxTokens: 3000,
+    prompt: `Analyze these search results for brand mentions. Return ONLY valid JSON.
 
 Brand name: "${brandName}"
 Search query: ${query}
@@ -87,20 +91,12 @@ Return JSON:
   ],
   "total_results_found": <number>
 }`,
-      },
-    ],
+    truncationGuidance: "Reduce max_results to shrink the number of search results analyzed per call.",
+    parseFailureError: (responseText) =>
+      new Error(
+        `Failed to extract brand mentions. Raw: ${responseText.slice(0, 200)}`,
+      ),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract brand mentions.");
-
-  let output: Record<string, unknown>;
-  try {
-    output = JSON.parse(jsonMatch[0]);
-  } catch {
-    throw new Error(`Serper/Claude response parse failed (response may have been truncated). Raw: ${jsonMatch[0].slice(0, 200)}`);
-  }
   output.brand_name = brandName;
   output.query = query;
 

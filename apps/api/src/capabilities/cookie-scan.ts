@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { extractJsonObject } from "./lib/llm-json.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import {
   fetchRenderedHtml,
@@ -215,8 +216,14 @@ Only include tracking scripts where detected is true. For potential_issues, cons
     ],
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  // Optional-chained: an empty content array (e.g. a safety stop with no
+  // text block) must fall into the non-fatal default path below, not throw
+  // a TypeError that discards the cookies already collected.
+  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+  // Real brace-matching, not the greedy object-capture regex — an unbalanced
+  // (truncated) response yields null and we continue with defaults, which is
+  // this capability's intended non-fatal degrade.
+  const analysisRaw = extractJsonObject(responseText);
 
   let trackingScripts: Array<{ name: string; detected: boolean }> = [];
   let consentBannerDetected = false;
@@ -224,9 +231,9 @@ Only include tracking scripts where detected is true. For potential_issues, cons
   let thirdPartyDomains: string[] = [];
   let potentialIssues: string[] = [];
 
-  if (jsonMatch) {
+  if (analysisRaw) {
     try {
-      const analysis = JSON.parse(jsonMatch[0]);
+      const analysis = analysisRaw as Record<string, any>;
       trackingScripts = (analysis.tracking_scripts ?? []).filter(
         (s: { detected: boolean }) => s.detected,
       );

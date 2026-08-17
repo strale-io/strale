@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("company-industry-classify", async (input: CapabilityInput) => {
   const companyName = ((input.company_name as string) ?? (input.name as string) ?? "").trim();
@@ -43,17 +44,14 @@ Return:
   "confidence": "high|medium|low"
 }`;
 
-  const r = await client.messages.create({
+  const classified = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 500,
-    messages: [{ role: "user", content: prompt }],
+    maxTokens: 500,
+    prompt,
+    truncationGuidance: "Provide a shorter company description.",
+    parseFailureError: () => new Error("Classification failed — could not parse response."),
   });
-
-  const text = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Classification failed — could not parse response.");
-
-  const classified = JSON.parse(jsonMatch[0]);
 
   return {
     output: {

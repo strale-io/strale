@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("meeting-notes-extract", async (input: CapabilityInput) => {
   const transcript = ((input.transcript as string) ?? (input.text as string) ?? (input.task as string) ?? "").trim();
@@ -9,13 +10,11 @@ registerCapability("meeting-notes-extract", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
-    messages: [
-      {
-        role: "user",
-        content: `Extract structured meeting notes from this transcript. Return ONLY valid JSON.
+    maxTokens: 1500,
+    prompt: `Extract structured meeting notes from this transcript. Return ONLY valid JSON.
 
 Transcript:
 """
@@ -38,15 +37,9 @@ Return JSON:
   "follow_up_needed": ["items that need follow-up"],
   "sentiment": "productive/neutral/contentious/unclear"
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter transcript excerpt per call.",
+    parseFailureError: () => new Error("Failed to extract meeting notes."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract meeting notes.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.transcript_length = transcript.length;
   output.word_count = transcript.split(/\s+/).length;
 

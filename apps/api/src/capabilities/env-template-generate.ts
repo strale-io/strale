@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("env-template-generate", async (input: CapabilityInput) => {
   const code = ((input.code as string) ?? "").trim();
@@ -73,13 +74,11 @@ registerCapability("env-template-generate", async (input: CapabilityInput) => {
     : `Project description:\n${projectDescription.slice(0, 3000)}`;
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const parsed = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
-    messages: [
-      {
-        role: "user",
-        content: `Generate a .env template with descriptions and examples for these environment variables. Return ONLY valid JSON.
+    maxTokens: 1500,
+    prompt: `Generate a .env template with descriptions and examples for these environment variables. Return ONLY valid JSON.
 
 ${sourceContext}
 
@@ -94,15 +93,9 @@ Return JSON:
     }
   ]
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a smaller source file per call.",
+    parseFailureError: () => new Error("Failed to generate env template."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate env template.");
-
-  const parsed = JSON.parse(jsonMatch[0]);
   const variables = (parsed.variables as Array<{ name: string; description: string; example_value: string; required: boolean }>) ?? [];
 
   // Merge source_line info

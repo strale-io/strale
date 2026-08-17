@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { extractJsonObject } from "./lib/llm-json.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { safeFetch } from "../lib/safe-fetch.js";
 
@@ -50,12 +51,12 @@ registerCapability("receipt-categorize", async (input: CapabilityInput) => {
     messages,
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to parse receipt.");
+  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
+  const parsedOutput = extractJsonObject(responseText);
+  if (!parsedOutput) throw new Error("Failed to parse receipt.");
 
   return {
-    output: JSON.parse(jsonMatch[0]),
+    output: parsedOutput,
     provenance: { source: "claude-haiku", fetched_at: new Date().toISOString() },
   };
 });

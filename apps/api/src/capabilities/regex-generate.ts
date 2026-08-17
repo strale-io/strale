@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("regex-generate", async (input: CapabilityInput) => {
   const description = ((input.description as string) ?? (input.task as string) ?? "").trim();
@@ -15,13 +16,11 @@ registerCapability("regex-generate", async (input: CapabilityInput) => {
     : "";
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 800,
-    messages: [
-      {
-        role: "user",
-        content: `Generate a regular expression for this requirement. Return ONLY valid JSON.
+    maxTokens: 800,
+    prompt: `Generate a regular expression for this requirement. Return ONLY valid JSON.
 
 Requirement: "${description}"${testSection}
 
@@ -33,26 +32,24 @@ Requirement: "${description}"${testSection}
     {"input": "string", "matches": true/false, "match": "matched text or null"}
   ]
 }`,
-      },
-    ],
+    truncationGuidance: "Provide fewer test_strings per call.",
+    parseFailureError: () => new Error("Regex generation failed."),
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Regex generation failed.");
-
-  const output = JSON.parse(jsonMatch[0]);
+  const regexPattern = output.regex as string;
+  const regexFlags = (output.flags as string | undefined) ?? "";
 
   // Verify regex is valid
   try {
-    new RegExp(output.regex, output.flags ?? "");
+    new RegExp(regexPattern, regexFlags);
   } catch (e) {
     throw new Error(`Generated regex is invalid: ${e instanceof Error ? e.message : String(e)}`);
   }
 
   // Run test strings if provided and not already tested
-  if (testStrings.length > 0 && (!output.test_results || output.test_results.length === 0)) {
-    const re = new RegExp(output.regex, output.flags ?? "");
+  const existingResults = output.test_results as unknown[] | undefined;
+  if (testStrings.length > 0 && (!existingResults || existingResults.length === 0)) {
+    const re = new RegExp(regexPattern, regexFlags);
     output.test_results = testStrings.map((s) => {
       const m = s.match(re);
       return { input: s, matches: !!m, match: m ? m[0] : null };

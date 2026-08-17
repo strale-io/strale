@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("classify-text", async (input: CapabilityInput) => {
   const text = ((input.text as string) ?? (input.task as string) ?? "").trim();
@@ -16,13 +17,11 @@ registerCapability("classify-text", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 600,
-    messages: [
-      {
-        role: "user",
-        content: `${categoriesStr}. Return ONLY valid JSON.
+    maxTokens: 600,
+    prompt: `${categoriesStr}. Return ONLY valid JSON.
 
 {
   "primary_category": "most likely category",
@@ -40,15 +39,9 @@ registerCapability("classify-text", async (input: CapabilityInput) => {
 
 Text:
 "${text.slice(0, 10000)}"`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter text excerpt per call.",
+    parseFailureError: () => new Error("Text classification failed."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Text classification failed.");
-
-  const output = JSON.parse(jsonMatch[0]);
 
   return {
     output,

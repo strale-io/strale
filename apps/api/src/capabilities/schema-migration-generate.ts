@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("schema-migration-generate", async (input: CapabilityInput) => {
   const currentSchema = ((input.current_schema as string) ?? "").trim();
@@ -14,13 +15,11 @@ registerCapability("schema-migration-generate", async (input: CapabilityInput) =
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Generate a database migration from current schema to desired schema. ORM: ${orm}. Return ONLY valid JSON.
+    maxTokens: 2000,
+    prompt: `Generate a database migration from current schema to desired schema. ORM: ${orm}. Return ONLY valid JSON.
 
 Current schema:
 ${currentSchema.slice(0, 4000)}
@@ -36,15 +35,9 @@ Return JSON:
   "breaking_changes": ["list of changes that could break existing code"],
   "warnings": ["data loss risks, column type changes, etc"]
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a smaller schema per call.",
+    parseFailureError: () => new Error("Failed to generate migration."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate migration.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.orm = orm;
 
   return {

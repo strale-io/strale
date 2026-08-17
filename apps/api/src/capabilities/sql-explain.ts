@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("sql-explain", async (input: CapabilityInput) => {
   const sql = ((input.sql as string) ?? (input.query as string) ?? (input.task as string) ?? "").trim();
@@ -11,13 +12,11 @@ registerCapability("sql-explain", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
-    messages: [
-      {
-        role: "user",
-        content: `Explain this SQL query in plain language. Dialect: ${dialect}. Return ONLY valid JSON.
+    maxTokens: 1500,
+    prompt: `Explain this SQL query in plain language. Dialect: ${dialect}. Return ONLY valid JSON.
 
 SQL:
 ${sql.slice(0, 5000)}
@@ -30,15 +29,9 @@ Return JSON:
   "potential_issues": ["N+1 queries", "missing index hints", "full table scans", etc],
   "optimization_suggestions": ["specific optimization recommendations"]
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter SQL query per call.",
+    parseFailureError: () => new Error("Failed to explain SQL."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to explain SQL.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.dialect = dialect;
   output.sql_length = sql.length;
 

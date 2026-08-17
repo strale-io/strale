@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 
 registerCapability("code-review", async (input: CapabilityInput) => {
   const code = ((input.code as string) ?? (input.task as string) ?? "").trim();
@@ -52,7 +53,19 @@ Return JSON:
     ],
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
+  // Structurally skipped from the extractJsonWithLlm migration (the
+  // sanitize-and-retry below doesn't fit the helper's single parse path),
+  // but the truncation guard applies here all the same: a sample with many
+  // findings can exceed the 1500-token budget, and without this check the
+  // failure would classify as `internal` and count against the quality floor.
+  if (r.stop_reason === "max_tokens") {
+    throw new CapabilityRefusalError(
+      "Extraction result too large for one call: the output exceeded the per-call budget before completing. " +
+        "Review a smaller code sample, or narrow the focus to one category.",
+    );
+  }
+
+  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Failed to review code.");
 
