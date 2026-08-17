@@ -418,6 +418,20 @@ export async function shouldSkipForBudget(slug: string): Promise<boolean> {
   }
 }
 
+/**
+ * The heartbeat's "suites tested" figure, derived from executed results
+ * only. Deliberately NOT batch arithmetic (`runnableSuites.length -
+ * outerSkips`): the runner can also skip suites internally via its own
+ * per-suite budget re-check, which the scheduler cannot observe, so any
+ * batch-based subtraction misreports in both directions (closing review
+ * round, 2026-08-17: 4-duplicate-suite batch with budget 2 → old formula
+ * said 1 tested; 2 results actually existed). Exported for the regression
+ * test that pins this shape.
+ */
+export function suitesTestedFromResults(totalPassed: number, totalFailed: number): number {
+  return totalPassed + totalFailed;
+}
+
 // ─── Auxiliary tasks ────────────────────────────────────────────────────────
 
 async function runAuxiliaryTasks(): Promise<void> {
@@ -776,13 +790,17 @@ async function pollCycle(): Promise<void> {
         await delay(DELAY_BETWEEN_CAPABILITIES_MS);
       }
 
-      // Phase-4 tail fix (2026-08-17 review, LOW-8): runnableSuites is the
-      // BATCH size (everything the scheduler decided to attempt this
-      // cycle) — it is NOT the same as "suites actually tested" once
-      // shouldSkipForBudget can skip suites mid-batch. Reporting it as
-      // suites_tested silently counted skips as tests. Subtract the
-      // skipped ones so the summary/heartbeat reflect what actually ran.
-      const suitesActuallyTested = runnableSuites.length - skippedBudgetExhausted;
+      // Phase-4 tail fix (2026-08-17 review, LOW-8; corrected in the closing
+      // review round): "suites tested" must be DERIVED FROM EXECUTED RESULTS,
+      // never from batch arithmetic. runnableSuites counts scheduler batch
+      // entries; skippedBudgetExhausted counts only the batches skipped at
+      // THIS level — but runTests() can also skip suites internally (the
+      // per-suite budget re-check), so `batch - outerSkips` over-counts in
+      // one direction and under-counts in the other (Codex's trace: 4
+      // duplicate suites, budget 2 → formula said 1 tested/3 skipped;
+      // reality was 2 executed, 2 internally skipped). totalPassed +
+      // totalFailed is the count of results that actually exist.
+      const suitesActuallyTested = suitesTestedFromResults(totalPassed, totalFailed);
 
       jobLog.info(
         {

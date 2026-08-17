@@ -61,3 +61,23 @@ describe("shouldSkipForBudget (Phase-4 tail fix)", () => {
     await expect(shouldSkipForBudget("danish-company-data")).resolves.toBe(false);
   });
 });
+
+describe("suitesTestedFromResults (closing review round — heartbeat accounting)", () => {
+  it("derives 'tested' from executed results, not batch arithmetic — the reviewer's exact trace", async () => {
+    const { suitesTestedFromResults } = await import("./test-scheduler.js");
+    // 4 duplicate suites, budget for 2: two execute (say both pass), the
+    // runner internally skips two, the scheduler skips 3 later batch
+    // entries. The OLD formula (batch 4 − outer skips 3) reported 1.
+    // The truth is the number of results that exist: 2.
+    expect(suitesTestedFromResults(2, 0)).toBe(2);
+    expect(suitesTestedFromResults(1, 1)).toBe(2);
+    expect(suitesTestedFromResults(0, 0)).toBe(0);
+  });
+
+  it("pollCycle's summary uses the results-derived helper, never batch subtraction", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("./test-scheduler.ts", import.meta.url), "utf8");
+    expect(src).toContain("suitesTestedFromResults(totalPassed, totalFailed)");
+    expect(src).not.toMatch(/runnableSuites\.length\s*-\s*skippedBudgetExhausted/);
+  });
+});
