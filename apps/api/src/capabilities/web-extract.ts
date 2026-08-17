@@ -3,6 +3,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import { extractJsonObject } from "./lib/llm-json.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
+import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 
 registerCapability("web-extract", async (input: CapabilityInput) => {
   const url = input.url as string | undefined;
@@ -123,7 +124,7 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
 
   const response = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 4000,
+    max_tokens: 16000,
     messages: [
       {
         role: "user",
@@ -141,11 +142,37 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences. Just the JS
     ],
   });
 
+  // Check BEFORE attempting to parse. A response cut off at max_tokens is
+  // truncated mid-JSON, so extractJsonObject correctly returns null (the
+  // object never closes — unbalanced braces), and the old code fell through
+  // to the generic parse-failure error below. That error text contains
+  // "failed to parse", which transaction-failure-taxonomy.ts's INTERNAL_RE
+  // classifies as `internal` — our fault — so the quality floor (DEC-20260812-A)
+  // counted these as capability failures and quarantined web-extract in
+  // production on 2026-08-17 after six paid x402 calls hit this in 5 minutes,
+  // all six were a ~100-name roster page that legitimately needed more than
+  // 4000 output tokens. The fix is two-part: raise the budget (4000 -> 16000)
+  // so most legitimate extractions fit, AND refuse distinctly when the model
+  // still runs out, so the caller gets actionable guidance instead of a raw
+  // parse error, and the failure is attributed to the request's scope (caller
+  // input) rather than to us.
+  if (response.stop_reason === "max_tokens") {
+    throw new CapabilityRefusalError(
+      "Extraction result too large for one call: the output exceeded the per-call budget before completing. " +
+        "Narrow your 'extract' instruction or split the request (e.g. one page or one section at a time).",
+    );
+  }
+
   const responseText =
-    response.content[0].type === "text" ? response.content[0].text : "";
+    response.content[0]?.type === "text" ? response.content[0].text : "";
 
   const parsed = extractJsonObject(responseText);
   if (!parsed) {
+    // Genuinely malformed (non-truncation) output — the model returned
+    // something that isn't recoverable JSON even though it had room to
+    // finish. This stays a plain Error: it's our parsing/prompting problem,
+    // not the caller's request being too large, so it must keep classifying
+    // as `internal` in the taxonomy.
     throw new Error(
       `Failed to parse extraction result as JSON. Raw response: ${responseText.slice(0, 300)}`,
     );

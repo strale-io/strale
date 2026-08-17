@@ -74,6 +74,21 @@ export const REFUSAL_MESSAGE_PATTERNS = [
   "Ambiguous ", // pickByName: several equally-good registry matches
   "No confident ", // pickByName / assertSingleResultMatch: nothing matched well enough
   "Could not identify a specific ", // extractCompanyName: input names no company
+  // web-extract / product-reviews-extract: the LLM extraction call hit its
+  // per-call output-token budget before finishing. The page rendered fine
+  // and the model understood the request well enough to start answering it —
+  // the request just needs to be narrower or split, which is the same "the
+  // capability worked, the ask has to change" shape as the entries above.
+  // 2026-08-17: this exact failure (undetected truncation -> unbalanced-brace
+  // parse failure -> classified `internal` by INTERNAL_RE's "failed to parse"
+  // match) quarantined web-extract in production after six paid x402 calls
+  // hit it in 5 minutes. Registering the phrase here — rather than only in
+  // transaction-failure-taxonomy.ts's CALLER_INPUT_RE — additionally keeps
+  // the circuit breaker (circuit-breaker.ts spreads REFUSAL_MESSAGE_PATTERNS
+  // into USER_INPUT_ERROR_PATTERNS) and quality-capture.ts's categorizeError
+  // (via isCapabilityRefusal) aligned with the taxonomy, the same three-consumer
+  // guarantee this list already gives the registry-refusal patterns above.
+  "Extraction result too large for one call",
 ] as const;
 
 /** Does this error — object or bare message — represent a refusal? */

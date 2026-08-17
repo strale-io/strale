@@ -96,3 +96,11 @@ limitations:
     category: accuracy
     severity: info
     workaround: Use structured-scrape with CSS selectors for precise extraction when you know the page structure
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~16k output tokens) are refused
+      rather than returned truncated — for example a page listing 100+ items when 'extract' asks for every one
+      of them in detail. Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Narrow the 'extract' instruction, or split the request into multiple calls (e.g. one page or one section at a time)
