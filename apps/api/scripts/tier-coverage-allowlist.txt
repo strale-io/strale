@@ -1,15 +1,17 @@
-# tier-coverage gate — Phase 1 grandfathered findings.
+# tier-coverage gate — grandfathered findings.
 #
 # Each slug below has at least one finding in the 2026-05-17 capture pass.
-# Phase 1 (current) is WARN-ONLY and surfaces all findings; this allowlist
-# is consulted only for the per-finding "[allowlisted]" tag in the output.
-#
-# When the gate is promoted to Phase 2 (--strict exits 1 on new findings),
-# slugs in this allowlist are grandfathered and won't fail CI. New slugs
-# that appear in future captures will fail. Remove a slug from this list
-# AFTER its manifest is fixed (re-capture with `npx tsx
-# apps/api/scripts/capture-tier-fixtures.ts --slug <slug>` and confirm
-# the gate reports zero findings for it).
+# The gate was promoted to Phase 2 / STRICT on 2026-08-17 (--strict now
+# exits 1 on any finding not in this allowlist; see check-tier-coverage.mjs
+# and .github/workflows/ci.yml). Slugs listed here are grandfathered and
+# won't fail CI. New slugs that appear in future captures WILL fail. Remove
+# a slug from this list AFTER its manifest is fixed (re-capture with `npx
+# tsx apps/api/scripts/capture-tier-fixtures.ts --slug <slug>` and confirm
+# the gate reports zero findings for it) — or, per the 2026-08-17 review,
+# after declaring the missing fields directly in the manifest when no
+# recapture is actually needed (cypriot-company-data's case: the 3
+# undeclared fields were known, stable canonical aliases, not a data-shape
+# question the vendor answers).
 #
 # Format: one slug per line, # comments allowed, blank lines ignored.
 
@@ -24,8 +26,9 @@ swedish-company-data
 us-company-data
 # uk: tier fixture capture requires COMPANIES_HOUSE_API_KEY (prod-only); recapture in a keyed environment
 uk-company-data
-# cyprus: tier fixture capture requires OPENAPI_ENABLED=true, which is legally gated —
-# unsigned resale addendum, case 151296 (per CLAUDE.md capabilities notes, 2026-08-17).
-# Do not flip OPENAPI_ENABLED to recapture this fixture without Petter's sign-off on
-# the addendum; remove this line once that's resolved and a clean recapture lands.
-cypriot-company-data
+# cyprus: NOT allowlisted (2026-08-17 review, MEDIUM-4) — its 3 undeclared
+# fields (legal_name, primary_registration_id, date_incorporated) are
+# DEC-20260518-A canonical aliases the executor sets unconditionally; no
+# live recapture was needed (that would have required flipping the
+# legally-gated OPENAPI_ENABLED flag, case 151296). Declared directly in
+# manifests/cypriot-company-data.yaml instead.
