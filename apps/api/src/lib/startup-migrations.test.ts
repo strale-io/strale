@@ -1230,6 +1230,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0086_srcBasis",
       "runMigration0087_unhideRedactedRows",
       "runMigration0088_solutionGateCondition",
+      "runMigration0089_deactivateUsCourtSearch",
     ]);
   });
 });
@@ -1541,5 +1542,65 @@ describe("startup-migrations — failure-aborts-boot semantics (orchestrator)", 
     await expect(runStartupMigrations()).rejects.toThrow(
       /0062_paid_vendor_costs post-condition failed/,
     );
+  });
+});
+
+describe("startup-migrations — block 0089 (deactivate us-court-search)", () => {
+  it("takes the capability off every surface, not just x402", async () => {
+    // The defect this executes against: DQ-4 recorded us-court-search as
+    // switched off on 2026-08-15, but only x402_enabled was cleared. Verified
+    // on production 2026-08-17 — still is_active, still visible, still on
+    // /v1/capabilities at EUR 0.15, returning HTTP 500 to every caller because
+    // CourtListener rejects the token with 403.
+    const { runMigration0089_deactivateUsCourtSearch } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 1 }] });
+    const result = await runMigration0089_deactivateUsCourtSearch(stub);
+
+    const rendered = stub.renderedSql[0].toLowerCase();
+    expect(rendered).toContain("update capabilities");
+    expect(rendered).toContain("is_active = false");
+    expect(rendered).toContain("visible = false");
+    expect(rendered).toContain("x402_enabled = false");
+    expect(rendered).toContain("us-court-search");
+    expect(result.rows_affected).toBe(1);
+    expect(result.block).toBe("0089_deactivateUsCourtSearch");
+  });
+
+  it("is idempotent — the WHERE clause makes a re-run a no-op", async () => {
+    const { runMigration0089_deactivateUsCourtSearch } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    const result = await runMigration0089_deactivateUsCourtSearch(stub);
+
+    // Guards both re-running on an already-deactivated row AND re-deactivating
+    // a capability an operator has since deliberately switched back on.
+    expect(stub.renderedSql[0].toLowerCase()).toContain("is_active = true");
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toContain("no change");
+  });
+
+  it("records a reversible reason naming the credential to restore", async () => {
+    const { runMigration0089_deactivateUsCourtSearch, US_COURT_SEARCH_DEACTIVATION_REASON } =
+      await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 1 }] });
+    await runMigration0089_deactivateUsCourtSearch(stub);
+
+    // The reason is bound as a parameter, so it is in the query's params, not
+    // in the rendered SQL text — assert on the bound value, not on the string.
+    expect(US_COURT_SEARCH_DEACTIVATION_REASON).toContain("COURTLISTENER_API_TOKEN");
+    expect(US_COURT_SEARCH_DEACTIVATION_REASON).toContain("DQ-4");
+    expect(dialect.sqlToQuery(stub.captured[0]).params).toContain(
+      US_COURT_SEARCH_DEACTIVATION_REASON,
+    );
+  });
+
+  it("no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)", async () => {
+    const { runMigration0089_deactivateUsCourtSearch } = await import("./startup-migrations.js");
+    const stub = makeStub({ queue: [{ count: 1 }] });
+    await runMigration0089_deactivateUsCourtSearch(stub);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      const badChunks = chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c));
+      expect(badChunks, "no Date/Buffer chunk reaches the SQL bind layer").toEqual([]);
+    }
   });
 });
