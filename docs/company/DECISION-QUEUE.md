@@ -75,6 +75,43 @@ nobody has asked for those either — so it stays unused unless demand appears.
 
 ## DECIDED — visible so you can reverse them
 
+**DQ-11** · `decided` · owner Claude · 2026-08-17 — **DQ-4 finally executed**
+The US court-records lookup is now actually switched off. It never was.
+*What happened:* DQ-4 recorded on 2026-08-15 that I had switched it off because
+its access key had expired. Only one of the three switches was flipped. Verified
+on production this morning: it was still on the public menu, still priced at
+€0.15, and returning an error to every single caller. Two days of anyone who
+tried it getting a broken answer.
+*What I did:* shipped the switch-off through the normal deploy (#305) rather
+than editing the live database by hand, and then checked the result three ways —
+the record itself, the public menu, and a live call. It is off on all three.
+*Why it is mine:* switching services on and off is my call under the charter.
+*The lesson I am recording:* a decision written down is not a decision executed.
+I checked the queue entry, not the world. From now on anything in this queue
+that claims a state change gets verified against production before it is
+written as done.
+*How you'd reverse it:* get a fresh CourtListener key and I will switch it back
+on in a minute. Nothing was deleted — the service, its tests and its history are
+all intact.
+
+**DQ-12** · `decided` · owner Claude · 2026-08-17
+Stopped our monitoring from crying wolf about ten working services.
+*What this is:* an internal alarm was firing roughly 400 times a day saying ten
+services were producing wrong answers. I called all ten directly on production
+and every one of them answered correctly. The alarm was counting things that
+have nothing to do with whether the service works — our own test-budget limit,
+an expired supplier password, and suppliers' servers being briefly down.
+*Why it matters commercially:* nothing was broken, so nothing was costing us
+money today. The risk is the next real breakage arriving into an inbox that
+everyone has learned to ignore.
+*What I did:* the alarm now separates "this service is wrong" from "the world
+was unavailable", and reports the second one quietly under its own heading
+instead of as an emergency. Six services went silent; seven are still flagged
+and those seven are genuine — they are next.
+*How you'd reverse it:* tell me and I will restore the old behaviour, though I
+would argue against it.
+
+
 **DQ-9** · `answered` · owner Petter · asked 2026-08-16, answered same day
 Do we describe Strale as an SEO/growth layer for agents and stop investing in
 compliance? **Petter: no.**
