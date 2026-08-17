@@ -17,7 +17,7 @@ cd apps/api && npx tsx --env-file=../../.env scripts/session-close-check.ts
 
 Checks git integrity, DB↔code parity, stuck caps, open breakers, uncommitted handoff files. Exit codes: `0` clean, `1` warnings, `2` blockers. Capture findings for the final report.
 
-## 2. Write the session handoff file (CLAUDE.md step 6)
+## 2. Write the session handoff file (CLAUDE.md step 7)
 
 Author a handoff file at `handoff/_general/from-code/YYYY-MM-DD-<topic>.md` covering this session's work. Convention:
 
@@ -29,7 +29,7 @@ If a handoff file authored *this session* already exists for today's topic (e.g.
 
 If the session was genuinely trivial (single trivial fix, nothing worth recording), still write a one-line handoff. Skipping is Petter's call, not yours.
 
-## 3. Create the Journal entry in Notion (CLAUDE.md step 7)
+## 3. Create the Journal entry in Notion (CLAUDE.md step 8)
 
 Create a session-log entry in the Journal data source (`collection://8f54383b-3227-42c2-bee4-77a091027f8f`) with:
 
@@ -86,8 +86,8 @@ Give the user a structured summary:
 ⚠ Yellow    (N items review)
 ✗ Red       (N items blockers)
 
-Handoff file (step 6):     ✓ <path> (written this session)
-Journal entry (step 7):    ✓ <title + URL> (written this session)
+Handoff file (step 7):     ✓ <path> (written this session)
+Journal entry (step 8):    ✓ <title + URL> (written this session)
 Decisions to log:          [0 | N to-confirm]
 Supersessions:             [none | N requires Contradiction Protocol]
 To-do DB state:            [clean | N items need attention]
