@@ -215,6 +215,7 @@ async function withAdvisoryLock<T>(
 interface OverdueSuite {
   slug: string;
   testType: string;
+  suiteId: string;
   lastRunAt: Date | null;
 }
 
@@ -268,6 +269,17 @@ export function slugStaggerMinute(slug: string, testType?: string): number {
  * applies — known-broken suites back off to daily/weekly even on the new
  * hourly cadence. The "no status creates a black hole" invariant from the
  * old tiered query is preserved by the ELSE branch.
+ *
+ * Each returned row carries its own `suiteId` (ts.id), not just
+ * (slug, testType). pollCycle() passes that id straight through to
+ * `runTests({..., suiteId})`, which scopes execution to exactly that one
+ * test_suites row. Before this, two suites sharing (slug, testType) — e.g.
+ * danish-company-data's 4 duplicate known_answer suites — produced 4
+ * identical (slug, testType) rows here, and each of the 4 loop iterations
+ * in pollCycle() called runTests({capabilitySlug, testType}) *without* a
+ * suite id, which reloaded and re-ran ALL 4 suites every time: a batch of
+ * N due suites did N x N executions, not N. See TestRunOptions.suiteId's
+ * doc comment in test-runner.ts for the full incident.
  */
 async function findOverdueSuites(): Promise<OverdueSuite[]> {
   const db = getDb();
@@ -279,6 +291,7 @@ async function findOverdueSuites(): Promise<OverdueSuite[]> {
   const rows = await db.execute(sql`
     SELECT
       c.slug,
+      ts.id::text AS "suiteId",
       ts.test_type AS "testType",
       (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id) AS "lastRunAt"
     FROM capabilities c
@@ -326,6 +339,7 @@ async function findOverdueSuites(): Promise<OverdueSuite[]> {
   return resultRows.map((r: any) => ({
     slug: r.slug,
     testType: r.testType,
+    suiteId: r.suiteId,
     lastRunAt: r.lastRunAt ? new Date(r.lastRunAt) : null,
   }));
 }
@@ -730,7 +744,16 @@ async function pollCycle(): Promise<void> {
             "test-scheduler-testing",
           );
 
-          const summary = await runTests({ capabilitySlug: suite.slug, testType: suite.testType });
+          // suiteId scopes this call to exactly the one overdue suite this
+          // batch entry represents — see findOverdueSuites' doc comment and
+          // TestRunOptions.suiteId in test-runner.ts. Without it, N
+          // same-(slug,testType) suites due in the same batch produced N x N
+          // executions (danish-company-data: 4 duplicates -> 16/batch).
+          const summary = await runTests({
+            capabilitySlug: suite.slug,
+            testType: suite.testType,
+            suiteId: suite.suiteId,
+          });
           totalPassed += summary.passed;
           totalFailed += summary.failed;
           slugsTested.add(suite.slug);

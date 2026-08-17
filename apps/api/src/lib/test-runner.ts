@@ -91,6 +91,34 @@ export interface TestRunOptions {
   capabilitySlug?: string;
   tier?: ScheduleTier;
   testType?: string;
+  /**
+   * Scope execution to exactly one test_suites row (by id). Additive to
+   * capabilitySlug/testType, not a replacement for them — existing callers
+   * that omit it keep loading every active suite matching (capabilitySlug,
+   * testType) exactly as before.
+   *
+   * Added for the scheduler's per-suite batch entries (Codex review,
+   * 2026-08-18): findOverdueSuites() emits one row per due SUITE, but
+   * runTests({capabilitySlug, testType}) without this field reloads and
+   * re-executes EVERY active suite sharing that (slug, testType) pair.
+   * With N same-type suites, a batch of N due rows produced N x N
+   * executions per cadence (danish-company-data's 4 duplicate
+   * known_answer suites: 4 batch entries x 4 suites reloaded each = 16
+   * attempts against a 100/day budget). PR #318's isBudgetExhausted
+   * re-checks stopped the redundant calls from writing failed
+   * test_results rows once the budget ran out, but did nothing to stop
+   * the redundant *executions* themselves before that point — this field
+   * is the actual fix: the scheduler now passes the specific overdue
+   * suite's id, so one batch entry runs exactly its own suite.
+   *
+   * Fail-closed, not fail-open (Codex closing-pass HIGH, 2026-08-18): when
+   * this key is present (`!== undefined`), its value MUST be a non-empty
+   * string or runTests() throws. A falsy value silently ignored here would
+   * widen scope back to every suite matching (capabilitySlug, testType) —
+   * the exact bug this field exists to close — so "present but malformed"
+   * fails loudly instead of degrading into the old quadratic behavior.
+   */
+  suiteId?: string;
 }
 
 export interface TestRunSummary {
@@ -159,6 +187,32 @@ export async function runTests(
   }
   if (opts.testType) {
     conditions.push(eq(testSuites.testType, opts.testType));
+  }
+  // Codex closing-pass HIGH: `if (opts.suiteId)` was fail-open — a falsy
+  // suiteId (null, "", or undefined-by-bug) from the scheduler silently
+  // dropped the id predicate and widened execution back to every suite
+  // matching (capabilitySlug, testType), which is the exact quadratic
+  // failure this parameter exists to close. The scheduler's OverdueSuite
+  // rows come off a raw `any`-typed SQL result (test-scheduler.ts's
+  // findOverdueSuites), so a NULL `suiteId` column reaching here would be
+  // typed as `string` by TypeScript but actually be `null` at runtime —
+  // exactly the class of bug this closes against. suiteId presence is
+  // detected by `!== undefined` (the scheduler ALWAYS supplies it; every
+  // other caller never passes the key at all, so it stays genuinely
+  // undefined for them and the field remains optional/backward-compatible)
+  // — once present, it must be a non-empty string or this throws instead
+  // of silently widening scope.
+  if (opts.suiteId !== undefined) {
+    if (typeof opts.suiteId !== "string" || opts.suiteId.length === 0) {
+      throw new Error(
+        `runTests: suiteId was supplied but is not a non-empty string (got ${JSON.stringify(opts.suiteId)}). ` +
+          "A falsy/malformed suiteId must never silently widen execution back to every suite matching " +
+          "(capabilitySlug, testType) — that is the exact N x N quadratic failure this parameter exists " +
+          "to close. test-scheduler.ts always supplies a real suite id from findOverdueSuites; a falsy " +
+          "value reaching here means the caller has a bug and must fail loudly, not silently widen scope.",
+      );
+    }
+    conditions.push(eq(testSuites.id, opts.suiteId));
   }
 
   // T-1: Inner join with capabilities to skip deactivated/suspended capabilities.
