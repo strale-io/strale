@@ -100,7 +100,7 @@ Extract up to 10 recent reviews. Use null for any fields you cannot determine. S
     );
   }
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
+  const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
 
   // extractJsonObject does real brace-matching rather than the greedy
   // /\{[\s\S]*\}/ regex this replaces — the exact over-capture bug

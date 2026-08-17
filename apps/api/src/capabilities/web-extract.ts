@@ -164,7 +164,7 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences. Just the JS
   }
 
   const responseText =
-    response.content[0].type === "text" ? response.content[0].text : "";
+    response.content[0]?.type === "text" ? response.content[0].text : "";
 
   const parsed = extractJsonObject(responseText);
   if (!parsed) {
