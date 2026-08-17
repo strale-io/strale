@@ -70,3 +70,11 @@ limitations:
     category: coverage
     severity: info
     workaround: Supplement with the target company's own regulatory disclosure filings, which may reference unpublished penalties
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example a broad country-level search returning many fines.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Narrow the search (specific company or country) so fewer fines are returned per call

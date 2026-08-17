@@ -445,3 +445,11 @@ limitations:
     category: accuracy
     severity: info
     workaround: Verify all command examples and installation steps in a clean environment before publishing
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~8k output tokens) are refused
+      rather than returned truncated — for example an unusually large or detailed project description.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Retry with a smaller or more focused request — a shorter project_description

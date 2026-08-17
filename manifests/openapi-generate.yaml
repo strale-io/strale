@@ -168,3 +168,11 @@ limitations:
     category: accuracy
     severity: info
     workaround: Validate the generated spec with openapi-validate and test against actual API behavior
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~4k output tokens) are refused
+      rather than returned truncated — for example a description covering many endpoints and schemas.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Describe fewer endpoints per call

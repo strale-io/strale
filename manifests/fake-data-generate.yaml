@@ -126,3 +126,11 @@ limitations:
     category: accuracy
     severity: info
     workaround: For fields requiring valid checksums or format validation, use dedicated validators on the generated data
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~4k output tokens) are refused
+      rather than returned truncated — 'count' accepts up to 1000 records, and a high count with a wide schema
+      can exceed the budget well before reaching that ceiling. Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Request a smaller 'count' — fewer records per call

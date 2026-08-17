@@ -100,3 +100,11 @@ limitations:
     category: accuracy
     severity: info
     workaround: Distribute extracted notes to all participants for confirmation before treating action items as final
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~1.5k output tokens) are refused
+      rather than returned truncated — for example a long meeting with an unusually large number of action
+      items and discussion points. Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Provide a shorter transcript excerpt per call

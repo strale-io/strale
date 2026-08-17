@@ -86,3 +86,11 @@ limitations:
     workaround: >-
       Treat as list price comparison; check each retailer link in the response for current promotions before purchase
       decisions
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~4k output tokens) are refused
+      rather than returned truncated — for example a shopping results page with an unusually long offer list.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Retry with a smaller or more focused request — fewer offers per call

@@ -84,3 +84,11 @@ limitations:
     workaround: >-
       Use as a directional benchmark and adjust for company size, location, and industry using local compensation
       surveys
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example a job title page with an unusually long list of comparable
+      titles. Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: This job title's salary page produced more content than fits in one call — no direct workaround

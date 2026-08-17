@@ -85,3 +85,11 @@ limitations:
     workaround: >-
       Verify extracted duty rates against the official TARIC database and consult a customs broker for complex
       classifications
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example an HS code with an unusually long list of preferential rates
+      or additional duties. Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: This HS code's duty page produced more preferential-rate entries than fit in one call — no direct workaround

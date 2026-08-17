@@ -122,3 +122,11 @@ limitations:
     category: coverage
     severity: info
     workaround: Specify the target regex engine in the input for more accurate explanations of engine-specific syntax
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~1.5k output tokens) are refused
+      rather than returned truncated — for example a large 'test_strings' array (uncapped) requiring a
+      test_results entry per string. Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Provide fewer test_strings per call

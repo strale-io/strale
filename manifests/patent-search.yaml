@@ -200,3 +200,11 @@ limitations:
     workaround: >-
       For comprehensive patent searches, supplement with Espacenet (worldwide.espacenet.com) or the national patent
       office
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example a broad query returning many patents.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Reduce max_results so fewer patents are returned per call

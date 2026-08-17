@@ -100,3 +100,11 @@ limitations:
     category: coverage
     severity: info
     workaround: Pass each policy URL (privacy, cookies, terms) as separate requests and combine the results
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example an unusually long or detailed privacy policy document.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: This privacy policy produced more content than fits in one call — no direct workaround
