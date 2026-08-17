@@ -125,3 +125,11 @@ limitations:
     category: coverage
     severity: info
     workaround: Request the direct product review page URL rather than the main product page for more complete review coverage
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~8k output tokens) are refused rather
+      than returned truncated — for example a page with an unusually large number of long reviews. Retrying the
+      identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Try a page with fewer reviews — this capability extracts up to ~10 recent reviews per call

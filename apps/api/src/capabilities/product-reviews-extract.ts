@@ -1,6 +1,8 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
+import { extractJsonObject } from "./lib/llm-json.js";
+import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 import Anthropic from "@anthropic-ai/sdk";
 
 // Product review extraction from review and product pages via Browserless + Claude.
@@ -39,7 +41,7 @@ registerCapability("product-reviews-extract", async (input: CapabilityInput) => 
   const client = new Anthropic({ apiKey });
   const r = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
+    max_tokens: 8000,
     messages: [
       {
         role: "user",
@@ -82,11 +84,34 @@ Extract up to 10 recent reviews. Use null for any fields you cannot determine. S
     ],
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract product review data.");
+  // Check BEFORE attempting to parse — same reasoning as web-extract.ts.
+  // A response cut off at max_tokens is truncated mid-JSON; the old greedy
+  // regex below would have matched to the LAST `}` in whatever partial text
+  // came back (which may not even close the object), and the follow-on
+  // JSON.parse would throw a generic error that transaction-failure-taxonomy.ts
+  // classifies as `internal` (INTERNAL_RE matches "failed to parse") — our
+  // fault, not the caller's, feeding the armed quality floor (DEC-20260812-A).
+  // Budget raised 2000 -> 8000 so this should be rare in practice; when it
+  // still happens the caller gets guidance instead of a raw parse error.
+  if (r.stop_reason === "max_tokens") {
+    throw new CapabilityRefusalError(
+      "Extraction result too large for one call: the output exceeded the per-call budget before completing. " +
+        "Try a page with fewer reviews — this capability extracts up to ~10 recent reviews per call.",
+    );
+  }
 
-  const output = JSON.parse(jsonMatch[0]);
+  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
+
+  // extractJsonObject does real brace-matching rather than the greedy
+  // /\{[\s\S]*\}/ regex this replaces — the exact over-capture bug
+  // lib/llm-json.ts's docstring warns about: the greedy regex runs to the
+  // LAST `}` in the string, so trailing prose containing a brace (e.g. "use
+  // {} for missing fields") would silently pull unrelated text into the
+  // parsed object instead of failing loudly.
+  const parsed = extractJsonObject(responseText);
+  if (!parsed) throw new Error("Failed to extract product review data.");
+
+  const output = parsed;
   output.url = fullUrl;
 
   // Refuse to bill for an empty extraction.
