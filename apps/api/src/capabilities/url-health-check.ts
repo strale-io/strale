@@ -26,12 +26,22 @@ registerCapability("url-health-check", async (input: CapabilityInput) => {
     // Manual redirect following to capture chain
     let maxRedirects = 10;
     while (maxRedirects > 0) {
-      // F-0-006: re-validate every hop. safeFetch with maxRedirects: 0
-      // returns the 3xx so we can walk the chain ourselves.
+      // F-0-006: re-validate every hop. safeFetch with maxRedirects: 0 +
+      // returnOnRedirectCap: true returns the 3xx instead of throwing, so
+      // we can walk the chain ourselves. Phase-4 tail fix (MEDIUM-5,
+      // 2026-08-17 review): this call was missing returnOnRedirectCap —
+      // same bug class as redirect-trace.ts before its fix. Without the
+      // flag, maxRedirects: 0 alone makes safeFetch throw "Too many
+      // redirects (>0)" on the FIRST redirect (followRedirects increments
+      // hop to 1 before the hop > maxRedirects check, so 1 > 0 is always
+      // true) — any URL with a real redirect failed this whole capability
+      // outright instead of reporting the redirect chain. See
+      // safe-fetch.ts's SafeFetchOptions doc for the full history.
       await validateUrl(currentUrl);
       const response = await safeFetch(currentUrl, {
         method: "HEAD",
         maxRedirects: 0,
+        returnOnRedirectCap: true,
         signal: AbortSignal.timeout(timeout),
         headers: { "User-Agent": "Strale/1.0 (health-check; admin@strale.io)" },
       });
@@ -58,9 +68,14 @@ registerCapability("url-health-check", async (input: CapabilityInput) => {
     }
     responseTimeMs = Date.now() - start;
   } else {
+    // follow_redirects: false — caller wants to see whether the URL
+    // redirects at all, not follow it. Same returnOnRedirectCap need as
+    // above: without it, a redirecting URL threw instead of reporting
+    // its 3xx status_code.
     const response = await safeFetch(fullUrl, {
       method: "HEAD",
       maxRedirects: 0,
+      returnOnRedirectCap: true,
       signal: AbortSignal.timeout(timeout),
       headers: { "User-Agent": "Strale/1.0 (health-check; admin@strale.io)" },
     });
