@@ -2,7 +2,7 @@
 
 **Decision this informs:** v1 launch readiness for sanctions-check / pep-check / adverse-media-check across EU27 + UK + NO + CH (v1) and + US (v1.1).
 
-**Method:** Live calls against the Strale production API (sanctions / PEP) and direct Dilisense API (adverse media). 65 PEP cases + 24 adverse-media cases. Test script: [`apps/api/scripts/empirical-screening-coverage.ts`](../../apps/api/scripts/empirical-screening-coverage.ts).
+**Method:** Live calls against the Strale production API (sanctions / PEP) and direct Dilisense API (adverse media). 65 PEP cases + 24 adverse-media cases. Test script: [`apps/api/scripts/archive/empirical-screening-coverage.ts`](../../apps/api/scripts/archive/empirical-screening-coverage.ts) (archived 2026-08-17 — one-time empirical study, preserved as pattern reference).
 
 **Cost:** €6.90 in wallet credits (Strale-side) + ~50 Dilisense calls on Starter quota.
 
@@ -154,7 +154,7 @@ Confirmed empirically. The "EN/FR/DE only" marketing claim isn't just an absence
 
 ## 2026-04-29 follow-up — zero-hit variant testing
 
-Diagnostic script: [`apps/api/scripts/diag-adverse-media-variants.ts`](../../apps/api/scripts/diag-adverse-media-variants.ts). Cost: 9 Dilisense calls (quota was not exhausted; under the 100/mo free cap including the original 2026-04-27 testing).
+Diagnostic script: [`apps/api/scripts/archive/diag-adverse-media-variants.ts`](../../apps/api/scripts/archive/diag-adverse-media-variants.ts) (archived 2026-08-17). Cost: 9 Dilisense calls (quota was not exhausted; under the 100/mo free cap including the original 2026-04-27 testing).
 
 ### Results
 

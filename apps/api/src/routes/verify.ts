@@ -22,7 +22,7 @@ const DEFAULT_DEPTH = 20;
 
 export const verifyRoute = new Hono<AppEnv>();
 
-// F-A-012: 10 req/min per IP (was 30). See audit-reports/F_A_012_a_audit.md.
+// F-A-012: 10 req/min per IP (was 30). See archive/sessions/audit-reports/F_A_012_a_audit.md.
 verifyRoute.use("*", rateLimitByIp(10, 60_000));
 
 verifyRoute.get("/:transactionId", async (c) => {
