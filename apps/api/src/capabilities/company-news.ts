@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { withRetry } from "../lib/retry.js";
 
 /**
  * Company News — real-time news monitoring via GDELT.
@@ -12,6 +13,30 @@ import { registerCapability, type CapabilityInput } from "./index.js";
  */
 
 const GDELT_API = "https://api.gdeltproject.org/api/v2/doc/doc";
+
+/**
+ * Phase-4 tail fix (2026-08-17): GDELT rate-limits (HTTP 429) under normal
+ * traffic and this executor previously surfaced that straight through as a
+ * capability failure with no retry. Same idiom as us-company-data.ts's
+ * `fetchSec` — delegate to the shared `withRetry` primitive, whose default
+ * retryable-pattern set already covers `/HTTP 429/i`, so a single retry
+ * with backoff+jitter (~1s) is enough without widening the shared default
+ * or introducing new retry machinery. Only 429 is retried here; any other
+ * non-ok status (4xx/5xx) passes straight through to the existing
+ * `!resp.ok` handling below, unchanged.
+ */
+export function fetchGdelt(url: string, fetchImpl: typeof fetch = fetch): Promise<Response> {
+  return withRetry(
+    async () => {
+      const response = await fetchImpl(url, { signal: AbortSignal.timeout(25000) });
+      if (response.status === 429) {
+        throw new Error(`GDELT API returned HTTP 429`);
+      }
+      return response;
+    },
+    { maxRetries: 1, baseDelayMs: 1000, slug: "company-news" },
+  );
+}
 
 const VALID_TIMESPANS = ["1d", "3d", "7d", "14d", "30d"];
 
@@ -43,9 +68,7 @@ registerCapability("company-news", async (input: CapabilityInput) => {
   });
 
   const url = `${GDELT_API}?${params}`;
-  const resp = await fetch(url, {
-    signal: AbortSignal.timeout(25000),
-  });
+  const resp = await fetchGdelt(url);
 
   if (!resp.ok) {
     throw new Error(`GDELT API returned HTTP ${resp.status}. The news search service may be temporarily unavailable. Please try again.`);
