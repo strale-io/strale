@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("diff-review", async (input: CapabilityInput) => {
   const diff = ((input.diff as string) ?? (input.code as string) ?? (input.task as string) ?? "").trim();
@@ -31,13 +32,11 @@ registerCapability("diff-review", async (input: CapabilityInput) => {
     : "";
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const analysis = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Review this code diff for a pre-merge check. ${focusInstruction}${contextInstruction}
+    maxTokens: 2000,
+    prompt: `Review this code diff for a pre-merge check. ${focusInstruction}${contextInstruction}
 
 This is a unified diff (git diff format). Focus ONLY on what changed (+ and - lines). Return ONLY valid JSON.
 
@@ -71,15 +70,9 @@ Rules:
 - Be specific about file paths and line numbers when possible
 - "info" severity is for style nits only — don't pad the list
 - If the diff looks clean, return an empty issues array and approve`,
-      },
-    ],
+    truncationGuidance: "Provide a smaller diff (fewer files or lines) per call.",
+    parseFailureError: () => new Error("Failed to analyze diff."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to analyze diff.");
-
-  const analysis = JSON.parse(jsonMatch[0]);
 
   return {
     output: {

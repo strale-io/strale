@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("blog-post-outline", async (input: CapabilityInput) => {
   const topic = ((input.topic as string) ?? (input.task as string) ?? "").trim();
@@ -15,13 +16,11 @@ registerCapability("blog-post-outline", async (input: CapabilityInput) => {
   const keywordSection = keywords.length > 0 ? `\nTarget SEO keywords: ${keywords.join(", ")}` : "";
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Generate a detailed blog post outline. Return ONLY valid JSON, no prose.
+    maxTokens: 2000,
+    prompt: `Generate a detailed blog post outline. Return ONLY valid JSON, no prose.
 
 Topic: "${topic}"
 Target audience: ${targetAudience}
@@ -43,15 +42,9 @@ Return JSON:
   "meta_description": "suggested meta description (150 chars)",
   "hook_ideas": ["2-3 opening hook ideas"]
 }`,
-      },
-    ],
+    truncationGuidance: "Ask for fewer sections per call.",
+    parseFailureError: () => new Error("Failed to generate outline."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate outline.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.topic = topic;
   output.target_audience = targetAudience;
   output.tone = tone;

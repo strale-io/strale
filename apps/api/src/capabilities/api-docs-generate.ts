@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("api-docs-generate", async (input: CapabilityInput) => {
   const openapiSpec = (input.openapi_spec as string)?.trim();
@@ -17,13 +18,11 @@ registerCapability("api-docs-generate", async (input: CapabilityInput) => {
     : `Endpoint description:\n${endpointDesc!.slice(0, 5000)}`;
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Generate API documentation from this specification. Return ONLY valid JSON.
+    maxTokens: 2000,
+    prompt: `Generate API documentation from this specification. Return ONLY valid JSON.
 
 ${sourceText}
 
@@ -42,15 +41,9 @@ Return JSON:
   "total_endpoints": <number>,
   "authentication_type": "bearer/api-key/basic/oauth2/none"
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a smaller spec or split it into fewer endpoints per call.",
+    parseFailureError: () => new Error("Failed to generate API docs."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate API docs.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.source_type = openapiSpec ? "openapi" : "natural_language";
 
   return {

@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("address-parse", async (input: CapabilityInput) => {
   const address = ((input.address as string) ?? (input.text as string) ?? (input.task as string) ?? "").trim();
@@ -11,13 +12,11 @@ registerCapability("address-parse", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 500,
-    messages: [
-      {
-        role: "user",
-        content: `Parse this address into structured components. Return ONLY valid JSON.
+    maxTokens: 500,
+    prompt: `Parse this address into structured components. Return ONLY valid JSON.
 
 {
   "raw_address": "${address}",
@@ -35,15 +34,9 @@ registerCapability("address-parse", async (input: CapabilityInput) => {
 }
 
 Address: "${address}"`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter or simpler address string.",
+    parseFailureError: () => new Error("Address parsing failed."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Address parsing failed.");
-
-  const output = JSON.parse(jsonMatch[0]);
 
   return {
     output,

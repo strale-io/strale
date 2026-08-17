@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("docstring-generate", async (input: CapabilityInput) => {
   const code = ((input.code as string) ?? (input.source as string) ?? (input.task as string) ?? "").trim();
@@ -11,13 +12,11 @@ registerCapability("docstring-generate", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Add Python docstrings to all functions/classes/methods in this code. Use ${style} style. Return ONLY valid JSON.
+    maxTokens: 2000,
+    prompt: `Add Python docstrings to all functions/classes/methods in this code. Use ${style} style. Return ONLY valid JSON.
 
 Code:
 ${code.slice(0, 5000)}
@@ -29,16 +28,12 @@ Return JSON:
   "functions_documented": 0,
   "classes_documented": 0
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter code snippet per call.",
+    parseFailureError: () => new Error("Failed to generate docstrings."),
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate docstrings.");
-
   return {
-    output: JSON.parse(jsonMatch[0]),
+    output,
     provenance: { source: "claude-haiku", fetched_at: new Date().toISOString() },
   };
 });

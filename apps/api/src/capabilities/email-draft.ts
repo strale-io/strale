@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("email-draft", async (input: CapabilityInput) => {
   const context = ((input.context as string) ?? (input.task as string) ?? "").trim();
@@ -15,13 +16,11 @@ registerCapability("email-draft", async (input: CapabilityInput) => {
   const recipientLine = recipientContext ? `\nRecipient context: ${recipientContext}` : "";
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1000,
-    messages: [
-      {
-        role: "user",
-        content: `Draft a professional email. Return ONLY valid JSON.
+    maxTokens: 1000,
+    prompt: `Draft a professional email. Return ONLY valid JSON.
 
 Context: "${context}"
 Intent: ${intent} (cold_outreach/follow_up/apology/request/announcement/thank_you/general)
@@ -36,16 +35,12 @@ Return JSON:
   "tone_applied": "${tone}",
   "intent_applied": "${intent}"
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter context description.",
+    parseFailureError: () => new Error("Failed to draft email."),
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to draft email.");
-
   return {
-    output: JSON.parse(jsonMatch[0]),
+    output,
     provenance: { source: "claude-haiku", fetched_at: new Date().toISOString() },
   };
 });
