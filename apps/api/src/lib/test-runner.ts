@@ -14,6 +14,7 @@ import {
   CapabilityInvocationRefusedError,
   CapabilityNotClassifiedError,
   BudgetExhaustedError,
+  isBudgetExhausted,
 } from "../capabilities/guarded-executor.js";
 import type { CapabilityResult } from "../capabilities/index.js";
 import { computeHealthState, HEALTH_STATE_FREQUENCY_HOURS } from "./health-state.js";
@@ -244,6 +245,13 @@ export async function runTests(
       outputSchemaMap,
     );
 
+    // Phase-4 tail fix (HIGH-1, 2026-08-17 review): runSingleTest returns
+    // null when it hit a per-suite budget-exhaustion skip (see its own
+    // comment for why the once-per-batch scheduler check isn't enough —
+    // this call can carry several suites for the same capability). No
+    // test_results row was written; nothing to push, no self-heal to run.
+    if (result === null) continue;
+
     // ── Self-healing: attempt remediation on failures ──────────────────
     if (!result.passed && result.failureReason) {
       try {
@@ -455,7 +463,7 @@ async function runSingleTest(
   fieldReliabilityMap?: Map<string, Record<string, string>>,
   capabilityTypeMap?: Map<string, string>,
   outputSchemaMap?: Map<string, Record<string, unknown>>,
-): Promise<SingleTestResult> {
+): Promise<SingleTestResult | null> {
   const db = getDb();
   const startTime = Date.now();
 
@@ -526,6 +534,36 @@ async function runSingleTest(
       failureReason,
       responseTimeMs: 0,
     };
+  }
+
+  // Phase-4 tail fix (HIGH-1, 2026-08-17 review): re-check the live budget
+  // counter per suite, immediately before the call that would otherwise
+  // run straight into assertBudgetAvailable's BudgetExhaustedError.
+  //
+  // test-scheduler.ts's shouldSkipForBudget is a once-per-BATCH pre-check
+  // (before calling runTests()) — not enough on its own, because a single
+  // runTests({capabilitySlug, testType}) call reloads ALL suites matching
+  // that (slug, testType) pair, and this per-suite loop then runs them
+  // sequentially. danish-company-data has 4 duplicate known_answer test
+  // suites; a single runTests() call for it ran all 4 in one pass — the
+  // scheduler's outer check saw "budget available" once, the first 2
+  // suites here spent it, and the other 2 used to run straight into
+  // BudgetExhaustedError anyway, each writing a FAILED test_results row.
+  // This is the check that actually closes the gap; the scheduler's
+  // pre-check stays as a cheap early-out that avoids the runTests() call
+  // (and its DB query + per-suite loop startup) entirely when the whole
+  // batch is already known to be spent.
+  if (await isBudgetExhausted(suite.capabilitySlug)) {
+    log.info(
+      {
+        label: "test-runner-skip-budget-exhausted",
+        capability_slug: suite.capabilitySlug,
+        test_suite_id: suite.id,
+        test_type: suite.testType,
+      },
+      "test-runner-skip-budget-exhausted",
+    );
+    return null;
   }
 
   let capResult: CapabilityResult | null = null;

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Tier-coverage structural gate (Phase 1: WARN-ONLY).
+ * Tier-coverage structural gate (STRICT in CI as of 2026-08-17).
  *
  * Fourth structural CI gate alongside:
  *   - check-output-schema.ts               (output_schema isn't char-indexed)
@@ -17,7 +17,7 @@
  *       A guaranteed field absent from the wire is the worst class of drift:
  *       customers assert on it, downstream callers .field access it without
  *       a null-guard, and the SQS engine (gone) used to mark capabilities
- *       degraded on first miss. Phase 1 reports it; Phase 2 fails CI on it.
+ *       degraded on first miss. Strict mode fails CI on it.
  *
  *   (b) UNDECLARED_POPULATED — every populated key in the fixture must be
  *       declared in BOTH (i) `output_field_reliability` and (ii)
@@ -33,11 +33,10 @@
  * the guaranteed-emptiness check nor the undeclared-populated check fires
  * on them. They're allowed to be present or absent.
  *
- * Phase 1 — WARN-ONLY:
- *   Default and --strict both exit 0; --strict still groups & formats
- *   findings the same way Phase 2 will. Phase 2 promotion (separate PR)
- *   flips --strict to exit 1 after the WARN findings are reviewed and
- *   the allowlist is established.
+ * Enforcement (promoted 2026-08-17, the day findings-not-in-allowlist hit
+ * zero): --strict exits 1 on any finding not in
+ * scripts/tier-coverage-allowlist.txt; the bare invocation stays warn-only
+ * for local exploration. CI runs --strict.
  *
  * The fixture set is the EU30 registry capabilities (output of
  *   npx tsx apps/api/scripts/capture-tier-fixtures.ts --company-data
@@ -48,10 +47,8 @@
  * Pattern mirrors check-manifest-guaranteed-consistency.mjs.
  *
  * Usage (run from repo root or apps/api):
- *   node apps/api/scripts/check-tier-coverage.mjs
- *   node apps/api/scripts/check-tier-coverage.mjs --strict   # still exits 0 in Phase 1
- *
- * Exits 0 in Phase 1 regardless of findings.
+ *   node apps/api/scripts/check-tier-coverage.mjs            # warn-only
+ *   node apps/api/scripts/check-tier-coverage.mjs --strict   # CI mode, enforcing
  */
 
 import { readFileSync, readdirSync, existsSync } from "node:fs";
@@ -65,8 +62,6 @@ const manifestsDir = resolve(repoRoot, "manifests");
 const fixturesDir = resolve(repoRoot, "apps", "api", "test", "fixtures", "tier-coverage");
 const allowlistPath = resolve(__dirname, "tier-coverage-allowlist.txt");
 const strict = process.argv.includes("--strict");
-
-const PHASE = 1; // WARN-only. Phase 2 promotion changes this to 2.
 
 function isPopulated(v) {
   if (v === null || v === undefined) return false;
@@ -198,7 +193,7 @@ const allowed = loadAllowlist();
 const newFindings = findings.filter((f) => !allowed.has(f.slug));
 
 console.log(
-  `tier-coverage [phase ${PHASE} / WARN-ONLY]: ${scanned} manifests scanned, ` +
+  `tier-coverage [${strict ? "strict" : "warn-only"}]: ${scanned} manifests scanned, ` +
     `${withFixture} with fixtures, ${findings.length} findings (${newFindings.length} not in allowlist)`,
 );
 
@@ -216,15 +211,19 @@ if (findings.length > 0) {
     }
   }
   console.log(
-    "\nPhase 1 is WARN-ONLY — exiting 0 regardless. Phase 2 promotion (separate PR) " +
-      "will change the final exit to fail on findings NOT in scripts/tier-coverage-allowlist.txt. " +
-      "Re-capture a fixture after fixing its manifest with: " +
-      "npx tsx apps/api/scripts/capture-tier-fixtures.ts --slug <slug>",
+    strict
+      ? "\nSTRICT: findings not in scripts/tier-coverage-allowlist.txt fail this gate. " +
+          "Re-capture a fixture after fixing its manifest with: " +
+          "npx tsx apps/api/scripts/capture-tier-fixtures.ts --slug <slug>"
+      : "\nWarn-only invocation — exiting 0. CI runs this gate with --strict. " +
+          "Re-capture a fixture after fixing its manifest with: " +
+          "npx tsx apps/api/scripts/capture-tier-fixtures.ts --slug <slug>",
   );
 }
 
-// Phase 1: always exit 0. The `strict` flag is accepted (for parity with the
-// sibling gates' invocation surface) but not enforced. Phase 2 promotion
-// replaces the next line with:
-//   if (strict && newFindings.length > 0) process.exit(1);
+// Phase 2 promotion (2026-08-17): --strict now enforces. Promoted the same
+// day the finding count reached zero-not-in-allowlist (spanish recaptured
+// after its 2026-08-13 vendor swap; cypriot allowlisted pending the
+// OPENAPI_ENABLED legal gate, case 151296).
+if (strict && newFindings.length > 0) process.exit(1);
 process.exit(0);

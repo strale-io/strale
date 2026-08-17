@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { logWarn } from "../lib/log.js";
 
 /**
  * Company News — real-time news monitoring via GDELT.
@@ -12,6 +13,45 @@ import { registerCapability, type CapabilityInput } from "./index.js";
  */
 
 const GDELT_API = "https://api.gdeltproject.org/api/v2/doc/doc";
+
+/**
+ * Phase-4 tail fix (2026-08-17, revised same day per review MEDIUM-3):
+ * GDELT rate-limits (HTTP 429) under normal traffic. This executor used
+ * to surface that straight through with no retry at all; a same-day fix
+ * added an executor-level withRetry (single retry, ~1s backoff). Review
+ * caught the amplification that created: do.ts's executeWithRetry (the
+ * customer /v1/do path) and test-runner.ts's runSingleTest (the scheduler
+ * path) BOTH already wrap the whole executor call in their own withRetry
+ * (maxRetries: 1 each) for non-deterministic capabilities. Stacking a
+ * THIRD retry layer here meant one logical call could fire up to 2 (outer)
+ * x 2 (this layer) = 4 requests against an API that was already telling
+ * us to slow down — the opposite of what a 429 backoff should do.
+ *
+ * Fixed by removing this layer entirely: a 429 just throws (still matches
+ * failure-classifier's UPSTREAM_TRANSIENT_PATTERNS `/HTTP 429/i` and
+ * lib/retry.ts's own default retryable set), and the outer layer's retry
+ * re-invokes the WHOLE executor — which re-runs this fetch from scratch —
+ * giving exactly one retry per logical call, not up to four. Any other
+ * non-ok status (4xx/5xx) passes straight through to the existing
+ * `!resp.ok` handling below, unchanged.
+ *
+ * The 429 branch still cancels the unconsumed response body before
+ * throwing — otherwise the stream pins the connection open until GC
+ * (same failure mode + same fix shape as safe-fetch.ts's redirect-cap
+ * cancellation).
+ */
+export async function fetchGdelt(url: string, fetchImpl: typeof fetch = fetch): Promise<Response> {
+  const response = await fetchImpl(url, { signal: AbortSignal.timeout(25000) });
+  if (response.status === 429) {
+    await response.body?.cancel().catch((err) =>
+      logWarn("gdelt-429-body-cancel-failed", "429 body cancel failed (connection may pin until GC)", {
+        err: String(err),
+      }),
+    );
+    throw new Error(`GDELT API returned HTTP 429`);
+  }
+  return response;
+}
 
 const VALID_TIMESPANS = ["1d", "3d", "7d", "14d", "30d"];
 
@@ -43,9 +83,7 @@ registerCapability("company-news", async (input: CapabilityInput) => {
   });
 
   const url = `${GDELT_API}?${params}`;
-  const resp = await fetch(url, {
-    signal: AbortSignal.timeout(25000),
-  });
+  const resp = await fetchGdelt(url);
 
   if (!resp.ok) {
     throw new Error(`GDELT API returned HTTP ${resp.status}. The news search service may be temporarily unavailable. Please try again.`);

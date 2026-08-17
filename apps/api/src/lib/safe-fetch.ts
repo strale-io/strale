@@ -117,6 +117,29 @@ export interface SafeFetchOptions extends Omit<RequestInit, "redirect"> {
    * cases, never for normal capability fetches).
    */
   timeoutMs?: number;
+  /**
+   * Phase-4 tail fix: when the hop count exceeds `maxRedirects`, RETURN the
+   * 3xx response at the cap instead of throwing. Default false, so every
+   * existing caller keeps the "throw past the cap" behaviour unchanged.
+   *
+   * Exists for redirect-trace, which calls `safeFetch(url, {maxRedirects:
+   * 0})` expecting the first 3xx response back so it can walk the chain
+   * itself. Without this flag `maxRedirects: 0` always throws on the first
+   * redirect — `followRedirects` increments `hop` to 1 before the
+   * `hop > maxRedirects` check, so `1 > 0` is true on every redirect,
+   * including the very first one (introduced in commit 1f0d480,
+   * 2026-04-17, swapping raw `fetch(url, {redirect:'manual'})` for
+   * safeFetch under a wrong equivalence assumption — raw fetch with
+   * `redirect: 'manual'` returns the 3xx; `safeFetch` with `maxRedirects:
+   * 0` throws instead).
+   *
+   * SSRF guarantee preserved: the URL at the cap has already been
+   * `validate()`-d (it's the URL we just fetched, validated at the top of
+   * this same loop iteration, same as every other hop). This flag changes
+   * only what happens to the response once the cap is hit — it does not
+   * skip or reorder any validation.
+   */
+  returnOnRedirectCap?: boolean;
 }
 
 const DEFAULT_MAX_REDIRECTS = 3;
@@ -140,7 +163,7 @@ export async function safeFetch(
   url: string | URL,
   opts: SafeFetchOptions = {},
 ): Promise<Response> {
-  const { maxRedirects = DEFAULT_MAX_REDIRECTS, timeoutMs, ...init } = opts;
+  const { maxRedirects = DEFAULT_MAX_REDIRECTS, timeoutMs, returnOnRedirectCap, ...init } = opts;
 
   // Per-source ToS policy is enforced at the fetch layer, not only in the
   // capabilities that remember to call it (P2, 2026-08-12 — three separate
@@ -163,6 +186,7 @@ export async function safeFetch(
     init,
     maxRedirects,
     validateUrl,
+    returnOnRedirectCap ?? false,
   );
 }
 
@@ -181,6 +205,7 @@ export async function followRedirects(
   init: Omit<RequestInit, "redirect">,
   maxRedirects: number,
   validate: (u: string) => Promise<void>,
+  returnOnCap = false,
 ): Promise<Response> {
   let current = url;
   let hop = 0;
@@ -208,6 +233,13 @@ export async function followRedirects(
 
     hop++;
     if (hop > maxRedirects) {
+      if (returnOnCap) {
+        // The URL that produced this response was validated at the top of
+        // this same loop iteration (same as every other hop) — returning
+        // it instead of throwing changes nothing about the SSRF guarantee,
+        // only who's responsible for deciding whether to follow further.
+        return response;
+      }
       logWarn("ssrf-too-many-redirects", "Exceeded maxRedirects", {
         start: url,
         hops: hop,
