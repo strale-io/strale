@@ -388,6 +388,36 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// ─── Mid-batch budget re-check (Phase-4 tail fix, 2026-08-17) ───────────────
+//
+// findOverdueSuites()'s budget exclusion above is a snapshot taken once at
+// the START of a poll cycle. When several of a capability's suites collide
+// on the same minute's stagger (confirmed live for danish-company-data: 4
+// duplicate `known_answer` test suites all hash `slug + ':known_answer'` to
+// the identical minute), the batch can contain more of that capability's
+// suites than its remaining budget covers — the snapshot said "budget
+// available", but the scheduler's sequential loop spends it as it goes. The
+// first couple of suites in the batch succeed and exhaust the counter;
+// every suite after that in the SAME batch used to run straight into
+// `assertBudgetAvailable`'s `BudgetExhaustedError`, writing a failed
+// `test_results` row (confirmed live: danish-company-data logged 15
+// budget-exhaustion failures out of 17 attempts in 24h).
+//
+// Exported so the skip decision — including its fail-open behavior — is
+// unit-testable without the DB/advisory-lock machinery the rest of this
+// module needs (test-harness exemption, DEC-20260504-A).
+export async function shouldSkipForBudget(slug: string): Promise<boolean> {
+  try {
+    const { isBudgetExhausted } = await import("../capabilities/guarded-executor.js");
+    return await isBudgetExhausted(slug);
+  } catch (err) {
+    // A peek failure must never block real testing — fail open, same
+    // posture as the health-check peek a few lines up in pollCycle().
+    logError("test-scheduler-budget-peek-failed", err, { capability_slug: slug });
+    return false;
+  }
+}
+
 // ─── Auxiliary tasks ────────────────────────────────────────────────────────
 
 async function runAuxiliaryTasks(): Promise<void> {
@@ -646,11 +676,34 @@ async function pollCycle(): Promise<void> {
 
       let totalPassed = 0;
       let totalFailed = 0;
+      let skippedBudgetExhausted = 0;
       const slugsTested = new Set<string>();
 
       for (const suite of runnableSuites) {
         const agoMs = suite.lastRunAt ? Date.now() - suite.lastRunAt.getTime() : null;
         const agoLabel = agoMs != null ? `${Math.round(agoMs / 60_000)}m ago` : "never tested";
+
+        // Re-check budget per suite, immediately before the call that would
+        // otherwise run-to-fail and write a budget-exhaustion test_results
+        // row. See shouldSkipForBudget's doc comment for why the once-per-
+        // cycle SQL exclusion in findOverdueSuites() isn't sufficient on
+        // its own. No DB write here — assertBudgetAvailable inside
+        // runTests() remains the sole place that reserves a slot, so this
+        // can never let a call through the real check would refuse; it
+        // only ever turns a guaranteed failure into a skip.
+        if (await shouldSkipForBudget(suite.slug)) {
+          skippedBudgetExhausted++;
+          jobLog.info(
+            {
+              label: "test-scheduler-skip-budget-exhausted",
+              capability_slug: suite.slug,
+              test_type: suite.testType,
+            },
+            "test-scheduler-skip-budget-exhausted",
+          );
+          await delay(DELAY_BETWEEN_CAPABILITIES_MS);
+          continue;
+        }
 
         try {
           jobLog.info(
@@ -731,6 +784,7 @@ async function pollCycle(): Promise<void> {
           passed: totalPassed,
           failed: totalFailed,
           skipped_unhealthy: skippedUnhealthy,
+          skipped_budget_exhausted: skippedBudgetExhausted,
           paid_skipped: paidSkipped,
           queue_depth: queueDepth,
         },
@@ -750,6 +804,7 @@ async function pollCycle(): Promise<void> {
               passed: totalPassed,
               failed: totalFailed,
               skipped_unhealthy: skippedUnhealthy,
+              skipped_budget_exhausted: skippedBudgetExhausted,
               paid_skipped: paidSkipped,
               queue_depth: queueDepth,
             },
