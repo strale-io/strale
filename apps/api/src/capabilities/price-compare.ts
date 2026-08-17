@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
-import { extractJsonObject } from "./lib/llm-json.js";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
 
 // Price comparison via PriceRunner (Nordic) / Google Shopping + Claude extraction
@@ -61,13 +61,18 @@ registerCapability("price-compare", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  // Truncation surfaced as "Unterminated string in JSON" via the naive
+  // parser (production incident, 2026-06-17→24). extractJsonWithLlm's
+  // stop_reason check catches it before the parse and throws a
+  // CapabilityRefusalError (caller_input) rather than the plain Error this
+  // used to throw — the plain Error classified as `internal` under
+  // transaction-failure-taxonomy.ts, the same misclassification PR #314
+  // fixed on web-extract.
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: MAX_OUTPUT_TOKENS,
-    messages: [
-      {
-        role: "user",
-        content: `Extract price comparison data from this shopping page. Return ONLY valid JSON.
+    maxTokens: MAX_OUTPUT_TOKENS,
+    prompt: `Extract price comparison data from this shopping page. Return ONLY valid JSON.
 
 Product searched: "${product}"
 Source: ${sourceUsed}
@@ -96,22 +101,9 @@ Return JSON:
 }
 
 Extract all visible offers. Calculate lowest, highest, average and range from the extracted prices. Use null for missing fields.`,
-      },
-    ],
+    truncationGuidance: "Retry with a smaller or more focused request — fewer offers per call.",
+    parseFailureError: () => new Error("Failed to extract price comparison data."),
   });
-
-  // Truncation surfaced as "Unterminated string in JSON" via the naive
-  // parser (production incident, 2026-06-17→24) — stop_reason catches it
-  // before the parse and gives the caller something actionable to retry on.
-  if (r.stop_reason === "max_tokens") {
-    throw new Error(
-      "The price extractor produced more output than the model's limit allows, so the result was truncated. Retry with a smaller or more focused request.",
-    );
-  }
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const output = extractJsonObject(responseText);
-  if (!output) throw new Error("Failed to extract price comparison data.");
 
   output.source = sourceUsed;
   output.country = country;

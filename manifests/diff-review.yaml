@@ -121,3 +121,12 @@ limitations:
       project context.
     category: accuracy
     severity: info
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — distinct from the input diff-size limit above: even a diff within the
+      12,000-character input limit can produce an issues list too large for the output budget on a large,
+      dense diff. Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Provide a smaller diff (fewer files or lines) per call

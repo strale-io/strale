@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("job-posting-analyze", async (input: CapabilityInput) => {
   const url = (input.url as string)?.trim();
@@ -33,13 +34,11 @@ registerCapability("job-posting-analyze", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
-    messages: [
-      {
-        role: "user",
-        content: `Analyze this job posting. Return ONLY valid JSON.
+    maxTokens: 1500,
+    prompt: `Analyze this job posting. Return ONLY valid JSON.
 
 Job posting:
 """
@@ -65,15 +64,9 @@ Return JSON:
   "employment_type": "full-time/part-time/contract/freelance",
   "summary": "2-3 sentence assessment of this role"
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter job posting excerpt.",
+    parseFailureError: () => new Error("Failed to analyze job posting."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to analyze job posting.");
-
-  const output = JSON.parse(jsonMatch[0]);
   if (url) output.source_url = url;
 
   return {

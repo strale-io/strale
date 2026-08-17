@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("fake-data-generate", async (input: CapabilityInput) => {
   const schema = input.schema;
@@ -17,13 +18,11 @@ registerCapability("fake-data-generate", async (input: CapabilityInput) => {
     : `Fields:\n${(fields ?? []).map((f) => `- ${f.name}: ${f.type}${f.constraints ? ` (${f.constraints})` : ""}`).join("\n")}`;
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 4000,
-    messages: [
-      {
-        role: "user",
-        content: `Generate ${count} records of realistic fake data. Locale: ${locale}. Return ONLY valid JSON.
+    maxTokens: 4000,
+    prompt: `Generate ${count} records of realistic fake data. Locale: ${locale}. Return ONLY valid JSON.
 
 ${schemaDesc}
 
@@ -38,15 +37,9 @@ Return JSON:
 {
   "data": [<array of ${count} objects matching the schema>]
 }`,
-      },
-    ],
+    truncationGuidance: "Request a smaller 'count' — fewer records per call.",
+    parseFailureError: () => new Error("Failed to generate fake data."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate fake data.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.schema_used = schema ? "json_schema" : "field_list";
   output.locale = locale;
   output.record_count = Array.isArray(output.data) ? output.data.length : 0;

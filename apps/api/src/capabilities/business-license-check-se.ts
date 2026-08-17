@@ -3,6 +3,7 @@ import {
   fetchRenderedHtml,
   htmlToText,
 } from "./lib/browserless-extract.js";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
 
 // ─── Swedish business license check via Allabolag.se — Browserless + Claude ──
@@ -102,13 +103,14 @@ registerCapability("business-license-check-se", async (input: CapabilityInput) =
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  // The name-resolution call earlier in this file returns bare text and
+  // stays inline; this call returns a JSON object and goes through the
+  // shared truncation-aware helper like every other JSON extractor.
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
-    messages: [
-      {
-        role: "user",
-        content: `Extract Swedish company registration and license data from this Allabolag.se page.
+    maxTokens: 1500,
+    prompt: `Extract Swedish company registration and license data from this Allabolag.se page.
 
 Organization number: ${formatOrgNumber(orgDigits)}
 
@@ -136,15 +138,10 @@ Use null for fields not found on the page. For boolean fields (f_skatt, moms_reg
 - "Arbetsgivare: Ja/Nej" or "Registrerad arbetsgivare"
 For SNI codes, look for "SNI" or "Bransch" sections.
 For board members, look for "Styrelse" or "Befattningshavare" sections.`,
-      },
-    ],
+    truncationGuidance:
+      "The company's registration record is unusually large — retry, or query the organization number directly for a smaller page.",
+    parseFailureError: () => new Error("Failed to extract business license data."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract business license data.");
-
-  const output = JSON.parse(jsonMatch[0]);
 
   // Ensure org_number is correctly formatted
   output.org_number = formatOrgNumber(orgDigits);

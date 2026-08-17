@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("test-case-generate", async (input: CapabilityInput) => {
   const description = ((input.function_description as string) ?? (input.description as string) ?? (input.task as string) ?? "").trim();
@@ -14,13 +15,11 @@ registerCapability("test-case-generate", async (input: CapabilityInput) => {
   const langNote = language ? `Target language: ${language}` : "Infer the programming language from the function signature";
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Generate test cases for this function. Return ONLY valid JSON.
+    maxTokens: 2000,
+    prompt: `Generate test cases for this function. Return ONLY valid JSON.
 
 Function:
 ${description.slice(0, 4000)}
@@ -43,15 +42,9 @@ Return JSON:
   "coverage_notes": "what aspects are covered and any gaps",
   "language_detected": "the programming language"
 }`,
-      },
-    ],
+    truncationGuidance: "Request fewer test cases per call, or set include_edge_cases to false.",
+    parseFailureError: () => new Error("Failed to generate test cases."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate test cases.");
-
-  const output = JSON.parse(jsonMatch[0]);
 
   return {
     output,

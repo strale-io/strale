@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("commit-message-generate", async (input: CapabilityInput) => {
   const diff = ((input.diff as string) ?? (input.changes as string) ?? (input.task as string) ?? "").trim();
@@ -11,13 +12,11 @@ registerCapability("commit-message-generate", async (input: CapabilityInput) => 
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 500,
-    messages: [
-      {
-        role: "user",
-        content: `Generate a git commit message for these changes. Style: ${style}. Return ONLY valid JSON.
+    maxTokens: 500,
+    prompt: `Generate a git commit message for these changes. Style: ${style}. Return ONLY valid JSON.
 
 Changes:
 ${diff.slice(0, 5000)}
@@ -31,15 +30,9 @@ Return JSON:
   "breaking_change": false,
   "files_summary": "brief summary of files changed"
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a smaller diff per call.",
+    parseFailureError: () => new Error("Failed to generate commit message."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate commit message.");
-
-  const output = JSON.parse(jsonMatch[0]);
   const scope = output.scope ? `(${output.scope})` : "";
   const breaking = output.breaking_change ? "!" : "";
   output.conventional = `${output.type}${scope}${breaking}: ${output.subject}`;

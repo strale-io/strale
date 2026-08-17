@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("dockerfile-generate", async (input: CapabilityInput) => {
   const language = ((input.language as string) ?? (input.task as string) ?? "").trim().toLowerCase();
@@ -13,13 +14,11 @@ registerCapability("dockerfile-generate", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
-    messages: [
-      {
-        role: "user",
-        content: `Generate an optimized, production-ready Dockerfile. Return ONLY valid JSON.
+    maxTokens: 1500,
+    prompt: `Generate an optimized, production-ready Dockerfile. Return ONLY valid JSON.
 
 Language: ${language}
 Framework: ${framework || "none specified"}
@@ -43,15 +42,9 @@ Return JSON:
   "build_args": ["any build arguments used"],
   "dockerignore_recommended": ["patterns to add to .dockerignore"]
 }`,
-      },
-    ],
+    truncationGuidance: "Try without multi-stage, or ask for a smaller set of requirements.",
+    parseFailureError: () => new Error("Failed to generate Dockerfile."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate Dockerfile.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.language = language;
   output.framework = framework || null;
   output.multi_stage = multiStage;

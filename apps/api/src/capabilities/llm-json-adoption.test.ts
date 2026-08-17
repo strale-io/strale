@@ -77,22 +77,61 @@ describe("source guard — the anchored fence strip is gone", () => {
     expect(files.length).toBeGreaterThan(100);
   });
 
-  it("confirms the five swapped executors call the shared extractor", () => {
-    const swapped = [
-      "web-extract.ts",
-      "pii-redact.ts",
-      "pdf-extract.ts",
-      "invoice-extract.ts",
-      "annual-report-extract.ts",
-    ];
+  it("finds no executor using the greedy object-capture regex", () => {
+    // The 2026-08-17 llm-extract migration eliminated the greedy
+    // /\{[\s\S]*\}/ idiom (it over-captures to the LAST brace in the
+    // string, so trailing prose containing a brace silently pollutes the
+    // parsed object). This scan keeps all ~68 migrated executors from
+    // quietly reverting: a re-introduced greedy capture fails here even
+    // though only a handful of executors have dedicated truncation tests.
+    //
+    // code-review.ts is the one legitimate holdout: its sanitize-and-retry
+    // repair chain operates on the captured slice, and it now carries its
+    // own stop_reason truncation guard upstream of the capture.
+    const GREEDY_OBJECT_CAPTURE = String.raw`\{[\s\S]*\}`;
+    const GREEDY_ALLOWED = new Set(["code-review.ts", "llm-output-validate.ts"]);
+    const offenders = files.filter(
+      (f) =>
+        !GREEDY_ALLOWED.has(f) &&
+        readFileSync(join(dir, f), "utf8").includes(GREEDY_OBJECT_CAPTURE),
+    );
 
-    for (const f of swapped) {
+    expect(offenders).toEqual([]);
+  });
+
+  it("confirms the five swapped executors call the shared extractor", () => {
+    // web-extract and pii-redact were migrated again on 2026-08-17 (the
+    // llm-extract.ts helper, see that module's docstring) onto
+    // extractJsonWithLlm from "./lib/llm-extract.js" — which itself calls
+    // extractJsonObject from lib/llm-json.js internally, so the balanced-
+    // brace protection this test guards is still in force, just one level
+    // of indirection further from these two files. pdf-extract,
+    // invoice-extract, and annual-report-extract carry document/image
+    // content blocks the helper's string-prompt signature doesn't fit, so
+    // they still call extractJsonObject directly.
+    const directCallers = ["pdf-extract.ts", "invoice-extract.ts", "annual-report-extract.ts"];
+    for (const f of directCallers) {
       const src = readFileSync(join(dir, f), "utf8");
       expect(src, `${f} should import the shared extractor`).toContain(
         'from "./lib/llm-json.js"',
       );
       expect(src, `${f} should call extractJsonObject`).toContain("extractJsonObject(");
     }
+
+    const viaHelper = ["web-extract.ts", "pii-redact.ts"];
+    for (const f of viaHelper) {
+      const src = readFileSync(join(dir, f), "utf8");
+      expect(src, `${f} should import the shared LLM-extract helper`).toContain(
+        'from "./lib/llm-extract.js"',
+      );
+      expect(src, `${f} should call extractJsonWithLlm`).toContain("extractJsonWithLlm(");
+    }
+
+    // The helper itself must still be the one calling the balanced-brace
+    // scanner — this is what keeps the indirection honest.
+    const helperSrc = readFileSync(join(dir, "lib", "llm-extract.ts"), "utf8");
+    expect(helperSrc).toContain('from "./llm-json.js"');
+    expect(helperSrc).toContain("extractJsonObject(");
   });
 
   it("guards empty extractions everywhere a bare shell would be billed", () => {

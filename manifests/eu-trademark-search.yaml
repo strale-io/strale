@@ -72,3 +72,11 @@ limitations:
     category: coverage
     severity: info
     workaround: Supplement with national IP office searches (e.g., UKIPO, DPMA, INPI) for complete trademark clearance
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example a broad or generic query returning many trademarks.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Narrow the query or nice_class so fewer trademarks are returned per call

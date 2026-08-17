@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("crontab-generate", async (input: CapabilityInput) => {
   const description = ((input.description as string) ?? (input.schedule as string) ?? (input.task as string) ?? "").trim();
@@ -15,13 +16,11 @@ registerCapability("crontab-generate", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 800,
-    messages: [
-      {
-        role: "user",
-        content: `Convert this schedule description to a cron expression. Return ONLY valid JSON.
+    maxTokens: 800,
+    prompt: `Convert this schedule description to a cron expression. Return ONLY valid JSON.
 
 Description: ${description}
 
@@ -32,15 +31,9 @@ Return JSON:
   "next_5_runs": ["ISO timestamps of next 5 execution times starting from now"],
   "timezone_note": "note about timezone considerations"
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a simpler schedule description.",
+    parseFailureError: () => new Error("Failed to generate cron expression."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate cron expression.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.input_description = description;
 
   return {

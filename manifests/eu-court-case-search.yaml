@@ -142,3 +142,11 @@ limitations:
     workaround: >-
       For ECHR cases, search hudoc.echr.coe.int directly; for national cases, use the respective country's legal
       database
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example a broad search term returning many cases.
+      Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Narrow the search query so fewer cases are returned per call

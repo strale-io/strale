@@ -127,3 +127,11 @@ limitations:
     category: accuracy
     severity: info
     workaround: Use generated tests as a starting coverage baseline and add domain-specific edge cases manually
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example a complex function description with include_edge_cases
+      producing an unusually large test_cases list. Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Request fewer test cases per call, or set include_edge_cases to false

@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("sql-optimize", async (input: CapabilityInput) => {
   const sql = ((input.sql as string) ?? (input.query as string) ?? (input.task as string) ?? "").trim();
@@ -14,13 +15,11 @@ registerCapability("sql-optimize", async (input: CapabilityInput) => {
   const schemaSection = tableSchema ? `\nTable schema:\n${tableSchema.slice(0, 4000)}` : "";
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Optimize this SQL query for performance. Dialect: ${dialect}. Return ONLY valid JSON.
+    maxTokens: 2000,
+    prompt: `Optimize this SQL query for performance. Dialect: ${dialect}. Return ONLY valid JSON.
 
 Original SQL:
 ${sql.slice(0, 5000)}${schemaSection}
@@ -33,15 +32,9 @@ Return JSON:
   "index_recommendations": ["CREATE INDEX recommendations"],
   "explanation": "why these changes improve performance"
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a smaller SQL query or table_schema per call.",
+    parseFailureError: () => new Error("Failed to optimize SQL."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to optimize SQL.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.dialect = dialect;
   output.original_sql = sql;
 

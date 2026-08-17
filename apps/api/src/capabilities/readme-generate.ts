@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
-import { extractJsonObject } from "./lib/llm-json.js";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // A comprehensive README (installation, usage, API docs, contributing) is the
 // output regardless of how short the input description is, so the output
@@ -23,13 +23,18 @@ registerCapability("readme-generate", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  // Truncation surfaced as "Unterminated string in JSON" via the naive
+  // parser (production incident, 2026-06-17→24). extractJsonWithLlm's
+  // stop_reason check catches it before the parse and throws a
+  // CapabilityRefusalError (caller_input) rather than the plain Error this
+  // used to throw — the plain Error classified as `internal` under
+  // transaction-failure-taxonomy.ts, the same misclassification PR #314
+  // fixed on web-extract.
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: MAX_OUTPUT_TOKENS,
-    messages: [
-      {
-        role: "user",
-        content: `Generate a comprehensive README.md for this project. Return ONLY valid JSON.
+    maxTokens: MAX_OUTPUT_TOKENS,
+    prompt: `Generate a comprehensive README.md for this project. Return ONLY valid JSON.
 
 ${name ? `Project Name: ${name}\n` : ""}${techStack ? `Tech Stack: ${techStack}\n` : ""}Description:
 ${project.slice(0, 4000)}
@@ -44,22 +49,9 @@ Return JSON:
   "has_api_docs": true,
   "has_contributing": true
 }`,
-      },
-    ],
+    truncationGuidance: "Retry with a smaller or more focused request — a shorter project_description.",
+    parseFailureError: () => new Error("Failed to generate README."),
   });
-
-  // Truncation surfaced as "Unterminated string in JSON" via the naive
-  // parser (production incident, 2026-06-17→24) — stop_reason catches it
-  // before the parse and gives the caller something actionable to retry on.
-  if (r.stop_reason === "max_tokens") {
-    throw new Error(
-      "The README generator produced more output than the model's limit allows, so the result was truncated. Retry with a smaller or more focused request.",
-    );
-  }
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const output = extractJsonObject(responseText);
-  if (!output) throw new Error("Failed to generate README.");
 
   return {
     output,

@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("social-post-generate", async (input: CapabilityInput) => {
   const content = ((input.content as string) ?? (input.topic as string) ?? (input.task as string) ?? "").trim();
@@ -41,13 +42,11 @@ registerCapability("social-post-generate", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 800,
-    messages: [
-      {
-        role: "user",
-        content: `Generate a social media post. Return ONLY valid JSON.
+    maxTokens: 800,
+    prompt: `Generate a social media post. Return ONLY valid JSON.
 
 Content/topic: "${sourceContent}"
 Platform: ${platform} (character limit: ${charLimit})
@@ -63,16 +62,12 @@ Return JSON:
   "thread_version": ${platform === "twitter" || platform === "x" ? '["tweet 1", "tweet 2", "tweet 3"] if content needs a thread, or null' : "null"},
   "engagement_hooks": ["why this post should get engagement"]
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter content/topic input.",
+    parseFailureError: () => new Error("Failed to generate social post."),
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate social post.");
-
   return {
-    output: JSON.parse(jsonMatch[0]),
+    output,
     provenance: { source: "claude-haiku", fetched_at: new Date().toISOString() },
   };
 });

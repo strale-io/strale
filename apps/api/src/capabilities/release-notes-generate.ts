@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("release-notes-generate", async (input: CapabilityInput) => {
   const commits = ((input.commits as string) ?? (input.changelog as string) ?? (input.task as string) ?? "").trim();
@@ -11,13 +12,11 @@ registerCapability("release-notes-generate", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Generate release notes from these commits/changes. Use Keep a Changelog format. Return ONLY valid JSON.
+    maxTokens: 2000,
+    prompt: `Generate release notes from these commits/changes. Use Keep a Changelog format. Return ONLY valid JSON.
 ${version ? `\nVersion: ${version}` : ""}
 Commits/Changes:
 ${commits.slice(0, 5000)}
@@ -39,16 +38,12 @@ Return JSON:
   "contributors": [],
   "markdown": "the full release notes in markdown format"
 }`,
-      },
-    ],
+    truncationGuidance: "Provide fewer commits per call.",
+    parseFailureError: () => new Error("Failed to generate release notes."),
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate release notes.");
-
   return {
-    output: JSON.parse(jsonMatch[0]),
+    output,
     provenance: { source: "claude-haiku", fetched_at: new Date().toISOString() },
   };
 });

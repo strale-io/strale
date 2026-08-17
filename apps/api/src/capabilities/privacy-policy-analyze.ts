@@ -5,6 +5,7 @@ import {
   htmlToText,
 } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // ─── Privacy Policy analysis — Browserless + Claude ──────────────────────────
 
@@ -102,13 +103,11 @@ registerCapability("privacy-policy-analyze", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Analyze this privacy policy page. Extract all key information about data handling, user rights, and compliance.
+    maxTokens: 2000,
+    prompt: `Analyze this privacy policy page. Extract all key information about data handling, user rights, and compliance.
 
 URL: ${privacyUrl}
 
@@ -135,15 +134,9 @@ Return ONLY valid JSON:
 }
 
 Be specific and factual. Use null for fields where information is not found. For missing_elements, consider: DPO contact, data retention periods, specific legal bases, international transfer mechanisms, cookie specifics, children's data handling, automated decision-making disclosure, right to lodge complaint with supervisory authority.`,
-      },
-    ],
+    truncationGuidance: "This privacy policy produced more content than fits in one call.",
+    parseFailureError: () => new Error("Failed to extract privacy policy data."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract privacy policy data.");
-
-  const output = JSON.parse(jsonMatch[0]);
 
   const parsedPrivacyUrl = new URL(privacyUrl);
 

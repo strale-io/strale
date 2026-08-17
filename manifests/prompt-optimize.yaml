@@ -122,3 +122,11 @@ limitations:
     category: accuracy
     severity: info
     workaround: Test optimized prompts against your target model and iterate based on actual output quality
+  - title: Output size cap per call
+    text: >-
+      The output budget scales with input size (up to an 8k-token ceiling) but a request can still exceed it —
+      the improved prompt plus the analysis envelope must fit in one response. When it doesn't, the call is
+      refused rather than returned truncated. Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: Shorten the prompt and retry

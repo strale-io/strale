@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // ─── EU Customs Duty Lookup via TARIC + Browserless + Claude ────────────────
 
@@ -74,13 +75,11 @@ registerCapability("customs-duty-lookup", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Extract customs duty information from this EU customs/TARIC page for HS code "${hsCode}"${originCountry ? ` from origin country "${originCountry}"` : ""}.
+    maxTokens: 2000,
+    prompt: `Extract customs duty information from this EU customs/TARIC page for HS code "${hsCode}"${originCountry ? ` from origin country "${originCountry}"` : ""}.
 
 Return ONLY valid JSON:
 {
@@ -101,15 +100,9 @@ If the page does not contain clear duty data, still return the JSON structure wi
 
 Page text:
 ${pageText.slice(0, 12000)}`,
-      },
-    ],
+    truncationGuidance: "This HS code's duty page produced more preferential-rate entries than fit in one call.",
+    parseFailureError: () => new Error("Failed to extract customs duty data from the page."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract customs duty data from the page.");
-
-  const output = JSON.parse(jsonMatch[0]);
 
   return {
     output,

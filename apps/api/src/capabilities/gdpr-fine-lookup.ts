@@ -4,6 +4,7 @@ import {
   htmlToText,
 } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // GDPR fine lookup via enforcementtracker.com (Browserless + Claude)
 
@@ -44,13 +45,11 @@ registerCapability("gdpr-fine-lookup", async (input: CapabilityInput) => {
       ? `country code "${countryCode}"`
       : `query "${task}"`;
 
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Extract GDPR fine information from this enforcement tracker page. Search was for: ${searchContext}.
+    maxTokens: 2000,
+    prompt: `Extract GDPR fine information from this enforcement tracker page. Search was for: ${searchContext}.
 
 Page text:
 ${text.slice(0, 12000)}
@@ -73,15 +72,9 @@ Return ONLY valid JSON:
 }
 
 Return up to 15 fines. Use null for missing fields. Amounts should be numbers, not strings.`,
-      },
-    ],
+    truncationGuidance: "Narrow the search (specific company or country) so fewer fines are returned per call.",
+    parseFailureError: () => new Error("Failed to extract GDPR fine data."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract GDPR fine data.");
-
-  const output = JSON.parse(jsonMatch[0]);
 
   return {
     output,

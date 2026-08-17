@@ -123,3 +123,11 @@ limitations:
     category: coverage
     severity: info
     workaround: If no Trustpilot profile exists, check Google Business Profile or use google-search for alternative review sources
+  - title: Output size cap per call
+    text: >-
+      Extractions whose structured output would exceed the per-call budget (~2k output tokens) are refused
+      rather than returned truncated — for example a company with an unusually large number of reviews or
+      rating detail. Retrying the identical request will not help.
+    category: coverage
+    severity: info
+    workaround: This company's Trustpilot page produced more content than fits in one call — no direct workaround

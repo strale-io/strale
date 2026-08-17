@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // Trustpilot score/review extraction via Browserless + Claude
 
@@ -41,13 +42,11 @@ registerCapability("trustpilot-score", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Extract Trustpilot review data from this page. Return ONLY valid JSON.
+    maxTokens: 2000,
+    prompt: `Extract Trustpilot review data from this page. Return ONLY valid JSON.
 
 Domain: ${domain}
 URL: ${trustpilotUrl}
@@ -83,15 +82,9 @@ Return JSON:
 }
 
 Extract up to 5 recent reviews. Use null for any fields you cannot determine.`,
-      },
-    ],
+    truncationGuidance: "This company's Trustpilot page produced more content than fits in one call.",
+    parseFailureError: () => new Error("Failed to extract Trustpilot data."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract Trustpilot data.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.trustpilot_url = trustpilotUrl;
 
   return {
