@@ -78,21 +78,38 @@ describe("source guard — the anchored fence strip is gone", () => {
   });
 
   it("confirms the five swapped executors call the shared extractor", () => {
-    const swapped = [
-      "web-extract.ts",
-      "pii-redact.ts",
-      "pdf-extract.ts",
-      "invoice-extract.ts",
-      "annual-report-extract.ts",
-    ];
-
-    for (const f of swapped) {
+    // web-extract and pii-redact were migrated again on 2026-08-17 (the
+    // llm-extract.ts helper, see that module's docstring) onto
+    // extractJsonWithLlm from "./lib/llm-extract.js" — which itself calls
+    // extractJsonObject from lib/llm-json.js internally, so the balanced-
+    // brace protection this test guards is still in force, just one level
+    // of indirection further from these two files. pdf-extract,
+    // invoice-extract, and annual-report-extract carry document/image
+    // content blocks the helper's string-prompt signature doesn't fit, so
+    // they still call extractJsonObject directly.
+    const directCallers = ["pdf-extract.ts", "invoice-extract.ts", "annual-report-extract.ts"];
+    for (const f of directCallers) {
       const src = readFileSync(join(dir, f), "utf8");
       expect(src, `${f} should import the shared extractor`).toContain(
         'from "./lib/llm-json.js"',
       );
       expect(src, `${f} should call extractJsonObject`).toContain("extractJsonObject(");
     }
+
+    const viaHelper = ["web-extract.ts", "pii-redact.ts"];
+    for (const f of viaHelper) {
+      const src = readFileSync(join(dir, f), "utf8");
+      expect(src, `${f} should import the shared LLM-extract helper`).toContain(
+        'from "./lib/llm-extract.js"',
+      );
+      expect(src, `${f} should call extractJsonWithLlm`).toContain("extractJsonWithLlm(");
+    }
+
+    // The helper itself must still be the one calling the balanced-brace
+    // scanner — this is what keeps the indirection honest.
+    const helperSrc = readFileSync(join(dir, "lib", "llm-extract.ts"), "utf8");
+    expect(helperSrc).toContain('from "./llm-json.js"');
+    expect(helperSrc).toContain("extractJsonObject(");
   });
 
   it("guards empty extractions everywhere a bare shell would be billed", () => {

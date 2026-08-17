@@ -5,6 +5,7 @@ import {
   htmlToText,
 } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // ─── Terms of Service extraction — Browserless + Claude ──────────────────────
 
@@ -102,13 +103,11 @@ registerCapability("terms-of-service-extract", async (input: CapabilityInput) =>
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Extract key Terms of Service information from this page. Analyze carefully for important clauses, rights, and restrictions.
+    maxTokens: 2000,
+    prompt: `Extract key Terms of Service information from this page. Analyze carefully for important clauses, rights, and restrictions.
 
 URL: ${tosUrl}
 
@@ -133,15 +132,9 @@ Return ONLY valid JSON:
 }
 
 Use null for fields where information is not found. Be specific and factual — extract actual clauses, don't infer.`,
-      },
-    ],
+    truncationGuidance: "This ToS page produced more content than fits in one call.",
+    parseFailureError: () => new Error("Failed to extract Terms of Service data."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract Terms of Service data.");
-
-  const output = JSON.parse(jsonMatch[0]);
 
   const parsedTosUrl = new URL(tosUrl);
 

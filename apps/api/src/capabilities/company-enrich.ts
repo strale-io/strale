@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
-import { extractJsonObject } from "./lib/llm-json.js";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 const EXTRACTION_PROMPT = `You are a company intelligence extraction system.
 
@@ -160,26 +160,15 @@ registerCapability("company-enrich", async (input: CapabilityInput) => {
     : combinedText;
 
   const client = new Anthropic({ apiKey });
-  const response = await client.messages.create({
+  const parsed = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `${EXTRACTION_PROMPT}\n\nDomain: ${domain}\n\n--- PAGE CONTENT ---\n${truncated}\n--- END ---`,
-      },
-    ],
+    maxTokens: 2000,
+    prompt: `${EXTRACTION_PROMPT}\n\nDomain: ${domain}\n\n--- PAGE CONTENT ---\n${truncated}\n--- END ---`,
+    truncationGuidance: "This domain's page produced more content than fits in one call.",
+    parseFailureError: (responseText) =>
+      new Error(`Failed to parse enrichment result for ${domain}. Raw: ${responseText.slice(0, 300)}`),
   });
-
-  const responseText =
-    response.content[0].type === "text" ? response.content[0].text : "";
-
-  const parsed = extractJsonObject(responseText);
-  if (!parsed) {
-    throw new Error(
-      `Failed to parse enrichment result for ${domain}. Raw: ${responseText.slice(0, 300)}`,
-    );
-  }
 
   if (!hasSubstance(parsed)) {
     throw new Error(

@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // Output-token ceiling for a single optimization pass. Kept conservatively below
 // the model's maximum output so we never request more than it can return.
@@ -49,13 +50,17 @@ registerCapability("prompt-optimize", async (input: CapabilityInput) => {
   const maxTokens = Math.min(MAX_OUTPUT_TOKENS, Math.max(1500, Math.ceil(estimatedInputTokens * 1.6) + 800));
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  // If the model hit the output ceiling the JSON is truncated mid-string and
+  // unparseable. extractJsonWithLlm's stop_reason check catches this before
+  // parsing is attempted and throws a CapabilityRefusalError (caller_input)
+  // rather than the plain Error this used to throw — the plain Error
+  // classified as `internal` under transaction-failure-taxonomy.ts, the
+  // same misclassification PR #314 fixed on web-extract.
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: maxTokens,
-    messages: [
-      {
-        role: "user",
-        content: `You are a prompt engineering expert. Analyze and improve this prompt. Return ONLY valid JSON.
+    maxTokens: maxTokens,
+    prompt: `You are a prompt engineering expert. Analyze and improve this prompt. Return ONLY valid JSON.
 
 Current prompt:
 """
@@ -75,31 +80,9 @@ Return JSON:
   "issues_found": ["issues with the original prompt"],
   "techniques_applied": ["prompt engineering techniques used"]
 }`,
-      },
-    ],
+    truncationGuidance: "Shorten the prompt and retry.",
+    parseFailureError: () => new Error("Failed to optimize prompt: the optimizer returned malformed output. Please retry."),
   });
-
-  // If the model hit the output ceiling the JSON is truncated mid-string and
-  // unparseable. Surface that as a clear, actionable error instead of a cryptic
-  // "Unterminated string in JSON" from JSON.parse.
-  if (r.stop_reason === "max_tokens") {
-    throw new Error("'current_prompt' produced output that exceeded the model's output limit. Shorten the prompt and retry.");
-  }
-
-  const block = r.content[0];
-  const responseText = block?.type === "text" ? block.text.trim() : "";
-
-  // Both "no JSON object found" and "JSON.parse threw" are the same failure class
-  // from the caller's view — the optimizer returned unusable output — so surface
-  // one consistent, actionable message rather than two different ones.
-  let output: Record<string, unknown>;
-  try {
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new SyntaxError("no JSON object in response");
-    output = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-  } catch {
-    throw new Error("Failed to optimize prompt: the optimizer returned malformed output. Please retry.");
-  }
 
   return {
     output,

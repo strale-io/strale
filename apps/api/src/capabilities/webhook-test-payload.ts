@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("webhook-test-payload", async (input: CapabilityInput) => {
   const service = ((input.service as string) ?? "").trim().toLowerCase();
@@ -12,13 +13,11 @@ registerCapability("webhook-test-payload", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Generate a realistic test webhook payload for ${service} with event type "${eventType}". The payload should match the actual ${service} webhook schema as closely as possible. Return ONLY valid JSON.
+    maxTokens: 2000,
+    prompt: `Generate a realistic test webhook payload for ${service} with event type "${eventType}". The payload should match the actual ${service} webhook schema as closely as possible. Return ONLY valid JSON.
 
 Return JSON:
 {
@@ -27,15 +26,9 @@ Return JSON:
   "event_type": "${eventType}",
   "documentation_url": "URL to the ${service} webhook documentation for this event"
 }`,
-      },
-    ],
+    truncationGuidance: "This event type's payload produced more content than fits in one call.",
+    parseFailureError: () => new Error("Failed to generate webhook payload."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate webhook payload.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.service = service;
 
   return {
