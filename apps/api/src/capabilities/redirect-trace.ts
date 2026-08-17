@@ -2,6 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { TOS_REFUSAL_MARKER } from "../lib/tos-blocklist.js";
+import { logWarn } from "../lib/log.js";
 
 /**
  * F-0-006 special case: redirect-trace exists to FOLLOW and REPORT ON
@@ -68,6 +69,20 @@ registerCapability("redirect-trace", async (input: CapabilityInput) => {
     const latency = Date.now() - start;
     const location = response.headers.get("location");
     const server = response.headers.get("server");
+
+    // Phase-4 tail fix (MEDIUM-6, 2026-08-17 review): this loop never
+    // reads the body of ANY hop's response (only headers/status) — up to
+    // `maxRedirects` (default 20, cap 30) unconsumed streams per trace,
+    // each pinning its connection open until GC. Cancel it here, whether
+    // the hop is a redirect we're about to follow or the final response
+    // where the loop is about to break. Mirrors safe-fetch.ts's own
+    // maxRedirects-cap cancellation (same failure mode, same fix shape).
+    await response.body?.cancel().catch((err) =>
+      logWarn("redirect-trace-body-cancel-failed", "hop body cancel failed (connection may pin until GC)", {
+        step,
+        err: String(err),
+      }),
+    );
 
     chain.push({
       step,

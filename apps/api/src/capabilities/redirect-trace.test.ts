@@ -136,4 +136,39 @@ describe("redirect-trace", () => {
     expect(output.chain).toHaveLength(2);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("cancels every hop's response body — none are read (MEDIUM-6, 2026-08-17 review)", async () => {
+    // `new Response(null, ...)` has no ReadableStream body at all (`.body`
+    // is `null`), which would make a body-leak test vacuously pass. Give
+    // every hop a real, non-null body so `.body` is a genuine
+    // ReadableStream we can spy `.cancel()` on.
+    const responses: Response[] = [];
+    const makeResponse = (init: ResponseInit) => {
+      const r = new Response("some response bytes", init);
+      responses.push(r);
+      return r;
+    };
+
+    fetchMock.mockImplementation(async (url: string) => {
+      const u = String(url);
+      if (u === "https://example.test/start") {
+        return makeResponse({ status: 302, headers: { location: "/end" } });
+      }
+      if (u === "https://example.test/end") {
+        return makeResponse({ status: 200 });
+      }
+      throw new Error(`unexpected fetch to ${u}`);
+    });
+
+    const exec = getDirectExecutor("redirect-trace")!;
+    await exec({ url: "https://example.test/start" });
+
+    // Both hops (the redirect AND the final 200) got a real body, and
+    // this loop never calls .text()/.json() on either — only .cancel()
+    // should have consumed them.
+    expect(responses).toHaveLength(2);
+    for (const r of responses) {
+      expect(r.bodyUsed).toBe(true);
+    }
+  });
 });
