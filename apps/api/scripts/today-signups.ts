@@ -1,3 +1,5 @@
+export {};
+
 async function main() {
   const postgres = (await import("postgres")).default;
   const sql = postgres(process.env.DATABASE_URL!, { max: 1 });

@@ -19,6 +19,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "dev": "tsx src/server.ts",
     "prepublishOnly": "npm run build"
   },

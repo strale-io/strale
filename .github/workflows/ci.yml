@@ -31,7 +31,30 @@ jobs:
       # do the same or typecheck can't find the module. See the seed CI
       # in #9 + the Phase B+C merge in #8.
       - run: npm --workspace=packages/mcp-server run build
+      # packages/langchain imports `straleio` (packages/sdk-typescript) by
+      # its published dist/index.d.ts, same reasoning as mcp-server above —
+      # its own typecheck (below, via root `npm run typecheck`) can't resolve
+      # the module until sdk-typescript has been built at least once.
+      - run: npm --workspace=packages/sdk-typescript run build
+      # Phase 2 T2.1 (2026-08-17): widened from apps/api/src only to also
+      # cover apps/api/scripts + apps/api/test (tsconfig.scripts.json,
+      # apps/api's typecheck:scripts script) and the published TS packages
+      # (sdk-typescript, langchain, semantic-kernel-strale, mcp-server) —
+      # see the root package.json `typecheck` chain for the full list.
+      # Previously only apps/api/src was ever typechecked; scripts/ and
+      # test/ were tsx-transpiled but never checked, and the four packages
+      # were never built or typechecked in CI at all.
       - run: npm run typecheck
+      # Codex review follow-up (2026-08-17, same PR as the T2.1 typecheck
+      # widening above): tsconfig.scripts.json is TS/MTS only — it does NOT
+      # cover the non-archived .mjs files (26 at the 2026-08-17 review) in apps/api/scripts, several of
+      # which are themselves CI gate scripts (check-pii.mjs,
+      # check-tier-coverage.mjs, etc.). Full checkJs coverage surfaced 166
+      # errors (mostly noImplicitAny) when trialed, too large for a
+      # same-pass fix — see tsconfig.scripts.json's DECLARED BOUNDARY
+      # comment. This is the syntax-level floor in the meantime: proves
+      # every .mjs parses as valid ESM, no more.
+      - run: node apps/api/scripts/check-mjs-syntax.mjs
       - run: npm --workspace=apps/api run lint:no-bare-catch
       # Money-integrity 2026-08-12: caller-URL capabilities must use safeFetch
       # or the ToS gate — raw fetch shipped as blocklist side doors ten times.
@@ -54,6 +77,14 @@ jobs:
       # with. Blocks the "hollow package" class of incident that surfaced
       # with pydantic-ai on 2026-04-21. See archive/sessions/CONTAINMENT_REPORT.md.
       - run: node apps/api/scripts/check-framework-packages.mjs
+      # Phase A0b CI lint (wired 2026-08-17, Phase 2 T2.2 — written
+      # 2026-08-12 but never wired in): apps/api/scripts/*.{ts,mts,mjs} must route
+      # executor invocation through guardedExecute/assertGuardedAllow, not
+      # call an executor obtained directly from getExecutor(). Pure static
+      # scan of the scripts directory, no DB/network needed. Superseded and
+      # made check-paid-api-preflight.ts (archived) redundant per the
+      # 2026-08-12 scripts-rightsizing audit.
+      - run: node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs
       # Cert-audit C6 follow-up: every fetch() must be timeout-bounded.
       # Pre-existing offenders are tracked in fetch-timeout-allowlist.txt;
       # --strict fails CI on new offenders.

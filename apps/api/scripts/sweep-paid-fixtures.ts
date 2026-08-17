@@ -31,7 +31,7 @@ import { config } from "dotenv";
 import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { autoRegisterCapabilities } from "../src/capabilities/auto-register.js";
-// guarded-executor-exempt: deliberate operator-supervised paid sweep. The
+// dispatcher-gate-exempt: deliberate operator-supervised paid sweep. The
 // ALLOW_MATRIX correctly refuses paid execution from internal_test/ci/
 // health_probe; this script IS the sanctioned manual bypass (see file header:
 // run by an operator, one call per capability, DENYLIST for metered vendors).

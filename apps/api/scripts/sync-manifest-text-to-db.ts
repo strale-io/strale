@@ -102,8 +102,8 @@ if (dryRun) {
 const result = await sql`
   UPDATE capabilities
   SET description = ${manifest.description},
-      input_schema = ${sql.json(manifest.input_schema as object)},
-      output_schema = ${sql.json(manifest.output_schema as object)}
+      input_schema = ${sql.json(manifest.input_schema as never)},
+      output_schema = ${sql.json(manifest.output_schema as never)}
   WHERE slug = ${slug}
   RETURNING slug, description
 `;

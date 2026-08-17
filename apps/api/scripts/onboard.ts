@@ -1380,7 +1380,14 @@ async function processSingleManifest(
   manifestPath: string,
   dryRun: boolean,
   isBackfill: boolean,
-  flags: { strict: boolean; fix: boolean; discover: boolean; skipGates: Array<{ gate: string; reason: string }> },
+  flags: {
+    strict: boolean;
+    fix: boolean;
+    discover: boolean;
+    skipGates: Array<{ gate: string; reason: string }>;
+    force: boolean;
+    bypassAuthority?: boolean;
+  },
 ): Promise<OnboardResult> {
   const start = Date.now();
   let raw: string;
@@ -1425,7 +1432,14 @@ async function runBatch(
   manifestDir: string,
   dryRun: boolean,
   isBackfill: boolean,
-  flags: { strict: boolean; fix: boolean; discover: boolean; skipGates: Array<{ gate: string; reason: string }> },
+  flags: {
+    strict: boolean;
+    fix: boolean;
+    discover: boolean;
+    skipGates: Array<{ gate: string; reason: string }>;
+    force: boolean;
+    bypassAuthority?: boolean;
+  },
   delayMs: number,
 ): Promise<void> {
   if (!existsSync(manifestDir)) {

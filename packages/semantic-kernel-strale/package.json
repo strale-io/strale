@@ -17,6 +17,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/plugin.test.ts",
     "prepublishOnly": "npm run build"
   },
