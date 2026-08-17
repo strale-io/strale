@@ -4,7 +4,7 @@ Intent: diagnose why `singapore-company-data` is deactivated despite being refer
 
 ## What shipped
 
-- `audit-reports/2026-04-21-singapore-kyb-investigation.md` (275 lines) — full report with classification, revive plan, drop plan, recommendation.
+- `archive/sessions/audit-reports/2026-04-21-singapore-kyb-investigation.md` (275 lines) — full report with classification, revive plan, drop plan, recommendation.
 - Commit `5a04325` on `main`, pushed.
 
 ## Conclusion (short)

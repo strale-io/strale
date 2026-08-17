@@ -97,7 +97,7 @@ In priority order:
 - `apps/api/drizzle/0052_unhashed_legacy_state.sql`
 - `apps/api/drizzle/0053_x402_orphan_settlements.sql`
 - `apps/api/drizzle/0054_append_only_chain_trigger.sql`
-- `apps/api/scripts/diag-adverse-media-variants.ts` (new, this session)
+- `apps/api/scripts/diag-adverse-media-variants.ts` (new, this session; archived 2026-08-17 → apps/api/scripts/archive/)
 - `apps/api/scripts/preflight-2026-04-29-migrations.ts` (new)
 - `apps/api/scripts/postflight-2026-04-29-migrations.ts` (new)
 - `apps/api/scripts/verify-deploy-2026-04-29.ts` (new)

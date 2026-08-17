@@ -503,7 +503,7 @@ discard work. It is a safety net, not a substitute for rule 1.
 
 ### Report Filing Convention
 
-Large investigative/audit/session reports (AUDIT-*, FIX_PHASE_*, SESSION_*, RESOLUTION_REPORT, REVIEW_FINDINGS_*, *_INVENTORY, *_RESEARCH, checklists tied to a specific incident, etc.) route to `archive/sessions/` (flat layout — see existing entries for naming convention), never to the repo root. Root stays reserved for genuine top-level canon (README, CLAUDE.md, LICENSE, WORKTREES.md-style structural docs, live-use checklists still actively referenced). Note: `AGENTS.md` is currently untracked in this repo pending its own resolution — it is not yet part of this convention's tracked surface.
+Large investigative/audit/session reports (AUDIT-*, FIX_PHASE_*, SESSION_*, RESOLUTION_REPORT, REVIEW_FINDINGS_*, *_INVENTORY, *_RESEARCH, checklists tied to a specific incident, etc.) route to `archive/sessions/` — flat layout for individual reports (see existing entries for naming convention); directory sweeps imported wholesale (Phase 3, 2026-08-17: `audit/`, `audit-output/`, `audit-reports/`, `a2a-sample/`, `tasks/`, `capability-sources/`, `distribution/`) keep their internal structure as `archive/sessions/<dirname>/`. Never to the repo root. Root stays reserved for genuine top-level canon (README, CLAUDE.md, LICENSE, WORKTREES.md-style structural docs, live-use checklists still actively referenced). Note: `AGENTS.md` (+ `.agents/`, `.codex/`) is deliberately gitignored (Phase 3 decision, 2026-08-17): it mirrors CLAUDE.md but is months stale and missing safety rules. Refresh it against CLAUDE.md before ever re-tracking.
 
 ### Workflow Invariants (Non-Negotiable)
 - NEVER edit Journal entries, Decision content, or Deferred content

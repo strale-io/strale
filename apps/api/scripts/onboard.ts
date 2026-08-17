@@ -1158,7 +1158,7 @@ async function backfill(
       "But: verify this slug's YAML is consistent with DB before proceeding,\n" +
       "and re-check if this script is widened in the future.\n" +
       "\n" +
-      "See audit-reports/manifest_drift_inventory.md Class 4 for full list.\n" +
+      "See archive/sessions/audit-reports/manifest_drift_inventory.md Class 4 for full list.\n" +
       "\n" +
       "Re-run with --force to proceed.\n" +
       "═══════════════════════════════════════════════════════════════════\n"

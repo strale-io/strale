@@ -3,7 +3,7 @@
  *
  * For each in-scope capability, invokes its executor against the manifest's
  * `health_check_input` and writes the resulting `output` object to
- *   apps/api/tests/fixtures/tier-coverage/<slug>.json
+ *   apps/api/test/fixtures/tier-coverage/<slug>.json
  *
  * The captured fixture is what `check-tier-coverage.mjs` reads to compare
  * empirical wire-shape against manifest declarations.
@@ -73,7 +73,7 @@ import { autoRegisterCapabilities } from "../src/capabilities/auto-register.js";
 import { getExecutor } from "../src/capabilities/index.js";
 
 const manifestsDir = resolve(repoRoot, "manifests");
-const fixturesDir = resolve(repoRoot, "apps", "api", "tests", "fixtures", "tier-coverage");
+const fixturesDir = resolve(repoRoot, "apps", "api", "test", "fixtures", "tier-coverage");
 
 // Fields whose values are arrays of natural-person records — committing
 // real director/partner names + roles to a public repo is a GDPR exposure
