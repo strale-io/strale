@@ -491,6 +491,16 @@ where node holds handles. Hit three times on 2026-08-14.
    ENOENT, that is this bug, not a real deletion. Run
    `node scripts/guard-tree-integrity.mjs` (or just any Bash command, if the
    PostToolUse hook is wired) and re-check before diagnosing further.
+5. **Never use `git stash` in any worktree of this clone.** `refs/stash` is
+   repo-wide, shared across ALL worktrees — concurrent sessions' stash
+   push/pop interleave, and a pop in one worktree can consume (and on
+   conflict, destroy) another session's stashed work. Hit on 2026-08-16:
+   one agent's `stash pop` returned a sibling agent's quality-floor changes.
+   For fail-before verification or temporary reverts, use
+   `git checkout <base-sha> -- <paths>` + `git checkout <branch> -- <paths>`
+   to restore, or a temporary WIP commit. If a stash accident happens,
+   recover via `git fsck --dangling` (stash commits survive as dangling
+   commits) and save the foreign diff to a patch file — never discard it.
 
 The guard at `scripts/guard-tree-integrity.mjs` auto-repairs the damage and is
 wired as a PostToolUse/Bash hook in `.claude/settings.json` (gitignored — each
