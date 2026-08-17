@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { and, eq, isNull } from "drizzle-orm";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { extractJsonObject } from "./lib/llm-json.js";
 import { firstString } from "./lib/input-aliases.js";
 import { getBrowserlessConfig, htmlToText } from "./lib/browserless-extract.js";
 import { getDb } from "../db/index.js";
@@ -141,9 +142,9 @@ async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
   const html = await resp.text();
   // Chrome renders JSON APIs in a <pre> tag; extract and parse
   const text = htmlToText(html);
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Could not extract API response via proxy.");
-  return JSON.parse(jsonMatch[0]);
+  const parsedResponse = extractJsonObject(text);
+  if (!parsedResponse) throw new Error("Could not extract API response via proxy.");
+  return parsedResponse;
 }
 
 /** Try direct fetch first (works from EU IPs), fall back to Browserless proxy. */

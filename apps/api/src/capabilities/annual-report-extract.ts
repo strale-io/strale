@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
 
 // Swedish org numbers: 10 digits, optionally with hyphen after 6th digit
@@ -258,8 +259,18 @@ registerCapability(
       messages,
     });
 
+    // Structurally skipped from the extractJsonWithLlm migration (multimodal
+    // document content blocks), but the truncation guard applies all the
+    // same — a long annual report can exceed the 4000-token output budget.
+    if (response.stop_reason === "max_tokens") {
+      throw new CapabilityRefusalError(
+        "Extraction result too large for one call: the output exceeded the per-call budget before completing. " +
+          "Request a single fiscal year, or extract specific sections instead of the full report.",
+      );
+    }
+
     const text =
-      response.content[0].type === "text" ? response.content[0].text : "";
+      response.content[0]?.type === "text" ? response.content[0].text : "";
 
     const parsed = extractJsonObject(text);
     if (!parsed) {

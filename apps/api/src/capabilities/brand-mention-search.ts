@@ -92,7 +92,10 @@ Return JSON:
   "total_results_found": <number>
 }`,
     truncationGuidance: "Reduce max_results to shrink the number of search results analyzed per call.",
-    parseFailureError: () => new Error("Failed to extract brand mentions."),
+    parseFailureError: (responseText) =>
+      new Error(
+        `Failed to extract brand mentions. Raw: ${responseText.slice(0, 200)}`,
+      ),
   });
   output.brand_name = brandName;
   output.query = query;

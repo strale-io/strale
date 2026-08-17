@@ -34,7 +34,10 @@ Return JSON:
   "preserved_instructions": ["list of key instructions that were preserved"]
 }`,
     truncationGuidance: "Provide a shorter prompt_text per call.",
-    parseFailureError: () => new Error("Failed to compress prompt."),
+    parseFailureError: (responseText) =>
+      new Error(
+        `Failed to compress prompt. Raw: ${responseText.slice(0, 200)}`,
+      ),
   });
   const compressedTokens = Math.ceil((output.compressed_prompt as string).length / 4);
 

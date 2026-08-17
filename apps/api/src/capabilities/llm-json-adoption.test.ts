@@ -77,6 +77,28 @@ describe("source guard — the anchored fence strip is gone", () => {
     expect(files.length).toBeGreaterThan(100);
   });
 
+  it("finds no executor using the greedy object-capture regex", () => {
+    // The 2026-08-17 llm-extract migration eliminated the greedy
+    // /\{[\s\S]*\}/ idiom (it over-captures to the LAST brace in the
+    // string, so trailing prose containing a brace silently pollutes the
+    // parsed object). This scan keeps all ~68 migrated executors from
+    // quietly reverting: a re-introduced greedy capture fails here even
+    // though only a handful of executors have dedicated truncation tests.
+    //
+    // code-review.ts is the one legitimate holdout: its sanitize-and-retry
+    // repair chain operates on the captured slice, and it now carries its
+    // own stop_reason truncation guard upstream of the capture.
+    const GREEDY_OBJECT_CAPTURE = String.raw`\{[\s\S]*\}`;
+    const GREEDY_ALLOWED = new Set(["code-review.ts", "llm-output-validate.ts"]);
+    const offenders = files.filter(
+      (f) =>
+        !GREEDY_ALLOWED.has(f) &&
+        readFileSync(join(dir, f), "utf8").includes(GREEDY_OBJECT_CAPTURE),
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   it("confirms the five swapped executors call the shared extractor", () => {
     // web-extract and pii-redact were migrated again on 2026-08-17 (the
     // llm-extract.ts helper, see that module's docstring) onto

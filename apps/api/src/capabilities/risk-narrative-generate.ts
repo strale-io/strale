@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonObject } from "./lib/llm-json.js";
 import { logError, logWarn } from "../lib/log.js";
 
 // Cert-audit Y-10 — model pinning for replay determinism.
@@ -243,7 +244,7 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
       ],
     });
 
-    const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
+    const responseText = r.content[0]?.type === "text" ? r.content[0].text.trim() : "";
 
     // Cert-audit Y-10: regex-check the raw LLM output for prohibited
     // wording before parsing. If the model violated a wording rule
@@ -270,17 +271,20 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
       }
     }
 
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    // Real brace-matching, not the greedy object-capture regex: on this
+    // capability (DEC-20260428-B citation bar) an over-capture that happens
+    // to parse would produce a semantically wrong narrative rather than a
+    // crash, which is worse. extractJsonObject returns null on anything
+    // unbalanced, which drops us into the algorithmic fallback below.
+    const parsed = extractJsonObject(responseText) as Record<string, any> | null;
 
-    if (!jsonMatch) {
+    if (!parsed) {
       const output = algorithmicAssessment(checkResults, context);
       return {
         output: { ...output, raw_checks: checkResults },
         provenance: { source: "algorithmic-fallback", fetched_at: new Date().toISOString() },
       };
     }
-
-    const parsed = JSON.parse(jsonMatch[0]);
 
     // Validate risk_level
     const validLevels = ["none", "low", "medium", "high", "critical"];
