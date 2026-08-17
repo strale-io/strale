@@ -557,6 +557,6 @@ When changing facts that appear on multiple surfaces (capability count, country 
 - **Frontend consumer**: `usePlatformFacts()` hook in `strale-frontend/src/hooks/use-platform-facts.ts`. Component pages read from this; never hardcode the displayed value.
 - **Static frontend files** that can't reach the hook (`public/llms.txt`, `public/.well-known/*.json`): use phrasing that doesn't bake in counts, with a pointer to `/v1/platform/facts`.
 
-The `apps/api/scripts/check-platform-facts-drift.mjs` CI guard catches new hardcoded values introduced into surface files. The weekly cron runs the same sweep across both repos and opens a tracking issue on any drift.
+The `apps/api/scripts/check-platform-facts-drift.ts` guard (run via `npx tsx`, wired in weekly-drift.yml) catches new hardcoded values introduced into surface files. The weekly cron runs the same sweep across both repos and opens a tracking issue on any drift.
 
 For vendor switches specifically, invoke the `vendor-switch` skill (in `.claude/skills/vendor-switch/SKILL.md`) — it codifies the full surface-update + DEC-entry checklist.

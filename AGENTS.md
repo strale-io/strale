@@ -169,7 +169,7 @@ a first statement in a channel never used before); pricing outside the
 existing band; and anything a regulator would read as a claim about the
 product. The charter's founder-gated list is broader still — vendor/license
 commitments, deactivating revenue earners, DEC-20260428-B-grade builds, new
-external claims, anything outward-facing (published packages, directory
+external claims, **new capabilities** (charter classifies capability creation as approval_required — broad technical authority does NOT delegate it), anything outward-facing (published packages, directory
 submissions, vendor contact, social), legal/grey-zone judgment — read
 `docs/company/CHARTER.md` before assuming an ambiguous action is delegated;
 default to `approval_required` on the decision queue when unclear, never to
@@ -192,9 +192,10 @@ drift:
   `src/lib/sqs.ts` to "fix" a score — it doesn't exist; diagnose root cause
   instead (Scoring Integrity, retired but the discipline stands).
 - Free-tier capability list is `is_free_tier = true` in the `capabilities`
-  table, surfaced via `free_tier_slugs` on `/v1/platform/facts`. IP-based
-  10/day limit.
-- x402 (pay-per-use USDC on Base) is DB-driven: `x402_enabled` on the
+  table, surfaced via `free_tier_slugs` on `/v1/platform/facts`. The
+  per-IP daily limit is FREE_TIER_DAILY_LIMIT in `src/routes/do.ts` — read
+  it there, don't restate it.
+- x402 pay-per-use (rail details: `platform-facts.ts`) is DB-driven: `x402_enabled` on the
   `capabilities` row. Catalog: `GET /x402/catalog`.
 - KYB Essentials/Complete and Invoice Verify solution families (multi-country
   — see the `solutions` table for the current country list) have
