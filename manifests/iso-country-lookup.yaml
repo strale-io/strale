@@ -1,6 +1,3 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: iso-country-lookup
 name: ISO Country Lookup
 description: >-
@@ -27,24 +24,21 @@ output_schema:
     matches: []
     total_matches: 0
   properties:
-    name:
+    query:
       type: string
-    region:
+    match:
+      type: object
+    matches:
+      type: array
+    total_matches:
+      type: integer
+    error:
       type: string
-    alpha_2:
-      type: string
-    alpha_3:
-      type: string
-    schengen:
-      type: boolean
-    eu_member:
-      type: boolean
 data_source: Algorithmic (ISO 3166-1 country code database)
 data_source_type: computed
 transparency_tag: algorithmic
 freshness_category: computed
 maintenance_class: pure-computation
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: false
 personal_data_categories: []
 geography: global
@@ -64,16 +58,12 @@ test_fixtures:
         reliability: common
   health_check_input:
     query: land
-# Top-level response fields only. `name`, `alpha_2`, `region` etc. are NOT
-# top-level — the executor nests them inside `match` (single hit) or inside
-# each element of `matches` (zero or several hits). Declaring them here made
-# the smoke test assert not-null on fields that never appear at the top level,
-# so step 3 failed on every run.
 output_field_reliability:
   query: guaranteed
   match: common
   matches: common
   total_matches: common
+  error: rare
 limitations:
   - title: Country data is based on ISO 3166-1 — newly created or renamed countries may not yet be reflected
     text: Country data based on ISO 3166-1 standard — newly created or renamed countries may take time to be reflected

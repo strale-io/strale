@@ -1231,6 +1231,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0087_unhideRedactedRows",
       "runMigration0088_solutionGateCondition",
       "runMigration0089_deactivateUsCourtSearch",
+      "runMigration0090_capabilityOutputContracts",
     ]);
   });
 });
@@ -1597,6 +1598,59 @@ describe("startup-migrations — block 0089 (deactivate us-court-search)", () =>
     const { runMigration0089_deactivateUsCourtSearch } = await import("./startup-migrations.js");
     const stub = makeStub({ queue: [{ count: 1 }] });
     await runMigration0089_deactivateUsCourtSearch(stub);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      const badChunks = chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c));
+      expect(badChunks, "no Date/Buffer chunk reaches the SQL bind layer").toEqual([]);
+    }
+  });
+});
+
+describe("startup-migrations — block 0090 (capability output contracts)", () => {
+  it("writes properties, reliability and the two replacement fixtures", async () => {
+    const { runMigration0090_capabilityOutputContracts } = await import("./startup-migrations.js");
+    const { CORRECTED_SLUGS, CAPABILITY_OUTPUT_CONTRACTS } = await import(
+      "./capability-output-contracts.js"
+    );
+    const withFixture = CORRECTED_SLUGS.filter(
+      (s) => CAPABILITY_OUTPUT_CONTRACTS[s]!.knownAnswerInput,
+    );
+    // 2 statements per slug, plus one more for each replacement fixture.
+    const expected = CORRECTED_SLUGS.length * 2 + withFixture.length;
+    const stub = makeStub({ default: { count: 1 } });
+    const result = await runMigration0090_capabilityOutputContracts(stub);
+
+    expect(stub.captured).toHaveLength(expected);
+    expect(result.rows_affected).toBe(expected);
+
+    // Slugs are bound parameters, not SQL text — assert on the binds.
+    const boundParams = stub.captured.flatMap((c) => dialect.sqlToQuery(c).params);
+    for (const slug of CORRECTED_SLUGS) expect(boundParams).toContain(slug);
+
+    const all = stub.renderedSql.join(" ").toLowerCase();
+    // Only `properties` is replaced, so a hand-written `example` survives.
+    expect(all).toContain("jsonb_set");
+    expect(all).toContain("'{properties}'");
+    expect(all).toContain("update test_suites");
+    expect(all).toContain("test_type = 'known_answer'");
+  });
+
+  it("is idempotent — every statement is guarded by IS DISTINCT FROM", async () => {
+    const { runMigration0090_capabilityOutputContracts } = await import("./startup-migrations.js");
+    const stub = makeStub({ default: { count: 0 } });
+    const result = await runMigration0090_capabilityOutputContracts(stub);
+
+    for (const rendered of stub.renderedSql) {
+      expect(rendered.toLowerCase()).toContain("is distinct from");
+    }
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toContain("no change");
+  });
+
+  it("no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)", async () => {
+    const { runMigration0090_capabilityOutputContracts } = await import("./startup-migrations.js");
+    const stub = makeStub({ default: { count: 1 } });
+    await runMigration0090_capabilityOutputContracts(stub);
     for (const query of stub.captured) {
       const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
       const badChunks = chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c));
