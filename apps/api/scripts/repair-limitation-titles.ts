@@ -104,7 +104,7 @@ interface Report {
   relUnrepairable: UnrepairableEntry[];
   jsonbAffected: number;
   jsonbApplied: Array<{ slug: string; text: string; oldTitle: string; newTitle: string }>;
-  jsonbRaced: Array<{ slug: string; reason: string }>;
+  jsonbRaced: Array<{ slug: string; reason: string; skippedCount: number }>;
   jsonbUnrepairable: Array<{ slug: string; text: string; reason: string }>;
 }
 
@@ -117,7 +117,7 @@ function printReport(mode: "DRY RUN" | "APPLY", r: Report) {
 
   const totalApplied = r.relApplied.length + r.jsonbApplied.length;
   const totalUnrepairable = r.relUnrepairable.length + r.jsonbUnrepairable.length;
-  const totalRaced = r.relRaced.length + r.jsonbRaced.length;
+  const totalRaced = r.relRaced.length + r.jsonbRaced.reduce((a, x) => a + x.skippedCount, 0);
 
   console.log(`\n${mode === "APPLY" ? "Repaired" : "Repairable (manifest source has a real title)"}: ${totalApplied}`);
   console.log(`Unrepairable (reported separately, not touched): ${totalUnrepairable}`);
@@ -301,6 +301,7 @@ async function main() {
         } else {
           report.jsonbRaced.push({
             slug: cap.slug,
+            skippedCount: result.repaired.length,
             reason: `onboarding_manifest.limitations changed since this run scanned it — ${result.repaired.length} planned repair(s) skipped to avoid clobbering a concurrent write`,
           });
         }
@@ -310,7 +311,7 @@ async function main() {
     printReport("APPLY", report);
 
     const totalApplied = report.relApplied.length + report.jsonbApplied.length;
-    const totalRaced = report.relRaced.length + report.jsonbRaced.length;
+    const totalRaced = report.relRaced.length + report.jsonbRaced.reduce((a, x) => a + x.skippedCount, 0);
     if (totalApplied === 0) {
       console.log("\nNothing applied.");
     } else {

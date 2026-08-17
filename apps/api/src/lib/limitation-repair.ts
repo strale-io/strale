@@ -121,9 +121,11 @@ export interface JsonbRepairEntry {
 }
 
 export interface JsonbRepairResult {
-  /** A full copy of the input array with repairable entries fixed. Never
-   *  mutates the array passed in. */
-  newArray: Array<Record<string, unknown>>;
+  /** A shallow copy of the input array with repairable entries replaced
+   *  and every other element preserved by reference (never normalized —
+   *  non-object bystanders must round-trip untouched). Never mutates the
+   *  array passed in. */
+  newArray: unknown[];
   /** Count of entries with title === "undefined" in the ORIGINAL array,
    *  computed before any mutation. This is the count that must be
    *  reported — computing it from `newArray` after repairs are applied
@@ -143,23 +145,34 @@ export interface JsonbRepairResult {
  * scan, independent of how many entries actually got repaired.
  */
 export function repairJsonbLimitationsArray(
-  arr: ReadonlyArray<Record<string, unknown>>,
+  arr: ReadonlyArray<unknown>,
   slug: string,
   manifestLims: Map<string, ManifestLimitation[]>,
   warn: (msg: string) => void = () => {},
 ): JsonbRepairResult {
   // Count BEFORE any mutation — see the affectedCount doc comment above.
+  // Only plain objects can carry the defect; the scan therefore also
+  // guarantees every repair target below is spread-safe.
   const affectedIndices: number[] = [];
   for (let i = 0; i < arr.length; i++) {
-    if (arr[i]?.title === "undefined") affectedIndices.push(i);
+    const e = arr[i];
+    if (e !== null && typeof e === "object" && !Array.isArray(e) && (e as Record<string, unknown>).title === "undefined") {
+      affectedIndices.push(i);
+    }
   }
 
-  const newArray = arr.map((entry) => ({ ...entry }));
+  // Shallow array copy, entries preserved BY REFERENCE. The closing review
+  // (2026-08-18) reproduced the previous `arr.map((e) => ({ ...e }))`
+  // corrupting non-object bystanders: `{...null}` → `{}` and a string
+  // entry char-indexes into `{"0":"l","1":"e",...}` — the same coercion
+  // family this whole module exists to clean up. Untouched entries must
+  // round-trip byte-identical; only validated repair targets are replaced.
+  const newArray: unknown[] = [...arr];
   const repaired: JsonbRepairEntry[] = [];
   const unrepairable: JsonbRepairResult["unrepairable"] = [];
 
   for (const i of affectedIndices) {
-    const entry = arr[i];
+    const entry = arr[i] as Record<string, unknown>; // scan above guarantees a plain object
     const text = String(entry.text ?? "");
     const { match, ambiguous } = findManifestMatch(manifestLims, slug, text);
     if (ambiguous) {

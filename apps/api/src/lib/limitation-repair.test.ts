@@ -171,3 +171,26 @@ describe("repairJsonbLimitationsArray", () => {
     expect(result.newArray).toEqual([]);
   });
 });
+
+describe("repairJsonbLimitationsArray — non-object bystanders (closing review, 2026-08-18)", () => {
+  it("preserves null and string entries byte-identical instead of normalizing them", () => {
+    const manifestLims = new Map([
+      ["cap-x", [{ title: "Real title", text: "the text" }]],
+    ]);
+    const arr: unknown[] = [
+      null,
+      "legacy",
+      { title: "undefined", text: "the text" },
+      { title: "Fine", text: "other" },
+    ];
+    const result = repairJsonbLimitationsArray(arr, "cap-x", manifestLims);
+    // The reviewer reproduced the old behavior: null -> {} and
+    // "legacy" -> {"0":"l","1":"e",...}. Bystanders must survive untouched.
+    expect(result.newArray[0]).toBeNull();
+    expect(result.newArray[1]).toBe("legacy");
+    expect(result.newArray[3]).toBe(arr[3]); // same reference, not a normalized copy
+    expect((result.newArray[2] as Record<string, unknown>).title).toBe("Real title");
+    expect(result.affectedCount).toBe(1);
+    expect(result.repaired).toHaveLength(1);
+  });
+});
