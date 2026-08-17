@@ -474,8 +474,26 @@ async function runSingleTest(
   // ── Fixture mode: validate stored baseline without calling the executor ────
   // For deterministic capabilities where the output never changes.
   // Zero cost — just validates baseline_output against validation_rules.
-  if (suite.testMode === "fixture" && suite.baselineOutput) {
+  //
+  // A baseline captured BEFORE the suite was last edited describes an input
+  // that is no longer the one under test, so replaying it answers a question
+  // nobody asked. Because `captureBaseline` refuses to overwrite an existing
+  // baseline, that state is permanent: the executor is never called again and
+  // the verdict never changes. Measured 2026-08-17 — six capabilities had been
+  // failing continuously since 2026-03-20 on baselines captured 2026-03-13/19
+  // with a different suite's input, 81 runs each without one live execution.
+  // `iso-country-lookup`'s known-answer suite stores `{"query":"Sweden"}` and
+  // every recorded result echoed `"land"`.
+  if (suite.testMode === "fixture" && suite.baselineOutput && !isBaselineStale(suite)) {
     return runFixtureTest(suite, fieldReliabilityMap, outputSchemaMap);
+  }
+
+  // Stale baseline on a suite we cannot re-run for free: do not guess. Report
+  // it as an instrument problem under its own name rather than manufacturing a
+  // pass or a failure about the capability — the same rule the correctness
+  // invariant learned on 2026-08-17.
+  if (suite.testMode === "fixture" && suite.baselineOutput && (suite.externalCostCents ?? 0) > 0) {
+    return recordStaleFixture(suite);
   }
 
   // ── Real execution for other test types (negative, edge_case, known_answer)
@@ -1040,19 +1058,92 @@ function extractKeyStructure(obj: unknown, prefix = ""): string[] {
   return keys;
 }
 
-/** Capture baseline output on first successful real execution. */
+/**
+ * Is this suite's stored baseline older than the suite itself?
+ *
+ * `updated_at` moves on any edit to the suite — including the input change
+ * that makes a baseline meaningless. Using it is deliberately conservative:
+ * the worst case for a false positive is one live execution followed by a
+ * fresh capture, which for a zero-cost capability costs nothing. The worst
+ * case for a false negative is what shipped — a permanently wrong verdict
+ * that no amount of re-running can correct.
+ *
+ * A suite with no baseline is not stale; it has simply never been captured,
+ * and the live path handles it.
+ */
+export function isBaselineStale(suite: {
+  baselineOutput?: unknown;
+  baselineCapturedAt?: Date | null;
+  updatedAt?: Date | null;
+}): boolean {
+  if (!suite.baselineOutput) return false;
+  if (!suite.baselineCapturedAt) return true; // a baseline we cannot date is not one we can trust
+  if (!suite.updatedAt) return false;
+  return suite.baselineCapturedAt.getTime() < suite.updatedAt.getTime();
+}
+
+/**
+ * Record a stale fixture on a suite that costs money to re-run.
+ *
+ * Deliberately `passed: false` with a reason naming the instrument, not the
+ * capability. `transaction-failure-taxonomy` classifies this as `config`
+ * (ours to fix, not the capability's logic), so the correctness invariant
+ * excludes it from the denominator rather than reporting a code defect.
+ */
+async function recordStaleFixture(
+  suite: typeof testSuites.$inferSelect,
+): Promise<SingleTestResult> {
+  const db = getDb();
+  const failureReason =
+    `fixture_refresh_required: baseline captured ${suite.baselineCapturedAt?.toISOString() ?? "at an unknown time"} ` +
+    `predates the suite's last edit ${suite.updatedAt?.toISOString() ?? ""} and the suite is not free to re-run ` +
+    `(external_cost_cents=${suite.externalCostCents ?? 0}). Not evidence about the capability.`;
+
+  await db.insert(testResults).values({
+    testSuiteId: suite.id,
+    capabilitySlug: suite.capabilitySlug,
+    passed: false,
+    failureReason,
+    responseTimeMs: 0,
+    failureClassification: "stale_input",
+  });
+
+  return {
+    testName: suite.testName,
+    testType: suite.testType,
+    capabilitySlug: suite.capabilitySlug,
+    passed: false,
+    failureReason,
+    responseTimeMs: 0,
+  };
+}
+
+/**
+ * Capture baseline output on first successful real execution — or refresh one
+ * that has gone stale.
+ *
+ * The early return used to be unconditional, which is what made a stale
+ * baseline permanent: the fixture path replayed it forever and the capture
+ * path declined to replace it.
+ */
 async function captureBaseline(
   suite: typeof testSuites.$inferSelect,
   output: Record<string, unknown>,
 ): Promise<void> {
-  if (suite.baselineOutput) return; // already captured
+  if (suite.baselineOutput && !isBaselineStale(suite)) return; // already captured and still current
   const db = getDb();
+  const capturedAt = new Date();
   await db
     .update(testSuites)
     .set({
       baselineOutput: output,
-      baselineCapturedAt: new Date(),
-      updatedAt: new Date(),
+      // ONE timestamp for both columns. Two `new Date()` calls can differ by a
+      // millisecond, and `capturedAt < updatedAt` by a millisecond is exactly
+      // the staleness predicate — every freshly captured baseline would be born
+      // stale, and the suite would re-execute live forever instead of ever
+      // using fixture mode again.
+      baselineCapturedAt: capturedAt,
+      updatedAt: capturedAt,
     })
     .where(eq(testSuites.id, suite.id));
 }
