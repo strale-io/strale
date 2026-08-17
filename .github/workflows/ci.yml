@@ -67,6 +67,14 @@ jobs:
       # with. Blocks the "hollow package" class of incident that surfaced
       # with pydantic-ai on 2026-04-21. See archive/sessions/CONTAINMENT_REPORT.md.
       - run: node apps/api/scripts/check-framework-packages.mjs
+      # Phase A0b CI lint (wired 2026-08-17, Phase 2 T2.2 — written
+      # 2026-08-12 but never wired in): apps/api/scripts/*.ts must route
+      # executor invocation through guardedExecute/assertGuardedAllow, not
+      # call an executor obtained directly from getExecutor(). Pure static
+      # scan of the scripts directory, no DB/network needed. Superseded and
+      # made check-paid-api-preflight.ts (archived) redundant per the
+      # 2026-08-12 scripts-rightsizing audit.
+      - run: node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs
       # Cert-audit C6 follow-up: every fetch() must be timeout-bounded.
       # Pre-existing offenders are tracked in fetch-timeout-allowlist.txt;
       # --strict fails CI on new offenders.

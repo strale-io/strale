@@ -27,5 +27,14 @@ async function main() {
   console.log(`empty/other: ${empty}`);
   console.log(`sample corrupted: ${bad.slice(0, 20).join(", ")}`);
   await sql.end();
+  // Weekly-drift gate (Phase 2 T2.2, 2026-08-17): a char-indexed
+  // output_schema ({"0":"{","1":"\"",...}) means a JS string got
+  // JSON.stringify'd twice somewhere on the write path — the column looks
+  // populated but is useless to every reader. Fail so the weekly sweep
+  // surfaces it instead of it sitting silent.
+  if (corrupted > 0) {
+    console.error(`\n${corrupted} capability(ies) have corrupted (char-indexed) output_schema.`);
+    process.exit(1);
+  }
 }
 main().catch((e) => { console.error(e); process.exit(1); });

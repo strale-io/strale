@@ -116,6 +116,22 @@ jobs:
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
+      # capabilities.output_schema corruption scan (Phase 2 T2.2, wired
+      # 2026-08-17 — script existed since before but was never wired
+      # anywhere). A char-indexed output_schema ({"0":"{","1":"\"",...})
+      # means a JS string got JSON.stringify'd twice on some write path;
+      # the column looks populated but is useless to every reader. Needs
+      # DATABASE_URL, so this belongs here rather than ci.yml.
+      - id: output-schema
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set +e
+          set -o pipefail
+          cd apps/api && npx tsx scripts/check-output-schema.ts 2>&1 | tee /tmp/output-schema.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
       # Aggregate report. Step fails (and triggers issue creation) if
       # ANY upstream sweep reported drift.
       - id: aggregate
@@ -152,6 +168,11 @@ jobs:
             echo '```'
             cat /tmp/toast-readability.txt
             echo '```'
+            echo ""
+            echo "## output_schema corruption (char-indexed JSONB)"
+            echo '```'
+            cat /tmp/output-schema.txt
+            echo '```'
           } > /tmp/report.md
           cat /tmp/report.md
 
@@ -162,7 +183,8 @@ jobs:
           VR=${{ steps.vendor-roster.outputs.exit }}
           AR=${{ steps.audit-record-shape.outputs.exit }}
           TR=${{ steps.toast-readability.outputs.exit }}
-          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ] || [ "$TR" != "0" ]; then
+          OS=${{ steps.output-schema.outputs.exit }}
+          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ] || [ "$TR" != "0" ] || [ "$OS" != "0" ]; then
             echo "::warning::One or more drift sweeps reported findings — see report"
             exit 1
           fi
