@@ -1,6 +1,3 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: company-id-detect
 name: Company ID Detection
 description: >-
@@ -27,24 +24,29 @@ output_schema:
     message: Could not identify the format of this company ID.
     detected: false
   properties:
+    input:
+      type: string
     detected:
       type: boolean
     best_match:
       type: object
     all_matches:
       type: array
+    matches:
+      type: array
+    message:
+      type: string
 data_source: Algorithmic (pattern matching for org number formats across 20+ countries)
 data_source_type: computed
 transparency_tag: algorithmic
 freshness_category: computed
 maintenance_class: pure-computation
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: false
 geography: global
 test_fixtures:
   known_answer:
     input:
-      id: 556703-7485
+      id: 559395-7979
     expected_fields:
       - field: detected
         operator: not_null
@@ -68,11 +70,14 @@ test_fixtures:
         reliability: guaranteed
         value: array
   health_check_input:
-    id: 556703-7485
+    id: 559395-7979
 output_field_reliability:
+  input: guaranteed
   detected: guaranteed
-  best_match: guaranteed
-  all_matches: guaranteed
+  best_match: common
+  all_matches: common
+  matches: common
+  message: common
 limitations:
   - title: Ambiguous IDs matching multiple country formats may return multiple candidates requiring manual disambiguation
     text: >-

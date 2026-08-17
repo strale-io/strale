@@ -1,6 +1,3 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: incoterms-explain
 name: Incoterms Explain
 description: Explain any Incoterms 2020 rule. Returns seller/buyer obligations, risk/cost transfer points, suitability.
@@ -20,7 +17,7 @@ input_schema:
 output_schema:
   type: object
   example:
-    error: "Unknown Incoterm: \"test\". Must be one of the 11 Incoterms 2020 rules."
+    error: 'Unknown Incoterm: "test". Must be one of the 11 Incoterms 2020 rules.'
     available_codes:
       - EXW
       - FCA
@@ -68,20 +65,23 @@ output_schema:
         full_name: Cost, Insurance and Freight
         suitable_for: sea_and_inland_waterway_only
   properties:
-    full_name:
+    incoterm:
+      type: object
+    version:
       type: string
-    buyer_obligations:
-      type: array
-    seller_obligations:
-      type: array
-    risk_transfer_point:
+    published_by:
       type: string
+    error:
+      type: string
+    available_codes:
+      type: array
+    available_terms:
+      type: array
 data_source: Algorithmic (ICC Incoterms 2020 rule database)
 data_source_type: computed
 transparency_tag: algorithmic
 freshness_category: computed
 maintenance_class: pure-computation
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: false
 geography: global
 test_fixtures:
@@ -98,10 +98,12 @@ test_fixtures:
   health_check_input:
     incoterm: EXW
 output_field_reliability:
-  full_name: guaranteed
-  buyer_obligations: guaranteed
-  seller_obligations: guaranteed
-  risk_transfer_point: guaranteed
+  incoterm: guaranteed
+  version: guaranteed
+  published_by: guaranteed
+  error: rare
+  available_codes: rare
+  available_terms: rare
 limitations:
   - title: Incoterms 2020 explanation does not account for contractual modifications or local trade customs
     text: AI-generated explanation of Incoterms 2020 — does not account for contractual modifications or local trade customs

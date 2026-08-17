@@ -1,6 +1,3 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: name-parse
 name: Name Parse
 description: >-
@@ -30,24 +27,25 @@ output_schema:
     first_name: test
     middle_name: null
   properties:
+    full_name:
+      type: string
+    first_name:
+      type: string
+    last_name:
+      type: string
+    middle_name:
+      type: string
     prefix:
       type: string
     suffix:
       type: string
     nickname:
       type: string
-    last_name:
-      type: string
-    first_name:
-      type: string
-    middle_name:
-      type: string
 data_source: Algorithmic (name component extraction, no external data)
 data_source_type: computed
 transparency_tag: algorithmic
 freshness_category: computed
 maintenance_class: pure-computation
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: true
 personal_data_categories:
   - name
@@ -81,12 +79,13 @@ test_fixtures:
   health_check_input:
     full_name: test
 output_field_reliability:
-  prefix: guaranteed
-  suffix: guaranteed
-  nickname: guaranteed
-  last_name: guaranteed
+  full_name: guaranteed
   first_name: guaranteed
-  middle_name: guaranteed
+  last_name: guaranteed
+  middle_name: common
+  prefix: common
+  suffix: common
+  nickname: common
 limitations:
   - title: Compound surnames, non-Western naming conventions, and honorifics may be split incorrectly
     text: AI-powered name parsing — compound surnames, cultural naming conventions, and honorifics may be split incorrectly

@@ -1,6 +1,3 @@
-# Auto-generated from database on 2026-03-17
-# Review and adjust before using as onboarding template
-
 slug: skill-extract
 name: Skill Extract
 description: >-
@@ -31,22 +28,27 @@ output_schema:
     total_skills_found: 0
     experience_levels_mentioned: []
   properties:
-    tools:
-      type: array
-    languages:
+    technical_skills:
       type: array
     soft_skills:
       type: array
+    tools:
+      type: array
     certifications:
       type: array
-    technical_skills:
+    languages:
       type: array
+    experience_levels_mentioned:
+      type: array
+    seniority_signals:
+      type: array
+    total_skills_found:
+      type: integer
 data_source: Algorithmic (skill taxonomy matching from text, no external data)
 data_source_type: computed
 transparency_tag: algorithmic
 freshness_category: computed
 maintenance_class: commercial-stable-api
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: true
 personal_data_categories:
   - professional
@@ -54,7 +56,10 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      text: This is a test input for automated capability testing.
+      text: >-
+        Senior backend engineer with 6 years building Python and TypeScript services on AWS and Kubernetes. Day-to-day
+        tools are Docker, Git and Terraform. AWS Certified Solutions Architect. Known for clear written communication
+        and mentoring juniors. Fluent in Swedish and English.
     expected_fields:
       - field: tools
         operator: not_null
@@ -85,13 +90,19 @@ test_fixtures:
         reliability: guaranteed
         value: array
   health_check_input:
-    text: test
+    text: >-
+      Senior backend engineer with 6 years building Python and TypeScript services on AWS and Kubernetes. Day-to-day
+      tools are Docker, Git and Terraform. AWS Certified Solutions Architect. Known for clear written communication and
+      mentoring juniors. Fluent in Swedish and English.
 output_field_reliability:
-  tools: guaranteed
-  languages: guaranteed
-  soft_skills: guaranteed
-  certifications: guaranteed
   technical_skills: guaranteed
+  languages: guaranteed
+  total_skills_found: guaranteed
+  soft_skills: common
+  tools: common
+  certifications: common
+  experience_levels_mentioned: common
+  seniority_signals: common
 limitations:
   - title: AI skill extraction may categorize competencies differently than industry taxonomies like ESCO or O*NET
     text: >-

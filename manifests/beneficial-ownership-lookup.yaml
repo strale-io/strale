@@ -1,10 +1,9 @@
 slug: beneficial-ownership-lookup
 name: Beneficial Ownership Lookup (UK)
 description: >-
-  Look up UK beneficial ownership (UBO / PSC) information for a company. Returns individuals
-  who ultimately own or control the entity, their ownership percentage, and the ownership
-  chain. Uses Companies House Persons of Significant Control. UK-only — non-GB inputs
-  return a clear coverage notice rather than a fabricated result.
+  Look up UK beneficial ownership (UBO / PSC) information for a company. Returns individuals who ultimately own or
+  control the entity, their ownership percentage, and the ownership chain. Uses Companies House Persons of Significant
+  Control. UK-only — non-GB inputs return a clear coverage notice rather than a fabricated result.
 category: compliance
 cost_class: free_quota
 quota_window: daily
@@ -32,50 +31,44 @@ input_schema:
 output_schema:
   type: object
   properties:
-    query:
+    company_name:
+      type: string
+    company_number:
+      type: string
+    jurisdiction:
+      type: string
+    company_status:
       type: string
     beneficial_owners:
-      type:
-        - array
-        - "null"
-      description: >-
-        Array of resolved PSCs on the success path. Absent entirely on the
-        `supported_jurisdiction: false` envelope (non-UK jurisdictions —
-        discriminated runtime shape, check the discriminator before reading).
-    total_owners:
+      type: array
+    total_beneficial_owners:
       type: integer
-    company_match:
-      type: object
+    has_psc_data:
+      type: boolean
     data_source:
-      type: string
-    lookup_date:
       type: string
     supported_jurisdiction:
       type: boolean
-      description: >-
-        Present on the non-UK path. `false` indicates the executor does not
-        currently cover this jurisdiction; data fields are absent.
+    message:
+      type: string
+    supported_jurisdictions:
+      type: array
 data_source: Companies House Persons of Significant Control (UK)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
 maintenance_class: commercial-stable-api
-# SA.2b: per-capability PII classification (F-A-003, F-A-009)
 processes_personal_data: true
 personal_data_categories:
   - name
   - address
   - sensitive_special
-# Cert-audit RED-4: was 'global' in the manifest while the executor only
-# calls Companies House for jurisdiction='gb'. Corrected to UK-only.
-# Adding non-UK coverage requires either a real UBO API integration
-# (OpenOwnership / aggregator) or a vendor wrap per DEC-20260428-A.
 geography: uk
 test_fixtures:
   known_answer:
     input:
-      company_name: "Tesco PLC"
-      jurisdiction: "GB"
+      company_name: Tesco PLC
+      jurisdiction: GB
     expected_fields:
       - field: query
         operator: not_null
@@ -90,22 +83,26 @@ test_fixtures:
         operator: not_null
         reliability: guaranteed
   health_check_input:
-    company_name: "Tesco PLC"
-    jurisdiction: "GB"
+    company_name: Tesco PLC
+    jurisdiction: GB
 output_field_reliability:
-  query: guaranteed
-  beneficial_owners: common
-  total_owners: guaranteed
-  company_match: common
-  data_source: guaranteed
-  lookup_date: guaranteed
-  jurisdiction: common
+  company_name: guaranteed
+  jurisdiction: guaranteed
   company_number: common
-  coverage_note: common
+  company_status: common
+  beneficial_owners: common
+  total_beneficial_owners: common
+  has_psc_data: common
+  data_source: common
   supported_jurisdiction: rare
+  message: rare
+  supported_jurisdictions: rare
 limitations:
   - title: UK only — non-GB inputs return a coverage notice
-    text: This capability calls Companies House Persons of Significant Control. Non-GB jurisdictions return a structured coverage notice rather than a result. Adding non-UK coverage requires a separate real UBO source (OpenOwnership integration or aggregator wrap per DEC-20260428-A).
+    text: >-
+      This capability calls Companies House Persons of Significant Control. Non-GB jurisdictions return a structured
+      coverage notice rather than a result. Adding non-UK coverage requires a separate real UBO source (OpenOwnership
+      integration or aggregator wrap per DEC-20260428-A).
     category: coverage
     severity: warning
   - title: PSC data may lag real ownership changes
@@ -113,6 +110,8 @@ limitations:
     category: freshness
     severity: info
   - title: Complex ownership chains may not be fully resolved
-    text: Cross-border ownership chains where intermediate entities are non-UK companies cannot be traced from this dataset alone.
+    text: >-
+      Cross-border ownership chains where intermediate entities are non-UK companies cannot be traced from this dataset
+      alone.
     category: accuracy
     severity: info
