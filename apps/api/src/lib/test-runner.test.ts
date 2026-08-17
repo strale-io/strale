@@ -37,28 +37,70 @@ vi.mock("../capabilities/index.js", () => ({
 }));
 
 // Recursively walks a composed drizzle `and(eq(...), eq(...))` condition
-// object for embedded bind values (`Param` instances), the same technique
-// do.spend-cap.test.ts uses for raw sql`` tags — here applied to the
-// query-builder's `.where(and(...))` shape, where interpolated values are
-// wrapped one level deeper (SQL -> Param) than a raw tagged template.
-// Used both to assert the built condition really carries a suiteId filter
-// AND (in the mock `.where()` below) to make the mock behave like a real
-// DB: return only the row(s) matching that id when one is present.
-function findParams(node: unknown, acc: unknown[], depth = 0): void {
-  if (depth > 20 || node == null || typeof node !== "object") return;
-  const ctorName = (node as { constructor?: { name?: string } }).constructor?.name;
-  if (ctorName === "Param") {
-    acc.push((node as { value: unknown }).value);
+// object and extracts each `eq(column, value)` as a {column, value} pair —
+// the same "walk queryChunks for bind values" technique do.spend-cap.test.ts
+// uses for raw sql`` tags, extended one level deeper to also identify WHICH
+// COLUMN each bound value belongs to (drizzle's query-builder `eq()` nests
+// as SQL -> [PgColumn, "=", Param] rather than a raw tag's flat chunk list).
+// Column identity is what makes the mock's `.where()` below correct: a
+// naive "does any bound value match a known suite id" check (the prior
+// version of this mock) can't tell "no id filter was in the query" apart
+// from "an id filter was present but simply didn't match any row" — for an
+// UNKNOWN suiteId, both look identical (no match found), so the old mock
+// fell back to returning every row for an unmatched id. Real Postgres does
+// not do that: `WHERE id = 'nonexistent'` returns zero rows regardless of
+// what else matched. Distinguishing by column, not by value, fixes that
+// (Codex closing-pass HIGH review, 2026-08-18).
+interface EqCondition {
+  column: string;
+  value: unknown;
+}
+
+function isNotWrapperStringChunk(chunk: unknown): boolean {
+  if (!chunk || typeof chunk !== "object") return false;
+  if ((chunk as { constructor?: { name?: string } }).constructor?.name !== "StringChunk") return false;
+  // Drizzle's StringChunk.value is string[], not a plain string.
+  const value = (chunk as { value?: unknown }).value;
+  return Array.isArray(value) && value.some((s) => typeof s === "string" && s.trim().toLowerCase() === "not");
+}
+
+function findEqConditions(node: unknown, acc: EqCondition[], depth = 0): void {
+  if (depth > 25 || node == null || typeof node !== "object") return;
+  const chunks = (node as { queryChunks?: unknown[] }).queryChunks;
+  if (!Array.isArray(chunks)) return;
+
+  // runTests()'s conditions array includes `not(eq(testType, "piggyback"))`
+  // — an EXCLUSION, not a positive filter. Structurally it renders as
+  // `SQL[StringChunk("not "), SQL(<the wrapped eq>)]`: the "not " prefix
+  // sits in a sibling StringChunk one level above the eq it negates, not
+  // inside the eq's own chunk array, so a naive walk that recurses into
+  // everything picks up `{column: "test_type", value: "piggyback"}` as if
+  // it were a real filter — which broke every test in this suite the first
+  // time this mock was written this way (all rows in fixtures have
+  // testType "negative", so requiring testType to ALSO equal "piggyback"
+  // via the misread NOT clause made every row fail to match, yielding zero
+  // rows even for the plain capabilitySlug+testType case). Detect the
+  // "not " prefix and skip descending into the fragment it wraps entirely.
+  if (chunks.length > 0 && isNotWrapperStringChunk(chunks[0])) {
     return;
   }
-  const chunks = (node as { queryChunks?: unknown[] }).queryChunks;
-  if (Array.isArray(chunks)) {
-    for (const c of chunks) findParams(c, acc, depth + 1);
+
+  const columnChunk = chunks.find(
+    (c): c is { name: string } =>
+      !!c && typeof c === "object" && "name" in c && "table" in c && typeof (c as { name?: unknown }).name === "string",
+  );
+  const paramChunk = chunks.find(
+    (c) => !!c && typeof c === "object" && (c as { constructor?: { name?: string } }).constructor?.name === "Param",
+  ) as { value: unknown } | undefined;
+  if (columnChunk && paramChunk) {
+    acc.push({ column: columnChunk.name, value: paramChunk.value });
   }
+
+  for (const c of chunks) findEqConditions(c, acc, depth + 1);
 }
 
 const insertResultsCalls: unknown[] = [];
-let suiteRows: Array<{ suite: { id: string } }> = [];
+let suiteRows: Array<{ suite: { id: string; capabilitySlug: string; testType: string } }> = [];
 const whereCalls: unknown[] = [];
 const mockDb = {
   select: () => ({
@@ -66,21 +108,23 @@ const mockDb = {
       innerJoin: () => ({
         where: (condition: unknown) => {
           whereCalls.push(condition);
-          // Mirror real Postgres behavior: if the composed condition
-          // carries a bind value matching one of our fake suite ids, only
-          // that row would ever come back from the actual `test_suites`
-          // table. Suite-id-agnostic callers (no suiteId passed) see every
-          // row, exactly as before this fix — the pre-existing
-          // (capabilitySlug, testType) behavior is untouched.
-          const params: unknown[] = [];
-          findParams(condition, params);
-          const matchingIds = suiteRows
-            .map((r) => r.suite.id)
-            .filter((id) => params.includes(id));
-          const filtered =
-            matchingIds.length > 0
-              ? suiteRows.filter((r) => matchingIds.includes(r.suite.id))
-              : suiteRows;
+          const eqConditions: EqCondition[] = [];
+          findEqConditions(condition, eqConditions);
+          // Faithfully apply every recognized column filter — not just id.
+          // This is what makes "mismatched-slug id" testable: an id that
+          // exists in suiteRows but belongs to a different capability_slug
+          // must still yield zero rows, exactly as a real Postgres
+          // `WHERE id = 'x' AND capability_slug = 'y'` would when 'x'
+          // belongs to some other slug.
+          const COLUMN_TO_FIELD: Record<string, "id" | "capabilitySlug" | "testType"> = {
+            id: "id",
+            capability_slug: "capabilitySlug",
+            test_type: "testType",
+          };
+          const applicable = eqConditions.filter((c) => c.column in COLUMN_TO_FIELD);
+          const filtered = suiteRows.filter((r) =>
+            applicable.every((c) => r.suite[COLUMN_TO_FIELD[c.column]] === c.value),
+          );
           return Promise.resolve(filtered);
         },
       }),
@@ -106,12 +150,12 @@ import {
   runTests,
 } from "./test-runner.js";
 
-function fakeSuiteRow(id: string) {
+function fakeSuiteRow(id: string, overrides?: { capabilitySlug?: string; testType?: string }) {
   return {
     suite: {
       id,
-      capabilitySlug: "budget-test-cap",
-      testType: "negative",
+      capabilitySlug: overrides?.capabilitySlug ?? "budget-test-cap",
+      testType: overrides?.testType ?? "negative",
       testName: `duplicate-known-answer-${id}`,
       testMode: "live",
       input: {},
@@ -244,9 +288,9 @@ describe("runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review)", () =>
     await runTests({ capabilitySlug: "budget-test-cap", testType: "negative", suiteId: "suite-2" });
 
     expect(whereCalls).toHaveLength(1);
-    const params: unknown[] = [];
-    findParams(whereCalls[0], params);
-    expect(params).toContain("suite-2");
+    const eqConditions: EqCondition[] = [];
+    findEqConditions(whereCalls[0], eqConditions);
+    expect(eqConditions).toContainEqual({ column: "id", value: "suite-2" });
   });
 
   it("suiteId scopes execution to exactly that one suite, even with 3 due siblings sharing (slug, testType)", async () => {
@@ -273,10 +317,10 @@ describe("runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review)", () =>
     expect(insertResultsCalls).toHaveLength(4);
     expect(summary.total).toBe(4);
 
-    // No id-scoping param was ever built for this call.
-    const params: unknown[] = [];
-    findParams(whereCalls[0], params);
-    for (const row of suiteRows) expect(params).not.toContain(row.suite.id);
+    // No id-scoping condition was ever built for this call.
+    const eqConditions: EqCondition[] = [];
+    findEqConditions(whereCalls[0], eqConditions);
+    expect(eqConditions.find((c) => c.column === "id")).toBeUndefined();
   });
 
   it("the danish-4-duplicate scenario becomes LINEAR: 4 overdue suites, one runTests() call each (as the fixed scheduler now does) → exactly 4 executions total, not 16", async () => {
@@ -303,6 +347,75 @@ describe("runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review)", () =>
     // re-running all 4 suites) — asserting the exact pre-fix number here
     // as a named contrast, not just "not 16".
     expect(totalExecuted).not.toBe(4 * 4);
+  });
+
+  // ─── Fail-closed on a malformed suiteId (Codex closing-pass HIGH,
+  // 2026-08-18) ────────────────────────────────────────────────────────────
+  //
+  // `if (opts.suiteId)` was fail-OPEN: a falsy suiteId (null, "", or
+  // undefined-by-bug) silently dropped the id predicate and widened
+  // execution back to every suite matching (capabilitySlug, testType) — the
+  // exact quadratic failure this parameter exists to close. The fix checks
+  // presence via `!== undefined` and then requires a non-empty string,
+  // throwing otherwise. These are genuine runtime-shape tests, not just
+  // TypeScript exercises: `as never`/`as any` simulate exactly what a raw
+  // `any`-typed DB row (test-scheduler.ts's findOverdueSuites) could hand
+  // runTests() if a future refactor let a NULL suiteId column through.
+
+  it("suiteId: null (present but falsy) throws instead of silently widening scope", async () => {
+    mockIsBudgetExhausted.mockResolvedValue(false);
+
+    await expect(
+      runTests({ capabilitySlug: "budget-test-cap", testType: "negative", suiteId: null as never }),
+    ).rejects.toThrow(/suiteId was supplied but is not a non-empty string/);
+
+    // The failure happens before any suite executes — no partial/wrong-
+    // scope execution slipped through on the way to the throw.
+    expect(mockExecutor).not.toHaveBeenCalled();
+  });
+
+  it("suiteId: empty string (present but falsy) throws instead of silently widening scope", async () => {
+    mockIsBudgetExhausted.mockResolvedValue(false);
+
+    await expect(
+      runTests({ capabilitySlug: "budget-test-cap", testType: "negative", suiteId: "" }),
+    ).rejects.toThrow(/suiteId was supplied but is not a non-empty string/);
+    expect(mockExecutor).not.toHaveBeenCalled();
+  });
+
+  it("suiteId: unknown-but-valid-shaped id (no such suite) runs ZERO suites — never falls back to every row", async () => {
+    mockIsBudgetExhausted.mockResolvedValue(false);
+
+    const summary = await runTests({
+      capabilitySlug: "budget-test-cap",
+      testType: "negative",
+      suiteId: "suite-does-not-exist-9999",
+    });
+
+    // The exact regression the prior version of this mock couldn't catch
+    // (Codex: "the current mock returns all rows for unknown ids"): an
+    // unmatched id must yield zero rows, not every row in suiteRows.
+    expect(mockExecutor).not.toHaveBeenCalled();
+    expect(insertResultsCalls).toHaveLength(0);
+    expect(summary.total).toBe(0);
+  });
+
+  it("suiteId: id exists but belongs to a different capabilitySlug — zero rows, no cross-scope leak", async () => {
+    mockIsBudgetExhausted.mockResolvedValue(false);
+    // suite-5 is real, but registered under a DIFFERENT capability than
+    // the one this call scopes to — a real Postgres
+    // `WHERE id = 'suite-5' AND capability_slug = 'budget-test-cap'`
+    // would return zero rows for it, and this call must too.
+    suiteRows.push(fakeSuiteRow("suite-5", { capabilitySlug: "other-cap" }));
+
+    const summary = await runTests({
+      capabilitySlug: "budget-test-cap",
+      testType: "negative",
+      suiteId: "suite-5",
+    });
+
+    expect(mockExecutor).not.toHaveBeenCalled();
+    expect(summary.total).toBe(0);
   });
 });
 
