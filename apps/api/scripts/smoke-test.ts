@@ -109,7 +109,7 @@ async function smokeTest(
 
   // Step 2: Execute with known_answer test input
   const knownAnswerSuite = suites.find((s) => s.testType === "known_answer");
-  if (!dryRun && executor && knownAnswerSuite) {
+  if (!dryRun && executor !== undefined && knownAnswerSuite) {
     const start2 = Date.now();
     try {
       const testInput = knownAnswerSuite.input as Record<string, unknown>;
@@ -193,7 +193,7 @@ async function smokeTest(
 
   // Step 4: Negative test — empty input returns structured error
   const negativeSuite = suites.find((s) => s.testType === "negative");
-  if (!dryRun && executor && negativeSuite) {
+  if (!dryRun && executor !== undefined && negativeSuite) {
     const start4 = Date.now();
     try {
       const result = await Promise.race([
@@ -390,8 +390,8 @@ async function smokeTest(
     detail: hasAnnotations
       ? `${Object.keys(reliability!).length} fields annotated`
       : reliability
-        ? "output_field_reliability is empty — run backfill-field-reliability.ts"
-        : "output_field_reliability is null — run backfill-field-reliability.ts",
+        ? "output_field_reliability is empty — run onboard.ts --discover"
+        : "output_field_reliability is null — run onboard.ts --discover",
     durationMs: Date.now() - start11,
   });
 

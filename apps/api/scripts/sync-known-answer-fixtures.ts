@@ -100,7 +100,12 @@ async function main() {
     }
 
     await sql.begin(async (tx) => {
-      await tx`
+      // postgres-js types `TransactionSql` via `Omit<Sql<T>, ...>`, which
+      // (like all Omit<> on a callable interface) drops the tagged-template
+      // call signature — a known upstream typing limitation, not a real
+      // runtime issue. Cast to the callable base type once per transaction.
+      const t = tx as unknown as typeof sql;
+      await t`
         UPDATE test_suites
         SET input = ${tx.json(ka.input)},
             validation_rules = ${tx.json(validationRules)},
@@ -108,11 +113,11 @@ async function main() {
             baseline_captured_at = NULL
         WHERE id = ${keep.id}`;
       if (extras.length) {
-        await tx`UPDATE test_suites SET active = false WHERE id = ANY(${extras})`;
+        await t`UPDATE test_suites SET active = false WHERE id = ANY(${extras})`;
       }
       // onboard.ts derives the schema_check input from the known_answer input;
       // leaving it stale would keep exercising the old (possibly broken) input.
-      await tx`
+      await t`
         UPDATE test_suites
         SET input = ${tx.json(ka.input)}
         WHERE capability_slug = ${slug} AND test_type = 'schema_check' AND active = true`;

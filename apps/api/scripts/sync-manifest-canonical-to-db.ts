@@ -182,8 +182,8 @@ const result = await sql`
   UPDATE capabilities
   SET description = ${manifest.description},
       category = ${manifest.category},
-      input_schema = ${sql.json(manifest.input_schema as object)},
-      output_schema = ${sql.json(manifest.output_schema as object)},
+      input_schema = ${sql.json(manifest.input_schema as never)},
+      output_schema = ${sql.json(manifest.output_schema as never)},
       data_source = ${manifest.data_source},
       maintenance_class = ${manifest.maintenance_class ?? dbRow.maintenance_class},
       transparency_tag = ${manifest.transparency_tag ?? dbRow.transparency_tag},

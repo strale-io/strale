@@ -31,6 +31,19 @@ jobs:
       # do the same or typecheck can't find the module. See the seed CI
       # in #9 + the Phase B+C merge in #8.
       - run: npm --workspace=packages/mcp-server run build
+      # packages/langchain imports `straleio` (packages/sdk-typescript) by
+      # its published dist/index.d.ts, same reasoning as mcp-server above —
+      # its own typecheck (below, via root `npm run typecheck`) can't resolve
+      # the module until sdk-typescript has been built at least once.
+      - run: npm --workspace=packages/sdk-typescript run build
+      # Phase 2 T2.1 (2026-08-17): widened from apps/api/src only to also
+      # cover apps/api/scripts + apps/api/test (tsconfig.scripts.json,
+      # apps/api's typecheck:scripts script) and the published TS packages
+      # (sdk-typescript, langchain, semantic-kernel-strale, mcp-server) —
+      # see the root package.json `typecheck` chain for the full list.
+      # Previously only apps/api/src was ever typechecked; scripts/ and
+      # test/ were tsx-transpiled but never checked, and the four packages
+      # were never built or typechecked in CI at all.
       - run: npm run typecheck
       - run: npm --workspace=apps/api run lint:no-bare-catch
       # Money-integrity 2026-08-12: caller-URL capabilities must use safeFetch

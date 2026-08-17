@@ -35,7 +35,7 @@ const OFFLINE_ONLY = !LIVE;
 interface CountryConfig {
   country: string;
   slug: string;
-  product: "ww-top" | "es-advanced" | "pt-advanced";
+  product: "ww-top" | "es-advanced" | "pt-advanced" | "it-advanced";
   validFixture: Record<string, string>;
   invalidShape: Record<string, string>; // pre-flight regex reject
   expectedCompanyName: string;          // for live verify (loose match)

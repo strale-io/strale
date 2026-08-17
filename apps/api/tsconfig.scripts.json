@@ -1,32 +1,23 @@
 {
-  // Type-checking only, for the operator scripts that are actively maintained.
+  // Type-checking only, for apps/api/scripts + apps/api/test — files that
+  // `tsconfig.json` deliberately excludes (its `rootDir: ./src` scopes the
+  // real build) and that tsx has always transpiled-without-checking.
   //
-  // `scripts/` cannot live in tsconfig.json because that config sets
-  // `rootDir: ./src` for the build output — so until now `npx tsc --noEmit
-  // --project tsconfig.json` reported "clean" for changes it had never looked
-  // at. The CEO dashboard is the one Petter reads; it was ungated.
-  //
-  // The include list is deliberately narrow rather than `scripts/**/*`: a
-  // repo-wide sweep reports 127 pre-existing errors (dead archive scripts,
-  // drifted imports, duplicate top-level declarations across one-off files).
-  // Fixing those is its own task; widening this glob before then would produce
-  // a gate that is red on arrival and therefore ignored. Add files here as
-  // they are cleaned up.
-  //
-  // Run as: npx tsc --noEmit --project tsconfig.scripts.json
+  // Supersedes the narrow scaffold added in #296 (2026-08-16), which only
+  // included `scripts/ceo-dashboard.ts` + `scripts/lib/**/*` because a
+  // repo-wide sweep at the time reported ~127 pre-existing errors and the
+  // plan was to widen the glob only as files got cleaned up. Phase 2 T2.1
+  // (2026-08-17) did that cleanup in one pass: fixed the mechanical errors,
+  // archived the ~14 scripts whose errors traced to genuinely dead code
+  // (broken imports to deleted modules, superseded one-off phase scripts,
+  // zero-reference diagnostics) to `scripts/archive/`, and widened the glob
+  // to the full `scripts/**/*` + `test/**/*`. Run via `npm run
+  // typecheck:scripts --workspace=apps/api`, chained into the root
+  // `typecheck` script and into CI (ci.yml).
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["scripts/ceo-dashboard.ts", "scripts/lib/**/*", "src/**/*"],
-  // Same test excludes as tsconfig.json — vitest type-checks its own files, and
-  // several existing tests use casts tsc rejects but vitest accepts.
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "**/*.test.tsx",
-    "**/*.spec.tsx"
-  ]
+  "include": ["scripts/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist", "scripts/archive/**"]
 }

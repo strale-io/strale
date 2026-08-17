@@ -288,7 +288,7 @@ async function validateCapability(slug: string, apply = false): Promise<{
       ? `${Object.keys(reliability!).length} fields annotated (${guaranteedCount} guaranteed)`
       : reliability
         ? "output_field_reliability is empty object"
-        : "output_field_reliability is null — run backfill-field-reliability.ts",
+        : "output_field_reliability is null — run onboard.ts --discover",
   });
 
   // 16. Gate 5: Path coverage for multi-path capabilities (DEC-20260411-B)
