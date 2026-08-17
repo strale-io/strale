@@ -20,6 +20,10 @@ import { sendAlert } from "../lib/alerting.js";
 import { randomUUID } from "node:crypto";
 import { log, logError, logWarn } from "../lib/log.js";
 import { isShuttingDown } from "../lib/shutdown.js";
+import {
+  classifyTransactionFailure,
+  type TransactionFailureClass,
+} from "../lib/transaction-failure-taxonomy.js";
 
 const CHECK_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
 const STARTUP_DELAY_MS = 60_000; // 60 seconds
@@ -292,8 +296,134 @@ async function checkOrphanedSolutionSteps(): Promise<{ alerts: number; checked: 
 }
 
 // ─── CHECK 5: Algorithmic correctness floor (Tier 1 — CRITICAL ALERT) ───────
-// Pure algorithmic capabilities have zero environmental variability.
-// Correctness below 85% is definitionally a code defect, not a transient issue.
+// A capability's known-answer suite failing is a code defect — but only when
+// the failures are the capability's own doing.
+//
+// The original premise here was "pure algorithmic capabilities have zero
+// environmental variability, so correctness below 85% is definitionally a code
+// defect". That is false, and 2026-08-17 measured the cost: ten capabilities
+// were reported at "correctness 0%" every ~36 minutes for over 24 hours —
+// roughly 400 Tier-1 alerts a day — while every one of them answered correctly
+// in production when called directly. `transparency_tag = 'algorithmic'`
+// describes how an answer is DERIVED (deterministically, not by an LLM); it
+// says nothing about whether the capability makes a network call.
+// `swedish-company-data` is algorithmic and calls a Swedish registry;
+// `us-court-search` is algorithmic and calls CourtListener.
+//
+// So the failures being counted included: a test-budget guard whose own
+// message says "Customer traffic is unaffected", an expired vendor token
+// (HTTP 403), upstream 5xx from the Gazette and PageSpeed APIs, GDELT 429s,
+// and plain timeouts. None of those is a correctness signal, and burying the
+// real ones under 400 daily false alarms is how a genuine break goes unseen.
+//
+// The fix: environmental failures leave the denominator entirely, and are
+// reported separately (Tier 2) rather than silently dropped — the signal moves,
+// it does not disappear. Failures that ARE the capability's own — a missing
+// guaranteed field, an all-null response, a wrong value — still count in full,
+// which is why this change silences six capabilities and keeps seven.
+//
+// Classification reuses lib/transaction-failure-taxonomy.ts rather than growing
+// a third parallel list of error strings. That module is pure string
+// classification with no transaction coupling, and it answers exactly the
+// question asked here: is this failure ours, or the world's?
+
+/** One known-answer result, as the correctness check reads it. */
+export interface CorrectnessTestRow {
+  test_name: string;
+  passed: boolean;
+  failure_reason: string | null;
+}
+
+/**
+ * Failure classes that are the world's doing, not the capability's, and so
+ * cannot be evidence about its correctness.
+ *
+ * - `upstream` — vendor 5xx/429, and the test-budget guard, whose message says
+ *   in as many words that customer traffic is unaffected.
+ * - `config`   — a credential of ours is missing or rejected. Real, and a
+ *   different problem with a different owner; the dependency-health check is
+ *   where it belongs.
+ * - `timeout`  — a deadline, not a wrong answer.
+ *
+ * `caller_input` and `tos_policy` are deliberately absent: a known-answer
+ * fixture is our own input, so "the caller sent something bad" means we wrote
+ * a bad fixture. That is ours to fix and it keeps counting.
+ */
+export const ENVIRONMENTAL_FAILURE_CLASSES: ReadonlySet<TransactionFailureClass> = new Set<
+  TransactionFailureClass
+>(["upstream", "config", "timeout"]);
+
+export function isEnvironmentalFailure(reason: string | null | undefined): boolean {
+  return ENVIRONMENTAL_FAILURE_CLASSES.has(classifyTransactionFailure(reason));
+}
+
+/**
+ * Split a window of known-answer results into what it says about the
+ * capability and what it says about the world.
+ *
+ * The rate's denominator is `passed + attributable` — environmental results
+ * leave entirely rather than counting as passes. Counting them as passes would
+ * be worse than the bug being fixed: a capability that is genuinely broken
+ * while its upstream is also flaky would be flattered into looking fine.
+ */
+export function scoreCorrectness(rows: readonly CorrectnessTestRow[]): {
+  passed: number;
+  attributableFailures: CorrectnessTestRow[];
+  environmentalFailures: CorrectnessTestRow[];
+  /** 0–100, or null when nothing in the window was judgeable. */
+  correctnessRate: number;
+} {
+  const passed = rows.filter((r) => r.passed).length;
+  const failures = rows.filter((r) => !r.passed);
+  const environmentalFailures = failures.filter((r) => isEnvironmentalFailure(r.failure_reason));
+  const attributableFailures = failures.filter((r) => !isEnvironmentalFailure(r.failure_reason));
+  const denominator = passed + attributableFailures.length;
+  return {
+    passed,
+    attributableFailures,
+    environmentalFailures,
+    correctnessRate: denominator === 0 ? 100 : Math.round((passed / denominator) * 100),
+  };
+}
+
+function describeFailures(rows: readonly CorrectnessTestRow[], limit = 5): string[] {
+  return rows
+    .map((r) => `"${r.test_name}": ${r.failure_reason ?? "no reason recorded"}`)
+    .slice(0, limit);
+}
+
+/**
+ * Every failure in the window was environmental. Report it at Tier 2 so the
+ * signal moves rather than disappearing — a capability whose upstream has been
+ * down for twelve hours is still something an operator should see, just not
+ * under a heading that says its code is wrong.
+ */
+async function reportEnvironmentalOnly(
+  cap: { slug: string; name: string },
+  environmentalFailures: readonly CorrectnessTestRow[],
+  windowHours: number,
+): Promise<void> {
+  if (environmentalFailures.length === 0) return;
+  logWarn(
+    "invariant-check-5-environmental-only",
+    `All known-answer failures for ${cap.slug} in the last ${windowHours}h were environmental; no correctness evidence`,
+    { capability_slug: cap.slug, excluded_count: environmentalFailures.length },
+  );
+  await logHealthEvent({
+    eventType: "invariant_alert",
+    capabilitySlug: cap.slug,
+    tier: 2,
+    actionTaken: `${cap.slug}: all ${environmentalFailures.length} known-answer failure(s) in the last ${windowHours}h were environmental (upstream, credential, or timeout) — no correctness evidence either way`,
+    details: {
+      check: "algorithmic_correctness_environmental_only",
+      capability_slug: cap.slug,
+      capability_name: cap.name,
+      excluded_count: environmentalFailures.length,
+      excluded_examples: describeFailures(environmentalFailures, 3),
+      window_hours: windowHours,
+    },
+  });
+}
 
 async function checkAlgorithmicCorrectnessFloor(
   unhealthyCapabilities: Set<string>,
@@ -344,8 +474,16 @@ async function checkAlgorithmicCorrectnessFloor(
 
     if (rows.length === 0) continue;
 
-    const passed = rows.filter((r) => r.passed).length;
-    const correctnessRate = Math.round((passed / rows.length) * 100);
+    const { passed, attributableFailures, environmentalFailures, correctnessRate } =
+      scoreCorrectness(rows);
+
+    // Every failure in the window was the world's fault, not ours. There is no
+    // correctness evidence to judge — say so at Tier 2 and move on, rather than
+    // either crying code-bug or going quiet.
+    if (passed + attributableFailures.length === 0) {
+      await reportEnvironmentalOnly(cap, environmentalFailures, ROLLING_WINDOW_HOURS);
+      continue;
+    }
 
     if (correctnessRate < CORRECTNESS_FLOOR) {
       // Check if failures are explained by a known provider outage
@@ -406,10 +544,10 @@ async function checkAlgorithmicCorrectnessFloor(
         continue; // Skip CODE BUG alert for this capability
       }
 
-      const failingTests = rows
-        .filter((r) => !r.passed)
-        .map((r) => `"${r.test_name}": ${r.failure_reason ?? "no reason recorded"}`)
-        .slice(0, 5);
+      // Only capability-attributable failures are quoted. Listing an upstream
+      // 500 under "ALGORITHMIC CORRECTNESS VIOLATION" is what sent three
+      // separate sessions looking for a bug in working code.
+      const failingTests = describeFailures(attributableFailures);
 
       logError(
         "invariant-algorithmic-correctness-violation",
@@ -418,9 +556,10 @@ async function checkAlgorithmicCorrectnessFloor(
           capability_slug: cap.slug,
           correctness_rate_pct: correctnessRate,
           floor_pct: CORRECTNESS_FLOOR,
-          tests_checked: rows.length,
+          tests_checked: passed + attributableFailures.length,
           tests_passed: passed,
-          tests_failed: rows.length - passed,
+          tests_failed: attributableFailures.length,
+          tests_excluded_environmental: environmentalFailures.length,
           failing_tests: failingTests,
         },
       );
@@ -438,6 +577,12 @@ async function checkAlgorithmicCorrectnessFloor(
           correctness_rate: correctnessRate,
           floor: CORRECTNESS_FLOOR,
           failing_tests: failingTests,
+          // Denominator provenance: whoever reads this event can see how many
+          // results were judged and how many were set aside as the world's
+          // fault, without re-querying.
+          tests_judged: passed + attributableFailures.length,
+          tests_excluded_environmental: environmentalFailures.length,
+          excluded_examples: describeFailures(environmentalFailures, 3),
           window_hours: ROLLING_WINDOW_HOURS,
           provider_health: "verified_healthy",
         },
