@@ -349,6 +349,31 @@ const RESTORE_PLANS: RestorePlan[] = [
   },
 ];
 
+// ─── Legacy validation_rules shape (MEDIUM, Codex closing-pass review) ─────
+//
+// The version of this script that first ran against prod (before the
+// company_name-equals fix) wrote a validation_rules shape identical to the
+// current one EXCEPT its first check was `{ field: "company_name",
+// operator: "not_null" }` instead of the current equals-form. Derived
+// programmatically from each plan's CURRENT validationRules (swap only the
+// company_name check) rather than hand-duplicating the other 15 checks a
+// second time — that duplication would be its own drift risk (two literal
+// copies of "the same 15 checks" silently diverging over an edit to one).
+//
+// This is the EXACT shape --upgrade-rules is willing to touch. Anything
+// else — including a hypothetical future INTENTIONAL tightening of these
+// rules by an operator — must classify as sanity_fail (reported, left
+// alone), never silently treated as "stale" and overwritten. Recognizing
+// only this one known-precise legacy shape (instead of "any rules mismatch
+// is upgradeable", the pre-review version of this file) is what makes that
+// distinction possible.
+function deriveLegacyValidationRules(plan: RestorePlan): { checks: Array<Record<string, unknown>> } {
+  const checks = plan.validationRules.checks.map((check) =>
+    check.field === "company_name" ? { field: "company_name", operator: "not_null" } : check,
+  );
+  return { checks };
+}
+
 // Honest per-suite daily rate: the average of the 5 suite types that were
 // NEVER duplicated, so their historical test_results rate was never
 // contaminated by the scheduler's pre-fix N x N same-test-type amplifier
@@ -428,9 +453,13 @@ function printBudgetArithmetic(): void {
 // escalation-contract text ran into: the orchestrator applied this script
 // to prod between when it was written and when this review landed, so any
 // naive rerun today would hit that refusal on all 3 rows.
+type RulesState =
+  | "current" // matches plan.validationRules exactly — nothing to do
+  | "legacy_not_null"; // matches the ONE known legacy shape — --upgrade-rules may touch it
+
 type RowClassification =
   | { kind: "needs_restore" }
-  | { kind: "already_restored"; rulesUpToDate: boolean }
+  | { kind: "already_restored"; rulesState: RulesState }
   | { kind: "sanity_fail"; reason: string };
 
 function classifyRow(
@@ -457,14 +486,32 @@ function classifyRow(
   // behind. Recognizing it (rather than only the pre-restore state) is
   // what makes a rerun idempotent instead of a refusal.
   if (row.active === true && inputMatchesNew && row.quarantine_reason === null) {
-    // MEDIUM (Codex review): the version of this script that already ran
-    // against prod wrote not_null-only company_name checks. rulesUpToDate
-    // distinguishes "restored with the current (equals-assertion)
-    // validation_rules" from "restored, but with the older weaker rules" —
-    // the latter needs --upgrade-rules, not a fresh restore (the row is
-    // already active/correct otherwise; only the rules are stale).
-    const rulesUpToDate = JSON.stringify(row.validation_rules) === JSON.stringify(plan.validationRules);
-    return { kind: "already_restored", rulesUpToDate };
+    // MEDIUM (Codex closing-pass review): the prior version of this file
+    // treated ANY validation_rules mismatch as "stale, upgradeable" — which
+    // would silently overwrite a future INTENTIONAL rule change (an
+    // operator tightening these checks further, say) the moment someone
+    // reran this script with --upgrade-rules. Recognize only the ONE exact
+    // legacy shape this session itself wrote (not_null-only company_name,
+    // otherwise byte-identical to the current rules) as upgradeable.
+    // Anything else — including "close but not exact" — is sanity_fail:
+    // reported, left untouched, never guessed at.
+    const rulesMatchCurrent = JSON.stringify(row.validation_rules) === JSON.stringify(plan.validationRules);
+    if (rulesMatchCurrent) {
+      return { kind: "already_restored", rulesState: "current" };
+    }
+    const legacyRules = deriveLegacyValidationRules(plan);
+    const rulesMatchLegacy = JSON.stringify(row.validation_rules) === JSON.stringify(legacyRules);
+    if (rulesMatchLegacy) {
+      return { kind: "already_restored", rulesState: "legacy_not_null" };
+    }
+    return {
+      kind: "sanity_fail",
+      reason:
+        "row is otherwise correctly restored (active, correct input, no quarantine), but its " +
+        "validation_rules match neither the current equals-form nor the one known legacy " +
+        "not_null-form this script recognizes. Could be an intentional change made after this " +
+        "session — refusing to guess whether it's safe to overwrite. Left untouched.",
+    };
   }
 
   // Pre-restore state: the stale, Spotify-cloned, quarantined row Phase 4
@@ -546,7 +593,7 @@ async function main() {
         }
 
         if (classification.kind === "already_restored") {
-          if (classification.rulesUpToDate) {
+          if (classification.rulesState === "current") {
             console.log(`OK-SKIP (already restored): ${plan.testName}`);
             console.log(`  current: active=true, input=${JSON.stringify(plan.newInput)}, quarantine_reason=(null) — matches this plan's target state exactly.`);
             console.log(`  no write needed; rerun is idempotent.`);
@@ -555,14 +602,17 @@ async function main() {
             continue;
           }
 
-          // Already restored, but with the pre-review not_null-only
-          // company_name check (MEDIUM finding). The row itself (active,
-          // input, quarantine_reason) is correct — only validation_rules
-          // is stale. --upgrade-rules is the dedicated, explicit opt-in
-          // for touching an otherwise-fine row a second time.
-          console.log(`OK-SKIP, STALE RULES: ${plan.testName}`);
+          // rulesState === "legacy_not_null": already restored, but with
+          // the EXACT pre-review not_null-only company_name check (MEDIUM
+          // finding) this script itself wrote and nothing else — any other
+          // mismatch would have sanity-failed above instead of reaching
+          // here. The row itself (active, input, quarantine_reason) is
+          // correct — only validation_rules is the known-stale shape.
+          // --upgrade-rules is the dedicated, explicit opt-in for touching
+          // an otherwise-fine row a second time.
+          console.log(`OK-SKIP, STALE RULES (known legacy shape): ${plan.testName}`);
           console.log(`  current: active=true, input=${JSON.stringify(plan.newInput)} — correct.`);
-          console.log(`  current validation_rules still use company_name not_null (pre-review) instead of equals("${plan.baselineOutput.company_name}").`);
+          console.log(`  current validation_rules exactly match the known legacy not_null-company_name shape this script wrote — instead of equals("${plan.baselineOutput.company_name}").`);
           if (upgradeRules) {
             console.log(`  --upgrade-rules is set: will upgrade validation_rules${apply ? "" : " (dry run — not written)"}.`);
           } else {
@@ -579,11 +629,20 @@ async function main() {
           if (!apply) continue;
 
           // Compare-and-set scoped to the row's CURRENT (already-restored)
-          // state — id AND active=true AND input=newInput — distinct from
-          // the needs_restore predicate below (id AND active=false AND
-          // input=oldInput). Only validation_rules/baseline_output change;
-          // active/input/quarantine_reason are untouched (they're already
-          // correct, which is exactly why this row is "already_restored").
+          // state — id AND active=true AND input=newInput AND
+          // validation_rules=<the exact legacy shape> — distinct from the
+          // needs_restore predicate below (id AND active=false AND
+          // input=oldInput). Including validation_rules in the WHERE
+          // (Codex closing-pass MEDIUM) is what makes this a genuine CAS
+          // rather than an unconditional overwrite of whatever happens to
+          // be there: classifyRow() already proved the row matches this
+          // exact legacy shape a moment ago (under this transaction's
+          // SELECT ... FOR UPDATE lock), and the UPDATE re-asserts that at
+          // write time instead of trusting the read. Only
+          // validation_rules/baseline_output change; active/input/
+          // quarantine_reason are untouched (they're already correct,
+          // which is exactly why this row is "already_restored").
+          const legacyRules = deriveLegacyValidationRules(plan);
           const upgraded = await tx.execute(sql`
             UPDATE test_suites
                SET validation_rules = ${JSON.stringify(plan.validationRules)}::jsonb,
@@ -592,6 +651,7 @@ async function main() {
              WHERE id = ${plan.suiteId}
                AND active = true
                AND input = ${JSON.stringify(plan.newInput)}::jsonb
+               AND validation_rules = ${JSON.stringify(legacyRules)}::jsonb
             RETURNING id
           `);
           const upgradedRows = Array.isArray(upgraded) ? upgraded : (upgraded as { rows?: unknown[] }).rows ?? [];
