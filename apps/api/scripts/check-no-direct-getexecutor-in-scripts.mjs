@@ -29,12 +29,14 @@
 //   // dispatcher-gate-exempt: <reason>
 //
 // A marker with no invocation clears the file outright (existence checks
-// only). A marker on a file that DOES invoke clears it ONLY if the
-// filename is ALSO in OPERATOR_TOOL_ALLOWLIST below — the double-gate
-// means a new invoking bypass is a reviewed diff to this guard, not just a
-// comment dropped in the offending file. Remove either half (the marker,
-// or the allowlist entry) and the checker fails again — that is the
-// intended trip-wire.
+// only). A file that DOES invoke is cleared ONLY by marker + a matching
+// OPERATOR_TOOL_ALLOWLIST entry (keyed by scripts-relative path) — the
+// double-gate means a new invoking bypass is a reviewed diff to this
+// guard, not just a comment dropped in the offending file. Remove either
+// half and the checker fails again — that is the intended trip-wire.
+// NOTE: a guarded-executor import clears IMPORT-ONLY files, never an
+// invoking one — an unused `guardedExecute` import must not whitewash a
+// direct call (Codex round-3 finding).
 //
 // Exit codes:
 //   0 — clean
@@ -52,8 +54,9 @@ const EXEMPT_MARKER = "dispatcher-gate-exempt";
 // Operator tools that invoke executors deliberately, under documented cost
 // controls (denylist / budget cap / flag-gating / unclassified-cost-class
 // analysis — see each file's header). The marker alone does NOT exempt an
-// invoking script — the filename must ALSO be on this list, so adding a
-// new bypass is a visible diff to this guard, not just a comment.
+// invoking script — its scripts-relative path must ALSO be on this list,
+// so adding a new bypass is a visible diff to this guard, not just a
+// comment. Entries are relative to apps/api/scripts/ (forward slashes).
 const OPERATOR_TOOL_ALLOWLIST = new Set([
   "sweep-paid-fixtures.ts",
   "capture-tier-fixtures.ts",
@@ -229,23 +232,27 @@ for (const file of listSourceFiles(SCRIPTS_DIR)) {
   const { hasGetExecutorImport, hasGuardedImport, invokes } = analyzeFile(file, content);
   if (!hasGetExecutorImport) continue;
 
-  // Clears via the guarded-executor import (any invocation elsewhere in
-  // the file is assumed routed through guardedExecute/assertGuardedAllow;
-  // this guard doesn't try to prove that separately).
-  if (hasGuardedImport) continue;
-
   const fileName = relative(SCRIPTS_DIR, file).split(/[\\/]/).join("/");
-  const baseName = fileName.split("/").pop();
   const marked = content.includes(EXEMPT_MARKER);
 
-  if (marked && !invokes) continue; // existence-check-only, marker is enough
-  if (marked && invokes && OPERATOR_TOOL_ALLOWLIST.has(baseName)) continue; // sanctioned invoker
-
-  if (marked && invokes && !OPERATOR_TOOL_ALLOWLIST.has(baseName)) {
-    unlistedInvokers.push(fileName);
+  if (invokes) {
+    // Direct invocation is NEVER cleared by a guarded-executor import alone
+    // (Codex round-3: an unused `guardedExecute` import must not whitewash a
+    // direct paid-path call). Invokers need the marker AND the allowlist
+    // entry — keyed by scripts-relative path, not basename, so a nested file
+    // cannot reuse an allowed filename (Codex round-3, minor).
+    if (marked && OPERATOR_TOOL_ALLOWLIST.has(fileName)) continue;
+    if (marked) {
+      unlistedInvokers.push(fileName);
+    } else {
+      offenders.push(fileName);
+    }
     continue;
   }
 
+  // No direct invocation: importing getExecutor for existence checks is fine
+  // when paired with the guarded-executor import, or explicitly marked.
+  if (hasGuardedImport || marked) continue;
   offenders.push(fileName);
 }
 
@@ -255,7 +262,9 @@ if (offenders.length === 0 && unlistedInvokers.length === 0) {
 }
 
 if (offenders.length > 0) {
-  console.error("[lint] The following scripts import getExecutor without a paired");
+  console.error("[lint] The following scripts either invoke a getExecutor-obtained");
+  console.error(`[lint] executor directly (a guarded-executor import does NOT clear an`);
+  console.error(`[lint] invocation), or import getExecutor without a paired`);
   console.error(`[lint] guarded-executor import or a \`${EXEMPT_MARKER}\` marker:`);
   for (const f of offenders) console.error(`  - ${f}`);
   console.error("");

@@ -16,7 +16,7 @@
   // `typecheck` script and into CI (ci.yml).
   //
   // DECLARED BOUNDARY (Codex review, 2026-08-17): this config is TS/MTS only
-  // — it does NOT type-check the 25 non-archived .mjs files in
+  // — it does NOT type-check the non-archived .mjs files (26 at the 2026-08-17 review) in
   // apps/api/scripts (several of which are themselves CI gate scripts, e.g.
   // check-pii.mjs, check-tier-coverage.mjs). Tried turning on
   // allowJs+checkJs here first: it surfaces 166 errors across all 25 files

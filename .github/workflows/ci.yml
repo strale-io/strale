@@ -47,7 +47,7 @@ jobs:
       - run: npm run typecheck
       # Codex review follow-up (2026-08-17, same PR as the T2.1 typecheck
       # widening above): tsconfig.scripts.json is TS/MTS only — it does NOT
-      # cover the 25 non-archived .mjs files in apps/api/scripts, several of
+      # cover the non-archived .mjs files (26 at the 2026-08-17 review) in apps/api/scripts, several of
       # which are themselves CI gate scripts (check-pii.mjs,
       # check-tier-coverage.mjs, etc.). Full checkJs coverage surfaced 166
       # errors (mostly noImplicitAny) when trialed, too large for a
@@ -78,7 +78,7 @@ jobs:
       # with pydantic-ai on 2026-04-21. See archive/sessions/CONTAINMENT_REPORT.md.
       - run: node apps/api/scripts/check-framework-packages.mjs
       # Phase A0b CI lint (wired 2026-08-17, Phase 2 T2.2 — written
-      # 2026-08-12 but never wired in): apps/api/scripts/*.ts must route
+      # 2026-08-12 but never wired in): apps/api/scripts/*.{ts,mts,mjs} must route
       # executor invocation through guardedExecute/assertGuardedAllow, not
       # call an executor obtained directly from getExecutor(). Pure static
       # scan of the scripts directory, no DB/network needed. Superseded and
