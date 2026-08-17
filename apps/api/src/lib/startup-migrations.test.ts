@@ -1232,6 +1232,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0088_solutionGateCondition",
       "runMigration0089_deactivateUsCourtSearch",
       "runMigration0090_capabilityOutputContracts",
+      "runMigration0091_bolStaleValidationRules",
     ]);
   });
 });
@@ -1655,6 +1656,66 @@ describe("startup-migrations — block 0090 (capability output contracts)", () =
       const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
       const badChunks = chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c));
       expect(badChunks, "no Date/Buffer chunk reaches the SQL bind layer").toEqual([]);
+    }
+  });
+});
+
+describe("startup-migrations — block 0091 (stale beneficial-ownership assertions)", () => {
+  it("asserts only fields the executor actually returns", async () => {
+    const { BOL_DEPENDENCY_HEALTH_CHECKS, BOL_SCHEMA_CHECK_CHECKS } = await import(
+      "./startup-migrations.js"
+    );
+    // Verbatim from production 2026-08-17, input {company_name:"Tesco PLC", jurisdiction:"GB"}.
+    const PROD_KEYS = [
+      "company_name", "company_number", "jurisdiction", "company_status",
+      "beneficial_owners", "total_beneficial_owners", "has_psc_data", "data_source",
+    ];
+    for (const rules of [BOL_DEPENDENCY_HEALTH_CHECKS, BOL_SCHEMA_CHECK_CHECKS]) {
+      for (const c of rules.checks) {
+        expect(PROD_KEYS, `asserts a field production does not return: ${c.field}`).toContain(c.field);
+      }
+    }
+    // The four dead names must be gone from both.
+    const all = JSON.stringify([BOL_DEPENDENCY_HEALTH_CHECKS, BOL_SCHEMA_CHECK_CHECKS]);
+    for (const dead of ["coverage_note", "total_owners", "lookup_date"]) {
+      expect(all).not.toContain(dead);
+    }
+    // ...and the replacements must still assert something real, not nothing.
+    expect(BOL_DEPENDENCY_HEALTH_CHECKS.checks.length).toBeGreaterThanOrEqual(3);
+    expect(BOL_SCHEMA_CHECK_CHECKS.checks.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("targets only the schema_check suite carrying the dead names", async () => {
+    const { runMigration0091_bolStaleValidationRules } = await import("./startup-migrations.js");
+    const stub = makeStub({ default: { count: 1 } });
+    await runMigration0091_bolStaleValidationRules(stub);
+    const [depSql, schemaSql] = stub.renderedSql.map((x) => x.toLowerCase());
+    expect(depSql).toContain("test_type = 'dependency_health'");
+    expect(schemaSql).toContain("test_type = 'schema_check'");
+    // Without this predicate the migration would overwrite the three sibling
+    // schema_check suites that assert real fields.
+    expect(schemaSql).toContain("coverage_note");
+    expect(schemaSql).toContain("like");
+  });
+
+  it("is idempotent — both statements guard on IS DISTINCT FROM", async () => {
+    const { runMigration0091_bolStaleValidationRules } = await import("./startup-migrations.js");
+    const stub = makeStub({ default: { count: 0 } });
+    const result = await runMigration0091_bolStaleValidationRules(stub);
+    for (const rendered of stub.renderedSql) {
+      expect(rendered.toLowerCase()).toContain("is distinct from");
+    }
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toContain("no change");
+  });
+
+  it("no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)", async () => {
+    const { runMigration0091_bolStaleValidationRules } = await import("./startup-migrations.js");
+    const stub = makeStub({ default: { count: 1 } });
+    await runMigration0091_bolStaleValidationRules(stub);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
     }
   });
 });
