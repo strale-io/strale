@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { withRetry } from "../lib/retry.js";
+import { logWarn } from "../lib/log.js";
 
 /**
  * Company News — real-time news monitoring via GDELT.
@@ -15,27 +15,42 @@ import { withRetry } from "../lib/retry.js";
 const GDELT_API = "https://api.gdeltproject.org/api/v2/doc/doc";
 
 /**
- * Phase-4 tail fix (2026-08-17): GDELT rate-limits (HTTP 429) under normal
- * traffic and this executor previously surfaced that straight through as a
- * capability failure with no retry. Same idiom as us-company-data.ts's
- * `fetchSec` — delegate to the shared `withRetry` primitive, whose default
- * retryable-pattern set already covers `/HTTP 429/i`, so a single retry
- * with backoff+jitter (~1s) is enough without widening the shared default
- * or introducing new retry machinery. Only 429 is retried here; any other
+ * Phase-4 tail fix (2026-08-17, revised same day per review MEDIUM-3):
+ * GDELT rate-limits (HTTP 429) under normal traffic. This executor used
+ * to surface that straight through with no retry at all; a same-day fix
+ * added an executor-level withRetry (single retry, ~1s backoff). Review
+ * caught the amplification that created: do.ts's executeWithRetry (the
+ * customer /v1/do path) and test-runner.ts's runSingleTest (the scheduler
+ * path) BOTH already wrap the whole executor call in their own withRetry
+ * (maxRetries: 1 each) for non-deterministic capabilities. Stacking a
+ * THIRD retry layer here meant one logical call could fire up to 2 (outer)
+ * x 2 (this layer) = 4 requests against an API that was already telling
+ * us to slow down — the opposite of what a 429 backoff should do.
+ *
+ * Fixed by removing this layer entirely: a 429 just throws (still matches
+ * failure-classifier's UPSTREAM_TRANSIENT_PATTERNS `/HTTP 429/i` and
+ * lib/retry.ts's own default retryable set), and the outer layer's retry
+ * re-invokes the WHOLE executor — which re-runs this fetch from scratch —
+ * giving exactly one retry per logical call, not up to four. Any other
  * non-ok status (4xx/5xx) passes straight through to the existing
  * `!resp.ok` handling below, unchanged.
+ *
+ * The 429 branch still cancels the unconsumed response body before
+ * throwing — otherwise the stream pins the connection open until GC
+ * (same failure mode + same fix shape as safe-fetch.ts's redirect-cap
+ * cancellation).
  */
-export function fetchGdelt(url: string, fetchImpl: typeof fetch = fetch): Promise<Response> {
-  return withRetry(
-    async () => {
-      const response = await fetchImpl(url, { signal: AbortSignal.timeout(25000) });
-      if (response.status === 429) {
-        throw new Error(`GDELT API returned HTTP 429`);
-      }
-      return response;
-    },
-    { maxRetries: 1, baseDelayMs: 1000, slug: "company-news" },
-  );
+export async function fetchGdelt(url: string, fetchImpl: typeof fetch = fetch): Promise<Response> {
+  const response = await fetchImpl(url, { signal: AbortSignal.timeout(25000) });
+  if (response.status === 429) {
+    await response.body?.cancel().catch((err) =>
+      logWarn("gdelt-429-body-cancel-failed", "429 body cancel failed (connection may pin until GC)", {
+        err: String(err),
+      }),
+    );
+    throw new Error(`GDELT API returned HTTP 429`);
+  }
+  return response;
 }
 
 const VALID_TIMESPANS = ["1d", "3d", "7d", "14d", "30d"];
