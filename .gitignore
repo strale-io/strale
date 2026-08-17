@@ -43,6 +43,6 @@ docs/company/ceo-dashboard.html
 # stale vs CLAUDE.md (missing the Shared-Checkout Rule and the August
 # decisions) and tracking it stale risks a Codex session operating on wrong
 # rules. Track only after a refresh brings it in line with CLAUDE.md.
-AGENTS.md
-.agents/
-.codex/
+/AGENTS.md
+/.agents/
+/.codex/
