@@ -188,6 +188,39 @@ describe("limitationHash (F-B-012)", () => {
   });
 });
 
+describe("sanitizeLimitationTitle (defensive guard against coerced-undefined titles)", () => {
+  it("passes real titles through unchanged", async () => {
+    const { sanitizeLimitationTitle } = await importHelper();
+    expect(sanitizeLimitationTitle("Coverage varies by country")).toBe("Coverage varies by country");
+  });
+
+  it("null and undefined both normalize to null", async () => {
+    const { sanitizeLimitationTitle } = await importHelper();
+    expect(sanitizeLimitationTitle(null)).toBeNull();
+    expect(sanitizeLimitationTitle(undefined)).toBeNull();
+  });
+
+  it("rejects the literal string 'undefined' — the String(undefined) / unguarded-template-literal artifact", async () => {
+    const { sanitizeLimitationTitle } = await importHelper();
+    expect(sanitizeLimitationTitle("undefined")).toBeNull();
+  });
+
+  it("rejects 'null' and 'NaN' string artifacts and whitespace-only titles", async () => {
+    const { sanitizeLimitationTitle } = await importHelper();
+    expect(sanitizeLimitationTitle("null")).toBeNull();
+    expect(sanitizeLimitationTitle("NaN")).toBeNull();
+    expect(sanitizeLimitationTitle("   ")).toBeNull();
+    expect(sanitizeLimitationTitle("")).toBeNull();
+  });
+
+  it("does not reject a title that merely contains 'undefined' as a substring", async () => {
+    const { sanitizeLimitationTitle } = await importHelper();
+    expect(sanitizeLimitationTitle("Behavior is undefined for negative inputs")).toBe(
+      "Behavior is undefined for negative inputs",
+    );
+  });
+});
+
 describe("diffAndUpdateLimitations (F-B-012)", () => {
   function opsByType() {
     return {
@@ -298,5 +331,36 @@ describe("diffAndUpdateLimitations (F-B-012)", () => {
     expect(insertOps).toHaveLength(2);
     expect(insertOps.map((o) => o.values.sortOrder).sort()).toEqual([0, 1]);
     expect(insertOps.every((o) => o.values.capabilitySlug === SLUG)).toBe(true);
+  });
+
+  // Regression test for the "undefined"-titled-limitation finding. This is
+  // the exact shape a caller upstream (a buggy manifest generator, a
+  // `${lim.title}` template literal on a missing property, a hand-authored
+  // manifest with a stray "undefined" string) could hand to this function.
+  // Without the sanitizeLimitationTitle guard in diffAndUpdateLimitations,
+  // this test fails: the INSERT's `values.title` is the literal string
+  // "undefined" instead of null. Verified failing against the pre-fix
+  // version of capability-persistence.ts (guard removed) before landing.
+  it("never persists the literal string 'undefined' as a title — writes null instead", async () => {
+    const { diffAndUpdateLimitations, queryable } = await importHelper();
+    state.existingRows = [];
+    const manifest = [lim("undefined", "Some real limitation text")];
+
+    const r = await diffAndUpdateLimitations(queryable as never, SLUG, manifest);
+    expect(r).toEqual({ deleted: 0, inserted: 1, reordered: 0 });
+    const insertOps = state.ops.filter((o) => o.type === "insert") as Array<Extract<Op, { type: "insert" }>>;
+    expect(insertOps).toHaveLength(1);
+    expect(insertOps[0].values.title).toBeNull();
+    expect(insertOps[0].values.title).not.toBe("undefined");
+  });
+
+  it("a real title containing the substring 'undefined' survives the guard unchanged", async () => {
+    const { diffAndUpdateLimitations, queryable } = await importHelper();
+    state.existingRows = [];
+    const manifest = [lim("Behavior is undefined for negative inputs", "See docs")];
+
+    await diffAndUpdateLimitations(queryable as never, SLUG, manifest);
+    const insertOps = state.ops.filter((o) => o.type === "insert") as Array<Extract<Op, { type: "insert" }>>;
+    expect(insertOps[0].values.title).toBe("Behavior is undefined for negative inputs");
   });
 });
