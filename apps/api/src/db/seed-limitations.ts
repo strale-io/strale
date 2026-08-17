@@ -3,9 +3,11 @@ import { resolve } from "node:path";
 
 config({ path: resolve(import.meta.dirname, "../../../../.env") });
 
+import { pathToFileURL } from "node:url";
 import { getDb } from "./index.js";
 import { capabilityLimitations } from "./schema.js";
 import { eq, and } from "drizzle-orm";
+import { sanitizeLimitationTitle } from "../lib/capability-persistence.js";
 
 interface LimitationDef {
   capabilitySlug: string;
@@ -17,7 +19,7 @@ interface LimitationDef {
   workaround?: string;
 }
 
-const LIMITATIONS: LimitationDef[] = [
+export const LIMITATIONS: LimitationDef[] = [
   // ── swedish-company-data ──
   { capabilitySlug: "swedish-company-data", category: "coverage", severity: "info",
     title: "Does not cover sole proprietorships — about 15% of Swedish businesses",
@@ -1619,6 +1621,41 @@ const LIMITATIONS: LimitationDef[] = [
     workaround: "Use url-to-markdown for cleaner output that better separates main content from page chrome" },
 ];
 
+export interface LimitationWrite {
+  capabilitySlug: string;
+  title: string | null;
+  limitationText: string;
+  category: string;
+  severity: string;
+  affectedPercentage: string | null;
+  workaround: string | null;
+  sortOrder: number;
+}
+
+/**
+ * Pure: LIMITATIONS entry + its index -> the sanitized row payload this
+ * script writes (insert) or partially writes (update — only workaround +
+ * title + sortOrder are set on the update path). Extracted so the
+ * sanitization can be regression-tested without a DB — see
+ * seed-limitations.test.ts. Same guard as diffAndUpdateLimitations
+ * (capability-persistence.ts): this array is hand-authored today, but
+ * it's still a write path into capability_limitations.title with no other
+ * sanitization, so it gets the same defensive normalization rather than
+ * trusting every future entry to be typed correctly by hand forever.
+ */
+export function computeLimitationWrite(lim: LimitationDef, index: number): LimitationWrite {
+  return {
+    capabilitySlug: lim.capabilitySlug,
+    title: sanitizeLimitationTitle(lim.title),
+    limitationText: lim.limitationText,
+    category: lim.category,
+    severity: lim.severity,
+    affectedPercentage: lim.affectedPercentage?.toFixed(1) ?? null,
+    workaround: lim.workaround ?? null,
+    sortOrder: index,
+  };
+}
+
 async function seed() {
   const db = getDb();
   let inserted = 0;
@@ -1627,6 +1664,7 @@ async function seed() {
 
   for (let i = 0; i < LIMITATIONS.length; i++) {
     const lim = LIMITATIONS[i];
+    const write = computeLimitationWrite(lim, i);
 
     // Idempotent: check if this exact limitation text already exists for this slug
     const [existing] = await db
@@ -1642,10 +1680,9 @@ async function seed() {
 
     if (existing) {
       // Update workaround or title if either changed
-      const newWorkaround = lim.workaround ?? null;
-      if (existing.workaround !== newWorkaround || existing.title !== lim.title) {
+      if (existing.workaround !== write.workaround || existing.title !== write.title) {
         await db.update(capabilityLimitations)
-          .set({ workaround: newWorkaround, title: lim.title, sortOrder: i })
+          .set({ workaround: write.workaround, title: write.title, sortOrder: write.sortOrder })
           .where(eq(capabilityLimitations.id, existing.id));
         updated++;
       } else {
@@ -1654,16 +1691,7 @@ async function seed() {
       continue;
     }
 
-    await db.insert(capabilityLimitations).values({
-      capabilitySlug: lim.capabilitySlug,
-      title: lim.title,
-      limitationText: lim.limitationText,
-      category: lim.category,
-      severity: lim.severity,
-      affectedPercentage: lim.affectedPercentage?.toFixed(1) ?? null,
-      workaround: lim.workaround ?? null,
-      sortOrder: i,
-    });
+    await db.insert(capabilityLimitations).values(write);
     inserted++;
   }
 
@@ -1677,7 +1705,16 @@ async function seed() {
   process.exit(0);
 }
 
-seed().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+// Only seeds when this file is the process entry point. Importing it — e.g.
+// to unit-test computeLimitationWrite/LIMITATIONS — must never write
+// anything or touch the DB. Same pattern as seed-solutions.ts.
+const invokedDirectly =
+  process.argv[1] !== undefined &&
+  pathToFileURL(process.argv[1]).href === import.meta.url;
+
+if (invokedDirectly) {
+  seed().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}
