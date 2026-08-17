@@ -28,7 +28,7 @@ This is the evidence shape that survives a compliance review — and the gap tha
 
 ## Empirical coverage test (added late-session)
 
-Ran a live coverage battery to convert "asserted but unverified" coverage claims into measured per-country/per-language data. Full report: [`docs/research/2026-04-27-screening-coverage-empirical.md`](../../../docs/research/2026-04-27-screening-coverage-empirical.md). Test runner: [`apps/api/scripts/empirical-screening-coverage.ts`](../../../apps/api/scripts/empirical-screening-coverage.ts) (read keys from `STRALE_TEST_API_KEY` + `DILISENSE_API_KEY` env vars; idempotent for monthly re-runs). Cost: €6.90 wallet + ~50 Dilisense calls.
+Ran a live coverage battery to convert "asserted but unverified" coverage claims into measured per-country/per-language data. Full report: [`docs/research/2026-04-27-screening-coverage-empirical.md`](../../../docs/research/2026-04-27-screening-coverage-empirical.md). Test runner: [`apps/api/scripts/empirical-screening-coverage.ts`](../../../apps/api/scripts/archive/empirical-screening-coverage.ts) (read keys from `STRALE_TEST_API_KEY` + `DILISENSE_API_KEY` env vars; idempotent for monthly re-runs). Cost: €6.90 wallet + ~50 Dilisense calls.
 
 **Headline:**
 - **PEP 65/65 = 100% hit rate** across EU27 + UK + NO + CH + US heads of state and central bank governors. v1 + v1.1 ready.

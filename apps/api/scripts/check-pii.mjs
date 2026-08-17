@@ -27,7 +27,7 @@
  * there's nothing else in a manifest that would trip it.
  *
  * Detector 2 — high-signal identifier scan (NEW, wider scope: manifests/,
- * apps/api/scripts/, apps/api/test/, apps/api/tests/, apps/api/coverage-matrix/,
+ * apps/api/scripts/, apps/api/test/, apps/api/coverage-matrix/,
  * archive/, audit-output/, handoff/, docs/, apps/api/docs/). This is where vendor
  * samples actually land in practice outside the manifest-authoring flow —
  * smoke scripts that mock fetch() with a captured response (exactly the
@@ -195,7 +195,6 @@ const IDENTIFIER_SCAN_DIRS = [
   "manifests",
   "apps/api/scripts",
   "apps/api/test",
-  "apps/api/tests",
   "apps/api/coverage-matrix",
   "archive",
   "audit-output",

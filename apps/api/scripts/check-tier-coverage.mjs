@@ -9,7 +9,7 @@
  *   - check-manifest-guaranteed-consistency.mjs (guaranteed-tier fields appear in schema)
  *
  * For each capability with a captured response fixture at
- *   apps/api/tests/fixtures/tier-coverage/<slug>.json
+ *   apps/api/test/fixtures/tier-coverage/<slug>.json
  * asserts the manifest's declarations match empirical response shape:
  *
  *   (a) GUARANTEED_EMPTY — every `output_field_reliability` entry marked
@@ -62,7 +62,7 @@ import yaml from "js-yaml";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "..", "..", "..");
 const manifestsDir = resolve(repoRoot, "manifests");
-const fixturesDir = resolve(repoRoot, "apps", "api", "tests", "fixtures", "tier-coverage");
+const fixturesDir = resolve(repoRoot, "apps", "api", "test", "fixtures", "tier-coverage");
 const allowlistPath = resolve(__dirname, "tier-coverage-allowlist.txt");
 const strict = process.argv.includes("--strict");
 
@@ -114,7 +114,7 @@ function scan() {
   if (!existsSync(fixturesDir)) {
     // No fixtures captured yet — gate is a no-op. Not an error.
     console.log(
-      "tier-coverage: no fixtures directory at apps/api/tests/fixtures/tier-coverage/ — skipping all checks",
+      "tier-coverage: no fixtures directory at apps/api/test/fixtures/tier-coverage/ — skipping all checks",
     );
     return { scanned: 0, withFixture: 0, findings: [] };
   }

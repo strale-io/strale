@@ -17,7 +17,7 @@ metadata is currently emitted into a facilitator that does not catalogue it, so
 none of the paid catalog is indexed. Routing settlement through CDP makes the
 whole paid catalog self-index off organic traffic — no per-endpoint submission.
 
-Source: `audit-output/parallel-audits-2026-08-12/distribution-playbook.md` §0 and §1.1.
+Source: `archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md` §0 and §1.1 (archived 2026-08-17, path updated).
 
 ## What shipped
 

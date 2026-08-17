@@ -21,9 +21,12 @@
  *
  * Allowlist:
  *   - apps/api/src/db/schema.ts — the declaration itself.
- *   - apps/api/scripts/verify-phase-c-state.mjs — the bake monitor that
- *     asserts the external workflow's row counts haven't changed
- *     (read-only diagnostic, not API code).
+ *   - apps/api/scripts/archive/verify-phase-c-state.mjs — the Phase C bake
+ *     monitor that asserted the external workflow's row counts hadn't
+ *     changed (read-only diagnostic, not API code). Archived 2026-08-17
+ *     (Phase C is long complete); path updated so the allowlist stays
+ *     accurate even though the default walk root (apps/api/src) never
+ *     reached scripts/ anyway.
  *   - This script itself.
  */
 
@@ -38,8 +41,8 @@ const ALLOWLIST_FILES = new Set([
   "apps/api/src/db/schema.ts",
   // The Phase C bake monitor reads the external workflow's row counts
   // as a cross-check that Phase C didn't accidentally mutate it. Read
-  // only, diagnostic, not API code.
-  "apps/api/scripts/verify-phase-c-state.mjs",
+  // only, diagnostic, not API code. Archived 2026-08-17 (Phase C complete).
+  "apps/api/scripts/archive/verify-phase-c-state.mjs",
   // The integrity-hash worker mentions the column in a comment to
   // explain what NOT to use — defensive documentation, not access.
   "apps/api/src/jobs/integrity-hash-retry.ts",

@@ -3,7 +3,7 @@
 **Date:** 2026-08-13
 **Mode:** READ-ONLY analysis. Production DB queried via temporary scripts (deleted after use); SELECT only. Deliverables: this file + `manifests-drafts/`.
 **Window:** 30 days and 90 days to 2026-08-13, internal accounts excluded (`petter@`, `test@`, `test2@`, `system@strale.internal`, `test@example.com`), `status <> 'health_probe'`.
-**Extends:** `audit-output/parallel-audits-2026-08-12/catalog-buildout-strategy.md` (2026-08-12). That document's structural conclusions still hold; this one adds a day of fresh data, the first look at `discovery_hits`, and **three findings that change its ranking**. It does not restate its analysis.
+**Extends:** `archive/sessions/audit-output/parallel-audits-2026-08-12/catalog-buildout-strategy.md` (2026-08-12; archived 2026-08-17, path updated). That document's structural conclusions still hold; this one adds a day of fresh data, the first look at `discovery_hits`, and **three findings that change its ranking**. It does not restate its analysis.
 
 **Excluded from all "missing" lists** (shipped dark 2026-08-13, `is_active = true`, `x402_enabled = false`): `google-news-search`, `serp-related-questions`, `email-auth-check`. Also `page-exists` (dark 2026-08-12).
 

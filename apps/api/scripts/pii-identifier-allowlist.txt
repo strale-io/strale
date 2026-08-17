@@ -34,6 +34,8 @@ archive/submissions/docker-mcp-submission/strale/readme.md|DE8937040044053201300
 handoff/_general/from-code/2026-03-19-x402-gateway.md|DE89370400440532013000
 docs/api-quickstart.md|DE89370400440532013000
 docs/claude-md-snippet.md|DE89370400440532013000
+archive/sessions/a2a-sample/blog-strale-a2a.md|DE89370400440532013000
+archive/sessions/audit-reports/activation-funnel-ground-truth.md|DE89370400440532013000
 
 # Nordea's published Swedish worked examples (same "textbook IBAN" role as
 # the Bundesbank one above, for the SE format) used in
