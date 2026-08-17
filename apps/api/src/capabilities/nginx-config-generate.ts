@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // F-0-006 Bucket D: user inputs (including URL-like strings) are passed
 // to Claude as prose for config generation. No network I/O touches the
@@ -19,13 +20,11 @@ registerCapability("nginx-config-generate", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Generate a production-ready nginx server block configuration. Return ONLY valid JSON.
+    maxTokens: 2000,
+    prompt: `Generate a production-ready nginx server block configuration. Return ONLY valid JSON.
 
 Domain: ${domain}
 Upstream port: ${upstreamPort}
@@ -51,15 +50,9 @@ Return JSON:
   "security_headers_included": ["list of security headers"],
   "notes": ["important notes about this config"]
 }`,
-      },
-    ],
+    truncationGuidance: "Request fewer optional features per call.",
+    parseFailureError: () => new Error("Failed to generate nginx config."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate nginx config.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.domain = domain;
   output.upstream_port = upstreamPort;
 

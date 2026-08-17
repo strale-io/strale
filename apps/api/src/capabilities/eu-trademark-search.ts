@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // EUIPO TMView trademark search via Browserless + Claude extraction
 registerCapability("eu-trademark-search", async (input: CapabilityInput) => {
@@ -25,13 +26,11 @@ registerCapability("eu-trademark-search", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Extract trademark search results from this EUIPO eSearch page. The search was for: "${query}".
+    maxTokens: 2000,
+    prompt: `Extract trademark search results from this EUIPO eSearch page. The search was for: "${query}".
 
 Return ONLY valid JSON:
 {
@@ -51,15 +50,9 @@ Return ONLY valid JSON:
 
 Page text:
 ${text.slice(0, 12000)}`,
-      },
-    ],
+    truncationGuidance: "Narrow the query or nice_class so fewer trademarks are returned per call.",
+    parseFailureError: () => new Error("Failed to extract trademark results."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract trademark results.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.query = query;
   output.source_url = searchUrl;
 

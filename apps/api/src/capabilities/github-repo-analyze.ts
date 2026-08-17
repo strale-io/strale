@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // F-0-006 Bucket D: user input is an owner/repo pair; requests go to
 // hardcoded api.github.com and raw.githubusercontent.com. The user
@@ -57,13 +58,11 @@ registerCapability("github-repo-analyze", async (input: CapabilityInput) => {
     : [];
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
-    messages: [
-      {
-        role: "user",
-        content: `Analyze this GitHub repository. Return ONLY valid JSON.
+    maxTokens: 1500,
+    prompt: `Analyze this GitHub repository. Return ONLY valid JSON.
 
 Repo: ${owner}/${repo}
 Stars: ${(repoData as Record<string, unknown>).stargazers_count}
@@ -99,15 +98,9 @@ Return JSON:
   "concerns": ["potential issues"],
   "summary": "2-3 sentence assessment"
 }`,
-      },
-    ],
+    truncationGuidance: "This repository produced more analysis content than fits in one call.",
+    parseFailureError: () => new Error("Failed to analyze repository."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to analyze repository.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.repo = `${owner}/${repo}`;
   output.url = `https://github.com/${owner}/${repo}`;
   output.stars = (repoData as Record<string, unknown>).stargazers_count;

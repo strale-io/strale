@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("openapi-generate", async (input: CapabilityInput) => {
   const description = ((input.description as string) ?? (input.task as string) ?? "").trim();
@@ -9,13 +10,11 @@ registerCapability("openapi-generate", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 4000,
-    messages: [
-      {
-        role: "user",
-        content: `Generate a complete OpenAPI 3.1 specification from this API description. Return ONLY valid JSON.
+    maxTokens: 4000,
+    prompt: `Generate a complete OpenAPI 3.1 specification from this API description. Return ONLY valid JSON.
 
 Description:
 ${description.slice(0, 6000)}
@@ -27,15 +26,9 @@ Return JSON:
   "schemas": ["list of schema names defined"],
   "total_paths": <number>
 }`,
-      },
-    ],
+    truncationGuidance: "Describe fewer endpoints per call.",
+    parseFailureError: () => new Error("Failed to generate OpenAPI spec."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to generate OpenAPI spec.");
-
-  const output = JSON.parse(jsonMatch[0]);
 
   return {
     output,

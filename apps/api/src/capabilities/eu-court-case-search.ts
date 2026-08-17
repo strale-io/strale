@@ -4,6 +4,7 @@ import {
   htmlToText,
 } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // EU court case search — CJEU (Court of Justice of the EU) and ECHR (European Court of Human Rights)
 
@@ -40,13 +41,11 @@ registerCapability("eu-court-case-search", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Extract court cases from this ${court === "cjeu" ? "CJEU (Court of Justice of the EU)" : "ECHR (European Court of Human Rights)"} search results page.
+    maxTokens: 2000,
+    prompt: `Extract court cases from this ${court === "cjeu" ? "CJEU (Court of Justice of the EU)" : "ECHR (European Court of Human Rights)"} search results page.
 
 Search query: "${query}"
 
@@ -70,15 +69,9 @@ Return ONLY valid JSON:
 }
 
 Return up to 10 cases. Use null for missing fields.`,
-      },
-    ],
+    truncationGuidance: "Narrow the search query so fewer cases are returned per call.",
+    parseFailureError: () => new Error("Failed to extract court case data."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract court case data.");
-
-  const output = JSON.parse(jsonMatch[0]);
 
   return {
     output,

@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("error-explain", async (input: CapabilityInput) => {
   const error = ((input.error as string) ?? (input.error_message as string) ?? (input.task as string) ?? "").trim();
@@ -12,13 +13,11 @@ registerCapability("error-explain", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
-    messages: [
-      {
-        role: "user",
-        content: `Explain this error and suggest fixes. Return ONLY valid JSON.
+    maxTokens: 1500,
+    prompt: `Explain this error and suggest fixes. Return ONLY valid JSON.
 
 Error:
 ${error.slice(0, 3000)}${language ? `\nLanguage/Framework: ${language}` : ""}${context ? `\nContext: ${context}` : ""}
@@ -33,16 +32,12 @@ Return JSON:
   "related_errors": ["similar errors to be aware of"],
   "search_terms": ["useful search terms for this error"]
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter error message or stack trace.",
+    parseFailureError: () => new Error("Failed to explain error."),
   });
 
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to explain error.");
-
   return {
-    output: JSON.parse(jsonMatch[0]),
+    output,
     provenance: { source: "claude-haiku", fetched_at: new Date().toISOString() },
   };
 });

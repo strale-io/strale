@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("hs-code-lookup", async (input: CapabilityInput) => {
   const query = ((input.product as string) ?? (input.description as string) ?? (input.task as string) ?? "").trim();
@@ -11,13 +12,11 @@ registerCapability("hs-code-lookup", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 800,
-    messages: [
-      {
-        role: "user",
-        content: `You are an expert in the Harmonized System (HS) commodity classification. Classify the following product/description and return the most likely HS codes.
+    maxTokens: 800,
+    prompt: `You are an expert in the Harmonized System (HS) commodity classification. Classify the following product/description and return the most likely HS codes.
 
 Product: "${query}"
 
@@ -39,15 +38,9 @@ Return ONLY valid JSON:
   "notes": "Any classification notes or caveats",
   "confidence": "high/medium/low"
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter product description.",
+    parseFailureError: () => new Error("Failed to classify product."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to classify product.");
-
-  const output = JSON.parse(jsonMatch[0]);
 
   return {
     output,
