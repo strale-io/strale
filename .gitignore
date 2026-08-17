@@ -37,12 +37,3 @@ apps/spike/
 # Raw sweep evidence (may embed production output values) stays local
 audit-output/*.jsonl
 docs/company/ceo-dashboard.html
-
-# Codex-CLI parallel config (AGENTS.md + .agents/ + .codex/) — deliberately
-# untracked per the 2026-08-17 Phase 3 decision: the content is ~4 months
-# stale vs CLAUDE.md (missing the Shared-Checkout Rule and the August
-# decisions) and tracking it stale risks a Codex session operating on wrong
-# rules. Track only after a refresh brings it in line with CLAUDE.md.
-/AGENTS.md
-/.agents/
-/.codex/

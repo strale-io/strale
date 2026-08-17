@@ -1,0 +1,250 @@
+## About this file
+
+AGENTS.md is the Codex-CLI counterpart to `CLAUDE.md`. It is a **condensed
+derivative** — CLAUDE.md is canon. Where a fact can drift (capability/solution
+counts, decision full text, which solutions are active, exact protocol steps),
+this file points at the CLAUDE.md section or the canonical source (the
+`solutions`/`capabilities` tables, `GET /v1/platform/facts`) instead of
+restating it. Refresh this file against CLAUDE.md when drift is noticed —
+don't let it silently go stale again. (It was ~4 months stale as of
+2026-08-17; see `docs/company/CHARTER.md` and the Report Filing Convention
+section of CLAUDE.md for the history.)
+
+## Session Start
+
+1. Declare session intent (one sentence).
+2. Determine mode — **Quick** (bug fix, config change, <2h, no design
+   decisions) vs **Full** (new feature, design exploration, multi-component,
+   anything requiring decisions). Full criteria and escalation triggers:
+   `.claude/PROTOCOL.md`.
+3. Escalation triggers: second feature touched, design decision emerges,
+   >2hr estimate, contradiction detected.
+
+## Notion & GitHub Access
+
+- Project Home: https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
+- To-do & Build Plan: https://www.notion.so/33c67c87-082c-81c3-a72b-cc59b10ff4ac
+- Decisions DB: `ea57671f-7167-44e4-a254-c0a1de79e7f9`
+- Repo: strale (local). Main branch: `main`. Feature branch pattern:
+  `type/kebab-description`.
+
+Full workspace structure, governance rules (one page per topic, To-do DB is
+the only task list, brainstorms → Journal DB, etc.) and the project-spec
+pointer: CLAUDE.md → "Notion Access" / "Notion Workspace Structure" /
+"Notion Governance Rules".
+
+## Tech Stack & Project Structure
+
+Node.js + TypeScript, Hono, PostgreSQL + Drizzle, Stripe Checkout (wallet
+top-ups, no Connect), Railway (US East), Browserless.io (managed, never
+self-hosted Puppeteer). Monorepo: `apps/api` (Hono server), `packages/*`
+(SDKs, MCP server, framework plugins). Full tree diagram and package list:
+CLAUDE.md → "Tech Stack" / "Project Structure".
+
+## Shared-Checkout Rule (concurrency safety — read before touching git)
+
+**This checkout is shared.** Several Claude Code and Codex sessions and
+background agents run against the same working tree at once. Git branch
+switching is not concurrency-safe here.
+
+**The failure mode:** an agent runs `git checkout <branch>` in the main tree
+while another process holds file locks (tsc, vitest, npm, an editor). On
+Windows git's delete-then-rewrite sequence fails partway — old files are
+unlinked, new ones never written. ~1,000 tracked files vanish from disk while
+the index still lists them, always in `apps/api/**` and `packages/**` where
+node holds handles. Hit three times on 2026-08-14.
+
+**Rules:**
+
+1. **Any agent that edits files MUST work in its own worktree** (isolation
+   mode, or `git worktree add` for Codex sessions without a built-in
+   equivalent). An agent working in the shared checkout will eventually
+   collide with the main loop or another agent. This is the actual
+   prevention.
+2. **Agents must never `git checkout` a branch in the main tree.** If a
+   session without worktree isolation needs a branch, create your own
+   worktree rather than moving the shared one.
+3. **Before branch-switching in the main tree, check `git status`** for
+   another session's uncommitted work. Uncommitted changes travel across
+   branch switches and can end up staged onto the wrong branch.
+4. **Never "fix" phantom breakage.** If files that are committed suddenly
+   ENOENT, that is this bug, not a real deletion. Run
+   `node scripts/guard-tree-integrity.mjs` (or any Bash command, if the
+   PostToolUse hook is wired) and re-check before diagnosing further.
+5. **Never use `git stash` in any worktree of this clone.** `refs/stash` is
+   repo-wide, shared across ALL worktrees — concurrent sessions' stash
+   push/pop interleave, and a pop in one worktree can consume (and on
+   conflict, destroy) another session's stashed work. Hit on 2026-08-16: one
+   agent's `stash pop` returned a sibling agent's quality-floor changes. For
+   fail-before verification or temporary reverts, use
+   `git checkout <base-sha> -- <paths>` + `git checkout <branch> -- <paths>`
+   to restore, or a temporary WIP commit. If a stash accident happens,
+   recover via `git fsck --dangling` (stash commits survive as dangling
+   commits) and save the foreign diff to a patch file — never discard it.
+
+The guard at `scripts/guard-tree-integrity.mjs` auto-repairs tracked-and-
+deleted paths and is wired as a PostToolUse/Bash hook in `.claude/settings.json`
+(gitignored — each machine opts in). It is a safety net, not a substitute for
+rule 1.
+
+### Worktree node_modules hazard
+
+Creating a Windows directory junction from a temporary worktree to the main
+checkout's `node_modules`, then later removing that worktree with `rm -rf`,
+follows the junction and **deletes the real `node_modules`** in the main
+tree. Symptom: every command fails with `ERR_MODULE_NOT_FOUND` for packages
+that are definitely installed. No source is lost — it's generated — but
+recovery requires `npm install` at the repo root, then
+`npm --workspace=packages/mcp-server run build`, or `src/routes/mcp.ts` shows
+phantom type errors. **Rule:** run `npm install` inside each worktree instead
+of linking, and remove worktrees with `git worktree remove`, never `rm -rf`.
+
+## Mandatory Protocols — trigger list
+
+Each of these is **non-negotiable** once its trigger fires; a prompt that
+doesn't mention the protocol's steps does not make them optional. Full text
+of every protocol (required steps, background incident, end-of-session
+report format, what it does/doesn't override) lives in CLAUDE.md under the
+matching heading — read it before acting once a trigger fires.
+
+| Trigger | Protocol | CLAUDE.md heading |
+|---|---|---|
+| New/modified capability, executor file, manifest, capability DB row | Capability Onboarding Protocol (DEC-20260320-B) | "Adding New Capabilities (MANDATORY PIPELINE)" + "Capability Onboarding Protocol" |
+| Touching a PR on a non-`strale-io/*` repo, or modifying `packages/*-strale/` | Distribution PR Integrity Protocol (DEC-20260422-A) | "Distribution PR Integrity Protocol" |
+| Commit referencing a cert-audit finding (Y-/A-/B-/RED-/MED-/CRIT-/F-AUDIT-), or touching wallet/audit-trail/spend-cap/idempotency code | Audit-Follow-up Test Coverage Protocol (DEC-20260504-A) | "Audit-Follow-up Test Coverage Protocol" |
+| Deploy that fixes a long-silent bulk operation (retention, archival, reconciliation, batch, cleanup) | Bulk-Operation Deploy Protocol (DEC-20260504-B) | "Bulk-Operation Deploy Protocol" |
+| PR adding a code path that depends on deploy-pipeline behavior (migrations, env vars, build steps, startup hooks, cron) | Deploy Mechanism Verification Protocol (DEC-20260504-C) | "Deploy Mechanism Verification Protocol" |
+
+Also always in force: Test Infrastructure Cost Principles (zero-cost health
+probes, input validation before paid APIs, piggyback suites never scheduled)
+and the Wire-shape rule for `/v1/public/ops/trust/*` and money/score/date
+fields generally — see CLAUDE.md for both.
+
+**Code-review gate:** if any code was modified this session, run the `go`
+skill (`.agents/skills/go/SKILL.md`) before ending the session — never end a
+session over unreviewed code. Docs-only / AGENTS.md / Notion-only sessions
+are exempt.
+
+## Active Decisions
+
+Full list and text: CLAUDE.md → "Active Decisions". Do not restate the list
+here — it drifts. The ones every session should know exist:
+
+- **DEC-20260812-A** — Readiness program (library-as-product, x402 primary
+  rail) is the operating strategy; Counterparty Assurance retired as primary
+  product; quality-floor quarantine/deactivation thresholds; escalation
+  contract for platform-acts-alone vs. human-decides.
+- **DEC-20260813-A** — Per-call HTML/PDF parsing of statutorily-public
+  registry pages is permitted under four constraints (statutorily public,
+  ToS permits per-call access, per-entity never bulk, attribution +
+  provenance preserved). Still absolute: bulk crawling, ToS-prohibited
+  targets, robots.txt evasion, CAPTCHA solving, proxy rotation, login-wall
+  circumvention.
+- **DEC-20260815-A** — Operating charter (see below).
+- **DEC-20260428-A / -B** — Third-party scraping doctrine (three-tier) and
+  the engineering bar for Strale-built regulatory-grade data services.
+
+**Conflict duty:** if a request would contradict an active Decision, state
+the conflict before proceeding — quote the Decision, ask the human to
+confirm, supersede, or revise.
+
+## Operating Charter (DEC-20260815-A) — division of authority
+
+Full text: `docs/company/CHARTER.md` (authoritative if this paragraph and
+CLAUDE.md ever diverge). Governing principle: *the tier of risk stays the
+same, the width expands.* No technical question goes to Petter — architecture,
+implementation, what to measure, what to build and in what order, testing,
+tooling, and vendor-API choice are all Claude's/Codex's to decide;
+asking him to arbitrate a technical choice is a failure of the role. The
+agent also decides-then-tells on: turning services on/off, pricing inside
+the existing €0.02–€1.00 band, quality gates, quarantine/promote, refunds,
+retries, delisting, merging its own work once repo gates pass, dispatching
+agents, scheduling sessions, and spend inside €50/week. **Petter alone
+decides:** spend beyond the envelope, anything legally binding Moonlighter
+AB (accounts, terms, vendor contracts), one-way public acts, pricing outside
+the band, and regulator-facing claims. **Shipping is never Petter's
+decision** — the session that opens a PR merges it and reports afterwards in
+plain English. Customer-data boundary (no outreach derived from transaction
+evidence, anonymous-only telemetry insight, 90-day redaction) is fixed;
+widening it is Petter's explicit call.
+
+## Capabilities & Quality
+
+Counts and per-capability status go stale within days. Read `manifests/*.yaml`,
+`GET /v1/platform/facts`, or the DB — never trust a static number here or in
+CLAUDE.md's prose without cross-checking. Key structural facts that don't
+drift:
+
+- The SQS scoring engine was **deleted** (DEC-20260503-B, 2026-05-05). No
+  `/v1/quality/:slug`, no `min_sqs`, no lifecycle automation. Circuit
+  breakers, fixture mode, and canary mode survive. Never edit
+  `src/lib/sqs.ts` to "fix" a score — it doesn't exist; diagnose root cause
+  instead (Scoring Integrity, retired but the discipline stands).
+- Free-tier capability list is `is_free_tier = true` in the `capabilities`
+  table, surfaced via `free_tier_slugs` on `/v1/platform/facts`. IP-based
+  10/day limit.
+- x402 (pay-per-use USDC on Base) is DB-driven: `x402_enabled` on the
+  `capabilities` row. Catalog: `GET /x402/catalog`.
+- KYB Essentials/Complete and Invoice Verify solution families (×20
+  countries) have predecessors that overlap them (`kyc-sweden`,
+  `kyc-norway`, `kyc-denmark`, `kyc-finland`, `verify-us-company`). Their
+  active/deprecated status is **not** recorded in either CLAUDE.md or here —
+  production contradicted a stale "deprecated" note on 2026-08-14. Read
+  `is_active` / `x402_enabled` on the `solutions` table before acting on any
+  of them; do not deactivate on the strength of a doc line.
+
+Full new-capability pipeline (write executor → manifest → `onboard.ts
+--discover` → review field reliability → `smoke-test.ts`), flags, and the
+manifest template: CLAUDE.md → "Adding New Capabilities (MANDATORY
+PIPELINE)". The pipeline (`apps/api/scripts/onboard.ts`) is the only
+sanctioned path for capability creation.
+
+## Drift-Prevention Surfaces
+
+When changing a fact that appears on multiple surfaces (capability/country
+counts, retention period, vendor names, free-tier list, processing region),
+update **only** the canonical source and let consumers read from it:
+`apps/api/src/lib/platform-facts.ts` (backend) → `GET /v1/platform/facts` →
+`usePlatformFacts()` (frontend). CI guard:
+`apps/api/scripts/check-platform-facts-drift.mjs`. For vendor switches
+specifically, use the `vendor-switch` skill
+(`.agents/skills/vendor-switch/SKILL.md`) — it codifies the full
+surface-update + DEC-entry checklist. Full detail (wire-shape rules for
+money/scores/dates, the shape-contract CI check for `AuditRecord`, the
+frozen-fixture contract-test pattern): CLAUDE.md → "Cross-Repo Updates" /
+"Wire-shape rule" / "Drift-prevention surfaces".
+
+## Session Checklists
+
+Quick (bug fix / config / small component) and Full (feature / design /
+multi-component) checklists — declare intent, connectivity check, do the
+work, code-review gate (`go` skill) before ending, write
+`handoff/_general/from-code/` file, Journal entry, archive completed To-dos.
+Full step-by-step lists: CLAUDE.md → "Quick Session Checklist" / "Full
+Session Checklist". The `end-session` skill
+(`.agents/skills/source-command-end-session/SKILL.md`) automates the
+verify + handoff-file + Journal-entry flow.
+
+## Workflow Invariants (non-negotiable)
+
+- NEVER edit Journal entries, Decision content, or Deferred content.
+- NEVER delete anything in Notion.
+- Corrections → new Journal entry, type = course-correction.
+- Global decisions → ALWAYS get confirmation.
+- Supersessions → ALWAYS use the Contradiction Protocol (including a
+  CLAUDE.md/AGENTS.md update).
+
+### Degraded mode
+
+If Notion is unavailable: work continues, log to handoff files with
+`[BACKFILL]` prefix. If Git is unavailable: **STOP**, fix before proceeding.
+
+## Report Filing Convention
+
+Large investigative/audit/session reports route to `archive/sessions/`
+(flat layout, or `archive/sessions/<dirname>/` for wholesale directory
+sweeps) — never the repo root. Full convention: CLAUDE.md → "Report Filing
+Convention". `AGENTS.md`, `.agents/`, and `.codex/` are **tracked**, derived
+from CLAUDE.md, and refreshed on drift — not gitignored (the 2026-08-17
+Phase 3 gitignore was the temporary state while this file was stale; this
+refresh is the unblock).
