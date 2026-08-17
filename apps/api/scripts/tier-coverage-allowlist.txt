@@ -24,3 +24,8 @@ swedish-company-data
 us-company-data
 # uk: tier fixture capture requires COMPANIES_HOUSE_API_KEY (prod-only); recapture in a keyed environment
 uk-company-data
+# cyprus: tier fixture capture requires OPENAPI_ENABLED=true, which is legally gated —
+# unsigned resale addendum, case 151296 (per CLAUDE.md capabilities notes, 2026-08-17).
+# Do not flip OPENAPI_ENABLED to recapture this fixture without Petter's sign-off on
+# the addendum; remove this line once that's resolved and a clean recapture lands.
+cypriot-company-data
