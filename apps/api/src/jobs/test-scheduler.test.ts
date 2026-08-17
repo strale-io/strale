@@ -81,3 +81,40 @@ describe("suitesTestedFromResults (closing review round — heartbeat accounting
     expect(src).not.toMatch(/runnableSuites\.length\s*-\s*skippedBudgetExhausted/);
   });
 });
+
+describe("suite-scoped batch execution (HIGH-1, Codex 2026-08-18 review)", () => {
+  // pollCycle() itself has no DB harness (raw postgres advisory-lock client,
+  // live HTTP per capability, 5-10 minute cycles — test-harness exemption,
+  // DEC-20260504-A), so this pins the wiring shape directly against source,
+  // the same technique the block above uses for the heartbeat-accounting
+  // fix. The behavioral proof that suiteId actually narrows execution (not
+  // just that it's threaded through) lives in test-runner.test.ts's
+  // "runTests — suiteId scoping" describe block, which mocks the DB layer
+  // runTests() itself talks to.
+  it("findOverdueSuites' SQL selects each suite's own id, not just (slug, testType)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("./test-scheduler.ts", import.meta.url), "utf8");
+    expect(src).toContain('ts.id::text AS "suiteId"');
+  });
+
+  it("the OverdueSuite type and its mapper carry suiteId through from the query", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("./test-scheduler.ts", import.meta.url), "utf8");
+    // Interface declares it (was slug/testType/lastRunAt only, pre-fix).
+    expect(src).toMatch(/interface OverdueSuite \{[^}]*suiteId: string;[^}]*\}/s);
+    // The row mapper actually populates it from the query result.
+    expect(src).toMatch(/return resultRows\.map\(\(r: any\) => \(\{[^}]*suiteId: r\.suiteId,[^}]*\}\)\);/s);
+  });
+
+  it("pollCycle's runTests() call passes the specific overdue suite's id — the actual fix to the former N x N call site", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("./test-scheduler.ts", import.meta.url), "utf8");
+    // Pre-fix this call read exactly:
+    //   runTests({ capabilitySlug: suite.slug, testType: suite.testType })
+    // — no suite-level narrowing, so it reloaded every suite sharing that
+    // (slug, testType) pair on every one of the batch's N due-suite rows.
+    expect(src).toMatch(
+      /runTests\(\{\s*capabilitySlug:\s*suite\.slug,\s*testType:\s*suite\.testType,\s*suiteId:\s*suite\.suiteId,?\s*\}\)/,
+    );
+  });
+});

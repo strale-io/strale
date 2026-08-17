@@ -91,6 +91,27 @@ export interface TestRunOptions {
   capabilitySlug?: string;
   tier?: ScheduleTier;
   testType?: string;
+  /**
+   * Scope execution to exactly one test_suites row (by id). Additive to
+   * capabilitySlug/testType, not a replacement for them — existing callers
+   * that omit it keep loading every active suite matching (capabilitySlug,
+   * testType) exactly as before.
+   *
+   * Added for the scheduler's per-suite batch entries (Codex review,
+   * 2026-08-18): findOverdueSuites() emits one row per due SUITE, but
+   * runTests({capabilitySlug, testType}) without this field reloads and
+   * re-executes EVERY active suite sharing that (slug, testType) pair.
+   * With N same-type suites, a batch of N due rows produced N x N
+   * executions per cadence (danish-company-data's 4 duplicate
+   * known_answer suites: 4 batch entries x 4 suites reloaded each = 16
+   * attempts against a 100/day budget). PR #318's isBudgetExhausted
+   * re-checks stopped the redundant calls from writing failed
+   * test_results rows once the budget ran out, but did nothing to stop
+   * the redundant *executions* themselves before that point — this field
+   * is the actual fix: the scheduler now passes the specific overdue
+   * suite's id, so one batch entry runs exactly its own suite.
+   */
+  suiteId?: string;
 }
 
 export interface TestRunSummary {
@@ -159,6 +180,9 @@ export async function runTests(
   }
   if (opts.testType) {
     conditions.push(eq(testSuites.testType, opts.testType));
+  }
+  if (opts.suiteId) {
+    conditions.push(eq(testSuites.id, opts.suiteId));
   }
 
   // T-1: Inner join with capabilities to skip deactivated/suspended capabilities.
