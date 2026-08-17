@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("pricing-page-extract", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -14,13 +15,11 @@ registerCapability("pricing-page-extract", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
-    messages: [
-      {
-        role: "user",
-        content: `Extract pricing information from this SaaS pricing page. Return ONLY valid JSON.
+    maxTokens: 1500,
+    prompt: `Extract pricing information from this SaaS pricing page. Return ONLY valid JSON.
 
 URL: ${fullUrl}
 
@@ -47,15 +46,9 @@ Return JSON:
   "annual_discount": "string or null (e.g. 'Save 20%')",
   "pricing_model": "per-seat/flat-rate/usage-based/tiered/freemium"
 }`,
-      },
-    ],
+    truncationGuidance: "This pricing page produced more plans than fit in one call.",
+    parseFailureError: () => new Error("Failed to extract pricing data."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract pricing data.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.url = fullUrl;
 
   return {

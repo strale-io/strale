@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("prompt-compress", async (input: CapabilityInput) => {
   const promptText = ((input.prompt_text as string) ?? (input.prompt as string) ?? (input.task as string) ?? "").trim();
@@ -13,13 +14,15 @@ registerCapability("prompt-compress", async (input: CapabilityInput) => {
   const originalTokens = Math.ceil(promptText.length / 4);
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  // extractJsonWithLlm's stop_reason check now catches the truncation case
+  // the old try/catch's "response may have been truncated" message was
+  // guessing at — a genuine max_tokens cutoff is refused distinctly, before
+  // parsing is attempted at all.
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 4000,
-    messages: [
-      {
-        role: "user",
-        content: `Compress the following prompt to be ~${targetReduction}% shorter while preserving ALL semantic meaning and instructions. Return ONLY valid JSON.
+    maxTokens: 4000,
+    prompt: `Compress the following prompt to be ~${targetReduction}% shorter while preserving ALL semantic meaning and instructions. Return ONLY valid JSON.
 
 Original prompt:
 ${promptText.slice(0, 8000)}
@@ -30,20 +33,9 @@ Return JSON:
   "removed_content": ["list of specific content/phrases removed or condensed"],
   "preserved_instructions": ["list of key instructions that were preserved"]
 }`,
-      },
-    ],
+    truncationGuidance: "Provide a shorter prompt_text per call.",
+    parseFailureError: () => new Error("Failed to compress prompt."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to compress prompt.");
-
-  let output: Record<string, unknown>;
-  try {
-    output = JSON.parse(jsonMatch[0]);
-  } catch {
-    throw new Error(`Claude response parse failed (response may have been truncated). Raw: ${jsonMatch[0].slice(0, 200)}`);
-  }
   const compressedTokens = Math.ceil((output.compressed_prompt as string).length / 4);
 
   output.original_tokens = originalTokens;

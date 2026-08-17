@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 // Google Shopping product search via Browserless + Claude extraction
 
@@ -24,13 +25,11 @@ registerCapability("product-search", async (input: CapabilityInput) => {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const client = new Anthropic({ apiKey });
-  const r = await client.messages.create({
+  const output = await extractJsonWithLlm({
+    client,
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: `Extract product listings from this Google Shopping results page. Return ONLY valid JSON.
+    maxTokens: 2000,
+    prompt: `Extract product listings from this Google Shopping results page. Return ONLY valid JSON.
 
 Search query: "${query}"
 
@@ -56,15 +55,9 @@ Return JSON:
 }
 
 Extract as many products as visible. Use null for missing fields. If no products found, return an empty products array.`,
-      },
-    ],
+    truncationGuidance: "Narrow the search query so fewer products are returned per call.",
+    parseFailureError: () => new Error("Failed to extract product listings from Google Shopping."),
   });
-
-  const responseText = r.content[0].type === "text" ? r.content[0].text.trim() : "";
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Failed to extract product listings from Google Shopping.");
-
-  const output = JSON.parse(jsonMatch[0]);
   output.search_url = searchUrl;
 
   return {
