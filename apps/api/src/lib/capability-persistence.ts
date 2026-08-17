@@ -108,6 +108,35 @@ type LimitationHashInput = {
   workaround?: string | null;
 };
 
+/** Values that mean "no title was actually authored" when they show up in
+ *  the `title` slot — i.e. the result of a JS coercion bug, not a real
+ *  title. `String(undefined)`, an unguarded `${obj.title}` template
+ *  literal on a missing property, and `JSON.parse` round-tripping a stray
+ *  `"undefined"` string all produce these exact values. A legitimate
+ *  human- or LLM-authored title is never literally one of these. */
+const COERCED_MISSING_TITLE_VALUES = new Set(["undefined", "null", "NaN"]);
+
+/**
+ * Defensive guard at the single choke point all limitation writes pass
+ * through (`diffAndUpdateLimitations`). Normalizes a title that is empty,
+ * whitespace-only, or one of the known JS-coercion artifacts down to
+ * `null` — the schema's actual "no title" representation — instead of
+ * letting the literal string leak into a customer-facing response.
+ *
+ * No known current writer produces these values (onboard.ts and the
+ * manifest-generation scripts already use `lim.title ?? null`), but the
+ * coercion is a one-character-away JS footgun (`${lim.title}` vs.
+ * `${lim.title ?? ""}`), and this is customer-facing trust content, so the
+ * guard sits at the persistence boundary rather than relying on every call
+ * site staying careful forever.
+ */
+export function sanitizeLimitationTitle(title: string | null | undefined): string | null {
+  if (title === null || title === undefined) return null;
+  const trimmed = title.trim();
+  if (trimmed === "" || COERCED_MISSING_TITLE_VALUES.has(trimmed)) return null;
+  return title;
+}
+
 /** Hash the 5 content fields. Null/undefined normalize to empty string;
  *  leading/trailing whitespace is trimmed before hashing. */
 export function limitationHash(l: LimitationHashInput): string {
@@ -157,10 +186,18 @@ export async function diffAndUpdateLimitations(
   capabilitySlug: string,
   manifestLimitations: ReadonlyArray<Omit<CapabilityLimitationInsert, "capabilitySlug">>,
 ): Promise<DiffLimitationsResult> {
+  // 0. Sanitize titles before anything else touches them — the hash, the
+  //    diff, and the eventual INSERT/UPDATE all read from this sanitized
+  //    copy so a coerced-`undefined` title can never reach the DB.
+  const sanitizedLimitations = manifestLimitations.map((lim) => ({
+    ...lim,
+    title: sanitizeLimitationTitle(lim.title),
+  }));
+
   // 1. Build manifestByHash with positional index (drives sort_order).
   const manifestByHash = new Map<string, { lim: Omit<CapabilityLimitationInsert, "capabilitySlug">; index: number }>();
-  for (let i = 0; i < manifestLimitations.length; i++) {
-    const lim = manifestLimitations[i];
+  for (let i = 0; i < sanitizedLimitations.length; i++) {
+    const lim = sanitizedLimitations[i];
     const h = limitationHash(lim);
     // If two manifest rows hash-collide (rare but possible — identical
     // content duplicated in the manifest), later wins. The caller
