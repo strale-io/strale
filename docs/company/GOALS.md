@@ -16,6 +16,13 @@ buyers demonstrate they want.
 **€45.58/week** (last 7d, 641 calls) · €30.02/week (30d average, €128.66 total).
 In USD ≈ **$50/week**. The goal is therefore **~40×**, and M1 is **~5×**, not 2.2×.
 
+> **Read revenue week-over-week, not as a rolling 7d figure.** On 2026-08-17 the
+> rolling 7d read €36.64 against the €45.58 baseline and looked like a 20% fall.
+> Discrete weeks say the opposite: w-0 €36.64, w-1 €29.98, w-2 €10.85, w-3
+> €37.73, and the per-week rate rises monotonically as the window shortens
+> (90d €19.67 → 30d €27.95 → 14d €33.31 → 7d €36.64). At this volume a rolling
+> window is dominated by which individual days fall in or out. Trend is up.
+
 > An earlier draft of this file said "$115/week". That was a 30-day figure
 > relabelled as weekly — caught by cross-provider review 2026-08-15 and
 > re-measured against production. Every milestone below is denominated in EUR
@@ -84,6 +91,26 @@ conversion.
   in **enforce** mode, so this actively removes working capabilities from the
   catalogue and from x402. `us-company-data` was delisted at "64% completion on
   11 calls" — 7 successes, 1 genuine upstream 500, and the rest caller input.
+- **The harness also fails the other way: it blamed capabilities for the world.**
+  Measured 2026-08-17. Ten capabilities were emitting "ALGORITHMIC CORRECTNESS
+  VIOLATION — correctness 0%" every ~36 minutes for over 24 hours (~400 Tier-1
+  alerts/day) while **every one of them answered correctly when called directly
+  on production**. The invariant counted a test-budget guard (whose own message
+  reads "Customer traffic is unaffected"), an expired vendor token, upstream
+  5xx/429s and timeouts as evidence of broken capability logic. Its premise —
+  "algorithmic capabilities have zero environmental variability" — is false:
+  `transparency_tag` describes how an answer is derived, not whether the
+  capability makes a network call. Fixed 2026-08-17 (#305): environmental
+  failures leave the denominator and report at Tier 2 instead. Six capabilities
+  went quiet; seven still violate and are genuine.
+- **The seven that remain are fixture-contract bugs, not broken capabilities.**
+  `iso-country-lookup`, `skill-extract`, `company-id-detect`,
+  `incoterms-explain`, `dangerous-goods-classify`, `beneficial-ownership-lookup`
+  and `name-parse` all fail on `guaranteed_field_missing` or `high_null_ratio`
+  while returning correct, fully-populated answers in production. The pattern
+  is fixtures asserting a flattened shape against a nested response — verified
+  for `iso-country-lookup`, whose six "null" fields all live under `match`. This
+  is the next fixture-hygiene batch.
 - **`screenshot-url` has a plain bug, not a quality problem**: 23 of its 25 real
   failures are `HTTP 400: "waitForSelector" is not allowed` — a parameter *we*
   send that Browserless rejects. Deterministic, ours, and invisible to the
