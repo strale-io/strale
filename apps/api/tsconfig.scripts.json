@@ -19,7 +19,7 @@
   // — it does NOT type-check the non-archived .mjs files (26 at the 2026-08-17 review) in
   // apps/api/scripts (several of which are themselves CI gate scripts, e.g.
   // check-pii.mjs, check-tier-coverage.mjs). Tried turning on
-  // allowJs+checkJs here first: it surfaces 166 errors across all 25 files
+  // allowJs+checkJs here first: it surfaced 166 errors across the then-25 .mjs files (check-mjs-syntax.mjs, the 26th, was added after that trial)
   // (mostly noImplicitAny — checkJs on unannotated JS is not a small lift),
   // well past the ~30 threshold for a same-pass mechanical fix. Real .mjs
   // coverage is intentionally deferred rather than silently absent: see
