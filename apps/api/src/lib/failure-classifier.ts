@@ -78,8 +78,16 @@ const INFRA_GEO_PATTERNS = [
 // test because the capability's daily test-budget counter is spent. That's
 // test infrastructure, not a capability signal, so it belongs in the same
 // bucket as the other INFRA_* patterns above.
+// Phase-4 tail fix (2026-08-17 review, LOW-7): anchored on the FULL real
+// message shape ("has exhausted its <window> test budget (<...>). Customer
+// traffic is unaffected") rather than the bare "has exhausted its .* test
+// budget" substring. The looser form risked matching any future message
+// that happened to contain that phrase without actually being a
+// BudgetExhaustedError (e.g. a capability echoing vendor-quota language in
+// an unrelated error) and misclassifying a real upstream/capability signal
+// as test_infrastructure.
 const INFRA_BUDGET_PATTERNS = [
-  /has exhausted its.*test budget/i,
+  /has exhausted its .+ test budget \(.+\)\.\s*Customer traffic is\s*unaffected/i,
 ];
 
 // Browserless billing/quota (our infrastructure) — NOT target site failures.
@@ -163,9 +171,17 @@ const INPUT_REJECTION_PATTERNS = [
 // needs its own pattern set. Not a capability bug and not an upstream
 // failure: a correct refusal per DEC-20260428-A must not trip breakers or
 // count against quality signal (feedback_refusal_is_not_a_fault.md).
+//
+// Phase-4 tail fix (2026-08-17 review, LOW-7): anchored on the fuller real
+// prefix ("<X> search is unavailable: the only compliant data path is")
+// instead of the bare substring "only compliant data path". The looser
+// form would have matched an unrelated message like "only compliant data
+// path returned HTTP 500" (a genuine upstream failure that happens to
+// share that fragment) and misclassified it as a high-confidence
+// test_design refusal instead of the real upstream_transient/
+// capability_bug verdict.
 const COMPLIANCE_REFUSAL_PATTERNS = [
-  /only compliant data path/i,
-  /search is unavailable:.*compliant/i,
+  /search is unavailable: the only compliant data path is/i,
 ];
 
 // Upstream returned empty/HTML instead of expected data — transient
