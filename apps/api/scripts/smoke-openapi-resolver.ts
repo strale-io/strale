@@ -67,6 +67,31 @@ const COUNTRIES: CountryConfig[] = [
 const savedDbUrl = process.env.DATABASE_URL;
 process.env.DATABASE_URL = "";
 
+// dispatcher-gate-exempt: deliberate operator-supervised regression smoke,
+// never wired into any schedule/CI trigger (grep the repo — the only
+// references to this file are this file itself and the 2026-08-12
+// scripts-rightsizing audit). --offline-only is the default and never
+// reaches a paid call; --live is opt-in, requires `railway run --` for
+// prod Openapi credentials, and costs ~€1.28/sweep per the file header.
+//
+// guardedExecute is NOT a viable route for --live: querying prod
+// (2026-08-17) shows of the 11 capabilities configured in COUNTRIES above,
+// 6 (BG/CY/HU/LU/MT/RO) have no `capabilities` table row at all, and of
+// the 5 that do, 4 (AT/NL/PT/IT) are cost_class=NULL (unclassified) and
+// only 1 (ES) is free_quota. Per ALLOW_MATRIX/NULL_DECISIONS in
+// guarded-executor.ts, an unclassified capability invoked with
+// internal_test context is REFUSED outright — routing this smoke through
+// guardedExecute would make --live fail closed for 10 of its 11
+// configured countries, defeating the smoke's entire purpose (verifying
+// the live paid path actually works). So: this script bypasses the
+// ALLOW_MATRIX/budget system entirely for its live path; the only
+// protection against accidental spend is that it is manual-only,
+// --live-gated, and requires prod credentials an operator must explicitly
+// supply. It does NOT protect against a human running --live by mistake
+// or on a stale/wrong fixture. Getting these capabilities cost_class-
+// classified (Phase A0b backfill) would let a future version of this
+// smoke route through the gate for real; that's open follow-up, not done
+// here.
 const { autoRegisterCapabilities } = await import("../src/capabilities/auto-register.js");
 const { getExecutor } = await import("../src/capabilities/index.js");
 await autoRegisterCapabilities();

@@ -65,7 +65,7 @@ const repoRoot = resolve(__dirname, "..", "..", "..");
 // .env lives at the repo root (same convention as smoke-test.ts).
 config({ path: resolve(repoRoot, ".env") });
 
-// guarded-executor-exempt: deliberate operator-supervised capture run for the
+// dispatcher-gate-exempt: deliberate operator-supervised capture run for the
 // tier-coverage gate (see file header: costs documented per run, Openapi calls
 // flag-gated behind OPENAPI_ENABLED, scope defaults to --company-data).
 // Auto-registers every capability executor. Must run before getExecutor().

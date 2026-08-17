@@ -20,7 +20,7 @@ import {
   testSuites,
   capabilityLimitations,
 } from "../src/db/schema.js";
-// guarded-executor-exempt: existence-check only at line 116 (`!!executor`);
+// dispatcher-gate-exempt: existence-check only at line 116 (`!!executor`);
 // never invokes the executor, so the dispatcher gate doesn't apply.
 import { getExecutor } from "../src/capabilities/index.js";
 import { transitionCapability } from "../src/lib/lifecycle.js";
