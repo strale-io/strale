@@ -776,10 +776,18 @@ async function pollCycle(): Promise<void> {
         await delay(DELAY_BETWEEN_CAPABILITIES_MS);
       }
 
+      // Phase-4 tail fix (2026-08-17 review, LOW-8): runnableSuites is the
+      // BATCH size (everything the scheduler decided to attempt this
+      // cycle) — it is NOT the same as "suites actually tested" once
+      // shouldSkipForBudget can skip suites mid-batch. Reporting it as
+      // suites_tested silently counted skips as tests. Subtract the
+      // skipped ones so the summary/heartbeat reflect what actually ran.
+      const suitesActuallyTested = runnableSuites.length - skippedBudgetExhausted;
+
       jobLog.info(
         {
           label: "test-scheduler-poll-complete",
-          suites_tested: runnableSuites.length,
+          suites_tested: suitesActuallyTested,
           capabilities_touched: slugsTested.size,
           passed: totalPassed,
           failed: totalFailed,
@@ -797,9 +805,10 @@ async function pollCycle(): Promise<void> {
           logHealthEvent({
             eventType: "scheduler_heartbeat",
             tier: 1,
-            actionTaken: `DB-driven poll: ${runnableSuites.length} suites tested across ${slugsTested.size} capabilities`,
+            actionTaken: `DB-driven poll: ${suitesActuallyTested} suites tested across ${slugsTested.size} capabilities` +
+              (skippedBudgetExhausted > 0 ? ` (${skippedBudgetExhausted} skipped, budget exhausted)` : ""),
             details: {
-              suites_tested: runnableSuites.length,
+              suites_tested: suitesActuallyTested,
               capabilities_touched: slugsTested.size,
               passed: totalPassed,
               failed: totalFailed,
