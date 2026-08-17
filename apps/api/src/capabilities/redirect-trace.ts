@@ -7,10 +7,19 @@ import { TOS_REFUSAL_MARKER } from "../lib/tos-blocklist.js";
  * F-0-006 special case: redirect-trace exists to FOLLOW and REPORT ON
  * redirects, which means the Bucket-A recipe (auto-follow via safeFetch)
  * would destroy the feature. Instead we call safeFetch with
- * maxRedirects: 0 — we still get validateUrl + the undici dispatcher's
- * DNS-rebinding refusal, but the 3xx response is returned to us so we
+ * maxRedirects: 0 and returnOnRedirectCap: true — we still get
+ * validateUrl + the undici dispatcher's DNS-rebinding refusal, but the
+ * 3xx response is returned to us (instead of safeFetch throwing) so we
  * can record the hop and advance the chain ourselves. validateUrl is
- * also called on every next-hop URL before we fetch it.
+ * also called on every next-hop URL before we fetch it (each hop is a
+ * fresh safeFetch call, and safeFetch always validates before fetching).
+ *
+ * Phase-4 tail fix: before `returnOnRedirectCap` existed, `maxRedirects:
+ * 0` alone made safeFetch throw "Too many redirects (>0)" on the FIRST
+ * redirect (followRedirects increments hop to 1 before the hop >
+ * maxRedirects check, so 1 > 0 is always true) — every URL with a real
+ * redirect failed here. See safe-fetch.ts's SafeFetchOptions doc for the
+ * full history.
  */
 registerCapability("redirect-trace", async (input: CapabilityInput) => {
   let url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -34,6 +43,7 @@ registerCapability("redirect-trace", async (input: CapabilityInput) => {
       response = await safeFetch(currentUrl, {
         method: "GET",
         maxRedirects: 0,
+        returnOnRedirectCap: true,
         signal: AbortSignal.timeout(10000),
       });
     } catch (err) {
