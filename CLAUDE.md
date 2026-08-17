@@ -491,6 +491,16 @@ where node holds handles. Hit three times on 2026-08-14.
    ENOENT, that is this bug, not a real deletion. Run
    `node scripts/guard-tree-integrity.mjs` (or just any Bash command, if the
    PostToolUse hook is wired) and re-check before diagnosing further.
+5. **Never use `git stash` in any worktree of this clone.** `refs/stash` is
+   repo-wide, shared across ALL worktrees — concurrent sessions' stash
+   push/pop interleave, and a pop in one worktree can consume (and on
+   conflict, destroy) another session's stashed work. Hit on 2026-08-16:
+   one agent's `stash pop` returned a sibling agent's quality-floor changes.
+   For fail-before verification or temporary reverts, use
+   `git checkout <base-sha> -- <paths>` + `git checkout <branch> -- <paths>`
+   to restore, or a temporary WIP commit. If a stash accident happens,
+   recover via `git fsck --dangling` (stash commits survive as dangling
+   commits) and save the foreign diff to a patch file — never discard it.
 
 The guard at `scripts/guard-tree-integrity.mjs` auto-repairs the damage and is
 wired as a PostToolUse/Bash hook in `.claude/settings.json` (gitignored — each
@@ -503,7 +513,7 @@ discard work. It is a safety net, not a substitute for rule 1.
 
 ### Report Filing Convention
 
-Large investigative/audit/session reports (AUDIT-*, FIX_PHASE_*, SESSION_*, RESOLUTION_REPORT, REVIEW_FINDINGS_*, *_INVENTORY, *_RESEARCH, checklists tied to a specific incident, etc.) route to `archive/sessions/` — flat layout for individual reports (see existing entries for naming convention); directory sweeps imported wholesale (Phase 3, 2026-08-17: `audit/`, `audit-output/`, `audit-reports/`, `a2a-sample/`, `tasks/`, `capability-sources/`, `distribution/`) keep their internal structure as `archive/sessions/<dirname>/`. Never to the repo root. Root stays reserved for genuine top-level canon (README, CLAUDE.md, LICENSE, WORKTREES.md-style structural docs, live-use checklists still actively referenced). Note: `AGENTS.md` (+ `.agents/`, `.codex/`) is deliberately gitignored (Phase 3 decision, 2026-08-17): it mirrors CLAUDE.md but is months stale and missing safety rules. Refresh it against CLAUDE.md before ever re-tracking.
+Large investigative/audit/session reports (AUDIT-*, FIX_PHASE_*, SESSION_*, RESOLUTION_REPORT, REVIEW_FINDINGS_*, *_INVENTORY, *_RESEARCH, checklists tied to a specific incident, etc.) route to `archive/sessions/` — flat layout for individual reports (see existing entries for naming convention); directory sweeps imported wholesale (Phase 3, 2026-08-17: `audit/`, `audit-output/`, `audit-reports/`, `a2a-sample/`, `tasks/`, `capability-sources/`, `distribution/`) keep their internal structure as `archive/sessions/<dirname>/`. Never to the repo root. Root stays reserved for genuine top-level canon (README, CLAUDE.md, LICENSE, WORKTREES.md-style structural docs, live-use checklists still actively referenced). Note: `AGENTS.md` (+ `.agents/`, `.codex/`) is tracked (refreshed and re-tracked 2026-08-17, superseding the Phase 3 gitignore). It is a condensed derivative of CLAUDE.md for Codex-CLI sessions — CLAUDE.md is canon; AGENTS.md points at CLAUDE.md sections for anything that can drift rather than restating it. Refresh AGENTS.md against CLAUDE.md whenever drift is noticed (new decisions, new mandatory protocols, Shared-Checkout Rule changes) rather than letting it go stale again.
 
 ### Workflow Invariants (Non-Negotiable)
 - NEVER edit Journal entries, Decision content, or Deferred content
@@ -547,6 +557,6 @@ When changing facts that appear on multiple surfaces (capability count, country 
 - **Frontend consumer**: `usePlatformFacts()` hook in `strale-frontend/src/hooks/use-platform-facts.ts`. Component pages read from this; never hardcode the displayed value.
 - **Static frontend files** that can't reach the hook (`public/llms.txt`, `public/.well-known/*.json`): use phrasing that doesn't bake in counts, with a pointer to `/v1/platform/facts`.
 
-The `apps/api/scripts/check-platform-facts-drift.mjs` CI guard catches new hardcoded values introduced into surface files. The weekly cron runs the same sweep across both repos and opens a tracking issue on any drift.
+The `apps/api/scripts/check-platform-facts-drift.ts` guard (run via `npx tsx`, wired in weekly-drift.yml) catches new hardcoded values introduced into surface files. The weekly cron runs the same sweep across both repos and opens a tracking issue on any drift.
 
 For vendor switches specifically, invoke the `vendor-switch` skill (in `.claude/skills/vendor-switch/SKILL.md`) — it codifies the full surface-update + DEC-entry checklist.

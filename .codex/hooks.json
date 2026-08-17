@@ -1,0 +1,4 @@
+{
+  "_comment": "SessionStart hook that called `node scripts/session-state.mjs ensure` was removed 2026-08-17 (AGENTS.md refresh). scripts/session-state.mjs was never part of origin/main's history and no equivalent lives under scripts/ post-Phase-3 (see scripts/guard-tree-integrity.mjs and apps/api/scripts/session-close-check.ts for the closest surviving analogs — neither is a drop-in replacement for the session-marker pattern). Re-add a SessionStart hook here only once a real script exists to back it.",
+  "hooks": {}
+}
