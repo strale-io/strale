@@ -1,22 +1,27 @@
 {
-  "company_name": "Telefonica, SA",
-  "native_company_name": null,
-  "registration_number": "A28015865",
-  "vat_number": "ESA28015865",
-  "country_code": "ES",
-  "legal_form": null,
+  "company_name": "CONSTRUCCIONES AMENABAR SA",
+  "nif": "A20072302",
+  "vat_number": "ESA20072302",
+  "company_type": "S.A.",
   "status": "active",
-  "is_active": true,
-  "registered_date": "1924-04-19",
-  "registered_address": "Calle Gran Via, 28 5 28, 28013, Madrid, ES",
-  "lei_code": "549300EEJH4FEPDBBR25",
-  "nace_codes": [
-    {
-      "code": "6190",
-      "description": "Other telecommunications activities"
-    }
-  ],
-  "company_size": null,
-  "source_as_of": "[CAPTURE_TIMESTAMP]",
-  "last_filing_date": "2024-12-31"
+  "status_raw": "Activa",
+  "address": null,
+  "province": "Gipuzkoa",
+  "registration_date": null,
+  "first_borme_activity": "2009-04-16",
+  "last_borme_activity": "2026-01-15",
+  "borme_acts_count": 79,
+  "legal_representatives": "[REDACTED]",
+  "total_legal_representatives": 22,
+  "recent_borme_acts": "[REDACTED]",
+  "jurisdiction": "ES",
+  "legal_name": "CONSTRUCCIONES AMENABAR SA",
+  "primary_registration_id": "A20072302",
+  "legal_form": "S.A.",
+  "registered_address": null,
+  "date_incorporated": null,
+  "tier_2_available": true,
+  "tier_2_available_reason": "current officers (cargos vigentes) from BORME appointment/cessation acts via OpenMercantil.es",
+  "ubo_availability": "unavailable_no_registry",
+  "ubo_availability_reason": "Spain's RETIR/beneficial-ownership registry is not publicly accessible; BORME does not carry ownership"
 }

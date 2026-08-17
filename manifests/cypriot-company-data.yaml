@@ -71,6 +71,15 @@ output_schema:
       description: UBO availability flag. CY is unavailable_no_registry — Cyprus UBO Register closed to public access since 2023-01-03 (CJEU C-37/20).
     ubo_availability_reason:
       type: string
+    legal_name:
+      type: string
+      description: Evidence Tier 1 canonical alias (DEC-20260518-A) for company_name. Set unconditionally by the executor — same reliability as company_name.
+    primary_registration_id:
+      type: string
+      description: Evidence Tier 1 canonical alias (DEC-20260518-A) for registration_number. Set unconditionally by the executor — same reliability as registration_number.
+    date_incorporated:
+      type: ["string", "null"]
+      description: Evidence Tier 1 canonical alias (DEC-20260518-A) for registered_date. Set unconditionally by the executor — same reliability as registered_date.
 data_source: Openapi.com WW-Top (Tier-3) + data.gov.cy DRCOR open-data CSV (Tier-2 legal_representatives via C-prefix lookup)
 data_source_type: api
 transparency_tag: algorithmic
@@ -117,6 +126,15 @@ output_field_reliability:
   tier_2_available_reason: guaranteed
   ubo_availability: guaranteed
   ubo_availability_reason: guaranteed
+  # Evidence Tier 1 canonical aliases (DEC-20260518-A) — executor sets these
+  # unconditionally from company_name / registration_number / registered_date
+  # (src/capabilities/cypriot-company-data.ts), so reliability mirrors the
+  # source field exactly. MEDIUM-4, 2026-08-17 review: declared here instead
+  # of allowlisting the slug — these are known, stable fields, not a legal
+  # gate like the recapture itself.
+  legal_name: guaranteed
+  primary_registration_id: guaranteed
+  date_incorporated: common
 limitations:
   - title: Gated behind OPENAPI_ENABLED flag pending resale addendum countersignature
     text: >-

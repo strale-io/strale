@@ -92,6 +92,19 @@ const PII_ARRAY_FIELDS = new Set([
   "managers",
   "officers",
   "legal_representatives",
+  // Phase-4 tail fix (2026-08-17): spanish-company-data's BORME activity
+  // log. Each element's free-text `registral_reference` field embeds real
+  // officer/appointee full names inline as unstructured prose (BORME's
+  // "Apo.Sol.: <name>;<name>;..." appointment-notice format), unlike the
+  // structured person-record arrays above — caught live during the
+  // 2026-08-17 spanish-company-data recapture (see commit history for
+  // apps/api/test/fixtures/tier-coverage/spanish-company-data.json), same
+  // incident class as the 2026-08-14 italian-company-stakeholders exposure
+  // this scrub exists to prevent. Never paste the raw officer names this
+  // finding surfaced into a comment, commit message, or doc — describing
+  // the shape (a name-bearing free-text field) is all a future reader
+  // needs.
+  "recent_borme_acts",
 ]);
 
 // Fields whose value is a live wall-clock timestamp from the capture run.

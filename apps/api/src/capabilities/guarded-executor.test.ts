@@ -312,6 +312,71 @@ describe("computeWindowStart", () => {
   });
 });
 
+// ─── isBudgetExhausted peek (Phase-4 tail fix, 2026-08-17) ──────────────────
+//
+// Regression coverage for the scheduler's mid-batch budget skip. Confirmed
+// live against prod (read-only): danish-company-data had 4 duplicate
+// known_answer test suites whose per-suite stagger hash collided on the
+// same minute, so findOverdueSuites()'s once-per-cycle SQL exclusion saw
+// "budget available" and returned all of them in one batch — the
+// scheduler's sequential loop then spent the budget on the first couple
+// and ran the rest straight into BudgetExhaustedError (15 of 17 attempts
+// in 24h). isBudgetExhausted() lets the scheduler re-check per suite.
+describe("isBudgetExhausted (Phase-4 tail fix)", () => {
+  it("returns false for a cost_class that doesn't budget-track (no counter query issued)", async () => {
+    stubMeta({ slug: "x", cost_class: "free_unlimited" });
+    const { isBudgetExhausted } = await import("./guarded-executor.js");
+    await expect(isBudgetExhausted("x")).resolves.toBe(false);
+    // Only the cost-meta SELECT — short-circuits before any counter query.
+    expect(mockDbExecute).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns false for paid_prepaid (never budget-tracked)", async () => {
+    stubMeta({ slug: "x", cost_class: "paid_prepaid" });
+    const { isBudgetExhausted } = await import("./guarded-executor.js");
+    await expect(isBudgetExhausted("x")).resolves.toBe(false);
+  });
+
+  it("returns false when no counter row exists yet this window (nothing spent)", async () => {
+    stubMeta({ slug: "x", cost_class: "free_quota", quota_window: "daily", quota_cap: 20 });
+    mockDbExecute.mockResolvedValueOnce([]); // counter SELECT — no row yet
+    const { isBudgetExhausted } = await import("./guarded-executor.js");
+    await expect(isBudgetExhausted("x")).resolves.toBe(false);
+  });
+
+  it("returns false when test_count is under budget_cap", async () => {
+    stubMeta({ slug: "danish-company-data", cost_class: "free_quota", quota_window: "daily", quota_cap: 20 });
+    mockDbExecute.mockResolvedValueOnce([{ test_count: 1, budget_cap: 2 }]);
+    const { isBudgetExhausted } = await import("./guarded-executor.js");
+    await expect(isBudgetExhausted("danish-company-data")).resolves.toBe(false);
+  });
+
+  it("returns true when test_count has reached budget_cap (the exact prod shape: 2/2)", async () => {
+    stubMeta({ slug: "danish-company-data", cost_class: "free_quota", quota_window: "daily", quota_cap: 20 });
+    mockDbExecute.mockResolvedValueOnce([{ test_count: 2, budget_cap: 2 }]);
+    const { isBudgetExhausted } = await import("./guarded-executor.js");
+    await expect(isBudgetExhausted("danish-company-data")).resolves.toBe(true);
+  });
+
+  it("returns true when test_count has overshot budget_cap (burst overshoot)", async () => {
+    stubMeta({ slug: "x", cost_class: "paid_with_free_tier", quota_window: "daily", quota_cap: 100 });
+    mockDbExecute.mockResolvedValueOnce([{ test_count: 6, budget_cap: 5 }]);
+    const { isBudgetExhausted } = await import("./guarded-executor.js");
+    await expect(isBudgetExhausted("x")).resolves.toBe(true);
+  });
+
+  it("never writes — only SELECT statements reach the DB", async () => {
+    stubMeta({ slug: "x", cost_class: "free_quota", quota_window: "daily", quota_cap: 20 });
+    mockDbExecute.mockResolvedValueOnce([{ test_count: 2, budget_cap: 2 }]);
+    const { isBudgetExhausted } = await import("./guarded-executor.js");
+    await isBudgetExhausted("x");
+    for (const call of mockDbExecute.mock.calls) {
+      const queryText = String(call[0]);
+      expect(queryText).not.toMatch(/INSERT|UPDATE|DELETE/i);
+    }
+  });
+});
+
 // ─── Budget race (concurrent burst) ─────────────────────────────────────────
 
 describe("budget race", () => {

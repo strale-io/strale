@@ -441,6 +441,67 @@ export async function assertBudgetAvailable(
   );
 }
 
+/**
+ * Read-only peek at whether `slug`'s current budget window is already
+ * spent — no write, no side effect, safe to call speculatively.
+ *
+ * Phase-4 tail fix (2026-08-17): `test-scheduler.ts`'s `findOverdueSuites()`
+ * already excludes budget-exhausted capabilities from its SELECT, but that
+ * exclusion is a snapshot taken ONCE per poll cycle. When a capability has
+ * several suites whose per-suite stagger hash collides on the same minute
+ * (verified live for danish-company-data: 4 duplicate `known_answer` test
+ * suites all hash `slug + ':known_answer'` to the identical minute), the
+ * SQL pre-check sees the capability as "not yet exhausted" at query time,
+ * returns all of its suites in one batch, and the scheduler's sequential
+ * for-loop then burns through them one by one — the first couple succeed
+ * and spend the budget, every suite after that in the SAME batch hits
+ * `assertBudgetAvailable` mid-loop and fails with `BudgetExhaustedError`,
+ * writing a FAILED `test_results` row for every one. Confirmed against
+ * prod (read-only): danish-company-data logged 17 attempts in 24h, 15 of
+ * them budget-exhaustion failures, all 9 seconds apart in a single burst.
+ *
+ * This function lets the scheduler re-check remaining budget PER SUITE,
+ * immediately before each `runTests()` call, so a mid-batch exhaustion
+ * skips the remaining suites in that same batch instead of running them
+ * to a guaranteed, metrics-poisoning failure. It intentionally does NOT
+ * reserve a slot (no INSERT) — `assertBudgetAvailable` inside the executor
+ * path remains the sole place that increments the counter, so a race
+ * between the peek and the real call still fails safe (the real call's
+ * atomic increment is what actually enforces the cap).
+ */
+export async function isBudgetExhausted(slug: string): Promise<boolean> {
+  const meta = await getCapabilityCostMeta(slug);
+  if (meta.cost_class !== "free_quota" && meta.cost_class !== "paid_with_free_tier") {
+    // Doesn't budget-track (free_unlimited, paid_prepaid, paid_subscription,
+    // unclassified) — never "exhausted" in this sense.
+    return false;
+  }
+  if (meta.quota_window === null || meta.quota_window === "none") return false;
+
+  // ISO string, never a Date instance — see the bind-encoder note on
+  // assertBudgetAvailable (DEC-20260504-A / PR #43 bug class).
+  const windowStart = computeWindowStart(meta.quota_window, meta.quota_reset_dom).toISOString();
+  const windowKind = meta.quota_window;
+
+  const db = getDb();
+  const result = await db.execute(sql`
+    SELECT test_count, budget_cap
+      FROM capability_budget_counters
+     WHERE capability_slug = ${slug}
+       AND window_start = ${windowStart}
+       AND window_kind = ${windowKind}
+  `);
+  const rows = Array.isArray(result) ? result : (result as { rows?: unknown[] })?.rows ?? [];
+  const row = rows[0] as { test_count: number; budget_cap: number } | undefined;
+  if (!row) return false; // No counter row yet this window — nothing spent.
+
+  // Compare against the ROW's own budget_cap (what assertBudgetAvailable's
+  // RETURNING clause checked, and what actually got written), not a fresh
+  // computeBudgetCap(meta) recomputation — a manifest change mid-window
+  // can't then produce a peek/assert disagreement.
+  return row.test_count >= row.budget_cap;
+}
+
 async function maybeFireThresholdAlerts(
   row: BudgetRow,
   slug: string,

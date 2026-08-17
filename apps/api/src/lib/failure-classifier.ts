@@ -68,6 +68,28 @@ const INFRA_GEO_PATTERNS = [
   /ECB.*restrict/i,
 ];
 
+// Phase-4 tail fix (2026-08-17): scheduler-side budget exhaustion
+// (guarded-executor.ts's BudgetExhaustedError, e.g. "Capability
+// 'danish-company-data' has exhausted its daily test budget (free_quota,
+// quota_cap=2). Customer traffic is unaffected; Strale's own test/CI usage
+// must wait for the next window.") was falling through every pattern set to
+// `unknown` — it isn't a missing key, a quota/billing message, or a
+// geo-restriction; it's the platform's OWN scheduler declining to run the
+// test because the capability's daily test-budget counter is spent. That's
+// test infrastructure, not a capability signal, so it belongs in the same
+// bucket as the other INFRA_* patterns above.
+// Phase-4 tail fix (2026-08-17 review, LOW-7): anchored on the FULL real
+// message shape ("has exhausted its <window> test budget (<...>). Customer
+// traffic is unaffected") rather than the bare "has exhausted its .* test
+// budget" substring. The looser form risked matching any future message
+// that happened to contain that phrase without actually being a
+// BudgetExhaustedError (e.g. a capability echoing vendor-quota language in
+// an unrelated error) and misclassifying a real upstream/capability signal
+// as test_infrastructure.
+const INFRA_BUDGET_PATTERNS = [
+  /has exhausted its .+ test budget \(.+\)\.\s*Customer traffic is\s*unaffected/i,
+];
+
 // Browserless billing/quota (our infrastructure) — NOT target site failures.
 // Browserless 500 and navigation timeouts go to upstream_transient below.
 const INFRA_BROWSERLESS_PATTERNS = [
@@ -136,6 +158,30 @@ const INPUT_REJECTION_PATTERNS = [
   /is required/i,
   /expected.*string.*got/i,
   /expected.*number.*got/i,
+];
+
+// Phase-4 tail fix (2026-08-17): executor-thrown COMPLIANCE refusals — the
+// executor deliberately declines an input shape because no compliant data
+// path exists for it (e.g. polish-company-data.ts:150-157 refusing
+// name-based search: "Polish company name search is unavailable: the only
+// compliant data path is the KRS API by registration number. ..."). This is
+// the same test_design class as INPUT_REJECTION_PATTERNS above — the test
+// sent an unsupported input and the executor correctly refused it — but the
+// phrasing doesn't contain "required"/"invalid input"/"must provide", so it
+// needs its own pattern set. Not a capability bug and not an upstream
+// failure: a correct refusal per DEC-20260428-A must not trip breakers or
+// count against quality signal (feedback_refusal_is_not_a_fault.md).
+//
+// Phase-4 tail fix (2026-08-17 review, LOW-7): anchored on the fuller real
+// prefix ("<X> search is unavailable: the only compliant data path is")
+// instead of the bare substring "only compliant data path". The looser
+// form would have matched an unrelated message like "only compliant data
+// path returned HTTP 500" (a genuine upstream failure that happens to
+// share that fragment) and misclassified it as a high-confidence
+// test_design refusal instead of the real upstream_transient/
+// capability_bug verdict.
+const COMPLIANCE_REFUSAL_PATTERNS = [
+  /search is unavailable: the only compliant data path is/i,
 ];
 
 // Upstream returned empty/HTML instead of expected data — transient
@@ -210,6 +256,14 @@ export function classifyFailure(
     };
   }
 
+  if (matchesAny(reason, INFRA_BUDGET_PATTERNS)) {
+    return {
+      verdict: "test_infrastructure",
+      confidence: "high",
+      reason: `Scheduler skipped/failed due to exhausted test budget: ${truncate(reason, 120)}`,
+    };
+  }
+
   if (matchesAny(reason, INFRA_BROWSERLESS_PATTERNS)) {
     return {
       verdict: "test_infrastructure",
@@ -262,6 +316,18 @@ export function classifyFailure(
       verdict: "test_design",
       confidence: "high",
       reason: `Executor rejected input (expected for negative/edge_case tests): ${truncate(reason, 120)}`,
+    };
+  }
+
+  // ── 5b. COMPLIANCE REFUSAL (test_design) ───────────────────────────────
+  // Executor correctly refused an input shape with no compliant data path
+  // (e.g. polish-company-data refusing name-based search). Same class as
+  // input rejection above: a correct refusal, not a fault.
+  if (!executionSucceeded && matchesAny(reason, COMPLIANCE_REFUSAL_PATTERNS)) {
+    return {
+      verdict: "test_design",
+      confidence: "high",
+      reason: `Executor refused a non-compliant input shape (deliberate compliance refusal, not a bug): ${truncate(reason, 120)}`,
     };
   }
 
