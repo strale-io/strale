@@ -170,3 +170,95 @@ describe("followRedirects — loop mechanics (F-0-006)", () => {
     expect(response.status).toBe(302);
   });
 });
+
+// ── Suite 4: returnOnCap (Phase-4 tail fix, redirect-trace's core bug) ────────
+//
+// Before this flag existed, `maxRedirects: 0` made safeFetch ALWAYS throw on
+// the first redirect: `followRedirects` increments `hop` to 1 before the
+// `hop > maxRedirects` check, so `1 > 0` is true on every redirect,
+// including the very first one. redirect-trace's own comment said it
+// expected "the first 3xx response returned" — that was never true until
+// this flag. See safe-fetch.ts's SafeFetchOptions doc + redirect-trace.ts.
+describe("followRedirects — returnOnCap (Phase-4 tail fix)", () => {
+  it("returns the 3xx response at the cap instead of throwing when returnOnCap is true", async () => {
+    const base = await startServer((req, res) => {
+      if (req.url === "/start") {
+        res.statusCode = 302;
+        res.setHeader("location", "/end");
+        res.end();
+      } else {
+        res.statusCode = 200;
+        res.end("final");
+      }
+    });
+    const response = await followRedirects(
+      `${base}/start`,
+      {},
+      0, // maxRedirects: 0 — the exact redirect-trace call shape.
+      async () => {},
+      true, // returnOnCap
+    );
+    // Pre-fix this threw "Too many redirects (>0)". Post-fix it returns
+    // the first hop's 302 so the caller can walk the chain itself.
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/end");
+  });
+
+  it("still throws past the cap when returnOnCap is false (default) — existing callers unaffected", async () => {
+    const base = await startServer((req, res) => {
+      if (req.url === "/start") {
+        res.statusCode = 302;
+        res.setHeader("location", "/end");
+        res.end();
+      } else {
+        res.statusCode = 200;
+        res.end("final");
+      }
+    });
+    await expect(
+      followRedirects(`${base}/start`, {}, 0, async () => {}),
+    ).rejects.toThrow(/Too many redirects \(>0\)/);
+  });
+
+  it("does not return early when the response at the cap boundary is not a redirect", async () => {
+    const base = await startServer((_req, res) => {
+      res.statusCode = 200;
+      res.end("no redirect here");
+    });
+    const response = await followRedirects(
+      `${base}/`,
+      {},
+      0,
+      async () => {},
+      true,
+    );
+    expect(response.status).toBe(200);
+  });
+
+  it("validates every hop's URL before fetching it, even in returnOnCap mode", async () => {
+    const validated: string[] = [];
+    const base = await startServer((req, res) => {
+      if (req.url === "/start") {
+        res.statusCode = 302;
+        res.setHeader("location", "/end");
+        res.end();
+      } else {
+        res.statusCode = 200;
+        res.end("final");
+      }
+    });
+    await followRedirects(
+      `${base}/start`,
+      {},
+      0,
+      async (u) => {
+        validated.push(u);
+      },
+      true,
+    );
+    // With maxRedirects: 0 + returnOnCap, only the starting URL is fetched
+    // (the 302 is returned to the caller rather than followed) — but that
+    // one hop must still have gone through validation first.
+    expect(validated).toEqual([`${base}/start`]);
+  });
+});

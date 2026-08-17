@@ -1,11 +1,17 @@
 ---
-description: End-of-session verification — runs the close-check, then writes the handoff file and Journal entry, and surfaces loose threads.
-argument-hint: "(no args)"
+name: "source-command-end-session"
+description: "End-of-session verification — runs the close-check, then writes the handoff file and Journal entry, and surfaces loose threads."
 ---
+
+# source-command-end-session
+
+Use this skill when the user asks to run the migrated source command `end-session`.
+
+## Command Template
 
 # /end-session — verify, then write session artifacts + surface loose threads
 
-Purpose: complete the CLAUDE.md Quick Session Checklist on Petter's behalf. **This command DOES write the handoff file and Journal entry** — that's the standing preference (set 2026-04-27). It still does not create Decisions DB entries, To-do mutations, or other governance artifacts without explicit per-item approval.
+Purpose: complete CLAUDE.md's Quick Session Checklist on Petter's behalf (AGENTS.md → "Session Checklists" carries the Codex-flavored pointer to the same list — AGENTS.md has no numbered checklist of its own, CLAUDE.md's is canonical). **This command DOES write the handoff file and Journal entry** — that's the standing preference (set 2026-04-27). It still does not create Decisions DB entries, To-do mutations, or other governance artifacts without explicit per-item approval.
 
 Run these steps in order. After the checks, write the artifacts (steps 2 and 3) before producing the final report.
 
@@ -17,7 +23,7 @@ cd apps/api && npx tsx --env-file=../../.env scripts/session-close-check.ts
 
 Checks git integrity, DB↔code parity, stuck caps, open breakers, uncommitted handoff files. Exit codes: `0` clean, `1` warnings, `2` blockers. Capture findings for the final report.
 
-## 2. Write the session handoff file (CLAUDE.md step 7)
+## 2. Write the session handoff file (CLAUDE.md Quick Session Checklist step 7)
 
 Author a handoff file at `handoff/_general/from-code/YYYY-MM-DD-<topic>.md` covering this session's work. Convention:
 
@@ -29,21 +35,21 @@ If a handoff file authored *this session* already exists for today's topic (e.g.
 
 If the session was genuinely trivial (single trivial fix, nothing worth recording), still write a one-line handoff. Skipping is Petter's call, not yours.
 
-## 3. Create the Journal entry in Notion (CLAUDE.md step 8)
+## 3. Create the Journal entry in Notion (CLAUDE.md Quick Session Checklist step 8)
 
 Create a session-log entry in the Journal data source (`collection://8f54383b-3227-42c2-bee4-77a091027f8f`) with:
 
 - `Title`: `Session log — <topic> YYYY-MM-DD` (matches existing entry pattern)
 - `Type`: `session`
 - `Source`: `code`
-- `Actor`: `claude-code`
+- `Actor`: `Codex`
 - `Action Required`: `no` (unless the session left explicit follow-ups for Petter)
 - `Content`: mirror the handoff file's structure — Intent, Outcome, Open, Non-obvious learnings. Don't duplicate the entire handoff verbatim, but cover the same ground.
 
-If a Journal entry from this session already exists, don't duplicate — report its title + URL. Use `notion-search` with `filters.created_date_range` = today and `Actor = claude-code` to check first.
+If a Journal entry from this session already exists, don't duplicate — report its title + URL. Use `notion-search` with `filters.created_date_range` = today and `Actor = Codex` to check first.
 
 **What this step does NOT do:**
-- Create Decisions DB entries — those still require explicit Petter approval per CLAUDE.md governance authority thresholds.
+- Create Decisions DB entries — those still require explicit Petter approval per AGENTS.md governance authority thresholds.
 - Mutate the To-do DB — flag drift only.
 - Update memory unless explicitly asked.
 
@@ -51,19 +57,19 @@ If a Journal entry from this session already exists, don't duplicate — report 
 
 Query the To-do DB (`collection://33a67c87-082c-8033-8ac5-000ba9922392`):
 
-a. **"In progress" items owned by `Claude code`:** list them. Are any actually abandoned (haven't been touched in days)? Surface them — user decides what to do.
+a. **"In progress" items owned by `Codex`:** list them. Are any actually abandoned (haven't been touched in days)? Surface them — user decides what to do.
 
-b. **"Done" items updated today:** per CLAUDE.md "Move completed To-do items to Archive > Completed To-dos (page `34067c87-082c-814e-a45c-fa8d851c8f12`)", these should be archived. Flag if any aren't yet.
+b. **"Done" items updated today:** per AGENTS.md "Move completed To-do items to Archive > Completed To-dos (page `34067c87-082c-814e-a45c-fa8d851c8f12`)", these should be archived. Flag if any aren't yet.
 
 Do NOT mutate status. Flag only.
 
 ## 5. Check for contradictions / unlogged decisions
 
-Review the conversation for signals that require governance action per CLAUDE.md:
+Review the conversation for signals that require governance action per AGENTS.md:
 
 - **Decisions made** (the user authorized a non-trivial tradeoff): check Decisions DB (`ea57671f-7167-44e4-a254-c0a1de79e7f9`) for an entry matching; flag if missing.
-- **Contradictions with active Decisions**: per CLAUDE.md Workflow Invariants, supersessions must use the Contradiction Protocol. If this session contradicted an existing Decision without following it, flag RED.
-- **Memory of precedent**: if something was agreed that'd benefit future sessions, user may want to save it to memory or update CLAUDE.md.
+- **Contradictions with active Decisions**: per AGENTS.md Workflow Invariants, supersessions must use the Contradiction Protocol. If this session contradicted an existing Decision without following it, flag RED.
+- **Memory of precedent**: if something was agreed that'd benefit future sessions, user may want to save it to memory or update AGENTS.md.
 
 Flag; do not mutate.
 
@@ -104,7 +110,7 @@ Ready to close? (yes / [which item you want to address first])
 ## Rules
 
 - **Write the handoff file and Journal entry** as part of the standard flow — Petter set this preference 2026-04-27. Don't ask first; don't flag them as missing for him to write. Skip only if a session-authored handoff for the same topic already exists.
-- **Never create a Decisions DB entry on the user's behalf.** Decisions still require explicit Petter approval per CLAUDE.md governance authority thresholds. Flag if the session made a decision that needs logging.
+- **Never create a Decisions DB entry on the user's behalf.** Decisions still require explicit Petter approval per AGENTS.md governance authority thresholds. Flag if the session made a decision that needs logging.
 - **Never mutate Notion to-do status** without explicit per-item user confirmation.
 - If `DATABASE_URL` isn't set, skip DB checks and flag in the report.
 - If Notion MCP tools are unavailable, write the handoff file anyway (filesystem); skip the Journal step and flag loudly — never silently proceed.

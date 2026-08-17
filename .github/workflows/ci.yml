@@ -115,17 +115,19 @@ jobs:
       # script header for why identifier-format + checksum was chosen over
       # a name-shaped heuristic for the wider scope.
       - run: node apps/api/scripts/check-pii.mjs --strict
-      # Phase 1 tier-coverage gate (WARN-ONLY). For each manifest with a
+      # Tier-coverage gate (STRICT since 2026-08-17 — zero unallowlisted findings). For each manifest with a
       # captured response fixture at apps/api/test/fixtures/tier-coverage/
       # <slug>.json, compares empirical wire-shape against manifest
       # declarations: guaranteed-reliability fields must be populated;
       # populated fields must be declared in both output_field_reliability
-      # and output_schema.properties. Phase 1 exits 0 regardless of
-      # findings — surfacing the WARN signal in CI logs is the value.
-      # Phase 2 promotion (separate PR) flips --strict to exit 1 after
-      # the WARN findings are reviewed and the allowlist is established.
+      # and output_schema.properties. --strict now ENFORCES: any finding
+      # not listed in scripts/tier-coverage-allowlist.txt fails this step.
+      # Grandfathered findings stay in that allowlist until their manifest
+      # is fixed (recapture, or declare the missing fields directly — see
+      # the allowlist file's own header for when each applies). New slugs
+      # with new findings fail CI on first appearance, by design.
       # See script header for findings classification + extension notes.
-      - run: node apps/api/scripts/check-tier-coverage.mjs
+      - run: node apps/api/scripts/check-tier-coverage.mjs --strict
       # DEC-20260513-D Phase 3 Harden gate (a): canonical-input sentinel for
       # Identity capabilities. Catches the GR-PR-#116 class of bad-shape
       # fixture (branch entity asserted, dissolved status equals-asserted,

@@ -22,34 +22,34 @@ output_schema:
   type: object
   example:
     chain:
-      - url: https://httpbin.org/redirect/2
+      - url: http://microsoft.com/
         step: 1
-        server: gunicorn/19.9.0
-        location: /relative-redirect/1
-        latency_ms: 3
-        status_code: 302
-        status_text: FOUND
-      - url: https://httpbin.org/relative-redirect/1
+        server: null
+        location: https://microsoft.com/
+        latency_ms: 60
+        status_code: 307
+        status_text: Temporary Redirect
+      - url: https://microsoft.com/
         step: 2
-        server: gunicorn/19.9.0
-        location: /get
-        latency_ms: 4
-        status_code: 302
-        status_text: FOUND
-      - url: https://httpbin.org/get
+        server: null
+        location: https://www.microsoft.com/
+        latency_ms: 55
+        status_code: 301
+        status_text: Moved Permanently
+      - url: https://www.microsoft.com/
         step: 3
-        server: gunicorn/19.9.0
+        server: null
         location: null
-        latency_ms: 5
+        latency_ms: 70
         status_code: 200
         status_text: OK
     issues: []
-    final_url: https://httpbin.org/get
+    final_url: https://www.microsoft.com/
     uses_https: true
-    same_domain: true
-    original_url: https://httpbin.org/redirect/2
+    same_domain: false
+    original_url: http://microsoft.com/
     redirect_count: 2
-    total_latency_ms: 12
+    total_latency_ms: 185
     final_status_code: 200
   properties:
     chain:
@@ -73,7 +73,14 @@ geography: global
 test_fixtures:
   known_answer:
     input:
-      url: https://httpbin.org/redirect/2
+      # Swapped off httpbin.org (2026-08-17, Phase-4 tail fix) — httpbin's
+      # /redirect/N endpoint 503s often enough that the known_answer test
+      # was silently skipping the redirect branch (a 503 isn't a redirect,
+      # so the test "passed" without ever exercising the chain-walk logic —
+      # exactly how the safeFetch maxRedirects:0 regression went
+      # undetected). http://microsoft.com is a real, stable 2-hop chain
+      # (307 http->https, then 301 apex->www) verified live.
+      url: http://microsoft.com
     expected_fields:
       - field: chain
         operator: not_null
@@ -104,7 +111,7 @@ test_fixtures:
         reliability: guaranteed
         value: string
   health_check_input:
-    url: https://httpbin.org/redirect/1
+    url: http://microsoft.com
 output_field_reliability:
   chain: guaranteed
   issues: guaranteed
