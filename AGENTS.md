@@ -35,11 +35,13 @@ pointer: CLAUDE.md → "Notion Access" / "Notion Workspace Structure" /
 
 ## Tech Stack & Project Structure
 
-Node.js + TypeScript, Hono, PostgreSQL + Drizzle, Stripe Checkout (wallet
-top-ups, no Connect), Railway (US East), Browserless.io (managed, never
-self-hosted Puppeteer). Monorepo: `apps/api` (Hono server), `packages/*`
-(SDKs, MCP server, framework plugins). Full tree diagram and package list:
-CLAUDE.md → "Tech Stack" / "Project Structure".
+Node.js + TypeScript, Hono, PostgreSQL + Drizzle. Monorepo: `apps/api` (Hono
+server), `packages/*` (SDKs, MCP server, framework plugins). Hosting,
+processing region, payments vendor, and headless-browser vendor are the kind
+of facts this file doesn't restate (vendor names and processing region are
+canonical drift-prevention surfaces — see below): read CLAUDE.md → "Tech
+Stack" or `GET /v1/platform/facts`. Full tree diagram and package list:
+CLAUDE.md → "Project Structure".
 
 ## Shared-Checkout Rule (concurrency safety — read before touching git)
 
@@ -107,13 +109,13 @@ of every protocol (required steps, background incident, end-of-session
 report format, what it does/doesn't override) lives in CLAUDE.md under the
 matching heading — read it before acting once a trigger fires.
 
-| Trigger | Protocol | CLAUDE.md heading |
+| Trigger (verbatim scope from CLAUDE.md — treat as a superset, not a paraphrase) | Protocol | CLAUDE.md heading |
 |---|---|---|
-| New/modified capability, executor file, manifest, capability DB row | Capability Onboarding Protocol (DEC-20260320-B) | "Adding New Capabilities (MANDATORY PIPELINE)" + "Capability Onboarding Protocol" |
-| Touching a PR on a non-`strale-io/*` repo, or modifying `packages/*-strale/` | Distribution PR Integrity Protocol (DEC-20260422-A) | "Distribution PR Integrity Protocol" |
-| Commit referencing a cert-audit finding (Y-/A-/B-/RED-/MED-/CRIT-/F-AUDIT-), or touching wallet/audit-trail/spend-cap/idempotency code | Audit-Follow-up Test Coverage Protocol (DEC-20260504-A) | "Audit-Follow-up Test Coverage Protocol" |
-| Deploy that fixes a long-silent bulk operation (retention, archival, reconciliation, batch, cleanup) | Bulk-Operation Deploy Protocol (DEC-20260504-B) | "Bulk-Operation Deploy Protocol" |
-| PR adding a code path that depends on deploy-pipeline behavior (migrations, env vars, build steps, startup hooks, cron) | Deploy Mechanism Verification Protocol (DEC-20260504-C) | "Deploy Mechanism Verification Protocol" |
+| New executor file in `src/capabilities/`, new or modified DB row in `capabilities` table, new capability slug, manifest file, seed entry, OR the prompt mentions adding/creating a capability | Capability Onboarding Protocol (DEC-20260320-B) | "Adding New Capabilities (MANDATORY PIPELINE)" + "Capability Onboarding Protocol" |
+| The session prompt mentions a PR on a framework repo (Pipedream, LangFlow, Flowise, pydantic-ai, langchain, crewAI, agno, composio, semantic-kernel, awesome-list, etc.), OR modifies files under `packages/*-strale/`, OR edits PyPI/npm publication metadata | Distribution PR Integrity Protocol (DEC-20260422-A) | "Distribution PR Integrity Protocol" |
+| The commit message references a cert-audit finding code (Y-/A-/B-/RED-/MED-/CRIT-/F-AUDIT-), OR the change adds/modifies a function that runs inside a wallet transaction, an audit-trail builder, a chain-integrity primitive, a spend-cap check, an idempotency check, or **any other money/compliance-critical path** | Audit-Follow-up Test Coverage Protocol (DEC-20260504-A) | "Audit-Follow-up Test Coverage Protocol" |
+| ANY deploy that fixes a long-silent bulk operation (retention, archival, reconciliation, batch processing, periodic cleanup) | Bulk-Operation Deploy Protocol (DEC-20260504-B) | "Bulk-Operation Deploy Protocol" |
+| ANY PR that adds a code path which depends on a deploy-pipeline behavior (migrations running, env vars read, build steps, startup hooks, **scheduled jobs**, cron triggers) | Deploy Mechanism Verification Protocol (DEC-20260504-C) | "Deploy Mechanism Verification Protocol" |
 
 Also always in force: Test Infrastructure Cost Principles (zero-cost health
 probes, input validation before paid APIs, piggyback suites never scheduled)
@@ -127,22 +129,20 @@ are exempt.
 
 ## Active Decisions
 
-Full list and text: CLAUDE.md → "Active Decisions". Do not restate the list
-here — it drifts. The ones every session should know exist:
+Full list and text: CLAUDE.md → "Active Decisions". Do not restate decision
+content here — thresholds, bands, and constraints inside a Decision are
+exactly the kind of thing that drifts; read CLAUDE.md (or the linked Notion
+Decisions DB entry) for the actual text before acting on any of these. The
+IDs every session should know exist, topic only, no numbers:
 
-- **DEC-20260812-A** — Readiness program (library-as-product, x402 primary
-  rail) is the operating strategy; Counterparty Assurance retired as primary
-  product; quality-floor quarantine/deactivation thresholds; escalation
-  contract for platform-acts-alone vs. human-decides.
-- **DEC-20260813-A** — Per-call HTML/PDF parsing of statutorily-public
-  registry pages is permitted under four constraints (statutorily public,
-  ToS permits per-call access, per-entity never bulk, attribution +
-  provenance preserved). Still absolute: bulk crawling, ToS-prohibited
-  targets, robots.txt evasion, CAPTCHA solving, proxy rotation, login-wall
-  circumvention.
-- **DEC-20260815-A** — Operating charter (see below).
-- **DEC-20260428-A / -B** — Third-party scraping doctrine (three-tier) and
-  the engineering bar for Strale-built regulatory-grade data services.
+- **DEC-20260812-A** — Readiness program / operating strategy.
+- **DEC-20260813-A** — Scraping-doctrine interpretation (per-call registry
+  parsing).
+- **DEC-20260815-A** — Operating charter. Division of authority kept inline
+  below (the one Decision this file restates, deliberately).
+- **DEC-20260428-A** — Third-party scraping doctrine (three-tier).
+- **DEC-20260428-B** — Engineering bar for Strale-built regulatory-grade
+  data services.
 
 **Conflict duty:** if a request would contradict an active Decision, state
 the conflict before proceeding — quote the Decision, ask the human to
@@ -153,20 +153,31 @@ confirm, supersede, or revise.
 Full text: `docs/company/CHARTER.md` (authoritative if this paragraph and
 CLAUDE.md ever diverge). Governing principle: *the tier of risk stays the
 same, the width expands.* No technical question goes to Petter — architecture,
-implementation, what to measure, what to build and in what order, testing,
-tooling, and vendor-API choice are all Claude's/Codex's to decide;
+implementation, what to measure and how, what to build and in what order,
+testing, tooling, and vendor-API choice are all Claude's/Codex's to decide;
 asking him to arbitrate a technical choice is a failure of the role. The
 agent also decides-then-tells on: turning services on/off, pricing inside
 the existing €0.02–€1.00 band, quality gates, quarantine/promote, refunds,
 retries, delisting, merging its own work once repo gates pass, dispatching
 agents, scheduling sessions, and spend inside €50/week. **Petter alone
-decides:** spend beyond the envelope, anything legally binding Moonlighter
-AB (accounts, terms, vendor contracts), one-way public acts, pricing outside
-the band, and regulator-facing claims. **Shipping is never Petter's
-decision** — the session that opens a PR merges it and reports afterwards in
-plain English. Customer-data boundary (no outreach derived from transaction
-evidence, anonymous-only telemetry insight, 90-day redaction) is fixed;
-widening it is Petter's explicit call.
+decides — reserved, not delegable:** spend beyond the €50/week envelope;
+anything that legally binds Moonlighter AB, which the charter defines
+broadly — creating accounts, accepting terms, signing agreements, or
+**contacting a vendor as the company at all** (not just signing a contract);
+one-way public acts (publishing a package version that can't be unpublished,
+a first statement in a channel never used before); pricing outside the
+existing band; and anything a regulator would read as a claim about the
+product. The charter's founder-gated list is broader still — vendor/license
+commitments, deactivating revenue earners, DEC-20260428-B-grade builds, new
+external claims, anything outward-facing (published packages, directory
+submissions, vendor contact, social), legal/grey-zone judgment — read
+`docs/company/CHARTER.md` before assuming an ambiguous action is delegated;
+default to `approval_required` on the decision queue when unclear, never to
+acting alone. **Shipping is never Petter's decision** — the session that
+opens a PR merges it and reports afterwards in plain English. Customer-data
+boundary (no outreach derived from transaction evidence, anonymous-only
+telemetry insight, 90-day redaction) is fixed; widening it is Petter's
+explicit call.
 
 ## Capabilities & Quality
 
@@ -185,9 +196,10 @@ drift:
   10/day limit.
 - x402 (pay-per-use USDC on Base) is DB-driven: `x402_enabled` on the
   `capabilities` row. Catalog: `GET /x402/catalog`.
-- KYB Essentials/Complete and Invoice Verify solution families (×20
-  countries) have predecessors that overlap them (`kyc-sweden`,
-  `kyc-norway`, `kyc-denmark`, `kyc-finland`, `verify-us-company`). Their
+- KYB Essentials/Complete and Invoice Verify solution families (multi-country
+  — see the `solutions` table for the current country list) have
+  predecessors that overlap them (`kyc-sweden`, `kyc-norway`,
+  `kyc-denmark`, `kyc-finland`, `verify-us-company`). Their
   active/deprecated status is **not** recorded in either CLAUDE.md or here —
   production contradicted a stale "deprecated" note on 2026-08-14. Read
   `is_active` / `x402_enabled` on the `solutions` table before acting on any
@@ -206,7 +218,7 @@ counts, retention period, vendor names, free-tier list, processing region),
 update **only** the canonical source and let consumers read from it:
 `apps/api/src/lib/platform-facts.ts` (backend) → `GET /v1/platform/facts` →
 `usePlatformFacts()` (frontend). CI guard:
-`apps/api/scripts/check-platform-facts-drift.mjs`. For vendor switches
+`apps/api/scripts/check-platform-facts-drift.ts`. For vendor switches
 specifically, use the `vendor-switch` skill
 (`.agents/skills/vendor-switch/SKILL.md`) — it codifies the full
 surface-update + DEC-entry checklist. Full detail (wire-shape rules for

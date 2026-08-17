@@ -67,7 +67,7 @@ cd apps/api && npx tsx --env-file=../../.env scripts/sync-manifest-canonical-to-
 ## Step 4 — Run the drift sweep — twice
 
 ```bash
-node apps/api/scripts/check-platform-facts-drift.mjs
+cd apps/api && npx tsx scripts/check-platform-facts-drift.ts
 ```
 
 The first run shows everything that still references the old vendor —
@@ -128,8 +128,8 @@ Specifically check:
 ```bash
 cd apps/api && npm test                                         # full suite
 npm run typecheck                                                # tsc clean
-node apps/api/scripts/check-platform-facts-drift.mjs --strict   # 0 drift
-node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict  # no new offenders
+npx tsx scripts/check-platform-facts-drift.ts --strict           # 0 drift
+node scripts/check-fetch-timeout-coverage.mjs --strict           # no new offenders
 ```
 
 Open the PR with the DEC draft inline in the description. The reviewer
