@@ -14,10 +14,22 @@
   // to the full `scripts/**/*` + `test/**/*`. Run via `npm run
   // typecheck:scripts --workspace=apps/api`, chained into the root
   // `typecheck` script and into CI (ci.yml).
+  //
+  // DECLARED BOUNDARY (Codex review, 2026-08-17): this config is TS/MTS only
+  // — it does NOT type-check the 25 non-archived .mjs files in
+  // apps/api/scripts (several of which are themselves CI gate scripts, e.g.
+  // check-pii.mjs, check-tier-coverage.mjs). Tried turning on
+  // allowJs+checkJs here first: it surfaces 166 errors across all 25 files
+  // (mostly noImplicitAny — checkJs on unannotated JS is not a small lift),
+  // well past the ~30 threshold for a same-pass mechanical fix. Real .mjs
+  // coverage is intentionally deferred rather than silently absent: see
+  // `check-mjs-syntax.mjs` (wired into ci.yml) for the syntax-level floor
+  // that exists today, and treat full .mjs type-checking (convert to .mts,
+  // or add JSDoc + checkJs per-file) as open Phase 3 debt, not closed here.
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["scripts/**/*", "test/**/*"],
+  "include": ["scripts/**/*.ts", "scripts/**/*.mts", "scripts/**/*.cts", "test/**/*"],
   "exclude": ["node_modules", "dist", "scripts/archive/**"]
 }

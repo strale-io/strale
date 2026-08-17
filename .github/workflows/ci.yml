@@ -45,6 +45,16 @@ jobs:
       # test/ were tsx-transpiled but never checked, and the four packages
       # were never built or typechecked in CI at all.
       - run: npm run typecheck
+      # Codex review follow-up (2026-08-17, same PR as the T2.1 typecheck
+      # widening above): tsconfig.scripts.json is TS/MTS only — it does NOT
+      # cover the 25 non-archived .mjs files in apps/api/scripts, several of
+      # which are themselves CI gate scripts (check-pii.mjs,
+      # check-tier-coverage.mjs, etc.). Full checkJs coverage surfaced 166
+      # errors (mostly noImplicitAny) when trialed, too large for a
+      # same-pass fix — see tsconfig.scripts.json's DECLARED BOUNDARY
+      # comment. This is the syntax-level floor in the meantime: proves
+      # every .mjs parses as valid ESM, no more.
+      - run: node apps/api/scripts/check-mjs-syntax.mjs
       - run: npm --workspace=apps/api run lint:no-bare-catch
       # Money-integrity 2026-08-12: caller-URL capabilities must use safeFetch
       # or the ToS gate — raw fetch shipped as blocklist side doors ten times.
