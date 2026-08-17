@@ -123,6 +123,39 @@ async function main() {
       })
       .join(', ');
     console.log(`Failed request logs: ${total}  (${breakdown})`);
+
+    // Split by crawler vs plain-client user agents
+    const crawlerSplit = await sql`
+      SELECT
+        COUNT(*) FILTER (WHERE user_agent ~* 'bot|probe|monitor|crawl|explorer|healthcheck|health check|survey|oracle|census|index|discovery')::int AS crawler,
+        COUNT(*) FILTER (WHERE user_agent IS NULL OR user_agent !~* 'bot|probe|monitor|crawl|explorer|healthcheck|health check|survey|oracle|census|index|discovery')::int AS plain
+      FROM failed_requests f
+      LEFT JOIN users u ON u.id = f.user_id
+      WHERE f.created_at > ${since.toISOString()}
+        AND (u.email IS NULL OR u.email <> ALL(${EXCLUDED_EMAILS}))
+    `;
+    const cs = crawlerSplit[0];
+    console.log(`  crawler-UA probes: ${cs.crawler}, plain-client: ${cs.plain}`);
+
+    // Top plain-client x402_* failure types
+    const plainClientX402 = await sql`
+      SELECT f.failure_type, COUNT(*)::int AS n
+      FROM failed_requests f
+      LEFT JOIN users u ON u.id = f.user_id
+      WHERE f.created_at > ${since.toISOString()}
+        AND (u.email IS NULL OR u.email <> ALL(${EXCLUDED_EMAILS}))
+        AND f.failure_type LIKE 'x402_%'
+        AND (f.user_agent IS NULL OR f.user_agent !~* 'bot|probe|monitor|crawl|explorer|healthcheck|health check|survey|oracle|census|index|discovery')
+      GROUP BY f.failure_type
+      ORDER BY n DESC
+      LIMIT 8
+    `;
+    if (plainClientX402.length > 0) {
+      console.log(`\n--- not-on-rail / unknown-slug demand (plain-client UAs only; heuristic — enumerators sometimes use plain UAs) ---`);
+      for (const r of plainClientX402) {
+        console.log(`  ${r.failure_type}: ${r.n}`);
+      }
+    }
   } else {
     console.log(`Failed request logs: 0`);
   }
