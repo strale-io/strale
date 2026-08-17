@@ -230,3 +230,73 @@ describe("the incident this fixes", () => {
     expect(excused("SEC EDGAR search returned HTTP 500")).toBe(false);
   });
 });
+
+describe("LLM output-truncation refusal (2026-08-17 web-extract quarantine incident)", () => {
+  // web-extract calls Claude Haiku with a fixed max_tokens and never checked
+  // stop_reason. A ~100-name roster page hit the cap, the response came back
+  // truncated mid-JSON, extractJsonObject correctly returned null (unbalanced
+  // braces), and the capability threw "Failed to parse extraction result as
+  // JSON. Raw response: ...". INTERNAL_RE's "failed to parse" match classified
+  // that as `internal` — our fault — and the armed quality floor
+  // (DEC-20260812-A) quarantined a revenue-earning capability over its own
+  // truncation bug. web-extract.ts and product-reviews-extract.ts now detect
+  // `stop_reason === "max_tokens"` and throw a distinct, actionable refusal
+  // BEFORE attempting to parse, instead of letting it fall through to the
+  // generic parse-failure error.
+
+  const WEB_EXTRACT_TRUNCATION_REFUSAL =
+    "Extraction result too large for one call: the output exceeded the per-call budget before completing. " +
+    "Narrow your 'extract' instruction or split the request (e.g. one page or one section at a time).";
+
+  const PRODUCT_REVIEWS_TRUNCATION_REFUSAL =
+    "Extraction result too large for one call: the output exceeded the per-call budget before completing. " +
+    "Try a page with fewer reviews — this capability extracts up to ~10 recent reviews per call.";
+
+  it("classifies the new truncation refusal as caller_input, not internal — the whole point of the fix", () => {
+    expect(classOf(WEB_EXTRACT_TRUNCATION_REFUSAL)).toBe("caller_input");
+    expect(excused(WEB_EXTRACT_TRUNCATION_REFUSAL)).toBe(true);
+    expect(classOf(PRODUCT_REVIEWS_TRUNCATION_REFUSAL)).toBe("caller_input");
+    expect(excused(PRODUCT_REVIEWS_TRUNCATION_REFUSAL)).toBe(true);
+  });
+
+  it("the legacy generic parse-failure message — genuinely malformed, non-truncation output — still classifies as internal (must not regress)", () => {
+    // This is the exact message shape that caused the 2026-08-17 quarantine.
+    // It must keep classifying as `internal`: web-extract.ts only throws it
+    // now for non-truncation parse failures, which really are our defect
+    // (bad prompt, model went off-script) and must keep counting against the
+    // capability so the floor retains its teeth for a genuine regression.
+    const legacyMessage =
+      'Failed to parse extraction result as JSON. Raw response: {"data": {"headline": "broken';
+    expect(classOf(legacyMessage)).toBe("internal");
+    expect(excused(legacyMessage)).toBe(false);
+  });
+
+  it("does not misfire on INTERNAL_RE's own patterns — the new phrase shares no vocabulary with 'failed to parse' or 'response parse failed'", () => {
+    // Guards the ordering requirement directly: INTERNAL_RE runs before
+    // CALLER_INPUT_RE, so if the new refusal text ever drifted to contain
+    // "parse" it would silently flip back to `internal`.
+    expect(WEB_EXTRACT_TRUNCATION_REFUSAL).not.toMatch(/failed to parse|response parse failed|in JSON at position|unterminated string/i);
+    expect(PRODUCT_REVIEWS_TRUNCATION_REFUSAL).not.toMatch(/failed to parse|response parse failed|in JSON at position|unterminated string/i);
+  });
+
+  it("is recognised through the shared CapabilityRefusalError machinery, not a bespoke taxonomy-only pattern", async () => {
+    // The pattern is registered once, in capability-refusal.ts's
+    // REFUSAL_MESSAGE_PATTERNS, and taxonomy.ts's CALLER_INPUT_RE spreads it
+    // in — the same three-consumer arrangement (breaker / taxonomy /
+    // quality-capture) the registry-refusal patterns already use.
+    const { isRefusalMessage, isCapabilityRefusal, CapabilityRefusalError } = await import(
+      "./capability-refusal.js"
+    );
+    const { isUserInputError } = await import("./circuit-breaker.js");
+    const { categorizeError } = await import("./quality-capture.js");
+
+    expect(isRefusalMessage(WEB_EXTRACT_TRUNCATION_REFUSAL)).toBe(true);
+    expect(isCapabilityRefusal(WEB_EXTRACT_TRUNCATION_REFUSAL)).toBe(true);
+    expect(isUserInputError(WEB_EXTRACT_TRUNCATION_REFUSAL)).toBe(true);
+    expect(categorizeError(WEB_EXTRACT_TRUNCATION_REFUSAL)).toBe("capability_refusal");
+
+    const err = new CapabilityRefusalError(WEB_EXTRACT_TRUNCATION_REFUSAL);
+    expect(isCapabilityRefusal(err)).toBe(true);
+    expect(categorizeError(err)).toBe("capability_refusal");
+  });
+});

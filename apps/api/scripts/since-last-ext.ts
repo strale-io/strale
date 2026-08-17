@@ -7,6 +7,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_FILE = resolve(__dirname, "../../../.claude/state/last-activity-check.json");
 const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", SYSTEM_ACCOUNT_EMAIL, "test@example.com"];
 
+// Heuristic split of failed_requests user agents: self-identifying discovery
+// crawlers / health probes vs everything else ("plain" clients — node, axios,
+// NULL). Tune here only; both queries below interpolate this one pattern.
+const CRAWLER_UA_PATTERN =
+  "bot|probe|monitor|crawl|explorer|healthcheck|health check|survey|oracle|census|index|discovery";
+
 function fmtCET(d: Date): string {
   const parts = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "Europe/Stockholm",
@@ -123,6 +129,42 @@ async function main() {
       })
       .join(', ');
     console.log(`Failed request logs: ${total}  (${breakdown})`);
+
+    // Split by crawler vs plain-client user agents
+    const crawlerSplit = await sql`
+      SELECT
+        COUNT(*) FILTER (WHERE user_agent ~* ${CRAWLER_UA_PATTERN})::int AS crawler,
+        COUNT(*) FILTER (WHERE user_agent IS NULL OR user_agent !~* ${CRAWLER_UA_PATTERN})::int AS plain
+      FROM failed_requests f
+      LEFT JOIN users u ON u.id = f.user_id
+      WHERE f.created_at > ${since.toISOString()}
+        AND (u.email IS NULL OR u.email <> ALL(${EXCLUDED_EMAILS}))
+    `;
+    const cs = crawlerSplit[0];
+    console.log(`  crawler-UA probes: ${cs.crawler}, plain-client: ${cs.plain}`);
+
+    // Top plain-client x402_* slugs — the closest thing to a real demand
+    // signal this table offers. Grouped by task (the slug asked for), with
+    // the failure kind alongside so not_on_rail and unknown_slug stay
+    // distinguishable.
+    const plainClientX402 = await sql`
+      SELECT f.task, f.failure_type, COUNT(*)::int AS n
+      FROM failed_requests f
+      LEFT JOIN users u ON u.id = f.user_id
+      WHERE f.created_at > ${since.toISOString()}
+        AND (u.email IS NULL OR u.email <> ALL(${EXCLUDED_EMAILS}))
+        AND f.failure_type LIKE 'x402_%'
+        AND (f.user_agent IS NULL OR f.user_agent !~* ${CRAWLER_UA_PATTERN})
+      GROUP BY f.task, f.failure_type
+      ORDER BY n DESC
+      LIMIT 8
+    `;
+    if (plainClientX402.length > 0) {
+      console.log(`\n--- x402 demand misses (plain-client UAs only; heuristic — enumerators sometimes use plain UAs) ---`);
+      for (const r of plainClientX402) {
+        console.log(`  ${r.task} (${r.failure_type}): ${r.n}`);
+      }
+    }
   } else {
     console.log(`Failed request logs: 0`);
   }
