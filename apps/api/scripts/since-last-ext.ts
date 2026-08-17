@@ -7,6 +7,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_FILE = resolve(__dirname, "../../../.claude/state/last-activity-check.json");
 const EXCLUDED_EMAILS = ["petter@strale.io", "test@strale.io", "test2@strale.io", SYSTEM_ACCOUNT_EMAIL, "test@example.com"];
 
+// Heuristic split of failed_requests user agents: self-identifying discovery
+// crawlers / health probes vs everything else ("plain" clients — node, axios,
+// NULL). Tune here only; both queries below interpolate this one pattern.
+const CRAWLER_UA_PATTERN =
+  "bot|probe|monitor|crawl|explorer|healthcheck|health check|survey|oracle|census|index|discovery";
+
 function fmtCET(d: Date): string {
   const parts = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "Europe/Stockholm",
@@ -127,8 +133,8 @@ async function main() {
     // Split by crawler vs plain-client user agents
     const crawlerSplit = await sql`
       SELECT
-        COUNT(*) FILTER (WHERE user_agent ~* 'bot|probe|monitor|crawl|explorer|healthcheck|health check|survey|oracle|census|index|discovery')::int AS crawler,
-        COUNT(*) FILTER (WHERE user_agent IS NULL OR user_agent !~* 'bot|probe|monitor|crawl|explorer|healthcheck|health check|survey|oracle|census|index|discovery')::int AS plain
+        COUNT(*) FILTER (WHERE user_agent ~* ${CRAWLER_UA_PATTERN})::int AS crawler,
+        COUNT(*) FILTER (WHERE user_agent IS NULL OR user_agent !~* ${CRAWLER_UA_PATTERN})::int AS plain
       FROM failed_requests f
       LEFT JOIN users u ON u.id = f.user_id
       WHERE f.created_at > ${since.toISOString()}
@@ -148,7 +154,7 @@ async function main() {
       WHERE f.created_at > ${since.toISOString()}
         AND (u.email IS NULL OR u.email <> ALL(${EXCLUDED_EMAILS}))
         AND f.failure_type LIKE 'x402_%'
-        AND (f.user_agent IS NULL OR f.user_agent !~* 'bot|probe|monitor|crawl|explorer|healthcheck|health check|survey|oracle|census|index|discovery')
+        AND (f.user_agent IS NULL OR f.user_agent !~* ${CRAWLER_UA_PATTERN})
       GROUP BY f.task, f.failure_type
       ORDER BY n DESC
       LIMIT 8
