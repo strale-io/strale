@@ -605,6 +605,15 @@ async function runSingleTest(
   // human must actually intervene (reset the suite, its baseline, or the
   // underlying issue AND clear test_status) to get a passing result again.
   // That is the intended, not accidental, consequence of "needs human".
+  // Round 3 correction: round 2's tests asserted "exactly 3" executor
+  // calls. The actual property this gate exists to guarantee is BOUNDED —
+  // a permanently-failing recapture stops consuming Browserless calls
+  // after a finite, small number of attempts (MAX_FIXTURE_RECAPTURE_FAILURES
+  // real attempts, up to ×2 raw calls each when withRetry's single retry
+  // fires) and ZERO after that. The precise count is incidental; unbounded
+  // is the only unacceptable outcome. See recordFixtureRecaptureFailure's
+  // doc comment below for the accepted (documented, not locked) concurrency
+  // window on the counter itself.
   if (
     suite.testMode === "fixture" &&
     suite.testStatus === "quarantined" &&
@@ -1451,10 +1460,33 @@ export const FIXTURE_RECAPTURE_QUARANTINE_MARKER = "fixture_recapture_exhausted:
  * `captureBaseline` — but with the runtime gate active, that can only
  * happen after a human clears `test_status`/`quarantine_reason` (the
  * refusal path never calls the executor, so it can never self-heal into a
- * pass). `health-sweep.ts`'s `checkQuarantineRecovery` sweep still exists
- * and is harmless here: every refusal this cause records is `passed: false`,
- * so it can never manufacture the 3-consecutive-passes evidence that sweep
- * requires to release quarantine automatically.
+ * pass). `health-sweep.ts`'s `checkQuarantineRecovery` sweep is now also
+ * explicitly excluded for this cause (round 3) rather than relying on that
+ * as an implicit consequence.
+ *
+ * Concurrency (Codex round 3, "non-atomic cap" finding — accepted,
+ * documented, deliberately NOT fixed with locking): the increment
+ * (`UPDATE ... SET fixture_recapture_failures = fixture_recapture_failures
+ * + 1 ... RETURNING`) and the conditional quarantine transition below are
+ * two separate statements, not one atomic UPDATE. Two overlapping
+ * `runSingleTest()` calls for the SAME suite (rare in practice — the
+ * scheduler's per-suite hourly cadence and suiteId-scoped dispatch mean
+ * this needs a manual re-run to actually overlap a scheduled tick) could
+ * each read a stale pre-quarantine count and both issue the quarantine
+ * UPDATE. Traced through: Postgres row-locks each individual UPDATE, so
+ * the increment itself never loses a count (two overlapping callers get
+ * distinct, correct post-increment values, e.g. 3 and 4, never both 3) —
+ * the only possible outcome of the gap is a harmless duplicate quarantine
+ * write (same `test_status`, a `quarantine_reason` string differing only
+ * in which count it names). It cannot produce an incorrect final state or
+ * reopen the executor to unbounded calls; the counter is monotonic, so the
+ * worst case is that a concurrent overlap costs a small, still-bounded
+ * number of extra live attempts (at most one extra per overlapping call),
+ * never unbounded. A session-scoped advisory lock or `SELECT ... FOR
+ * UPDATE` spanning the executor call would close this narrow window
+ * completely, but is out of proportion for a test-infra cost guard whose
+ * failure mode, even unaddressed, stays bounded — this file accepts the
+ * window rather than building it.
  */
 export async function recordFixtureRecaptureFailure(
   suite: typeof testSuites.$inferSelect,
