@@ -41,7 +41,14 @@ jobs:
 
       # Each sweep is non-fatal individually so we collect ALL findings
       # in one run rather than failing on the first. Aggregate at the end.
+      # This step ran without DATABASE_URL from the day it was written, so it
+      # died on ECONNREFUSED to localhost every week and never once compared a
+      # manifest to the database — while still reporting a finding, which
+      # trained everyone to treat the weekly issue as noise. It is the only
+      # DB-touching step here that lacked the secret.
       - id: manifest-drift
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set +e
           set -o pipefail

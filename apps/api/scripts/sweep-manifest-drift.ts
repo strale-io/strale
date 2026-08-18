@@ -28,7 +28,21 @@ import postgres from "postgres";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
 const apply = process.argv.includes("--apply");
-const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
+
+// Without this, an unset DATABASE_URL becomes `undefined`, postgres falls
+// back to localhost:5432, and the sweep dies on ECONNREFUSED — which is
+// what it had been doing on every weekly run, unnoticed, because the
+// workflow step never passed the secret. "Cannot connect" and "found
+// drift" must not look alike to whoever reads the drift issue.
+if (!process.env.DATABASE_URL) {
+  console.error(
+    "DATABASE_URL is not set — refusing to run.\n" +
+      "This sweep compares manifests against the real capabilities table; without a\n" +
+      "connection it verifies NOTHING. Do not read a failure here as drift.",
+  );
+  process.exit(2);
+}
+const sql = postgres(process.env.DATABASE_URL, { max: 1, ssl: "require" });
 
 interface Manifest {
   slug: string;
@@ -161,6 +175,9 @@ if (drifts.length > 0) {
   console.log();
 }
 
+// Hoisted so the exit-code decision below can see it.
+let appliedFailed = 0;
+
 if (apply && drifts.length > 0) {
   console.log(`\n=== APPLYING canonical sync to ${drifts.length} drifted caps ===\n`);
   // Spawn the existing sync-manifest-canonical-to-db.ts per cap so we
@@ -184,6 +201,7 @@ if (apply && drifts.length > 0) {
       console.log(`  ✓ ${d.slug}`);
     } else {
       failed++;
+      appliedFailed++;
       console.log(`  ✗ ${d.slug} (exit ${result.code})`);
       console.log(`    ${result.out.split("\n").filter((l) => l).slice(-3).join(" | ")}`);
     }
@@ -192,4 +210,21 @@ if (apply && drifts.length > 0) {
 }
 
 await sql.end();
-process.exit(0);
+
+// Exit non-zero when drift remains. This script previously exited 0
+// unconditionally, so even a fully-working sweep reported "clean" to the
+// weekly aggregate no matter how many capabilities had drifted — a check
+// that runs, finds real problems, and reports success. Fixing the missing
+// DATABASE_URL without also fixing this would have turned a loudly-broken
+// gate into a silently-useless one, which is worse: nobody investigates a
+// green check.
+//   0 = no drift (or --apply resolved all of it)
+//   1 = drift found and not applied, or some --apply syncs failed
+//   2 = could not run at all (see the DATABASE_URL guard above)
+if (drifts.length === 0) process.exit(0);
+if (apply) process.exit(appliedFailed > 0 ? 1 : 0);
+console.log(
+  `${drifts.length} capabilit${drifts.length === 1 ? "y has" : "ies have"} manifest↔DB drift. ` +
+    `Re-run with --apply to sync, or fix the manifest if the DB is right.`,
+);
+process.exit(1);

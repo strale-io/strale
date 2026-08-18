@@ -7,15 +7,23 @@ quota_window: none
 price_cents: 5
 input_schema:
   type: object
-  required:
-    - domain
+  # The executor throws unless one of domain/url is present, so neither
+  # `required: [domain]` (what this manifest claimed) nor `required: []`
+  # (what the DB served) described it. Declared as anyOf, matching the
+  # contract the code actually enforces.
+  required: []
+  anyOf:
+    - required:
+        - domain
+    - required:
+        - url
   properties:
     domain:
       type: string
       description: Domain name (e.g. stripe.com)
     url:
       type: string
-      description: Optional URL to extract domain from
+      description: URL to extract the domain from (alternative to `domain`)
 output_schema:
   type: object
   properties:
@@ -35,9 +43,16 @@ data_source: DNS protocol + public website HTML
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
-maintenance_class: free-stable-api
-processes_personal_data: false
-personal_data_categories: []
+# Fetches the domain's homepage HTML, so it breaks when a site changes —
+# not a stable API contract.
+maintenance_class: scraping-fragile-target
+# Regex-harvests real addresses from page HTML and returns them as
+# `public_emails_found`. Those are personal data; declaring false here was
+# simply untrue, and the database already had this right.
+processes_personal_data: true
+personal_data_categories:
+  - email
+  - name
 geography: global
 test_fixtures:
   known_answer:
