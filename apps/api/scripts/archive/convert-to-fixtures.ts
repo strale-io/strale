@@ -63,6 +63,16 @@ async function main() {
     }
 
     if (!DRY_RUN) {
+      // Archived script (scripts/archive/) — not invoked by any deploy path,
+      // cron, or route; not a live writer of fixture_last_refreshed despite
+      // the write below. Its live successor, the /recalibrate-adjacent
+      // convert-fixtures admin route in internal-tests.ts, had the same
+      // premature-freshness bug (Codex closing-pass review, 2026-08-18) and
+      // was fixed there by DROPPING this write — a suite this script flips
+      // to fixture mode never had its baseline validated by a real
+      // execution, so stamping fixture_last_refreshed here would be the
+      // same false freshness claim. Left as-is (not fixed) since this file
+      // is dead code; noted so a future un-archival doesn't copy the bug.
       await db.update(testSuites)
         .set({
           testMode: "fixture",
