@@ -1,0 +1,107 @@
+{
+  "runStartedAt": "2026-05-06T13:03:01.816Z",
+  "concurrency": 10,
+  "n": 10,
+  "totalWallClockMs": 2208,
+  "latencyMs": {
+    "min": 1680,
+    "p50": 1988.5,
+    "p95": 2168.65,
+    "max": 2206
+  },
+  "syncFlowThresholdMs": 5000,
+  "syncFlowConcern": false,
+  "spendEur": 0.66,
+  "results": [
+    {
+      "country": "DE",
+      "id": "DE811115368",
+      "expected": 200,
+      "status": 200,
+      "ok": true,
+      "error": null,
+      "latencyMs": 1815
+    },
+    {
+      "country": "BG",
+      "id": "831902088",
+      "expected": 200,
+      "status": 200,
+      "ok": true,
+      "error": null,
+      "latencyMs": 2123
+    },
+    {
+      "country": "HU",
+      "id": "HU10625790",
+      "expected": 200,
+      "status": 200,
+      "ok": true,
+      "error": null,
+      "latencyMs": 2056
+    },
+    {
+      "country": "NL",
+      "id": "NL821218833B01",
+      "expected": 204,
+      "status": 204,
+      "ok": true,
+      "error": null,
+      "latencyMs": 1941
+    },
+    {
+      "country": "SI",
+      "id": "SI82646716",
+      "expected": 204,
+      "status": 204,
+      "ok": true,
+      "error": null,
+      "latencyMs": 1942
+    },
+    {
+      "country": "LU",
+      "id": "LU22850926",
+      "expected": 204,
+      "status": 204,
+      "ok": true,
+      "error": null,
+      "latencyMs": 2120
+    },
+    {
+      "country": "SK",
+      "id": "SK2020481748",
+      "expected": 204,
+      "status": 204,
+      "ok": true,
+      "error": null,
+      "latencyMs": 1680
+    },
+    {
+      "country": "MT",
+      "id": "MT16234415",
+      "expected": 204,
+      "status": 204,
+      "ok": true,
+      "error": null,
+      "latencyMs": 1948
+    },
+    {
+      "country": "CY",
+      "id": "CY10006578D",
+      "expected": 204,
+      "status": 204,
+      "ok": true,
+      "error": null,
+      "latencyMs": 2029
+    },
+    {
+      "country": "FR",
+      "id": "542051180",
+      "expected": 200,
+      "status": 200,
+      "ok": true,
+      "error": null,
+      "latencyMs": 2206
+    }
+  ]
+}

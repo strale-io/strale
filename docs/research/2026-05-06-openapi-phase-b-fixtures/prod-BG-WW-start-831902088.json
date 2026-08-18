@@ -1,0 +1,45 @@
+{
+  "entityName": "Sopharma AD (UIC 831902088)",
+  "result": {
+    "ok": true,
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "69fb3b443d5eb197cf548ce4",
+          "lastUpdateTimestamp": 1778072387,
+          "companyName": "Sopharma",
+          "taxCode": "831902088",
+          "vatCode": "BG831902088",
+          "leiCode": "097900BGGW0000048796",
+          "address": {
+            "registeredOffice": {
+              "town": "Sofia",
+              "country": "BG",
+              "zipCode": "1220",
+              "streetName": "ul. Iliensko shose 16",
+              "streetNumber": "16",
+              "gps": {
+                "coordinates": [
+                  23.31702,
+                  42.7347
+                ]
+              }
+            }
+          },
+          "activityStatus": "ACTIVE",
+          "incorporationDate": "1933-01-01"
+        }
+      ],
+      "success": true,
+      "message": "",
+      "error": null
+    },
+    "error": null,
+    "latencyMs": 7480,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "BG",
+    "identifier": "831902088"
+  }
+}

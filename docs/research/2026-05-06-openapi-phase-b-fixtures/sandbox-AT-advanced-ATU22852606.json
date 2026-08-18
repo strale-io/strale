@@ -1,0 +1,100 @@
+{
+  "data": [
+    {
+      "id": "683ef349e6f35b061c53d7e5",
+      "lastUpdateTimestamp": 1748940194,
+      "companyName": "Oberbank AG",
+      "vatCode": "ATU22852606",
+      "leiCode": "RRUN0TCQ1K2JDV7MXO75",
+      "companyNumber": "FN 79063 w (Linz)",
+      "address": {
+        "registeredOffice": {
+          "town": "Linz",
+          "country": "AT",
+          "zipCode": "4020",
+          "streetName": "Untere Donaulaende 28",
+          "streetNumber": "28",
+          "gps": {
+            "coordinates": [
+              14.291955,
+              48.3085639
+            ]
+          }
+        }
+      },
+      "activityStatus": "ACTIVE",
+      "incorporationDate": "1869-07-04",
+      "contacts": {
+        "fax": "+43 732 7802 32140",
+        "phone": "+43 732 7802 0",
+        "website": "www.oberbank.at"
+      },
+      "internationalClassification": {
+        "nace": {
+          "code": "6419",
+          "description": "Other monetary intermediation"
+        },
+        "naics": {
+          "code": "522110",
+          "description": "Commercial Banking"
+        },
+        "sic": {
+          "code": "6021",
+          "description": "National Commercial Banks"
+        }
+      },
+      "balanceSheets": {
+        "last": {
+          "year": 2024,
+          "balanceSheetDate": "2024-01-01",
+          "employees": 2074,
+          "netWorth": null,
+          "operatingRevenue": null,
+          "equity": null,
+          "totalAssets": null
+        },
+        "all": [
+          {
+            "year": 2024,
+            "balanceSheetDate": "2024-01-01",
+            "employees": 2074,
+            "netWorth": null,
+            "operatingRevenue": null,
+            "equity": null,
+            "totalAssets": null
+          },
+          {
+            "year": 2023,
+            "balanceSheetDate": "2023-12-31",
+            "employees": 2461,
+            "netWorth": 382603000,
+            "operatingRevenue": 973166000,
+            "equity": 3863073000,
+            "totalAssets": 27834471000
+          },
+          {
+            "year": 2022,
+            "balanceSheetDate": "2022-12-31",
+            "employees": 2139,
+            "netWorth": 243287000,
+            "operatingRevenue": 706652000,
+            "equity": 3546920000,
+            "totalAssets": 26798166000
+          },
+          {
+            "year": 2021,
+            "balanceSheetDate": "2021-12-31",
+            "employees": 2158,
+            "netWorth": 234648000,
+            "operatingRevenue": 687548000,
+            "equity": 3317861000,
+            "totalAssets": 27539663000
+          }
+        ]
+      }
+    }
+  ],
+  "success": true,
+  "message": "",
+  "error": null
+}

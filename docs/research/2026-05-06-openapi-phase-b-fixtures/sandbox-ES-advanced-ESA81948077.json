@@ -1,0 +1,145 @@
+{
+  "data": [
+    {
+      "id": "67936db8bde13107b9432585",
+      "lastUpdateTimestamp": 1737561557,
+      "companyName": "Endesa Energia SAU",
+      "taxCode": "A81948077",
+      "vatCode": "ESA81948077",
+      "leiCode": "549300IRONX5F5IZDY68",
+      "address": {
+        "registeredOffice": {
+          "town": "Madrid",
+          "country": "ES",
+          "zipCode": "28042",
+          "streetName": "Calle Ribera Del Loira, 60",
+          "streetNumber": "60",
+          "gps": {
+            "coordinates": [
+              -3.61851,
+              40.4606
+            ]
+          }
+        }
+      },
+      "activityStatus": "ACTIVE",
+      "incorporationDate": "1998-02-03",
+      "contacts": {
+        "fax": "+34 912134633",
+        "phone": "+34 912131000",
+        "website": "www.endesa.com"
+      },
+      "internationalClassification": {
+        "nace": {
+          "code": "3514",
+          "description": "Trade of electricity"
+        },
+        "naics": {
+          "code": "221122",
+          "description": "Electric Power Distribution"
+        },
+        "sic": {
+          "code": "4911",
+          "description": "Electric Services"
+        }
+      },
+      "balanceSheets": {
+        "last": {
+          "year": 2023,
+          "balanceSheetDate": "2023-12-31",
+          "employees": 842,
+          "netWorth": 542720000,
+          "operatingRevenue": 18917411000,
+          "equity": 1178982000,
+          "totalAssets": 10940018000
+        },
+        "all": [
+          {
+            "year": 2023,
+            "balanceSheetDate": "2023-12-31",
+            "employees": 842,
+            "netWorth": 542720000,
+            "operatingRevenue": 18917411000,
+            "equity": 1178982000,
+            "totalAssets": 10940018000
+          },
+          {
+            "year": 2022,
+            "balanceSheetDate": "2022-12-31",
+            "employees": 833,
+            "netWorth": -681102000,
+            "operatingRevenue": 20085264000,
+            "equity": -1288910000,
+            "totalAssets": 14932575000
+          },
+          {
+            "year": 2021,
+            "balanceSheetDate": "2021-12-31",
+            "employees": 827,
+            "netWorth": 14754000,
+            "operatingRevenue": 12426678000,
+            "equity": 257411000,
+            "totalAssets": 11753532000
+          },
+          {
+            "year": 2020,
+            "balanceSheetDate": "2020-12-31",
+            "employees": 1078,
+            "netWorth": 816936000,
+            "operatingRevenue": 10713848000,
+            "equity": 1113043000,
+            "totalAssets": 3643294000
+          },
+          {
+            "year": 2019,
+            "balanceSheetDate": "2019-12-31",
+            "employees": 1114,
+            "netWorth": 664381000,
+            "operatingRevenue": 12652181000,
+            "equity": 1386948000,
+            "totalAssets": 4174127000
+          },
+          {
+            "year": 2018,
+            "balanceSheetDate": "2018-12-31",
+            "employees": 1061,
+            "netWorth": -61572000,
+            "operatingRevenue": 12546822000,
+            "equity": 950637000,
+            "totalAssets": 3579250000
+          },
+          {
+            "year": 2017,
+            "balanceSheetDate": "2017-12-31",
+            "employees": 998,
+            "netWorth": -176591000,
+            "operatingRevenue": 12622285000,
+            "equity": -81667000,
+            "totalAssets": 2652235000
+          },
+          {
+            "year": 2016,
+            "balanceSheetDate": "2016-12-31",
+            "employees": 961,
+            "netWorth": 682738000,
+            "operatingRevenue": 11767670000,
+            "equity": 94592000,
+            "totalAssets": 2214935000
+          },
+          {
+            "year": 2015,
+            "balanceSheetDate": "2015-12-31",
+            "employees": 922,
+            "netWorth": 202236000,
+            "operatingRevenue": 12382735000,
+            "equity": 75294000,
+            "totalAssets": 2454089000
+          }
+        ]
+      }
+    }
+  ],
+  "success": true,
+  "message": "",
+  "error": null
+}

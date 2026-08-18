@@ -1,0 +1,109 @@
+{
+  "data": [
+    {
+      "id": "678a6db6bde13107b9432521",
+      "lastUpdateTimestamp": 1736872416,
+      "companyName": "AUDI Aktiengesellschaft",
+      "companyNumber": "HRB 1 (Ingolstadt)",
+      "vatCode": "DE811115368",
+      "leiCode": "529900J1PXYSZJVZ3Z09",
+      "address": {
+        "registeredOffice": {
+          "town": "Ingolstadt",
+          "country": "DE",
+          "zipCode": "85057",
+          "streetName": "Auto-Union-Str. 1",
+          "streetNumber": "1",
+          "gps": {
+            "coordinates": [
+              11.41527,
+              48.7838
+            ]
+          }
+        }
+      },
+      "activityStatus": "ACTIVE",
+      "incorporationDate": "1873-01-01",
+      "contacts": {
+        "fax": "+49 841 8932524",
+        "phone": "+49 841 89 0",
+        "website": "www.audi.de"
+      },
+      "internationalClassification": {
+        "nace": {
+          "code": "2920",
+          "description": "Manufacture of bodies (coachwork) for motor vehicles; manufacture of trailers and semi-trailers"
+        },
+        "naics": {
+          "code": "336211",
+          "description": "Motor Vehicle Body Manufacturing"
+        },
+        "sic": {
+          "code": "3711",
+          "description": "Motor Vehicles and Passenger Car Bodies"
+        }
+      },
+      "balanceSheets": {
+        "last": {
+          "year": 2023,
+          "balanceSheetDate": "2023-12-31",
+          "employees": 87736,
+          "netWorth": 6260000000,
+          "operatingRevenue": 69865000000,
+          "equity": 33839000000,
+          "totalAssets": 73447000000
+        },
+        "all": [
+          {
+            "year": 2023,
+            "balanceSheetDate": "2023-12-31",
+            "employees": 87736,
+            "netWorth": 6260000000,
+            "operatingRevenue": 69865000000,
+            "equity": 33839000000,
+            "totalAssets": 73447000000
+          },
+          {
+            "year": 2022,
+            "balanceSheetDate": "2022-12-31",
+            "employees": 87996,
+            "netWorth": 7116000000,
+            "operatingRevenue": 63730000000,
+            "equity": 31582000000,
+            "totalAssets": 70812000000
+          },
+          {
+            "year": 2021,
+            "balanceSheetDate": "2021-12-31",
+            "employees": 85750,
+            "netWorth": 5649000000,
+            "operatingRevenue": 54993000000,
+            "equity": 26012000000,
+            "totalAssets": 66124000000
+          },
+          {
+            "year": 2020,
+            "balanceSheetDate": "2020-12-31",
+            "employees": 86860,
+            "netWorth": 3774000000,
+            "operatingRevenue": 50503000000,
+            "equity": 24253000000,
+            "totalAssets": 67229000000
+          },
+          {
+            "year": 2019,
+            "balanceSheetDate": "2019-12-31",
+            "employees": 90640,
+            "netWorth": 3850000000,
+            "operatingRevenue": 57663000000,
+            "equity": 28395000000,
+            "totalAssets": 66878000000
+          }
+        ]
+      }
+    }
+  ],
+  "success": true,
+  "message": "",
+  "error": null
+}

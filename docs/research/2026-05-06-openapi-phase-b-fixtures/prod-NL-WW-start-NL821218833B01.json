@@ -1,0 +1,14 @@
+{
+  "entityName": "ASML Holding N.V. (VAT NL821218833B01)",
+  "result": {
+    "ok": true,
+    "status": 204,
+    "body": null,
+    "error": null,
+    "latencyMs": 4332,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "NL",
+    "identifier": "NL821218833B01"
+  }
+}
