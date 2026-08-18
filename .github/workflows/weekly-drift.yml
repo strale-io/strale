@@ -107,6 +107,22 @@ jobs:
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
+      # Phase 2 T2.1 weekly backup (2026-08-18): frontend-typecheck.yml
+      # covers PRs that touch the backend surfaces likely to break the
+      # frontend's types, but a frontend-side-only change (e.g. someone
+      # edits strale-frontend directly, or the shared shape genuinely
+      # drifts without a matching backend PR landing here) wouldn't trip
+      # that gate. This weekly run is the backstop, same reasoning as the
+      # AuditRecord shape check above. Uses the strale-frontend checkout
+      # from the step above.
+      - id: frontend-typecheck
+        run: |
+          set +e
+          set -o pipefail
+          (cd strale-frontend && npm ci && npx tsc -b --force) 2>&1 | tee /tmp/frontend-typecheck.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
       # TOAST-readability scan over compliance-critical JSONB columns.
       # Added after the 2026-08-12 incident: a lost TOAST chunk in
       # transactions.audit_trail sat undetected for four months. A weekly
@@ -169,6 +185,11 @@ jobs:
             cat /tmp/audit-record-shape.txt
             echo '```'
             echo ""
+            echo "## Frontend typecheck (strale-frontend, tsc -b)"
+            echo '```'
+            cat /tmp/frontend-typecheck.txt
+            echo '```'
+            echo ""
             echo "## TOAST readability (audit/compliance JSONB columns)"
             echo '```'
             cat /tmp/toast-readability.txt
@@ -187,9 +208,10 @@ jobs:
           FT=${{ steps.fetch-timeout.outputs.exit }}
           VR=${{ steps.vendor-roster.outputs.exit }}
           AR=${{ steps.audit-record-shape.outputs.exit }}
+          FTC=${{ steps.frontend-typecheck.outputs.exit }}
           TR=${{ steps.toast-readability.outputs.exit }}
           OS=${{ steps.output-schema.outputs.exit }}
-          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ] || [ "$TR" != "0" ] || [ "$OS" != "0" ]; then
+          if [ "$MD" != "0" ] || [ "$FD" != "0" ] || [ "$FT" != "0" ] || [ "$VR" != "0" ] || [ "$AR" != "0" ] || [ "$FTC" != "0" ] || [ "$TR" != "0" ] || [ "$OS" != "0" ]; then
             echo "::warning::One or more drift sweeps reported findings — see report"
             exit 1
           fi

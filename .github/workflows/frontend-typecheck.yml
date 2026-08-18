@@ -1,0 +1,77 @@
+# Blocking PR gate: TypeScript compiles clean on strale-frontend.
+#
+# Why this exists (Phase 2 T2.1, 2026-08-18): the Codebase Quality Program's
+# last unmet Phase-2 target was "typecheck everything including the
+# dashboard" — apps/api + all published TS packages were widened into CI on
+# 2026-08-17 (see ci.yml), but strale-frontend (a separate private repo,
+# hosts the dashboard) was never covered by anything in strale's CI, and
+# investigation found nothing in strale-frontend's OWN CI covers it either:
+#
+#   - `npm run build` = `tsx scripts/generate-sitemap.ts && vite build`.
+#     vite build transpiles via @vitejs/plugin-react-swc, which STRIPS types
+#     without checking them — SWC is not a type checker.
+#   - `npm run test` = `vitest run`. Same story: esbuild/swc transform, no
+#     `--typecheck` flag configured.
+#   - `npm run lint:ratchet` runs `typescript-eslint`'s NON-type-aware
+#     `recommended` config (no `parserOptions.project`, not
+#     `recommended-type-checked`) — syntax-level lint, not the type checker.
+#   - No `typecheck` npm script exists in strale-frontend's package.json.
+#   - Cloudflare Pages (the deploy target) runs the same `npm run build`.
+#
+# Proven empirically, not assumed: a deliberate `const x: number = "str"`
+# type error made `npx tsc -b --force` fail (exit 2) while
+# `npx vite build --mode development` (the actual build command's engine)
+# succeeded cleanly (exit 0) on the same tree. A frontend type error can
+# reach production today with NOTHING — not strale-frontend's CI, not
+# Cloudflare Pages, not this repo — ever having compiled the code. The
+# cross-repo shape-contract gate (audit-shape-contract.yml) doesn't cover
+# this either: it textually diffs one named interface (AuditRecord), it
+# does not compile anything.
+#
+# This workflow closes that gap the direct way: check out strale-frontend
+# and run its own `tsc -b` (project-references build mode, matches its
+# tsconfig.json solution file) for real. Scoped to PRs that can plausibly
+# change what the frontend consumes — not every backend PR, which would be
+# redundant cost for zero added signal on unrelated changes.
+#
+# The paths filter includes this workflow file itself so the PR that
+# introduces it demonstrably executes it (DEC-20260504-C: a gate's first
+# proof of life is its own introducing PR).
+name: frontend-typecheck
+
+on:
+  pull_request:
+    paths:
+      - "apps/api/src/routes/**"
+      - "apps/api/src/lib/platform-facts.ts"
+      - ".github/workflows/frontend-typecheck.yml"
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: strale-io/strale-frontend
+          path: strale-frontend
+          # Private repo — founder-created fine-grained PAT, read-only
+          # Contents on strale-io/strale-frontend only (same credential
+          # audit-shape-contract.yml and weekly-drift.yml already use).
+          token: ${{ secrets.FRONTEND_READ_PAT }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: strale-frontend/package-lock.json
+
+      - working-directory: strale-frontend
+        run: npm ci
+
+      # `tsc -b` (build mode) reads strale-frontend's root tsconfig.json
+      # (a solution file with `files: []` + references to tsconfig.app.json
+      # and tsconfig.node.json) and type-checks both. This is the actual
+      # compiler — unlike `npm run build`/`npm run test`, nothing here
+      # transpiles-without-checking.
+      - working-directory: strale-frontend
+        run: npx tsc -b --force
