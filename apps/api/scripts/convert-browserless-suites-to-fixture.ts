@@ -17,13 +17,16 @@
  * `test_mode = 'canary'` (24h floor — see `minRetestIntervalHours` in
  * `apps/api/src/jobs/test-scheduler.ts`), and every other executor-touching
  * suite to `test_mode = 'fixture'` (zero-cost baseline replay once a
- * baseline exists; the first scheduled run after conversion executes live
- * exactly once to capture one if missing/stale — see `isBaselineStale` in
- * `apps/api/src/lib/test-runner.ts`). `schema_check`, `regression`, and
- * `piggyback` suites are never touched. Capabilities outside the hardcoded
- * 12 (`TARGET_SLUGS` in `../src/lib/browserless-suite-migration.ts`) are
- * never touched. All planning logic is pure and unit-tested in that module
- * — this script is a thin DB read/write wrapper.
+ * baseline exists; max-age-refreshed every ~30d — see
+ * `checkBaselineStaleness` in `apps/api/src/lib/test-runner.ts`).
+ * `schema_check`, `regression`, and `piggyback` suites are never touched.
+ * Capabilities outside the hardcoded 12 (`TARGET_SLUGS` in
+ * `../src/lib/browserless-suite-migration.ts`) are never touched. A
+ * capability with no active `known_answer`/`dependency_health` suite to
+ * keep live is refused entirely rather than left with zero live suites
+ * (`refused_no_live_candidate` — see that module's EDGE case doc). All
+ * planning logic is pure and unit-tested in that module — this script is a
+ * thin DB read/write wrapper.
  *
  * Usage:
  *   cd apps/api
@@ -37,16 +40,25 @@
  *       # restrict to one or more of the 12 (repeatable flag). Any slug
  *       # outside TARGET_SLUGS is rejected loudly, not silently ignored.
  *
- * Concurrency: each --apply write is a CAS-guarded single-row UPDATE
- * (`WHERE id = $1 AND test_mode IS NOT DISTINCT FROM $2`, the exact mode
- * this run planned against). A suite that changed between plan and apply
- * (0 rows affected) is reported as "raced — skipped", never silently
- * overwritten — same convention as `repair-limitation-titles.ts`. Writes
- * are independent per-suite UPDATEs, not one big transaction: a problem on
- * one suite must not roll back 59 other correct conversions, and no suite's
- * write depends on another's.
+ * Concurrency (widened per Codex review, 2026-08-18 — MEDIUM-4): each
+ * --apply write is a CAS-guarded single-row UPDATE asserting
+ * `id`, `active = true`, `test_type`, `capability_slug`, AND
+ * `test_mode IS NOT DISTINCT FROM <the exact mode this run planned
+ * against>` — not just the test_mode check alone. A suite that changed
+ * shape (deactivated, retyped, or reassigned) between plan and apply is
+ * exactly as much a race as one whose test_mode alone changed; the wider
+ * WHERE catches both. 0 rows affected is reported as "raced — skipped",
+ * never silently overwritten — same convention as
+ * `repair-limitation-titles.ts`. Writes are independent per-suite UPDATEs,
+ * not one big transaction: a problem on one suite must not roll back 59
+ * other correct conversions, and no suite's write depends on another's.
+ *
+ * HIGH-2a (Codex review): `updated_at` is bumped ONLY for plans where
+ * `bumpUpdatedAt` is true (baseline missing/already stale at plan time —
+ * see browserless-suite-migration.ts). A suite whose baseline is already
+ * fresh gets ONLY its `test_mode` flipped, so the conversion itself never
+ * manufactures an unnecessary live recapture.
  */
-import { readFileSync } from "node:fs";
 import postgres from "postgres";
 import {
   planMigration,
@@ -94,10 +106,22 @@ async function main() {
 
   try {
     const rows = await sql<
-      { id: string; capabilitySlug: string; testType: string; testMode: string | null; active: boolean }[]
+      {
+        id: string;
+        capabilitySlug: string;
+        testType: string;
+        testMode: string | null;
+        active: boolean;
+        hasBaseline: boolean;
+        baselineCapturedAt: Date | null;
+        updatedAt: Date | null;
+      }[]
     >`
       SELECT id::text AS "id", capability_slug AS "capabilitySlug",
-             test_type AS "testType", test_mode AS "testMode", active
+             test_type AS "testType", test_mode AS "testMode", active,
+             (baseline_output IS NOT NULL) AS "hasBaseline",
+             baseline_captured_at AS "baselineCapturedAt",
+             updated_at AS "updatedAt"
       FROM test_suites
       WHERE capability_slug = ANY(${targetSlugs})
       ORDER BY capability_slug, test_type
@@ -109,6 +133,9 @@ async function main() {
       testType: r.testType,
       testMode: r.testMode,
       active: r.active,
+      hasBaseline: r.hasBaseline,
+      baselineCapturedAt: r.baselineCapturedAt,
+      updatedAt: r.updatedAt,
     }));
 
     if (suites.length === 0) {
@@ -124,6 +151,7 @@ async function main() {
     );
     const unchanged = plans.filter((p) => p.action === "unchanged");
     const notTargeted = plans.filter((p) => p.action === "not_targeted");
+    const refused = plans.filter((p) => p.action === "refused_no_live_candidate");
 
     console.log(`Mode: ${APPLY ? "APPLY (writing)" : "DRY-RUN (no writes)"}`);
     console.log(`Capabilities in scope: ${targetSlugs.join(", ")}`);
@@ -133,10 +161,19 @@ async function main() {
     for (const p of actionable) {
       console.log(
         `  ${p.capabilitySlug.padEnd(24)} ${p.testType.padEnd(18)} ` +
-          `${(p.currentMode ?? "live").padEnd(8)} -> ${p.targetMode!.padEnd(8)}  ${p.reason}`,
+          `${(p.currentMode ?? "live").padEnd(8)} -> ${p.targetMode!.padEnd(8)}  ` +
+          `[bump_updated_at=${p.bumpUpdatedAt}]  ${p.reason}`,
       );
     }
     if (actionable.length === 0) console.log("  (none — every suite already at its target mode)");
+
+    if (refused.length > 0) {
+      console.log("\n── REFUSED — capability has no live candidate (EDGE case) ─────");
+      const refusedSlugs = [...new Set(refused.map((p) => p.capabilitySlug))];
+      for (const slug of refusedSlugs) {
+        console.log(`  ${slug}: ${refused.find((p) => p.capabilitySlug === slug)!.reason}`);
+      }
+    }
 
     console.log("\n── Already correct (unchanged) ──────────────────────────────");
     for (const p of unchanged) {
@@ -149,7 +186,8 @@ async function main() {
     }
 
     console.log(
-      `\nSummary: ${actionable.length} to convert, ${unchanged.length} already correct, ${notTargeted.length} not touched.`,
+      `\nSummary: ${actionable.length} to convert, ${unchanged.length} already correct, ` +
+        `${notTargeted.length} not touched, ${refused.length} refused (${new Set(refused.map((p) => p.capabilitySlug)).size} capabilities).`,
     );
 
     if (!APPLY) {
@@ -162,22 +200,41 @@ async function main() {
     let applied = 0;
     let raced = 0;
     for (const p of actionable) {
-      // CAS-guarded: only write if the suite's test_mode still matches what
-      // this run planned against. IS NOT DISTINCT FROM handles the NULL
-      // case (schema default is 'live' but the column itself is nullable).
-      const result = await sql`
-        UPDATE test_suites
-        SET test_mode = ${p.targetMode}, updated_at = NOW()
-        WHERE id = ${p.id}::uuid
-          AND test_mode IS NOT DISTINCT FROM ${p.currentMode}
-      `;
+      // CAS-guarded: only write if the suite still matches every shape this
+      // run planned against — id, still active, still the same test_type
+      // and capability_slug, and test_mode unchanged since the plan was
+      // read. IS NOT DISTINCT FROM handles the NULL case (schema default is
+      // 'live' but the column itself is nullable). updated_at is bumped
+      // only when the plan calls for it (HIGH-2a) — two separate statement
+      // shapes rather than a conditional NOW()/NULL expression, so the
+      // "don't touch updated_at" case can never accidentally write a NULL
+      // into a NOT NULL column via a mis-built CASE.
+      const result = p.bumpUpdatedAt
+        ? await sql`
+            UPDATE test_suites
+            SET test_mode = ${p.targetMode}, updated_at = NOW()
+            WHERE id = ${p.id}::uuid
+              AND active = true
+              AND test_type = ${p.testType}
+              AND capability_slug = ${p.capabilitySlug}
+              AND test_mode IS NOT DISTINCT FROM ${p.currentMode}
+          `
+        : await sql`
+            UPDATE test_suites
+            SET test_mode = ${p.targetMode}
+            WHERE id = ${p.id}::uuid
+              AND active = true
+              AND test_type = ${p.testType}
+              AND capability_slug = ${p.capabilitySlug}
+              AND test_mode IS NOT DISTINCT FROM ${p.currentMode}
+          `;
       if (result.count > 0) {
         applied++;
       } else {
         raced++;
         console.warn(
           `  [raced — skipped] ${p.capabilitySlug} / ${p.testType} (id ${p.id}): ` +
-            `test_mode changed since this run's plan was read; not overwritten`,
+            `suite changed shape since this run's plan was read; not overwritten`,
         );
       }
     }

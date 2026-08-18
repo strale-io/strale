@@ -546,7 +546,13 @@ async function runSingleTest(
   // with a different suite's input, 81 runs each without one live execution.
   // `iso-country-lookup`'s known-answer suite stores `{"query":"Sweden"}` and
   // every recorded result echoed `"land"`.
-  if (suite.testMode === "fixture" && suite.baselineOutput && !isBaselineStale(suite)) {
+  // Staleness has two independent axes (Codex review, 2026-08-18 — HIGH-1):
+  // edit-invalidation (suite input changed since capture — see above) and
+  // max-age (the baseline just got old, regardless of edits). See
+  // `checkBaselineStaleness`'s doc comment for the full rationale, including
+  // why the age axis reads `fixture_last_refreshed` and not `updated_at`.
+  const staleness = checkBaselineStaleness(suite);
+  if (suite.testMode === "fixture" && suite.baselineOutput && !staleness.stale) {
     return runFixtureTest(suite, fieldReliabilityMap, outputSchemaMap);
   }
 
@@ -554,7 +560,21 @@ async function runSingleTest(
   // it as an instrument problem under its own name rather than manufacturing a
   // pass or a failure about the capability — the same rule the correctness
   // invariant learned on 2026-08-17.
-  if (suite.testMode === "fixture" && suite.baselineOutput && (suite.externalCostCents ?? 0) > 0) {
+  //
+  // EXCEPTION (HIGH-1): `max_age_exceeded` never routes here, even for a
+  // paid suite. Edit-invalidation is a suite-authoring accident — refusing
+  // and asking a human is correct, because we don't know whether the new
+  // input is even valid. Max-age is a deliberate, designed, bounded refresh
+  // cycle (one live call per suite per 30 days) — the whole point of adding
+  // it was to make that periodic spend automatic, not to gate it behind a
+  // human every time. See browserless-suite-migration.ts's projection table
+  // for the accepted monthly cost this represents.
+  if (
+    suite.testMode === "fixture" &&
+    suite.baselineOutput &&
+    staleness.reason !== "max_age_exceeded" &&
+    (suite.externalCostCents ?? 0) > 0
+  ) {
     return recordStaleFixture(suite);
   }
 
@@ -780,6 +800,25 @@ async function runSingleTest(
     fireAndForget(
       () => captureBaseline(suite, capResult.output),
       { label: "baseline-capture", context: { slug: suite.capabilitySlug } },
+    );
+  }
+
+  // Fixture recapture failure tracking (Codex review 2026-08-18 — HIGH-2b).
+  // A test_mode='fixture' suite only ever reaches this "real execution"
+  // branch because its baseline was missing or stale (see the two guards
+  // above) — so every arrival here is an attempted recapture. A passing
+  // attempt is handled above: captureBaseline resets the counter to 0 on
+  // success. A failing attempt must be bounded — without this, a fixture
+  // suite whose upstream permanently broke would attempt a live call on
+  // every dispatch tick forever (doubled by the executor's own retry),
+  // burning exactly the Browserless budget this migration exists to
+  // reclaim. Awaited (not fire-and-forget): the cap's correctness depends
+  // on the counter actually landing before the next dispatch can race it.
+  if (suite.testMode === "fixture" && !(passed && capResult?.output)) {
+    await recordFixtureRecaptureFailure(suite).catch((err) =>
+      logError("fixture-recapture-failure-tracking-failed", err, {
+        capability_slug: suite.capabilitySlug,
+      }),
     );
   }
 
@@ -1150,28 +1189,100 @@ function extractKeyStructure(obj: unknown, prefix = ""): string[] {
   return keys;
 }
 
-/**
- * Is this suite's stored baseline older than the suite itself?
- *
- * `updated_at` moves on any edit to the suite — including the input change
- * that makes a baseline meaningless. Using it is deliberately conservative:
- * the worst case for a false positive is one live execution followed by a
- * fresh capture, which for a zero-cost capability costs nothing. The worst
- * case for a false negative is what shipped — a permanently wrong verdict
- * that no amount of re-running can correct.
- *
- * A suite with no baseline is not stale; it has simply never been captured,
- * and the live path handles it.
- */
-export function isBaselineStale(suite: {
+/** Max age (ms) a fixture baseline may reach before it's treated as stale by age alone. */
+export const FIXTURE_MAX_AGE_DAYS = 30;
+const FIXTURE_MAX_AGE_MS = FIXTURE_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+
+export type BaselineStalenessReason =
+  | "not_stale"
+  | "no_capture_timestamp"
+  | "edited_since_capture"
+  | "max_age_exceeded";
+
+export interface BaselineStalenessInput {
   baselineOutput?: unknown;
   baselineCapturedAt?: Date | null;
   updatedAt?: Date | null;
-}): boolean {
-  if (!suite.baselineOutput) return false;
-  if (!suite.baselineCapturedAt) return true; // a baseline we cannot date is not one we can trust
-  if (!suite.updatedAt) return false;
-  return suite.baselineCapturedAt.getTime() < suite.updatedAt.getTime();
+  /**
+   * Deliberately three-valued at the call site, not just nullable:
+   *   - a `Date`               → the real "last (re)captured" timestamp; age is measured from it
+   *   - `null`                 → column exists and reads NULL (never (re)captured under this
+   *                              check — a pre-existing baseline, or a suite just converted to
+   *                              fixture mode). Treated as maximally stale by age: one live
+   *                              recapture away from starting its own clock, same posture as
+   *                              `no_capture_timestamp` below for baselineCapturedAt.
+   *   - `undefined` (omitted)  → the caller is deliberately not evaluating the age axis at all
+   *                              (used by callers/tests that predate this field and only care
+   *                              about edit-invalidation). A real DB row select always includes
+   *                              the column, so production callers can only ever pass a Date or
+   *                              `null`, never omit it — `undefined` is exclusively a test/caller
+   *                              opt-out, not a value that can appear in prod.
+   */
+  fixtureLastRefreshed?: Date | null;
+}
+
+/**
+ * Is this suite's stored fixture baseline stale, and why?
+ *
+ * Two independent axes (Codex review, 2026-08-18 — HIGH-1):
+ *
+ * 1. **Edit-invalidation.** `updated_at` moves on any edit to the suite —
+ *    including the input change that makes a baseline meaningless. Using it
+ *    is deliberately conservative: the worst case for a false positive is
+ *    one live execution followed by a fresh capture, which for a zero-cost
+ *    capability costs nothing. The worst case for a false negative is what
+ *    shipped 2026-08-17 — a permanently wrong verdict that no amount of
+ *    re-running can correct (see the six-capability incident below).
+ *
+ * 2. **Max age.** A baseline can be perfectly valid for its input and still
+ *    silently drift behind whatever the live upstream now returns — nothing
+ *    about "the suite was never edited" bounds how long a fixture replay
+ *    can run unchecked. `fixture_last_refreshed` is the dedicated timestamp
+ *    for this axis specifically because `updated_at` is not trustworthy for
+ *    it: `updated_at` gets bumped by unrelated suite edits (auto-remediation,
+ *    classification updates, or this migration's own test_mode flip), which
+ *    would silently reset an age clock that has nothing to do with the
+ *    baseline's actual freshness. `fixture_last_refreshed` is written ONLY
+ *    by `captureBaseline` on an actual (re)capture — see that function.
+ *
+ * A suite with no baseline output at all is not stale; it has simply never
+ * been captured, and the live path handles it.
+ */
+export function checkBaselineStaleness(
+  suite: BaselineStalenessInput,
+  now: Date = new Date(),
+): { stale: boolean; reason: BaselineStalenessReason } {
+  if (!suite.baselineOutput) return { stale: false, reason: "not_stale" };
+  if (!suite.baselineCapturedAt) {
+    return { stale: true, reason: "no_capture_timestamp" }; // a baseline we cannot date is not one we can trust
+  }
+  if (suite.updatedAt && suite.baselineCapturedAt.getTime() < suite.updatedAt.getTime()) {
+    return { stale: true, reason: "edited_since_capture" };
+  }
+  if (suite.fixtureLastRefreshed === undefined) {
+    // Caller opted out of the age axis entirely — see the field's doc above.
+    return { stale: false, reason: "not_stale" };
+  }
+  if (
+    !suite.fixtureLastRefreshed ||
+    now.getTime() - suite.fixtureLastRefreshed.getTime() > FIXTURE_MAX_AGE_MS
+  ) {
+    return { stale: true, reason: "max_age_exceeded" };
+  }
+  return { stale: false, reason: "not_stale" };
+}
+
+/**
+ * Boolean convenience wrapper over `checkBaselineStaleness`. Kept because
+ * `test-runner.stale-baseline.test.ts` (2026-08-17 incident regression
+ * suite) pins the two-argument boolean shape and deliberately never sets
+ * `fixtureLastRefreshed` on its fixtures — by omitting that field, those
+ * calls opt out of the age axis and continue exercising exactly the
+ * edit-invalidation behavior they were written to pin, unaffected by this
+ * addition.
+ */
+export function isBaselineStale(suite: BaselineStalenessInput, now?: Date): boolean {
+  return checkBaselineStaleness(suite, now).stale;
 }
 
 /**
@@ -1212,13 +1323,20 @@ async function recordStaleFixture(
 
 /**
  * Capture baseline output on first successful real execution — or refresh one
- * that has gone stale.
+ * that has gone stale (by edit OR by age — see `checkBaselineStaleness`).
  *
  * The early return used to be unconditional, which is what made a stale
  * baseline permanent: the fixture path replayed it forever and the capture
  * path declined to replace it.
+ *
+ * `fixture_last_refreshed` is written here and ONLY here — the single
+ * writer for the age axis's reference timestamp (HIGH-1, Codex review
+ * 2026-08-18). `fixture_recapture_failures` resets to 0 on every successful
+ * capture (HIGH-2b) — "successful recapture resets the [failure] counter",
+ * paired with `recordFixtureRecaptureFailure`'s increment-and-quarantine
+ * path below for the failure case.
  */
-async function captureBaseline(
+export async function captureBaseline(
   suite: typeof testSuites.$inferSelect,
   output: Record<string, unknown>,
 ): Promise<void> {
@@ -1236,8 +1354,63 @@ async function captureBaseline(
       // using fixture mode again.
       baselineCapturedAt: capturedAt,
       updatedAt: capturedAt,
+      fixtureLastRefreshed: capturedAt,
+      fixtureRecaptureFailures: 0,
     })
     .where(eq(testSuites.id, suite.id));
+}
+
+/** Consecutive failed fixture-recapture attempts before a suite is quarantined. */
+export const MAX_FIXTURE_RECAPTURE_FAILURES = 3;
+
+/**
+ * Bound a fixture suite's failing recapture attempts (Codex review,
+ * 2026-08-18 — HIGH-2b).
+ *
+ * A `test_mode = 'fixture'` suite reaches the "real execution" branch in
+ * `runSingleTest` only because its baseline was missing or stale — every
+ * arrival there is an attempted recapture. Without a cap, a suite whose
+ * upstream permanently broke would attempt (and fail) a live call on every
+ * dispatch tick forever: the exact Browserless-burn pattern this whole
+ * migration exists to close, just relocated from "always live" to "always
+ * failing-and-retrying".
+ *
+ * Increments `fixture_recapture_failures`; at `MAX_FIXTURE_RECAPTURE_FAILURES`
+ * consecutive failures, sets `test_status = 'quarantined'` — which
+ * `test-scheduler.ts`'s `minRetestIntervalHours` already floors at a 168h
+ * (weekly) cadence, so the retry rate drops ~168x on its own via the
+ * existing quarantine machinery, no new scheduling logic needed. A
+ * subsequent successful recapture (whenever the weekly retry lands) resets
+ * the counter to 0 via `captureBaseline`; `health-sweep.ts`'s existing
+ * `checkQuarantineRecovery` sweep independently releases the
+ * `test_status = 'quarantined'` flag once recent results show recovery —
+ * the two mechanisms are separate but compatible, no new wiring needed
+ * there either.
+ */
+export async function recordFixtureRecaptureFailure(
+  suite: typeof testSuites.$inferSelect,
+): Promise<void> {
+  const db = getDb();
+  const [updated] = await db
+    .update(testSuites)
+    .set({
+      fixtureRecaptureFailures: sql`${testSuites.fixtureRecaptureFailures} + 1`,
+      updatedAt: new Date(),
+    })
+    .where(eq(testSuites.id, suite.id))
+    .returning({ count: testSuites.fixtureRecaptureFailures });
+
+  const newCount = updated?.count ?? 0;
+  if (newCount >= MAX_FIXTURE_RECAPTURE_FAILURES) {
+    await db
+      .update(testSuites)
+      .set({
+        testStatus: "quarantined",
+        quarantineReason: `fixture recapture failing — needs human (${newCount} consecutive failed live recapture attempts)`,
+        updatedAt: new Date(),
+      })
+      .where(eq(testSuites.id, suite.id));
+  }
 }
 
 // ─── Validation logic ───────────────────────────────────────────────────────

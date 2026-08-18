@@ -1559,6 +1559,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0090_capabilityOutputContracts,
   runMigration0091_bolStaleValidationRules,
   runMigration0092_x402GrowthBundles,
+  runMigration0093_fixtureRecaptureFailures,
 ];
 
 /**
@@ -2463,6 +2464,56 @@ export async function runMigration0092_x402GrowthBundles(
         ? "no change (growth bundles already on the x402 rail)"
         : `${affected} growth bundle(s) put on the x402 rail — listed publicly but unpayable since 2026-08-16`,
     rows_affected: affected,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0093: fixture_recapture_failures on test_suites ─────────────────
+//
+// Browserless harness-burn mitigation (branch ops/cut-browserless-harness-burn,
+// 2026-08-18), HIGH-2b of the Codex closing-pass review. Adds the counter
+// column `recordFixtureRecaptureFailure` (test-runner.ts) increments on a
+// failed fixture-recapture attempt and `captureBaseline` resets to 0 on
+// success — bounds a permanently-failing fixture suite to
+// MAX_FIXTURE_RECAPTURE_FAILURES live retries before it quarantines, instead
+// of retrying forever.
+//
+// `fixture_last_refreshed` (used by the sibling HIGH-1 max-age staleness
+// fix) already exists in prod as of this migration — added by an earlier,
+// untracked manual apply — so this block does not touch it; ADD COLUMN IF
+// NOT EXISTS on it would be a harmless no-op if ever re-added here, but
+// there is no need.
+//
+// Idempotency: ADD COLUMN IF NOT EXISTS — a Postgres no-op when the column
+// already exists.
+
+export async function runMigration0093_fixtureRecaptureFailures(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  const check = await tx.execute(sql`
+    SELECT count(*)::text AS cnt FROM information_schema.columns
+    WHERE table_name = 'test_suites' AND column_name = 'fixture_recapture_failures'
+  `);
+  const rows = Array.isArray(check) ? check : (check as { rows?: unknown[] })?.rows ?? [];
+  const exists = (rows[0] as { cnt?: string })?.cnt !== "0";
+
+  if (exists) {
+    return {
+      block: "0093_fixture_recapture_failures",
+      outcome: "skipped (column already exists)",
+      duration_ms: Date.now() - startedAt,
+    };
+  }
+
+  await tx.execute(sql`
+    ALTER TABLE "test_suites" ADD COLUMN "fixture_recapture_failures" integer DEFAULT 0 NOT NULL
+  `);
+
+  return {
+    block: "0093_fixture_recapture_failures",
+    outcome: "added column",
     duration_ms: Date.now() - startedAt,
   };
 }

@@ -396,6 +396,21 @@ async function findOverdueSuites(): Promise<OverdueSuite[]> {
  * hour, ignoring the per-minute stagger). Used for queue-depth
  * observability — if this number creeps up, hourly testing is falling
  * behind.
+ *
+ * MEDIUM-3 (Codex review, 2026-08-18): this used to derive "overdue" from
+ * `capabilities.last_tested_at`, a capability-wide timestamp that ANY of
+ * the capability's suites bumps on execution — including its frequently-
+ * dispatched fixture siblings, which (post this migration) still get
+ * dispatched on the normal ~1h cadence even though they cost nothing to
+ * run. A capability whose canary suite (the one on the 24h `minRetestIntervalHours`
+ * floor) hadn't actually run in 20+ hours would still read as "recently
+ * tested" here because a sibling fixture suite ran an hour ago — hiding a
+ * genuinely stuck/overdue canary from the queue-depth metric that exists
+ * specifically to catch that. The fix: derive per-suite age the identical
+ * way `findOverdueSuites()` does — `MAX(test_results.executed_at)` scoped
+ * to that one `test_suite_id`, never the capability-wide column — and count
+ * a capability as overdue if ANY of its suites is, by that same per-suite
+ * measure.
  */
 async function countOverdueCapabilities(): Promise<number> {
   const db = getDb();
@@ -407,8 +422,9 @@ async function countOverdueCapabilities(): Promise<number> {
     WHERE c.is_active = true
       AND ts.scheduled_testing_eligible = TRUE
       AND (
-        c.last_tested_at IS NULL
-        OR c.last_tested_at < NOW() - GREATEST(
+        (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id) IS NULL
+        OR (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id)
+           < NOW() - GREATEST(
           INTERVAL '1 hour',
           CASE ts.test_status
             WHEN 'upstream_broken' THEN INTERVAL '24 hours'

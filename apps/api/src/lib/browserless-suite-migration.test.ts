@@ -1,40 +1,83 @@
 /**
  * Regression tests for the Browserless harness-burn migration planner
  * (2026-08-18, branch `ops/cut-browserless-harness-burn`). See
- * browserless-suite-migration.ts's header for the full design rationale.
+ * browserless-suite-migration.ts's header for the full design rationale,
+ * including the Codex closing-pass review fixes (HIGH-2a, EDGE).
  */
 
 import { describe, it, expect } from "vitest";
 import {
   planCapabilityMigration,
   planMigration,
+  hasFreshBaseline,
   TARGET_SLUGS,
   type SuiteRow,
 } from "./browserless-suite-migration.js";
+
+const NOW = new Date("2026-08-18T12:00:00.000Z");
+const OLD = new Date("2026-03-01T00:00:00.000Z");
 
 function suite(
   id: string,
   capabilitySlug: string,
   testType: string,
   testMode: string | null,
-  active = true,
+  overrides: Partial<SuiteRow> = {},
 ): SuiteRow {
-  return { id, capabilitySlug, testType, testMode, active };
+  return {
+    id,
+    capabilitySlug,
+    testType,
+    testMode,
+    active: true,
+    hasBaseline: false,
+    baselineCapturedAt: null,
+    updatedAt: NOW,
+    ...overrides,
+  };
 }
 
 // A realistic capability shape: the 7 non-piggyback types the 12 target
 // capabilities actually have (per the 2026-08-18 prod query), plus piggyback.
+// Baselines default to "fresh" (captured now, suite not edited since) so
+// tests that don't care about baseline freshness aren't tripped by it.
 function fullSuiteSet(slug: string, mode: string | null = "live"): SuiteRow[] {
+  const fresh = { hasBaseline: true, baselineCapturedAt: NOW, updatedAt: NOW };
   return [
-    suite(`${slug}-dependency_health`, slug, "dependency_health", mode),
-    suite(`${slug}-edge_case`, slug, "edge_case", mode),
-    suite(`${slug}-known_answer`, slug, "known_answer", mode),
-    suite(`${slug}-known_bad`, slug, "known_bad", mode),
-    suite(`${slug}-negative`, slug, "negative", mode),
+    suite(`${slug}-dependency_health`, slug, "dependency_health", mode, fresh),
+    suite(`${slug}-edge_case`, slug, "edge_case", mode, fresh),
+    suite(`${slug}-known_answer`, slug, "known_answer", mode, fresh),
+    suite(`${slug}-known_bad`, slug, "known_bad", mode, fresh),
+    suite(`${slug}-negative`, slug, "negative", mode, fresh),
     suite(`${slug}-piggyback`, slug, "piggyback", "live"),
     suite(`${slug}-schema_check`, slug, "schema_check", "live"),
   ];
 }
+
+describe("hasFreshBaseline", () => {
+  it("is false when there is no baseline at all", () => {
+    expect(hasFreshBaseline({ hasBaseline: false, baselineCapturedAt: null, updatedAt: null })).toBe(false);
+  });
+
+  it("is false when the baseline is undateable", () => {
+    expect(hasFreshBaseline({ hasBaseline: true, baselineCapturedAt: null, updatedAt: NOW })).toBe(false);
+  });
+
+  it("is false when the suite was edited after the baseline was captured", () => {
+    expect(
+      hasFreshBaseline({ hasBaseline: true, baselineCapturedAt: OLD, updatedAt: NOW }),
+    ).toBe(false);
+  });
+
+  it("is true when the baseline is present, dateable, and not edited since", () => {
+    expect(
+      hasFreshBaseline({ hasBaseline: true, baselineCapturedAt: NOW, updatedAt: NOW }),
+    ).toBe(true);
+    expect(
+      hasFreshBaseline({ hasBaseline: true, baselineCapturedAt: NOW, updatedAt: null }),
+    ).toBe(true);
+  });
+});
 
 describe("planCapabilityMigration", () => {
   it("picks known_answer as the canary and converts the other 4 executor-touching suites to fixture", () => {
@@ -125,6 +168,86 @@ describe("planCapabilityMigration", () => {
     const canaries = plans.filter((p) => p.action === "convert_to_canary");
     expect(canaries.length).toBe(1);
   });
+
+  describe("HIGH-2a — bumpUpdatedAt only when the baseline actually needs one", () => {
+    it("does NOT bump updated_at when converting a suite whose baseline is already fresh", () => {
+      const suites = fullSuiteSet("screenshot-url"); // fullSuiteSet's default baselines are fresh
+      const plans = planCapabilityMigration(suites);
+      for (const t of ["dependency_health", "edge_case", "known_bad", "negative"]) {
+        const p = plans.find((p) => p.testType === t)!;
+        expect(p.action).toBe("convert_to_fixture");
+        expect(p.bumpUpdatedAt).toBe(false);
+      }
+    });
+
+    it("DOES bump updated_at when the baseline is missing", () => {
+      const suites = fullSuiteSet("screenshot-url").map((s) =>
+        s.testType === "edge_case" ? { ...s, hasBaseline: false, baselineCapturedAt: null } : s,
+      );
+      const plans = planCapabilityMigration(suites);
+      const p = plans.find((p) => p.testType === "edge_case")!;
+      expect(p.action).toBe("convert_to_fixture");
+      expect(p.bumpUpdatedAt).toBe(true);
+    });
+
+    it("DOES bump updated_at when the baseline is already edit-stale", () => {
+      const suites = fullSuiteSet("screenshot-url").map((s) =>
+        s.testType === "known_bad" ? { ...s, baselineCapturedAt: OLD, updatedAt: NOW } : s,
+      );
+      const plans = planCapabilityMigration(suites);
+      const p = plans.find((p) => p.testType === "known_bad")!;
+      expect(p.action).toBe("convert_to_fixture");
+      expect(p.bumpUpdatedAt).toBe(true);
+    });
+  });
+
+  describe("EDGE — no live candidate leaves the capability with zero live suites", () => {
+    it("refuses the whole capability when neither known_answer nor dependency_health is active", () => {
+      const suites = fullSuiteSet("no-canary-cap").filter(
+        (s) => s.testType !== "known_answer" && s.testType !== "dependency_health",
+      );
+      const plans = planCapabilityMigration(suites);
+      for (const t of ["edge_case", "known_bad", "negative"]) {
+        const p = plans.find((p) => p.testType === t)!;
+        expect(p.action).toBe("refused_no_live_candidate");
+        expect(p.targetMode).toBeNull();
+        expect(p.reason).toMatch(/zero live suites/i);
+      }
+      // Nothing for this capability gets a canary or a fixture conversion.
+      expect(plans.some((p) => p.action === "convert_to_canary")).toBe(false);
+      expect(plans.some((p) => p.action === "convert_to_fixture")).toBe(false);
+    });
+
+    it("refuses even when known_answer/dependency_health rows exist but are inactive", () => {
+      const suites = fullSuiteSet("inactive-canary-cap").map((s) =>
+        s.testType === "known_answer" || s.testType === "dependency_health"
+          ? { ...s, active: false }
+          : s,
+      );
+      const plans = planCapabilityMigration(suites);
+      const edgeCase = plans.find((p) => p.testType === "edge_case")!;
+      expect(edgeCase.action).toBe("refused_no_live_candidate");
+    });
+
+    it("does NOT refuse a capability whose only suites are schema_check/piggyback (nothing to convert anyway)", () => {
+      const suites = [
+        suite("schema-only-cap-schema_check", "schema-only-cap", "schema_check", "live"),
+        suite("schema-only-cap-piggyback", "schema-only-cap", "piggyback", "live"),
+      ];
+      const plans = planCapabilityMigration(suites);
+      expect(plans.every((p) => p.action === "not_targeted")).toBe(true);
+      expect(plans.some((p) => p.action === "refused_no_live_candidate")).toBe(false);
+    });
+
+    it("none of the 12 target capabilities hit this in practice (documents the guard is currently inert, not currently firing)", () => {
+      // Every one of the 12 has an active known_answer suite per the
+      // 2026-08-18 prod query — this test exists so a future suite
+      // deactivation that WOULD trip the guard is caught by the other EDGE
+      // tests above, not silently passed over here.
+      const plans = planCapabilityMigration(fullSuiteSet("screenshot-url"));
+      expect(plans.some((p) => p.action === "refused_no_live_candidate")).toBe(false);
+    });
+  });
 });
 
 describe("planMigration (multi-capability)", () => {
@@ -156,6 +279,21 @@ describe("planMigration (multi-capability)", () => {
         expect(p.testType).toBe("known_answer");
       }
     }
+  });
+
+  it("a refused capability doesn't affect a sibling capability's normal conversion", () => {
+    const refused = fullSuiteSet("refused-cap").filter(
+      (s) => s.testType !== "known_answer" && s.testType !== "dependency_health",
+    );
+    const normal = fullSuiteSet("normal-cap");
+    const plans = planMigration([...refused, ...normal]);
+
+    const refusedPlans = plans.filter((p) => p.capabilitySlug === "refused-cap");
+    expect(refusedPlans.every((p) => p.action === "refused_no_live_candidate" || p.action === "not_targeted")).toBe(true);
+
+    const normalPlans = plans.filter((p) => p.capabilitySlug === "normal-cap");
+    expect(normalPlans.some((p) => p.action === "convert_to_canary")).toBe(true);
+    expect(normalPlans.some((p) => p.action === "convert_to_fixture")).toBe(true);
   });
 });
 

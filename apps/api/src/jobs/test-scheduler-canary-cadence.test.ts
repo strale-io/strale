@@ -90,3 +90,53 @@ describe("findOverdueSuites' and countOverdueCapabilities' SQL carry the canary 
     }
   });
 });
+
+/**
+ * MEDIUM-3 (Codex review, 2026-08-18): CASE-literal presence alone doesn't
+ * prove the two queries agree on what "overdue" MEANS. Before this fix,
+ * `countOverdueCapabilities()` derived age from `capabilities.last_tested_at`
+ * — a capability-wide timestamp any of its suites bumps — while
+ * `findOverdueSuites()` derived age per-suite via
+ * `MAX(test_results.executed_at) WHERE test_suite_id = ts.id`. A capability
+ * whose canary suite hadn't run in 20+ hours still read as "recently
+ * tested" in the queue-depth metric because a sibling fixture suite ran an
+ * hour ago — hiding the exact stuck-canary case the metric exists to catch.
+ * These tests extract each function's SQL and compare the actual
+ * age-derivation expression, not just whether a CASE branch string exists
+ * somewhere in the file.
+ */
+describe("findOverdueSuites and countOverdueCapabilities share per-suite age semantics (MEDIUM-3)", () => {
+  const PER_SUITE_AGE_SUBQUERY =
+    "(SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id)";
+
+  function extractFunctionSource(src: string, signature: string): string {
+    const start = src.indexOf(signature);
+    if (start === -1) throw new Error(`signature not found in test-scheduler.ts: ${signature}`);
+    const searchFrom = start + signature.length;
+    const nextFnMatch = /\n(?:export )?(?:async )?function /.exec(src.slice(searchFrom));
+    const end = nextFnMatch ? searchFrom + nextFnMatch.index : src.length;
+    return src.slice(start, end);
+  }
+
+  it("both functions derive overdue-ness from the identical per-suite MAX(test_results.executed_at) subquery", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("./test-scheduler.ts", import.meta.url), "utf8");
+
+    const findSrc = extractFunctionSource(src, "async function findOverdueSuites(");
+    const countSrc = extractFunctionSource(src, "async function countOverdueCapabilities(");
+
+    expect(findSrc).toContain(PER_SUITE_AGE_SUBQUERY);
+    expect(countSrc).toContain(PER_SUITE_AGE_SUBQUERY);
+  });
+
+  it("countOverdueCapabilities no longer reads the capability-wide last_tested_at column for its overdue check", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("./test-scheduler.ts", import.meta.url), "utf8");
+
+    const countSrc = extractFunctionSource(src, "async function countOverdueCapabilities(");
+    // c.last_tested_at is still legitimately read/written elsewhere in this
+    // file (e.g. the skip-marker bump in pollCycle) — the assertion is
+    // scoped to this one function's body, not the whole file.
+    expect(countSrc).not.toContain("c.last_tested_at");
+  });
+});
