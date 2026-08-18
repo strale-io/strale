@@ -2484,36 +2484,34 @@ export async function runMigration0092_x402GrowthBundles(
 // NOT EXISTS on it would be a harmless no-op if ever re-added here, but
 // there is no need.
 //
-// Idempotency: ADD COLUMN IF NOT EXISTS — a Postgres no-op when the column
-// already exists.
+// MEDIUM (Codex closing-pass round 2, 2026-08-18): the original shape here
+// was check-then-ALTER — SELECT information_schema.columns, branch, and only
+// if absent run a bare `ADD COLUMN` (no `IF NOT EXISTS`). That's a TOCTOU
+// race: two overlapping boots (a Railway deploy that briefly runs old and
+// new instances together) can both read "column absent" from the SELECT,
+// then both attempt the bare ALTER — the second one fails with Postgres's
+// "column already exists" error, and `runStartupMigrations()` aborts boot on
+// any block throwing (by design — see this file's header). The instance that
+// loses the race never starts. `ADD COLUMN IF NOT EXISTS` is the pattern
+// every other column-adding block since 0060 uses (0067, 0078, 0083, 0086,
+// 0088) specifically because it's a single atomic DDL statement Postgres
+// itself no-ops safely — no read-then-write gap for a second boot to land
+// in. Adopting it here for the same reason; the check-then-ALTER shape
+// (0029, 0030) predates that convention and was the wrong template to copy.
 
 export async function runMigration0093_fixtureRecaptureFailures(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
   const startedAt = Date.now();
 
-  const check = await tx.execute(sql`
-    SELECT count(*)::text AS cnt FROM information_schema.columns
-    WHERE table_name = 'test_suites' AND column_name = 'fixture_recapture_failures'
-  `);
-  const rows = Array.isArray(check) ? check : (check as { rows?: unknown[] })?.rows ?? [];
-  const exists = (rows[0] as { cnt?: string })?.cnt !== "0";
-
-  if (exists) {
-    return {
-      block: "0093_fixture_recapture_failures",
-      outcome: "skipped (column already exists)",
-      duration_ms: Date.now() - startedAt,
-    };
-  }
-
   await tx.execute(sql`
-    ALTER TABLE "test_suites" ADD COLUMN "fixture_recapture_failures" integer DEFAULT 0 NOT NULL
+    ALTER TABLE "test_suites"
+      ADD COLUMN IF NOT EXISTS "fixture_recapture_failures" integer DEFAULT 0 NOT NULL
   `);
 
   return {
     block: "0093_fixture_recapture_failures",
-    outcome: "added column",
+    outcome: "column ensured (fixture_recapture_failures)",
     duration_ms: Date.now() - startedAt,
   };
 }
