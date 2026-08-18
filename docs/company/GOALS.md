@@ -16,6 +16,12 @@ buyers demonstrate they want.
 **€45.58/week** (last 7d, 641 calls) · €30.02/week (30d average, €128.66 total).
 In USD ≈ **$50/week**. The goal is therefore **~40×**, and M1 is **~5×**, not 2.2×.
 
+> **Week of 2026-08-18: €47.22, the highest of the last five discrete weeks**
+> (w-0 €47.22 · w-1 €40.09 · w-2 €11.13 · w-3 €36.07 · w-4 €29.53, measured
+> through `lib/metrics`). Two consecutive rising weeks against a €45.58
+> baseline. Still ~5× short of M1, and w-2's €11.13 is a reminder that single
+> days move this number at our size.
+
 > **Read revenue week-over-week, not as a rolling 7d figure.** On 2026-08-17 the
 > rolling 7d read €36.64 against the €45.58 baseline and looked like a 20% fall.
 > Discrete weeks say the opposite: w-0 €36.64, w-1 €29.98, w-2 €10.85, w-3
@@ -73,6 +79,29 @@ conversion.
   written only by `/v1/do` (four call sites in `routes/do.ts`), never by the
   x402 route — which is where nearly all revenue is. Catalog work must read
   x402 refusals too, or it will mine demand from the rail nobody pays on.
+- **…but the x402 refusal capture is currently dominated by an automated
+  enumerator, and must not be read as demand** (measured 2026-08-18). The
+  instrument shows 1,317 `x402_not_on_rail` events, which reads as a large
+  unmet-demand signal and is the single most misleading number on the platform
+  right now. The evidence against that reading:
+  - Every event falls in the ~41 hours since the instrument switched on
+    (first row 2026-08-16 13:30). "1,317 over 14 days" is the age of the
+    instrument, not the size of the demand — the same trap as DQ-10.
+  - `user_id` is null on all 1,317, and the arrival rate is flat around the
+    clock, ~26 distinct slugs per hour including 03:00 UTC.
+  - The per-slug counts are near-uniform across unrelated capabilities
+    (44/44/44/43/42/41/41/38/36/34…). Real demand is not uniform.
+  - The same slug population appears under `x402_unknown_slug`, **including
+    slugs that are live on the rail** (`us-company-data`, `screenshot-url`,
+    `url-to-text`). A client with a genuine need does not ask for a slug it
+    just successfully bought.
+
+  Read together: one machine is walking the catalogue. **Do not rank catalog
+  work off this table until the traffic is attributed.** What would falsify
+  this: a payer hash or client attribution showing multiple distinct sources,
+  or a non-uniform distribution once the enumerator is excluded. Attributing
+  the source is the next measurement job, and it is a prerequisite for the
+  catalog role using this table at all.
 - ~98% of traffic is our own test harness. Every revenue/usage number must use
   the canonical internal-account filter.
 - **The harness does not measure what customers experience** (found 2026-08-16).
@@ -123,6 +152,7 @@ conversion.
 | E1 | Advertising x402 at MCP refusal converts arrivals | refusal→x402-call rate, distinct payers | no lift after 14d |
 | E2 | Funnel instrumentation reveals the biggest drop | step ratios in weekly rollup | n/a (measurement) |
 | E3 | Capabilities are being delisted for refusing bad input, not for failing. Fixing the failure taxonomy re-lists working inventory | count of capabilities the floor would quarantine before vs after; catalogue size | no capability changes verdict — then the floor is right and the capabilities are genuinely broken |
+| E4 | The four growth bundles sell once they are payable. They were built 2026-08-16 under DQ-9 and sat listed-but-unpayable (`x402_enabled = false`) until 2026-08-18 — every euro arrives over x402, so they had earned nothing by construction | external sales of `competitor-read` / `page-seo-check` / `prospect-brief` / `keyword-scout` | zero sales across all four in 14 days on the rail — then bundle demand does not generalise beyond `lead-email-verify` and we stop building them |
 
 **E3 result (2026-08-16, shipped `f19f9f8`): partly confirmed, and the "partly"
 is the useful half.** One capability changes verdict — `us-company-data`, which
