@@ -1233,6 +1233,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0089_deactivateUsCourtSearch",
       "runMigration0090_capabilityOutputContracts",
       "runMigration0091_bolStaleValidationRules",
+      "runMigration0092_x402GrowthBundles",
     ]);
   });
 });
@@ -1716,6 +1717,103 @@ describe("startup-migrations — block 0091 (stale beneficial-ownership assertio
     for (const query of stub.captured) {
       const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
       expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
+    }
+  });
+});
+
+describe("startup-migrations — block 0092 (growth bundles onto the x402 rail)", () => {
+  // The defect this executes against: the four bundles created 2026-08-16 under
+  // DQ-9 shipped is_active = true (publicly listed) and x402_enabled = false
+  // (unpayable). Every euro of external revenue arrives over x402, so they have
+  // earned nothing since. Verified 2026-08-18 in the DB, in GET /x402/catalog,
+  // and by live probe.
+  const freshRun = () => makeStub({ queue: [{ count: 0 }, [], { count: 4 }, { count: 1 }] });
+
+  it("puts exactly the four growth bundles on the rail, and nothing else", async () => {
+    const { runMigration0092_x402GrowthBundles, X402_GROWTH_BUNDLE_SLUGS } = await import(
+      "./startup-migrations.js"
+    );
+    const stub = freshRun();
+    const result = await runMigration0092_x402GrowthBundles(stub);
+
+    const update = stub.renderedSql.find((s) => /update solutions/i.test(s));
+    expect(update, "an UPDATE against solutions is issued on first run").toBeDefined();
+    expect(update!.toLowerCase()).toContain("x402_enabled = true");
+    // Guarded on is_active so it can never surface a deactivated bundle.
+    expect(update!.toLowerCase()).toContain("is_active = true");
+    expect(update!.toLowerCase()).toContain("x402_enabled = false");
+
+    // The set is exact: these four and no others. lead-email-verify is already
+    // on the rail and must not be touched by this block.
+    expect([...X402_GROWTH_BUNDLE_SLUGS].sort()).toEqual([
+      "competitor-read",
+      "keyword-scout",
+      "page-seo-check",
+      "prospect-brief",
+    ]);
+    const updateQuery = dialect.sqlToQuery(stub.captured[2]);
+    expect(JSON.stringify(updateQuery.params) + updateQuery.sql).not.toContain(
+      "lead-email-verify",
+    );
+    expect(result.rows_affected).toBe(4);
+    expect(result.block).toBe("0092_x402GrowthBundles");
+  });
+
+  it("retires itself: once applied, a later boot issues NO update at all", async () => {
+    // This is the test that discriminates against the obvious implementation.
+    // A block idempotent only by WHERE clause would re-issue the UPDATE on every
+    // boot and re-enable a bundle an operator had deliberately switched off —
+    // the scheduled_testing_eligible footgun in CLAUDE.md. The ledger check must
+    // short-circuit before any write.
+    const { runMigration0092_x402GrowthBundles } = await import("./startup-migrations.js");
+    const stub = makeStub({
+      queue: [{ count: 0 }, [{ block: "0092_x402GrowthBundles" }]],
+    });
+    const result = await runMigration0092_x402GrowthBundles(stub);
+
+    expect(stub.renderedSql.some((s) => /update solutions/i.test(s))).toBe(false);
+    expect(stub.renderedSql.some((s) => /insert into startup_migration_ledger/i.test(s))).toBe(
+      false,
+    );
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toContain("no change");
+  });
+
+  it("records the ledger row only after the update has succeeded", async () => {
+    const { runMigration0092_x402GrowthBundles } = await import("./startup-migrations.js");
+    const stub = freshRun();
+    await runMigration0092_x402GrowthBundles(stub);
+
+    const updateAt = stub.renderedSql.findIndex((s) => /update solutions/i.test(s));
+    const ledgerAt = stub.renderedSql.findIndex((s) =>
+      /insert into startup_migration_ledger/i.test(s),
+    );
+    expect(updateAt).toBeGreaterThanOrEqual(0);
+    expect(ledgerAt).toBeGreaterThan(updateAt);
+    // A crash between the two is safe: the retry's UPDATE matches nothing.
+    expect(stub.renderedSql[ledgerAt].toLowerCase()).toContain("on conflict");
+  });
+
+  it("creates its ledger table idempotently before reading it", async () => {
+    const { runMigration0092_x402GrowthBundles } = await import("./startup-migrations.js");
+    const stub = freshRun();
+    await runMigration0092_x402GrowthBundles(stub);
+    expect(stub.renderedSql[0].toLowerCase()).toContain(
+      "create table if not exists startup_migration_ledger",
+    );
+    expect(stub.renderedSql[1].toLowerCase()).toContain("select block from startup_migration_ledger");
+  });
+
+  it("no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)", async () => {
+    const { runMigration0092_x402GrowthBundles } = await import("./startup-migrations.js");
+    const stub = freshRun();
+    await runMigration0092_x402GrowthBundles(stub);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(
+        chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c)),
+        "no Date/Buffer chunk reaches the SQL bind layer",
+      ).toEqual([]);
     }
   });
 });
