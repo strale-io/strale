@@ -73,6 +73,31 @@ about half an hour:
 statistical indicators are a different product from a company registry, and
 nobody has asked for those either — so it stays unused unless demand appears.
 
+**DQ-14** · `your_call` · owner Petter · raised 2026-08-18T07:00Z · no deadline
+Four small things only you can do. None of them block anything today.
+*Why they are here:* each has been sitting in session handoff notes — one of
+them since 2026-08-15 — where nobody sees them. The queue is the place for
+things that need you, so they now live here and will show on the dashboard
+until they are done or you tell me to drop them.
+
+1. **CourtListener key.** The US court-records lookup is switched off because
+   its key expired (DQ-4, DQ-11). A fresh key from CourtListener and it goes
+   back on in a minute. Nobody has asked for it in a month, so this is low
+   urgency — I list it because the service is otherwise fine.
+2. **The Gazette outage.** The UK Gazette notice search fails on every call
+   because their API returns an error to everyone, not just us. It needs
+   reporting to them at github.com/TheGazette/DevDocs. I do not contact
+   vendors as the company. Until then it stays our worst-scoring service, with
+   a written reason.
+3. **A read-only GitHub token** for the frontend repo, as a repository secret.
+   It makes an existing automatic check real — right now it silently cannot
+   run. Ten minutes.
+4. **The wow-core repository** — archive it or delete it. It is dead and only
+   adds noise.
+
+*If you do nothing:* nothing breaks. Item 2 keeps one service visibly broken;
+item 3 leaves one automated check inert; items 1 and 4 are tidying.
+
 ## DECIDED — visible so you can reverse them
 
 **DQ-13** · `decided` · owner Claude · 2026-08-18
