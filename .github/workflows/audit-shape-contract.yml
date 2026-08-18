@@ -1,0 +1,46 @@
+# Blocking PR gate: the AuditRecord wire-shape contract between
+# apps/api/src/routes/audit.ts and strale-frontend's compliance-types.ts.
+#
+# Why this exists (Phase 2 finding, 2026-08-17): the weekly-drift cron was
+# believed to check this contract, but its private-repo checkout had never
+# succeeded (no cross-repo credential existed) — the check had never once
+# validated real frontend content. Weekly-on-main is also the wrong tier for
+# a contract break: a PR that changes the backend shape can merge and stay
+# broken for up to a week. This workflow runs ON the PRs that can break the
+# contract, and it BLOCKS (no continue-on-error).
+#
+# The paths filter includes this workflow file itself so the PR that
+# introduces or modifies the gate demonstrably executes it (DEC-20260504-C:
+# a gate's first proof of life is its own introducing PR).
+name: audit-shape-contract
+
+on:
+  pull_request:
+    paths:
+      - "apps/api/src/routes/audit.ts"
+      - "apps/api/scripts/check-shape-contracts.mjs"
+      - ".github/workflows/audit-shape-contract.yml"
+
+jobs:
+  shape-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: strale-io/strale-frontend
+          path: strale-frontend
+          # Private repo — founder-created fine-grained PAT, read-only
+          # Contents on strale-io/strale-frontend only (added 2026-08-18).
+          token: ${{ secrets.FRONTEND_READ_PAT }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # check-shape-contracts.mjs reads TS interface declarations textually —
+      # no build or npm ci needed, matching weekly-drift.yml's invocation.
+      - env:
+          STRALE_FRONTEND_PATH: ${{ github.workspace }}/strale-frontend
+        run: node apps/api/scripts/check-shape-contracts.mjs

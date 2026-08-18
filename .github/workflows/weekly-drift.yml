@@ -88,8 +88,13 @@ jobs:
         with:
           repository: strale-io/strale-frontend
           path: strale-frontend
-          # No token needed for public-repo read; if the repo is
-          # private, set a GH_PAT secret and reference it here.
+          # strale-frontend is PRIVATE — the default GITHUB_TOKEN cannot see
+          # it, and until 2026-08-18 this step silently 404'd on every run
+          # (masked by continue-on-error), so the AuditRecord shape check
+          # below had NEVER actually validated real frontend content.
+          # FRONTEND_READ_PAT is a founder-created fine-grained PAT,
+          # read-only Contents on strale-io/strale-frontend only.
+          token: ${{ secrets.FRONTEND_READ_PAT }}
         continue-on-error: true
 
       - id: audit-record-shape
