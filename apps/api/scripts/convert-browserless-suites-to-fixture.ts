@@ -40,8 +40,8 @@
  *       # restrict to one or more of the 12 (repeatable flag). Any slug
  *       # outside TARGET_SLUGS is rejected loudly, not silently ignored.
  *
- * Concurrency (widened per Codex review, 2026-08-18 — MEDIUM-4): each
- * --apply write is a CAS-guarded single-row UPDATE asserting
+ * Concurrency (widened per Codex review, 2026-08-18 round 1 — MEDIUM-4):
+ * each --apply write is a CAS-guarded single-row UPDATE asserting
  * `id`, `active = true`, `test_type`, `capability_slug`, AND
  * `test_mode IS NOT DISTINCT FROM <the exact mode this run planned
  * against>` — not just the test_mode check alone. A suite that changed
@@ -53,11 +53,25 @@
  * not one big transaction: a problem on one suite must not roll back 59
  * other correct conversions, and no suite's write depends on another's.
  *
- * HIGH-2a (Codex review): `updated_at` is bumped ONLY for plans where
- * `bumpUpdatedAt` is true (baseline missing/already stale at plan time —
- * see browserless-suite-migration.ts). A suite whose baseline is already
- * fresh gets ONLY its `test_mode` flipped, so the conversion itself never
- * manufactures an unnecessary live recapture.
+ * Round 2 (2026-08-18 — MEDIUM): for `bumpUpdatedAt: true` plans, the CAS
+ * ALSO asserts `baseline_captured_at IS NOT DISTINCT FROM` the value this
+ * run observed at plan time. The test_mode check alone can't see a
+ * successful live recapture that lands on the suite between plan and
+ * apply (its normal scheduled dispatch fires mid-script and captures a
+ * fresh baseline) — that race advances baseline_captured_at without
+ * touching test_mode. Applying the stale plan anyway would bump
+ * updated_at past the suite's brand-new baseline_captured_at, immediately
+ * re-triggering edit-invalidation staleness on a baseline that had just
+ * become fresh: the exact unnecessary-recapture problem HIGH-2a fixed,
+ * reintroduced through the race window. `bumpUpdatedAt: false` plans don't
+ * need this — their UPDATE never touches updated_at, so a concurrent
+ * capture can't be invalidated by it.
+ *
+ * HIGH-2a (Codex review, round 1): `updated_at` is bumped ONLY for plans
+ * where `bumpUpdatedAt` is true (baseline missing/already stale at plan
+ * time — see browserless-suite-migration.ts). A suite whose baseline is
+ * already fresh gets ONLY its `test_mode` flipped, so the conversion
+ * itself never manufactures an unnecessary live recapture.
  */
 import postgres from "postgres";
 import {
@@ -209,6 +223,22 @@ async function main() {
       // shapes rather than a conditional NOW()/NULL expression, so the
       // "don't touch updated_at" case can never accidentally write a NULL
       // into a NOT NULL column via a mis-built CASE.
+      //
+      // MEDIUM (Codex review, 2026-08-18 round 2): for a bumpUpdatedAt=true
+      // plan, ALSO assert baseline_captured_at is unchanged from what this
+      // run observed. Without it, a successful live recapture landing on
+      // this suite between plan and apply (its normal scheduled dispatch
+      // fires and captures a fresh baseline while this script is running)
+      // advances baseline_captured_at without touching test_mode — the
+      // test_mode check alone can't see that race. Applying the stale plan
+      // anyway would bump updated_at past the suite's BRAND NEW
+      // baseline_captured_at, immediately re-triggering edit-invalidation
+      // staleness on a baseline that had just become fresh: the exact
+      // unnecessary-recapture problem HIGH-2a fixed, reintroduced through
+      // the race window. A bumpUpdatedAt=false plan's UPDATE never touches
+      // updated_at, so a concurrent capture can't be invalidated by it —
+      // no extra guard needed there (see SuitePlan.observedBaselineCapturedAt's
+      // doc comment in browserless-suite-migration.ts for the full case).
       const result = p.bumpUpdatedAt
         ? await sql`
             UPDATE test_suites
@@ -218,6 +248,7 @@ async function main() {
               AND test_type = ${p.testType}
               AND capability_slug = ${p.capabilitySlug}
               AND test_mode IS NOT DISTINCT FROM ${p.currentMode}
+              AND baseline_captured_at IS NOT DISTINCT FROM ${p.observedBaselineCapturedAt}
           `
         : await sql`
             UPDATE test_suites

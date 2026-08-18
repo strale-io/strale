@@ -201,6 +201,38 @@ describe("planCapabilityMigration", () => {
     });
   });
 
+  describe("MEDIUM (round 2) — observedBaselineCapturedAt carries through for the apply-step race guard", () => {
+    it("carries the suite's actual baseline_captured_at on a convert_to_fixture plan needing a bump", () => {
+      const captured = new Date("2026-07-01T00:00:00.000Z");
+      const suites = fullSuiteSet("screenshot-url").map((s) =>
+        s.testType === "edge_case"
+          ? { ...s, hasBaseline: false, baselineCapturedAt: null } // missing -> bumpUpdatedAt true
+          : s,
+      );
+      const plans = planCapabilityMigration(suites);
+      const p = plans.find((p) => p.testType === "edge_case")!;
+      expect(p.bumpUpdatedAt).toBe(true);
+      expect(p.observedBaselineCapturedAt).toBeNull();
+
+      // A second scenario with a real (non-null) but stale captured-at.
+      const suites2 = fullSuiteSet("screenshot-url").map((s) =>
+        s.testType === "known_bad" ? { ...s, baselineCapturedAt: captured, updatedAt: NOW } : s,
+      );
+      const plans2 = planCapabilityMigration(suites2);
+      const p2 = plans2.find((p) => p.testType === "known_bad")!;
+      expect(p2.bumpUpdatedAt).toBe(true);
+      expect(p2.observedBaselineCapturedAt).toEqual(captured);
+    });
+
+    it("still carries observedBaselineCapturedAt even when bumpUpdatedAt is false (harmless, just unused by the apply step)", () => {
+      const suites = fullSuiteSet("screenshot-url"); // default: fresh baselines
+      const plans = planCapabilityMigration(suites);
+      const p = plans.find((p) => p.testType === "dependency_health")!;
+      expect(p.bumpUpdatedAt).toBe(false);
+      expect(p.observedBaselineCapturedAt).toEqual(NOW);
+    });
+  });
+
   describe("EDGE — no live candidate leaves the capability with zero live suites", () => {
     it("refuses the whole capability when neither known_answer nor dependency_health is active", () => {
       const suites = fullSuiteSet("no-canary-cap").filter(

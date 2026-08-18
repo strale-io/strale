@@ -155,6 +155,26 @@ export interface SuitePlan {
    * Meaningless (left `true`) for actions the apply step never writes.
    */
   bumpUpdatedAt: boolean;
+  /**
+   * The suite's `baseline_captured_at` as observed AT PLAN TIME — carried
+   * through so the apply step's CAS (Codex review, 2026-08-18 round 2 —
+   * MEDIUM) can guard against a race it couldn't see otherwise: a
+   * successful live recapture landing on this suite between plan and apply
+   * (e.g. its normal scheduled dispatch fires and captures a fresh
+   * baseline while this script is running) advances `baseline_captured_at`
+   * without changing `test_mode` — the CAS's original `test_mode IS NOT
+   * DISTINCT FROM` check alone can't see that. For a `bumpUpdatedAt: true`
+   * plan, applying it anyway would bump `updated_at` past the suite's
+   * BRAND NEW `baseline_captured_at`, immediately re-triggering
+   * edit-invalidation staleness on a baseline that had just become fresh —
+   * exactly the unnecessary-recapture problem HIGH-2a fixed, reintroduced
+   * through the race window. The script includes this value in the WHERE
+   * clause (`baseline_captured_at IS NOT DISTINCT FROM`) only for
+   * `bumpUpdatedAt: true` plans; a `bumpUpdatedAt: false` plan's UPDATE
+   * never touches `updated_at`, so a concurrent capture can't be
+   * invalidated by it and the extra guard isn't needed.
+   */
+  observedBaselineCapturedAt: Date | null;
 }
 
 /**
@@ -218,6 +238,7 @@ export function planCapabilityMigration(suites: SuiteRow[]): SuitePlan[] {
         action: "not_targeted",
         reason: "suite is inactive",
         bumpUpdatedAt: false,
+        observedBaselineCapturedAt: suite.baselineCapturedAt,
       });
       continue;
     }
@@ -232,6 +253,7 @@ export function planCapabilityMigration(suites: SuiteRow[]): SuitePlan[] {
         action: "not_targeted",
         reason: "piggyback — Principle C, never scheduled proactively, never touched",
         bumpUpdatedAt: false,
+        observedBaselineCapturedAt: suite.baselineCapturedAt,
       });
       continue;
     }
@@ -246,6 +268,7 @@ export function planCapabilityMigration(suites: SuiteRow[]): SuitePlan[] {
         action: "not_targeted",
         reason: `${suite.testType} already short-circuits to a free dry-run/structural check regardless of test_mode — never touched Browserless`,
         bumpUpdatedAt: false,
+        observedBaselineCapturedAt: suite.baselineCapturedAt,
       });
       continue;
     }
@@ -263,6 +286,7 @@ export function planCapabilityMigration(suites: SuiteRow[]): SuitePlan[] {
           "converting the rest to fixture would leave it with ZERO live suites (silent blind spot). " +
           "Refusing the whole capability's conversion; needs a human to add/reactivate a canary candidate first.",
         bumpUpdatedAt: false,
+        observedBaselineCapturedAt: suite.baselineCapturedAt,
       });
       continue;
     }
@@ -280,6 +304,7 @@ export function planCapabilityMigration(suites: SuiteRow[]): SuitePlan[] {
           action: "unchanged",
           reason: "already the kept-live canary suite",
           bumpUpdatedAt: true,
+          observedBaselineCapturedAt: suite.baselineCapturedAt,
         });
       } else {
         plans.push({
@@ -291,6 +316,7 @@ export function planCapabilityMigration(suites: SuiteRow[]): SuitePlan[] {
           action: "convert_to_canary",
           reason: `chosen as the one kept-live suite (${suite.testType}) — will drop from hourly to a 24h floor via minRetestIntervalHours`,
           bumpUpdatedAt: true,
+          observedBaselineCapturedAt: suite.baselineCapturedAt,
         });
       }
       continue;
@@ -308,6 +334,7 @@ export function planCapabilityMigration(suites: SuiteRow[]): SuitePlan[] {
         action: "unchanged",
         reason: "already fixture mode",
         bumpUpdatedAt: true,
+        observedBaselineCapturedAt: suite.baselineCapturedAt,
       });
     } else {
       const fresh = hasFreshBaseline(suite);
@@ -324,6 +351,7 @@ export function planCapabilityMigration(suites: SuiteRow[]): SuitePlan[] {
           : "Browserless-touching, not the canary — converting to zero-cost fixture replay; " +
             "baseline is missing or already stale, so the next dispatch recaptures it live once regardless",
         bumpUpdatedAt: !fresh,
+        observedBaselineCapturedAt: suite.baselineCapturedAt,
       });
     }
   }
