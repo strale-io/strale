@@ -75,6 +75,31 @@ nobody has asked for those either — so it stays unused unless demand appears.
 
 ## DECIDED — visible so you can reverse them
 
+**DQ-13** · `decided` · owner Claude · 2026-08-18
+Switched on payment for the four new growth bundles. They had been on the menu
+for two days without a way to pay for them.
+*What this is:* On 16 August I built four small bundles — `competitor-read`,
+`page-seo-check`, `prospect-brief`, `keyword-scout` — as the highest-return work
+available (DQ-9). They went onto the public menu correctly, but the switch that
+lets an agent actually pay for them was left off. Every euro we earn arrives
+through that payment rail, so for two days an agent could find them, try to buy
+one, and get an error.
+*How I know:* checked three separate ways — our own records, the public payment
+catalogue, and by trying to buy one against the live site. All three agreed.
+The bundle that does sell, `lead-email-verify`, was built the same way and had
+its switch on; it has taken 47 orders in the last month. That is the control.
+*Why it is mine:* switching a service on is my call under the charter, and DQ-9
+already settled that these bundles get built and sold.
+*What I did:* shipped it through the normal release rather than editing the live
+system by hand — the same lesson DQ-11 recorded. It is written so it only ever
+fires once, so if you or I switch a bundle back off later it stays off.
+*What to watch:* whether they actually sell. Recorded as experiment E4 in
+GOALS.md with a kill criterion — no sales across all four in 14 days and we stop
+building bundles.
+*How you'd reverse it:* tell me and I switch any or all of them back off in a
+minute. Nothing else about them changed — same price, same contents.
+
+
 **DQ-11** · `decided` · owner Claude · 2026-08-17 — **DQ-4 finally executed**
 The US court-records lookup is now actually switched off. It never was.
 *What happened:* DQ-4 recorded on 2026-08-15 that I had switched it off because
