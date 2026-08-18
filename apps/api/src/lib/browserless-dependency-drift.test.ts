@@ -96,13 +96,25 @@ describe("dependency-manifest.ts browserless.capabilities — drift detector", (
 
   it("every executor with hard-require Browserless evidence is in the curated list (under-inclusion check)", () => {
     const curated = new Set(CURATED_BROWSERLESS_SLUGS);
-    const missing: string[] = [];
+    // Carries the matched evidence, symmetrically with the over-inclusion
+    // check above: a bare slug list tells a future engineer WHAT failed but
+    // not WHY, leaving them to re-derive the pattern match by hand.
+    const missing: Array<{ slug: string; evidence: string; reason: string }> = [];
     for (const [slug, source] of EXECUTOR_SOURCES) {
-      if (HARD_REQUIRE_PATTERN.test(source) && !curated.has(slug)) {
-        missing.push(slug);
+      const match = source.match(HARD_REQUIRE_PATTERN);
+      if (match && !curated.has(slug)) {
+        missing.push({
+          slug,
+          evidence: match[0],
+          reason:
+            "executor hard-requires Browserless (matched above) but is absent from " +
+            "dependency-manifest.ts's browserless.capabilities — add it there, or the " +
+            "credential and provider-health gates will not skip it when Browserless is " +
+            "unconfigured/down, producing timeout noise instead of clean skips",
+        });
       }
     }
-    expect(missing, JSON.stringify(missing)).toEqual([]);
+    expect(missing, JSON.stringify(missing, null, 2)).toEqual([]);
   });
 
   // Pins today's audited set so an unreviewed addition/removal fails loudly
