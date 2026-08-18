@@ -13,6 +13,7 @@ import {
 } from "../db/schema.js";
 import { runTests } from "../lib/test-runner.js";
 import type { ScheduleTier } from "../lib/test-runner.js";
+import { isExhaustedRecapture, selectRecalibrationBestSuite } from "../lib/recalibration-eligibility.js";
 import { getExecutor } from "../capabilities/index.js";
 import {
   assertGuardedAllow,
@@ -1021,6 +1022,10 @@ internalTestsRoute.post("/recalibrate", async (c) => {
     skippedNegative: 0,
     skippedEdgeCase: 0,
     skippedPiggyback: 0,
+    // Codex round 3: suites quarantined for exhausted fixture-recapture
+    // attempts (FIXTURE_RECAPTURE_QUARANTINE_MARKER) — never touched by
+    // recalibration, live executor call or DB write, dry-run or not.
+    skippedExhaustedRecapture: 0,
     failedNoExecutor: 0,
     failedExecution: 0,
     failedNoOutput: 0,
@@ -1038,6 +1043,18 @@ internalTestsRoute.post("/recalibrate", async (c) => {
     bySlug.set(s.capabilitySlug, list);
   }
 
+  // Codex closing-pass round 3: /recalibrate calls the executor directly
+  // (below), bypassing runSingleTest entirely — so the runtime refusal
+  // gate that test-runner.ts's runSingleTest enforces for a suite
+  // quarantined after exhausted fixture-recapture attempts never sees this
+  // path at all. Without this check, an admin running /recalibrate (even
+  // with ?dry-run — the live executor call below is NOT gated by dryRun,
+  // only the DB write later is) would silently re-spend the exact
+  // Browserless calls the quarantine exists to stop, defeating it via a
+  // side door. `isExhaustedRecapture` / `selectRecalibrationBestSuite`
+  // (../lib/recalibration-eligibility.js) carry the pure selection logic
+  // so it's unit-testable without a DB/HTTP harness for this route.
+
   for (const [slug, slugSuites] of bySlug) {
     const cap = capMap.get(slug);
     if (!cap) continue;
@@ -1047,53 +1064,64 @@ internalTestsRoute.post("/recalibrate", async (c) => {
     let executionError: string | null = null;
 
     if (executor) {
-      const calibratable = slugSuites.filter(
-        (s) => s.testType === "known_answer" || s.testType === "schema_check" || s.testType === "dependency_health",
-      );
-      const bestSuite = calibratable[0] ?? slugSuites[0];
-      const resolution = resolveRecalInput(bestSuite.input as Record<string, unknown>, cap);
+      // Excludes exhausted-recapture suites from both the preferred
+      // candidate pool and the plain fallback — a slug whose ONLY suites
+      // are all exhausted-recapture must not have its executor called at
+      // all, dry-run or live.
+      const bestSuite = selectRecalibrationBestSuite(slugSuites);
 
-      // Phase A0b dispatcher gate. Recalibration is operator-initiated
-      // admin diagnostic — internal_test/manual.
-      let gateError: string | null = null;
-      try {
-        await assertGuardedAllow(slug, {
-          kind: "internal_test",
-          suiteId: bestSuite.id,
-          reason: "manual",
-        });
-      } catch (err) {
-        if (
-          err instanceof CapabilityInvocationRefusedError ||
-          err instanceof CapabilityNotClassifiedError ||
-          err instanceof BudgetExhaustedError
-        ) {
-          gateError = err.message;
-        } else {
-          throw err;
-        }
-      }
-
-      if (gateError) {
-        executionError = gateError.slice(0, 200);
+      if (!bestSuite) {
+        // Every suite for this slug is quarantined for exhausted recapture
+        // — refuse to call the executor for this slug at all. Per-suite
+        // reporting below still runs (isExhaustedRecapture skips each one
+        // individually), so this just avoids the live call; report.totalProcessed
+        // and the manualReview list still reflect what happened.
       } else {
-        try {
-          const result = await executor(resolution.input);
-          if (result?.output && Object.keys(result.output).length > 0) {
-            realOutput = result.output;
-          }
-        } catch (err: any) {
-          executionError = err.message?.slice(0, 200) ?? "Unknown error";
-        }
-      }
+        const resolution = resolveRecalInput(bestSuite.input as Record<string, unknown>, cap);
 
-      // 2s delay between capabilities
-      await new Promise((r) => setTimeout(r, 2000));
+        // Phase A0b dispatcher gate. Recalibration is operator-initiated
+        // admin diagnostic — internal_test/manual.
+        let gateError: string | null = null;
+        try {
+          await assertGuardedAllow(slug, {
+            kind: "internal_test",
+            suiteId: bestSuite.id,
+            reason: "manual",
+          });
+        } catch (err) {
+          if (
+            err instanceof CapabilityInvocationRefusedError ||
+            err instanceof CapabilityNotClassifiedError ||
+            err instanceof BudgetExhaustedError
+          ) {
+            gateError = err.message;
+          } else {
+            throw err;
+          }
+        }
+
+        if (gateError) {
+          executionError = gateError.slice(0, 200);
+        } else {
+          try {
+            const result = await executor(resolution.input);
+            if (result?.output && Object.keys(result.output).length > 0) {
+              realOutput = result.output;
+            }
+          } catch (err: any) {
+            executionError = err.message?.slice(0, 200) ?? "Unknown error";
+          }
+        }
+
+        // 2s delay between capabilities
+        await new Promise((r) => setTimeout(r, 2000));
+      }
     }
 
     for (const suite of slugSuites) {
       report.totalProcessed++;
 
+      if (isExhaustedRecapture(suite)) { report.skippedExhaustedRecapture++; continue; }
       if (suite.testType === "negative") { report.skippedNegative++; continue; }
       if (suite.testType === "edge_case") { report.skippedEdgeCase++; continue; }
       if (suite.testType === "piggyback") { report.skippedPiggyback++; continue; }
@@ -1479,8 +1507,23 @@ internalTestsRoute.post("/admin/run-script", async (c) => {
           for (const suite of rows) {
             if (!suite.baseline_output) { noBaseline++; continue; }
             if (!dryRun) {
+              // Do NOT set fixture_last_refreshed here (Codex review,
+              // 2026-08-18 round 2 — HIGH). This route only flips test_mode
+              // on a suite that already has SOME baseline_output — it never
+              // executes the capability, so it has no idea whether that
+              // baseline is a minute old or a year old. fixture_last_refreshed
+              // is the single-writer timestamp checkBaselineStaleness()
+              // (test-runner.ts) uses to decide when a fixture baseline goes
+              // stale by age; only captureBaseline (a genuine successful
+              // recapture) may set it. Stamping NOW() here would silently
+              // hand an arbitrarily-old, never-validated baseline a fresh
+              // 30-day age-staleness grant it did nothing to earn. Leaving
+              // the column NULL/unchanged is correct: checkBaselineStaleness
+              // treats a NULL fixture_last_refreshed as maximally stale, so
+              // the very next scheduled run performs one real live capture
+              // and starts the clock honestly.
               await db.execute(sql`
-                UPDATE test_suites SET test_mode = 'fixture', fixture_last_refreshed = NOW(), updated_at = NOW()
+                UPDATE test_suites SET test_mode = 'fixture', updated_at = NOW()
                 WHERE id = ${suite.id}::uuid
               `);
             }

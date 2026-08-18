@@ -2,19 +2,34 @@
  * Chromium/Browserless health monitor.
  *
  * Probes the Browserless.io managed service every 30 minutes with a real
- * page render (example.com). Exports isChromiumHealthy() for the test runner
- * to skip Browserless-dependent capabilities when the service is down,
- * preventing hundreds of timeout failures from polluting the SQS window.
+ * page render (example.com). Exports isChromiumHealthy() for capability
+ * executors on the live customer path (see data-provider.ts's
+ * executeWithFallback, which skips a fallback-chain provider whose
+ * requiredServices includes "browserless" when this reports unhealthy) to
+ * fail fast rather than wait out a timeout.
  *
- * Browserless-dependent capabilities are determined from the database
- * (capability_type = 'scraping') with a 5-minute cache.
+ * NOTE (2026-08-18): this module does NOT gate the scheduled test runner.
+ * That was the original intent — isBrowserlessCapability() was written for
+ * exactly that — but it had zero call sites anywhere in the codebase and was
+ * removed. Skip-on-unhealthy-provider for scheduled tests is handled by
+ * upstream-health-gate.ts's findUnhealthyUpstream(), wired into
+ * test-runner.ts's runTests() per-suite loop, and (as an earlier, cheaper
+ * gate) by test-scheduler.ts's own pre-runTests() provider-health filter.
+ * All of these share one source of truth for "which capabilities depend on
+ * Browserless": dependency-manifest.ts's curated `browserless.capabilities`
+ * list — the gate and this module's getBrowserlessCapabilityCount() read it
+ * via upstream-health-gate.ts's getBrowserlessDependentSlugs(), while the
+ * scheduler's pre-filter reads the manifest directly. Either way it is the
+ * curated list, never inferred from capability_type='scraping'. See that function's
+ * doc comment for why the capability_type heuristic was rejected (it missed
+ * capabilities hard-requiring Browserless that happen to be classified
+ * capability_type='ai_assisted', while over-including capabilities that
+ * keep working via web-provider.ts's fallback tiers when Browserless is
+ * down).
  *
  * State transitions are logged and trigger interrupt emails on critical changes.
  */
 
-import { eq } from "drizzle-orm";
-import { getDb } from "../db/index.js";
-import { capabilities } from "../db/schema.js";
 import { buildBrowserlessRequestUrl, stripToken } from "./browserless-launch.js";
 import { fireAndForget } from "./fire-and-forget.js";
 import { log, logError, logWarn } from "./log.js";
@@ -40,12 +55,9 @@ setTimeout(() => {
 
 async function refreshBrowserlessCache(): Promise<Set<string>> {
   try {
-    const db = getDb();
-    const rows = await db
-      .select({ slug: capabilities.slug })
-      .from(capabilities)
-      .where(eq(capabilities.capabilityType, "scraping"));
-    _browserlessSlugs = new Set(rows.map((r) => r.slug));
+    const { getBrowserlessDependentSlugs } = await import("./upstream-health-gate.js");
+    const slugs = await getBrowserlessDependentSlugs();
+    _browserlessSlugs = new Set(slugs);
     _browserlessCacheExpiry = Date.now() + CACHE_TTL_MS;
   } catch (err) {
     // On DB error, keep the stale cache rather than clearing it
@@ -59,15 +71,6 @@ async function refreshBrowserlessCache(): Promise<Set<string>> {
 /** Whether Chromium/Browserless is currently responding to render requests. */
 export function isChromiumHealthy(): boolean {
   return _healthy;
-}
-
-/**
- * Whether a capability depends on Browserless for execution.
- * Reads from cached Set (populated from DB). Safe to call synchronously —
- * cache is refreshed during probeChromiumHealth() every 30 minutes.
- */
-export function isBrowserlessCapability(slug: string): boolean {
-  return _browserlessSlugs.has(slug);
 }
 
 /** Number of capabilities that would be skipped when Chromium is down. */
