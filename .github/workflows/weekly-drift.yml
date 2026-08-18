@@ -95,6 +95,10 @@ jobs:
           # FRONTEND_READ_PAT is a founder-created fine-grained PAT,
           # read-only Contents on strale-io/strale-frontend only.
           token: ${{ secrets.FRONTEND_READ_PAT }}
+          # This job now runs `npm ci` against this checkout. Without this,
+          # actions/checkout leaves the PAT in strale-frontend/.git/config
+          # for the rest of the job. Nothing here needs to push or re-fetch.
+          persist-credentials: false
         continue-on-error: true
 
       - id: audit-record-shape
@@ -120,11 +124,38 @@ jobs:
       # cannot break its compilation; gating backend PRs on it would blame
       # unrelated PRs for pre-existing frontend errors.
       # Reuses the strale-frontend checkout from the step above.
+      # Two checks, because a backstop that only compiles would miss the more
+      # likely regression: the primary gate being removed while the code still
+      # happens to compile. So assert the `typecheck` script is still wired in
+      # the frontend's package.json, THEN compile.
+      # Three failure modes, deliberately reported as three DIFFERENT messages.
+      # Petter reads this issue at 3am on a Sunday; "cd: No such file or
+      # directory" would leave him unable to tell an expired PAT apart from a
+      # frontend that genuinely lost its type gate. The PAT has already needed
+      # regenerating once, so that confusion is likely, not hypothetical.
       - id: frontend-typecheck
         run: |
           set +e
           set -o pipefail
-          (cd strale-frontend && npm ci && npx tsc -b --force) 2>&1 | tee /tmp/frontend-typecheck.txt
+          (
+            if [ ! -d strale-frontend ]; then
+              echo "CHECKOUT UNAVAILABLE — the checkout step above did not produce strale-frontend/."
+              echo "Most likely FRONTEND_READ_PAT expired or lost access. This is NOT evidence"
+              echo "that the frontend's typecheck gate broke — fix the token, then re-run."
+              exit 1
+            fi
+            cd strale-frontend
+            if ! node -e 'process.exit(require("./package.json").scripts?.typecheck ? 0 : 1)' 2>/dev/null; then
+              echo "PRIMARY GATE MISSING — no \"typecheck\" script in strale-frontend/package.json."
+              echo "That script is the real gate (strale-io/strale-frontend#19); this weekly run"
+              echo "only watches it. Either it was removed, or #19 has not merged yet."
+              exit 1
+            fi
+            # --ignore-scripts: this step only needs tsc, and the checkout above
+            # persists its PAT in .git/config. No reason to run third-party
+            # postinstall scripts next to a credential.
+            npm ci --ignore-scripts && npx tsc -b --force
+          ) 2>&1 | tee /tmp/frontend-typecheck.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
