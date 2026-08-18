@@ -64,6 +64,7 @@ import {
   runMigration0078_transactionsCapabilityIdCreatedAtIdx,
   runMigration0082_reclassifyThrottledFreeUnlimited,
   runMigration0087_unhideRedactedRows,
+  runMigration0093_fixtureRecaptureFailures,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -108,6 +109,27 @@ describe("startup-migrations — block 0029 (actual_cost_cents)", () => {
   it("second run: skips when column already exists", async () => {
     const stub = makeStub({ queue: [[{ cnt: "1" }]] });
     const result = await runMigration0029_actualCostCents(stub);
+    expect(result.outcome).toMatch(/skipped/i);
+    expect(stub.captured).toHaveLength(1); // only the check ran
+    expect(stub.renderedSql.some((s) => /alter table/i.test(s))).toBe(false);
+  });
+});
+
+describe("startup-migrations — block 0093 (fixture_recapture_failures)", () => {
+  // Same shape as block 0029 — information_schema check + conditional
+  // ADD COLUMN. Companion to the Browserless harness-burn mitigation's
+  // HIGH-2b fix (recordFixtureRecaptureFailure in test-runner.ts).
+  it("first run: adds column when information_schema reports absence", async () => {
+    const stub = makeStub({ queue: [[{ cnt: "0" }]] });
+    const result = await runMigration0093_fixtureRecaptureFailures(stub);
+    expect(result.outcome).toMatch(/added column/i);
+    expect(stub.captured).toHaveLength(2); // check + ALTER TABLE
+    expect(stub.renderedSql.some((s) => /alter table.*add column.*fixture_recapture_failures/i.test(s))).toBe(true);
+  });
+
+  it("second run: skips when column already exists", async () => {
+    const stub = makeStub({ queue: [[{ cnt: "1" }]] });
+    const result = await runMigration0093_fixtureRecaptureFailures(stub);
     expect(result.outcome).toMatch(/skipped/i);
     expect(stub.captured).toHaveLength(1); // only the check ran
     expect(stub.renderedSql.some((s) => /alter table/i.test(s))).toBe(false);
