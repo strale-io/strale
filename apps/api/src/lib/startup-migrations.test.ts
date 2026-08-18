@@ -1804,6 +1804,34 @@ describe("startup-migrations — block 0092 (growth bundles onto the x402 rail)"
     expect(stub.renderedSql[1].toLowerCase()).toContain("select block from startup_migration_ledger");
   });
 
+  it("never renders ANY((...)) — the row-value tuple Postgres rejects", async () => {
+    // The bug this pins shipped in this very block and was caught before it
+    // reached a booted process. drizzle's sql tag does not serialize a JS array
+    // as a Postgres array bind: `slug = ANY(${array})` renders
+    // `ANY(($1, $2, $3, $4))`, and Postgres answers "op ANY/ALL (array) requires
+    // array on right side". lib/internal-accounts.ts documents the same defect
+    // as the root cause of a production outage (4bf58d0), resurfaced three times.
+    //
+    // Here it is worse than a failed query: runStartupMigrations() throws on the
+    // first failing block and index.ts exits the process, so this shape is the
+    // difference between a deploy and a crash loop on every boot.
+    const { runMigration0092_x402GrowthBundles } = await import("./startup-migrations.js");
+    const stub = freshRun();
+    await runMigration0092_x402GrowthBundles(stub);
+
+    for (const rendered of stub.renderedSql) {
+      expect(
+        rendered,
+        "a bound JS array must never reach ANY() through drizzle's sql tag",
+      ).not.toMatch(/any\s*\(\s*\(/i);
+    }
+    // ...and the slugs must still each be bound, not string-interpolated.
+    const update = stub.renderedSql.find((s) => /update solutions/i.test(s))!;
+    expect(update).toMatch(/slug in \(\$\d+(, \$\d+)+\)/i);
+    expect(update).not.toContain("competitor-read");
+    expect(dialect.sqlToQuery(stub.captured[2]).params).toContain("competitor-read");
+  });
+
   it("no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)", async () => {
     const { runMigration0092_x402GrowthBundles } = await import("./startup-migrations.js");
     const stub = freshRun();

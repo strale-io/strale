@@ -2423,11 +2423,24 @@ export async function runMigration0092_x402GrowthBundles(
     };
   }
 
+  // NOT `slug = ANY(${array})`. drizzle's sql tag does not serialize a JS array
+  // as a single Postgres array bind — it expands to the row-value tuple
+  // `ANY(($1, $2, $3, $4))`, which Postgres rejects with "op ANY/ALL (array)
+  // requires array on right side". See lib/internal-accounts.ts, which documents
+  // this as the root cause of a prior production outage (commit 4bf58d0) that
+  // has resurfaced three times since. In a startup migration the blast radius is
+  // worse than a failed query: runStartupMigrations() throws on first failure and
+  // index.ts exits, so the shape below is the difference between a deploy and a
+  // crash loop. Built as a parameterized IN-list via sql.join instead.
+  const slugList = sql.join(
+    X402_GROWTH_BUNDLE_SLUGS.map((slug) => sql`${slug}`),
+    sql`, `,
+  );
   const res = await tx.execute(sql`
     UPDATE solutions
     SET x402_enabled = true,
         updated_at = now()
-    WHERE slug = ANY(${[...X402_GROWTH_BUNDLE_SLUGS]})
+    WHERE slug IN (${slugList})
       AND is_active = true
       AND x402_enabled = false
   `);
