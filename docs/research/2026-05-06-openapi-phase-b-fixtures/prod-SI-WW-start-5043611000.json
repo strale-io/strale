@@ -1,0 +1,19 @@
+{
+  "entityName": "Krka, d.d., Novo mesto (matična 5043611000)",
+  "result": {
+    "ok": false,
+    "status": 406,
+    "body": {
+      "success": false,
+      "message": "vatCode not valid, must match one of these regex: [\"^SI\\\\d{8}$\",\"^\\\\d{8}$\"]",
+      "error": 2015,
+      "data": null
+    },
+    "error": "client",
+    "latencyMs": 1811,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "SI",
+    "identifier": "5043611000"
+  }
+}

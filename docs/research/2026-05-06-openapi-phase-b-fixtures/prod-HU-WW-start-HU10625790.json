@@ -1,0 +1,45 @@
+{
+  "entityName": "MOL Nyrt. (VAT HU10625790)",
+  "result": {
+    "ok": true,
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "69ca36468b2fdc514ccce013",
+          "lastUpdateTimestamp": 1778072456,
+          "companyName": "MOL Magyar Olaj- es Gazipari Nyilvanosan Mukodo Reszvenytarsasag",
+          "taxCode": "10625790-4-44",
+          "vatCode": "HU17781774",
+          "leiCode": "213800R83KX5FQFGXS67",
+          "address": {
+            "registeredOffice": {
+              "town": "Budapest",
+              "country": "HU",
+              "zipCode": "1117",
+              "streetName": "Dombovari ut 28.",
+              "streetNumber": "27",
+              "gps": {
+                "coordinates": [
+                  19.05825,
+                  47.46818
+                ]
+              }
+            }
+          },
+          "activityStatus": "ACTIVE",
+          "incorporationDate": "1991-10-01"
+        }
+      ],
+      "success": true,
+      "message": "",
+      "error": null
+    },
+    "error": null,
+    "latencyMs": 7221,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "HU",
+    "identifier": "HU10625790"
+  }
+}

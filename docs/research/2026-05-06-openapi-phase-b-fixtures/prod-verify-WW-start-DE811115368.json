@@ -1,0 +1,44 @@
+{
+  "result": {
+    "ok": true,
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "695fd9d6b8b6b5a2d5ed2658",
+          "lastUpdateTimestamp": 1778072170,
+          "companyName": "AUDI Aktiengesellschaft",
+          "companyNumber": "HRB 1 (Ingolstadt)",
+          "leiCode": "529900J1PXYSZJVZ3Z09",
+          "vatCode": "DE811115368",
+          "address": {
+            "registeredOffice": {
+              "town": "Ingolstadt",
+              "country": "DE",
+              "zipCode": "85057",
+              "streetName": "Auto-Union-Str. 1",
+              "streetNumber": "1",
+              "gps": {
+                "coordinates": [
+                  11.41527,
+                  48.7838
+                ]
+              }
+            }
+          },
+          "activityStatus": "ACTIVE",
+          "incorporationDate": "1873-01-01"
+        }
+      ],
+      "success": true,
+      "message": "",
+      "error": null
+    },
+    "error": null,
+    "latencyMs": 9028,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "DE",
+    "identifier": "DE811115368"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "runStartedAt": "2026-05-06T13:01:20.136Z",
+  "totalSpendEur": 0.48,
+  "results": [
+    {
+      "country": "NL",
+      "vatId": "NL821218833B01",
+      "entityName": "ASML Holding N.V. (VAT NL821218833B01)",
+      "status": 204,
+      "ok": true,
+      "error": null,
+      "latencyMs": 4332
+    },
+    {
+      "country": "HU",
+      "vatId": "HU10625790",
+      "entityName": "MOL Nyrt. (VAT HU10625790)",
+      "status": 200,
+      "ok": true,
+      "error": null,
+      "latencyMs": 7221
+    },
+    {
+      "country": "SI",
+      "vatId": "SI82646716",
+      "entityName": "Krka d.d. (VAT SI82646716)",
+      "status": 204,
+      "ok": true,
+      "error": null,
+      "latencyMs": 3781
+    },
+    {
+      "country": "RO",
+      "vatId": "RO1590082",
+      "entityName": "OMV Petrom (VAT RO1590082)",
+      "status": 406,
+      "ok": false,
+      "error": "client",
+      "latencyMs": 1824
+    },
+    {
+      "country": "LU",
+      "vatId": "LU22850926",
+      "entityName": "ArcelorMittal (VAT LU22850926)",
+      "status": 204,
+      "ok": true,
+      "error": null,
+      "latencyMs": 4219
+    },
+    {
+      "country": "SK",
+      "vatId": "SK2020481748",
+      "entityName": "Tatry mountain resorts (VAT SK2020481748)",
+      "status": 204,
+      "ok": true,
+      "error": null,
+      "latencyMs": 4012
+    },
+    {
+      "country": "MT",
+      "vatId": "MT16234415",
+      "entityName": "Bank of Valletta (VAT MT16234415)",
+      "status": 204,
+      "ok": true,
+      "error": null,
+      "latencyMs": 4175
+    },
+    {
+      "country": "CY",
+      "vatId": "CY10006578D",
+      "entityName": "Bank of Cyprus Holdings (VAT CY10006578D)",
+      "status": 204,
+      "ok": true,
+      "error": null,
+      "latencyMs": 3822
+    }
+  ]
+}

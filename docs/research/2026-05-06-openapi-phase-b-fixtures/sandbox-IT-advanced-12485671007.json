@@ -1,0 +1,155 @@
+{
+  "data": [
+    {
+      "taxCode": "12485671007",
+      "vatCode": "12485671007",
+      "companyName": "OPENAPI S.P.A.",
+      "address": {
+        "registeredOffice": {
+          "toponym": "VIALE",
+          "street": "F TOMMASO MARINETTI",
+          "streetNumber": "221",
+          "streetName": "VIALE F TOMMASO MARINETTI 221",
+          "town": "ROMA",
+          "hamlet": null,
+          "province": "RM",
+          "zipCode": "00143",
+          "gps": {
+            "coordinates": [
+              12.47843,
+              41.8071
+            ]
+          },
+          "region": {
+            "code": "12",
+            "description": "LAZIO"
+          },
+          "townCode": "H501"
+        }
+      },
+      "activityStatus": "ATTIVA",
+      "reaCode": "1378273",
+      "cciaa": "RM",
+      "atecoClassification": {
+        "ateco": {
+          "code": "6201",
+          "description": "Produzione di software non connesso all'edizione"
+        }
+      },
+      "detailedLegalForm": {
+        "code": "SP",
+        "description": "SOCIETA' PER AZIONI"
+      },
+      "startDate": "2013-10-20",
+      "registrationDate": "2013-07-19",
+      "endDate": null,
+      "pec": "openapi@legalmail.it",
+      "taxCodeCeased": false,
+      "taxCodeCeasedTimestamp": 1708699396,
+      "vatGroup": {
+        "vatGroupParticipation": false,
+        "isVatGroupLeader": false,
+        "registryOk": true
+      },
+      "sdiCode": "USAL8PV",
+      "sdiCodeTimestamp": 1709049141,
+      "creationTimestamp": 1624358855,
+      "lastUpdateTimestamp": 1708705000,
+      "balanceSheets": {
+        "last": {
+          "year": 2022,
+          "employees": 14,
+          "balanceSheetDate": "2022-12-31",
+          "turnover": 4043407,
+          "netWorth": 166491,
+          "shareCapital": 50000,
+          "totalStaffCost": 604997,
+          "totalAssets": 1483126,
+          "avgGrossSalary": 43214
+        },
+        "all": [
+          {
+            "year": 2024,
+            "employees": 15,
+            "balanceSheetDate": null,
+            "turnover": null,
+            "netWorth": null,
+            "shareCapital": 50000
+          },
+          {
+            "year": 2023,
+            "employees": 15,
+            "balanceSheetDate": null,
+            "turnover": null,
+            "netWorth": null,
+            "shareCapital": 50000
+          },
+          {
+            "year": 2022,
+            "employees": 14,
+            "balanceSheetDate": "2022-12-31",
+            "turnover": 4043407,
+            "netWorth": 166491,
+            "shareCapital": 50000,
+            "totalStaffCost": 604997,
+            "totalAssets": 1483126,
+            "avgGrossSalary": 43214
+          },
+          {
+            "year": 2021,
+            "employees": 15,
+            "balanceSheetDate": "2021-12-31",
+            "turnover": 4432761,
+            "netWorth": 469366,
+            "shareCapital": 50000
+          },
+          {
+            "year": 2020,
+            "employees": 14,
+            "balanceSheetDate": "2020-12-31",
+            "turnover": 4192138,
+            "netWorth": 170234,
+            "shareCapital": 10000
+          },
+          {
+            "year": 2019,
+            "employees": 14,
+            "balanceSheetDate": "2019-12-31",
+            "turnover": 1799587,
+            "netWorth": 111309,
+            "shareCapital": 10000
+          },
+          {
+            "year": 2018,
+            "employees": null,
+            "balanceSheetDate": "2018-12-31",
+            "turnover": 1325358,
+            "netWorth": 826,
+            "shareCapital": null
+          },
+          {
+            "year": 2017,
+            "employees": null,
+            "balanceSheetDate": "2017-12-31",
+            "turnover": 1120176,
+            "netWorth": 2928,
+            "shareCapital": null
+          }
+        ]
+      },
+      "shareHolders": [
+        {
+          "companyName": "OPEN HOLDING S.R.L.",
+          "name": null,
+          "surname": null,
+          "taxCode": "16935371001",
+          "percentShare": 100
+        }
+      ],
+      "id": "60d1bfc731177b0a092cdfc1"
+    }
+  ],
+  "success": true,
+  "message": "",
+  "error": null
+}

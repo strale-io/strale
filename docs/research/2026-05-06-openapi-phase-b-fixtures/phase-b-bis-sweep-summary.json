@@ -1,0 +1,619 @@
+{
+  "runStartedAt": "2026-05-06T13:00:00.406Z",
+  "scriptBudgetEur": 2.94,
+  "priorSpendEur": 0.06,
+  "totalSpendEur": 0.6500000000000001,
+  "cumulativeSpendEur": 0.7100000000000002,
+  "calls": [
+    {
+      "country": "NL",
+      "tier": "WW-start",
+      "identifier": "17014545",
+      "entityName": "ASML Holding N.V. (KVK 17014545)",
+      "status": 406,
+      "ok": false,
+      "error": "client",
+      "latencyMs": 2039,
+      "costEur": 0.06,
+      "fieldCoverage": {
+        "legal_name": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registration_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "status": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registered_address": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "directors": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "incorporation_date": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "legal_form": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "vat_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "lei": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "nace_code": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "share_capital": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "financials": {
+          "status": "missing",
+          "matchedKey": null
+        }
+      }
+    },
+    {
+      "country": "HU",
+      "tier": "WW-start",
+      "identifier": "0110041683",
+      "entityName": "MOL Magyar Olaj- és Gázipari Nyrt. (cégjegyzékszám 01-10-041683)",
+      "status": 406,
+      "ok": false,
+      "error": "client",
+      "latencyMs": 1532,
+      "costEur": 0.06,
+      "fieldCoverage": {
+        "legal_name": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registration_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "status": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registered_address": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "directors": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "incorporation_date": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "legal_form": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "vat_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "lei": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "nace_code": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "share_capital": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "financials": {
+          "status": "missing",
+          "matchedKey": null
+        }
+      }
+    },
+    {
+      "country": "SI",
+      "tier": "WW-start",
+      "identifier": "5043611000",
+      "entityName": "Krka, d.d., Novo mesto (matična 5043611000)",
+      "status": 406,
+      "ok": false,
+      "error": "client",
+      "latencyMs": 1811,
+      "costEur": 0.06,
+      "fieldCoverage": {
+        "legal_name": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registration_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "status": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registered_address": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "directors": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "incorporation_date": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "legal_form": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "vat_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "lei": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "nace_code": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "share_capital": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "financials": {
+          "status": "missing",
+          "matchedKey": null
+        }
+      }
+    },
+    {
+      "country": "BG",
+      "tier": "WW-start",
+      "identifier": "831902088",
+      "entityName": "Sopharma AD (UIC 831902088)",
+      "status": 200,
+      "ok": true,
+      "error": null,
+      "latencyMs": 7480,
+      "costEur": 0.06,
+      "fieldCoverage": {
+        "legal_name": {
+          "status": "populated",
+          "matchedKey": "companyName"
+        },
+        "registration_number": {
+          "status": "populated",
+          "matchedKey": "id"
+        },
+        "status": {
+          "status": "populated",
+          "matchedKey": "activityStatus"
+        },
+        "registered_address": {
+          "status": "populated",
+          "matchedKey": "address"
+        },
+        "directors": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "incorporation_date": {
+          "status": "populated",
+          "matchedKey": "incorporationDate"
+        },
+        "legal_form": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "vat_number": {
+          "status": "populated",
+          "matchedKey": "vatCode"
+        },
+        "lei": {
+          "status": "populated",
+          "matchedKey": "leiCode"
+        },
+        "nace_code": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "share_capital": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "financials": {
+          "status": "missing",
+          "matchedKey": null
+        }
+      }
+    },
+    {
+      "country": "BG",
+      "tier": "WW-advanced",
+      "identifier": "831902088",
+      "entityName": "Sopharma AD (UIC 831902088)",
+      "status": 200,
+      "ok": true,
+      "error": null,
+      "latencyMs": 2380,
+      "costEur": 0.11,
+      "fieldCoverage": {
+        "legal_name": {
+          "status": "populated",
+          "matchedKey": "companyName"
+        },
+        "registration_number": {
+          "status": "populated",
+          "matchedKey": "id"
+        },
+        "status": {
+          "status": "populated",
+          "matchedKey": "activityStatus"
+        },
+        "registered_address": {
+          "status": "populated",
+          "matchedKey": "address"
+        },
+        "directors": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "incorporation_date": {
+          "status": "populated",
+          "matchedKey": "incorporationDate"
+        },
+        "legal_form": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "vat_number": {
+          "status": "populated",
+          "matchedKey": "vatCode"
+        },
+        "lei": {
+          "status": "populated",
+          "matchedKey": "leiCode"
+        },
+        "nace_code": {
+          "status": "populated",
+          "matchedKey": "nace"
+        },
+        "share_capital": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "financials": {
+          "status": "populated",
+          "matchedKey": "balanceSheets"
+        }
+      }
+    },
+    {
+      "country": "RO",
+      "tier": "WW-start",
+      "identifier": "1590082",
+      "entityName": "OMV Petrom S.A. (CUI 1590082)",
+      "status": 406,
+      "ok": false,
+      "error": "client",
+      "latencyMs": 1916,
+      "costEur": 0.06,
+      "fieldCoverage": {
+        "legal_name": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registration_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "status": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registered_address": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "directors": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "incorporation_date": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "legal_form": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "vat_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "lei": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "nace_code": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "share_capital": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "financials": {
+          "status": "missing",
+          "matchedKey": null
+        }
+      }
+    },
+    {
+      "country": "LU",
+      "tier": "WW-start",
+      "identifier": "B82454",
+      "entityName": "ArcelorMittal S.A. (RCS B82454)",
+      "status": 406,
+      "ok": false,
+      "error": "client",
+      "latencyMs": 1839,
+      "costEur": 0.06,
+      "fieldCoverage": {
+        "legal_name": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registration_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "status": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registered_address": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "directors": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "incorporation_date": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "legal_form": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "vat_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "lei": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "nace_code": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "share_capital": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "financials": {
+          "status": "missing",
+          "matchedKey": null
+        }
+      }
+    },
+    {
+      "country": "SK",
+      "tier": "WW-start",
+      "identifier": "31560636",
+      "entityName": "Tatry mountain resorts, a.s. (IČO 31560636)",
+      "status": 406,
+      "ok": false,
+      "error": "client",
+      "latencyMs": 1809,
+      "costEur": 0.06,
+      "fieldCoverage": {
+        "legal_name": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registration_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "status": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registered_address": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "directors": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "incorporation_date": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "legal_form": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "vat_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "lei": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "nace_code": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "share_capital": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "financials": {
+          "status": "missing",
+          "matchedKey": null
+        }
+      }
+    },
+    {
+      "country": "MT",
+      "tier": "WW-start",
+      "identifier": "C2833",
+      "entityName": "Bank of Valletta plc (C2833)",
+      "status": 406,
+      "ok": false,
+      "error": "client",
+      "latencyMs": 1828,
+      "costEur": 0.06,
+      "fieldCoverage": {
+        "legal_name": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registration_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "status": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registered_address": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "directors": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "incorporation_date": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "legal_form": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "vat_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "lei": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "nace_code": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "share_capital": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "financials": {
+          "status": "missing",
+          "matchedKey": null
+        }
+      }
+    },
+    {
+      "country": "CY",
+      "tier": "WW-start",
+      "identifier": "HE165638",
+      "entityName": "Bank of Cyprus Holdings plc (HE165638)",
+      "status": 406,
+      "ok": false,
+      "error": "client",
+      "latencyMs": 1771,
+      "costEur": 0.06,
+      "fieldCoverage": {
+        "legal_name": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registration_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "status": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "registered_address": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "directors": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "incorporation_date": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "legal_form": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "vat_number": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "lei": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "nace_code": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "share_capital": {
+          "status": "missing",
+          "matchedKey": null
+        },
+        "financials": {
+          "status": "missing",
+          "matchedKey": null
+        }
+      }
+    }
+  ]
+}

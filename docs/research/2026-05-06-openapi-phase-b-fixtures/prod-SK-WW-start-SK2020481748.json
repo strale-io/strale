@@ -1,0 +1,14 @@
+{
+  "entityName": "Tatry mountain resorts (VAT SK2020481748)",
+  "result": {
+    "ok": true,
+    "status": 204,
+    "body": null,
+    "error": null,
+    "latencyMs": 4012,
+    "mode": "production",
+    "endpoint": "WW-start",
+    "country": "SK",
+    "identifier": "SK2020481748"
+  }
+}
