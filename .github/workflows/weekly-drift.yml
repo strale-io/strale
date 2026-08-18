@@ -107,14 +107,19 @@ jobs:
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
-      # Phase 2 T2.1 weekly backup (2026-08-18): frontend-typecheck.yml
-      # covers PRs that touch the backend surfaces likely to break the
-      # frontend's types, but a frontend-side-only change (e.g. someone
-      # edits strale-frontend directly, or the shared shape genuinely
-      # drifts without a matching backend PR landing here) wouldn't trip
-      # that gate. This weekly run is the backstop, same reasoning as the
-      # AuditRecord shape check above. Uses the strale-frontend checkout
-      # from the step above.
+      # Phase 2 T2.1 backstop (2026-08-18). PRIMARY enforcement lives in
+      # strale-frontend's own CI (strale-io/strale-frontend#19 added a
+      # Typecheck step there; before that the repo had no type gate at all
+      # — SWC strips types, vitest runs untyped, the ESLint ratchet is not
+      # type-aware, and Cloudflare Pages runs the same untypechecked build).
+      # This weekly run exists ONLY to notice if that gate stops working:
+      # a green frontend CI that has quietly stopped catching things is the
+      # exact failure mode this program hit three times (see the hollow-gate
+      # findings in the 2026-08-18 handoff). Deliberately NOT a PR gate here
+      # — the frontend depends on no backend package, so a backend change
+      # cannot break its compilation; gating backend PRs on it would blame
+      # unrelated PRs for pre-existing frontend errors.
+      # Reuses the strale-frontend checkout from the step above.
       - id: frontend-typecheck
         run: |
           set +e
