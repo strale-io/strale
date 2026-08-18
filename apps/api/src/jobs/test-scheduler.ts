@@ -247,6 +247,48 @@ export function slugStaggerMinute(slug: string, testType?: string): number {
 }
 
 /**
+ * Minimum re-test interval, in hours, for a suite given its
+ * (test_status, test_mode). Mirrors the `GREATEST(...)` interval expression
+ * inside `findOverdueSuites()`'s and `countOverdueCapabilities()`'s SQL —
+ * this TypeScript copy exists for unit tests and documentation only; the SQL
+ * in this file is the authoritative computation actually enforced against
+ * production (same convention as `slugStaggerMinute`, above).
+ *
+ * Cost-reduction pass (2026-08-18, `ops/cut-browserless-harness-burn`):
+ * schema.ts's `test_mode` column comment has documented three values since
+ * the column was added — `'live'` (real API), `'fixture'` (saved data),
+ * `'canary'` (periodic live check at reduced frequency) — but only
+ * `'fixture'` ever had a code path. `runSingleTest` in test-runner.ts
+ * special-cases `testMode === 'fixture'`; every other value, including
+ * `'canary'`, fell through to the same "real execution" branch as `'live'`.
+ * The scheduler's cadence, in turn, only read `test_status`. Net effect: a
+ * suite set to `test_mode = 'canary'` was dispatched hourly and executed for
+ * real every time — indistinguishable from `'live'`. This closes that gap
+ * by giving `'canary'` its own cadence floor, independent of (and combined
+ * via `GREATEST` with) the existing status-based backoff, so a capability
+ * can keep exactly one suite genuinely live at a deliberately low frequency
+ * instead of converting it to a zero-signal fixture replay.
+ */
+export function minRetestIntervalHours(
+  testStatus: string | null,
+  testMode: string | null,
+): number {
+  const statusHours: Record<string, number> = {
+    upstream_broken: 24,
+    infra_limited: 24,
+    quarantined: 168,
+  };
+  const modeHours: Record<string, number> = {
+    canary: 24,
+  };
+  return Math.max(
+    1,
+    statusHours[testStatus ?? ""] ?? 0,
+    modeHours[testMode ?? ""] ?? 0,
+  );
+}
+
+/**
  * Find suites (capability × test_type pairs) due for testing this minute.
  *
  * Per DEC-20260503-B + DEC-20260513-D (per-suite spread):
@@ -268,7 +310,8 @@ export function slugStaggerMinute(slug: string, testType?: string): number {
  * The status floor (upstream_broken, infra_limited, quarantined) still
  * applies — known-broken suites back off to daily/weekly even on the new
  * hourly cadence. The "no status creates a black hole" invariant from the
- * old tiered query is preserved by the ELSE branch.
+ * old tiered query is preserved by the ELSE branch. `test_mode = 'canary'`
+ * adds an independent daily floor on top (see `minRetestIntervalHours`).
  *
  * Each returned row carries its own `suiteId` (ts.id), not just
  * (slug, testType). pollCycle() passes that id straight through to
@@ -309,6 +352,10 @@ async function findOverdueSuites(): Promise<OverdueSuite[]> {
             WHEN 'upstream_broken' THEN INTERVAL '24 hours'
             WHEN 'infra_limited'   THEN INTERVAL '24 hours'
             WHEN 'quarantined'     THEN INTERVAL '168 hours'
+            ELSE INTERVAL '0 hours'
+          END,
+          CASE ts.test_mode
+            WHEN 'canary' THEN INTERVAL '24 hours'
             ELSE INTERVAL '0 hours'
           END
         )
@@ -367,6 +414,10 @@ async function countOverdueCapabilities(): Promise<number> {
             WHEN 'upstream_broken' THEN INTERVAL '24 hours'
             WHEN 'infra_limited'   THEN INTERVAL '24 hours'
             WHEN 'quarantined'     THEN INTERVAL '168 hours'
+            ELSE INTERVAL '0 hours'
+          END,
+          CASE ts.test_mode
+            WHEN 'canary' THEN INTERVAL '24 hours'
             ELSE INTERVAL '0 hours'
           END
         )
