@@ -1479,8 +1479,23 @@ internalTestsRoute.post("/admin/run-script", async (c) => {
           for (const suite of rows) {
             if (!suite.baseline_output) { noBaseline++; continue; }
             if (!dryRun) {
+              // Do NOT set fixture_last_refreshed here (Codex review,
+              // 2026-08-18 round 2 — HIGH). This route only flips test_mode
+              // on a suite that already has SOME baseline_output — it never
+              // executes the capability, so it has no idea whether that
+              // baseline is a minute old or a year old. fixture_last_refreshed
+              // is the single-writer timestamp checkBaselineStaleness()
+              // (test-runner.ts) uses to decide when a fixture baseline goes
+              // stale by age; only captureBaseline (a genuine successful
+              // recapture) may set it. Stamping NOW() here would silently
+              // hand an arbitrarily-old, never-validated baseline a fresh
+              // 30-day age-staleness grant it did nothing to earn. Leaving
+              // the column NULL/unchanged is correct: checkBaselineStaleness
+              // treats a NULL fixture_last_refreshed as maximally stale, so
+              // the very next scheduled run performs one real live capture
+              // and starts the clock honestly.
               await db.execute(sql`
-                UPDATE test_suites SET test_mode = 'fixture', fixture_last_refreshed = NOW(), updated_at = NOW()
+                UPDATE test_suites SET test_mode = 'fixture', updated_at = NOW()
                 WHERE id = ${suite.id}::uuid
               `);
             }
