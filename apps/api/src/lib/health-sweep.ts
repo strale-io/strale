@@ -17,6 +17,7 @@ import { getDb } from "../db/index.js";
 import { testSuites, testResults } from "../db/schema.js";
 import { analyzeAndRemediate, applyRemediation } from "./auto-remediation.js";
 import { runUpstreamEscalationSweep } from "./upstream-tracker.js";
+import { FIXTURE_RECAPTURE_QUARANTINE_MARKER } from "./test-runner.js";
 // Lifecycle automatic sweep removed with the SQS engine (DEC-20260503-B).
 import { runWeeklyChecks } from "./meta-monitoring.js";
 import { log, logWarn } from "./log.js";
@@ -28,6 +29,15 @@ interface SweepReport {
   staleDateFixes: number;
   deadUrlsFound: number;
   quarantineReleased: string[];
+  // Codex closing-pass round 3: suites quarantined specifically for
+  // exhausted fixture-recapture attempts are a human-only reset by
+  // design (test-runner.ts's runSingleTest refuses further live calls
+  // for this cause, and captureBaseline can never reset the failure
+  // counter without a real successful execution). The generic
+  // quarantine-review sweep below never even evaluates recovery for
+  // these — this list is purely observability, so an operator scanning
+  // sweep reports can see which suites are waiting on them, not on time.
+  quarantineSkippedNeedsHuman: string[];
   upstreamRecovered: string[];
   classificationSummary: Record<string, number>;
   totalSuitesScanned: number;
@@ -46,6 +56,7 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
     staleDateFixes: 0,
     deadUrlsFound: 0,
     quarantineReleased: [],
+    quarantineSkippedNeedsHuman: [],
     upstreamRecovered: [],
     classificationSummary: {},
     totalSuitesScanned: 0,
@@ -109,6 +120,22 @@ export async function runWeeklyHealthSweep(): Promise<SweepReport> {
     ));
 
   for (const suite of quarantinedSuites) {
+    // Codex closing-pass round 3: exhausted-recapture quarantine is a
+    // human-only reset by design (test-runner.ts's runSingleTest already
+    // refuses every further live call for this cause, so the passing
+    // evidence checkQuarantineRecovery looks for can never be generated
+    // while it stays quarantined — this generic sweep must not even
+    // evaluate recovery for it, let alone release it). Explicit rather
+    // than relying on "checkQuarantineRecovery organically never finds 3
+    // consecutive passes" holding by construction: that's true today but
+    // fragile if either threshold changes independently later, and it
+    // doesn't document the "needs human" intent anywhere a future reader
+    // of THIS sweep would see it.
+    if (suite.quarantineReason?.startsWith(FIXTURE_RECAPTURE_QUARANTINE_MARKER)) {
+      report.quarantineSkippedNeedsHuman.push(suite.capabilitySlug);
+      continue;
+    }
+
     const recovered = await checkQuarantineRecovery(suite);
     if (recovered) {
       await db.update(testSuites).set({
