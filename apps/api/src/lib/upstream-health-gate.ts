@@ -19,7 +19,7 @@ import { logError } from "./log.js";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
 import { fireAndForget } from "./fire-and-forget.js";
-import { getActiveProviders } from "./dependency-manifest.js";
+import { getCuratedProviderCapabilities } from "./dependency-manifest.js";
 
 // ─── Upstream health state ──────────────────────────────────────────────────
 
@@ -90,11 +90,15 @@ const FIXED_UPSTREAM_SLUGS: Record<string, string[]> = {
  * source of truth for three other subsystems (invariant-checker.ts,
  * test-scheduler.ts's own pre-runTests() provider-health filter, and
  * situation-assessment.ts's alert-affected-count), so reusing it here closes
- * the gap without introducing a fourth parallel definition.
+ * the gap without introducing a fourth parallel definition. As of the
+ * 2026-08-18 credential-health.ts fix, that module's own browserless skip-
+ * when-credential-missing gate also reads this same list via the shared
+ * getCuratedProviderCapabilities() accessor — the raw "find the browserless
+ * provider, read its capabilities" lookup lives in exactly one place
+ * (dependency-manifest.ts) rather than being copy-pasted per consumer.
  */
 export async function getBrowserlessDependentSlugs(): Promise<string[]> {
-  const browserlessProvider = getActiveProviders().find((p) => p.name === "browserless");
-  const candidateSlugs = browserlessProvider?.capabilities ?? [];
+  const candidateSlugs = getCuratedProviderCapabilities("browserless");
   if (candidateSlugs.length === 0) return [];
 
   const db = getDb();

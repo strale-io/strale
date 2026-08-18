@@ -1,3 +1,5 @@
+import { getCuratedProviderCapabilities } from "./dependency-manifest.js";
+
 /**
  * Credential health registry.
  *
@@ -32,25 +34,21 @@ const CREDENTIAL_REGISTRY: CredentialEntry[] = [
   {
     provider: "browserless",
     envVar: "BROWSERLESS_URL",
-    capabilities: [
-      "accessibility-audit", "annual-report-extract", "austrian-company-data",
-      "belgian-company-data", "business-license-check-se", "company-enrich",
-      "company-tech-stack", "competitor-compare", "container-track",
-      "cookie-scan", "credit-report-summary", "custom-scrape",
-      "customs-duty-lookup", "danish-company-data", "dutch-company-data",
-      "employer-review-summary", "estonian-company-data", "eu-court-case-search",
-      "eu-regulation-search", "eu-trademark-search", "gdpr-fine-lookup",
-      "german-company-data", "hong-kong-company-data", "html-to-pdf",
-      "indian-company-data", "irish-company-data", "italian-company-data",
-      "japanese-company-data", "landing-page-roast", "latvian-company-data",
-      "lithuanian-company-data", "patent-search", "portuguese-company-data",
-      "price-compare", "pricing-page-extract", "privacy-policy-analyze",
-      "product-reviews-extract", "product-search", "return-policy-extract",
-      "salary-benchmark", "screenshot-url", "seo-audit",
-      "spanish-company-data", "structured-scrape", "swedish-company-data",
-      "swiss-company-data", "tech-stack-detect", "terms-of-service-extract",
-      "trustpilot-score", "url-to-markdown", "web-extract", "youtube-summarize",
-    ],
+    // Deliberately NOT a hand-maintained list (2026-08-18 fix: the old
+    // 52-slug literal array had drifted — 19 stale slugs, some no longer
+    // touching Browserless, some with no executor at all). Derived from
+    // dependency-manifest.ts's curated `browserless.capabilities` — the same
+    // "genuinely requires Browserless, no fallback" set upstream-health-
+    // gate.ts's getBrowserlessDependentSlugs() already reads (via the shared
+    // getCuratedProviderCapabilities() accessor) for its own skip-when-
+    // unhealthy gate. Both gates reduce to the same question — "can this
+    // capability actually produce a correct result right now?" — so both now
+    // read the same source instead of each maintaining an independent list.
+    // Full staleness history and the bidirectional drift enforcement live in
+    // browserless-dependency-drift.test.ts.
+    get capabilities(): string[] {
+      return getCuratedProviderCapabilities("browserless");
+    },
   },
   {
     provider: "serper",
@@ -82,9 +80,15 @@ const CREDENTIAL_REGISTRY: CredentialEntry[] = [
     // SDDA UR-API-LegalEntity via api.viss.gov.lv (WSO2 API Manager).
     // OAuth2 client_credentials — also needs SDDA_API_CLIENT_SECRET, but
     // CLIENT_ID is the sentinel (both are always paired at provisioning).
-    // The stub provider is scaffolded but NOT primary: Browserless scraping
-    // remains the active path for latvian-company-data until credentials
-    // land and a follow-up session wires registerChain() for SDDA.
+    // The stub provider is scaffolded but NOT primary: latvian-company-data's
+    // live executor (apps/api/src/capabilities/latvian-company-data.ts) calls
+    // the data.gov.lv CKAN datastore API directly (acquisition_method:
+    // direct_api per DEC-20260428-A) — it migrated off the prior
+    // Browserless+Claude scrape of info.ur.gov.lv (Tier 1 violation) and does
+    // NOT touch Browserless at all today. SDDA remains an unwired stub for a
+    // future path pending credentials and a follow-up session to wire
+    // registerChain() for SDDA — it is not what's live now, and neither is
+    // Browserless.
   },
 ];
 
