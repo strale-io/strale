@@ -60,6 +60,102 @@ is diagnosed.
 
 **Exit criteria:** a type error, a broken shape, or an unwired guard can no longer reach `main` silently.
 
+### T2.4 outcome — post-deploy verification made standard (branch `ops/automate-deploy-verification`)
+
+DEC-20260504-C's "query prod for the expected effect" step had been followed
+correctly but by hand every time (e.g. manually confirming migration block
+0093's column existed in prod before flipping suites to fixture mode,
+2026-08-16/18) — pure discipline, nothing failed if a session skipped it.
+
+**What shipped.** `schema-validator.ts`'s `validateSchema()` — already wired
+blocking into `index.ts` right after `runStartupMigrations()`, before the API
+starts listening — now derives what to check from `startup-migrations.ts`'s
+own SQL (`apps/api/src/lib/migration-artifact-audit.ts`) instead of the
+hand-maintained `REQUIRED_COLUMNS` array it used to carry. The old list's
+last entry covered migration 0050; `startup-migrations.ts` had shipped 43
+more blocks since (up to 0093) with zero startup verification that any of
+their columns, tables, or indexes actually existed. Deriving from the SQL
+that block authors already have to write — instead of a parallel list they
+have to remember to update — closes that gap permanently and structurally,
+per the "derived beats curated" rule: a new migration block gets startup
+verification for free, no second registration step.
+
+Every boot now performs, automatically, the exact class of check that used
+to be a manual `\d table` after watching the deploy log go green — and does
+it *before* traffic is served, which is strictly stronger than a post-hoc
+check. Read-only verification against real production (`information_schema`
++ `pg_indexes`, SELECT-only) during development confirmed the deriver finds
+all 36 artifacts across blocks 0029-0093 and all 36 are present in prod
+today.
+
+**Chosen design, and why the alternatives were rejected.**
+- Rejected: a new curated "artifacts to verify" registry (would rot exactly
+  like `REQUIRED_COLUMNS` did, and like the four stale Browserless
+  dependency lists).
+- Rejected: a post-deploy CI step polling `/health` then asserting prod
+  state (viable, but strictly weaker than blocking startup — it lets a
+  broken deploy serve traffic before the check runs, and needs its own new
+  CI wiring to prove per T2.4's own standard).
+- Rejected: a brand-new invariant-checker check (`jobs/invariant-checker.ts`)
+  — that job is Tier-1/Tier-2 alert-and-continue by design, not
+  boot-blocking, so it would report the PR-42 class bug rather than prevent
+  it from serving traffic.
+- Chosen: extend the schema artifact check that already blocks boot
+  (`schema-validator.ts`, wired at `index.ts:118-121`), and make its
+  artifact list derived instead of curated. Smallest change that closes the
+  actual gap: no new wiring to verify, no new failure mode, same
+  `StartupFatalError` / operator-alert contract as before.
+
+**Boot-safety hardening (added in review).** This gate aborts startup, which
+makes its two failure directions wildly asymmetric: under-deriving is a
+smaller safety net, but **over-deriving is a production crash-loop on every
+deploy**. Review found three ways the first draft could do the wrong one, all
+now fixed and covered by fail-before/pass-after tests:
+
+- **Multi-column `ALTER TABLE`** (`ADD COLUMN a, ADD COLUMN b`) matched only
+  the first column — silently, with no error. Worse than the stale list it
+  replaced: a stale list is visibly stale, a regex miss is invisible. Now
+  parsed in two stages, bounded to the statement so it cannot bleed onto the
+  next table.
+- **No `DROP`/`RENAME` subtraction.** The first block to remove a column
+  would have made boot demand an artifact that is correctly gone — prod down,
+  and staying down, until someone edited the parser. No block does this
+  today, which is precisely why it would have shipped unnoticed. Dropped and
+  renamed artifacts are now subtracted.
+- **A collapsed parse reported "all clear."** Zero derived artifacts meant
+  zero missing, so a broken parser certified the schema — the hollow-gate
+  shape this program already found three times in one week. Deriving nothing
+  from a file that plainly contains migration blocks now throws instead.
+
+**Verification (DEC-20260504-C, done properly rather than reasoned about).**
+Deploy path confirmed by file: `Dockerfile CMD → dist/index.js → dynamic
+import ./lib/schema-validator.js → validateSchema`, running after
+`runStartupMigrations()`. The deriver reads its *compiled* sibling at runtime,
+so that was tested, not assumed: a real project build to a temp `outDir` puts
+`startup-migrations.js` and `migration-artifact-audit.js` side by side in
+`dist/lib`, and parsing the compiled `.js` yields **the identical 36-artifact
+set** as the `.ts` source. Finally, all 36 were checked read-only against
+**production** before merge — all present, so this gate will not block boot on
+deploy. That last check is the one that matters: shipping it unverified is
+exactly the "code is correct ≠ deploy will behave" failure DEC-20260504-C
+exists for.
+
+**Scope boundary.** The other manual practice named in the trigger — polling
+`/health` until its commit matches the merge commit — is not automated by
+this change; it stayed a documented human/CI step. It answers a different
+question (did *this* deploy reach prod) than the one closed here (did the
+deploy's *schema effect* land), and folding it in would have widened this
+fix past "smallest thing that works."
+
+Tests: `apps/api/src/lib/migration-artifact-audit.test.ts` (parser
+correctness, including a fail-before/pass-after regression on a real bug
+the parser itself shipped with during development — see the file's
+docstring) and `apps/api/src/lib/schema-validator.test.ts` (fail-before
+verified against the actual pre-fix file via `git show origin/main`: the
+old `REQUIRED_COLUMNS`-based check resolves cleanly even when a real
+migration's column, table, or index is simulated absent from prod, because
+it never queries for anything past migration 0050).
+
 ## Phase 3 — Debloat
 
 **Goal:** The repo matches its own documented structure; dead weight is archived.
