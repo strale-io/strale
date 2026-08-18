@@ -71,3 +71,38 @@ Moving artifact derivation into per-block typed metadata on `BLOCKS`, with regex
 1. Watch the first Railway boot after #332 for `startup-schema-ok` ("all migration-derived artifacts present"). All 36 artifacts were confirmed present in prod pre-merge, so this should be uneventful — but it is the first boot under the new gate.
 2. `uk-disqualified-director-check`: set `personal_data_categories: ["name"]` (currently empty while `processes_personal_data` is true).
 3. Optional, raised by review on #332: move migration-artifact derivation into per-block typed metadata on `BLOCKS`, demoting the regex to a CI lint. Better long-term; touches every migration block, so it needs its own pass.
+
+---
+
+## Second half: the repo itself was the problem
+
+Asked to confirm we were "working off main", we were not. The primary checkout sat on `ops/company-scaffold`, **77 commits behind**, and had done for weeks.
+
+**Root cause, and it is not carelessness.** Two structural things:
+
+1. **Squash merges make finished branches look alive forever.** GitHub replays merged work as one new commit, so the local branch keeps its originals and git reports "17 commits ahead" permanently. `git branch --merged` says unmerged. Every standard check said the branch had unmerged work; every one was wrong. Verified by content instead: main had *newer* versions of every file on it (metrics 330→370 lines, dashboard 398→419, CHARTER 156→211) and even the same migration block `0085_actorIdentity`.
+2. **`session-close-check` scoped every check to "what did THIS session do".** Correct for "did I leave a mess", but it means drift older than the current session belongs to nobody — every session honestly reported clean while the repo rotted. Its stale-handoff check only looked at files dated *today*, so five session records left uncommitted overnight became permanently invisible.
+
+**Fixed:** checkout on main, level with origin; `ops/company-scaffold` deleted after content verification; the five orphaned handoffs and one unique script committed (#335).
+
+**Automated so it cannot silently recur (#335):** a deliberately NON-session-scoped hygiene pass in `session-close-check.ts` — checkout branch + distance behind main (with an explicit warning that "N ahead" proves nothing after a squash merge), handoffs uncommitted at *any* age, branches untouched 14+ days. Runs at every `/end-session`, and as **step B2b of the daily `strale-checkin-morning` task** via `--hygiene-only` (no DB, no credentials). Tested against the broken state first — it caught all three problems.
+
+## Branch cleanup: 172 local → 1, 156 remote → 13
+
+Petter could not review 328 branches, so nothing was a judgement call. Evidence tiers: also-exists-on-GitHub (103 local), merged-PR-exists (113 remote), merging-adds-nothing, squash-commit-found-on-main. Records with SHAs in `archive/sessions/2026-08-18-local-branch-cleanup.md` (#336, #339).
+
+**Six remote branches held research that existed nowhere on main** — deleting them would have destroyed it. Landed first (#337, #338): BG/CY/HU/LU registry build-path studies, a capability-health blind-spot analysis, outage triage, two cost audits, and the **Openapi.com vendor evaluation with real responses for 14 countries** — that vendor is the live upstream behind four company-data capabilities.
+
+**The PII guard earned its keep:** the Openapi rescue initially carried real Italian *codice fiscale* values in an IT-stakeholders fixture. CI blocked it. Dropped the file rather than faking values.
+
+Kept deliberately: 3 branches 1–3 days old, 7 `rescue/*` janitor snapshots (they *are* the safety net), 1 preserved abandoned branch (it deletes the solutions surface — 104 solutions are live), 1 parked tooling proposal.
+
+## Manifest drift, and a gate that would have gone quiet
+
+`manifest-drift` was the only DB-touching step in `weekly-drift.yml` without `DATABASE_URL` — dying on `ECONNREFUSED` every week since written, never once comparing a manifest to the database. **The script also ended in an unconditional `process.exit(0)`**, so supplying the secret alone would have turned a loudly-broken gate into a silently-useless one reporting clean over 18 real drifts. Both fixed (#334); exit 2 = cannot run, 1 = drift, 0 = clean.
+
+The 18 drifts were resolved per capability. Four `transparency_tag` claimed `ai_generated` with **zero** LLM references anywhere in their path — we were over-claiming AI involvement in an EU-AI-Act field. One went the other way: `email-pattern-discover`'s manifest declared `processes_personal_data: false` while harvesting real addresses from page HTML — **a blind sync would have flipped a GDPR flag to false.** Drift is now 0 and the weekly sweep is green for the first time.
+
+## Closing state
+
+Checkout on main and level · 1 local branch · 13 remote · 0 open PRs · prod == main · close-check green apart from one benign note (`email-pattern-discover` is deliberately deactivated).
