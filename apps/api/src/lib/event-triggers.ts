@@ -15,7 +15,12 @@ import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilityHealth, capabilities } from "../db/schema.js";
 import { runTests } from "./test-runner.js";
-import { getCapabilityUpstreams, refreshUpstreamMapping, isCacheExpired } from "./upstream-health-gate.js";
+import {
+  getCapabilityUpstreams,
+  refreshUpstreamMapping,
+  isCacheExpired,
+  getBrowserlessDependentSlugs,
+} from "./upstream-health-gate.js";
 import { log, logError } from "./log.js";
 
 // ─── Rate limiter ────────────────────────────────────────────────────────────
@@ -64,11 +69,11 @@ async function getDependencyCapabilities(dependencyName: string): Promise<string
   let slugs: string[];
 
   if (dependencyName === "browserless") {
-    const rows = await db
-      .select({ slug: capabilities.slug })
-      .from(capabilities)
-      .where(and(eq(capabilities.capabilityType, "scraping"), eq(capabilities.isActive, true)));
-    slugs = rows.map((r) => r.slug);
+    // Shares upstream-health-gate.ts's curated (dependency-manifest.ts-driven)
+    // list rather than capability_type='scraping' — see that function's doc
+    // comment. This branch used to run its own capability_type query here;
+    // it had the same under/over-inclusion gap findUnhealthyUpstream did.
+    slugs = await getBrowserlessDependentSlugs();
   } else if (dependencyName === "anthropic") {
     const rows = await db
       .select({ slug: capabilities.slug })
