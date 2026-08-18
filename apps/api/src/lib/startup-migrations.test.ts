@@ -64,6 +64,7 @@ import {
   runMigration0078_transactionsCapabilityIdCreatedAtIdx,
   runMigration0082_reclassifyThrottledFreeUnlimited,
   runMigration0087_unhideRedactedRows,
+  runMigration0093_fixtureRecaptureFailures,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -111,6 +112,47 @@ describe("startup-migrations — block 0029 (actual_cost_cents)", () => {
     expect(result.outcome).toMatch(/skipped/i);
     expect(stub.captured).toHaveLength(1); // only the check ran
     expect(stub.renderedSql.some((s) => /alter table/i.test(s))).toBe(false);
+  });
+});
+
+describe("startup-migrations — block 0093 (fixture_recapture_failures)", () => {
+  // Companion to the Browserless harness-burn mitigation's HIGH-2b fix
+  // (recordFixtureRecaptureFailure in test-runner.ts). MEDIUM (Codex
+  // closing-pass round 2, 2026-08-18): rewritten from check-then-ALTER
+  // (a TOCTOU race between two overlapping boots — see the block's own
+  // comment) to a single `ADD COLUMN IF NOT EXISTS` statement, the pattern
+  // every other column-adding block since 0060 uses. A single atomic DDL
+  // statement has no read-then-write gap for a second boot to race into,
+  // so there's no "first run vs second run" branch to test — every
+  // invocation issues the identical idempotent statement and Postgres
+  // itself no-ops it when the column is already there.
+  it("issues a single ADD COLUMN IF NOT EXISTS statement", async () => {
+    const stub = makeStub({});
+    const result = await runMigration0093_fixtureRecaptureFailures(stub);
+    expect(result.outcome).toMatch(/column ensured/i);
+    expect(stub.captured).toHaveLength(1); // one statement, no preceding check
+    expect(stub.renderedSql[0].toLowerCase()).toMatch(
+      /alter table[\s\S]*add column if not exists[\s\S]*fixture_recapture_failures/,
+    );
+  });
+
+  it("a second invocation issues the identical statement — no app-level branching to race", async () => {
+    const stub = makeStub({});
+    await runMigration0093_fixtureRecaptureFailures(stub);
+    const firstSql = stub.renderedSql[0];
+
+    const stub2 = makeStub({});
+    await runMigration0093_fixtureRecaptureFailures(stub2);
+    const secondSql = stub2.renderedSql[0];
+
+    expect(secondSql).toBe(firstSql);
+    expect(stub2.captured).toHaveLength(1);
+  });
+
+  it("never reads information_schema before the ALTER — the exact shape that created the two-boot race", async () => {
+    const stub = makeStub({});
+    await runMigration0093_fixtureRecaptureFailures(stub);
+    expect(stub.renderedSql.some((s) => /information_schema/i.test(s))).toBe(false);
   });
 });
 
@@ -1192,7 +1234,7 @@ describe("startup-migrations — block 0087 (un-hide content-redacted rows)", ()
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 31 blocks in historical order", () => {
+  it("exports the expected 32 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1234,6 +1276,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0090_capabilityOutputContracts",
       "runMigration0091_bolStaleValidationRules",
       "runMigration0092_x402GrowthBundles",
+      "runMigration0093_fixtureRecaptureFailures",
     ]);
   });
 });

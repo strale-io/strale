@@ -596,7 +596,22 @@ export const testSuites = pgTable(
     // Test mode and cost tracking
     testMode: varchar("test_mode", { length: 20 }).default("live"),
     // 'live' (real API), 'fixture' (saved data), 'canary' (periodic live check)
+    // Written ONLY by test-runner.ts's captureBaseline() on an actual
+    // (re)capture — the dedicated timestamp for fixture-baseline max-age
+    // staleness (checkBaselineStaleness), deliberately never overloading
+    // updated_at, which unrelated suite edits also bump. See that function's
+    // doc comment (HIGH-1, Codex review 2026-08-18).
     fixtureLastRefreshed: timestamp("fixture_last_refreshed", { withTimezone: true }),
+    // Consecutive failed fixture-recapture attempts (HIGH-2b, Codex review
+    // 2026-08-18). Incremented by recordFixtureRecaptureFailure in
+    // test-runner.ts; reset to 0 by captureBaseline on any successful
+    // recapture. At MAX_FIXTURE_RECAPTURE_FAILURES the suite is quarantined
+    // (test_status), which the scheduler's minRetestIntervalHours floors at
+    // a 168h cadence — bounds the retry blast radius instead of retrying a
+    // permanently-broken suite on every dispatch tick forever.
+    fixtureRecaptureFailures: integer("fixture_recapture_failures")
+      .notNull()
+      .default(0),
     externalCostCents: integer("external_cost_cents").default(0),
     // Scheduling eligibility — explicit billing/scheduling decoupling per PR A
     // of the May 2026 Haiku-leak structural follow-up (see DEC-20260511-?).
