@@ -30,8 +30,13 @@ import {
 import { analyzeAndRemediate, applyRemediation } from "./auto-remediation.js";
 import { checkUpstreamEscalation } from "./upstream-tracker.js";
 import { getUnconfiguredCapabilities } from "./credential-health.js";
-import { isChromiumHealthy, isBrowserlessCapability, probeChromiumHealth } from "./chromium-health.js";
-import { findUnhealthyUpstream, refreshUpstreamMapping, isCacheExpired } from "./upstream-health-gate.js";
+// chromium-health.ts's isChromiumHealthy/isBrowserlessCapability/
+// probeChromiumHealth used to be imported here but had zero call sites in
+// this file (2026-08-18 finding) — the Browserless-outage skip below is
+// findUnhealthyUpstream(), not anything from chromium-health.ts. See
+// chromium-health.ts's header comment for the full account of why that
+// module's test-runner-facing exports were removed instead of wired in.
+import { findUnhealthyUpstream } from "./upstream-health-gate.js";
 // Lifecycle automatic evaluation removed (DEC-20260503-B).
 import { logHealthEvent } from "./health-monitor.js";
 import { checkNewFailures, checkInfrastructureHealth } from "./meta-monitoring.js";
@@ -281,9 +286,21 @@ export async function runTests(
       continue;
     }
 
-    // Skip capabilities whose upstream dependency is unhealthy
-    // (prevents timeout failures from polluting the SQS window)
-    const unhealthyUpstream = findUnhealthyUpstream(suite.capabilitySlug);
+    // Skip capabilities whose upstream dependency is unhealthy (prevents
+    // timeout failures from polluting the test window). findUnhealthyUpstream
+    // is a synchronous Map read today and shouldn't throw, but this is the
+    // gate a Browserless-platform outage flows through — fail OPEN (run the
+    // suite) rather than let an unexpected error here silently abort the
+    // rest of the batch.
+    let unhealthyUpstream: string | null = null;
+    try {
+      unhealthyUpstream = findUnhealthyUpstream(suite.capabilitySlug);
+    } catch (err) {
+      logWarn("test-runner-upstream-check-failed", "upstream health check threw; failing open", {
+        capability_slug: suite.capabilitySlug,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
     if (unhealthyUpstream) {
       log.info(
         { label: "test-runner-skip-unhealthy-upstream", capability_slug: suite.capabilitySlug, upstream: unhealthyUpstream },
