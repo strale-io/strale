@@ -24,9 +24,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // dependency-manifest.ts's hand-curated `browserless.capabilities` list.
 // These tests pin the new wiring and the skip-gate semantics that consume it.
 
+// 2026-08-18: upstream-health-gate.ts now calls the shared
+// getCuratedProviderCapabilities() accessor (dependency-manifest.ts) instead
+// of inlining `getActiveProviders().find(p => p.name === "browserless")`
+// itself — credential-health.ts's browserless skip-when-credential-missing
+// gate reads the same accessor. Mocked here in terms of the same
+// mockGetActiveProviders fixture so every existing assertion below (which
+// drives behavior via mockGetActiveProviders.mockReturnValue(...)) keeps
+// working unchanged — the mock mirrors the real implementation's
+// find-by-name-then-read-capabilities shape.
 const mockGetActiveProviders = vi.fn();
 vi.mock("./dependency-manifest.js", () => ({
   getActiveProviders: (...args: unknown[]) => mockGetActiveProviders(...args),
+  getCuratedProviderCapabilities: (providerName: string) =>
+    mockGetActiveProviders().find((p: { name: string }) => p.name === providerName)?.capabilities ?? [],
 }));
 
 // Queue of rows returned by successive `.where()` calls against the

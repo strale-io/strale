@@ -509,3 +509,17 @@ export function getRetiredProviders(): DependencyProvider[] {
 export function getProvider(name: string): DependencyProvider | undefined {
   return PROVIDERS.find((p) => p.name === name);
 }
+
+/**
+ * A provider's curated `capabilities` list (e.g. browserless's hand-curated
+ * "genuinely requires this provider, no fallback" set). Single accessor so
+ * every "which capabilities are curated as depending on provider X" call
+ * site reads the exact same lookup instead of each independently
+ * re-deriving `getActiveProviders().find(p => p.name === X)?.capabilities`.
+ * Consumers: credential-health.ts (skip-when-credential-missing) and
+ * upstream-health-gate.ts (skip-when-provider-unhealthy). Returns [] if no
+ * active provider with that name is registered.
+ */
+export function getCuratedProviderCapabilities(providerName: string): string[] {
+  return getActiveProviders().find((p) => p.name === providerName)?.capabilities ?? [];
+}
