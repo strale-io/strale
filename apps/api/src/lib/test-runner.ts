@@ -578,6 +578,41 @@ async function runSingleTest(
     return recordStaleFixture(suite);
   }
 
+  // Quarantined after MAX_FIXTURE_RECAPTURE_FAILURES consecutive failed
+  // recapture attempts (Codex closing-pass review, round 2 — "unbounded
+  // recapture" re-verification): refuse to attempt another live call at
+  // all, rather than merely dispatching less often. Before this gate,
+  // reaching MAX_FIXTURE_RECAPTURE_FAILURES only slowed the retry cadence
+  // to the scheduler's 168h quarantine floor (minRetestIntervalHours) — a
+  // real reduction, but not termination; a direct runTests({suiteId}) call
+  // (admin trigger, manual re-run) would still reach the executor with no
+  // cap at all. This gate makes the cap airtight at the one chokepoint
+  // every execution path shares: any test_mode='fixture' suite whose
+  // quarantine reason carries the FIXTURE_RECAPTURE_QUARANTINE_MARKER
+  // refuses here, unconditionally, until a human resets test_status (the
+  // reason string says so explicitly). Scoped to THIS specific quarantine
+  // cause via the marker prefix — not a blanket "any quarantined fixture
+  // suite refuses" — so it doesn't change behavior for suites quarantined
+  // by unrelated mechanisms (health-sweep's own escalation, upstream
+  // breakage) that still want their normal weekly live probe to detect
+  // recovery.
+  //
+  // Recovery interaction: health-sweep.ts's checkQuarantineRecovery
+  // requires 3 consecutive PASSING results in the trailing 7 days to
+  // release quarantine. Every refusal recorded here is `passed: false`,
+  // so it can never manufacture a false recovery — but it also means
+  // recovery can never happen automatically for this specific cause: a
+  // human must actually intervene (reset the suite, its baseline, or the
+  // underlying issue AND clear test_status) to get a passing result again.
+  // That is the intended, not accidental, consequence of "needs human".
+  if (
+    suite.testMode === "fixture" &&
+    suite.testStatus === "quarantined" &&
+    suite.quarantineReason?.startsWith(FIXTURE_RECAPTURE_QUARANTINE_MARKER)
+  ) {
+    return recordQuarantinedRecaptureRefusal(suite);
+  }
+
   // ── Real execution for other test types (negative, edge_case, known_answer)
   const executor = getExecutor(suite.capabilitySlug);
 
@@ -599,6 +634,22 @@ async function runSingleTest(
     });
 
     await updateLastClassification(suite.id, classification);
+
+    // Fixture recapture failure tracking (HIGH-2b + round-2 gap fix): this
+    // early return used to bypass the failure-tracking block near the end
+    // of the "real execution" path entirely — a fixture-mode suite whose
+    // executor is missing would retry forever with zero cap, the one gap
+    // in "increments on EVERY failed recapture attempt". getExecutor()
+    // failures are rare (a genuine registration bug, not a real runtime
+    // scenario for the 12 target capabilities — all have registered
+    // executors), but the cap must be airtight regardless of cause.
+    if (suite.testMode === "fixture") {
+      await recordFixtureRecaptureFailure(suite).catch((err) =>
+        logError("fixture-recapture-failure-tracking-failed", err, {
+          capability_slug: suite.capabilitySlug,
+        }),
+      );
+    }
 
     return {
       testName: suite.testName,
@@ -1364,8 +1415,18 @@ export async function captureBaseline(
 export const MAX_FIXTURE_RECAPTURE_FAILURES = 3;
 
 /**
+ * Stable prefix on `quarantine_reason` identifying THIS specific quarantine
+ * cause (exhausted fixture-recapture retries), so the runtime refusal gate
+ * above (`test-runner.ts`'s "Quarantined after MAX_FIXTURE_RECAPTURE_FAILURES"
+ * block) can distinguish it from suites quarantined by unrelated mechanisms
+ * (health-sweep's own escalation, upstream breakage) that should keep their
+ * normal weekly live probe.
+ */
+export const FIXTURE_RECAPTURE_QUARANTINE_MARKER = "fixture_recapture_exhausted:";
+
+/**
  * Bound a fixture suite's failing recapture attempts (Codex review,
- * 2026-08-18 — HIGH-2b).
+ * 2026-08-18 round 1 — HIGH-2b; termination hardened round 2).
  *
  * A `test_mode = 'fixture'` suite reaches the "real execution" branch in
  * `runSingleTest` only because its baseline was missing or stale — every
@@ -1376,16 +1437,24 @@ export const MAX_FIXTURE_RECAPTURE_FAILURES = 3;
  * failing-and-retrying".
  *
  * Increments `fixture_recapture_failures`; at `MAX_FIXTURE_RECAPTURE_FAILURES`
- * consecutive failures, sets `test_status = 'quarantined'` — which
- * `test-scheduler.ts`'s `minRetestIntervalHours` already floors at a 168h
- * (weekly) cadence, so the retry rate drops ~168x on its own via the
- * existing quarantine machinery, no new scheduling logic needed. A
- * subsequent successful recapture (whenever the weekly retry lands) resets
- * the counter to 0 via `captureBaseline`; `health-sweep.ts`'s existing
- * `checkQuarantineRecovery` sweep independently releases the
- * `test_status = 'quarantined'` flag once recent results show recovery —
- * the two mechanisms are separate but compatible, no new wiring needed
- * there either.
+ * consecutive failures, sets `test_status = 'quarantined'` with a reason
+ * carrying `FIXTURE_RECAPTURE_QUARANTINE_MARKER`. Round-2 fix: reaching the
+ * cap used to only slow the retry cadence to `minRetestIntervalHours`'s 168h
+ * quarantine floor — real, but not termination; a direct `runTests({suiteId})`
+ * call (admin trigger, manual re-run) still reached the executor uncapped.
+ * The runtime gate in `runSingleTest` (immediately before this function's
+ * call site) now checks for the marker and refuses to attempt ANY further
+ * live call once quarantined for this cause, regardless of how or how often
+ * the suite is dispatched — genuine termination, not just a slower retry.
+ *
+ * A subsequent successful recapture resets the counter to 0 via
+ * `captureBaseline` — but with the runtime gate active, that can only
+ * happen after a human clears `test_status`/`quarantine_reason` (the
+ * refusal path never calls the executor, so it can never self-heal into a
+ * pass). `health-sweep.ts`'s `checkQuarantineRecovery` sweep still exists
+ * and is harmless here: every refusal this cause records is `passed: false`,
+ * so it can never manufacture the 3-consecutive-passes evidence that sweep
+ * requires to release quarantine automatically.
  */
 export async function recordFixtureRecaptureFailure(
   suite: typeof testSuites.$inferSelect,
@@ -1406,11 +1475,49 @@ export async function recordFixtureRecaptureFailure(
       .update(testSuites)
       .set({
         testStatus: "quarantined",
-        quarantineReason: `fixture recapture failing — needs human (${newCount} consecutive failed live recapture attempts)`,
+        quarantineReason:
+          `${FIXTURE_RECAPTURE_QUARANTINE_MARKER} ${newCount} consecutive failed live recapture ` +
+          `attempts — needs human. Further live calls refused until test_status is reset.`,
         updatedAt: new Date(),
       })
       .where(eq(testSuites.id, suite.id));
   }
+}
+
+/**
+ * Record the refusal itself when a fixture suite is quarantined for
+ * exhausted recapture attempts (Codex review, 2026-08-18 round 2). Same
+ * "name the instrument, not the capability" posture as `recordStaleFixture`
+ * — `passed: false` so the failure stays visible in `test_results`, with a
+ * `failureClassification` the correctness invariant can key off, but never
+ * pretending to have evidence about the capability's actual behavior since
+ * the executor was never called.
+ */
+async function recordQuarantinedRecaptureRefusal(
+  suite: typeof testSuites.$inferSelect,
+): Promise<SingleTestResult> {
+  const db = getDb();
+  const failureReason =
+    `fixture_recapture_quarantined: ${suite.quarantineReason ?? "repeated recapture failures"} ` +
+    `Refusing further live calls until a human resets test_status. Not evidence about the capability.`;
+
+  await db.insert(testResults).values({
+    testSuiteId: suite.id,
+    capabilitySlug: suite.capabilitySlug,
+    passed: false,
+    failureReason,
+    responseTimeMs: 0,
+    failureClassification: "test_infrastructure",
+  });
+
+  return {
+    testName: suite.testName,
+    testType: suite.testType,
+    capabilitySlug: suite.capabilitySlug,
+    passed: false,
+    failureReason,
+    responseTimeMs: 0,
+  };
 }
 
 // ─── Validation logic ───────────────────────────────────────────────────────

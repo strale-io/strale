@@ -289,7 +289,7 @@ describe("HIGH-2b: recordFixtureRecaptureFailure caps consecutive failures and q
 
     const quarantineWrite = recordedUpdates.find((u) => u.set.testStatus === "quarantined");
     expect(quarantineWrite).toBeTruthy();
-    expect(String(quarantineWrite!.set.quarantineReason)).toMatch(/fixture recapture failing/i);
+    expect(String(quarantineWrite!.set.quarantineReason)).toMatch(/fixture_recapture_exhausted:/);
     expect(String(quarantineWrite!.set.quarantineReason)).toContain(String(MAX_FIXTURE_RECAPTURE_FAILURES));
   });
 
