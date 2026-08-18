@@ -45,9 +45,31 @@ import { getCuratedProviderCapabilities } from "./dependency-manifest.js";
 
 const CAPABILITIES_DIR = resolve(import.meta.dirname, "../capabilities");
 
-/** Direct-Browserless-call evidence: no fallback tier can rescue these. */
+/**
+ * Hard-require evidence: reaching Browserless with no fallback tier able to
+ * rescue the call. Four spellings, all verified against web-provider.ts:
+ *
+ *   1-2. Direct config/URL construction — bypasses the tiered layer outright.
+ *   3.   `skipFallback: true` — explicitly disables tiers 1-2.
+ *   4.   A non-`networkidle0` `waitUntil` — the tier-1 (plain fetch) and
+ *        tier-2 (Jina) branches are BOTH gated on the default wait mode
+ *        (web-provider.ts ~345 / ~424), so any other value silently skips
+ *        straight to Browserless. `fetchCompanyPage()` is exactly this case:
+ *        it hardcodes `waitUntil: "domcontentloaded"`, so it is a hard
+ *        dependency despite reading like an innocuous helper (external
+ *        review, 2026-08-18 — the original three-token pattern missed it).
+ *
+ * Matched against comment-stripped source: a stale comment mentioning
+ * `getBrowserlessConfig` must not keep an obsolete slug alive in the curated
+ * list, and a commented-out call must not invent a new dependency.
+ */
 const HARD_REQUIRE_PATTERN =
-  /getBrowserlessConfig|buildBrowserlessRequestUrl|skipFallback\s*:\s*true/;
+  /getBrowserlessConfig|buildBrowserlessRequestUrl|skipFallback\s*:\s*true|fetchCompanyPage\s*\(|waitUntil\s*:\s*["'](?!networkidle0)/;
+
+/** Strip line and block comments so only real code is pattern-matched. */
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
 
 /**
  * Every top-level capabilities/*.ts file that self-registers an executor,
@@ -64,7 +86,7 @@ function loadExecutorSources(): Map<string, string> {
   for (const f of files) {
     const text = readFileSync(resolve(CAPABILITIES_DIR, f), "utf8");
     const m = text.match(/registerCapability\(\s*"([^"]+)"/);
-    if (m) bySlug.set(m[1], text);
+    if (m) bySlug.set(m[1], stripComments(text));
   }
   return bySlug;
 }

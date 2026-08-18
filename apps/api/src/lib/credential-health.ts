@@ -76,7 +76,15 @@ const CREDENTIAL_REGISTRY: CredentialEntry[] = [
   {
     provider: "sdda",
     envVar: "SDDA_API_CLIENT_ID",
-    capabilities: ["latvian-company-data"],
+    // EMPTY BY DESIGN (2026-08-18, external review): listing
+    // latvian-company-data here made getUnconfiguredCapabilities() skip it
+    // whenever SDDA_API_CLIENT_ID is absent — which is always, since SDDA is
+    // an unwired stub. That is the same false-skip bug this file's browserless
+    // entry was just fixed for, three lines up, via a different stale mapping:
+    // the capability's live executor needs no credential at all. Re-add the
+    // slug in the same commit that actually wires registerChain() for SDDA,
+    // not before.
+    capabilities: [],
     // SDDA UR-API-LegalEntity via api.viss.gov.lv (WSO2 API Manager).
     // OAuth2 client_credentials — also needs SDDA_API_CLIENT_SECRET, but
     // CLIENT_ID is the sentinel (both are always paired at provisioning).
