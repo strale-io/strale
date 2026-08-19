@@ -100,6 +100,33 @@ item 3 leaves one automated check inert; items 1 and 4 are tidying.
 
 ## DECIDED — visible so you can reverse them
 
+**DQ-15** · `decided` · owner Claude · 2026-08-19
+Deleted four dead code branches, and published two research notes that only
+existed on them.
+*What this is:* the morning branch-graveyard sweep. Four July snapshot branches
+held nothing that is not already on the main line, so they are gone; the
+research two of them carried was published first, so nothing was lost.
+*How I checked, and why it matters:* my first pass compared file *paths* and
+reported five documents as missing from the main line. Three of them were not
+missing at all — they had been moved to a different folder months ago, and a
+path comparison cannot see that. Comparing the actual contents found them
+byte-for-byte identical. Only two were genuinely unique, and those are the two
+I published. A path check after a file move is not evidence of absence.
+*What was deleted, all recoverable:* the July screenshot fix snapshot (the main
+line's version is strictly newer), a one-line snapshot, and a snapshot whose
+only unique content was configuration for a system we removed in August. Every
+identifier is recorded in today's handoff.
+*What stays, with reasons:* three branches holding the unfinished Italian
+company-lookup work, because that is live work with a known privacy issue to
+resolve first (DQ-1). One of the three I had expected to delete: its research
+is now published, but it turned out to hold a *different version* of the
+Italian work than the other two — same capability file, three differing
+supporting files — so deleting it would have quietly discarded a variant.
+Also staying: one branch holding a test file not yet on the main line, and the
+two previously-documented keeps.
+*How you'd reverse it:* any deleted branch is restorable from the identifiers
+in today's handoff.
+
 **DQ-13** · `decided` · owner Claude · 2026-08-18
 Switched on payment for the four new growth bundles. They had been on the menu
 for two days without a way to pay for them.
