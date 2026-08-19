@@ -144,6 +144,18 @@ interface SingleTestResult {
   failureReason: string | null;
   responseTimeMs: number;
   remediation?: RemediationResult;
+  /**
+   * The verdict already written to `test_results.failure_classification`,
+   * carried back to the caller so post-run meta-monitoring can group by cause.
+   *
+   * Added 2026-08-19. Every consumer read it as `(r as any).failureClassification`
+   * against an interface that never declared it, so it was `undefined` at every
+   * call site: `checkInfrastructureHealth` bucketed 14 of 14 production
+   * infrastructure alerts as `{"unknown": 6}` and the mass-failure
+   * situation assessment always reported `commonClassification: "unknown"`.
+   * The cast silenced the type error that would have caught this.
+   */
+  failureClassification?: string | null;
 }
 
 // ─── Tier-specific delays ───────────────────────────────────────────────────
@@ -471,8 +483,8 @@ export async function runTests(
   if (results.length > 0 && failed > 5 && failed / results.length > 0.10) {
     const classificationCounts: Record<string, number> = {};
     for (const r of results) {
-      if (!r.passed && (r as any).failureClassification) {
-        const c = String((r as any).failureClassification);
+      if (!r.passed && r.failureClassification) {
+        const c = String(r.failureClassification);
         classificationCounts[c] = (classificationCounts[c] ?? 0) + 1;
       }
     }
@@ -493,7 +505,7 @@ export async function runTests(
     const batchForMeta = results.map((r) => ({
       capabilitySlug: r.capabilitySlug,
       passed: r.passed,
-      failureClassification: (r as any).failureClassification as string | null | undefined,
+      failureClassification: r.failureClassification,
     }));
 
     // Check 1: New failure alert (regressions)
@@ -684,6 +696,7 @@ async function runSingleTest(
       passed: false,
       failureReason,
       responseTimeMs: 0,
+      failureClassification: classification.verdict,
     };
   }
 
@@ -906,6 +919,7 @@ async function runSingleTest(
     passed,
     failureReason,
     responseTimeMs,
+    failureClassification: classification?.verdict ?? null,
   };
 }
 
@@ -996,6 +1010,7 @@ async function runDryRunSchemaTest(
     passed,
     failureReason,
     responseTimeMs,
+    failureClassification: classification?.verdict ?? null,
   };
 }
 
@@ -1149,6 +1164,7 @@ async function runRegressionTest(
       passed: false,
       failureReason,
       responseTimeMs,
+      failureClassification: cls.verdict,
     };
   }
 
@@ -1210,6 +1226,7 @@ async function runRegressionTest(
       passed: false,
       failureReason,
       responseTimeMs,
+      failureClassification: cls.verdict,
     };
   }
 
@@ -1249,6 +1266,7 @@ async function runRegressionTest(
     passed,
     failureReason,
     responseTimeMs,
+    failureClassification: regressionCls?.verdict ?? null,
   };
 }
 
@@ -1370,6 +1388,12 @@ export function isBaselineStale(suite: BaselineStalenessInput, now?: Date): bool
  * (ours to fix, not the capability's logic), so the correctness invariant
  * excludes it from the denominator rather than reporting a code defect.
  */
+/**
+ * The verdict written for a stale fixture. One constant so the persisted row
+ * and the in-memory result returned to meta-monitoring cannot drift apart.
+ */
+const STALE_FIXTURE_CLASSIFICATION = "stale_input";
+
 async function recordStaleFixture(
   suite: typeof testSuites.$inferSelect,
 ): Promise<SingleTestResult> {
@@ -1385,7 +1409,7 @@ async function recordStaleFixture(
     passed: false,
     failureReason,
     responseTimeMs: 0,
-    failureClassification: "stale_input",
+    failureClassification: STALE_FIXTURE_CLASSIFICATION,
   });
 
   return {
@@ -1395,6 +1419,7 @@ async function recordStaleFixture(
     passed: false,
     failureReason,
     responseTimeMs: 0,
+    failureClassification: STALE_FIXTURE_CLASSIFICATION,
   };
 }
 
@@ -1566,6 +1591,7 @@ async function recordQuarantinedRecaptureRefusal(
     passed: false,
     failureReason,
     responseTimeMs: 0,
+    failureClassification: "test_infrastructure",
   };
 }
 
