@@ -132,6 +132,18 @@ conversion.
   capability makes a network call. Fixed 2026-08-17 (#305): environmental
   failures leave the denominator and report at Tier 2 instead. Six capabilities
   went quiet; seven still violate and are genuine.
+- **The Codebase Quality Program's exit measurement passed** (T4.3, run
+  2026-08-19 on the clean 24h window it was deferred for). **3 capabilities
+  under 90%** against a ≤5 target, down from 30 at program start, across 210
+  capabilities and 13,779 runs: `uk-gazette-notice-search` 60.0% (vendor API
+  returns 500 to everyone — DQ-14 item 2, Petter to file),
+  `eu-regulation-search` 60.4% (**not a capability fault at all** — every
+  failure was the fixture-staleness guard, fixed in #341) and
+  `canadian-company-data` 88.1%. Cross-checked at 12h/48h/7d: the same three
+  dominate, and the 7d window additionally carries pre-fix rows from the
+  program's own remediation, which is why the clean window was the one
+  specified.
+
 - **The seven that remain are fixture-contract bugs, not broken capabilities.**
   `iso-country-lookup`, `skill-extract`, `company-id-detect`,
   `incoterms-explain`, `dangerous-goods-classify`, `beneficial-ownership-lookup`
@@ -140,10 +152,46 @@ conversion.
   is fixtures asserting a flattened shape against a nested response — verified
   for `iso-country-lookup`, whose six "null" fields all live under `match`. This
   is the next fixture-hygiene batch.
-- **`screenshot-url` has a plain bug, not a quality problem**: 23 of its 25 real
-  failures are `HTTP 400: "waitForSelector" is not allowed` — a parameter *we*
-  send that Browserless rejects. Deterministic, ours, and invisible to the
-  harness.
+- **`screenshot-url`'s `waitForSelector` bug is fixed** (re-checked 2026-08-19).
+  The entry below is kept because the *diagnosis* was right and worth
+  remembering; the defect itself is gone. `screenshot-url.ts` on `main` carries
+  the v1/v2 wait-dialect probe (`toV1WaitFor`, `waitDialectByHost`), and over
+  the last 14 days external traffic shows **one call, completed, no error** —
+  so the fix is confirmed by real traffic, not just by reading the file. The
+  original finding: 23 of its 25 real failures were
+  `HTTP 400: "waitForSelector" is not allowed` — a parameter *we* sent that
+  Browserless rejected. Deterministic, ours, and invisible to the harness.
+
+- **The instrument blamed the capability a third time, by a third route**
+  (found and fixed 2026-08-19, #341). The fixture-staleness guard records
+  `passed: false` with a message ending "Not evidence about the capability" —
+  and then three consumers scored it as exactly that. `classifyTransactionFailure`
+  returned `internal` ("OUR bug until proven otherwise"), so it counted in the
+  correctness denominator, *despite the emitting function's own docstring
+  asserting it was classified `config` and excluded* — the docstring was
+  untrue and nothing had ever checked. `checkNewFailures` opened regressions on
+  it: `eu-regulation-search` was reported "was passing (100% over 10 runs), now
+  failing" three times on 2026-08-18 while answering correctly. And
+  `SingleTestResult` never declared `failureClassification`, so all four
+  consumers read it through `(r as any)` and got `undefined` — which is why
+  **14 of 14 production `infrastructure_alert` events grouped as
+  `{"unknown": 6}`**. A detector built to name the common cause of a systemic
+  failure had never once named one.
+
+  The lesson generalises past this fix: **DQ-12, E3 and this are the same bug
+  three times.** An instrument that knows it lacks evidence must be wired so
+  "no evidence" cannot be scored as "evidence of a defect" — and a comment
+  claiming that wiring exists is not the wiring.
+
+- **The quality floor's "daily" tick is in practice deploy-driven.** Its
+  interval is 24h with a 15-minute startup delay, so in a week of frequent
+  merges it evaluates once per boot: 8 deploys on 2026-08-18 produced 8 ticks,
+  and the 16-hour silence afterwards was simply the absence of a ninth deploy,
+  not an outage. Worth knowing before reading tick cadence as a health signal —
+  it cost most of an hour on 2026-08-19 before the interval constant explained
+  it. The self-throttle ("3 quarantines per run") is therefore per *deploy*,
+  not per day; harmless while decisions are 0, but it is not the documented
+  bound.
 
 ## Active experiments (M1)
 
