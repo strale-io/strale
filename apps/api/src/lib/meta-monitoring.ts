@@ -43,6 +43,28 @@ export interface BatchTestResult {
 // ─── 8A: Post-test-run checks ─────────────────────────────────────────────────
 
 /**
+ * Verdicts that describe the *instrument or the world* rather than the
+ * capability under test. A failure carrying one of these is not evidence the
+ * capability changed behaviour, so it must not open a regression.
+ *
+ * `undefined`/`null` stays attributable on purpose: an unclassified failure is
+ * unexplained, and silently excusing the unexplained is how a real regression
+ * would go unreported.
+ */
+const NON_ATTRIBUTABLE_CLASSIFICATIONS: ReadonlySet<string> = new Set([
+  "stale_input",         // fixture baseline older than its suite — no evidence either way
+  "test_infrastructure", // our own test-budget guard tripped
+  "test_design",         // the fixture asks for something the capability correctly refuses
+  "upstream_transient",  // vendor 5xx/429
+  "upstream_changed",    // vendor altered its contract
+]);
+
+export function isCapabilityAttributable(classification?: string | null): boolean {
+  if (!classification) return true;
+  return !NON_ATTRIBUTABLE_CLASSIFICATIONS.has(classification);
+}
+
+/**
  * Check 1: New failure alert (WARNING)
  * Detects capabilities that were passing in their previous run window
  * and are now failing in this batch (regression).
@@ -56,18 +78,32 @@ export async function checkNewFailures(
   const check = "new_failure_alert";
 
   try {
-    const db = getDb();
     const now = new Date();
 
-    // Only check slugs that failed in this batch
+    // Only check slugs that failed in this batch *for a reason attributable to
+    // the capability*. A stale fixture, an exhausted test budget or an upstream
+    // outage is an absence of evidence, not evidence of a regression — alerting
+    // on it is the crying-wolf failure DQ-12 fixed for the correctness
+    // invariant, arriving here by a different route.
+    //
+    // Observed 2026-08-18: `eu-regulation-search` produced three
+    // "was passing (100% over 10 runs), now failing" alerts while answering
+    // correctly in production. Every one of its failures was the harness's own
+    // `fixture_refresh_required` marker.
     const failedSlugs = [...new Set(
-      batchResults.filter((r) => !r.passed).map((r) => r.capabilitySlug),
+      batchResults
+        .filter((r) => !r.passed && isCapabilityAttributable(r.failureClassification))
+        .map((r) => r.capabilitySlug),
     )];
 
     if (failedSlugs.length === 0) {
       return { check, severity: "warning", passed: true, details: "No failures in this batch" };
     }
 
+    // Opened only once the batch is known to contain something worth querying:
+    // the no-op path must not need a database connection to report "nothing
+    // regressed", which is also what makes this check unit-testable.
+    const db = getDb();
     const regressions: string[] = [];
 
     for (const slug of failedSlugs) {

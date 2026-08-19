@@ -43,6 +43,26 @@ export const CALLER_ATTRIBUTABLE: ReadonlySet<TransactionFailureClass> = new Set
 // generic "is required", so config MUST be checked before caller patterns
 // with a shape only our env errors have. Case-sensitive env-var shape,
 // case-insensitive phrasings.
+/**
+ * The test harness's own fixture-staleness marker, emitted by
+ * `test-runner.recordStaleFixture` when a fixture baseline predates its
+ * suite's last edit and the suite costs money to re-run.
+ *
+ * Classified `config` — harness state on our side — so it joins
+ * `ENVIRONMENTAL_FAILURE_CLASSES` and leaves the correctness denominator.
+ * The result is deliberately recorded `passed: false` (we have no evidence
+ * the capability works), but "no evidence" must never be scored as "evidence
+ * of a defect": the message itself ends "Not evidence about the capability."
+ *
+ * Before 2026-08-19 this fell through to `internal` — "OUR bug until proven
+ * otherwise" — which counted it against the capability's completion rate and
+ * fired false `regression_detected` alerts. `eu-regulation-search` was
+ * reported as regressing from 100% three times on 2026-08-18 while answering
+ * correctly; the taxonomy is the reason. Matched on our own literal prefix,
+ * so no third-party text can reach it.
+ */
+const FIXTURE_STALE_RE = /^fixture_refresh_required:/;
+
 const CONFIG_ENV_RE = /\b[A-Z][A-Z0-9]+(?:_[A-Z0-9]+)*_(?:KEY|TOKEN|SECRET|GUID|URL|PASSWORD)\b/;
 const CONFIG_PHRASE_RE = /not configured|rejected the (?:api )?(?:key|token)|missing credential/i;
 
@@ -223,6 +243,10 @@ export function classifyTransactionFailure(error: string | null | undefined): Tr
   const msg = (error ?? "").trim();
   if (!msg) return "internal";
   if (msg.includes(TOS_REFUSAL_MARKER)) return "tos_policy";
+  // Our own harness marker, claimed before every other pattern: the message
+  // embeds suite metadata and timestamps that must never be pattern-matched
+  // as though they were a capability's error text.
+  if (FIXTURE_STALE_RE.test(msg)) return "config";
   if (CONFIG_ENV_RE.test(msg) || CONFIG_PHRASE_RE.test(msg)) return "config";
   // Before timeout/upstream/caller: these messages quote raw third-party text
   // that can contain any phrase, so they must be claimed by their own
