@@ -20,7 +20,7 @@ packages:
 
   WP0:
     title: Immediate containment (confirmed-live scope)
-    status: PLANNED
+    status: ACCEPTED
     depends_on: [M0]
     risks: [CR-10, CR-11, CR-12, CR-14, CR-19, N1, N2, N3]
     review: {codex: required, fable: required}
@@ -141,6 +141,8 @@ packages:
     risks: [CR-14, CR-15, CR-16, CR-17, CR-18]
     review: {codex: required, fable: required}
     checkin_b: "legal-text rewrites (Privacy retention, 'charged only on success', Terms-at-signup) batched here"
+    inherited_exit_conditions:
+      - "public examples require a positive publication-approval artifact, not an inferred one (Codex WP0 blocker, scope-deferred)"
     exit: [runtime==docs==claims, client_meta/payer_hash retention intentional, real assent]
 
   WP16:

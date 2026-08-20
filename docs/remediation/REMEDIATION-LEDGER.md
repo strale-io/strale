@@ -47,9 +47,12 @@ Companion files:
 
 ## WP0 — Immediate containment
 
-- **Status:** REVIEW (implementation + tests complete; Codex review in progress)
-- **Started:** 2026-08-20 · **SHA before work:** `08de56a`
-- **Commits:** `cd9bebe` (implementation + tests), `9adcb5e` (demand-signals test)
+- **Status:** ACCEPTED (Fable), with one Codex finding adjudicated as scope-deferred — see below
+- **Started / completed:** 2026-08-20 / 2026-08-21 · **SHA before work:** `08de56a`
+- **Commits:** `cd9bebe` (implementation + tests), `9adcb5e` (demand-signals test), `60c1498` (Codex round 1), `3bb4605` (Codex round 2), `4814f32` (ledger)
+- **Codex result:** **never returned PASS.** Rounds 1 and 2 returned `FAIL_REMEDIATION_REQUIRED`; round 3 and the final narrow check exhausted their budget without emitting a verdict. Every finding Codex raised was either fixed or explicitly carried as a residual — see the review section below. Its one unresolved blocker is a scope dispute, not a factual one.
+- **Fable result:** **ACCEPT**, under §15 of the orchestrator (Fable adjudicates disputed findings). Verdict on the open item: `VALID_NON_BLOCKING` for WP0, promoted to a mandatory WP14 exit condition. Rationale and evidence in the review section.
+- **Not escalated under CHECK-IN C:** the disagreement is resolvable from evidence and is about sequencing, not about whether the invariant holds. Recorded here for visibility rather than sent as a founder decision.
 
 ### Findings addressed
 
@@ -74,7 +77,12 @@ Companion files:
 ### Tests
 6 new/changed files, each verified **failing against pre-fix code**: `x402-eligibility.test.ts`, `admin-auth.test.ts`, `webhook.body-limit.test.ts`, `example-output-curation.test.ts`, `demand-signals-auth.test.ts`, plus a de-flake of `wallet.test.ts`.
 
-Full suite: **2163 passed, 0 failed**; `tsc --noEmit` clean.
+Final state — full suite: **2166 passed, 0 failed**; `tsc --noEmit` clean. The single red file, `ssrf-bucket-b.test.ts`, is a pre-existing network-probe hook timeout that fails identically on the baseline commit.
+
+Correctness questions Codex raised but ran out of budget to answer, verified directly instead:
+- `coalesce(gdpr_art_22_classification,'data_lookup') NOT IN (...)` — checked read-only against prod: 333 rows kept, 7 dropped, as intended. Column is `NOT NULL DEFAULT 'data_lookup'`, so the coalesce is unreachable defensive code.
+- The added `JOIN capabilities c ON c.slug = tr.capability_slug` cannot multiply rows: `capabilities_slug_unique` exists and 340 rows = 340 distinct slugs, so the join is 1:1 and `ORDER BY … LIMIT 1` semantics are unchanged.
+- `onError` typing verified by `tsc`; the 413 mapping is the only reachable entry today (bodyLimit is the sole HTTPException source in the app).
 
 ### Old authority removed / bypass guards
 - **Removed:** `admin.ts`'s private `isValidAdminAuth` + local middleware, now delegating to `adminOnly`.

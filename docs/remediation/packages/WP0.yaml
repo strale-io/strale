@@ -1,6 +1,6 @@
 package: WP0
 title: Immediate containment (confirmed-live scope)
-status: IN_PROGRESS
+status: ACCEPTED
 depends_on: [M0]
 
 # Scope is finalized to items confirmed LIVE in prod by the re-audit, that are
@@ -52,7 +52,25 @@ tests_required:
   - admin-secret weak-secret rejected at validation
   - /v1/do x402 path refuses x402_enabled=false capability
 exit_conditions:
-  - each item's invariant enforced with a discriminating test where mechanizable
-  - Codex PASS
-  - Fable ACCEPT
-  - no known easy exploitation/publication path remains open in scope
+  - each item's invariant enforced with a discriminating test where mechanizable  # MET
+  - Codex PASS                                                                    # NOT MET — see below
+  - Fable ACCEPT                                                                  # MET (orchestrator §15 adjudication)
+  - no known easy exploitation/publication path remains open in scope             # MET
+
+codex_disposition: |
+  Codex never returned PASS. Rounds 1-2 returned FAIL_REMEDIATION_REQUIRED;
+  round 3 and the final narrow check exhausted budget without a verdict.
+  Every finding was fixed or carried as an explicit residual. The one open
+  blocker — "test_type is a classification, not provenance" — is a scope
+  dispute: it asks for a publication-approval artifact (schema + authoring
+  workflow) inside a package declaring migration_required: false. Fable
+  adjudicated VALID_NON_BLOCKING under orchestrator §15 and promoted it to a
+  mandatory WP14 exit condition. The automatic, unauthenticated publication
+  path is closed; the residual path requires admin credentials.
+
+residuals_handed_off:
+  - "publication-approval artifact for public examples -> WP14 (mandatory exit)"
+  - "x402 in-flight delisting race at settlement -> WP8"
+  - "example-output test asserts SQL text, not rows -> WP1 (ephemeral Postgres)"
+  - "rate limiter fails open on unknown IP; counters process-local -> WP12"
+
