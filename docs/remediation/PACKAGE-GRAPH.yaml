@@ -1,0 +1,183 @@
+# Strale Remediation — machine-readable package graph
+# Produced by the initial Fable re-audit (2026-08-20). Adjudication: FABLE-REAUDIT.md.
+# Order retained from the Master Plan; WP0 scope finalized to confirmed-live items.
+
+meta:
+  audited_baseline: "482ef93"
+  current_main: "e825a05"
+  m0_status: ACCEPTED
+  checkin_a_triggered: false
+  fable_acceptance_required:
+    [M0, WP0, WP1, WP2, WP3, WP4, WP5, WP6, WP7, WP8, WP11, WP12, WP14, WP16.2, WP16.3, WP16.4, WP16.5]
+
+# Verdict legend: UPHELD | UPHELD_REFRAMED | NARROWED | DOWNGRADED | REJECTED
+packages:
+  M0:
+    title: Freeze and reconcile
+    status: ACCEPTED
+    depends_on: []
+    exit: [audit-delta produced, references rebaselined]
+
+  WP0:
+    title: Immediate containment (confirmed-live scope)
+    status: PLANNED
+    depends_on: [M0]
+    risks: [CR-10, CR-11, CR-12, CR-14, CR-19, N1, N2, N3]
+    review: {codex: required, fable: required}
+    invariants:
+      - no public endpoint serves verbatim customer free-text
+      - no public "example" serves live customer/test output for paid capabilities
+      - key rotation requires mailbox proof; no reusable key emailed in plaintext
+      - admin secret has an enforced minimum strength
+      - unauthenticated bodies are size-capped before expensive parse/auth
+      - "/health/deep is not an unauthenticated DB-write amplifier"
+      - raw-socket capabilities are contained until WP12
+    live_evidence:
+      demand_signals_rows: 3426
+      piggyback_rows: 508
+      stale_executing_rows: 11
+      delisted_but_sellable_caps: 30
+
+  WP1:
+    title: Proof floor (ephemeral Postgres CI + crash/mutation tests + eval harness)
+    status: PLANNED
+    depends_on: [WP0]
+    risks: [CR-07]
+    review: {codex: required, fable: required}
+    exit: [critical invariants falsifiable by tests, ephemeral-PG lane green, webhook test exists]
+
+  WP2:
+    title: Wallet Service (single mutation authority)
+    status: PLANNED
+    depends_on: [WP1]
+    risks: [CR-01]
+    review: {codex: required, fable: required}
+    exit: [all 10 balance-write sites flow through WalletService, CI grep guard, old route SQL deleted]
+
+  WP3:
+    title: Durable wallet reservations + reconciler
+    status: PLANNED
+    depends_on: [WP2]
+    risks: [CR-01, N1]
+    review: {codex: required, fable: required}
+    exit: [reserved/executing/captured/released persisted, crash cannot strand funds, 11 live orphans reconciled]
+
+  WP4:
+    title: Capability Runner + canonical ExecutionOutcome/OutputAssessment
+    status: PLANNED
+    depends_on: [WP2]
+    risks: [CR-02]
+    review: {codex: required, fable: required}
+    exit: [payment consumes billable, no rail decides success locally, gated honored on all rails]
+
+  WP5:
+    title: x402 durable payment state + recovery
+    status: PLANNED
+    depends_on: [WP3, WP4]
+    risks: [CR-01]
+    review: {codex: required, fable: required}
+    exit: [durable intent before settle, one canonical record per settlement, orphan table reconciled]
+
+  WP7:
+    title: Audit finality (reframed threat model — see C2)
+    status: PLANNED
+    depends_on: [WP4]
+    risks: [CR-04]
+    review: {codex: required, fable: required}
+    exit: [terminal-only admission incl. free-tier, consistent head selection, prev_hash uniqueness, fail-closed genesis, branch-topology check]
+
+  WP6:
+    title: Idempotency & replay (fingerprint + capability binding)
+    status: PLANNED
+    depends_on: [WP4]
+    risks: [CR-03, N4]
+    review: {codex: required, fable: required}
+    exit: [key bound to (principal,fingerprint,capability), user-scoped unique index, coverage on solutions/MCP/A2A/x402-via-do]
+
+  WP8:
+    title: Policy convergence (one eligibility authority)
+    status: PLANNED
+    depends_on: [WP4]
+    risks: [CR-05, N5, N6]
+    review: {codex: required, fable: required}
+    exit: [quarantine unbypassable on /v1/do X-Payment, checkSolutionGates autoactivation deleted, steps gated, x402 feeds breaker]
+
+  WP9:
+    title: Capability Invocation Facts
+    status: PLANNED
+    depends_on: [WP4, WP8]
+    risks: [CR-06]
+    review: {codex: required, fable: optional}
+    exit: [immutable invocation facts incl. solution sub-calls, floor consumes facts]
+
+  WP11:
+    title: Account / trial / Stripe lifecycle
+    status: PLANNED
+    depends_on: [WP2]
+    risks: [CR-09, CR-10]
+    review: {codex: required, fable: required}
+    exit: [atomic signup, one trial authority, Stripe amount/currency verified, closure ledger-consistent]
+
+  WP12:
+    title: Network/resource safety substrate
+    status: PLANNED
+    depends_on: [WP0]
+    risks: [CR-11, CR-12, CR-19]
+    review: {codex: required, fable: required}
+    exit: [CIDR-based guard incl. IPv6 gaps, connect-time re-check for raw sockets, byte/pixel caps, XFF trusted-hop]
+
+  WP10:
+    title: Durable Job Coordinator
+    status: PLANNED
+    depends_on: [WP1]
+    risks: [CR-08]
+    review: {codex: required, fable: optional}
+    exit: [durable next-run/lease, hook_failed sweeper built, deploy does not reset cadence]
+
+  WP14:
+    title: Legal & Data Policy Authority
+    status: PLANNED
+    depends_on: [WP0]
+    risks: [CR-14, CR-15, CR-16, CR-17, CR-18]
+    review: {codex: required, fable: required}
+    checkin_b: "legal-text rewrites (Privacy retention, 'charged only on success', Terms-at-signup) batched here"
+    exit: [runtime==docs==claims, client_meta/payer_hash retention intentional, real assent]
+
+  WP16:
+    title: Discovery & Retrieval Authority
+    status: PLANNED
+    depends_on: [WP8]
+    subpackages:
+      WP16.0: {title: Discovery containment, start: immediate_parallel}
+      WP16.1: {title: Evaluation harness, start: immediate_parallel}
+      WP16.2: {title: Discovery Metadata Registry, fable: required}
+      WP16.3: {title: Hybrid candidate retrieval, fable: required}
+      WP16.4: {title: Structured constraints + abstention, fable: required, risks: [N9]}
+      WP16.5: {title: Surface convergence, fable: required}
+      WP16.6: {title: x402 discovery assurance}
+      WP16.7: {title: External discovery program}
+
+  WP13:
+    title: Supply chain
+    status: PLANNED
+    depends_on: [VERIFY-DEP]
+    risks: [CR-13, N8]
+    review: {codex: required, fable: optional}
+
+  WP15:
+    title: CI/runtime hygiene
+    status: PLANNED
+    depends_on: [WP1]
+    risks: [CR-20, N7]
+    review: {codex: required, fable: optional}
+
+verification_gates:
+  VERIFY-IP:    {status: OPEN, blocks: [WP12], note: "leftmost XFF confirmed spoofable; confirm Railway hop count"}
+  VERIFY-DEP:   {status: PARTIAL, blocks: [WP13], note: "1crit/14high/7mod/2low counted; reachability triage unrun"}
+  VERIFY-LEGAL: {status: OPEN, blocks: [WP14], note: "Dilisense role, DPA, assent evidence"}
+  VERIFY-P3:    {status: PARTIAL, note: "prod read-only done for index/orphans/delisting/free-x402/publication; process-kill+cadence+settlement deferred to WP1-5"}
+
+execution_order:
+  [M0, WP0, WP1, WP2, WP3, WP4, WP5, WP7, WP6, WP8, WP9, WP11, WP12, WP10, WP14, WP16, WP13, WP15]
+parallel:
+  - [WP16.0, WP16.1]   # discovery containment + eval harness start immediately
