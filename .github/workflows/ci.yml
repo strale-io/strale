@@ -6,6 +6,72 @@ on:
   pull_request:
 
 jobs:
+  # ─── Ephemeral-Postgres integration lane (WP1) ──────────────────────────
+  #
+  # DB-critical behaviour — wallet locking, idempotency uniqueness, Stripe
+  # crediting, audit-chain linkage — cannot be proven against a mocked db
+  # module. Integration suites for it already existed in the repo, but every
+  # one of them is gated on DATABASE_URL_TEST, and that variable was set in no
+  # workflow. They therefore called describe.skip on every CI run since they
+  # were written: green, and proving nothing.
+  #
+  # This job gives them a real database. Schema is materialised from
+  # src/db/schema.ts via drizzle-kit push, so the lane tracks the same file the
+  # application imports rather than a hand-maintained copy that can drift.
+  #
+  # Kept as its own job so the deterministic unit suite stays fast and a
+  # database problem is legible as a database problem. The service container
+  # is published on localhost, which is what the loopback guard in
+  # src/test-support/integration-db.ts requires.
+  integration-db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: strale_test
+        ports:
+          - 5432:5432
+        # Without a health check the first migration can race the server's
+        # startup and fail the whole job for no real reason.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      AUDIT_HMAC_SECRET: ci-placeholder-secret-at-least-32-chars-long-0123456789
+      FRONTEND_URL: https://strale.dev
+      ADMIN_SECRET: ci-placeholder-admin-secret-at-least-32-chars-0123456789
+      DATABASE_URL_TEST: postgresql://postgres:test@localhost:5432/strale_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      # apps/api imports from strale-mcp/tools; app.ts cannot load without it.
+      - run: npm --workspace=packages/mcp-server run build
+      # Materialise the schema in the throwaway database. --force skips the
+      # interactive confirmation; the target is a fresh container, and
+      # drizzle.config.ts refuses to run without DATABASE_URL_TEST.
+      - name: Materialise test schema from src/db/schema.ts
+        working-directory: apps/api
+        run: npx drizzle-kit push --force
+      # STRALE_REQUIRE_INTEGRATION_DB makes a missing database a hard error
+      # inside useTestDatabase() rather than a skip. Vitest exits 0 for a fully
+      # skipped file, so without this the job would stay green while asserting
+      # nothing — which is exactly how these suites lay dormant for months. If
+      # the filter stops matching any file, vitest exits non-zero with "No test
+      # files found", so the empty-lane case is covered too.
+      - name: Run DB integration suites (fails closed if the DB is missing)
+        working-directory: apps/api
+        env:
+          STRALE_REQUIRE_INTEGRATION_DB: "1"
+        run: npx vitest run integration.test.ts
+
   check:
     runs-on: ubuntu-latest
     env:
