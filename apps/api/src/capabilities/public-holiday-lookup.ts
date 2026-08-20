@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { getHolidays } from "./holiday-calendar.js";
 
 // Public holiday lookup via Nager.Date API — free, no key required
 // https://date.nager.at/api/v3/PublicHolidays/{year}/{countryCode}
@@ -34,32 +35,16 @@ registerCapability("public-holiday-lookup", async (input: CapabilityInput) => {
     throw new Error("'year' must be a valid year between 1900 and 2100.");
   }
 
-  const url = `https://date.nager.at/api/v3/PublicHolidays/${year}/${countryCode}`;
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (response.status === 404) {
-    throw new Error(
-      `No public holiday data found for country '${countryCode}' and year ${year}. Verify the country code is supported by Nager.Date API.`,
-    );
-  }
-  if (!response.ok) {
-    throw new Error(`Nager.Date API returned HTTP ${response.status}`);
-  }
-
-  const data = (await response.json()) as Array<{
+  // Shared Nager.Date integration — brings the 24h cache, the 204/empty-body
+  // "not covered" handling, and the JSON.parse guard along with it.
+  const data: Array<{
     date: string;
     localName: string;
     name: string;
-    countryCode: string;
     fixed: boolean;
     global: boolean;
-    counties: string[] | null;
-    launchYear: number | null;
     types: string[];
-  }>;
+  }> = await getHolidays(countryCode, year);
 
   // Format holidays
   const holidays = data.map((h) => ({

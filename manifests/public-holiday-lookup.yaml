@@ -3,7 +3,7 @@
 
 slug: public-holiday-lookup
 name: Public Holiday Lookup
-description: Get public holidays for any country and year. Uses Nager.Date API. Returns holiday dates, names, and next upcoming.
+description: Get public holidays by country and year for the 200+ countries covered by Nager.Date. Returns holiday dates, names, and next upcoming.
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -174,3 +174,11 @@ limitations:
     category: coverage
     severity: info
     workaround: For regional holidays (e.g., German Bundesländer), check the specific state's official holiday calendar
+  - title: Not all countries are covered
+    text: >-
+      Nager.Date covers 200+ countries but has notable gaps, including Thailand,
+      India, Malaysia, Pakistan, the UAE, and Saudi Arabia (verified 2026-08-20).
+      Uncovered countries return a structured "not covered" error. Machine-readable
+      coverage list: https://date.nager.at/api/v3/AvailableCountries
+    category: coverage
+    severity: warning
