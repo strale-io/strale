@@ -113,6 +113,18 @@ export function classifyError(err: Error): {
   return { error_class: "unknown" };
 }
 
+/**
+ * Fixed client-facing responses for middleware-thrown HTTPExceptions, keyed by
+ * status. Deliberately a closed set with constant messages: see the note in
+ * app.onError for why an exception's own message is not echoed.
+ */
+const HTTP_EXCEPTION_RESPONSES: Record<
+  number,
+  { code: "invalid_request" | "rate_limited"; message: string }
+> = {
+  413: { code: "invalid_request", message: "Request body is too large." },
+};
+
 app.onError((err, c) => {
   // WP0 §3 (CR-12): Hono middleware signals client-side rejections by throwing
   // HTTPException — bodyLimit throws 413 Payload Too Large. Without this
@@ -120,23 +132,24 @@ app.onError((err, c) => {
   // pre-existing /v1, /a2a and /mcp body caps have been reporting oversized
   // payloads as server faults. Memory was still bounded; the status was a lie.
   //
-  // The status the middleware chose is preserved, but the body is re-emitted
-  // in this platform's structured error shape. Returning hono's own response
-  // verbatim would answer a /v1 request with a bare text body, breaking the
-  // { error_code, message } contract every client and SDK depends on.
+  // Only statuses with an explicit mapping are re-emitted in this platform's
+  // { error_code, message } shape, and the message is a fixed string. An
+  // HTTPException's own message is diagnostic text that may name internals,
+  // so it is never echoed to the client.
   //
-  // Only client-side (4xx) exceptions short-circuit here. A 5xx HTTPException
-  // is a server fault and falls through to classification and logging below.
-  if (err instanceof HTTPException && err.status < 500) {
-    return c.json(
-      apiError(
-        err.status === 429 ? "rate_limited" : "invalid_request",
-        err.status === 413
-          ? "Request body is too large."
-          : err.message || "Request rejected.",
-      ),
-      err.status,
-    );
+  // Anything unmapped returns hono's own response untouched. That preserves
+  // the status and any headers the middleware set — WWW-Authenticate on a 401,
+  // Retry-After on a 429 — which rewriting the body would discard. Today only
+  // bodyLimit's 413 is reachable; this keeps the fallback honest if that
+  // changes. 5xx still falls through to classification and logging below.
+  if (err instanceof HTTPException) {
+    const mapped = HTTP_EXCEPTION_RESPONSES[err.status];
+    if (mapped) {
+      return c.json(apiError(mapped.code, mapped.message), err.status);
+    }
+    if (err.status < 500) {
+      return err.getResponse();
+    }
   }
   const { error_class, pg_code } = classifyError(err);
   const reqLog = (c.get("log" as any) as { error?: (...args: unknown[]) => void } | undefined);

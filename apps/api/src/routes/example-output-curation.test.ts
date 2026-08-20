@@ -70,6 +70,35 @@ describe("GET /capabilities/:slug/example-output curation", () => {
     expect(text).toContain("edge_case");
   });
 
+  it("fails closed for the Art. 22 screening classes", async () => {
+    // The decisive gate. test_type describes how a fixture is used, not
+    // whether its content may be published — an operator can create a
+    // 'known_answer' suite from arbitrary input. A sanctions/PEP/adverse-media
+    // output asserts something about a named person, so the surface must
+    // refuse regardless of which suite produced the row.
+    await callExampleOutput("curation-probe-screening");
+    const text = sqlTextOf(executed[0]).replace(/\s+/g, " ");
+    expect(text).toContain("gdpr_art_22_classification");
+    expect(text).toContain("screening_signal");
+    expect(text).toContain("risk_synthesis");
+    // Must be an exclusion, not an inclusion.
+    expect(text).toContain("NOT IN");
+  });
+
+  it("requires the suite to belong to the result's capability", async () => {
+    // The join is on suite id alone, so without this a result carrying
+    // capability A's slug could be published under a suite row for B.
+    await callExampleOutput("curation-probe-slug-match");
+    const text = sqlTextOf(executed[0]).replace(/\s+/g, " ");
+    expect(text).toContain("ts.capability_slug = tr.capability_slug");
+  });
+
+  it("excludes retired suites", async () => {
+    await callExampleOutput("curation-probe-active");
+    const text = sqlTextOf(executed[0]).replace(/\s+/g, " ");
+    expect(text).toContain("ts.active = true");
+  });
+
   it("never sources a public example from customer traffic", async () => {
     await callExampleOutput("curation-probe-piggyback");
     const text = sqlTextOf(executed[0]);

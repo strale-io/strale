@@ -720,7 +720,25 @@ internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
     SELECT tr.actual_output, tr.executed_at, ts.input, ts.test_type
     FROM test_results tr
     JOIN test_suites ts ON ts.id = tr.test_suite_id
+    JOIN capabilities c ON c.slug = tr.capability_slug
     WHERE tr.capability_slug = ${slug}
+      -- Fail closed for the screening classes. test_type says how a fixture is
+      -- used, not whether its content may be published: an operator can create
+      -- a 'known_answer' suite from arbitrary input via the admin add-fixture
+      -- endpoint. For a sanctions/PEP/adverse-media capability the output
+      -- asserts something about a named person, so no example is worth the
+      -- risk regardless of which suite produced the row.
+      --
+      -- Scoped to the Art. 22 screening classes rather than every
+      -- processes_personal_data capability. Once piggyback rows are excluded
+      -- the remaining examples come from authored fixtures, whose subject is a
+      -- chosen test entity — a company registry lookup naming a director is
+      -- not the same hazard as publishing 'this person is a PEP'. In
+      -- production that is 7 capabilities excluded rather than 109, which
+      -- keeps the surface useful without publishing screening verdicts.
+      -- A positive publication-approval artifact is the durable fix — WP14.
+      AND coalesce(c.gdpr_art_22_classification, 'data_lookup')
+            NOT IN ('screening_signal', 'risk_synthesis')
       AND tr.passed = true
       AND tr.actual_output IS NOT NULL
       AND tr.executed_at >= ts.updated_at
