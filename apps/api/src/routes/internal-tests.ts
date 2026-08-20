@@ -725,6 +725,13 @@ internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
       AND tr.actual_output IS NOT NULL
       AND tr.executed_at >= ts.updated_at
       AND ts.test_type IN ('known_answer', 'edge_case')
+      -- The suite must belong to the same capability as the result. The join
+      -- is on suite id alone, so without this a result carrying capability A's
+      -- slug could be paired with (and published under) a suite row for B.
+      AND ts.capability_slug = tr.capability_slug
+      -- Retired suites are not a curation surface; their fixtures are no
+      -- longer maintained and must not become the public example.
+      AND ts.active = true
     ORDER BY (ts.test_type = 'known_answer') DESC, tr.executed_at DESC
     LIMIT 1
   `);

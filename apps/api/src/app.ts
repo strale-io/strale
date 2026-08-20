@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 import { versionMiddleware } from "./lib/versioning.js";
+import { apiError } from "./lib/errors.js";
 import { rateLimitByIp } from "./lib/rate-limit.js";
 import { rateLimitByIpDb } from "./lib/db-rate-limit.js";
 import { adminOnly } from "./lib/admin-auth.js";
@@ -118,9 +119,24 @@ app.onError((err, c) => {
   // branch every such rejection was rewritten to `500 internal_error`, so the
   // pre-existing /v1, /a2a and /mcp body caps have been reporting oversized
   // payloads as server faults. Memory was still bounded; the status was a lie.
-  // No application code throws HTTPException, so this only affects middleware.
-  if (err instanceof HTTPException) {
-    return err.getResponse();
+  //
+  // The status the middleware chose is preserved, but the body is re-emitted
+  // in this platform's structured error shape. Returning hono's own response
+  // verbatim would answer a /v1 request with a bare text body, breaking the
+  // { error_code, message } contract every client and SDK depends on.
+  //
+  // Only client-side (4xx) exceptions short-circuit here. A 5xx HTTPException
+  // is a server fault and falls through to classification and logging below.
+  if (err instanceof HTTPException && err.status < 500) {
+    return c.json(
+      apiError(
+        err.status === 429 ? "rate_limited" : "invalid_request",
+        err.status === 413
+          ? "Request body is too large."
+          : err.message || "Request rejected.",
+      ),
+      err.status,
+    );
   }
   const { error_class, pg_code } = classifyError(err);
   const reqLog = (c.get("log" as any) as { error?: (...args: unknown[]) => void } | undefined);
@@ -209,10 +225,19 @@ app.use("/x402/*", publicCors);
 // WP0 §3 (CR-12): when an X-Payment header is present the wildcard handlers
 // call the external facilitator to verify BEFORE any throttle applied, so an
 // attacker could force unbounded facilitator verifications with junk headers.
-// Only /x402/catalog carried a limiter. This bounds the whole rail per IP.
+// Only /x402/catalog carried a limiter. This bounds the rest of the rail.
 // The ceiling is deliberately well above real agent traffic (a paying caller
 // makes one request per payment) but low enough to stop verification floods.
-app.use("/x402/*", rateLimitByIp(60, 60_000));
+//
+// /x402/catalog is excluded: it is a cheap cached read that already declares
+// its own, higher, 120/min limit at the handler. Wrapping it here would
+// silently cut its documented capacity in half.
+const x402CatalogPath = /^\/x402\/catalog\/?$/;
+const x402RailLimiter = rateLimitByIp(60, 60_000);
+app.use("/x402/*", async (c, next) => {
+  if (x402CatalogPath.test(c.req.path)) return next();
+  return x402RailLimiter(c, next);
+});
 
 // Public read-only endpoints — open CORS (data is intentionally public)
 app.use("/v1/capabilities/*", publicCors);

@@ -36,6 +36,23 @@ vi.mock("../db/index.js", () => ({
   }),
 }));
 
+// Capture the exact bytes handed to Stripe's signature verifier. A 400 alone
+// does not prove the raw body survived — an empty or truncated body fails
+// verification identically. Asserting the payload argument is what actually
+// discriminates "bodyLimit bounded the stream" from "bodyLimit consumed it".
+const constructEventCalls: string[] = [];
+
+vi.mock("../lib/stripe.js", () => ({
+  getStripe: () => ({
+    webhooks: {
+      constructEvent: (payload: string) => {
+        constructEventCalls.push(payload);
+        throw new Error("No signatures found matching the expected signature");
+      },
+    },
+  }),
+}));
+
 // app.ts imports the MCP route at module load; vitest cannot resolve the
 // workspace package without a prior build (same stub as health-deep.test.ts).
 vi.mock("./mcp.js", () => {
@@ -43,7 +60,7 @@ vi.mock("./mcp.js", () => {
   return { mcpRoute: new Hono() };
 });
 
-beforeAll(() => {
+beforeAll(async () => {
   process.env.ADMIN_SECRET =
     "unit-test-admin-secret-plenty-of-entropy-0123456789";
   process.env.AUDIT_HMAC_SECRET =
@@ -52,7 +69,11 @@ beforeAll(() => {
   // Required so the handler proceeds past getStripe() to the body read —
   // without it the route throws before bodyLimit's stream check can matter.
   process.env.STRIPE_SECRET_KEY = "sk_test_unit_placeholder";
-});
+  // Import app.ts here, not inside the first test. Transforming its module
+  // graph from cold costs more than the per-test timeout, which would fail
+  // these tests for a reason unrelated to what they assert.
+  await loadApp();
+}, 120_000);
 
 async function loadApp() {
   const { app } = await import("./../app.js");
@@ -90,16 +111,24 @@ describe("POST /webhooks/stripe body cap", () => {
     expect(res.status).toBe(413);
   });
 
-  it("still delivers a normal-sized raw body to signature verification", async () => {
+  it("hands the byte-for-byte raw body to signature verification", async () => {
     const app = await loadApp();
-    const res = await app.request(
-      webhookRequest(
-        JSON.stringify({ id: "evt_test", type: "checkout.session.completed" }),
-      ),
-    );
-    // The forged signature must fail verification (400) — NOT 413, and not a
-    // 500 from an empty or consumed body. Reaching the signature check proves
-    // the raw body survived the bodyLimit middleware intact.
+    constructEventCalls.length = 0;
+
+    const payload = JSON.stringify({
+      id: "evt_test",
+      type: "checkout.session.completed",
+      data: { object: { metadata: { user_id: "u_1", amount_cents: "2500" } } },
+    });
+    const res = await app.request(webhookRequest(payload));
+
+    // Verification must have been reached with the ORIGINAL bytes. Asserting
+    // only on the 400 would pass even if bodyLimit had consumed the stream and
+    // handed Stripe an empty string, which is precisely the regression that
+    // would silently break every real top-up.
+    expect(constructEventCalls).toHaveLength(1);
+    expect(constructEventCalls[0]).toBe(payload);
+
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe("Invalid signature");
   });
