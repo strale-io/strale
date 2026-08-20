@@ -1,44 +1,29 @@
 import { Hono } from "hono";
 import { sql } from "drizzle-orm";
-import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { apiError } from "../lib/errors.js";
+import { adminOnly } from "../lib/admin-auth.js";
 import { log, logError } from "../lib/log.js";
 import { persistCapability } from "../lib/capability-persistence.js";
 import { SYSTEM_ACCOUNT_EMAIL } from "../lib/internal-accounts.js";
 import type { AppEnv } from "../types.js";
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 let cachedStats: Record<string, unknown> | null = null;
 let cachedAt = 0;
 
-/** Constant-time comparison for admin auth to prevent timing attacks. */
-function isValidAdminAuth(auth: string | undefined): boolean {
-  if (!auth || !ADMIN_SECRET) return false;
-  const expected = Buffer.from(`Bearer ${ADMIN_SECRET}`, "utf-8");
-  const provided = Buffer.from(auth, "utf-8");
-  if (expected.length !== provided.length) return false;
-  return timingSafeEqual(expected, provided);
-}
-
 export const adminRoute = new Hono<AppEnv>();
 
-// Admin auth middleware — requires ADMIN_SECRET
-adminRoute.use("*", async (c, next) => {
-  if (!ADMIN_SECRET) {
-    return c.json(
-      apiError("unauthorized", "Admin endpoint is not configured."),
-      503,
-    );
-  }
-  const auth = c.req.header("Authorization");
-  if (!isValidAdminAuth(auth)) {
-    return c.json(apiError("unauthorized", "Invalid admin secret."), 401);
-  }
-  await next();
-});
+// Admin auth middleware — requires ADMIN_SECRET.
+//
+// WP0 §3 (CR-10): this route previously carried its own verbatim copy of
+// isValidAdminAuth plus a local middleware, so the ADMIN_SECRET strength floor
+// added to lib/admin-auth.ts would not have applied here — the surface that
+// most needs it, since /v1/admin/external-transactions returns raw customer
+// transaction input and output. Delegating to the shared `adminOnly` removes
+// the duplicate authority and makes the floor universal.
+adminRoute.use("*", adminOnly);
 
 function toRows(result: unknown): any[] {
   if (Array.isArray(result)) return result;

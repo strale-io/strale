@@ -340,10 +340,21 @@ describe("POST /v1/wallet/topup", () => {
 describe("POST /v1/wallet/topup — via the real app.ts pipeline (MAJOR 1)", () => {
   it("a Stripe API failure surfaces via app.ts's real onError as a structured error, not a raw exception", async () => {
     const user = buildUserRow();
-    mocks.selectQueue.push([user]);
     mocks.stripeCreate.mockRejectedValue(new Error("stripe unavailable — do not leak this"));
 
+    // Import the real app BEFORE queueing the auth row. Importing app.ts runs
+    // module-load side effects — refreshUpstreamMapping() in
+    // lib/upstream-health-gate.ts issues its own db.select() calls — which draw
+    // from this same FIFO queue. Queueing first let those startup selects
+    // consume the row intended for the auth lookup, so auth saw no user and
+    // returned 401 instead of reaching the handler. Whether that race was lost
+    // depended on module-import ordering, which any change to app.ts's import
+    // graph can perturb. Draining first makes the test independent of it.
     const app = await loadRealApp();
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    mocks.selectQueue.length = 0;
+    mocks.selectQueue.push([user]);
+
     const res = await app.request("/v1/wallet/topup", {
       method: "POST",
       headers: authHeaders(),

@@ -708,6 +708,14 @@ internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
   // passing result captured BEFORE the fixture was updated. When a fixture is
   // edited (manifest backfill, DB correction), the previous passing output is
   // stale relative to the new input — hide the example until a fresh run lands.
+  // WP0 §3 (CR-14 / N3): this endpoint is public via the /v1/public/ops
+  // allowlist, so it must only ever serve CURATED fixture data. Piggyback
+  // suites are fed verbatim from real customer traffic by
+  // recordPiggybackResult(), so a piggyback row's actual_output is a
+  // customer's output — for compliance capabilities that is personal data
+  // about a screened individual. Restricting to authored fixture types keeps
+  // customer-derived rows out of the public example surface entirely; a
+  // capability with no curated example simply has no example.
   const rows = await db.execute(sql`
     SELECT tr.actual_output, tr.executed_at, ts.input, ts.test_type
     FROM test_results tr
@@ -716,6 +724,7 @@ internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
       AND tr.passed = true
       AND tr.actual_output IS NOT NULL
       AND tr.executed_at >= ts.updated_at
+      AND ts.test_type IN ('known_answer', 'edge_case')
     ORDER BY (ts.test_type = 'known_answer') DESC, tr.executed_at DESC
     LIMIT 1
   `);

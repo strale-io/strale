@@ -37,6 +37,7 @@ import { getAiDescription, getDataSourceUrl } from "../lib/audit-helpers.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { validateX402Input } from "../lib/x402-input-validation.js";
+import { isX402PayableCapability } from "../lib/x402-eligibility.js";
 import { recoverValuesFromTask, recoveredValuesHint, unsatisfiedGroupFields } from "../lib/task-value-hints.js";
 import { logError, logWarn } from "../lib/log.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
@@ -563,6 +564,12 @@ doRoute.post(
         isActive: capabilities.isActive,
         priceCents: capabilities.priceCents,
         name: capabilities.name,
+        // x402 rail eligibility (WP0 §3.1) — these four decide whether the
+        // capability may be paid for with USDC. Consumed by
+        // isX402PayableCapability; do not gate on isActive alone.
+        x402Enabled: capabilities.x402Enabled,
+        marketplaceEligible: capabilities.marketplaceEligible,
+        lifecycleState: capabilities.lifecycleState,
       })
       .from(capabilities)
       .where(eq(capabilities.slug, capabilitySlug))
@@ -577,7 +584,24 @@ doRoute.post(
       // Check for x402 payment header
       const paymentHeader = extractPaymentHeader(c.req.raw.headers);
 
-      if (paymentHeader && isX402Configured()) {
+      // WP0 §3.1 — the x402 rail has its own eligibility rule, and the quality
+      // floor delists a failing capability by clearing x402_enabled. Honour the
+      // same rule here so a delisted capability cannot be bought through
+      // /v1/do. Checked before verification so no payment is ever consumed for
+      // a capability we will not serve.
+      const x402Payable = isX402PayableCapability(lookedUp);
+
+      if (paymentHeader && isX402Configured() && !x402Payable) {
+        return c.json(
+          apiError(
+            "capability_unavailable",
+            `'${capabilitySlug}' is not currently available for x402 payment. No payment was taken.`,
+          ),
+          503,
+        );
+      }
+
+      if (paymentHeader && isX402Configured() && x402Payable) {
         // Verify x402 payment WITHOUT broadcasting settlement — the settle
         // step runs only after the capability has produced output (DEC-14).
         const verification = await verifyX402PaymentOnly(paymentHeader, lookedUp.priceCents);
@@ -592,7 +616,7 @@ doRoute.post(
         c.set("x402_paid" as any, true);
         // Fall through to normal execution — the capability will execute
         // and the transaction will be logged with payment_method: "x402"
-      } else if (isX402Configured()) {
+      } else if (isX402Configured() && x402Payable) {
         // No payment header, x402 configured → return 402 with price
         const resp = build402Response({
           slug: capabilitySlug,

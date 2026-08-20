@@ -1,0 +1,58 @@
+package: WP0
+title: Immediate containment (confirmed-live scope)
+status: IN_PROGRESS
+depends_on: [M0]
+
+# Scope is finalized to items confirmed LIVE in prod by the re-audit, that are
+# genuine containment (small, reversible, no prod-data writes, no customer-facing
+# legal-text change). Deeper redesigns are explicitly deferred to their owning WP.
+risks: [CR-10, CR-11, CR-12, CR-14, N2, N3, item-3.1-quarantine-bypass]
+
+items:
+  A_demand_signals:
+    finding: "N2 — GET /v1/demand-signals serves verbatim customer free-text (3,426 rows live)"
+    containment: "stop public verbatim exposure (auth-gate or remove from public surface); verify consumers first"
+    invariant: "no unauthenticated response contains verbatim customer-submitted task text"
+  B_example_output:
+    finding: "N3 — example-output serves live test_results incl. piggyback customer output (508 rows), incl. compliance PII"
+    containment: "restrict example-output to curated test types (known_answer); never piggyback/customer rows"
+    invariant: "public example-output never sourced from test_type='piggyback' or customer traffic"
+  C_webhook_body_cap:
+    finding: "CR-12 — Stripe webhook buffers full body before signature check; outside all bodyLimit scopes"
+    containment: "cap /webhooks body size before c.req.text()"
+    invariant: "webhook rejects oversized bodies before buffering/parse"
+  D_health_deep:
+    finding: "CR-12 — GET /health/deep public + DB write probe per hit"
+    containment: "rate-limit and/or auth-gate; do not run write probe for unauthenticated callers"
+    invariant: "unauthenticated /health/deep cannot drive unbounded DB write load"
+  E_x402_preverify_rl:
+    finding: "CR-12 — x402 wildcard execution handlers have no per-IP rate limit; facilitator verify pre-payment"
+    containment: "add rateLimitByIp to x402 wildcard capability/solution handlers"
+    invariant: "x402 preverify path is IP-rate-limited"
+  F_admin_secret_strength:
+    finding: "CR-10 — no ADMIN_SECRET minimum-strength enforcement (contrast AUDIT_HMAC >=32)"
+    containment: "enforce ADMIN_SECRET min length at boot (fail closed)"
+    invariant: "process refuses to treat a weak ADMIN_SECRET as valid admin auth"
+  G_quarantine_bypass:
+    finding: "3.1 — /v1/do X-Payment path executes x402_enabled=false / delisted caps (30 live)"
+    containment: "the /v1/do x402 path must honor x402_enabled + lifecycle, matching the /x402 rail"
+    invariant: "a capability delisted from x402 (x402_enabled=false) cannot be paid via /v1/do X-Payment"
+
+deferred_out_of_wp0:
+  - "N1 crash-orphan: fixing the 11 live rows writes to prod wallets -> WP3 reconciler + CHECK-IN B"
+  - "raw-socket DNS rebinding (CR-11): substrate rebuild -> WP12 (contained only if a per-file guard proves cheap)"
+  - "recovery-key-in-email + unauthenticated rotation DoS (CR-10): flow redesign -> WP11"
+  - "legal-text corrections (CR-15/16/17): customer-facing wording -> WP14 CHECK-IN B batch"
+
+migration_required: false
+review: {codex: required, fable: required}
+tests_required:
+  - example-output excludes piggyback (fails pre-fix, passes post-fix)
+  - webhook rejects oversized body
+  - admin-secret weak-secret rejected at validation
+  - /v1/do x402 path refuses x402_enabled=false capability
+exit_conditions:
+  - each item's invariant enforced with a discriminating test where mechanizable
+  - Codex PASS
+  - Fable ACCEPT
+  - no known easy exploitation/publication path remains open in scope
