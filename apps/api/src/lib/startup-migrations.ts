@@ -1834,6 +1834,49 @@ export async function runMigration0097_chainSequence(
 }
 
 
+/**
+ * Block 0098 — per-customer idempotency + request fingerprint (WP6).
+ *
+ * Two changes, both verified read-only against production first:
+ *   - 0 duplicate (user_id, idempotency_key) pairs across 421 keyed rows, so
+ *     the new unique index cannot abort boot.
+ *   - 0 keyed rows with a NULL user_id, so scoping to the customer strands
+ *     nothing.
+ *
+ * The old index is dropped AFTER the new one exists. Order matters: dropping
+ * first would leave a window with no uniqueness at all, and this runs at boot
+ * while the previous release is still serving traffic.
+ */
+export async function runMigration0098_perCustomerIdempotency(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  await tx.execute(sql`
+    ALTER TABLE "transactions"
+      ADD COLUMN IF NOT EXISTS "idempotency_fingerprint" varchar(64)
+  `);
+
+  await tx.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS "transactions_user_idempotency_key_unique"
+      ON "transactions" ("user_id", "idempotency_key")
+      WHERE "idempotency_key" IS NOT NULL
+  `);
+
+  // Only now — see the ordering note above.
+  await tx.execute(sql`
+    DROP INDEX IF EXISTS "transactions_idempotency_key_unique"
+  `);
+
+  return {
+    block: "0098_per_customer_idempotency",
+    outcome:
+      "idempotency_fingerprint column; unique index scoped to (user_id, idempotency_key); global index dropped",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
   runMigration0030_complianceColumns,
@@ -1876,6 +1919,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0095_walletReservations,
   runMigration0096_x402SettlementIntents,
   runMigration0097_chainSequence,
+  runMigration0098_perCustomerIdempotency,
 ];
 
 /**

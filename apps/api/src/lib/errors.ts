@@ -23,6 +23,10 @@ export type ErrorCode =
   // so callers can retry the same inputs safely (execution happened; only
   // the record did not).
   | "transaction_finalization_failed"
+  // WP6: an Idempotency-Key was reused for DIFFERENT work. Distinct from
+  // invalid_request because the request itself is well-formed — the fault is
+  // in the key's reuse, and the caller can fix it by issuing a new one.
+  | "idempotency_key_reused"
   // Internal admin surface only — POST /v1/internal/tests/admin/
   // apply-migrations returns this when runStartupMigrations() throws
   // (e.g. block 0062 post-condition violation). Not exposed on the

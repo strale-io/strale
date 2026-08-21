@@ -173,7 +173,7 @@ describeMaybe("/v1/do idempotency against a real database", () => {
     expect(rows).toHaveLength(1);
   }, 120_000);
 
-  it("PINS BUG: a different payload under the same key replays the old result", async () => {
+  it("a different payload under the same key is a 409, not a replay (WP6 inverts the WP1 pin)", async () => {
     await seedCapability(slugA);
     const apiKey = await seedUser();
     const key = randomUUID();
@@ -189,16 +189,17 @@ describeMaybe("/v1/do idempotency against a real database", () => {
       key,
     );
 
-    // The key is not bound to a request fingerprint, so the second request's
-    // inputs are ignored and the caller is handed the first request's answer.
-    // A conflict (409) is the correct response. WP6 must make this fail.
-    expect(second.status).toBe(200);
+    // WP6 binds the key to a fingerprint of the request it was issued for, so
+    // reusing it for different inputs is a client bug rather than a retry.
+    // Pre-WP6 this returned 200 carrying the FIRST call's answer.
+    expect(second.status).toBe(409);
     const body = (await second.json()) as any;
-    expect(JSON.stringify(body)).toContain("original");
-    expect(JSON.stringify(body)).not.toContain("COMPLETELY DIFFERENT");
+    expect(body.error_code).toBe("idempotency_key_reused");
+    // And crucially it does NOT hand over the earlier result.
+    expect(JSON.stringify(body)).not.toContain("original");
   }, 120_000);
 
-  it("PINS BUG: a different capability under the same key returns the first one's output", async () => {
+  it("a different capability under the same key is a 409, not the first one's output (WP6)", async () => {
     await seedCapability(slugA);
     await seedCapability(slugB);
     const apiKey = await seedUser();
@@ -215,17 +216,19 @@ describeMaybe("/v1/do idempotency against a real database", () => {
       key,
     );
 
-    expect(second.status).toBe(200);
+    expect(second.status).toBe(409);
     const body = (await second.json()) as any;
 
-    // Capability A's output, returned for a request that asked for B — and the
-    // response labels it as B. That is worse than a stale replay: the caller
-    // is told it received something it did not.
-    expect(JSON.stringify(body.result ?? body)).toContain('"from":"A"');
-    expect(body.capability_used ?? body.result?.capability_used).toBe(slugB);
+    expect(body.error_code).toBe("idempotency_key_reused");
+
+    // The property that matters: capability A's output is NOT handed to a
+    // caller who asked for B. Pre-WP6 it was, and the response labelled it as
+    // B — worse than a stale replay, because the caller is told it received
+    // something it did not.
+    expect(JSON.stringify(body)).not.toContain('"from":"A"');
   }, 120_000);
 
-  it("PINS BUG: the same key from a different customer collides", async () => {
+  it("the same key from a different customer is independent (WP6)", async () => {
     await seedCapability(slugA);
     const apiKeyOne = await seedUser();
     const apiKeyTwo = await seedUser();
@@ -238,13 +241,16 @@ describeMaybe("/v1/do idempotency against a real database", () => {
 
     expect((await callDo(apiKeyOne, body, sharedKey)).status).toBe(200);
 
-    // The unique index is on idempotency_key alone, while the replay lookup is
-    // scoped by user. So customer two neither replays nor succeeds: the insert
-    // violates the constraint and surfaces as an unhandled 500. Two customers
-    // picking the same UUID is unlikely; a client using a deterministic key
-    // ("order-123") is not. It is also a weak oracle for whether a key exists
-    // anywhere on the platform. WP6 scopes the index to (user_id, key).
+    // WP6 scopes the unique index to (user_id, idempotency_key), so customer
+    // two's key is their own. Pre-WP6 the index was global while the replay
+    // lookup was per-user, so customer two neither replayed nor inserted and
+    // got an unhandled 500 — which also leaked whether a key existed anywhere
+    // on the platform.
     const other = await callDo(apiKeyTwo, body, sharedKey);
-    expect(other.status).toBe(500);
+    expect(other.status).toBe(200);
+
+    // Independent: customer two gets their OWN execution, not customer one's.
+    const otherBody = (await other.json()) as any;
+    expect(otherBody.meta?.idempotency_replay ?? false).toBe(false);
   }, 120_000);
 });

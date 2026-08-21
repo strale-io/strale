@@ -1,6 +1,10 @@
 import { Hono } from "hono";
 import { eq, and, gte, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import {
+  computeIdempotencyFingerprint,
+  isReplayable,
+} from "../lib/idempotency-fingerprint.js";
 import * as settlementIntent from "../lib/x402-settlement-intent.js";
 import {
   assertBillableOutput,
@@ -524,12 +528,40 @@ doRoute.post(
   // ── 2. Idempotency check (authenticated only) ─────────────────────────
   const idempotencyKey = c.req.header("Idempotency-Key") || null;
 
+  // WP6: what the key is a key TO. Bound to the request it was first used for,
+  // so the same key reused for different work is a client bug (409) rather than
+  // a plausible-looking answer to a question the caller did not ask.
+  const idempotencyFingerprint = computeIdempotencyFingerprint({
+    task,
+    capabilitySlug,
+    inputs,
+  });
+
   if (idempotencyKey && user) {
     const [existing] = await db
       .select()
       .from(transactions)
       .where(and(eq(transactions.idempotencyKey, idempotencyKey), eq(transactions.userId, user.id), isNull(transactions.deletedAt)))
       .limit(1);
+
+    if (existing && !isReplayable(existing.idempotencyFingerprint, idempotencyFingerprint)) {
+      // The dangerous case, and the reason this package exists. Pre-WP6 this
+      // path returned the EARLIER call's output while echoing the slug the
+      // caller had just asked for — an answer to someone else's question,
+      // labelled as an answer to theirs. A deterministic key like "order-123"
+      // reused across two capabilities is far likelier than a UUID collision.
+      return c.json(
+        apiError(
+          "idempotency_key_reused",
+          "This Idempotency-Key was already used for a different request. " +
+            "A key identifies one specific request; reusing it for different " +
+            "inputs or a different capability is not a retry, so replaying the " +
+            "earlier result would answer a question you did not ask. Use a new key.",
+          { conflicting_transaction_id: existing.id },
+        ),
+        409,
+      );
+    }
 
     if (existing) {
       const [wallet] = await db
@@ -1104,15 +1136,15 @@ doRoute.post(
 
   // Free-tier with auth: skip wallet operations but still record transaction
   if (user && isFreeTier) {
-    return executeFreeTierAuthenticated(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, freshness);
+    return executeFreeTierAuthenticated(c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness);
   }
 
   // Paid execution: sync or async (DEC-22)
   const isAsync = (capability.avgLatencyMs ?? 0) > ASYNC_THRESHOLD_MS;
   if (isAsync) {
-    return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, freshness);
+    return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness);
   } else {
-    return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, outputSchema, freshness);
+    return executeSync(c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness);
   }
 });
 
@@ -1525,6 +1557,7 @@ async function executeFreeTierAuthenticated(
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
+  idempotencyFingerprint: string,
   outputSchema: Record<string, unknown>,
   freshness: FreshnessInfo | null,
 ) {
@@ -1700,6 +1733,7 @@ async function executeSync(
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
+  idempotencyFingerprint: string,
   outputSchema: Record<string, unknown>,
   freshness: FreshnessInfo | null,
 ) {
@@ -1826,6 +1860,7 @@ async function executeSync(
         userId: user.id,
         capabilityId: capability.id,
         idempotencyKey,
+        idempotencyFingerprint,
         status: "executing",
       clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
         input: executionInput,
@@ -2125,6 +2160,7 @@ async function executeAsync(
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
   idempotencyKey: string | null,
+  idempotencyFingerprint: string,
   outputSchema: Record<string, unknown>,
   freshness: FreshnessInfo | null,
 ) {
@@ -2192,6 +2228,7 @@ async function executeAsync(
         userId: user.id,
         capabilityId: capability.id,
         idempotencyKey,
+        idempotencyFingerprint,
         status: "executing",
       clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
         input: executionInput,
