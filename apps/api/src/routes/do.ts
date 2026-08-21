@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { eq, and, gte, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { assertBillableOutput } from "../lib/execution-outcome.js";
 import {
   wallets,
   walletTransactions,
@@ -1289,6 +1290,7 @@ async function executeFreeTier(
 
   try {
     const capResult = await executeWithRetry(executor, executionInput, capability);
+    assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
     const audit = buildFullAudit({
@@ -1493,6 +1495,7 @@ async function executeFreeTierAuthenticated(
 
   try {
     const capResult = await executeWithRetry(executor, executionInput, capability);
+    assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
     const audit = buildFullAudit({
@@ -1769,6 +1772,7 @@ async function executeSync(
     // Execute the capability
     try {
       const capResult = await executeWithRetry(executor, executionInput, capability);
+      assertBillableOutput(capability.slug, capResult.output);
       const latencyMs = Date.now() - startTime;
 
       // Deduct through the wallet service — the balance change and its ledger
@@ -2293,6 +2297,7 @@ async function executeInBackground(
       executeWithRetry(executor, executionInput, capability),
       EXEC_HARD_TIMEOUT_MS,
     );
+    assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
     // Success: update transaction record with full audit trail

@@ -408,3 +408,43 @@ export function aggregateSolutionOutcome(
 export function transactionStatusFor(outcome: ExecutionOutcome): "completed" | "failed" {
   return outcome.success ? "completed" : "failed";
 }
+
+/**
+ * Thrown when an executor resolved with something that is not the purchased
+ * answer.
+ *
+ * The capability rails are written around "resolved means succeeded", with the
+ * charge and the audit write immediately after resolution and every failure
+ * path already living in the surrounding catch block. Rather than restructure
+ * four call sites around a new return value — which is where a money bug would
+ * hide — the unusable case is raised as an error, so it takes the failure path
+ * that is already proven: no debit on the sync rail, reservation released on
+ * the async rail, transaction marked failed on both.
+ */
+export class UnbillableOutputError extends Error {
+  constructor(
+    public readonly slug: string,
+    public readonly assessment: OutputAssessment,
+  ) {
+    super(
+      assessment.quality_flags.includes("executor_error_marker")
+        ? "Capability returned an error marker rather than output"
+        : "Capability returned no usable output",
+    );
+    this.name = "UnbillableOutputError";
+  }
+}
+
+/**
+ * Gate the capability rails on the same assessment the solution rails use.
+ *
+ * Note what this does NOT reject: a soft verdict, an uptime check reporting a
+ * site down, or an output that violates its declared contract. Those are all
+ * billable — see the header, and `outcomeFromOutput`.
+ */
+export function assertBillableOutput(slug: string, output: unknown): void {
+  const outcome = outcomeFromOutput(slug, output);
+  if (!outcome.billable) {
+    throw new UnbillableOutputError(slug, outcome.output_assessment!);
+  }
+}

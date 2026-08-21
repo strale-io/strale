@@ -376,39 +376,19 @@ export interface X402PaymentRequirement {
 }
 
 /**
- * Verify AND settle an x402 payment header using the facilitator.
+ * WP4 removed `verifyX402Payment`, a combined verify-and-settle helper.
  *
- * This is the legacy one-shot flow — the on-chain transaction is broadcast
- * before the capability runs, so a validation/execution failure still charges
- * the caller. Kept for the /v1/do x402 path which hasn't yet been refactored.
+ * It moved the USDC before the capability ran, so there was no output to assess
+ * and no way for it to consult the canonical billing decision — a DEC-14
+ * violation its own docstring acknowledged while pointing new code at the split
+ * form. Nothing called it. It was deleted rather than documented because a
+ * charge-before-execute helper sitting in the shared library is an invitation,
+ * and WP4's exit condition ("no route decides billability independently")
+ * cannot be guaranteed while one exists.
  *
- * For new code (e.g. /x402/:slug), prefer `verifyX402PaymentOnly` +
- * `settleX402Payment` so the USDC is only moved after the capability produces
- * output (DEC-14: don't charge before execution succeeds).
- *
- * @param paymentHeader - Base64-encoded X-PAYMENT header from the request
- * @param priceCentsEur - EUR price of the capability (for fallback conversion)
- * @param priceUsdOverride - USD price the 402 response quoted to the client.
- *   MUST match what the client signed against. If provided, this wins over
- *   priceCentsEur. The x402 gateway-v2 passes this from cap.x402PriceUsd so the
- *   verification amount exactly matches what was in the 402 response's
- *   maxAmountRequired field.
+ * Use `verifyX402PaymentOnly` to authorize, execute, then `settleX402Payment`.
  */
-export async function verifyX402Payment(
-  paymentHeader: string,
-  priceCentsEur: number,
-  priceUsdOverride?: number,
-  requirementOverrides?: X402PaymentRequirement,
-): Promise<X402VerificationResult> {
-  const verifyOnly = await verifyX402PaymentOnly(
-    paymentHeader, priceCentsEur, priceUsdOverride, requirementOverrides,
-  );
-  if (!verifyOnly.valid || !verifyOnly.verified) {
-    return { valid: false, error: verifyOnly.error };
-  }
-  const settle = await settleX402Payment(verifyOnly.verified);
-  return { valid: settle.valid, settlementId: settle.settlementId, error: settle.error };
-}
+
 
 /**
  * Opaque handle returned by a successful verify. Pass it to
