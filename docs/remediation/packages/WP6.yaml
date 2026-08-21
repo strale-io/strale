@@ -1,6 +1,8 @@
 package: WP6
 title: Idempotency & replay — bind the key to the request
-status: REMEDIATED
+status: ACCEPTED
+merged_sha: 4302547
+merged_pr: 354
 depends_on: [WP4]
 risks: [CR-03, N4]
 
