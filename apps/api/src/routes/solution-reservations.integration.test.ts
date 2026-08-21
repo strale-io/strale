@@ -54,6 +54,8 @@ describeMaybe("solution execution holds a wallet reservation", () => {
   let userId = "";
   let walletId = "";
   let capabilityId = "";
+  /** Extra capabilities seeded by individual tests, cleaned up alongside. */
+  const extraCapabilityIds: string[] = [];
   let solutionId = "";
   let capSlug = "";
   let solSlug = "";
@@ -102,6 +104,9 @@ describeMaybe("solution execution holds a wallet reservation", () => {
         .delete(solutionSteps)
         .where(eq(solutionSteps.solutionId, solutionId));
       await db.delete(solutions).where(eq(solutions.id, solutionId));
+    }
+    for (const id of extraCapabilityIds.splice(0)) {
+      await db.delete(capabilities).where(eq(capabilities.id, id));
     }
     if (capabilityId)
       await db.delete(capabilities).where(eq(capabilities.id, capabilityId));
@@ -380,6 +385,78 @@ describeMaybe("solution execution holds a wallet reservation", () => {
     const res = await runSolution();
     const body = (await res.json()) as Record<string, any>;
     expect(body.result?.steps?.[capSlug]?.unavailable).toBe(true);
+    expect(await balance()).toBe(STARTING_BALANCE);
+  }, 120_000);
+
+  it("a quarantine landing MID-RUN stops the next group (WP8 TOCTOU)", async () => {
+    // The review's second blocking finding. Eligibility was loaded once before
+    // any group executed, so a capability quarantined after the run started
+    // still executed in a later group from a stale snapshot — the same
+    // delisting race WP8 closed on the x402 catalogue cache, with a shorter
+    // window and no justification for the inconsistency.
+    //
+    // The invariant this pins: a quarantine stops step execution that has NOT
+    // yet begun. Steps already in flight are allowed to finish, because killing
+    // those would discard work the customer is about to receive.
+    await seed();
+    stepShouldFail = false;
+
+    // Step 1 quarantines step 2's capability WHILE the run is in progress —
+    // after the snapshot would have been taken, before group 2 executes.
+    const { registerCapability } = await import("../capabilities/index.js");
+    const secondSlug = `wp8-second-${randomUUID().slice(0, 8)}`;
+    const secondId = randomUUID();
+    extraCapabilityIds.push(secondId);
+
+    registerCapability(secondSlug, async () => ({
+      output: { ok: true, ran: true },
+      provenance: { source: "wp8", fetched_at: new Date().toISOString() },
+    }));
+
+    await db.insert(capabilities).values({
+      id: secondId,
+      slug: secondSlug,
+      name: "WP8 second-group capability",
+      description: "Seeded by the WP8 TOCTOU test.",
+      category: "developer-tools",
+      inputSchema: { type: "object" },
+      outputSchema: { type: "object" },
+      priceCents: 10,
+      isActive: true,
+      visible: true,
+      avgLatencyMs: 50,
+      lifecycleState: "active",
+    });
+    await db.insert(solutionSteps).values({
+      solutionId,
+      capabilitySlug: secondSlug,
+      stepOrder: 2,
+      inputMap: { probe: "probe" },
+    });
+
+    // Re-register step 1 so that RUNNING it quarantines step 2 — the quarantine
+    // lands strictly between the two groups, which is the race.
+    registerCapability(capSlug, async () => {
+      await db
+        .update(capabilities)
+        .set({ visible: false, x402Enabled: false })
+        .where(eq(capabilities.slug, secondSlug));
+      return {
+        output: { ok: true },
+        provenance: { source: "wp8", fetched_at: new Date().toISOString() },
+      };
+    });
+
+    const res = await runSolution();
+    const body = (await res.json()) as Record<string, any>;
+
+    // Step 2 must NOT have executed against the stale snapshot.
+    const second = body.result?.steps?.[secondSlug];
+    expect(second?.unavailable, "the quarantined step must not run").toBe(true);
+    expect(second?.platform_withheld).toBe(true);
+    expect(second?.ran).toBeUndefined();
+
+    // And a withheld component makes the whole bundle unbillable.
     expect(await balance()).toBe(STARTING_BALANCE);
   }, 120_000);
 });
