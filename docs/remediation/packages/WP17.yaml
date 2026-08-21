@@ -55,6 +55,15 @@ requirements:
   - "Survives the writer being unaware of it. A script author must not need to remember anything."
   - "Bounded growth. These fields change rarely; a retention rule still needs stating rather than discovering later."
 
+v1_default: >
+  Immutable RECORDING, plus writer inventory and permission narrowing. Not
+  blocking. Recording is strictly additive and cannot break an operator mid-
+  incident; blocking is a behavioural change to every path that touches these
+  fields, and its cost is only knowable once the inventory exists.
+
+  Escalate to the founder ONLY with a concrete proposal: this class of write,
+  currently done by these paths, would be refused, at this operational cost.
+
 non_goals:
   - "Not a general row-audit system for every table. The value is concentrated in state that decides what is sold and at what price."
   - "Not a replacement for health_monitor_events, which records WHY the platform changed something. This records THAT it changed and by whom."
@@ -72,7 +81,12 @@ second_deliverable_inventory_and_narrowing: >
 open_questions_for_the_implementer:
   - "Trigger-based capture costs a write per state change and adds a failure mode to every UPDATE. Rare-change fields make that cheap, but the trade needs stating explicitly rather than assumed."
   - "Does the DB role separation exist to make the ledger genuinely append-only, or does the application connect as owner? If the latter, immutability is a convention and should be described as one."
-  - "Should a write with no recorded authority be REFUSED rather than recorded? That is a stronger and more disruptive design; it belongs to Petter, not the platform, because it can block legitimate operator action."
+  # Deliberately NOT an open question for the founder at spec time. Asking
+  # "should unattributed writes be refused?" in the abstract invites a policy
+  # decision with no concrete trade-off attached, which is the wrong shape of
+  # question to hand someone. v1 defaults to RECORDING, and escalates only if
+  # implementation produces a specific proposal to block an identified class of
+  # legitimate operator write, with the operational cost stated.
 
 exit_conditions:
   - a direct psql UPDATE to any scoped field is captured, with old and new values

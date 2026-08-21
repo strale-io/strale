@@ -1,46 +1,61 @@
 #!/usr/bin/env node
 /**
- * Run a mutation test safely.
+ * Run a mutation test safely, and prove the result means something.
  *
  * WHY THIS EXISTS
  *
  * During the 2026-08-21 remediation program, `git checkout -- <file>` destroyed
- * uncommitted work FOUR times. Each time the sequence was identical: write a
- * fix, mutate it to prove a test discriminates, then "restore" with
- * `git checkout --` — which does not restore anything, it discards. Work that
- * had never been committed was simply gone. Twice it was caught only because a
- * later step failed for an unrelated reason; once an entire migration block
- * vanished and only the mutation check itself noticed.
+ * uncommitted work FOUR times. Each time: write a fix, mutate it to prove a test
+ * discriminates, then "restore" with `git checkout --` — which does not restore,
+ * it discards. Work never committed was simply gone.
  *
- * A rule was not enough, because the rule was known and broken anyway. This is
- * the tooling.
+ * A rule was not enough, because the rule was known and broken anyway.
  *
- * WHAT IT GUARANTEES
+ * THE PROTOCOL, AND WHY EACH STEP IS THERE
  *
- *   1. It REFUSES to run if the working tree is dirty. Nothing uncommitted can
- *      be lost, because nothing uncommitted is allowed to exist.
- *   2. It records the candidate commit SHA before touching anything.
- *   3. It restores from that SHA — a named commit, never the "discard local
- *      changes" form — and verifies the tree matches afterwards.
+ *   clean tree → baseline PASS → mutate → FAIL → restore → PASS → clean tree
+ *
+ * The first version of this script mutated first and treated ANY non-zero exit
+ * as "mutation caught". That is wrong, and it produced a false result inside
+ * this very package: four tests were committed with a missing import, so the
+ * suite was already red, and the tool cheerfully reported MUTATION CAUGHT. An
+ * already-failing suite catches every mutation and proves nothing. So does a
+ * missing database, a bad env var, a timeout, or a typo in the test command —
+ * all of them exit non-zero, and none of them are evidence.
+ *
+ * Requiring green BEFORE and green AFTER is what separates "this test
+ * discriminates" from "something is broken". The trailing green also proves the
+ * restore actually worked, rather than leaving a half-mutated tree behind.
  *
  * USAGE
  *
  *   node scripts/mutation-test.mjs \
  *     --file src/lib/x.ts \
- *     --find "the exact source text to replace" \
- *     --replace "the mutated text" \
- *     --test "npx vitest run --no-file-parallelism src/lib/x.test.ts"
- *
- * A mutation test PASSES when the suite goes RED. A green suite under mutation
- * means the test does not discriminate and is not evidence of anything.
+ *     --find "exact source text to replace" \
+ *     --replace "mutated text" \
+ *     --test "npx vitest run src/lib/x.test.ts"
  */
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
-import { argv, exit } from "node:process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { argv, exit, platform } from "node:process";
 
 function git(...args) {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
+}
+
+/** Runs the caller's test command. Returns true when it exits 0. */
+function runTest(command) {
+  try {
+    execFileSync(
+      platform === "win32" ? "cmd" : "sh",
+      platform === "win32" ? ["/c", command] : ["-c", command],
+      { stdio: "inherit" },
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function arg(name) {
@@ -60,67 +75,116 @@ if (!file || !find || !test) {
   exit(2);
 }
 
-// ── Guard 1: the tree must be clean ─────────────────────────────────────────
-//
-// This is the whole safety property. Everything below can overwrite files, and
-// overwriting is only safe when the pre-state is recoverable from a commit.
-const dirty = git("status", "--porcelain", "--untracked-files=no");
-if (dirty) {
-  console.error(
-    "REFUSING TO RUN: the working tree has uncommitted changes.\n\n" +
-      dirty +
-      "\n\nCommit the candidate first. Mutation testing overwrites files and\n" +
-      "restores them from a commit; anything not committed cannot be restored.\n" +
-      "This guard exists because `git checkout --` destroyed uncommitted\n" +
-      "remediation work four times in one session.",
-  );
+function refuse(reason) {
+  console.error(`REFUSING TO RUN: ${reason}`);
   exit(1);
+}
+
+// ── Guard 1: the tree must be clean, INCLUDING UNTRACKED FILES ──────────────
+//
+// The first version passed `--untracked-files=no`, which let an UNTRACKED
+// target through: the file looked clean, got mutated, and could not be restored
+// because it does not exist in any commit. The restore would then either fail or
+// delete it outright. Untracked files are precisely the ones with no recoverable
+// copy, so they are the last thing that should be exempt.
+const dirty = git("status", "--porcelain");
+if (dirty) {
+  refuse(
+    "the working tree is not clean.\n\n" +
+      dirty +
+      "\n\nCommit the candidate first. This script overwrites files and restores\n" +
+      "them from a commit; anything not committed cannot be restored. Untracked\n" +
+      "files count — they are the ones with no recoverable copy at all.",
+  );
 }
 
 const candidateSha = git("rev-parse", "HEAD");
-console.log(`candidate commit: ${candidateSha}`);
+
+// ── Guard 2: the target must exist IN THE CANDIDATE COMMIT ──────────────────
+//
+// A clean tree is not sufficient on its own: a path can be clean and still be
+// absent from HEAD (for example, ignored). Restoring it would fail.
+try {
+  git("cat-file", "-e", `${candidateSha}:${file}`);
+} catch {
+  refuse(
+    `${file} does not exist in the candidate commit ${candidateSha.slice(0, 12)}.\n` +
+      "It could be mutated but not restored.",
+  );
+}
+
+if (!existsSync(file)) refuse(`${file} does not exist on disk.`);
 
 const original = readFileSync(file, "utf8");
 if (!original.includes(find)) {
-  console.error(
-    `REFUSING TO RUN: the --find text is not present in ${file}.\n` +
+  refuse(
+    `the --find text is not present in ${file}.\n` +
       "A mutation that changes nothing produces a green run and proves nothing.",
+  );
+}
+
+console.log(`candidate commit: ${candidateSha}`);
+
+// ── Step 1: BASELINE MUST BE GREEN ──────────────────────────────────────────
+//
+// Without this the whole exercise is meaningless — see the header. A red
+// baseline "catches" every mutation, and so does a broken environment.
+console.log("\n── baseline (must PASS) ─────────────────────────────────────");
+if (!runTest(test)) {
+  refuse(
+    "the baseline test run FAILED before any mutation was applied.\n\n" +
+      "An already-failing suite reports every mutation as caught, which is how a\n" +
+      "false result entered this package. Fix the baseline, then mutate.\n" +
+      "The same applies to a missing database, a bad env var, or a typo in the\n" +
+      "test command: all exit non-zero and none are evidence.",
+  );
+}
+
+// ── Step 2: mutate, and the test MUST go red ────────────────────────────────
+let mutationCaught = false;
+let restoredGreen = false;
+try {
+  writeFileSync(file, original.replace(find, replace), "utf8");
+  console.log(`\n── mutated ${file} (must FAIL) ──────────────────────────────`);
+  mutationCaught = !runTest(test);
+} finally {
+  // ── Step 3: restore from the RECORDED COMMIT ──────────────────────────────
+  //
+  // `git checkout <sha> -- <path>` restores a known version. The banned form is
+  // `git checkout -- <path>`, which discards uncommitted work — the cause of the
+  // four incidents this script exists to prevent.
+  git("checkout", candidateSha, "--", file);
+
+  const afterwards = git("status", "--porcelain");
+  if (afterwards) {
+    console.error(
+      `\nRESTORE INCOMPLETE — tree still dirty after restoring from ${candidateSha}:\n${afterwards}`,
+    );
+    exit(1);
+  }
+  console.log(`\n── restored ${file} from ${candidateSha.slice(0, 12)} ───────`);
+}
+
+// ── Step 4: GREEN AGAIN ─────────────────────────────────────────────────────
+//
+// Proves the restore genuinely put the candidate back, and that the red run was
+// the mutation rather than something that broke midway and stayed broken.
+console.log("\n── after restore (must PASS again) ─────────────────────────");
+restoredGreen = runTest(test);
+
+if (!restoredGreen) {
+  console.error(
+    "\nINCONCLUSIVE — the suite is still red after restoring the candidate.\n" +
+      "The red run cannot be attributed to the mutation. Investigate before\n" +
+      "trusting any mutation result from this file.",
   );
   exit(1);
 }
 
-let testFailed = false;
-try {
-  writeFileSync(file, original.replace(find, replace), "utf8");
-  console.log(`mutated ${file}`);
-
-  try {
-    execFileSync(process.platform === "win32" ? "cmd" : "sh",
-      process.platform === "win32" ? ["/c", test] : ["-c", test],
-      { stdio: "inherit" });
-  } catch {
-    testFailed = true;
-  }
-} finally {
-  // ── Guard 3: restore from the RECORDED COMMIT ─────────────────────────────
-  //
-  // `git checkout <sha> -- <path>` restores a known-good version. The banned
-  // form is `git checkout -- <path>`, which silently discards uncommitted work
-  // — and is what caused the incidents this script exists to prevent.
-  git("checkout", candidateSha, "--", file);
-
-  const afterwards = git("status", "--porcelain", "--untracked-files=no");
-  if (afterwards) {
-    console.error(
-      `RESTORE INCOMPLETE — the tree is still dirty after restoring from ${candidateSha}:\n${afterwards}`,
-    );
-    exit(1);
-  }
-  console.log(`restored ${file} from ${candidateSha}; tree clean`);
-}
-
-if (testFailed) {
-  console.log("\nMUTATION CAUGHT — the suite went red. The test discriminates.");
+if (mutationCaught) {
+  console.log(
+    "\nMUTATION CAUGHT — green → red → green. The test discriminates.",
+  );
   exit(0);
 }
 
