@@ -2,8 +2,9 @@
 
 _Last updated: 2026-08-21 (session 1)_
 
-- **Current package:** WP3 — ACCEPTED, merged as `ee7f737` (PR #350). Ready to start WP4.
-- **Next package:** WP4 — Capability Runner + canonical ExecutionOutcome (closes CR-02: five rails each deciding billability their own way)
+- **Current package:** WP4 — in independent adversarial review on `remediation/wp4`.
+- **Next package:** WP5
+- **WP3:** ACCEPTED, merged as `ee7f737` (PR #350), verified live in production — table, all three indexes, and the CHECK constraint reached `validated=true`.
 - **Latest accepted SHA:** `ee7f737` on `main`
 - **Unresolved blockers:** none
 - **Human approvals granted:** program-level autonomy (run continuously; escalate only per CHECK-IN A/B/C)
