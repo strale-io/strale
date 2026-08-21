@@ -1,6 +1,6 @@
 package: WP7
 title: Audit finality — the chain must actually be a chain
-status: REVIEW
+status: REMEDIATED
 depends_on: [WP4]
 risks: [CR-04]
 
@@ -45,6 +45,55 @@ history_is_not_rewritten: >
   NON-unique index, and single-parent is checked by detectChainForks() rather
   than enforced. Scoping that check to rows after the fix is what keeps the
   historical break from drowning the signal that a NEW fork appeared.
+
+review:
+  codex: deferred_to_final_pass
+  independent_agent: FAIL_REMEDIATION_REQUIRED, then all findings closed
+
+  blocking_1_the_fix_did_not_fix_it: >
+    The first attempt made the SORT KEYS agree and left the ADMISSION key
+    different, so the chain still forked. `completed_at` is stamped from a clock
+    read BEFORE the row's own created_at default — median delta in production is
+    MINUS 1.5 ms — so a row can be admitted after the head while carrying an
+    earlier completion time. It chains onto the head without becoming it, and
+    the next row chains onto the same parent. The reviewer replayed the rule
+    over 30 days of real production rows: NINE new forks, in bursts of up to six
+    children on one parent. The same shape also arises from a per-row failure
+    inside a batch, retried on a later tick with a smaller completed_at.
+    Fixed properly: `chain_seq`, assigned from a sequence AT HASH TIME. The head
+    is the last row the worker actually hashed, which makes backdating, clock
+    skew and retries structurally incapable of forking rather than unlikely to.
+
+  blocking_2_dead_detector: >
+    detectChainForks was exported and called by nothing. A fork detector no
+    scheduler invokes detects nothing, and the exit condition claimed otherwise.
+    Now checkChainForks in chain-health-monitoring.ts, registered in
+    meta-monitoring's daily schedule — the module that was already wired and
+    already queries this table four times.
+
+  the_generator_was_still_live: >
+    The reviewer traced the incident to its source: /health/deep ran
+    `WITH probe AS (INSERT ... RETURNING id) DELETE ... WHERE id IN (SELECT id
+    FROM probe)` and commented it "atomic, no data left behind". False — in a
+    data-modifying CTE the DELETE runs against a snapshot predating the CTE's
+    INSERT, so it matches nothing. Every call to this PUBLIC endpoint leaked a
+    permanent row: 200 in August, 144 in May. One of the May rows is the
+    150,719-child parent. Fixed to two statements in one transaction. WP7 would
+    otherwise have marked rows 'excluded' forever on a queue nobody stopped
+    filling.
+
+  non_blocking_closed:
+    - "Migration 0097's first draft created an index on previous_hash that production ALREADY has as idx_transactions_previous_hash (65 MB). IF NOT EXISTS matches on NAME, not definition, so it would have built a second 60 MB index on a hot table for zero benefit. Removed."
+    - "The exclusion sweep was a denylist, so any status literal added later would be silently dropped from the chain. Now an allowlist."
+    - "'excluded' rows fell through /v1/audit's guards and would have been served as audit_chain_state: 'hashed' with a NULL integrity_hash. Unreachable today (no solution profile resolves, so it 404s first) but latent. Now stamped honestly."
+    - "The fork check scoped on a TIMESTAMP has a straddle blind spot — a fork whose children fall either side of the boundary counts as one. Now scoped on chain_seq IS NOT NULL, which is exact."
+    - "Two tests still did not test what they claimed: the fork test would have passed against an implementation ignoring `since`, and no test reached the cross-batch case where the blocking defect actually lives."
+
+  reviewer_finding_withdrawn_by_the_reviewer: >
+    It first reported the exclusion sweep as a no-op against its stated
+    population, then retracted: the sweep is correct and load-bearing, because
+    /health/deep keeps producing exactly those rows. Worth recording — an
+    adversarial reviewer's findings need adjudicating too, in both directions.
 
 # Verified by reading the code, not taken from the audit.
 defects:
@@ -101,7 +150,9 @@ design:
 exit_conditions:
   - terminal-only admission, including free-tier rows
   - one ordering for both batch threading and head selection
-  - single-parent CHECKED, not enforced — a unique index cannot be added over the existing forks
+  - single-parent CHECKED by a scheduled job, not enforced — a unique index cannot be added over the existing forks
+  - the head is derived from hash order, not from any wall-clock column
+  - the generator (/health/deep leaking a row per call) is closed
   - genesis returned only when the chain is genuinely empty
   - a branch-topology check that detects a fork if one ever appears
   - the WP1 "PINS BUG" test inverts
