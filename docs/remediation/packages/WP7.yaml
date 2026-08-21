@@ -1,0 +1,71 @@
+package: WP7
+title: Audit finality — the chain must actually be a chain
+status: IN_PROGRESS
+depends_on: [WP4]
+risks: [CR-04]
+
+objective: >
+  Make the integrity hash chain a chain: one head, one parent per child, and
+  only immutable rows admitted. Today it is a chain in shape and a forest in
+  behaviour.
+
+# Verified by reading the code, not taken from the audit.
+defects:
+  two_orderings: >
+    The worker threads a batch by (created_at, id) ASC
+    (jobs/integrity-hash-retry.ts:104). Head selection picks by
+    (completed_at, id) DESC (lib/integrity-hash.ts:107). A row created before a
+    sibling but completed after it means the tip the batch produced is NOT the
+    head the next tick resumes from — so the next batch links to a row that is
+    not the chain tip, and one parent acquires two children. WP1 pinned this
+    with a test literally named "PINS BUG"; its own comment says WP7 makes the
+    orderings agree and the expectation then inverts.
+
+  non_terminal_admission: >
+    Admission filters on `compliance_hash_state = 'pending'` and an age cutoff.
+    It does NOT require a terminal status. So a row still in 'executing' can be
+    hashed — and `status` is one of the hashed fields
+    (jobs/integrity-hash-retry.ts:137). When that row later reaches 'completed'
+    or 'failed', its recorded hash no longer describes it. The chain then
+    contains an entry that cannot be reverified, which is indistinguishable
+    from tampering.
+
+    Not hypothetical: production holds 11 rows stuck in 'executing' since
+    2026-04-07 (see WP3), each older than any grace period.
+
+  genesis_on_error: >
+    `getPreviousHash` wraps everything in `try { ... } catch { return
+    GENESIS_HASH; }` (lib/integrity-hash.ts:110). A transient DB error during
+    head selection therefore silently starts a SECOND chain from genesis rather
+    than failing. An audit chain that quietly restarts under load is worse than
+    one that stops: it produces a plausible-looking chain with an unexplained
+    second root.
+
+  no_structural_constraint: >
+    Nothing prevents two rows sharing a prev_hash. The single-parent property —
+    the thing that makes a hash chain evidence — rests entirely on the two
+    orderings agreeing, which they do not.
+
+design:
+  one_ordering: >
+    Both the batch and head selection order by the SAME key. `completed_at` is
+    the honest one for a chain of finished work, with `id` as the deterministic
+    tiebreaker, and admission restricted to rows that HAVE a completed_at.
+  terminal_only: >
+    Admit only rows whose status is terminal. A row that is not finished has
+    nothing final to attest.
+  fail_closed: >
+    A head-selection error must propagate, not become genesis. Genesis is
+    returned only when the table genuinely holds no hashed row.
+  structural_single_parent: >
+    A unique index on prev_hash. Convention has already failed here once; the
+    database can enforce what the code did not.
+
+exit_conditions:
+  - terminal-only admission, including free-tier rows
+  - one ordering for both batch threading and head selection
+  - prev_hash uniqueness enforced by an index, not by convention
+  - genesis returned only when the chain is genuinely empty
+  - a branch-topology check that detects a fork if one ever appears
+  - the WP1 "PINS BUG" test inverts
+  - independent adversarial review passes

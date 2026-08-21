@@ -1757,6 +1757,45 @@ export async function runMigration0096_x402SettlementIntents(
 }
 
 
+/**
+ * Block 0097 — chain-fork detection index (WP7).
+ *
+ * NOT a unique index. Production is ALREADY forked: `previous_hash` has ten
+ * distinct values with more than one child, the largest with 150,719. A unique
+ * index would abort boot on the first attempt, which is exactly why the
+ * duplicate check ran against production before this was written.
+ *
+ * What happened, established by query rather than inference: `getPreviousHash`
+ * orders by `completed_at DESC`, and Postgres sorts NULLs FIRST under DESC. A
+ * `health_probe` row hashed on 2026-05-04 with a null `completed_at` has
+ * therefore occupied the head position permanently, and every batch since has
+ * linked to it. The chain has been a star, not a chain, for three and a half
+ * months.
+ *
+ * History is NOT rewritten. Recomputing 863,946 hashes would destroy the
+ * evidence that the break happened, which is the opposite of what an audit
+ * chain is for. This index exists so the fork is queryable and so the
+ * topology check can prove no NEW fork appears after the fix.
+ */
+export async function runMigration0097_chainForkDetection(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS "transactions_previous_hash_idx"
+      ON "transactions" ("previous_hash")
+      WHERE "previous_hash" IS NOT NULL
+  `);
+
+  return {
+    block: "0097_chain_fork_detection",
+    outcome: "transactions.previous_hash index for fork detection (idempotent)",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
   runMigration0030_complianceColumns,
@@ -1798,6 +1837,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   // WP3: reservations table + non-negative balance constraint.
   runMigration0095_walletReservations,
   runMigration0096_x402SettlementIntents,
+  runMigration0097_chainForkDetection,
 ];
 
 /**

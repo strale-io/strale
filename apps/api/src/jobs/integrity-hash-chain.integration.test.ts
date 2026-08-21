@@ -193,11 +193,13 @@ describeMaybe("integrity hash chain admission", () => {
     expect(guardsPreviousHash).toBe(false);
   }, 120_000);
 
-  it("PINS BUG: head selection and batch threading use different orderings", async () => {
-    // The worker threads a batch by (created_at, id) ASC; getPreviousHash()
-    // picks the head by (completed_at, id) DESC. This row is created before a
-    // sibling but completed after it, so the tip the batch produces is not the
-    // head the next tick resumes from.
+  it("head selection and batch threading agree (WP7 inverts the WP1 pin)", async () => {
+    // This test was named "PINS BUG" and asserted the defect: the worker
+    // threaded by (created_at, id) while getPreviousHash picked the head by
+    // (completed_at, id), so the tip a batch produced was not the head the next
+    // tick resumed from, and one parent acquired two children. Both now order
+    // by completed_at. The expectation inverts, exactly as WP1's comment said
+    // it would.
     const earlyCreatedLateCompleted = await insertCompleted({
       createdAgoMs: OLDER_THAN_GRACE + 5_000,
       completedAgoMs: OLDER_THAN_GRACE + 500,
@@ -215,19 +217,121 @@ describeMaybe("integrity hash chain admission", () => {
     ]);
     for (const row of rows) expect(row.integrityHash).toBeTruthy();
 
-    // Now the head the NEXT tick would start from.
     const { getPreviousHash } = await import("../lib/integrity-hash.js");
     const head = await getPreviousHash();
 
-    const tip = rows.find((r) => r.id === lateCreatedEarlyCompleted)!;
-    const laterCompleted = rows.find((r) => r.id === earlyCreatedLateCompleted)!;
+    // The batch threads in completed_at order, so the row completed LAST is the
+    // tip — and it is also what the next tick resumes from. One tip, one head.
+    const tip = rows.find((r) => r.id === earlyCreatedLateCompleted)!;
+    expect(head).toBe(tip.integrityHash);
+  }, 120_000);
 
-    // Threading order made `lateCreatedEarlyCompleted` the batch tip, but head
-    // selection returns the row with the greatest completed_at instead. The
-    // next admission therefore links to a row that is not the chain tip, which
-    // is how two children of one parent arise. WP7 makes the two orderings
-    // agree; this expectation then inverts.
-    expect(head).toBe(laterCompleted.integrityHash);
-    expect(head).not.toBe(tip.integrityHash);
+  it("a null completed_at row cannot capture the head", async () => {
+    // THE production defect, and the reason the chain stopped being a chain.
+    // Postgres sorts NULLs FIRST under DESC, so one hashed row with a null
+    // completed_at held the head from 2026-05-04 onward and every later batch
+    // linked to it — 150,719 children on one parent.
+    const settled = await insertCompleted({
+      createdAgoMs: OLDER_THAN_GRACE + 3_000,
+      completedAgoMs: OLDER_THAN_GRACE + 3_000,
+    });
+    await runOnce();
+
+    const { getPreviousHash, detectChainForks } = await import(
+      "../lib/integrity-hash.js"
+    );
+    const headBefore = await getPreviousHash();
+
+    // Plant exactly the shape that broke production: hashed, no completed_at.
+    const [planted] = await db
+      .insert(transactions)
+      .values({
+        status: "health_probe",
+        input: {},
+        priceCents: 0,
+        integrityHash: "f".repeat(64),
+        previousHash: headBefore,
+        complianceHashState: "complete",
+        completedAt: null,
+      })
+      .returning({ id: transactions.id });
+
+    try {
+      // The head must be unmoved by a row with no completion time.
+      expect(await getPreviousHash()).toBe(headBefore);
+      expect(headBefore).toBeTruthy();
+      expect(settled).toBeTruthy();
+    } finally {
+      await db.delete(transactions).where(eq(transactions.id, planted.id));
+    }
+  }, 120_000);
+
+  it("does not admit a non-terminal row to the chain", async () => {
+    // status and completed_at are hashed fields, so hashing a row that is still
+    // running bakes in values that will change — and the recorded hash then
+    // stops describing the row, which is indistinguishable from tampering.
+    const [running] = await db
+      .insert(transactions)
+      .values({
+        status: "executing",
+        input: {},
+        priceCents: 10,
+        complianceHashState: "pending",
+        createdAt: new Date(Date.now() - OLDER_THAN_GRACE - 10_000),
+        completedAt: null,
+      })
+      .returning({ id: transactions.id });
+
+    try {
+      await runOnce();
+
+      const [after] = await db
+        .select({
+          integrityHash: transactions.integrityHash,
+          state: transactions.complianceHashState,
+        })
+        .from(transactions)
+        .where(eq(transactions.id, running.id));
+
+      expect(after!.integrityHash).toBeNull();
+      // Still pending, not 'excluded': it may yet complete and become eligible.
+      expect(after!.state).toBe("pending");
+    } finally {
+      await db.delete(transactions).where(eq(transactions.id, running.id));
+    }
+  }, 120_000);
+
+  it("detects a fork if one ever appears again", async () => {
+    const { detectChainForks } = await import("../lib/integrity-hash.js");
+    const since = new Date(Date.now() - 60_000);
+
+    const parent = `parent-${Math.random().toString(36).slice(2, 10)}`;
+    const planted: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const [row] = await db
+        .insert(transactions)
+        .values({
+          status: "completed",
+          input: {},
+          priceCents: 0,
+          integrityHash: `child-${i}-${Math.random().toString(36).slice(2)}`,
+          previousHash: parent,
+          complianceHashState: "complete",
+          completedAt: new Date(),
+        })
+        .returning({ id: transactions.id });
+      planted.push(row.id);
+    }
+
+    try {
+      const forks = await detectChainForks(since);
+      const found = forks.find((f) => f.previousHash === parent);
+      expect(found, "two children of one parent is a fork").toBeDefined();
+      expect(found!.childCount).toBe(2);
+    } finally {
+      for (const id of planted) {
+        await db.delete(transactions).where(eq(transactions.id, id));
+      }
+    }
   }, 120_000);
 });

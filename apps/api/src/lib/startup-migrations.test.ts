@@ -1236,7 +1236,7 @@ describe("startup-migrations — block 0087 (un-hide content-redacted rows)", ()
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 39 blocks in historical order", () => {
+  it("exports the expected 40 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1283,6 +1283,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       // WP3: wallet_reservations table + the non-negative balance constraint.
       "runMigration0095_walletReservations",
       "runMigration0096_x402SettlementIntents",
+      "runMigration0097_chainForkDetection",
     ]);
   });
 });
