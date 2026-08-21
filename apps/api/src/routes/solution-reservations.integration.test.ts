@@ -261,4 +261,66 @@ describeMaybe("solution execution holds a wallet reservation", () => {
     const reservations = await import("../lib/wallet-reservations.js");
     expect(await reservations.findAbandoned(db)).toHaveLength(0);
   }, 120_000);
+
+  it("a retried solution is not charged twice (WP6)", async () => {
+    // Solutions had NO replay guard at all. A client retrying a EUR 2.50 call —
+    // a timeout, a proxy redelivery, an agent's own retry loop — was charged
+    // again. The capability rail has had idempotency since MVP; the bundle
+    // rail, which carries the platform's most expensive SKUs, never did.
+    await seed();
+    stepShouldFail = false;
+    const key = randomUUID();
+
+    const first = await app.request(`http://localhost/v1/solutions/${solSlug}/execute`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "Idempotency-Key": key,
+      },
+      body: JSON.stringify({ inputs: { probe: "wp6" } }),
+    });
+    expect(first.status).toBe(200);
+    const afterFirst = await balance();
+    expect(afterFirst).toBe(STARTING_BALANCE - SOLUTION_PRICE);
+
+    const retry = await app.request(`http://localhost/v1/solutions/${solSlug}/execute`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "Idempotency-Key": key,
+      },
+      body: JSON.stringify({ inputs: { probe: "wp6" } }),
+    });
+    expect(retry.status).toBe(200);
+
+    const retryBody = (await retry.json()) as Record<string, any>;
+    expect(retryBody.meta?.idempotency_replay).toBe(true);
+
+    // The property that matters: the balance did not move again.
+    expect(await balance()).toBe(afterFirst);
+  }, 120_000);
+
+  it("the same key for DIFFERENT inputs is a 409, not a replay (WP6)", async () => {
+    await seed();
+    stepShouldFail = false;
+    const key = randomUUID();
+
+    const call = (probe: string) =>
+      app.request(`http://localhost/v1/solutions/${solSlug}/execute`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          "Idempotency-Key": key,
+        },
+        body: JSON.stringify({ inputs: { probe } }),
+      });
+
+    expect((await call("first")).status).toBe(200);
+    const conflict = await call("SOMETHING ELSE");
+    expect(conflict.status).toBe(409);
+    expect(((await conflict.json()) as any).error_code).toBe("idempotency_key_reused");
+  }, 120_000);
 });

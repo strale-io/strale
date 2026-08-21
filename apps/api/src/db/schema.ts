@@ -244,6 +244,16 @@ export const transactions = pgTable(
       .references(() => capabilities.id), // nullable: solution executions have no single capability
     solutionSlug: text("solution_slug"), // set for solution executions, null for capability executions
     idempotencyKey: varchar("idempotency_key", { length: 255 }),
+    /**
+     * Hash of the request this key was first used for (WP6).
+     *
+     * A key without one is a key to nothing in particular: the platform
+     * replayed on the string alone, so the same key reused for different work
+     * returned the earlier answer to the later question. Null on rows predating
+     * this column; those still replay, because refusing would break clients
+     * holding keys issued before the deploy.
+     */
+    idempotencyFingerprint: varchar("idempotency_fingerprint", { length: 64 }),
     status: varchar("status", { length: 20 }).notNull().default("pending"),
     // 'pending' | 'executing' | 'completed' | 'failed'
     input: jsonb("input").notNull(),
@@ -353,8 +363,12 @@ export const transactions = pgTable(
     completedAt: timestamp("completed_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("transactions_idempotency_key_unique")
-      .on(table.idempotencyKey)
+    // WP6: scoped to the CUSTOMER. A global unique index meant two customers
+    // picking the same key collided — the second neither replayed (the lookup
+    // is per-user) nor inserted (the index is not), surfacing as a 500. It was
+    // also a weak oracle for whether a key existed anywhere on the platform.
+    uniqueIndex("transactions_user_idempotency_key_unique")
+      .on(table.userId, table.idempotencyKey)
       .where(sql`idempotency_key IS NOT NULL`),
     index("transactions_user_id_idx").on(table.userId),
     index("transactions_status_idx").on(table.status),
