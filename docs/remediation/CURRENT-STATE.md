@@ -9,6 +9,26 @@ _Last updated: 2026-08-21 (session 1)_
 - **Human approvals granted:** program-level autonomy (run continuously; escalate only per CHECK-IN A/B/C)
 - **Awaiting founder:** nothing. One item is logged for *visibility only*, not decision — see "Codex disposition" below.
 
+## Review lane — founder decision, 2026-08-21
+
+Codex exhausted its credits mid-WP3 (available again 27 Aug). Decision: **do
+not buy more now.** Adversarial review continues via independent Claude agents
+given the same brief, with a **single Codex pass reserved for the end** of the
+program.
+
+Rationale for recording it: the substitute is not a downgrade in kind. On WP3
+the agent returned FAIL_REMEDIATION_REQUIRED with three blocking findings, one
+of which — a migration that reintroduced a TOCTOU defect the same file had
+fixed two commits earlier, and could ship without its unique index — was at
+least as sharp as anything Codex produced. What a single reviewer cannot give
+is *independence across packages*: the same model reviewing its own family of
+work has a correlated blind spot, which is what the final Codex pass exists to
+catch.
+
+Practical note for whoever runs that pass: brief it on the FULL branch diff,
+not per-package, and give it the residuals list from each package manifest so
+it can check that deferred items actually landed where they were promised.
+
 ## Where WP2 landed
 
 One authority for wallet mutations: `lib/wallet-service.ts`. Every balance
