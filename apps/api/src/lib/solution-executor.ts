@@ -14,10 +14,11 @@
  *   anything else       — passed through as a literal value
  */
 
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { solutionSteps } from "../db/schema.js";
+import { capabilities, solutionSteps } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
+import { isServableCapability } from "./x402-eligibility.js";
 import {
   assertGuardedAllow,
   CapabilityInvocationRefusedError,
@@ -331,6 +332,11 @@ export async function executeSolution(
   inputs: Record<string, unknown>,
 ): Promise<SolutionExecutionResult | null> {
   const db = getDb();
+  // WP8: eligibility is deliberately NOT read here. It is re-read per group at
+  // execution time (see the loop below), because a snapshot taken at solution
+  // start goes stale while later groups run — a capability quarantined mid-run
+  // would still execute. Joining it here as well would leave a tempting stale
+  // copy in scope, which is how the first version of this gate went wrong.
   const steps = await db
     .select({
       capabilitySlug: solutionSteps.capabilitySlug,
@@ -393,16 +399,77 @@ export async function executeSolution(
   let entityContext: Record<string, unknown> = {};
 
   for (const { steps: groupSteps } of sortedGroups) {
+    // WP8 remediation — eligibility is re-read PER GROUP, not once per run.
+    //
+    // The first version loaded visible/is_active/lifecycle_state for every step
+    // in one query before execution began. A solution runs its groups in
+    // sequence and can take seconds to minutes, so a capability quarantined
+    // after the run started would still execute in a later group from a stale
+    // snapshot. WP8 closed exactly this shape on the x402 catalogue cache and
+    // called it a delisting race; leaving it open here would be the same defect
+    // with a shorter window and no justification for the inconsistency.
+    //
+    // The invariant, stated so it is testable: a quarantine stops all step
+    // execution that has not already begun. Steps already in flight when the
+    // quarantine lands are allowed to finish — stopping those would mean
+    // killing work the customer is about to receive, which is the same
+    // reasoning WP3 used for reservation TTLs.
+    //
+    // One indexed read per group. Groups are few (typically one to four), and
+    // this is the path where a wrong answer runs a capability we withdrew.
+    const groupSlugs = groupSteps.map((s) => s.capabilitySlug);
+    const freshRows = await db
+      .select({
+        slug: capabilities.slug,
+        isActive: capabilities.isActive,
+        lifecycleState: capabilities.lifecycleState,
+        visible: capabilities.visible,
+      })
+      .from(capabilities)
+      .where(inArray(capabilities.slug, groupSlugs));
+    const freshBySlug = new Map(freshRows.map((r) => [r.slug, r]));
+
     const executions = groupSteps.map(async (step) => {
-      const executor = getExecutor(step.capabilitySlug);
+      // WP8: is this capability fit to run at all? Checked BEFORE the executor
+      // lookup, because a registered executor for a quarantined capability is
+      // exactly the case that used to slip through — the code was present, so
+      // the step ran, even though the platform had decided to stop serving it.
+      //
+      // Solution steps consulted no eligibility rule of any kind before this.
+      // Not yet a live incident (every offending step in production sits in an
+      // already-inactive solution), but 103 live solutions depend on 99
+      // capabilities and 19 moved to a non-servable state in the last 90 days,
+      // with the quality floor quarantining automatically. The gap was one
+      // quarantine away from putting a delisted capability inside a paid bundle.
+      // The FRESH row, not the one loaded with the step list. A capability
+      // absent from the fresh read was deleted mid-run and is not servable.
+      const fresh = freshBySlug.get(step.capabilitySlug);
+      const servable =
+        fresh != null &&
+        isServableCapability({
+          isActive: fresh.isActive,
+          lifecycleState: fresh.lifecycleState,
+          visible: fresh.visible,
+        });
+
+      const executor = servable ? getExecutor(step.capabilitySlug) : undefined;
       if (!executor) {
-        stepErrors.push(`${step.capabilitySlug}: executor unavailable`);
+        stepErrors.push(
+          servable
+            ? `${step.capabilitySlug}: executor unavailable`
+            : `${step.capabilitySlug}: capability is not currently servable`,
+        );
         // Money-integrity 2026-08-12: the step must still APPEAR — a bare
         // return made deactivated steps vanish from the audit trail entirely
         // (a solution advertising 14 steps audited 13 with no gap marker).
         stepResults[step.capabilitySlug] = {
           unavailable: true,
-          reason: "capability unavailable (deactivated or not deployed) — this step did not run",
+          // Distinguished because the two mean different things for BILLING.
+          // A capability we withheld is our decision, not partial delivery.
+          ...(servable ? {} : { platform_withheld: true }),
+          reason: servable
+            ? "capability unavailable (not deployed) — this step did not run"
+            : "capability was withheld by Strale (quarantined or deactivated) — this step did not run",
         };
         completedSteps[stepIndex.get(step)!] = {};
         stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: 0 });

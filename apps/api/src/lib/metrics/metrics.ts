@@ -316,22 +316,40 @@ export async function topSellers(w: Window, limit = 6): Promise<Measurement<TopS
   };
 }
 
-export interface PlatformHealth { breakersOpen: number; active: number; quarantined: number }
+export interface PlatformHealth { breakersOpen: number; active: number; withheldFromCatalog: number }
 
 /** Operational state. A point-in-time reading, so its window is "now". */
+/**
+ * WP8: named for what it MEASURES.
+ *
+ * It read `lifecycle_state = 'quarantined'`, and that value does not exist —
+ * the states in production are active, deactivated, degraded, probation and
+ * validating. The quality floor quarantines by clearing `visible` and
+ * `x402_enabled` (jobs/quality-floor.ts), so this gauge reported 0 no matter
+ * how many capabilities the armed floor had quarantined.
+ *
+ * It was renamed rather than left as `quarantined`, because it counts WITHHELD
+ * FROM THE CATALOGUE — nine rows today, of which
+ * only one (page-speed-test) is a floor quarantine; the rest are pre-launch
+ * capabilities hidden by the onboarding pipeline. That conflation is deliberate
+ * and disclosed rather than silently precise-looking: both groups are "not
+ * currently offered", which is what an operator reading this number wants to
+ * know. A quarantine-only count needs health_monitor_events minus subsequent
+ * promotions, which is a different measurement and belongs with the floor.
+ */
 export async function platformHealth(): Promise<Measurement<PlatformHealth>> {
-  const r = await rows<{ breakers: string; active: string; quarantined: string }>(sql`
+  const r = await rows<{ breakers: string; active: string; withheld_from_catalog: string }>(sql`
     SELECT (SELECT COUNT(*)::int FROM capability_health WHERE state <> 'closed') AS breakers,
            (SELECT COUNT(*)::int FROM capabilities WHERE is_active) AS active,
            (SELECT COUNT(*)::int FROM capabilities
-             WHERE is_active AND lifecycle_state = 'quarantined') AS quarantined`);
+             WHERE is_active AND NOT visible) AS withheld_from_catalog`);
   const now = new Date();
   return {
     status: "observed",
     value: {
       breakersOpen: Number(r[0]?.breakers ?? 0),
       active: Number(r[0]?.active ?? 0),
-      quarantined: Number(r[0]?.quarantined ?? 0),
+      withheldFromCatalog: Number(r[0]?.withheld_from_catalog ?? 0),
     },
     window: { from: now, to: now, label: "right now" },
     population: "all_transactions", instruments: [],

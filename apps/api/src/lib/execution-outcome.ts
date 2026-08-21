@@ -175,6 +175,10 @@ export function assessOutput(
 
   if (obj.skipped === true) quality_flags.push("step_skipped");
   if (obj.unavailable === true) quality_flags.push("step_unavailable");
+  // WP8: the platform WITHHELD this component (quarantined or deactivated).
+  // Distinct from "not deployed" because it changes the economics: a component
+  // we removed is our decision, not partial delivery the customer chose.
+  if (obj.platform_withheld === true) quality_flags.push("platform_withheld");
 
   const isFailureMarker = isExecutorFailureMarker(obj);
   if (isFailureMarker) quality_flags.push("executor_error_marker");
@@ -369,6 +373,38 @@ export function aggregateSolutionOutcome(
 ): SolutionOutcome {
   const steps_total = stepOutcomes.length;
   const steps_succeeded = stepOutcomes.filter((o) => o.success).length;
+
+  // WP8 remediation. This rule first shipped inside routes/solution-execute.ts,
+  // so the WALLET rail applied it and the x402 rail did not — a partially
+  // successful x402 run with a withheld component would still have settled full
+  // price. That is CR-02 exactly: one economic fact, two rails, two answers.
+  // Putting it here is the whole point of this module; putting it in a rail was
+  // a violation of the principle the module exists to enforce.
+  //
+  // Precedence over the gate check below is deliberate. Both make a run
+  // unbillable, but a withheld component is the more specific explanation and
+  // the one an operator needs to see: the gate tripped because WE removed the
+  // thing behind it.
+  const withheld = stepOutcomes.filter((o) =>
+    o.output_assessment?.quality_flags.includes("platform_withheld"),
+  );
+  if (withheld.length > 0) {
+    return {
+      success: false,
+      failure_class: "output_unusable",
+      billable: false,
+      retryable: false,
+      // Not the capability's fault and not the customer's — ours.
+      fault: "strale",
+      output_assessment: null,
+      counts_against_capability: false,
+      error_message:
+        `${withheld.length} component(s) were withheld by Strale (quarantined or ` +
+        "deactivated); the bundle could not be delivered in full and was not charged",
+      steps_total,
+      steps_succeeded,
+    };
+  }
 
   if (gate) {
     return { ...outcomeFromGate(gate), steps_total, steps_succeeded };

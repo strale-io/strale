@@ -54,6 +54,8 @@ describeMaybe("solution execution holds a wallet reservation", () => {
   let userId = "";
   let walletId = "";
   let capabilityId = "";
+  /** Extra capabilities seeded by individual tests, cleaned up alongside. */
+  const extraCapabilityIds: string[] = [];
   let solutionId = "";
   let capSlug = "";
   let solSlug = "";
@@ -103,6 +105,9 @@ describeMaybe("solution execution holds a wallet reservation", () => {
         .where(eq(solutionSteps.solutionId, solutionId));
       await db.delete(solutions).where(eq(solutions.id, solutionId));
     }
+    for (const id of extraCapabilityIds.splice(0)) {
+      await db.delete(capabilities).where(eq(capabilities.id, id));
+    }
     if (capabilityId)
       await db.delete(capabilities).where(eq(capabilities.id, capabilityId));
     userId = walletId = capabilityId = solutionId = "";
@@ -146,6 +151,7 @@ describeMaybe("solution execution holds a wallet reservation", () => {
       isActive: true,
       avgLatencyMs: 50,
       lifecycleState: "active",
+      visible: true,
     });
 
     await db.insert(solutions).values({
@@ -322,5 +328,135 @@ describeMaybe("solution execution holds a wallet reservation", () => {
     const conflict = await call("SOMETHING ELSE");
     expect(conflict.status).toBe(409);
     expect(((await conflict.json()) as any).error_code).toBe("idempotency_key_reused");
+  }, 120_000);
+
+  it("does NOT run a step whose capability has been quarantined (WP8)", async () => {
+    // The gap this closes. lib/solution-executor.ts had no eligibility check of
+    // any kind, so a capability the platform had decided to stop serving still
+    // ran as a step inside a paid bundle. Not yet a live incident — every
+    // offending step in production sits in an already-inactive solution — but
+    // 103 live solutions depend on 99 capabilities, 19 moved to a non-servable
+    // state in the last 90 days, and the quality floor quarantines
+    // automatically. This is the transition that would have made it real.
+    await seed();
+    stepShouldFail = false;
+
+    // Quarantine EXACTLY as jobs/quality-floor.ts does it: visible=false and
+    // x402_enabled=false, leaving is_active and lifecycle_state alone.
+    //
+    // The first version of this test set {lifecycleState:'degraded',
+    // isActive:false} — which is DEACTIVATION, a different transition. It
+    // passed, and proved the deactivation gate works, while its title and the
+    // commit message claimed quarantine. Production contradicted both:
+    // page-speed-test was quarantined 2026-08-20 and is still is_active=true,
+    // lifecycle_state='active', sitting in two live paid solutions.
+    await db
+      .update(capabilities)
+      .set({ visible: false, x402Enabled: false })
+      .where(eq(capabilities.slug, capSlug));
+
+    const res = await runSolution();
+    const body = (await res.json()) as Record<string, any>;
+
+    // The step is recorded as unavailable rather than executed...
+    const stepOutput = body.result?.steps?.[capSlug];
+    expect(stepOutput?.unavailable).toBe(true);
+    expect(stepOutput?.platform_withheld).toBe(true);
+    expect(String(stepOutput?.reason)).toMatch(/withheld by Strale/i);
+
+    // ...and the customer is not charged. A component WE withheld is not
+    // partial delivery; charging for a bundle missing a piece we removed would
+    // be charging for a hollow answer.
+    expect(await balance()).toBe(STARTING_BALANCE);
+  }, 120_000);
+
+  it("also refuses a step whose capability was DEACTIVATED (WP8)", async () => {
+    // The transition the first version of the quarantine test actually tested.
+    // Kept as its own case so both paths are covered explicitly rather than one
+    // standing in for the other.
+    await seed();
+    stepShouldFail = false;
+
+    await db
+      .update(capabilities)
+      .set({ isActive: false, lifecycleState: "deactivated" })
+      .where(eq(capabilities.slug, capSlug));
+
+    const res = await runSolution();
+    const body = (await res.json()) as Record<string, any>;
+    expect(body.result?.steps?.[capSlug]?.unavailable).toBe(true);
+    expect(await balance()).toBe(STARTING_BALANCE);
+  }, 120_000);
+
+  it("a quarantine landing MID-RUN stops the next group (WP8 TOCTOU)", async () => {
+    // The review's second blocking finding. Eligibility was loaded once before
+    // any group executed, so a capability quarantined after the run started
+    // still executed in a later group from a stale snapshot — the same
+    // delisting race WP8 closed on the x402 catalogue cache, with a shorter
+    // window and no justification for the inconsistency.
+    //
+    // The invariant this pins: a quarantine stops step execution that has NOT
+    // yet begun. Steps already in flight are allowed to finish, because killing
+    // those would discard work the customer is about to receive.
+    await seed();
+    stepShouldFail = false;
+
+    // Step 1 quarantines step 2's capability WHILE the run is in progress —
+    // after the snapshot would have been taken, before group 2 executes.
+    const { registerCapability } = await import("../capabilities/index.js");
+    const secondSlug = `wp8-second-${randomUUID().slice(0, 8)}`;
+    const secondId = randomUUID();
+    extraCapabilityIds.push(secondId);
+
+    registerCapability(secondSlug, async () => ({
+      output: { ok: true, ran: true },
+      provenance: { source: "wp8", fetched_at: new Date().toISOString() },
+    }));
+
+    await db.insert(capabilities).values({
+      id: secondId,
+      slug: secondSlug,
+      name: "WP8 second-group capability",
+      description: "Seeded by the WP8 TOCTOU test.",
+      category: "developer-tools",
+      inputSchema: { type: "object" },
+      outputSchema: { type: "object" },
+      priceCents: 10,
+      isActive: true,
+      visible: true,
+      avgLatencyMs: 50,
+      lifecycleState: "active",
+    });
+    await db.insert(solutionSteps).values({
+      solutionId,
+      capabilitySlug: secondSlug,
+      stepOrder: 2,
+      inputMap: { probe: "probe" },
+    });
+
+    // Re-register step 1 so that RUNNING it quarantines step 2 — the quarantine
+    // lands strictly between the two groups, which is the race.
+    registerCapability(capSlug, async () => {
+      await db
+        .update(capabilities)
+        .set({ visible: false, x402Enabled: false })
+        .where(eq(capabilities.slug, secondSlug));
+      return {
+        output: { ok: true },
+        provenance: { source: "wp8", fetched_at: new Date().toISOString() },
+      };
+    });
+
+    const res = await runSolution();
+    const body = (await res.json()) as Record<string, any>;
+
+    // Step 2 must NOT have executed against the stale snapshot.
+    const second = body.result?.steps?.[secondSlug];
+    expect(second?.unavailable, "the quarantined step must not run").toBe(true);
+    expect(second?.platform_withheld).toBe(true);
+    expect(second?.ran).toBeUndefined();
+
+    // And a withheld component makes the whole bundle unbillable.
+    expect(await balance()).toBe(STARTING_BALANCE);
   }, 120_000);
 });

@@ -120,6 +120,7 @@ describeMaybe("conversion-email usage summary against a real database", () => {
       isFreeTier: false,
       avgLatencyMs: 50,
       lifecycleState: "active",
+      visible: true,
     });
   }
 

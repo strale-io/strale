@@ -117,6 +117,7 @@ describeMaybe("/v1/do idempotency against a real database", () => {
       isFreeTier: opts.isFreeTier ?? false,
       avgLatencyMs: 50,
       lifecycleState: "active",
+      visible: true,
     });
   }
 

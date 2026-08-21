@@ -195,6 +195,7 @@ describeMaybe("a gated solution bills identically on both rails", () => {
         isActive: true,
         avgLatencyMs: 50,
         lifecycleState: "active",
+      visible: true,
       });
     }
 
@@ -400,6 +401,7 @@ describeMaybe("a capability returning an unusable output bills on neither rail",
       isActive: true,
       avgLatencyMs: 50,
       lifecycleState: "active",
+      visible: true,
       x402Enabled: true,
       x402PriceUsd: 0.3,
     });
@@ -419,5 +421,134 @@ describeMaybe("a capability returning an unusable output bills on neither rail",
     // The assertion that would have caught the blocking finding.
     expect(settleSpy).not.toHaveBeenCalled();
     expect(res.status).not.toBe(200);
+  }, 120_000);
+});
+/**
+ * WP8: a component Strale withheld makes the bundle unbillable on BOTH rails.
+ *
+ * The review's blocking finding. The rule first shipped inside
+ * routes/solution-execute.ts, so the wallet rail applied it and the x402 rail
+ * did not — a partially successful x402 run with a quarantined component would
+ * still have settled full price. That is CR-02 again: one economic fact, two
+ * rails, two answers. The rule now lives in aggregateSolutionOutcome.
+ */
+describeMaybe("a withheld component is unbillable on the x402 rail too", () => {
+  let client: ReturnType<typeof postgres>;
+  let db: ReturnType<typeof drizzle>;
+  let app: Awaited<typeof import("../app.js")>["app"];
+
+  let solutionId = "";
+  let solSlug = "";
+  const capIds: string[] = [];
+  const GOOD = `wp8-good-${randomUUID().slice(0, 8)}`;
+  const WITHHELD = `wp8-withheld-${randomUUID().slice(0, 8)}`;
+
+  beforeAll(async () => {
+    client = postgres(DATABASE_URL_TEST!, { max: 4 });
+    db = drizzle(client);
+    const { registerCapability } = await import("../capabilities/index.js");
+    for (const slug of [GOOD, WITHHELD]) {
+      registerCapability(slug, async () => ({
+        output: { ok: true, from: slug },
+        provenance: { source: "wp8", fetched_at: new Date().toISOString() },
+      }));
+    }
+    ({ app } = await import("../app.js"));
+  }, 120_000);
+
+  afterAll(async () => {
+    await client.end();
+  });
+
+  afterEach(async () => {
+    settleSpy.mockClear();
+    if (solSlug) {
+      await db.delete(transactions).where(eq(transactions.solutionSlug, solSlug));
+      await db.delete(x402SettlementIntents).where(eq(x402SettlementIntents.slug, solSlug));
+    }
+    if (solutionId) {
+      await db.delete(solutionSteps).where(eq(solutionSteps.solutionId, solutionId));
+      await db.delete(solutions).where(eq(solutions.id, solutionId));
+    }
+    for (const id of capIds.splice(0)) {
+      await db.delete(capabilities).where(eq(capabilities.id, id));
+    }
+    solutionId = solSlug = "";
+  });
+
+  it("does not settle when one component was quarantined", async () => {
+    solutionId = randomUUID();
+    solSlug = `wp8-sol-${randomUUID().slice(0, 8)}`;
+
+    for (const slug of [GOOD, WITHHELD]) {
+      const id = randomUUID();
+      capIds.push(id);
+      await db.insert(capabilities).values({
+        id,
+        slug,
+        name: `WP8 ${slug}`,
+        description: "Seeded by the WP8 x402 parity test.",
+        category: "developer-tools",
+        inputSchema: { type: "object" },
+        outputSchema: { type: "object" },
+        priceCents: 10,
+        isActive: true,
+        visible: true,
+        avgLatencyMs: 50,
+        lifecycleState: "active",
+      });
+    }
+
+    await db.insert(solutions).values({
+      id: solutionId,
+      slug: solSlug,
+      name: "WP8 x402 parity solution",
+      description: "Seeded by the WP8 x402 parity test.",
+      category: "compliance",
+      priceCents: 250,
+      componentSumCents: 20,
+      valueTier: "standard",
+      maintenanceLevel: "low",
+      geography: "EU",
+      inputSchema: { type: "object", properties: { probe: { type: "string" } } },
+      isActive: true,
+      x402Enabled: true,
+      x402PriceUsd: 2.75,
+    });
+    await db.insert(solutionSteps).values([
+      { solutionId, capabilitySlug: GOOD, stepOrder: 1, inputMap: { probe: "probe" } },
+      { solutionId, capabilitySlug: WITHHELD, stepOrder: 2, inputMap: { probe: "probe" } },
+    ]);
+
+    // Quarantine EXACTLY as the quality floor does.
+    await db
+      .update(capabilities)
+      .set({ visible: false, x402Enabled: false })
+      .where(eq(capabilities.slug, WITHHELD));
+
+    const { __resetX402CacheForTests } = await import("./x402-gateway-v2.js");
+    __resetX402CacheForTests();
+
+    const res = await app.request(`http://localhost/x402/solutions/${solSlug}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-PAYMENT": `wp8-auth-${randomUUID()}`,
+      },
+      body: JSON.stringify({ probe: "wp8" }),
+    });
+
+    // Step 1 SUCCEEDED, so the pre-WP8-remediation aggregate would have called
+    // this billable and settled the full USDC.
+    expect(settleSpy, "a withheld component must stop settlement").not.toHaveBeenCalled();
+    expect(res.status).toBe(502);
+
+    // And the run is recorded rather than vanishing — the canonical unbilled row.
+    const rows = await db
+      .select({ priceCents: transactions.priceCents })
+      .from(transactions)
+      .where(eq(transactions.solutionSlug, solSlug));
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+    expect(rows[0]!.priceCents).toBe(0);
   }, 120_000);
 });

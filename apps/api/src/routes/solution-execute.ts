@@ -416,6 +416,9 @@ solutionExecuteRoute.post(
     const gated = execResult.gated;
     const stepsSucceeded = outcome.steps_succeeded;
     const allFailed = stepsSucceeded === 0;
+    // WP8 remediation: the withheld rule moved into aggregateSolutionOutcome, so
+    // `billable` already accounts for it and BOTH rails inherit it. Keeping a
+    // second copy here was what let the x402 rail settle a withheld run.
     const refundRequired = !outcome.billable;
 
     // /v1/do vocabulary: "completed" or "failed". Partial success maps to

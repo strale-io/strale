@@ -1,0 +1,144 @@
+package: WP8
+title: Policy convergence — one eligibility authority
+status: REMEDIATED
+depends_on: [WP4]
+risks: [CR-05, N5, N6]
+
+objective: >
+  "May this capability be served right now?" is currently answered by two
+  different columns, consulted by different rails, and by neither in the place
+  that matters most. WP4 did this for billability; this is the same move for
+  eligibility.
+
+# Measured against PRODUCTION, not read off the audit.
+production_evidence:
+  two_authorities_already_disagree: >
+    6 capabilities have lifecycle_state = 'validating' with is_active = true.
+    The wallet rail gates on `isActive` (routes/do.ts:642) and would serve them.
+    The x402 rail gates on lifecycle_state IN ('active','probation')
+    (routes/x402-gateway-v2.ts:157-164) and would not. Same capability, same
+    instant, two answers — decided by which rail the caller used. This is CR-02
+    restated for eligibility instead of billability.
+  solution_steps_are_gated_by_nothing: >
+    24 solution steps point at a capability that is either non-servable by
+    lifecycle or is_active = false. lib/solution-executor.ts contains no
+    eligibility check of any kind — grep for lifecycleState, isActive or
+    quarantine returns nothing. So a capability the platform has decided not to
+    serve still runs, as a step, inside the bundles that are the most expensive
+    thing we sell.
+  catalogue_shape:
+    - "active/is_active=true: 299"
+    - "deactivated/is_active=false: 20"
+    - "degraded/is_active=false: 8"
+    - "validating/is_active=true: 6   <- the divergence"
+    - "active/is_active=false: 5      <- and the mirror of it"
+    - "probation/is_active=true: 1"
+
+defects:
+  divergent_predicates: >
+    lib/x402-eligibility.ts::isX402PayableCapability exists and is correct, but
+    it is imported by exactly one file (routes/do.ts). Every other rail
+    open-codes its own rule, so the shared predicate is a convention rather than
+    an authority.
+  in_flight_delisting_race: >
+    The x402 gateway answers from a 60-second catalogue cache
+    (routes/x402-gateway-v2.ts, CACHE_TTL_MS). A capability quarantined mid-
+    window keeps serving until the cache turns over, and the quality floor's
+    delisting is exactly the event that should take effect immediately.
+  breaker_does_not_hear_x402: >
+    WP4 wired counts_against_capability into the /v1/do breaker sites. The x402
+    rail records failures in its own transaction rows but does not feed the same
+    signal, so a capability failing only on the x402 rail is invisible to the
+    circuit breaker and to the quality floor.
+
+# Exit condition 2 named `checkSolutionGates` autoactivation. That symbol does
+# not exist anywhere in the tree — verified by grep across src/. Either it was
+# removed before this program began or the audit named it from an older
+# revision. Recorded rather than silently dropped; nothing to delete.
+checkSolutionGates: ABSENT_ALREADY
+
+review:
+  independent_agent: FAIL_REMEDIATION_REQUIRED, then all findings closed
+
+  blocking_1_the_gate_could_not_see_quarantine: >
+    isServableCapability read is_active and lifecycle_state. The quality floor
+    quarantines with {visible:false, x402Enabled:false} — it touches NEITHER, so
+    the predicate returned true for every floor-quarantined capability and the
+    gate let them straight through. Production: page-speed-test quarantined
+    2026-08-20, still is_active=true and lifecycle_state='active', and a step in
+    TWO live x402-enabled paid solutions; danish-company-data the same in FOUR
+    more, two of them EUR 2.50 KYB bundles. Six live paid solutions contain a
+    quarantined capability.
+
+    This also made my report to Petter wrong. I had told him there was no live
+    exposure, having queried the two columns quarantine does not use. His
+    instinct that "solutions using forbidden capabilities is not ok" was right
+    and my correction of it was not.
+
+  blocking_2_would_have_broken_the_biggest_x402_earner: >
+    The live re-read used /v1/do's predicate, which excludes free-tier because
+    that rail serves those calls for free. The gateway is different: on it
+    "free" means price_cents = 0, and free-tier capabilities carry a real price
+    and are genuinely sold there. Six would have 503'd permanently — including
+    email-validate, the single highest-volume x402 slug at roughly a fifth of
+    call volume. isX402RailEligible mirrors the gateway's own catalogue filter.
+
+  second_review_round:
+    blocking_1_the_rule_was_in_a_rail_not_the_authority: >
+      The withheld-component rule shipped inside routes/solution-execute.ts, so
+      the WALLET rail applied it and the x402 rail did not — a partially
+      successful x402 run with a quarantined component would still have settled
+      full price. CR-02 again: one economic fact, two rails, two answers. Worse,
+      putting the rule in a rail violated the exact principle
+      lib/execution-outcome.ts exists to enforce, which I had written myself one
+      package earlier. Now in aggregateSolutionOutcome, so `billable` accounts
+      for it and both rails inherit it.
+    blocking_2_toctou_on_solution_eligibility: >
+      Eligibility was loaded once before any group executed, so a capability
+      quarantined after the run started still executed in a later group from a
+      stale snapshot — the same delisting race WP8 closed on the x402 catalogue
+      cache, with a shorter window and no justification for the inconsistency.
+      Re-read per group now, with the invariant stated so it is testable: a
+      quarantine stops execution that has NOT begun; steps already in flight
+      finish, because killing those discards work the customer is about to
+      receive (the WP3 reservation-TTL reasoning). The stale columns were
+      REMOVED from the step query rather than left in scope — a tempting stale
+      copy is how the first version went wrong.
+    non_blocking_metric_name: >
+      platformHealth.quarantined counted every active invisible capability while
+      the docs said eight of nine are pre-launch. Renamed to
+      withheldFromCatalog. Publishing a knowingly wrong name is worse than an
+      imprecise one. The rename surfaced a consumer in scripts/ceo-dashboard.ts
+      that my earlier grep missed because it searched only src/ — it printed
+      "N paused", which was never true; it now reads "not yet live".
+    tests_added:
+      - "x402 solution with a quality-floor-style quarantine: withheld step never executes, settlement never occurs, an unbilled canonical row exists"
+      - "quarantine landing BETWEEN groups: the next group does not run against the stale snapshot"
+      - "both mutation-checked — removing the aggregate rule reddens the parity test, defeating the per-group re-read reddens the race test"
+
+  non_blocking_closed:
+    - "a fifth open-coded copy in routes/a2a.ts, invisible to the guard because it was a bare array literal — the most likely copy-paste shape"
+    - "lib/suggest.ts was MORE permissive than the floor; my allowlist entry claimed the opposite, classified without reading"
+    - "an import line exempted a whole file from the guard; now a call or shared-constant import is required"
+    - "only four directories were scanned; a new top-level dir was a free bypass"
+    - "two guard assertions were satisfied by the import line alone — delete the logic, keep the import, still green"
+    - "the quarantine test set {lifecycleState:'degraded', isActive:false}, which is DEACTIVATION; it passed while proving something else, and its title contradicted production"
+    - "the metrics comment claimed nine quarantines; one is a floor quarantine, eight are pre-launch"
+
+  consequence_for_petter: >
+    Six live paid solutions currently depend on a quarantined capability. With
+    the gate working, those bundles no longer run that step — and because a
+    component WE withheld is not partial delivery, they no longer charge for the
+    run either (DEC-14). Four DK solutions lose danish-company-data, two SEO
+    solutions lose page-speed-test. Not charging is the platform's call;
+    DEACTIVATING a revenue earner is not, so the solutions stay live and simply
+    do not bill until the capabilities are promoted back.
+
+exit_conditions:
+  - one predicate answers "may this be served", consumed by every rail
+  - solution steps consult it                      # 24 live steps do not today
+  - quarantine unbypassable on /v1/do X-Payment    # already true (WP0); keep it true by construction
+  - the delisting race is closed or bounded
+  - x402 failures feed the same breaker signal as wallet failures
+  - a guard prevents a new rail open-coding its own rule
+  - independent adversarial review passes

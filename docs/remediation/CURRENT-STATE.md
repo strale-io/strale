@@ -2,13 +2,43 @@
 
 _Last updated: 2026-08-21 (session 1)_
 
-- **Current package:** WP7 — ACCEPTED, merged as `8d6c860` (PR #353), verified live.
-- **Next package:** WP6 — idempotency & replay (WP1 already pinned its acceptance signal)
+- **Current package:** WP6 — ACCEPTED, merged as `4302547` (PR #354), verified live.
+- **Next package:** WP8
 - **WP3:** ACCEPTED, merged as `ee7f737` (PR #350), verified live in production — table, all three indexes, and the CHECK constraint reached `validated=true`.
 - **Latest accepted SHA:** `ee7f737` on `main`
 - **Unresolved blockers:** none
 - **Human approvals granted:** program-level autonomy (run continuously; escalate only per CHECK-IN A/B/C)
 - **Awaiting founder:** nothing. One item is logged for *visibility only*, not decision — see "Codex disposition" below.
+
+## Where WP6 landed
+
+Idempotency keys are bound to a fingerprint of the request they were issued
+for. WP1's three pinned defects all inverted.
+
+The sharpest was that a key reused across two capabilities returned the FIRST
+one's output while the response echoed the slug the caller had just asked for.
+Reusing `order-123` across two calls is far likelier than a UUID collision.
+
+Two gaps beyond the pins, both money: **solutions had no replay guard at all**
+(a retried EUR 2.50 call was charged twice — the capability rail has had this
+since MVP, the bundle rail never did), and **A2A dropped the header**, so those
+clients could not make a retry safe no matter what they sent.
+
+The review's two blocking findings were both mine and both instructive:
+
+1. A parameter threaded into `executeFreeTierAuthenticated` and never written.
+   Its PRESENCE is what made the omission read as done — tsc cannot flag an
+   unused parameter, and every integration case seeded a paid capability.
+2. The solutions replay matched ANY prior row with that key, and all 421
+   existing keyed rows are capability rows with a null fingerprint. A customer
+   reusing an old key on a KYB bundle would have received a capability's payload
+   labelled as a KYB Complete result — the wrong-answer class this package
+   exists to close, introduced BY it.
+
+**Post-deploy verification mattered here specifically.** Block 0098 has no
+behavioural test — CI materialises the schema before migrations run, so its
+statements are no-ops there. Confirmed against production: fingerprint column
+present, global unique index dropped, per-user index in force.
 
 ## Where WP7 landed — the biggest finding of the program
 

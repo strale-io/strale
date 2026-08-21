@@ -20,6 +20,7 @@ const payable: X402EligibilityFields = {
   x402Enabled: true,
   marketplaceEligible: true,
   lifecycleState: "active",
+      visible: true,
 };
 
 describe("isX402PayableCapability", () => {

@@ -167,6 +167,9 @@ describe("the refund path, structurally", () => {
     // pinning the literal `allFailed || gated !== undefined` would now forbid
     // the fix. What it pins instead is stronger — that this rail derives the
     // decision rather than making one.
+    // WP8 remediation moved the withheld rule INTO aggregateSolutionOutcome,
+    // so this rail derives it from `billable` again — which is the point. A
+    // second copy here is what let the x402 rail settle a withheld run.
     expect(src).toContain("const refundRequired = !outcome.billable;");
     expect(src).toContain("if (refundRequired) {");
 

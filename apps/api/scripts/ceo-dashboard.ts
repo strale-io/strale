@@ -271,7 +271,10 @@ async function main() {
         icon("pulse", hv && hv.breakersOpen > 0 ? "i-warn" : "i-good")}</div>
         <div class="kval">${hv ? `${hv.breakersOpen}<span class="unit"> switched off</span>` : "—"}</div>
         <div class="kfoot">${hv
-          ? `${hv.active} data services working · ${hv.quarantined} paused`
+          // WP8: renamed from `quarantined`, which the number never was — most
+          // of it is pre-launch capabilities, not paused ones. "not yet live"
+          // covers both honestly for a founder-facing dashboard.
+          ? `${hv.active} data services working · ${hv.withheldFromCatalog} not yet live`
           : healthNote}</div></div>
 
       <div class="kpi"><div class="krow"><span class="klabel">Money spent this week</span>${

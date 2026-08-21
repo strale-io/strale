@@ -127,6 +127,7 @@ describeMaybe("async /v1/do — surviving a hard process kill", () => {
       // Above ASYNC_THRESHOLD_MS, so /v1/do takes the debit-first async path.
       avgLatencyMs: 20_000,
       lifecycleState: "active",
+      visible: true,
     });
   }
 
