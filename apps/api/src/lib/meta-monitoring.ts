@@ -21,6 +21,7 @@ import {
   checkChainFailedCount,
   checkChainStuckDeferred,
   checkChainUnhashedLegacyCount,
+  checkChainForks,
 } from "./chain-health-monitoring.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -980,6 +981,10 @@ export const CHECK_REGISTRY: CheckRegistration[] = [
   // Daily — informational count of pre-chain rows from migration 0047/0052.
   // Stable count; not an alert; verifies methodology page disclosure.
   { name: "chain_unhashed_legacy_count", fn: checkChainUnhashedLegacyCount, schedule: "daily" },
+  // WP7: a branch-topology check that RUNS. The first version shipped
+  // detectChainForks as an exported function nothing called — a fork detector
+  // no scheduler invokes detects nothing.
+  { name: "chain_fork_detection", fn: checkChainForks, schedule: "daily" },
 
   // Weekly — coverage sweeps (DB-heavy). SQS integrity checks retired
   // (DEC-20260503-B): score_without_evidence / stuck_scores /

@@ -92,6 +92,22 @@ async function runOnce(): Promise<void> {
       // id is the secondary tiebreaker for same-millisecond inserts; it's
       // a uuid().defaultRandom(), so the order is deterministic without
       // implying time semantics.
+      // WP7 — CHAIN_ORDER_NOTE. Two changes, both load-bearing:
+      //
+      // 1. TERMINAL-ONLY ADMISSION. `status` and `completed_at` are hashed
+      //    fields, so admitting a row that is still running bakes in values
+      //    that will change, and its hash silently stops describing it —
+      //    indistinguishable from tampering. Production had 507 such rows: 506
+      //    health probes with a null completed_at, and one transaction stuck in
+      //    'executing' since 2026-04-07 that WP3's reconciler will eventually
+      //    move. Requiring a completed_at is also what stops another null-head
+      //    row from ever entering the chain.
+      //
+      // 2. ONE ORDERING. This ordered by (created_at, id) while
+      //    getPreviousHash picked the head by (completed_at, id), so the tip a
+      //    batch produced was not the head the next tick resumed from. Both now
+      //    use completed_at with id as the deterministic tiebreaker. If you
+      //    change one, change the other; they are one decision expressed twice.
       const pending = await tx
         .select()
         .from(transactions)
@@ -99,10 +115,32 @@ async function runOnce(): Promise<void> {
           and(
             eq(transactions.complianceHashState, "pending"),
             lt(transactions.createdAt, pendingCutoff),
+            sql`${transactions.completedAt} IS NOT NULL`,
+            sql`${transactions.status} IN ('completed', 'failed')`,
           ),
         )
-        .orderBy(asc(transactions.createdAt), asc(transactions.id))
+        .orderBy(asc(transactions.completedAt), asc(transactions.id))
         .limit(BATCH_SIZE);
+
+      // Rows that will never be chain-eligible must LEAVE the queue, or they
+      // are reselected every tick forever and the bounded batch fills with work
+      // that cannot progress — the starvation shape WP5's review caught one
+      // package earlier. 'excluded' is terminal and says why.
+      await tx
+        .update(transactions)
+        .set({ complianceHashState: "excluded" })
+        .where(
+          and(
+            eq(transactions.complianceHashState, "pending"),
+            lt(transactions.createdAt, pendingCutoff),
+            // ALLOWLIST, not a denylist. A denylist silently drops any status
+            // literal added later — 'refunded', 'cancelled', 'expired' — from
+            // the audit chain with no signal at all. Naming what is excluded
+            // means a new status stays 'pending' and shows up in the backlog
+            // check instead of vanishing.
+            sql`${transactions.status} IN ('health_probe')`,
+          ),
+        );
 
       if (pending.length === 0) return;
 
@@ -156,6 +194,12 @@ async function runOnce(): Promise<void> {
               integrityHash: hash,
               previousHash: currentPrevious,
               complianceHashState: "complete",
+              // WP7: claim the next chain position AT HASH TIME. This is what
+              // makes the head well-defined — see getPreviousHash. Assigning it
+              // here, in the same UPDATE as the hash, means a row cannot be
+              // hashed without taking a position or take one without being
+              // hashed.
+              chainSeq: sql`nextval('transactions_chain_seq')`,
             })
             .where(eq(transactions.id, txn.id));
           currentPrevious = hash;

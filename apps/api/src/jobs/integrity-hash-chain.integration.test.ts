@@ -22,7 +22,7 @@
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { randomUUID } from "node:crypto";
@@ -193,11 +193,13 @@ describeMaybe("integrity hash chain admission", () => {
     expect(guardsPreviousHash).toBe(false);
   }, 120_000);
 
-  it("PINS BUG: head selection and batch threading use different orderings", async () => {
-    // The worker threads a batch by (created_at, id) ASC; getPreviousHash()
-    // picks the head by (completed_at, id) DESC. This row is created before a
-    // sibling but completed after it, so the tip the batch produces is not the
-    // head the next tick resumes from.
+  it("head selection and batch threading agree (WP7 inverts the WP1 pin)", async () => {
+    // This test was named "PINS BUG" and asserted the defect: the worker
+    // threaded by (created_at, id) while getPreviousHash picked the head by
+    // (completed_at, id), so the tip a batch produced was not the head the next
+    // tick resumed from, and one parent acquired two children. Both now order
+    // by completed_at. The expectation inverts, exactly as WP1's comment said
+    // it would.
     const earlyCreatedLateCompleted = await insertCompleted({
       createdAgoMs: OLDER_THAN_GRACE + 5_000,
       completedAgoMs: OLDER_THAN_GRACE + 500,
@@ -215,19 +217,183 @@ describeMaybe("integrity hash chain admission", () => {
     ]);
     for (const row of rows) expect(row.integrityHash).toBeTruthy();
 
-    // Now the head the NEXT tick would start from.
     const { getPreviousHash } = await import("../lib/integrity-hash.js");
     const head = await getPreviousHash();
 
-    const tip = rows.find((r) => r.id === lateCreatedEarlyCompleted)!;
-    const laterCompleted = rows.find((r) => r.id === earlyCreatedLateCompleted)!;
+    // The TIP is whichever row the batch chained last — i.e. the one that is
+    // nobody's parent. Deriving it from the data rather than naming a row is
+    // what makes this discriminating: naming `earlyCreatedLateCompleted`
+    // asserted that head selection agrees with itself, which is true under the
+    // bug too. Verified by mutation — reverting the batch to (created_at, id)
+    // turns this red.
+    const parents = new Set(rows.map((r) => r.previousHash).filter(Boolean));
+    const tips = rows.filter((r) => !parents.has(r.integrityHash));
+    expect(tips, "a batch must produce exactly one tip").toHaveLength(1);
+    expect(head).toBe(tips[0]!.integrityHash);
+  }, 120_000);
 
-    // Threading order made `lateCreatedEarlyCompleted` the batch tip, but head
-    // selection returns the row with the greatest completed_at instead. The
-    // next admission therefore links to a row that is not the chain tip, which
-    // is how two children of one parent arise. WP7 makes the two orderings
-    // agree; this expectation then inverts.
-    expect(head).toBe(laterCompleted.integrityHash);
-    expect(head).not.toBe(tip.integrityHash);
+  it("a null completed_at row cannot capture the head", async () => {
+    // THE production defect, and the reason the chain stopped being a chain.
+    // Postgres sorts NULLs FIRST under DESC, so one hashed row with a null
+    // completed_at held the head from 2026-05-04 onward and every later batch
+    // linked to it — 150,719 children on one parent.
+    const settled = await insertCompleted({
+      createdAgoMs: OLDER_THAN_GRACE + 3_000,
+      completedAgoMs: OLDER_THAN_GRACE + 3_000,
+    });
+    await runOnce();
+
+    const { getPreviousHash } = await import("../lib/integrity-hash.js");
+    const headBefore = await getPreviousHash();
+
+    // Plant exactly the shape that broke production: hashed, no completed_at.
+    const [planted] = await db
+      .insert(transactions)
+      .values({
+        status: "health_probe",
+        input: {},
+        priceCents: 0,
+        integrityHash: "f".repeat(64),
+        previousHash: headBefore,
+        complianceHashState: "complete",
+        completedAt: null,
+      })
+      .returning({ id: transactions.id });
+
+    try {
+      // The head must be unmoved by a row with no completion time.
+      expect(await getPreviousHash()).toBe(headBefore);
+      expect(headBefore).toBeTruthy();
+    } finally {
+      await db.delete(transactions).where(eq(transactions.id, planted.id));
+    }
+  }, 120_000);
+
+  it("does not admit a non-terminal row to the chain", async () => {
+    // status and completed_at are hashed fields, so hashing a row that is still
+    // running bakes in values that will change — and the recorded hash then
+    // stops describing the row, which is indistinguishable from tampering.
+    const [running] = await db
+      .insert(transactions)
+      .values({
+        status: "executing",
+        input: {},
+        priceCents: 10,
+        complianceHashState: "pending",
+        createdAt: new Date(Date.now() - OLDER_THAN_GRACE - 10_000),
+        // Deliberately HAS a completed_at. A null one is already excluded by
+        // the head-capture guard, so leaving it null meant this test passed
+        // with the status filter removed — it was proving the other fix.
+        // Verified by mutation: dropping the status filter now turns it red.
+        completedAt: new Date(Date.now() - OLDER_THAN_GRACE - 5_000),
+      })
+      .returning({ id: transactions.id });
+
+    try {
+      await runOnce();
+
+      const [after] = await db
+        .select({
+          integrityHash: transactions.integrityHash,
+          state: transactions.complianceHashState,
+        })
+        .from(transactions)
+        .where(eq(transactions.id, running.id));
+
+      expect(after!.integrityHash).toBeNull();
+      // Still pending, not 'excluded': it may yet complete and become eligible.
+      expect(after!.state).toBe("pending");
+    } finally {
+      await db.delete(transactions).where(eq(transactions.id, running.id));
+    }
+  }, 120_000);
+
+  it("detects a fork among SEQUENCED rows, and ignores the historical break", async () => {
+    // Points at the scheduled check, not at a helper. The first version tested
+    // an exported `detectChainForks` that nothing called — a fork detector no
+    // scheduler invokes detects nothing, which was the review's second blocking
+    // finding.
+    const { checkChainForks } = await import("../lib/chain-health-monitoring.js");
+
+    const parent = `parent-${Math.random().toString(36).slice(2, 10)}`;
+    const planted: string[] = [];
+    try {
+      // Two children of one parent, but WITHOUT chain_seq — i.e. the shape of
+      // the pre-WP7 history. Must NOT be reported, or the known break drowns
+      // the signal that a new fork appeared.
+      for (let i = 0; i < 2; i++) {
+        const [row] = await db
+          .insert(transactions)
+          .values({
+            status: "completed",
+            input: {},
+            priceCents: 0,
+            integrityHash: `hist-${i}-${Math.random().toString(36).slice(2)}`,
+            previousHash: parent,
+            complianceHashState: "complete",
+            completedAt: new Date(),
+          })
+          .returning({ id: transactions.id });
+        planted.push(row.id);
+      }
+
+      const historical = await checkChainForks();
+      expect(historical.passed, "unsequenced history must not be reported").toBe(true);
+
+      // Now give them chain positions: the same rows become a REAL fork.
+      for (const id of planted) {
+        await db
+          .update(transactions)
+          .set({ chainSeq: sql`nextval('transactions_chain_seq')` })
+          .where(eq(transactions.id, id));
+      }
+
+      const detected = await checkChainForks();
+      expect(detected.passed, "two sequenced children of one parent is a fork").toBe(false);
+      expect(detected.severity).toBe("critical");
+    } finally {
+      for (const id of planted) {
+        await db.delete(transactions).where(eq(transactions.id, id));
+      }
+    }
+  }, 120_000);
+
+  it("does not fork ACROSS batches when a row completes out of order", async () => {
+    // The review's blocking finding, and the case no test reached: both prior
+    // ordering tests put their rows in ONE batch, where the loop threads them
+    // correctly under either rule. The defect lives at the batch boundary.
+    //
+    // `completed_at` is stamped from a clock read before the row's own
+    // created_at default (median delta in production: MINUS 1.5 ms), so a row
+    // admitted in a later tick can carry an EARLIER completion time. Under the
+    // old max(completed_at) head rule it chained onto the head without becoming
+    // it, and the next row chained onto the same parent.
+    const first = await insertCompleted({
+      createdAgoMs: OLDER_THAN_GRACE + 9_000,
+      completedAgoMs: OLDER_THAN_GRACE + 1_000,
+    });
+    await runOnce();
+
+    // Second tick: a row whose completed_at is EARLIER than what tick 1 left as
+    // the head.
+    const backdated = await insertCompleted({
+      createdAgoMs: OLDER_THAN_GRACE + 8_000,
+      completedAgoMs: OLDER_THAN_GRACE + 7_000,
+    });
+    await runOnce();
+
+    const rows = await chainRows([first, backdated]);
+    for (const row of rows) expect(row.integrityHash).toBeTruthy();
+
+    // The property: distinct parents. Same parent for both = the fork.
+    const parents = rows.map((r) => r.previousHash);
+    expect(new Set(parents).size, "each row must chain onto a distinct parent").toBe(
+      parents.length,
+    );
+
+    // And the head is the LAST-HASHED row, not the latest-completed one.
+    const { getPreviousHash } = await import("../lib/integrity-hash.js");
+    const backdatedRow = rows.find((r) => r.id === backdated)!;
+    expect(await getPreviousHash()).toBe(backdatedRow.integrityHash);
   }, 120_000);
 });

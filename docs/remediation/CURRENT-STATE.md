@@ -2,13 +2,39 @@
 
 _Last updated: 2026-08-21 (session 1)_
 
-- **Current package:** WP4 — ACCEPTED, merged as `c7efbb4` (PR #351).
-- **Next package:** WP5
+- **Current package:** WP5 — ACCEPTED, merged as `8b4b653` (PR #352), verified live.
+- **Next package:** WP7 (audit finality) — WP6 follows per the package order
 - **WP3:** ACCEPTED, merged as `ee7f737` (PR #350), verified live in production — table, all three indexes, and the CHECK constraint reached `validated=true`.
 - **Latest accepted SHA:** `ee7f737` on `main`
 - **Unresolved blockers:** none
 - **Human approvals granted:** program-level autonomy (run continuously; escalate only per CHECK-IN A/B/C)
 - **Awaiting founder:** nothing. One item is logged for *visibility only*, not decision — see "Codex disposition" below.
+
+## Where WP5 landed
+
+Durable settlement intent, written before the facilitator is called. An x402
+settlement is irreversible, and the orphan capture was a catch block in the
+same process — it handled "the INSERT threw" and could not handle "the process
+died", when it never runs either.
+
+Two gaps found by checking rather than assuming: **nothing ever read**
+`x402_orphan_settlements`, and no unique index constrained how many rows one
+settlement could produce.
+
+**The review found the sharpest defect of the program.** The escalate branch
+deliberately left unresolvable rows untouched — but the sweep is
+`ORDER BY updated_at ASC LIMIT 25`, so untouched rows stay permanently the
+oldest, and 25 of them would own the batch forever. The recovery job would have
+silently stopped recovering, with a tick log indistinguishable from health,
+while per-row paging muted the only channel that could report it. The general
+lesson: **a queue that skips rows without mutating them is not a queue.**
+
+Proved fixed by measurement — 30 stuck rows plus one real crash: tick 1
+escalated 25, tick 2 recovered the real one, tick 3 drained.
+
+Verified live: table, all four indexes (including the new one on
+`transactions.x402_settlement_id`, checked against prod for duplicates first —
+0 across 5,675 rows), zero unreconciled orphans.
 
 ## Where WP4 landed
 

@@ -266,3 +266,71 @@ export async function checkChainUnhashedLegacyCount(): Promise<MetaCheckResult> 
     };
   }
 }
+
+/**
+ * Has the hash chain forked since the WP7 fix (branch-topology check)?
+ *
+ * The property that makes a hash chain evidence is one child per parent.
+ * Production is already forked — ten parents with more than one child, the
+ * largest with 150,719, caused by a null-`completed_at` row holding the head
+ * from 2026-05-04 — so a unique index cannot enforce it without aborting boot.
+ * The constraint is therefore checked here instead.
+ *
+ * Scoped to rows the WP7 sequence actually governs. Asking globally would
+ * return the historical break on every run and drown the only signal that
+ * matters: whether a NEW fork has appeared. Scoping on `chain_seq IS NOT NULL`
+ * rather than on a timestamp is deliberate — a time window has a straddle blind
+ * spot, where a fork's two children fall either side of the boundary and each
+ * counts as one.
+ */
+export async function checkChainForks(): Promise<MetaCheckResult> {
+  const check = "chain_fork_detection";
+  try {
+    const db = getDb();
+    const rows = await db.execute(sql`
+      SELECT previous_hash, COUNT(*)::int AS child_count
+      FROM transactions
+      WHERE previous_hash IS NOT NULL AND chain_seq IS NOT NULL
+      GROUP BY previous_hash
+      HAVING COUNT(*) > 1
+      ORDER BY COUNT(*) DESC
+      LIMIT 10
+    `);
+    const forks = (Array.isArray(rows) ? rows : (rows as { rows?: unknown[] })?.rows ?? []) as Array<{
+      previous_hash: string;
+      child_count: number;
+    }>;
+
+    if (forks.length === 0) {
+      return {
+        check,
+        severity: "info",
+        passed: true,
+        details:
+          "No fork among sequenced rows: every parent has exactly one child. " +
+          "Historical rows (chain_seq IS NULL) are excluded — the pre-WP7 break " +
+          "is known and deliberately not rewritten.",
+      };
+    }
+
+    return {
+      check,
+      // A fork means the chain has stopped being evidence of ordering. That is
+      // the compliance claim itself failing, not a degradation of it.
+      severity: "critical",
+      passed: false,
+      details:
+        `${forks.length} parent(s) have more than one child AFTER the WP7 fix. ` +
+        `Largest: ${forks[0]!.previous_hash.slice(0, 16)}… with ${forks[0]!.child_count} children. ` +
+        "The chain is no longer single-parent, so it does not evidence ordering " +
+        "or absence of deletion. Investigate before relying on any audit export.",
+    };
+  } catch (err) {
+    return {
+      check,
+      severity: "warning",
+      passed: false,
+      details: `Check failed: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+}

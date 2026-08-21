@@ -95,23 +95,37 @@ export function computeIntegrityHash(
  * Returns the genesis hash if no previous transactions exist.
  */
 export async function getPreviousHash(): Promise<string> {
-  try {
-    const db = getDb();
-    const [latest] = await db
-      .select({ integrityHash: transactions.integrityHash })
-      .from(transactions)
-      .where(sql`${transactions.integrityHash} IS NOT NULL`)
-      // F-A-008: stable sort via `id DESC` as tiebreaker — same-ms
-      // `completedAt` rows would otherwise be returned in storage-layer
-      // order (non-deterministic). `id` is uuid().defaultRandom(), so
-      // the secondary sort is deterministic without being time-ordered.
-      .orderBy(desc(transactions.completedAt), desc(transactions.id))
-      .limit(1);
-    return latest?.integrityHash ?? GENESIS_HASH;
-  } catch {
-    return GENESIS_HASH;
-  }
+  // WP7: the head is THE LAST ROW THE WORKER HASHED, read from a monotonic
+  // sequence assigned at hash time.
+  //
+  // It cannot be max(completed_at), which was WP7's first attempt and is what
+  // the adversarial review caught. That column is stamped from a clock read
+  // before the row's own `created_at` default — median delta in production is
+  // MINUS 1.5 ms — so a row can be admitted after the head while carrying an
+  // earlier completion time. It then chains onto the head without becoming it,
+  // and the next row chains onto the same parent: one parent, two children.
+  // Replaying that rule over 30 days of real traffic yields nine forks. The
+  // same shape also arises from a per-row failure inside a batch, which is
+  // retried on a later tick with a smaller completed_at.
+  //
+  // A sequence is monotone in the only order that matters — the order rows
+  // were actually chained — so backdating, clock skew and retries become
+  // structurally incapable of forking rather than merely unlikely to.
+  //
+  // FAILS CLOSED. This was once wrapped in `catch { return GENESIS_HASH; }`,
+  // so a transient DB error silently started a second chain; genesis has 11
+  // children in production, which is what that looks like. Genesis is now
+  // returned for exactly one reason: no row has ever been sequenced.
+  const db = getDb();
+  const [latest] = await db
+    .select({ integrityHash: transactions.integrityHash })
+    .from(transactions)
+    .where(sql`${transactions.chainSeq} IS NOT NULL`)
+    .orderBy(desc(transactions.chainSeq))
+    .limit(1);
+  return latest?.integrityHash ?? GENESIS_HASH;
 }
+
 
 /**
  * Verify a single transaction's integrity hash.
