@@ -393,6 +393,52 @@ export const disputeRequests = pgTable("dispute_requests", {
   dispositionNotes: text("disposition_notes"),
 });
 
+// ─── x402_settlement_intents ────────────────────────────────────────────────
+// WP5: durable intent, written BEFORE the facilitator is called. The orphan
+// table below only catches "the INSERT threw"; it cannot catch "the process
+// died", because then its catch block never runs either. This table is what
+// survives a SIGKILL between an irreversible on-chain settlement and the row
+// that records it.
+export const x402SettlementIntents = pgTable(
+  "x402_settlement_intents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    // One intent per payment authorization. Unique so a replayed header cannot
+    // create a second attempt record for one platform action.
+    paymentHash: text("payment_hash").notNull(),
+    slug: text("slug").notNull(),
+    solutionSlug: text("solution_slug"),
+    priceCents: integer("price_cents").notNull(),
+    priceUsd: decimal("price_usd", { precision: 10, scale: 4 }),
+    // 'settling' | 'settled' | 'recorded' | 'failed'
+    state: varchar("state", { length: 16 }).notNull().default("settling"),
+    settlementId: text("settlement_id"),
+    transactionId: uuid("transaction_id"),
+    failureReason: text("failure_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("x402_settlement_intents_payment_hash_unique").on(
+      table.paymentHash,
+    ),
+    index("x402_settlement_intents_state_updated_idx").on(
+      table.state,
+      table.updatedAt,
+    ),
+    // One canonical record per settlement, enforced structurally rather than by
+    // convention. Partial, because the column is null until the facilitator
+    // answers and null values must not compete for the slot.
+    uniqueIndex("x402_settlement_intents_settlement_id_unique")
+      .on(table.settlementId)
+      .where(sql`${table.settlementId} IS NOT NULL`),
+  ],
+);
+
 // ─── x402_orphan_settlements ────────────────────────────────────────────────
 // CCO P0 #12: log of x402 settlements that succeeded on-chain but whose
 // transactions row INSERT failed. See migration 0053 for the recovery

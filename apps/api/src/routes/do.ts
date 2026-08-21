@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { eq, and, gte, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import * as settlementIntent from "../lib/x402-settlement-intent.js";
 import {
   assertBillableOutput,
   shouldCountAgainstCapability,
@@ -63,6 +64,7 @@ import {
   settleX402Payment,
   extractPaymentHeader,
   type X402VerifiedPayment,
+  hashPaymentHeader,
 } from "../lib/x402-gateway.js";
 import { recordUnlock, isUnlocked, getUnlockedSlugs } from "../lib/progressive-unlock.js";
 import type { AppEnv } from "../types.js";
@@ -619,6 +621,10 @@ doRoute.post(
         }
         // Stash the verified handle for executeFreeTier to settle post-success.
         c.set("x402_verified" as any, verification.verified);
+        // WP5: and the payment hash, so the settle site downstream can write a
+        // durable intent before it moves USDC. Carried the same way the handle
+        // is, because the settle happens far from where the header is in scope.
+        c.set("x402_payment_hash" as any, hashPaymentHeader(paymentHeader));
         c.set("x402_paid" as any, true);
         // Fall through to normal execution — the capability will execute
         // and the transaction will be logged with payment_method: "x402"
@@ -1316,7 +1322,34 @@ async function executeFreeTier(
     const x402Verified = c.get("x402_verified" as any) as X402VerifiedPayment | undefined;
     let x402SettlementId: string | null = null;
     if (x402Verified) {
+      // WP5: durable intent before the irreversible call. Same reasoning as the
+      // wildcard gateway — a crash between settlement and the transaction row
+      // otherwise leaves the customer's USDC moved and no record anywhere.
+      const paymentHash = c.get("x402_payment_hash" as any) as string | undefined;
+      const intent = paymentHash
+        ? await settlementIntent.openIntent(db, {
+            paymentHash,
+            slug: capability.slug,
+            solutionSlug: null,
+            priceCents: capability.priceCents,
+
+          })
+        : null;
+
       const settled = await settleX402Payment(x402Verified);
+      if (intent) {
+        if (settled.valid && settled.settlementId) {
+          await settlementIntent.markSettled(db, {
+            intentId: intent.id,
+            settlementId: settled.settlementId,
+          });
+        } else {
+          await settlementIntent.markFailed(db, {
+            intentId: intent.id,
+            reason: settled.error ?? "settlement returned invalid",
+          });
+        }
+      }
       if (!settled.valid) {
         await db
           .update(transactions)

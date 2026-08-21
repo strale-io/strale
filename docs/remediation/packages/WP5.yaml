@@ -1,0 +1,71 @@
+package: WP5
+title: x402 durable settlement state + recovery
+status: IN_PROGRESS
+depends_on: [WP3, WP4]
+risks: [CR-01]
+
+objective: >
+  Make an irreversible on-chain settlement recoverable. WP3 did this for wallet
+  debits, which are reversible; this is the harder half, because a settlement
+  cannot be undone and the customer's USDC has already moved.
+
+# Verified against the code and against production, not taken from the audit.
+current_state:
+  orphan_table_exists: >
+    x402_orphan_settlements, added by CCO P0 #12. Its schema comment says a row
+    means "customer paid USDC, settlement succeeded, but our DB write failed —
+    awaiting reconciliation."
+  prod: "0 orphan rows; 6,377 x402 transactions total"
+
+defects:
+  no_durable_intent: >
+    THE defect, and the exact structural analogue of WP3. The orphan capture is
+    a catch block in the same process (routes/x402-gateway-v2.ts:851). It
+    handles "the INSERT threw". It cannot handle "the process died between the
+    settlement succeeding and the INSERT committing", because then the catch
+    never runs either. A SIGKILL there means the customer's USDC moved
+    irreversibly and Strale holds no row anywhere — not in transactions, not in
+    the orphan table. Undetectable except by on-chain reconciliation against
+    our own wallet.
+
+    An in-process catch block is not a recovery mechanism. That was the WP3
+    lesson and it was never applied to the rail where the money movement is
+    irreversible.
+
+  no_uniqueness_per_settlement: >
+    transactions.x402_settlement_id has no unique index, and
+    x402_orphan_settlements.settlement_id has none either. Nothing structurally
+    prevents one settlement being recorded twice. The existing unique index on
+    x402_payment_hash is a DIFFERENT guarantee — it dedups a replayed payment
+    header so the work is not re-executed. It does not constrain how many rows
+    one settlement produces.
+
+  orphan_table_never_read: >
+    No job reads x402_orphan_settlements. Confirmed by grep across src/jobs/:
+    the only x402 job is settlement-watch, a 24h volume tripwire, not a
+    reconciler. "Awaiting reconciliation" means awaiting a human who has to
+    notice first, and nothing pages them. The table has been correct and inert.
+
+design:
+  durable_intent: >
+    Write the intent BEFORE calling the facilitator. state: settling → settled
+    → recorded, plus failed. A crash at any point leaves a durable row naming
+    exactly what was attempted.
+  reconciler_resolves_what_it_can: >
+    - intent 'settled' with a matching transactions row  → mark recorded
+    - intent 'settled' with NO transactions row          → recreate from stored args
+    - intent 'settling', no settlement_id, past deadline → CANNOT be resolved from
+      our side; the chain may or may not have moved. Alert, never guess.
+  the_honest_residual: >
+    That last class is real and irreducible without an on-chain oracle. The
+    reconciler must page rather than assume either way — assuming "settled"
+    invents revenue, assuming "not settled" gives away the work. Money code
+    should refuse to guess and say so loudly.
+
+exit_conditions:
+  - durable intent written before any settlement call
+  - one canonical record per settlement (enforced by a unique index, not convention)
+  - the orphan table is read by something that runs
+  - a crash between settle and record is recoverable, proved by a kill test
+  - ambiguous cases alert rather than resolve themselves
+  - independent adversarial review passes
