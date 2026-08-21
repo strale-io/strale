@@ -1,4 +1,5 @@
 import { eq, and, asc, inArray, sql } from "drizzle-orm";
+import { SERVABLE_LIFECYCLE_STATES } from "./x402-eligibility.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { getDb } from "../db/index.js";
 import {
@@ -335,7 +336,11 @@ async function loadCatalog(): Promise<CatalogItem[]> {
             // strale.dev surfacing per DEC-20260503-A — semantic suggest
             // mirrors the public marketplace.
             eq(capabilities.marketplaceEligible, true),
-            inArray(capabilities.lifecycleState, ["active", "degraded"]),
+            // WP8: was ["active","degraded"] — MORE permissive than the
+            // servability floor, so this recommended capabilities /v1/do then
+            // refused. A recommender may be stricter than the floor; it may
+            // never be looser.
+            inArray(capabilities.lifecycleState, [...SERVABLE_LIFECYCLE_STATES]),
           ),
         );
 

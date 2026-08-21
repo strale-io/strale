@@ -23,8 +23,28 @@ const API_SRC = join(import.meta.dirname, "..");
  * standing in for "may we serve this", written anywhere other than the module
  * that owns the decision.
  */
-const OPEN_CODED_LIFECYCLE =
-  /lifecycleState\s*(?:===|!==|,)\s*["']|lifecycle_state\s*(?:=|<>|!=|IN)\s*|inArray\(\s*capabilities\.lifecycleState/;
+const OPEN_CODED_LIFECYCLE = [
+  // A direct comparison or a drizzle inArray on the column.
+  /lifecycleState\s*(?:===|!==|,)\s*["']|lifecycle_state\s*(?:=|<>|!=|IN)\s*|inArray\(\s*capabilities\.lifecycleState/,
+  // A BARE ARRAY LITERAL of the states. Review finding: routes/a2a.ts held a
+  // fifth copy written exactly this way and the guard could not see it — which
+  // is the worst possible miss, because it is the literal body of
+  // isServableCapability and therefore the most likely copy-paste.
+  /\[\s*["']active["']\s*,\s*["'](?:probation|degraded)["']/,
+];
+
+/*
+ * `is_active` is deliberately NOT a pattern here.
+ *
+ * The review was right that a rail gating on isActive alone is the /v1/do
+ * divergence in miniature. But `eq(capabilities.isActive, true)` appears in
+ * every backfill script, test generator and listing query in the tree —
+ * scanning for it flagged twenty legitimate files. A guard that needs a
+ * thirty-entry allowlist is not a guard; it is noise, and noise gets silenced.
+ *
+ * The lifecycle patterns are what actually diverged, they are rare, and they
+ * are unambiguous about intent. Narrow and enforced beats broad and disabled.
+ */
 
 /**
  * Files reviewed once and found NOT to be deciding servability.
@@ -43,6 +63,10 @@ const REVIEWED_NOT_DECIDING = new Set([
   "lib/x402-eligibility.ts",
   // WRITE lifecycle transitions — they must name the states they move between.
   "jobs/quality-floor.ts",
+  // Selects which capabilities the floor EVALUATES (active + degraded). That is
+  // a different question from whether they may be served — a degraded one is
+  // exactly what the floor exists to assess.
+  "lib/quality-floor.ts",
   "jobs/capability-promotion.ts",
   "jobs/fix-lifecycle-anomalies.ts",
   "lib/startup-migrations.ts",
@@ -92,18 +116,32 @@ describe("one authority answers 'may this capability be served'", () => {
   it("no rail open-codes a lifecycle-state rule", () => {
     const offenders: string[] = [];
 
-    for (const dir of ["routes", "lib", "jobs", "capabilities"]) {
-      for (const file of readdirRecursive(join(API_SRC, dir))) {
+    // Every source directory, not a hand-listed subset: a new top-level dir
+    // (src/middleware/, src/web3-assurance/) was a free bypass.
+    for (const file of readdirRecursive(API_SRC)) {
+      {
         if (!file.endsWith(".ts") || file.includes(".test.")) continue;
         const rel = file.slice(API_SRC.length + 1).replace(/\\/g, "/");
         if (REVIEWED_NOT_DECIDING.has(rel)) continue;
 
         const src = stripComments(readFileSync(file, "utf8"));
-        if (!OPEN_CODED_LIFECYCLE.test(src)) continue;
+        if (!OPEN_CODED_LIFECYCLE.some((re) => re.test(src))) continue;
 
-        // Reading the column to PASS to the predicate is fine; deciding with it
-        // is not. A file that imports the authority is presumed to be feeding it.
-        if (src.includes("x402-eligibility.js")) continue;
+        // A file that CALLS the authority is feeding it, not deciding.
+        //
+        // Was `src.includes("x402-eligibility.js")` — an import line exempted
+        // the WHOLE file, so x402-gateway-v2.ts became invisible the moment it
+        // imported the module, including the open-coded SQL it still contains.
+        // Requiring a call is narrower; a file that both calls and open-codes
+        // is still exempt, which is a known and accepted limit of a regex guard.
+        // Calling a predicate, or consuming the shared state list, both count
+        // as deferring to the authority.
+        if (
+          /isServableCapability\(|isX402RailEligible\(|isX402PayableCapability\(/.test(src) ||
+          /SERVABLE_LIFECYCLE_STATES|X402_PAYABLE_LIFECYCLE_STATES/.test(src)
+        ) {
+          continue;
+        }
 
         offenders.push(rel);
       }

@@ -10,6 +10,7 @@
  */
 
 import { Hono } from "hono";
+import { X402_PAYABLE_LIFECYCLE_STATES } from "../lib/x402-eligibility.js";
 import { recordDiscoveryHit } from "../lib/attribution.js";
 import { eq, and, isNull } from "drizzle-orm";
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -138,7 +139,15 @@ function payableViaX402(row: {
   if (row.isFreeTier) return false; // free tier needs no payment endpoint
   if (!row.x402Enabled) return false;
   // Solutions carry no lifecycle column; absence means "not gated on it".
-  if (row.lifecycleState && !["active", "probation"].includes(row.lifecycleState)) return false;
+  // WP8: the states come from the authority rather than a fifth inline copy —
+  // this one was invisible to the guard precisely because it was written as a
+  // bare array literal, the most likely shape of a copy-paste.
+  if (
+    row.lifecycleState &&
+    !(X402_PAYABLE_LIFECYCLE_STATES as readonly string[]).includes(row.lifecycleState)
+  ) {
+    return false;
+  }
   return true;
 }
 

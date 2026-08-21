@@ -326,9 +326,15 @@ export interface PlatformHealth { breakersOpen: number; active: number; quaranti
  * the states in production are active, deactivated, degraded, probation and
  * validating. The quality floor quarantines by clearing `visible` and
  * `x402_enabled` (jobs/quality-floor.ts), so this gauge reported 0 no matter
- * how many capabilities the armed floor had quarantined. Nine are quarantined
- * as of this change; the dashboard said zero, and an operator watching it would
- * conclude the floor never fires.
+ * how many capabilities the armed floor had quarantined.
+ *
+ * What it counts now is WITHHELD FROM THE CATALOGUE — nine rows today, of which
+ * only one (page-speed-test) is a floor quarantine; the rest are pre-launch
+ * capabilities hidden by the onboarding pipeline. That conflation is deliberate
+ * and disclosed rather than silently precise-looking: both groups are "not
+ * currently offered", which is what an operator reading this number wants to
+ * know. A quarantine-only count needs health_monitor_events minus subsequent
+ * promotions, which is a different measurement and belongs with the floor.
  */
 export async function platformHealth(): Promise<Measurement<PlatformHealth>> {
   const r = await rows<{ breakers: string; active: string; quarantined: string }>(sql`
