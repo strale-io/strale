@@ -1283,7 +1283,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       // WP3: wallet_reservations table + the non-negative balance constraint.
       "runMigration0095_walletReservations",
       "runMigration0096_x402SettlementIntents",
-      "runMigration0097_chainForkDetection",
+      "runMigration0097_chainSequence",
     ]);
   });
 });

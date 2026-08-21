@@ -133,7 +133,12 @@ async function runOnce(): Promise<void> {
           and(
             eq(transactions.complianceHashState, "pending"),
             lt(transactions.createdAt, pendingCutoff),
-            sql`${transactions.status} NOT IN ('completed', 'failed', 'executing', 'pending', 'deferred')`,
+            // ALLOWLIST, not a denylist. A denylist silently drops any status
+            // literal added later — 'refunded', 'cancelled', 'expired' — from
+            // the audit chain with no signal at all. Naming what is excluded
+            // means a new status stays 'pending' and shows up in the backlog
+            // check instead of vanishing.
+            sql`${transactions.status} IN ('health_probe')`,
           ),
         );
 
@@ -189,6 +194,12 @@ async function runOnce(): Promise<void> {
               integrityHash: hash,
               previousHash: currentPrevious,
               complianceHashState: "complete",
+              // WP7: claim the next chain position AT HASH TIME. This is what
+              // makes the head well-defined — see getPreviousHash. Assigning it
+              // here, in the same UPDATE as the hash, means a row cannot be
+              // hashed without taking a position or take one without being
+              // hashed.
+              chainSeq: sql`nextval('transactions_chain_seq')`,
             })
             .where(eq(transactions.id, txn.id));
           currentPrevious = hash;

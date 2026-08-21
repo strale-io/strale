@@ -514,6 +514,12 @@ auditRoute.get("/:transactionId", async (c) => {
   // audit URLs still resolve — but stamp the response so customers and
   // regulators see the row is informational, not hash-protected.
   const isUnhashedLegacy = txn.complianceHashState === "unhashed_legacy";
+  // WP7: rows deliberately kept out of the chain (internal health probes). Not
+  // reachable today — no solution profile resolves for them, so the endpoint
+  // 404s first — but the stamp must be honest if that ever changes. Falling
+  // through to the default would have served a row with a NULL integrity_hash
+  // as `audit_chain_state: "hashed"`.
+  const isExcluded = txn.complianceHashState === "excluded";
 
   // Resolve entity → fetch its compliance profile + personal-data signals.
   let profile: ComplianceProfile | null = null;
@@ -592,7 +598,19 @@ auditRoute.get("/:transactionId", async (c) => {
     // CCO P0 #5: explicit chain-state stamp. For 'unhashed_legacy' rows,
     // a clear disclaimer that the row predates the cryptographic chain
     // and is not third-party verifiable via /v1/verify.
-    audit_chain_state: isUnhashedLegacy ? "unhashed_legacy" : "hashed",
+    audit_chain_state: isUnhashedLegacy
+      ? "unhashed_legacy"
+      : isExcluded
+        ? "excluded"
+        : "hashed",
+    ...(isExcluded
+      ? {
+          excluded_disclaimer:
+            "This row is an internal platform record (not customer activity) and is " +
+            "deliberately not part of the cryptographic audit chain. It is not " +
+            "third-party verifiable via /v1/verify.",
+        }
+      : {}),
     ...(isUnhashedLegacy
       ? {
           unhashed_legacy_disclaimer:

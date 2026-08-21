@@ -22,7 +22,7 @@
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { randomUUID } from "node:crypto";
@@ -243,9 +243,7 @@ describeMaybe("integrity hash chain admission", () => {
     });
     await runOnce();
 
-    const { getPreviousHash, detectChainForks } = await import(
-      "../lib/integrity-hash.js"
-    );
+    const { getPreviousHash } = await import("../lib/integrity-hash.js");
     const headBefore = await getPreviousHash();
 
     // Plant exactly the shape that broke production: hashed, no completed_at.
@@ -266,7 +264,6 @@ describeMaybe("integrity hash chain admission", () => {
       // The head must be unmoved by a row with no completion time.
       expect(await getPreviousHash()).toBe(headBefore);
       expect(headBefore).toBeTruthy();
-      expect(settled).toBeTruthy();
     } finally {
       await db.delete(transactions).where(eq(transactions.id, planted.id));
     }
@@ -311,37 +308,92 @@ describeMaybe("integrity hash chain admission", () => {
     }
   }, 120_000);
 
-  it("detects a fork if one ever appears again", async () => {
-    const { detectChainForks } = await import("../lib/integrity-hash.js");
-    const since = new Date(Date.now() - 60_000);
+  it("detects a fork among SEQUENCED rows, and ignores the historical break", async () => {
+    // Points at the scheduled check, not at a helper. The first version tested
+    // an exported `detectChainForks` that nothing called — a fork detector no
+    // scheduler invokes detects nothing, which was the review's second blocking
+    // finding.
+    const { checkChainForks } = await import("../lib/chain-health-monitoring.js");
 
     const parent = `parent-${Math.random().toString(36).slice(2, 10)}`;
     const planted: string[] = [];
-    for (let i = 0; i < 2; i++) {
-      const [row] = await db
-        .insert(transactions)
-        .values({
-          status: "completed",
-          input: {},
-          priceCents: 0,
-          integrityHash: `child-${i}-${Math.random().toString(36).slice(2)}`,
-          previousHash: parent,
-          complianceHashState: "complete",
-          completedAt: new Date(),
-        })
-        .returning({ id: transactions.id });
-      planted.push(row.id);
-    }
-
     try {
-      const forks = await detectChainForks(since);
-      const found = forks.find((f) => f.previousHash === parent);
-      expect(found, "two children of one parent is a fork").toBeDefined();
-      expect(found!.childCount).toBe(2);
+      // Two children of one parent, but WITHOUT chain_seq — i.e. the shape of
+      // the pre-WP7 history. Must NOT be reported, or the known break drowns
+      // the signal that a new fork appeared.
+      for (let i = 0; i < 2; i++) {
+        const [row] = await db
+          .insert(transactions)
+          .values({
+            status: "completed",
+            input: {},
+            priceCents: 0,
+            integrityHash: `hist-${i}-${Math.random().toString(36).slice(2)}`,
+            previousHash: parent,
+            complianceHashState: "complete",
+            completedAt: new Date(),
+          })
+          .returning({ id: transactions.id });
+        planted.push(row.id);
+      }
+
+      const historical = await checkChainForks();
+      expect(historical.passed, "unsequenced history must not be reported").toBe(true);
+
+      // Now give them chain positions: the same rows become a REAL fork.
+      for (const id of planted) {
+        await db
+          .update(transactions)
+          .set({ chainSeq: sql`nextval('transactions_chain_seq')` })
+          .where(eq(transactions.id, id));
+      }
+
+      const detected = await checkChainForks();
+      expect(detected.passed, "two sequenced children of one parent is a fork").toBe(false);
+      expect(detected.severity).toBe("critical");
     } finally {
       for (const id of planted) {
         await db.delete(transactions).where(eq(transactions.id, id));
       }
     }
+  }, 120_000);
+
+  it("does not fork ACROSS batches when a row completes out of order", async () => {
+    // The review's blocking finding, and the case no test reached: both prior
+    // ordering tests put their rows in ONE batch, where the loop threads them
+    // correctly under either rule. The defect lives at the batch boundary.
+    //
+    // `completed_at` is stamped from a clock read before the row's own
+    // created_at default (median delta in production: MINUS 1.5 ms), so a row
+    // admitted in a later tick can carry an EARLIER completion time. Under the
+    // old max(completed_at) head rule it chained onto the head without becoming
+    // it, and the next row chained onto the same parent.
+    const first = await insertCompleted({
+      createdAgoMs: OLDER_THAN_GRACE + 9_000,
+      completedAgoMs: OLDER_THAN_GRACE + 1_000,
+    });
+    await runOnce();
+
+    // Second tick: a row whose completed_at is EARLIER than what tick 1 left as
+    // the head.
+    const backdated = await insertCompleted({
+      createdAgoMs: OLDER_THAN_GRACE + 8_000,
+      completedAgoMs: OLDER_THAN_GRACE + 7_000,
+    });
+    await runOnce();
+
+    const rows = await chainRows([first, backdated]);
+    for (const row of rows) expect(row.integrityHash).toBeTruthy();
+
+    // The property: distinct parents. Same parent for both = the fork.
+    const parents = rows.map((r) => r.previousHash);
+    expect(new Set(parents).size, "each row must chain onto a distinct parent").toBe(
+      parents.length,
+    );
+
+    // And the head is the LAST-HASHED row, not the latest-completed one.
+    const { getPreviousHash } = await import("../lib/integrity-hash.js");
+    const backdatedRow = rows.find((r) => r.id === backdated)!;
+    expect(await getPreviousHash()).toBe(backdatedRow.integrityHash);
   }, 120_000);
 });

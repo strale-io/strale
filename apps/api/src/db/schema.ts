@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   index,
   primaryKey,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -263,6 +264,21 @@ export const transactions = pgTable(
     // Compliance infrastructure
     integrityHash: varchar("integrity_hash", { length: 128 }),
     previousHash: varchar("previous_hash", { length: 128 }),
+    /**
+     * Position in the hash chain, assigned from a sequence AT HASH TIME (WP7).
+     *
+     * The head must be "the last row the worker hashed". It cannot be
+     * `max(completed_at)`: that column is stamped from a clock read before the
+     * row's own `created_at` default (median delta in production: MINUS 1.5 ms),
+     * so a row can be admitted after the head while carrying an earlier
+     * completion time — it then chains onto the head without becoming it, and
+     * the next row chains onto the same parent. Nine such forks in 30 days of
+     * real traffic.
+     *
+     * NULL on the 863,946 rows hashed before this existed. They are not head
+     * candidates; their chain is unchanged.
+     */
+    chainSeq: bigint("chain_seq", { mode: "number" }),
     // F-0-009 Stage 2: 'pending' | 'complete' | 'failed'.
     // Hashing moved off the hot path; jobs/integrity-hash-retry.ts fills it in.
     // NOT called integrity_hash_status — that column exists on prod and is

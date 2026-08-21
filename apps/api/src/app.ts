@@ -346,16 +346,29 @@ app.get("/health/deep", rateLimitByIp(6, 60_000), async (c) => {
   try {
     const db = getDb();
     // Test the write path on the transactions table (touches all indexes).
-    // CTE inserts a probe row and immediately deletes it — atomic, no data left behind.
     // Uses solution_slug (not capability_id) to satisfy the XOR check constraint.
-    await db.execute(sql`
-      WITH probe AS (
+    //
+    // WP7: this was ONE statement — `WITH probe AS (INSERT … RETURNING id)
+    // DELETE … WHERE id IN (SELECT id FROM probe)` — commented "atomic, no data
+    // left behind". That is false, and it is the generator of the audit-chain
+    // incident. In a data-modifying CTE the DELETE runs against the statement's
+    // snapshot, which predates the CTE's INSERT, so it matches nothing. Every
+    // call to this public endpoint therefore leaked one permanent row: 200 in
+    // August alone, 144 in May — and one of the May rows, hashed with a null
+    // completed_at, captured the chain head and acquired 150,719 children.
+    //
+    // Two statements in one transaction: the DELETE now sees the INSERT.
+    await db.transaction(async (tx) => {
+      const inserted = (await tx.execute(sql`
         INSERT INTO transactions (solution_slug, status, input, price_cents, transparency_marker, data_jurisdiction, is_free_tier)
         VALUES ('_health_probe', 'health_probe', '{}', 0, 'algorithmic', 'EU', true)
         RETURNING id
-      )
-      DELETE FROM transactions WHERE id IN (SELECT id FROM probe)
-    `);
+      `)) as unknown as Array<{ id: string }>;
+      const probeId = inserted[0]?.id;
+      if (probeId) {
+        await tx.execute(sql`DELETE FROM transactions WHERE id = ${probeId}`);
+      }
+    });
     return c.json({ status: "ok", write_path: "ok", latency_ms: Date.now() - start });
   } catch (err) {
     console.error("[health/deep] Write-path probe failed:", err instanceof Error ? err.message : err);
