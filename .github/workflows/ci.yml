@@ -66,11 +66,19 @@ jobs:
       # nothing — which is exactly how these suites lay dormant for months. If
       # the filter stops matching any file, vitest exits non-zero with "No test
       # files found", so the empty-lane case is covered too.
+      # --no-file-parallelism is required, not a preference. Vitest runs each
+      # test file in its own worker process, and each of these imports the app,
+      # whose pool opens up to 30 connections. Nine files in parallel therefore
+      # ask for far more than the server's max_connections of 100, and suites
+      # drop out with a different count on every run. Measured: parallel gives
+      # 8/9 files with 39-44 of 45 tests; sequential gives 45/45 across
+      # repeated runs. They also share one database, so serialising them
+      # removes cross-file interference at the same time.
       - name: Run DB integration suites (fails closed if the DB is missing)
         working-directory: apps/api
         env:
           STRALE_REQUIRE_INTEGRATION_DB: "1"
-        run: npx vitest run integration.test.ts
+        run: npx vitest run --no-file-parallelism integration.test.ts
 
   check:
     runs-on: ubuntu-latest

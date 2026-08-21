@@ -19,9 +19,17 @@
  *
  * Deliberately not an allowlist of production hostnames — that fails open for
  * every host nobody thought to list. Loopback-only fails closed.
+ *
+ * Host alone is not enough, though: an SSH tunnel or port-forward on
+ * localhost:5432 reaches whatever is on the far end, production included. So
+ * the database NAME must also identify itself as a test database. Production
+ * is `railway`, which fails that check even through a tunnel.
  */
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+
+/** A test database has to say so in its name. */
+const TEST_DATABASE_NAME = /test/i;
 
 export class UnsafeTestDatabaseError extends Error {}
 
@@ -47,6 +55,20 @@ export function assertLoopbackDatabaseUrl(url: string): void {
         "tests only run against a loopback database — they INSERT, UPDATE and " +
         "DELETE, and must never be able to reach a shared or production " +
         "database. Start a throwaway Postgres and point DATABASE_URL_TEST at it.",
+    );
+  }
+
+  // Loopback is not proof of a throwaway target: a tunnel or port-forward on
+  // localhost reaches whatever is on the far end. Requiring the name to
+  // identify itself refuses production (`railway`) even down a tunnel.
+  const database = parsed.pathname.replace(/^\//, "");
+  if (!TEST_DATABASE_NAME.test(database)) {
+    throw new UnsafeTestDatabaseError(
+      `DATABASE_URL_TEST names database "${database}", which is not ` +
+        'identifiable as a test database (the name must contain "test"). ' +
+        "Loopback alone does not prove the target is disposable — a tunnel on " +
+        "localhost can reach production. Rename the database or point at a " +
+        "throwaway one.",
     );
   }
 }

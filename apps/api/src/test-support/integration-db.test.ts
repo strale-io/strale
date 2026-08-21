@@ -42,6 +42,53 @@ describe("assertLoopbackDatabaseUrl", () => {
     }
   });
 
+  it("refuses URLs that only look like loopback", () => {
+    // Classic bypass shapes. Every one must land on the refusing side; a
+    // hostname parser that reads the userinfo or the fragment as the host
+    // would send writes to the attacker-chosen server instead.
+    const disguised = [
+      "postgresql://127.0.0.1@evil.com/db", // loopback in the userinfo
+      "postgresql://u:p@evil.com#localhost/db", // loopback in the fragment
+      "postgresql://u:p@127.0.0.1.evil.com/db", // loopback as a subdomain
+    ];
+    for (const url of disguised) {
+      expect(() => assertLoopbackDatabaseUrl(url)).toThrow(UnsafeTestDatabaseError);
+    }
+  });
+
+  it("accepts loopback regardless of case", () => {
+    expect(() =>
+      assertLoopbackDatabaseUrl("postgresql://u:p@LOCALHOST:5432/strale_test"),
+    ).not.toThrow();
+  });
+
+  it("refuses obfuscated loopback encodings, erring towards refusal", () => {
+    // 0177.0.0.1 and 2130706433 both resolve to 127.0.0.1, and
+    // ::ffff:127.0.0.1 is v4-mapped loopback. The guard does not decode them,
+    // so it refuses. That is the safe direction — a false refusal costs a
+    // developer one clear error message; a false accept costs customer data.
+    for (const host of ["0177.0.0.1", "2130706433", "[::ffff:127.0.0.1]"]) {
+      expect(() =>
+        assertLoopbackDatabaseUrl(`postgresql://u:p@${host}/db`),
+      ).toThrow(UnsafeTestDatabaseError);
+    }
+  });
+
+  it("refuses a loopback tunnel pointed at a non-test database", () => {
+    // Loopback is not proof of a throwaway target. An SSH tunnel or
+    // port-forward on localhost:5432 reaches whatever is on the far end, and
+    // production is reachable that way. The database NAME is what
+    // distinguishes them: production is "railway".
+    for (const database of ["railway", "postgres", "strale_prod"]) {
+      expect(() =>
+        assertLoopbackDatabaseUrl(`postgresql://u:p@localhost:5432/${database}`),
+      ).toThrow(UnsafeTestDatabaseError);
+    }
+    expect(() =>
+      assertLoopbackDatabaseUrl("postgresql://u:p@localhost:5432/strale_test"),
+    ).not.toThrow();
+  });
+
   it("refuses a malformed URL rather than passing it through", () => {
     expect(() => assertLoopbackDatabaseUrl("not-a-url")).toThrow(
       UnsafeTestDatabaseError,
