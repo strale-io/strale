@@ -1,6 +1,8 @@
 package: WP3
 title: Durable wallet reservations + reconciler
-status: REVIEW
+status: ACCEPTED
+merged_sha: ee7f737
+merged_pr: 350
 depends_on: [WP2]
 risks: [CR-01, N1]
 
@@ -92,4 +94,4 @@ exit_conditions:
   - duplicate capture is idempotent                          # MET
   - duplicate release is idempotent                          # MET
   - independent adversarial review passes                    # MET after remediation
-  - Fable ACCEPT                                             # pending CI + merge
+  - Fable ACCEPT                                             # MET

@@ -22,7 +22,12 @@ import { solutions, wallets, walletTransactions, transactions } from "../db/sche
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
-import { executeSolution, isSuccessfulStepOutput } from "../lib/solution-executor.js";
+import { executeSolution } from "../lib/solution-executor.js";
+import {
+  aggregateSolutionOutcome,
+  assessOutput,
+  outcomeFromOutput,
+} from "../lib/execution-outcome.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { logError, logWarn } from "../lib/log.js";
 import * as walletService from "../lib/wallet-service.js";
@@ -305,19 +310,25 @@ solutionExecuteRoute.post(
     // UNAVAILABLE steps as successes, so a solution whose step 1 failed
     // (starving every downstream step) billed full price for zero executed
     // checks. Same predicate the x402 rail settles on (DEC-14).
-    const stepsSucceeded = Object.values(execResult.steps).filter(isSuccessfulStepOutput).length;
-    const allFailed = stepsSucceeded === 0;
-
-    // A tripped gate is NOT a failure — the gate step did its job and returned
-    // a true answer ("the page is down"). It is a refund, because the bundle
-    // could not perform the work it was sold for. Before gates existed the
-    // caller paid in full here: the gate step counts as a success, one success
-    // is enough to bill, and the steps behind it had already run and failed.
+    // WP4: the same aggregate the x402 rail now reads. The rule this encodes is
+    // unchanged from what this rail already did — a tripped gate is not a
+    // failure (the gate answered truthfully) but it is a refund, because the
+    // bundle could not perform the work it was sold for. What changed is that
+    // the rule now lives in one place, so the other rail cannot disagree.
+    const outcome = aggregateSolutionOutcome(
+      Object.entries(execResult.steps).map(([stepSlug, stepOutput]) =>
+        outcomeFromOutput(stepSlug, stepOutput),
+      ),
+      execResult.gated,
+    );
     const gated = execResult.gated;
-    const refundRequired = allFailed || gated !== undefined;
+    const stepsSucceeded = outcome.steps_succeeded;
+    const allFailed = stepsSucceeded === 0;
+    const refundRequired = !outcome.billable;
 
-    // /v1/do vocabulary: "completed" or "failed". Partial success maps to "completed"
-    // with per-step detail in audit_trail. A gated run completed — it answered.
+    // /v1/do vocabulary: "completed" or "failed". Partial success maps to
+    // "completed" with per-step detail in audit_trail. A gated run completed —
+    // it answered — so status is not simply `transactionStatusFor(outcome)`.
     const txStatus = allFailed ? "failed" : "completed";
     const chargedPrice = refundRequired ? 0 : sol.priceCents;
 
@@ -337,7 +348,11 @@ solutionExecuteRoute.post(
     // trail that says "14 steps" must list 14 steps.
     const stepAuditEntries = Object.entries(execResult.steps).map(([capSlug, output], index) => {
       const obj = (output && typeof output === "object" ? output : {}) as Record<string, unknown>;
-      const status = isSuccessfulStepOutput(output)
+      // WP4: the audit label reads the same assessment billing reads. Leaving
+      // this on the old predicate would print "completed" for an
+      // `{error, status}` step that billing had just counted as a failure —
+      // the same divergence this package closes, one layer down.
+      const status = assessOutput(capSlug, output).semantically_usable
         ? "completed"
         : obj.skipped === true
           ? "skipped"

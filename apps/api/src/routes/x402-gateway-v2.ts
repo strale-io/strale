@@ -42,7 +42,11 @@ import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { extractClientMeta, recordDiscoveryHit, hashX402Payer } from "../lib/attribution.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
-import { executeSolution, isSuccessfulStepOutput } from "../lib/solution-executor.js";
+import { executeSolution } from "../lib/solution-executor.js";
+import {
+  aggregateSolutionOutcome,
+  outcomeFromOutput,
+} from "../lib/execution-outcome.js";
 import { logError } from "../lib/log.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import { getProcessingLocation } from "../lib/processing-location.js";
@@ -1108,16 +1112,28 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     return c.json({ error: "Solution has no steps configured." }, 503);
   }
 
-  // Settle only if at least one step produced output. All-steps-failed returns
-  // a 4xx-shaped response and the caller keeps their USDC authorization.
-  // Shared predicate with the wallet path (money-integrity 2026-08-12) — it
-  // also covers the new `unavailable` marker for deactivated steps.
-  const anyStepSucceeded = Object.values(result.steps).some(isSuccessfulStepOutput);
-  if (!anyStepSucceeded) {
+  // WP4: billability comes from the canonical outcome, not from a predicate
+  // local to this rail. Before this, the token `gated` appeared zero times in
+  // this file, so a solution whose gate tripped refunded the wallet customer in
+  // full and settled the x402 customer in full — same execution, opposite
+  // billing, decided by the caller's payment method. `result.gated` was
+  // available here the whole time; nothing read it.
+  const outcome = aggregateSolutionOutcome(
+    Object.entries(result.steps).map(([stepSlug, stepOutput]) =>
+      outcomeFromOutput(stepSlug, stepOutput),
+    ),
+    result.gated,
+  );
+
+  if (!outcome.billable) {
     return c.json(
       {
-        error: "Solution failed — no steps produced output. No payment was taken.",
+        error:
+          outcome.failure_class === "gate_tripped"
+            ? `Solution could not run: ${outcome.error_message}. No payment was taken.`
+            : "Solution failed — no steps produced output. No payment was taken.",
         solution: sol.slug,
+        failure_class: outcome.failure_class,
         steps: result.steps,
         errors: result.errors,
       },
