@@ -15,8 +15,12 @@
  */
 
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import {
+  computeIdempotencyFingerprint,
+  isReplayable,
+} from "../lib/idempotency-fingerprint.js";
 import { extractClientMeta } from "../lib/attribution.js";
 import { solutions, wallets, walletTransactions, transactions } from "../db/schema.js";
 import { authMiddleware } from "../lib/middleware.js";
@@ -58,6 +62,14 @@ solutionExecuteRoute.post(
     }
 
     const inputs = body.inputs;
+
+    // WP6: bound to the bundle and its inputs, exactly as on the capability
+    // rail, so one helper defines what "the same request" means everywhere.
+    const idempotencyKey = c.req.header("Idempotency-Key") || null;
+    const idempotencyFingerprint = computeIdempotencyFingerprint({
+      capabilitySlug: slug,
+      inputs: inputs as Record<string, unknown> | null,
+    });
     if (!inputs || typeof inputs !== "object" || Array.isArray(inputs)) {
       return c.json(
         apiError("invalid_request", "'inputs' is required and must be an object."),
@@ -115,6 +127,30 @@ solutionExecuteRoute.post(
     try {
       const txResult = await db.transaction(async (tx) => {
         // Lock wallet row
+        // WP6: idempotency on the most expensive SKUs. Solutions had NO replay
+        // guard at all, so a client retrying a €2.50 call — a timeout, a proxy
+        // redelivery, an agent's own retry loop — was charged again. The
+        // capability rail has had this since MVP; the bundle rail never did.
+        if (idempotencyKey) {
+          const [prior] = await tx
+            .select()
+            .from(transactions)
+            .where(
+              and(
+                eq(transactions.idempotencyKey, idempotencyKey),
+                eq(transactions.userId, user.id),
+                isNull(transactions.deletedAt),
+              ),
+            )
+            .limit(1);
+
+          if (prior) {
+            return isReplayable(prior.idempotencyFingerprint, idempotencyFingerprint)
+              ? { ok: false as const, replayOf: prior }
+              : { ok: false as const, keyConflictWith: prior.id };
+          }
+        }
+
         const [wallet] = await tx
           .select()
           .from(wallets)
@@ -136,6 +172,8 @@ solutionExecuteRoute.post(
             capabilityId: null,
             solutionSlug: sol.slug,
             status: "executing",
+            idempotencyKey,
+            idempotencyFingerprint,
             clientMeta: extractClientMeta(c.req, {
               src: c.req.query("src"),
               ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
@@ -186,6 +224,40 @@ solutionExecuteRoute.post(
           reservationId: reservation.id,
         };
       });
+
+      // WP6: three distinct not-ok shapes now share this branch, and they mean
+      // very different things to the caller. Discriminate before assuming the
+      // wallet one, or a replay would be reported as insufficient funds.
+      if (!txResult.ok && "keyConflictWith" in txResult) {
+        return c.json(
+          apiError(
+            "idempotency_key_reused",
+            "This Idempotency-Key was already used for a different request. " +
+              "A key identifies one specific request; reusing it for different " +
+              "inputs or a different solution is not a retry. Use a new key.",
+            { conflicting_transaction_id: txResult.keyConflictWith },
+          ),
+          409,
+        );
+      }
+
+      if (!txResult.ok && "replayOf" in txResult) {
+        // The whole point: the bundle is NOT executed again and NOT charged
+        // again. Pre-WP6 a retry of a €2.50 solution simply ran and billed a
+        // second time.
+        const prior = txResult.replayOf!;
+        return c.json({
+          result: {
+            transaction_id: prior.id,
+            solution_slug: sol.slug,
+            status: prior.status,
+            steps: (prior.output as { steps?: unknown } | null)?.steps ?? prior.output,
+            price_cents: prior.priceCents,
+            latency_ms: prior.latencyMs,
+          },
+          meta: { idempotency_replay: true, audit: prior.auditTrail },
+        });
+      }
 
       if (!txResult.ok) {
         return c.json(

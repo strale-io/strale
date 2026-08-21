@@ -541,6 +541,15 @@ async function handleMessageSend(
   if (authHeader?.startsWith("Bearer ")) {
     headers.Authorization = authHeader;
   }
+  // WP6: forward the caller's idempotency key. This rail proxies to /v1/do,
+  // which supports idempotency — but only Content-Type and Authorization were
+  // passed through, so an A2A client had no way to make a retry safe no matter
+  // what it sent. A proxy that drops the header silently converts an idempotent
+  // request into a repeatable charge.
+  const idempotencyHeader = c.req.header("Idempotency-Key");
+  if (idempotencyHeader) {
+    headers["Idempotency-Key"] = idempotencyHeader;
+  }
 
   // Build the /v1/do request body
   const doBody: Record<string, unknown> = {
