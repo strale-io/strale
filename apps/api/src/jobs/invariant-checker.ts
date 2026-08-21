@@ -17,6 +17,7 @@ import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps, testResults, testSuites, capabilityHealth, healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { sendAlert } from "../lib/alerting.js";
+import { alertOnce } from "../lib/alert-once.js";
 import { randomUUID } from "node:crypto";
 import { log, logError, logWarn } from "../lib/log.js";
 import { isShuttingDown } from "../lib/shutdown.js";
@@ -75,6 +76,14 @@ export async function runInvariantChecks(): Promise<void> {
     checked += r3.checked;
   } catch (err) {
     jobLog.error({ label: "invariant-check-3-failed", check: "orphaned-steps", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-3-failed");
+  }
+
+  try {
+    const r6 = await checkPartialQuarantineState(jobLog);
+    alerts += r6.alerts;
+    checked += r6.checked;
+  } catch (err) {
+    jobLog.error({ label: "invariant-check-6-failed", check: "partial-quarantine", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-6-failed");
   }
 
   // Correlated failure detection deferred (lived inside the CHECK 4 block
@@ -1195,3 +1204,67 @@ async function checkLyingBreakers(): Promise<{ alerts: number; checked: number }
   return { alerts: 1, checked: lying.length };
 }
 
+
+
+/**
+ * A capability must not sit HALF-quarantined.
+ *
+ * `jobs/quality-floor.ts` withdraws with `{visible:false, x402Enabled:false}`
+ * and `jobs/capability-promotion.ts` restores `{visible:true, x402Enabled:…}` —
+ * both write the pair together, in one statement, inside a transaction. So
+ * neither can produce `visible=false, x402_enabled=true`.
+ *
+ * Production held exactly that state anyway. `danish-company-data` was
+ * quarantined on 2026-08-12 with the intended DB state recorded in its
+ * manifest, and on 2026-08-21T00:08 a single un-audited row write set
+ * `x402_enabled` back to true while leaving it invisible. No job wrote it, no
+ * commit corresponds, and no health-monitor event records it — the platform has
+ * no audit trail for capability flag changes at all.
+ *
+ * The consequence was not cosmetic: the capability was listed and purchasable
+ * over x402 while failing 100% of real customer calls (14 of 14 over 90 days),
+ * and a review of WP8 nearly redefined the servability authority around the
+ * drifted row rather than repairing it.
+ *
+ * So the invariant is asserted rather than assumed. It alerts; it does not
+ * self-heal, because which direction to repair — withdraw or promote — is a
+ * quality judgement that belongs to the floor and the promotion job, not to a
+ * consistency sweep guessing from two booleans.
+ */
+export async function checkPartialQuarantineState(
+  jobLog: { error: (obj: unknown, msg: string) => void },
+): Promise<{ alerts: number; checked: number }> {
+  const db = getDb();
+  const rows = (await db.execute(sql`
+    SELECT slug, lifecycle_state
+    FROM capabilities
+    WHERE is_active = true AND visible = false AND x402_enabled = true
+    ORDER BY slug
+  `)) as unknown as Array<{ slug: string; lifecycle_state: string }>;
+
+  if (rows.length === 0) return { alerts: 0, checked: 1 };
+
+  const slugs = rows.map((r) => r.slug);
+  jobLog.error(
+    { label: "invariant-partial-quarantine", slugs, count: rows.length },
+    "invariant-partial-quarantine",
+  );
+
+  await alertOnce("invariant-partial-quarantine", 6 * 60 * 60 * 1000, {
+    subject: `${rows.length} capability(ies) are half-quarantined`,
+    body:
+      `${slugs.join(", ")} — withdrawn from the catalogue (visible=false) but still ` +
+      `enabled on the x402 rail. Neither the quality floor nor the promotion job can ` +
+      `produce this state; both write the pair together. It therefore indicates an ` +
+      `out-of-band row write.
+
+` +
+      `A capability in this state is purchasable while the platform considers it ` +
+      `withdrawn. Decide which way it should go and apply BOTH flags: withdraw ` +
+      `(visible=false, x402_enabled=false) or promote via the promotion job, which ` +
+      `restores lifecycle, visibility and rail together.`,
+    severity: "critical",
+  });
+
+  return { alerts: 1, checked: 1 };
+}
