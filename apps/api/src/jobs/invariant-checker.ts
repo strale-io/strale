@@ -1250,6 +1250,28 @@ export async function checkPartialQuarantineState(
     "invariant-partial-quarantine",
   );
 
+  // Recorded INDEPENDENTLY of the page. alertOnce suppresses on a cooldown, so
+  // a condition that persists for days would leave one alert and no further
+  // trace — "the condition existed" and "a page was sent" are separate facts,
+  // and only the first belongs in the health record.
+  try {
+    await logHealthEvent({
+      eventType: "invariant_alert",
+      capabilitySlug: slugs[0],
+      // Tier 1: the capability is purchasable while the platform considers it
+      // withdrawn, which is a revenue-integrity fault, not a degradation.
+      tier: 1,
+      actionTaken:
+        `half-quarantined (visible=false, x402_enabled=true): ${slugs.join(", ")}`,
+      details: { slugs, count: rows.length, invariant: "no_half_quarantine" },
+    });
+  } catch (err) {
+    jobLog.error(
+      { label: "invariant-partial-quarantine-event-failed", err },
+      "invariant-partial-quarantine-event-failed",
+    );
+  }
+
   await alertOnce("invariant-partial-quarantine", 6 * 60 * 60 * 1000, {
     subject: `${rows.length} capability(ies) are half-quarantined`,
     body:
