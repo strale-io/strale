@@ -67,6 +67,7 @@ solutionExecuteRoute.post(
     // rail, so one helper defines what "the same request" means everywhere.
     const idempotencyKey = c.req.header("Idempotency-Key") || null;
     const idempotencyFingerprint = computeIdempotencyFingerprint({
+      rail: "solution",
       capabilitySlug: slug,
       inputs: inputs as Record<string, unknown> | null,
     });
@@ -139,15 +140,34 @@ solutionExecuteRoute.post(
               and(
                 eq(transactions.idempotencyKey, idempotencyKey),
                 eq(transactions.userId, user.id),
+                // Review finding, and it would have been live on day one:
+                // without this the lookup matched ANY prior row with that key,
+                // including the 421 existing capability rows — every one of
+                // which carries a NULL fingerprint, because solutions never
+                // wrote keys before. A customer reusing an old /v1/do key on a
+                // KYB bundle would have received that capability's payload,
+                // labelled as a KYB Complete result, on the product whose
+                // entire selling point is the audit trail. No charge, so not a
+                // double-charge — a wrong-answer defect, which is the class
+                // this package exists to close.
+                eq(transactions.solutionSlug, sol.slug),
                 isNull(transactions.deletedAt),
               ),
             )
             .limit(1);
 
           if (prior) {
-            return isReplayable(prior.idempotencyFingerprint, idempotencyFingerprint)
-              ? { ok: false as const, replayOf: prior }
-              : { ok: false as const, keyConflictWith: prior.id };
+            if (!isReplayable(prior.idempotencyFingerprint, idempotencyFingerprint)) {
+              return { ok: false as const, keyConflictWith: prior.id };
+            }
+            // Only a COMPLETED run is a replay. A prior failure is exactly when
+            // a client retries, and short-circuiting would hand back HTTP 200
+            // carrying status:"failed" with a non-zero price — read as success
+            // by anything keying off response.ok. Re-executing is what the
+            // caller wants and what happened before this package existed.
+            if (prior.status === "completed") {
+              return { ok: false as const, replayOf: prior };
+            }
           }
         }
 

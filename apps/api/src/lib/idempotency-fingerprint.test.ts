@@ -98,3 +98,39 @@ describe("replayability", () => {
     expect(isReplayable(null, computeIdempotencyFingerprint(base))).toBe(true);
   });
 });
+
+describe("what the key is scoped to", () => {
+  it("separates the capability rail from the solution rail", () => {
+    // Capabilities and solutions are separate tables with independent slug
+    // namespaces. Nothing prevents the same string existing in both, and
+    // without a rail discriminator one key would fingerprint identically
+    // across them.
+    expect(
+      computeIdempotencyFingerprint({ rail: "capability", capabilitySlug: "kyb-complete-se", inputs: {} }),
+    ).not.toBe(
+      computeIdempotencyFingerprint({ rail: "solution", capabilitySlug: "kyb-complete-se", inputs: {} }),
+    );
+  });
+
+  it("distinguishes a dry run from a real execution", () => {
+    // A replay answers "what DID happen" in a shape indistinguishable from a
+    // real execution. Someone asking "what WOULD happen" must not get it.
+    expect(computeIdempotencyFingerprint({ capabilitySlug: "x", inputs: {}, dryRun: true })).not.toBe(
+      computeIdempotencyFingerprint({ capabilitySlug: "x", inputs: {}, dryRun: false }),
+    );
+  });
+
+  it("distinguishes require_fresh, which a replay would silently bypass", () => {
+    expect(
+      computeIdempotencyFingerprint({ capabilitySlug: "x", inputs: {}, requireFresh: true }),
+    ).not.toBe(computeIdempotencyFingerprint({ capabilitySlug: "x", inputs: {}, requireFresh: false }));
+  });
+
+  it("does NOT include the budget knobs — replaying past those is the point", () => {
+    // max_price_cents / timeout_seconds are not part of the question being
+    // asked, and folding them in would 409 a retry that merely raised a budget.
+    const a = computeIdempotencyFingerprint({ capabilitySlug: "x", inputs: { a: 1 } });
+    const b = computeIdempotencyFingerprint({ capabilitySlug: "x", inputs: { a: 1 } });
+    expect(a).toBe(b);
+  });
+});

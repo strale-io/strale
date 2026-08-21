@@ -56,11 +56,30 @@ export function computeIdempotencyFingerprint(params: {
   task?: string | null;
   capabilitySlug?: string | null;
   inputs?: Record<string, unknown> | null;
+  /** Which rail issued the key. Capability and solution slugs are separate namespaces. */
+  rail?: "capability" | "solution";
+  /**
+   * Modes that change WHAT IS BEING ASKED, so a key bound to one must not
+   * replay for the other.
+   *
+   * Deliberately not the budget knobs (max_price_cents, timeout_seconds,
+   * max_latency_ms): replaying past a changed budget is what idempotency means.
+   * These two are different in kind — `dry_run` asks "what WOULD happen", and a
+   * replay answers "what DID happen" in a shape indistinguishable from a real
+   * execution; `require_fresh` is a gate that refuses stale data, and a replay
+   * returns before it, silently handing back exactly what the gate exists to
+   * refuse.
+   */
+  dryRun?: boolean | null;
+  requireFresh?: boolean | null;
 }): string {
   const payload = JSON.stringify({
+    rail: params.rail ?? "capability",
     task: params.task ?? null,
     capability_slug: params.capabilitySlug ?? null,
     inputs: canonicalize(params.inputs ?? null),
+    dry_run: params.dryRun === true,
+    require_fresh: params.requireFresh === true,
   });
   return createHash("sha256").update(payload).digest("hex").slice(0, 32);
 }

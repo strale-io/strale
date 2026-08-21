@@ -82,3 +82,39 @@ export function orderingEvidenceUnavailable(at: Date): boolean {
     w.lost.includes("ordering_and_completeness"),
   );
 }
+
+/**
+ * Customer-facing disclosure text for a record inside a known window.
+ *
+ * DRAFT — deliberately not wired into any response. `/v1/verify` already
+ * discloses redaction, and this is written in the same register: state what is
+ * unavailable, state what remains true, name the cause and the fix, and do not
+ * editorialise. But it is a claim about the reliability of an audit trail, and
+ * the charter puts regulator-facing claims with the founder rather than with
+ * the platform. This function exists so the wording can be read and approved as
+ * a concrete thing rather than described in the abstract.
+ */
+export function orderingDisclosureText(at: Date): string | null {
+  const window = windowsCovering(at).find((w) =>
+    w.lost.includes("ordering_and_completeness"),
+  );
+  if (!window) return null;
+
+  return (
+    "This record was created during a period when Strale's audit chain did not " +
+    "evidence ordering. Between " +
+    window.from.slice(0, 10) +
+    " and " +
+    (window.to ?? "").slice(0, 10) +
+    ", a defect in how the chain's head was selected caused newly hashed records " +
+    "to link to the same predecessor rather than forming a sequence. The record " +
+    "itself is intact: its content hash still covers its own data and its recorded " +
+    "predecessor, so alteration of this record remains detectable. What cannot be " +
+    "demonstrated for this period is the order of records relative to one another, " +
+    "or that no record was removed. The defect was corrected on " +
+    (window.to ?? "").slice(0, 10) +
+    "; records created after that date carry full ordering evidence. Strale has " +
+    "deliberately not recomputed the affected hashes, because doing so would remove " +
+    "the evidence that the gap occurred."
+  );
+}

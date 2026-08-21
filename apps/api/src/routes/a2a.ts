@@ -458,6 +458,9 @@ async function handleMessageSend(
 ) {
   const message = params.message;
   let skillId: string | undefined = params.skillId;
+  // Captured before suggest() can overwrite it: an idempotency guarantee is
+  // only meaningful when the caller determined what runs.
+  const explicitSkillId: string | undefined = params.skillId;
 
   if (!message || !message.parts || !Array.isArray(message.parts)) {
     return c.json({
@@ -546,9 +549,17 @@ async function handleMessageSend(
   // passed through, so an A2A client had no way to make a retry safe no matter
   // what it sent. A proxy that drops the header silently converts an idempotent
   // request into a repeatable charge.
+  //
+  // ONLY when the caller named the skill. Review finding: when skillId is
+  // absent this handler resolves one from free text via suggest() — embeddings
+  // plus an LLM re-rank — and the fingerprint is computed downstream from the
+  // RESOLVED slug. A byte-identical retry that re-ranks differently would then
+  // be told it "reused a key for a different request", which is both false and
+  // unactionable, since the client never chose the slug. Forwarding only the
+  // deterministic case keeps the guarantee honest instead of approximate.
   const idempotencyHeader = c.req.header("Idempotency-Key");
-  if (idempotencyHeader) {
-    headers["Idempotency-Key"] = idempotencyHeader;
+  if (idempotencyHeader && explicitSkillId) {
+    headers["Idempotency-Key"] = idempotencyHeader.slice(0, 255);
   }
 
   // Build the /v1/do request body

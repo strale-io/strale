@@ -98,7 +98,10 @@ describeMaybe("/v1/do idempotency against a real database", () => {
     seededCaps.length = 0;
   });
 
-  async function seedCapability(slug: string) {
+  async function seedCapability(
+    slug: string,
+    opts: { isFreeTier?: boolean; priceCents?: number } = {},
+  ) {
     const id = randomUUID();
     seededCaps.push(id);
     await db.insert(capabilities).values({
@@ -109,9 +112,9 @@ describeMaybe("/v1/do idempotency against a real database", () => {
       category: "developer-tools",
       inputSchema: { type: "object", properties: { probe: { type: "string" } } },
       outputSchema: { type: "object", properties: { from: { type: "string" } } },
-      priceCents: PRICE_CENTS,
+      priceCents: opts.priceCents ?? PRICE_CENTS,
       isActive: true,
-      isFreeTier: false,
+      isFreeTier: opts.isFreeTier ?? false,
       avgLatencyMs: 50,
       lifecycleState: "active",
     });
@@ -252,5 +255,44 @@ describeMaybe("/v1/do idempotency against a real database", () => {
     // Independent: customer two gets their OWN execution, not customer one's.
     const otherBody = (await other.json()) as any;
     expect(otherBody.meta?.idempotency_replay ?? false).toBe(false);
+  }, 120_000);
+
+  it("binds the key on the FREE-TIER path too (the review's blocking finding)", async () => {
+    // Every case above seeds a PAID capability, so all four route through
+    // executeSync and none touched executeFreeTierAuthenticated. That path took
+    // the fingerprint as a parameter and never wrote it, so its rows carried a
+    // NULL fingerprint — and a NULL fingerprint replays by design. The guard
+    // was permanently off for free-tier keys, and the parameter's presence made
+    // it read as done.
+    await seedCapability(slugA, { isFreeTier: true, priceCents: 0 });
+    await seedCapability(slugB, { isFreeTier: true, priceCents: 0 });
+    const apiKey = await seedUser();
+    const key = randomUUID();
+
+    const first = await callDo(
+      apiKey,
+      { capability_slug: slugA, inputs: { probe: "x" }, max_price_cents: PRICE_CENTS },
+      key,
+    );
+    expect(first.status).toBe(200);
+
+    const second = await callDo(
+      apiKey,
+      { capability_slug: slugB, inputs: { probe: "x" }, max_price_cents: PRICE_CENTS },
+      key,
+    );
+    expect(second.status).toBe(409);
+    expect(((await second.json()) as any).error_code).toBe("idempotency_key_reused");
+  }, 120_000);
+
+  it("rejects an over-long key with 400, not a Postgres 500", async () => {
+    await seedCapability(slugA);
+    const apiKey = await seedUser();
+    const res = await callDo(
+      apiKey,
+      { capability_slug: slugA, inputs: { probe: "x" }, max_price_cents: PRICE_CENTS },
+      "k".repeat(300),
+    );
+    expect(res.status).toBe(400);
   }, 120_000);
 });

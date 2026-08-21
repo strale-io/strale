@@ -527,21 +527,45 @@ doRoute.post(
 
   // ── 2. Idempotency check (authenticated only) ─────────────────────────
   const idempotencyKey = c.req.header("Idempotency-Key") || null;
+  // The column is varchar(255); an over-long key reached the INSERT and raised
+  // Postgres 22001, which the executeSync catch does not recognise and which
+  // therefore surfaced as a 500. Newly reachable now that A2A forwards a
+  // caller-controlled header, and a clear 400 is the honest answer either way.
+  if (idempotencyKey && idempotencyKey.length > 255) {
+    return c.json(
+      apiError(
+        "invalid_request",
+        "Idempotency-Key must be 255 characters or fewer.",
+      ),
+      400,
+    );
+  }
 
   // WP6: what the key is a key TO. Bound to the request it was first used for,
   // so the same key reused for different work is a client bug (409) rather than
   // a plausible-looking answer to a question the caller did not ask.
   const idempotencyFingerprint = computeIdempotencyFingerprint({
+    rail: "capability",
     task,
     capabilitySlug,
     inputs,
+    dryRun: body.dry_run === true,
+    requireFresh: body.require_fresh === true,
   });
 
   if (idempotencyKey && user) {
     const [existing] = await db
       .select()
       .from(transactions)
-      .where(and(eq(transactions.idempotencyKey, idempotencyKey), eq(transactions.userId, user.id), isNull(transactions.deletedAt)))
+      // Scoped to the capability rail. A key is per-customer, but it is not
+      // per-PLATFORM: without this, a prior solution row could be replayed as a
+      // capability result. The solutions route carries the mirror of this.
+      .where(and(
+        eq(transactions.idempotencyKey, idempotencyKey),
+        eq(transactions.userId, user.id),
+        isNull(transactions.solutionSlug),
+        isNull(transactions.deletedAt),
+      ))
       .limit(1);
 
     if (existing && !isReplayable(existing.idempotencyFingerprint, idempotencyFingerprint)) {
@@ -1571,6 +1595,14 @@ async function executeFreeTierAuthenticated(
       userId: user.id,
       capabilityId: capability.id,
       idempotencyKey,
+      // Review finding, and the sharpest kind: the parameter was threaded into
+      // this function and then never written, so it READ as done. Every
+      // authenticated free-tier call carrying a key produced a row with a NULL
+      // fingerprint — and a NULL fingerprint is replayable by design, so the
+      // guard was permanently off for this path rather than off for a draining
+      // legacy set. tsc cannot catch an unused parameter, and the integration
+      // tests all seed paid capabilities, so nothing exercised it.
+      idempotencyFingerprint,
       status: "executing",
       clientMeta: (c.get("clientMeta" as any) as object | null) ?? null,
       input: executionInput,
