@@ -48,7 +48,7 @@ const ALLOWED = new Set([
  * drift apart.
  */
 const RAW_SQL_WALLET_WRITE =
-  /(UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+(public\.)?"?(wallets|wallet_transactions)"?\b/i;
+  /(UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+("?public"?\.)?"?(wallets|wallet_transactions)"?\b/i;
 
 /**
  * Ways a wallet table can be written from code.
@@ -95,7 +95,9 @@ describe("wallet mutation authority", () => {
     const offenders: string[] = [];
 
     for (const root of CODE_ROOTS) {
-      for (const file of filesUnder(root, /\.ts$/)) {
+      // .mjs and .js too: scripts/ holds plain-JS tooling, and a bypass in a
+      // .mjs helper is as reachable as one in TypeScript.
+      for (const file of filesUnder(root, /\.(ts|mjs|js)$/)) {
         const rel = relative(root, file);
         if (ALLOWED.has(rel)) continue;
         // Tests seed and clean up their own fixtures directly; they are not

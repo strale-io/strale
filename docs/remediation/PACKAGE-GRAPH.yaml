@@ -48,7 +48,7 @@ packages:
 
   WP2:
     title: Wallet Service (single mutation authority)
-    status: PLANNED
+    status: ACCEPTED
     depends_on: [WP1]
     risks: [CR-01]
     review: {codex: required, fable: required}
@@ -59,6 +59,8 @@ packages:
     status: PLANNED
     depends_on: [WP2]
     risks: [CR-01, N1]
+    inherited_exit_conditions:
+      - "CHECK (balance_cents >= 0) database backstop (Codex WP2 residual; WP3 owns the migration)"
     review: {codex: required, fable: required}
     exit: [reserved/executing/captured/released persisted, crash cannot strand funds, 11 live orphans reconciled]
 

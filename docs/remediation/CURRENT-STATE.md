@@ -2,12 +2,32 @@
 
 _Last updated: 2026-08-21 (session 1)_
 
-- **Current package:** WP1 — ACCEPTED (Fable). Ready to start WP2.
-- **Next package:** WP2 — Wallet Service (one authority for wallet mutations)
-- **Latest accepted SHA:** `5cebef6` on `remediation/program` (branch not yet merged to main)
+- **Current package:** WP2 — ACCEPTED. Ready to start WP3.
+- **Next package:** WP3 — Durable wallet reservations + reconciler (closes the crash window WP1 proved, and the 11 stranded prod rows)
+- **Latest accepted SHA:** `b8a2600` on `remediation/program` (branch not yet merged to main)
 - **Unresolved blockers:** none
 - **Human approvals granted:** program-level autonomy (run continuously; escalate only per CHECK-IN A/B/C)
 - **Awaiting founder:** nothing. One item is logged for *visibility only*, not decision — see "Codex disposition" below.
+
+## Where WP2 landed
+
+One authority for wallet mutations: `lib/wallet-service.ts`. Every balance
+change now writes a matching ledger row in the same transaction, and every
+change is a delta — there is no exported way to set an absolute balance.
+
+Two real defects fixed by the migration: the solutions refund (absolute,
+unlocked, outside any transaction — it clobbered concurrent top-ups) and the
+closure burn (no ledger entry at all). Affordability is now enforced by the
+database via a conditional UPDATE, not by the caller's snapshot.
+
+The bypass guard covers **code, scripts, and docs** — each surface added
+because a real bypass was found on it, including a runbook that told an
+operator to run bare `UPDATE wallets`.
+
+**Codex returned PASS_WITH_NON_BLOCKING_FINDINGS — the first clean verdict of
+the program**, after three FAIL rounds. It also caught a hollow guard (a regex
+containing a literal backspace, so it matched nothing) and a commit whose
+message described two fixes that were not in the tree.
 
 ## Where WP1 landed
 

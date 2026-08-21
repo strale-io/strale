@@ -1,0 +1,92 @@
+package: WP2
+title: Wallet Service — one authority for balance mutations
+status: ACCEPTED
+depends_on: [WP1]
+risks: [CR-01]
+
+objective: >
+  Make every wallet balance change go through one module, and make the
+  reintroduction of a second path fail CI.
+
+the_invariant: >
+  Not "use a lock" but something stronger and cheaper to check: every balance
+  change writes a matching ledger row in the same transaction, and every change
+  is a delta. There is no exported way to set a balance to an absolute value.
+
+defects_fixed:
+  solutions_refund: >
+    Wrote an ABSOLUTE balance captured before the solution ran. Execution takes
+    seconds to minutes, so any debit or top-up landing in that window was
+    silently overwritten, and the ledger row it wrote recorded a delta that did
+    not match the balance change. Now an in-database delta inside a transaction.
+  closure_forfeit: >
+    Zeroed the balance with no ledger entry — the one balance change on the
+    platform with no audit trail, leaving the ledger permanently out of step for
+    that wallet. Now takes the row lock it skipped and writes a closure_forfeit
+    entry. Still a forfeiture, not a refund: the money is not returned, which is
+    the documented product decision.
+  signup_grant: >
+    Inserted the wallet with a non-zero balance, then wrote the ledger row
+    separately. Now opens at zero and credits through the same primitive, inside
+    a transaction.
+  affordability: >
+    debit() checked the caller's snapshot, and the service cannot verify the
+    caller holds the lock. Now a conditional UPDATE ... WHERE balance_cents >=
+    amount RETURNING: no row means insufficient funds and nothing was written.
+
+migrated_sites:
+  - /v1/do sync debit + wallet lock
+  - /v1/do async debit + async refund
+  - solutions debit + solutions refund
+  - Stripe webhook credit
+  - both signup paths
+  - account-closure forfeit
+  - scripts/topup-test.ts
+
+bypass_guard:
+  covers: [src/, scripts/, docs/]
+  why_each: >
+    src/ held the original ten call sites; scripts/topup-test.ts was found
+    mutating balances directly; and the smoke-test runbook told an operator to
+    run bare SQL. Each surface was added because a real bypass was found on it.
+  verified_by: planting violations on every surface, including a quoted-schema
+    write inside a .mjs script and a runbook containing the statement.
+
+review:
+  codex: 4 rounds — FAIL, FAIL, FAIL, then PASS_WITH_NON_BLOCKING_FINDINGS
+  first_pass_verdict_of_the_program: true
+  findings_closed:
+    - "guard scanned only src/, missing scripts/ — a real escaped write path"
+    - "guard missed DELETE, UPDATE on wallet_transactions, quoted/qualified names, interpolated tables"
+    - "affordability was a JS snapshot; lock contract unenforceable"
+    - "credit() with the bare db handle made balance and ledger separate commits — signup did this"
+    - "a RUNBOOK instructed an operator to run bare UPDATE wallets — a bypass made of documentation"
+    - "guard regex contained a literal backspace, so it matched nothing — a hollow gate"
+    - "a claimed fix had not landed at all; the commit message described work not in the tree"
+    - "quoted schema names and .mjs scripts evaded the widened guard"
+  non_blocking_accepted:
+    - "openWallet's transaction check is duck typing — rejects the bare db handle, cannot prove an active transaction"
+    - "docs/remediation is exempt from the docs scan (it quotes the defects while describing them)"
+    - "SQL-like prose in comments could produce a false positive; noisy rather than unsafe"
+    - "async reorder reverses created_at ordering between a transaction row and its ledger entry"
+  fable: ACCEPT
+
+process_failure_worth_recording: >
+  Two fixes were committed with a message describing them, and neither was in
+  the tree: one edit's shell command began with a `cd` into a directory it was
+  already in, so the command failed and the edit never ran. Codex caught it by
+  reading the file rather than the commit. The lesson is the one already in the
+  ledger for WP1 — verify by reading the artefact back, never by trusting that
+  a tool call did what it said.
+
+residual_risks:
+  - "CHECK (balance_cents >= 0) as a database-level backstop — deferred to WP3, which owns the reservation migration; WP2 declares no schema change."
+  - "Reserve/capture/release is deliberately NOT here. WP2 makes mutation single-authority; the durable state machine is WP3, built on these primitives."
+  - "prod holds zero top_up ledger rows — no Stripe top-up has ever been credited. Not a WP2 defect; noted for WP11, which owns the Stripe lifecycle."
+
+exit_conditions:
+  - all balance-write sites flow through WalletService   # MET
+  - CI guard forbids reintroduction                      # MET (code, scripts, docs)
+  - old route SQL deleted                                # MET
+  - Codex PASS                                           # MET (PASS_WITH_NON_BLOCKING_FINDINGS)
+  - Fable ACCEPT                                         # MET
