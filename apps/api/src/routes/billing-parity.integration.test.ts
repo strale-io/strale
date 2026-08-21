@@ -121,6 +121,15 @@ describeMaybe("a gated solution bills identically on both rails", () => {
 
   afterEach(async () => {
     settleSpy.mockClear();
+    // The x402 rail has no user, so its rows carry user_id NULL and a delete
+    // keyed on userId silently leaves them behind. They then outlive the test
+    // with a fresh completed_at, and integrity-hash-chain's head selection —
+    // which scans ALL transactions by (completed_at, id) DESC — resumes from
+    // one of them. That failed in CI while passing locally, which is what
+    // leftover rows look like.
+    if (solSlug) {
+      await db.delete(transactions).where(eq(transactions.solutionSlug, solSlug));
+    }
     if (userId) {
       await db.delete(walletReservations).where(eq(walletReservations.userId, userId));
       await db.delete(transactions).where(eq(transactions.userId, userId));
@@ -355,11 +364,17 @@ describeMaybe("a capability returning an unusable output bills on neither rail",
 
   afterAll(async () => {
     if (capabilityId) {
+      // Keyed on capabilityId, not userId: this rail has no user, so its rows
+      // carry user_id NULL. Leaving them behind gives integrity-hash-chain's
+      // global head selection a fresher completed_at to resume from — which is
+      // how the solutions block broke that test in CI while passing locally.
+      // `transactions` has no slug column; capability_id is the identifier.
       await db.delete(transactions).where(eq(transactions.capabilityId, capabilityId));
       await db.delete(capabilities).where(eq(capabilities.id, capabilityId));
     }
     await client.end();
   });
+
 
   it("the x402 capability rail does not settle", async () => {
     settleSpy.mockClear();
