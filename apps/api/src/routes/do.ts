@@ -1186,11 +1186,23 @@ async function buildUsageSummaryForUser(db: ReturnType<typeof getDb>, userId: st
     ? Math.max(1, Math.ceil((Date.now() - new Date(userRow.createdAt).getTime()) / 86_400_000))
     : 1;
 
+  // WP1: this selected `capability_slug` from `transactions`, a column that
+  // does not exist on that table — it keys capabilities by `capability_id`.
+  // The query therefore threw on every call in production. Both callers are
+  // the low-balance and zero-balance conversion emails, dispatched through
+  // fireAndForget, so the failure was swallowed into a log line and every
+  // "your agent ran out of credits" email silently failed to send. Found by
+  // the ephemeral-Postgres lane; regression-tested in
+  // do.usage-summary.integration.test.ts.
+  //
+  // Solution transactions carry capability_id = NULL and so are excluded by
+  // the join, which matches the intent of a top-capabilities summary.
   const rows = await db.execute(
-    sql`SELECT capability_slug, COUNT(*)::int AS count
-        FROM transactions
-        WHERE user_id = ${userId} AND status = 'completed'
-        GROUP BY capability_slug
+    sql`SELECT c.slug AS capability_slug, COUNT(*)::int AS count
+        FROM transactions t
+        JOIN capabilities c ON c.id = t.capability_id
+        WHERE t.user_id = ${userId} AND t.status = 'completed'
+        GROUP BY c.slug
         ORDER BY count DESC
         LIMIT 10`,
   );
@@ -1208,6 +1220,19 @@ async function buildUsageSummaryForUser(db: ReturnType<typeof getDb>, userId: st
     topCapabilities: capRows.map((r: any) => ({ slug: r.capability_slug, count: r.count })),
     totalSpentCents: spentRow?.total ?? 0,
   };
+}
+
+/**
+ * Test seam for buildUsageSummaryForUser (WP1).
+ *
+ * The summary is only ever reached through a fireAndForget callback, so a
+ * thrown query cannot fail a request and cannot be observed from the outside —
+ * which is how a broken column reference survived in production. Exposing it
+ * lets the integration lane assert on the query directly instead of inferring
+ * its health from a log line.
+ */
+export async function buildUsageSummaryForUserForTest(userId: string) {
+  return buildUsageSummaryForUser(getDb(), userId);
 }
 
 function buildUsageBlock(callsToday: number, cap: number): Record<string, unknown> {
