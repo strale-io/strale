@@ -207,3 +207,25 @@ over 24h.
   migration block on `runStartupMigrations`'s registry), deployed SHA confirmed via
   `/health`, and production queried for the block's actual effect rather than trusting
   a log line. DEC-20260504-B does not apply — 0094 touches 2 rows.
+
+## Addendum — post-merge re-check (written after the docs merge redeployed)
+
+Checked the fix once more after the second boot of the day, because one deploy is
+one sample. **Still 0 `stale_input` writes, and 0 fixture-mode suites bumped.** The
+381-row per-boot churn is gone across two independent boots, not one.
+
+Six suites *did* get a fresh `updated_at` in the minutes after that boot, and they
+are a different, pre-existing mechanism — `flight-status`, `page-speed-test`,
+`tech-stack-detect`, `company-news`, `us-product-recall-search` and `vat-validate`,
+all `live` or `canary`, all `known_answer`/`dependency_health`. Five land inside two
+seconds of each other, so something at boot is rewriting them. Harmless today (the
+fixture-staleness path is `test_mode = 'fixture'` only, so none of these can be
+poisoned the way `eu-regulation-search` was), and six is not 381. But it is the same
+*shape* as the bug fixed this morning, and nobody has named which block does it.
+Worth twenty minutes at the next check-in: identify the writer, and confirm it is
+editing content rather than stamping metadata. If it is stamping metadata, it is the
+same defect wearing a different hat.
+
+`eu-regulation-search`'s two cleared baselines had still not been re-dispatched by
+the end of the session — expected, the scheduler staggers by slug hash. Item 1 of
+"what the next session should pick up" stands unchanged.
