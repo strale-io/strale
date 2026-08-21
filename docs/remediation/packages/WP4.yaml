@@ -16,7 +16,14 @@ authorities_before:
   wallet_solutions: "refundRequired = allFailed || gated !== undefined"
   x402_capability: "executor resolving IS success; settle on any resolution"
   x402_solutions: "anyStepSucceeded → settle FULL price"
-  mcp_a2a: "re-derives success from the proxied HTTP status"
+  mcp_a2a: >
+    Re-derives success from the proxied HTTP status — but for REPORTING, not
+    billing. Checked rather than assumed: a2a.ts proxies to POST /v1/do over
+    HTTP (routes/a2a.ts:564) and mcp.ts reads that response's error_code.
+    Neither calls walletService.debit or settleX402Payment, which the guard's
+    derived rail list independently confirms. So the billing decision is made
+    inside /v1/do and these two inherit it. Not rewired, and not a gap in the
+    exit condition.
 
 sharpest_defect: >
   A gated solution run. The wallet rail refunded in full and told the customer
