@@ -33,7 +33,7 @@ const SRC = fileURLToPath(new URL("..", import.meta.url));
  * lowering it means suites were removed and should be a deliberate, explained
  * edit rather than a silent one.
  */
-const MINIMUM_LANE_FILES = 9;
+const MINIMUM_LANE_FILES = 10;
 
 /** Split on either line ending — these files are checked out CRLF on Windows. */
 function splitLines(source: string): string[] {
@@ -134,6 +134,33 @@ describe("ephemeral-Postgres integration lane", () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  it("leaves no database-gated suite outside the lane", () => {
+    // The failure this catches, found while building WP1:
+    // capabilities-contract.test.ts gated itself on DATABASE_URL_TEST but its
+    // name did not match the CI filter, so it ran in NEITHER job — skipped in
+    // the unit job for want of a database, and never selected by the lane. It
+    // had 13 assertions nobody had executed. A file that needs a database must
+    // be in the lane; otherwise it is dormant by construction.
+    const dormant: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) {
+          if (entry === "test-support") continue;
+          walk(full);
+        } else if (entry.endsWith(".test.ts")) {
+          if (full.includes("integration.test.ts")) continue;
+          if (readFileSync(full, "utf8").includes("DATABASE_URL_TEST")) {
+            dormant.push(relative(SRC, full));
+          }
+        }
+      }
+    };
+    walk(SRC);
+
+    expect(dormant).toEqual([]);
   });
 
   it("keeps every suite matchable by the CI filename filter", () => {
