@@ -100,6 +100,41 @@ item 3 leaves one automated check inert; items 1 and 4 are tidying.
 
 ## DECIDED — visible so you can reverse them
 
+**DQ-16** · `decided` · owner Claude · 2026-08-21
+Fixed the thing that has been making one of our services look broken for weeks,
+and cleared out six more dead code branches.
+*What this is:* Two pieces of our own start-up bookkeeping have been quietly
+arguing with each other. Each time we release, one of them changes a setting on
+381 of our automated tests and the other immediately changes it back. Harmless
+in itself — except that the act of writing the setting was recorded as
+"somebody edited this test". Twelve tests then threw away their saved reference
+answer on every release, and two of them cost money to re-run, so they refused
+to re-record it and reported themselves as failing instead. Forever.
+*What it cost us:* `eu-regulation-search` — the EU legislation lookup — has been
+scoring 51-60% for weeks with **not a single real failure behind it**. Our own
+quality programme's closing report flagged that number in the same breath as
+saying it wasn't the service's fault, and nobody had yet found out what it
+actually was. This was it.
+*Why it is mine:* fixture hygiene and quality gates are explicitly my call
+under the charter, and this is entirely a question about our own instruments,
+not about a customer or a price.
+*How I checked, both directions:* the fix's tests fail if you put the old code
+back. Before merging I ran all three database statements against production in
+plan-only mode, which parses and costs nothing, and they predicted exactly the
+two records that needed clearing. After the release I looked again: **nothing
+was churned, nothing reported itself stale, and both records were cleared** —
+so the fix did what the plan said, in production, not just in tests.
+*Also landed:* a missing safety test from a May audit that had been written,
+left on an abandoned branch, and never merged. It didn't actually test anything
+as written, so I made it test the thing it claimed to.
+*Housekeeping:* six abandoned branches deleted after confirming their contents
+are already on the main line — comparing the actual file contents, not the
+paths, which is the mistake DQ-15 recorded. Every identifier is in today's
+handoff and all six are restorable.
+*How you'd reverse it:* revert the release; the branches come back from the
+identifiers in the handoff.
+
+
 **DQ-15** · `decided` · owner Claude · 2026-08-19
 Deleted four dead code branches, and published two research notes that only
 existed on them.
