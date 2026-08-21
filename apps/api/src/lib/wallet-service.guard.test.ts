@@ -29,6 +29,15 @@ const SRC = fileURLToPath(new URL("..", import.meta.url));
 const SCRIPTS = fileURLToPath(new URL("../../scripts", import.meta.url));
 const ROOTS = [SRC, SCRIPTS];
 
+/**
+ * Runbooks are a write path too — one executed by a human with a psql prompt.
+ * Codex found the smoke-test recovery procedure telling an operator to run a
+ * bare `UPDATE wallets`, which changes a balance with no ledger row and is
+ * precisely the defect WP2 removed from account closure. Code guards cannot
+ * see documentation, so the documentation is scanned as well.
+ */
+const DOCS = fileURLToPath(new URL("../../../../docs", import.meta.url));
+
 /** The authority itself, and the schema module that declares the tables. */
 const ALLOWED = new Set([
   join("lib", "wallet-service.ts"),
@@ -101,6 +110,38 @@ describe("wallet mutation authority", () => {
     // If this fails, the fix is to route the write through
     // src/lib/wallet-service.ts — not to add the file to ALLOWED. The whole
     // point is that there is one place a balance can change.
+    expect(offenders).toEqual([]);
+  });
+
+  it("is not bypassed by a runbook telling an operator to write SQL", () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      let entries: string[];
+      try {
+        entries = readdirSync(dir);
+      } catch {
+        return; // docs/ is optional from the API package's point of view
+      }
+      for (const entry of entries) {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) {
+          walk(full);
+          continue;
+        }
+        if (!/\.(md|sql)$/i.test(entry)) continue;
+        // The remediation ledger quotes these statements when describing the
+        // defects; quoting a bug is not instructing anyone to reproduce it.
+        if (full.includes(join("docs", "remediation"))) continue;
+
+        const source = readFileSync(full, "utf8");
+        if (/(UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+(public\.)?"?(wallets|wallet_transactions)"?/i.test(source)) {
+          offenders.push(relative(DOCS, full));
+        }
+      }
+    };
+    walk(DOCS);
+
+    // Route the operator through scripts/topup-test.ts, which uses the service.
     expect(offenders).toEqual([]);
   });
 
