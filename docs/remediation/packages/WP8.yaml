@@ -1,0 +1,67 @@
+package: WP8
+title: Policy convergence — one eligibility authority
+status: IN_PROGRESS
+depends_on: [WP4]
+risks: [CR-05, N5, N6]
+
+objective: >
+  "May this capability be served right now?" is currently answered by two
+  different columns, consulted by different rails, and by neither in the place
+  that matters most. WP4 did this for billability; this is the same move for
+  eligibility.
+
+# Measured against PRODUCTION, not read off the audit.
+production_evidence:
+  two_authorities_already_disagree: >
+    6 capabilities have lifecycle_state = 'validating' with is_active = true.
+    The wallet rail gates on `isActive` (routes/do.ts:642) and would serve them.
+    The x402 rail gates on lifecycle_state IN ('active','probation')
+    (routes/x402-gateway-v2.ts:157-164) and would not. Same capability, same
+    instant, two answers — decided by which rail the caller used. This is CR-02
+    restated for eligibility instead of billability.
+  solution_steps_are_gated_by_nothing: >
+    24 solution steps point at a capability that is either non-servable by
+    lifecycle or is_active = false. lib/solution-executor.ts contains no
+    eligibility check of any kind — grep for lifecycleState, isActive or
+    quarantine returns nothing. So a capability the platform has decided not to
+    serve still runs, as a step, inside the bundles that are the most expensive
+    thing we sell.
+  catalogue_shape:
+    - "active/is_active=true: 299"
+    - "deactivated/is_active=false: 20"
+    - "degraded/is_active=false: 8"
+    - "validating/is_active=true: 6   <- the divergence"
+    - "active/is_active=false: 5      <- and the mirror of it"
+    - "probation/is_active=true: 1"
+
+defects:
+  divergent_predicates: >
+    lib/x402-eligibility.ts::isX402PayableCapability exists and is correct, but
+    it is imported by exactly one file (routes/do.ts). Every other rail
+    open-codes its own rule, so the shared predicate is a convention rather than
+    an authority.
+  in_flight_delisting_race: >
+    The x402 gateway answers from a 60-second catalogue cache
+    (routes/x402-gateway-v2.ts, CACHE_TTL_MS). A capability quarantined mid-
+    window keeps serving until the cache turns over, and the quality floor's
+    delisting is exactly the event that should take effect immediately.
+  breaker_does_not_hear_x402: >
+    WP4 wired counts_against_capability into the /v1/do breaker sites. The x402
+    rail records failures in its own transaction rows but does not feed the same
+    signal, so a capability failing only on the x402 rail is invisible to the
+    circuit breaker and to the quality floor.
+
+# Exit condition 2 named `checkSolutionGates` autoactivation. That symbol does
+# not exist anywhere in the tree — verified by grep across src/. Either it was
+# removed before this program began or the audit named it from an older
+# revision. Recorded rather than silently dropped; nothing to delete.
+checkSolutionGates: ABSENT_ALREADY
+
+exit_conditions:
+  - one predicate answers "may this be served", consumed by every rail
+  - solution steps consult it                      # 24 live steps do not today
+  - quarantine unbypassable on /v1/do X-Payment    # already true (WP0); keep it true by construction
+  - the delisting race is closed or bounded
+  - x402 failures feed the same breaker signal as wallet failures
+  - a guard prevents a new rail open-coding its own rule
+  - independent adversarial review passes
