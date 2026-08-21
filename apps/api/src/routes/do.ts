@@ -1387,6 +1387,19 @@ async function executeFreeTier(
       })
       .where(eq(transactions.id, txnRecord.id));
 
+    // WP5: the row exists, so the intent is discharged. Review finding — this
+    // rail opened intents and never closed them, because markRecordedBySettlement
+    // lives inside recordX402Transaction, which /v1/do does not use. Every paid
+    // call therefore left a 'settled' intent that the reconciler picked up five
+    // minutes later as "abandoned", routing the NORMAL path through the
+    // crash-recovery path and permanently contending its bounded queue.
+    if (x402SettlementId) {
+      await settlementIntent.markRecordedBySettlement(db, {
+        settlementId: x402SettlementId,
+        transactionId: txnRecord.id,
+      });
+    }
+
     // Record circuit breaker + quality (fire-and-forget)
     fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
     recordQuality({

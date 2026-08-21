@@ -33,9 +33,12 @@ import { transactions } from "../db/schema.js";
 import { log, logError } from "../lib/log.js";
 import { alertOnce } from "../lib/alert-once.js";
 import {
+  countEscalated,
+  escalateIntent,
   findAbandonedIntents,
   markRecordedBySettlement,
 } from "../lib/x402-settlement-intent.js";
+import { capabilities, x402OrphanSettlements } from "../db/schema.js";
 
 /**
  * Distinct from the WP3 reconciler's lock. Two jobs sweeping different tables
@@ -93,24 +96,20 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
     for (const intent of abandoned) {
       try {
         if (intent.state === "settling" || !intent.settlementId) {
-          // The unresolvable class. Escalate; do not touch the row.
+          // The unresolvable class: the process died during the facilitator
+          // call, so only the chain knows whether USDC moved. We still refuse
+          // to guess — nothing about the money is inferred — but the row MUST
+          // leave the sweep.
+          //
+          // Review finding: the first version escalated and deliberately left
+          // the row untouched. The sweep is ORDER BY updated_at ASC LIMIT n, so
+          // an untouched row stays permanently among the oldest; once n of them
+          // accumulate they own the whole batch forever and the next real crash
+          // is never examined. The recovery job would have silently stopped
+          // recovering. Handing the row to a human is a state change, not a
+          // guess about the money.
+          await escalateIntent(db, intent.id);
           summary.escalated += 1;
-          await alertOnce(
-            `x402-settlement-interrupted-${intent.id}`,
-            ALERT_COOLDOWN_MS,
-            {
-              subject:
-                "x402 settlement interrupted mid-flight — manual on-chain check required",
-              body:
-                `Intent ${intent.id} (slug=${intent.slug}, ${intent.priceCents} cents) was left ` +
-                `in state '${intent.state}' with no settlement id. The process died during the ` +
-                `facilitator call, so we cannot tell from our side whether the USDC moved. ` +
-                `Check the chain against our receiving address for payment hash ` +
-                `${intent.paymentHash}. If it settled, the customer paid and has no record; ` +
-                `if it did not, no action is needed.`,
-              severity: "critical",
-            },
-          );
           continue;
         }
 
@@ -132,24 +131,51 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
 
         // Settled, and no row. This is the case the orphan table was written
         // for and structurally could not catch.
+        //
+        // Attribute it properly. The intent stores the slug precisely so
+        // recovery is possible, and the first version discarded it — leaving
+        // the row unattributable to any capability except through free text.
+        const [cap] = intent.solutionSlug
+          ? []
+          : await db
+              .select({
+                id: capabilities.id,
+                transparencyTag: capabilities.transparencyTag,
+              })
+              .from(capabilities)
+              .where(eq(capabilities.slug, intent.slug))
+              .limit(1);
+
         const [recreated] = await db
           .insert(transactions)
           .values({
             userId: null,
-            capabilityId: null,
+            capabilityId: cap?.id ?? null,
             solutionSlug: intent.solutionSlug,
-            status: "completed",
+            // 'failed', not 'completed'. transactions.status is about what the
+            // CUSTOMER got, and they got nothing — the output was lost with the
+            // process. Marking it completed would both overstate delivery and
+            // poison the gateway's replay cache, which serves a completed row's
+            // output back: a retry inside the authorization window would have
+            // received an empty body dressed as a successful cached result.
+            // The money that moved is recorded by priceCents + the settlement
+            // id, not by the status.
+            status: "failed",
             input: { recovered_by: "settlement-reconciler" },
             output: null,
             priceCents: intent.priceCents,
             paymentMethod: "x402",
             x402SettlementId: intent.settlementId,
             x402PaymentHash: intent.paymentHash,
+            // Never inherit the column default here. It is 'ai_generated',
+            // which on a recovered row would be a fabricated EU AI Act Art. 50
+            // marker on a call we cannot describe.
+            transparencyMarker: cap?.transparencyTag ?? "unknown",
             error:
               "Recovered by the WP5 settlement reconciler: the settlement " +
               "succeeded on-chain but the process died before its transaction " +
-              "row was written. Output was not captured and cannot be " +
-              "reconstructed.",
+              "row was written. The customer paid and did not receive output, " +
+              "which cannot be reconstructed.",
             completedAt: new Date(),
           })
           .returning({ id: transactions.id });
@@ -158,6 +184,15 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
           settlementId: intent.settlementId,
           transactionId: recreated.id,
         });
+        // The orphan table is the OTHER channel for this same event, and it
+        // says "awaiting reconciliation" with a procedure ("recreate the row
+        // OR refund the payer") that an operator following it now would apply
+        // to a settlement already reconciled — double-recording or wrongly
+        // refunding. Close it here so the two channels cannot disagree.
+        await db
+          .update(x402OrphanSettlements)
+          .set({ reconciledAt: new Date(), reconciliationStatus: "auto_recovered" })
+          .where(eq(x402OrphanSettlements.settlementId, intent.settlementId));
         summary.recovered += 1;
 
         // Recovered, but the customer paid and did not receive output. That is
@@ -177,6 +212,16 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
           },
         );
       } catch (err) {
+        // The unique index on transactions.x402_settlement_id IS the claim.
+        // The advisory lock only spans the batch SELECT, so two staggered
+        // replicas can both reach the insert; the loser gets 23505 here, which
+        // means "already recovered", not "failed". Treated as a discharge so a
+        // benign race is not reported as an error every tick.
+        const pgCode = (err as { code?: string } | null)?.code;
+        if (pgCode === "23505") {
+          summary.discharged += 1;
+          continue;
+        }
         summary.failed += 1;
         logError("settlement-reconcile-item-failed", err, {
           intent_id: intent.id,
@@ -185,10 +230,42 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
     }
   }
 
+  // One alert about the whole escalated backlog, not one per row.
+  //
+  // Review finding: the first version paged per intent id on a 6h cooldown, so
+  // a handful of permanently-stuck rows meant a standing stream of CRITICAL
+  // pages every six hours — the alert-fatigue mode that ends with the channel
+  // muted, which is precisely the channel that would tell an operator the
+  // recovery job had stopped recovering.
+  const escalatedBacklog = await countEscalated(db);
+  if (escalatedBacklog > 0) {
+    await alertOnce("x402-settlement-escalated-backlog", ALERT_COOLDOWN_MS, {
+      subject: `${escalatedBacklog} x402 settlement(s) need a manual on-chain check`,
+      body:
+        `${escalatedBacklog} settlement intent(s) are in state 'escalated'. Each was ` +
+        `interrupted during the facilitator call, so we cannot tell from our side whether ` +
+        `the USDC moved. Query:
+
+` +
+        `  SELECT id, slug, payment_hash, price_cents, escalated_at
+` +
+        `  FROM x402_settlement_intents WHERE state = 'escalated' ORDER BY escalated_at;
+
+` +
+        `For each, check the chain against our receiving address for that payment hash. ` +
+        `If it settled, the customer paid and has no record. If it did not, no action is ` +
+        `needed — mark the row resolved either way so this count returns to zero.`,
+      severity: "critical",
+    });
+  }
+
   // Logged every tick, including the quiet ones. A summary that only appears
   // when something happened is indistinguishable from a job that stopped
   // running — the failure mode DEC-20260504-B was written about.
-  log.info({ label: "settlement-reconcile", ...summary }, "settlement-reconcile");
+  log.info(
+    { label: "settlement-reconcile", ...summary, escalated_backlog: escalatedBacklog },
+    "settlement-reconcile",
+  );
   return summary;
 }
 

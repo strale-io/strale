@@ -122,21 +122,71 @@ describeMaybe("a crashed x402 settlement is recoverable", () => {
     expect(intent!.state).toBe("recorded");
   }, 120_000);
 
-  it("does not recover it twice", async () => {
-    // A second tick must be a no-op. The unique index on settlement_id is the
-    // structural guarantee; this proves the job respects it rather than
-    // relying on it to throw.
+  it("does not recover it twice when the discharge itself was lost", async () => {
+    // Review finding: the first version of this test ran reconcile() twice and
+    // claimed to prove idempotent recovery. It could not — after the first tick
+    // the intent is 'recorded' with a transaction_id, so the selection excludes
+    // it and the second tick never looks at the row. It was asserting a state
+    // transition while describing a guarantee.
+    //
+    // The real risk is markRecordedBySettlement failing AFTER the INSERT, which
+    // leaves the intent at 'settled' with a null transaction_id — squarely back
+    // in the sweep, with its row already created. That is what this reproduces.
     const settlementId = `wp5-set-${randomUUID().slice(0, 8)}`;
-    await seedIntent({ state: "settled", settlementId });
+    const { paymentHash } = await seedIntent({ state: "settled", settlementId });
 
     await reconcile();
+
+    // Simulate the lost discharge: the row exists, the intent forgot.
+    await db
+      .update(x402SettlementIntents)
+      .set({ state: "settled", transactionId: null, updatedAt: STALE })
+      .where(eq(x402SettlementIntents.paymentHash, paymentHash));
+
     await reconcile();
 
     const rows = await db
       .select({ id: transactions.id })
       .from(transactions)
       .where(eq(transactions.x402SettlementId, settlementId));
+    // Exactly one. The second pass must find the existing row and discharge,
+    // never insert a second revenue record for one settlement.
     expect(rows).toHaveLength(1);
+
+    const [intent] = await db
+      .select({ state: x402SettlementIntents.state })
+      .from(x402SettlementIntents)
+      .where(eq(x402SettlementIntents.paymentHash, paymentHash));
+    expect(intent!.state).toBe("recorded");
+  }, 120_000);
+
+  it("takes an unresolvable intent OUT of the sweep", async () => {
+    // The starvation defect. The escalate branch left the row untouched, so it
+    // kept its original updated_at, stayed permanently among the oldest, and —
+    // with ORDER BY updated_at ASC LIMIT n — a handful of them would own the
+    // whole batch forever, starving every later crash out of ever being
+    // examined. The recovery job would have silently stopped recovering.
+    const { paymentHash } = await seedIntent({ state: "settling" });
+
+    await reconcile();
+
+    const [intent] = await db
+      .select({
+        state: x402SettlementIntents.state,
+        escalatedAt: x402SettlementIntents.escalatedAt,
+      })
+      .from(x402SettlementIntents)
+      .where(eq(x402SettlementIntents.paymentHash, paymentHash));
+
+    expect(intent!.state).toBe("escalated");
+    expect(intent!.escalatedAt).not.toBeNull();
+
+    // And it no longer appears in the sweep at all.
+    const { findAbandonedIntents } = await import(
+      "../lib/x402-settlement-intent.js"
+    );
+    const remaining = await findAbandonedIntents(db, 100);
+    expect(remaining.map((r) => r.paymentHash)).not.toContain(paymentHash);
   }, 120_000);
 
   it("discharges an intent whose transaction row already exists", async () => {
@@ -181,22 +231,27 @@ describeMaybe("a crashed x402 settlement is recoverable", () => {
     // have.
     const { paymentHash } = await seedIntent({ state: "settling" });
 
-    const summary = await reconcile();
-    expect(summary.escalated).toBeGreaterThanOrEqual(1);
-    expect(summary.recovered).toBe(0);
+    await reconcile();
 
     const [intent] = await db
       .select({
         state: x402SettlementIntents.state,
         transactionId: x402SettlementIntents.transactionId,
+        settlementId: x402SettlementIntents.settlementId,
       })
       .from(x402SettlementIntents)
       .where(eq(x402SettlementIntents.paymentHash, paymentHash));
 
-    // Untouched. A stuck row an operator can see beats a wrong number nobody
-    // can find.
-    expect(intent!.state).toBe("settling");
+    // `summary.recovered === 0` was here and was wrong in the same way the
+    // last test in this file calls out: that counter covers every stale row in
+    // the database, including ones other suites write. Assert about THIS row.
+    //
+    // Nothing about the MONEY is inferred: no settlement id is invented and no
+    // transaction row is created. The state change only records that a human
+    // now owns it.
+    expect(intent!.state).toBe("escalated");
     expect(intent!.transactionId).toBeNull();
+    expect(intent!.settlementId).toBeNull();
   }, 120_000);
 
   it("a settlement-id collision does not fail the request", async () => {

@@ -35,7 +35,7 @@
 
 import { and, eq, isNull, lt, sql } from "drizzle-orm";
 
-import { x402SettlementIntents } from "../db/schema.js";
+import { x402OrphanSettlements, x402SettlementIntents } from "../db/schema.js";
 import { logError } from "./log.js";
 import type { WalletTx } from "./wallet-service.js";
 
@@ -60,12 +60,41 @@ import type { WalletTx } from "./wallet-service.js";
 async function bestEffort(
   label: string,
   context: Record<string, unknown>,
-  fn: () => Promise<void>,
-): Promise<void> {
+  fn: () => Promise<number>,
+): Promise<number> {
   try {
-    await fn();
+    return await fn();
   } catch (err) {
     logError(label, err, context);
+    return 0;
+  }
+}
+
+/**
+ * A conditional UPDATE that matches nothing is not an exception.
+ *
+ * Review finding, and the sharper half of the swallow problem: `bestEffort`
+ * only catches THROWS. Every transition here is guarded on the prior state, so
+ * a guard miss is a zero-row UPDATE — no error, no log, no counter, nothing.
+ * The safety argument above ("it degrades to a state the reconciler escalates")
+ * holds for the throw case and is FALSE for this one, where the row can be left
+ * describing a different settlement while looking fully resolved.
+ *
+ * So every transition reports whether it applied, and a no-op is logged as the
+ * anomaly it is. DEC-20260504-A's swallow-visibility rule, applied to the case
+ * that produces no error to swallow.
+ */
+function reportNoOp(
+  label: string,
+  applied: number,
+  context: Record<string, unknown>,
+): void {
+  if (applied === 0) {
+    logError(
+      label,
+      new Error("conditional state transition matched no row"),
+      context,
+    );
   }
 }
 
@@ -73,7 +102,19 @@ export type SettlementIntentState =
   | "settling"
   | "settled"
   | "recorded"
-  | "failed";
+  | "failed"
+  /**
+   * Handed to a human. Terminal from the job's perspective.
+   *
+   * Exists because of a starvation defect found in review: the reconciler
+   * escalated unresolvable rows and deliberately left them untouched, but the
+   * sweep is `ORDER BY updated_at ASC LIMIT n`. An untouched row keeps its
+   * original timestamp, so it stays permanently among the oldest — and once n
+   * of them accumulate they occupy the whole batch forever, and the next real
+   * crash is never examined. The recovery job would have silently stopped
+   * recovering, which is the failure WP5 exists to prevent.
+   */
+  | "escalated";
 
 /**
  * How long an intent may sit non-terminal before the reconciler treats it as
@@ -86,9 +127,33 @@ export type SettlementIntentState =
  */
 export const INTENT_STALE_AFTER_MS = 5 * 60 * 1000;
 
+/**
+ * The intent could not be written, so the settlement cannot be made durable.
+ *
+ * Its own class so the failure is attributable. It is raised BEFORE any money
+ * moves, which makes failing the request the safe choice — but the capability
+ * has already executed successfully by then, and without a distinct type the
+ * generic catch fires recordFailure + triggerOnFailure against a quality floor
+ * that is armed in production. A database blip on Strale's side would delist a
+ * capability that did its job.
+ */
+export class SettlementIntentUnavailableError extends Error {
+  constructor(cause: unknown) {
+    super(
+      "Could not record a durable settlement intent; the payment was not " +
+        "taken. This is a Strale-side failure, not a capability failure.",
+    );
+    this.name = "SettlementIntentUnavailableError";
+    this.cause = cause;
+  }
+}
+
 export interface SettlementIntent {
   id: string;
   paymentHash: string;
+  /** State AFTER the upsert — 'settling' for a fresh intent. */
+  state: string;
+  settlementId: string | null;
 }
 
 /**
@@ -118,6 +183,7 @@ export async function openIntent(
     priceUsd?: number | null;
   },
 ): Promise<SettlementIntent> {
+  try {
   const [row] = await db
     .insert(x402SettlementIntents)
     .values({
@@ -137,9 +203,38 @@ export async function openIntent(
     .returning({
       id: x402SettlementIntents.id,
       paymentHash: x402SettlementIntents.paymentHash,
+      state: x402SettlementIntents.state,
+      settlementId: x402SettlementIntents.settlementId,
     });
 
+  // A conflict on a NON-'settling' intent means this authorization already
+  // reached the facilitator once. The caller is about to settle it again, and
+  // this row cannot represent two settlements — its uniqueness on payment_hash
+  // caps the durable record at one. Surfaced rather than swallowed; markSettled's
+  // zero-row path is what actually preserves the second settlement.
+  if (row.state !== "settling") {
+    logError(
+      "x402-intent-reopened-on-terminal-state",
+      new Error(
+        `Intent for this payment hash is already in state '${row.state}'; a ` +
+          "second settlement is about to be attempted against one authorization",
+      ),
+      {
+        intent_id: row.id,
+        existing_state: row.state,
+        existing_settlement_id: row.settlementId,
+      },
+    );
+  }
+
   return row;
+  } catch (err) {
+    // Deliberately NOT best-effort: this runs before the facilitator, so
+    // failing the request costs nothing but a retry, while proceeding without
+    // durability reinstates the exact defect WP5 exists to close.
+    if (err instanceof SettlementIntentUnavailableError) throw err;
+    throw new SettlementIntentUnavailableError(err);
+  }
 }
 
 /** The facilitator answered. Record which way, and the settlement id if any. */
@@ -147,11 +242,11 @@ export async function markSettled(
   db: WalletTx,
   params: { intentId: string; settlementId: string },
 ): Promise<void> {
-  await bestEffort(
+  const applied = await bestEffort(
     "x402-intent-mark-settled-failed",
     { intent_id: params.intentId, settlement_id: params.settlementId },
     async () => {
-  await db
+  const rows = await db
     .update(x402SettlementIntents)
     .set({
       state: "settled",
@@ -163,9 +258,41 @@ export async function markSettled(
         eq(x402SettlementIntents.id, params.intentId),
         eq(x402SettlementIntents.state, "settling"),
       ),
-    );
+    )
+    .returning({ id: x402SettlementIntents.id });
+  return rows.length;
     },
   );
+
+  // The settlement id could not be attached to its intent, so it now exists
+  // ONLY on-chain. Preserve it in the orphan table — that table's whole purpose
+  // is "a settlement we could not record normally" — otherwise a second
+  // settlement against one authorization vanishes without trace.
+  if (applied === 0) {
+    reportNoOp("x402-intent-mark-settled-noop", applied, {
+      intent_id: params.intentId,
+      settlement_id: params.settlementId,
+    });
+    await bestEffort(
+      "x402-intent-orphan-capture-failed",
+      { settlement_id: params.settlementId },
+      async () => {
+        await db.insert(x402OrphanSettlements).values({
+          settlementId: params.settlementId,
+          capabilitySlug: null,
+          solutionSlug: null,
+          payerAddress: null,
+          priceUsd: "0.0000",
+          priceCents: 0,
+          rawArgs: { intent_id: params.intentId, source: "mark-settled-noop" },
+          failureReason:
+            "Settlement succeeded but its intent was no longer in 'settling'; " +
+            "the settlement id had nowhere else to live.",
+        });
+        return 1;
+      },
+    );
+  }
 }
 
 /**
@@ -179,11 +306,11 @@ export async function markFailed(
   db: WalletTx,
   params: { intentId: string; reason: string },
 ): Promise<void> {
-  await bestEffort(
+  const applied = await bestEffort(
     "x402-intent-mark-failed-failed",
     { intent_id: params.intentId },
     async () => {
-  await db
+  const rows = await db
     .update(x402SettlementIntents)
     .set({
       state: "failed",
@@ -195,9 +322,14 @@ export async function markFailed(
         eq(x402SettlementIntents.id, params.intentId),
         eq(x402SettlementIntents.state, "settling"),
       ),
-    );
+    )
+    .returning({ id: x402SettlementIntents.id });
+  return rows.length;
     },
   );
+  reportNoOp("x402-intent-mark-failed-noop", applied, {
+    intent_id: params.intentId,
+  });
 }
 
 /**
@@ -296,7 +428,7 @@ export async function markRecordedBySettlement(
   db: WalletTx,
   params: { settlementId: string; transactionId: string },
 ): Promise<void> {
-  await db
+  const rows = await db
     .update(x402SettlementIntents)
     .set({
       state: "recorded",
@@ -308,5 +440,44 @@ export async function markRecordedBySettlement(
         eq(x402SettlementIntents.settlementId, params.settlementId),
         eq(x402SettlementIntents.state, "settled"),
       ),
-    );
+    )
+    .returning({ id: x402SettlementIntents.id });
+
+  reportNoOp("x402-intent-mark-recorded-noop", rows.length, {
+    settlement_id: params.settlementId,
+    transaction_id: params.transactionId,
+  });
+}
+
+/**
+ * Hand an unresolvable intent to a human and take it OUT of the sweep.
+ *
+ * The transition is what fixes the starvation: an escalated row no longer
+ * matches the selection, so it cannot occupy a slot in an ordered, limited
+ * batch forever. It stays in the table, fully visible, with the timestamp of
+ * when it was handed over.
+ */
+export async function escalateIntent(
+  db: WalletTx,
+  intentId: string,
+): Promise<boolean> {
+  const rows = await db
+    .update(x402SettlementIntents)
+    .set({ state: "escalated", escalatedAt: new Date(), updatedAt: new Date() })
+    .where(
+      and(
+        eq(x402SettlementIntents.id, intentId),
+        sql`${x402SettlementIntents.state} IN ('settling', 'settled')`,
+      ),
+    )
+    .returning({ id: x402SettlementIntents.id });
+  return rows.length > 0;
+}
+
+/** How many intents are sitting with a human. Drives one aggregate alert. */
+export async function countEscalated(db: WalletTx): Promise<number> {
+  const rows = (await db.execute(
+    sql`SELECT count(*)::int AS c FROM x402_settlement_intents WHERE state = 'escalated'`,
+  )) as unknown as Array<{ c: number }>;
+  return rows[0]?.c ?? 0;
 }

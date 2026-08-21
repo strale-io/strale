@@ -410,8 +410,15 @@ export const x402SettlementIntents = pgTable(
     solutionSlug: text("solution_slug"),
     priceCents: integer("price_cents").notNull(),
     priceUsd: decimal("price_usd", { precision: 10, scale: 4 }),
-    // 'settling' | 'settled' | 'recorded' | 'failed'
+    // 'settling' | 'settled' | 'recorded' | 'failed' | 'escalated'
+    //
+    // 'escalated' is terminal-from-the-job's-perspective: a human must resolve
+    // it against the chain. It exists so an unresolvable row LEAVES the
+    // reconciler's selection set. Without it, a stuck row keeps its original
+    // updated_at, stays permanently the oldest row, and — with an ordered,
+    // limited sweep — starves every later crash out of ever being examined.
     state: varchar("state", { length: 16 }).notNull().default("settling"),
+    escalatedAt: timestamp("escalated_at", { withTimezone: true }),
     settlementId: text("settlement_id"),
     transactionId: uuid("transaction_id"),
     failureReason: text("failure_reason"),
