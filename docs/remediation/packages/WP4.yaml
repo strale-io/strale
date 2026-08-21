@@ -1,6 +1,8 @@
 package: WP4
 title: Canonical ExecutionOutcome — one authority for billability
-status: REMEDIATED
+status: ACCEPTED
+merged_sha: c7efbb4
+merged_pr: 351
 depends_on: [WP2]
 risks: [CR-02]
 
@@ -126,7 +128,7 @@ incidental_findings:
 review:
   codex: deferred_to_final_pass
   independent_agent: FAIL_REMEDIATION_REQUIRED, then all findings closed
-  fable: pending
+  fable: ACCEPT
 
   blocking_finding: >
     The x402 CAPABILITY rail was never wired. The module docstring named five

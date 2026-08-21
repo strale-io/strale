@@ -176,6 +176,7 @@ async function main() {
   // since April, and draining a long-silent backlog in one burst is what took
   // Postgres down on 2026-05-04 (DEC-20260504-B).
   const { startReservationReconciler } = await import("./jobs/reservation-reconciler.js");
+  const { startSettlementReconciler } = await import("./jobs/settlement-reconciler.js");
   const { assertReservationTtlExceedsExecutionTimeout } = await import(
     "./lib/wallet-reservations.js"
   );
@@ -186,6 +187,9 @@ async function main() {
     parseInt(process.env.EXEC_HARD_TIMEOUT_MS ?? "300000", 10),
   );
   startReservationReconciler();
+  // WP5: the x402 half. Nothing read x402_orphan_settlements before this —
+  // "awaiting reconciliation" meant awaiting a human who had to notice first.
+  startSettlementReconciler();
 
   // Monthly REINDEX CONCURRENTLY on `transactions` — prevents B-tree
   // bloat drift that caused the 2026-04-16 outage. Uses the dedicated-

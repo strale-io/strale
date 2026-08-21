@@ -2,13 +2,43 @@
 
 _Last updated: 2026-08-21 (session 1)_
 
-- **Current package:** WP4 — in independent adversarial review on `remediation/wp4`.
+- **Current package:** WP4 — ACCEPTED, merged as `c7efbb4` (PR #351).
 - **Next package:** WP5
 - **WP3:** ACCEPTED, merged as `ee7f737` (PR #350), verified live in production — table, all three indexes, and the CHECK constraint reached `validated=true`.
 - **Latest accepted SHA:** `ee7f737` on `main`
 - **Unresolved blockers:** none
 - **Human approvals granted:** program-level autonomy (run continuously; escalate only per CHECK-IN A/B/C)
 - **Awaiting founder:** nothing. One item is logged for *visibility only*, not decision — see "Codex disposition" below.
+
+## Where WP4 landed
+
+One authority for billability: `lib/execution-outcome.ts`. Payment consumes
+`billable`. A rail still decides HOW to collect; it no longer decides WHETHER.
+
+The defect was real and sharper than the audit stated. `gated` appeared twelve
+times in the wallet solution route and zero times in the x402 one, so a gated
+run refunded one customer in full and charged the other in full. `result.gated`
+was available on the x402 rail the whole time.
+
+**The review's blocking finding was about my own claim, not just my code.** I
+rewired four of five rails and recorded "no route decides billability
+independently" as MET. That was false — the x402 capability rail still settled
+on any resolution — and the half-fix *created* a new asymmetry between
+`/v1/do` + X-PAYMENT and `/x402/:slug`. The guard was green throughout because
+its import check was file-scoped: one handler importing the module satisfied it
+while another settled 250 lines away. The lesson generalises past this package:
+a guard that checks a FILE cannot protect a decision made in a FUNCTION.
+
+Also closed: `counts_against_capability` had no consumer, so the advertised
+"refusals don't count against a capability" fix was documentation only against
+an armed quality floor; `UnbillableOutputError` discarded upstream error text
+and so misfiled 5xx failures as Strale's bug; a gated x402 solution wrote no
+transaction row and no replay-dedup entry, leaving the authorization replayable
+at our cost.
+
+Three review findings were guard bugs rather than code bugs and were fixed as
+such — worth remembering that an adversarial reviewer's findings also need
+adjudicating rather than blanket acceptance.
 
 ## WP3 in production — verified, with one honest gap
 

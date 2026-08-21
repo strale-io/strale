@@ -1,0 +1,110 @@
+package: WP5
+title: x402 durable settlement state + recovery
+status: REMEDIATED
+depends_on: [WP3, WP4]
+risks: [CR-01]
+
+objective: >
+  Make an irreversible on-chain settlement recoverable. WP3 did this for wallet
+  debits, which are reversible; this is the harder half, because a settlement
+  cannot be undone and the customer's USDC has already moved.
+
+# Verified against the code and against production, not taken from the audit.
+current_state:
+  orphan_table_exists: >
+    x402_orphan_settlements, added by CCO P0 #12. Its schema comment says a row
+    means "customer paid USDC, settlement succeeded, but our DB write failed —
+    awaiting reconciliation."
+  prod: "0 orphan rows; 6,377 x402 transactions total"
+
+defects:
+  no_durable_intent: >
+    THE defect, and the exact structural analogue of WP3. The orphan capture is
+    a catch block in the same process (routes/x402-gateway-v2.ts:851). It
+    handles "the INSERT threw". It cannot handle "the process died between the
+    settlement succeeding and the INSERT committing", because then the catch
+    never runs either. A SIGKILL there means the customer's USDC moved
+    irreversibly and Strale holds no row anywhere — not in transactions, not in
+    the orphan table. Undetectable except by on-chain reconciliation against
+    our own wallet.
+
+    An in-process catch block is not a recovery mechanism. That was the WP3
+    lesson and it was never applied to the rail where the money movement is
+    irreversible.
+
+  no_uniqueness_per_settlement: >
+    transactions.x402_settlement_id has no unique index, and
+    x402_orphan_settlements.settlement_id has none either. Nothing structurally
+    prevents one settlement being recorded twice. The existing unique index on
+    x402_payment_hash is a DIFFERENT guarantee — it dedups a replayed payment
+    header so the work is not re-executed. It does not constrain how many rows
+    one settlement produces.
+
+  orphan_table_never_read: >
+    No job reads x402_orphan_settlements. Confirmed by grep across src/jobs/:
+    the only x402 job is settlement-watch, a 24h volume tripwire, not a
+    reconciler. "Awaiting reconciliation" means awaiting a human who has to
+    notice first, and nothing pages them. The table has been correct and inert.
+
+design:
+  durable_intent: >
+    Write the intent BEFORE calling the facilitator. state: settling → settled
+    → recorded, plus failed. A crash at any point leaves a durable row naming
+    exactly what was attempted.
+  reconciler_resolves_what_it_can: >
+    - intent 'settled' with a matching transactions row  → mark recorded
+    - intent 'settled' with NO transactions row          → recreate from stored args
+    - intent 'settling', no settlement_id, past deadline → CANNOT be resolved from
+      our side; the chain may or may not have moved. Alert, never guess.
+  the_honest_residual: >
+    That last class is real and irreducible without an on-chain oracle. The
+    reconciler must page rather than assume either way — assuming "settled"
+    invents revenue, assuming "not settled" gives away the work. Money code
+    should refuse to guess and say so loudly.
+
+review:
+  codex: deferred_to_final_pass
+  independent_agent: FAIL_REMEDIATION_REQUIRED, then all findings closed
+
+  blocking_1_starvation: >
+    The sharpest finding of the program so far. The escalate branch alerted and
+    deliberately left the row untouched — but the sweep is
+    ORDER BY updated_at ASC LIMIT 25. An untouched row keeps its original
+    timestamp, so it stays permanently among the oldest; once 25 accumulate they
+    own the entire batch forever and the next real crash is NEVER examined. The
+    recovery job would have silently stopped recovering, which is precisely the
+    failure WP5 exists to prevent — and the tick log would have read
+    "examined:25 escalated:25" forever, indistinguishable from health.
+    Compounded by per-row alerting on a 6h cooldown: 25 permanent CRITICAL
+    pages every six hours would have muted the one channel that could report it.
+    Fixed with an `escalated` state that leaves the selection set, plus ONE
+    aggregate alert about the backlog.
+
+  blocking_2_silent_noop: >
+    `bestEffort` only caught THROWS. Every transition is a conditional UPDATE,
+    so a guard miss is a ZERO-ROW update — no error, no log, nothing. The
+    module's own safety argument ("it degrades to a state the reconciler
+    escalates") held for the throw case and was false here, where the row can
+    end up describing a different settlement while looking fully resolved. A
+    second settlement against one authorization was written nowhere at all.
+    Fixed: every transition returns its row count, a no-op is logged as the
+    anomaly it is, and a settlement id that cannot reach its intent is captured
+    in x402_orphan_settlements — the table that exists for exactly that.
+
+  non_blocking_closed:
+    - "/v1/do opened intents and never discharged them, routing every paid call through the crash-recovery path and permanently contending its bounded queue."
+    - "The orphan table still was not read; the two channels could disagree, and an operator following the orphan procedure would double-record or wrongly refund. The reconciler now closes the orphan row when it recovers."
+    - "The `one canonical record per settlement` exit condition was claimed but only constrained the intents table; duplicate prevention on `transactions` rested on the unrelated payment-hash index. A partial unique index now exists on transactions.x402_settlement_id — verified against production first: 0 duplicates across 5,675 rows, so it cannot abort boot."
+    - "The advisory lock spanned only the batch SELECT, so two staggered replicas could both reach the insert. The unique index is now the claim, and a 23505 loser is counted as discharged rather than failed."
+    - "The recovered row was status='completed' with null output, which poisoned the gateway replay cache (a retry received an empty body dressed as a cached success), discarded the slug the intent stores precisely to make recovery possible, and inherited a DEFAULT transparency marker of 'ai_generated' — a fabricated EU AI Act Art. 50 claim. Now 'failed' (the customer received nothing; the money is recorded by priceCents + settlement id), attributed to its capability, with an honest marker."
+    - "An openIntent failure blamed the CAPABILITY: recordFailure + triggerOnFailure against an armed quality floor, for a Strale database blip. Now a typed error WP4's classifier excludes."
+    - "Two tests did not test what they claimed — `does not recover it twice` could not reach the second tick at all, and `REFUSES to guess` reintroduced the global-counter assertion the file itself calls out."
+
+exit_conditions:
+  - durable intent written before any settlement call
+  - one canonical record per settlement (enforced by a unique index, not convention)
+  - the orphan table is read by something that runs
+  - a crash between settle and record is recoverable, proved by a kill test
+  - ambiguous cases alert rather than resolve themselves
+  - the sweep cannot be starved by unresolvable rows      # MET (added after review)
+  - independent adversarial review passes                  # MET after remediation

@@ -28,6 +28,7 @@ import { randomUUID } from "node:crypto";
 import { useTestDatabase } from "../test-support/integration-db.js";
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import {
+  x402SettlementIntents,
   users,
   wallets,
   walletTransactions,
@@ -129,6 +130,11 @@ describeMaybe("a gated solution bills identically on both rails", () => {
     // leftover rows look like.
     if (solSlug) {
       await db.delete(transactions).where(eq(transactions.solutionSlug, solSlug));
+      // WP5 added settlement intents; the x402 rail writes one per request and
+      // they outlive the test the same way its transaction rows used to.
+      await db
+        .delete(x402SettlementIntents)
+        .where(eq(x402SettlementIntents.slug, solSlug));
     }
     if (userId) {
       await db.delete(walletReservations).where(eq(walletReservations.userId, userId));
@@ -370,6 +376,9 @@ describeMaybe("a capability returning an unusable output bills on neither rail",
       // how the solutions block broke that test in CI while passing locally.
       // `transactions` has no slug column; capability_id is the identifier.
       await db.delete(transactions).where(eq(transactions.capabilityId, capabilityId));
+      await db
+        .delete(x402SettlementIntents)
+        .where(eq(x402SettlementIntents.slug, CAP_SLUG));
       await db.delete(capabilities).where(eq(capabilities.id, capabilityId));
     }
     await client.end();

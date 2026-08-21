@@ -24,6 +24,7 @@ import {
 import {
   isX402Configured,
   verifyX402PaymentOnly,
+  hashPaymentHeader,
   settleX402Payment,
   extractPaymentHeader,
   extractPayerAddress,
@@ -43,6 +44,7 @@ import { extractClientMeta, recordDiscoveryHit, hashX402Payer } from "../lib/att
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { executeSolution } from "../lib/solution-executor.js";
+import * as settlementIntent from "../lib/x402-settlement-intent.js";
 import {
   aggregateSolutionOutcome,
   assertBillableOutput,
@@ -611,10 +613,6 @@ function schemaBadRequest(
 // row is `completed`, return its output as the cached response. If found
 // and `failed`, return its error.
 
-function hashPaymentHeader(header: string): string {
-  return createHash("sha256").update(header).digest("hex").slice(0, 32);
-}
-
 async function findCachedX402Response(
   paymentHash: string,
 ): Promise<{ status: string; output: unknown; latencyMs: number | null; settlementId: string | null } | null> {
@@ -845,6 +843,22 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
           .where(eq(transactions.id, insertedId));
       } catch (updErr) {
         logError("x402-audit-rebuild-failed", updErr, { transactionId: insertedId });
+      }
+    }
+    // WP5: the row landed, so the intent is discharged. Best-effort — the
+    // customer-facing record must never fail to land because bookkeeping did,
+    // and a missed mark leaves an intent the reconciler resolves as
+    // already-recorded.
+    if (args.settlementId) {
+      try {
+        await settlementIntent.markRecordedBySettlement(db, {
+          settlementId: args.settlementId,
+          transactionId: insertedId,
+        });
+      } catch (intentErr) {
+        logError("x402-intent-mark-recorded-failed", intentErr, {
+          settlementId: args.settlementId,
+        });
       }
     }
     return insertedId;
@@ -1202,7 +1216,36 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
 
   let settlementId: string | undefined;
   if (verified) {
+    // WP5: durable intent BEFORE the facilitator is called. That ordering is
+    // the whole point — the orphan capture below is a catch block in this
+    // process, so it handles "the INSERT threw" and cannot handle "the process
+    // died", when it never runs either. A settlement is irreversible, so the
+    // window between it succeeding and the row landing is the one place on the
+    // platform where a crash costs a customer money with no record at all.
+    const intent = paymentHash
+      ? await settlementIntent.openIntent(getDb(), {
+          paymentHash,
+          slug: sol.slug,
+          solutionSlug: sol.slug,
+          priceCents: sol.priceCents,
+          priceUsd: sol.x402PriceUsd,
+        })
+      : null;
+
     const settled = await settleX402Payment(verified);
+    if (intent) {
+      if (settled.valid && settled.settlementId) {
+        await settlementIntent.markSettled(getDb(), {
+          intentId: intent.id,
+          settlementId: settled.settlementId,
+        });
+      } else {
+        await settlementIntent.markFailed(getDb(), {
+          intentId: intent.id,
+          reason: settled.error ?? "settlement returned invalid",
+        });
+      }
+    }
     if (!settled.valid) {
       return c.json(
         { error: "Payment settlement failed", detail: settled.error },
@@ -1520,7 +1563,36 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   // already passed) surface a clear error; the client can retry the paid call.
   let settlementId: string | undefined;
   if (verified) {
+    // WP5: durable intent BEFORE the facilitator is called. That ordering is
+    // the whole point — the orphan capture below is a catch block in this
+    // process, so it handles "the INSERT threw" and cannot handle "the process
+    // died", when it never runs either. A settlement is irreversible, so the
+    // window between it succeeding and the row landing is the one place on the
+    // platform where a crash costs a customer money with no record at all.
+    const intent = paymentHash
+      ? await settlementIntent.openIntent(getDb(), {
+          paymentHash,
+          slug: cap.slug,
+          solutionSlug: null,
+          priceCents: cap.priceCents,
+          priceUsd: cap.x402PriceUsd,
+        })
+      : null;
+
     const settled = await settleX402Payment(verified);
+    if (intent) {
+      if (settled.valid && settled.settlementId) {
+        await settlementIntent.markSettled(getDb(), {
+          intentId: intent.id,
+          settlementId: settled.settlementId,
+        });
+      } else {
+        await settlementIntent.markFailed(getDb(), {
+          intentId: intent.id,
+          reason: settled.error ?? "settlement returned invalid",
+        });
+      }
+    }
     if (!settled.valid) {
       return c.json(
         { error: "Payment settlement failed", detail: settled.error },

@@ -495,6 +495,12 @@ export function assertBillableOutput(slug: string, output: unknown): void {
  * only the latter.
  */
 export function shouldCountAgainstCapability(error: unknown): boolean {
+  // WP5: a settlement-intent write failure is Strale's database, not the
+  // capability. Matched by name rather than by import to keep the billing
+  // authority from depending on the x402 rail.
+  if ((error as Error | null)?.name === "SettlementIntentUnavailableError") {
+    return false;
+  }
   if (error instanceof UnbillableOutputError) {
     // The capability resolved with something unusable. That IS its fault —
     // unless the marker says the step never ran.

@@ -16,6 +16,7 @@
  */
 
 import { HTTPFacilitatorClient } from "@x402/core/server";
+import { createHash } from "node:crypto";
 import { parsePaymentPayload } from "@x402/core/schemas";
 import { createFacilitatorConfig } from "@coinbase/x402";
 import { log, logError } from "./log.js";
@@ -662,4 +663,17 @@ export function extractPaymentHeader(headers: Headers): string | null {
 export function encodePaymentResponseHeader(settlementId: string): string {
   const payload = { success: true, transaction: settlementId, network: NETWORK };
   return Buffer.from(JSON.stringify(payload)).toString("base64");
+}
+
+/**
+ * Stable identifier for one payment authorization.
+ *
+ * Moved here in WP5 from routes/x402-gateway-v2.ts, where it was private. Both
+ * the wildcard gateway and the /v1/do x402 path need it now — the gateway to
+ * dedup replays, /v1/do to key its settlement intent — and two copies of a
+ * hashing rule is how the two rails would silently stop agreeing about what
+ * "the same payment" means.
+ */
+export function hashPaymentHeader(header: string): string {
+  return createHash("sha256").update(header).digest("hex").slice(0, 32);
 }
