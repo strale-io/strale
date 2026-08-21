@@ -6,10 +6,16 @@
  * prevents reintroduction — otherwise the eleventh site gets added next month
  * and the invariant quietly stops holding.
  *
- * What this enforces: no module other than the wallet service may write to the
- * `wallets` or `wallet_transactions` tables. Both matter. Writing a balance
- * without its ledger row is the closure bug; writing a ledger row without the
- * balance is the same divergence from the other side.
+ * What this enforces: nothing outside the wallet service writes the `wallets`
+ * or `wallet_transactions` tables. Both matter. Writing a balance without its
+ * ledger row is the closure bug; writing a ledger row without the balance is
+ * the same divergence from the other side.
+ *
+ * Three write surfaces are covered, and each was added because a real bypass
+ * was found on it:
+ *   - src/      — the original ten call sites;
+ *   - scripts/  — topup-test.ts was mutating balances directly;
+ *   - docs/     — the smoke-test runbook told an operator to run bare SQL.
  *
  * Runs as an ordinary unit test so it fails in the normal CI job rather than
  * needing a separate lint step.
@@ -21,20 +27,12 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SRC = fileURLToPath(new URL("..", import.meta.url));
-/**
- * Scripts are production write paths too. The first version of this guard
- * scanned only src/, and scripts/topup-test.ts was mutating balances directly
- * the whole time — Codex found it, and it is why the roots list exists.
- */
 const SCRIPTS = fileURLToPath(new URL("../../scripts", import.meta.url));
-const ROOTS = [SRC, SCRIPTS];
+const CODE_ROOTS = [SRC, SCRIPTS];
 
 /**
- * Runbooks are a write path too — one executed by a human with a psql prompt.
- * Codex found the smoke-test recovery procedure telling an operator to run a
- * bare `UPDATE wallets`, which changes a balance with no ledger row and is
- * precisely the defect WP2 removed from account closure. Code guards cannot
- * see documentation, so the documentation is scanned as well.
+ * Runbooks are a write path too — one executed by a human at a psql prompt.
+ * Code guards cannot see documentation, so the documentation is scanned too.
  */
 const DOCS = fileURLToPath(new URL("../../../../docs", import.meta.url));
 
@@ -45,39 +43,47 @@ const ALLOWED = new Set([
 ]);
 
 /**
- * Ways a wallet table can be written.
+ * Raw SQL that writes a wallet table, allowing `public.` qualification and
+ * quoted identifiers. Shared by the code and docs scans so the two cannot
+ * drift apart.
+ */
+const RAW_SQL_WALLET_WRITE =
+  /(UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+(public\.)?"?(wallets|wallet_transactions)"?\b/i;
+
+/**
+ * Ways a wallet table can be written from code.
  *
  * The first version of this list only covered the verbs the codebase happened
- * to use. Codex pointed out the gaps — DELETE on either table, UPDATE on
- * wallet_transactions, schema-qualified and quoted identifiers, and the table
- * object interpolated into raw SQL — so the patterns are now written per verb
- * rather than per known call site.
+ * to use. The gaps — DELETE on either table, UPDATE on wallet_transactions,
+ * schema-qualified and quoted identifiers, and the table object interpolated
+ * into raw SQL — are why the patterns are now written per verb rather than per
+ * known call site.
  */
 const MUTATION_PATTERNS: { label: string; re: RegExp }[] = [
-  // Drizzle builders: any mutating verb against either table.
   {
     label: "drizzle mutation on a wallet table",
     re: /\.(update|insert|delete)\(\s*(wallets|walletTransactions)\s*\)/,
   },
-  // Raw SQL, allowing `public.` qualification and quoted identifiers.
+  { label: "raw SQL mutation on a wallet table", re: RAW_SQL_WALLET_WRITE },
   {
-    label: "raw SQL mutation on a wallet table",
-    re: /(UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+(public\.)?"?(wallets|wallet_transactions)"?\b/i,
-  },
-  // The table object interpolated into a template — sql`UPDATE ${wallets} ...`
-  // — which is neither a builder call nor a literal table name.
-  {
+    // sql`UPDATE ${wallets} ...` — neither a builder call nor a literal name.
     label: "wallet table interpolated into raw SQL",
     re: /(UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+\$\{\s*(wallets|walletTransactions)/i,
   },
 ];
 
-function sourceFiles(dir: string, found: string[] = []): string[] {
-  for (const entry of readdirSync(dir)) {
+function filesUnder(dir: string, ext: RegExp, found: string[] = []): string[] {
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return found; // the directory is optional from this package's point of view
+  }
+  for (const entry of entries) {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
-      sourceFiles(full, found);
-    } else if (entry.endsWith(".ts")) {
+      filesUnder(full, ext, found);
+    } else if (ext.test(entry)) {
       found.push(full);
     }
   }
@@ -88,21 +94,17 @@ describe("wallet mutation authority", () => {
   it("is the only module that writes wallet tables", () => {
     const offenders: string[] = [];
 
-    const files = ROOTS.flatMap((root) =>
-      sourceFiles(root).map((full) => ({ full, root })),
-    );
+    for (const root of CODE_ROOTS) {
+      for (const file of filesUnder(root, /\.ts$/)) {
+        const rel = relative(root, file);
+        if (ALLOWED.has(rel)) continue;
+        // Tests seed and clean up their own fixtures directly; they are not
+        // production paths and blocking them would make the lane unwritable.
+        if (rel.includes(".test.ts")) continue;
 
-    for (const { full: file, root } of files) {
-      const rel = relative(root, file);
-      if (ALLOWED.has(rel)) continue;
-      // Tests seed and clean up their own fixtures directly; they are not
-      // production paths and blocking them would make the lane unwritable.
-      if (rel.includes(".test.ts")) continue;
-
-      const source = readFileSync(file, "utf8");
-      for (const { label, re } of MUTATION_PATTERNS) {
-        if (re.test(source)) {
-          offenders.push(`${rel}: ${label}`);
+        const source = readFileSync(file, "utf8");
+        for (const { label, re } of MUTATION_PATTERNS) {
+          if (re.test(source)) offenders.push(`${rel}: ${label}`);
         }
       }
     }
@@ -114,32 +116,12 @@ describe("wallet mutation authority", () => {
   });
 
   it("is not bypassed by a runbook telling an operator to write SQL", () => {
-    const offenders: string[] = [];
-    const walk = (dir: string) => {
-      let entries: string[];
-      try {
-        entries = readdirSync(dir);
-      } catch {
-        return; // docs/ is optional from the API package's point of view
-      }
-      for (const entry of entries) {
-        const full = join(dir, entry);
-        if (statSync(full).isDirectory()) {
-          walk(full);
-          continue;
-        }
-        if (!/\.(md|sql)$/i.test(entry)) continue;
-        // The remediation ledger quotes these statements when describing the
-        // defects; quoting a bug is not instructing anyone to reproduce it.
-        if (full.includes(join("docs", "remediation"))) continue;
-
-        const source = readFileSync(full, "utf8");
-        if (/(UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+(public\.)?"?(wallets|wallet_transactions)"?/i.test(source)) {
-          offenders.push(relative(DOCS, full));
-        }
-      }
-    };
-    walk(DOCS);
+    const offenders = filesUnder(DOCS, /\.(md|sql)$/i)
+      // The remediation ledger quotes these statements while describing the
+      // defects. Quoting a bug is not instructing anyone to reproduce it.
+      .filter((file) => !file.includes(join("docs", "remediation")))
+      .filter((file) => RAW_SQL_WALLET_WRITE.test(readFileSync(file, "utf8")))
+      .map((file) => relative(DOCS, file));
 
     // Route the operator through scripts/topup-test.ts, which uses the service.
     expect(offenders).toEqual([]);

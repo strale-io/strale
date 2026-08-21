@@ -215,7 +215,19 @@ export async function debit(
     .returning({ balanceCents: wallets.balanceCents });
 
   if (!row) {
-    throw new InsufficientFundsError(wallet.balanceCents, amountCents);
+    // Report what the database actually holds, not the caller's snapshot. If
+    // the caller did not hold the lock, that snapshot can be arbitrarily stale
+    // — and an error that misstates the balance sends whoever reads it looking
+    // in the wrong place. One extra read, only on the failure path.
+    const [current] = await tx
+      .select({ balanceCents: wallets.balanceCents })
+      .from(wallets)
+      .where(eq(wallets.id, wallet.id))
+      .limit(1);
+    throw new InsufficientFundsError(
+      current?.balanceCents ?? wallet.balanceCents,
+      amountCents,
+    );
   }
 
   await tx.insert(walletTransactions).values({

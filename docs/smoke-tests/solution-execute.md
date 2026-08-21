@@ -102,11 +102,12 @@ If the test fails:
 2. Refund the test account through the wallet service, never with direct SQL:
    `npx tsx scripts/topup-test.ts --user <the test account's uuid> --amount 150`
 
-   A bare `UPDATE wallets SET balance_cents = ...` changes the balance without
-   writing a `wallet_transactions` row, so the ledger stops summing to the
-   balance for that wallet permanently — the same defect WP2 removed from
-   account closure. `lib/wallet-service.ts` is the only sanctioned way a
-   balance changes, and the script routes through it. Against a non-local
+   Editing the balance column by hand changes it without writing a
+   `wallet_transactions` row, so the ledger stops summing to the balance for
+   that wallet permanently — the same defect WP2 removed from account closure.
+   `apps/api/src/lib/wallet-service.ts` is the only sanctioned way a balance
+   changes, and the script above routes through it. Against a non-local
    database the script requires `--i-know-this-is-not-local`, which is
    deliberate friction.
+
 3. Do NOT re-run until root cause is understood and fixed
