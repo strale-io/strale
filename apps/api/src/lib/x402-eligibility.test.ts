@@ -12,6 +12,7 @@ import {
   isX402PayableCapability,
   X402_PAYABLE_LIFECYCLE_STATES,
   type X402EligibilityFields,
+  isServableCapability,
 } from "./x402-eligibility.js";
 
 const payable: X402EligibilityFields = {
