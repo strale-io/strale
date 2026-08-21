@@ -67,7 +67,7 @@ export interface ServabilityFields {
   isActive: boolean;
   lifecycleState: string;
   /**
-   * THE quarantine signal, and the one this predicate originally missed.
+   * Half of the quarantine signal. See `x402Enabled` — BOTH are required.
    *
    * jobs/quality-floor.ts quarantines with `{visible: false, x402Enabled:
    * false}` — it changes NEITHER is_active NOR lifecycle_state. So a predicate
@@ -80,6 +80,24 @@ export interface ServabilityFields {
    * reason and equally should not run.
    */
   visible: boolean;
+  /**
+   * The other half, and the correction that post-deploy verification forced.
+   *
+   * The floor quarantines with `{visible:false, x402Enabled:false}` — BOTH. I
+   * first read `visible` alone, which is overloaded: it also means "hidden from
+   * the catalogue" for reasons that have nothing to do with quality.
+   * `danish-company-data` is exactly that — invisible, but x402-enabled,
+   * marketplace-eligible, lifecycle active, and with ZERO health-monitor
+   * events. It was never withdrawn. Treating it as withheld broke four live DK
+   * solutions, which skipped their Danish registry lookup and billed nothing
+   * for a capability nobody had quarantined.
+   *
+   * Verified against every invisible-but-active capability in production: the
+   * conjunction exonerates danish-company-data and correctly withholds the
+   * floor quarantine plus the seven pre-launch rows, which equally should not
+   * run inside a paid bundle.
+   */
+  x402Enabled: boolean;
 }
 
 /** Lifecycle states in which a capability is fit to execute. */
@@ -111,9 +129,9 @@ export const SERVABLE_LIFECYCLE_STATES = ["active", "probation"] as const;
  */
 export function isServableCapability(cap: ServabilityFields): boolean {
   if (!cap.isActive) return false;
-  // Quarantined or pre-launch. See the field docs — omitting this made the
-  // predicate blind to the platform's own primary delisting action.
-  if (!cap.visible) return false;
+  // Withheld == the floor's full signature, not half of it. `visible` alone is
+  // overloaded and catches capabilities that were merely hidden, never withdrawn.
+  if (!cap.visible && !cap.x402Enabled) return false;
   return (SERVABLE_LIFECYCLE_STATES as readonly string[]).includes(
     cap.lifecycleState,
   );

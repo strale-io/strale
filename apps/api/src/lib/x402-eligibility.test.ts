@@ -12,6 +12,7 @@ import {
   isX402PayableCapability,
   X402_PAYABLE_LIFECYCLE_STATES,
   type X402EligibilityFields,
+  isServableCapability,
 } from "./x402-eligibility.js";
 
 const payable: X402EligibilityFields = {
@@ -74,5 +75,46 @@ describe("isX402PayableCapability", () => {
 
   it("only ever admits the two documented lifecycle states", () => {
     expect([...X402_PAYABLE_LIFECYCLE_STATES]).toEqual(["active", "probation"]);
+  });
+});
+describe("what counts as WITHHELD (the post-deploy correction)", () => {
+  const base = { isActive: true, lifecycleState: "active" };
+
+  it("a floor quarantine is withheld — both flags off", () => {
+    // jobs/quality-floor.ts sets {visible:false, x402Enabled:false}.
+    expect(
+      isServableCapability({ ...base, visible: false, x402Enabled: false }),
+    ).toBe(false);
+  });
+
+  it("merely hidden from the catalogue is NOT withheld", () => {
+    // The regression this test exists to prevent. danish-company-data is
+    // invisible but x402-enabled, marketplace-eligible, lifecycle active, with
+    // zero health-monitor events — never withdrawn. Reading `visible` alone
+    // made it unservable and broke four live DK solutions, which skipped their
+    // Danish registry lookup and billed nothing.
+    expect(
+      isServableCapability({ ...base, visible: false, x402Enabled: true }),
+    ).toBe(true);
+  });
+
+  it("a published capability is servable whether or not it is on the x402 rail", () => {
+    // Most capabilities are wallet-only. Requiring x402Enabled would have
+    // withheld the majority of the catalogue.
+    expect(
+      isServableCapability({ ...base, visible: true, x402Enabled: false }),
+    ).toBe(true);
+    expect(
+      isServableCapability({ ...base, visible: true, x402Enabled: true }),
+    ).toBe(true);
+  });
+
+  it("still refuses a deactivated or non-servable lifecycle regardless of flags", () => {
+    expect(
+      isServableCapability({ ...base, isActive: false, visible: true, x402Enabled: true }),
+    ).toBe(false);
+    expect(
+      isServableCapability({ ...base, lifecycleState: "validating", visible: true, x402Enabled: true }),
+    ).toBe(false);
   });
 });

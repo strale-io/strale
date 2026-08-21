@@ -424,6 +424,7 @@ export async function executeSolution(
         isActive: capabilities.isActive,
         lifecycleState: capabilities.lifecycleState,
         visible: capabilities.visible,
+        x402Enabled: capabilities.x402Enabled,
       })
       .from(capabilities)
       .where(inArray(capabilities.slug, groupSlugs));
@@ -450,6 +451,7 @@ export async function executeSolution(
           isActive: fresh.isActive,
           lifecycleState: fresh.lifecycleState,
           visible: fresh.visible,
+          x402Enabled: fresh.x402Enabled,
         });
 
       const executor = servable ? getExecutor(step.capabilitySlug) : undefined;
