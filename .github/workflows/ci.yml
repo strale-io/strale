@@ -76,6 +76,24 @@ jobs:
       - name: Materialise test schema from src/db/schema.ts
         working-directory: apps/api
         run: npx drizzle-kit push --force
+      # WP7: run the startup migrations too, exactly as boot does.
+      #
+      # `drizzle-kit push` materialises TABLES AND COLUMNS from schema.ts. It
+      # does not create sequences, partial indexes, constraints or seed rows —
+      # those live in startup-migrations.ts and run at boot. So a code path
+      # depending on one of them passes locally (where the object was created by
+      # hand) and fails in CI with an error that reads like a broken feature.
+      # That is what happened here: `nextval('transactions_chain_seq')` had no
+      # sequence, so nothing was hashed at all.
+      #
+      # Running both is also the more faithful lane — it is the sequence
+      # production actually executes, so a migration that disagrees with the
+      # schema now fails here rather than at boot (DEC-20260504-C).
+      - name: Apply startup migrations (as boot does)
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/strale_test
+        run: npx tsx scripts/apply-startup-migrations.ts
       # STRALE_REQUIRE_INTEGRATION_DB makes a missing database a hard error
       # inside useTestDatabase() rather than a skip. Vitest exits 0 for a fully
       # skipped file, so without this the job would stay green while asserting
