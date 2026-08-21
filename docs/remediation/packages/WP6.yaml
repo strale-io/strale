@@ -1,0 +1,73 @@
+package: WP6
+title: Idempotency & replay — bind the key to the request
+status: REMEDIATED
+depends_on: [WP4]
+risks: [CR-03, N4]
+
+objective: >
+  An Idempotency-Key means "this is the same request as before; do not perform
+  it twice". It does not mean "return whatever I got last time I used this
+  string". Without a record of what the key was issued FOR, those readings are
+  indistinguishable — and the platform implemented the second.
+
+acceptance_signal: >
+  WP1 left three failing tests in place specifically as this package's signal.
+  All three inverted, and all three verified discriminating by mutation.
+
+defects_closed:
+  - "a different payload under the same key replayed the old result"
+  - "a different capability under the same key returned the FIRST one's output, while the response echoed the slug the caller had just asked for — an answer to someone else's question, labelled as an answer to theirs"
+  - "the same key from a different customer 500'd: the unique index was global while the replay lookup was per-user, which also leaked whether a key existed anywhere on the platform"
+
+beyond_the_pins:
+  solutions_had_no_guard_at_all: >
+    A client retrying a EUR 2.50 solution — a timeout, a proxy redelivery, an
+    agent's own retry loop — was charged twice. The capability rail has had
+    idempotency since MVP; the bundle rail, carrying the most expensive SKUs,
+    never did.
+  a2a_dropped_the_header: >
+    It forwarded only Content-Type and Authorization, so an A2A client could not
+    make a retry safe no matter what it sent. A proxy that drops the header
+    silently converts an idempotent request into a repeatable charge.
+  x402_deliberately_untouched: >
+    Payment IS the key there, and the rail already dedups on a hash of the
+    payment header (cert-audit C9).
+
+review:
+  codex: deferred_to_final_pass
+  independent_agent: FAIL_REMEDIATION_REQUIRED, then all findings closed
+
+  blocking_1_parameter_threaded_but_never_written: >
+    executeFreeTierAuthenticated took idempotencyFingerprint and never wrote it,
+    so every authenticated free-tier call carrying a key produced a NULL
+    fingerprint — which replays by design. The guard was permanently OFF for
+    that path, not off for a draining legacy set. The parameter's PRESENCE is
+    what made it read as done; tsc cannot flag an unused parameter, and every
+    integration case seeded a paid capability so nothing exercised the path.
+    Production has 20 such rows across the free tier.
+
+  blocking_2_replay_crossed_the_rails: >
+    The solutions lookup matched ANY prior row with that key. All 421 existing
+    keyed rows are capability rows with a NULL fingerprint, because solutions
+    never wrote keys before. A customer reusing an old /v1/do key on a KYB
+    bundle would have received that capability's payload labelled as a KYB
+    Complete result — on the product whose entire selling point is the audit
+    trail. Not a double-charge; a wrong-answer defect, which is the class this
+    package exists to close, being introduced BY this package.
+
+  non_blocking_closed:
+    - "a replayed FAILED solution returned HTTP 200 with status:failed and a non-zero price; a prior failure is exactly when clients retry, so those now re-execute"
+    - "dry_run and require_fresh were outside the fingerprint: a replay answered what DID happen to someone asking what WOULD happen, and returned before the freshness gate"
+    - "migration 0098 could abort boot on lock contention — CREATE UNIQUE INDEX on a 902k-row table takes SHARE, a pending SHARE queues every write behind it, and lock wait counts toward statement_timeout. Now bounded and deferring, the same shape block 0095 chose for wallets."
+    - "A2A forwarded the key even when the skill was resolved by the suggest engine, so an identical retry that re-ranked differently would be told it reused a key for a different request — false, and unactionable"
+    - "over-long keys raised Postgres 22001 and surfaced as a 500; now a 400"
+    - "block 0098 has no behavioural test: CI materialises the schema from schema.ts before migrations run, so its statements are no-ops there. Post-deploy prod query is the only verification (DEC-20260504-C)."
+
+exit_conditions:
+  - key bound to (principal, fingerprint, capability)   # MET
+  - user-scoped unique index                            # MET (prod-checked first: 0 dupes, 0 null-user)
+  - coverage on solutions                               # MET (had none at all)
+  - coverage on A2A                                     # MET (header was dropped)
+  - coverage on MCP                                     # inherits /v1/do; proxies rather than executing
+  - coverage on x402-via-do                             # MET (the /v1/do x402 path settles inside executeFreeTier, which now writes the fingerprint)
+  - independent adversarial review passes               # MET after remediation
