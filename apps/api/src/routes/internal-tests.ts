@@ -708,14 +708,48 @@ internalTestsRoute.get("/capabilities/:slug/example-output", async (c) => {
   // passing result captured BEFORE the fixture was updated. When a fixture is
   // edited (manifest backfill, DB correction), the previous passing output is
   // stale relative to the new input — hide the example until a fresh run lands.
+  // WP0 §3 (CR-14 / N3): this endpoint is public via the /v1/public/ops
+  // allowlist, so it must only ever serve CURATED fixture data. Piggyback
+  // suites are fed verbatim from real customer traffic by
+  // recordPiggybackResult(), so a piggyback row's actual_output is a
+  // customer's output — for compliance capabilities that is personal data
+  // about a screened individual. Restricting to authored fixture types keeps
+  // customer-derived rows out of the public example surface entirely; a
+  // capability with no curated example simply has no example.
   const rows = await db.execute(sql`
     SELECT tr.actual_output, tr.executed_at, ts.input, ts.test_type
     FROM test_results tr
     JOIN test_suites ts ON ts.id = tr.test_suite_id
+    JOIN capabilities c ON c.slug = tr.capability_slug
     WHERE tr.capability_slug = ${slug}
+      -- Fail closed for the screening classes. test_type says how a fixture is
+      -- used, not whether its content may be published: an operator can create
+      -- a 'known_answer' suite from arbitrary input via the admin add-fixture
+      -- endpoint. For a sanctions/PEP/adverse-media capability the output
+      -- asserts something about a named person, so no example is worth the
+      -- risk regardless of which suite produced the row.
+      --
+      -- Scoped to the Art. 22 screening classes rather than every
+      -- processes_personal_data capability. Once piggyback rows are excluded
+      -- the remaining examples come from authored fixtures, whose subject is a
+      -- chosen test entity — a company registry lookup naming a director is
+      -- not the same hazard as publishing 'this person is a PEP'. In
+      -- production that is 7 capabilities excluded rather than 109, which
+      -- keeps the surface useful without publishing screening verdicts.
+      -- A positive publication-approval artifact is the durable fix — WP14.
+      AND coalesce(c.gdpr_art_22_classification, 'data_lookup')
+            NOT IN ('screening_signal', 'risk_synthesis')
       AND tr.passed = true
       AND tr.actual_output IS NOT NULL
       AND tr.executed_at >= ts.updated_at
+      AND ts.test_type IN ('known_answer', 'edge_case')
+      -- The suite must belong to the same capability as the result. The join
+      -- is on suite id alone, so without this a result carrying capability A's
+      -- slug could be paired with (and published under) a suite row for B.
+      AND ts.capability_slug = tr.capability_slug
+      -- Retired suites are not a curation surface; their fixtures are no
+      -- longer maintained and must not become the public example.
+      AND ts.active = true
     ORDER BY (ts.test_type = 'known_answer') DESC, tr.executed_at DESC
     LIMIT 1
   `);

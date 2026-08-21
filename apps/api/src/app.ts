@@ -1,7 +1,9 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
+import { HTTPException } from "hono/http-exception";
 import { versionMiddleware } from "./lib/versioning.js";
+import { apiError } from "./lib/errors.js";
 import { rateLimitByIp } from "./lib/rate-limit.js";
 import { rateLimitByIpDb } from "./lib/db-rate-limit.js";
 import { adminOnly } from "./lib/admin-auth.js";
@@ -111,7 +113,44 @@ export function classifyError(err: Error): {
   return { error_class: "unknown" };
 }
 
+/**
+ * Fixed client-facing responses for middleware-thrown HTTPExceptions, keyed by
+ * status. Deliberately a closed set with constant messages: see the note in
+ * app.onError for why an exception's own message is not echoed.
+ */
+const HTTP_EXCEPTION_RESPONSES: Record<
+  number,
+  { code: "invalid_request" | "rate_limited"; message: string }
+> = {
+  413: { code: "invalid_request", message: "Request body is too large." },
+};
+
 app.onError((err, c) => {
+  // WP0 §3 (CR-12): Hono middleware signals client-side rejections by throwing
+  // HTTPException — bodyLimit throws 413 Payload Too Large. Without this
+  // branch every such rejection was rewritten to `500 internal_error`, so the
+  // pre-existing /v1, /a2a and /mcp body caps have been reporting oversized
+  // payloads as server faults. Memory was still bounded; the status was a lie.
+  //
+  // Only statuses with an explicit mapping are re-emitted in this platform's
+  // { error_code, message } shape, and the message is a fixed string. An
+  // HTTPException's own message is diagnostic text that may name internals,
+  // so it is never echoed to the client.
+  //
+  // Anything unmapped returns hono's own response untouched. That preserves
+  // the status and any headers the middleware set — WWW-Authenticate on a 401,
+  // Retry-After on a 429 — which rewriting the body would discard. Today only
+  // bodyLimit's 413 is reachable; this keeps the fallback honest if that
+  // changes. 5xx still falls through to classification and logging below.
+  if (err instanceof HTTPException) {
+    const mapped = HTTP_EXCEPTION_RESPONSES[err.status];
+    if (mapped) {
+      return c.json(apiError(mapped.code, mapped.message), err.status);
+    }
+    if (err.status < 500) {
+      return err.getResponse();
+    }
+  }
   const { error_class, pg_code } = classifyError(err);
   const reqLog = (c.get("log" as any) as { error?: (...args: unknown[]) => void } | undefined);
   const logCtx = {
@@ -196,6 +235,23 @@ const publicCors = cors({
 // x402 payment gateway — permissive CORS handled inside the route itself
 app.use("/x402/*", publicCors);
 
+// WP0 §3 (CR-12): when an X-Payment header is present the wildcard handlers
+// call the external facilitator to verify BEFORE any throttle applied, so an
+// attacker could force unbounded facilitator verifications with junk headers.
+// Only /x402/catalog carried a limiter. This bounds the rest of the rail.
+// The ceiling is deliberately well above real agent traffic (a paying caller
+// makes one request per payment) but low enough to stop verification floods.
+//
+// /x402/catalog is excluded: it is a cheap cached read that already declares
+// its own, higher, 120/min limit at the handler. Wrapping it here would
+// silently cut its documented capacity in half.
+const x402CatalogPath = /^\/x402\/catalog\/?$/;
+const x402RailLimiter = rateLimitByIp(60, 60_000);
+app.use("/x402/*", async (c, next) => {
+  if (x402CatalogPath.test(c.req.path)) return next();
+  return x402RailLimiter(c, next);
+});
+
 // Public read-only endpoints — open CORS (data is intentionally public)
 app.use("/v1/capabilities/*", publicCors);
 app.use("/v1/capabilities", publicCors);
@@ -279,7 +335,13 @@ app.get("/health", (c) =>
 
 // Health check — deep (DB write path works, including indexes on transactions table)
 // Use this for Railway health checks to catch index corruption, disk full, connection pool exhaustion, etc.
-app.get("/health/deep", async (c) => {
+// WP0 §3 (CR-12): this probe performs a real INSERT+DELETE on `transactions`
+// (deliberately, to exercise every index). Unauthenticated and unthrottled, it
+// let any caller drive sustained write and WAL load against the primary DB.
+// The rate limit keeps it usable for Railway health checks and operators while
+// removing the amplification. Kept public rather than admin-gated so the
+// platform health check needs no secret.
+app.get("/health/deep", rateLimitByIp(6, 60_000), async (c) => {
   const start = Date.now();
   try {
     const db = getDb();
@@ -344,7 +406,17 @@ app.get("/openapi.json", async (c) => {
 });
 
 // Stripe webhook — must be before any body-parsing middleware
-// Needs raw body for signature verification
+// Needs raw body for signature verification.
+//
+// WP0 §3 (CR-12): /webhooks sits outside the /v1, /a2a and /mcp bodyLimit
+// scopes above, so before this cap an unauthenticated caller could POST an
+// arbitrarily large body and the handler would buffer all of it via
+// c.req.text() BEFORE the signature check rejected it. bodyLimit only bounds
+// the stream — it does not consume or parse the body, so raw-body signature
+// verification is unaffected (covered by webhook.body-limit.test.ts). 512 KB
+// is far above any real Stripe event (checkout.session.completed is a few KB)
+// while still bounding pre-auth memory.
+app.use("/webhooks/*", bodyLimit({ maxSize: 512 * 1024 }));
 app.route("/webhooks", webhookRoute);
 
 // API v1 routes

@@ -37,12 +37,18 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+
+import { useTestDatabase } from "../test-support/integration-db.js";
 import { randomUUID } from "node:crypto";
 
 import { capabilitiesRoute } from "./capabilities.js";
 import { capabilities } from "../db/schema.js";
 
-const DATABASE_URL_TEST = process.env.DATABASE_URL_TEST;
+// WP1: routes exercised here resolve getDb() through DATABASE_URL, so the
+// guard has to point that at the test database as well — without it the
+// handlers had no connection and every parity assertion failed. The guard also
+// refuses a non-disposable target.
+const DATABASE_URL_TEST = useTestDatabase();
 const describeMaybe = DATABASE_URL_TEST ? describe : describe.skip;
 
 /**

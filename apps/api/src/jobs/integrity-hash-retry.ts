@@ -52,6 +52,17 @@ const ADVISORY_LOCK_ID = 20260417;
 
 let _running = false;
 
+/**
+ * Exported as a test seam (WP1). The worker is otherwise only reachable
+ * through startIntegrityHashRetry()'s interval, so the chain-admission
+ * behaviour it owns — the single writer of `integrity_hash` — could not be
+ * exercised deterministically. Tests call this directly against an ephemeral
+ * Postgres; nothing in production should.
+ */
+export async function runIntegrityHashRetryOnce(): Promise<void> {
+  return runOnce();
+}
+
 async function runOnce(): Promise<void> {
   const db = getDb();
 

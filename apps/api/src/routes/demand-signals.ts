@@ -1,19 +1,35 @@
 /**
- * PUBLIC ENDPOINTS — intentional, no auth required.
+ * Demand signals — what callers asked for that the catalog could not serve.
  *
- * Demand signals are public by design — shows what capabilities
- * users are requesting but don't exist yet. Rate limited by IP.
- * If this changes, add authMiddleware.
+ * MIXED AUTH (changed by WP0 §3, CR-14 / N2):
+ *   - GET /categories is aggregate-only and stays PUBLIC.
+ *   - GET / returns `task_normalized`, which is the caller's VERBATIM request
+ *     text, and now requires admin auth.
+ *
+ * Why: `failed_requests.task` is free text submitted by the caller. It logs
+ * genuine unmet demand ("check a Latvian VAT number") but equally logs input
+ * fumbles, where the text is the real payload the caller meant to send — a
+ * company name, a person's name, an email, a document URL. Serving that
+ * verbatim over an unauthenticated, publicly-cached endpoint republishes
+ * customer input. At re-audit time the table held 3,426 rows and the endpoint
+ * had no consumer anywhere in either repo.
+ *
+ * WP14 (Legal & Data Policy Authority) decides whether a public demand surface
+ * returns to strale.dev in curated/derived form. Until then this is an
+ * internal business-intelligence surface. Do NOT re-open GET / to anonymous
+ * callers without a redaction or classification step in front of `task`.
  */
 
 import { Hono } from "hono";
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
+import { adminOnly } from "../lib/admin-auth.js";
 
 export const demandSignalsRoute = new Hono();
 demandSignalsRoute.get(
   "/",
+  adminOnly,
   rateLimitByIp(10, 60_000),
   async (c) => {
     const days = Math.min(

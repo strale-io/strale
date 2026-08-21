@@ -25,6 +25,7 @@ import { apiError } from "../lib/errors.js";
 import { executeSolution, isSuccessfulStepOutput } from "../lib/solution-executor.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { logError } from "../lib/log.js";
+import * as walletService from "../lib/wallet-service.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import type { AppEnv } from "../types.js";
 
@@ -119,18 +120,11 @@ solutionExecuteRoute.post(
           };
         }
 
-        // Debit wallet
-        const newBalance = wallet.balanceCents - sol.priceCents;
-        await tx
-          .update(wallets)
-          .set({ balanceCents: newBalance, updatedAt: new Date() })
-          .where(eq(wallets.id, wallet.id));
-
-        // Log wallet transaction
-        await tx.insert(walletTransactions).values({
-          walletId: wallet.id,
-          amountCents: -sol.priceCents,
-          type: "purchase",
+        // Debit through the wallet service — balance change and ledger row are
+        // written together, so the two cannot diverge (WP2).
+        const newBalance = await walletService.debit(tx, {
+          wallet,
+          amountCents: sol.priceCents,
           description: `Solution: ${sol.slug}`,
         });
 
@@ -237,7 +231,7 @@ solutionExecuteRoute.post(
       }
 
       // Refund
-      await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "execution error");
+      await refundWallet(db, walletId, sol.priceCents, sol.slug, "execution error", transactionId);
 
       return c.json(
         apiError("execution_failed", "Solution execution failed. You were not charged.", {
@@ -275,7 +269,7 @@ solutionExecuteRoute.post(
         );
       }
 
-      await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "no steps configured");
+      await refundWallet(db, walletId, sol.priceCents, sol.slug, "no steps configured", transactionId);
 
       return c.json(
         apiError("execution_failed", "Solution has no steps configured. You were not charged.", {
@@ -314,8 +308,9 @@ solutionExecuteRoute.post(
 
     if (refundRequired) {
       await refundWallet(
-        db, walletId, walletBalanceBefore, sol.priceCents, sol.slug,
+        db, walletId, sol.priceCents, sol.slug,
         gated ? `gate tripped: ${gated.capabilitySlug}.${gated.field}` : "all steps failed",
+        transactionId,
       );
     }
 
@@ -397,7 +392,7 @@ solutionExecuteRoute.post(
       // refunded here a SECOND time. Caught by auditing the whole route rather
       // than only the block being edited.
       if (!refundRequired) {
-        await refundWallet(db, walletId, walletBalanceBefore, sol.priceCents, sol.slug, "phase2 update failed");
+        await refundWallet(db, walletId, sol.priceCents, sol.slug, "phase2 update failed", transactionId);
       }
 
       return c.json(
@@ -467,24 +462,39 @@ solutionExecuteRoute.post(
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Return a solution charge.
+ *
+ * WP2: this used to write an ABSOLUTE balance — the value read before the
+ * solution executed — outside any transaction and without a row lock. Execution
+ * takes seconds to minutes, so any debit or top-up that landed in that window
+ * was silently overwritten, and the ledger row it wrote recorded a delta that
+ * did not match the balance change. It now goes through the wallet service,
+ * which applies an in-database delta and writes the paired ledger row in one
+ * transaction, so `originalBalance` is no longer needed or wanted.
+ *
+ * The swallow is kept deliberately: the customer has already been told they
+ * were not charged, and throwing here would turn a refund failure into a
+ * confusing execution error. It is still wrong for a failed refund to be
+ * invisible — WP3's reconciler is what makes it recoverable rather than merely
+ * logged.
+ */
 async function refundWallet(
   db: ReturnType<typeof getDb>,
   walletId: string,
-  originalBalance: number,
   priceCents: number,
   solutionSlug: string,
   reason: string,
+  referenceId?: string | null,
 ): Promise<void> {
   try {
-    await db
-      .update(wallets)
-      .set({ balanceCents: originalBalance, updatedAt: new Date() })
-      .where(eq(wallets.id, walletId));
-    await db.insert(walletTransactions).values({
-      walletId,
-      amountCents: priceCents,
-      type: "refund",
-      description: `Refund: ${solutionSlug} (${reason})`,
+    await db.transaction(async (tx) => {
+      await walletService.refund(tx, {
+        walletId,
+        amountCents: priceCents,
+        description: `Refund: ${solutionSlug} (${reason})`,
+        referenceId: referenceId ?? null,
+      });
     });
   } catch (err) {
     logError("solutions-refund-failed", err, { solution_slug: solutionSlug, wallet_id: walletId });

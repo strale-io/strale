@@ -322,7 +322,29 @@ function buildMockTx(opts: { walletRow: Record<string, unknown> | null; transact
       set: vi.fn((vals: unknown) => ({
         where: vi.fn(() => {
           updateCalls.push({ table, vals });
-          return Promise.resolve([]);
+          // WP2: the wallet debit is now a conditional UPDATE ... RETURNING,
+          // so the result has to be awaitable AND expose .returning(). An
+          // empty returning() would read as "the balance predicate did not
+          // hold", which the service treats as insufficient funds — so the
+          // mock hands back one row.
+          //
+          // The row echoes the seeded balance rather than simulating the
+          // arithmetic: this test asserts the SQL shape, the lock, and the
+          // ledger pairing. What the balance actually settles to is asserted
+          // against a real database in the wallet-service and concurrency
+          // integration suites.
+          // Settle the arithmetic the database would do, by reading the
+          // bound amount out of the SQL delta. The route returns this value
+          // as wallet_balance_cents, so echoing the pre-debit balance would
+          // make the response assertion vacuous.
+          const before = (opts.walletRow?.balanceCents as number) ?? 0;
+          const chunks = (vals as any)?.balanceCents?.queryChunks ?? [];
+          const amount = chunks.find((c: unknown) => typeof c === "number");
+          const settled: any = Promise.resolve([]);
+          settled.returning = vi.fn(async () => [
+            { balanceCents: typeof amount === "number" ? before - amount : before },
+          ]);
+          return settled;
         }),
       })),
     })),
@@ -449,9 +471,32 @@ describe("POST /v1/do — happy path (authenticated, paid capability, sync)", ()
     expect(tx.__selectCalls[0].table).toBe(wallets);
     expect(whereReferences(tx.__selectCalls[0].cond, wallets, "user_id", { eq: user.id })).toBe(true);
     // Wallet debited by exactly the capability price.
+    //
+    // WP2 changed the shape here deliberately: the debit is now an in-database
+    // delta (`balance_cents + -5`) rather than an absolute value computed in
+    // JavaScript. A read-modify-write is only correct while holding the row
+    // lock, and the one site that did it without a lock — the solutions refund
+    // — is exactly where the money bug was. So the assertion checks the delta
+    // rather than a precomputed total; the resulting balance is asserted
+    // against a real database in do.wallet-concurrency.integration.test.ts.
     const walletUpdate = tx.__updateCalls.find((c) => c.table === wallets);
     expect(walletUpdate).toBeTruthy();
-    expect((walletUpdate!.vals as any).balanceCents).toBe(startingBalance - CAPABILITY_FIXTURE.priceCents);
+    const balanceExpr = (walletUpdate!.vals as any).balanceCents;
+    // A SQL expression, not a precomputed number — that is the point of the
+    // change. queryChunks is drizzle's parameter list for the template.
+    expect(Array.isArray(balanceExpr?.queryChunks)).toBe(true);
+    // Bound values appear in queryChunks as raw primitives, and the operator
+    // as a string chunk. Assert both: the amount alone would not distinguish a
+    // debit from a credit.
+    const params = balanceExpr.queryChunks.filter(
+      (chunk: unknown) => typeof chunk === "number",
+    );
+    expect(params).toContain(CAPABILITY_FIXTURE.priceCents);
+    const operators = balanceExpr.queryChunks
+      .filter((chunk: any) => Array.isArray(chunk?.value))
+      .map((chunk: any) => chunk.value.join(""))
+      .join("");
+    expect(operators).toContain("-");
     // Wallet transaction ledger entry logged.
     const walletTxInsert = tx.__insertCalls.find((c) => c.table === walletTransactions);
     expect(walletTxInsert).toBeTruthy();

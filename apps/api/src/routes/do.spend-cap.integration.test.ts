@@ -37,12 +37,18 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+
+import { useTestDatabase } from "../test-support/integration-db.js";
 import { randomUUID } from "node:crypto";
 
 import { spendCapWouldExceed } from "./do.js";
 import { transactions, users, wallets, capabilities } from "../db/schema.js";
 
-const DATABASE_URL_TEST = process.env.DATABASE_URL_TEST;
+// WP1: validate the target is a throwaway loopback database and point the
+// application's own DATABASE_URL at it, so routes exercised here resolve
+// getDb() to the test database instead of failing (or, worse, reaching a
+// real one inherited from the shell). Throws on an unsafe target.
+const DATABASE_URL_TEST = useTestDatabase();
 
 // Skip the entire suite when no test DB is configured. Local devs and
 // CI ticks without a Postgres harness still run the unit test in

@@ -4,6 +4,7 @@ import { getDb } from "../db/index.js";
 import { wallets, walletTransactions } from "../db/schema.js";
 import { getStripe } from "../lib/stripe.js";
 import { logError } from "../lib/log.js";
+import * as walletService from "../lib/wallet-service.js";
 
 export const webhookRoute = new Hono();
 
@@ -81,22 +82,16 @@ webhookRoute.post("/stripe", async (c) => {
         return;
       }
 
-      // Credit the wallet atomically
-      await tx
-        .update(wallets)
-        .set({
-          balanceCents: sql`${wallets.balanceCents} + ${amountCents}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(wallets.id, wallet.id));
-
-      // Record the wallet transaction
-      await tx.insert(walletTransactions).values({
+      // Credit through the wallet service (WP2). Same in-database delta as
+      // before — this path was already correct — but the balance change and
+      // ledger row are now written by one call, and the stripe_session_id that
+      // makes the credit idempotent is carried on the entry.
+      await walletService.credit(tx, {
         walletId: wallet.id,
         amountCents,
         type: "top_up",
         stripeSessionId: sessionId,
-        description: `Stripe top-up: €${(amountCents / 100).toFixed(2)}`,
+        description: `Stripe top-up: EUR ${(amountCents / 100).toFixed(2)}`,
       });
     });
   }

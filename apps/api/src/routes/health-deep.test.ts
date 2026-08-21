@@ -37,12 +37,16 @@ vi.mock("./mcp.js", () => {
   return { mcpRoute: new Hono() };
 });
 
-beforeAll(() => {
+beforeAll(async () => {
   process.env.ADMIN_SECRET =
     "unit-test-admin-secret-plenty-of-entropy-0123456789";
   process.env.AUDIT_HMAC_SECRET =
     "unit-test-audit-secret-plenty-of-entropy-0123456789";
-});
+  // Import app.ts here rather than inside the first test. Transforming its
+  // module graph from cold can exceed the per-test timeout on a loaded
+  // machine, failing these tests for a reason unrelated to /health/deep.
+  await loadApp();
+}, 120_000);
 
 async function loadApp() {
   const { app } = await import("./../app.js");

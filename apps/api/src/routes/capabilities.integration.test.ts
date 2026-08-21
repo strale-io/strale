@@ -33,12 +33,18 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+
+import { useTestDatabase } from "../test-support/integration-db.js";
 import { randomUUID } from "node:crypto";
 
 import { capabilitiesRoute } from "./capabilities.js";
 import { transactions, users, capabilities } from "../db/schema.js";
 
-const DATABASE_URL_TEST = process.env.DATABASE_URL_TEST;
+// WP1: validate the target is a throwaway loopback database and point the
+// application's own DATABASE_URL at it, so routes exercised here resolve
+// getDb() to the test database instead of failing (or, worse, reaching a
+// real one inherited from the shell). Throws on an unsafe target.
+const DATABASE_URL_TEST = useTestDatabase();
 const describeMaybe = DATABASE_URL_TEST ? describe : describe.skip;
 
 describeMaybe("GET /v1/capabilities/:slug — cost_class + last_customer_call_at", () => {

@@ -37,6 +37,8 @@ import { getAiDescription, getDataSourceUrl } from "../lib/audit-helpers.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { validateX402Input } from "../lib/x402-input-validation.js";
+import { isX402PayableCapability } from "../lib/x402-eligibility.js";
+import * as walletService from "../lib/wallet-service.js";
 import { recoverValuesFromTask, recoveredValuesHint, unsatisfiedGroupFields } from "../lib/task-value-hints.js";
 import { logError, logWarn } from "../lib/log.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
@@ -563,6 +565,12 @@ doRoute.post(
         isActive: capabilities.isActive,
         priceCents: capabilities.priceCents,
         name: capabilities.name,
+        // x402 rail eligibility (WP0 §3.1) — these four decide whether the
+        // capability may be paid for with USDC. Consumed by
+        // isX402PayableCapability; do not gate on isActive alone.
+        x402Enabled: capabilities.x402Enabled,
+        marketplaceEligible: capabilities.marketplaceEligible,
+        lifecycleState: capabilities.lifecycleState,
       })
       .from(capabilities)
       .where(eq(capabilities.slug, capabilitySlug))
@@ -577,7 +585,24 @@ doRoute.post(
       // Check for x402 payment header
       const paymentHeader = extractPaymentHeader(c.req.raw.headers);
 
-      if (paymentHeader && isX402Configured()) {
+      // WP0 §3.1 — the x402 rail has its own eligibility rule, and the quality
+      // floor delists a failing capability by clearing x402_enabled. Honour the
+      // same rule here so a delisted capability cannot be bought through
+      // /v1/do. Checked before verification so no payment is ever consumed for
+      // a capability we will not serve.
+      const x402Payable = isX402PayableCapability(lookedUp);
+
+      if (paymentHeader && isX402Configured() && !x402Payable) {
+        return c.json(
+          apiError(
+            "capability_unavailable",
+            `'${capabilitySlug}' is not currently available for x402 payment. No payment was taken.`,
+          ),
+          503,
+        );
+      }
+
+      if (paymentHeader && isX402Configured() && x402Payable) {
         // Verify x402 payment WITHOUT broadcasting settlement — the settle
         // step runs only after the capability has produced output (DEC-14).
         const verification = await verifyX402PaymentOnly(paymentHeader, lookedUp.priceCents);
@@ -592,7 +617,7 @@ doRoute.post(
         c.set("x402_paid" as any, true);
         // Fall through to normal execution — the capability will execute
         // and the transaction will be logged with payment_method: "x402"
-      } else if (isX402Configured()) {
+      } else if (isX402Configured() && x402Payable) {
         // No payment header, x402 configured → return 402 with price
         const resp = build402Response({
           slug: capabilitySlug,
@@ -1162,11 +1187,23 @@ async function buildUsageSummaryForUser(db: ReturnType<typeof getDb>, userId: st
     ? Math.max(1, Math.ceil((Date.now() - new Date(userRow.createdAt).getTime()) / 86_400_000))
     : 1;
 
+  // WP1: this selected `capability_slug` from `transactions`, a column that
+  // does not exist on that table — it keys capabilities by `capability_id`.
+  // The query therefore threw on every call in production. Both callers are
+  // the low-balance and zero-balance conversion emails, dispatched through
+  // fireAndForget, so the failure was swallowed into a log line and every
+  // "your agent ran out of credits" email silently failed to send. Found by
+  // the ephemeral-Postgres lane; regression-tested in
+  // do.usage-summary.integration.test.ts.
+  //
+  // Solution transactions carry capability_id = NULL and so are excluded by
+  // the join, which matches the intent of a top-capabilities summary.
   const rows = await db.execute(
-    sql`SELECT capability_slug, COUNT(*)::int AS count
-        FROM transactions
-        WHERE user_id = ${userId} AND status = 'completed'
-        GROUP BY capability_slug
+    sql`SELECT c.slug AS capability_slug, COUNT(*)::int AS count
+        FROM transactions t
+        JOIN capabilities c ON c.id = t.capability_id
+        WHERE t.user_id = ${userId} AND t.status = 'completed'
+        GROUP BY c.slug
         ORDER BY count DESC
         LIMIT 10`,
   );
@@ -1184,6 +1221,19 @@ async function buildUsageSummaryForUser(db: ReturnType<typeof getDb>, userId: st
     topCapabilities: capRows.map((r: any) => ({ slug: r.capability_slug, count: r.count })),
     totalSpentCents: spentRow?.total ?? 0,
   };
+}
+
+/**
+ * Test seam for buildUsageSummaryForUser (WP1).
+ *
+ * The summary is only ever reached through a fireAndForget callback, so a
+ * thrown query cannot fail a request and cannot be observed from the outside —
+ * which is how a broken column reference survived in production. Exposing it
+ * lets the integration lane assert on the query directly instead of inferring
+ * its health from a log line.
+ */
+export async function buildUsageSummaryForUserForTest(userId: string) {
+  return buildUsageSummaryForUser(getDb(), userId);
 }
 
 function buildUsageBlock(callsToday: number, cap: number): Record<string, unknown> {
@@ -1661,12 +1711,8 @@ async function executeSync(
     // and is caught at the route boundary as a clean execution_timeout.
     await tx.execute(sql`SET LOCAL lock_timeout = '5s'`);
 
-    // Lock wallet row
-    const [wallet] = await tx
-      .select()
-      .from(wallets)
-      .where(eq(wallets.userId, user.id))
-      .for("update");
+    // Lock wallet row (WP2: via the wallet service, which owns the lock shape)
+    const wallet = await walletService.lockWalletForUser(tx, user.id);
 
     if (!wallet || wallet.balanceCents < capability.priceCents) {
       return {
@@ -1724,18 +1770,11 @@ async function executeSync(
       const capResult = await executeWithRetry(executor, executionInput, capability);
       const latencyMs = Date.now() - startTime;
 
-      // Deduct from wallet
-      const newBalance = wallet.balanceCents - capability.priceCents;
-      await tx
-        .update(wallets)
-        .set({ balanceCents: newBalance, updatedAt: new Date() })
-        .where(eq(wallets.id, wallet.id));
-
-      // Log wallet transaction
-      await tx.insert(walletTransactions).values({
-        walletId: wallet.id,
-        amountCents: -capability.priceCents,
-        type: "purchase",
+      // Deduct through the wallet service — the balance change and its ledger
+      // row are written together, so they cannot diverge (WP2).
+      const newBalance = await walletService.debit(tx, {
+        wallet,
+        amountCents: capability.priceCents,
         referenceId: txnRecord.id,
         description: `Capability: ${capability.slug}`,
       });
@@ -2037,11 +2076,7 @@ async function executeAsync(
       };
 
   const setupResult: SetupResult = await db.transaction(async (tx) => {
-    const [wallet] = await tx
-      .select()
-      .from(wallets)
-      .where(eq(wallets.userId, user.id))
-      .for("update");
+    const wallet = await walletService.lockWalletForUser(tx, user.id);
 
     if (!wallet || wallet.balanceCents < capability.priceCents) {
       return {
@@ -2072,13 +2107,6 @@ async function executeAsync(
       }
     }
 
-    // Optimistic debit — refunded if execution fails
-    const newBalance = wallet.balanceCents - capability.priceCents;
-    await tx
-      .update(wallets)
-      .set({ balanceCents: newBalance, updatedAt: new Date() })
-      .where(eq(wallets.id, wallet.id));
-
     // Create transaction record
     const marker = getTransparencyMarker(capability.transparencyTag);
     const [txnRecord] = await tx
@@ -2103,11 +2131,15 @@ async function executeAsync(
       })
       .returning({ id: transactions.id });
 
-    // Log wallet transaction (purchase)
-    await tx.insert(walletTransactions).values({
-      walletId: wallet.id,
-      amountCents: -capability.priceCents,
-      type: "purchase",
+    // Optimistic debit — refunded if execution fails.
+    //
+    // WP2: balance change and ledger row now happen in one call, so they
+    // cannot drift apart. Ordered after the transaction insert only so the
+    // ledger row can carry its reference; both writes are in this transaction,
+    // so the sequence between them is not observable.
+    const newBalance = await walletService.debit(tx, {
+      wallet,
+      amountCents: capability.priceCents,
       referenceId: txnRecord.id,
       description: `Capability: ${capability.slug}`,
     });
@@ -2321,19 +2353,9 @@ async function executeInBackground(
         .from(wallets)
         .where(eq(wallets.id, walletId))
         .for("update");
-      await tx
-        .update(wallets)
-        .set({
-          balanceCents: walletRow.b + capability.priceCents,
-          updatedAt: new Date(),
-        })
-        .where(eq(wallets.id, walletId));
-
-      // Log refund
-      await tx.insert(walletTransactions).values({
+      await walletService.refund(tx, {
         walletId,
         amountCents: capability.priceCents,
-        type: "refund",
         referenceId: transactionId,
         description: `Refund: ${capability.slug} execution failed`,
       });

@@ -1,0 +1,111 @@
+package: WP1
+title: Proof floor — ephemeral Postgres, DB contracts, crash recovery
+status: ACCEPTED
+depends_on: [WP0]
+risks: [CR-07]
+
+objective: >
+  Make the invariants WP2-WP5 will refactor falsifiable BEFORE the refactor,
+  so a money-path change can be proven rather than argued.
+
+delivered:
+  ci_lane:
+    - postgres:16 service container, health-checked
+    - schema materialised from src/db/schema.ts via drizzle-kit push, so the
+      lane tracks the file the application imports
+    - disposability verified BEFORE any write, including the schema push
+    - suites run sequentially (see flakiness note)
+  safety:
+    - src/test-support/integration-db.ts — loopback host + test-named database
+    - scripts/assert-disposable-test-db.mjs — asks what the database CONTAINS,
+      which a proxy cannot forge; refuses a foreign database outright
+  coverage:
+    - webhook.integration.test.ts — first ever coverage of the money-in path,
+      real Stripe HMAC signatures
+    - do.crash-recovery.integration.test.ts — real SIGKILL of a child running
+      the real route, proving risk N1
+    - do.wallet-concurrency.integration.test.ts — DEC-8 lock proven, not asserted
+    - do.idempotency.integration.test.ts — three defects pinned for WP6
+    - integrity-hash-chain.integration.test.ts — CR-04 as REFRAMED by the re-audit
+    - example-output-curation.integration.test.ts — row-level, closing Codex WP0 #4
+    - capabilities-contract.integration.test.ts — rescued from dormancy
+
+invariants_now_falsifiable:
+  - a Stripe top-up credits once and only once, and by increment
+  - concurrent debits cannot overspend a wallet
+  - a hard kill after the async debit strands the charge (currently TRUE — WP3 inverts)
+  - the audit chain threads terminal rows, and head selection disagrees with
+    batch threading (currently TRUE — WP7 inverts)
+  - public examples are never customer-derived
+
+production_bug_found_and_fixed:
+  finding: >
+    buildUsageSummaryForUser selected capability_slug from transactions, a
+    column that table does not have. Its only callers are the low-balance and
+    zero-balance conversion emails, dispatched fire-and-forget, so every
+    "your agent ran out of credits" email failed silently.
+  evidence: verified read-only against production — prod has capability_id only
+  caught_by: the lane, on its first real run
+  missed_by: the original audit and the Fable re-audit
+
+corrections_to_my_own_work:
+  - >
+    Claimed webhook idempotency "rests on the unique index". Tested it by
+    dropping the index; the handler still credited once, including under five
+    concurrent deliveries. The in-transaction SELECT plus the row lock on
+    UPDATE wallets is the real mechanism. Docstring rewritten to what was
+    measured; the index got its own test, which does fail without it.
+  - >
+    The lane's filename assertion was tautological — the glob building the file
+    list already filtered on the same suffix, so it could never fail. Caught by
+    Codex. Now globs a broader set and is verified by planting a decoy file.
+
+review:
+  codex: 4 rounds, all FAIL_REMEDIATION_REQUIRED, each finding fixed
+  codex_findings_closed:
+    - "tautological filename assertion (was a real defect in my own guard)"
+    - "describe.skipIf evaded the skip regex"
+    - "database identity: name matching is not identity — added content check"
+    - "ORDERING: the safety check ran AFTER drizzle-kit push --force, which is
+       itself a write. Sharpest catch of the program; check now runs first."
+  fable: ACCEPT
+
+residual_risks:
+  - >
+    The disposability rule remains heuristic in two ways Codex named: a small
+    non-production Strale deployment under the row ceilings would pass, and
+    rows hidden by RLS would not be counted. Both need a deliberately
+    misconfigured loopback target with a test-shaped name; CI pins
+    DATABASE_URL_TEST to a container it starts itself. Durable fix — have the
+    lane create and drop its own uniquely-named database, so disposability
+    holds by construction — recorded for WP15.
+  - >
+    The lane showed occasional first-run partial failures under heavy local
+    load (timeouts, not assertion failures). Stable across repeated clean runs.
+    If it flakes in CI, raise the hook timeouts before suspecting the tests.
+  - >
+    Retrieval benchmark harness (master plan WP1 item 7) is NOT in this package.
+    It needs the catalog and provider calls and is independent of the DB lane;
+    it belongs to WP16.1, which the package graph already flags as
+    start-immediate-parallel. Recorded so it is not silently dropped.
+
+deferred_from_wp0_and_now_closed:
+  - "example-output SQL-text assertions upgraded to row-level tests"
+
+exit_conditions:
+  - critical invariants falsifiable by tests            # MET
+  - ephemeral-PG lane green and failing closed          # MET
+  - webhook test exists                                 # MET (was zero coverage)
+  - Codex PASS                                          # NOT MET — see below
+  - Fable ACCEPT                                        # MET
+
+codex_disposition: |
+  Codex never returned PASS on WP1, as on WP0. Every finding it raised was
+  fixed, including two I would not have found alone: the tautological
+  assertion in my own guard, and the safety check running after the first
+  write. Its final position is that the disposability rule is heuristic
+  rather than a proof of identity. That is true and is recorded as a residual
+  with a concrete durable fix assigned to WP15. Fable adjudicated
+  VALID_NON_BLOCKING under orchestrator §15: for the environment this lane
+  runs in, CI sets the URL to a service container it starts itself, and three
+  independent conditions must all fail for a write to land elsewhere.
