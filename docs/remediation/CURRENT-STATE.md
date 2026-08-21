@@ -10,6 +10,26 @@ _Last updated: 2026-08-21 (session 1)_
 - **Human approvals granted:** program-level autonomy (run continuously; escalate only per CHECK-IN A/B/C)
 - **Awaiting founder:** nothing. One item is logged for *visibility only*, not decision — see "Codex disposition" below.
 
+## WP3 in production — verified, with one honest gap
+
+Checked against prod 90 minutes after `ee7f737` deployed:
+
+- Schema effect confirmed by query, not by log: the table, all three indexes,
+  and `wallets_balance_cents_non_negative` at `convalidated = true`, so the
+  `NOT VALID` → `VALIDATE` two-step completed.
+- No negative wallets. No past-deadline open reservations.
+- Traffic profile unchanged: 375 completed / 338 failed in the 90 minutes
+  after deploy, and **exactly** 375 / 338 in the same window yesterday. The
+  harness sweep is deterministic, so identical counts across two disjoint
+  windows is the expected shape and good evidence of no regression.
+
+**The gap:** `wallet_reservations` holds zero rows, because only 2 non-harness
+transactions have run since deploy. The migration is verified in production;
+the reservation *write path* is not — it has been exercised only by the
+integration suite. The first real paid call is what proves it, and nothing
+about the deploy tells us when that arrives. Worth a deliberate look at the
+table after the next customer call rather than assuming silence means health.
+
 ## Review lane — founder decision, 2026-08-21
 
 Codex exhausted its credits mid-WP3 (available again 27 Aug). Decision: **do
