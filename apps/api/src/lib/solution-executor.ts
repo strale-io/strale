@@ -16,8 +16,9 @@
 
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { solutionSteps } from "../db/schema.js";
+import { capabilities, solutionSteps } from "../db/schema.js";
 import { getExecutor } from "../capabilities/index.js";
+import { isServableCapability } from "./x402-eligibility.js";
 import {
   assertGuardedAllow,
   CapabilityInvocationRefusedError,
@@ -331,6 +332,9 @@ export async function executeSolution(
   inputs: Record<string, unknown>,
 ): Promise<SolutionExecutionResult | null> {
   const db = getDb();
+  // WP8: the step's own eligibility comes back with it. A LEFT JOIN, not an
+  // inner one — a step naming a capability that no longer exists must still
+  // appear in the audit trail rather than vanishing from the step list.
   const steps = await db
     .select({
       capabilitySlug: solutionSteps.capabilitySlug,
@@ -339,8 +343,11 @@ export async function executeSolution(
       canParallel: solutionSteps.canParallel,
       parallelGroup: solutionSteps.parallelGroup,
       gateCondition: solutionSteps.gateCondition,
+      capIsActive: capabilities.isActive,
+      capLifecycleState: capabilities.lifecycleState,
     })
     .from(solutionSteps)
+    .leftJoin(capabilities, eq(capabilities.slug, solutionSteps.capabilitySlug))
     .where(eq(solutionSteps.solutionId, solutionId))
     .orderBy(solutionSteps.stepOrder);
 
@@ -394,15 +401,40 @@ export async function executeSolution(
 
   for (const { steps: groupSteps } of sortedGroups) {
     const executions = groupSteps.map(async (step) => {
-      const executor = getExecutor(step.capabilitySlug);
+      // WP8: is this capability fit to run at all? Checked BEFORE the executor
+      // lookup, because a registered executor for a quarantined capability is
+      // exactly the case that used to slip through — the code was present, so
+      // the step ran, even though the platform had decided to stop serving it.
+      //
+      // Solution steps consulted no eligibility rule of any kind before this.
+      // Not yet a live incident (every offending step in production sits in an
+      // already-inactive solution), but 103 live solutions depend on 99
+      // capabilities and 19 moved to a non-servable state in the last 90 days,
+      // with the quality floor quarantining automatically. The gap was one
+      // quarantine away from putting a delisted capability inside a paid bundle.
+      const servable =
+        step.capIsActive != null &&
+        step.capLifecycleState != null &&
+        isServableCapability({
+          isActive: step.capIsActive,
+          lifecycleState: step.capLifecycleState,
+        });
+
+      const executor = servable ? getExecutor(step.capabilitySlug) : undefined;
       if (!executor) {
-        stepErrors.push(`${step.capabilitySlug}: executor unavailable`);
+        stepErrors.push(
+          servable
+            ? `${step.capabilitySlug}: executor unavailable`
+            : `${step.capabilitySlug}: capability is not currently servable`,
+        );
         // Money-integrity 2026-08-12: the step must still APPEAR — a bare
         // return made deactivated steps vanish from the audit trail entirely
         // (a solution advertising 14 steps audited 13 with no gap marker).
         stepResults[step.capabilitySlug] = {
           unavailable: true,
-          reason: "capability unavailable (deactivated or not deployed) — this step did not run",
+          reason: servable
+            ? "capability unavailable (not deployed) — this step did not run"
+            : "capability is not currently servable (deactivated or quarantined) — this step did not run",
         };
         completedSteps[stepIndex.get(step)!] = {};
         stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: 0 });

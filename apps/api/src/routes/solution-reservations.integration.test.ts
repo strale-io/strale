@@ -323,4 +323,36 @@ describeMaybe("solution execution holds a wallet reservation", () => {
     expect(conflict.status).toBe(409);
     expect(((await conflict.json()) as any).error_code).toBe("idempotency_key_reused");
   }, 120_000);
+
+  it("does NOT run a step whose capability has been quarantined (WP8)", async () => {
+    // The gap this closes. lib/solution-executor.ts had no eligibility check of
+    // any kind, so a capability the platform had decided to stop serving still
+    // ran as a step inside a paid bundle. Not yet a live incident — every
+    // offending step in production sits in an already-inactive solution — but
+    // 103 live solutions depend on 99 capabilities, 19 moved to a non-servable
+    // state in the last 90 days, and the quality floor quarantines
+    // automatically. This is the transition that would have made it real.
+    await seed();
+    stepShouldFail = false;
+
+    // Quarantine the step's capability AFTER the solution was built, which is
+    // exactly how it happens: the bundle is live and its dependency degrades.
+    await db
+      .update(capabilities)
+      .set({ lifecycleState: "degraded", isActive: false })
+      .where(eq(capabilities.slug, capSlug));
+
+    const res = await runSolution();
+    const body = (await res.json()) as Record<string, any>;
+
+    // The step is recorded as unavailable rather than executed...
+    const stepOutput = body.result?.steps?.[capSlug];
+    expect(stepOutput?.unavailable).toBe(true);
+    expect(String(stepOutput?.reason)).toMatch(/not currently servable/i);
+
+    // ...and because no step produced usable output, WP4's aggregate makes the
+    // run unbillable. The customer is not charged for a bundle whose only step
+    // the platform refused to run.
+    expect(await balance()).toBe(STARTING_BALANCE);
+  }, 120_000);
 });
