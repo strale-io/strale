@@ -33,7 +33,7 @@ const SRC = fileURLToPath(new URL("..", import.meta.url));
  * lowering it means suites were removed and should be a deliberate, explained
  * edit rather than a silent one.
  */
-const MINIMUM_LANE_FILES = 11;
+const MINIMUM_LANE_FILES = 12;
 
 /** Split on either line ending — these files are checked out CRLF on Windows. */
 function splitLines(source: string): string[] {

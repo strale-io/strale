@@ -24,8 +24,9 @@ import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import { executeSolution, isSuccessfulStepOutput } from "../lib/solution-executor.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
-import { logError } from "../lib/log.js";
+import { logError, logWarn } from "../lib/log.js";
 import * as walletService from "../lib/wallet-service.js";
+import * as reservations from "../lib/wallet-reservations.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import type { AppEnv } from "../types.js";
 
@@ -103,6 +104,8 @@ solutionExecuteRoute.post(
     let balanceAfter: number;
     let walletId: string;
     let walletBalanceBefore: number;
+    /** WP3: the open reservation this run must capture or release. */
+    let reservationId: string;
 
     try {
       const txResult = await db.transaction(async (tx) => {
@@ -119,14 +122,6 @@ solutionExecuteRoute.post(
             balance: wallet?.balanceCents ?? 0,
           };
         }
-
-        // Debit through the wallet service — balance change and ledger row are
-        // written together, so the two cannot diverge (WP2).
-        const newBalance = await walletService.debit(tx, {
-          wallet,
-          amountCents: sol.priceCents,
-          description: `Solution: ${sol.slug}`,
-        });
 
         // Insert transaction row at "executing" — two-phase write per /v1/do pattern
         const [txnRecord] = await tx
@@ -159,12 +154,31 @@ solutionExecuteRoute.post(
           })
           .returning({ id: transactions.id });
 
+        // WP3: reserve rather than plainly debit. Solutions have the same
+        // crash window /v1/do had, and a wider one — execution is multi-step
+        // and takes seconds to minutes — on the platform's most expensive
+        // SKUs. The four refund call sites below all live in this process; a
+        // SIGKILL anywhere in that window strands the charge unless something
+        // durable records that the debit was provisional.
+        //
+        // Ordered after the transaction insert so the reservation can carry
+        // its reference. Both writes are in this transaction, so the sequence
+        // between them is not observable.
+        const reservation = await reservations.reserve(tx, {
+          wallet,
+          userId: user.id,
+          amountCents: sol.priceCents,
+          transactionId: txnRecord.id,
+          description: `Solution: ${sol.slug}`,
+        });
+
         return {
           ok: true as const,
           transactionId: txnRecord.id,
-          balanceAfter: newBalance,
+          balanceAfter: reservation.balanceAfter,
           walletId: wallet.id,
           walletBalanceBefore: wallet.balanceCents,
+          reservationId: reservation.id,
         };
       });
 
@@ -183,6 +197,7 @@ solutionExecuteRoute.post(
       balanceAfter = txResult.balanceAfter;
       walletId = txResult.walletId;
       walletBalanceBefore = txResult.walletBalanceBefore;
+      reservationId = txResult.reservationId;
     } catch (err) {
       c.get("log").error(
         { label: "solutions-tx-insert-failed", solution_slug: slug, err: err instanceof Error ? { message: err.message, stack: err.stack } : err },
@@ -231,7 +246,7 @@ solutionExecuteRoute.post(
       }
 
       // Refund
-      await refundWallet(db, walletId, sol.priceCents, sol.slug, "execution error", transactionId);
+      await refundWallet(db, walletId, sol.priceCents, sol.slug, "execution error", reservationId);
 
       return c.json(
         apiError("execution_failed", "Solution execution failed. You were not charged.", {
@@ -269,7 +284,7 @@ solutionExecuteRoute.post(
         );
       }
 
-      await refundWallet(db, walletId, sol.priceCents, sol.slug, "no steps configured", transactionId);
+      await refundWallet(db, walletId, sol.priceCents, sol.slug, "no steps configured", reservationId);
 
       return c.json(
         apiError("execution_failed", "Solution has no steps configured. You were not charged.", {
@@ -310,7 +325,7 @@ solutionExecuteRoute.post(
       await refundWallet(
         db, walletId, sol.priceCents, sol.slug,
         gated ? `gate tripped: ${gated.capabilitySlug}.${gated.field}` : "all steps failed",
-        transactionId,
+        reservationId,
       );
     }
 
@@ -359,20 +374,42 @@ solutionExecuteRoute.post(
     // worst outcome — customer paid, no record. Refund on the non-allFailed
     // path and return 500 so the caller can retry.
     try {
-      await db.update(transactions)
-        .set({
-          status: txStatus,
-          output: execResult.steps,
-          latencyMs,
-          completedAt: new Date(),
-          priceCents: chargedPrice,
-          auditTrail,
-          // CCO P0 #6: flip 'deferred' → 'pending' atomically with the
-          // final auditTrail/output write. The retry worker will hash the
-          // final state on its next tick (≥10s later) — no race possible.
-          complianceHashState: "pending",
-        })
-        .where(eq(transactions.id, transactionId));
+      await db.transaction(async (tx) => {
+        await tx.update(transactions)
+          .set({
+            status: txStatus,
+            output: execResult.steps,
+            latencyMs,
+            completedAt: new Date(),
+            priceCents: chargedPrice,
+            auditTrail,
+            // CCO P0 #6: flip 'deferred' → 'pending' atomically with the
+            // final auditTrail/output write. The retry worker will hash the
+            // final state on its next tick (≥10s later) — no race possible.
+            complianceHashState: "pending",
+          })
+          .where(eq(transactions.id, transactionId));
+
+        // WP3: settle the reservation in the SAME transaction as the terminal
+        // status write. A refunded run has already released it above, so this
+        // only captures the runs that kept the money. Separately, a crash
+        // between the two writes would leave a finished run holding an open
+        // reservation for the reconciler to refund — paying back work the
+        // customer received.
+        if (!refundRequired) {
+          const captured = await reservations.capture(tx, {
+            reservationId,
+            reason: `solution ${txStatus}`,
+          });
+          if (!captured) {
+            logWarn(
+              "solutions-capture-missed",
+              "reservation was already terminal at capture time",
+              { transaction_id: transactionId, reservation_id: reservationId },
+            );
+          }
+        }
+      });
     } catch (e) {
       c.get("log").error(
         {
@@ -392,7 +429,7 @@ solutionExecuteRoute.post(
       // refunded here a SECOND time. Caught by auditing the whole route rather
       // than only the block being edited.
       if (!refundRequired) {
-        await refundWallet(db, walletId, sol.priceCents, sol.slug, "phase2 update failed", transactionId);
+        await refundWallet(db, walletId, sol.priceCents, sol.slug, "phase2 update failed", reservationId);
       }
 
       return c.json(
@@ -485,16 +522,26 @@ async function refundWallet(
   priceCents: number,
   solutionSlug: string,
   reason: string,
-  referenceId?: string | null,
+  reservationId: string,
 ): Promise<void> {
   try {
     await db.transaction(async (tx) => {
-      await walletService.refund(tx, {
-        walletId,
-        amountCents: priceCents,
-        description: `Refund: ${solutionSlug} (${reason})`,
-        referenceId: referenceId ?? null,
+      // WP3: release the reservation rather than crediting directly. The
+      // release claims the row with a conditional UPDATE and only credits if
+      // it won, so this cannot double-refund against a reconciler that got
+      // there first — which is what makes the reconciler safe to run while
+      // solutions are executing.
+      const released = await reservations.release(tx, {
+        reservationId,
+        reason: `${solutionSlug} (${reason})`,
       });
+      if (!released) {
+        logWarn(
+          "solutions-release-missed",
+          "reservation was already terminal at release time",
+          { solution_slug: solutionSlug, reservation_id: reservationId },
+        );
+      }
     });
   } catch (err) {
     logError("solutions-refund-failed", err, { solution_slug: solutionSlug, wallet_id: walletId });

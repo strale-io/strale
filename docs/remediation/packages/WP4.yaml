@@ -1,0 +1,71 @@
+package: WP4
+title: Capability Runner + canonical ExecutionOutcome
+status: PLANNED
+depends_on: [WP2]
+risks: [CR-02]
+
+objective: >
+  Make "what happened, and may we charge for it" a single business fact, decided
+  once, rather than five rails each deciding it with their own heuristic.
+
+# Verified against the code, not taken from the audit.
+current_authorities:
+  do_sync: "executeWithRetry not throwing IS success; debit in the same transaction"
+  do_async: "promise resolution IS success; debit upfront, refund in a catch block"
+  wallet_solutions: "refundRequired = allFailed || gated !== undefined (solution-execute.ts:317)"
+  x402_capability: "executor resolving IS success; settle on any resolution"
+  x402_solutions: "anyStepSucceeded → settle FULL price; `gated` appears zero times in the file"
+  mcp_a2a: "re-derives success from the proxied HTTP status"
+
+sharpest_defect: >
+  The same solution run, with a gate tripped: the wallet rail refunds and tells
+  the customer they were not charged, while the x402 rail counts the gate step
+  as a success and settles the full USDC. Identical execution, opposite billing,
+  decided by which rail the caller happened to use. Confirmed by grep — `gated`
+  is simply absent from x402-gateway-v2.ts.
+
+second_defect: >
+  isSuccessfulStepOutput (solution-executor.ts) treats any object as success
+  unless it is exactly {error: string} or carries skipped/unavailable. The
+  reasoning is sound — capabilities legitimately return soft verdicts like
+  {valid:false, error:"Invalid IBAN checksum"}, which IS the purchased answer —
+  but it means an executor that ever resolves with {error, status} converts a
+  failure into a billable success. A convention is doing the job of a contract.
+
+third_defect: >
+  capability-output-contracts.ts is imported ONLY by startup-migrations.ts.
+  Output validation runs after the money has moved and writes to audit metadata;
+  schema_validated:false never blocks a charge.
+
+canonical_types:
+  OutputAssessment: [structurally_valid, semantically_usable, contract_valid, quality_flags]
+  ExecutionOutcome:
+    - success | failure
+    - failure_class
+    - billable            # the field payment consumes
+    - retryable
+    - fault: provider | strale | caller
+    - output_assessment
+    - provenance
+    - latency_ms, cost facts
+
+rules:
+  - payment consumes `billable`, never a route-local success heuristic
+  - breaker and quality consume the canonical outcome
+  - audit consumes the terminal outcome
+  - the solution orchestrator aggregates step outcomes into one solution outcome
+
+migration_required: false
+review: {codex: deferred_to_final_pass, independent_agent: required, fable: required}
+
+tests_required:
+  - a gated solution is billed identically on the wallet and x402 rails
+  - an {error, status} shaped output is not billable
+  - a contract-invalid output is not billable
+  - each rail's billing decision comes from the same function (bypass guard)
+
+exit_conditions:
+  - one ExecutionOutcome type, one OutputAssessment type
+  - no route decides success or billability independently
+  - CI guard forbids a new local billing predicate
+  - independent adversarial review passes
