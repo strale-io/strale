@@ -1,0 +1,95 @@
+package: WP3
+title: Durable wallet reservations + reconciler
+status: REVIEW
+depends_on: [WP2]
+risks: [CR-01, N1]
+
+objective: >
+  Make a crashed execution's charge recoverable. Not by moving the debit —
+  that only relocates the window — but by recording, in the same transaction as
+  the debit, that the money movement is still provisional. That record outlives
+  the process, so a reconciler can find what a crash abandoned.
+
+state_machine: |
+  reserved ──▶ executing ──▶ captured
+       ╰────────────┴──────▶ released
+
+  Every transition is a conditional UPDATE predicated on the expected state.
+  That is what makes duplicate capture and duplicate release no-ops rather than
+  second money movements, and what makes the reconciler safe to run against a
+  live system: a live execution finishing at the same moment either wins and
+  captures, or loses and finds nothing to capture.
+
+defect_closed: >
+  The async /v1/do path debited, committed, answered 202, then executed in an
+  in-memory promise whose catch block held the only refund. A SIGKILL between
+  the commit and that catch stranded the charge: customer debited, transaction
+  stuck in 'executing', nothing anywhere transitioning it. shutdown.ts claimed
+  the integrity-hash janitor recovered these; it only ever writes
+  compliance_hash_state. Solutions had the same window, wider (multi-step,
+  seconds to minutes) and on the most expensive SKUs.
+
+acceptance_signal: >
+  The WP1 crash tests INVERTED. They previously pinned the bug — no refund
+  ever, transaction stranded. They now assert the reservation survives the
+  kill, the reconciler refunds it, a second pass refunds nothing further, and
+  the transaction reaches a terminal state. Verified discriminating by
+  disabling recovery: exactly those assertions fail.
+
+migration:
+  block: "0095_wallet_reservations"
+  numbering_note: >
+    Written as 0090, corrected to 0094 when the blocks ratchet caught a
+    collision, then to 0095 when main landed its own 0094 while this branch was
+    in review. The ratchet caught both. The historical numbering is the audit
+    trail, so the collisions mattered.
+  contents:
+    - "CREATE TABLE IF NOT EXISTS wallet_reservations + three indexes, all individually idempotent"
+    - "CHECK (balance_cents >= 0) added NOT VALID, then VALIDATE separately"
+  safety:
+    - "Every statement independently idempotent — no check-then-bare-DDL, which block 0093's own comment documents as having already broken a deploy"
+    - "Indexes created unconditionally, not inside a table-was-absent branch: the runner has no transaction, so a kill between CREATE TABLE and the index builds would otherwise leave the unique index permanently absent"
+    - "NOT VALID avoids an ACCESS EXCLUSIVE lock held for a full table scan against a path that holds FOR UPDATE on wallets across an external HTTP call"
+    - "Constraint failure is logged and retried next boot rather than thrown — a throw aborts boot, and a failed Railway deploy does not cut over"
+  verified:
+    - "re-runnable: run twice, second is a clean no-op"
+    - "self-healing: dropped the unique index, re-ran, it came back"
+    - "constraint bites: UPDATE to -1 rejected"
+    - "prod checked read-only first: 59 wallets, none negative"
+
+review:
+  codex: unavailable (credits exhausted until 27 Aug; founder decision — no purchase)
+  independent_agent: FAIL_REMEDIATION_REQUIRED, then all findings closed
+  blocking_findings_closed:
+    - "migration reintroduced the TOCTOU shape the same file fixed two commits earlier, and could ship without its unique index"
+    - "ADD CONSTRAINT lock contention — my safety argument had only verified row content, never lock acquisition"
+    - "solutions had the identical window and a comment falsely claiming the reconciler covered it"
+  non_blocking_closed:
+    - "ABBA deadlock between the success path and the reconciler — could have recorded a SUCCEEDED call as failed and discarded its output"
+    - "unguarded post-commit failure write would have left a customer charged while the row read 'failed'"
+    - "reserve discarded the DB-settled balance WP2 introduced to stop snapshot arithmetic"
+    - "no cross-replica advisory lock, making the DEC-20260504-B batch bound per-instance"
+    - "released-but-not-marked counted as clean recovery while leaving the transaction stuck forever"
+    - "TTL vs EXEC_HARD_TIMEOUT_MS correct only by coincidence and env-tunable to incorrect — now asserted at boot"
+    - "the 'executing' state was dead code — now recorded"
+  residual:
+    - "wallet_reservations has no retention rule — an omission, not yet a decision. WP14 owns it alongside the 90-day content commitment."
+    - "the reconciler's own behaviour has no test for two concurrent instances; the advisory lock is asserted by inspection, not exercised."
+
+deployment:
+  reconciler_first_run_has_a_backlog: >
+    11 transactions stranded since 2026-04-07. Bounded per tick (25) so the
+    backlog drains over minutes rather than in one burst — DEC-20260504-B.
+  NOT_DONE_HERE: >
+    Those 11 historical rows predate the table and have NO reservation row, so
+    findAbandoned can never return them. Reconciling them is a separate,
+    explicit operation against real customer wallets and needs founder approval.
+    Deliberately not bundled into this package.
+
+exit_conditions:
+  - a hard crash cannot strand customer funds indefinitely   # MET (crash tests inverted)
+  - one reservation reaches exactly one terminal state       # MET (race test)
+  - duplicate capture is idempotent                          # MET
+  - duplicate release is idempotent                          # MET
+  - independent adversarial review passes                    # MET after remediation
+  - Fable ACCEPT                                             # pending CI + merge
