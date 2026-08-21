@@ -161,10 +161,22 @@ describe("the refund path, structurally", () => {
     expect(src).not.toMatch(/if \(!allFailed\) \{\s*\n\s*await refundWallet/);
   });
 
-  it("refunds a gated run exactly once", () => {
-    // One refund call on the main path, and it covers both reasons.
-    expect(src).toContain("const refundRequired = allFailed || gated !== undefined;");
+  it("refunds a gated run exactly once, on the canonical decision", () => {
+    // WP4 moved the rule itself into lib/execution-outcome.ts, because the
+    // x402 rail had its own answer and disagreed. This assertion followed:
+    // pinning the literal `allFailed || gated !== undefined` would now forbid
+    // the fix. What it pins instead is stronger — that this rail derives the
+    // decision rather than making one.
+    expect(src).toContain("const refundRequired = !outcome.billable;");
     expect(src).toContain("if (refundRequired) {");
+
+    // Behavioural coverage for the gate itself now lives in
+    // routes/billing-parity.integration.test.ts, which drives both rails
+    // against a real gated solution and asserts they agree. This block remains
+    // structural only because no route-level harness existed when it was
+    // written; the integration test is the one that would catch a regression
+    // in behaviour rather than in wording.
+    expect(src).toContain("aggregateSolutionOutcome(");
   });
 
   it("charges nothing when the gate trips", () => {

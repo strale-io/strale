@@ -42,7 +42,12 @@ import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { extractClientMeta, recordDiscoveryHit, hashX402Payer } from "../lib/attribution.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
-import { executeSolution, isSuccessfulStepOutput } from "../lib/solution-executor.js";
+import { executeSolution } from "../lib/solution-executor.js";
+import {
+  aggregateSolutionOutcome,
+  assertBillableOutput,
+  outcomeFromOutput,
+} from "../lib/execution-outcome.js";
 import { logError } from "../lib/log.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import { getProcessingLocation } from "../lib/processing-location.js";
@@ -99,6 +104,20 @@ const CACHE_TTL_MS = 60_000;
 let _capCache: Map<string, X402Capability> = new Map();
 let _solCache: Map<string, X402Solution> = new Map();
 let _cacheExpiry = 0;
+
+/**
+ * Drop the catalogue cache so a test that seeds a solution can reach it.
+ *
+ * The cache holds for 60s, which is correct in production and makes any test
+ * seeding more than one slug per minute silently 404 on everything after the
+ * first — a failure that reads like a broken route rather than a stale cache.
+ * Named with the `__…ForTests` convention already used in guarded-executor.ts.
+ */
+export function __resetX402CacheForTests(): void {
+  _capCache = new Map();
+  _solCache = new Map();
+  _cacheExpiry = 0;
+}
 
 async function ensureCache(): Promise<void> {
   if (Date.now() < _cacheExpiry) return;
@@ -1108,16 +1127,72 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     return c.json({ error: "Solution has no steps configured." }, 503);
   }
 
-  // Settle only if at least one step produced output. All-steps-failed returns
-  // a 4xx-shaped response and the caller keeps their USDC authorization.
-  // Shared predicate with the wallet path (money-integrity 2026-08-12) — it
-  // also covers the new `unavailable` marker for deactivated steps.
-  const anyStepSucceeded = Object.values(result.steps).some(isSuccessfulStepOutput);
-  if (!anyStepSucceeded) {
+  // WP4: billability comes from the canonical outcome, not from a predicate
+  // local to this rail. Before this, the token `gated` appeared zero times in
+  // this file, so a solution whose gate tripped refunded the wallet customer in
+  // full and settled the x402 customer in full — same execution, opposite
+  // billing, decided by the caller's payment method. `result.gated` was
+  // available here the whole time; nothing read it.
+  const outcome = aggregateSolutionOutcome(
+    Object.entries(result.steps).map(([stepSlug, stepOutput]) =>
+      outcomeFromOutput(stepSlug, stepOutput),
+    ),
+    result.gated,
+  );
+
+  if (!outcome.billable) {
+    // WP4 remediation. Two things the first version got wrong by returning
+    // early:
+    //
+    // 1. Audit divergence. The wallet rail refunds a gated run AND still
+    //    writes a terminal transaction row with its full audit trail, so the
+    //    run appears in /v1/audit. Returning here left the x402 run invisible
+    //    — a cross-rail inconsistency in exactly the dimension this package
+    //    claims to unify.
+    // 2. Free re-execution. Without a paymentHash row the cert-audit C9 replay
+    //    cache has nothing to match, so the same signed authorization could be
+    //    replayed until expiry, re-running the pre-gate steps at Strale's
+    //    external-API cost with zero revenue. A gate is the deterministic
+    //    repeat case — a registry that is down stays down — so this is the
+    //    worst place to leave that open.
+    //
+    // Recorded unsettled (DEC-14): the row proves the call happened and
+    // carries no payment.
+    try {
+      await recordX402Transaction({
+        clientMeta: extractClientMeta(c.req, {
+          src: c.req.query("src"),
+          ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
+        }) ?? null,
+        capabilityId: null,
+        solutionSlug: sol.slug,
+        slug: sol.slug,
+        inputs,
+        output: { steps: result.steps, errors: result.errors },
+        // Same sources the success path uses below: the executor's own measured
+        // latency, and the "mixed" transparency tag a bundle carries because
+        // its steps may differ.
+        latencyMs: result.latency_ms,
+        priceCents: 0,
+        priceUsd: sol.x402PriceUsd,
+        transparencyTag: "mixed",
+        settlementId: undefined,
+        payerAddress: verified ? extractPayerAddress(verified) : null,
+        error: outcome.error_message ?? "no step produced usable output",
+        paymentHash,
+      });
+    } catch (recordErr) {
+      logError("x402-solution-unbillable-record-failed", recordErr, { slug: sol.slug });
+    }
+
     return c.json(
       {
-        error: "Solution failed — no steps produced output. No payment was taken.",
+        error:
+          outcome.failure_class === "gate_tripped"
+            ? `Solution could not run: ${outcome.error_message}. No payment was taken.`
+            : "Solution failed — no steps produced output. No payment was taken.",
         solution: sol.slug,
+        failure_class: outcome.failure_class,
         steps: result.steps,
         errors: result.errors,
       },
@@ -1373,6 +1448,16 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   let result: Awaited<ReturnType<typeof executor>>;
   try {
     result = await executor(inputs);
+    // WP4 remediation: the capability rail was missed in the first pass while
+    // the package's exit condition claimed every rail was covered. Without
+    // this, `POST /x402/:slug` settles on any resolution while the same
+    // capability reached through `POST /v1/do` with an X-PAYMENT header does
+    // not — a NEW cross-rail asymmetry introduced by the fix for the old one.
+    //
+    // Raised inside the try on purpose: the catch below already records a
+    // failed x402 transaction and deliberately does not settle (CRIT-9,
+    // DEC-14), which is exactly the handling an unusable output needs.
+    assertBillableOutput(cap.slug, result.output);
   } catch (err) {
     // CRIT-9: executor failure was previously logged-only — no transactions
     // row, no audit record, no compliance evidence the call ever happened.

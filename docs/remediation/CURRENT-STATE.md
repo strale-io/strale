@@ -2,12 +2,33 @@
 
 _Last updated: 2026-08-21 (session 1)_
 
-- **Current package:** WP2 — ACCEPTED. Ready to start WP3.
-- **Next package:** WP3 — Durable wallet reservations + reconciler (closes the crash window WP1 proved, and the 11 stranded prod rows)
-- **Latest accepted SHA:** `b8a2600` on `remediation/program` (branch not yet merged to main)
+- **Current package:** WP4 — in independent adversarial review on `remediation/wp4`.
+- **Next package:** WP5
+- **WP3:** ACCEPTED, merged as `ee7f737` (PR #350), verified live in production — table, all three indexes, and the CHECK constraint reached `validated=true`.
+- **Latest accepted SHA:** `ee7f737` on `main`
 - **Unresolved blockers:** none
 - **Human approvals granted:** program-level autonomy (run continuously; escalate only per CHECK-IN A/B/C)
 - **Awaiting founder:** nothing. One item is logged for *visibility only*, not decision — see "Codex disposition" below.
+
+## WP3 in production — verified, with one honest gap
+
+Checked against prod 90 minutes after `ee7f737` deployed:
+
+- Schema effect confirmed by query, not by log: the table, all three indexes,
+  and `wallets_balance_cents_non_negative` at `convalidated = true`, so the
+  `NOT VALID` → `VALIDATE` two-step completed.
+- No negative wallets. No past-deadline open reservations.
+- Traffic profile unchanged: 375 completed / 338 failed in the 90 minutes
+  after deploy, and **exactly** 375 / 338 in the same window yesterday. The
+  harness sweep is deterministic, so identical counts across two disjoint
+  windows is the expected shape and good evidence of no regression.
+
+**The gap:** `wallet_reservations` holds zero rows, because only 2 non-harness
+transactions have run since deploy. The migration is verified in production;
+the reservation *write path* is not — it has been exercised only by the
+integration suite. The first real paid call is what proves it, and nothing
+about the deploy tells us when that arrives. Worth a deliberate look at the
+table after the next customer call rather than assuming silence means health.
 
 ## Review lane — founder decision, 2026-08-21
 
@@ -28,6 +49,32 @@ catch.
 Practical note for whoever runs that pass: brief it on the FULL branch diff,
 not per-package, and give it the residuals list from each package manifest so
 it can check that deferred items actually landed where they were promised.
+
+## Where WP3 landed
+
+Durable reservations. Every debit now writes, in the same transaction, the fact
+that the money movement is provisional; that record outlives the process, so a
+reconciler finds what a crash abandoned. The state machine is
+`reserved → executing → captured | released`, every transition a conditional
+UPDATE, which is what makes duplicate capture and duplicate release no-ops
+rather than second money movements.
+
+**The WP1 crash tests are inverted** — they pinned the bug (no refund ever,
+transaction stranded) and now pin the recovery. Verified discriminating.
+
+Solutions had the identical window on the most expensive SKUs, plus a comment
+in the route falsely claiming this reconciler already covered it. Wired and
+proved end to end.
+
+The independent agent returned FAIL_REMEDIATION_REQUIRED (3 blocking, 9
+non-blocking); all closed. Sharpest: a migration that reintroduced the
+check-then-bare-DDL defect the same file had fixed two commits earlier, and an
+ABBA deadlock that could have recorded a SUCCEEDED call as failed and discarded
+its output.
+
+**Still open, founder decision:** the 11 historical stranded rows predate the
+table and carry no reservation, so `findAbandoned` can never reach them.
+Reconciling them writes real customer wallets — CHECK-IN B.
 
 ## Where WP2 landed
 
@@ -98,7 +145,10 @@ residual path requires admin credentials.
 | Item | Owner |
 |---|---|
 | Publication-approval artifact for public examples | WP14 (mandatory exit) |
-| 11 stranded `executing` transactions; crash-orphan reconciler | WP3 (+ CHECK-IN B — writes prod wallets) |
+| ~~Crash-orphan reconciler~~ — CLOSED in WP3 | — |
+| 11 stranded `executing` transactions (pre-date the reservations table; reconciler cannot reach them) | CHECK-IN B — writes prod wallets |
+| `wallet_reservations` retention rule (omission, not yet a decision) | WP14 |
+| Two concurrent reconciler instances untested; advisory lock asserted by inspection | WP15 |
 | Wallet rail still serves quarantined capabilities; solution steps ungated | WP8 |
 | x402 in-flight delisting race at settlement | WP8 |
 | ~~SQL-text assertions want row-level tests~~ — CLOSED in WP1 | — |

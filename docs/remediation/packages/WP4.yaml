@@ -1,71 +1,203 @@
 package: WP4
-title: Capability Runner + canonical ExecutionOutcome
-status: PLANNED
+title: Canonical ExecutionOutcome — one authority for billability
+status: REMEDIATED
 depends_on: [WP2]
 risks: [CR-02]
 
 objective: >
-  Make "what happened, and may we charge for it" a single business fact, decided
-  once, rather than five rails each deciding it with their own heuristic.
+  Make "what happened, and may we charge for it" a single business fact,
+  decided once, rather than five rails each deciding it with their own
+  heuristic.
 
-# Verified against the code, not taken from the audit.
-current_authorities:
+# Verified against the code before the work started, not taken from the audit.
+authorities_before:
   do_sync: "executeWithRetry not throwing IS success; debit in the same transaction"
   do_async: "promise resolution IS success; debit upfront, refund in a catch block"
-  wallet_solutions: "refundRequired = allFailed || gated !== undefined (solution-execute.ts:317)"
+  wallet_solutions: "refundRequired = allFailed || gated !== undefined"
   x402_capability: "executor resolving IS success; settle on any resolution"
-  x402_solutions: "anyStepSucceeded → settle FULL price; `gated` appears zero times in the file"
-  mcp_a2a: "re-derives success from the proxied HTTP status"
+  x402_solutions: "anyStepSucceeded → settle FULL price"
+  mcp_a2a: >
+    Re-derives success from the proxied HTTP status — but for REPORTING, not
+    billing. Checked rather than assumed: a2a.ts proxies to POST /v1/do over
+    HTTP (routes/a2a.ts:564) and mcp.ts reads that response's error_code.
+    Neither calls walletService.debit or settleX402Payment, which the guard's
+    derived rail list independently confirms. So the billing decision is made
+    inside /v1/do and these two inherit it. Not rewired, and not a gap in the
+    exit condition.
 
 sharpest_defect: >
-  The same solution run, with a gate tripped: the wallet rail refunds and tells
-  the customer they were not charged, while the x402 rail counts the gate step
-  as a success and settles the full USDC. Identical execution, opposite billing,
-  decided by which rail the caller happened to use. Confirmed by grep — `gated`
-  is simply absent from x402-gateway-v2.ts.
+  A gated solution run. The wallet rail refunded in full and told the customer
+  they were not charged; the x402 rail counted the gate step as a success and
+  settled the full USDC. Identical execution, opposite billing, decided by
+  which rail the caller happened to use. Confirmed by grep before it was
+  confirmed by test: `gated` appears twelve times in solution-execute.ts and
+  zero times in x402-gateway-v2.ts. `result.gated` was available on the x402
+  rail the whole time. Nothing read it.
 
 second_defect: >
-  isSuccessfulStepOutput (solution-executor.ts) treats any object as success
-  unless it is exactly {error: string} or carries skipped/unavailable. The
-  reasoning is sound — capabilities legitimately return soft verdicts like
-  {valid:false, error:"Invalid IBAN checksum"}, which IS the purchased answer —
-  but it means an executor that ever resolves with {error, status} converts a
-  failure into a billable success. A convention is doing the job of a contract.
+  isSuccessfulStepOutput matched EXACTLY {error: string}, so an executor
+  resolving {error, status} converted a failure into a billable success purely
+  by having two keys. A convention was doing a contract's job.
 
 third_defect: >
-  capability-output-contracts.ts is imported ONLY by startup-migrations.ts.
-  Output validation runs after the money has moved and writes to audit metadata;
-  schema_validated:false never blocks a charge.
+  capability-output-contracts.ts was imported ONLY by startup-migrations.ts.
+  Output validation ran after the money moved and wrote to audit metadata;
+  schema_validated:false never blocked a charge.
 
-canonical_types:
-  OutputAssessment: [structurally_valid, semantically_usable, contract_valid, quality_flags]
-  ExecutionOutcome:
-    - success | failure
-    - failure_class
-    - billable            # the field payment consumes
-    - retryable
-    - fault: provider | strale | caller
-    - output_assessment
-    - provenance
-    - latency_ms, cost facts
+what_landed:
+  module: "lib/execution-outcome.ts — OutputAssessment, ExecutionOutcome, and the aggregate"
+  rule: "payment consumes `billable`. A rail still decides HOW to collect; it no longer decides WHETHER."
+  rails_rewired:
+    - "x402 CAPABILITY — assertBillableOutput before settlement (MISSED in the first pass; see review.blocking_finding)"
+    - "x402 solutions — now reads result.gated through aggregateSolutionOutcome"
+    - "wallet solutions — same aggregate, so the two cannot disagree"
+    - "the per-step audit label reads the same assessment billing reads"
+    - "all four /v1/do executeWithRetry sites gate on assertBillableOutput"
+  deleted: >
+    lib/x402-gateway.ts's verifyX402Payment — a combined verify-and-settle
+    helper that moved USDC before the capability ran, so no output existed to
+    assess. Its own docstring called it a DEC-14 violation. Nothing called it.
+    Found by the guard's derived rail list, not by reading the diff.
 
-rules:
-  - payment consumes `billable`, never a route-local success heuristic
-  - breaker and quality consume the canonical outcome
-  - audit consumes the terminal outcome
-  - the solution orchestrator aggregates step outcomes into one solution outcome
+judgment_calls:
+  soft_verdict_is_billable: >
+    {valid:false, error:"Invalid IBAN checksum"} is the purchased answer. The
+    same signal feeds the breaker and the quality floor, so treating it as a
+    failure would eventually delist a capability for being right.
+  numeric_status_only: >
+    The failure-marker widening keys on a NUMERIC status, not the key name.
+    {status:"down", error:"timeout"} is an uptime check reporting a site down —
+    the deliverable, and billable. The first draft keyed on the name and would
+    have unbilled it; the pre-existing solution-executor suite already pinned
+    that case and caught it.
+  contract_violation_does_not_block_billing: >
+    The contract table exists to correct declarations that drifted away from
+    working executors. Refusing the charge would hand money back on the
+    strength of the side we already know to be unreliable. It feeds quality.
+  refusal_is_not_a_fault: >
+    counts_against_capability is false for refusals, budget exhaustion and
+    misclassification. This is the taxonomy gap that let the armed quality
+    floor delist capabilities for correctly refusing bad input.
+  thrown_not_returned: >
+    assertBillableOutput raises rather than returning a value, so each of the
+    four call sites takes the failure path already proven there. Restructuring
+    four money call sites around a new return value is where a bug would hide.
 
-migration_required: false
-review: {codex: deferred_to_final_pass, independent_agent: required, fable: required}
+guard:
+  file: "lib/execution-outcome.guard.test.ts"
+  checks:
+    - "each rail imports the canonical module"
+    - "denylist of the three retired predicates (catches a literal revert)"
+    - "no rail imports the superseded step predicate"
+    - "shape check: a billing-named identifier must be assigned from an outcome (catches a NEW predicate under a NEW name)"
+    - "derived rail list: re-derives from debit/settle call sites rather than trusting the hand-written list"
+  proved_not_hollow: >
+    Four violations planted one at a time; each turned the guard red and the
+    baseline green again after removal. The derived check is the one that
+    found the deleted pre-charge helper.
 
-tests_required:
-  - a gated solution is billed identically on the wallet and x402 rails
-  - an {error, status} shaped output is not billable
-  - a contract-invalid output is not billable
-  - each rail's billing decision comes from the same function (bypass guard)
+acceptance_signal:
+  file: "routes/billing-parity.integration.test.ts"
+  what: >
+    The same gated solution driven down both rails. The facilitator is mocked
+    at the module boundary so both run their real logic while no USDC moves;
+    the assertion is the settle spy, not the status code.
+  discriminating: >
+    Verified. Restoring the pre-WP4 x402 predicate turns "settlement is never
+    reached" and "the two rails agree" red while the wallet assertion stays
+    green — exactly the asymmetry the package removes.
+  other_direction: >
+    Also asserts both rails still charge a NON-gated run. A parity fix that
+    simply stopped charging would satisfy the first assertions and be worse
+    than the bug.
+
+incidental_findings:
+  x402_replay_dedup: >
+    The route dedups replays on a hash of the X-PAYMENT header (cert-audit C9).
+    The first draft of the parity test reused one header, so every call after
+    the first replayed the cached row — a 200 with no execution and no
+    settlement, which reads exactly like a billing bug. Worth knowing before
+    anyone writes another x402 test.
+  cache_reset: >
+    __resetX402CacheForTests added. The catalogue cache holds 60s, which is
+    correct in production and makes any test seeding more than one slug per
+    minute silently 404 on everything after the first.
+
+review:
+  codex: deferred_to_final_pass
+  independent_agent: FAIL_REMEDIATION_REQUIRED, then all findings closed
+  fable: pending
+
+  blocking_finding: >
+    The x402 CAPABILITY rail was never wired. The module docstring named five
+    rails; the first pass rewired four and I recorded the exit condition "no
+    route decides success or billability independently" as MET. That was a
+    false statement about the code, which is the part that matters most — a
+    package accepted on a false exit condition corrupts every later package
+    that depends on it. Worse than the omission: the half-fix CREATED a new
+    asymmetry, because POST /v1/do with an X-PAYMENT header assessed the output
+    while POST /x402/:slug did not. CR-02 restated one layer down, introduced
+    by its own fix.
+
+  non_blocking_closed:
+    - "counts_against_capability had NO consumer — the advertised taxonomy fix was documentation only, so refusals still tripped the breaker against an armed quality floor. Wired at all four sites."
+    - "UnbillableOutputError discarded the executor's error text, misfiling upstream 5xx failures as `internal` (Strale's bug) — which is the bucket that counts against a capability."
+    - "A gated x402 solution wrote no transaction row and no replay-dedup entry: invisible in /v1/audit, and the same authorization replayable until expiry, re-running pre-gate steps at our cost with zero revenue."
+    - "The guard was green while the blocking defect was live: file-scoped import check, a seven-name denylist, a canonical-source test satisfied by the bare substring `outcome`, and a `derived` rail list whose regex matched neither of the ways solution-execute.ts moves money."
+    - "The integration test covered solutions only, so it structurally could not fail on the blocking finding."
+    - "One integration assertion was vacuous — worse than reported: NEITHER key it read existed at the top level, so it asserted nothing."
+    - "Test constructors used wrong arity for all three guarded-executor errors; tsconfig excludes *.test.ts so tsc never saw it."
+
+  findings_that_were_guard_bugs_not_code_bugs:
+    - "reserve flagged as unconsulted money movement — but a WP3 reservation is PROVISIONAL by design; capture is the finalizing act. Guard now keys on capture."
+    - "`settled = await settleX402Payment(...)` flagged — that holds the RESULT of moving money, not a decision about whether to."
+    - "`chargedPrice = refundRequired ? 0 : price` flagged — a decision may legitimately be computed in steps; the guard now tracks derivation."
+
+  accepted_and_documented_not_fixed:
+    free_tier_behaviour_change: >
+      assertBillableOutput sits on two €0 paths too, so a free-tier caller whose
+      capability resolves with an error marker now gets a 500 instead of a 200
+      carrying that marker, and the call still consumes one of their 10/day.
+      Kept deliberately. The assertion is load-bearing on that same function
+      because the x402-paid /v1/do variant settles inside it. And excluding
+      failures from the quota would let a caller force errors for unlimited free
+      external API calls — a worse hole than the one it closes. Failed calls
+      already consumed quota before WP4 for every capability that THREW; this
+      applies the same rule to more calls rather than inventing a new harm.
+
+residuals:
+  unaudited_passthrough_executors: >
+    A handful of executors pass upstream JSON straight into `output` — e.g.
+    providers/latvian-company-data-sdda.ts:133 (`output: raw`). If such a
+    registry ever answers with a JSON array, that capability now fails where it
+    previously returned 200 carrying the array. Reviewed and deliberately NOT
+    "fixed": an array output was already broken — the audit trail, the declared
+    output_schema and every downstream consumer assume an object — so WP4 makes
+    a silent wrong charge into a visible failure, which is the direction the
+    package exists to move. What was done instead is to make the failure
+    legible: the error now names the actual shape rather than saying "no usable
+    output", so an operator is not sent hunting through the executor for a bug
+    that is in the upstream response.
+
+    What was NOT done: auditing all 338 executors for pass-through shape. That
+    is a catalog-wide sweep, not a billing change. Verified closed for the LLM
+    paths, which were the reviewer's main concern — extractJsonObject slices a
+    brace-balanced span starting at `{`, so it returns a plain object or null,
+    and every caller rejects null. No LLM path can emit an array.
+
+  domain_field_named_code: >
+    Unresolved by reading alone. The failure-marker widening treats
+    {error, code: <number>} as a failure; a capability whose legitimate output
+    is an error string plus a numeric DOMAIN code (an HS code, a registry error
+    code) would be unbilled. Greps found no current instance across 338 files,
+    but the search cannot be exhaustive over dynamic shapes. Cheap to detect in
+    production — the failure message now names the marker — and cheap to fix by
+    narrowing the key list if one appears.
 
 exit_conditions:
-  - one ExecutionOutcome type, one OutputAssessment type
-  - no route decides success or billability independently
-  - CI guard forbids a new local billing predicate
-  - independent adversarial review passes
+  - one ExecutionOutcome type, one OutputAssessment type      # MET
+  - no route decides success or billability independently     # MET — but only after remediation; claimed MET while false in the first pass
+  - CI guard forbids a new local billing predicate            # MET (handler-scoped; proved discriminating against the blocking defect itself + 2 evasions)
+  - the two rails bill a gated solution identically           # MET (proved discriminating)
+  - the two rails bill an unusable CAPABILITY output identically  # MET (added after review)
+  - independent adversarial review passes                     # MET after remediation
