@@ -74,9 +74,15 @@ export function computeIdempotencyFingerprint(params: {
  * The set is finite and drains as old keys age out.
  */
 export function isReplayable(
-  storedFingerprint: string | null,
+  storedFingerprint: string | null | undefined,
   incomingFingerprint: string,
 ): boolean {
-  if (storedFingerprint === null) return true;
+  // `undefined` as well as `null`. A column read as NULL arrives as null, but a
+  // row that never carried the field at all — a projection that omits it, a
+  // fixture, a cached shape — arrives as undefined, and `undefined === null` is
+  // false. Treating those differently would 409 a legitimate retry, which is a
+  // worse failure than the one this package fixes. Caught by an existing
+  // do.core test rather than by inspection.
+  if (storedFingerprint == null) return true;
   return storedFingerprint === incomingFingerprint;
 }
