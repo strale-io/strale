@@ -319,12 +319,23 @@ export async function topSellers(w: Window, limit = 6): Promise<Measurement<TopS
 export interface PlatformHealth { breakersOpen: number; active: number; quarantined: number }
 
 /** Operational state. A point-in-time reading, so its window is "now". */
+/**
+ * WP8: `quarantined` counts what quarantine ACTUALLY is.
+ *
+ * It read `lifecycle_state = 'quarantined'`, and that value does not exist —
+ * the states in production are active, deactivated, degraded, probation and
+ * validating. The quality floor quarantines by clearing `visible` and
+ * `x402_enabled` (jobs/quality-floor.ts), so this gauge reported 0 no matter
+ * how many capabilities the armed floor had quarantined. Nine are quarantined
+ * as of this change; the dashboard said zero, and an operator watching it would
+ * conclude the floor never fires.
+ */
 export async function platformHealth(): Promise<Measurement<PlatformHealth>> {
   const r = await rows<{ breakers: string; active: string; quarantined: string }>(sql`
     SELECT (SELECT COUNT(*)::int FROM capability_health WHERE state <> 'closed') AS breakers,
            (SELECT COUNT(*)::int FROM capabilities WHERE is_active) AS active,
            (SELECT COUNT(*)::int FROM capabilities
-             WHERE is_active AND lifecycle_state = 'quarantined') AS quarantined`);
+             WHERE is_active AND NOT visible) AS quarantined`);
   const now = new Date();
   return {
     status: "observed",

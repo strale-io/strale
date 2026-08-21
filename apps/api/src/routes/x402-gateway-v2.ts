@@ -45,6 +45,7 @@ import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { executeSolution } from "../lib/solution-executor.js";
 import * as settlementIntent from "../lib/x402-settlement-intent.js";
+import { isX402PayableCapability } from "../lib/x402-eligibility.js";
 import {
   aggregateSolutionOutcome,
   assertBillableOutput,
@@ -1315,6 +1316,46 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   await ensureCache();
 
   const cap = _capCache.get(slug);
+
+  // WP8: the cache is a ROUTING HINT, not an eligibility authority.
+  //
+  // It holds for 60 seconds, and the quality floor delists by clearing
+  // x402_enabled — so a capability quarantined mid-window kept selling until
+  // the cache turned over. Delisting is precisely the event that must take
+  // effect immediately: the floor fires because a capability is failing real
+  // customers, and up to a minute of further sales is the opposite of the
+  // intent.
+  //
+  // One indexed read on the money path, before anything is executed or
+  // settled. Checked against the same predicate every other rail uses, so a
+  // capability cannot be servable here and not there.
+  if (cap) {
+    const [live] = await getDb()
+      .select({
+        isActive: capabilities.isActive,
+        isFreeTier: capabilities.isFreeTier,
+        x402Enabled: capabilities.x402Enabled,
+        marketplaceEligible: capabilities.marketplaceEligible,
+        lifecycleState: capabilities.lifecycleState,
+      })
+      .from(capabilities)
+      .where(eq(capabilities.slug, slug))
+      .limit(1);
+
+    if (!live || !isX402PayableCapability(live)) {
+      // Drop the stale entry so the next caller does not pay for the same
+      // lookup, and answer as the catalogue would once it refreshes.
+      _capCache.delete(slug);
+      return c.json(
+        {
+          error: "Capability is no longer available via x402. No payment was taken.",
+          hint: `${BASE_URL}/x402/catalog`,
+        },
+        503,
+      );
+    }
+  }
+
   if (!cap) {
     // Two very different things wear the same 404. Distinguish them before
     // recording, or the demand table fills with "someone wanted X" for every

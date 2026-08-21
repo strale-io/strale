@@ -1,6 +1,7 @@
 import { eq, and, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities } from "../db/schema.js";
+import { SERVABLE_LIFECYCLE_STATES } from "./x402-eligibility.js";
 import { tokenize } from "./tokenize.js";
 
 type CapabilityRow = typeof capabilities.$inferSelect;
@@ -42,8 +43,21 @@ export async function matchCapability(
         and(
           eq(capabilities.slug, req.capabilitySlug),
           eq(capabilities.isActive, true),
-          // Probation allows internal testing by slug; draft/validating/suspended blocked
-          inArray(capabilities.lifecycleState, ["active", "degraded", "probation"]),
+          // WP8: the shared servability floor, not a third rule.
+          //
+          // This admitted 'degraded' — a state every other rail refuses — so a
+          // capability the platform had assessed as failing could still be
+          // bought by naming it explicitly. That is quarantine-bypass in
+          // another costume: an assessment that does not bind is not an
+          // assessment. Behaviour change recorded rather than slipped in; it
+          // has no live effect today because no capability is currently both
+          // degraded and active.
+          //
+          // Probation stays, which is what the original comment was protecting.
+          inArray(
+            capabilities.lifecycleState,
+            [...SERVABLE_LIFECYCLE_STATES],
+          ),
         ),
       )
       .limit(1);
@@ -64,6 +78,12 @@ export async function matchCapability(
       and(
         eq(capabilities.isActive, true),
         eq(capabilities.visible, true),
+        // Deliberately STRICTER than the servability floor, and allowed to be.
+        // The floor answers "may this be served if asked for"; automatic
+        // routing additionally requires that we are willing to CHOOSE it, and
+        // 'probation' means not yet. A rail may be stricter than the authority.
+        // It may never be more permissive — that is the direction that produced
+        // the divergence WP8 exists to remove.
         eq(capabilities.lifecycleState, "active"),
       ),
     );
