@@ -104,6 +104,20 @@ let _capCache: Map<string, X402Capability> = new Map();
 let _solCache: Map<string, X402Solution> = new Map();
 let _cacheExpiry = 0;
 
+/**
+ * Drop the catalogue cache so a test that seeds a solution can reach it.
+ *
+ * The cache holds for 60s, which is correct in production and makes any test
+ * seeding more than one slug per minute silently 404 on everything after the
+ * first — a failure that reads like a broken route rather than a stale cache.
+ * Named with the `__…ForTests` convention already used in guarded-executor.ts.
+ */
+export function __resetX402CacheForTests(): void {
+  _capCache = new Map();
+  _solCache = new Map();
+  _cacheExpiry = 0;
+}
+
 async function ensureCache(): Promise<void> {
   if (Date.now() < _cacheExpiry) return;
   try {
