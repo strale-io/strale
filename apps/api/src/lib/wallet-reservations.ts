@@ -45,6 +45,27 @@ import type { WalletTx } from "./wallet-service.js";
  */
 export const DEFAULT_RESERVATION_TTL_MS = 15 * 60 * 1000;
 
+/**
+ * The TTL must exceed the executor's hard timeout, or the reconciler would
+ * refund executions that are still running and about to deliver a result.
+ * The two constants live in different modules and EXEC_HARD_TIMEOUT_MS is
+ * env-tunable, so the relationship is asserted rather than assumed — set it
+ * above the TTL on Railway and this fails at boot instead of silently
+ * refunding live work.
+ */
+export function assertReservationTtlExceedsExecutionTimeout(
+  execHardTimeoutMs: number,
+  ttlMs: number = DEFAULT_RESERVATION_TTL_MS,
+): void {
+  if (ttlMs <= execHardTimeoutMs) {
+    throw new Error(
+      `Reservation TTL (${ttlMs}ms) must exceed the executor hard timeout ` +
+        `(${execHardTimeoutMs}ms); otherwise the reconciler releases executions ` +
+        "that are still running and refunds work the customer is about to receive.",
+    );
+  }
+}
+
 export type ReservationState =
   | "reserved"
   | "executing"
@@ -59,6 +80,13 @@ export interface Reservation {
   walletId: string;
   amountCents: number;
   state: ReservationState;
+  /**
+   * The balance the database settled on, straight from the debit's RETURNING.
+   * WP2 introduced that value specifically so callers would stop doing
+   * arithmetic on a snapshot; discarding it here would have quietly restored
+   * the habit, with correctness resting on a lock held in another module.
+   */
+  balanceAfter: number;
 }
 
 export class ReservationNotOpenError extends Error {
@@ -96,7 +124,7 @@ export async function reserve(
 ): Promise<Reservation> {
   const { wallet, userId, amountCents, transactionId, description } = params;
 
-  await walletService.debit(tx, {
+  const balanceAfter = await walletService.debit(tx, {
     wallet,
     amountCents,
     referenceId: transactionId,
@@ -124,6 +152,7 @@ export async function reserve(
     walletId: wallet.id,
     amountCents,
     state: "reserved",
+    balanceAfter,
   };
 }
 

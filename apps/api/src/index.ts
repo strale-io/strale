@@ -176,6 +176,15 @@ async function main() {
   // since April, and draining a long-silent backlog in one burst is what took
   // Postgres down on 2026-05-04 (DEC-20260504-B).
   const { startReservationReconciler } = await import("./jobs/reservation-reconciler.js");
+  const { assertReservationTtlExceedsExecutionTimeout } = await import(
+    "./lib/wallet-reservations.js"
+  );
+  // Fail loudly at boot rather than silently refunding live executions: the
+  // executor's hard timeout is env-tunable, and if it is raised above the
+  // reservation TTL the reconciler starts releasing work that is still running.
+  assertReservationTtlExceedsExecutionTimeout(
+    parseInt(process.env.EXEC_HARD_TIMEOUT_MS ?? "300000", 10),
+  );
   startReservationReconciler();
 
   // Monthly REINDEX CONCURRENTLY on `transactions` — prevents B-tree

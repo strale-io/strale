@@ -2148,7 +2148,7 @@ async function executeAsync(
       transactionId: txnRecord.id,
       description: `Capability: ${capability.slug}`,
     });
-    const newBalance = wallet.balanceCents - capability.priceCents;
+    const newBalance = reservation.balanceAfter;
 
     return {
       ok: true as const,
@@ -2272,6 +2272,17 @@ async function executeInBackground(
   reservationId: string,
 ) {
   try {
+    // WP3: record that work actually began. Advisory only — the reconciler
+    // releases 'reserved' and 'executing' alike — but it is the difference
+    // between "we took the money and never started" and "we took the money
+    // and the work was in flight" when reading the table after an incident.
+    await reservations.markExecuting(db, reservationId).catch((err) =>
+      logWarn("reservation-mark-executing-failed", String(err), {
+        transaction_id: transactionId,
+        reservation_id: reservationId,
+      }),
+    );
+
     // Cert-audit C7: hard timeout on the executor. Without this, an executor
     // that hangs (no AbortSignal on its fetch, infinite CPU loop, deadlock)
     // would leave the row in 'deferred' until the integrity-hash-retry
@@ -2421,7 +2432,17 @@ async function executeInBackground(
           // state. Same race-elimination as the success path above.
           complianceHashState: "pending",
         })
-        .where(eq(transactions.id, transactionId));
+        .where(
+          and(
+            eq(transactions.id, transactionId),
+            // WP3: do not overwrite a row that already reached a terminal
+            // state. Post-WP3 the release is conditional, so a throw AFTER
+            // the success commit would otherwise leave the customer charged
+            // (capture won) while the row reads "failed" — they would poll,
+            // see failure, and reasonably conclude they were not billed.
+            inArray(transactions.status, ["executing", "deferred"]),
+          ),
+        );
     });
 
     // CCO P0 #6: row was 'deferred' until the UPDATE above flipped it
