@@ -76,3 +76,33 @@ describe("isX402PayableCapability", () => {
     expect([...X402_PAYABLE_LIFECYCLE_STATES]).toEqual(["active", "probation"]);
   });
 });
+
+describe("isServableCapability — may this run at all", () => {
+  const base = { isActive: true, lifecycleState: "active" };
+
+  it("refuses a capability withdrawn from the catalogue", () => {
+    // The quality floor's withdrawal signal. Found missing by
+    // scripts/mutation-test.mjs: deleting this branch from the predicate left
+    // the whole unit suite green, because the only coverage was an integration
+    // test. A rule with no unit test is a rule one refactor from disappearing.
+    expect(isServableCapability({ ...base, visible: false })).toBe(false);
+  });
+
+  it("allows a published capability", () => {
+    expect(isServableCapability({ ...base, visible: true })).toBe(true);
+  });
+
+  it("refuses a deactivated capability whatever its visibility", () => {
+    expect(isServableCapability({ ...base, isActive: false, visible: true })).toBe(false);
+  });
+
+  it("allows probation but refuses the pre-launch and failed states", () => {
+    expect(isServableCapability({ ...base, lifecycleState: "probation", visible: true })).toBe(true);
+    for (const state of ["validating", "degraded", "deactivated", "draft"]) {
+      expect(
+        isServableCapability({ ...base, lifecycleState: state, visible: true }),
+        `${state} must not be servable`,
+      ).toBe(false);
+    }
+  });
+});
