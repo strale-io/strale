@@ -253,13 +253,21 @@ describeMaybe("a crashed x402 settlement is recoverable", () => {
       // updatedAt defaults to now(): inside the staleness window.
     });
 
-    const summary = await reconcile();
+    await reconcile();
 
     const [intent] = await db
-      .select({ state: x402SettlementIntents.state })
+      .select({
+        state: x402SettlementIntents.state,
+        updatedAt: x402SettlementIntents.updatedAt,
+      })
       .from(x402SettlementIntents)
       .where(eq(x402SettlementIntents.paymentHash, paymentHash));
+
+    // Asserted about THIS intent rather than the summary's global counter.
+    // The counter reflects every stale row in the database, including ones
+    // other suites left behind, so `escalated === 0` was a claim about the
+    // whole table pretending to be a claim about this row.
     expect(intent!.state).toBe("settling");
-    expect(summary.escalated).toBe(0);
+    expect(intent!.updatedAt.getTime()).toBeGreaterThan(Date.now() - 60_000);
   }, 120_000);
 });
