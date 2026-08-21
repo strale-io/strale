@@ -1,6 +1,8 @@
 package: WP5
 title: x402 durable settlement state + recovery
-status: REMEDIATED
+status: ACCEPTED
+merged_sha: 8b4b653
+merged_pr: 352
 depends_on: [WP3, WP4]
 risks: [CR-01]
 
