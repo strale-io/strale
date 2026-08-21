@@ -51,6 +51,26 @@ const sql = postgres(url, { max: 1, idle_timeout: 5 });
 try {
   const findings = [];
 
+  // A database that already holds tables but is NOT a Strale database belongs
+  // to something else. `drizzle-kit push --force` would then add Strale schema
+  // to a stranger's data. Refuse outright rather than reason about row counts:
+  // fresh means no tables at all, or a Strale schema from a previous lane run.
+  const [{ table_count: tableCount }] = await sql`
+    SELECT COUNT(*)::int AS table_count
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'`;
+  const [{ exists: isStraleDatabase }] = await sql`
+    SELECT to_regclass('public.capabilities') IS NOT NULL AS exists`;
+
+  if (tableCount > 0 && !isStraleDatabase) {
+    console.error(
+      `[disposable-db] REFUSING: the target holds ${tableCount} table(s) but ` +
+        "none of Strale's. That is somebody else's database, and the schema " +
+        "push would write into it.",
+    );
+    process.exit(1);
+  }
+
   let absent = 0;
 
   for (const { table, max } of CEILINGS) {
