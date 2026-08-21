@@ -146,6 +146,7 @@ describeMaybe("solution execution holds a wallet reservation", () => {
       isActive: true,
       avgLatencyMs: 50,
       lifecycleState: "active",
+      visible: true,
     });
 
     await db.insert(solutions).values({
@@ -335,11 +336,18 @@ describeMaybe("solution execution holds a wallet reservation", () => {
     await seed();
     stepShouldFail = false;
 
-    // Quarantine the step's capability AFTER the solution was built, which is
-    // exactly how it happens: the bundle is live and its dependency degrades.
+    // Quarantine EXACTLY as jobs/quality-floor.ts does it: visible=false and
+    // x402_enabled=false, leaving is_active and lifecycle_state alone.
+    //
+    // The first version of this test set {lifecycleState:'degraded',
+    // isActive:false} — which is DEACTIVATION, a different transition. It
+    // passed, and proved the deactivation gate works, while its title and the
+    // commit message claimed quarantine. Production contradicted both:
+    // page-speed-test was quarantined 2026-08-20 and is still is_active=true,
+    // lifecycle_state='active', sitting in two live paid solutions.
     await db
       .update(capabilities)
-      .set({ lifecycleState: "degraded", isActive: false })
+      .set({ visible: false, x402Enabled: false })
       .where(eq(capabilities.slug, capSlug));
 
     const res = await runSolution();
@@ -348,11 +356,30 @@ describeMaybe("solution execution holds a wallet reservation", () => {
     // The step is recorded as unavailable rather than executed...
     const stepOutput = body.result?.steps?.[capSlug];
     expect(stepOutput?.unavailable).toBe(true);
-    expect(String(stepOutput?.reason)).toMatch(/not currently servable/i);
+    expect(stepOutput?.platform_withheld).toBe(true);
+    expect(String(stepOutput?.reason)).toMatch(/withheld by Strale/i);
 
-    // ...and because no step produced usable output, WP4's aggregate makes the
-    // run unbillable. The customer is not charged for a bundle whose only step
-    // the platform refused to run.
+    // ...and the customer is not charged. A component WE withheld is not
+    // partial delivery; charging for a bundle missing a piece we removed would
+    // be charging for a hollow answer.
+    expect(await balance()).toBe(STARTING_BALANCE);
+  }, 120_000);
+
+  it("also refuses a step whose capability was DEACTIVATED (WP8)", async () => {
+    // The transition the first version of the quarantine test actually tested.
+    // Kept as its own case so both paths are covered explicitly rather than one
+    // standing in for the other.
+    await seed();
+    stepShouldFail = false;
+
+    await db
+      .update(capabilities)
+      .set({ isActive: false, lifecycleState: "deactivated" })
+      .where(eq(capabilities.slug, capSlug));
+
+    const res = await runSolution();
+    const body = (await res.json()) as Record<string, any>;
+    expect(body.result?.steps?.[capSlug]?.unavailable).toBe(true);
     expect(await balance()).toBe(STARTING_BALANCE);
   }, 120_000);
 });

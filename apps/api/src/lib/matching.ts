@@ -43,6 +43,10 @@ export async function matchCapability(
         and(
           eq(capabilities.slug, req.capabilitySlug),
           eq(capabilities.isActive, true),
+          // Quarantine is unbypassable by naming the slug. The floor sets
+          // visible=false, so omitting this would let an explicit /v1/do call
+          // reach a capability the platform had just withdrawn.
+          eq(capabilities.visible, true),
           // WP8: the shared servability floor, not a third rule.
           //
           // This admitted 'degraded' — a state every other rail refuses — so a

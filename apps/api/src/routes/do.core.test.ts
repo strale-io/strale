@@ -359,6 +359,7 @@ const CAPABILITY_FIXTURE = {
   isActive: true,
   isFreeTier: false,
   lifecycleState: "active",
+      visible: true,
   capabilityType: "deterministic",
   transparencyTag: "algorithmic",
   dataSource: "Test Source",

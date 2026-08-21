@@ -119,17 +119,28 @@ describe("one authority answers 'may this capability be served'", () => {
     ).toEqual([]);
   });
 
-  it("the solution executor consults the authority", () => {
-    // Named explicitly because its absence was the WP8 defect: solution steps
-    // checked nothing, so a quarantined capability ran inside a paid bundle.
-    const src = readFileSync(join(API_SRC, "lib/solution-executor.ts"), "utf8");
-    expect(src).toMatch(/isServableCapability/);
+  // The two below are lint assertions, not behavioural tests, and the review
+  // caught them being satisfied by an IMPORT LINE alone — delete the logic,
+  // keep the import, and they stayed green. They now require a CALL with an
+  // argument, which an import cannot satisfy. Behavioural coverage lives in
+  // routes/solution-reservations.integration.test.ts, which quarantines a
+  // capability the way the quality floor actually does and asserts the step
+  // does not run.
+
+  it("the solution executor CALLS the authority", () => {
+    const src = stripComments(
+      readFileSync(join(API_SRC, "lib/solution-executor.ts"), "utf8"),
+    );
+    expect(src).toMatch(/isServableCapability\(\s*\{/);
+    // And on the quarantine signal specifically — the field whose absence made
+    // the first version of this package miss every floor quarantine.
+    expect(src).toMatch(/visible:/);
   });
 
-  it("the x402 gateway verifies against the database, not only its cache", () => {
-    // The cache holds 60s and delisting must take effect immediately, so the
-    // handler re-reads before executing or settling.
-    const src = readFileSync(join(API_SRC, "routes/x402-gateway-v2.ts"), "utf8");
-    expect(src).toMatch(/isX402PayableCapability/);
+  it("the x402 gateway CALLS its rail predicate against a live row", () => {
+    const src = stripComments(
+      readFileSync(join(API_SRC, "routes/x402-gateway-v2.ts"), "utf8"),
+    );
+    expect(src).toMatch(/isX402RailEligible\(\w+\)/);
   });
 });

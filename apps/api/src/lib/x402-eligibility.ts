@@ -66,6 +66,20 @@ export function isX402PayableCapability(cap: X402EligibilityFields): boolean {
 export interface ServabilityFields {
   isActive: boolean;
   lifecycleState: string;
+  /**
+   * THE quarantine signal, and the one this predicate originally missed.
+   *
+   * jobs/quality-floor.ts quarantines with `{visible: false, x402Enabled:
+   * false}` — it changes NEITHER is_active NOR lifecycle_state. So a predicate
+   * reading only those two returns true for every floor-quarantined capability,
+   * which is how the first version of this function failed to stop the exact
+   * thing it was written to stop. Verified in production: page-speed-test was
+   * quarantined 2026-08-20 and is still is_active=true, lifecycle_state=active.
+   *
+   * It also covers pre-launch capabilities, which are invisible for a different
+   * reason and equally should not run.
+   */
+  visible: boolean;
 }
 
 /** Lifecycle states in which a capability is fit to execute. */
@@ -97,7 +111,38 @@ export const SERVABLE_LIFECYCLE_STATES = ["active", "probation"] as const;
  */
 export function isServableCapability(cap: ServabilityFields): boolean {
   if (!cap.isActive) return false;
+  // Quarantined or pre-launch. See the field docs — omitting this made the
+  // predicate blind to the platform's own primary delisting action.
+  if (!cap.visible) return false;
   return (SERVABLE_LIFECYCLE_STATES as readonly string[]).includes(
+    cap.lifecycleState,
+  );
+}
+
+/**
+ * May this capability be SOLD over the x402 rail?
+ *
+ * Distinct from `isX402PayableCapability`, which is `/v1/do`'s rule and
+ * excludes free-tier because that rail serves those calls for nothing. The
+ * gateway is different: on it "free" means `price_cents === 0`, and free-tier
+ * capabilities carry a real price and are genuinely sold there — six of them,
+ * including `email-validate`, the single highest-volume x402 slug.
+ *
+ * Applying /v1/do's predicate to the gateway inverts its own rule and would
+ * have permanently 503'd all six. This mirrors the catalogue-building filter
+ * exactly, so the SQL and the runtime check cannot drift — which is the whole
+ * point of the package.
+ */
+export function isX402RailEligible(cap: {
+  isActive: boolean;
+  x402Enabled: boolean;
+  marketplaceEligible: boolean;
+  lifecycleState: string;
+}): boolean {
+  if (!cap.isActive) return false;
+  if (!cap.x402Enabled) return false;
+  if (!cap.marketplaceEligible) return false;
+  return (X402_PAYABLE_LIFECYCLE_STATES as readonly string[]).includes(
     cap.lifecycleState,
   );
 }

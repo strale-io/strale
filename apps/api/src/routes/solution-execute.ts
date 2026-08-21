@@ -413,10 +413,23 @@ solutionExecuteRoute.post(
       ),
       execResult.gated,
     );
+    // WP8: a bundle we could not run in full because WE withheld a component
+    // is not partial delivery — it is us failing to deliver what was sold. Six
+    // live solutions currently contain a quarantined capability, two of them
+    // EUR 2.50 KYB bundles; billing full price for a KYB check missing its
+    // registry lookup would be charging for a hollow answer. DEC-14: no charge
+    // for work not delivered.
+    const platformWithheldStep = Object.values(execResult.steps).some(
+      (v) =>
+        v != null &&
+        typeof v === "object" &&
+        (v as Record<string, unknown>).platform_withheld === true,
+    );
+
     const gated = execResult.gated;
     const stepsSucceeded = outcome.steps_succeeded;
     const allFailed = stepsSucceeded === 0;
-    const refundRequired = !outcome.billable;
+    const refundRequired = !outcome.billable || platformWithheldStep;
 
     // /v1/do vocabulary: "completed" or "failed". Partial success maps to
     // "completed" with per-step detail in audit_trail. A gated run completed —

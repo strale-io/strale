@@ -195,6 +195,7 @@ describeMaybe("a gated solution bills identically on both rails", () => {
         isActive: true,
         avgLatencyMs: 50,
         lifecycleState: "active",
+      visible: true,
       });
     }
 
@@ -400,6 +401,7 @@ describeMaybe("a capability returning an unusable output bills on neither rail",
       isActive: true,
       avgLatencyMs: 50,
       lifecycleState: "active",
+      visible: true,
       x402Enabled: true,
       x402PriceUsd: 0.3,
     });

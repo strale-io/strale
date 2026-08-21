@@ -45,7 +45,7 @@ import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { executeSolution } from "../lib/solution-executor.js";
 import * as settlementIntent from "../lib/x402-settlement-intent.js";
-import { isX402PayableCapability } from "../lib/x402-eligibility.js";
+import { isX402RailEligible } from "../lib/x402-eligibility.js";
 import {
   aggregateSolutionOutcome,
   assertBillableOutput,
@@ -1333,7 +1333,6 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     const [live] = await getDb()
       .select({
         isActive: capabilities.isActive,
-        isFreeTier: capabilities.isFreeTier,
         x402Enabled: capabilities.x402Enabled,
         marketplaceEligible: capabilities.marketplaceEligible,
         lifecycleState: capabilities.lifecycleState,
@@ -1342,7 +1341,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
       .where(eq(capabilities.slug, slug))
       .limit(1);
 
-    if (!live || !isX402PayableCapability(live)) {
+    if (!live || !isX402RailEligible(live)) {
       // Drop the stale entry so the next caller does not pay for the same
       // lookup, and answer as the catalogue would once it refreshes.
       _capCache.delete(slug);

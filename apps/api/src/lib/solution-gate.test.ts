@@ -167,7 +167,10 @@ describe("the refund path, structurally", () => {
     // pinning the literal `allFailed || gated !== undefined` would now forbid
     // the fix. What it pins instead is stronger — that this rail derives the
     // decision rather than making one.
-    expect(src).toContain("const refundRequired = !outcome.billable;");
+    // WP8 widened this: a component WE withheld also blocks the charge.
+    expect(src).toContain(
+      "const refundRequired = !outcome.billable || platformWithheldStep;",
+    );
     expect(src).toContain("if (refundRequired) {");
 
     // Behavioural coverage for the gate itself now lives in

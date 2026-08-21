@@ -127,6 +127,7 @@ describeMaybe("concurrent /v1/do debits — no overspend", () => {
       // Below ASYNC_THRESHOLD_MS, so this takes the synchronous debit path.
       avgLatencyMs: 50,
       lifecycleState: "active",
+      visible: true,
     });
   }
 
