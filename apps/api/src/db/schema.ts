@@ -980,3 +980,76 @@ export const discoveryHits = pgTable(
     index("discovery_hits_src_tag_idx").on(table.srcTag).where(sql`src_tag IS NOT NULL`),
   ],
 );
+
+// ─── wallet_reservations (WP3) ──────────────────────────────────────────────
+//
+// The durable record that makes a charge recoverable after a crash.
+//
+// The async /v1/do path debits, commits, answers 202, then executes in an
+// in-memory promise whose catch block holds the only refund. A SIGKILL between
+// the commit and that catch — an OOM, a container replacement — strands the
+// charge: the customer stays debited, the transaction stays 'executing', and
+// nothing in the codebase ever transitions it. Production is holding 11 such
+// rows, the oldest from 2026-04-07.
+//
+// A row here is the intent, written in the SAME transaction as the debit. It
+// outlives the process, so a reconciler can find what the crash abandoned and
+// release it. The money movement itself is unchanged and still flows through
+// the wallet service (WP2) — this table records WHY it moved and whether that
+// movement is still provisional.
+//
+// State machine, one terminal state per reservation:
+//
+//     reserved ──▶ executing ──▶ captured
+//          ╰────────────┴──────▶ released
+//
+// Transitions are conditional UPDATEs predicated on the expected current
+// state, so a duplicate capture or release is a no-op rather than a second
+// money movement — the idempotency the master plan asks for, enforced by the
+// database rather than by callers remembering.
+export const walletReservations = pgTable(
+  "wallet_reservations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    walletId: uuid("wallet_id")
+      .notNull()
+      .references(() => wallets.id),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    /** Always positive. The direction is implied by the state. */
+    amountCents: integer("amount_cents").notNull(),
+    /** reserved | executing | captured | released */
+    state: varchar("state", { length: 16 }).notNull().default("reserved"),
+    /** The execution this reservation is holding funds for. */
+    transactionId: uuid("transaction_id"),
+    /**
+     * When this reservation stops being plausibly in-flight. The reconciler
+     * releases anything still non-terminal past it. Stored rather than derived
+     * so a long-running capability can be given a longer window without
+     * changing the reconciler.
+     */
+    deadlineAt: timestamp("deadline_at", { withTimezone: true }).notNull(),
+    /** Why it reached its terminal state — set on capture and release. */
+    terminalReason: text("terminal_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // The reconciler's only query: non-terminal rows past their deadline.
+    index("wallet_reservations_state_deadline_idx").on(
+      table.state,
+      table.deadlineAt,
+    ),
+    index("wallet_reservations_wallet_id_idx").on(table.walletId),
+    // One reservation per execution. Without this a retry could open a second
+    // hold against the same transaction and the reconciler would release both.
+    uniqueIndex("wallet_reservations_transaction_id_unique")
+      .on(table.transactionId)
+      .where(sql`transaction_id IS NOT NULL`),
+  ],
+);

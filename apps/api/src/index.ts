@@ -170,6 +170,14 @@ async function main() {
   const { startIntegrityHashRetry } = await import("./jobs/integrity-hash-retry.js");
   startIntegrityHashRetry();
 
+  // WP3: releases wallet reservations a crash abandoned, and marks their
+  // executions failed so a polling client reaches a terminal state. Bounded
+  // per tick — its first production run has a backlog of 11 rows stranded
+  // since April, and draining a long-silent backlog in one burst is what took
+  // Postgres down on 2026-05-04 (DEC-20260504-B).
+  const { startReservationReconciler } = await import("./jobs/reservation-reconciler.js");
+  startReservationReconciler();
+
   // Monthly REINDEX CONCURRENTLY on `transactions` — prevents B-tree
   // bloat drift that caused the 2026-04-16 outage. Uses the dedicated-
   // connection advisory-lock pattern because REINDEX CONCURRENTLY can't

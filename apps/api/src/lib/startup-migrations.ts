@@ -1563,6 +1563,106 @@ export async function runMigration0080_cyDirectors(
  * Exported so the admin endpoint regression test can introspect the
  * canonical block list and assert it matches what the endpoint returns.
  */
+// ─── Block 0095: wallet reservations + non-negative balance (WP3) ───────────
+//
+// Two changes, both additive and both reversible by dropping what they create.
+//
+// 1. `wallet_reservations` — the durable record that makes a charge
+//    recoverable after a crash. See the table comment in db/schema.ts for why
+//    it exists; in short, the async /v1/do path's only refund lives in an
+//    in-memory catch block, so a SIGKILL strands the charge with nothing to
+//    recover it. Production is holding 11 such rows.
+//
+// 2. A CHECK constraint pinning balances at or above zero. Codex asked for
+//    this during WP2 as the final backstop under the application-level
+//    affordability check: the conditional UPDATE cannot overdraw, but a
+//    constraint means no future path can either, including one that bypasses
+//    the service entirely.
+//
+//    Verified against production read-only before writing this: 59 wallets,
+//    none negative, lowest balance 0. So the constraint cannot fail validation
+//    on existing rows — which matters, because a failing constraint here would
+//    throw inside startup migrations and crash-loop the deploy (the
+//    boot-blocking-gate hazard).
+export async function runMigration0095_walletReservations(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  const tableCheck = await tx.execute(sql`
+    SELECT to_regclass('public.wallet_reservations') IS NOT NULL AS present
+  `);
+  const tableRows = Array.isArray(tableCheck)
+    ? tableCheck
+    : (tableCheck as { rows?: unknown[] })?.rows ?? [];
+  const tableExists = (tableRows[0] as { present?: boolean })?.present === true;
+
+  if (!tableExists) {
+    await tx.execute(sql`
+      CREATE TABLE "wallet_reservations" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "wallet_id" uuid NOT NULL REFERENCES "wallets"("id"),
+        "user_id" uuid NOT NULL REFERENCES "users"("id"),
+        "amount_cents" integer NOT NULL,
+        "state" varchar(16) DEFAULT 'reserved' NOT NULL,
+        "transaction_id" uuid,
+        "deadline_at" timestamptz NOT NULL,
+        "terminal_reason" text,
+        "created_at" timestamptz DEFAULT now() NOT NULL,
+        "updated_at" timestamptz DEFAULT now() NOT NULL
+      )
+    `);
+    // The reconciler's only query shape.
+    await tx.execute(sql`
+      CREATE INDEX "wallet_reservations_state_deadline_idx"
+        ON "wallet_reservations" ("state", "deadline_at")
+    `);
+    await tx.execute(sql`
+      CREATE INDEX "wallet_reservations_wallet_id_idx"
+        ON "wallet_reservations" ("wallet_id")
+    `);
+    // One reservation per execution — without it a retry could open a second
+    // hold against the same transaction and the reconciler would release both.
+    await tx.execute(sql`
+      CREATE UNIQUE INDEX "wallet_reservations_transaction_id_unique"
+        ON "wallet_reservations" ("transaction_id")
+        WHERE "transaction_id" IS NOT NULL
+    `);
+  }
+
+  const constraintCheck = await tx.execute(sql`
+    SELECT count(*)::text AS cnt FROM pg_constraint
+    WHERE conname = 'wallets_balance_cents_non_negative'
+  `);
+  const constraintRows = Array.isArray(constraintCheck)
+    ? constraintCheck
+    : (constraintCheck as { rows?: unknown[] })?.rows ?? [];
+  const constraintExists =
+    (constraintRows[0] as { cnt?: string })?.cnt !== "0";
+
+  if (!constraintExists) {
+    await tx.execute(sql`
+      ALTER TABLE "wallets"
+        ADD CONSTRAINT "wallets_balance_cents_non_negative"
+        CHECK ("balance_cents" >= 0)
+    `);
+  }
+
+  const created = [
+    tableExists ? null : "wallet_reservations",
+    constraintExists ? null : "wallets_balance_cents_non_negative",
+  ].filter(Boolean);
+
+  return {
+    block: "0095_wallet_reservations",
+    outcome:
+      created.length === 0
+        ? "skipped (table and constraint already present)"
+        : `created ${created.join(" + ")}`,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
   runMigration0030_complianceColumns,
@@ -1601,6 +1701,8 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0092_x402GrowthBundles,
   runMigration0093_fixtureRecaptureFailures,
   runMigration0094_clearChurnInvalidatedBaselines,
+  // WP3: reservations table + non-negative balance constraint.
+  runMigration0095_walletReservations,
 ];
 
 /**

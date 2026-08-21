@@ -14,11 +14,15 @@
  * Production currently holds 11 such rows, the oldest from 2026-04-07.
  *
  * These tests kill a real child process running the real route, then assert
- * what survives. They describe CURRENT behaviour deliberately: the customer
- * stays debited and the row stays non-terminal. WP3 introduces the reservation
- * state machine and reconciler, at which point the final two expectations
- * invert — that is the signal WP3 has actually worked, so they are written to
- * fail loudly rather than quietly pass.
+ * what survives.
+ *
+ * WP3 UPDATE — the two expectations that pinned the bug have now inverted,
+ * which is exactly the signal the WP1 versions were written to produce. The
+ * crash still strands the charge in the moment (nothing can prevent that; the
+ * debit is committed and the process is gone). What changed is that the
+ * reservation written in the same transaction outlives the process, so the
+ * reconciler finds it and gives the money back. The tests below drive that
+ * reconciler explicitly rather than waiting on its interval.
  *
  * Why a child process: SIGKILL cannot be delivered to the vitest worker
  * without taking the run down with it. The child drives production code end to
@@ -40,6 +44,7 @@ import {
   users,
   wallets,
   walletTransactions,
+  walletReservations,
   capabilities,
   transactions,
 } from "../db/schema.js";
@@ -74,6 +79,9 @@ describeMaybe("async /v1/do — surviving a hard process kill", () => {
   });
 
   afterEach(async () => {
+    await db
+      .delete(walletReservations)
+      .where(eq(walletReservations.userId, userId));
     await db.delete(transactions).where(eq(transactions.userId, userId));
     await db
       .delete(walletTransactions)
@@ -169,6 +177,34 @@ describeMaybe("async /v1/do — surviving a hard process kill", () => {
     });
   }
 
+  async function balanceOf(id: string): Promise<number> {
+    const [row] = await db
+      .select({ balanceCents: wallets.balanceCents })
+      .from(wallets)
+      .where(eq(wallets.id, id))
+      .limit(1);
+    return row!.balanceCents;
+  }
+
+  /**
+   * Age the reservation past its deadline instead of waiting fifteen real
+   * minutes. The reconciler's own predicate is what is under test, so moving
+   * the clock on the row is the honest way to reach it.
+   */
+  async function expireReservations(): Promise<void> {
+    await db
+      .update(walletReservations)
+      .set({ deadlineAt: new Date(Date.now() - 60_000) })
+      .where(eq(walletReservations.userId, userId));
+  }
+
+  async function runReconciler() {
+    const { runReservationReconcilerOnce } = await import(
+      "../jobs/reservation-reconciler.js"
+    );
+    return runReservationReconcilerOnce();
+  }
+
   it("leaves the customer debited with the execution unfinished", async () => {
     await seed();
     await runChildUntilKilled();
@@ -196,12 +232,39 @@ describeMaybe("async /v1/do — surviving a hard process kill", () => {
     expect(purchases[0]!.amountCents).toBe(-PRICE_CENTS);
   }, 180_000);
 
-  it("PINS BUG: the charge is never refunded after the crash", async () => {
+  it("leaves an open reservation the reconciler can find", async () => {
     await seed();
     await runChildUntilKilled();
 
-    // The refund lives in the catch block of an in-memory promise that died
-    // with the process. Nothing else refunds it. WP3 must make this fail.
+    // The durable half of the fix. Before WP3 the only record of the charge
+    // being provisional lived in a promise that died with the process.
+    const open = await db
+      .select({
+        id: walletReservations.id,
+        state: walletReservations.state,
+        amountCents: walletReservations.amountCents,
+      })
+      .from(walletReservations)
+      .where(eq(walletReservations.userId, userId));
+
+    expect(open).toHaveLength(1);
+    expect(["reserved", "executing"]).toContain(open[0]!.state);
+    expect(open[0]!.amountCents).toBe(PRICE_CENTS);
+  }, 180_000);
+
+  it("refunds the stranded charge once the reconciler runs", async () => {
+    await seed();
+    await runChildUntilKilled();
+
+    // Immediately after the crash the customer is still out of pocket.
+    expect(await balanceOf(walletId)).toBe(STARTING_BALANCE - PRICE_CENTS);
+
+    await expireReservations();
+    const summary = await runReconciler();
+    expect(summary.released).toBe(1);
+
+    // The money is back, and the ledger explains why.
+    expect(await balanceOf(walletId)).toBe(STARTING_BALANCE);
     const refunds = await db
       .select()
       .from(walletTransactions)
@@ -211,24 +274,50 @@ describeMaybe("async /v1/do — surviving a hard process kill", () => {
           eq(walletTransactions.type, "refund"),
         ),
       );
-    expect(refunds).toHaveLength(0);
+    expect(refunds).toHaveLength(1);
+    expect(refunds[0]!.amountCents).toBe(PRICE_CENTS);
   }, 180_000);
 
-  it("PINS BUG: the transaction is stranded in a non-terminal state", async () => {
+  it("is idempotent — a second reconciler pass refunds nothing further", async () => {
+    // The reconciler runs every minute against a live system. A second pass
+    // over an already-released reservation must not credit again.
+    await seed();
+    await runChildUntilKilled();
+    await expireReservations();
+
+    expect((await runReconciler()).released).toBe(1);
+    const afterFirst = await balanceOf(walletId);
+
+    const second = await runReconciler();
+    expect(second.released).toBe(0);
+    expect(await balanceOf(walletId)).toBe(afterFirst);
+  }, 180_000);
+
+  it("drives the stranded transaction to a terminal state", async () => {
     await seed();
     await runChildUntilKilled();
 
-    const [txn] = await db
+    const [beforeReconcile] = await db
       .select({ status: transactions.status })
       .from(transactions)
       .where(eq(transactions.userId, userId))
       .limit(1);
+    expect(beforeReconcile!.status).toBe("executing");
 
-    // Two consequences, both customer-visible. A client polling this
-    // transaction per the 202 contract never reaches a terminal state, and
-    // spendCapWouldExceed counts `executing` rows toward the hourly cap
-    // forever, so a capped customer's budget shrinks permanently.
-    expect(txn).toBeDefined();
-    expect(txn!.status).toBe("executing");
+    await expireReservations();
+    await runReconciler();
+
+    const [after] = await db
+      .select({ status: transactions.status, error: transactions.error })
+      .from(transactions)
+      .where(eq(transactions.userId, userId))
+      .limit(1);
+
+    // Both consequences of the old behaviour are closed. A client polling per
+    // the 202 contract now reaches a terminal state, and spendCapWouldExceed
+    // no longer counts this row toward the hourly cap forever — which used to
+    // shrink a capped customer's budget permanently.
+    expect(after!.status).toBe("failed");
+    expect(after!.error).toContain("refunded automatically");
   }, 180_000);
 });

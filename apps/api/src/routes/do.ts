@@ -39,6 +39,7 @@ import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { validateX402Input } from "../lib/x402-input-validation.js";
 import { isX402PayableCapability } from "../lib/x402-eligibility.js";
 import * as walletService from "../lib/wallet-service.js";
+import * as reservations from "../lib/wallet-reservations.js";
 import { recoverValuesFromTask, recoveredValuesHint, unsatisfiedGroupFields } from "../lib/task-value-hints.js";
 import { logError, logWarn } from "../lib/log.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
@@ -2060,6 +2061,8 @@ async function executeAsync(
         transactionId: string;
         walletId: string;
         balanceAfter: number;
+        /** WP3: the open reservation this execution must capture or release. */
+        reservationId: string;
       }
     | {
         ok: false;
@@ -2131,24 +2134,28 @@ async function executeAsync(
       })
       .returning({ id: transactions.id });
 
-    // Optimistic debit — refunded if execution fails.
+    // Reserve rather than plainly debit (WP3).
     //
-    // WP2: balance change and ledger row now happen in one call, so they
-    // cannot drift apart. Ordered after the transaction insert only so the
-    // ledger row can carry its reference; both writes are in this transaction,
-    // so the sequence between them is not observable.
-    const newBalance = await walletService.debit(tx, {
+    // The money moves now, exactly as before — but the reservation row records
+    // in this same transaction that the movement is still provisional. That
+    // record outlives the process, so a crash between this commit and the
+    // in-memory catch block below no longer strands the charge: the reconciler
+    // finds the open reservation and releases it.
+    const reservation = await reservations.reserve(tx, {
       wallet,
+      userId: user.id,
       amountCents: capability.priceCents,
-      referenceId: txnRecord.id,
+      transactionId: txnRecord.id,
       description: `Capability: ${capability.slug}`,
     });
+    const newBalance = wallet.balanceCents - capability.priceCents;
 
     return {
       ok: true as const,
       transactionId: txnRecord.id,
       walletId: wallet.id,
       balanceAfter: newBalance,
+      reservationId: reservation.id,
     };
   });
 
@@ -2205,6 +2212,7 @@ async function executeAsync(
       capability,
       startTime,
       outputSchema,
+      setupResult.reservationId,
     ),
   ).catch((err) => {
     // Last-resort error logging — should not normally reach here
@@ -2260,6 +2268,8 @@ async function executeInBackground(
   capability: CapabilityInfo,
   startTime: number,
   outputSchema: Record<string, unknown>,
+  /** WP3: the open reservation this execution must capture or release. */
+  reservationId: string,
 ) {
   try {
     // Cert-audit C7: hard timeout on the executor. Without this, an executor
@@ -2290,22 +2300,44 @@ async function executeInBackground(
       requestContext: undefined, // background execution — no request context available
     });
 
-    await db
-      .update(transactions)
-      .set({
-        status: "completed",
-        output: capResult.output,
-        provenance: capResult.provenance,
-        auditTrail: audit,
-        latencyMs,
-        completedAt: new Date(),
-        // CCO P0 #6: flip from 'deferred' to 'pending' atomically with the
-        // hashed-field writes. After this UPDATE commits, the retry worker
-        // will pick the row up on its next tick (≥10s later) and hash it
-        // with the final values — no race possible.
-        complianceHashState: "pending",
-      })
-      .where(eq(transactions.id, transactionId));
+    // WP3: settle the reservation in the SAME transaction as the terminal
+    // status write. Separately, a crash between them would leave a completed
+    // execution with an open reservation, which the reconciler would then
+    // refund — handing back money for work the customer received.
+    await db.transaction(async (tx) => {
+      await tx
+        .update(transactions)
+        .set({
+          status: "completed",
+          output: capResult.output,
+          provenance: capResult.provenance,
+          auditTrail: audit,
+          latencyMs,
+          completedAt: new Date(),
+          // CCO P0 #6: flip from 'deferred' to 'pending' atomically with the
+          // hashed-field writes. After this UPDATE commits, the retry worker
+          // will pick the row up on its next tick (≥10s later) and hash it
+          // with the final values — no race possible.
+          complianceHashState: "pending",
+        })
+        .where(eq(transactions.id, transactionId));
+
+      // False means the reconciler already released it — the execution
+      // outran its deadline. The customer has been refunded; leave it that
+      // way rather than re-charging them for a result they waited too long
+      // for. Logged so the deadline can be tuned if it happens often.
+      const captured = await reservations.capture(tx, {
+        reservationId,
+        reason: "execution succeeded",
+      });
+      if (!captured) {
+        logWarn(
+          "reservation-capture-missed",
+          "reservation was already terminal at capture time",
+          { transaction_id: transactionId, reservation_id: reservationId },
+        );
+      }
+    });
 
     // Record success for circuit breaker + quality + piggyback
     fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
@@ -2347,18 +2379,24 @@ async function executeInBackground(
 
     // Failure: refund wallet + update transaction in a single tx
     await db.transaction(async (tx) => {
-      // Refund the optimistic debit — SELECT FOR UPDATE to prevent race conditions (DEC-8)
-      const [walletRow] = await tx
-        .select({ b: wallets.balanceCents })
-        .from(wallets)
-        .where(eq(wallets.id, walletId))
-        .for("update");
-      await walletService.refund(tx, {
-        walletId,
-        amountCents: capability.priceCents,
-        referenceId: transactionId,
-        description: `Refund: ${capability.slug} execution failed`,
+      // WP3: release the reservation rather than refunding directly. The
+      // release claims the row with a conditional UPDATE and only credits if
+      // it won, so this cannot double-refund against a reconciler that got
+      // there first — which is what makes the reconciler safe to run against
+      // a live system.
+      //
+      // False means it was already terminal; the money is already back.
+      const released = await reservations.release(tx, {
+        reservationId,
+        reason: `${capability.slug} execution failed`,
       });
+      if (!released) {
+        logWarn(
+          "reservation-release-missed",
+          "reservation was already terminal at release time",
+          { transaction_id: transactionId, reservation_id: reservationId },
+        );
+      }
 
       // Mark transaction failed with audit trail
       const failAudit = buildFailureAudit({
