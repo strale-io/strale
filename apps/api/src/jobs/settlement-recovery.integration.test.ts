@@ -199,6 +199,47 @@ describeMaybe("a crashed x402 settlement is recoverable", () => {
     expect(intent!.transactionId).toBeNull();
   }, 120_000);
 
+  it("a settlement-id collision does not fail the request", async () => {
+    // Regression. The unique index on settlement_id can reject markSettled, and
+    // that rejection propagated as an unhandled 500 — AFTER the USDC had
+    // already left the customer's wallet. Pre-WP5 they would have received
+    // their result, so the durability mechanism had made things strictly worse.
+    // Found by the WP4 parity suite, not by inspection.
+    const settlementId = `wp5-dup-${randomUUID().slice(0, 8)}`;
+    const first = await seedIntent({ state: "settled", settlementId });
+    expect(first.settlementId).toBe(settlementId);
+
+    const secondHash = `wp5-${randomUUID().slice(0, 12)}`;
+    hashes.push(secondHash);
+    await db.insert(x402SettlementIntents).values({
+      paymentHash: secondHash,
+      slug: "wp5-probe-capability",
+      priceCents: 25,
+      state: "settling",
+    });
+    const [second] = await db
+      .select({ id: x402SettlementIntents.id })
+      .from(x402SettlementIntents)
+      .where(eq(x402SettlementIntents.paymentHash, secondHash));
+
+    const { markSettled } = await import("../lib/x402-settlement-intent.js");
+
+    // Must not throw. The money already moved; bookkeeping may not turn a paid
+    // call into an error.
+    await expect(
+      markSettled(db, { intentId: second!.id, settlementId }),
+    ).resolves.toBeUndefined();
+
+    // And it degrades to the RIGHT state: still 'settling', which is the
+    // reconciler's "we do not know" class, so a human is paged rather than the
+    // discrepancy being silently resolved.
+    const [after] = await db
+      .select({ state: x402SettlementIntents.state })
+      .from(x402SettlementIntents)
+      .where(eq(x402SettlementIntents.paymentHash, secondHash));
+    expect(after!.state).toBe("settling");
+  }, 120_000);
+
   it("leaves a fresh in-flight intent alone", async () => {
     // Not stale yet — a live settlement in progress. Sweeping it would race a
     // request that is about to write its own row.

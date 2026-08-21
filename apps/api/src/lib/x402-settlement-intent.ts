@@ -36,7 +36,38 @@
 import { and, eq, isNull, lt, sql } from "drizzle-orm";
 
 import { x402SettlementIntents } from "../db/schema.js";
+import { logError } from "./log.js";
 import type { WalletTx } from "./wallet-service.js";
+
+/**
+ * Bookkeeping after the money has moved must never fail the request.
+ *
+ * Found by an existing test rather than by inspection: the unique index on
+ * settlement_id can reject `markSettled`, and that rejection propagated as an
+ * unhandled 500 — AFTER the USDC had already left the customer's wallet. Before
+ * WP5 they would have received their result. A durability mechanism that turns
+ * a successful paid call into an error has made things worse, not better.
+ *
+ * Swallowing here is safe precisely because of what it degrades TO: an intent
+ * stuck at 'settling' is the reconciler's "we do not know" class, which gets
+ * escalated to a human rather than silently resolved. The failure becomes a
+ * page instead of a 500.
+ *
+ * Logged loudly, per DEC-20260504-A's swallow-visibility rule — a swallowed
+ * error that produces a clean-looking summary is the failure mode that protocol
+ * exists to prevent.
+ */
+async function bestEffort(
+  label: string,
+  context: Record<string, unknown>,
+  fn: () => Promise<void>,
+): Promise<void> {
+  try {
+    await fn();
+  } catch (err) {
+    logError(label, err, context);
+  }
+}
 
 export type SettlementIntentState =
   | "settling"
@@ -116,6 +147,10 @@ export async function markSettled(
   db: WalletTx,
   params: { intentId: string; settlementId: string },
 ): Promise<void> {
+  await bestEffort(
+    "x402-intent-mark-settled-failed",
+    { intent_id: params.intentId, settlement_id: params.settlementId },
+    async () => {
   await db
     .update(x402SettlementIntents)
     .set({
@@ -129,6 +164,8 @@ export async function markSettled(
         eq(x402SettlementIntents.state, "settling"),
       ),
     );
+    },
+  );
 }
 
 /**
@@ -142,6 +179,10 @@ export async function markFailed(
   db: WalletTx,
   params: { intentId: string; reason: string },
 ): Promise<void> {
+  await bestEffort(
+    "x402-intent-mark-failed-failed",
+    { intent_id: params.intentId },
+    async () => {
   await db
     .update(x402SettlementIntents)
     .set({
@@ -155,6 +196,8 @@ export async function markFailed(
         eq(x402SettlementIntents.state, "settling"),
       ),
     );
+    },
+  );
 }
 
 /**
