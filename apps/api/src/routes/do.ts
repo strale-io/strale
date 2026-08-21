@@ -38,6 +38,7 @@ import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { validateX402Input } from "../lib/x402-input-validation.js";
 import { isX402PayableCapability } from "../lib/x402-eligibility.js";
+import * as walletService from "../lib/wallet-service.js";
 import { recoverValuesFromTask, recoveredValuesHint, unsatisfiedGroupFields } from "../lib/task-value-hints.js";
 import { logError, logWarn } from "../lib/log.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
@@ -1710,12 +1711,8 @@ async function executeSync(
     // and is caught at the route boundary as a clean execution_timeout.
     await tx.execute(sql`SET LOCAL lock_timeout = '5s'`);
 
-    // Lock wallet row
-    const [wallet] = await tx
-      .select()
-      .from(wallets)
-      .where(eq(wallets.userId, user.id))
-      .for("update");
+    // Lock wallet row (WP2: via the wallet service, which owns the lock shape)
+    const wallet = await walletService.lockWalletForUser(tx, user.id);
 
     if (!wallet || wallet.balanceCents < capability.priceCents) {
       return {
@@ -1773,18 +1770,11 @@ async function executeSync(
       const capResult = await executeWithRetry(executor, executionInput, capability);
       const latencyMs = Date.now() - startTime;
 
-      // Deduct from wallet
-      const newBalance = wallet.balanceCents - capability.priceCents;
-      await tx
-        .update(wallets)
-        .set({ balanceCents: newBalance, updatedAt: new Date() })
-        .where(eq(wallets.id, wallet.id));
-
-      // Log wallet transaction
-      await tx.insert(walletTransactions).values({
-        walletId: wallet.id,
-        amountCents: -capability.priceCents,
-        type: "purchase",
+      // Deduct through the wallet service — the balance change and its ledger
+      // row are written together, so they cannot diverge (WP2).
+      const newBalance = await walletService.debit(tx, {
+        wallet,
+        amountCents: capability.priceCents,
         referenceId: txnRecord.id,
         description: `Capability: ${capability.slug}`,
       });
@@ -2086,11 +2076,7 @@ async function executeAsync(
       };
 
   const setupResult: SetupResult = await db.transaction(async (tx) => {
-    const [wallet] = await tx
-      .select()
-      .from(wallets)
-      .where(eq(wallets.userId, user.id))
-      .for("update");
+    const wallet = await walletService.lockWalletForUser(tx, user.id);
 
     if (!wallet || wallet.balanceCents < capability.priceCents) {
       return {
@@ -2121,13 +2107,6 @@ async function executeAsync(
       }
     }
 
-    // Optimistic debit — refunded if execution fails
-    const newBalance = wallet.balanceCents - capability.priceCents;
-    await tx
-      .update(wallets)
-      .set({ balanceCents: newBalance, updatedAt: new Date() })
-      .where(eq(wallets.id, wallet.id));
-
     // Create transaction record
     const marker = getTransparencyMarker(capability.transparencyTag);
     const [txnRecord] = await tx
@@ -2152,11 +2131,15 @@ async function executeAsync(
       })
       .returning({ id: transactions.id });
 
-    // Log wallet transaction (purchase)
-    await tx.insert(walletTransactions).values({
-      walletId: wallet.id,
-      amountCents: -capability.priceCents,
-      type: "purchase",
+    // Optimistic debit — refunded if execution fails.
+    //
+    // WP2: balance change and ledger row now happen in one call, so they
+    // cannot drift apart. Ordered after the transaction insert only so the
+    // ledger row can carry its reference; both writes are in this transaction,
+    // so the sequence between them is not observable.
+    const newBalance = await walletService.debit(tx, {
+      wallet,
+      amountCents: capability.priceCents,
       referenceId: txnRecord.id,
       description: `Capability: ${capability.slug}`,
     });
@@ -2370,19 +2353,9 @@ async function executeInBackground(
         .from(wallets)
         .where(eq(wallets.id, walletId))
         .for("update");
-      await tx
-        .update(wallets)
-        .set({
-          balanceCents: walletRow.b + capability.priceCents,
-          updatedAt: new Date(),
-        })
-        .where(eq(wallets.id, walletId));
-
-      // Log refund
-      await tx.insert(walletTransactions).values({
+      await walletService.refund(tx, {
         walletId,
         amountCents: capability.priceCents,
-        type: "refund",
         referenceId: transactionId,
         description: `Refund: ${capability.slug} execution failed`,
       });

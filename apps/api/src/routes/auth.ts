@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import * as walletService from "../lib/wallet-service.js";
 import { eq, sql, and, gte } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { users, wallets, walletTransactions, transactions } from "../db/schema.js";
@@ -86,14 +87,13 @@ authRoute.post(
     })
     .returning({ id: users.id, email: users.email });
 
-  const [wallet] = await db
-    .insert(wallets)
-    .values({ userId: user.id, balanceCents: TRIAL_CREDITS_CENTS })
-    .returning({ id: wallets.id });
-
-  await db.insert(walletTransactions).values({
-    walletId: wallet.id,
-    amountCents: TRIAL_CREDITS_CENTS,
+  // WP2: opened at zero and credited through the wallet service, so a failure
+  // between the two writes can no longer leave a balance with no matching
+  // ledger entry. (The three signup writes are still not one transaction —
+  // that is CR-09 and belongs to WP11.)
+  await walletService.openWallet(db, {
+    userId: user.id,
+    grantCents: TRIAL_CREDITS_CENTS,
     type: "trial_credit",
     description: "Welcome trial credits",
   });
@@ -272,12 +272,18 @@ authRoute.delete("/me", authMiddleware, async (c) => {
       })
       .where(eq(users.id, user.id));
 
-    // Burn the wallet — refund-on-delete is out of scope (would require
-    // a Stripe payout flow). Documented in the response.
-    await tx
-      .update(wallets)
-      .set({ balanceCents: 0, updatedAt: now })
-      .where(eq(wallets.userId, user.id));
+    // Forfeit whatever remains — refund-on-delete is out of scope (it would
+    // need a Stripe payout flow) and is documented in the response.
+    //
+    // WP2: this used to zero the balance with no ledger entry, which made it
+    // the one balance change on the platform with no audit trail and left the
+    // ledger permanently out of step with the balance for that wallet. It now
+    // goes through the wallet service, which writes a paired closure_forfeit
+    // entry, and takes the row lock the previous version skipped.
+    await walletService.forfeitOnClosure(tx, {
+      userId: user.id,
+      description: "Balance forfeited on account closure (Art. 17 erasure)",
+    });
   });
 
   // Cert-audit Y-7: be explicit about what survives erasure. The
@@ -464,14 +470,10 @@ export async function agentSignupHandler(c: Context) {
     })
     .returning({ id: users.id, email: users.email });
 
-  const [wallet] = await db
-    .insert(wallets)
-    .values({ userId: user.id, balanceCents: TRIAL_CREDITS_CENTS })
-    .returning({ id: wallets.id });
-
-  await db.insert(walletTransactions).values({
-    walletId: wallet.id,
-    amountCents: TRIAL_CREDITS_CENTS,
+  // WP2: same wallet-service path as the human signup above.
+  await walletService.openWallet(db, {
+    userId: user.id,
+    grantCents: TRIAL_CREDITS_CENTS,
     type: "trial_credit",
     description: "Welcome trial credits (agent self-signup)",
   });
