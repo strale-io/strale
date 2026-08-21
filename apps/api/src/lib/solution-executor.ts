@@ -345,6 +345,7 @@ export async function executeSolution(
       gateCondition: solutionSteps.gateCondition,
       capIsActive: capabilities.isActive,
       capLifecycleState: capabilities.lifecycleState,
+      capVisible: capabilities.visible,
     })
     .from(solutionSteps)
     .leftJoin(capabilities, eq(capabilities.slug, solutionSteps.capabilitySlug))
@@ -415,9 +416,11 @@ export async function executeSolution(
       const servable =
         step.capIsActive != null &&
         step.capLifecycleState != null &&
+        step.capVisible != null &&
         isServableCapability({
           isActive: step.capIsActive,
           lifecycleState: step.capLifecycleState,
+          visible: step.capVisible,
         });
 
       const executor = servable ? getExecutor(step.capabilitySlug) : undefined;
@@ -432,9 +435,12 @@ export async function executeSolution(
         // (a solution advertising 14 steps audited 13 with no gap marker).
         stepResults[step.capabilitySlug] = {
           unavailable: true,
+          // Distinguished because the two mean different things for BILLING.
+          // A capability we withheld is our decision, not partial delivery.
+          ...(servable ? {} : { platform_withheld: true }),
           reason: servable
             ? "capability unavailable (not deployed) — this step did not run"
-            : "capability is not currently servable (deactivated or quarantined) — this step did not run",
+            : "capability was withheld by Strale (quarantined or deactivated) — this step did not run",
         };
         completedSteps[stepIndex.get(step)!] = {};
         stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: 0 });
