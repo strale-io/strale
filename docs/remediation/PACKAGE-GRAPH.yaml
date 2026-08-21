@@ -39,8 +39,8 @@ packages:
       delisted_but_sellable_caps: 30
 
   WP1:
-    title: Proof floor (ephemeral Postgres CI + crash/mutation tests + eval harness)
-    status: PLANNED
+    title: Proof floor (ephemeral Postgres CI + crash/mutation tests)
+    status: ACCEPTED
     depends_on: [WP0]
     risks: [CR-07]
     review: {codex: required, fable: required}
@@ -151,7 +151,7 @@ packages:
     depends_on: [WP8]
     subpackages:
       WP16.0: {title: Discovery containment, start: immediate_parallel}
-      WP16.1: {title: Evaluation harness, start: immediate_parallel}
+      WP16.1: {title: Evaluation harness, start: immediate_parallel, note: "owns the frozen 200-query retrieval benchmark listed under WP1 in the master plan"}
       WP16.2: {title: Discovery Metadata Registry, fable: required}
       WP16.3: {title: Hybrid candidate retrieval, fable: required}
       WP16.4: {title: Structured constraints + abstention, fable: required, risks: [N9]}
@@ -171,6 +171,10 @@ packages:
     status: PLANNED
     depends_on: [WP1]
     risks: [CR-20, N7]
+    inherited_exit_conditions:
+      - "integration lane creates and drops its own uniquely-named database, so
+         disposability holds by construction rather than by row-count heuristics
+         (Codex WP1 residual)"
     review: {codex: required, fable: optional}
 
 verification_gates:

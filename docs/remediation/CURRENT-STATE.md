@@ -2,12 +2,34 @@
 
 _Last updated: 2026-08-21 (session 1)_
 
-- **Current package:** WP0 — ACCEPTED (Fable). Ready to start WP1.
-- **Next package:** WP1 — Proof floor (ephemeral Postgres CI, crash/mutation tests, retrieval eval harness)
-- **Latest accepted SHA:** `4814f32` on `remediation/program` (branch not yet merged to main)
+- **Current package:** WP1 — ACCEPTED (Fable). Ready to start WP2.
+- **Next package:** WP2 — Wallet Service (one authority for wallet mutations)
+- **Latest accepted SHA:** `5cebef6` on `remediation/program` (branch not yet merged to main)
 - **Unresolved blockers:** none
 - **Human approvals granted:** program-level autonomy (run continuously; escalate only per CHECK-IN A/B/C)
 - **Awaiting founder:** nothing. One item is logged for *visibility only*, not decision — see "Codex disposition" below.
+
+## Where WP1 landed
+
+The proof floor exists. 10 files / 59 tests run against a real Postgres in CI;
+15 of them had never executed before because no workflow set `DATABASE_URL_TEST`.
+
+- First-ever coverage of the Stripe money-in path, with real HMAC signatures.
+- Hard-SIGKILL crash test proving N1: the debit survives, no refund is written,
+  the transaction is stranded. WP3 must invert the last two.
+- DEC-8 wallet locking proven by racing 6 calls at a wallet funded for 1
+  (verified: removing the lock makes all 6 succeed).
+- Three idempotency defects pinned as WP6's acceptance signal.
+- Audit chain tested as the re-audit REFRAMED it, not as the audit stated it.
+- **Live production bug found and fixed:** every "your agent ran out of
+  credits" conversion email was failing silently on a bad column reference.
+- A DB-gated suite that ran in neither CI job was rescued; a guard now makes
+  that impossible.
+
+Safety, because these tests write: loopback host + test-named database +
+a pre-write content check that refuses anything holding real data (verified
+against production). Runs BEFORE the schema push — Codex caught that the
+check was originally positioned after it.
 
 ## Where WP0 landed
 
@@ -39,7 +61,9 @@ residual path requires admin credentials.
 | 11 stranded `executing` transactions; crash-orphan reconciler | WP3 (+ CHECK-IN B — writes prod wallets) |
 | Wallet rail still serves quarantined capabilities; solution steps ungated | WP8 |
 | x402 in-flight delisting race at settlement | WP8 |
-| SQL-text assertions want row-level tests; mock-DB FIFO races startup selects | WP1 |
+| ~~SQL-text assertions want row-level tests~~ — CLOSED in WP1 | — |
+| Lane disposability is heuristic; create-and-drop own database instead | WP15 |
+| Frozen 200-query retrieval benchmark (master plan listed it under WP1) | WP16.1 |
 | Rate limiter fails open on unknown IP; counters process-local | WP12 (+ VERIFY-IP) |
 | Raw-socket DNS rebinding; CIDR-vs-prefix IPv6 gaps | WP12 |
 | Key-recovery emails a reusable key; unauthenticated rotation DoS | WP11 |

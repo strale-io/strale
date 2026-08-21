@@ -119,7 +119,79 @@ Findings 3 (in-flight delisting race), 4 (SQL-text assertion is not a row-level 
 
 ## WP1 — Proof floor
 
-- **Status:** PLANNED
+- **Status:** ACCEPTED (Fable), Codex findings all fixed — see `packages/WP1.yaml`
+- **Started / completed:** 2026-08-21 / 2026-08-21 · **SHA before work:** `04a8ed1`
+- **Commits:** `a4944fe` (CI lane), `05ff170` (Stripe money-in), `062a7bc` (crash test), `7d12256` (usage-summary fix + wallet locking), `04a8ed1` (idempotency), `f17cbd6` (chain + curation + top-up), `411bdf6` + `66560fa` + `925c165` + `4c562f6` (Codex rounds), `5cebef6` (dormant suite)
+
+### What changed
+
+The repo already had DB integration suites. Every one was gated on
+`DATABASE_URL_TEST`, and no workflow set it — so they called `describe.skip` on
+every CI run since they were written. Green, proving nothing. **15 tests that
+had never once executed now run**, alongside 44 new ones: 10 files, 59 tests.
+
+| Area | Coverage added |
+|---|---|
+| Stripe money-in | First ever test of `webhook.ts`, with real HMAC signatures |
+| Crash recovery | Real SIGKILL of a child running the real route — proves N1 |
+| Wallet locking | DEC-8 proven by racing 6 calls at a wallet funded for 1 |
+| Idempotency | Three defects pinned as WP6's acceptance signal |
+| Audit chain | CR-04 as **reframed** by the re-audit, not as the audit stated it |
+| Public examples | Row-level, closing Codex's WP0 finding 4 |
+
+### Production bug found by the lane
+
+`buildUsageSummaryForUser` selected `capability_slug` from `transactions` — a
+column that table does not have. Its only callers are the low-balance and
+zero-balance conversion emails, dispatched fire-and-forget, so **every "your
+agent ran out of credits" email has been failing silently**. Confirmed against
+production read-only. Neither the original audit nor my re-audit caught it.
+
+### Two corrections to my own work
+
+1. I wrote that webhook idempotency "rests on the unique index", then tested it
+   by dropping the index — the handler still credited exactly once, including
+   under five concurrent deliveries. The row lock is the real mechanism. The
+   docstring now says what was measured, and the index has its own test that
+   does fail without it.
+2. My lane's filename assertion was **tautological** — the glob already
+   filtered on the suffix being asserted. Codex caught it. Now globs a broader
+   set, verified by planting a decoy file.
+
+### Codex review — 4 rounds, never PASS
+
+Every finding was fixed. Two I would not have found alone:
+- the tautological assertion above;
+- **the safety check ran after `drizzle-kit push --force`**, which is itself a
+  write — so against a proxied production database the schema could have been
+  altered before anything verified the target. Sharpest catch of the program.
+
+Its final position is that disposability is checked heuristically rather than
+proven. True, recorded as a residual with a durable fix assigned to WP15.
+**Fable adjudication:** VALID_NON_BLOCKING under §15 — CI pins the URL to a
+container it starts itself, and three independent conditions must all fail for
+a write to land elsewhere.
+
+### Residuals
+
+- Disposability heuristics (small Strale deployment under ceilings; RLS-hidden
+  rows) → **WP15**, durable fix: lane creates and drops its own database.
+- Retrieval benchmark harness (master-plan WP1 item 7) → **WP16.1**, which the
+  package graph already flags start-immediate-parallel. Independent of the DB
+  lane; recorded so it is not silently dropped.
+- Occasional first-run partial failures under heavy local load (timeouts, not
+  assertion failures); stable across repeated clean runs.
+
+### Final state
+
+Lane 59/59 across repeated runs on a genuinely fresh database; unit suite 2185
+passed; typecheck clean.
+
+---
+
+## WP1 — original plan entry
+
+- **Status:** superseded by the entry above
 
 ## WP2–WP16 and verification gates
 
