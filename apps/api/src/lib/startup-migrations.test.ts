@@ -65,6 +65,8 @@ import {
   runMigration0082_reclassifyThrottledFreeUnlimited,
   runMigration0087_unhideRedactedRows,
   runMigration0093_fixtureRecaptureFailures,
+  runMigration0066_ensureEligibilityColumnAndReconcile,
+  runMigration0094_clearChurnInvalidatedBaselines,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1234,7 +1236,7 @@ describe("startup-migrations — block 0087 (un-hide content-redacted rows)", ()
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 32 blocks in historical order", () => {
+  it("exports the expected 37 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1277,6 +1279,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0091_bolStaleValidationRules",
       "runMigration0092_x402GrowthBundles",
       "runMigration0093_fixtureRecaptureFailures",
+      "runMigration0094_clearChurnInvalidatedBaselines",
     ]);
   });
 });
@@ -1886,5 +1889,82 @@ describe("startup-migrations — block 0092 (growth bundles onto the x402 rail)"
         "no Date/Buffer chunk reaches the SQL bind layer",
       ).toEqual([]);
     }
+  });
+});
+
+/**
+ * The 0066/0069 eligibility ping-pong (found 2026-08-21).
+ *
+ * Both blocks derived `test_suites.scheduled_testing_eligible`, from
+ * different sources, on every boot. Where the sources disagreed the flag
+ * flipped twice per boot and each block's post-condition still passed,
+ * because each checked only its own derivation right after its own write.
+ * Both UPDATEs also carried `updated_at = NOW()`, which test-runner.ts
+ * reads as "this suite's content was edited" — so a scheduling-flag write
+ * invalidated the fixture baseline every deploy, and paid suites (which
+ * refuse to re-baseline without a human) were pinned at `passed: false`
+ * forever. `eu-regulation-search` scored 51% over 24h that way with no
+ * real failure behind it.
+ *
+ * Each assertion below fails against the pre-fix source: the UPDATEs
+ * contained `updated_at = NOW()` and 0066 was unscoped.
+ */
+describe("startup-migrations — eligibility reconcile is not a content edit", () => {
+  it("0066 does not stamp updated_at (a scheduling flag is not an edit)", async () => {
+    const stub = makeStub({ queue: [undefined, { count: 0 }, [{ mismatched: 0 }]] });
+    await runMigration0066_ensureEligibilityColumnAndReconcile(stub);
+    const update = stub.renderedSql[1].toLowerCase();
+    expect(update).toContain("scheduled_testing_eligible");
+    expect(update).not.toContain("updated_at");
+  });
+
+  it("0069 does not stamp updated_at either", async () => {
+    const stub = makeStub({ queue: [{ count: 0 }, [{ mismatched: 0 }]] });
+    await runMigration0069_reconcileEligibilityFromCostClass(stub);
+    const update = stub.renderedSql[0].toLowerCase();
+    expect(update).toContain("scheduled_testing_eligible");
+    expect(update).not.toContain("updated_at");
+  });
+
+  it("0066 claims only capabilities 0069 does not — UPDATE and post-check alike", async () => {
+    const stub = makeStub({ queue: [undefined, { count: 0 }, [{ mismatched: 0 }]] });
+    await runMigration0066_ensureEligibilityColumnAndReconcile(stub);
+    // Both the write and the fail-boot assertion must carry the same
+    // exclusion, or boot breaks the moment 0069 legitimately disagrees.
+    for (const rendered of [stub.renderedSql[1], stub.renderedSql[2]]) {
+      const q = rendered.toLowerCase().replace(/\s+/g, " ");
+      expect(q).toContain("not exists");
+      expect(q).toContain("cost_class is not null");
+    }
+  });
+});
+
+describe("startup-migrations — block 0094 (clear churn-invalidated baselines)", () => {
+  it("clears only paid fixture baselines owned by a free-classified capability", async () => {
+    const stub = makeStub({ queue: [{ count: 2 }] });
+    const result = await runMigration0094_clearChurnInvalidatedBaselines(stub);
+    expect(result.rows_affected).toBe(2);
+    expect(result.outcome).toMatch(/cleared 2 baseline/i);
+    const q = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
+    expect(q).toContain("baseline_output = null");
+    expect(q).toContain("baseline_captured_at = null");
+    // Scope: paid-to-run fixture suites whose baseline predates the write...
+    expect(q).toContain("ts.external_cost_cents > 0");
+    expect(q).toContain("ts.test_mode = 'fixture'");
+    expect(q).toContain("ts.baseline_captured_at < ts.updated_at");
+    // ...and only where the capability is one 0069 calls free, which is
+    // exactly the set the ping-pong could reach. Genuine paid-vendor
+    // suites stay human-gated.
+    expect(q).toContain("free_unlimited");
+    expect(q).toContain("paid_with_free_tier");
+  });
+
+  it("is idempotent: requires a non-null baseline, so a recaptured suite is not re-cleared", async () => {
+    const stub = makeStub({ queue: [{ count: 0 }] });
+    const result = await runMigration0094_clearChurnInvalidatedBaselines(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no churn-invalidated baselines remain/i);
+    const q = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
+    expect(q).toContain("ts.baseline_output is not null");
   });
 });

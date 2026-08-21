@@ -1,6 +1,6 @@
 # Strale Goals — the document every agent reads first
 
-**Reviewed:** 2026-08-15 · next review at each Sunday synthesis · quarterly deep review.
+**Reviewed:** 2026-08-21 · next review at each Sunday synthesis · quarterly deep review.
 
 ## Mission
 
@@ -16,11 +16,21 @@ buyers demonstrate they want.
 **€45.58/week** (last 7d, 641 calls) · €30.02/week (30d average, €128.66 total).
 In USD ≈ **$50/week**. The goal is therefore **~40×**, and M1 is **~5×**, not 2.2×.
 
-> **Week of 2026-08-18: €47.22, the highest of the last five discrete weeks**
-> (w-0 €47.22 · w-1 €40.09 · w-2 €11.13 · w-3 €36.07 · w-4 €29.53, measured
-> through `lib/metrics`). Two consecutive rising weeks against a €45.58
-> baseline. Still ~5× short of M1, and w-2's €11.13 is a reminder that single
-> days move this number at our size.
+> **Week of 2026-08-21 (measured 2026-08-21, ISO weeks, canonical population):**
+> the current week is **€45.34 on 715 calls with three days still to run** —
+> already above the whole of the previous week (€39.24 / 620) and the highest
+> call count in the series. Preceding weeks: 08-10 €39.24 · 08-03 €27.38 ·
+> 07-27 €10.85 · 07-20 €37.98 · 07-13 €27.42. Rolling `revenueCents` agrees on
+> the direction and on nothing else being the story: 7d €55.77, 14d €52.92/wk,
+> 30d €35.78/wk — the shorter the window the higher the rate, which is what a
+> genuinely rising series looks like. Still ~5× short of M1.
+>
+> **Concentration is now the binding constraint, not the total.** `payingActors`
+> over 7d returns 2 identified wallets with a **94.7% top share**. M1 needs ≥5
+> distinct payers and no single payer above 60%, so on today's evidence the
+> revenue bar would be cleared long before the concentration bar. The instrument
+> is still young (wallet identity since 2026-08-15) so this is a lower bound —
+> but it is now old enough to plan against, which it was not last week.
 
 > **Read revenue week-over-week, not as a rolling 7d figure.** On 2026-08-17 the
 > rolling 7d read €36.64 against the €45.58 baseline and looked like a 20% fall.
@@ -138,20 +148,22 @@ conversion.
   capabilities and 13,779 runs: `uk-gazette-notice-search` 60.0% (vendor API
   returns 500 to everyone — DQ-14 item 2, Petter to file),
   `eu-regulation-search` 60.4% (**not a capability fault at all** — every
-  failure was the fixture-staleness guard, fixed in #341) and
+  failure was the fixture-staleness guard; #341 stopped it being *scored* as a
+  defect and #346, 2026-08-21, removed the churn that was firing it) and
   `canadian-company-data` 88.1%. Cross-checked at 12h/48h/7d: the same three
   dominate, and the 7d window additionally carries pre-fix rows from the
   program's own remediation, which is why the clean window was the one
   specified.
 
-- **The seven that remain are fixture-contract bugs, not broken capabilities.**
-  `iso-country-lookup`, `skill-extract`, `company-id-detect`,
-  `incoterms-explain`, `dangerous-goods-classify`, `beneficial-ownership-lookup`
-  and `name-parse` all fail on `guaranteed_field_missing` or `high_null_ratio`
-  while returning correct, fully-populated answers in production. The pattern
-  is fixtures asserting a flattened shape against a nested response — verified
-  for `iso-country-lookup`, whose six "null" fields all live under `match`. This
-  is the next fixture-hygiene batch.
+- **The seven fixture-contract bugs are closed.** `iso-country-lookup`,
+  `skill-extract`, `company-id-detect`, `incoterms-explain`,
+  `dangerous-goods-classify`, `beneficial-ownership-lookup` and `name-parse`
+  were all failing on `guaranteed_field_missing` or `high_null_ratio` while
+  answering correctly in production — fixtures asserting a flattened shape
+  against a nested response. Re-measured 2026-08-21: **every one is at 100%
+  over 48h** (144, 138, 143, 143, 144, 214 and 143 runs respectively). Blocks
+  0090/0091 realigned the declared contracts and the suites followed. Nothing
+  is owed here; do not re-open it from this file's history.
 - **`screenshot-url`'s `waitForSelector` bug is fixed** (re-checked 2026-08-19).
   The entry below is kept because the *diagnosis* was right and worth
   remembering; the defect itself is gone. `screenshot-url.ts` on `main` carries
@@ -183,6 +195,34 @@ conversion.
   "no evidence" cannot be scored as "evidence of a defect" — and a comment
   claiming that wiring exists is not the wiring.
 
+- **A fourth time, and this one had a cause upstream of the instrument**
+  (found and fixed 2026-08-21, #346). #341 stopped the fixture-staleness guard
+  being *scored* as a capability defect. It did not ask why the guard was
+  firing at all. The answer: startup-migration blocks 0066 and 0069 both derive
+  `test_suites.scheduled_testing_eligible`, from different sources — 0066 from
+  `external_cost_cents`, 0069 from `capabilities.cost_class` — and both run on
+  every boot. Wherever the sources disagree the flag flips twice per boot, and
+  neither post-condition notices because each checks only its own derivation
+  immediately after its own write. **381 suites flipped one way and straight
+  back on every deploy**; the 381 rows sharing an `updated_at` of
+  2026-08-20 21:03:36 are that churn, recorded in the table.
+
+  Both UPDATEs stamped `updated_at = NOW()`, and `checkBaselineStaleness` reads
+  `updated_at` as "this suite's content was edited" — so a scheduling-flag
+  write invalidated 12 fixture baselines every deploy. Ten re-ran live for
+  free; two could not. `eu-regulation-search`'s `known_bad` and `edge_case`
+  cost 1¢ a call, so the guard refused to re-baseline and wrote `passed: false`
+  instead, permanently. **That is the whole of its 51% over 24h and of the
+  60.4% in the T4.3 exit measurement above** — the entry there was right that
+  it was "not a capability fault at all", and now names what it actually was.
+
+  Fixed: neither eligibility UPDATE touches `updated_at`; 0066 and 0069
+  partition the table so they cannot contradict each other; block 0094 cleared
+  the two poisoned baselines for live recapture. Verified against production
+  after the deploy — **0 suites bumped, 0 stale_input writes, both baselines
+  cleared.** The generalisation stands with one addition: *a metadata write
+  must not be recorded in a field something else reads as a content edit.*
+
 - **The quality floor's "daily" tick is in practice deploy-driven.** Its
   interval is 24h with a 15-minute startup delay, so in a week of frequent
   merges it evaluates once per boot: 8 deploys on 2026-08-18 produced 8 ticks,
@@ -202,6 +242,16 @@ conversion.
 | E3 | Capabilities are being delisted for refusing bad input, not for failing. Fixing the failure taxonomy re-lists working inventory | count of capabilities the floor would quarantine before vs after; catalogue size | no capability changes verdict — then the floor is right and the capabilities are genuinely broken |
 | E4 | The four growth bundles sell once they are payable. They were built 2026-08-16 under DQ-9 and sat listed-but-unpayable (`x402_enabled = false`) until 2026-08-18 — every euro arrives over x402, so they had earned nothing by construction | external sales of `competitor-read` / `page-seo-check` / `prospect-brief` / `keyword-scout` | zero sales across all four in 14 days on the rail — then bundle demand does not generalise beyond `lead-email-verify` and we stop building them |
 
+**E4 at day 3 of 14 (2026-08-21): zero external sales across all four.** All
+four are confirmed live and payable — present in `/x402/catalog`'s `solutions`
+list, checked directly. The control is healthy and getting healthier:
+`lead-email-verify` took **79 external orders for €15.80 in 35 days**, last one
+2026-08-20. Three days is far too early to read, and the kill criterion does not
+fire until 2026-09-01. One measurement note for whoever checks next: bundles are
+`solution_slug` on `transactions` and they live in the catalog's `solutions`
+array, **not** `capabilities` — reading only the capability list makes every
+bundle look delisted. It did so here for about a minute this morning.
+
 **E3 result (2026-08-16, shipped `f19f9f8`): partly confirmed, and the "partly"
 is the useful half.** One capability changes verdict — `us-company-data`, which
 the floor really did quarantine on 2026-08-12 at "64% completion on 11 calls"
@@ -218,9 +268,11 @@ traffic, 19 distinct error strings and 55 calls change class, **all** from
 
 So the honest reading is: misattribution was real and is now fixed, but it was
 not hiding a large pool of healthy inventory. Exactly one capability is owed a
-re-listing. **That re-listing has not happened** — the floor never promotes and
-the promotion job correctly refuses to overturn a takedown, so it needs a
-deliberate publish. It is the first action of the next session.
+re-listing. **That re-listing has since happened** — verified on production
+2026-08-21: `us-company-data` is `is_active = true`, `x402_enabled = true`, and
+present in `/x402/catalog`. This paragraph previously read "has not happened,
+it is the first action of the next session"; it was, and the note went stale.
+Nothing is owed here.
 
 New experiments enter here with a kill criterion or they don't run.
 
