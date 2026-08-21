@@ -13,9 +13,14 @@
  * capabilities and real customers. That distinction cannot be forged by a
  * proxy, because the proxy has to serve the real rows to be useful.
  *
- * Runs in CI after the schema is materialised and before any suite executes.
- * Deliberately a separate step rather than part of the test run: if this
- * fails, nothing should get the chance to write.
+ * Runs in CI BEFORE the schema is materialised, and before any suite executes.
+ * The ordering is the whole point: `drizzle-kit push --force` is itself a
+ * write, and against a proxied production database it could alter or drop real
+ * schema. A safety check that runs after the first write has already lost.
+ *
+ * That means the target is usually empty when this runs, so an absent table is
+ * treated as evidence of a fresh database rather than as an error. A proxy
+ * pointing at production fails the other way: the tables exist and are full.
  */
 
 import postgres from "postgres";
@@ -46,17 +51,18 @@ const sql = postgres(url, { max: 1, idle_timeout: 5 });
 try {
   const findings = [];
 
+  let absent = 0;
+
   for (const { table, max } of CEILINGS) {
-    // The lane's schema comes from drizzle-kit push, so a missing table means
-    // the bootstrap did not run — worth failing on rather than skipping past.
     const [{ exists }] = await sql`
       SELECT to_regclass(${"public." + table}) IS NOT NULL AS exists`;
+
+    // Runs before the schema is created, so an absent table is the normal
+    // case for a fresh lane database — and positive evidence that this is not
+    // production, where every one of these exists and is populated.
     if (!exists) {
-      console.error(
-        `[disposable-db] Table "${table}" does not exist. The schema was not ` +
-          "materialised, so the lane would run against an empty or foreign database.",
-      );
-      process.exit(1);
+      absent += 1;
+      continue;
     }
 
     const [{ count }] = await sql.unsafe(
@@ -80,7 +86,10 @@ try {
   }
 
   console.log(
-    "[disposable-db] OK — target is empty enough to be a throwaway database.",
+    absent === CEILINGS.length
+      ? "[disposable-db] OK — target has no Strale tables yet; treating as a " +
+          "fresh throwaway database."
+      : "[disposable-db] OK — target is empty enough to be a throwaway database.",
   );
 } finally {
   await sql.end({ timeout: 5 });
