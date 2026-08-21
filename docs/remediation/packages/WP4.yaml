@@ -1,6 +1,6 @@
 package: WP4
 title: Canonical ExecutionOutcome — one authority for billability
-status: REVIEW
+status: REMEDIATED
 depends_on: [WP2]
 risks: [CR-02]
 
@@ -48,6 +48,7 @@ what_landed:
   module: "lib/execution-outcome.ts — OutputAssessment, ExecutionOutcome, and the aggregate"
   rule: "payment consumes `billable`. A rail still decides HOW to collect; it no longer decides WHETHER."
   rails_rewired:
+    - "x402 CAPABILITY — assertBillableOutput before settlement (MISSED in the first pass; see review.blocking_finding)"
     - "x402 solutions — now reads result.gated through aggregateSolutionOutcome"
     - "wallet solutions — same aggregate, so the two cannot disagree"
     - "the per-step audit label reads the same assessment billing reads"
@@ -124,12 +125,50 @@ incidental_findings:
 
 review:
   codex: deferred_to_final_pass
-  independent_agent: in_progress
+  independent_agent: FAIL_REMEDIATION_REQUIRED, then all findings closed
   fable: pending
+
+  blocking_finding: >
+    The x402 CAPABILITY rail was never wired. The module docstring named five
+    rails; the first pass rewired four and I recorded the exit condition "no
+    route decides success or billability independently" as MET. That was a
+    false statement about the code, which is the part that matters most — a
+    package accepted on a false exit condition corrupts every later package
+    that depends on it. Worse than the omission: the half-fix CREATED a new
+    asymmetry, because POST /v1/do with an X-PAYMENT header assessed the output
+    while POST /x402/:slug did not. CR-02 restated one layer down, introduced
+    by its own fix.
+
+  non_blocking_closed:
+    - "counts_against_capability had NO consumer — the advertised taxonomy fix was documentation only, so refusals still tripped the breaker against an armed quality floor. Wired at all four sites."
+    - "UnbillableOutputError discarded the executor's error text, misfiling upstream 5xx failures as `internal` (Strale's bug) — which is the bucket that counts against a capability."
+    - "A gated x402 solution wrote no transaction row and no replay-dedup entry: invisible in /v1/audit, and the same authorization replayable until expiry, re-running pre-gate steps at our cost with zero revenue."
+    - "The guard was green while the blocking defect was live: file-scoped import check, a seven-name denylist, a canonical-source test satisfied by the bare substring `outcome`, and a `derived` rail list whose regex matched neither of the ways solution-execute.ts moves money."
+    - "The integration test covered solutions only, so it structurally could not fail on the blocking finding."
+    - "One integration assertion was vacuous — worse than reported: NEITHER key it read existed at the top level, so it asserted nothing."
+    - "Test constructors used wrong arity for all three guarded-executor errors; tsconfig excludes *.test.ts so tsc never saw it."
+
+  findings_that_were_guard_bugs_not_code_bugs:
+    - "reserve flagged as unconsulted money movement — but a WP3 reservation is PROVISIONAL by design; capture is the finalizing act. Guard now keys on capture."
+    - "`settled = await settleX402Payment(...)` flagged — that holds the RESULT of moving money, not a decision about whether to."
+    - "`chargedPrice = refundRequired ? 0 : price` flagged — a decision may legitimately be computed in steps; the guard now tracks derivation."
+
+  accepted_and_documented_not_fixed:
+    free_tier_behaviour_change: >
+      assertBillableOutput sits on two €0 paths too, so a free-tier caller whose
+      capability resolves with an error marker now gets a 500 instead of a 200
+      carrying that marker, and the call still consumes one of their 10/day.
+      Kept deliberately. The assertion is load-bearing on that same function
+      because the x402-paid /v1/do variant settles inside it. And excluding
+      failures from the quota would let a caller force errors for unlimited free
+      external API calls — a worse hole than the one it closes. Failed calls
+      already consumed quota before WP4 for every capability that THREW; this
+      applies the same rule to more calls rather than inventing a new harm.
 
 exit_conditions:
   - one ExecutionOutcome type, one OutputAssessment type      # MET
-  - no route decides success or billability independently     # MET (guard + derived list)
-  - CI guard forbids a new local billing predicate            # MET (proved discriminating ×4)
+  - no route decides success or billability independently     # MET — but only after remediation; claimed MET while false in the first pass
+  - CI guard forbids a new local billing predicate            # MET (handler-scoped; proved discriminating against the blocking defect itself + 2 evasions)
   - the two rails bill a gated solution identically           # MET (proved discriminating)
-  - independent adversarial review passes                     # pending
+  - the two rails bill an unusable CAPABILITY output identically  # MET (added after review)
+  - independent adversarial review passes                     # MET after remediation

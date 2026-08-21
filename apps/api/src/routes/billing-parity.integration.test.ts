@@ -267,7 +267,15 @@ describeMaybe("a gated solution bills identically on both rails", () => {
     const res = await runWalletRail();
     const body = (await res.json()) as Record<string, any>;
 
-    expect(body.charged_cents ?? body.price_cents ?? 0).toBe(0);
+    // Review finding: this line was `body.charged_cents ?? body.price_cents ?? 0`,
+    // which is vacuously 0 when the response carries NEITHER key — and neither
+    // was ever at the top level, so it asserted nothing at all. The real field
+    // is result.price_cents; the gated block also states it outright.
+    expect(body.result).toHaveProperty("price_cents");
+    expect(body.result.price_cents).toBe(0);
+    expect(body.result.gated?.charged).toBe(false);
+
+    // The load-bearing assertion either way: the money did not move.
     expect(await balance()).toBe(STARTING_BALANCE);
   }, 120_000);
 
@@ -313,5 +321,79 @@ describeMaybe("a gated solution bills identically on both rails", () => {
     const x402Res = await runX402Rail();
     expect(x402Res.status).toBe(200);
     expect(settleSpy).toHaveBeenCalledTimes(1);
+  }, 120_000);
+});
+
+/**
+ * The capability rail, added after adversarial review.
+ *
+ * The solutions block above could not have caught the blocking finding: it
+ * exercises solutions only, so an unwired CAPABILITY rail was invisible to it
+ * while the package's exit condition claimed every rail was covered. Same
+ * capability, same USDC, two endpoints — they must agree.
+ */
+describeMaybe("a capability returning an unusable output bills on neither rail", () => {
+  let client: ReturnType<typeof postgres>;
+  let db: ReturnType<typeof drizzle>;
+  let app: Awaited<typeof import("../app.js")>["app"];
+
+  let capabilityId = "";
+  const CAP_SLUG = `wp4-bad-${randomUUID().slice(0, 8)}`;
+
+  beforeAll(async () => {
+    client = postgres(DATABASE_URL_TEST!, { max: 4 });
+    db = drizzle(client);
+    const { registerCapability } = await import("../capabilities/index.js");
+    // RESOLVES — does not throw — with an error marker plus a numeric HTTP
+    // status. Pre-WP4 both rails treated resolution as success and charged.
+    registerCapability(CAP_SLUG, async () => ({
+      output: { error: "Registry returned 503", status: 503 },
+      provenance: { source: "wp4-test", fetched_at: new Date().toISOString() },
+    }));
+    ({ app } = await import("../app.js"));
+  }, 120_000);
+
+  afterAll(async () => {
+    if (capabilityId) {
+      await db.delete(transactions).where(eq(transactions.capabilityId, capabilityId));
+      await db.delete(capabilities).where(eq(capabilities.id, capabilityId));
+    }
+    await client.end();
+  });
+
+  it("the x402 capability rail does not settle", async () => {
+    settleSpy.mockClear();
+    capabilityId = randomUUID();
+    await db.insert(capabilities).values({
+      id: capabilityId,
+      slug: CAP_SLUG,
+      name: "WP4 unusable-output capability",
+      description: "Seeded by the WP4 billing-parity test.",
+      category: "developer-tools",
+      inputSchema: { type: "object" },
+      outputSchema: { type: "object" },
+      priceCents: 25,
+      isActive: true,
+      avgLatencyMs: 50,
+      lifecycleState: "active",
+      x402Enabled: true,
+      x402PriceUsd: 0.3,
+    });
+
+    const { __resetX402CacheForTests } = await import("./x402-gateway-v2.js");
+    __resetX402CacheForTests();
+
+    const res = await app.request(`http://localhost/x402/${CAP_SLUG}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-PAYMENT": `wp4-auth-${randomUUID()}`,
+      },
+      body: JSON.stringify({ probe: "wp4" }),
+    });
+
+    // The assertion that would have caught the blocking finding.
+    expect(settleSpy).not.toHaveBeenCalled();
+    expect(res.status).not.toBe(200);
   }, 120_000);
 });
