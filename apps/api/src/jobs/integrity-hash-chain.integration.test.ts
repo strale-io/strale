@@ -220,10 +220,16 @@ describeMaybe("integrity hash chain admission", () => {
     const { getPreviousHash } = await import("../lib/integrity-hash.js");
     const head = await getPreviousHash();
 
-    // The batch threads in completed_at order, so the row completed LAST is the
-    // tip — and it is also what the next tick resumes from. One tip, one head.
-    const tip = rows.find((r) => r.id === earlyCreatedLateCompleted)!;
-    expect(head).toBe(tip.integrityHash);
+    // The TIP is whichever row the batch chained last — i.e. the one that is
+    // nobody's parent. Deriving it from the data rather than naming a row is
+    // what makes this discriminating: naming `earlyCreatedLateCompleted`
+    // asserted that head selection agrees with itself, which is true under the
+    // bug too. Verified by mutation — reverting the batch to (created_at, id)
+    // turns this red.
+    const parents = new Set(rows.map((r) => r.previousHash).filter(Boolean));
+    const tips = rows.filter((r) => !parents.has(r.integrityHash));
+    expect(tips, "a batch must produce exactly one tip").toHaveLength(1);
+    expect(head).toBe(tips[0]!.integrityHash);
   }, 120_000);
 
   it("a null completed_at row cannot capture the head", async () => {
@@ -278,7 +284,11 @@ describeMaybe("integrity hash chain admission", () => {
         priceCents: 10,
         complianceHashState: "pending",
         createdAt: new Date(Date.now() - OLDER_THAN_GRACE - 10_000),
-        completedAt: null,
+        // Deliberately HAS a completed_at. A null one is already excluded by
+        // the head-capture guard, so leaving it null meant this test passed
+        // with the status filter removed — it was proving the other fix.
+        // Verified by mutation: dropping the status filter now turns it red.
+        completedAt: new Date(Date.now() - OLDER_THAN_GRACE - 5_000),
       })
       .returning({ id: transactions.id });
 

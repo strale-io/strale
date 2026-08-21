@@ -1,6 +1,6 @@
 package: WP7
 title: Audit finality — the chain must actually be a chain
-status: IN_PROGRESS
+status: REVIEW
 depends_on: [WP4]
 risks: [CR-04]
 
@@ -8,6 +8,43 @@ objective: >
   Make the integrity hash chain a chain: one head, one parent per child, and
   only immutable rows admitted. Today it is a chain in shape and a forest in
   behaviour.
+
+# CORRECTION to an earlier draft of this file: it claimed the parent pointer
+# existed only inside the hash preimage. That was wrong — a `previous_hash`
+# column exists and the worker writes it. The claim came from grepping for
+# `prev_hash`. Having the column is what made the real defect findable.
+
+# Verified against PRODUCTION, not read off the audit.
+production_evidence:
+  the_chain_is_forked: >
+    Ten distinct `previous_hash` values have more than one child. The largest
+    has 150,719. The chain has not been a chain since 2026-05-04.
+  root_cause: >
+    getPreviousHash orders by `completed_at DESC`, and Postgres sorts NULLs
+    FIRST under DESC. A health_probe row hashed on 2026-05-04 with a null
+    completed_at has held the head position ever since — it is still what
+    getPreviousHash returns today — so every batch for three and a half months
+    linked to that same parent. A star has no sequence, so it proves nothing
+    about ordering or deletion, which is the entire tamper-evidence property.
+  genesis_restarts: >
+    GENESIS_HASH (b6abba31...) has 11 children. That is the swallowed catch in
+    getPreviousHash silently starting a new chain on a transient DB error,
+    eleven times.
+  non_terminal_rows_in_the_chain: >
+    507 hashed rows sit in a non-terminal status — 506 health probes with no
+    completed_at, and one transaction stuck in 'executing' since 2026-04-07
+    (one of WP3's stranded rows, which the reconciler will eventually move,
+    breaking its own recorded hash).
+
+history_is_not_rewritten: >
+  Deliberate. Recomputing 863,946 hashes would erase the evidence that the
+  break happened, which is the opposite of what an audit chain is for. The fix
+  is forward-only, and the fork stays queryable.
+  Consequence: the unique index this package's exit condition asked for CANNOT
+  be added — it would abort boot on the existing forks. Block 0097 adds a
+  NON-unique index, and single-parent is checked by detectChainForks() rather
+  than enforced. Scoping that check to rows after the fix is what keeps the
+  historical break from drowning the signal that a NEW fork appeared.
 
 # Verified by reading the code, not taken from the audit.
 defects:
@@ -64,7 +101,7 @@ design:
 exit_conditions:
   - terminal-only admission, including free-tier rows
   - one ordering for both batch threading and head selection
-  - prev_hash uniqueness enforced by an index, not by convention
+  - single-parent CHECKED, not enforced — a unique index cannot be added over the existing forks
   - genesis returned only when the chain is genuinely empty
   - a branch-topology check that detects a fork if one ever appears
   - the WP1 "PINS BUG" test inverts
