@@ -1,0 +1,83 @@
+package: WP17
+title: Immutable capability-state change ledger
+status: SPECIFIED_NOT_STARTED
+depends_on: [WP8]
+risks: [CR-05]
+
+# SPECIFICATION ONLY. Deliberately not implemented alongside WP8 — the reviewer
+# was explicit that this must not be folded into a package already in review,
+# and the scope below is larger than WP8's remaining surface.
+
+why_this_exists: >
+  On 2026-08-21 an out-of-band write flipped `danish-company-data.x402_enabled`
+  from false to true while leaving it invisible, putting a capability on the
+  paid rail that the platform had withdrawn and that fails 100% of real customer
+  calls. It was purchasable in that state for roughly 21 hours.
+
+  The writer could not be identified. Not "was difficult to identify" —
+  could not, at all. No job can produce the state, no commit corresponds, no
+  health-monitor event records it, and exactly one row changed in that minute.
+  The only reason the drift was diagnosable is that the capability's manifest
+  happened to record the intended state in a comment.
+
+  WP8 added a CHECK constraint that prevents that specific invalid combination
+  and an invariant check that detects it. Neither answers the general question:
+  WHO changed a capability's state, WHEN, and on what authority.
+
+the_gap_precisely: >
+  Application-level logging is insufficient and must not be proposed as the
+  solution. The write that caused this incident did not go through the
+  application — that is the defining property of the incident. A ledger that
+  only records what the application does would have recorded nothing.
+
+  Whatever is built must capture a direct `UPDATE capabilities SET ...` issued
+  from a psql session, a migration, a one-off script, or an admin tool, without
+  those writers cooperating.
+
+scope:
+  fields:
+    - is_active
+    - visible
+    - x402_enabled
+    - marketplace_eligible
+    - lifecycle_state
+    - deactivation_reason
+    - price_cents          # a silent price change is the same class of problem
+    - cost_class           # governs budget enforcement
+  tables:
+    - capabilities
+    - solutions            # is_active and x402_enabled carry the same weight there
+
+requirements:
+  - "Captures out-of-band SQL writes. A database-level mechanism — a trigger writing to an append-only table is the obvious candidate — not application middleware."
+  - "Immutable in practice: the ledger table must not be updatable or deletable by the application role."
+  - "Records the OLD and NEW value per field, the timestamp, and whatever actor identity the database can observe (session_user, application_name, client_addr). Honest about what it cannot know: a shared connection string reduces attribution to 'something using the app credentials'."
+  - "Survives the writer being unaware of it. A script author must not need to remember anything."
+  - "Bounded growth. These fields change rarely; a retention rule still needs stating rather than discovering later."
+
+non_goals:
+  - "Not a general row-audit system for every table. The value is concentrated in state that decides what is sold and at what price."
+  - "Not a replacement for health_monitor_events, which records WHY the platform changed something. This records THAT it changed and by whom."
+
+second_deliverable_inventory_and_narrowing: >
+  Alongside the ledger, inventory every path that can write these fields and
+  narrow it where possible. Known writers today: jobs/quality-floor.ts,
+  jobs/capability-promotion.ts, jobs/fix-lifecycle-anomalies.ts,
+  lib/capability-persistence.ts, lib/capability-onboarding.ts, the startup
+  migration blocks, and an unknown number of one-off scripts under
+  apps/api/scripts/ and its archive/. The incident write matched none of them.
+  Narrowing means: fewer paths, each identifiable, and a documented reason for
+  every one that remains.
+
+open_questions_for_the_implementer:
+  - "Trigger-based capture costs a write per state change and adds a failure mode to every UPDATE. Rare-change fields make that cheap, but the trade needs stating explicitly rather than assumed."
+  - "Does the DB role separation exist to make the ledger genuinely append-only, or does the application connect as owner? If the latter, immutability is a convention and should be described as one."
+  - "Should a write with no recorded authority be REFUSED rather than recorded? That is a stronger and more disruptive design; it belongs to Petter, not the platform, because it can block legitimate operator action."
+
+exit_conditions:
+  - a direct psql UPDATE to any scoped field is captured, with old and new values
+  - the ledger cannot be modified by the application role
+  - every known writer is inventoried, and unnecessary ones removed
+  - a retention rule exists for the ledger table
+  - the 2026-08-21 incident is replayable as a test: apply the same out-of-band write to a test database and show the ledger records it
+  - independent adversarial review passes
