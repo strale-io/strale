@@ -52,6 +52,32 @@ function integrationTestFiles(dir: string, found: string[] = []): string[] {
   return found;
 }
 
+/**
+ * Every file whose NAME claims to be an integration test, however it is
+ * spelled. Deliberately broader than integrationTestFiles(): asking whether
+ * the strictly-matching set matches the CI filter would be tautological, since
+ * that set is defined by the same suffix. The point is to catch a file called
+ * `foo.integration.spec.ts`, which claims membership but would never run.
+ */
+function filesClaimingToBeIntegrationTests(
+  dir: string,
+  found: string[] = [],
+): string[] {
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) {
+      // test-support holds the lane's own guards. They are ordinary unit tests
+      // that happen to have "integration" in the name, and they deliberately
+      // do NOT run in the DB lane — that is what lets them police it.
+      if (entry === "test-support") continue;
+      filesClaimingToBeIntegrationTests(full, found);
+    } else if (/integration/i.test(entry) && /\.(test|spec)\.ts$/.test(entry)) {
+      found.push(full);
+    }
+  }
+  return found;
+}
+
 describe("ephemeral-Postgres integration lane", () => {
   const files = integrationTestFiles(SRC);
 
@@ -100,7 +126,9 @@ describe("ephemeral-Postgres integration lane", () => {
       const lines = splitLines(readFileSync(file, "utf8"));
       for (const [i, line] of lines.entries()) {
         if (line.includes(SANCTIONED)) continue;
-        if (/\b(it|test|describe)\.(skip|todo)\b/.test(line)) {
+        // skipIf/runIf evade a plain skip|todo match and can disable an entire
+        // suite just as effectively.
+        if (/\b(it|test|describe)\.(skip|todo|skipIf|runIf)\b/.test(line)) {
           offenders.push(`${relative(SRC, file)}:${i + 1}`);
         }
       }
@@ -110,9 +138,9 @@ describe("ephemeral-Postgres integration lane", () => {
 
   it("keeps every suite matchable by the CI filename filter", () => {
     // The CI step runs `vitest run integration.test.ts`, a substring filter.
-    // A file named e.g. `foo.integration.spec.ts` would never run, and nothing
-    // else would notice.
-    const unmatched = files
+    // A file named e.g. `foo.integration.spec.ts` claims to be part of the
+    // lane but would never run, and nothing else would notice.
+    const unmatched = filesClaimingToBeIntegrationTests(SRC)
       .filter((f) => !f.includes("integration.test.ts"))
       .map((f) => relative(SRC, f));
 

@@ -66,6 +66,17 @@ jobs:
       # nothing — which is exactly how these suites lay dormant for months. If
       # the filter stops matching any file, vitest exits non-zero with "No test
       # files found", so the empty-lane case is covered too.
+      # The in-process guard checks the URL — loopback host, test-named
+      # database. Both are properties of the address, and an address can lie: a
+      # PgBouncer or tunnel can publish localhost/strale_test and route it to
+      # production. This asks the database what it CONTAINS instead, which a
+      # proxy cannot forge because it has to serve the real rows to be useful.
+      # Verified against production: refuses on 340 capabilities and 899k
+      # transactions.
+      - name: Verify the target database is disposable
+        working-directory: apps/api
+        run: node scripts/assert-disposable-test-db.mjs
+
       # --no-file-parallelism is required, not a preference. Vitest runs each
       # test file in its own worker process, and each of these imports the app,
       # whose pool opens up to 30 connections. Nine files in parallel therefore

@@ -33,12 +33,19 @@ import { users, wallets, walletTransactions } from "../db/schema.js";
 
 const WEBHOOK_SECRET = "whsec_wp1_integration_secret";
 
-process.env.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET;
-// getStripe() asserts on this at module load; the value is never used for a
-// network call because only signature verification runs in this path.
-process.env.STRIPE_SECRET_KEY ??= "sk_test_wp1_placeholder";
-process.env.FRONTEND_URL ??= "https://strale.dev";
-process.env.AUDIT_HMAC_SECRET ??= "wp1-integration-secret-at-least-32-chars-long";
+
+// Environment is set only when the lane is actually going to run. These
+// module-level assignments execute even when the suite skips, so applying them
+// unconditionally leaked configuration into every other suite in a full-suite
+// run and made an unrelated admin-auth test fail intermittently.
+if (process.env.DATABASE_URL_TEST) {
+  process.env.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET;
+  // getStripe() asserts on this at module load; the value is never used for a
+  // network call because only signature verification runs in this path.
+  process.env.STRIPE_SECRET_KEY ??= "sk_test_wp1_placeholder";
+  process.env.FRONTEND_URL ??= "https://strale.dev";
+  process.env.AUDIT_HMAC_SECRET ??= "wp1-integration-secret-at-least-32-chars-long";
+}
 
 const DATABASE_URL_TEST = useTestDatabase();
 const describeMaybe = DATABASE_URL_TEST ? describe : describe.skip;

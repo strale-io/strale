@@ -30,9 +30,16 @@ import { randomUUID } from "node:crypto";
 import { useTestDatabase } from "../test-support/integration-db.js";
 import { transactions, users, capabilities } from "../db/schema.js";
 
-process.env.FRONTEND_URL ??= "https://strale.dev";
-process.env.AUDIT_HMAC_SECRET ??= "wp1-chain-secret-at-least-32-chars-long-0000";
-process.env.ADMIN_SECRET ??= "wp1-chain-admin-secret-at-least-32-chars-0000";
+
+// Environment is set only when the lane is actually going to run. These
+// module-level assignments execute even when the suite skips, so applying them
+// unconditionally leaked configuration into every other suite in a full-suite
+// run and made an unrelated admin-auth test fail intermittently.
+if (process.env.DATABASE_URL_TEST) {
+  process.env.FRONTEND_URL ??= "https://strale.dev";
+  process.env.AUDIT_HMAC_SECRET ??= "wp1-chain-secret-at-least-32-chars-long-0000";
+  process.env.ADMIN_SECRET ??= "wp1-chain-admin-secret-at-least-32-chars-0000";
+}
 
 const DATABASE_URL_TEST = useTestDatabase();
 const describeMaybe = DATABASE_URL_TEST ? describe : describe.skip;

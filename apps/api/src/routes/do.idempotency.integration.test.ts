@@ -29,11 +29,18 @@ import {
   transactions,
 } from "../db/schema.js";
 
-process.env.FRONTEND_URL ??= "https://strale.dev";
-process.env.AUDIT_HMAC_SECRET ??= "wp1-idem-secret-at-least-32-chars-long-00000";
-process.env.ADMIN_SECRET ??= "wp1-idem-admin-secret-at-least-32-chars-00000";
-process.env.STRIPE_SECRET_KEY ??= "sk_test_wp1_placeholder";
-process.env.STRIPE_WEBHOOK_SECRET ??= "whsec_wp1_placeholder";
+
+// Environment is set only when the lane is actually going to run. These
+// module-level assignments execute even when the suite skips, so applying them
+// unconditionally leaked configuration into every other suite in a full-suite
+// run and made an unrelated admin-auth test fail intermittently.
+if (process.env.DATABASE_URL_TEST) {
+  process.env.FRONTEND_URL ??= "https://strale.dev";
+  process.env.AUDIT_HMAC_SECRET ??= "wp1-idem-secret-at-least-32-chars-long-00000";
+  process.env.ADMIN_SECRET ??= "wp1-idem-admin-secret-at-least-32-chars-00000";
+  process.env.STRIPE_SECRET_KEY ??= "sk_test_wp1_placeholder";
+  process.env.STRIPE_WEBHOOK_SECRET ??= "whsec_wp1_placeholder";
+}
 
 const DATABASE_URL_TEST = useTestDatabase();
 const describeMaybe = DATABASE_URL_TEST ? describe : describe.skip;
