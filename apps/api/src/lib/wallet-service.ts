@@ -28,7 +28,7 @@
  * ledger primitives below are what it will be built on.
  */
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 
 import { wallets, walletTransactions } from "../db/schema.js";
 
@@ -77,6 +77,23 @@ export class InsufficientFundsError extends Error {
       `Insufficient balance: have ${balanceCents} cents, need ${requiredCents}`,
     );
     this.name = "InsufficientFundsError";
+  }
+}
+
+/**
+ * Reject the bare db handle where multi-statement atomicity is required.
+ *
+ * Drizzle's transaction object carries a rollback method; the top-level handle
+ * does not. That is the only structural difference available, and it is enough
+ * to catch the mistake that matters — passing `db` where `tx` was meant.
+ */
+function assertTransactional(tx: WalletTx, operation: string): void {
+  if (typeof tx?.rollback !== "function") {
+    throw new Error(
+      `${operation} must run inside a transaction: its writes are not atomic ` +
+        "otherwise, and a crash between them leaves the balance and the ledger " +
+        "disagreeing. Wrap the call in db.transaction(...).",
+    );
   }
 }
 
@@ -181,19 +198,36 @@ export async function debit(
   if (amountCents <= 0) {
     throw new Error(`debit requires a positive amount, got ${amountCents}`);
   }
-  if (wallet.balanceCents < amountCents) {
+
+  // Affordability is enforced by the database, not by the balance the caller
+  // happens to be holding. `wallet.balanceCents` is a snapshot: it is accurate
+  // while the caller holds the row lock, but the service cannot verify that it
+  // does, and a caller that forgets would otherwise overdraw silently. The
+  // predicate below cannot be wrong — if the row no longer satisfies it, no row
+  // is returned and nothing was written.
+  const [row] = await tx
+    .update(wallets)
+    .set({
+      balanceCents: sql`${wallets.balanceCents} - ${amountCents}`,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(wallets.id, wallet.id), gte(wallets.balanceCents, amountCents)))
+    .returning({ balanceCents: wallets.balanceCents });
+
+  if (!row) {
     throw new InsufficientFundsError(wallet.balanceCents, amountCents);
   }
 
-  await applyDelta(tx, {
+  await tx.insert(walletTransactions).values({
     walletId: wallet.id,
-    deltaCents: -amountCents,
+    amountCents: -amountCents,
     type: params.type ?? "purchase",
+    referenceId: referenceId ?? null,
     description,
-    referenceId,
   });
 
-  return wallet.balanceCents - amountCents;
+  // The value the database actually settled on, not arithmetic on the snapshot.
+  return row.balanceCents;
 }
 
 /**
@@ -250,6 +284,11 @@ export async function refund(
  * then wrote the ledger row separately, so a failure between the two produced a
  * balance with no corresponding entry. Opening at zero and crediting through
  * the same primitive as everything else makes that impossible.
+ *
+ * MUST be given a transaction, not the bare db handle. Opening and granting are
+ * two statements; run outside a transaction they are two commits, and a crash
+ * between them leaves a wallet that exists but never received its grant. The
+ * assertion below makes that a loud failure rather than a rare silent one.
  */
 export async function openWallet(
   tx: WalletTx,
@@ -260,6 +299,8 @@ export async function openWallet(
     description: string;
   },
 ): Promise<LockedWallet> {
+  assertTransactional(tx, "openWallet");
+
   const [wallet] = await tx
     .insert(wallets)
     .values({ userId: params.userId, balanceCents: 0 })

@@ -33,8 +33,8 @@ describeMaybe("wallet service against a real database", () => {
   let client: ReturnType<typeof postgres>;
   let db: ReturnType<typeof drizzle>;
 
-  let userId: string;
-  let walletId: string;
+  let userId = "";
+  let walletId = "";
 
   beforeAll(async () => {
     client = postgres(DATABASE_URL_TEST!, { max: 6 });
@@ -46,11 +46,17 @@ describeMaybe("wallet service against a real database", () => {
   });
 
   afterEach(async () => {
-    await db
-      .delete(walletTransactions)
-      .where(eq(walletTransactions.walletId, walletId));
-    await db.delete(wallets).where(eq(wallets.id, walletId));
-    await db.delete(users).where(eq(users.id, userId));
+    // Not every test seeds — the transaction-requirement test asserts a
+    // refusal before anything is created — so clean up only what exists.
+    if (walletId) {
+      await db
+        .delete(walletTransactions)
+        .where(eq(walletTransactions.walletId, walletId));
+      await db.delete(wallets).where(eq(wallets.id, walletId));
+    }
+    if (userId) await db.delete(users).where(eq(users.id, userId));
+    walletId = "";
+    userId = "";
   });
 
   async function seed(startingBalance: number) {
@@ -61,12 +67,16 @@ describeMaybe("wallet service against a real database", () => {
       apiKeyHash: `hash-${userId}`,
       keyPrefix: "sk_live_wp2",
     });
-    const wallet = await walletService.openWallet(db, {
-      userId,
-      grantCents: startingBalance,
-      type: "trial_credit",
-      description: "WP2 test opening grant",
-    });
+    // openWallet requires a transaction: opening and granting are two
+    // statements, and outside one they are two commits.
+    const wallet = await db.transaction((tx) =>
+      walletService.openWallet(tx, {
+        userId,
+        grantCents: startingBalance,
+        type: "trial_credit",
+        description: "WP2 test opening grant",
+      }),
+    );
     walletId = wallet.id;
   }
 
@@ -91,6 +101,20 @@ describeMaybe("wallet service against a real database", () => {
   async function expectLedgerReconciled() {
     expect(await ledgerSum()).toBe(await balance());
   }
+
+  it("refuses to open a wallet outside a transaction", async () => {
+    // The two writes are not atomic without one, so a crash between them
+    // leaves a wallet that exists but never received its grant. Codex found
+    // this: signup was passing the bare db handle.
+    await expect(
+      walletService.openWallet(db, {
+        userId: randomUUID(),
+        grantCents: 100,
+        type: "trial_credit",
+        description: "should refuse",
+      }),
+    ).rejects.toThrow(/must run inside a transaction/);
+  });
 
   it("opens a wallet whose ledger already explains its balance", async () => {
     await seed(200);

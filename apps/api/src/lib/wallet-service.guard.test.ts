@@ -21,6 +21,13 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SRC = fileURLToPath(new URL("..", import.meta.url));
+/**
+ * Scripts are production write paths too. The first version of this guard
+ * scanned only src/, and scripts/topup-test.ts was mutating balances directly
+ * the whole time — Codex found it, and it is why the roots list exists.
+ */
+const SCRIPTS = fileURLToPath(new URL("../../scripts", import.meta.url));
+const ROOTS = [SRC, SCRIPTS];
 
 /** The authority itself, and the schema module that declares the tables. */
 const ALLOWED = new Set([
@@ -29,20 +36,31 @@ const ALLOWED = new Set([
 ]);
 
 /**
- * Drizzle mutation calls against the wallet tables. Deliberately matches the
- * builder entry points rather than trying to parse statements: `update(wallets)`
- * and `insert(walletTransactions)` are the only ways drizzle writes them.
+ * Ways a wallet table can be written.
+ *
+ * The first version of this list only covered the verbs the codebase happened
+ * to use. Codex pointed out the gaps — DELETE on either table, UPDATE on
+ * wallet_transactions, schema-qualified and quoted identifiers, and the table
+ * object interpolated into raw SQL — so the patterns are now written per verb
+ * rather than per known call site.
  */
 const MUTATION_PATTERNS: { label: string; re: RegExp }[] = [
-  { label: "update(wallets)", re: /\.update\(\s*wallets\s*\)/ },
-  { label: "insert(wallets)", re: /\.insert\(\s*wallets\s*\)/ },
-  { label: "delete(wallets)", re: /\.delete\(\s*wallets\s*\)/ },
-  { label: "insert(walletTransactions)", re: /\.insert\(\s*walletTransactions\s*\)/ },
-  { label: "update(walletTransactions)", re: /\.update\(\s*walletTransactions\s*\)/ },
-  // Raw SQL, which would sidestep the builder patterns entirely.
-  { label: "raw UPDATE wallets", re: /UPDATE\s+wallets\b/i },
-  { label: "raw INSERT INTO wallets", re: /INSERT\s+INTO\s+wallets\b/i },
-  { label: "raw INSERT INTO wallet_transactions", re: /INSERT\s+INTO\s+wallet_transactions\b/i },
+  // Drizzle builders: any mutating verb against either table.
+  {
+    label: "drizzle mutation on a wallet table",
+    re: /\.(update|insert|delete)\(\s*(wallets|walletTransactions)\s*\)/,
+  },
+  // Raw SQL, allowing `public.` qualification and quoted identifiers.
+  {
+    label: "raw SQL mutation on a wallet table",
+    re: /(UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+(public\.)?"?(wallets|wallet_transactions)"?\b/i,
+  },
+  // The table object interpolated into a template — sql`UPDATE ${wallets} ...`
+  // — which is neither a builder call nor a literal table name.
+  {
+    label: "wallet table interpolated into raw SQL",
+    re: /(UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+\$\{\s*(wallets|walletTransactions)/i,
+  },
 ];
 
 function sourceFiles(dir: string, found: string[] = []): string[] {
@@ -61,8 +79,12 @@ describe("wallet mutation authority", () => {
   it("is the only module that writes wallet tables", () => {
     const offenders: string[] = [];
 
-    for (const file of sourceFiles(SRC)) {
-      const rel = relative(SRC, file);
+    const files = ROOTS.flatMap((root) =>
+      sourceFiles(root).map((full) => ({ full, root })),
+    );
+
+    for (const { full: file, root } of files) {
+      const rel = relative(root, file);
       if (ALLOWED.has(rel)) continue;
       // Tests seed and clean up their own fixtures directly; they are not
       // production paths and blocking them would make the lane unwritable.

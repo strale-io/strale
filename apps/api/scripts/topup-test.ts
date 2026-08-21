@@ -24,9 +24,8 @@
 
 import { config } from "dotenv";
 import { resolve } from "node:path";
-import { eq, sql } from "drizzle-orm";
-
 import { assertLoopbackDatabaseUrl } from "../src/test-support/integration-db.js";
+import * as walletService from "../src/lib/wallet-service.js";
 
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
@@ -77,32 +76,17 @@ if (!overrideLocalCheck) {
 }
 
 const { getDb } = await import("../src/db/index.js");
-const { wallets, walletTransactions } = await import("../src/db/schema.js");
 
 const db = getDb();
 
 const balance = await db.transaction(async (tx) => {
-  const [wallet] = await tx
-    .select({ id: wallets.id, balanceCents: wallets.balanceCents })
-    .from(wallets)
-    .where(eq(wallets.userId, userId))
-    .for("update");
-
+  // WP2: goes through the wallet service like every other balance change. An
+  // operational script is still a write path, and a script that reimplements
+  // the ledger pairing is exactly how a second authority reappears.
+  const wallet = await walletService.lockWalletForUser(tx, userId);
   if (!wallet) throw new Error(`No wallet found for user ${userId}`);
 
-  // Increment, not an absolute write: an absolute write silently discards any
-  // debit or top-up that landed since the read.
-  await tx
-    .update(wallets)
-    .set({
-      balanceCents: sql`${wallets.balanceCents} + ${amountCents}`,
-      updatedAt: new Date(),
-    })
-    .where(eq(wallets.id, wallet.id));
-
-  // Same transaction as the balance change, so the ledger cannot drift from
-  // the balance even if this process dies mid-run.
-  await tx.insert(walletTransactions).values({
+  await walletService.credit(tx, {
     walletId: wallet.id,
     amountCents,
     type: "top_up",

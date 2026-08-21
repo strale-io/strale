@@ -91,12 +91,14 @@ authRoute.post(
   // between the two writes can no longer leave a balance with no matching
   // ledger entry. (The three signup writes are still not one transaction —
   // that is CR-09 and belongs to WP11.)
-  await walletService.openWallet(db, {
-    userId: user.id,
-    grantCents: TRIAL_CREDITS_CENTS,
-    type: "trial_credit",
-    description: "Welcome trial credits",
-  });
+  await db.transaction((tx) =>
+    walletService.openWallet(tx, {
+      userId: user.id,
+      grantCents: TRIAL_CREDITS_CENTS,
+      type: "trial_credit",
+      description: "Welcome trial credits",
+    }),
+  );
 
   // Fire-and-forget signup webhook
   const totalUsers = await db
@@ -471,12 +473,14 @@ export async function agentSignupHandler(c: Context) {
     .returning({ id: users.id, email: users.email });
 
   // WP2: same wallet-service path as the human signup above.
-  await walletService.openWallet(db, {
-    userId: user.id,
-    grantCents: TRIAL_CREDITS_CENTS,
-    type: "trial_credit",
-    description: "Welcome trial credits (agent self-signup)",
-  });
+  await db.transaction((tx) =>
+    walletService.openWallet(tx, {
+      userId: user.id,
+      grantCents: TRIAL_CREDITS_CENTS,
+      type: "trial_credit",
+      description: "Welcome trial credits (agent self-signup)",
+    }),
+  );
 
   // Fire-and-forget webhook
   fireAndForget(
