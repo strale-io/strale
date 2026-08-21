@@ -165,6 +165,35 @@ review:
       already consumed quota before WP4 for every capability that THREW; this
       applies the same rule to more calls rather than inventing a new harm.
 
+residuals:
+  unaudited_passthrough_executors: >
+    A handful of executors pass upstream JSON straight into `output` — e.g.
+    providers/latvian-company-data-sdda.ts:133 (`output: raw`). If such a
+    registry ever answers with a JSON array, that capability now fails where it
+    previously returned 200 carrying the array. Reviewed and deliberately NOT
+    "fixed": an array output was already broken — the audit trail, the declared
+    output_schema and every downstream consumer assume an object — so WP4 makes
+    a silent wrong charge into a visible failure, which is the direction the
+    package exists to move. What was done instead is to make the failure
+    legible: the error now names the actual shape rather than saying "no usable
+    output", so an operator is not sent hunting through the executor for a bug
+    that is in the upstream response.
+
+    What was NOT done: auditing all 338 executors for pass-through shape. That
+    is a catalog-wide sweep, not a billing change. Verified closed for the LLM
+    paths, which were the reviewer's main concern — extractJsonObject slices a
+    brace-balanced span starting at `{`, so it returns a plain object or null,
+    and every caller rejects null. No LLM path can emit an array.
+
+  domain_field_named_code: >
+    Unresolved by reading alone. The failure-marker widening treats
+    {error, code: <number>} as a failure; a capability whose legitimate output
+    is an error string plus a numeric DOMAIN code (an HS code, a registry error
+    code) would be unbilled. Greps found no current instance across 338 files,
+    but the search cannot be exhaustive over dynamic shapes. Cheap to detect in
+    production — the failure message now names the marker — and cheap to fix by
+    narrowing the key list if one appears.
+
 exit_conditions:
   - one ExecutionOutcome type, one OutputAssessment type      # MET
   - no route decides success or billability independently     # MET — but only after remediation; claimed MET while false in the first pass

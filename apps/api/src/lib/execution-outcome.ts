@@ -445,7 +445,18 @@ export class UnbillableOutputError extends Error {
         ? `Capability returned an error rather than output: ${upstreamMessage}`
         : assessment.quality_flags.includes("executor_error_marker")
           ? "Capability returned an error marker rather than output"
-          : "Capability returned no usable output",
+          // Name the actual shape. A handful of executors pass upstream JSON
+          // straight through (`output: raw`), so if a registry ever answers
+          // with an array this is what an operator will see in
+          // transactions.error — "no usable output" would send them hunting
+          // through the executor for a bug that is in the upstream response.
+          : assessment.quality_flags.includes("output_is_array")
+            ? "Capability returned a JSON array; the output contract is an object"
+            : assessment.quality_flags.includes("output_not_object")
+              ? "Capability returned a non-object; the output contract is an object"
+              : assessment.quality_flags.includes("output_absent")
+                ? "Capability returned no output at all"
+                : "Capability returned no usable output",
     );
     this.name = "UnbillableOutputError";
   }
