@@ -83,6 +83,39 @@ review:
     email-validate, the single highest-volume x402 slug at roughly a fifth of
     call volume. isX402RailEligible mirrors the gateway's own catalogue filter.
 
+  second_review_round:
+    blocking_1_the_rule_was_in_a_rail_not_the_authority: >
+      The withheld-component rule shipped inside routes/solution-execute.ts, so
+      the WALLET rail applied it and the x402 rail did not — a partially
+      successful x402 run with a quarantined component would still have settled
+      full price. CR-02 again: one economic fact, two rails, two answers. Worse,
+      putting the rule in a rail violated the exact principle
+      lib/execution-outcome.ts exists to enforce, which I had written myself one
+      package earlier. Now in aggregateSolutionOutcome, so `billable` accounts
+      for it and both rails inherit it.
+    blocking_2_toctou_on_solution_eligibility: >
+      Eligibility was loaded once before any group executed, so a capability
+      quarantined after the run started still executed in a later group from a
+      stale snapshot — the same delisting race WP8 closed on the x402 catalogue
+      cache, with a shorter window and no justification for the inconsistency.
+      Re-read per group now, with the invariant stated so it is testable: a
+      quarantine stops execution that has NOT begun; steps already in flight
+      finish, because killing those discards work the customer is about to
+      receive (the WP3 reservation-TTL reasoning). The stale columns were
+      REMOVED from the step query rather than left in scope — a tempting stale
+      copy is how the first version went wrong.
+    non_blocking_metric_name: >
+      platformHealth.quarantined counted every active invisible capability while
+      the docs said eight of nine are pre-launch. Renamed to
+      withheldFromCatalog. Publishing a knowingly wrong name is worse than an
+      imprecise one. The rename surfaced a consumer in scripts/ceo-dashboard.ts
+      that my earlier grep missed because it searched only src/ — it printed
+      "N paused", which was never true; it now reads "not yet live".
+    tests_added:
+      - "x402 solution with a quality-floor-style quarantine: withheld step never executes, settlement never occurs, an unbilled canonical row exists"
+      - "quarantine landing BETWEEN groups: the next group does not run against the stale snapshot"
+      - "both mutation-checked — removing the aggregate rule reddens the parity test, defeating the per-group re-read reddens the race test"
+
   non_blocking_closed:
     - "a fifth open-coded copy in routes/a2a.ts, invisible to the guard because it was a bare array literal — the most likely copy-paste shape"
     - "lib/suggest.ts was MORE permissive than the floor; my allowlist entry claimed the opposite, classified without reading"
