@@ -569,6 +569,43 @@ export async function runMigration0065_pr86LeakyCapsCleanup(
 //   - The reconciliation UPDATE filters `IS DISTINCT FROM` so a re-run
 //     against an already-reconciled DB matches zero rows.
 
+/**
+ * The rows block 0066 owns: suites whose capability carries no `cost_class`.
+ *
+ * Why this scoping exists (found 2026-08-21 by the morning check-in).
+ * Blocks 0066 and 0069 derived the SAME column from two different sources —
+ * 0066 from `test_suites.external_cost_cents`, 0069 from
+ * `capabilities.cost_class` — and both ran on every boot, in that order.
+ * For any suite where the two disagreed, each boot flipped the flag twice:
+ * 0066 set it one way, 0069 set it back. Both post-conditions passed,
+ * because each checked only its own derivation immediately after its own
+ * UPDATE. Nothing ever converged and nothing ever complained.
+ *
+ * In production this hit exactly 8 suites — `eu-regulation-search` and
+ * `seo-audit`, both `cost_class = 'free_unlimited'` (so 0069 says eligible)
+ * with `external_cost_cents = 1` for their Haiku call (so 0066 says not).
+ * Both readings are correct about different questions; only the column is
+ * shared.
+ *
+ * The damage was not the churn itself but the `updated_at = NOW()` both
+ * UPDATEs carried. `checkBaselineStaleness` (test-runner.ts) reads
+ * `updated_at` as "the suite's content was edited", so a scheduling-flag
+ * write invalidated the fixture baseline — on every single deploy. Those
+ * suites cost money to re-run, so `recordStaleFixture` refused to
+ * re-baseline and wrote `passed: false` instead, forever:
+ * `eu-regulation-search` scored 51% over 24h and 60% in the Codebase
+ * Quality Program's exit measurement without a single real failure.
+ *
+ * Both halves are fixed here: the two blocks now partition the table
+ * (0069 owns classified capabilities, 0066 owns the rest), and neither
+ * touches `updated_at`, because changing which suites the scheduler picks
+ * up is not an edit to what a suite asserts.
+ */
+const UNCLASSIFIED_ONLY = sql`NOT EXISTS (
+        SELECT 1 FROM capabilities c
+         WHERE c.slug = ts.capability_slug AND c.cost_class IS NOT NULL
+      )`;
+
 export async function runMigration0066_ensureEligibilityColumnAndReconcile(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
@@ -581,22 +618,26 @@ export async function runMigration0066_ensureEligibilityColumnAndReconcile(
       ADD COLUMN IF NOT EXISTS scheduled_testing_eligible BOOLEAN NOT NULL DEFAULT FALSE
   `);
 
-  // Data: reconcile eligibility from cost (PR A interim derivation bridge).
+  // Data: reconcile eligibility from cost, ONLY for suites whose capability
+  // has no cost_class. Block 0069 owns every classified capability; see
+  // UNCLASSIFIED_ONLY's comment for why the two must not overlap.
   const update = await tx.execute(sql`
-    UPDATE test_suites
-       SET scheduled_testing_eligible = (external_cost_cents = 0),
-           updated_at = NOW()
-     WHERE scheduled_testing_eligible IS DISTINCT FROM (external_cost_cents = 0)
+    UPDATE test_suites ts
+       SET scheduled_testing_eligible = (ts.external_cost_cents = 0)
+     WHERE ${UNCLASSIFIED_ONLY}
+       AND ts.scheduled_testing_eligible IS DISTINCT FROM (ts.external_cost_cents = 0)
   `);
   const updateCount = (update as { count?: number }).count ?? 0;
 
-  // Post-condition: every row's eligibility matches the cost derivation.
-  // If a row remains mismatched, something raced our UPDATE (or the
-  // expression form differs between engines). Fail boot.
+  // Post-condition: every row this block owns matches the cost derivation.
+  // Scoped identically to the UPDATE — asserting over classified rows too
+  // would fail boot the moment 0069 legitimately disagrees, which is the
+  // whole point of splitting them.
   const checkRows = await tx.execute(sql`
     SELECT COUNT(*)::int AS mismatched
-      FROM test_suites
-     WHERE scheduled_testing_eligible IS DISTINCT FROM (external_cost_cents = 0)
+      FROM test_suites ts
+     WHERE ${UNCLASSIFIED_ONLY}
+       AND ts.scheduled_testing_eligible IS DISTINCT FROM (ts.external_cost_cents = 0)
   `);
   const checkResultRows = Array.isArray(checkRows)
     ? checkRows
@@ -793,8 +834,7 @@ export async function runMigration0069_reconcileEligibilityFromCostClass(
     UPDATE test_suites ts
        SET scheduled_testing_eligible = (
              c.cost_class IN ('free_unlimited', 'free_quota', 'paid_with_free_tier')
-           ),
-           updated_at = NOW()
+           )
       FROM capabilities c
      WHERE c.slug = ts.capability_slug
        AND c.cost_class IS NOT NULL
@@ -1560,6 +1600,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0091_bolStaleValidationRules,
   runMigration0092_x402GrowthBundles,
   runMigration0093_fixtureRecaptureFailures,
+  runMigration0094_clearChurnInvalidatedBaselines,
 ];
 
 /**
@@ -2512,6 +2553,64 @@ export async function runMigration0093_fixtureRecaptureFailures(
   return {
     block: "0093_fixture_recapture_failures",
     outcome: "column ensured (fixture_recapture_failures)",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0094: discard baselines this codebase's own churn invalidated ───
+//
+// One-time repair for the 0066/0069 ping-pong described at
+// UNCLASSIFIED_ONLY. Fixing the churn stops NEW false invalidations, but
+// the suites already carrying a polluted `updated_at` stay stale forever:
+// `checkBaselineStaleness` compares against a timestamp that no longer
+// corresponds to any edit, and `recordStaleFixture` refuses to re-baseline
+// a suite that costs money to run.
+//
+// Scope, deliberately narrow. Only fixture suites that are BOTH
+// external_cost_cents > 0 (so they took the refuse-and-wait path) AND
+// owned by a capability 0069 classifies as free — that intersection IS
+// the ping-pong set, and nothing else lands in it. Genuinely paid-vendor
+// suites (`pep-check`, `sanctions-check`, `adverse-media-check`) are also
+// stale, but for the honest reason the guard was built for: a human has
+// not confirmed their edited input. They are left alone.
+//
+// Clearing the baseline rather than back-dating `updated_at`: the next
+// scheduled run then executes live and captures a fresh baseline through
+// the normal `captureBaseline` path (~1¢ per suite, twice, once). Writing
+// a fabricated timestamp would re-bless output nobody has verified.
+//
+// Idempotent: the WHERE requires `baseline_output IS NOT NULL`, so a
+// re-run after the recapture (which writes a baseline_captured_at newer
+// than updated_at) matches nothing.
+
+export async function runMigration0094_clearChurnInvalidatedBaselines(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  const update = await tx.execute(sql`
+    UPDATE test_suites ts
+       SET baseline_output = NULL,
+           baseline_captured_at = NULL
+      FROM capabilities c
+     WHERE c.slug = ts.capability_slug
+       AND ts.active
+       AND ts.test_mode = 'fixture'
+       AND ts.external_cost_cents > 0
+       AND ts.baseline_output IS NOT NULL
+       AND ts.baseline_captured_at IS NOT NULL
+       AND ts.baseline_captured_at < ts.updated_at
+       AND c.cost_class IN ('free_unlimited', 'free_quota', 'paid_with_free_tier')
+  `);
+  const updateCount = (update as { count?: number }).count ?? 0;
+
+  return {
+    block: "0094_clear_churn_invalidated_baselines",
+    outcome:
+      updateCount === 0
+        ? "no churn-invalidated baselines remain"
+        : `cleared ${updateCount} baseline(s) for live recapture`,
+    rows_affected: updateCount,
     duration_ms: Date.now() - startedAt,
   };
 }
