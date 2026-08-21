@@ -2,13 +2,47 @@
 
 _Last updated: 2026-08-21 (session 1)_
 
-- **Current package:** WP5 — ACCEPTED, merged as `8b4b653` (PR #352), verified live.
-- **Next package:** WP7 (audit finality) — WP6 follows per the package order
+- **Current package:** WP7 — ACCEPTED, merged as `8d6c860` (PR #353), verified live.
+- **Next package:** WP6 — idempotency & replay (WP1 already pinned its acceptance signal)
 - **WP3:** ACCEPTED, merged as `ee7f737` (PR #350), verified live in production — table, all three indexes, and the CHECK constraint reached `validated=true`.
 - **Latest accepted SHA:** `ee7f737` on `main`
 - **Unresolved blockers:** none
 - **Human approvals granted:** program-level autonomy (run continuously; escalate only per CHECK-IN A/B/C)
 - **Awaiting founder:** nothing. One item is logged for *visibility only*, not decision — see "Codex disposition" below.
+
+## Where WP7 landed — the biggest finding of the program
+
+**The audit chain had not been a chain since 2026-05-04.** One parent held
+150,719 children. Found by querying production, not by reading the audit.
+
+`getPreviousHash` ordered by `completed_at DESC`, and Postgres sorts NULLs
+FIRST under DESC, so a `health_probe` row with a null `completed_at` held the
+head permanently. A star has no sequence, so the chain evidenced nothing about
+ordering or deletion — the whole tamper-evidence property.
+
+**And the generator was still running.** `/health/deep` used a data-modifying
+CTE whose DELETE ran against a snapshot predating its own INSERT, so it never
+deleted anything: one leaked row per call on a public endpoint, 200 in August.
+One of the May rows is the 150,719-child parent. Now zero in 20 minutes of
+production traffic.
+
+**My first fix did not fix it.** I made the sort keys agree and left the
+admission key different. The reviewer replayed the rule over 30 days of real
+rows: nine new forks. `completed_at` is stamped from a clock read BEFORE the
+row's own `created_at` default (median −1.5 ms), so it cannot define a head at
+all. The head is now `chain_seq`, assigned at hash time — the last row the
+worker actually hashed.
+
+The general lesson, and it is not specific to hashing: **a head derived from a
+wall-clock column is not a head.** Wall clocks are not monotone with the order
+work actually happens in.
+
+History is deliberately not rewritten. Recomputing 863,946 hashes would erase
+the evidence the break happened. Single-parent is now CHECKED daily by a
+scheduled job — a unique index would abort boot on the existing forks.
+
+Verified live: column and sequence present, exactly one seeded head (a
+completed row, continuing the chain rather than starting a second root).
 
 ## Where WP5 landed
 

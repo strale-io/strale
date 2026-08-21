@@ -1,6 +1,8 @@
 package: WP7
 title: Audit finality — the chain must actually be a chain
-status: REMEDIATED
+status: ACCEPTED
+merged_sha: 8d6c860
+merged_pr: 353
 depends_on: [WP4]
 risks: [CR-04]
 
