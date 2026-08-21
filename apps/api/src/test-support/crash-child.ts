@@ -14,6 +14,13 @@
  *
  * Contract with the parent: print CHILD_DEBITED once the platform has
  * responded 202 (debit committed, execution in flight), then die instantly.
+ *
+ * console.* is deliberate here and allowlisted in
+ * scripts/console-allowlist.json. stdout IS the protocol with the parent
+ * process — the structured logger writes shaped JSON to a different sink, and
+ * this process is about to SIGKILL itself, so anything buffered or asynchronous
+ * would never be flushed. The F-0-014 rule targets application logging, which
+ * this is not.
  */
 
 import { randomUUID } from "node:crypto";
