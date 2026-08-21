@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { eq, and, gte, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { assertBillableOutput } from "../lib/execution-outcome.js";
+import {
+  assertBillableOutput,
+  shouldCountAgainstCapability,
+} from "../lib/execution-outcome.js";
 import {
   wallets,
   walletTransactions,
@@ -1439,8 +1442,13 @@ async function executeFreeTier(
 
     // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
     // by column default; jobs/integrity-hash-retry.ts will fill it in.
-    fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
-    fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
+    // WP4 remediation: a refusal is the guarded executor working, not a broken
+    // capability. Recording it here delisted capabilities for correctly
+    // refusing bad input — the quality floor is armed in production.
+    if (shouldCountAgainstCapability(err)) {
+      fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
+      fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
+    }
     recordQuality({
       transactionId: txnRecord.id,
       responseTimeMs: latencyMs,
@@ -1600,8 +1608,13 @@ async function executeFreeTierAuthenticated(
 
     // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
     // by column default; jobs/integrity-hash-retry.ts will fill it in.
-    fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
-    fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
+    // WP4 remediation: a refusal is the guarded executor working, not a broken
+    // capability. Recording it here delisted capabilities for correctly
+    // refusing bad input — the quality floor is armed in production.
+    if (shouldCountAgainstCapability(err)) {
+      fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
+      fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
+    }
     recordQuality({
       transactionId: txnRecord.id,
       responseTimeMs: latencyMs,
@@ -1679,6 +1692,13 @@ async function executeSync(
         error: string;
         transactionId: string;
         balanceAfter: number;
+        /**
+         * Whether this failure should count against the capability's health.
+         * Decided where the thrown value is still in scope; by the time the
+         * caller records the breaker failure it has only the message string,
+         * and a refusal is indistinguishable from a fault once flattened.
+         */
+        countsAgainstCapability: boolean;
       };
 
   // Cert-audit Y-5: catch postgres timeout codes from the wallet tx so
@@ -1864,6 +1884,10 @@ async function executeSync(
         error: errorMessage,
         transactionId: txnRecord.id,
         balanceAfter: wallet.balanceCents,
+        // Classified HERE, where the thrown value is still in scope. The caller
+        // that records the breaker failure sees only the message string, and a
+        // refusal is indistinguishable from a real fault once flattened to text.
+        countsAgainstCapability: shouldCountAgainstCapability(err),
       };
     }
     });
@@ -1921,7 +1945,7 @@ async function executeSync(
       },
       { label: "activation-hook", context: { userId: user.id, slug: capability.slug } },
     );
-  } else if (result.errorCode === "execution_failed") {
+  } else if (result.errorCode === "execution_failed" && result.countsAgainstCapability !== false) {
     fireAndForget(() => recordFailure(capability.slug, result.error), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
     fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
     recordQuality({
@@ -2453,8 +2477,13 @@ async function executeInBackground(
     // CCO P0 #6: row was 'deferred' until the UPDATE above flipped it
     // to 'pending'. Retry worker picks it up on its next tick.
     // Record failure for circuit breaker + quality
-    fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
-    fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
+    // WP4 remediation: a refusal is the guarded executor working, not a broken
+    // capability. Recording it here delisted capabilities for correctly
+    // refusing bad input — the quality floor is armed in production.
+    if (shouldCountAgainstCapability(err)) {
+      fireAndForget(() => recordFailure(capability.slug, errorMessage), { label: "circuit-breaker-record-failure", context: { slug: capability.slug } });
+      fireAndForget(() => triggerOnFailure(capability.slug), { label: "trigger-on-failure", context: { slug: capability.slug } });
+    }
     recordQuality({
       transactionId,
       responseTimeMs: latencyMs,

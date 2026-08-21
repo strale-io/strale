@@ -425,11 +425,27 @@ export class UnbillableOutputError extends Error {
   constructor(
     public readonly slug: string,
     public readonly assessment: OutputAssessment,
+    /**
+     * The executor's own error text, when it had one.
+     *
+     * Carried through rather than replaced by a generic string. Review finding:
+     * the first version discarded it, so an output of
+     * `{error: "Bolagsverket returned HTTP 503", status: 503}` reached
+     * `transactions.error` as "Capability returned an error marker rather than
+     * output" — which classifyTransactionFailure files as `internal`, i.e.
+     * Strale's bug, when the original text would have matched UPSTREAM_RE and
+     * filed correctly as `upstream`. That misfiling is not cosmetic: the
+     * quality floor is armed in production and `internal` counts against a
+     * capability while `upstream` is read differently.
+     */
+    public readonly upstreamMessage?: string | null,
   ) {
     super(
-      assessment.quality_flags.includes("executor_error_marker")
-        ? "Capability returned an error marker rather than output"
-        : "Capability returned no usable output",
+      upstreamMessage
+        ? `Capability returned an error rather than output: ${upstreamMessage}`
+        : assessment.quality_flags.includes("executor_error_marker")
+          ? "Capability returned an error marker rather than output"
+          : "Capability returned no usable output",
     );
     this.name = "UnbillableOutputError";
   }
@@ -445,6 +461,35 @@ export class UnbillableOutputError extends Error {
 export function assertBillableOutput(slug: string, output: unknown): void {
   const outcome = outcomeFromOutput(slug, output);
   if (!outcome.billable) {
-    throw new UnbillableOutputError(slug, outcome.output_assessment!);
+    throw new UnbillableOutputError(
+      slug,
+      outcome.output_assessment!,
+      outcome.error_message,
+    );
   }
+}
+
+/**
+ * Should this failure count against the capability's health?
+ *
+ * The consumer `counts_against_capability` was missing. Without it the field
+ * was documentation rather than behaviour: a refusal still called
+ * `recordFailure` + `triggerOnFailure`, so the guarded executor protecting
+ * vendor budget looked identical to a capability that was broken. The quality
+ * floor is armed in production — quarantine below 70% over 30 days — so that is
+ * not a reporting nicety. It is how a capability gets delisted for behaving
+ * correctly.
+ *
+ * Accepts a thrown value or a bare message string, because one call site has
+ * only the latter.
+ */
+export function shouldCountAgainstCapability(error: unknown): boolean {
+  if (error instanceof UnbillableOutputError) {
+    // The capability resolved with something unusable. That IS its fault —
+    // unless the marker says the step never ran.
+    return !error.assessment.quality_flags.some(
+      (f) => f === "step_skipped" || f === "step_unavailable",
+    );
+  }
+  return outcomeFromError(error).counts_against_capability;
 }

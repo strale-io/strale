@@ -188,9 +188,33 @@ describe("contract validation informs quality without blocking the charge", () =
 
 describe("a refusal is not a capability fault", () => {
   it.each([
-    ["refused", new CapabilityInvocationRefusedError("x", "test-reason"), "capability_refused", "caller"],
-    ["budget", new BudgetExhaustedError("x", "daily", 1, 1), "budget_exhausted", "strale"],
-    ["unclassified", new CapabilityNotClassifiedError("x"), "not_classified", "strale"],
+    // Constructed with the REAL signatures. Review finding: the first version
+    // passed the wrong arity to all three, and tsconfig excludes *.test.ts so
+    // `tsc --noEmit` never caught it. The assertions held via `instanceof`, so
+    // it was not a false green — but it did not exercise the shapes production
+    // throws, which is the only reason to build them at all.
+    [
+      "refused",
+      new CapabilityInvocationRefusedError("x", "paid_external", "scheduled_test"),
+      "capability_refused",
+      "caller",
+    ],
+    [
+      "budget",
+      new BudgetExhaustedError(
+        "x",
+        { slug: "x", cost_class: "paid_external", quota_window: "daily", quota_cap: 10 } as never,
+        { kind: "scheduled_test" } as never,
+      ),
+      "budget_exhausted",
+      "strale",
+    ],
+    [
+      "unclassified",
+      new CapabilityNotClassifiedError("x", { kind: "scheduled_test" } as never),
+      "not_classified",
+      "strale",
+    ],
   ])("%s: unbillable, not retryable, not counted", (_label, err, cls, fault) => {
     const outcome = outcomeFromError(err);
     expect(outcome.failure_class).toBe(cls);

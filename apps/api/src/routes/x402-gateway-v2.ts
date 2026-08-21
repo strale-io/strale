@@ -45,6 +45,7 @@ import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { executeSolution } from "../lib/solution-executor.js";
 import {
   aggregateSolutionOutcome,
+  assertBillableOutput,
   outcomeFromOutput,
 } from "../lib/execution-outcome.js";
 import { logError } from "../lib/log.js";
@@ -1140,6 +1141,50 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   );
 
   if (!outcome.billable) {
+    // WP4 remediation. Two things the first version got wrong by returning
+    // early:
+    //
+    // 1. Audit divergence. The wallet rail refunds a gated run AND still
+    //    writes a terminal transaction row with its full audit trail, so the
+    //    run appears in /v1/audit. Returning here left the x402 run invisible
+    //    — a cross-rail inconsistency in exactly the dimension this package
+    //    claims to unify.
+    // 2. Free re-execution. Without a paymentHash row the cert-audit C9 replay
+    //    cache has nothing to match, so the same signed authorization could be
+    //    replayed until expiry, re-running the pre-gate steps at Strale's
+    //    external-API cost with zero revenue. A gate is the deterministic
+    //    repeat case — a registry that is down stays down — so this is the
+    //    worst place to leave that open.
+    //
+    // Recorded unsettled (DEC-14): the row proves the call happened and
+    // carries no payment.
+    try {
+      await recordX402Transaction({
+        clientMeta: extractClientMeta(c.req, {
+          src: c.req.query("src"),
+          ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
+        }) ?? null,
+        capabilityId: null,
+        solutionSlug: sol.slug,
+        slug: sol.slug,
+        inputs,
+        output: { steps: result.steps, errors: result.errors },
+        // Same sources the success path uses below: the executor's own measured
+        // latency, and the "mixed" transparency tag a bundle carries because
+        // its steps may differ.
+        latencyMs: result.latency_ms,
+        priceCents: 0,
+        priceUsd: sol.x402PriceUsd,
+        transparencyTag: "mixed",
+        settlementId: undefined,
+        payerAddress: verified ? extractPayerAddress(verified) : null,
+        error: outcome.error_message ?? "no step produced usable output",
+        paymentHash,
+      });
+    } catch (recordErr) {
+      logError("x402-solution-unbillable-record-failed", recordErr, { slug: sol.slug });
+    }
+
     return c.json(
       {
         error:
@@ -1403,6 +1448,16 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   let result: Awaited<ReturnType<typeof executor>>;
   try {
     result = await executor(inputs);
+    // WP4 remediation: the capability rail was missed in the first pass while
+    // the package's exit condition claimed every rail was covered. Without
+    // this, `POST /x402/:slug` settles on any resolution while the same
+    // capability reached through `POST /v1/do` with an X-PAYMENT header does
+    // not — a NEW cross-rail asymmetry introduced by the fix for the old one.
+    //
+    // Raised inside the try on purpose: the catch below already records a
+    // failed x402 transaction and deliberately does not settle (CRIT-9,
+    // DEC-14), which is exactly the handling an unusable output needs.
+    assertBillableOutput(cap.slug, result.output);
   } catch (err) {
     // CRIT-9: executor failure was previously logged-only — no transactions
     // row, no audit record, no compliance evidence the call ever happened.
