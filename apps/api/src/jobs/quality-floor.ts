@@ -439,14 +439,14 @@ export async function runQualityFloorOnce(): Promise<{
           ) lp ON true
           WHERE c.is_active = true
         )
-        SELECT s.slug, COALESCE(SUM(t.price_cents), 0)::int AS cents
+        SELECT s.slug, COALESCE(SUM(rt.price_cents), 0)::int AS cents
         FROM scope s
-        JOIN transactions t ON t.capability_id = s.id
-        WHERE t.created_at > s.win_start
-          AND t.status = 'completed'
-          AND t.deleted_at IS NULL
-          AND COALESCE(t.is_free_tier, false) = false
-          AND (t.user_id IS NULL OR t.user_id NOT IN (
+        JOIN transactions rt ON rt.capability_id = s.id
+        WHERE rt.created_at > s.win_start
+          AND rt.status = 'completed'
+          AND rt.deleted_at IS NULL
+          AND COALESCE(rt.is_free_tier, false) = false
+          AND (rt.user_id IS NULL OR rt.user_id NOT IN (
             SELECT id FROM users
             WHERE email LIKE ANY(${INTERNAL_EMAIL_LIKE_PATTERNS})
                OR email = ANY(${EXTRA_EXCLUDED_EMAILS})
