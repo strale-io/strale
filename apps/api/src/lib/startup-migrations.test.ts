@@ -2093,7 +2093,19 @@ describe("startup-migrations — block identity is unique, not just the function
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
     const src = readFileSync(resolve(import.meta.dirname, "startup-migrations.ts"), "utf8");
+    // Resolved, not just literal. Four return sites write `block: BLOCK,` where
+    // BLOCK is a const -- and one of those four is
+    // runMigration0100_relistUrlToMarkdown, the exact block the collision was
+    // about. A literals-only regex could not see it, so the invariant was
+    // decorative for precisely the case its docstring names. Ninth hollow
+    // assertion in this program; this one was decorative from birth rather than
+    // broken by a later edit.
     const labels = [...src.matchAll(/^\s*block: "([^"]+)",$/gm)].map((m) => m[1]);
+    const constLabels = [...src.matchAll(/const BLOCK = "([^"]+)"/g)].map((m) => m[1]);
+    labels.push(...constLabels);
+    expect(constLabels.length, "block: BLOCK return sites must be resolvable")
+      .toBeGreaterThanOrEqual(2);
+    expect(labels).toContain("0100_relistUrlToMarkdown");
     expect(labels.length).toBeGreaterThanOrEqual(10);
     // Grouped by NUMBER, not deduped outright: several blocks legitimately
     // return the same label from more than one path (an early skip and a

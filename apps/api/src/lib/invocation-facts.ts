@@ -123,6 +123,43 @@ export interface InvocationFact {
  */
 export const INVOCATION_FACT_DELETE_GUARD_DAYS = 35;
 
+/**
+ * Record a fact for a CUSTOMER-SERVING invocation.
+ *
+ * Exists because the fields that decide whether the floor can READ a row turned
+ * out to be the easiest thing in the package to break and the hardest to guard.
+ * Five review rounds produced nine hollow assertions, and the last three were
+ * all the same shape: a source-text guard pinned one writer file, and the same
+ * one-token change stayed available in the next one. Reviewers kept finding it
+ * because the guards were chasing call sites instead of removing them.
+ *
+ * So `context_kind` is no longer something a call site can get wrong — it is
+ * written here, once, and customer rails cannot express any other value. A
+ * mutation at a call site cannot make a paid call look like harness traffic,
+ * because call sites no longer say.
+ *
+ * `is_free_tier` is derived here too, from the same two facts the transaction
+ * row derives it from: the capability is free-tier AND there is no account. An
+ * authenticated caller of a free-tier capability is ordinary traffic on both
+ * sides, which is what keeps the fact branch and the pre-epoch transaction
+ * branch measuring the same population.
+ */
+export async function recordCustomerInvocation(
+  fact: Omit<InvocationFact, "contextKind" | "isFreeTier"> & {
+    /** The capability's own free-tier flag, not a decision about this call. */
+    capabilityIsFreeTier: boolean;
+  },
+): Promise<void> {
+  const { capabilityIsFreeTier, ...rest } = fact;
+  await recordInvocation({
+    ...rest,
+    contextKind: "customer_paid",
+    // Anonymous zero-cost traffic only. The authenticated free-tier path writes
+    // a transaction with is_free_tier unset, so its facts must match.
+    isFreeTier: capabilityIsFreeTier && (rest.userId ?? null) === null,
+  });
+}
+
 /** Marker event type. The floor reads this; nothing else writes it. */
 export const FACT_WRITE_FAILED_EVENT = "invocation_fact_write_failed";
 

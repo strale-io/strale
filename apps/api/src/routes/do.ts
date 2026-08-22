@@ -12,7 +12,7 @@ import {
   outcomeFromOutput,
   shouldCountAgainstCapability,
 } from "../lib/execution-outcome.js";
-import { recordInvocation } from "../lib/invocation-facts.js";
+import { recordCustomerInvocation } from "../lib/invocation-facts.js";
 import {
   wallets,
   walletTransactions,
@@ -270,6 +270,11 @@ type CapabilityInfo = {
   dataSource: string | null;
   dataClassification: string | null;
   freshnessCategory: string | null;
+  // Read from the DB already; declared here because the invocation-fact writer
+  // derives `is_free_tier` from it rather than taking that decision from a call
+  // site. Every source-text guard on that field was found hollow one file at a
+  // time; removing the field from call sites ends the category.
+  isFreeTier: boolean;
   dataUpdateCycleDays: number | null;
   datasetLastUpdated: Date | null;
   // SA.2b (F-A-003, F-A-009): manifest-declared PII classification.
@@ -344,7 +349,6 @@ export async function spendCapWouldExceed(
  */
 interface InvocationActor {
   userId: string | null;
-  isFreeTier: boolean;
 }
 
 /**
@@ -379,23 +383,21 @@ async function executeWithRetry(
             baseDelayMs: 1000,
             slug: capability.slug,
           });
-    await recordInvocation({
+    await recordCustomerInvocation({
       capabilitySlug: capability.slug,
       rail: "v1_do",
-      contextKind: "customer_paid",
       userId: actor.userId,
-      isFreeTier: actor.isFreeTier,
+      capabilityIsFreeTier: capability.isFreeTier,
       latencyMs: Date.now() - startedAt,
       outcome: outcomeFromOutput(capability.slug, result?.output),
     });
     return result;
   } catch (err) {
-    await recordInvocation({
+    await recordCustomerInvocation({
       capabilitySlug: capability.slug,
       rail: "v1_do",
-      contextKind: "customer_paid",
       userId: actor.userId,
-      isFreeTier: actor.isFreeTier,
+      capabilityIsFreeTier: capability.isFreeTier,
       latencyMs: Date.now() - startedAt,
       outcome: outcomeFromError(err),
     });
@@ -1412,7 +1414,7 @@ async function executeFreeTier(
     .returning({ id: transactions.id });
 
   try {
-    const capResult = await executeWithRetry(executor, executionInput, capability, { userId: null, isFreeTier: true });
+    const capResult = await executeWithRetry(executor, executionInput, capability, { userId: null });
     assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
@@ -1671,7 +1673,7 @@ async function executeFreeTierAuthenticated(
     .returning({ id: transactions.id });
 
   try {
-    const capResult = await executeWithRetry(executor, executionInput, capability, { userId: user.id, isFreeTier: false });
+    const capResult = await executeWithRetry(executor, executionInput, capability, { userId: user.id });
     assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
@@ -1962,7 +1964,7 @@ async function executeSync(
 
     // Execute the capability
     try {
-      const capResult = await executeWithRetry(executor, executionInput, capability, { userId: user.id, isFreeTier: false });
+      const capResult = await executeWithRetry(executor, executionInput, capability, { userId: user.id });
       assertBillableOutput(capability.slug, capResult.output);
       const latencyMs = Date.now() - startTime;
 
@@ -2406,7 +2408,7 @@ async function executeAsync(
     `async-exec:${capability.slug}:${transactionId}`,
     executeInBackground(
       db,
-      { userId: user.id, isFreeTier: false },
+      { userId: user.id },
       executor,
       executionInput,
       transactionId,

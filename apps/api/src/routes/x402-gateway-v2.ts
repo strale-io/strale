@@ -52,7 +52,7 @@ import {
   outcomeFromError,
   outcomeFromOutput,
 } from "../lib/execution-outcome.js";
-import { recordInvocation } from "../lib/invocation-facts.js";
+import { recordCustomerInvocation } from "../lib/invocation-facts.js";
 import { logError } from "../lib/log.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import { getProcessingLocation } from "../lib/processing-location.js";
@@ -1143,7 +1143,6 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
     // honest value, and it matches how x402 transaction rows already record
     // the payer (2,592 paid rows in a 30-day window carry a NULL user_id).
     userId: null,
-    isFreeTier: false,
   });
 
   if (!result) {
@@ -1545,10 +1544,12 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   let factRecorded = false;
   try {
     result = await executor(inputs);
-    await recordInvocation({
+    await recordCustomerInvocation({
       capabilitySlug: cap.slug,
       rail: "x402_gateway",
-      contextKind: "customer_paid",
+      // x402 callers have no account and never buy on the free tier.
+      userId: null,
+      capabilityIsFreeTier: false,
       latencyMs: Date.now() - startMs,
       outcome: outcomeFromOutput(cap.slug, result.output),
     });
@@ -1574,10 +1575,11 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     const latencyMs = Date.now() - startMs;
     const sanitized = sanitizeFailureReason(message);
     if (!factRecorded) {
-      await recordInvocation({
+      await recordCustomerInvocation({
         capabilitySlug: cap.slug,
         rail: "x402_gateway",
-        contextKind: "customer_paid",
+        userId: null,
+        capabilityIsFreeTier: false,
         latencyMs,
         outcome: outcomeFromError(err),
       });

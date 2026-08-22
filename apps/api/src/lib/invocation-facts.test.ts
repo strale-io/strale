@@ -10,7 +10,7 @@
 
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 
 import { foldTrafficRows, type FloorTrafficRow } from "../jobs/quality-floor.js";
 import { evaluateFloor, DEFAULT_FLOOR_CONFIG } from "./quality-floor.js";
@@ -226,7 +226,7 @@ describe("no serving path may skip the fact", () => {
     for (const file of walk(SRC)) {
       const body = readFileSync(file, "utf8");
       if (!body.includes(`kind: "customer_paid"`)) continue;
-      if (!body.includes("recordInvocation(")) {
+      if (!/record(Customer)?Invocation\(/.test(body)) {
         offenders.push(file.slice(SRC.length + 1).replace(/\\/g, "/"));
       }
     }
@@ -234,7 +234,7 @@ describe("no serving path may skip the fact", () => {
       offenders,
       "These files invoke a capability as a paying customer but record no " +
         "invocation fact, so the quality floor cannot see their traffic. " +
-        "Call recordInvocation() from lib/invocation-facts.ts on BOTH the " +
+        "Call recordCustomerInvocation() from lib/invocation-facts.ts on BOTH the " +
         "success and the failure path.",
     ).toEqual([]);
   });
@@ -252,9 +252,11 @@ describe("no serving path may skip the fact", () => {
     const covered = walk(SRC)
       .filter((f) => {
         const body = readFileSync(f, "utf8");
-        return body.includes(`kind: "customer_paid"`) && body.includes("recordInvocation(");
+        return (
+          body.includes(`kind: "customer_paid"`) && /record(Customer)?Invocation\(/.test(body)
+        );
       })
-      .map((f) => f.slice(SRC.length + 1).replace(/\\/g, "/"))
+      .map((f) => f.slice(SRC.length + 1).split(sep).join("/"))
       .sort();
 
     expect(covered).toEqual([
@@ -283,7 +285,7 @@ describe("no serving path may skip the fact", () => {
       "routes/x402-gateway-v2.ts",
     ]) {
       const body = readFileSync(join(SRC, rel), "utf8");
-      const calls = (body.match(/recordInvocation\(\{/g) ?? []).length;
+      const calls = (body.match(/record(?:Customer)?Invocation\(\{/g) ?? []).length;
       const fromError = (body.match(/outcomeFromError\(/g) ?? []).length;
       if (calls < 2 || fromError < 1) {
         shortfall.push(`${rel}: ${calls} record site(s), ${fromError} error-outcome derivation(s)`);
@@ -297,32 +299,60 @@ describe("no serving path may skip the fact", () => {
     ).toEqual([]);
   });
 
-  it("a fact the floor cannot read is worse than no fact — the visibility fields are pinned", () => {
-    // The whole outcome machinery is mutation-checked. The fields that decide
-    // whether the row is READ AT ALL were not, and a one-token change silently
-    // nullified the package with a green suite: setting the solution step's
-    // `isFreeTier` to a literal `true` makes every bundle fact fail the floor's
-    // `AND f.is_free_tier = false` filter, so bundle-only capabilities go back
-    // to being invisible — the single defect WP9 exists to close.
+  it("no serving path can express the fields that decide whether its fact is readable", () => {
+    // Rounds 3, 4 and 5 each found the same one-token kill in a file the
+    // previous round's guard did not cover: set a writer's `contextKind` to
+    // "internal_test" or its `isFreeTier` to true, and the floor stops reading
+    // that rail entirely -- a silent disarm, with a green suite. Each round the
+    // fix was another source-text assertion, and each round it moved one file
+    // over.
     //
-    // The headline test misses it because it hand-builds FloorTrafficRows and
-    // feeds the fold; it never exercises the writer. These assert the writer.
-    const solutions = readFileSync(join(SRC, "lib/solution-executor.ts"), "utf8");
-    expect((solutions.match(/isFreeTier: actor\.isFreeTier/g) ?? []).length).toBe(2);
-    expect((solutions.match(/userId: actor\.userId/g) ?? []).length).toBe(2);
-    expect((solutions.match(/contextKind: "customer_paid"/g) ?? []).length).toBe(2);
-    expect(solutions).not.toContain("isFreeTier: true");
+    // The guards were chasing call sites instead of removing them. Customer
+    // rails now call recordCustomerInvocation, which sets `contextKind` itself
+    // and DERIVES `isFreeTier` from the capability flag plus the absence of an
+    // account -- the same two facts the transaction row derives it from. So
+    // there is nothing at a call site left to get wrong, and this asserts that
+    // rather than asserting the absence of a particular wrong value.
+    const writers = [
+      "routes/do.ts",
+      "routes/solution-execute.ts",
+      "routes/x402-gateway-v2.ts",
+      "lib/solution-executor.ts",
+    ];
+    const offenders: string[] = [];
+    for (const rel of writers) {
+      const body = readFileSync(join(SRC, rel), "utf8");
+      if (/contextKind:/.test(body)) offenders.push(`${rel} sets contextKind`);
+      if (/isFreeTier:\s*(true|false)/.test(body) && !/capabilityIsFreeTier/.test(body)) {
+        offenders.push(`${rel} sets a literal isFreeTier on a fact`);
+      }
+      if (/recordInvocation\(\{/.test(body)) {
+        offenders.push(`${rel} calls recordInvocation directly instead of recordCustomerInvocation`);
+      }
+    }
+    expect(
+      offenders,
+      "A customer-serving rail must not decide these fields. Call " +
+        "recordCustomerInvocation and let one authority derive them.",
+    ).toEqual([]);
 
-    // Same for the two direct rails. `/v1/do` threads a required actor through
-    // four execution paths; x402 has no account by design and is never
-    // free-tier, so its literals are the correct values and are pinned as such.
-    const doRoute = readFileSync(join(SRC, "routes/do.ts"), "utf8");
-    expect((doRoute.match(/isFreeTier: actor\.isFreeTier/g) ?? []).length).toBe(2);
-    expect((doRoute.match(/userId: actor\.userId/g) ?? []).length).toBe(2);
+    // And the authority is genuinely singular: exactly one place in the whole
+    // source writes the customer context kind.
+    const all = walk(SRC)
+      .filter((f) => /contextKind: "customer_paid"/.test(readFileSync(f, "utf8")))
+      .map((f) => f.slice(SRC.length + 1).split(sep).join("/"));
+    expect(all).toEqual(["lib/invocation-facts.ts"]);
+  });
 
-    const x402 = readFileSync(join(SRC, "routes/x402-gateway-v2.ts"), "utf8");
-    expect((x402.match(/contextKind: "customer_paid"/g) ?? []).length).toBe(2);
-    expect(x402).not.toContain("isFreeTier: true");
+  it("derives free-tier the same way the transaction row does", () => {
+    // Anonymous zero-cost traffic only. An AUTHENTICATED caller of a free-tier
+    // capability writes a transaction with is_free_tier unset, so its fact must
+    // agree -- otherwise the fact branch and the pre-epoch transaction branch
+    // measure different populations across the epoch boundary.
+    const src = readFileSync(join(SRC, "lib/invocation-facts.ts"), "utf8");
+    expect(src).toContain(
+      "isFreeTier: capabilityIsFreeTier && (rest.userId ?? null) === null,",
+    );
   });
 
   it("the solution executor assesses the enriched output, not the raw result", () => {
