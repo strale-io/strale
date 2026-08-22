@@ -26,7 +26,11 @@ import {
   BudgetExhaustedError,
 } from "../capabilities/guarded-executor.js";
 import { sanitizeFailureReason } from "./sanitize.js";
-import { outcomeFromError, outcomeFromOutput } from "./execution-outcome.js";
+import {
+  outcomeFromError,
+  outcomeFromOutput,
+  outcomeFromPlatformFault,
+} from "./execution-outcome.js";
 import { recordPaidInvocation } from "./invocation-facts.js";
 import { enrichCompanyOutput } from "../capabilities/lib/enrich-company-output.js";
 import { logWarn } from "./log.js";
@@ -515,6 +519,12 @@ export async function executeSolution(
       }
 
       const stepStartMs = Date.now();
+      // Which phase threw. This try covers OUR input mapping and OUR output
+      // enrichment as well as the capability's executor, and WP9 turns what
+      // used to be an unrecorded step failure into a row an armed floor reads.
+      // Without this, a bug in our own plumbing counts toward delisting a
+      // capability that did nothing wrong.
+      let phase: "input" | "executor" | "enrich" = "input";
       try {
         // Map solution inputs to step inputs using seed-data syntax
         const stepInput: Record<string, unknown> = {};
@@ -553,7 +563,9 @@ export async function executeSolution(
           if (v === null || v === undefined) delete stepInput[k];
         }
 
+        phase = "executor";
         const result = await executor(stepInput);
+        phase = "enrich";
         // Enrich company data outputs with derived fields (e.g., vat_number)
         const output = enrichCompanyOutput(
           step.capabilitySlug,
@@ -591,7 +603,8 @@ export async function executeSolution(
           solutionId,
           userId: actor.userId,
           latencyMs: Date.now() - stepStartMs,
-          outcome: outcomeFromError(err),
+          outcome:
+            phase === "executor" ? outcomeFromError(err) : outcomeFromPlatformFault(err),
         });
         stepErrors.push(`${step.capabilitySlug}: ${msg.slice(0, 200)}`);
         stepResults[step.capabilitySlug] = { error: sanitizeFailureReason(msg) };

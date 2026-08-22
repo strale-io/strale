@@ -391,6 +391,33 @@ export function outcomeFromError(error: unknown): ExecutionOutcome {
   };
 }
 
+/**
+ * Strale's own code threw, not the capability's.
+ *
+ * The solution executor's try block spans more than the executor call: it also
+ * covers input mapping and output enrichment, both of which are ours. Before
+ * WP9 that did not matter, because a solution step produced no per-capability
+ * row at all -- nothing reached the floor either way. WP9 makes those rows
+ * real, so a bug in our own step plumbing would arrive as fault "provider" and
+ * count toward delisting a capability that did nothing wrong, on a floor that
+ * is armed.
+ *
+ * counts_against_capability is false for the same reason a refusal does not
+ * count: the capability is not the thing that broke.
+ */
+export function outcomeFromPlatformFault(error: unknown): ExecutionOutcome {
+  return {
+    success: false,
+    failure_class: "internal_error",
+    billable: false,
+    retryable: false,
+    fault: "strale",
+    output_assessment: null,
+    counts_against_capability: false,
+    error_message: error instanceof Error ? error.message : String(error),
+  };
+}
+
 /** A gate step reported the bundle cannot do what it was sold for. */
 export function outcomeFromGate(
   gate: { capabilitySlug: string; field: string },

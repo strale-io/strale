@@ -14,7 +14,7 @@ import { join, sep } from "node:path";
 
 import { foldTrafficRows, type FloorTrafficRow } from "../jobs/quality-floor.js";
 import { evaluateFloor, DEFAULT_FLOOR_CONFIG } from "./quality-floor.js";
-import { outcomeFromError } from "./execution-outcome.js";
+import { outcomeFromError, outcomeFromPlatformFault } from "./execution-outcome.js";
 import { CapabilityRefusalError } from "./capability-refusal.js";
 import { TOS_REFUSAL_MARKER } from "./tos-blocklist.js";
 import { classifyTransactionFailure } from "./transaction-failure-taxonomy.js";
@@ -177,6 +177,35 @@ describe("the floor can see a capability that only runs inside solutions", () =>
     );
     expect(classifyTransactionFailure(unrecognised.message)).toBe("internal");
     expect(outcomeFromError(unrecognised).counts_against_capability).toBe(false);
+  });
+
+  it("a bug in our own step plumbing is not the capability's fault", () => {
+    // The solution executor's try spans input mapping and output enrichment as
+    // well as the executor call. Before WP9 a step failure produced no
+    // per-capability row at all, so it did not matter; WP9 makes those rows
+    // real, and a bug in OUR plumbing would have arrived as fault "provider"
+    // and counted toward delisting a capability that did nothing wrong -- on a
+    // floor that is armed.
+    const ours = outcomeFromPlatformFault(new TypeError("Cannot read properties of undefined"));
+    expect(ours.fault).toBe("strale");
+    expect(ours.counts_against_capability).toBe(false);
+    expect(ours.billable).toBe(false);
+
+    // And the executor phase still attributes to the provider, or the whole
+    // point is lost in the other direction.
+    const theirs = outcomeFromError(new Error("Zefix API error: HTTP 503"));
+    expect(theirs.fault).toBe("provider");
+    expect(theirs.counts_against_capability).toBe(true);
+
+    // The step loop must choose between them on the phase, not record one
+    // unconditionally.
+    const body = readFileSync(join(SRC, "lib/solution-executor.ts"), "utf8");
+    expect(body).toContain('let phase: "input" | "executor" | "enrich" = "input";');
+    expect(body).toContain('phase = "executor";');
+    expect(body).toContain('phase = "enrich";');
+    expect(body).toContain(
+      'phase === "executor" ? outcomeFromError(err) : outcomeFromPlatformFault(err)',
+    );
   });
 
   it("still counts what is genuinely the capability's problem", () => {
@@ -431,7 +460,13 @@ describe("no serving path may skip the fact", () => {
       const marker =
         /(?:record(?:Paid|Anonymous)?Invocation|recordFactWithoutHoldingTheLock)\(\{/g;
       for (let m = marker.exec(src); m !== null; m = marker.exec(src)) {
-        blocks.push(src.slice(m.index, m.index + 400));
+        // Bounded at the call's own closing `});`, not a fixed window. The two
+        // record sites in do.ts are 386 characters apart, so a 400-char window
+        // had 14 characters of slack: shrink the code between them and block 0
+        // swallows site 1's field, at which point forging site 0 passes.
+        const rest = src.slice(m.index);
+        const close = rest.indexOf("});");
+        blocks.push(close === -1 ? rest : rest.slice(0, close));
       }
       // Both rails record on the success path and the failure path.
       expect(blocks.length, `${rel} record sites`).toBe(2);

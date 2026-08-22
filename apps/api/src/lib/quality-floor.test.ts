@@ -137,6 +137,26 @@ describe("holed evidence must not spend the quarantine budget", () => {
     const [d] = evaluateFloor([broken("holed")], DEFAULT_FLOOR_CONFIG, new Set(["holed"]));
     expect(d.action).toBe("none");
     expect(d.deactivateProposal).toBe(true);
+    // And the marker the job reads to tell "we looked and it is fine" from "we
+    // could not look". The consumer side was pinned by source text; the
+    // producer was not, so setting it false survived — inert today because the
+    // job ORs it with its own maps, but the field exists precisely so that
+    // redundancy is real rather than assumed.
+    expect(d.suppressedForIncompleteEvidence).toBe(true);
+  });
+
+  it("marks only the suppressed ones", () => {
+    const [clean] = evaluateFloor(
+      [{
+        slug: "clean", lifecycleState: "active", visible: true, x402Enabled: true,
+        eligibleCalls: 100, completedCalls: 0, revenueCents: 0,
+        distinctFailureDays: 5, recentEligibleCalls: 0, recentCompletedCalls: 0,
+      }],
+      DEFAULT_FLOOR_CONFIG,
+      new Set(),
+    );
+    expect(clean.action).toBe("quarantine");
+    expect(clean.suppressedForIncompleteEvidence).toBeUndefined();
   });
 });
 
