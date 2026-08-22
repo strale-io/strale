@@ -338,3 +338,78 @@ review_round_2:
     - >
       Tests are excluded from tsconfig repo-wide, which is how N-6 stayed
       invisible. That is a repo-wide gap, not a WP9 one.
+
+# -- Independent review round 3: FAIL, three blocking findings, all remediated --
+review_round_3:
+  verdict: FAIL_REMEDIATION_REQUIRED
+  blk1_the_fact_branch_discarded_the_refusal_taxonomy: >
+    A design defect, not a slip, and the most serious finding in the package.
+    WP9 made outcomeFromError the sole authority on whether a failure counts
+    against a capability. That function excused only the three cost-gate errors:
+    it did not know about CapabilityRefusalError and never consulted
+    classifyTransactionFailure. So every string in the curated caller-input and
+    ToS sets -- built incident by incident over months -- became a counted
+    failure the moment the epoch passed. One authority is the right goal; the
+    authority chosen was the weaker of the two.
+    Modelled against production with real error strings: product-reviews-extract
+    100% -> 9.3% completion (39 excused failures, 14 of them Trustpilot ToS
+    refusals, which are answers the platform is REQUIRED to give under
+    DEC-20260428-A); us-company-data 100% -> 33%; url-to-markdown 71% -> 53% --
+    the free-tier front door that main quarantined at 05:58Z on 2026-08-22 and
+    un-quarantined by adding those very strings to CALLER_INPUT_RE. WP9 would
+    have made that fix inert. Fixed by having outcomeFromError consult both the
+    refusal discriminator and the taxonomy.
+  blk1_the_tests_pinned_both_answers_at_once: >
+    The same string, "Missing required input fields: iban", was asserted as
+    EXCUSED on a transaction row (lib/quality-floor.test.ts) and as COUNTED on a
+    fact row (lib/invocation-facts.test.ts), with a comment declaring the second
+    correct. The reasoning in that comment was right -- the fact should win over
+    the string -- and the example was wrong, because it pinned an authority that
+    could not yet answer the question. Replaced with a regression test over the
+    real production strings.
+  blk2_round_twos_own_fix_was_hollow: >
+    toContain("EXISTS (") is satisfied by "NOT EXISTS (", and that mutation
+    survived. Inverted, factsProtected is true exactly when the trigger is
+    ABSENT: a healthy production would never read facts at all, and an
+    unprotected table would be trusted. Sixth hollow assertion in this program
+    and the second consecutive one to appear inside the remediation for the
+    previous one.
+  blk3_the_cross_checks_inputs_were_untested: >
+    Round 2 moved the threshold into a tested pure function; the two counts
+    feeding it came from SQL no test executed. Making the fact CTE permanently
+    empty survived: every capability with >=10 billed calls would look like
+    total evidence loss, every quarantine platform-wide would be suppressed, and
+    the armed safety mechanism would silently disarm with nothing failing. Third
+    consecutive round this same defence has been found unguarded somewhere new.
+  non_blocking_fixed:
+    - "N-1: the cross-check CTEs measured different populations -- the fact side lacked the internal-account exclusion, inflating facts and biasing toward SILENCE, the unsafe direction since silence means the floor proceeds on possibly-holed evidence."
+    - "N-3: the retention table-present guard was hollow by the same substring trick; inverted it never deletes (unbounded growth) AND runs the DELETE when the table is absent."
+    - "N-4: the x402 double-record flag was unguarded, so a non-billable output could write two facts, one of them recording success -- inflating the completion rate the floor decides on."
+    - "N-6: CREATE TABLE autocommits, so a block failing between the table and the trigger left the writer filling an unguarded table -- and because the floor keys its epoch on MIN(created_at), a later boot creating the trigger would make that whole era authoritative evidence. Those rows are now discarded before protection is installed; on the normal path the table is empty and nothing is deleted."
+    - "N-7: the floor probed pg_trigger by name alone, which pg_trigger does not guarantee unique (it is unique on tgrelid+tgname). Qualified via to_regclass, which returns NULL rather than raising when the table is absent."
+    - "N-2: two comments contradicted each other about whether the harness reaches /v1/do over HTTP. It does not -- it calls getExecutor in-process and writes no facts at all."
+  suite_flakiness_measured_not_assumed: >
+    Review round 3 could not reproduce the "flaky on main too" claim from a
+    single green run of main. Measured properly, three full runs each:
+    origin/main failed 0, 5, 5 tests; this branch failed 9, 0, 5. Both branches
+    are flaky at comparable magnitude, so the flakiness is pre-existing and not
+    introduced here -- but the earlier claim rested on too little evidence and
+    the reviewer was right to reject it.
+  still_open_non_blocking:
+    - >
+      N-5: recordInvocation acquires a second pooled connection inside the open
+      wallet transaction. The hazard is pool exhaustion, not transaction
+      poisoning -- 30 concurrent sync paid calls each holding a connection and
+      requesting a second only they can free. Unreachable at current volumes
+      (busiest capability: 778 calls/30d) and recorded rather than fixed,
+      because the alternative -- writing the fact on the wallet transaction --
+      would let a bookkeeping failure roll back a customer's paid call.
+    - >
+      N-3 from round 2 still stands: revenue reaches a capability only through
+      transactions.capability_id, so a bundle-only capability gets
+      requiresHuman = false even when its steps earn real bundle revenue.
+    - >
+      N-6 from round 2 still stands in part: the trigger-verification throw is
+      swallowed into a "deferred to next boot" outcome that nothing escalates.
+      The floor degrades safely and the heartbeat carries
+      facts_table_protected: false, but nothing alerts on it.
