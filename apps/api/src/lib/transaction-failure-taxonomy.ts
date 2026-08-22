@@ -223,6 +223,38 @@ const CALLER_INPUT_RE = new RegExp(
     // the rule this whole block exists to enforce.
     "targets a restricted address",
 
+    // ── Added 2026-08-22. The caller's target page loaded and carried nothing
+    // to work with. This is the "your input matches nothing" branch of the
+    // rule above, applied to page CONTENT rather than to an identifier: the
+    // fetch succeeded, the capability inspected what came back, and the
+    // truthful answer is that the URL has no extractable text. That is the
+    // capability working, in the same sense as "No US company found matching
+    // …" — which this list already excuses.
+    //
+    // Both patterns are our own diagnostic phrasings, not third-party text, so
+    // no vendor payload can reach them. Deliberately NOT generalised to
+    // "could not be loaded (HTTP 4xx)", which is a different claim — there the
+    // operation did not complete, and by this module's own rule it keeps
+    // counting.
+    //
+    // Cost of leaving this out, measured: `url-to-markdown` — one of the 11
+    // no-signup free-tier capabilities — was quarantined on 2026-08-22 at
+    // "67% completion on 15 eligible calls/30d". Its five counted failures
+    // were this refusal once, two target-site HTTP 400s and two target-site
+    // HTTP 429s. Not one was a defect, and the quarantine took a front-door
+    // capability off the catalogue.
+    //
+    // "This page returned almost no readable text (0 words). It may require
+    // JavaScript to render its content, or the URL may point to a login page."
+    //
+    // Deliberately NOT extended to `structured-scrape`'s "Page at [service]
+    // returned too little content." A prior review pinned that one as ours
+    // and it is right to: it makes no claim about what was inspected, so it
+    // reads equally as our fetch having under-read the page. The string below
+    // reports a measured word count and names the two conditions that produce
+    // it — it is a diagnosis of the target, not a shrug.
+    "returned almost no readable text",
+
     // Registry name-search refusals. Sourced from capability-refusal.ts so
     // this list, the circuit breaker's and the throw sites cannot drift apart
     // — they are three consumers of one definition.
