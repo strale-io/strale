@@ -51,7 +51,12 @@
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
 
 import { getDb } from "../src/db/index.js";
-import { transactions, wallets, walletTransactions } from "../src/db/schema.js";
+import {
+  healthMonitorEvents,
+  transactions,
+  wallets,
+  walletTransactions,
+} from "../src/db/schema.js";
 import * as walletService from "../src/lib/wallet-service.js";
 
 const APPLY = process.argv.includes("--apply");
@@ -85,6 +90,15 @@ const TARGET_IDS = [
 /** Newest target. Nothing created after this instant is in scope, ever. */
 const CUTOFF_ISO = "2026-08-12T09:22:06.000Z";
 
+/**
+ * Recorded verbatim on every remediation event, so the durable record carries
+ * the rule that was applied and not just the change that was made.
+ */
+const FOUNDER_POLICY =
+  "When successful billable delivery cannot be proven from durable evidence, " +
+  "resolve ambiguity in the favour of the customer; do not create or preserve " +
+  "a charge based on inference.";
+
 const CLOSURE_NOTE =
   "Execution abandoned before durable wallet reservations existed (WP3). " +
   "No output was produced, so successful delivery cannot be evidenced. " +
@@ -92,6 +106,7 @@ const CLOSURE_NOTE =
 
 async function main(): Promise<void> {
   const db = getDb();
+  let closedCount = 0;
 
   // ── BEFORE ────────────────────────────────────────────────────────────────
   const before = await db
@@ -102,6 +117,10 @@ async function main(): Promise<void> {
       userId: transactions.userId,
       hasOutput: sql<boolean>`${transactions.output} IS NOT NULL`,
       hashed: sql<boolean>`${transactions.integrityHash} IS NOT NULL`,
+      // Whether the 90-day content purge already redacted this row. Decides
+      // whether the closure note may be written into `error`, and is recorded
+      // on the remediation event so the record says which rows carry one.
+      redacted: sql<boolean>`${transactions.redactedAt} IS NOT NULL`,
     })
     .from(transactions)
     // Named ids AND still-executing AND older than the newest target. Three
@@ -126,6 +145,19 @@ async function main(): Promise<void> {
   }
   console.log(`  total charged against undelivered work: ${chargedTotal}c`);
 
+  // The approval is given against an ELEVEN-row before/after statement. If the
+  // snapshot returns anything else the world has moved since it was taken, and
+  // proceeding would close a different set than the one that was approved while
+  // printing a confident summary of it.
+  if (before.length !== TARGET_IDS.length) {
+    console.error(
+      `REFUSING: snapshot returned ${before.length} row(s), expected ` +
+        `${TARGET_IDS.length}. Some target changed state since the snapshot ` +
+        "was taken. Re-census and obtain a fresh approval.",
+    );
+    process.exit(1);
+  }
+
   // A row WITH output would mean delivery might be provable, and the policy
   // would not apply. Refuse rather than guess.
   const withOutput = before.filter((r) => r.hasOutput);
@@ -134,6 +166,26 @@ async function main(): Promise<void> {
       `\nREFUSING: ${withOutput.length} row(s) carry output. Delivery may be ` +
         "provable for those, and this script only implements the " +
         "cannot-be-proven branch of the policy. Resolve them individually.",
+    );
+    process.exit(1);
+  }
+
+  // A charge with no wallet owner is the shape of every x402 row: 2,592 paid
+  // rows in a 30-day window carry `price_cents > 0` with `user_id IS NULL`,
+  // because payment settled on-chain rather than against a wallet.
+  // `chargedRows` below requires BOTH, so such a row would fall silently into
+  // the "close status only" bucket and be reported to the operator as "no
+  // charge exists" — the founder policy exactly inverted, a charge preserved
+  // against work the script has just declared undelivered. Unreachable today
+  // because of the pinning; this makes it unreachable by CHECK, which is what
+  // pinning cannot promise for a future edit.
+  const paidWithoutWallet = before.filter((r) => r.priceCents > 0 && !r.userId);
+  if (paidWithoutWallet.length > 0) {
+    console.error(
+      `REFUSING: ${paidWithoutWallet.length} row(s) carry a charge with no ` +
+        "wallet owner (the x402 shape). Reversing those means reversing an " +
+        "on-chain settlement, which this script cannot do and must not report " +
+        "as 'no charge exists'. Resolve them individually.",
     );
     process.exit(1);
   }
@@ -175,9 +227,23 @@ async function main(): Promise<void> {
   }
 
   // ── APPLY ─────────────────────────────────────────────────────────────────
-  for (const r of chargedRows) {
-    await db.transaction(async (tx) => {
-      // Guarded so a re-run cannot double-credit.
+  //
+  // ONE database transaction for the whole remediation: refunds, the status
+  // close, and the durable record of both. The first version refunded in its
+  // own transaction and closed afterwards, so an abort at the verification step
+  // left the money returned and the row still `executing` — recoverable, but a
+  // half-applied remediation is exactly the state this package exists to stop
+  // the platform producing.
+  const targetIds = before.map((r) => r.id);
+
+  await db.transaction(async (tx) => {
+    // ── Refunds ────────────────────────────────────────────────────────────
+    for (const r of chargedRows) {
+      // Guarded so a re-run cannot double-credit. This is a read, not a
+      // constraint — `wallet_transactions` has no unique index on
+      // (reference_id, type), so two CONCURRENT invocations could both pass it.
+      // Safe for a single supervised run, which is the only way this script is
+      // meant to execute; recorded rather than hidden.
       const prior = await tx
         .select({ id: walletTransactions.id })
         .from(walletTransactions)
@@ -188,14 +254,14 @@ async function main(): Promise<void> {
           ),
         )
         .limit(1);
-      if (prior.length > 0) return;
+      if (prior.length > 0) continue;
 
       const [wallet] = await tx
         .select({ id: wallets.id })
         .from(wallets)
         .where(eq(wallets.userId, r.userId!))
         .limit(1);
-      if (!wallet) return;
+      if (!wallet) continue;
 
       await walletService.refund(tx, {
         walletId: wallet.id,
@@ -205,64 +271,116 @@ async function main(): Promise<void> {
           "Refund: execution abandoned before WP3 reservations existed; " +
           "delivery could not be evidenced",
       });
-    });
-  }
+    }
 
-  // PINNED TO THE SNAPSHOT IDS. The first version ran
-  // `WHERE status='executing' AND output IS NULL`, which is not a description
-  // of these eleven rows — it is a description of every call currently IN
-  // FLIGHT. `executing` is the live transient state written by /v1/do and
-  // /v1/solutions/:slug/execute, and an in-flight row has no output by
-  // definition. Production runs ~433 transactions per hour.
-  //
-  // A concurrent paid call would have been marked `failed` with an error string
-  // asserting it "was abandoned before WP3 reservations existed", while its
-  // wallet debit — committed before the row was even inserted — stood. That is
-  // the founder policy exactly inverted: a charge preserved against work the
-  // platform had just declared undelivered. Worse for x402, where 2,592 paid
-  // rows in 30 days carry a NULL user_id and would have been reported to the
-  // operator as "no charge exists".
-  const targetIds = before.map((r) => r.id);
-  const closed = await db
-    .update(transactions)
-    .set({
-      status: "failed",
-      // Only where there is no redaction marker: writing a fresh 200-character
-      // note into the `error` column of a row marked content-redacted would
-      // have /v1/verify describe it as "payload removed" while it carries newly
-      // written content.
-      error: sql`CASE WHEN ${transactions.redactedAt} IS NULL THEN ${CLOSURE_NOTE} ELSE ${transactions.error} END`,
-      // completed_at is deliberately NOT set. These executions never completed;
-      // stamping today's date would assert an instant we know to be wrong, in a
-      // field that is part of the integrity-hash preimage and the hashing
-      // worker's ordering key. Asserting an unevidenced completion time sits
-      // badly beside a policy about not asserting what cannot be evidenced.
-    })
-    .where(
-      and(
-        eq(transactions.status, "executing"),
-        inArray(transactions.id, targetIds),
-      ),
-    )
-    .returning({ id: transactions.id });
+    // ── Close ──────────────────────────────────────────────────────────────
+    //
+    // PINNED TO THE SNAPSHOT IDS. The first version ran
+    // `WHERE status='executing' AND output IS NULL`, which is not a description
+    // of these eleven rows — it is a description of every call currently IN
+    // FLIGHT. `executing` is the live transient state written by /v1/do and
+    // /v1/solutions/:slug/execute, and an in-flight row has no output by
+    // definition. Production runs ~408 transactions per hour.
+    //
+    // A concurrent paid call would have been marked `failed` with an error
+    // string asserting it "was abandoned before WP3 reservations existed",
+    // while its wallet debit — committed before the row was even inserted —
+    // stood. That is the founder policy exactly inverted: a charge preserved
+    // against work the platform had just declared undelivered.
+    const closedRows = await tx
+      .update(transactions)
+      .set({
+        status: "failed",
+        // Only where there is no redaction marker: writing a fresh
+        // 200-character note into the `error` column of a row marked
+        // content-redacted would have /v1/verify describe it as "payload
+        // removed" while it carries newly written content.
+        error: sql`CASE WHEN ${transactions.redactedAt} IS NULL THEN ${CLOSURE_NOTE} ELSE ${transactions.error} END`,
+        // completed_at is deliberately NOT set. These executions never
+        // completed; stamping today with a date would assert an instant we know
+        // to be wrong, in a field that is part of the integrity-hash preimage
+        // and the hashing worker ordering key. It is also load-bearing:
+        // integrity-hash-retry admits only rows with `completed_at IS NOT
+        // NULL`, so leaving it NULL is what keeps that job away from these
+        // rows.
+      })
+      .where(
+        and(
+          eq(transactions.status, "executing"),
+          inArray(transactions.id, targetIds),
+        ),
+      )
+      .returning({ id: transactions.id });
 
-  if (closed.length !== before.length) {
-    console.error(
-      `
-ABORTING VERIFICATION: expected to close ${before.length} rows, closed ` +
-        `${closed.length}. Some row changed state between the snapshot and the ` +
-        "write. Inspect before re-running.",
-    );
-    process.exit(1);
-  }
+    if (closedRows.length !== before.length) {
+      // Throwing rolls the whole transaction back, refunds included.
+      throw new Error(
+        `expected to close ${before.length} rows, closed ${closedRows.length}. ` +
+          "Some row changed state between the snapshot and the write. Nothing " +
+          "was applied. Inspect before re-running.",
+      );
+    }
+    closedCount = closedRows.length;
+
+    // ── The durable record ─────────────────────────────────────────────────
+    //
+    // TEN OF THE ELEVEN rows are already content-redacted, so the CASE above
+    // deliberately leaves their `error` column untouched — which meant the
+    // first version of this script mutated ten audit rows and left no record
+    // anywhere of who changed them or why. The status flip was the only
+    // evidence, and a status flip does not say that a human approved this on
+    // the basis of a stated policy.
+    //
+    // `health_monitor_events` is the existing durable operator-event table, so
+    // the record goes there rather than into a new one, and it is written in
+    // the SAME transaction as the change it describes — the WP8 rule that a
+    // listing change and its evidence must commit together, applied to a manual
+    // remediation.
+    for (const r of before) {
+      await tx.insert(healthMonitorEvents).values({
+        eventType: "manual_reconciliation",
+        capabilitySlug: null,
+        tier: 2,
+        actionTaken: "stranded_executing_closed",
+        humanOverride: true,
+        details: {
+          transaction_id: r.id,
+          created_at: r.createdAt.toISOString(),
+          price_cents: r.priceCents,
+          refunded_cents: r.priceCents > 0 && r.userId ? r.priceCents : 0,
+          had_output: r.hasOutput,
+          previous_status: "executing",
+          new_status: "failed",
+          closure_note_written: !r.redacted,
+          content_redacted_before_close: r.redacted,
+          policy: FOUNDER_POLICY,
+          authorised_by: "founder approval, 2026-08-21 stranded-row reconciliation",
+          script: "apps/api/scripts/reconcile-stranded-executing.ts",
+        },
+      });
+    }
+  });
 
   // ── AFTER ─────────────────────────────────────────────────────────────────
-  console.log(`\nAFTER — closed ${closed.length} row(s)`);
+  console.log(`\nAFTER — closed ${closedCount} row(s)`);
+
+  // Bounded to the eleven. An unbounded `WHERE status='executing'` census reads
+  // the LIVE transient state: production runs ~408 transactions/hour and calls
+  // have been observed taking 17 seconds, so a perfectly successful run can
+  // report a non-zero count purely because someone was mid-call, and the
+  // operator would read that as failure.
   const remaining = await db
     .select({ id: transactions.id })
     .from(transactions)
-    .where(eq(transactions.status, "executing"));
-  console.log(`  rows still in status='executing': ${remaining.length}  (expected 0)`);
+    .where(
+      and(
+        inArray(transactions.id, [...TARGET_IDS]),
+        eq(transactions.status, "executing"),
+      ),
+    );
+  console.log(
+    `  targets still in status='executing': ${remaining.length}  (expected 0)`,
+  );
 
   for (const [userId, was] of balancesBefore) {
     const [w] = await db
@@ -270,14 +388,19 @@ ABORTING VERIFICATION: expected to close ${before.length} rows, closed ` +
       .from(wallets)
       .where(eq(wallets.userId, userId))
       .limit(1);
-    console.log(`  wallet ${userId.slice(0, 8)}: ${was}c -> ${w?.balanceCents}c`);
+    const now = w?.balanceCents ?? was;
+    console.log(
+      `  wallet ${userId.slice(0, 8)}: ${was}c -> ${now}c  (delta ${now - was >= 0 ? "+" : ""}${now - was}c)`,
+    );
   }
 
   console.log(
-    "\nNOTE: one closed row (2026-04-18) carries an integrity hash computed " +
-      "over status='executing'. Its recorded hash no longer matches, by design " +
-      "and with the reason recorded in lib/chain-integrity-windows.ts. That is " +
-      "a disclosed correction, not tampering.\n",
+    "\nNOTE: ten of the eleven rows were content-redacted by the 90-day " +
+      "retention purge before this ran, so their integrity hashes already " +
+      "mismatched and /v1/verify already reports that as routine retention " +
+      "rather than tampering. This reconciliation neither causes nor changes " +
+      "that. The durable record of what was changed and why is in " +
+      "health_monitor_events (event_type='manual_reconciliation').\n",
   );
 }
 

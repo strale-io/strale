@@ -75,26 +75,41 @@ would return `verified: false` for most of the platform. That is true today,
 this change does not affect it, and it strengthens the case for leaving the row
 otherwise alone.
 
-## Proposed remediation — one idempotent statement
+## Proposed remediation
 
-```sql
--- Rows 1-10: close the status. No money involved.
-UPDATE transactions
-   SET status = 'failed',
-       error = 'Execution abandoned before WP3 reservations existed; '
-               'no output was produced and no charge was taken. '
-               'Closed by the 2026-08-21 stranded-row reconciliation.',
-       completed_at = COALESCE(completed_at, now())
- WHERE status = 'executing'
-   AND price_cents = 0;
+**This section previously printed an `UPDATE ... WHERE status = 'executing' AND
+price_cents = 0` statement.** That was the dangerous form — `executing` is the
+LIVE transient state of every call currently in flight, and production runs ~408
+transactions an hour. It is not what will run, and it has been removed rather
+than left as a description an approval could be given against.
 
--- Row 11: close the status AND return the money, in one transaction,
--- through the wallet service so the ledger row is written with it.
-```
+What runs is `apps/api/scripts/reconcile-stranded-executing.ts`, and its
+behaviour is:
 
-Idempotent by construction: the `WHERE status = 'executing'` predicate matches
-nothing on a second run. The refund goes through `walletService.refund` (WP2),
-so the balance change and its ledger row cannot diverge.
+- **Pinned to eleven literal UUIDs.** Nothing is discovered by querying status.
+  Three independent conditions (`id IN (…)`, `status='executing'`,
+  `created_at < cutoff`) each exclude a live row on their own.
+- **Refuses and exits** if the snapshot returns anything other than 11 rows, if
+  any row carries output, or if any row carries a charge with no wallet owner
+  (the x402 shape — reversing one of those means reversing an on-chain
+  settlement, which this script cannot do and must not report as "no charge
+  exists").
+- **One database transaction** for refunds, the status close and the durable
+  record. An abort rolls back all three; there is no half-applied state.
+- **Does not stamp `completed_at`.** These executions never completed. It is
+  also load-bearing: `integrity-hash-retry` admits only rows with a
+  `completed_at`, so leaving it NULL is what keeps that job away from them.
+- **Writes a `manual_reconciliation` event per row** to `health_monitor_events`,
+  carrying the transaction id, the before/after status, whether a refund
+  occurred, and the founder policy verbatim. Ten of the eleven rows are already
+  content-redacted, so the closure note cannot be written into their `error`
+  column — without this event those ten would have been mutated with no record
+  anywhere of who changed them or why.
+
+Idempotent: a second run finds zero targets still `executing` and refuses at the
+count check before writing. The refund additionally checks for a prior refund
+ledger row against the same transaction, and goes through `walletService.refund`
+(WP2) so the balance change and its ledger row cannot diverge.
 
 ## Rollback and proof
 
@@ -141,22 +156,33 @@ DRY RUN — nothing written.
 
 | | Before | After |
 |---|---|---|
-| Rows in `status='executing'` | 11 | 0 |
+| **Targets** in `status='executing'` | 11 | 0 |
 | Charge standing against undelivered work | 100c | 0c |
-| Wallet `2e3d9f92` balance | 3052c | 3152c |
+| Wallet `2e3d9f92` balance | *live value at run time* | **+100c** |
 | Ledger rows referencing these transactions | 1 (`purchase −100c`) | 2 (`purchase −100c`, `refund +100c`) |
+| `manual_reconciliation` events | 0 | 11 |
 | External customer money affected | **none** | none |
+
+Two corrections to how this table used to read. It quoted an absolute wallet
+balance of `3052c → 3152c`; that wallet is live and had already moved to 3047c
+by the time the figure was reviewed. **The durable fact is the delta, +100c** —
+the script prints the real before and after at run time. And the first row now
+says *targets*: an unbounded census of `status='executing'` reads calls that are
+merely in flight, so a completely successful run could report a non-zero count
+and be misread as a failure.
 
 ## Recommendation
 
-**Approve rows 1–10 now** — they are free-tier status hygiene with no economic
-content and no chain impact except row 10.
+**Approve all eleven as one batch.** Ten are free-tier status hygiene with no
+economic content. The eleventh returns €1.00 to an internal account, where the
+value is a correct ledger rather than the money.
 
-**Approve row 11 with them** — €1.00 to an internal account; the value is a
-correct ledger, not the money.
-
-**Approve option 3 for row 10's hash**, so the one broken verification is
-disclosed rather than discovered.
+**No separate decision is needed for row 10's hash.** The earlier version of this
+brief recommended publishing a chain-integrity disclosure for it. That
+recommendation is withdrawn — the same document establishes four paragraphs
+earlier that the mismatch was caused by the 2026-08-16 retention purge, is
+already correctly disclosed by `/v1/verify`, and has nothing to do with this
+reconciliation. Publishing a disclosure would have attributed it to us falsely.
 
 This is a much smaller decision than I previously represented, and I am sorry
 for the earlier framing — I carried "11 stranded charges" forward for several
@@ -225,20 +251,41 @@ withdrawn**, for two reasons:
 pure subtraction with no replacement claim. Where the two documents differ, that
 one governs.
 
+## The surface list is much larger than this brief first said
+
+Two rounds of independent review each found surfaces the previous round had
+missed. The current count is **32 locations across four deploy units**, and the
+three most consequential were absent from the first two versions of the plan:
+
+- **`Privacy.tsx:42-43` states the opposite of production behaviour** — that
+  redaction preserves hash verifiability, when redaction is exactly what breaks
+  it. Not an overstatement; false.
+- **The shareable audit page and its PDF assert "Verified compliance record"
+  unconditionally** and never call `/v1/verify`. That page is the artefact a
+  compliance reviewer actually receives.
+- **A diff in version 2 did not match the line it claimed to change**, so the
+  word "immutable" would have survived inside FAQPage structured data on a
+  public `/learn/` route.
+
 ## Recommendation
 
-**Change the copy.** "Tamper-evident" is doing specific work for compliance
-buyers, and for a 3.5-month window it overstates what the system provides.
+**Apply the full plan in `docs/remediation/PUBLIC-COPY-CORRECTION.md`.** That
+document governs; where this brief and that one differ, that one is right.
 
-**Priority order:** `Methodology.tsx` and `Security.tsx` first — those are the
-load-bearing claims a compliance reviewer would cite. The passing references can
-follow.
+**Sequence:** API deploy first (it carries the strongest claim on the platform —
+`llms-txt.ts:110` asserts fitness for *regulatory verification*), then the
+frontend release, then the repo commit, then the npm publish.
 
-**Also worth doing, and cheap:** make `/v1/verify` disclose the window for
-affected records. The text is already drafted in
-`apps/api/src/lib/chain-integrity-windows.ts` as `orderingDisclosureText()`,
-deliberately unwired. Without it, the endpoint returns `verified: true` for a
-record whose ordering we know we cannot evidence.
+**No replacement claim of any kind.** An earlier version of this brief argued for
+keeping a precise per-record tamper-evidence statement. That is withdrawn: per
+the founder instruction a claim returns only when every word is supported by
+production behaviour, and demonstrating per-record tamper evidence to a reader
+requires a verification endpoint that detects what the claim asserts.
+`/v1/verify` currently returns `verified: true` for records where twenty of
+twenty-one chain links are redacted. Until that changes, the honest position is
+to describe the mechanism and claim nothing about it.
 
-**What I would not do:** remove the claims entirely. Per-record tamper evidence
-is real, it is working, and it is worth stating — precisely.
+**Also not proposed:** wiring `orderingDisclosureText()` into `/v1/verify`. It
+would add a new public statement, and the instruction is to remove first. It
+stays drafted and unwired. Making the endpoint able to detect a fork — and
+therefore able to support a claim again — is WP14.
