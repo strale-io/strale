@@ -221,6 +221,11 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     expect(src).toContain("async function detectFactVolumeShortfall");
     expect(src).toContain("FROM capability_invocations");
     expect(src).toMatch(/volumeShortfall = factsReady/);
+    // Populated FROM the detector. Asserting only that the function exists and
+    // that a variable is assigned would pass against a version that computes an
+    // always-empty map -- a check that can never fire, which is the shape this
+    // finding had in the first place.
+    expect(src).toContain("await detectFactVolumeShortfall(sql, epoch)");
     // And it must actually gate the action, not merely be computed.
     expect(src).toContain("holes > 0 || shortfall !== null");
     expect(src).toContain("mode === \"enforce\" && !evidenceIncomplete");
