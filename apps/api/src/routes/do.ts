@@ -50,6 +50,7 @@ import { getCapabilityQuality } from "../lib/quality-aggregation.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { validateX402Input } from "../lib/x402-input-validation.js";
 import { isX402PayableCapability } from "../lib/x402-eligibility.js";
+import { getFreeTierSlugs } from "../lib/free-tier.js";
 import * as walletService from "../lib/wallet-service.js";
 import * as reservations from "../lib/wallet-reservations.js";
 import { recoverValuesFromTask, recoveredValuesHint, unsatisfiedGroupFields } from "../lib/task-value-hints.js";
@@ -2668,22 +2669,13 @@ async function executeInBackground(
   }
 }
 
-// ─── Free-tier slug cache (refreshed every 5 minutes) ───────────────────────
-
-let _freeTierCache: { slugs: string[]; expiresAt: number } | null = null;
-
-async function getFreeTierSlugs(db: ReturnType<typeof getDb>): Promise<string[]> {
-  if (_freeTierCache && Date.now() < _freeTierCache.expiresAt) {
-    return _freeTierCache.slugs;
-  }
-  const rows = await db
-    .select({ slug: capabilities.slug })
-    .from(capabilities)
-    .where(and(eq(capabilities.isFreeTier, true), eq(capabilities.isActive, true), eq(capabilities.lifecycleState, "active")));
-  const slugs = rows.map((r) => r.slug);
-  _freeTierCache = { slugs, expiresAt: Date.now() + 5 * 60 * 1000 };
-  return slugs;
-}
+// ─── Free-tier slug cache ──────────────────────────────────────────────────
+//
+// Moved to lib/free-tier.ts on 2026-08-22. The implementation that lived here
+// selected `is_free_tier AND is_active AND lifecycle_state = 'active'` and
+// never consulted `visible`, so a quarantined free-tier capability stayed in
+// the advertisement while `matchCapability` refused to serve it. See that
+// module's header for the incident.
 
 // ─── Audit trail helpers ──────────────────────────────────────────────────────
 

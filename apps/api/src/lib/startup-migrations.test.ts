@@ -67,6 +67,7 @@ import {
   runMigration0093_fixtureRecaptureFailures,
   runMigration0066_ensureEligibilityColumnAndReconcile,
   runMigration0094_clearChurnInvalidatedBaselines,
+  runMigration0100_relistUrlToMarkdown,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1236,7 +1237,7 @@ describe("startup-migrations — block 0087 (un-hide content-redacted rows)", ()
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 43 blocks in historical order", () => {
+  it("exports the expected 44 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1286,6 +1287,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0097_chainSequence",
       "runMigration0098_perCustomerIdempotency",
       "runMigration0099_noHalfQuarantine",
+      "runMigration0100_relistUrlToMarkdown",
       "runMigration0101_capabilityInvocations",
     ]);
   });
@@ -1973,5 +1975,92 @@ describe("startup-migrations — block 0094 (clear churn-invalidated baselines)"
     expect(result.outcome).toMatch(/no churn-invalidated baselines remain/i);
     const q = stub.renderedSql[0].toLowerCase().replace(/\s+/g, " ");
     expect(q).toContain("ts.baseline_output is not null");
+  });
+});
+
+describe("startup-migrations — block 0100 (re-list url-to-markdown)", () => {
+  /**
+   * The 2026-08-22 quality-floor quarantine of `url-to-markdown` counted five
+   * failures, none of them a defect in the capability. This block reverses it.
+   *
+   * What each test protects, stated because the failure modes are asymmetric:
+   * a listing change without its evidence leaves the floor's window clamp and
+   * the promotion job reading a stale takedown, and a re-listing that fires on
+   * every boot would silently undo a LATER, legitimate quarantine.
+   */
+  const applied = () => [{ block: "0100_relistUrlToMarkdown" }] as unknown[];
+
+  it("flips both flags and writes the promotion event together", async () => {
+    const stub = makeStub({ queue: [{}, [], { count: 1 }, {}, {}] });
+    const result = await runMigration0100_relistUrlToMarkdown(stub);
+    const joined = stub.renderedSql.join(" | ").toLowerCase();
+    expect(joined).toMatch(/set\s+visible = true/);
+    expect(joined).toMatch(/x402_enabled = true/);
+    expect(joined).toContain("insert into health_monitor_events");
+    expect(joined).toContain("capability_promotion");
+    expect(result.rows_affected).toBe(1);
+  });
+
+  it("writes the event in the shape the floor clamp and promotion job read", async () => {
+    // jobs/quality-floor.ts clamps its window on
+    //   action_taken LIKE 'promoted%' AND details->>'mode' = 'enforce'
+    // and jobs/capability-promotion.ts treats any other last listing event as
+    // an un-reversed takedown. An event that misses either field is invisible
+    // to both, and the next tick re-quarantines on the same July rows.
+    const stub = makeStub({ queue: [{}, [], { count: 1 }, {}, {}] });
+    await runMigration0100_relistUrlToMarkdown(stub);
+    const insert = stub.renderedSql.find((q) => /insert into health_monitor_events/i.test(q));
+    expect(insert).toBeDefined();
+    expect(insert!).toContain("promoted_with_x402");
+    // The details payload is a bound parameter, not rendered SQL, so it has to
+    // be read off the captured chunks. Parsed rather than substring-matched:
+    // the assertion is about the VALUE the clamp reads, not about formatting.
+    const boundStrings = stub.captured
+      .flatMap((c) => ((c as { queryChunks?: unknown[] }).queryChunks ?? []) as unknown[])
+      .filter((v): v is string => typeof v === "string");
+    const details = boundStrings
+      .map((v) => {
+        try {
+          return JSON.parse(v) as Record<string, unknown>;
+        } catch {
+          return null;
+        }
+      })
+      .find((v) => v !== null && typeof v === "object");
+    expect(details, "the promotion event must bind a details payload").toBeTruthy();
+    expect(details!.mode).toBe("enforce");
+  });
+
+  it("does not claim a promotion that did not happen", async () => {
+    // UPDATE matched nothing (already listed) → no event. An event asserting a
+    // listing change that never occurred is the same lie as a quarantine
+    // without its evidence, and both consumers would read it as fact.
+    const stub = makeStub({ queue: [{}, [], { count: 0 }, {}] });
+    const result = await runMigration0100_relistUrlToMarkdown(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(stub.renderedSql.join(" | ")).not.toMatch(/insert into health_monitor_events/i);
+    expect(result.outcome).toMatch(/no change/);
+  });
+
+  it("never fires twice — a later quarantine is not undone on the next deploy", async () => {
+    const stub = makeStub({ queue: [{}, applied()] });
+    const result = await runMigration0100_relistUrlToMarkdown(stub);
+    expect(result.rows_affected).toBe(0);
+    const joined = stub.renderedSql.join(" | ").toLowerCase();
+    expect(joined).not.toMatch(/update capabilities/);
+    expect(joined).not.toMatch(/insert into health_monitor_events/);
+    expect(result.outcome).toMatch(/already applied/);
+  });
+
+  it("cannot produce the half-quarantine state the WP8 constraint forbids", async () => {
+    // capabilities_no_half_quarantine is CHECK (NOT (is_active AND NOT visible
+    // AND x402_enabled)). Setting x402_enabled without visible in the same
+    // statement would abort the UPDATE, and a throwing block aborts boot.
+    const stub = makeStub({ queue: [{}, [], { count: 1 }, {}, {}] });
+    await runMigration0100_relistUrlToMarkdown(stub);
+    const update = stub.renderedSql.find((q) => /update capabilities/i.test(q));
+    expect(update).toBeDefined();
+    const setClause = update!.slice(update!.toLowerCase().indexOf("set"));
+    expect(/visible = true/i.test(setClause) && /x402_enabled = true/i.test(setClause)).toBe(true);
   });
 });

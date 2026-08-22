@@ -10,6 +10,8 @@
 import { Hono } from "hono";
 import { computePlatformFacts } from "../lib/platform-facts.js";
 import { logError } from "../lib/log.js";
+import { getDb } from "../db/index.js";
+import { getServableFreeTierCapabilities } from "../lib/free-tier.js";
 
 export const welcomeRoute = new Hono();
 
@@ -349,47 +351,48 @@ const PRICING = {
     method: "Stripe Checkout",
     endpoint: "POST /v1/wallet/topup",
   },
-  free_capabilities: [
-    {
-      slug: "iban-validate",
-      price_cents: 3,
-      description: "Validate IBAN structure and extract bank details",
-    },
-    {
-      slug: "email-validate",
-      price_cents: 2,
-      description: "Validate email address format and deliverability",
-    },
-    {
-      slug: "dns-lookup",
-      price_cents: 2,
-      description: "DNS record lookup for any domain",
-    },
-    {
-      slug: "json-repair",
-      price_cents: 2,
-      description: "Repair malformed JSON strings",
-    },
-    {
-      slug: "url-to-markdown",
-      price_cents: 5,
-      description: "Convert any URL to clean markdown",
-    },
-  ],
+  // Filled per request from lib/free-tier.ts — see buildPricing(). The
+  // hardcoded five that used to sit here listed `url-to-markdown` throughout
+  // its 2026-08-22 quarantine and had never listed the other six free-tier
+  // slugs at all: a literal cannot track either a withdrawal or an addition.
+  free_capabilities: [] as Array<{ slug: string; price_cents: number; description: string }>,
   full_catalog: "https://api.strale.io/v1/capabilities",
   pricing_page: "https://strale.dev/pricing",
 };
 
-welcomeRoute.get("/v1/pricing", (c) => {
+/**
+ * Pricing payload with the free-tier list resolved against what the platform
+ * will actually serve. A DB failure degrades to an empty list rather than to a
+ * stale literal: advertising nothing is recoverable, advertising a capability
+ * we refuse is the bug this replaced.
+ */
+async function buildPricing(): Promise<typeof PRICING> {
+  try {
+    const free = await getServableFreeTierCapabilities(getDb());
+    return {
+      ...PRICING,
+      free_capabilities: free.map((c) => ({
+        slug: c.slug,
+        price_cents: c.priceCents,
+        description: c.description,
+      })),
+    };
+  } catch (err) {
+    logError("pricing-free-tier-failed", err);
+    return PRICING;
+  }
+}
+
+welcomeRoute.get("/v1/pricing", async (c) => {
   c.header("Cache-Control", "public, max-age=3600");
   c.header("Access-Control-Allow-Origin", "*");
-  return c.json(PRICING);
+  return c.json(await buildPricing());
 });
 
-welcomeRoute.get("/pricing", (c) => {
+welcomeRoute.get("/pricing", async (c) => {
   c.header("Cache-Control", "public, max-age=3600");
   c.header("Access-Control-Allow-Origin", "*");
-  return c.json(PRICING);
+  return c.json(await buildPricing());
 });
 
 // ─── Status endpoint ────────────────────────────────────────────────────────

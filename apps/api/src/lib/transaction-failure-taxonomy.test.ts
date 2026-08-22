@@ -300,3 +300,74 @@ describe("LLM output-truncation refusal (2026-08-17 web-extract quarantine incid
     expect(categorizeError(err)).toBe("capability_refusal");
   });
 });
+
+/**
+ * 2026-08-22 — the `url-to-markdown` quarantine.
+ *
+ * Same shape as the `us-company-data` incident pinned above, one rail along:
+ * a capability that had refused correctly was delisted for it, and this one
+ * was a free-tier front door, so the delisting also broke the no-signup
+ * promise the 401 body was still making.
+ *
+ * Both directions are pinned. The excused strings are the capability
+ * reporting a property of the caller's chosen page; the counted ones are
+ * operations that did not complete, whoever's fault that is.
+ */
+describe("a page with nothing in it is the caller's URL, not our defect", () => {
+  it("a measured-empty target page is caller_input", () => {
+    const msg =
+      "This page returned almost no readable text (0 words). It may require JavaScript to render its content, or the URL may point to a login page.";
+    expect(classOf(msg)).toBe("caller_input");
+    expect(excused(msg)).toBe(true);
+  });
+
+  it("but a bare 'too little content' shrug stays ours", () => {
+    // Pinned by an earlier review and left alone. It claims nothing about
+    // what was inspected, so it reads equally as our own fetch under-reading
+    // the page. The line the fix draws is a MEASURED property of the target,
+    // not any complaint about emptiness.
+    expect(excused("Page at [service] returned too little content.")).toBe(false);
+  });
+
+  it("still counts the failures that were in the same quarantine window", () => {
+    // The operation did not complete. By this module's own rule that is ours
+    // to carry, whatever caused it — so these must NOT be excused, or the
+    // floor goes blind on exactly the capability it just mis-judged.
+    const notExcused = [
+      "Could not extract content from this page ([service].uk). The web page ([service].uk) could not be loaded (HTTP 400).",
+      "This site is rate-limiting requests (HTTP 429). The target site has throttled access. Try again in a few minutes.",
+    ];
+    for (const msg of notExcused) expect(excused(msg)).toBe(false);
+  });
+
+  it("does not excuse our own empty-output defects", () => {
+    // The pattern is anchored to one house phrasing. A generic claim about
+    // emptiness in OUR OWN pipeline must keep counting — these are the
+    // assertions that fail if it is ever loosened to `no readable` or
+    // `returned too little`.
+    for (const msg of [
+      "Extraction pipeline returned too little data to build a result.",
+      "Internal renderer produced no readable output for the requested page.",
+    ]) {
+      expect(classOf(msg)).toBe("internal");
+    }
+  });
+
+  it("reproduces the floor arithmetic the fix changes", () => {
+    // The exact 30-day population the quality floor saw on 2026-08-22,
+    // verbatim from production. Before the fix: 15 eligible, 10 completed,
+    // 66.7% — below the 70% quarantine floor. After: the no-content refusal
+    // leaves the denominator and it clears.
+    const failures = [
+      "This page returned almost no readable text (0 words). It may require JavaScript to render its content, or the URL may point to a login page.",
+      "Could not extract content from this page ([service].uk). The web page ([service].uk) could not be loaded (HTTP 400).",
+      "Could not extract content from this page ([service].uk). The web page ([service].uk) could not be loaded (HTTP 400).",
+      "This site is rate-limiting requests (HTTP 429). The target site has throttled access. Try again in a few minutes.",
+      "This site is rate-limiting requests (HTTP 429). The target site has throttled access. Try again in a few minutes.",
+    ];
+    const completed = 10;
+    const counted = failures.filter((e) => !excused(e)).length;
+    expect(counted).toBe(4);
+    expect(completed / (completed + counted)).toBeGreaterThanOrEqual(0.7);
+  });
+});
