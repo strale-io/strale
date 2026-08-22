@@ -125,7 +125,8 @@ const NOTHING_TO_DECIDE = /^nothing needs your decision(?: today)?[.!]?$/i;
 function claimsNothingToDecide(section: string): boolean {
   const meaningful = section
     .split(/\r?\n/)
-    .map((l) => l.replace(/[*_`]/g, "").trim())
+    // `-` too, so a horizontal rule under the sentence is not read as content.
+    .map((l) => l.replace(/[*_`-]/g, "").trim())
     .filter(Boolean);
   return meaningful.length === 1 && NOTHING_TO_DECIDE.test(meaningful[0]!);
 }
@@ -288,7 +289,12 @@ export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}):
     // checked in full, however it opens.
     const blocks = splitByStatus(decide);
 
-    if (blocks.some((b) => b.status === "SYSTEM_ACTING")) {
+    // Read on the RAW section, not on the split blocks. `splitByStatus` takes
+    // the first tag per line, so `AUTHORIZATION_UNAVAILABLE and SYSTEM_ACTING —
+    // I already closed the records` classified as a handover and slipped past
+    // this check. An already-executed item must not be reportable here whatever
+    // else shares its line.
+    if (/\bSYSTEM_ACTING\b/.test(decide) || blocks.some((b) => b.status === "SYSTEM_ACTING")) {
       findings.push({
         severity: "error", rule: "status-misplaced",
         message:
@@ -330,6 +336,15 @@ export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}):
             });
           }
         }
+      } else if (b.status === "UNTAGGED") {
+        findings.push({
+          severity: "error", rule: "untagged-item",
+          message:
+            "text in this section carries no status tag. Every item here is " +
+            "FOUNDER_DECISION or AUTHORIZATION_UNAVAILABLE — an untagged sentence " +
+            "cannot be checked against either contract, and cannot tell the reader " +
+            "whether it wants a judgement or an authority.",
+        });
       } else {
         for (const field of ESCALATION_FIELDS) {
           if (!fieldPresent(b.text, field)) {
@@ -396,10 +411,10 @@ function fieldPresent(text: string, field: (typeof ESCALATION_FIELDS)[number]): 
  * refinement of the existing contract, not a new requirement that would
  * retroactively fail every brief written before them.
  */
-function splitByStatus(text: string): Array<{ status: StatusTag; text: string }> {
+function splitByStatus(text: string): Array<{ status: StatusTag | "UNTAGGED"; text: string }> {
   const tag = new RegExp(`\\b(${STATUS_TAGS.join("|")})\\b`);
   const lines = text.split(/\r?\n/);
-  const blocks: Array<{ status: StatusTag; text: string }> = [];
+  const blocks: Array<{ status: StatusTag | "UNTAGGED"; text: string }> = [];
   let current: { status: StatusTag; text: string } | null = null;
   // Text before the first tag is an untagged block, NOT discarded. Dropping it
   // let an escalation placed above the first tag escape every field check.
@@ -416,13 +431,25 @@ function splitByStatus(text: string): Array<{ status: StatusTag; text: string }>
     }
   }
   if (current) blocks.push(current);
-  // An untagged preamble carrying content is checked as a founder decision —
-  // the same treatment an entirely untagged section gets.
+  // An untagged preamble carrying content is reported as UNTAGGED, not as a
+  // founder decision missing five fields. Both fail the run, but reporting five
+  // missing fields on an escalation that has all five points the author at the
+  // wrong text — the diagnostic has to name the real problem, which is that the
+  // prose is outside the contract.
+  //
+  // `-` is stripped along with the emphasis characters so a `---` rule does not
+  // read as content.
   const preambleHasContent = preamble
     .split(/\r?\n/)
-    .map((l) => l.replace(/[*_`#]/g, "").trim())
+    .map((l) => l.replace(/[*_`#-]/g, "").trim())
     .some((l) => l.length > 0 && !NOTHING_TO_DECIDE.test(l));
-  if (preambleHasContent) blocks.unshift({ status: "FOUNDER_DECISION", text: preamble });
+  // Only when the section is PARTLY tagged. A section with no tags at all is
+  // still read as one founder decision, so briefs written before the tags
+  // existed do not retroactively fail; stray prose beside a tagged item is a
+  // different thing and gets its own finding.
+  if (blocks.length > 0 && preambleHasContent) {
+    blocks.unshift({ status: "UNTAGGED", text: preamble });
+  }
   return blocks.length > 0 ? blocks : [{ status: "FOUNDER_DECISION", text }];
 }
 
@@ -459,14 +486,23 @@ function sectionBody(lines: string[], heading: string): string {
   // already-executed SYSTEM_ACTING item, both passed clean behind a sub-heading.
   // Found by adversarial review after the first fix to this area, which closed
   // the reported example and not the class.
-  const own = depthOf(lines[start]!) || 2;
+  const own = depthOf(lines[start]!);
+  // The LAST required section runs to the end of the document. DAILY-RUN.md
+  // says the brief is "the five sections above, and nothing else", and without
+  // this a same-depth `## Appendix` after section 5 was a clean bypass: a full
+  // untagged escalation placed there was never linted. Closing only deeper
+  // headings closed the reported probe and not the class.
+  const runsToEnd = heading.toLowerCase()
+    === REQUIRED_SECTIONS[REQUIRED_SECTIONS.length - 1]!.toLowerCase();
   let end = lines.length;
   let fenced = false;
-  for (let i = start + 1; i < lines.length; i++) {
-    if (/^\s*```/.test(lines[i]!)) { fenced = !fenced; continue; }
-    if (fenced) continue;
-    const d = depthOf(lines[i]!);
-    if (d > 0 && d <= own) { end = i; break; }
+  if (!runsToEnd) {
+    for (let i = start + 1; i < lines.length; i++) {
+      if (/^\s*```/.test(lines[i]!)) { fenced = !fenced; continue; }
+      if (fenced) continue;
+      const d = depthOf(lines[i]!);
+      if (d > 0 && d <= own) { end = i; break; }
+    }
   }
   return lines.slice(start + 1, end).join("\n");
 }

@@ -218,8 +218,7 @@ is wrong.** An earlier draft of this section claimed no `Authority` value could
 be constructed at all. That is false and adversarial review demonstrated it:
 `Authority` is a structural type, `productionWriteUrl()` checks only that it
 received an object with a `kind`, and an object literal claiming
-`FOUNDER_GATED` with an invented grant id passes and serialises into an audit
-record. **Constructing the permission object is not the barrier.** The barriers
+`FOUNDER_GATED` with an invented grant id passes. **Constructing the permission object is not the barrier.** The barriers
 are, in order of what does the work:
 
 1. **No write credential.** `DATABASE_URL` is a read-only role and the writable

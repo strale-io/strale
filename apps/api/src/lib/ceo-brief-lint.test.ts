@@ -343,6 +343,45 @@ describe("escalations carry all five fields or they are not ready", () => {
               "**What I need:** your approval.",
     }));
     expect(r.ok, "untagged preamble must be checked, not dropped").toBe(false);
+    expect(r.findings.some((f) => f.rule === "untagged-item")).toBe(true);
+  });
+
+  it("names untagged prose for what it is, rather than blaming the tagged item", () => {
+    // A lead-in sentence above a COMPLETE escalation used to report five
+    // missing fields on an escalation that has all five — a true failure with a
+    // diagnostic pointing at the wrong text.
+    const r = lintBrief(goodBrief({
+      decide: `One thing needs your call today.\n\nFOUNDER_DECISION\n${complete}`,
+    }));
+    expect(r.ok).toBe(false);
+    expect(r.findings.some((f) => f.rule === "untagged-item")).toBe(true);
+    expect(r.findings.some((f) => f.rule === "escalation-incomplete"),
+      "the complete escalation must not be blamed").toBe(false);
+  });
+
+  it("is not tripped by a horizontal rule after the exemption sentence", () => {
+    const r = lintBrief(goodBrief({ decide: "Nothing needs your decision today.\n\n---" }));
+    expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
+  });
+
+  it("catches an already-executed item sharing a line with another tag", () => {
+    // splitByStatus takes the first tag per line, so this classified as a
+    // handover and slipped past the already-executed check entirely.
+    const r = lintBrief(goodBrief({
+      decide: "AUTHORIZATION_UNAVAILABLE and SYSTEM_ACTING — I already closed the eleven records.\n" +
+              "**Settled:** x.\n**Why it is not mine:** y.\n**What I need:** your approval.",
+    }));
+    expect(r.ok).toBe(false);
+    expect(r.findings.some((f) => f.rule === "status-misplaced")).toBe(true);
+  });
+
+  it("checks a section that runs past a same-depth appendix heading", () => {
+    // The last required section runs to the end of the document: a trailing
+    // `## Appendix` was a clean bypass for a full untagged escalation.
+    const withAppendix = goodBrief() +
+      "\n## Appendix\n\nFOUNDER_DECISION\n\nShould we double the price of everything?\n";
+    const r = lintBrief(withAppendix);
+    expect(r.ok, "content after the last section is still inside it").toBe(false);
     expect(r.findings.some((f) => f.rule === "escalation-incomplete")).toBe(true);
   });
 

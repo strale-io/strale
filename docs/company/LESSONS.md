@@ -184,11 +184,13 @@ footnote. If a fourth lands, open the investigation.
 suites skipped for months because a required variable was set in no workflow; a
 budget regression test that exercised the ORM rather than the fix and passed
 either way; two gates that could not fail (a script directory outside the
-typecheck glob, a row count read from the wrong property); and the fifth, which
-is this change's own: `charter-authorization-binding.test.ts` keyed on
-`lib/production-access.ts`, a module that review renamed before it landed, so
-the guard sat in its "dependency absent" branch and passed while the thing it
-guarded had drifted.
+typecheck glob, a row count read from the wrong property); and **two of this
+change's own, in consecutive attempts to fix the first of them**.
+`charter-authorization-binding.test.ts` keyed on `lib/production-access.ts`, a
+module that review renamed before it landed, so the guard sat in its "dependency
+absent" branch and passed while the thing it guarded had drifted (5). Its repair
+then held the type half with a compile-time reference in a file no tsconfig
+project typechecks, so deleting the type would have left every gate green (6).
 
 **Step 1 — the common instrument.** Not the individual tests. Every one of these
 verifies its *assertions* and none verifies its *reachability*: that it ran, over
@@ -371,10 +373,11 @@ Two hollow guards in two consecutive attempts to fix hollow guards, which is the
 most direct evidence available that this family needs a mechanism rather than
 more care. A
 guard keyed to a path that never arrives reports success for work it never
-looked at: **family F5, shipped inside the change that documents F5.** The test
-now imports the module statically and checks that every symbol the charter names
-is really exported, so a rename breaks compilation instead of silently
-disarming the check. Logged as F5 incident 5.
+looked at: **family F5, shipped inside the change that documents F5.** The test now checks
+that every symbol the charter names is really exported — runtime exports against
+`Object.keys`, and the type-only export by scanning the module's source, because
+a compile-time reference would prove nothing in a file no tsconfig project
+typechecks. Logged as F5 incidents 5 and 6.
 
 **State: OPEN.** Owner Claude. Opened 2026-08-22. Parts 1–3 are done and the
 binding is enforced. It stays open on the last criterion this file sets for any
