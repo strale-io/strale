@@ -14,6 +14,9 @@ import { join } from "node:path";
 
 import { foldTrafficRows, type FloorTrafficRow } from "../jobs/quality-floor.js";
 import { evaluateFloor, DEFAULT_FLOOR_CONFIG } from "./quality-floor.js";
+import { outcomeFromError } from "./execution-outcome.js";
+import { CapabilityRefusalError } from "./capability-refusal.js";
+import { TOS_REFUSAL_MARKER } from "./tos-blocklist.js";
 import {
   INVOCATION_RAILS,
   INVOCATION_FACT_DELETE_GUARD_DAYS,
@@ -98,18 +101,23 @@ describe("the floor can see a capability that only runs inside solutions", () =>
   });
 
   it("reads the verdict off the fact instead of re-deriving it from a string", () => {
-    // The error text says "Missing required input fields", which the string
-    // taxonomy classifies as caller-attributable. The FACT says this counts
-    // against the capability. The fact wins — one authority per business fact.
-    // If the fold ever falls back to the taxonomy for fact rows, two answers to
-    // one question exist again, which is the defect this program removes.
+    // The fold trusts `counts` and does not re-run the string taxonomy on fact
+    // rows — one authority per business fact.
+    //
+    // An earlier version of this test used "Missing required input fields" as
+    // the error and asserted the failure COUNTED, on the reasoning that the fact
+    // wins over the string. The reasoning was right and the example was wrong:
+    // it pinned an authority that could not yet answer the question. The fix is
+    // upstream, in outcomeFromError, which now consults the taxonomy so the fact
+    // carries the correct verdict in the first place — see the regression test
+    // below. Here the error text is deliberately incidental.
     const stats = foldTrafficRows(
       [
         factRow({ success: true, n: 1 }),
         factRow({
           success: false,
           counts: true,
-          error: "Missing required input fields: iban",
+          error: "some upstream returned a 500",
           n: 9,
           day: "2026-08-02",
         }),
@@ -118,6 +126,54 @@ describe("the floor can see a capability that only runs inside solutions", () =>
     );
     expect(stats[0].eligibleCalls).toBe(10);
     expect(stats[0].completedCalls).toBe(1);
+  });
+
+  it("a refusal and a caller's bad input never count against the capability", () => {
+    // The defect this test exists for, found by review round 3 and measured
+    // against production: WP9 made outcomeFromError the sole authority on
+    // whether a failure counts, and it only excused the three cost-gate errors.
+    // Every string in the curated caller-input and ToS sets — built
+    // incident-by-incident over months — would have become a counted failure
+    // the moment the epoch passed. Three live capabilities crossed the floor in
+    // the model: product-reviews-extract to 9.3%, us-company-data to 33%, and
+    // url-to-markdown to 53% — the last being the free-tier front door whose
+    // quarantine was reversed that very morning by adding those exact strings.
+    //
+    // These are the real production error strings, not invented ones.
+    for (const message of [
+      "URL returned HTTP 403. The site blocks automated access.",
+      "URL returned HTTP 404. This page does not exist.",
+      "'cik' or 'company_name' is required",
+      "No US company found matching that name",
+      "Missing required input fields: iban",
+      "This page returned almost no readable text",
+    ]) {
+      const outcome = outcomeFromError(new Error(message));
+      expect(outcome.counts_against_capability, message).toBe(false);
+      expect(outcome.fault, message).toBe("caller");
+    }
+
+    // A ToS refusal is an answer the platform is required to give under
+    // DEC-20260428-A. Scoring it as a defect would delist capabilities for
+    // obeying policy.
+    const refusal = outcomeFromError(
+      new CapabilityRefusalError(
+        `Trustpilot is not a supported source: its ${TOS_REFUSAL_MARKER}.`,
+      ),
+    );
+    expect(refusal.counts_against_capability).toBe(false);
+    expect(refusal.failure_class).toBe("capability_refused");
+  });
+
+  it("still counts what is genuinely the capability's problem", () => {
+    // The excusing must not swallow real defects, or the floor stops working.
+    for (const message of [
+      "The Danish business registry (cvrapi.dk) returned a server error (HTTP 503).",
+      "Request timed out after 35000ms",
+      "TypeError: Cannot read properties of undefined",
+    ]) {
+      expect(outcomeFromError(new Error(message)).counts_against_capability, message).toBe(true);
+    }
   });
 });
 
@@ -285,7 +341,27 @@ describe("retention and the database guard must not contradict each other", () =
       at,
     );
     expect(purge).toContain("to_regclass('public.capability_invocations')");
+    // The SENSE. `"?.ready) return 0;"` matches the inverted form too, and that
+    // mutation survived: inverted, the purge never deletes anything (unbounded
+    // growth at ~6k rows/day) AND runs the DELETE precisely when the table is
+    // absent -- both of the failures this guard exists to prevent.
+    expect(purge).toContain("if (!(presentRows[0]");
     expect(purge).toContain("?.ready) return 0;");
+  });
+});
+
+describe("one invocation, one fact", () => {
+  it("the x402 rail cannot record a call twice", () => {
+    // `assertBillableOutput` throws AFTER the success fact is written, and the
+    // catch block records again. Without the guard flag that is two facts for
+    // one invocation, one of them saying a non-billable call succeeded -- which
+    // is worse than missing it, because it inflates the completion rate the
+    // floor decides on. The rail guard only counts record sites (>=2), so the
+    // flag can stop working invisibly; this pins it.
+    const body = readFileSync(join(SRC, "routes/x402-gateway-v2.ts"), "utf8");
+    expect(body).toContain("let factRecorded = false;");
+    expect(body).toContain("factRecorded = true;");
+    expect(body).toContain("if (!factRecorded) {");
   });
 });
 

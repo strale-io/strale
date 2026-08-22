@@ -42,6 +42,11 @@ import {
   CapabilityNotClassifiedError,
 } from "../capabilities/guarded-executor.js";
 import { CAPABILITY_OUTPUT_CONTRACTS } from "./capability-output-contracts.js";
+import { isCapabilityRefusal } from "./capability-refusal.js";
+import {
+  CALLER_ATTRIBUTABLE,
+  classifyTransactionFailure,
+} from "./transaction-failure-taxonomy.js";
 
 /**
  * Why an execution did not produce a billable answer.
@@ -309,6 +314,58 @@ export function outcomeFromError(error: unknown): ExecutionOutcome {
       billable: false,
       retryable: false,
       fault: "strale",
+      counts_against_capability: false,
+    };
+  }
+
+  // A refusal is not a fault, and neither is a caller's bad input.
+  //
+  // This module used to excuse only the three cost-gate errors above, which was
+  // survivable while the quality floor read `transactions` and classified the
+  // error STRING through the curated taxonomy. WP9 makes this function the sole
+  // authority on whether a failure counts against a capability, so an
+  // incomplete implementation stops being a gap and becomes the rule.
+  //
+  // Measured against production before this was added: three live capabilities
+  // would have crossed the floor within thirty days of the fact epoch —
+  // `product-reviews-extract` to 9.3% completion on 39 excused failures (20
+  // upstream 403s, 5 target 404s, and 14 Trustpilot ToS refusals, which are
+  // answers the platform is REQUIRED to give under DEC-20260428-A),
+  // `us-company-data` to 33% on "'cik' or 'company_name' is required" and "no
+  // confident SEC EDGAR match", and `url-to-markdown` to 53% on target 404s and
+  // 403s — the free-tier front door whose quarantine was reversed on 2026-08-22
+  // by adding those very strings to the caller-input patterns. WP9 would have
+  // made that fix inert.
+  //
+  // The taxonomy is consulted rather than duplicated: one authority for
+  // "whose fault was this", used by both the fact writer and the pre-epoch
+  // transaction branch, so the two cannot drift.
+  if (isCapabilityRefusal(error)) {
+    return {
+      ...base,
+      failure_class: "capability_refused",
+      billable: false,
+      retryable: false,
+      fault: "caller",
+      counts_against_capability: false,
+    };
+  }
+
+  // The two vocabularies are deliberately different sizes — the taxonomy splits
+  // failures by WHOSE FAULT, this module splits them by WHAT A CONSUMER DOES —
+  // so the crossing is written out rather than cast. Only the caller-attributable
+  // members need a mapping; everything else falls through to the provider branch
+  // below, which is where the taxonomy's config/timeout/upstream/internal all
+  // correctly belong for billability purposes.
+  const taxonomyClass = classifyTransactionFailure(base.error_message);
+  if (CALLER_ATTRIBUTABLE.has(taxonomyClass)) {
+    return {
+      ...base,
+      failure_class:
+        taxonomyClass === "tos_policy" ? "capability_refused" : "caller_input_invalid",
+      billable: false,
+      retryable: false,
+      fault: "caller",
       counts_against_capability: false,
     };
   }

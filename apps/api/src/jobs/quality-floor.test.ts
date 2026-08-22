@@ -323,7 +323,16 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // version of this test asserted only that "FROM pg_trigger" appeared
     // somewhere, and that mutation survived it.
     expect(block).toContain("IF NOT EXISTS (");
+    expect(block).toContain("await hasImmutableTrigger(tx)");
     expect(block).toContain("if (triggerCount !== 1)");
+    // And it must discard anything written before protection existed rather
+    // than letting a later boot retroactively bless it. CREATE TABLE
+    // autocommits, so a block failing between the table and the trigger leaves
+    // the writer filling an unguarded table -- and the floor keys its epoch on
+    // MIN(created_at), so those rows would become authoritative evidence the
+    // moment the trigger finally appeared.
+    expect(block).toContain("if (!(await hasImmutableTrigger(tx)))");
+    expect(block).toContain('DELETE FROM "capability_invocations"');
   });
 
   it("refuses to treat an unprotected facts table as evidence", () => {
@@ -331,8 +340,15 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // reads as present, so the floor would decide delistings from rows anything
     // could have rewritten. The consumer checks rather than trusting the
     // producer, because a deferred migration can leave exactly that state.
-    expect(src).toContain("EXISTS (");
+    // The SENSE. `toContain("EXISTS (")` is satisfied by `NOT EXISTS (`, and
+    // that mutation survived: inverted, `factsProtected` is true exactly when
+    // the trigger is ABSENT, so a healthy production would never read facts at
+    // all (WP9 silently delivering nothing) while an unprotected table would be
+    // trusted. Sixth hollow assertion in this program, and the second in a row
+    // to appear inside the remediation for the previous one.
+    expect(src).toContain("          EXISTS (");
     expect(src).toContain("WHERE tgname = 'capability_invocations_immutable_trg'");
+    expect(src).toContain("AND tgrelid = to_regclass('public.capability_invocations')");
     expect(src).toContain("const factsReady = tablePresent && factsProtected;");
     const heartbeat = src.slice(src.indexOf(`actionTaken: "tick_complete"`));
     expect(heartbeat).toContain("facts_table_protected: factsProtected");
@@ -345,6 +361,26 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     expect(src).toContain("export function isFactVolumeShortfall");
     expect(src).toContain(".filter((r) => isFactVolumeShortfall(r.facts, r.txns))");
     expect(src).toContain("WHERE txn.n > 0`;");
+    // And the two counts feeding it. Making the fact CTE permanently empty
+    // survived mutation: every capability with >=10 billed calls would then
+    // look like total evidence loss, every quarantine platform-wide would be
+    // suppressed, and the armed safety mechanism would be silently disarmed
+    // with no test failing.
+    const fn = src.slice(
+      src.indexOf("async function detectFactVolumeShortfall"),
+      src.indexOf("export function isEnforceMode"),
+    );
+    expect(fn.length).toBeGreaterThan(400);
+    expect(fn).toContain("FROM capability_invocations");
+    expect(fn).toContain("AND context_kind = 'customer_paid'");
+    expect(fn).toContain("AND is_free_tier = false");
+    expect(fn).toContain("JOIN transactions t ON t.capability_id = c.id");
+    expect(fn).toContain("t.status IN ('completed', 'failed')");
+    // Both CTEs must measure the same population, or the ratio is meaningless.
+    // The transaction side excluded internal accounts and the fact side did not,
+    // which inflated facts and biased the check toward SILENCE -- the unsafe
+    // direction, since silence means the floor acts on possibly-holed evidence.
+    expect((fn.match(/email LIKE ANY\(/g) ?? []).length).toBe(2);
   });
 
   it("bounds the cross-check to the decision window, not the whole fact table", () => {

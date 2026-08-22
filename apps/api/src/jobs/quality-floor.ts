@@ -252,6 +252,15 @@ async function detectFactVolumeShortfall(
       WHERE created_at >= ${windowStart}::timestamptz
         AND context_kind = 'customer_paid'
         AND is_free_tier = false
+        -- Same exclusion as the transaction side. Without it the two CTEs count
+        -- different populations: facts inflated relative to transactions, which
+        -- biases the check toward SILENCE. That is the unsafe direction, since
+        -- silence means the floor proceeds on evidence that may be holed.
+        AND (user_id IS NULL OR user_id NOT IN (
+          SELECT id FROM users
+          WHERE email LIKE ANY(${INTERNAL_EMAIL_LIKE_PATTERNS})
+             OR email = ANY(${EXTRA_EXCLUDED_EMAILS})
+        ))
       GROUP BY capability_slug
     )
     SELECT txn.slug, COALESCE(fct.n, 0) AS facts, txn.n AS txns
@@ -315,9 +324,12 @@ export async function runQualityFloorOnce(): Promise<{
       // but a block that deferred midway can leave exactly this state, so the
       // consumer checks too rather than trusting the producer.
       //
-      // pg_trigger is matched on tgname alone, deliberately: qualifying it with
-      // `tgrelid = 'public.capability_invocations'::regclass` would raise when
-      // the table is absent, which is the case this probe exists to survive.
+      // Qualified by relation. pg_trigger is unique on (tgrelid, tgname), not on
+      // name alone, so an unqualified probe would be satisfied by a same-named
+      // trigger on any other table. The cast form
+      // `'public.capability_invocations'::regclass` WOULD raise when the table
+      // is absent — the case this probe exists to survive — but to_regclass
+      // returns NULL instead, and the same SELECT already calls it.
       const [{ ready: tablePresent, protected: factsProtected }] = await sql<
         { ready: boolean; protected: boolean }[]
       >`
@@ -326,6 +338,7 @@ export async function runQualityFloorOnce(): Promise<{
           EXISTS (
             SELECT 1 FROM pg_trigger
             WHERE tgname = 'capability_invocations_immutable_trg'
+              AND tgrelid = to_regclass('public.capability_invocations')
           ) AS "protected"`;
       const factsReady = tablePresent && factsProtected;
 

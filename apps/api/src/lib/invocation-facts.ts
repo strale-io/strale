@@ -90,9 +90,14 @@ export interface InvocationFact {
   transactionId?: string | null;
   /**
    * The calling account, where there is one. The floor applies the same
-   * internal-account exclusion it applies to transactions — without this, the
-   * internal test harness (roughly 98% of platform traffic, reaching /v1/do
-   * over HTTP like any other client) would be counted as customer experience.
+   * internal-account exclusion it applies to transactions.
+   *
+   * Note what this does NOT currently do. The internal test harness — roughly
+   * 98% of platform traffic — invokes executors in-process via getExecutor
+   * rather than over /v1/do, so it writes no facts at all, and this column is
+   * not what keeps it out. An earlier version of this comment said the harness
+   * reaches /v1/do over HTTP; it does not. The exclusion earns its place the
+   * moment any non-customer path starts recording.
    */
   userId?: string | null;
   /**

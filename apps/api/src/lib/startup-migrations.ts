@@ -2134,6 +2134,22 @@ export async function runMigration0100_relistUrlToMarkdown(
  * not cut over (DEC-20260504-C). Until the table exists the floor falls back to
  * its transactions query, which is exactly today's behaviour.
  */
+/**
+ * Does the append-only trigger exist? Qualified by relation, because
+ * `pg_trigger` is unique on (tgrelid, tgname) and a same-named trigger on
+ * another table would otherwise satisfy the check. `to_regclass` returns NULL
+ * rather than raising when the table is absent.
+ */
+async function hasImmutableTrigger(tx: MigrationExecutor): Promise<boolean> {
+  const res = await tx.execute(sql`
+    SELECT COUNT(*)::int AS n FROM pg_trigger
+    WHERE tgname = 'capability_invocations_immutable_trg'
+      AND tgrelid = to_regclass('public.capability_invocations')
+  `);
+  const rows = Array.isArray(res) ? res : (res as { rows?: unknown[] })?.rows ?? [];
+  return Number((rows[0] as { n?: number } | undefined)?.n ?? 0) === 1;
+}
+
 export async function runMigration0101_capabilityInvocations(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
@@ -2230,6 +2246,28 @@ export async function runMigration0101_capabilityInvocations(
     // The FUNCTION is still CREATE OR REPLACE, so the trigger's behaviour can
     // still be corrected by a deploy — replacing a function takes no lock on
     // the table.
+    // Rows written while the table had no trigger are not evidence, so they are
+    // discarded before protection is installed rather than retroactively
+    // blessed by it.
+    //
+    // CREATE TABLE autocommits, so a block that fails between the table and the
+    // trigger leaves the writer filling an unprotected table — and because the
+    // floor keys its epoch on MIN(created_at), a later boot that finally creates
+    // the trigger would make the whole unprotected era readable as authoritative
+    // evidence for delisting decisions. On the normal path the table was created
+    // moments ago and is empty, so this deletes nothing; it only ever fires on
+    // the recovery path, where the rows it removes are exactly the ones nothing
+    // was guarding. Runs BEFORE the trigger exists, which is the only moment a
+    // DELETE inside the floor window is permitted.
+    let discarded = 0;
+    if (!(await hasImmutableTrigger(tx))) {
+      const purge = await tx.execute(sql`
+        DELETE FROM "capability_invocations"
+      `);
+      const purgeRows = Array.isArray(purge) ? purge : (purge as { rows?: unknown[] })?.rows ?? [];
+      discarded = (purge as { count?: number })?.count ?? purgeRows.length ?? 0;
+    }
+
     await tx.execute(sql`
       DO $$
       BEGIN
@@ -2254,21 +2292,19 @@ export async function runMigration0101_capabilityInvocations(
     // it unprotected. An unprotected facts table is worse than no facts table,
     // because `to_regclass` still says non-null and the floor treats it as
     // authoritative evidence.
-    const check = await tx.execute(sql`
-      SELECT COUNT(*)::int AS n FROM pg_trigger
-      WHERE tgname = 'capability_invocations_immutable_trg'
-        AND tgrelid = 'public.capability_invocations'::regclass
-    `);
-    const checkRows = Array.isArray(check) ? check : (check as { rows?: unknown[] })?.rows ?? [];
-    const triggerCount = Number((checkRows[0] as { n?: number } | undefined)?.n ?? 0);
+    const triggerCount = (await hasImmutableTrigger(tx)) ? 1 : 0;
     if (triggerCount !== 1) {
       throw new Error(
-        "capability_invocations exists but its append-only trigger does not " +
+        "UNPROTECTED: capability_invocations exists but its append-only trigger does not " +
           `(pg_trigger match count ${triggerCount}). Refusing to report success: ` +
           "a mutable facts table still reads as present to the quality floor.",
       );
     }
-    outcome = "table, indexes and append-only trigger present and verified";
+    outcome =
+      "table, indexes and append-only trigger present and verified" +
+      (discarded > 0
+        ? ` (discarded ${discarded} fact(s) written while the table was unprotected)`
+        : "");
   } catch (err) {
     outcome =
       "deferred to next boot: " +
