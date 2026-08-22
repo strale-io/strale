@@ -576,6 +576,9 @@ export async function executeSolution(
           rail: "solution_step",
           solutionId,
           userId: actor.userId,
+          // A bundle has a real price; there is no free solution rail, and the
+          // parent transaction records the same.
+          servedFree: false,
           latencyMs: Date.now() - stepStartMs,
           outcome: outcomeFromOutput(step.capabilitySlug, output),
         });
@@ -590,6 +593,9 @@ export async function executeSolution(
           rail: "solution_step",
           solutionId,
           userId: actor.userId,
+          // A bundle has a real price; there is no free solution rail, and the
+          // parent transaction records the same.
+          servedFree: false,
           latencyMs: Date.now() - stepStartMs,
           outcome: outcomeFromError(err),
         });

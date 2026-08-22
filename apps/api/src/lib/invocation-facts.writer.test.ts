@@ -54,6 +54,7 @@ describe("the row a customer invocation actually writes", () => {
       capabilitySlug: "dns-lookup",
       rail: "v1_do",
       userId: "u1",
+      servedFree: false,
       latencyMs: 12,
       outcome: OK,
     });
@@ -71,6 +72,7 @@ describe("the row a customer invocation actually writes", () => {
       capabilitySlug: "dns-lookup",
       rail: "v1_do",
       userId: "u1",
+      servedFree: false,
       latencyMs: 1,
       outcome: OK,
     });
@@ -83,6 +85,7 @@ describe("the row a customer invocation actually writes", () => {
       capabilitySlug: "swiss-company-data",
       rail: "v1_do",
       userId: "u1",
+      servedFree: false,
       latencyMs: 1,
       outcome: broken,
     });
@@ -97,6 +100,7 @@ describe("the row a customer invocation actually writes", () => {
       capabilitySlug: "iban-validate",
       rail: "v1_do",
       userId: "u1",
+      servedFree: false,
       latencyMs: 1,
       outcome: refused,
     });
@@ -105,37 +109,46 @@ describe("the row a customer invocation actually writes", () => {
     expect(inserted[0].countsAgainstCapability).toBe(false);
   });
 
-  it("derives free-tier to match what the transaction row records, on every path", async () => {
-    // The parity claim review falsified. `/v1/do` routes THREE anonymous cases
-    // through executeFreeTier -- a free-tier capability, an X-Payment call, and
-    // a progressive-unlock call -- and stamps is_free_tier true on the
-    // transaction for all three, including the two where the capability is
-    // PAID. Deriving from the capability's own flag returned false for those
-    // two, so post-epoch they would have started counting toward the floor when
-    // pre-epoch they did not: anonymous zero-cost traffic on paid capabilities,
-    // which is the exact abuse vector the floor's H-1 filter excludes.
-    const cases: Array<[string, "v1_do" | "x402_gateway" | "solution_step", string | null, boolean]> = [
-      // rail,             userId, expected is_free_tier
-      ["anon free-tier",            "v1_do", null, true],
-      ["anon X-Payment",            "v1_do", null, true],
-      ["anon progressive unlock",   "v1_do", null, true],
-      ["authenticated free-tier",   "v1_do", "u1", false],
-      ["authenticated sync",        "v1_do", "u1", false],
-      ["x402 capability rail",      "x402_gateway", null, false],
-      ["solution step",             "solution_step", "u1", false],
-      ["solution step via x402",    "solution_step", null, false],
-    ];
-    for (const [label, rail, userId, expected] of cases) {
+  it("writes free-tier as the rail computed it, so the two writes cannot disagree", async () => {
+    // Two derivations of this value have now been falsified by review, in
+    // OPPOSITE directions. Reading the capability's own flag missed that
+    // `/v1/do` stamps is_free_tier true for anonymous X-Payment and
+    // progressive-unlock calls on PAID capabilities. Deriving `rail === v1_do
+    // && no account` then missed that a SUCCESSFUL anonymous X-Payment call has
+    // its transaction UPDATEd back to false on settlement -- production shows 5
+    // of 5 such rows are false -- so it would have dropped genuinely paid
+    // traffic out of the floor when pre-epoch it was counted.
+    //
+    // The writer cannot derive this: whether a call was paid is decided at the
+    // route, before settlement, and no property of the fact reveals it. So the
+    // enforceable invariant is not "the writer computes it correctly" but "the
+    // rail computes it ONCE and both writes get the same variable" -- asserted
+    // structurally in invocation-facts.test.ts, and asserted here as pass-through.
+    for (const servedFree of [true, false]) {
       inserted.length = 0;
       await recordCustomerInvocation({
         capabilitySlug: "dns-lookup",
-        rail,
-        userId,
+        rail: "v1_do",
+        userId: null,
+        servedFree,
         latencyMs: 1,
         outcome: OK,
       });
-      expect(inserted[0].isFreeTier, label).toBe(expected);
+      expect(inserted[0].isFreeTier, `servedFree=${servedFree}`).toBe(servedFree);
     }
+
+    // And it is genuinely pass-through, not a coincidence of the rail: the same
+    // value survives on a rail where free-tier is never correct.
+    inserted.length = 0;
+    await recordCustomerInvocation({
+      capabilitySlug: "dns-lookup",
+      rail: "x402_gateway",
+      userId: null,
+      servedFree: false,
+      latencyMs: 1,
+      outcome: OK,
+    });
+    expect(inserted[0].isFreeTier).toBe(false);
   });
 
   it("never fails a customer call when the database refuses the fact", async () => {
@@ -147,6 +160,7 @@ describe("the row a customer invocation actually writes", () => {
         capabilitySlug: "dns-lookup",
         rail: "v1_do",
         userId: null,
+        servedFree: true,
         latencyMs: 1,
         outcome: OK,
       }),

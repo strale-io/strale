@@ -145,33 +145,36 @@ export const INVOCATION_FACT_DELETE_GUARD_DAYS = 35;
  * branch measuring the same population.
  */
 export async function recordCustomerInvocation(
-  fact: Omit<InvocationFact, "contextKind" | "isFreeTier">,
+  fact: Omit<InvocationFact, "contextKind" | "isFreeTier"> & {
+    /**
+     * Was this call served WITHOUT payment?
+     *
+     * The one field a rail still supplies, because the writer cannot know it:
+     * whether a call was paid is decided at the route, before settlement, and
+     * no property of the fact reveals it. What CAN be enforced, and is, is that
+     * the rail computes it once and hands the same variable to both the
+     * transaction row and this fact — so the two cannot disagree, which is the
+     * invariant that actually matters.
+     *
+     * Two earlier derivations were falsified by review. Reading the
+     * capability's own free-tier flag missed that `/v1/do` stamps
+     * `is_free_tier: true` for anonymous X-Payment and progressive-unlock calls
+     * on PAID capabilities. Deriving `rail === "v1_do" && no account` then
+     * missed the opposite case: a successful anonymous X-Payment call has its
+     * transaction UPDATEd back to `is_free_tier: false` on settlement
+     * (do.ts:1526), and production shows 5 of 5 such rows are false. That
+     * derivation would have excluded genuinely PAID traffic from the floor
+     * post-epoch when pre-epoch it was included — removing coverage from the
+     * primary rail rather than adding it.
+     */
+    servedFree: boolean;
+  },
 ): Promise<void> {
+  const { servedFree, ...rest } = fact;
   await recordInvocation({
-    ...fact,
+    ...rest,
     contextKind: "customer_paid",
-    // Derived from the rail and the absence of an account, and from nothing a
-    // caller supplies.
-    //
-    // The first version derived it from the capability's own free-tier flag,
-    // and review falsified the parity claim built on it. `/v1/do` routes THREE
-    // anonymous cases through executeFreeTier -- a genuinely free-tier
-    // capability, an X-Payment call, and a progressive-unlock call -- and
-    // stamps `is_free_tier: true` on the transaction for all three, including
-    // the two where the capability is paid. The old derivation returned false
-    // for those two, so post-epoch they would have started counting toward the
-    // floor when pre-epoch they did not.
-    //
-    // That is the H-1 abuse vector reopened for exactly the wrong population:
-    // progressive unlock grants anonymous, unauthenticated, zero-cost calls on
-    // 13 PAID, x402-enabled capabilities, and an anonymous caller could have
-    // generated free failures against a capability the armed floor can delist.
-    //
-    // `rail === "v1_do" && no account` matches what the transaction row records
-    // on all seven serving paths: true for the three anonymous /v1/do cases,
-    // false for the three authenticated ones, and false on the x402 rail, where
-    // the caller has no account but did pay.
-    isFreeTier: fact.rail === "v1_do" && (fact.userId ?? null) === null,
+    isFreeTier: servedFree,
   });
 }
 

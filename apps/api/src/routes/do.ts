@@ -349,6 +349,13 @@ export async function spendCapWouldExceed(
  */
 interface InvocationActor {
   userId: string | null;
+  /**
+   * Was this call served without payment? Computed ONCE per route path and
+   * handed to both the transaction row and the invocation fact, so the two
+   * cannot disagree. That is the invariant; the value itself is not derivable
+   * inside the writer, because whether a call was paid is decided here.
+   */
+  servedFree: boolean;
 }
 
 /**
@@ -414,6 +421,7 @@ async function executeWithRetry(
       capabilitySlug: capability.slug,
       rail: "v1_do",
       userId: actor.userId,
+      servedFree: actor.servedFree,
       latencyMs: Date.now() - startedAt,
       outcome: outcomeFromOutput(capability.slug, result?.output),
     });
@@ -423,6 +431,7 @@ async function executeWithRetry(
       capabilitySlug: capability.slug,
       rail: "v1_do",
       userId: actor.userId,
+      servedFree: actor.servedFree,
       latencyMs: Date.now() - startedAt,
       outcome: outcomeFromError(err),
     });
@@ -1418,6 +1427,17 @@ async function executeFreeTier(
   const startTime = Date.now();
   const marker = getTransparencyMarker(capability.transparencyTag);
 
+  // ONE value, two writes. This function serves three anonymous cases -- a
+  // genuinely free-tier capability, a progressive-unlock call, and an X-Payment
+  // call -- and only the last of those was paid for. Computed here and handed to
+  // both the transaction row below and the invocation fact, because two
+  // independent derivations of the same fact is precisely what review falsified
+  // twice: the transaction is UPDATEd to is_free_tier=false on successful x402
+  // settlement (see the settlement update further down), and production shows
+  // 5 of 5 such rows are false, so any derivation that answered "free" for them
+  // would drop genuinely paid traffic out of the quality floor.
+  const servedFree = !c.get("x402_paid" as any);
+
   // Create a persisted transaction record so the audit trail is verifiable.
   // MED-10: write client_ip_hash directly so the free-tier rate-limit query
   // hits a top-level indexed column instead of audit_trail JSONB.
@@ -1433,13 +1453,15 @@ async function executeFreeTier(
       priceCents: 0,
       transparencyMarker: marker,
       dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
-      isFreeTier: true,
+      // The same variable the fact gets. Two derivations of one fact is what
+      // review falsified twice.
+      isFreeTier: servedFree,
       clientIpHash: reqCtxForInsert?.ipHash ?? null,
     })
     .returning({ id: transactions.id });
 
   try {
-    const capResult = await executeWithRetry(executor, executionInput, capability, { userId: null });
+    const capResult = await executeWithRetry(executor, executionInput, capability, { userId: null, servedFree });
     assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
@@ -1698,7 +1720,7 @@ async function executeFreeTierAuthenticated(
     .returning({ id: transactions.id });
 
   try {
-    const capResult = await executeWithRetry(executor, executionInput, capability, { userId: user.id });
+    const capResult = await executeWithRetry(executor, executionInput, capability, { userId: user.id, servedFree: false });
     assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
@@ -1989,7 +2011,7 @@ async function executeSync(
 
     // Execute the capability
     try {
-      const capResult = await executeWithRetry(executor, executionInput, capability, { userId: user.id });
+      const capResult = await executeWithRetry(executor, executionInput, capability, { userId: user.id, servedFree: false });
       assertBillableOutput(capability.slug, capResult.output);
       const latencyMs = Date.now() - startTime;
 
@@ -2433,7 +2455,7 @@ async function executeAsync(
     `async-exec:${capability.slug}:${transactionId}`,
     executeInBackground(
       db,
-      { userId: user.id },
+      { userId: user.id, servedFree: false },
       executor,
       executionInput,
       transactionId,

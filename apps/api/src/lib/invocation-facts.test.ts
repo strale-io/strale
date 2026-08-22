@@ -308,6 +308,13 @@ describe("no serving path may skip the fact", () => {
     // only they can free, exiting via the 15s idle-in-transaction timeout as a
     // wave of failed paid calls whose vendor cost was already spent.
     expect(doRoute).not.toContain("await recordCustomerInvocation(");
+    // ONE value, two writes. The transaction row and the fact must receive the
+    // same variable, because two independent derivations of "was this served
+    // free" have now been falsified in opposite directions by review.
+    expect(doRoute).toContain('const servedFree = !c.get("x402_paid" as any);');
+    expect(doRoute).toContain("isFreeTier: servedFree,");
+    expect(doRoute).toContain("{ userId: null, servedFree }");
+    expect(doRoute).toContain("servedFree: actor.servedFree,");
     expect(doRoute).toContain("void trackBackgroundTask(");
 
     expect(
@@ -350,7 +357,7 @@ describe("no serving path may skip the fact", () => {
       // inside the INSERT survived the entire source-text suite before it
       // existed.
       if (/capabilityIsFreeTier/.test(body)) {
-        offenders.push(`${rel} still decides free-tier for itself`);
+        offenders.push(`${rel} still decides free-tier from the capability flag`);
       }
       if (/recordInvocation\(\{/.test(body)) {
         offenders.push(`${rel} calls recordInvocation directly instead of recordCustomerInvocation`);
@@ -370,17 +377,25 @@ describe("no serving path may skip the fact", () => {
     expect(all).toEqual(["lib/invocation-facts.ts"]);
   });
 
-  it("derives free-tier from the rail, not from the capability", () => {
-    // Parity with the transaction row on all seven serving paths, asserted
-    // behaviourally in invocation-facts.writer.test.ts. This pins the shape so
-    // the derivation cannot quietly go back to reading the capability flag,
-    // which review falsified: /v1/do stamps is_free_tier true on the
-    // transaction for three anonymous cases, two of which are PAID
-    // capabilities.
-    const src = readFileSync(join(SRC, "lib/invocation-facts.ts"), "utf8");
-    expect(src).toContain(
-      'isFreeTier: fact.rail === "v1_do" && (fact.userId ?? null) === null,',
-    );
+  it("passes the rail's free-tier value straight through, deriving nothing", () => {
+    // The writer must NOT re-derive this. Two derivations were falsified in
+    // opposite directions: from the capability flag (missed that /v1/do stamps
+    // true for anonymous X-Payment and progressive-unlock calls on PAID
+    // capabilities) and from the rail plus absence of an account (missed that a
+    // SUCCESSFUL X-Payment call is UPDATEd back to false on settlement -- 5 of 5
+    // such rows in production are false). Whether a call was paid is decided at
+    // the route, before settlement, and nothing about the fact reveals it.
+    // Comments stripped: this is about the CODE. A negative assertion that
+    // matches prose is the hollow-assertion pattern in miniature -- the
+    // docstring below deliberately names both falsified derivations, and a
+    // naive `not.toContain` would fail on the documentation of the very bug it
+    // is guarding against.
+    const src = readFileSync(join(SRC, "lib/invocation-facts.ts"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1");
+    expect(src).toContain("isFreeTier: servedFree,");
+    expect(src).not.toContain("rail ===");
+    expect(src).not.toContain("capabilityIsFreeTier");
   });
 
   it("the solution executor assesses the enriched output, not the raw result", () => {
@@ -390,6 +405,22 @@ describe("no serving path may skip the fact", () => {
     // about the same call — two answers to one question, again.
     const body = readFileSync(join(SRC, "lib/solution-executor.ts"), "utf8");
     expect(body).toContain("outcome: outcomeFromOutput(step.capabilitySlug, output)");
+  });
+
+  it("every rail assesses the OUTPUT, not the result wrapper", () => {
+    // `result` is `{output, provenance}` -- an object with no `error` key, so
+    // assessOutput calls it usable and outcomeFromOutput returns success:true,
+    // counts_against_capability:false for EVERY call regardless of what the
+    // capability returned. That is the pin-every-capability-at-100% failure the
+    // writer test exists to prevent, closed at the writer and left open at the
+    // two call sites feeding it: the mutation survived four separate test files.
+    //
+    // solution-executor was already pinned; do.ts and x402 were not. Same shape
+    // as five earlier findings -- one writer file guarded, the next one not.
+    const doRoute = readFileSync(join(SRC, "routes/do.ts"), "utf8");
+    expect(doRoute).toContain("outcome: outcomeFromOutput(capability.slug, result?.output)");
+    const x402 = readFileSync(join(SRC, "routes/x402-gateway-v2.ts"), "utf8");
+    expect(x402).toContain("outcome: outcomeFromOutput(cap.slug, result.output)");
   });
 });
 
