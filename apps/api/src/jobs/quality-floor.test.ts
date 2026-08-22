@@ -206,6 +206,24 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // epoch value.
     expect(src).toMatch(/const factRows = factsReady\s*\?/);
     expect(src).toMatch(/const epoch = factsReady\s*\?/);
+    // And what the epoch IS. MIN -> MAX moves it to the newest fact, so the fact
+    // branch matches nothing and the transaction branch reclaims the whole
+    // window: the floor silently reverts to pre-WP9 behaviour with solution
+    // steps invisible again, while the heartbeat reports a plausible fact_epoch
+    // and facts_table_present: true.
+    expect(src).toContain("SELECT COALESCE(MIN(created_at), NOW()) AS epoch");
+  });
+
+  it("actually feeds both sources to the fold", () => {
+    // Every pin on the fact query is a slice assertion bounded by
+    // `const rows = [`, so dropping `...factRows` leaves all of that SQL in the
+    // file and none of it reaching foldTrafficRows. Once the table outlives the
+    // window the transaction branch returns nothing either, and the floor sees
+    // no traffic on any capability, forever, reporting `evaluated: 0` on a
+    // heartbeat indistinguishable from a quiet day.
+    //
+    // This is the package's entire exit condition, and nothing asserted it.
+    expect(src).toContain("const rows = [...transactionRows, ...factRows];");
   });
 
   it("keeps the two sources disjoint across the epoch", () => {
@@ -283,7 +301,15 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     );
     expect(factQuery).toContain("AND f.context_kind = 'customer_paid'");
     expect(factQuery).toContain("AND f.is_free_tier = false");
-    expect(factQuery).toContain("f.user_id NOT IN (");
+    // The WHOLE predicate, not the NOT IN fragment. Inverting the leading
+    // `IS NULL OR` to `IS NOT NULL AND` leaves that fragment untouched and
+    // removes 97.1% of the floor's evidence: 2,522 of 2,597 floor-eligible rows
+    // in a 30-day window carry a NULL user_id, because every x402 call does.
+    // The tick then evaluates almost nothing, quarantines nothing, and writes a
+    // healthy-looking heartbeat -- and the volume cross-check cannot catch it,
+    // because its own CTE keeps the NULL branch, so facts still match
+    // transactions. Completely silent.
+    expect(factQuery).toContain("AND (f.user_id IS NULL OR f.user_id NOT IN (");
   });
 
   it("keeps internal accounts out of the revenue figure", () => {
@@ -306,7 +332,7 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // a substring present in both the correct and the broken form is not a
     // guard -- the same class of hollow assertion WP8 shipped and this program
     // keeps re-finding.
-    expect(revenueQuery).toContain("rt.user_id NOT IN (");
+    expect(revenueQuery).toContain("AND (rt.user_id IS NULL OR rt.user_id NOT IN (");
     expect(revenueQuery).toContain("email LIKE ANY(");
     expect(revenueQuery).toContain("COALESCE(rt.is_free_tier, false) = false");
     expect(revenueQuery).toContain("WHERE rt.created_at > s.win_start");
@@ -393,6 +419,25 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     expect(block).toContain("UNPROTECTED-BACKLOG");
   });
 
+  it("the trigger refuses what it is installed to refuse", () => {
+    // Everything about this trigger was asserted except what it DOES. The stub
+    // harness in startup-migrations.test.ts queues opaque results and never
+    // evaluates SQL, so the one statement whose semantics are this table's
+    // entire safety argument was invisible to it -- and `factsProtected`, the
+    // floor's whole reason for trusting facts, is satisfied by a trigger whose
+    // body refuses nothing.
+    //
+    // Three mutations survived: refusing INSERT instead of UPDATE, dropping
+    // UPDATE from the trigger definition, and inverting the 35-day comparison
+    // so fresh evidence inside the floor's window becomes deletable while the
+    // nightly purge raises on every run.
+    expect(migration).toContain("IF TG_OP = 'UPDATE' THEN");
+    expect(migration).toContain("BEFORE UPDATE OR DELETE ON");
+    expect(migration).toContain(
+      "IF TG_OP = 'DELETE' AND OLD.created_at > now() - INTERVAL '35 days' THEN",
+    );
+  });
+
   it("refuses to treat an unprotected facts table as evidence", () => {
     // A table without its append-only trigger is worse than no table: it still
     // reads as present, so the floor would decide delistings from rows anything
@@ -419,6 +464,14 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     expect(src).toContain("export function isFactVolumeShortfall");
     expect(src).toContain(".filter((r) => isFactVolumeShortfall(r.facts, r.txns))");
     expect(src).toContain("WHERE txn.n > 0`;");
+    // The SELECT list and the join -- what round 10 pinned for the floor's two
+    // queries and not for this one. Transposing the aliases makes the shortfall
+    // fire on every capability with bundle traffic, suppressing every quarantine
+    // platform-wide while looking like a working safety mechanism, and makes the
+    // total-loss case it exists for evaluate to false. Turning the LEFT JOIN
+    // into a JOIN drops zero-fact capabilities out entirely, which IS that case.
+    expect(src).toContain("SELECT txn.slug, COALESCE(fct.n, 0) AS facts, txn.n AS txns");
+    expect(src).toContain("FROM txn LEFT JOIN fct ON fct.slug = txn.slug");
     // And the two counts feeding it. Making the fact CTE permanently empty
     // survived mutation: every capability with >=10 billed calls would then
     // look like total evidence loss, every quarantine platform-wide would be

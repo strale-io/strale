@@ -1229,8 +1229,13 @@ export const capabilityInvocations = pgTable(
       table.capabilitySlug,
       table.createdAt,
     ),
-    // "What did this bundle actually run?" — the query that was impossible
-    // before this table existed.
+    // Reserved. NO rail populates transaction_id today -- every live call site
+    // omits it, so the column is null for 100% of writes and this index is
+    // currently dead. It is kept rather than dropped because the linkage is the
+    // natural way to answer "what did this bundle actually run?", and adding
+    // the index later costs a migration; but the honest statement is that the
+    // question is not answerable yet. Review found the previous wording
+    // asserting the linkage as delivered.
     byTransaction: index("capability_invocations_transaction_idx").on(
       table.transactionId,
     ),

@@ -55,8 +55,12 @@ design:
   one_row_per_invocation: >
     Written wherever a capability executor is invoked — the /v1/do rails, the
     x402 capability rail, and each solution STEP. Carries the capability slug,
-    the canonical ExecutionOutcome fields, latency, and the parent transaction
-    if there is one.
+    the canonical ExecutionOutcome fields, and latency.
+    NOT the parent transaction: the column exists and the writer passes it
+    through, but no rail supplies one, so it is null for 100% of writes and its
+    index is dead. An earlier version of this line claimed the linkage as
+    delivered and review was right to call it false. Populating it is a
+    one-line-per-site change and is deliberately out of scope here.
   the_floor_consumes_facts: >
     Replacing a join on billing rows with a read of invocation facts makes
     solution steps count. That is the exit condition, and the acceptance signal
