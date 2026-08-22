@@ -97,7 +97,7 @@ async function main() {
     console.log(`  distinct payers            ${conc.payers}`);
     console.log(`  largest payer share        ${pct(conc.topShare)}  (${eur(conc.topCents)} vs ${eur(conc.othersCents)} from all others)`);
     console.log(`  unattributed revenue       ${eur(conc.unattributedCents)}`);
-    console.log(`  new payers                 ${conc.newPayers}`);
+    console.log(`  new payers                 ${conc.newPayers ?? "cannot tell yet — a buyer active before the identity instrument carries no identity, so it would read as new"}`);
     console.log(`  returning payers           ${conc.returningPayers ?? "cannot tell yet — identity instrument is younger than the lookback"}`);
     console.log(`  bought on >1 day           ${conc.repeatPayers}`);
     console.log(`  days anyone paid us        ${conc.activePayingDays}`);

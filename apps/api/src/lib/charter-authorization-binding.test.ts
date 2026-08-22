@@ -76,24 +76,75 @@ describe("the three statuses are defined once and used consistently", () => {
   it("excludes anything already executed from the settled-but-unpermitted status", () => {
     // Reporting a completed mutation as pending is the same misreporting as an
     // unapproved execution, pointing the other way (F10 incident 3).
-    expect(charter()).toMatch(/already carried out without authority is \*?\*?not\*?\*?/i);
+    // `\s+` rather than a literal space: the charter is hard-wrapped, and the
+    // first version of this assertion failed only because the sentence it was
+    // checking happened to break across a line.
+    expect(charter().replace(/\s+/g, " "))
+      .toMatch(/already carried out without authority is \*?\*?not\*?\*? ?`?AUTHORIZATION_UNAVAILABLE/i);
   });
 });
 
 describe("the charter binds to the authority model that actually landed", () => {
-  it("names only symbols the module exports", () => {
-    // Every capitalised/`backticked` identifier the charter presents as part of
-    // the authority model must really be exported. This is the check whose
-    // absence let four non-existent symbols sit in the charter.
+  /**
+   * Vocabulary the charter uses in backticks that is deliberately NOT an export
+   * of the authority module. Listed explicitly rather than pattern-excluded,
+   * because a pattern is how the first version of this check swept the three
+   * status names in and then failed on them.
+   */
+  const NOT_MODULE_EXPORTS = new Set([
+    // Our own status vocabulary — names for shapes, not symbols.
+    "SYSTEM_ACTING", "FOUNDER_DECISION", "AUTHORIZATION_UNAVAILABLE",
+    // Discriminants of the exported `Authority` union, not exports themselves.
+    "AUTONOMOUS_POLICY", "FOUNDER_GATED",
+    // Decision-queue classes.
+    "approval_required", "preauthorized_notice", "your_call",
+    // Environment and other modules.
+    "DATABASE_URL", "isInternalAccountEmail", "INTERNAL_EMAIL_LIKE_PATTERNS",
+    "failed_requests", "translate",
+  ]);
+
+  /**
+   * Runtime exports the charter must name. Checked against `Object.keys`.
+   */
+  const REQUIRED_RUNTIME = [
+    "AUTONOMOUS_PURPOSES", "autonomousAuthority", "requireFounderGrant",
+    "productionWriteUrl", "FOUNDER_GRANT_PUBLIC_KEY_PEM", "assertCannotMintGrants",
+  ] as const;
+
+  /**
+   * Type-only exports the charter names. These are erased at runtime, so
+   * `Object.keys` cannot see them and a runtime check would wrongly fail — the
+   * binding is enforced by the compile-time reference below instead: delete or
+   * rename `Authority` in the module and this file stops typechecking.
+   */
+  const REQUIRED_TYPES = ["Authority"] as const;
+  type _AuthorityIsExported = authority.Authority;
+
+  it("names the authority model's real symbols", () => {
+    for (const n of REQUIRED_RUNTIME) {
+      expect(charter(), `CHARTER.md must reference \`${n}\``).toMatch(new RegExp(`\`${n}\\(?\\)?\``));
+      expect(Object.keys(authority), `${n} must be exported`).toContain(n);
+    }
+    for (const n of REQUIRED_TYPES) {
+      expect(charter(), `CHARTER.md must reference \`${n}\``).toMatch(new RegExp(`\`${n}\``));
+    }
+  });
+
+  it("names no symbol the module does not export", () => {
+    // The check whose absence let four non-existent symbols sit in the charter
+    // for a day. Any backticked identifier that is not documented above as
+    // non-module vocabulary must really be exported.
     const named = [...charter().matchAll(/`([A-Za-z_][A-Za-z0-9_]*)\(?\)?`/g)]
       .map((m) => m[1]!)
-      .filter((n) => /^(?:AUTONOMOUS_|FOUNDER_|Authority$|autonomousAuthority$|requireFounderGrant$|productionWriteUrl$|describeAuthority$|assertCannotMintGrants$|ProductionAuthorityError$)/.test(n));
-    expect(named.length, "the charter must reference the authority model by name").toBeGreaterThan(0);
+      // Type-only exports are erased at runtime; they are held instead by the
+      // compile-time reference above.
+      .filter((n) => !NOT_MODULE_EXPORTS.has(n) && !REQUIRED_TYPES.includes(n as never));
     for (const n of named) {
       expect(
         Object.keys(authority),
         `CHARTER.md names \`${n}\`, which lib/production-authority.ts does not export. ` +
-          "The charter must not describe an authorization model the code does not have.",
+          "Either the charter is describing an authorization model the code does not " +
+          "have, or the name belongs in NOT_MODULE_EXPORTS with a reason.",
       ).toContain(n);
     }
   });
