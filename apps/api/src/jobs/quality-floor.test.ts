@@ -60,6 +60,15 @@ describe("quality-floor evidence window — the SQL clamp itself", () => {
   });
 });
 
+/**
+ * WP9: revenue moved out of the fold. Facts carry no price by design — they
+ * answer "did this work", and asking them what a call earned would be the same
+ * category error the package exists to undo — so the job reads revenue from the
+ * billing table and passes it in. Only consumer is `requiresHuman`, which none
+ * of these window tests exercise, so a flat value keeps them about the clamp.
+ */
+const REVENUE = new Map<string, number>([["cap", 500]]);
+
 describe("quality-floor evidence window — the bounce it must not reproduce", () => {
   // 30d of real customer traffic BEFORE the 2026-08-13T07:34 promotion:
   // 10 completed, 20 failed (upstream — non-caller-attributable) spread over
@@ -67,21 +76,25 @@ describe("quality-floor evidence window — the bounce it must not reproduce", (
   // 10/30 = 33%, matching the real prod incident's <70% figure.
   const prePromotionRows: FloorTrafficRow[] = [
     { slug: "screenshot-url", lifecycle_state: "active", visible: true, x402_enabled: true,
-      status: "completed", error: null, price_cents: 5, day: "2026-08-01", recent: false, n: 10 },
+      source: "transaction", success: null, counts: null,
+      status: "completed", error: null, day: "2026-08-01", recent: false, n: 10 },
     { slug: "screenshot-url", lifecycle_state: "active", visible: true, x402_enabled: true,
-      status: "failed", error: "upstream unavailable", price_cents: 5, day: "2026-08-06", recent: false, n: 10 },
+      source: "transaction", success: null, counts: null,
+      status: "failed", error: "upstream unavailable", day: "2026-08-06", recent: false, n: 10 },
     { slug: "screenshot-url", lifecycle_state: "active", visible: true, x402_enabled: true,
-      status: "failed", error: "upstream unavailable", price_cents: 5, day: "2026-08-09", recent: false, n: 10 },
+      source: "transaction", success: null, counts: null,
+      status: "failed", error: "upstream unavailable", day: "2026-08-09", recent: false, n: 10 },
   ];
   // The 07:47 tick, 13 minutes after promotion: essentially no new real
   // traffic has landed yet. One clean call, dated "recent" (< 7d old).
   const tinyPostPromotionRows: FloorTrafficRow[] = [
     { slug: "screenshot-url", lifecycle_state: "active", visible: true, x402_enabled: true,
-      status: "completed", error: null, price_cents: 5, day: "2026-08-13", recent: true, n: 1 },
+      source: "transaction", success: null, counts: null,
+      status: "completed", error: null, day: "2026-08-13", recent: true, n: 1 },
   ];
 
   it("WITHOUT the clamp (SQL returns pre- and post-promotion rows together) the tick re-quarantines — this is the bounce", () => {
-    const stats = foldTrafficRows([...prePromotionRows, ...tinyPostPromotionRows]);
+    const stats = foldTrafficRows([...prePromotionRows, ...tinyPostPromotionRows], REVENUE);
     const [d] = evaluateFloor(stats);
     expect(d.action).toBe("quarantine");
   });
@@ -92,7 +105,7 @@ describe("quality-floor evidence window — the bounce it must not reproduce", (
     // stays under minCalls (10) and evaluateFloor emits nothing at all: not
     // a quarantine, not a proposal. The ≥10-eligible-calls threshold is the
     // grace period.
-    const stats = foldTrafficRows(tinyPostPromotionRows);
+    const stats = foldTrafficRows(tinyPostPromotionRows, REVENUE);
     expect(evaluateFloor(stats)).toEqual([]);
   });
 });
@@ -103,15 +116,18 @@ describe("quality-floor evidence window — genuine new failures still re-quaran
   // distinct days. The clamp resets the window; it does not grant immunity.
   const genuinelyFailingPostPromotionRows: FloorTrafficRow[] = [
     { slug: "screenshot-url", lifecycle_state: "active", visible: true, x402_enabled: true,
-      status: "completed", error: null, price_cents: 5, day: "2026-08-15", recent: true, n: 5 },
+      source: "transaction", success: null, counts: null,
+      status: "completed", error: null, day: "2026-08-15", recent: true, n: 5 },
     { slug: "screenshot-url", lifecycle_state: "active", visible: true, x402_enabled: true,
-      status: "failed", error: "upstream unavailable", price_cents: 5, day: "2026-08-15", recent: true, n: 5 },
+      source: "transaction", success: null, counts: null,
+      status: "failed", error: "upstream unavailable", day: "2026-08-15", recent: true, n: 5 },
     { slug: "screenshot-url", lifecycle_state: "active", visible: true, x402_enabled: true,
-      status: "failed", error: "upstream unavailable", price_cents: 5, day: "2026-08-16", recent: true, n: 5 },
+      source: "transaction", success: null, counts: null,
+      status: "failed", error: "upstream unavailable", day: "2026-08-16", recent: true, n: 5 },
   ];
 
   it("re-quarantines on ≥10 genuinely-failing NEW calls, evaluated purely on post-promotion evidence", () => {
-    const stats = foldTrafficRows(genuinelyFailingPostPromotionRows);
+    const stats = foldTrafficRows(genuinelyFailingPostPromotionRows, REVENUE);
     const [d] = evaluateFloor(stats);
     expect(d.eligibleCalls).toBe(15);
     expect(d.action).toBe("quarantine");
