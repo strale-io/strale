@@ -84,6 +84,14 @@ exit_conditions:
 # ── Migration and retention implications, recorded explicitly ────────────────
 migration:
   block: "0101_capability_invocations"
+  renumbered_from_0100: >
+    origin/main landed runMigration0100_relistUrlToMarkdown (c6a3b16) while this
+    branch was open. Two structurally different migrations sharing a block id
+    makes the id useless as an audit key, and the block list is the one file
+    here whose ordering is safety-critical. Renumbered and merged; the migration
+    file was rebuilt additively from origin/main rather than hand-resolved,
+    because the first conflict resolution silently dropped three lines from the
+    tail of main's function.
   creates: >
     capability_invocations, three indexes (slug+created, transaction, created),
     and an append-only trigger. Defer-not-throw: a throw aborts boot and a failed
@@ -124,6 +132,15 @@ migration:
     bridge removes the need for it — facts from the first one written,
     transactions before that instant. Nothing is double-counted and the
     transactions branch contributes nothing once the table outlives the window.
+  deploy_verification_trigger: >
+    The trigger must be verified, not assumed. Block 0101 now queries pg_trigger
+    after creating it and THROWS if the count is not 1, and the floor
+    independently refuses to read facts when the trigger is missing. Both exist
+    because a table without its append-only trigger is worse than no table:
+    to_regclass still reports it present, so the floor would decide delistings
+    from rows anything could have rewritten. There is a real path to that state
+    even with correct code -- CREATE TABLE autocommits, so a block that defers
+    midway leaves the table present and unprotected while reporting "deferred".
   deploy_verification: >
     DEC-20260504-C requires querying prod for the effect, not reading a log line.
     After deploy: SELECT to_regclass('public.capability_invocations') must be
@@ -256,3 +273,68 @@ review_round_1:
       unconditionally, so there is no mechanism to honour an Art. 16 or Art. 17
       request against it. "No customer content" is not the same as "no personal
       data". Needs a decision, not necessarily a code change.
+
+# -- Independent review round 2: FAIL, four blocking findings, all remediated --
+review_round_2:
+  verdict: FAIL_REMEDIATION_REQUIRED
+  blk1_the_trigger_guard_was_hollow: >
+    Inverting IF NOT EXISTS to IF EXISTS in block 0101 left every test green.
+    The trigger would then never be created on a fresh table, leaving it fully
+    mutable while to_regclass still reported it present -- so the floor would
+    treat rewritable rows as authoritative evidence for a delisting. Nothing
+    anywhere verified the trigger existed: not the block, not the heartbeat, not
+    the deploy-verification query. Three fixes: the block verifies via
+    pg_trigger and throws if absent, the floor checks independently and falls
+    back to billing rows when unprotected, and the guard now asserts the sense
+    of the condition rather than the presence of the words.
+  blk2_the_threshold_could_be_reduced_to_nothing: >
+    Setting FACT_SHORTFALL_RATIO to 0 -- which makes the cross-check unable to
+    ever fire -- passed the whole suite, because the comparison lived in SQL no
+    test executed. Extracted to a pure exported isFactVolumeShortfall with
+    direct behavioural tests. Round 1 found this defence documented and not
+    implemented; round 2 found it implemented in a form that could be silently
+    returned to nothing.
+  blk2b_the_window_was_six_times_too_wide: >
+    Both CTEs bounded on the fact epoch alone. Since the epoch is MIN(created_at)
+    over a table retained 180 days, the comparison window grew to six times the
+    floor's 30-day decision window: a capability losing 100% of the last 30 days
+    scored 150/180 and never fired. It worked on the day it shipped and weakened
+    every day after. Now bounded to the later of the epoch and 30 days ago.
+  blk3_the_fact_clamp_guard_matched_the_revenue_query: >
+    The fact-query slice ran to end-of-file, so it also covered the revenue
+    query, which carries an identical promotion clamp. Removing the clamp from
+    the FACT source left both substrings intact and the test green -- exactly the
+    "grace period that held on one source and not the other" the test says it
+    exists to prevent. Slice now bounded, with a length assertion so an
+    over-narrow slice cannot pass vacuously either.
+  blk4_block_number_collision: >
+    Renumbered 0100 to 0101 and merged origin/main. do.ts auto-merged (main
+    changed the free-tier front door, this branch changed all four
+    executeWithRetry call sites in the same file) and was re-verified by the
+    full suite rather than assumed.
+  non_blocking_fixed:
+    - "N-2: the retention purge named capability_invocations unconditionally, reproducing B-1 one job over -- it is the last step of the sweep, so a missing table would have thrown before retention-cleanup-done was logged and lost the summary for every rule that had already run."
+    - "N-5: the claim that no statement in block 0101 takes a heavy lock was wrong -- CREATE INDEX IF NOT EXISTS opens the relation under SHARE before its existence check, which conflicts with INSERT. Corrected to what is actually true: nothing takes a LONG lock."
+    - "N-6: nineteen guardedExecute calls in its test file passed three arguments after the rail parameter became required. tsconfig excludes *.test.ts, so tsc never saw them; at runtime they inserted rail: undefined into a NOT NULL column and recordInvocation swallowed the error, so the tests exercised a permanently-failing fact write and stayed green."
+  non_blocking_recorded_not_fixed:
+    - >
+      N-1: context_kind is hardcoded customer_paid at every live write site, so
+      the schema comment claiming it is what makes harness traffic filterable
+      overstates it -- the harness exclusion still rests on the email-pattern
+      list. Harmless today (the harness calls getExecutor in-process and writes
+      no facts at all) but the stated mechanism is not the real one.
+    - >
+      N-3: revenue reaches a capability only through transactions.capability_id,
+      so a bundle-only capability gets requiresHuman = false even when its steps
+      earn real bundle revenue. WP9 makes such capabilities evaluable for the
+      first time, so it creates the case. Bounded -- deactivation is never
+      automatic -- but it is the flag that names a Petter-only decision.
+    - >
+      N-4: the epoch boundary can double-count a handful of rows. executeSync
+      inserts the transaction before running the executor, so a call in flight
+      when the first fact is written lands on both branches. Negligible in
+      volume; the docstring claim "nothing is double-counted" was absolute and
+      is now qualified.
+    - >
+      Tests are excluded from tsconfig repo-wide, which is how N-6 stayed
+      invisible. That is a repo-wide gap, not a WP9 one.

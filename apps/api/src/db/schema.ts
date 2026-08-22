@@ -1167,8 +1167,15 @@ export const capabilityInvocations = pgTable(
     rail: text("rail").notNull(),
     // The guarded-executor InvocationContext kind that authorised the call:
     // customer_paid | internal_test | health_probe | ci. The floor counts only
-    // customer_paid, which is what makes the harness's ~98% traffic share
-    // filterable by a column rather than by an email-pattern allowlist.
+    // customer_paid.
+    //
+    // Note what this does NOT currently buy. Every live write site hardcodes
+    // customer_paid, because the internal test harness invokes executors
+    // in-process rather than over /v1/do and so writes no facts at all. The
+    // harness exclusion therefore still rests on the email-pattern list, as it
+    // did before WP9. The column earns its place the moment any non-customer
+    // path starts recording — but it is not what keeps the harness out today,
+    // and an earlier version of this comment said it was.
     contextKind: text("context_kind").notNull(),
     // Set when rail = 'solution_step'. The bundle this invocation served.
     // The id, not the slug: it is the durable key (slugs get renamed), it needs

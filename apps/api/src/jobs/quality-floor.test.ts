@@ -29,7 +29,13 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { evaluateFloor } from "../lib/quality-floor.js";
-import { foldTrafficRows, type FloorTrafficRow } from "./quality-floor.js";
+import {
+  FACT_SHORTFALL_MIN_TRANSACTIONS,
+  FACT_SHORTFALL_RATIO,
+  foldTrafficRows,
+  isFactVolumeShortfall,
+  type FloorTrafficRow,
+} from "./quality-floor.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 /** Source with comments stripped — these assertions are about what the code
@@ -143,6 +149,46 @@ describe("quality-floor evidence window — genuine new failures still re-quaran
  * decides which rows exist. These assertions read the source with comments
  * STRIPPED, so a claim in a docstring cannot satisfy one.
  */
+describe("WP9 — the volume cross-check thresholds", () => {
+  // Round 2 found the thresholds untested: setting the ratio to 0 -- which makes
+  // the check permanently unable to fire -- passed the entire suite, because the
+  // comparison lived in SQL that no test executed. These assert the behaviour,
+  // so the numbers cannot be moved to nothing silently.
+  it("stays quiet below the minimum transaction count, however few facts there are", () => {
+    // Low-volume capabilities are noisy by nature; a delisting must not be
+    // suppressed forever because one call in nine went unrecorded.
+    expect(isFactVolumeShortfall(0, 9)).toBe(false);
+    expect(isFactVolumeShortfall(0, FACT_SHORTFALL_MIN_TRANSACTIONS - 1)).toBe(false);
+  });
+
+  it("fires when facts fall below half the billed calls", () => {
+    expect(isFactVolumeShortfall(4, 10)).toBe(true);
+    expect(isFactVolumeShortfall(0, 100)).toBe(true);
+  });
+
+  it("stays quiet when facts merely trail billed calls a little", () => {
+    // Facts and transactions do not correspond one-to-one by design, so a tight
+    // ratio would fire on every solution step and every rolled-back wallet
+    // transaction -- and a check that fires constantly gets ignored.
+    expect(isFactVolumeShortfall(5, 10)).toBe(false);
+    expect(isFactVolumeShortfall(90, 100)).toBe(false);
+  });
+
+  it("never fires when facts exceed billed calls, which is the normal bundle case", () => {
+    // A solution step produces a fact with no transaction of its own. That is
+    // the whole point of WP9, and it must not read as evidence loss.
+    expect(isFactVolumeShortfall(300, 100)).toBe(false);
+  });
+
+  it("the shipped thresholds are the ones these cases describe", () => {
+    // Pins the constants themselves: the cases above use explicit numbers, so
+    // without this a change to the defaults would leave them all passing while
+    // production behaved differently.
+    expect(FACT_SHORTFALL_MIN_TRANSACTIONS).toBe(10);
+    expect(FACT_SHORTFALL_RATIO).toBe(0.5);
+  });
+});
+
 describe("WP9 — the floor's fact/transaction sources", () => {
   const src = readCode("quality-floor.ts");
   const migration = readCode("../lib/startup-migrations.ts");
@@ -172,7 +218,17 @@ describe("WP9 — the floor's fact/transaction sources", () => {
   it("applies the promotion clamp to the fact source too", () => {
     // A grace period that held on one source and not the other would
     // reintroduce the contaminated-window bounce the clamp exists to stop.
-    const factQuery = src.slice(src.indexOf("const factRows"));
+    // Bounded to the fact query. The first version sliced to end-of-file, so it
+    // also covered the revenue query -- which carries an identical clamp, so
+    // removing the clamp from the FACT source left both substrings intact and
+    // the test green. That is precisely the "grace period that held on one
+    // source and not the other" this test exists to prevent, and the fourth
+    // hollow assertion this program has found.
+    const factQuery = src.slice(
+      src.indexOf("const factRows"),
+      src.indexOf("const rows = ["),
+    );
+    expect(factQuery.length).toBeGreaterThan(200);
     expect(factQuery).toContain("COALESCE(lp.promoted_at, '-infinity'::timestamptz)");
     expect(factQuery).toContain("GREATEST(s.win_start,");
   });
@@ -181,7 +237,10 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // The fact branch has no `is_free_tier` column on transactions to lean on,
     // so the equivalent exclusions have to be spelled out or ~98% of platform
     // traffic would be read as customer experience.
-    const factQuery = src.slice(src.indexOf("const factRows"));
+    const factQuery = src.slice(
+      src.indexOf("const factRows"),
+      src.indexOf("const rows = ["),
+    );
     expect(factQuery).toContain("AND f.context_kind = 'customer_paid'");
     expect(factQuery).toContain("AND f.is_free_tier = false");
     expect(factQuery).toContain("f.user_id NOT IN (");
@@ -225,7 +284,7 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // that a variable is assigned would pass against a version that computes an
     // always-empty map -- a check that can never fire, which is the shape this
     // finding had in the first place.
-    expect(src).toContain("await detectFactVolumeShortfall(sql, epoch)");
+    expect(src).toContain("await detectFactVolumeShortfall(");
     // And it must actually gate the action, not merely be computed.
     expect(src).toContain("holes > 0 || shortfall !== null");
     expect(src).toContain("mode === \"enforce\" && !evidenceIncomplete");
@@ -237,7 +296,7 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // a field that appears only on per-decision events cannot answer it, and a
     // proof query returning nothing is the same as skipping verification.
     const heartbeat = src.slice(src.indexOf(`actionTaken: "tick_complete"`));
-    expect(heartbeat).toContain("facts_table_present: factsReady");
+    expect(heartbeat).toContain("facts_table_present: tablePresent");
     expect(heartbeat).toContain("fact_epoch: epoch.toISOString()");
     expect(heartbeat).toContain("evidence_holes: holedEvidence.size");
     expect(heartbeat).toContain("evidence_shortfalls: volumeShortfall.size");
@@ -249,11 +308,52 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // transaction -- so every boot opened a window with no append-only
     // protection on a table whose whole purpose is immutability, and took
     // ACCESS EXCLUSIVE on a table the customer path writes to.
-    expect(migration).not.toContain(
+    const block = migration.slice(
+      migration.indexOf("export async function runMigration0101_capabilityInvocations"),
+      migration.indexOf("export const BLOCKS"),
+    );
+    expect(block.length).toBeGreaterThan(500);
+    expect(block).not.toContain(
       `DROP TRIGGER IF EXISTS "capability_invocations_immutable_trg"`,
     );
-    expect(migration).toContain("FROM pg_trigger");
-    expect(migration).toContain("tgname = 'capability_invocations_immutable_trg'");
+    // The SENSE, not the presence. Inverting IF NOT EXISTS to IF EXISTS means
+    // the trigger is never created on a fresh table -- leaving it fully mutable
+    // while to_regclass still reports it present, so the floor would treat a
+    // rewritable table as authoritative evidence for a delisting. The first
+    // version of this test asserted only that "FROM pg_trigger" appeared
+    // somewhere, and that mutation survived it.
+    expect(block).toContain("IF NOT EXISTS (");
+    expect(block).toContain("if (triggerCount !== 1)");
+  });
+
+  it("refuses to treat an unprotected facts table as evidence", () => {
+    // A table without its append-only trigger is worse than no table: it still
+    // reads as present, so the floor would decide delistings from rows anything
+    // could have rewritten. The consumer checks rather than trusting the
+    // producer, because a deferred migration can leave exactly that state.
+    expect(src).toContain("EXISTS (");
+    expect(src).toContain("WHERE tgname = 'capability_invocations_immutable_trg'");
+    expect(src).toContain("const factsReady = tablePresent && factsProtected;");
+    const heartbeat = src.slice(src.indexOf(`actionTaken: "tick_complete"`));
+    expect(heartbeat).toContain("facts_table_protected: factsProtected");
+  });
+
+  it("thresholds the volume cross-check in code, where a test can reach it", () => {
+    // The comparison used to live in the SQL, so setting the ratio to 0 -- which
+    // makes the check permanently unable to fire -- passed every test. The
+    // behaviour of the threshold is now asserted directly, below.
+    expect(src).toContain("export function isFactVolumeShortfall");
+    expect(src).toContain(".filter((r) => isFactVolumeShortfall(r.facts, r.txns))");
+    expect(src).toContain("WHERE txn.n > 0`;");
+  });
+
+  it("bounds the cross-check to the decision window, not the whole fact table", () => {
+    // Bounding on the epoch alone let the comparison window grow to the 180-day
+    // retention, so a total loss confined to the recent 30 days scored 150/180
+    // and never fired. It worked the day it shipped and weakened daily after.
+    expect(src).toContain("Math.max(epoch.getTime(), Date.now() - 30 * 24 * 60 * 60 * 1000)");
+    expect(src).toContain("AND t.created_at >= ${windowStart}::timestamptz");
+    expect(src).toContain("WHERE created_at >= ${windowStart}::timestamptz");
   });
 
   it("does not pretend to set a lock timeout that cannot take effect", () => {

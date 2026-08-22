@@ -76,8 +76,27 @@ const ADVISORY_LOCK_ID = 20260812; // cross-instance dedup
  * solution step and every rolled-back wallet transaction, and a check that
  * fires constantly is a check that gets ignored.
  */
-const FACT_SHORTFALL_MIN_TRANSACTIONS = 10;
-const FACT_SHORTFALL_RATIO = 0.5;
+export const FACT_SHORTFALL_MIN_TRANSACTIONS = 10;
+export const FACT_SHORTFALL_RATIO = 0.5;
+
+/**
+ * Does this capability have too few facts for the billed calls it served?
+ *
+ * Pure, exported and directly tested. The first version buried the comparison
+ * in the SQL, so setting the ratio to 0 — which makes the check permanently
+ * unable to fire — passed every test. A defence whose threshold can be reduced
+ * to nothing without anything noticing is the same defect this whole finding
+ * was about, one layer down.
+ */
+export function isFactVolumeShortfall(
+  facts: number,
+  transactions: number,
+  minTransactions: number = FACT_SHORTFALL_MIN_TRANSACTIONS,
+  ratio: number = FACT_SHORTFALL_RATIO,
+): boolean {
+  if (transactions < minTransactions) return false;
+  return facts < transactions * ratio;
+}
 
 export interface FloorTrafficRow {
   slug: string;
@@ -197,7 +216,16 @@ export function foldTrafficRows(
  */
 async function detectFactVolumeShortfall(
   sql: postgres.Sql,
-  epoch: Date,
+  /**
+   * Later of the fact epoch and the floor's own 30-day window.
+   *
+   * The first version bounded on the epoch alone. Since the epoch is
+   * MIN(created_at) over a table retained for 180 days, the comparison window
+   * grew to six times the window the floor actually decides on — and a loss
+   * confined to the recent 30 days simply disappeared into 150 days of healthy
+   * history. It worked on the day it shipped and weakened every day after.
+   */
+  windowStart: Date,
 ): Promise<Map<string, string>> {
   const rows = await sql<
     { slug: string; facts: number; txns: number }[]
@@ -207,7 +235,7 @@ async function detectFactVolumeShortfall(
       FROM capabilities c
       JOIN transactions t ON t.capability_id = c.id
       WHERE c.is_active = true
-        AND t.created_at >= ${epoch}::timestamptz
+        AND t.created_at >= ${windowStart}::timestamptz
         AND t.status IN ('completed', 'failed')
         AND t.deleted_at IS NULL
         AND COALESCE(t.is_free_tier, false) = false
@@ -221,23 +249,26 @@ async function detectFactVolumeShortfall(
     fct AS (
       SELECT capability_slug AS slug, COUNT(*)::int AS n
       FROM capability_invocations
-      WHERE created_at >= ${epoch}::timestamptz
+      WHERE created_at >= ${windowStart}::timestamptz
         AND context_kind = 'customer_paid'
         AND is_free_tier = false
       GROUP BY capability_slug
     )
     SELECT txn.slug, COALESCE(fct.n, 0) AS facts, txn.n AS txns
     FROM txn LEFT JOIN fct ON fct.slug = txn.slug
-    WHERE txn.n >= ${FACT_SHORTFALL_MIN_TRANSACTIONS}
-      AND COALESCE(fct.n, 0) < txn.n * ${FACT_SHORTFALL_RATIO}`;
+    WHERE txn.n > 0`;
 
   return new Map(
-    rows.map((r) => [
+    rows
+      // Thresholding happens HERE, in the pure function, not in the SQL. The
+      // SQL only gathers the two counts.
+      .filter((r) => isFactVolumeShortfall(r.facts, r.txns))
+      .map((r) => [
       r.slug,
-      `only ${r.facts} invocation fact(s) recorded against ${r.txns} billed ` +
-        `call(s) since the fact epoch — the evidence for this capability is ` +
-        `incomplete, so no delisting decision may rest on it`,
-    ]),
+        `only ${r.facts} invocation fact(s) recorded against ${r.txns} billed ` +
+          `call(s) in the decision window — the evidence for this capability is ` +
+          `incomplete, so no delisting decision may rest on it`,
+      ]),
   );
 }
 
@@ -277,8 +308,26 @@ export async function runQualityFloorOnce(): Promise<{
       // DEC-20260504-C proof that the job ran at all is the very thing that
       // stops being written. The floor is armed in production, not dry-run, so
       // it has to degrade to its previous behaviour rather than die quietly.
-      const [{ ready: factsReady }] = await sql<{ ready: boolean }[]>`
-        SELECT to_regclass('public.capability_invocations') IS NOT NULL AS ready`;
+      // Both halves matter. A table WITHOUT its append-only trigger is worse
+      // than no table at all: `to_regclass` still says non-null, so the floor
+      // would treat a mutable table as authoritative evidence for a delisting
+      // decision. Block 0101 now verifies the trigger before reporting success,
+      // but a block that deferred midway can leave exactly this state, so the
+      // consumer checks too rather than trusting the producer.
+      //
+      // pg_trigger is matched on tgname alone, deliberately: qualifying it with
+      // `tgrelid = 'public.capability_invocations'::regclass` would raise when
+      // the table is absent, which is the case this probe exists to survive.
+      const [{ ready: tablePresent, protected: factsProtected }] = await sql<
+        { ready: boolean; protected: boolean }[]
+      >`
+        SELECT
+          to_regclass('public.capability_invocations') IS NOT NULL AS ready,
+          EXISTS (
+            SELECT 1 FROM pg_trigger
+            WHERE tgname = 'capability_invocations_immutable_trg'
+          ) AS "protected"`;
+      const factsReady = tablePresent && factsProtected;
 
       // ── The epoch bridge (WP9) ──────────────────────────────────────────
       //
@@ -289,10 +338,18 @@ export async function runQualityFloorOnce(): Promise<{
       // mechanism because it looks exactly like "all healthy".
       //
       // So: facts from the instant the first one was written, transactions
-      // before it. The two never overlap, so nothing is double-counted, and the
-      // transaction branch contributes nothing once the table is older than the
-      // window — at which point it can be deleted. A bridge with an expiry
-      // date, not a permanent second authority.
+      // before it, and the transaction branch contributes nothing once the
+      // table is older than the window — at which point it can be deleted. A
+      // bridge with an expiry date, not a permanent second authority.
+      //
+      // Not perfectly disjoint, and the earlier version of this note claimed it
+      // was. executeSync inserts the transaction row BEFORE running the
+      // executor, so a call in flight at the instant the first fact is written
+      // has transaction.created_at < epoch <= fact.created_at and is counted on
+      // both branches. That is a handful of rows at one instant, once, and on a
+      // rolling deploy the old instance's fact-less transactions after the
+      // epoch are dropped from both branches instead. Both effects are
+      // negligible in volume; neither is zero.
       //
       // Fail-safe twice over: no table, or an empty one, both put the epoch at
       // NOW() and read transactions for the whole window — exactly today's
@@ -484,7 +541,10 @@ export async function runQualityFloorOnce(): Promise<{
       const holedEvidence = new Map(holedRows.map((r) => [r.slug, r.n]));
 
       const volumeShortfall = factsReady
-        ? await detectFactVolumeShortfall(sql, epoch)
+        ? await detectFactVolumeShortfall(
+            sql,
+            new Date(Math.max(epoch.getTime(), Date.now() - 30 * 24 * 60 * 60 * 1000)),
+          )
         : new Map<string, string>();
 
       const stats = foldTrafficRows(rows, revenueBySlug);
@@ -579,7 +639,10 @@ export async function runQualityFloorOnce(): Promise<{
           proposals,
           // false => block 0101 has not run; the floor is on the transactions
           // branch for the whole window, i.e. its pre-WP9 behaviour.
-          facts_table_present: factsReady,
+          facts_table_present: tablePresent,
+          // false with facts_table_present true means the table is MUTABLE and
+          // the floor has fallen back to billing rows on purpose.
+          facts_table_protected: factsProtected,
           fact_epoch: epoch.toISOString(),
           // Slugs whose evidence is known to be incomplete this tick. Zero is
           // the healthy reading, and it is a reading rather than an absence.

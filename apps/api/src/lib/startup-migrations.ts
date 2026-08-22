@@ -2091,6 +2091,10 @@ export async function runMigration0100_relistUrlToMarkdown(
         ? "no change (url-to-markdown was already listed)"
         : "url-to-markdown re-listed with its promotion event",
     rows_affected: affected,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
 /**
  * Block 0101 — invocation facts (WP9).
  *
@@ -2146,10 +2150,13 @@ export async function runMigration0101_capabilityInvocations(
   // protected. The effective bound is the connection-level statement_timeout
   // (30s) from db/index.ts.
   //
-  // What actually keeps this safe is that no statement below takes a heavy lock
-  // on an existing table: the table is only created when absent, and the
-  // trigger is only created when absent. There is no per-boot DDL churn on a
-  // table the customer path writes to.
+  // What keeps this safe is that nothing below takes a LONG lock: the table and
+  // the trigger are created only when absent, so there is no per-boot DDL churn
+  // on a table the customer path writes to. Not "no lock" — an earlier version
+  // of this note claimed that and review corrected it. `CREATE INDEX IF NOT
+  // EXISTS` opens the relation under SHARE before its existence check, and
+  // SHARE conflicts with the ROW EXCLUSIVE that INSERT takes. The hold is a
+  // catalog lookup, so microseconds, but it is not nothing.
   try {
     await tx.execute(sql`
       CREATE TABLE IF NOT EXISTS "capability_invocations" (
@@ -2238,7 +2245,30 @@ export async function runMigration0101_capabilityInvocations(
       END $$;
     `);
 
-    outcome = "table, indexes and append-only trigger present";
+    // VERIFY, do not assume. Review round 2 pointed out that nothing anywhere
+    // confirmed the trigger exists: a guard asserting the SQL text was
+    // satisfied by inverting IF NOT EXISTS to IF EXISTS, and there is a real
+    // path to a table-without-trigger even with correct code — CREATE TABLE
+    // autocommits, so if any later statement here throws, the block reports
+    // "deferred" while the table already exists and the writer starts filling
+    // it unprotected. An unprotected facts table is worse than no facts table,
+    // because `to_regclass` still says non-null and the floor treats it as
+    // authoritative evidence.
+    const check = await tx.execute(sql`
+      SELECT COUNT(*)::int AS n FROM pg_trigger
+      WHERE tgname = 'capability_invocations_immutable_trg'
+        AND tgrelid = 'public.capability_invocations'::regclass
+    `);
+    const checkRows = Array.isArray(check) ? check : (check as { rows?: unknown[] })?.rows ?? [];
+    const triggerCount = Number((checkRows[0] as { n?: number } | undefined)?.n ?? 0);
+    if (triggerCount !== 1) {
+      throw new Error(
+        "capability_invocations exists but its append-only trigger does not " +
+          `(pg_trigger match count ${triggerCount}). Refusing to report success: ` +
+          "a mutable facts table still reads as present to the quality floor.",
+      );
+    }
+    outcome = "table, indexes and append-only trigger present and verified";
   } catch (err) {
     outcome =
       "deferred to next boot: " +
@@ -2251,7 +2281,6 @@ export async function runMigration0101_capabilityInvocations(
     duration_ms: Date.now() - startedAt,
   };
 }
-
 
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,

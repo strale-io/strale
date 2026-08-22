@@ -195,6 +195,20 @@ export const INVOCATION_FACT_RETENTION_DAYS = 180;
 
 async function purgeCapabilityInvocations(cutoff: Date): Promise<number> {
   const db = getDb();
+  // Block 0101 is defer-not-throw, so the table genuinely may not exist -- that
+  // is the whole premise of the floor's to_regclass probe. Naming it
+  // unconditionally here reproduced the same defect one job over: this purge is
+  // the LAST step of the retention sweep, so a missing table would throw before
+  // `retention-cleanup-done` is logged and the operator would lose the summary
+  // for every rule that had already succeeded. Loud rather than silent, but
+  // losing the summary log for a bulk sweep is exactly the observability
+  // failure DEC-20260504-A exists over.
+  const present = await db.execute(
+    sql`SELECT to_regclass('public.capability_invocations') IS NOT NULL AS ready`,
+  );
+  const presentRows = Array.isArray(present) ? present : (present as { rows?: unknown[] })?.rows ?? [];
+  if (!(presentRows[0] as { ready?: boolean } | undefined)?.ready) return 0;
+
   let deleted = 0;
   let batches = 0;
   // LIMIT-paginated, like every other rule here (DEC-20260504-B). The table is
