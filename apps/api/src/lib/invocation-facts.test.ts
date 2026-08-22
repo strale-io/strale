@@ -323,9 +323,25 @@ describe("no serving path may skip the fact", () => {
     for (const rel of writers) {
       const body = readFileSync(join(SRC, rel), "utf8");
       if (/contextKind:/.test(body)) offenders.push(`${rel} sets contextKind`);
-      if (/isFreeTier:\s*(true|false)/.test(body) && !/capabilityIsFreeTier/.test(body)) {
-        offenders.push(`${rel} sets a literal isFreeTier on a fact`);
+      // `capabilityIsFreeTier: true` is never correct at a writer. True is only
+      // right when the CAPABILITY says so, which means reading it from the
+      // capability; a rail with no free tier passes false. Hardcoding true makes
+      // every fact from that rail fail the floor's filter -- a silent disarm.
+      //
+      // Two things were wrong with the line this replaces. It skipped any file
+      // that MENTIONED capabilityIsFreeTier, so introducing the field made the
+      // guard stop looking at exactly the files it was added to guard. And its
+      // regex contained two literal 0x08 bytes -- a word-boundary escape that
+      // did not survive the tooling -- so it could never have matched anything
+      // at all. An assertion that cannot fail is not a weak guard, it is no
+      // guard, and it read as one for a whole commit.
+      if (/capabilityIsFreeTier:\s*true/.test(body)) {
+        offenders.push(`${rel} hardcodes capabilityIsFreeTier: true`);
       }
+      // A forged `isFreeTier` on a fact is impossible rather than merely
+      // banned: recordCustomerInvocation's parameter type Omits it, so an
+      // object literal supplying it is a TS2353 excess-property error.
+      // Verified by hand against tsc, not assumed.
       if (/recordInvocation\(\{/.test(body)) {
         offenders.push(`${rel} calls recordInvocation directly instead of recordCustomerInvocation`);
       }
