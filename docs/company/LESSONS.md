@@ -180,15 +180,42 @@ footnote. If a fourth lands, open the investigation.
 > A test, gate or check that passes whether or not the thing it guards is
 > working.
 
-**Count: 4.** Integration suites skipped for months because a required variable
-was set in no workflow; a budget regression test that exercised the ORM rather
-than the fix and passed either way; two gates that could not fail (a script
-directory outside the typecheck glob, a row count read from the wrong property).
-**State: INVESTIGATION DUE.** Standing rule already in force: a test must
-be verified failing against the un-fixed state, in both directions. What is not
-yet systematic is proving a *gate* runs at all — three gates in one week were
-green while doing nothing. A fifth incident opens the investigation, and its
-step 1 answer is probably "we verify assertions, never reachability".
+**Count: 5 — threshold reached, investigation OPENED 2026-08-22.** Integration
+suites skipped for months because a required variable was set in no workflow; a
+budget regression test that exercised the ORM rather than the fix and passed
+either way; two gates that could not fail (a script directory outside the
+typecheck glob, a row count read from the wrong property); and the fifth, which
+is this change's own: `charter-authorization-binding.test.ts` keyed on
+`lib/production-access.ts`, a module that review renamed before it landed, so
+the guard sat in its "dependency absent" branch and passed while the thing it
+guarded had drifted.
+
+**Step 1 — the common instrument.** Not the individual tests. Every one of these
+verifies its *assertions* and none verifies its *reachability*: that it ran, over
+a non-empty input set, against the artefact it claims to guard. The entry above
+predicted this answer before the fifth incident, which is mild evidence it is
+right.
+
+**Step 2 — the affected population, measured.** Of the 13 gate scripts wired into
+CI, **5 cannot distinguish "found nothing wrong" from "looked at nothing"** —
+they report a clean result without reporting how many items they examined:
+`check-cost-class-coherence`, `check-no-direct-getexecutor-in-scripts`,
+`check-no-external-column-access`, `check-pii`, `check-ssrf-inventory`. The
+remaining 8 print a scanned count, which makes a zero visible to a reader even
+though none of them *fails* on zero. So the population is 13, the silent subset
+is 5, and the fail-on-zero subset is 0.
+
+That last figure is the finding. Printing a count is a courtesy to whoever reads
+the log; **no gate in this repository refuses to pass when its input set is
+empty.** `check-ceo-brief.ts` is explicit about it — "no briefs found, nothing
+to check", exit 0 — which is correct on a day with no brief and indistinguishable
+from a misnamed directory.
+
+**Steps 3–7 owed.** The hypothesis to falsify: *a gate that asserted a non-empty
+input set, or a minimum expected count, would have caught incidents 1, 4 and 5.*
+The repair direction is a shared helper every gate routes its input through,
+rather than five separate edits — the local-fix pattern is what carried F1 to
+seven. Not started.
 
 ### F6 · Stale or unsupported public claim
 
@@ -303,22 +330,37 @@ at two.
    were still open (incident 2). A failure mode with no vocabulary is one the
    reporter has to invent a category for under time pressure, and both
    inventions were wrong.
-3. **The mechanism — landing separately, and the reason this family is not
-   closed.** An approval-gated action must be *mechanically* distinguishable
-   from an ungated one at the point of execution, so acting on one means
-   deliberately overriding something rather than merely reasoning past it. That
-   is PR #361's `FOUNDER_GATED_ACTIONS` closed enum, `assertFounderGatedWrite`
-   (which accepts no prose, so a model cannot author its own authorisation),
-   the deny-all default verifier, and a physically read-only connection. It is
-   **not landed**, and its own open question is how it reconciles with the
-   ed25519 grant verification in `lib/production-authority.ts`. Until one
-   accepted authority exists, this family's state is *"named, and guarded by
-   prose"*.
+3. **The mechanism — landed 2026-08-22 as `lib/production-authority.ts`.** An
+   approval-gated action is now mechanically distinguishable from a delegated
+   one at the point of execution: permission is an `Authority` value, delegated
+   purposes are a closed list that moves by merge, and anything absent from it
+   is founder-gated **by omission**. A grant is an ed25519 signature made with a
+   key the platform never holds, so a session cannot mint the permission it is
+   asked to prove; the write credential is unobtainable without an `Authority`;
+   and the founder public key is empty, so every founder-gated action is refused
+   today. That last fact is the freeze, expressed as code rather than as
+   restraint. Incident 1 could not happen against this: the grant's purpose must
+   match the action exactly, which is the control that incident specifically
+   lacked.
 
-**State: OPEN.** Owner Claude. Opened 2026-08-22. Closes when part 3 lands, the
-charter binds to its symbols rather than describing them, and both incidents
-replay against the gate — `charter-authorization-binding.test.ts` fails until
-the binding is real, so the reconciliation cannot be quietly skipped.
+**A note on how this repair was verified, because it nearly was not.** The
+binding test written to hold the charter to this model keyed on
+`lib/production-access.ts` — the module name on the pre-review branch. Review
+reconciled two competing models and kept `production-authority.ts`, so the file
+the test guarded never landed, its "dependency absent" branch stayed selected,
+and it went on passing while the charter named four symbols that do not exist. A
+guard keyed to a path that never arrives reports success for work it never
+looked at: **family F5, shipped inside the change that documents F5.** The test
+now imports the module statically and checks that every symbol the charter names
+is really exported, so a rename breaks compilation instead of silently
+disarming the check. Logged as F5 incident 5.
+
+**State: OPEN.** Owner Claude. Opened 2026-08-22. Parts 1–3 are done and the
+binding is enforced. It stays open on the last criterion this file sets for any
+family: **the historical incidents have not been replayed against the new gate.**
+Incident 1's replay is cheap and specific — construct the authority the session
+would have needed for `close_stranded_executing_rows` and confirm it is refused
+— and it is owed before this closes.
 
 ---
 

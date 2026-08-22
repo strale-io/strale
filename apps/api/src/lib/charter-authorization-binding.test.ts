@@ -1,40 +1,40 @@
 /**
  * The charter's authorization vocabulary must bind to the code, not shadow it.
  *
- * CHARTER.md names three statuses and, for the one that means "settled but not
- * permitted", defers entirely to `lib/production-access.ts` for what
- * "authorized" means. That deferral is the whole design: a prose authorization
- * model beside a code one is two models to diverge, which is failure family F8
- * and the reason the daily-run documents exist at all.
+ * CHARTER.md names three statuses and defers entirely to the production
+ * authority model for what "authorized" means. That deferral is the design: a
+ * prose authorization model beside a code one is two models to diverge, which
+ * is failure family F8. This test is what makes the deferral real rather than
+ * polite — every symbol the charter names must exist, and the statuses must map
+ * onto the shapes the module actually produces.
  *
- * This test is the mechanism that makes the deferral real rather than polite.
- * It is deliberately written so that it **always asserts something** — the
- * hollow-gate family (F5) is a check that passes by doing nothing, and a test
- * that merely skipped while the module was absent would be exactly that:
+ * ── Why this file was rewritten (worth reading before editing it) ───────────
  *
- *   module absent  → assert the charter still carries its PENDING RECONCILIATION
- *                    block, so an unlanded dependency cannot be forgotten
- *   module present → assert the binding is real: the pending block is gone, and
- *                    every founder-reserved action the operating documents name
- *                    is a member of FOUNDER_GATED_ACTIONS
+ * Its first version guarded `lib/production-access.ts` and required the charter
+ * to name `FOUNDER_GATED_ACTIONS`, `assertFounderGatedWrite` and
+ * `GrantVerifier`. Those were the symbols on PR #361's BRANCH. Review
+ * reconciled the two competing models and the surviving module is
+ * `lib/production-authority.ts`, with a different API — so `production-access
+ * .ts` never landed, the "dependency absent" branch stayed selected, and the
+ * test went on passing while the charter named four symbols that do not exist.
  *
- * The flip is automatic. Landing the authorization boundary turns this from a
- * reminder into a conformance check without anybody remembering to convert it,
- * and it fails in the window between the module arriving and the charter being
- * reconciled — which is the window where the two models would silently diverge.
+ * A guard keyed to a filename that never arrives is a guard that reports
+ * success for work it never looked at: the hollow-gate family (F5), shipped
+ * inside the change that documents F5. The structural fix is below — this file
+ * now keys on the CONCEPTS (does the charter name symbols the module actually
+ * exports?) rather than on one path, and it imports the module statically so a
+ * rename breaks compilation rather than silently disarming the check.
  */
 import { describe, it, expect } from "vitest";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import * as authority from "./production-authority.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../../../..");
 const CHARTER = join(REPO, "docs", "company", "CHARTER.md");
 const DAILY_RUN = join(REPO, "docs", "company", "DAILY-RUN.md");
-const PRODUCTION_ACCESS = join(HERE, "production-access.ts");
-
-const PENDING_MARKER = "PENDING RECONCILIATION";
 
 /** The statuses the charter defines. Named here so a rename breaks a test. */
 const STATUSES = ["SYSTEM_ACTING", "FOUNDER_DECISION", "AUTHORIZATION_UNAVAILABLE"] as const;
@@ -61,68 +61,98 @@ describe("the three statuses are defined once and used consistently", () => {
   });
 
   it("keeps the settled-but-unpermitted status distinct from the judgement one", () => {
-    // The distinction is the point of the third status. If the charter ever
-    // describes them as interchangeable, the status stops carrying information.
     const text = charter();
-    // Markdown emphasis may wrap the token, so allow backticks/asterisks between.
     expect(text).toMatch(/AUTHORIZATION_UNAVAILABLE[`*\s]* is not a softer/i);
     expect(text, "moving to SYSTEM_ACTING must require the authority, not familiarity")
       .toMatch(/only because the authority actually arrived/i);
   });
+
+  it("states that the settled-but-unpermitted status is never authority to act", () => {
+    // The whole point of the third status. If the charter ever softens this,
+    // the status becomes a waiting room that a session can talk itself out of.
+    expect(charter()).toMatch(/never (?:a licence|authority to act)/i);
+  });
+
+  it("excludes anything already executed from the settled-but-unpermitted status", () => {
+    // Reporting a completed mutation as pending is the same misreporting as an
+    // unapproved execution, pointing the other way (F10 incident 3).
+    expect(charter()).toMatch(/already carried out without authority is \*?\*?not\*?\*?/i);
+  });
 });
 
-describe("the charter defers to the code for what 'authorized' means", () => {
-  it("names the code symbols rather than restating a model in prose", () => {
-    const text = charter();
-    for (const symbol of [
-      "FOUNDER_GATED_ACTIONS",
-      "assertFounderGatedWrite",
-      "GrantVerifier",
-      "production-access.ts",
-    ]) {
-      expect(text, `the charter must reference ${symbol}`).toContain(symbol);
+describe("the charter binds to the authority model that actually landed", () => {
+  it("names only symbols the module exports", () => {
+    // Every capitalised/`backticked` identifier the charter presents as part of
+    // the authority model must really be exported. This is the check whose
+    // absence let four non-existent symbols sit in the charter.
+    const named = [...charter().matchAll(/`([A-Za-z_][A-Za-z0-9_]*)\(?\)?`/g)]
+      .map((m) => m[1]!)
+      .filter((n) => /^(?:AUTONOMOUS_|FOUNDER_|Authority$|autonomousAuthority$|requireFounderGrant$|productionWriteUrl$|describeAuthority$|assertCannotMintGrants$|ProductionAuthorityError$)/.test(n));
+    expect(named.length, "the charter must reference the authority model by name").toBeGreaterThan(0);
+    for (const n of named) {
+      expect(
+        Object.keys(authority),
+        `CHARTER.md names \`${n}\`, which lib/production-authority.ts does not export. ` +
+          "The charter must not describe an authorization model the code does not have.",
+      ).toContain(n);
     }
   });
 
-  if (!existsSync(PRODUCTION_ACCESS)) {
-    // The dependency has not landed. Assert the charter says so, loudly and in
-    // the file itself, so the incompleteness is visible to a reader of the
-    // charter rather than only to a reader of this test.
-    it("records the unlanded dependency instead of pretending the binding exists", () => {
-      const text = charter();
-      expect(text, "an unlanded authorization model must be marked pending")
-        .toContain(PENDING_MARKER);
-      expect(text, "the pending block must name what it is waiting for")
-        .toMatch(/production-authority\.ts/);
-      expect(text, "and must forbid resolving it with more prose")
-        .toMatch(/do not resolve this by writing more prose/i);
-    });
-  } else {
-    // The dependency landed. The pending block must be gone and the binding real.
-    it("has replaced the pending block with a concrete binding", () => {
-      expect(
-        charter(),
-        "production-access.ts exists, so CHARTER.md's PENDING RECONCILIATION block " +
-          "must be replaced by the real binding — see the block's own instructions",
-      ).not.toContain(PENDING_MARKER);
-    });
+  it("no longer carries a pending-reconciliation placeholder", () => {
+    expect(
+      charter(),
+      "the authority model has landed, so the charter must carry the concrete binding",
+    ).not.toContain("PENDING RECONCILIATION");
+  });
 
-    it("names only actions that are members of FOUNDER_GATED_ACTIONS", async () => {
-      const { FOUNDER_GATED_ACTIONS } = await import("./production-access.js");
-      const named = new Set(
-        [...charter().matchAll(/`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`/g)].map((m) => m[1]!),
-      );
-      // Only kebab-case tokens that LOOK like gated actions are checked: a
-      // charter mentioning `read-only` should not be forced into the enum.
-      const actionLike = [...named].filter((n) =>
-        /^(?:close|issue|reverse|deactivate|edit|bulk)-/.test(n));
-      for (const n of actionLike) {
-        expect(
-          FOUNDER_GATED_ACTIONS as readonly string[],
-          `CHARTER.md names "${n}" as a founder-reserved action, but it is not in ` +
-            "FOUNDER_GATED_ACTIONS. Add it to the enum or stop naming it as one.",
-        ).toContain(n);
-      }
-    });
-  }
+  it("names the module that actually landed, not the one that did not", () => {
+    expect(charter()).toContain("production-authority.ts");
+    expect(charter(), "production-access.ts was not the module review kept")
+      .not.toContain("production-access.ts");
+  });
+});
+
+describe("the statuses map onto shapes the module can actually produce", () => {
+  it("SYSTEM_ACTING corresponds to a delegated purpose the module accepts", () => {
+    // Not a doc assertion: build the real Authority value. If AUTONOMOUS_PURPOSES
+    // is emptied or the constructor tightens, this fails.
+    const purpose = authority.AUTONOMOUS_PURPOSES[0]!;
+    const a = authority.autonomousAuthority(purpose, "DEC-20260815-A");
+    expect(a.kind).toBe("AUTONOMOUS_POLICY");
+    expect(authority.describeAuthority(a).authority_kind).toBe("AUTONOMOUS_POLICY");
+  });
+
+  it("a purpose outside the delegated list is refused, not assumed", () => {
+    // The charter's claim that anything not delegated is founder-gated BY
+    // OMISSION rests on this being fail-closed.
+    expect(() =>
+      authority.autonomousAuthority("close_stranded_executing_rows" as never, "DEC-20260815-A"),
+    ).toThrow(authority.ProductionAuthorityError);
+  });
+
+  it("AUTHORIZATION_UNAVAILABLE is the state the module is in right now", () => {
+    // While no founder public key is installed, every founder-gated action is
+    // refused. That IS the freeze, and the charter says so; this asserts the
+    // code agrees rather than trusting the sentence.
+    expect(authority.FOUNDER_GRANT_PUBLIC_KEY_PEM.trim()).toBe("");
+    expect(() => authority.requireFounderGrant("close_stranded_executing_rows"))
+      .toThrow(authority.ProductionAuthorityError);
+  });
+
+  it("no Authority value can be produced for a founder-gated action while frozen", () => {
+    // The strongest form of "it is never authority to act": in this state the
+    // type that represents permission cannot be constructed at all.
+    let built: unknown = null;
+    try {
+      built = authority.requireFounderGrant("close_stranded_executing_rows");
+    } catch {
+      built = null;
+    }
+    expect(built, "a settled-but-unpermitted action must yield no Authority").toBeNull();
+  });
+
+  it("a production write credential cannot be obtained without an Authority", () => {
+    expect(() => (authority.productionWriteUrl as (a: unknown) => string)(undefined))
+      .toThrow(authority.ProductionAuthorityError);
+  });
 });

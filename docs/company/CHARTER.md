@@ -184,32 +184,48 @@ draft of this section got it wrong about the incident that motivated the status.
 
 This charter does **not** define the authorization model, and must never grow a
 second one — a prose model beside a code model is two things to diverge (family
-F8, and the reason DAILY-RUN.md exists at all). The single authority is the
-production-authorization boundary being landed in
-`apps/api/src/lib/production-access.ts`:
+F8, and the reason DAILY-RUN.md exists at all). The single authority is
+`apps/api/src/lib/production-authority.ts`, landed 2026-08-22 and accepted as
+canonical. The three statuses above are **names for shapes that module
+produces**, not a parallel vocabulary:
 
-- **`FOUNDER_GATED_ACTIONS`** — the closed enum of production mutations reserved
-  to Petter. An action in this list is `AUTHORIZATION_UNAVAILABLE` for me by
-  definition, however settled the decision is.
-- **`assertFounderGatedWrite(action)`** — the gate. It accepts no reason, no
-  justification and no `authorisedBy`: there is no parameter through which my
-  prose can enter, which is exactly the mechanism F10 turned on.
-- **`GrantVerifier` / `DenyAllVerifier`** — an unwired verifier reads as refusal,
-  not as permission.
-- The read-only connection posture — a session that physically cannot write is
-  in `AUTHORIZATION_UNAVAILABLE` for *every* production mutation, gated or not.
+- **`Authority`** is the type that represents permission. It has exactly two
+  forms: `AUTONOMOUS_POLICY` (a delegated action, carrying the decision that
+  delegated it) and `FOUNDER_GATED` (a grant id, the purpose it was issued for,
+  and an expiry). Every production write records one.
+- **`SYSTEM_ACTING` is `AUTONOMOUS_POLICY`.** It requires a purpose on
+  **`AUTONOMOUS_PURPOSES`**, a closed list built with
+  **`autonomousAuthority()`**. Anything absent from that list is founder-gated
+  **by omission** — fail-closed, because the incident behind all of this was a
+  session deciding for itself that an action fell inside its delegation. The
+  list moves by merge, never by argument, and never by my reasoning in the
+  moment.
+- **`AUTHORIZATION_UNAVAILABLE` is the state in which no `Authority` value can
+  be constructed at all.** That is the strongest available form of "never
+  authority to act": **`requireFounderGrant()`** throws rather than returning,
+  so there is nothing to hand to **`productionWriteUrl()`**, which is the only
+  sanctioned route to a write credential. The status is not a waiting room I can
+  talk myself out of — it is the absence of the value the write path requires.
+- **`FOUNDER_GRANT_PUBLIC_KEY_PEM` is empty, so every founder-gated action is
+  refused today.** That is the freeze, and it is a property of the code rather
+  than of my restraint. It ends when Petter installs a public key in a reviewed
+  commit, having generated the pair somewhere this platform cannot reach.
+- **I cannot mint what I am asked to prove.** A grant is an ed25519 signature
+  made with a private key the platform never holds;
+  **`assertCannotMintGrants()`** refuses to run at all in an environment that
+  could forge one. Verification is not authorization.
+- Underneath all of it, `DATABASE_URL` is a read-only role. A session with no
+  write credential is in `AUTHORIZATION_UNAVAILABLE` for *every* production
+  mutation, delegated or not — the two barriers fail independently, on purpose.
 
-> **PENDING RECONCILIATION — do not resolve this by writing more prose here.**
-> As of 2026-08-22 that boundary is unlanded (PR #361), and its own review
-> question is how it reconciles with the ed25519 grant verification in
-> `lib/production-authority.ts`. Until **one** accepted authorization authority
-> exists, the four names above are references to a module this repository does
-> not yet contain, and this section is deliberately incomplete.
->
-> When it lands: rebase, replace this block with the concrete binding, and make
-> every action named anywhere in these operating documents a member of
-> `FOUNDER_GATED_ACTIONS` rather than a phrase. `charter-authorization-binding
-> .test.ts` fails until that is done — it is not a reminder, it is a gate.
+**Terminology, so the mapping cannot drift:** the module calls the unit of work
+a *purpose*; this charter and the daily run call it an *action*. They are the
+same thing, and a purpose that is not on `AUTONOMOUS_PURPOSES` is exactly what
+these documents mean by "founder-gated".
+
+`charter-authorization-binding.test.ts` enforces this binding: every symbol
+named above must be exported by that module, and the status↔shape mapping is
+asserted by constructing the values rather than by reading the prose.
 
 ### The test every escalation has to pass first
 
