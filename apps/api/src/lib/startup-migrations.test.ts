@@ -2106,6 +2106,15 @@ describe("startup-migrations — block identity is unique, not just the function
     expect(constLabels.length, "block: BLOCK return sites must be resolvable")
       .toBeGreaterThanOrEqual(2);
     expect(labels).toContain("0100_relistUrlToMarkdown");
+    // And every ledger lookup must match its own id EXACTLY. A predicate that
+    // loosened to a prefix would make 0101 read main's 0100 row and conclude it
+    // had already run -- the ledger collision, arriving through the query
+    // instead of through the id. Production's ledger holds 0100 today, so this
+    // is not hypothetical.
+    const lookups = [...src.matchAll(/FROM startup_migration_ledger WHERE block = \$\{BLOCK\}/g)];
+    const anyLedgerRead = [...src.matchAll(/FROM startup_migration_ledger WHERE /g)];
+    expect(lookups.length).toBe(anyLedgerRead.length);
+    expect(lookups.length).toBeGreaterThanOrEqual(2);
     expect(labels.length).toBeGreaterThanOrEqual(10);
     // Grouped by NUMBER, not deduped outright: several blocks legitimately
     // return the same label from more than one path (an early skip and a

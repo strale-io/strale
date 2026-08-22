@@ -300,6 +300,15 @@ describe("no serving path may skip the fact", () => {
     // The wrapper must delegate, not reimplement.
     const doRoute = readFileSync(join(SRC, "routes/do.ts"), "utf8");
     expect(doRoute).toContain("recordCustomerInvocation(fact)");
+    // And /v1/do must NOT await the write. executeSync runs the executor inside
+    // db.transaction holding the wallet row FOR UPDATE, and the writer uses the
+    // base handle rather than that tx -- so awaiting there reserves a SECOND
+    // connection from the same 30-connection pool while the first is held.
+    // Thirty concurrent paid calls each hold one and queue for a thirty-first
+    // only they can free, exiting via the 15s idle-in-transaction timeout as a
+    // wave of failed paid calls whose vendor cost was already spent.
+    expect(doRoute).not.toContain("await recordCustomerInvocation(");
+    expect(doRoute).toContain("void trackBackgroundTask(");
 
     expect(
       shortfall,
