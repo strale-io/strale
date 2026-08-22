@@ -118,6 +118,49 @@ to prevent. Shipped as migration 0085's `transaction_actors` view.
 With that, retention, concentration and repeat-purchase become answerable —
 none of which we can currently compute.
 
+## The commercial layer (added 2026-08-22, DEC-20260822-A)
+
+`metrics.ts` answers *how much*. It does not answer *what that means*, and on
+2026-08-22 the difference stopped being academic: revenue rose for the second
+consecutive completed week while one buyer accounted for 99.3% of the income.
+Each figure alone reads as an improving business. Together they say the
+opposite.
+
+The run of weeks is worth a sentence of its own, because the daily record that
+morning said **four** consecutive rises and the module says two. Four data
+points carry at most three transitions, one of those ended on the week still in
+progress, and one of the remaining two was a fall. Nobody was careless; the
+count was done by eye on a table that included a partial week. This is why the
+run is computed rather than observed.
+
+`metrics/commercial.ts` computes the twelve commercial questions
+[DAILY-RUN.md](DAILY-RUN.md) requires — discrete weeks, growth, distinct payers,
+concentration, largest-versus-rest, new versus returning, repeat, active paying
+days, growth attribution, what activated new payers, second-payer trajectory,
+and quiet payers — and, the part that matters, an `interpret()` function that
+turns them into stated conclusions in plain English. Consumers render the
+conclusions, so a report cannot accidentally publish a table with no reading
+attached.
+
+Three refusals are built in, each from a failure this system already made:
+
+1. **A partial week is never compared against a full one**, in either
+   direction. A record-breaking in-progress week is not evidence of growth, and
+   an in-progress week below last week's total is not evidence of decline.
+2. **A concentration share is not comparable across windows of different
+   coverage.** `Concentration.comparable` is false when the identity instrument
+   is younger than the window or when under 80% of revenue is attributable, and
+   `interpret()` will not narrate a movement without it. This was found on the
+   module's own first production run, which printed "99.3%, up from 19.0%" —
+   where the 19.0% was one payer divided by a week in which identity had existed
+   for two days. The entire "movement" was coverage. It is the same family as
+   the 2026-08-15 errors this document was written about, reproduced inside the
+   fix for them, which is the strongest available argument for putting the guard
+   in code rather than in a warning.
+3. **`returningPayers` is `null`, not `0`**, while the instrument is younger
+   than the lookback. Nobody *can* have been seen before the instrument existed,
+   so a zero would be a structural artefact presented as a finding.
+
 ## What we should optimise for
 
 Not revenue. At this size revenue is one buyer's behaviour, and optimising it

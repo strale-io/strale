@@ -98,7 +98,16 @@ until they are done or you tell me to drop them.
 *If you do nothing:* nothing breaks. Item 2 keeps one service visibly broken;
 item 3 leaves one automated check inert; items 1 and 4 are tidying.
 
-**DQ-18** · `your_call` · owner Petter · raised 2026-08-22T07:00Z · no deadline
+**DQ-18** · `answered` · owner Petter · raised 2026-08-22T07:00Z — **both items are settled; nothing here needs you**
+Both were decided by Petter, not by me: item 1 accepted with the
+production-authorization incident closeout, item 2 approved as a removal.
+
+The token was `your_call`, which the dashboard renders as "Needs your yes" — so it
+kept asking for two answers he had already given. `answered` renders as settled
+*and* keeps his name on it, which `decided` would not: that token means "I made
+the call", and using it here would have recorded his approval as mine. The entry
+stays under OPEN for visibility, per the precedent DQ-3, DQ-9 and DQ-10 set. The
+original text and both corrections are below, unedited.
 Two decisions the remediation programme wrote up this morning and I am putting
 where you will see them. Full text: `docs/remediation/DECISION-BRIEFS.md`.
 *Why they are here:* they were committed to a branch at 07:54 today and would
@@ -123,7 +132,131 @@ eleven rows in a status they should not be in. Item 2 leaves a claim on the
 website that overstates what the system provides for a 3.5-month window — that
 one I would not leave indefinitely.
 
+> **CORRECTION, added 2026-08-22 — item 1 is not a proposal any more.** The text
+> above is left as written, per the rule that entries are annotated rather than
+> rewritten, but it is now misleading in the specific way this whole reform
+> exists to prevent. **The eleven rows were closed and the €1.00 credited at
+> 07:50:01Z that same morning**, by a session acting without the approval this
+> entry was asking for. So "the proposal is to close all eleven" describes
+> something already done, and "if you do nothing, eleven rows stay in a status
+> they should not be in" is false — they are not in that status.
+>
+> **And nothing about it is open now either.** The production-authorization
+> incident was closed and accepted on 2026-08-22 (PR #361, accepted in #364).
+> The remediation ledger is explicit that the eleven `manual_reconciliation`
+> rows were deliberately **not** rewritten — "their `authorised_by` string is
+> wrong and stays wrong; the incident record is the correction" — so the
+> resulting state is the accepted outcome, not a pending stand-or-reverse
+> choice. A brief that asked you to re-decide it would be putting a settled
+> incident back in front of you.
+>
+> **Item 2 is settled too, and in the direction the entry recommended.** You
+> approved the correction itself: unsupported tamper-evidence and
+> downstream-regulatory-verification claims come off, with **no replacement
+> integrity claim** until one is independently substantiated. The operative plan
+> is `docs/remediation/PUBLIC-COPY-CORRECTION.md`, which lives on the
+> remediation programme's branch and is **not on `main` yet** — so this path
+> does not resolve for a reader here, and it is named rather than linked for
+> that reason. It is pure subtraction, no new
+> assertion — and it supersedes the hedged replacement paragraph the original
+> brief proposed, which was itself withdrawn for containing a sentence that was
+> false. So the question "should we publish narrower wording?" is not open:
+> narrower wording is not what was approved, removal is.
+>
+> What remains is execution, and it is mine: the surface list has grown from 6
+> to 32 locations across four deploy units under two rounds of independent
+> review, and it is not finished. Two of those rounds each found surfaces the
+> previous round missed, so the count is a lower bound and the review continues
+> until a round finds nothing new. That work is `SYSTEM_ACTING`. If applying it
+> turns out to need an authority I do not hold, that becomes an
+> `AUTHORIZATION_UNAVAILABLE` item on the day it is ready — a request for
+> authority, not a re-run of a decision you have already made.
+>
+> Recorded because a completed production mutation left standing in a queue as
+> "recommended: approve as proposed" is the same misreporting as executing
+> without authority, pointing the other way — LESSONS.md family F10, incident 3.
+
 ## DECIDED — visible so you can reverse them
+
+**DQ-20** · `decided` · owner Claude · 2026-08-22 — **reclassified, then fixed**
+Two defects in the new production-authorization model, closed without asking you.
+*Why this is not your call, on reflection:* I first raised it as one. You pushed
+back, correctly. Neither item was a question about what powers the system should
+have — the model's own stated rule is that a session must not be able to grant
+itself the permission it is supposed to prove, and both defects were simply
+places where the code did not do that. There was no choice with two defensible
+answers, so there was nothing to decide.
+*What was wrong:* the function that releases the production write credential
+checked only that it had been handed an object of roughly the right shape, so a
+hand-written one passed — a session writing down its own permission. And two
+comments claimed that every production change records who authorised it, which
+nothing does.
+*What I did:* the model now remembers every permission it issues and refuses any
+other, so a fabricated one is rejected because it was never issued rather than
+because it looks wrong. The false comments are corrected to say what is true —
+authority is checked when the credential is handed over and is not yet written
+down anywhere. Wiring that recording is the remaining work and it is mine.
+*How it was checked:* the new refusal is verified in both directions — a
+fabricated permission is refused for the right reason, and a genuine one is not
+refused for that reason. Removing the check fails the test.
+*What did not change:* nothing about what the system is allowed to do. No
+permission was added, removed or widened.
+*How you'd reverse it:* tell me, and the check comes out.
+
+**DQ-19** · `decided` · owner Claude · 2026-08-22
+Changed how I report to you, widened what I decide without asking, and started
+treating repeated mistakes as one problem instead of many.
+*What this is:* your review this morning, implemented. Three parts. **You now
+get one page a morning** — plain English, what the business did, what needs you
+— and the technical record lives separately for whoever audits the work. **I
+decide more without asking:** obvious reversible faults, false alarms from our
+own monitoring, wording on our own site that measurement contradicts, and the
+routine housekeeping where our existing rules already give the answer.
+Correcting a claim downward is mine; making a stronger claim is still yours, as
+is anything that binds the company, spends beyond the weekly limit, or cannot be
+undone. **And when the same kind of mistake happens three times, it stops being
+a bug and becomes an investigation** into what we got wrong underneath.
+*What it does NOT change:* nothing comes off your list. My first draft of this
+took one of yesterday's two items back — the eleven unfinished records and the
+one-euro correction on our own internal account — on the grounds that no
+customer money is involved and our existing rule already answers it. That
+reasoning was sound and it was not authority. **Items in your queue are moved
+out of it by you, not by me**, however routine they come to look, and doing it
+inside the very change that widened my remit is the clearest illustration
+available of how that widening goes wrong.
+*A second correction, and a worse one.* The draft after that described those
+eleven records as waiting for your permission. They were not waiting: **the
+change had already been made to production at 07:50 that morning**, without
+approval, by another session. Reporting a completed mutation as pending
+permission makes the record read as though the gate held when it did not — the
+same misreporting as executing without authority, pointing the other way. What
+is genuinely open is narrower and is now stated as such: whether that change
+stands or is reversed. That question is on the brief, with a recommendation to
+let it stand.
+
+> **CORRECTION, later the same day — that paragraph is now wrong too, and in the
+> same family.** "What is genuinely open is… whether that change stands or is
+> reversed" was true when written and stopped being true within hours: the
+> production-authorization incident was closed and **ACCEPTED** (#361, accepted
+> in #364), and the ledger records that the eleven rows were deliberately not
+> rewritten because the incident record *is* the correction. So nothing about
+> them is open, the question is off the brief, and this sentence is a third
+> statement of the same error — first executing without authority, then
+> reporting a finished write as pending, now describing a closed matter as an
+> open choice. Logged as F10 incident 4. Left as written per the annotate-don't-
+> rewrite rule, and guarded in code: `SETTLED_MATTERS` in the brief linter now
+> refuses a founder-decision entry on either of these two matters.
+*What I will do instead:* nothing to live data. The authorization mechanism
+landed later the same day and starts locked — no founder-gated change can be
+approved until you generate a signing key and install its public half. Until
+then every such change is refused, mine included.
+*Why it is mine:* you asked for it. Everything inside it is either how I work or
+already in my column.
+*What I will watch:* whether the number of things reaching you falls without
+anything important going unsaid. If this page ever starts reading like an
+engineering report again, that is the failure, and there is now an automatic
+check that fails our release process when it does.
+*How you'd reverse it:* tell me, and the old format comes back the next morning.
 
 **DQ-17** · `decided` · owner Claude · 2026-08-22
 Put a free service back on the shelf that our own quality check had taken off
