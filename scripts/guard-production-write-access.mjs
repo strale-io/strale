@@ -59,6 +59,7 @@ const AUTHORISED_MENTIONS = [
   "docs/incidents/2026-08-22-production-authorization-failure.md",
   "docs/security/2026-08-22-starve-set-1-provenance.md",
   "docs/security/2026-08-22-operator-script-migration.md",
+  "docs/security/2026-08-22-founder-grant-runbook.md",
   // Names the variable in prose only; `operator-db.ts` obtains the value via
   // productionWriteUrl(authority) and never reads the environment itself.
   "apps/api/src/lib/operator-db.ts",
