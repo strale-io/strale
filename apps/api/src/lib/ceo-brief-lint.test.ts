@@ -325,7 +325,7 @@ describe("a settled decision with no execution authority is its own status", () 
     "",
     "**Settled:** the eleven unfinished records should be closed and the one euro refunded.",
     "**Why it is not mine:** closing records and issuing refunds are reserved to you, and I hold read-only access.",
-    "**What I need:** do it yourself, or tell me and I will.",
+    "**What I need:** your approval, and I will make the change.",
   ].join("\n");
 
   it("accepts a handover without demanding the five judgement fields", () => {
@@ -348,6 +348,36 @@ describe("a settled decision with no execution authority is its own status", () 
       expect(r.findings.some((f) => f.rule === "handover-incomplete")).toBe(true);
     });
   }
+
+  it("rejects a handover that asks the founder to run the operation", () => {
+    // A real brief closed with "do it yourself, or tell me and I will". The ask
+    // is for authority, never for labour — he grants permission, he is not the
+    // operator, and a handover that inverts that has mistaken a permission
+    // problem for a staffing one.
+    for (const ask of [
+      "**What I need:** do it yourself, or tell me and I will.",
+      "**What I need:** you will need to run the script.",
+      "**What I need:** please run the migration when you get a moment.",
+    ]) {
+      const r = lintBrief(goodBrief({
+        decide: handover.replace(/\*\*What I need:\*\*.*$/m, ask),
+      }));
+      expect(r.ok, ask).toBe(false);
+      expect(r.findings.some((f) => f.rule === "handover-asks-for-labour"), ask).toBe(true);
+    }
+  });
+
+  it("accepts a handover that asks for approval or authority", () => {
+    for (const ask of [
+      "**What I need:** your approval, and I will run it.",
+      "**What I need:** the authority to make this change.",
+    ]) {
+      const r = lintBrief(goodBrief({
+        decide: handover.replace(/\*\*What I need:\*\*.*$/m, ask),
+      }));
+      expect(r.findings.filter((f) => f.severity === "error"), ask).toEqual([]);
+    }
+  });
 
   it("warns when a handover is dressed up as an open choice", () => {
     // Presenting a settled matter with options invites a re-decision nobody

@@ -196,12 +196,24 @@ defines, and the tag decides the shape of the entry:
   section 3.
 - **`FOUNDER_DECISION`** — judgement is his. Carries the five fields below.
 - **`AUTHORIZATION_UNAVAILABLE`** — **the decision is settled and I lack the
-  authority to execute it.** This is a handover, not a question, and it is
+  authority to execute it.** A request for authority, not a question, and it is
   written as one: what will happen, why it is not mine to do, and what I need
   from him. It deliberately does **not** carry the five judgement fields —
   forcing a settled matter into a decision shape invites him to re-open
   something that is not open, and that framing is half of how family F10
   happened.
+
+  Two constraints on this status, both from getting it wrong:
+  - **Ask for authority, never for labour.** "Approve it" or "grant me the
+    authority" — never "run this yourself". Petter is not the operator, and a
+    handover that pushes a production operation onto him has mistaken a
+    permission problem for a staffing one.
+  - **Only for something not yet done.** An action already carried out without
+    authority is a **breach**, not a pending item. It is reported in section 2
+    with what it changed and what has been frozen, and any live question about
+    it (does it stand? is it reversed?) is a `FOUNDER_DECISION`. Presenting a
+    completed production mutation as awaiting permission makes the record read
+    as though the gate held when it did not.
 
 A run may reach a firm conclusion about what should happen and, in the same
 breath, report that it is not permitted to act on it. That is a complete and
@@ -229,7 +241,7 @@ An `AUTHORIZATION_UNAVAILABLE` entry uses this shape instead:
 AUTHORIZATION_UNAVAILABLE
 **Settled:** <what should happen, and what already determined it>
 **Why it is not mine:** <the gate — a founder-reserved action, or no write access>
-**What I need:** <execute it yourself, or grant the authority>
+**What I need:** <your approval, or the authority — never an operation for you to run>
 ```
 
 Nothing in this section may be an unresolved technical question, and nothing may

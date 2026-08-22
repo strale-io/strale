@@ -135,6 +135,18 @@ const HANDOVER_LABELS: Record<(typeof HANDOVER_FIELDS)[number], RegExp> = {
   what_i_need: /\*\*\s*what I need\b/i,
 };
 
+/**
+ * Asking the founder to perform the operation.
+ *
+ * A handover is a request for *authority*, never for labour. The first draft of
+ * a real brief closed with "do it yourself, or tell me and I will", which reads
+ * as an instruction to go and run a production operation. He is the person who
+ * grants permission, not the person who executes; a handover that inverts that
+ * has mistaken a permission problem for a staffing one.
+ */
+const ASKS_FOUNDER_TO_OPERATE =
+  /\b(?:do it yourself|run it yourself|you(?:'ll| will)? need to (?:run|execute|apply)|execute it yourself|(?:please )?run (?:the|this) (?:script|command|migration))\b/i;
+
 export interface BriefLintResult {
   findings: Finding[];
   words: number;
@@ -276,6 +288,15 @@ export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}):
                 "a handover states what is settled, why it is not mine, and what is needed",
             });
           }
+        }
+        if (ASKS_FOUNDER_TO_OPERATE.test(b.text)) {
+          findings.push({
+            severity: "error", rule: "handover-asks-for-labour",
+            message:
+              "an AUTHORIZATION_UNAVAILABLE item asks the founder to run the operation. " +
+              'The ask is "approve it" or "grant me the authority" — he grants permission, ' +
+              "he is not the operator.",
+          });
         }
         for (const field of ESCALATION_FIELDS) {
           if (fieldPresent(b.text, field) && field !== "recommendation") {

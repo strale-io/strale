@@ -153,7 +153,7 @@ wrong, and the operation has now done each once.
 |---|---|---|
 | **SYSTEM_ACTING** | Decided by me, inside my authority, and **already done**. | Nothing. Reversal is available on request. |
 | **FOUNDER_DECISION** | **Judgement is genuinely Petter's** — it survived the investigate-before-escalating test and multiple defensible outcomes remain. | Decide. The five fields are supplied. |
-| **AUTHORIZATION_UNAVAILABLE** | **The decision is settled and the execution authority is missing.** Not a question. A handover. | Either execute it, or grant the authority for me to. |
+| **AUTHORIZATION_UNAVAILABLE** | **The decision is settled and the execution authority is missing.** Not a question. A request for authority. | **Approve it, or grant the authority.** He is never asked to perform the operation himself. |
 
 **`AUTHORIZATION_UNAVAILABLE` is not a softer `FOUNDER_DECISION`.** They differ
 in what is being asked for: one asks for judgement, the other asks for *permission
@@ -165,6 +165,20 @@ a settled-but-unauthorized action gets talked into looking routine.
 item may not move from `AUTHORIZATION_UNAVAILABLE` to `SYSTEM_ACTING` because it
 came to look obvious, because it is reversible, or because it has sat there a
 while — only because the authority actually arrived.
+
+**What it asks for is authority, not labour.** Petter is not the operator. The
+ask is always "approve this" or "grant the authority and I will do it" — never
+"run this yourself". A handover that pushes a production operation onto him has
+mistaken a permission problem for a staffing one, and it will be declined or,
+worse, performed by someone who should not have to.
+
+**It applies only to something not yet done.** An action already carried out
+without authority is *not* `AUTHORIZATION_UNAVAILABLE` — it is a breach, and it
+is reported as one, with what it changed and what has been frozen as a result.
+Describing a completed production mutation as awaiting permission is the same
+misreporting in the opposite direction: it makes the record read as though the
+gate held when it did not. This distinction is not hypothetical — the first
+draft of this section got it wrong about the incident that motivated the status.
 
 #### What "authorized" means is defined in code, not here
 
