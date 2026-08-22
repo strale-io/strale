@@ -1547,9 +1547,8 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     await recordCustomerInvocation({
       capabilitySlug: cap.slug,
       rail: "x402_gateway",
-      // x402 callers have no account and never buy on the free tier.
+      // x402 callers have no account -- payment IS the auth.
       userId: null,
-      capabilityIsFreeTier: false,
       latencyMs: Date.now() - startMs,
       outcome: outcomeFromOutput(cap.slug, result.output),
     });
@@ -1579,7 +1578,6 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         capabilitySlug: cap.slug,
         rail: "x402_gateway",
         userId: null,
-        capabilityIsFreeTier: false,
         latencyMs,
         outcome: outcomeFromError(err),
       });

@@ -145,18 +145,33 @@ export const INVOCATION_FACT_DELETE_GUARD_DAYS = 35;
  * branch measuring the same population.
  */
 export async function recordCustomerInvocation(
-  fact: Omit<InvocationFact, "contextKind" | "isFreeTier"> & {
-    /** The capability's own free-tier flag, not a decision about this call. */
-    capabilityIsFreeTier: boolean;
-  },
+  fact: Omit<InvocationFact, "contextKind" | "isFreeTier">,
 ): Promise<void> {
-  const { capabilityIsFreeTier, ...rest } = fact;
   await recordInvocation({
-    ...rest,
+    ...fact,
     contextKind: "customer_paid",
-    // Anonymous zero-cost traffic only. The authenticated free-tier path writes
-    // a transaction with is_free_tier unset, so its facts must match.
-    isFreeTier: capabilityIsFreeTier && (rest.userId ?? null) === null,
+    // Derived from the rail and the absence of an account, and from nothing a
+    // caller supplies.
+    //
+    // The first version derived it from the capability's own free-tier flag,
+    // and review falsified the parity claim built on it. `/v1/do` routes THREE
+    // anonymous cases through executeFreeTier -- a genuinely free-tier
+    // capability, an X-Payment call, and a progressive-unlock call -- and
+    // stamps `is_free_tier: true` on the transaction for all three, including
+    // the two where the capability is paid. The old derivation returned false
+    // for those two, so post-epoch they would have started counting toward the
+    // floor when pre-epoch they did not.
+    //
+    // That is the H-1 abuse vector reopened for exactly the wrong population:
+    // progressive unlock grants anonymous, unauthenticated, zero-cost calls on
+    // 13 PAID, x402-enabled capabilities, and an anonymous caller could have
+    // generated free failures against a capability the armed floor can delist.
+    //
+    // `rail === "v1_do" && no account` matches what the transaction row records
+    // on all seven serving paths: true for the three anonymous /v1/do cases,
+    // false for the three authenticated ones, and false on the x402 rail, where
+    // the caller has no account but did pay.
+    isFreeTier: fact.rail === "v1_do" && (fact.userId ?? null) === null,
   });
 }
 

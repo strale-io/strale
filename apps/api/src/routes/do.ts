@@ -367,6 +367,33 @@ interface InvocationActor {
  * both understate quality and break the floor's fact-vs-transaction
  * completeness cross-check.
  */
+/**
+ * Write the invocation fact WITHOUT extending an open wallet transaction.
+ *
+ * `executeSync` runs the executor inside `db.transaction`, holding the wallet
+ * row under FOR UPDATE. `recordInvocation` uses the base handle, not that `tx`,
+ * so awaiting it there reserved a SECOND connection from the same 30-connection
+ * pool while the first was still held — thirty concurrent paid calls would each
+ * hold one and queue for a thirty-first that only they could free, exiting only
+ * via the transaction's 15s idle-in-transaction timeout, as a wave of failed
+ * paid calls whose vendor cost had already been spent.
+ *
+ * Before WP9 nothing inside that transaction touched a second connection, and
+ * the comment at the top of the block exists specifically to bound how long the
+ * wallet lock is held. So the fact is tracked rather than awaited: the write
+ * still completes and still blocks shutdown until it does, but it no longer sits
+ * inside the lock. `recordInvocation` never throws and is explicitly
+ * best-effort, so nothing downstream depended on the await.
+ */
+function recordFactWithoutHoldingTheLock(
+  fact: Parameters<typeof recordCustomerInvocation>[0],
+): void {
+  void trackBackgroundTask(
+    `invocation-fact:${fact.rail}:${fact.capabilitySlug}`,
+    recordCustomerInvocation(fact),
+  );
+}
+
 async function executeWithRetry(
   executor: (input: Record<string, unknown>) => Promise<any>,
   input: Record<string, unknown>,
@@ -383,21 +410,19 @@ async function executeWithRetry(
             baseDelayMs: 1000,
             slug: capability.slug,
           });
-    await recordCustomerInvocation({
+    recordFactWithoutHoldingTheLock({
       capabilitySlug: capability.slug,
       rail: "v1_do",
       userId: actor.userId,
-      capabilityIsFreeTier: capability.isFreeTier,
       latencyMs: Date.now() - startedAt,
       outcome: outcomeFromOutput(capability.slug, result?.output),
     });
     return result;
   } catch (err) {
-    await recordCustomerInvocation({
+    recordFactWithoutHoldingTheLock({
       capabilitySlug: capability.slug,
       rail: "v1_do",
       userId: actor.userId,
-      capabilityIsFreeTier: capability.isFreeTier,
       latencyMs: Date.now() - startedAt,
       outcome: outcomeFromError(err),
     });

@@ -576,8 +576,6 @@ export async function executeSolution(
           rail: "solution_step",
           solutionId,
           userId: actor.userId,
-          // A bundle has a real price; there is no free-tier solution rail.
-          capabilityIsFreeTier: false,
           latencyMs: Date.now() - stepStartMs,
           outcome: outcomeFromOutput(step.capabilitySlug, output),
         });
@@ -592,8 +590,6 @@ export async function executeSolution(
           rail: "solution_step",
           solutionId,
           userId: actor.userId,
-          // A bundle has a real price; there is no free-tier solution rail.
-          capabilityIsFreeTier: false,
           latencyMs: Date.now() - stepStartMs,
           outcome: outcomeFromError(err),
         });

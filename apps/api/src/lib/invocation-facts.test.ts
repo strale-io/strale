@@ -285,12 +285,22 @@ describe("no serving path may skip the fact", () => {
       "routes/x402-gateway-v2.ts",
     ]) {
       const body = readFileSync(join(SRC, rel), "utf8");
-      const calls = (body.match(/record(?:Customer)?Invocation\(\{/g) ?? []).length;
+      // `/v1/do` records through a thin wrapper that tracks the write instead
+      // of awaiting it inside the open wallet transaction, so the wrapper name
+      // counts as a record site. The wrapper itself is asserted below to
+      // delegate to the one authority.
+      const calls = (
+        body.match(/(?:record(?:Customer)?Invocation|recordFactWithoutHoldingTheLock)\(\{/g) ?? []
+      ).length;
       const fromError = (body.match(/outcomeFromError\(/g) ?? []).length;
       if (calls < 2 || fromError < 1) {
         shortfall.push(`${rel}: ${calls} record site(s), ${fromError} error-outcome derivation(s)`);
       }
     }
+    // The wrapper must delegate, not reimplement.
+    const doRoute = readFileSync(join(SRC, "routes/do.ts"), "utf8");
+    expect(doRoute).toContain("recordCustomerInvocation(fact)");
+
     expect(
       shortfall,
       "Each of these files runs a capability and must record BOTH outcomes. " +
@@ -323,25 +333,16 @@ describe("no serving path may skip the fact", () => {
     for (const rel of writers) {
       const body = readFileSync(join(SRC, rel), "utf8");
       if (/contextKind:/.test(body)) offenders.push(`${rel} sets contextKind`);
-      // `capabilityIsFreeTier: true` is never correct at a writer. True is only
-      // right when the CAPABILITY says so, which means reading it from the
-      // capability; a rail with no free tier passes false. Hardcoding true makes
-      // every fact from that rail fail the floor's filter -- a silent disarm.
-      //
-      // Two things were wrong with the line this replaces. It skipped any file
-      // that MENTIONED capabilityIsFreeTier, so introducing the field made the
-      // guard stop looking at exactly the files it was added to guard. And its
-      // regex contained two literal 0x08 bytes -- a word-boundary escape that
-      // did not survive the tooling -- so it could never have matched anything
-      // at all. An assertion that cannot fail is not a weak guard, it is no
-      // guard, and it read as one for a whole commit.
-      if (/capabilityIsFreeTier:\s*true/.test(body)) {
-        offenders.push(`${rel} hardcodes capabilityIsFreeTier: true`);
+      // Nothing about free-tier can be expressed at a writer any more: the
+      // parameter type no longer has the field, so supplying it is a TS2353
+      // excess-property error. What the writer DOES put in the row is asserted
+      // behaviourally in invocation-facts.writer.test.ts, which mocks the
+      // database and checks the row field by field -- four one-token mutations
+      // inside the INSERT survived the entire source-text suite before it
+      // existed.
+      if (/capabilityIsFreeTier/.test(body)) {
+        offenders.push(`${rel} still decides free-tier for itself`);
       }
-      // A forged `isFreeTier` on a fact is impossible rather than merely
-      // banned: recordCustomerInvocation's parameter type Omits it, so an
-      // object literal supplying it is a TS2353 excess-property error.
-      // Verified by hand against tsc, not assumed.
       if (/recordInvocation\(\{/.test(body)) {
         offenders.push(`${rel} calls recordInvocation directly instead of recordCustomerInvocation`);
       }
@@ -360,14 +361,16 @@ describe("no serving path may skip the fact", () => {
     expect(all).toEqual(["lib/invocation-facts.ts"]);
   });
 
-  it("derives free-tier the same way the transaction row does", () => {
-    // Anonymous zero-cost traffic only. An AUTHENTICATED caller of a free-tier
-    // capability writes a transaction with is_free_tier unset, so its fact must
-    // agree -- otherwise the fact branch and the pre-epoch transaction branch
-    // measure different populations across the epoch boundary.
+  it("derives free-tier from the rail, not from the capability", () => {
+    // Parity with the transaction row on all seven serving paths, asserted
+    // behaviourally in invocation-facts.writer.test.ts. This pins the shape so
+    // the derivation cannot quietly go back to reading the capability flag,
+    // which review falsified: /v1/do stamps is_free_tier true on the
+    // transaction for three anonymous cases, two of which are PAID
+    // capabilities.
     const src = readFileSync(join(SRC, "lib/invocation-facts.ts"), "utf8");
     expect(src).toContain(
-      "isFreeTier: capabilityIsFreeTier && (rest.userId ?? null) === null,",
+      'isFreeTier: fact.rail === "v1_do" && (fact.userId ?? null) === null,',
     );
   });
 
