@@ -3,8 +3,8 @@
  * Fail CI if a tracked file contains a credential in a recognised token format.
  *
  * Why this exists: tooling config files (editor settings, agent permission
- * allowlists, task runners) can carry credentials inside a command string —
- * `--token <value>`, `Authorization: Bearer <value>` — where they read as
+ * allowlists, task runners) can carry credentials inside a command string --
+ * `--token <value>`, `Authorization: Bearer <value>` -- where they read as
  * configuration rather than as secrets. Untracking such a file later removes it
  * from the tip but not from history, so on a public repo the value stays
  * readable. A pre-merge scan is the only cheap place to stop that.
@@ -13,22 +13,63 @@
  * is a real credential, never a placeholder. A gate that cries wolf gets
  * disabled, and a disabled gate is worse than no gate.
  *
- * Scans tracked files only — untracked and gitignored files are the developer's
+ * Scans tracked files only -- untracked and gitignored files are the developer's
  * business; what matters is what reaches the public history.
  *
  * SCOPE LIMIT, stated deliberately: this scans the working tree, not each commit
  * in a PR. A credential added in one commit and removed in a later commit on the
  * same branch is invisible here. That is safe *only* because this repo squash-
- * merges, so the intermediate commits never reach main and the tree scanned here
- * is exactly what lands. `allow_merge_commit` is still enabled on the repo: if a
- * PR is ever landed as a true merge commit, that assumption breaks and the
- * intermediate commits will not have been covered. Either keep squash-merging,
- * or extend this to scan added lines from `git diff <base>...HEAD`.
+ * merges, so intermediate commits never reach main and the tree scanned here is
+ * exactly what lands. `allow_merge_commit` is still enabled on the repo: if a PR
+ * is ever landed as a true merge commit, that assumption breaks. Either keep
+ * squash-merging, or extend this to scan `git diff <base>...HEAD` added lines.
+ *
+ * ALLOWLIST INVARIANT: an entry must quote the exact matched text, so it can
+ * only exempt a value someone is willing to write down in plaintext here. For
+ * the token patterns the match IS the secret, so a real credential cannot be
+ * allowlisted without leaking it. The private-key check is different -- its
+ * match is a fixed PEM header carrying no key material -- so it is marked
+ * `allowlistable: false` and no entry can exempt it. If you add a pattern whose
+ * match is fixed or low-entropy, mark it the same way.
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
 
 const NUL = String.fromCharCode(0);
+const BACKSLASH = String.fromCharCode(92);
+const LF = String.fromCharCode(10);
+const SEP = NUL; // allowlist key separator; cannot occur in a path
+const ALLOWLIST_PATH = "apps/api/scripts/committed-secrets-allowlist.txt";
+
+/**
+ * A PEM header alone is not a secret: tests legitimately assert that such a
+ * value is refused, and this repo has exactly that fixture. What makes it a
+ * secret is key material following it.
+ *
+ * So match the header -- which catches every transport a key travels in -- and
+ * then decide by looking at what follows, undoing the encodings that hide a key
+ * body from a naive regex: escaped newlines (.env, JSON service accounts, the
+ * env-var form this repo reads the founder key in), indentation (YAML block
+ * scalars, k8s Secrets), quoting and commas (JSON arrays of lines), and the
+ * Proc-Type/DEK-Info headers of an encrypted traditional PEM or PGP armor.
+ *
+ * An earlier revision required base64 immediately after a literal newline. That
+ * silently missed every one of those layouts -- worse than the false positive
+ * it was avoiding, because a miss is invisible.
+ */
+function pemHasKeyMaterial(text, afterIndex) {
+  const window = text.slice(afterIndex, afterIndex + 800).split(BACKSLASH + "n").join(LF);
+  const lines = window.split(LF).slice(0, 9);
+  for (const raw of lines) {
+    const line = raw.trim().replace(/^["',]+/, "").replace(/["',]+$/, "").trim();
+    if (line === "") continue;
+    if (/^-----END/.test(line)) return false; // header immediately closed: no body
+    if (/^[A-Za-z][A-Za-z0-9-]*:/.test(line)) continue; // Proc-Type:, DEK-Info:, Version:
+    if (/^[A-Za-z0-9+\/=]{16,}$/.test(line)) return true;
+    return false; // prose or code after the header: a bare marker, not a key
+  }
+  return false;
+}
 
 const PATTERNS = [
   { name: "Strale/Stripe live secret key", re: /sk_live_[A-Za-z0-9]{24,}/g },
@@ -43,64 +84,51 @@ const PATTERNS = [
   { name: "Google API key", re: /AIza[0-9A-Za-z_-]{35}/g },
   { name: "Slack token", re: /xox[baprs]-[0-9A-Za-z-]{20,}/g },
   { name: "Notion integration token", re: /ntn_[A-Za-z0-9]{40,}/g },
-  { name: "Private key block", re: /-----BEGIN (?:RSA |EC |OPENSSH |PGP |DSA )?PRIVATE KEY-----[\r\n]+[A-Za-z0-9+\/=]{40}/g },
+  {
+    name: "Private key",
+    re: /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY(?: BLOCK)?-----/g,
+    verify: pemHasKeyMaterial,
+    allowlistable: false,
+  },
 ];
 
 // Vendors ship deliberately-fake credentials in their own documentation, and
 // those get pasted into READMEs. AWS's canonical AKIAIOSFODNN7EXAMPLE matches
-// the pattern above by design. Because this gate scans the whole tree, one such
-// paste would red-line every PR in the repo, so exclude the known-fake forms.
+// by design. Because this gate scans the whole tree, one such paste would
+// red-line every PR in the repo.
 const isPlaceholder = (v) => v.endsWith("EXAMPLE");
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
-const BACKSLASH = String.fromCharCode(92);
-const LF = String.fromCharCode(10);
-const SEP = String.fromCharCode(0); // key separator, cannot occur in a path
-const ALLOWLIST_PATH = "apps/api/scripts/committed-secrets-allowlist.txt";
-
-/**
- * Known-safe matches, keyed on path + the exact matched text.
- *
- * Requiring the literal is the safety property: an entry can only exempt a
- * value you are willing to write down in plaintext here. A real credential
- * therefore cannot be allowlisted -- writing it would leak it -- so the only
- * way past this gate for a real secret is to rotate it and take it out.
- *
- * That property holds ONLY while every pattern's match contains the secret
- * itself. A pattern matching a fixed, zero-entropy marker (a bare PEM header,
- * say) would let one entry exempt every real secret sharing that marker. If you
- * add a pattern, make sure the match includes the high-entropy material -- see
- * the private-key pattern, which requires key bytes rather than the header.
- */
+/** Known-safe matches, keyed on path + the exact matched text. */
 function loadAllowlist() {
   let raw;
   try {
     raw = readFileSync(ALLOWLIST_PATH, "utf8");
   } catch {
-    return new Map();
+    return { entries: new Map(), malformed: [] };
   }
   const entries = new Map();
+  const malformed = [];
   for (const line of raw.split(LF)) {
     const t = line.trim();
     if (!t || t.startsWith("#")) continue;
     const at = t.indexOf(" :: ");
-    if (at === -1) continue;
-    entries.set(t.slice(0, at).trim() + SEP + t.slice(at + 4), false);
+    if (at === -1) {
+      malformed.push(t);
+      continue;
+    }
+    // Literals may use \n so a multi-line match can be written on one line.
+    const literal = t.slice(at + 4).split(BACKSLASH + "n").join(LF);
+    entries.set(t.slice(0, at).trim() + SEP + literal, false);
   }
-  return entries;
+  return { entries, malformed };
 }
 
-const allowlist = loadAllowlist();
-
-function trackedFiles() {
-  const out = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-  return out.split(NUL).filter(Boolean);
-}
-
-const mask = (v) => v.slice(0, 10) + "..." + "[" + v.length + " chars, redacted]";
-
-const files = trackedFiles();
+const { entries: allowlist, malformed } = loadAllowlist();
+const files = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+  .split(NUL)
+  .filter(Boolean);
 const findings = [];
 
 for (const file of files) {
@@ -113,30 +141,47 @@ for (const file of files) {
   }
   if (text.includes(NUL)) continue; // binary
 
-  for (const { name, re } of PATTERNS) {
+  const normalised = file.split(BACKSLASH).join("/");
+  const isAllowlistFile = normalised === ALLOWLIST_PATH;
+
+  for (const { name, re, verify, allowlistable } of PATTERNS) {
     re.lastIndex = 0;
     let m;
     while ((m = re.exec(text)) !== null) {
-      const line = text.slice(0, m.index).split("\n").length;
       if (isPlaceholder(m[0])) continue;
-      const normalised = file.split(BACKSLASH).join("/");
+      if (verify && !verify(text, m.index + m[0].length)) continue;
 
-      // Inside the allowlist itself, only the literal half of a well-formed
-      // entry is exempt. Anything else there -- a comment, a stray paste -- is
-      // scanned like any other file, so the allowlist is not a hiding place.
-      if (normalised === ALLOWLIST_PATH) {
+      if (isAllowlistFile) {
+        // Only the literal half of a well-formed, non-comment entry is exempt.
+        // A comment is scanned like anything else -- this file's own purpose
+        // invites writing credential-shaped text into it, so it must not be a
+        // hiding place.
         const lineStart = text.lastIndexOf(LF, m.index) + 1;
-        const sepAt = text.indexOf(" :: ", lineStart);
         const lineEnd = text.indexOf(LF, lineStart);
+        const lineText = text.slice(lineStart, lineEnd === -1 ? text.length : lineEnd);
+        const sepAt = text.indexOf(" :: ", lineStart);
         const sepOnThisLine = sepAt !== -1 && (lineEnd === -1 || sepAt < lineEnd);
-        if (sepOnThisLine && m.index >= sepAt + 4) continue;
+        if (!lineText.trimStart().startsWith("#") && sepOnThisLine && m.index >= sepAt + 4) continue;
       }
 
-      const allowKey = normalised + SEP + m[0];
-      if (allowlist.has(allowKey)) { allowlist.set(allowKey, true); continue; }
+      if (allowlistable !== false) {
+        const key = normalised + SEP + m[0];
+        if (allowlist.has(key)) {
+          allowlist.set(key, true);
+          continue;
+        }
+      }
+
+      const line = text.slice(0, m.index).split(LF).length;
       findings.push({ file, line, name, value: m[0] });
     }
   }
+}
+
+const mask = (v) => v.slice(0, 10) + "..." + "[" + v.length + " chars, redacted]";
+
+for (const bad of malformed) {
+  console.error("check-no-committed-secrets: malformed allowlist line (needs ' :: '): " + bad.slice(0, 60));
 }
 
 const stale = [...allowlist.entries()].filter(([, used]) => !used).map(([k]) => k.split(SEP)[0]);
