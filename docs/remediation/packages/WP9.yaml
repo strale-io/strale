@@ -279,9 +279,10 @@ review_round_1:
       every getExecutor caller would flag the provider chain and the test
       harness, which legitimately do not record.
     - >
-      N-1: recordInvocation is awaited on a separate pooled connection inside
-      the open wallet transaction. It cannot poison that transaction, but it is
-      a nested pool acquisition and carries no timeout of its own.
+      N-1: recordInvocation was awaited on a separate pooled connection inside
+      the open wallet transaction. CLOSED in round 6 -- /v1/do now records via
+      recordFactWithoutHoldingTheLock, and a test forbids the await. Left here
+      because the finding is part of the record; the state is not.
     - >
       N-6: the table stores user_id for 180 days and the trigger refuses UPDATE
       unconditionally, so there is no mechanism to honour an Art. 16 or Art. 17
@@ -504,3 +505,53 @@ review_round_4:
       that would break it is a code MOVE, which the single-line mutation tool
       cannot express. The related property -- that the verification throws
       before the ledger row is written -- is mutation-proven separately.
+
+# ── Review rounds 5–14 ────────────────────────────────────────────────────────
+#
+# Rounds 1–4 are recorded above. This section covers the rest. It is deliberately
+# terse per round: the commit messages carry the full reasoning, and a manifest
+# that restates them goes stale the way the round 1–4 entries did.
+review_rounds_5_to_14:
+  verdicts: "FAIL every round. Blocking counts: 2, 3, 2, 1, 1, 1, 5, 1, 3, 1."
+  what_the_series_was_actually_about: >
+    Almost none of these were defects in what WP9 does. They were defects in what
+    GUARDS it. The mechanism was largely right by round 4; fourteen rounds went
+    into making it impossible to break silently, on a floor that is armed in
+    production and delists real capabilities.
+  the_recurring_shape: >
+    Nineteen assertions were caught HOLLOW -- each matched a substring that
+    survived the break it was meant to catch. Four of them were introduced INSIDE
+    the remediation for the previous one. The pattern each time: a guard pinned
+    one file, one call site, one column or one clause, and the identical
+    one-token change stayed available in the next one over. Naming it early would
+    have saved rounds; each fix was locally correct and globally one step behind.
+  how_it_terminated: >
+    By escalating the unit of assertion until there was nothing "one over" left.
+    Call sites -> the whole file. One column -> the whole projection. One clause
+    -> the whole STATEMENT, snapshotted to a committed fixture and compared
+    against the template's own backticks, with a coverage test that counts the
+    SQL calls in the module and demands a fixture for each. That coverage test
+    failed on its first run and named three statements that had been missed, and
+    a later round found the comparison itself was a substring test.
+  notable_findings:
+    - "R5: the free-tier value was derived from the capability flag; /v1/do stamps is_free_tier true for anonymous X-Payment and progressive-unlock calls on PAID capabilities."
+    - "R7: the replacement derivation was falsified in the OPPOSITE direction -- a successful anonymous X-Payment call is UPDATEd back to false on settlement (5 of 5 such rows in production). Wrong both ways, which is the signal it should never have been a derivation. It is now computed once at the route and handed to both writes."
+    - "R8: servedFree was guarded at one of nine call sites. Fixed by removing the field from eight of them rather than guarding it there: paid rails call recordPaidInvocation, which cannot express free-tier, and the do.ts actor is a discriminated union whose account variant has no such field."
+    - "R10/R12: the fact query's SELECT list was pinned four of seven columns; the three left out (day, recent, n) were each a total silent disarm -- collapsing failure-day granularity makes the burst guard fire forever so NOTHING is ever quarantined, while the heartbeat still reports evaluated: N."
+    - "R11: `f.user_id NOT IN (` survived inverting the predicate's leading IS NULL OR. 2,522 of 2,597 floor-eligible rows in 30 days carry a NULL user_id, so the mutation removed 97.1% of the floor's evidence, silently, and the volume cross-check could not see it because its own CTE kept the NULL branch."
+    - "R11: nothing asserted the two row arrays are joined. Dropping ...factRows left every fact-query pin intact -- they are all slices bounded by that very line."
+    - "R13: inverting the fact query's WHERE c.is_active = true deletes WP9 entirely while the DEC-20260504-C proof query this package prescribes returns a healthy reading."
+    - "R14: the snapshot compared a substring, so a clause APPENDED to any statement was invisible. LIMIT 1 on the fact query, HAVING false on the revenue query."
+  mine_not_the_reviewers:
+    - "A mutation result recorded as caught that nothing could have caught (R3, withdrawn)."
+    - "Two revenue assertions satisfied by both the correct and the broken form."
+    - "A guard whose regex contained two literal 0x08 bytes from a mangled escape -- it could not fail, and read as a guard for a whole commit."
+    - "A guard that skipped any file MENTIONING the field it was added to guard."
+    - "An assertion deleted by a cleanup whose replacement silently matched nothing."
+    - "An assert-against-itself: the expected value came from the same constant it was meant to exclude."
+    - "A source-typecheck gate run in place of the scripts gate, whose silence I read as a pass; CI caught it."
+  still_open_non_blocking:
+    - "The x402 rail awaits its fact write on the request path; /v1/do deliberately does not. No pool hazard there (no wallet lock), but the latency is real."
+    - "transaction_id is null for 100% of writes -- no rail supplies one. The column and index are kept; both claims now say so."
+    - "A bundle-only capability that is quarantined has no automatic route back: promotion reads test_results, and paid capabilities are not proactively tested."
+    - "No Postgres-backed harness exists for jobs/quality-floor.ts. The snapshot suite says the SQL is what was reviewed; it cannot say the SQL is correct."
