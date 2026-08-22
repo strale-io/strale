@@ -142,8 +142,13 @@ export const FOUNDER_GRANT_PUBLIC_KEY_PEM = "";
 const MINTED = new WeakSet<object>();
 
 function mint(authority: Authority): Authority {
+  // Frozen as well as recorded. Without this, `Object.assign(minted, {kind:
+  // "FOUNDER_GATED", grantId: "forged"})` keeps its minted identity while
+  // acquiring fabricated contents — harmless for credential release, which
+  // reads no fields, but it reconstitutes the incident's exact shape the moment
+  // `describeAuthority()` is wired to store what it is handed.
   MINTED.add(authority);
-  return authority;
+  return Object.freeze(authority);
 }
 
 /** Thrown when a production write is attempted without valid authority. */

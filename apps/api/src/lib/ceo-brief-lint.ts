@@ -170,7 +170,12 @@ export type StatusTag = (typeof STATUS_TAGS)[number];
 export const SETTLED_MATTERS: Array<{ id: string; re: RegExp; settledBy: string }> = [
   {
     id: "eleven-row-reconciliation",
-    re: /\b(?:eleven|11)\b[^.]{0,80}\b(?:records?|rows?|transactions?|reconciliation)\b/i,
+    // Matched on the ACT, not on a count. The first version keyed on "eleven"
+    // near a noun, which review evaded with "eleven stranded charges" and with
+    // "this morning's reconciliation stands or is reversed" — and which fired
+    // on the unrelated "11 transactions at 20 cents". Keying on the decision
+    // being re-asked is both wider and narrower in the right directions.
+    re: /\b(?:stands?|standing) (?:or|and) (?:it |be |being |is |get |gets )?revers|revers(?:e|ing|ed) (?:it|the (?:change|reconciliation|write))|(?:un(?:do|done)|roll(?:ing)? back) (?:it|the (?:change|reconciliation|write))|\bmanual_reconciliation\b|stranded (?:executing )?(?:rows?|records?|transactions?|charges?)/i,
     settledBy:
       "the production-authorization incident was closed and ACCEPTED on 2026-08-22 " +
       "(PR #361, accepted in #364); the remediation ledger records that the rows were " +
@@ -178,12 +183,16 @@ export const SETTLED_MATTERS: Array<{ id: string; re: RegExp; settledBy: string 
   },
   {
     id: "integrity-claim-wording",
-    re: /\btamper[- ]evident\b|\breplacement (?:integrity )?claim\b|\bnarrower wording\b/i,
+    // Any re-opening of the public integrity claim, in noun or adjective form,
+    // plus the specific move the approved plan rules out: proposing replacement
+    // wording at all.
+    re: /\btamper[- ]eviden(?:t|ce)\b|\bhash[- ]chained? (?:audit|integrity|record)\b|\b(?:replacement|narrower|hedged|softer) (?:integrity |cryptographic |tamper[- ]eviden(?:t|ce) )?(?:claim|wording|copy)\b/i,
     settledBy:
       "the founder approved the correction itself — unsupported tamper-evidence and " +
       "downstream-regulatory-verification claims are removed, with no replacement " +
-      "integrity claim until independently substantiated (docs/remediation/" +
-      "PUBLIC-COPY-CORRECTION.md, which supersedes the withdrawn hedged rewording)",
+      "integrity claim until independently substantiated. The operative surface plan lives on the remediation branch, not yet on main. It supersedes " +
+      "the withdrawn hedged rewording, so 'which wording should we publish' is not the " +
+      "open question; removal is what was approved",
   },
 ];
 
@@ -342,6 +351,21 @@ export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}):
     }
 
     for (const b of blocks) {
+      // A settled matter is not made open by the tag it wears. Checking only
+      // FOUNDER_DECISION left the obvious escape: relabel it a handover and it
+      // lints clean while reproducing F10 incident 3 word for word — a settled
+      // thing presented as awaiting his approval.
+      const settled = SETTLED_MATTERS.find((m) => m.re.test(b.text));
+      if (settled && b.status !== "SYSTEM_ACTING") {
+        findings.push({
+          severity: "error", rule: "settled-matter-reopened",
+          message:
+            `this puts "${settled.id}" back in front of the founder, and it is already ` +
+            `settled — ${settled.settledBy}. Report it as done, or as work in progress, ` +
+            "but never as something awaiting him: re-asking spends his attention on a " +
+            "decision he has made.",
+        });
+      }
       if (b.status === "AUTHORIZATION_UNAVAILABLE") {
         // A handover, not a question. Held to its own three fields, and
         // deliberately NOT to the five judgement fields.
@@ -375,19 +399,6 @@ export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}):
           }
         }
       } else if (b.status === "FOUNDER_DECISION") {
-        // A settled matter is not a decision, however carefully it is written
-        // up. Checked before the field rules so the message names the real
-        // problem: the entry does not belong here at all.
-        const settled = SETTLED_MATTERS.find((m) => m.re.test(b.text));
-        if (settled) {
-          findings.push({
-            severity: "error", rule: "settled-matter-reopened",
-            message:
-              `this asks for a decision on "${settled.id}", which is already settled — ` +
-              `${settled.settledBy}. Report it as done, or as work in progress, but ` +
-              "never as a question: re-asking spends his attention on a decision he has made.",
-          });
-        }
         for (const field of ESCALATION_FIELDS) {
           if (!fieldPresent(b.text, field)) {
             findings.push({

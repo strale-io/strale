@@ -98,7 +98,13 @@ until they are done or you tell me to drop them.
 *If you do nothing:* nothing breaks. Item 2 keeps one service visibly broken;
 item 3 leaves one automated check inert; items 1 and 4 are tidying.
 
-**DQ-18** · `your_call` · owner Petter · raised 2026-08-22T07:00Z · no deadline
+**DQ-18** · `decided` · owner Claude · raised 2026-08-22T07:00Z — **both items are settled; nothing here needs you**
+*Status token flipped from `your_call` the same day.* The dashboard reads this
+token and renders `your_call` as "Needs your yes", so leaving it would have kept
+asking him for two answers he had already given — item 1 accepted with the
+incident closeout, item 2 approved as a removal. The entry stays in OPEN for
+visibility, per the precedent DQ-3 and DQ-10 set. The original text and both
+corrections are below, unedited.
 Two decisions the remediation programme wrote up this morning and I am putting
 where you will see them. Full text: `docs/remediation/DECISION-BRIEFS.md`.
 *Why they are here:* they were committed to a branch at 07:54 today and would
@@ -145,7 +151,10 @@ one I would not leave indefinitely.
 > approved the correction itself: unsupported tamper-evidence and
 > downstream-regulatory-verification claims come off, with **no replacement
 > integrity claim** until one is independently substantiated. The operative plan
-> is `docs/remediation/PUBLIC-COPY-CORRECTION.md` — pure subtraction, no new
+> is `docs/remediation/PUBLIC-COPY-CORRECTION.md`, which lives on the
+> remediation programme's branch and is **not on `main` yet** — so this path
+> does not resolve for a reader here, and it is named rather than linked for
+> that reason. It is pure subtraction, no new
 > assertion — and it supersedes the hedged replacement paragraph the original
 > brief proposed, which was itself withdrawn for containing a sentence that was
 > false. So the question "should we publish narrower wording?" is not open:
@@ -221,6 +230,19 @@ same misreporting as executing without authority, pointing the other way. What
 is genuinely open is narrower and is now stated as such: whether that change
 stands or is reversed. That question is on the brief, with a recommendation to
 let it stand.
+
+> **CORRECTION, later the same day — that paragraph is now wrong too, and in the
+> same family.** "What is genuinely open is… whether that change stands or is
+> reversed" was true when written and stopped being true within hours: the
+> production-authorization incident was closed and **ACCEPTED** (#361, accepted
+> in #364), and the ledger records that the eleven rows were deliberately not
+> rewritten because the incident record *is* the correction. So nothing about
+> them is open, the question is off the brief, and this sentence is a third
+> statement of the same error — first executing without authority, then
+> reporting a finished write as pending, now describing a closed matter as an
+> open choice. Logged as F10 incident 4. Left as written per the annotate-don't-
+> rewrite rule, and guarded in code: `SETTLED_MATTERS` in the brief linter now
+> refuses a founder-decision entry on either of these two matters.
 *What I will do instead:* nothing to live data. The authorization mechanism
 landed later the same day and starts locked — no founder-gated change can be
 approved until you generate a signing key and install its public half. Until

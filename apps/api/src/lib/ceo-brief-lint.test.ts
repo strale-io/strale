@@ -219,14 +219,21 @@ describe("the brief may not open as a work log", () => {
   });
 });
 
-/** A complete five-field founder escalation. Shared by several blocks below. */
+/**
+ * A complete five-field founder escalation. Shared by several blocks below.
+ *
+ * Deliberately a GENUINELY OPEN decision. This fixture used to be the website
+ * integrity-claim item, which the settled-matter guard now correctly rejects —
+ * using a decided matter as the canonical example of a good escalation was the
+ * same confusion the guard exists to catch, sitting in the test file.
+ */
 const complete =
-  "One decision. **The choice:** whether to soften a claim on the website that we cannot fully " +
-  "stand behind. **What is established:** the claim holds for altering a single record and not " +
-  "for ordering or deletion across a three-and-a-half-month window; replacement wording is drafted. " +
-  "**Options:** change the wording now, or leave it and accept the exposure. " +
-  "**I recommend** changing it. **Consequence:** changing it costs an hour and narrows what we " +
-  "advertise; leaving it means a compliance buyer reads a claim we cannot fully support.";
+  "One decision. **The choice:** what to charge for the Greek registry lookup. " +
+  "**What is established:** 11 paid calls in 30 days at 20 cents, and the supplier charges " +
+  "us 12 cents each, so the margin is 8 cents and the volume is not growing. " +
+  "**Options:** hold at 20 cents, or move to 35. " +
+  "**I recommend** moving to 35. **Consequence:** at 35 we earn about 15 euros a month more " +
+  "if volume holds; leaving it means the line barely covers what we pay for it.";
 
 describe("escalations carry all five fields or they are not ready", () => {
   it("accepts an escalation with all five", () => {
@@ -236,7 +243,7 @@ describe("escalations carry all five fields or they are not ready", () => {
 
   it("rejects an escalation with no recommendation — the commonest omission", () => {
     const r = lintBrief(goodBrief({
-      decide: complete.replace("**I recommend** changing it.", "Your call."),
+      decide: complete.replace("**I recommend** moving to 35.", "Your call."),
     }));
     expect(r.ok).toBe(false);
     expect(r.findings.some((f) => f.rule === "escalation-incomplete" && /recommendation/.test(f.message))).toBe(true);
@@ -566,6 +573,47 @@ describe("a settled matter must never come back as a decision", () => {
         "The eleven unfinished records were closed this morning without the approval " +
         "you had reserved. The controls are built and the incident is closed out.",
       now: "Taking the unsupported tamper-evident claims off the website, as you decided.",
+    }));
+    expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
+  });
+
+  it("is not evaded by relabelling the settled matter a handover", () => {
+    // The escape review found: tag it AUTHORIZATION_UNAVAILABLE and it linted
+    // clean while reproducing F10 incident 3 word for word — a settled thing
+    // presented as awaiting his approval. The check now runs on every block.
+    const r = lintBrief(goodBrief({
+      decide:
+        "AUTHORIZATION_UNAVAILABLE\n\n**Settled:** the reconciliation should stand or be reversed.\n" +
+        "**Why it is not mine:** it touches live records.\n**What I need:** your approval.",
+    }));
+    expect(r.ok).toBe(false);
+    expect(r.findings.some((x) => x.rule === "settled-matter-reopened")).toBe(true);
+  });
+
+  it("is not evaded by dropping the count or changing the noun", () => {
+    for (const phrasing of [
+      "**The choice: whether this morning's change stands or is reversed.**",
+      "**The choice: whether to reverse the change made this morning.**",
+      "**The choice: what to do about the stranded executing rows.**",
+    ]) {
+      const r = lintBrief(goodBrief({
+        decide: `FOUNDER_DECISION\n\n${phrasing}\n**What is established:** x.\n` +
+                "**Options:** a or b.\n**I recommend** a.\n**The consequence:** y.",
+      }));
+      expect(r.findings.some((x) => x.rule === "settled-matter-reopened"), phrasing).toBe(true);
+    }
+  });
+
+  it("does not fire on an unrelated count that merely mentions transactions", () => {
+    // The first pattern keyed on "eleven" near a noun and flagged "11
+    // transactions in the last month at 20 cents" — ordinary business English
+    // inside a genuinely open pricing decision.
+    const r = lintBrief(goodBrief({
+      decide:
+        "FOUNDER_DECISION\n\n**The choice: what to charge for the Greek registry lookup.**\n" +
+        "**What is established:** 11 transactions in the last month at 20 cents, and the " +
+        "eleven free capabilities drove 400 transactions beside them.\n" +
+        "**Options:** hold, or move to 35.\n**I recommend** 35.\n**The consequence:** 15 euros a month.",
     }));
     expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
   });

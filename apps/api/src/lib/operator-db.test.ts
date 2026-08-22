@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { assertSslIntentIsExplicit, openOperatorWriteDb } from "./operator-db.js";
-import { ProductionAuthorityError } from "./production-authority.js";
+import { autonomousAuthority, ProductionAuthorityError } from "./production-authority.js";
 
 describe("TLS intent must be explicit, never hardcoded", () => {
   it("accepts a remote URL that says sslmode=require", () => {
@@ -70,15 +70,28 @@ describe("a writable handle cannot be opened without authority", () => {
     expect(() => openOperatorWriteDb({} as never)).toThrow(ProductionAuthorityError);
   });
 
-  it("refuses even a well-shaped Authority when no write credential exists", () => {
-    // The default state of every autonomous session: the credential simply is
-    // not there, so the question of authority never even arises.
+  it("refuses a well-shaped Authority this module did not issue", () => {
+    // Was "refuses even a well-shaped Authority when no write credential
+    // exists", asserting the credential message. A well-SHAPED literal is no
+    // longer well-FORMED: provenance is checked before the environment, so this
+    // is now refused for the better reason. Order matters — a session that
+    // fabricated an authority should be told that, not told to go and find a
+    // credential.
     expect(() =>
       openOperatorWriteDb({
         kind: "AUTONOMOUS_POLICY",
         policy: "DEC-20260812-A",
         purpose: "quality_floor_quarantine",
       }),
+    ).toThrow(/was not issued by/);
+  });
+
+  it("refuses a genuinely issued Authority when no write credential exists", () => {
+    // The case the test above used to cover, with an authority that really came
+    // from the constructor: the default state of every autonomous session is
+    // that the credential simply is not there.
+    expect(() =>
+      openOperatorWriteDb(autonomousAuthority("quality_floor_quarantine", "DEC-20260812-A")),
     ).toThrow(/No production write credential/);
   });
 });
