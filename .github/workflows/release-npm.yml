@@ -1,0 +1,129 @@
+name: Release (npm)
+
+# Publishing uses npm **trusted publishing** (OIDC). There is deliberately no
+# NPM_TOKEN secret: the job exchanges a short-lived GitHub OIDC identity for a
+# publish credential, and npm attaches a provenance attestation automatically.
+#
+# The PATH AND FILENAME of this workflow are part of the trust configuration
+# registered on npmjs.com for each package. Renaming or moving this file breaks
+# publishing until the npm-side config is updated to match. See
+# docs/release/npm-publishing.md.
+
+on:
+  push:
+    # Monorepo tag convention: <package-name>@<version>, e.g. strale-mcp@0.2.7
+    tags:
+      - "*@*"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Workspace directory to publish
+        required: true
+        type: choice
+        options:
+          - packages/mcp-server
+          - packages/sdk-typescript
+          - packages/langchain
+          - packages/semantic-kernel-strale
+          - packages/strale-capabilities
+      dry_run:
+        description: Build and pack only — do not publish
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required: this is what trusted publishing exchanges
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          registry-url: "https://registry.npmjs.org"
+
+      # Node 20 ships npm 10.x; trusted publishing needs >= 11.5.1.
+      - name: Upgrade npm
+        run: |
+          npm install -g npm@latest
+          echo "npm $(npm --version)"
+
+      - name: Resolve release target
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            node apps/api/scripts/npm-release-resolve.mjs --tag "$GITHUB_REF_NAME"
+          else
+            node apps/api/scripts/npm-release-resolve.mjs --dir "${{ inputs.package }}"
+          fi
+
+      - run: npm ci
+
+      # packages/langchain imports `straleio` via its built dist/index.d.ts, so
+      # sdk-typescript has to exist on disk first. Same reasoning as the build
+      # ordering in ci.yml's `check` job.
+      - name: Build sdk-typescript (dependency of langchain)
+        if: steps.target.outputs.dir == 'packages/langchain'
+        run: npm --workspace=packages/sdk-typescript run build
+
+      - name: Build target workspace
+        env:
+          DIR: ${{ steps.target.outputs.dir }}
+        run: |
+          if node -e "const s=require('./'+process.env.DIR+'/package.json').scripts||{}; process.exit(s.build?0:1)"; then
+            npm --workspace="$DIR" run build
+          else
+            echo "$DIR has no build script — publishing checked-in sources"
+          fi
+
+      # DEC-20260422-A: a framework-named *-strale package must actually import
+      # the framework it claims to integrate with. Enforced at PR time too; this
+      # is the last gate before the artefact becomes public and immutable.
+      - name: Framework-package integrity (DEC-20260422-A)
+        run: node apps/api/scripts/check-framework-packages.mjs
+
+      - name: Refuse to republish an existing version
+        env:
+          NAME: ${{ steps.target.outputs.name }}
+          VERSION: ${{ steps.target.outputs.version }}
+        run: |
+          existing=$(npm view "$NAME@$VERSION" version 2>/dev/null || true)
+          if [ -n "$existing" ]; then
+            echo "::error::$NAME@$VERSION is already on npm. Versions are immutable — bump and re-tag."
+            exit 1
+          fi
+          echo "$NAME@$VERSION is unpublished; proceeding"
+
+      - name: Pack and show tarball contents
+        working-directory: ${{ steps.target.outputs.dir }}
+        run: npm pack --dry-run
+
+      - name: Publish
+        if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+        working-directory: ${{ steps.target.outputs.dir }}
+        run: npm publish
+
+      - name: Summary
+        env:
+          NAME: ${{ steps.target.outputs.name }}
+          VERSION: ${{ steps.target.outputs.version }}
+        run: |
+          {
+            echo "### ${NAME}@${VERSION}"
+            if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.dry_run }}" = "false" ]; then
+              echo "Published with provenance via trusted publishing."
+            else
+              echo "Dry run — packed and validated, nothing published."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
