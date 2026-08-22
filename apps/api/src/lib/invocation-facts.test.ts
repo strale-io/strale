@@ -191,15 +191,45 @@ describe("no serving path may skip the fact", () => {
     ]);
   });
 
-  it("the solution executor records on both the success and the failure path", () => {
-    // The rail WP9 exists for. One call would be easy to write and would cover
-    // only half the outcomes — and the half it would miss is the failures,
-    // which are the entire input to a quality floor.
+  it("every covered path records the FAILURE case too, not just the success", () => {
+    // The guard above is satisfied by a single call, which is exactly how a
+    // half-wired rail would look: record the successes, drop the failures, and
+    // hand the quality floor a completion rate that can only ever be 100%.
+    // That is worse than no signal, because it reads as health.
+    //
+    // An invocation either returns output or throws, so each of these files
+    // needs at least two record sites. Removing one of a pair must be caught —
+    // the first version of this test checked only that SOME call existed, and a
+    // mutation deleting one of two survived it.
+    const shortfall: string[] = [];
+    for (const rel of [
+      "capabilities/guarded-executor.ts",
+      "lib/solution-executor.ts",
+      "routes/do.ts",
+      "routes/x402-gateway-v2.ts",
+    ]) {
+      const body = readFileSync(join(SRC, rel), "utf8");
+      const calls = (body.match(/recordInvocation\(\{/g) ?? []).length;
+      const fromError = (body.match(/outcomeFromError\(/g) ?? []).length;
+      if (calls < 2 || fromError < 1) {
+        shortfall.push(`${rel}: ${calls} record site(s), ${fromError} error-outcome derivation(s)`);
+      }
+    }
+    expect(
+      shortfall,
+      "Each of these files runs a capability and must record BOTH outcomes. " +
+        "A path that records only successes gives the floor a completion rate " +
+        "of 100% no matter how broken the capability is.",
+    ).toEqual([]);
+  });
+
+  it("the solution executor assesses the enriched output, not the raw result", () => {
+    // The customer receives the enriched output and the solution's aggregate
+    // billing verdict is computed from it. Assessing the raw executor result
+    // here would let a step's quality record and its billing verdict disagree
+    // about the same call — two answers to one question, again.
     const body = readFileSync(join(SRC, "lib/solution-executor.ts"), "utf8");
-    const calls = body.match(/await recordInvocation\(/g) ?? [];
-    expect(calls.length).toBeGreaterThanOrEqual(2);
     expect(body).toContain("outcome: outcomeFromOutput(step.capabilitySlug, output)");
-    expect(body).toContain("outcome: outcomeFromError(err)");
   });
 });
 
