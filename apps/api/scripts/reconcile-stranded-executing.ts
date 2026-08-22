@@ -23,11 +23,17 @@
  *
  * ── Idempotency ─────────────────────────────────────────────────────────────
  *
- * Every statement is predicated on `status='executing'`, which the first run
- * clears. A second run matches nothing. The refund goes through the WP2 wallet
- * service, so the balance change and its ledger row are written in one
- * transaction and cannot diverge — and it is guarded on the absence of a prior
- * refund for the same transaction, so a re-run cannot double-credit.
+ * A second run finds zero target rows still in `executing` and aborts before
+ * writing anything. The refund goes through the WP2 wallet service, so the
+ * balance change and its ledger row are written in one transaction and cannot
+ * diverge, and it is guarded on the absence of a prior `refund` ledger row for
+ * the same transaction.
+ *
+ * That guard is narrower than "idempotent" in general: it asks whether a REFUND
+ * was recorded, not whether the original purchase was reversed by some other
+ * means. A reversal booked as `closure_forfeit` or corrected by a manual top-up
+ * would not be seen. Verified for this run — exactly one ledger row references
+ * any of the eleven, a single `purchase −100c`.
  *
  * ── Usage ───────────────────────────────────────────────────────────────────
  *
@@ -42,13 +48,42 @@
  *   DATABASE_URL="<public url>" npx tsx apps/api/scripts/reconcile-stranded-executing.ts --apply
  */
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, lt, sql } from "drizzle-orm";
 
 import { getDb } from "../src/db/index.js";
 import { transactions, wallets, walletTransactions } from "../src/db/schema.js";
 import * as walletService from "../src/lib/wallet-service.js";
 
 const APPLY = process.argv.includes("--apply");
+
+/**
+ * The eleven rows, named explicitly.
+ *
+ * Not discovered by querying `status='executing'` at run time. That query
+ * describes the LIVE transient state as much as the historical one — production
+ * runs ~433 transactions per hour, and any of them in flight when the snapshot
+ * ran would have been swept into the batch. A remediation for eleven known
+ * historical rows should name those eleven rows.
+ *
+ * Captured 2026-08-21 and verified: created 2026-04-07 → 2026-08-12, all with
+ * `output IS NULL`, ten free-tier at 0c, one at 100c on an internal account.
+ */
+const TARGET_IDS = [
+  "c36a0f29-a61a-4f52-8b60-b9f4ad068b69", // 2026-04-07T02:00:07   0c
+  "029d88fc-a07a-45cc-8813-45015c878189", // 2026-04-07T02:01:19   0c
+  "a50a9780-90f1-439d-aed1-7b46e1ee1076", // 2026-04-07T02:11:13   0c
+  "3fa99138-c719-41e2-ae8f-b130f0418022", // 2026-04-07T02:12:27   0c
+  "34468c09-6f74-4edb-92aa-f5d99a6499eb", // 2026-04-10T15:06:53   0c
+  "04b05cf6-2d76-405b-811e-28dcaf7cfffb", // 2026-04-10T19:13:16   0c
+  "be6e87b9-66a0-4fcb-897d-a2886276fe77", // 2026-04-11T01:46:33   0c
+  "52892e48-c0c1-4f45-a405-75995e4ee69d", // 2026-04-11T02:05:14   0c
+  "1037b328-52b8-4b23-ac00-99bae3f65e29", // 2026-04-15T18:04:51   0c
+  "4994f0b2-8b80-418b-ae2f-694a029267dc", // 2026-04-18T08:59:56   0c
+  "e995cbb7-79bb-4abd-97ab-8ca32e97a6a4", // 2026-08-12T09:22:05 100c
+] as const;
+
+/** Newest target. Nothing created after this instant is in scope, ever. */
+const CUTOFF_ISO = "2026-08-12T09:22:06.000Z";
 
 const CLOSURE_NOTE =
   "Execution abandoned before durable wallet reservations existed (WP3). " +
@@ -69,7 +104,15 @@ async function main(): Promise<void> {
       hashed: sql<boolean>`${transactions.integrityHash} IS NOT NULL`,
     })
     .from(transactions)
-    .where(eq(transactions.status, "executing"))
+    // Named ids AND still-executing AND older than the newest target. Three
+    // independent conditions, each sufficient on its own to exclude a live row.
+    .where(
+      and(
+        inArray(transactions.id, [...TARGET_IDS]),
+        eq(transactions.status, "executing"),
+        lt(transactions.createdAt, new Date(CUTOFF_ISO)),
+      ),
+    )
     .orderBy(transactions.createdAt);
 
   console.log(`\nBEFORE — ${before.length} rows in status='executing'`);
