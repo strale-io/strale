@@ -35,6 +35,8 @@ const SCRIPT = resolve(
 
 let dir: string;
 let publicKeyPem: string;
+/** Signed once and reused. Each sign is a node spawn; three were two too many. */
+let token: string;
 
 function run(...args: string[]): string {
   return execFileSync(process.execPath, [SCRIPT, ...args], {
@@ -57,6 +59,7 @@ beforeAll(() => {
   const m = out.match(/"(-----BEGIN PUBLIC KEY-----[\s\S]*?-----END PUBLIC KEY-----\\n)"/);
   if (!m) throw new Error(`no public key in generator output:\n${out}`);
   publicKeyPem = JSON.parse(`"${m[1]}"`);
+  token = sign("wallet_topup");
 }, 60_000);
 
 afterAll(() => {
@@ -73,7 +76,6 @@ describe("a signed grant round-trips", () => {
   });
 
   it("a signed token parses and its signature verifies", () => {
-    const token = sign("wallet_topup");
     const parsed = parseGrantToken(token);
 
     expect(parsed.purpose).toBe("wallet_topup");
@@ -92,7 +94,6 @@ describe("a signed grant round-trips", () => {
     // The purpose is inside the signed bytes, so re-labelling it breaks the
     // signature rather than merely failing a later string comparison. That is
     // the difference between a control and a convention.
-    const token = sign("wallet_topup");
     const parsed = parseGrantToken(token);
     const tampered = parsed.signedPayload.replace(
       "wallet_topup",
@@ -112,7 +113,7 @@ describe("a signed grant round-trips", () => {
     // Signed payload is pipe-joined while the token is dot-joined, so a grant
     // cannot be re-segmented into a different (id, purpose, expiry) triple that
     // carries the same signature.
-    const parsed = parseGrantToken(sign("wallet_topup"));
+    const parsed = parseGrantToken(token);
     expect(parsed.signedPayload).toContain("|");
     expect(parsed.signedPayload).not.toContain(".");
   }, 30_000);

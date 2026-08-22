@@ -22,6 +22,14 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import {
+  assertCannotMintGrants,
+  autonomousAuthority,
+  AUTONOMOUS_PURPOSES,
+  ProductionAuthorityError,
+  requireFounderGrant,
+} from "../src/lib/production-authority.js";
+
 const AUTHORITY_MODULE = resolve(
   import.meta.dirname,
   "..",
@@ -167,106 +175,92 @@ console.log("RESULT:" + attempts.join(","));
     expect(r.stdout).toContain("rawEnv=absent");
   }, 90_000);
 
+  // The cases below inject the environment directly rather than spawning.
+  // requireFounderGrant and assertCannotMintGrants both take `env`, so a child
+  // process buys nothing here — and sixteen spawns across this package's tests
+  // pushed a neighbouring file past its 30s bootstrap hookTimeout in a serial
+  // run. The end-to-end proof above still runs in a real process.
+
   it("a string that claims founder approval has zero authority", () => {
     // Verbatim from the audit rows the incident produced. Prose is not a grant.
-    const source = `
-import { requireFounderGrant } from "${AUTHORITY_MODULE}";
-try {
-  requireFounderGrant("close_stranded_executing_rows");
-  console.log("ACCEPTED");
-} catch (e) {
-  console.log("REFUSED:" + (e as Error).message.slice(0, 60));
-}
-`;
-    const r = runScript(
-      source,
-      autonomousEnv({
-        STRALE_FOUNDER_GRANT:
-          "founder approval, 2026-08-21 stranded-row reconciliation",
+    expect(() =>
+      requireFounderGrant("close_stranded_executing_rows", {
+        env: {
+          STRALE_FOUNDER_GRANT:
+            "founder approval, 2026-08-21 stranded-row reconciliation",
+        },
       }),
-    );
-
-    expect(r.stdout).not.toContain("ACCEPTED");
-    expect(r.stdout).toContain("REFUSED");
-  }, 90_000);
+    ).toThrow(ProductionAuthorityError);
+  });
 
   it("even a well-formed but unsigned grant token is refused", () => {
-    const source = `
-import { requireFounderGrant } from "${AUTHORITY_MODULE}";
-try {
-  requireFounderGrant("close_stranded_executing_rows");
-  console.log("ACCEPTED");
-} catch (e) {
-  console.log("REFUSED");
-}
-`;
     const expiry = Math.floor(Date.now() / 1000) + 3600;
-    const r = runScript(
-      source,
-      autonomousEnv({
-        STRALE_FOUNDER_GRANT: `v1.g1.close_stranded_executing_rows.${expiry}.${Buffer.from(
-          "not-a-real-signature",
-        ).toString("base64url")}`,
-      }),
-    );
+    const token = `v1.g1.close_stranded_executing_rows.${expiry}.${Buffer.from(
+      "not-a-real-signature",
+    ).toString("base64url")}`;
 
-    expect(r.stdout).not.toContain("ACCEPTED");
-    expect(r.stdout).toContain("REFUSED");
-  }, 90_000);
+    expect(() =>
+      requireFounderGrant("close_stranded_executing_rows", {
+        env: { STRALE_FOUNDER_GRANT: token },
+      }),
+    ).toThrow(ProductionAuthorityError);
+  });
 
   it("refuses outright in a process that could mint its own grants", () => {
     // The assumption the whole model rests on. If a signing key is reachable,
     // a verified grant proves nothing, and the module must say so rather than
     // hand back an authority record that looks trustworthy.
-    const source = `
-import { assertCannotMintGrants } from "${AUTHORITY_MODULE}";
-try {
-  assertCannotMintGrants();
-  console.log("ALLOWED");
-} catch (e) {
-  console.log("REFUSED");
-}
-`;
-    const r = runScript(
-      source,
-      autonomousEnv({ STRALE_FOUNDER_GRANT_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----" }),
-    );
-
-    expect(r.stdout).not.toContain("ALLOWED");
-    expect(r.stdout).toContain("REFUSED");
-  }, 90_000);
+    for (const key of [
+      "STRALE_FOUNDER_GRANT_PRIVATE_KEY",
+      "STRALE_FOUNDER_GRANT_SECRET",
+      "STRALE_FOUNDER_GRANT_SIGNING_KEY",
+    ]) {
+      expect(() =>
+        assertCannotMintGrants({ [key]: "-----BEGIN PRIVATE KEY-----" }),
+        `${key} must make verification refuse`,
+      ).toThrow(ProductionAuthorityError);
+    }
+    // …and an environment without one is fine.
+    expect(() => assertCannotMintGrants({})).not.toThrow();
+  });
 });
 
 describe("autonomous and founder-gated are distinct capabilities", () => {
-  it("a delegated purpose yields authority; a reserved one never does", () => {
-    const source = `
-import { autonomousAuthority, requireFounderGrant } from "${AUTHORITY_MODULE}";
+  it("a delegated purpose yields authority", () => {
+    // The boundary is a boundary, not a wall: delegated work must still run
+    // without the founder, or the platform stops operating and the control
+    // gets removed for being in the way.
+    const ok = autonomousAuthority("quality_floor_quarantine", "DEC-20260812-A");
+    expect(ok.kind).toBe("AUTONOMOUS_POLICY");
+  });
 
-// Delegated by DEC-20260812-A — this is allowed to proceed without the founder.
-const ok = autonomousAuthority("quality_floor_quarantine", "DEC-20260812-A");
-console.log("DELEGATED:" + ok.kind);
+  it("a reserved action cannot be reached by relabelling it as delegated", () => {
+    expect(() =>
+      autonomousAuthority("issue_wallet_refund" as never, "DEC-20260815-A"),
+    ).toThrow(ProductionAuthorityError);
+  });
 
-// The same call shape for a reserved action must fail, and must fail even
-// though the caller is the same process with the same credentials.
-try {
-  autonomousAuthority("issue_wallet_refund" as never, "DEC-20260815-A");
-  console.log("ESCALATED");
-} catch { console.log("RESERVED:refused"); }
+  it("nor by asking for a grant this session cannot produce", () => {
+    expect(() => requireFounderGrant("issue_wallet_refund", { env: {} })).toThrow(
+      ProductionAuthorityError,
+    );
+  });
 
-try {
-  requireFounderGrant("issue_wallet_refund");
-  console.log("GRANTED");
-} catch { console.log("GATED:refused"); }
-`;
-    const r = runScript(source, autonomousEnv());
-
-    // The delegated path works — the boundary is a boundary, not a wall.
-    expect(r.stdout).toContain("DELEGATED:AUTONOMOUS_POLICY");
-    // The reserved path cannot be reached by relabelling it as delegated…
-    expect(r.stdout).toContain("RESERVED:refused");
-    expect(r.stdout).not.toContain("ESCALATED");
-    // …nor by asking for a grant this session cannot produce.
-    expect(r.stdout).toContain("GATED:refused");
-    expect(r.stdout).not.toContain("GRANTED");
-  }, 90_000);
+  it("money and lifecycle purposes are absent from the delegated list", () => {
+    // Founder-gated by OMISSION is the design. Assert the omission, so adding
+    // one of these to AUTONOMOUS_PURPOSES has to break a test and be argued for
+    // in review rather than slipped in.
+    for (const reserved of [
+      "issue_wallet_refund",
+      "close_stranded_executing_rows",
+      "wallet_topup",
+      "seed_sellable_solutions",
+      "reverse_x402_settlement",
+    ]) {
+      expect(
+        (AUTONOMOUS_PURPOSES as readonly string[]).includes(reserved),
+        `${reserved} must not be delegated`,
+      ).toBe(false);
+    }
+  });
 });

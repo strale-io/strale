@@ -94,13 +94,34 @@ export function assertAlertingConfigured(): void {
  * a local replay), set ALERT_SUPPRESS=true explicitly. Suppression is now
  * always something someone asked for, never something inferred.
  */
-function isTestRunner(): boolean {
-  return process.env.VITEST === "true" || process.env.VITEST === "1";
+export function isTestRunner(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.VITEST === "true" || env.VITEST === "1";
 }
 
 /** Deliberate, explicit silence for a non-test process. */
-function suppressionRequested(): boolean {
-  return process.env.ALERT_SUPPRESS === "true";
+function suppressionRequested(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.ALERT_SUPPRESS === "true";
+}
+
+/**
+ * Why this call would be silenced, or null to send. Exported and env-injectable
+ * so the rules can be asserted in-process.
+ *
+ * The alternative was a child process per environment permutation. Sixteen
+ * `tsx` spawns across this package's new tests loaded the machine enough that
+ * `admin-apply-migrations.test.ts` hit its 30s registry-bootstrap hookTimeout in
+ * a serial run — a test failing three directories away because of how another
+ * one was written. A pure predicate takes microseconds; one child process still
+ * proves the wiring end to end.
+ */
+export function suppressionReason(
+  env: NodeJS.ProcessEnv = process.env,
+): "test_runner" | "alert_suppress_requested" | null {
+  if (isTestRunner(env) && env.ALERT_ALLOW_IN_TEST !== "true") {
+    return "test_runner";
+  }
+  if (suppressionRequested(env)) return "alert_suppress_requested";
+  return null;
 }
 
 export async function sendAlert(opts: {
@@ -144,15 +165,10 @@ export async function sendAlert(opts: {
   //
   // Escape hatch for deliberately exercising real delivery. It is opt-in and
   // per-process; nothing in the suite sets it.
-  const inTest = isTestRunner() && process.env.ALERT_ALLOW_IN_TEST !== "true";
-  if (inTest || suppressionRequested()) {
+  const reason = suppressionReason();
+  if (reason) {
     log.info(
-      {
-        label: "alerting-suppressed",
-        severity,
-        subject,
-        reason: inTest ? "test_runner" : "alert_suppress_requested",
-      },
+      { label: "alerting-suppressed", severity, subject, reason },
       "alerting-suppressed (set ALERT_ALLOW_IN_TEST=true, or unset ALERT_SUPPRESS, to send)",
     );
     return false;
