@@ -133,8 +133,8 @@ no env gate on sendAlert
 ```
 
 Three of those four links are now closed by code: the gate (this PR), the
-grant model (`lib/production-authority.ts`, sibling session), and the
-deny-by-default write posture (`lib/production-access.ts`, this PR).
+grant model and the credential boundary (`lib/production-authority.ts` +
+`lib/operator-db.ts`, both on this branch).
 
 The fourth is a reasoning failure, not a code failure, and the only durable
 control for it is the rule now recorded in
@@ -149,8 +149,9 @@ control for it is the rule now recorded in
 |---|---|---|
 | Test runners cannot send email | `lib/alerting.ts` — `isTestRunner()` gate ahead of every severity path | Closed unless `ALERT_ALLOW_IN_TEST=true` |
 | Test workers hold no live credential | `test-env-setup.ts` — `delete RESEND_API_KEY` / `BETTER_STACK_SOURCE_TOKEN`, pin `NODE_ENV=test` | Closed; independent of runner detection |
-| Autonomous DB access is read-only | `lib/production-access.ts` — `getReadOnlyDb()` sets `default_transaction_read_only=on` server-side | Closed; enforced by Postgres, not by convention |
-| Model text is never approval | `lib/production-access.ts` — the gate accepts no free-text parameter and defaults to `DenyAllVerifier` | Closed by construction and by type |
+| Autonomous DB access is read-only | `lib/operator-db.ts` — `openOperatorDb()` sets `default_transaction_read_only=on` server-side | Closed; enforced by Postgres, not by convention |
+| Model text is never approval | `lib/production-authority.ts` — grants are ed25519 signatures bound to one purpose; no free-text path exists | Closed by cryptography |
+| The write credential has one door | `scripts/guard-production-write-access.mjs`, wired into CI | Closed; verified by an independent `git grep` in its test |
 | One session cannot corrupt another's tree | `scripts/guard-worktree-isolation.mjs` | Advisory + CI-enforceable |
 
 ## 7. Deliberately not done here

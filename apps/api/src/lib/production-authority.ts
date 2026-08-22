@@ -88,6 +88,13 @@ export const AUTONOMOUS_PURPOSES = [
   "fixture_refresh",
   "test_result_write",
   "invocation_fact_write",
+  // Added 2026-08-22 when the operator scripts were migrated onto this gate.
+  // Each is catalogue maintenance the escalation contract already delegates:
+  // metadata that describes a capability, not whether it is sold or what it
+  // costs. Money, listing state and lifecycle are deliberately NOT here — they
+  // stay founder-gated by omission, which is how this list is meant to work.
+  "capability_onboarding",
+  "catalogue_metadata_sync",
 ] as const;
 
 export type AutonomousPurpose = (typeof AUTONOMOUS_PURPOSES)[number];

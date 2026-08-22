@@ -78,18 +78,29 @@ export function assertAlertingConfigured(): void {
 /**
  * Is this process a test runner?
  *
- * Vitest sets VITEST=true in every worker. NODE_ENV is checked too because a
- * script run under `npx tsx` for a test purpose sets that and not VITEST.
- * Deliberately NOT "is this production": staging and local dev SHOULD be able
- * to page a human. The thing that must never page a human is a test asserting
- * on alert behaviour.
+ * ONLY the VITEST signal, which the runner sets in every worker and which
+ * nothing else sets.
+ *
+ * An earlier revision also treated `NODE_ENV === "test"` as a test runner, and
+ * that was a footgun of exactly the kind this file exists to prevent: a
+ * production deploy with NODE_ENV mis-set to "test" would have suppressed EVERY
+ * page — including the x402 settlement-volume-drop alert that exists to catch a
+ * total revenue stoppage — while logging only an info line, and
+ * `assertAlertingConfigured` would have stayed quiet too because it returns
+ * early when NODE_ENV is not "production". A silent alerting channel is the one
+ * failure this module must never produce by accident.
+ *
+ * For a non-vitest process that deliberately wants silence (a dry-run of a job,
+ * a local replay), set ALERT_SUPPRESS=true explicitly. Suppression is now
+ * always something someone asked for, never something inferred.
  */
 function isTestRunner(): boolean {
-  return (
-    process.env.VITEST === "true" ||
-    process.env.VITEST === "1" ||
-    (process.env.NODE_ENV ?? "").toLowerCase() === "test"
-  );
+  return process.env.VITEST === "true" || process.env.VITEST === "1";
+}
+
+/** Deliberate, explicit silence for a non-test process. */
+function suppressionRequested(): boolean {
+  return process.env.ALERT_SUPPRESS === "true";
 }
 
 export async function sendAlert(opts: {
@@ -133,10 +144,16 @@ export async function sendAlert(opts: {
   //
   // Escape hatch for deliberately exercising real delivery. It is opt-in and
   // per-process; nothing in the suite sets it.
-  if (isTestRunner() && process.env.ALERT_ALLOW_IN_TEST !== "true") {
+  const inTest = isTestRunner() && process.env.ALERT_ALLOW_IN_TEST !== "true";
+  if (inTest || suppressionRequested()) {
     log.info(
-      { label: "alerting-suppressed-test-env", severity, subject },
-      "alerting-suppressed-test-env (test runner detected; set ALERT_ALLOW_IN_TEST=true to override)",
+      {
+        label: "alerting-suppressed",
+        severity,
+        subject,
+        reason: inTest ? "test_runner" : "alert_suppress_requested",
+      },
+      "alerting-suppressed (set ALERT_ALLOW_IN_TEST=true, or unset ALERT_SUPPRESS, to send)",
     );
     return false;
   }

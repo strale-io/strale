@@ -43,6 +43,26 @@ function git(...args) {
 }
 
 /**
+ * A guard that dies with a stack trace is indistinguishable from a guard that
+ * refused, and `--report` is documented to always exit 0 so it can be run
+ * anywhere. Both were false: any git failure — not a repository, or a git
+ * older than 2.31 without `--path-format` — threw straight out of
+ * isPrimaryWorktree() / changedPaths(). A wrapper reading the exit code would
+ * have read the crash as a policy refusal.
+ */
+function gitOrNull(...args) {
+  try {
+    return git(...args);
+  } catch {
+    return null;
+  }
+}
+
+function inGitRepo() {
+  return gitOrNull("rev-parse", "--is-inside-work-tree") === "true";
+}
+
+/**
  * The primary worktree is the one whose git dir IS the common git dir. A linked
  * worktree's git dir is `<common>/worktrees/<name>`.
  *
@@ -53,8 +73,16 @@ function git(...args) {
  * thing" failure this repository has hit repeatedly.
  */
 export function isPrimaryWorktree() {
-  const gitDir = git("rev-parse", "--absolute-git-dir");
-  const commonDir = git("rev-parse", "--path-format=absolute", "--git-common-dir");
+  const gitDir = gitOrNull("rev-parse", "--absolute-git-dir");
+  const commonDir = gitOrNull(
+    "rev-parse",
+    "--path-format=absolute",
+    "--git-common-dir",
+  );
+  // Not a repo, or a git too old to answer. Unknown is NOT "isolated" — the
+  // caller asked whether this tree is safe to mutate and we cannot say, so
+  // --require-isolated must refuse rather than wave it through.
+  if (gitDir === null || commonDir === null) return null;
   return normalise(gitDir) === normalise(commonDir);
 }
 
@@ -62,9 +90,10 @@ function normalise(p) {
   return p.replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
 }
 
-/** Every path git considers changed, tracked or not. */
+/** Every path git considers changed, tracked or not. Null when git cannot answer. */
 export function changedPaths() {
-  const out = git("status", "--porcelain=v1", "--untracked-files=all");
+  const out = gitOrNull("status", "--porcelain=v1", "--untracked-files=all");
+  if (out === null) return null;
   if (!out) return [];
   return out
     .split("\n")
@@ -73,11 +102,20 @@ export function changedPaths() {
 }
 
 function report() {
+  if (!inGitRepo()) {
+    // Documented to always exit 0, so say so plainly and stop.
+    console.log("worktree : (not a git repository)");
+    console.log("primary  : unknown");
+    console.log("changes  : unknown");
+    return;
+  }
   const primary = isPrimaryWorktree();
-  const changes = changedPaths();
-  console.log(`worktree : ${git("rev-parse", "--show-toplevel")}`);
-  console.log(`branch   : ${git("rev-parse", "--abbrev-ref", "HEAD")}`);
-  console.log(`primary  : ${primary ? "YES — SHARED, other sessions live here" : "no (isolated)"}`);
+  const changes = changedPaths() ?? [];
+  console.log(`worktree : ${gitOrNull("rev-parse", "--show-toplevel") ?? "unknown"}`);
+  console.log(`branch   : ${gitOrNull("rev-parse", "--abbrev-ref", "HEAD") ?? "unknown"}`);
+  console.log(
+    `primary  : ${primary === null ? "unknown" : primary ? "YES — SHARED, other sessions live here" : "no (isolated)"}`,
+  );
   console.log(`changes  : ${changes.length}`);
   for (const c of changes) console.log(`  ${c.status.padEnd(2)} ${c.path}`);
   if (primary && changes.length > 0) {
@@ -120,7 +158,19 @@ if (!wantReport && !requireIsolated && !requireClean) {
 
 if (wantReport) report();
 
-if (requireIsolated && isPrimaryWorktree()) {
+// Unknown must refuse, not pass. `null && …` is falsy, so an earlier version
+// of this line waved through every directory git could not describe.
+const primaryState = requireIsolated || requireClean ? isPrimaryWorktree() : false;
+if ((requireIsolated || requireClean) && primaryState === null) {
+  console.error(
+    "\nREFUSING: git could not describe this directory, so whether it is the\n" +
+      "shared checkout is unknown. An unanswerable safety question is a refusal,\n" +
+      "not a pass. Run from inside the repository with git >= 2.31.\n",
+  );
+  exit(1);
+}
+
+if (requireIsolated && primaryState) {
   console.error(
     "\nREFUSING: this is the PRIMARY worktree and it is shared.\n\n" +
       "Other sessions are editing files here right now. A write from this tree\n" +
@@ -136,6 +186,13 @@ if (requireIsolated && isPrimaryWorktree()) {
 
 if (requireClean) {
   const changes = changedPaths();
+  if (changes === null) {
+    console.error(
+      "\nREFUSING: git could not report the working-tree state, so 'clean'\n" +
+        "cannot be established. Refusing rather than assuming.\n",
+    );
+    exit(1);
+  }
   if (changes.length > 0) {
     console.error(
       "\nREFUSING: the working tree is not clean.\n\n" +

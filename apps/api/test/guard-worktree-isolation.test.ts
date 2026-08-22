@@ -84,13 +84,25 @@ afterAll(() => {
 });
 
 describe("--require-isolated", () => {
+  // Computed once. Each guard run is a node spawn plus two git calls, and this
+  // file previously made fourteen of them — enough, under full-suite parallel
+  // load, to push neighbouring test files past their timeouts. Spawns are the
+  // expensive thing here, so they are shared rather than repeated.
+  let onPrimary: number;
+  let onLinked: number;
+
+  beforeAll(() => {
+    onPrimary = runGuard(primary, "--require-isolated");
+    onLinked = runGuard(linked, "--require-isolated");
+  }, 60_000);
+
   it("REFUSES in the primary worktree — the shared-checkout case", () => {
     // The whole point. If this ever returns 0 the guard is decorative.
-    expect(runGuard(primary, "--require-isolated")).toBe(1);
+    expect(onPrimary).toBe(1);
   });
 
   it("permits in a linked worktree", () => {
-    expect(runGuard(linked, "--require-isolated")).toBe(0);
+    expect(onLinked).toBe(0);
   });
 
   it("distinguishes the two — not merely constant", () => {
@@ -98,9 +110,7 @@ describe("--require-isolated", () => {
     // relative --git-dir to an absolute --git-common-dir returns the SAME
     // answer in both trees, and both of the assertions above would pass
     // individually only by luck.
-    expect(runGuard(primary, "--require-isolated")).not.toBe(
-      runGuard(linked, "--require-isolated"),
-    );
+    expect(onPrimary).not.toBe(onLinked);
   });
 });
 
@@ -132,14 +142,57 @@ describe("--require-clean", () => {
   });
 });
 
-describe("CLI contract", () => {
+describe("CLI contract and behaviour outside a repository", () => {
+  let bare: string;
+  let noFlags: number;
+  let reportPrimary: number;
+  let reportLinked: number;
+  let bareReport: number;
+  let bareIsolated: number;
+  let bareClean: number;
+
+  beforeAll(() => {
+    // A plain directory with no repository anywhere above it.
+    bare = mkdtempSync(join(tmpdir(), "guard-nogit-"));
+    noFlags = runGuard(linked);
+    reportPrimary = runGuard(primary, "--report");
+    reportLinked = runGuard(linked, "--report");
+    bareReport = runGuard(bare, "--report");
+    bareIsolated = runGuard(bare, "--require-isolated");
+    bareClean = runGuard(bare, "--require-clean");
+  }, 90_000);
+
+  afterAll(() => {
+    try {
+      rmSync(bare, { recursive: true, force: true });
+    } catch {
+      /* best effort */
+    }
+  });
+
   it("exits 2 with no flags rather than silently succeeding", () => {
     // A guard invoked with a typo'd flag must not look like a pass.
-    expect(runGuard(linked)).toBe(2);
+    expect(noFlags).toBe(2);
   });
 
   it("--report never fails, so it is safe to run anywhere", () => {
-    expect(runGuard(primary, "--report")).toBe(0);
-    expect(runGuard(linked, "--report")).toBe(0);
+    expect(reportPrimary).toBe(0);
+    expect(reportLinked).toBe(0);
+  });
+
+  it("--report still exits 0 outside a git repository, as documented", () => {
+    // Previously this died with an unhandled Node stack trace, which a calling
+    // script would have read as a policy refusal.
+    expect(bareReport).toBe(0);
+  });
+
+  it("--require-isolated REFUSES outside a repository rather than passing", () => {
+    // The dangerous direction. `null && ...` is falsy, so a naive fix makes an
+    // unanswerable safety question look like a pass.
+    expect(bareIsolated).toBe(1);
+  });
+
+  it("--require-clean REFUSES rather than assuming clean", () => {
+    expect(bareClean).toBe(1);
   });
 });

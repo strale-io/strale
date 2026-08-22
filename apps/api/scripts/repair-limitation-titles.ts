@@ -54,13 +54,15 @@
  * pure and unit-tested — apps/api/scripts is outside vitest's include
  * glob, so logic that needs test coverage belongs in src/lib, not here.
  */
+
+import { openOperatorWriteDb } from "../src/lib/operator-db.js";
+import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
 import { readFileSync, readdirSync } from "node:fs";
 import * as yaml from "js-yaml";
-import postgres from "postgres";
 import {
   planRelationalRepairs,
   repairJsonbLimitationsArray,
@@ -166,7 +168,7 @@ function printReport(mode: "DRY RUN" | "APPLY", r: Report) {
 async function main() {
   console.log(`Mode: ${APPLY ? "APPLY (writing)" : "DRY RUN (no writes)"}\n`);
 
-  const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
+  const sql = openOperatorWriteDb(autonomousAuthority("catalogue_metadata_sync", "DEC-20260812-A"));
   const manifestLims = loadManifestLimitations();
   console.log(`Loaded ${manifestLims.size} manifest files from ${MANIFEST_DIR}\n`);
   const warn = (msg: string) => console.warn(`  [warn] ${msg}`);

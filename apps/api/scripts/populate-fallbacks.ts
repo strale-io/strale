@@ -4,17 +4,19 @@
  *
  * Usage: npx tsx scripts/populate-fallbacks.ts
  */
+
+import { openOperatorWriteDrizzle } from "../src/lib/operator-db.js";
+import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
 import { eq } from "drizzle-orm";
-import { getDb } from "../src/db/index.js";
 import { capabilities } from "../src/db/schema.js";
 import { CAPABILITY_FALLBACKS } from "../src/data/capability-fallbacks.js";
 
 async function populate() {
-  const db = getDb();
+  const db = openOperatorWriteDrizzle(autonomousAuthority("catalogue_metadata_sync", "DEC-20260812-A"));
 
   console.log(`Populating ${CAPABILITY_FALLBACKS.length} fallback relationships...\n`);
 
