@@ -1,13 +1,21 @@
 # The daily run — what it does, and what it produces
 
 **Status: ACTIVE from 2026-08-22 (DEC-20260822-A).** This file is the authority
-on how a daily operating session runs and what it hands back. The scheduled task
-`strale-checkin-morning` is a *pointer* to this file, never a copy — before
-today the procedure existed only in that task's SKILL.md, outside the repo,
+on how a daily operating session runs and what it hands back. Before today the
+procedure existed only in the scheduled task's own definition, outside the repo,
 where it could not be reviewed, tested, or corrected by a session that had not
 been told to look at it. Duplicated authority is one of the failure families in
 [LESSONS.md](LESSONS.md), and this file exists partly to stop being an instance
 of it.
+
+**The scheduled task now points here instead of restating this.** Its definition
+lives at `~/.claude/scheduled-tasks/strale-checkin-morning/SKILL.md`, on the
+machine that runs it and therefore **outside version control** — so this
+paragraph is a claim about a file no reviewer of this repo can see, which is
+precisely the shape of the state-drift family (LESSONS.md F7). Treat it as
+unverified from here: a session that wants to rely on it should open that file
+and confirm it still defers to this one. If the two ever disagree, this file is
+the authority and the task is wrong.
 
 Authority above this file: [CHARTER.md](CHARTER.md). Ranking: [GOALS.md](GOALS.md).
 
@@ -178,10 +186,29 @@ as what the fix was.
 tasks: "find a second paying customer", not "attribute the enumerator".
 
 **5. Needs your decision.** Only genuine founder decisions, per CHARTER.md's
-short list. Prefer **"Nothing needs your decision today."** — and mean it. Each
-entry that does appear carries the five fields the charter requires: the actual
-choice, the facts already established, the options, my recommendation, and the
-concrete consequence of each option.
+short list. Prefer **"Nothing needs your decision today."** — write that exact
+sentence, and mean it.
+
+Each entry that does appear carries the five fields the charter requires, under
+these five labels, in this order. The labels are not decoration: they are what
+the guard checks, and they exist because the first version of that check tried
+to recognise the fields from prose and could be satisfied by a fluent paragraph
+that decided nothing while rejecting a terse one that decided everything.
+
+```
+**The choice: <one sentence — what is actually being decided>**
+**What is established:** <the facts I went and got>
+**Options:** <the real ones>
+**I recommend** <the recommendation — always present>
+**The consequence:** <what happens to money, customers, risk or time under each>
+```
+
+Nothing in this section may be an unresolved technical question, and nothing may
+appear here that CHARTER.md's investigate-before-escalating test would have
+resolved. **The reverse also holds:** an item already sitting in Petter's queue
+stays in this section until *he* moves it, no matter how routine it has come to
+look — moving it into my own column is an authority breach, not a decision, and
+it has already happened once (LESSONS.md F10).
 
 ### The editorial gate — run before presenting, rewrite if any answer is wrong
 

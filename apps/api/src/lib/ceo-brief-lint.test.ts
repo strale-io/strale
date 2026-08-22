@@ -91,8 +91,8 @@ describe("technical vocabulary is rejected wherever it appears", () => {
     ["commit-sha", "The change landed as b5e7428 and is live."],
     ["pr-number", "Shipped in PR #358 this morning."],
     ["filename", "The problem was in free-tier.ts and is resolved."],
-    ["db-internals", "A column was being read as though it meant something else."],
-    ["vcs", "I merged the change and verified the deploy."],
+    ["db-internals", "A database column was being read as though it meant something else."],
+    ["vcs", "I merged the pull request and pushed to main."],
     ["testing", "Fourteen new tests cover it, all passing."],
     ["migration", "Block 0100 put the service back on the shelf."],
     ["internal-vocab", "The quality floor quarantined it at six this morning."],
@@ -128,7 +128,80 @@ describe("technical vocabulary is rejected wherever it appears", () => {
   });
 });
 
+describe("the vocabulary rules survive an adversarial read", () => {
+  // Every case below was found by an independent review of the first version,
+  // which was wrong in both directions at once: blind to shas in their most
+  // common position, and rejecting ordinary business English.
+
+  it("catches a commit id at the end of a sentence, not only mid-sentence", () => {
+    // The first version's trailing `(?![.\w])` made exactly this invisible,
+    // and the original unit test happened to use the mid-sentence form — a
+    // rule validated only where it worked.
+    const r = lintBrief(goodBrief({ changed: "The correction is live as of 1ec94b0." }));
+    expect(r.findings.some((f) => f.rule === "commit-sha"), JSON.stringify(r.findings)).toBe(true);
+  });
+
+  for (const word of ["acceded", "effaced", "defaced", "faceded"]) {
+    it(`does not mistake the English word "${word}" for a commit id`, () => {
+      const r = lintBrief(goodBrief({ changed: `The largest buyer ${word} to the new price this week.` }));
+      expect(r.findings.some((f) => f.rule === "commit-sha"), JSON.stringify(r.findings)).toBe(false);
+    });
+  }
+
+  it("does not flag long plain numbers as commit ids", () => {
+    for (const line of [
+      "Moonlighter AB, org 5593957979, remains the seller.",
+      "We processed 1234567 requests this month.",
+    ]) {
+      const r = lintBrief(goodBrief({ changed: line }));
+      expect(r.findings.some((f) => f.rule === "commit-sha"), line).toBe(false);
+    }
+  });
+
+  it("accepts ordinary business English the word-level rules used to reject", () => {
+    // Each of these was a false positive against the first version. A guard
+    // that rejects correct prose gets worked around, so these are load-bearing.
+    for (const line of [
+      "The table above shows where the money came from.",
+      "Our price index is unchanged this month.",
+      "The real test is whether a second buyer appears.",
+      "We sell a package of three checks for a fixed price.",
+      "We deployed capital into the growth bundles rather than compliance.",
+      "That is a branch of the business we have not invested in.",
+      "I recommend we commit to the higher price for a month.",
+      "This is not a financial instrument and we do not market it as one.",
+    ]) {
+      const r = lintBrief(goodBrief({ changed: line }));
+      expect(r.findings.filter((f) => f.severity === "error"), line).toEqual([]);
+    }
+  });
+
+  it("treats a code span as a finding rather than as a way round the rules", () => {
+    // Stripping inline code made every rule bypassable by typing backticks.
+    const r = lintBrief(goodBrief({ changed: "The fix landed in `free-tier.ts` overnight." }));
+    expect(r.ok).toBe(false);
+    expect(r.findings.some((f) => f.rule === "code-span")).toBe(true);
+  });
+
+  it("allowing one term does not disable the rest of its rule on that line", () => {
+    // The first version examined one match per rule per line and skipped the
+    // line entirely if that match was allowlisted.
+    const brief = goodBrief({ changed: "Our price list, pricing.json, was wrong, and so was billing.yaml." });
+    const r = lintBrief(brief, { allowTerms: ["pricing.json"] });
+    expect(r.ok, "the second filename must still be caught").toBe(false);
+    expect(r.findings.some((f) => f.rule === "filename" && f.message.includes("billing.yaml"))).toBe(true);
+  });
+});
+
 describe("the brief may not open as a work log", () => {
+  it("rejects a bulleted work-log opening", () => {
+    // The opening patterns are anchored, so a leading "- " hid the whole rule.
+    const r = lintBrief(goodBrief({
+      perf: "- We ran the morning checks and then looked at the quality problem.",
+    }));
+    expect(r.findings.some((f) => f.rule === "activity-log-opening")).toBe(true);
+  });
+
   it("rejects an opening that leads with what the agent did", () => {
     const r = lintBrief(goodBrief({
       perf: "I ran the morning checks and then spent the session on the quality problem. " +
@@ -183,6 +256,31 @@ describe("escalations carry all five fields or they are not ready", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("rejects a fluent paragraph that decides nothing", () => {
+    // This passed the first version clean. Every field was 'present' as
+    // vocabulary and none was present as content.
+    const r = lintBrief(goodBrief({
+      decide:
+        "We should decide whether to keep going as we are. The facts have not moved since " +
+        "Monday. Either we wait another week or we act now. I would wait. Waiting leaves us " +
+        "where we are.",
+    }));
+    expect(r.ok, "fluency is not a decision").toBe(false);
+    expect(r.findings.filter((f) => f.rule === "escalation-incomplete").length).toBe(5);
+  });
+
+  it("accepts a terse escalation that carries real content under the labels", () => {
+    // The mirror case: the first version rejected this on all five fields.
+    const r = lintBrief(goodBrief({
+      decide:
+        "**The choice: what to charge for the Greek registry lookup.** " +
+        "**What is established:** 11 paid calls in 30 days at 20 cents, and the supplier " +
+        "charges us 12 cents each. **Options:** hold at 20 cents, or move to 35. " +
+        "**I recommend** 35. **The consequence:** left alone we forgo about 15 euros a month.",
+    }));
+    expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
+  });
+
   it("accepts the explicit nothing-to-decide line", () => {
     const r = lintBrief(goodBrief({ decide: "Nothing needs your decision today." }));
     expect(r.ok).toBe(true);
@@ -194,11 +292,25 @@ describe("escalations carry all five fields or they are not ready", () => {
     expect(r.findings.some((f) => f.rule === "empty-decision-section")).toBe(true);
   });
 
-  it("warns when more than three things want a decision", () => {
-    const r = lintBrief(goodBrief({
-      decide: complete + "\n\n- one\n- two\n- three\n- four\n",
-    }));
+  it("warns when more than three separate things want a decision", () => {
+    const r = lintBrief(goodBrief({ decide: [complete, complete, complete, complete].join("\n\n") }));
     expect(r.findings.some((f) => f.rule === "escalation-volume")).toBe(true);
+  });
+
+  it("does NOT warn on one escalation written to the mandated template", () => {
+    // Counting list items scored a single correctly-formatted escalation — one
+    // heading plus its five sub-bullets — as five demands on the founder's
+    // attention, and then warned about it. Volume is counted in decisions.
+    const templated = [
+      "1. **The choice: whether to raise the Greek registry price.**",
+      "   - **What is established:** 11 paid calls in 30 days at 20 cents; the supplier charges 12.",
+      "   - **Options:** hold at 20 cents, or move to 35.",
+      "   - **I recommend** moving to 35.",
+      "   - **The consequence:** about 15 euros a month forgone if we leave it.",
+    ].join("\n");
+    const r = lintBrief(goodBrief({ decide: templated }));
+    expect(r.findings.some((f) => f.rule === "escalation-volume"), JSON.stringify(r.findings)).toBe(false);
+    expect(r.findings.filter((f) => f.severity === "error")).toEqual([]);
   });
 });
 

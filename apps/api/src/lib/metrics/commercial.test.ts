@@ -20,7 +20,8 @@ const week = (startsOn: string, cents: number, opts: Partial<DiscreteWeek> = {})
 const conc = (o: Partial<Concentration> = {}): Concentration => ({
   payers: 4, topShare: 0.993, topCents: 5650, othersCents: 39, unattributedCents: 0,
   newPayers: 2, newPayerKeys: new Set(["b", "c"]), returningPayers: 2,
-  repeatPayers: 1, activePayingDays: 6, attributedShare: 1, comparable: true, ...o,
+  repeatPayers: 1, topPayerRepeats: true, repeatPayersExcludingTop: 0,
+  activePayingDays: 6, attributedShare: 1, comparable: true, partialWindow: false, ...o,
 });
 
 const textOf = (cs: ReturnType<typeof interpret>) => cs.map((c) => c.text).join(" ");
@@ -75,7 +76,7 @@ describe("a run of weeks is counted, not assumed from the last pair", () => {
     expect(v.kind).toBe("rising");
     if (v.kind === "rising") expect(v.consecutive).toBe(1);
     expect(textOf(interpret({ weeks: [], growth: v, concentration: null, quiet: null, activatingSlugs: [] })))
-      .toMatch(/Revenue rose this week/);
+      .toMatch(/Revenue rose in the last completed week/);
   });
 });
 
@@ -157,6 +158,20 @@ describe("a concentration move is never reported across incomparable windows", (
     expect(textOf(cs)).toMatch(/81\.0% of revenue cannot be traced/);
   });
 
+  it("refuses to compare when the window is a week still in progress", () => {
+    // On a Monday morning one buyer is the whole week, so topShare is 1.0 with
+    // full attribution. Against last week's completed 90% that reads as a jump
+    // to total dependency, every Monday, regardless of the business — the same
+    // partial-versus-full error growth() refuses for revenue.
+    const partialWindow = conc({ topShare: 1, attributedShare: 1, partialWindow: true, comparable: false });
+    expect(partialWindow.comparable).toBe(false);
+    const cs = interpret({
+      weeks: [], growth: rising, concentration: partialWindow,
+      quiet: null, activatingSlugs: [], priorTopShare: null,
+    });
+    expect(textOf(cs)).not.toMatch(/deepening|up from/);
+  });
+
   it("still reports the movement when both windows are genuinely comparable", () => {
     const cs = interpret({
       weeks: [], growth: rising, concentration: conc({ topShare: 0.993 }),
@@ -230,12 +245,33 @@ describe("repeat usage distinguishes the big buyer from a second habit", () => {
   const g = growth([week("a", 100), week("b", 50)]);
 
   it("does not present the largest buyer's return as a second habit", () => {
-    const cs = interpret({ weeks: [], growth: g, concentration: conc({ repeatPayers: 1 }), quiet: null, activatingSlugs: [] });
+    const cs = interpret({
+      weeks: [], growth: g,
+      concentration: conc({ repeatPayers: 1, topPayerRepeats: true, repeatPayersExcludingTop: 0 }),
+      quiet: null, activatingSlugs: [],
+    });
     expect(textOf(cs)).toMatch(/nobody else has developed a pattern/);
   });
 
   it("flags a genuine second returning buyer", () => {
-    const cs = interpret({ weeks: [], growth: g, concentration: conc({ repeatPayers: 3 }), quiet: null, activatingSlugs: [] });
+    const cs = interpret({
+      weeks: [], growth: g,
+      concentration: conc({ repeatPayers: 3, topPayerRepeats: true, repeatPayersExcludingTop: 2 }),
+      quiet: null, activatingSlugs: [],
+    });
+    expect(textOf(cs)).toMatch(/second habit forming/);
+  });
+
+  it("does not say 'only the largest' when the largest is NOT one of the repeaters", () => {
+    // A count cannot tell a small buyer forming a habit — the one signal we are
+    // looking for — from the big buyer simply buying again. Reading repeatPayers
+    // as "the top one plus others" inverted exactly that case.
+    const cs = interpret({
+      weeks: [], growth: g,
+      concentration: conc({ repeatPayers: 1, topPayerRepeats: false, repeatPayersExcludingTop: 1 }),
+      quiet: null, activatingSlugs: [],
+    });
+    expect(textOf(cs)).not.toMatch(/Only the largest buyer/);
     expect(textOf(cs)).toMatch(/second habit forming/);
   });
 
@@ -272,6 +308,58 @@ describe("no conclusion contains jargon a founder would have to decode", () => {
         /\b(actor_key|x402|wallet hash|SQL|transactions table|null|undefined|instrument)\b/i);
       expect(c.text.length, c.topic).toBeGreaterThan(20);
     }
+  });
+});
+
+describe("the flattering half of an unmeasurable pair is refused too", () => {
+  // `newPayers` and `returningPayers` sum to the payer count by construction.
+  // The first version gated only `returningPayers`, so before the identity
+  // instrument was old enough every buyer read as brand new — the same
+  // unmeasurable fact, published in its encouraging direction.
+  const g = growth([week("a", 100), week("b", 50)]);
+
+  it("says new-versus-returning cannot be answered rather than reporting all-new", () => {
+    const cs = interpret({
+      weeks: [], growth: g,
+      concentration: conc({ payers: 4, newPayers: null, returningPayers: null }),
+      quiet: null, activatingSlugs: [{ slug: "email-validate", payers: 3 }], priorTopShare: 0.9,
+    });
+    const t = textOf(cs);
+    expect(t).toMatch(/cannot be answered yet/);
+    expect(t, "no count of first-time buyers").not.toMatch(/bought for the first time/);
+  });
+
+  it("reports first-time buyers once the question is answerable", () => {
+    const cs = interpret({
+      weeks: [], growth: g, concentration: conc({ payers: 4, newPayers: 3, returningPayers: 1 }),
+      quiet: null, activatingSlugs: [{ slug: "email-validate", payers: 3 }], priorTopShare: 0.9,
+    });
+    expect(textOf(cs)).toMatch(/3 buyers bought for the first time/);
+  });
+});
+
+describe("zero traceable payers is not one customer", () => {
+  it("refuses any customer statement instead of reporting a single buyer", () => {
+    // `payers <= 1` produced the single-buyer headline for an empty set, next
+    // to a coverage line saying nothing could be traced — two adjacent
+    // sentences contradicting each other, the alarming one first.
+    const cs = interpret({
+      weeks: [], growth: growth([week("a", 100), week("b", 50)]),
+      concentration: conc({ payers: 0, topCents: 0, othersCents: 0, unattributedCents: 5000, attributedShare: 0 }),
+      quiet: null, activatingSlugs: [],
+    });
+    const t = textOf(cs);
+    expect(t).not.toMatch(/single buyer/);
+    expect(t).toMatch(/nothing here supports any statement about how many customers/);
+    expect(cs.find((c) => c.headline)?.topic).toBe("coverage");
+  });
+
+  it("still names the genuine single-customer case", () => {
+    const cs = interpret({
+      weeks: [], growth: growth([week("a", 100), week("b", 50)]),
+      concentration: conc({ payers: 1, topShare: 1 }), quiet: null, activatingSlugs: [],
+    });
+    expect(textOf(cs)).toMatch(/single buyer/);
   });
 });
 

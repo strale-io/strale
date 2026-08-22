@@ -4,11 +4,17 @@
  * `metrics.ts` answers "how much revenue, over what window, from a population
  * old enough to ask". That was enough while the only question was whether the
  * total was moving. It is not enough now: on 2026-08-22 revenue rose for the
- * fourth consecutive week *and* the largest buyer's share rose from 94.7% to
- * 99.3% in the same seven days. A daily report that stops at "€56.89, a record"
- * describes an improving business. The two figures together describe a
- * single-customer dependency deepening, which is the opposite conclusion and
- * the one that ranks the work.
+ * second consecutive completed week while one buyer accounted for 99.3% of the
+ * income. A daily report that stops at "€56.89, a record" describes an improving
+ * business. The two figures together describe a single-customer dependency,
+ * which is the opposite conclusion and the one that ranks the work.
+ *
+ * The "€56.89 record" and the "fourth consecutive week" that this docstring
+ * originally cited are both instructive mistakes. The first is the week still in
+ * progress, so it is not a record of anything yet; the second counted that
+ * partial week as a rise and read four data points as four transitions. This
+ * module returns "second" on the same series, which is how the error was
+ * caught.
  *
  * So this module computes the twelve commercial questions DAILY-RUN.md lists,
  * and — the part that matters — turns them into stated conclusions. A caller
@@ -42,6 +48,11 @@ export interface DiscreteWeek {
   /** ISO week start (Monday) as YYYY-MM-DD. */
   startsOn: string;
   cents: number;
+  /**
+   * Every completed external call in the week, free-tier included. NOT the
+   * same denominator as `PayerFacts.calls`, which counts paid calls only —
+   * printing the two adjacent without saying so invites a wrong ratio.
+   */
   calls: number;
   /** True for the week currently in progress — it is not comparable yet. */
   partial: boolean;
@@ -84,14 +95,25 @@ export async function discreteWeeks(count = 5, now = new Date()): Promise<Measur
       AND ${externalCustomers("t")}
     GROUP BY 1 ORDER BY 1 DESC`);
   const currentWeek = isoDate(startOfIsoWeek(now));
-  const value = r.map((x) => ({
-    startsOn: x.wk,
-    cents: Number(x.cents),
-    calls: Number(x.calls),
-    partial: x.wk === currentWeek,
-    daysElapsed: x.wk === currentWeek ? elapsedDaysInIsoWeek(now) : 7,
-  }));
-  if (value.length === 0) {
+  const byWeek = new Map(r.map((x) => [x.wk, x]));
+  // Densify. A week with no external traffic produces no GROUP BY row, and
+  // `growth()` would then treat two weeks either side of the gap as adjacent —
+  // reporting a week-on-week rise between weeks three apart. A missing bucket
+  // genuinely means zero revenue, so filling it is both honest and what makes
+  // the adjacency assumption downstream true rather than merely usual.
+  const value: DiscreteWeek[] = [];
+  for (let i = 0; i < count; i++) {
+    const wk = isoDate(new Date(startOfIsoWeek(now).getTime() - i * 7 * 86_400_000));
+    const hit = byWeek.get(wk);
+    value.push({
+      startsOn: wk,
+      cents: Number(hit?.cents ?? 0),
+      calls: Number(hit?.calls ?? 0),
+      partial: wk === currentWeek,
+      daysElapsed: wk === currentWeek ? elapsedDaysInIsoWeek(now) : 7,
+    });
+  }
+  if (r.length === 0) {
     return {
       status: "unavailable", population: "external_customers",
       requestedWindow: { from, to: now, label: `last ${count} weeks` },
@@ -181,15 +203,21 @@ export interface PayerFacts {
 
 export interface Concentration {
   payers: number;
+  /** True when the window is a week still in progress. Blocks comparison. */
+  partialWindow: boolean;
   topShare: number;
   topCents: number;
   othersCents: number;
   unattributedCents: number;
-  newPayers: number;
+  /** Null while the identity instrument is younger than the lookback. */
+  newPayers: number | null;
   /** Keys of the payers counted as new — feeds `activatingSlugs`. */
   newPayerKeys: Set<string>;
   returningPayers: number | null;
   repeatPayers: number;
+  /** Whether the largest payer is one of the repeaters. */
+  topPayerRepeats: boolean;
+  repeatPayersExcludingTop: number;
   activePayingDays: number;
   /** Share of revenue in the window that resolves to a payer at all, 0-1. */
   attributedShare: number;
@@ -294,8 +322,10 @@ export async function concentration(
   w: Window,
   facts: PayerFacts[],
   unattributedCents: number,
-  lookbackDays = 90,
+  opts: { lookbackDays?: number; partialWindow?: boolean } = {},
 ): Promise<Concentration> {
+  const lookbackDays = opts.lookbackDays ?? 90;
+  const partialWindow = opts.partialWindow ?? false;
   const identifiedCents = facts.reduce((a, f) => a + f.cents, 0);
   const totalCents = identifiedCents + unattributedCents;
   const sorted = [...facts].sort((a, b) => b.cents - a.cents);
@@ -305,6 +335,7 @@ export async function concentration(
 
   const newPayerKeys = new Set(facts.map((f) => f.key));
   let returningPayers: number | null = null;
+  let newPayers: number | null = null;
   if (facts.length > 0) {
     const prior = await rows<{ actor_key: string | null }>(sql`
       SELECT DISTINCT ${sql.raw(ACTOR_KEY_SQL)} AS actor_key
@@ -314,7 +345,13 @@ export async function concentration(
         AND ${externalCustomers("t")}`);
     const seen = new Set(prior.map((x) => x.actor_key).filter((k): k is string => k !== null));
     for (const f of facts) if (seen.has(f.key)) newPayerKeys.delete(f.key);
+    // BOTH halves are gated, not just the pessimistic one. They sum to
+    // `facts.length` by construction, so publishing `newPayers` while refusing
+    // `returningPayers` states the same unmeasurable fact in its flattering
+    // direction: before the instrument existed a returning buyer carries no
+    // identity, is absent from `seen`, and therefore reads as brand new.
     returningPayers = guard.ok ? facts.length - newPayerKeys.size : null;
+    newPayers = guard.ok ? newPayerKeys.size : null;
   }
   // "Days anyone paid us" is a union across payers, so it cannot be summed from
   // the per-payer counts without double-counting a day two buyers shared.
@@ -325,18 +362,31 @@ export async function concentration(
       AND t.created_at >= ${iso(w.from)} AND t.created_at <= ${iso(w.to)}
       AND ${externalCustomers("t")}`);
   const attributedShare = totalCents === 0 ? 0 : identifiedCents / totalCents;
+  const topKey = sorted[0]?.key ?? null;
+  const repeaters = facts.filter((f) => f.activeDays > 1);
   return {
     payers: facts.length,
+    partialWindow,
     topShare: totalCents === 0 ? 0 : topCents / totalCents,
     attributedShare,
-    comparable: coversWindow("x402_payer_identity", w.from).ok && attributedShare >= 0.8,
+    // A partial window disqualifies comparison as surely as a young instrument
+    // does. Two days of a week against a finished one is the same error
+    // `growth()` refuses for revenue, and on a Monday it reads as a jump to
+    // 100% concentration every single time.
+    comparable:
+      coversWindow("x402_payer_identity", w.from).ok && attributedShare >= 0.8 && !partialWindow,
     topCents,
     othersCents: identifiedCents - topCents,
     unattributedCents,
-    newPayers: newPayerKeys.size,
+    newPayers,
     newPayerKeys,
     returningPayers,
-    repeatPayers: facts.filter((f) => f.activeDays > 1).length,
+    repeatPayers: repeaters.length,
+    // Who repeated matters more than how many. A small buyer forming a habit is
+    // the single signal we are looking for, and a bare count cannot tell it
+    // apart from the big buyer simply buying again.
+    topPayerRepeats: topKey !== null && repeaters.some((f) => f.key === topKey),
+    repeatPayersExcludingTop: repeaters.filter((f) => f.key !== topKey).length,
     activePayingDays: Number(dayRows[0]?.n ?? 0),
   };
 }
@@ -453,18 +503,18 @@ export function interpret(input: {
     out.push({
       topic: "trajectory",
       text: g.consecutive > 1
-        ? `Revenue rose for the ${ordinal(g.consecutive)} week running, ${eur(g.priorCents)} to ${eur(g.latestFullCents)}.`
-        : `Revenue rose this week, ${eur(g.priorCents)} to ${eur(g.latestFullCents)}.`,
+        ? `Revenue rose for the ${ordinal(g.consecutive)} week running, reaching ${eur(g.latestFullCents)} in the last completed week.`
+        : `Revenue rose in the last completed week, ${eur(g.priorCents)} to ${eur(g.latestFullCents)}.`,
     });
   } else if (g.kind === "falling") {
     out.push({
       topic: "trajectory",
       text: g.consecutive > 1
-        ? `Revenue fell for the ${ordinal(g.consecutive)} week running, ${eur(g.priorCents)} to ${eur(g.latestFullCents)}.`
-        : `Revenue fell this week, ${eur(g.priorCents)} to ${eur(g.latestFullCents)}.`,
+        ? `Revenue fell for the ${ordinal(g.consecutive)} week running, down to ${eur(g.latestFullCents)} in the last completed week.`
+        : `Revenue fell in the last completed week, ${eur(g.priorCents)} to ${eur(g.latestFullCents)}.`,
     });
   } else {
-    out.push({ topic: "trajectory", text: `Revenue was flat week on week at ${eur(g.latestFullCents)}.` });
+    out.push({ topic: "trajectory", text: `Revenue was flat across the last two completed weeks, at ${eur(g.latestFullCents)}.` });
   }
 
   if (!c) {
@@ -480,7 +530,18 @@ export function interpret(input: {
   const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
   const rose = input.priorTopShare != null && c.topShare > input.priorTopShare + 0.005;
   const growing = g.kind === "rising";
-  if (c.payers <= 1) {
+  if (c.payers === 0) {
+    // Reachable whenever every paying call is unattributable. Saying "one
+    // buyer" here would be the same sentence as the genuine single-customer
+    // case, and it would sit next to a coverage line contradicting it.
+    out.push({
+      topic: "coverage",
+      text: "No payment in this period can be traced to a buyer, so nothing here supports any statement about how many customers we have.",
+      headline: true,
+    });
+    return out;
+  }
+  if (c.payers === 1) {
     out.push({
       topic: "concentration",
       text: "Every euro we can trace came from a single buyer, so the business currently has one customer and one point of failure.",
@@ -502,7 +563,12 @@ export function interpret(input: {
   }
 
   // 3. Acquisition, and where growth came from.
-  if (c.newPayers > 0) {
+  if (c.newPayers === null) {
+    out.push({
+      topic: "acquisition",
+      text: "Whether any of these buyers is new cannot be answered yet — we have not been able to recognise a returning buyer for long enough to tell a first purchase from a repeat one.",
+    });
+  } else if (c.newPayers > 0) {
     const slugs = input.activatingSlugs.slice(0, 3).map((s) => s.slug);
     out.push({
       topic: "acquisition",
@@ -513,7 +579,7 @@ export function interpret(input: {
   } else {
     out.push({ topic: "acquisition", text: "No new buyer appeared this period." });
   }
-  if (growing && c.newPayers > 0 && c.topShare >= 0.9) {
+  if (growing && c.newPayers !== null && c.newPayers > 0 && c.topShare >= 0.9) {
     out.push({
       topic: "acquisition",
       text: "The new buyers are rounding error against the largest one — they add names, not income.",
@@ -526,13 +592,23 @@ export function interpret(input: {
       topic: "repeat",
       text: "Nobody bought on more than one day, so there is no evidence yet of anyone building us into a routine.",
     });
-  } else {
-    const others = c.repeatPayers - 1;
+  } else if (c.repeatPayersExcludingTop > 0) {
     out.push({
       topic: "repeat",
-      text: others > 0
-        ? `${c.repeatPayers} buyers came back on a later day — including ${others} besides the largest, which is the first sign of a second habit forming.`
-        : "Only the largest buyer came back on a later day; nobody else has developed a pattern.",
+      text: `${c.repeatPayersExcludingTop} buyer${c.repeatPayersExcludingTop === 1 ? "" : "s"} other than the largest came back on a later day, which is the first sign of a second habit forming.`,
+    });
+  } else if (c.topPayerRepeats) {
+    out.push({
+      topic: "repeat",
+      text: "Only the largest buyer came back on a later day; nobody else has developed a pattern.",
+    });
+  } else {
+    // The count says somebody repeated and it was not the biggest buyer's
+    // doing. Saying "only the largest" here would invert the one signal we are
+    // actually looking for.
+    out.push({
+      topic: "repeat",
+      text: `${c.repeatPayers} buyer${c.repeatPayers === 1 ? "" : "s"} came back on a later day, and the largest buyer was not among them.`,
     });
   }
 

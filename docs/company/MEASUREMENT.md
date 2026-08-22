@@ -121,9 +121,17 @@ none of which we can currently compute.
 ## The commercial layer (added 2026-08-22, DEC-20260822-A)
 
 `metrics.ts` answers *how much*. It does not answer *what that means*, and on
-2026-08-22 the difference stopped being academic: revenue rose for the fourth
-consecutive week while the largest buyer's share rose in the same period. Each
-figure alone reads as an improving business. Together they say the opposite.
+2026-08-22 the difference stopped being academic: revenue rose for the second
+consecutive completed week while one buyer accounted for 99.3% of the income.
+Each figure alone reads as an improving business. Together they say the
+opposite.
+
+The run of weeks is worth a sentence of its own, because the daily record that
+morning said **four** consecutive rises and the module says two. Four data
+points carry at most three transitions, one of those ended on the week still in
+progress, and one of the remaining two was a fall. Nobody was careless; the
+count was done by eye on a table that included a partial week. This is why the
+run is computed rather than observed.
 
 `metrics/commercial.ts` computes the twelve commercial questions
 [DAILY-RUN.md](DAILY-RUN.md) requires — discrete weeks, growth, distinct payers,

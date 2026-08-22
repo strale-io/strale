@@ -46,16 +46,51 @@ export const WORD_BUDGET = { soft: 600, hard: 900 };
  */
 const BANNED_TERMS: Array<{ re: RegExp; rule: string; why: string }> = [
   { re: /\b(?:PR|pull request)\s*#\d+/i, rule: "pr-number", why: "a pull-request number is not a business fact" },
-  { re: /\b[0-9a-f]{7,40}\b(?![.\w])/, rule: "commit-sha", why: "a commit id means nothing to the reader" },
+  // A commit id, and not an English word. Requiring BOTH a digit and a letter
+  // separates `1ec94b0` from "acceded"/"effaced" (letters only) and from an org
+  // number or a request count (digits only) — all three of which the first
+  // version flagged. And no trailing lookahead: that version had `(?![.\w])`,
+  // which made a sha at the end of a sentence — by far its commonest position —
+  // invisible, while the unit test happened to exercise only the mid-sentence
+  // case. A rule validated exactly where it works is family F5.
+  {
+    re: /\b(?=[0-9a-f]{7,40}\b)(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b/,
+    rule: "commit-sha", why: "a commit id means nothing to the reader",
+  },
   { re: /\b\w[\w-]*\.(?:ts|tsx|js|mjs|sql|yaml|yml|json|py|md)\b/i, rule: "filename", why: "a filename is not a business fact" },
   { re: /\b(?:SELECT|INSERT|UPDATE|DELETE)\s+(?:\*|\w+)\s+(?:FROM|INTO|SET)\b/i, rule: "sql", why: "queries belong in the operating record" },
   { re: /\b(?:migration|block)\s+\d{3,4}\b/i, rule: "migration", why: "migration numbers are internal bookkeeping" },
-  { re: /\b(?:column|schema|table|foreign key|index)\b/i, rule: "db-internals", why: "database internals are not a founder concern" },
-  { re: /\b(?:branch|merge|merged|rebase|commit|deploy(?:ed|ment)?|CI|repo(?:sitory)?)\b/i, rule: "vcs", why: "shipping mechanics are execution, never news" },
-  { re: /\b(?:test|tests|test suite|assertion|regression test|typecheck|lint)\b/i, rule: "testing", why: "test counts are not business outcomes" },
-  { re: /\b(?:npm|npx|pip|package|SDK|API endpoint|env var|environment variable)\b/i, rule: "tooling", why: "tooling names are not business facts" },
-  { re: /\b(?:refactor|executor|handler|middleware|endpoint|payload|serializer|fixture)\b/i, rule: "jargon", why: "implementation vocabulary" },
-  { re: /\b(?:quarantine[ds]?|breaker|circuit breaker|instrument(?:ation)?|denominator)\b/i, rule: "internal-vocab", why: "our own operational vocabulary is not plain English" },
+  // The five rules below are phrase-scoped, not word-scoped. The first draft
+  // banned the bare words and an adversarial read found it rejecting ordinary
+  // business English: "the table above", "our price index", "the real test is
+  // whether a second buyer appears", "a package of three checks", "we deployed
+  // capital", "a branch of the business", "I recommend we commit to the higher
+  // price", "this is not a financial instrument". A guard that rejects correct
+  // prose gets worked around inside a week, so the precision is the point.
+  {
+    re: /\b(?:database (?:column|table|schema|index)|foreign key|(?:column|table|schema) (?:name|in the database))\b/i,
+    rule: "db-internals", why: "database internals are not a founder concern",
+  },
+  {
+    re: /\b(?:branch(?:es|ed)? (?:off|from|into)|rebased?|merged? (?:it |the |this )?(?:pull request|branch|to main|into main)|pushed to main|the repo(?:sitory)?|CI (?:is |was |went )?(?:green|red|passing|failing)|deployed (?:it|the (?:fix|change|code)))\b/i,
+    rule: "vcs", why: "shipping mechanics are execution, never news",
+  },
+  {
+    re: /\b(?:tests? (?:pass|passed|passing|fail|failed|failing|cover|covering)|\d+ (?:new )?(?:tests?|assertions?)|test suite|typecheck|regression tests?)\b/i,
+    rule: "testing", why: "test counts are not business outcomes",
+  },
+  {
+    re: /\b(?:npm|npx|pip install|the SDK|an? API endpoint|env(?:ironment)? var(?:iable)?s?)\b/i,
+    rule: "tooling", why: "tooling names are not business facts",
+  },
+  {
+    re: /\b(?:refactor(?:ed|ing)?|executors?|middleware|serializers?|the payload|(?:test )?fixtures?|the handler)\b/i,
+    rule: "jargon", why: "implementation vocabulary",
+  },
+  {
+    re: /\b(?:quarantined?|circuit breakers?|the denominator|instrumentation)\b/i,
+    rule: "internal-vocab", why: "our own operational vocabulary is not plain English",
+  },
 ];
 
 /**
@@ -134,25 +169,44 @@ export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}):
   }
 
   // ── vocabulary ─────────────────────────────────────────────────────────
+  //
+  // Inline code spans are NOT stripped. Stripping them made every rule
+  // bypassable by typing backticks, and nothing in DAILY-RUN.md ever permitted
+  // a code span in a brief — so a code span is itself the finding.
+  //
+  // Every match on a line is examined, not just the first. The earlier loop
+  // took `re.exec` once per rule and `continue`d if that one match was
+  // allowlisted, so allowing one term silently disabled its whole rule for the
+  // rest of the line.
   inFence = false;
   for (const [i, raw] of lines.entries()) {
     if (/^\s*```/.test(raw)) { inFence = !inFence; continue; }
     if (inFence) continue;
-    const line = raw.replace(/`[^`]*`/g, "");
-    for (const { re, rule, why } of BANNED_TERMS) {
-      const m = re.exec(line);
-      if (!m) continue;
-      if (allow.has(m[0].toLowerCase())) continue;
+    if (/`[^`]+`/.test(raw)) {
       findings.push({
-        severity: "error", rule, line: i + 1,
-        message: `"${m[0]}" — ${why}. Say what it meant for the business instead.`,
+        severity: "error", rule: "code-span", line: i + 1,
+        message: "a brief contains no code spans — if a term needs backticks it does not belong here",
       });
+    }
+    for (const { re, rule, why } of BANNED_TERMS) {
+      const global = new RegExp(re.source, re.flags.includes("g") ? re.flags : `${re.flags}g`);
+      for (const m of raw.matchAll(global)) {
+        if (allow.has(m[0].toLowerCase())) continue;
+        findings.push({
+          severity: "error", rule, line: i + 1,
+          message: `"${m[0]}" — ${why}. Say what it meant for the business instead.`,
+        });
+      }
     }
   }
 
   // ── frame ──────────────────────────────────────────────────────────────
   const perf = sectionBody(lines, "Business performance");
-  const firstSentence = (perf.match(/[^.!?]+[.!?]/)?.[0] ?? perf).trim();
+  // Strip list and emphasis markers before reading the opening sentence: the
+  // anchored patterns never fired on "- We ran the morning checks…", so a
+  // bulleted work log opened the brief unchallenged.
+  const firstSentence = (perf.match(/[^.!?]+[.!?]/)?.[0] ?? perf)
+    .replace(/^\s*(?:[-*]|\d+\.)\s*/, "").replace(/^[*_`]+/, "").trim();
   if (firstSentence && ACTIVITY_LOG_OPENINGS.some((re) => re.test(firstSentence))) {
     findings.push({
       severity: "error", rule: "activity-log-opening",
@@ -189,34 +243,71 @@ export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}):
 }
 
 /**
- * Field detection accepts the label or a recognisable synonym, because the
- * brief is prose and forcing literal headings would produce a form rather than
- * a paragraph. What it will not accept is silence on a field.
+ * Field detection is STRUCTURAL: each field is found by its label, not by
+ * vocabulary anywhere in the paragraph.
+ *
+ * The first version tried to be accommodating and matched synonyms across the
+ * whole section. An adversarial read broke it in both directions at once. This
+ * passed clean while deciding nothing:
+ *
+ *   "We should decide whether to keep going as we are. The facts have not
+ *    moved since Monday. Either we wait another week or we act now. I would
+ *    wait. Waiting leaves us where we are."
+ *
+ * — and this, a complete and correct escalation, was rejected on all five:
+ *
+ *   "Price for the Greek registry: 20 cents or 35 cents. Known: 11 paid calls
+ *    in 30 days at 20 cents, and the supplier charges us 12 cents each. I
+ *    suggest 35 cents. Left alone we forgo about 15 euros a month."
+ *
+ * A check that admits fluent evasion and rejects terse substance is worse than
+ * none: it teaches the writer to pad. Labels cost the author five bold phrases
+ * and cannot be satisfied by tone. DAILY-RUN.md carries the same labels, so the
+ * template and the check are one statement of the rule rather than two.
  */
-const FIELD_PATTERNS: Record<(typeof ESCALATION_FIELDS)[number], RegExp> = {
-  choice: /\b(?:the choice|decision|decide whether|choose between|whether to)\b/i,
-  established: /\b(?:what(?:'s| is| we) (?:already )?(?:known|established)|the facts|we (?:have )?(?:already )?(?:established|confirmed|measured|checked)|established:)\b/i,
-  options: /\b(?:option|options|either .* or |alternativ)\b/i,
-  recommendation: /\b(?:i recommend|my recommendation|recommended:|i would|i'd)\b/i,
-  consequence: /\b(?:consequence|if you do nothing|if we (?:do|leave)|the cost of|what happens if|leaves)\b/i,
+const FIELD_LABELS: Record<(typeof ESCALATION_FIELDS)[number], RegExp> = {
+  choice: /\*\*\s*(?:the\s+)?choice\b/i,
+  established: /\*\*\s*(?:what is |what's )?established\b/i,
+  options: /\*\*\s*(?:your |the )?options\b/i,
+  recommendation: /\*\*\s*(?:i |my )?recommend(?:ation|s|ed)?\b/i,
+  consequence: /\*\*\s*(?:the )?consequences?\b/i,
 };
 
 function fieldPresent(text: string, field: (typeof ESCALATION_FIELDS)[number]): boolean {
-  return FIELD_PATTERNS[field].test(text);
+  return FIELD_LABELS[field].test(text);
 }
 
-/** Numbered or bulleted top-level items in the decision section. */
+/**
+ * How many separate things are being escalated.
+ *
+ * Counted by `choice` labels, not by list items. Counting bullets scored a
+ * single escalation written to the mandated template — one heading, five
+ * sub-bullets — as five separate demands on the founder's attention, and then
+ * warned about it.
+ */
 function countEscalations(text: string): number {
-  return text.split(/\r?\n/).filter((l) => /^\s*(?:[-*]|\d+\.)\s+\S/.test(l)).length;
+  return text.split(/\r?\n/).filter((l) => FIELD_LABELS.choice.test(l)).length;
 }
 
+/**
+ * A section's body, terminated by the next heading.
+ *
+ * Two details that were wrong and mattered: the terminator has to accept the
+ * same heading shapes the collector does (it required a space where the
+ * collector did not, so `##Heading` ended nothing), and it has to ignore fenced
+ * blocks — otherwise a `# comment` line inside a fence truncates the section
+ * and the escalation check reports missing fields that are present.
+ */
 function sectionBody(lines: string[], heading: string): string {
+  const isHeading = (l: string) => /^#{1,4}\s*\S/.test(l);
   const start = lines.findIndex((l) =>
     new RegExp(`^#{1,4}\\s*(?:\\d+\\.\\s*)?[*_\`]*${escapeRe(heading)}`, "i").test(l));
   if (start === -1) return "";
   let end = lines.length;
+  let fenced = false;
   for (let i = start + 1; i < lines.length; i++) {
-    if (/^#{1,4}\s+\S/.test(lines[i]!)) { end = i; break; }
+    if (/^\s*```/.test(lines[i]!)) { fenced = !fenced; continue; }
+    if (!fenced && isHeading(lines[i]!)) { end = i; break; }
   }
   return lines.slice(start + 1, end).join("\n");
 }

@@ -138,11 +138,19 @@ Correcting a claim downward is mine; making a stronger claim is still yours, as
 is anything that binds the company, spends beyond the weekly limit, or cannot be
 undone. **And when the same kind of mistake happens three times, it stops being
 a bug and becomes an investigation** into what we got wrong underneath.
-*What it changes for you today:* one of the two items I put to you yesterday
-comes off your list. The eleven unfinished records and the one-euro correction
-on our own internal account involve no customer money and our existing rule
-already answers them, so I have taken that back. The website wording stays
-yours — it is a claim a regulator would read.
+*What it does NOT change:* nothing comes off your list. My first draft of this
+took one of yesterday's two items back — the eleven unfinished records and the
+one-euro correction on our own internal account — on the grounds that no
+customer money is involved and our existing rule already answers it. That
+reasoning was sound and it was not authority. **Items in your queue are moved
+out of it by you, not by me**, however routine they come to look, and doing it
+inside the very change that widened my remit is the clearest illustration
+available of how that widening goes wrong. Both items are still yours. The
+charter now says this in as many words, and it is logged as a repeat of the
+same failure — the earlier one being a reconciliation run against production
+records that sat behind exactly this kind of gate, on exactly this reasoning.
+*What I will do instead:* keep the recommendation on the record (close the
+eleven, refund the euro) and wait.
 *Why it is mine:* you asked for it. Everything inside it is either how I work or
 already in my column.
 *What I will watch:* whether the number of things reaching you falls without

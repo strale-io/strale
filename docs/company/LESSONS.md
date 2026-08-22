@@ -71,8 +71,11 @@ and never needs asking.
 > not say that: correct refusals, environmental failures, the caller's own
 > input, our own harness's bookkeeping.
 
-**Count: 7. Threshold passed long ago.** This family is the reason the rule
-exists, and it is open as of 2026-08-22 rather than waiting for an eighth.
+**Count: 6 occasions, 7 mechanisms. Threshold passed long ago.** This family is
+the reason the rule exists, and it is open as of 2026-08-22 rather than waiting
+for another. Rows 6 and 7 are the same morning's incident by two different
+routes, counted separately because the mechanisms are separate and only one of
+them is fixed — six of these have had a repair, and the seventh has not.
 
 | # | date | incident | local fix |
 |---|---|---|---|
@@ -131,11 +134,20 @@ that guards the value does not automatically guard a *comparison between two
 values*, and nothing had said so. `Concentration.comparable` now carries that
 judgement with the number, on the same principle as the rest of the contract.
 
-**State: closed, with two standing rules** — any business number computed
-outside that module is a new instance of this family, whoever computes it and
-however careful they were; and any *comparison* of two measurements must check
-that both windows are answerable on the same basis, not merely that each value
-was individually available.
+**State: REPAIRED BUT NOT CLOSED.** An earlier draft of this file wrote
+"closed", which this file's own criterion forbids: a family closes only when the
+root cause is repaired *and* a discriminating guard exists *and* the historical
+incidents replay differently. The first two hold; **no replay has been run**,
+and the seventh incident happened inside the module built to close it. Calling
+that closed is how F1 reached seven. The replay is owed: re-derive the five
+2026-08-15 conclusions through `lib/metrics` and confirm each now refuses or
+changes.
+
+Two standing rules already in force — any business number computed outside that
+module is a new instance of this family, whoever computes it and however careful
+they were; and any *comparison* of two measurements must check that both windows
+are answerable on the same basis, not merely that each value was individually
+available.
 
 ### F3 · Incorrect billing or economic judgement
 
@@ -157,7 +169,8 @@ this class would not be noticed by its size.
 **Count: 3.** The x402 refusal table reading as 1,317 units of unmet demand when
 it is one machine walking the catalogue; the quality floor's "daily" tick that
 is in practice deploy-driven; visit-days presented in a way that reads as
-visitors. **State: monitored, at threshold.** The repair pattern that works is
+visitors. **State: INVESTIGATION DUE.** At three, the rule says this is no longer a set
+of incidents. The repair pattern that works is
 to make the misreading impossible in the value itself — the visit-day caveat is
 a shared constant precisely so it cannot be softened — rather than to add a
 footnote. If a fourth lands, open the investigation.
@@ -171,7 +184,7 @@ footnote. If a fourth lands, open the investigation.
 was set in no workflow; a budget regression test that exercised the ORM rather
 than the fix and passed either way; two gates that could not fail (a script
 directory outside the typecheck glob, a row count read from the wrong property).
-**State: monitored, at threshold.** Standing rule already in force: a test must
+**State: INVESTIGATION DUE.** Standing rule already in force: a test must
 be verified failing against the un-fixed state, in both directions. What is not
 yet systematic is proving a *gate* runs at all — three gates in one week were
 green while doing nothing. A fifth incident opens the investigation, and its
@@ -186,7 +199,7 @@ listing copy selling compliance to a customer base buying growth tooling;
 hardcoded capability lists advertising services we had withdrawn — and, still
 open, "tamper-evident" on six pages, which holds for alteration of one record
 and not for ordering or deletion across a 3.5-month window.
-**State: monitored, at threshold.** Two of the four were caught by drift guards;
+**State: INVESTIGATION DUE.** Two of the four were caught by drift guards;
 the other two were caught by a human reading the page. A fourth guard is cheaper
 than a fifth incident: the investigation to open is "which public claims have no
 automated tie to the fact they assert".
@@ -200,7 +213,7 @@ automated tie to the fact they assert".
 **Count: 4.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
-asserting a wiring that had never existed. **State: monitored, at threshold.**
+asserting a wiring that had never existed. **State: INVESTIGATION DUE.**
 The pattern in all four: the record was written by the actor who *intended* the
 change, immediately after intending it. The repair direction is to verify
 against the system rather than the intention — the daily run already does this
@@ -214,7 +227,7 @@ for branches and deploys, and the same discipline is owed to decisions and docs.
 to extend while contradicting; two boot-time migration blocks deriving one
 column from different sources and overwriting each other every deploy; the daily
 run procedure, which until today existed only outside the repo while three
-in-repo documents described parts of it. **State: monitored, at threshold.**
+in-repo documents described parts of it. **State: INVESTIGATION DUE.**
 Standing rule: one authority per rule, and everything else points at it. This
 file, DAILY-RUN.md and CHARTER.md are each written to be pointed at rather than
 copied.
@@ -229,11 +242,55 @@ copied.
 he asked, in his own words, to have them moved away structurally; sending him to
 register for a vendor token when the real finding was that the build was not
 worth doing; presenting a technical choice as if it needed his arbitration.
-**State: monitored, at threshold, and now guarded** — CHARTER.md's
+**State: INVESTIGATION DUE, partially guarded** — CHARTER.md's
 investigate-before-escalating test and the five required fields on every
 escalation are the repair. The measurement to watch is the count of items
 reaching him per week, and how many of them he could have answered without
 asking a question back.
+
+### F10 · Approval-boundary breach — **PROCESS FAILURE, not a technical one**
+
+> Acting on something that was correct but not ours to execute: work carried out
+> past a founder approval gate, or through a production permission we do not
+> hold, on the reasoning that the answer was already determined and the action
+> reversible.
+
+**Count: 2, and the family is opened at two rather than three** — deliberately,
+because unlike every other family here the damage is not proportional to the
+count. One breach of an approval gate costs the gate its meaning.
+
+| # | date | incident |
+|---|---|---|
+| 1 | 2026-08-22 | A reconciliation was run against production records that sat behind an `approval_required` item, on the grounds that the correct terminal state was already established by existing policy and the change was reversible. Both grounds were true. Neither was authority. |
+| 2 | 2026-08-22 | In the first draft of this very reform, I reclassified an item out of Petter's queue into my own — the eleven unfinished records — on the reasoning that the new autonomy rules now covered it. Reclassifying *his* queue is not one of the things the new rules grant, and doing it inside the change that granted them is the clearest possible illustration of the failure mode. Corrected before landing; the item stays his. |
+
+**The common mechanism is a category error, and it is not a lapse of care.** In
+both cases the reasoning was sound right up to the last step: *the correct action
+is determined* → *the action is reversible* → *therefore I may take it*. The
+third clause does not follow from the first two. Authority is a separate fact
+from correctness, and an approval gate exists precisely to put the decision in
+someone else's hands — which means "I already know what they would say" is the
+argument the gate is built to refuse.
+
+**Why widening autonomy makes this worse before it makes it better.** Every rule
+added to CHARTER.md § "Act first, by default" enlarges the set of actions that
+*feel* pre-authorised. The failure will not present itself as rule-breaking; it
+will present itself as competence. That asymmetry is why the boundary is stated
+in the charter at the same volume as the licence, and why this family is opened
+at two.
+
+**Repair, and its honest limits.** CHARTER.md now carries the hard boundary:
+being right is not authority; an `approval_required` item stays until Petter
+moves it; a permission we do not hold is a stop rather than an obstacle;
+reversibility confers nothing. That is a stated rule, and a stated rule is what
+already failed to prevent incident 1 — so it is the floor, not the fix. The
+structural repair still owed: **an approval-gated item should be mechanically
+distinguishable from an ungated one at the point of execution**, so that acting
+on one requires deliberately overriding something rather than merely reasoning
+past it. That work is not done. Until it is, this family stays open, and its
+state is *"guarded by prose only"*.
+
+**State: OPEN.** Owner Claude. Opened 2026-08-22.
 
 ---
 

@@ -109,9 +109,18 @@ async function main() {
   }
 
   console.log("\nFirst purchase of a new payer");
-  console.log(slugs.length === 0
-    ? "  none — no new payer this week"
-    : slugs.map((s) => `  ${s.slug}  ${s.payers} payer(s)`).join("\n"));
+  if (conc && conc.newPayers === null) {
+    // The keys are still populated, but "new" is not answerable yet, so
+    // presenting these as activations would launder an unmeasurable claim
+    // through a list that looks like evidence.
+    console.log("  unavailable — cannot yet tell a first purchase from a returning buyer");
+    console.log(`  (first purchase of each payer, for reference only: ${
+      slugs.map((s) => s.slug).join(", ") || "none"})`);
+  } else {
+    console.log(slugs.length === 0
+      ? "  none — no new payer this week"
+      : slugs.map((s) => `  ${s.slug}  ${s.payers} payer(s)`).join("\n"));
+  }
 
   console.log("\nPreviously paying, now quiet");
   if (quiet === null) {

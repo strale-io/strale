@@ -35,8 +35,18 @@ In USD ≈ **$50/week**. The goal is therefore **~40×**, and M1 is **~5×**, no
 > at where a *second* payer comes from is worth more than any capability work
 > until that changes.
 >
-> **Correction to the comparison, 2026-08-22 (the level stands, the movement
-> does not).** The "94.7% a week ago → 99.3% now" reading is not sound, and the
+> **Correction to the run of weeks, 2026-08-22.** "Four consecutive rises" is
+> wrong; it is **two**. Computed by `growth()` over the same series: 07-13
+> €27.42 · 07-20 €37.98 · 07-27 €10.85 · 08-03 €27.38 · 08-10 €39.24 · 08-17
+> €56.89 (in progress). Four completed points carry at most three transitions,
+> 07-20 → 07-27 is a fall, and the €56.89 belongs to a week with a day still to
+> run — so it is neither a record nor a rise yet. The trend is genuinely up and
+> the direction is unchanged; only the count was inflated, by eyeballing a table
+> that included the partial week. The run is now computed rather than counted by
+> hand, and a partial week cannot enter the comparison in either direction.
+>
+> **Correction to the concentration comparison, 2026-08-22 (the level stands,
+> the movement does not).** The "94.7% a week ago → 99.3% now" reading is not sound, and the
 > first production run of `metrics/commercial.ts` is what caught it. Payer
 > identity only began recording on 2026-08-15, so any window reaching back
 > before that divides one visible payer by revenue nothing was attributing:
@@ -45,7 +55,13 @@ In USD ≈ **$50/week**. The goal is therefore **~40×**, and M1 is **~5×**, no
 > movement would have been a pure coverage artefact, and the 94.7% figure is the
 > same artefact in a milder form. **What survives:** this week is 100%
 > attributable and its top share really is 99.3% (€56.49 against €0.40 from
-> everyone else across 4 payers, 3 of them new). That level is the finding, and
+> everyone else across 4 payers). **Whether any of those 4 is new is NOT
+> measurable and must not be written down as if it were** — a buyer active in
+> July carries no recorded identity, so it is absent from the lookback and reads
+> as a first-time buyer. `newPayers` returns null rather than a flattering
+> count for exactly this reason; the first honest new-vs-returning split is
+> available once the lookback sits entirely after 2026-08-15. That level is the
+> finding, and
 > it is enough — the conclusion above is unchanged. What we cannot yet say is
 > whether concentration is *rising*; the first honest week-on-week comparison is
 > available once two full weeks sit entirely after 2026-08-15. `Concentration

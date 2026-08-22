@@ -33,8 +33,12 @@ const ALLOWED: Record<string, { terms: string[]; why: string }> = {};
 function briefPaths(argv: string[]): string[] {
   if (argv.length > 0) return argv.map((p) => resolve(process.cwd(), p));
   if (!existsSync(BRIEFS)) return [];
+  // Every markdown file in the directory, not only date-named ones. Filtering
+  // on `YYYY-MM-DD.md` meant a brief saved as `2026-08-22-morning.md` was
+  // skipped in silence, which is a gate that reports success for work it never
+  // looked at — the hollow-gate family in LESSONS.md.
   return readdirSync(BRIEFS)
-    .filter((f) => /^\d{4}-\d{2}-\d{2}\.md$/.test(f))
+    .filter((f) => f.endsWith(".md"))
     .sort()
     .map((f) => join(BRIEFS, f));
 }
