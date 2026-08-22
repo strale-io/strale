@@ -68,6 +68,7 @@ import {
   runMigration0066_ensureEligibilityColumnAndReconcile,
   runMigration0094_clearChurnInvalidatedBaselines,
   runMigration0100_relistUrlToMarkdown,
+  runMigration0101_capabilityInvocations,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -2062,5 +2063,167 @@ describe("startup-migrations — block 0100 (re-list url-to-markdown)", () => {
     expect(update).toBeDefined();
     const setClause = update!.slice(update!.toLowerCase().indexOf("set"));
     expect(/visible = true/i.test(setClause) && /x402_enabled = true/i.test(setClause)).toBe(true);
+  });
+});
+
+describe("startup-migrations — block identity is unique, not just the function name", () => {
+  /**
+   * Block 0100 (url-to-markdown re-listing) landed on main while WP9 was open,
+   * and WP9's block was originally numbered 0100 too. Renaming the function is
+   * the visible half of fixing that; the half that matters is the LEDGER ID,
+   * because `startup_migration_ledger.block` is a primary key and it is what
+   * tells a one-shot block it has already fired. Two blocks sharing an id means
+   * whichever runs second reads the other's row and skips its own work forever.
+   */
+  const BLOCK_ID_RE = /const BLOCK = "([^"]+)"/g;
+
+  it("no two blocks share a ledger id", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const src = readFileSync(resolve(import.meta.dirname, "startup-migrations.ts"), "utf8");
+    const ids = [...src.matchAll(BLOCK_ID_RE)].map((m) => m[1]);
+    expect(ids.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(ids).size, `duplicate ledger ids: ${ids.join(", ")}`).toBe(ids.length);
+  });
+
+  it("no two blocks share a BlockResult label either", async () => {
+    // The label is what the deploy log and the admin endpoint report. Distinct
+    // ledger ids with duplicate labels would make the log ambiguous about which
+    // migration ran, which is the same failure one layer out.
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const src = readFileSync(resolve(import.meta.dirname, "startup-migrations.ts"), "utf8");
+    const labels = [...src.matchAll(/^\s*block: "([^"]+)",$/gm)].map((m) => m[1]);
+    expect(labels.length).toBeGreaterThanOrEqual(10);
+    // Grouped by NUMBER, not deduped outright: several blocks legitimately
+    // return the same label from more than one path (an early skip and a
+    // completed run), and 0029/0030 do exactly that. The invariant that matters
+    // is that one number never names two different migrations -- which is the
+    // collision this describe exists for, arriving as a label rather than a
+    // function name.
+    const byNumber = new Map<string, Set<string>>();
+    for (const label of labels) {
+      const n = /^(\d+)_/.exec(label)?.[1];
+      if (!n) continue;
+      if (!byNumber.has(n)) byNumber.set(n, new Set());
+      byNumber.get(n)!.add(label);
+    }
+    const collisions = [...byNumber.entries()]
+      .filter(([, set]) => set.size > 1)
+      .map(([n, set]) => `${n}: ${[...set].join(" vs ")}`);
+    expect(collisions, `one block number naming two migrations: ${collisions.join("; ")}`).toEqual([]);
+  });
+
+  it("every registered block function has a distinct number prefix", () => {
+    // The number IS the audit key. Two blocks numbered 0100 make it useless
+    // even if their names and ledger ids differ.
+    const numbers = BLOCKS.map((fn) => /runMigration(\d+)_/.exec(fn.name)?.[1] ?? fn.name);
+    const dupes = numbers.filter((n, i) => numbers.indexOf(n) !== i);
+    expect(dupes, `duplicate block numbers: ${dupes.join(", ")}`).toEqual([]);
+  });
+
+  it("block numbers only ever increase", () => {
+    // A new block taking a number below the highest already registered is the
+    // collision this whole describe exists for, arriving from the other side.
+    const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
+    const sorted = [...numbers].sort((a, b) => a - b);
+    expect(numbers).toEqual(sorted);
+    expect(Math.max(...numbers)).toBe(101);
+  });
+});
+
+describe("startup-migrations — block 0101 runs its one-shot work exactly once", () => {
+  /**
+   * The DDL is idempotent by construction (CREATE IF NOT EXISTS, trigger created
+   * only when absent), so re-running it is a no-op. The part that is NOT safe to
+   * repeat is the purge of rows written while the table had no trigger, which is
+   * a DELETE. It is gated on the ledger so it can only ever fire on a genuine
+   * first install -- otherwise dropping the trigger for maintenance and
+   * rebooting would destroy live data.
+   */
+  it("purges the unprotected era on first install, and never again", async () => {
+    // First install: ledger empty, trigger absent, three stray rows.
+    const first = makeStub({
+      queue: [
+        {},            // ensure ledger table
+        [],            // ledger SELECT -> no prior run
+        {},            // create table
+        {}, {}, {},    // three indexes
+        {},            // create-or-replace function
+        [{ n: 0 }],    // hasImmutableTrigger -> absent
+        [{ n: 3 }],    // bounded probe -> 3 stray rows
+        { count: 3 },  // DELETE
+        {},            // create trigger
+        [{ n: 1 }],    // hasImmutableTrigger -> present
+        {},            // ledger INSERT
+      ],
+    });
+    const r1 = await runMigration0101_capabilityInvocations(first);
+    expect(r1.outcome).toContain("verified");
+    expect(r1.outcome).toContain("discarded 3");
+    expect(first.renderedSql.join(" | ").toLowerCase()).toContain(
+      'delete from "capability_invocations"',
+    );
+
+    // Second boot: the ledger already has the row. Even with the trigger somehow
+    // absent, nothing is deleted.
+    const second = makeStub({
+      queue: [
+        {},                                   // ensure ledger table
+        [{ block: "0101_capability_invocations" }], // prior run recorded
+        {},                                   // create table
+        {}, {}, {},                           // indexes
+        {},                                   // function
+        {},                                   // create trigger
+        [{ n: 1 }],                           // verification
+        {},                                   // ledger INSERT (no-op)
+      ],
+    });
+    const r2 = await runMigration0101_capabilityInvocations(second);
+    expect(r2.outcome).toContain("verified");
+    expect(r2.outcome).not.toContain("discarded");
+    expect(second.renderedSql.join(" | ").toLowerCase()).not.toContain(
+      'delete from "capability_invocations"',
+    );
+  });
+
+  it("refuses rather than bulk-deleting when the unprotected backlog is large", async () => {
+    // An unbounded DELETE at boot on a table holding ~6k rows a day is a bulk
+    // operation, and DEC-20260504-B says those get a plan and an operator, not a
+    // boot path. Refusing defers the block, which leaves the floor on billing
+    // rows -- its pre-WP9 behaviour -- and destroys nothing.
+    const stub = makeStub({
+      queue: [
+        {}, [], {}, {}, {}, {}, {},
+        [{ n: 0 }],       // trigger absent
+        [{ n: 10001 }],   // probe exceeds the ceiling
+      ],
+    });
+    const result = await runMigration0101_capabilityInvocations(stub);
+    expect(result.outcome).toContain("deferred to next boot");
+    expect(result.outcome).toContain("UNPROTECTED-BACKLOG");
+    expect(stub.renderedSql.join(" | ").toLowerCase()).not.toContain(
+      'delete from "capability_invocations"',
+    );
+  });
+
+  it("does not record itself as applied when it fails partway", async () => {
+    // A block that failed halfway must not write its ledger row, or the next
+    // boot skips the purge gate and the unprotected era becomes permanent.
+    const stub = makeStub({
+      queue: [
+        {}, [], {}, {}, {}, {}, {},
+        [{ n: 0 }],   // trigger absent
+        [{ n: 0 }],   // nothing to purge
+        {},           // create trigger
+        [{ n: 0 }],   // verification FAILS -- trigger still absent
+      ],
+    });
+    const result = await runMigration0101_capabilityInvocations(stub);
+    expect(result.outcome).toContain("deferred to next boot");
+    expect(result.outcome).toContain("UNPROTECTED");
+    expect(stub.renderedSql.join(" | ").toLowerCase()).not.toContain(
+      "insert into startup_migration_ledger",
+    );
   });
 });

@@ -323,7 +323,16 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // version of this test asserted only that "FROM pg_trigger" appeared
     // somewhere, and that mutation survived it.
     expect(block).toContain("IF NOT EXISTS (");
-    expect(block).toContain("await hasImmutableTrigger(tx)");
+    // The verification, pinned by its WHOLE assignment. `toContain("await
+    // hasImmutableTrigger(tx)")` became hollow the moment the purge gate added
+    // a second call site: replacing the verification with `const triggerCount =
+    // 1;` left both that substring and `if (triggerCount !== 1)` in the file,
+    // and the block then reported "present and verified" for a table with no
+    // trigger. Eighth hollow assertion in this program, third one created
+    // inside the remediation for the previous one.
+    expect(block).toContain(
+      "const triggerCount = (await hasImmutableTrigger(tx)) ? 1 : 0;",
+    );
     expect(block).toContain("if (triggerCount !== 1)");
     // And it must discard anything written before protection existed rather
     // than letting a later boot retroactively bless it. CREATE TABLE
@@ -331,8 +340,17 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // the writer filling an unguarded table -- and the floor keys its epoch on
     // MIN(created_at), so those rows would become authoritative evidence the
     // moment the trigger finally appeared.
-    expect(block).toContain("if (!(await hasImmutableTrigger(tx)))");
+    // The purge is gated on BOTH the ledger (a genuine first install) and the
+    // trigger being absent. Dropping the trigger for maintenance and rebooting
+    // must not destroy live facts, which the trigger-only gate would have done.
+    expect(block).toContain("if (firstInstall && !(await hasImmutableTrigger(tx)))");
     expect(block).toContain('DELETE FROM "capability_invocations"');
+    // And bounded. An unbounded boot-time DELETE on a table taking ~6k rows a
+    // day is a bulk operation; DEC-20260504-B says those get a plan and an
+    // operator, not a boot path. Beyond the ceiling the block refuses, which
+    // defers it, leaves the floor on billing rows, and destroys nothing.
+    expect(block).toContain("UNPROTECTED_PURGE_CEILING");
+    expect(block).toContain("UNPROTECTED-BACKLOG");
   });
 
   it("refuses to treat an unprotected facts table as evidence", () => {

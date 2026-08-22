@@ -2140,6 +2140,13 @@ export async function runMigration0100_relistUrlToMarkdown(
  * another table would otherwise satisfy the check. `to_regclass` returns NULL
  * rather than raising when the table is absent.
  */
+/**
+ * Most rows the boot path will discard as unprotected. Beyond this it refuses
+ * and defers instead: an unbounded DELETE at boot is a bulk operation, and
+ * DEC-20260504-B says those get a plan and an operator.
+ */
+const UNPROTECTED_PURGE_CEILING = 10_000;
+
 async function hasImmutableTrigger(tx: MigrationExecutor): Promise<boolean> {
   const res = await tx.execute(sql`
     SELECT COUNT(*)::int AS n FROM pg_trigger
@@ -2155,6 +2162,13 @@ export async function runMigration0101_capabilityInvocations(
 ): Promise<BlockResult> {
   const startedAt = Date.now();
   let outcome: string;
+
+  // Distinct ledger identity from every other block, checked by test. Block
+  // 0100 (url-to-markdown re-listing) landed on main while this was open and
+  // uses "0100_relistUrlToMarkdown"; a rename that left both writing the same
+  // ledger id would make the ledger lie about which migration had run, and the
+  // ledger is what tells a one-shot block it has already fired.
+  const BLOCK = "0101_capability_invocations";
 
   // No `SET LOCAL lock_timeout` here, deliberately. Blocks receive the drizzle
   // DB HANDLE, not a transaction (see runStartupMigrations), so every statement
@@ -2174,6 +2188,17 @@ export async function runMigration0101_capabilityInvocations(
   // SHARE conflicts with the ROW EXCLUSIVE that INSERT takes. The hold is a
   // catalog lookup, so microseconds, but it is not nothing.
   try {
+    await tx.execute(sql`
+      CREATE TABLE IF NOT EXISTS startup_migration_ledger (
+        block text PRIMARY KEY,
+        applied_at timestamptz NOT NULL DEFAULT now(),
+        rows_affected integer NOT NULL DEFAULT 0
+      )`);
+    const priorRun = (await tx.execute(sql`
+      SELECT block FROM startup_migration_ledger WHERE block = ${BLOCK}
+    `)) as unknown as Array<{ block: string }>;
+    const firstInstall = (Array.isArray(priorRun) ? priorRun : []).length === 0;
+
     await tx.execute(sql`
       CREATE TABLE IF NOT EXISTS "capability_invocations" (
         "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2260,12 +2285,36 @@ export async function runMigration0101_capabilityInvocations(
     // was guarding. Runs BEFORE the trigger exists, which is the only moment a
     // DELETE inside the floor window is permitted.
     let discarded = 0;
-    if (!(await hasImmutableTrigger(tx))) {
-      const purge = await tx.execute(sql`
-        DELETE FROM "capability_invocations"
+    if (firstInstall && !(await hasImmutableTrigger(tx))) {
+      // Bounded probe, not COUNT(*) over the whole table: this runs at boot
+      // under a 30s statement_timeout, and the table it is counting is the one
+      // the customer path writes ~6k rows a day into.
+      const probe = await tx.execute(sql`
+        SELECT COUNT(*)::int AS n
+          FROM (SELECT 1 FROM "capability_invocations" LIMIT ${UNPROTECTED_PURGE_CEILING + 1}) t
       `);
-      const purgeRows = Array.isArray(purge) ? purge : (purge as { rows?: unknown[] })?.rows ?? [];
-      discarded = (purge as { count?: number })?.count ?? purgeRows.length ?? 0;
+      const probeRows = Array.isArray(probe) ? probe : (probe as { rows?: unknown[] })?.rows ?? [];
+      const pending = Number((probeRows[0] as { n?: number } | undefined)?.n ?? 0);
+
+      if (pending > UNPROTECTED_PURGE_CEILING) {
+        // Deliberately NOT deleted. An unbounded DELETE at boot on a table this
+        // size is a bulk operation, and DEC-20260504-B says a bulk operation
+        // gets a plan and an operator, not a boot path. Refusing defers the
+        // block, which leaves the floor reading billing rows — its pre-WP9
+        // behaviour — and destroys nothing.
+        throw new Error(
+          `UNPROTECTED-BACKLOG: capability_invocations holds more than ` +
+            `${UNPROTECTED_PURGE_CEILING} rows written while it had no append-only ` +
+            "trigger. Those rows are not evidence and must not become readable, " +
+            "but discarding them is a bulk delete and belongs to an operator, " +
+            "not to boot. The floor stays on billing rows until this is resolved.",
+        );
+      }
+      if (pending > 0) {
+        const purge = await tx.execute(sql`DELETE FROM "capability_invocations"`);
+        const purgeRows = Array.isArray(purge) ? purge : (purge as { rows?: unknown[] })?.rows ?? [];
+        discarded = (purge as { count?: number })?.count ?? purgeRows.length ?? 0;
+      }
     }
 
     await tx.execute(sql`
@@ -2300,6 +2349,15 @@ export async function runMigration0101_capabilityInvocations(
           "a mutable facts table still reads as present to the quality floor.",
       );
     }
+    // Written LAST, and only on success. A block that failed halfway must not
+    // record itself as applied, or the next boot skips the purge gate above and
+    // the unprotected era becomes permanent.
+    await tx.execute(sql`
+      INSERT INTO startup_migration_ledger (block, rows_affected)
+      VALUES (${BLOCK}, ${discarded})
+      ON CONFLICT (block) DO NOTHING
+    `);
+
     outcome =
       "table, indexes and append-only trigger present and verified" +
       (discarded > 0

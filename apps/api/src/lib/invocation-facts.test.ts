@@ -297,6 +297,34 @@ describe("no serving path may skip the fact", () => {
     ).toEqual([]);
   });
 
+  it("a fact the floor cannot read is worse than no fact — the visibility fields are pinned", () => {
+    // The whole outcome machinery is mutation-checked. The fields that decide
+    // whether the row is READ AT ALL were not, and a one-token change silently
+    // nullified the package with a green suite: setting the solution step's
+    // `isFreeTier` to a literal `true` makes every bundle fact fail the floor's
+    // `AND f.is_free_tier = false` filter, so bundle-only capabilities go back
+    // to being invisible — the single defect WP9 exists to close.
+    //
+    // The headline test misses it because it hand-builds FloorTrafficRows and
+    // feeds the fold; it never exercises the writer. These assert the writer.
+    const solutions = readFileSync(join(SRC, "lib/solution-executor.ts"), "utf8");
+    expect((solutions.match(/isFreeTier: actor\.isFreeTier/g) ?? []).length).toBe(2);
+    expect((solutions.match(/userId: actor\.userId/g) ?? []).length).toBe(2);
+    expect((solutions.match(/contextKind: "customer_paid"/g) ?? []).length).toBe(2);
+    expect(solutions).not.toContain("isFreeTier: true");
+
+    // Same for the two direct rails. `/v1/do` threads a required actor through
+    // four execution paths; x402 has no account by design and is never
+    // free-tier, so its literals are the correct values and are pinned as such.
+    const doRoute = readFileSync(join(SRC, "routes/do.ts"), "utf8");
+    expect((doRoute.match(/isFreeTier: actor\.isFreeTier/g) ?? []).length).toBe(2);
+    expect((doRoute.match(/userId: actor\.userId/g) ?? []).length).toBe(2);
+
+    const x402 = readFileSync(join(SRC, "routes/x402-gateway-v2.ts"), "utf8");
+    expect((x402.match(/contextKind: "customer_paid"/g) ?? []).length).toBe(2);
+    expect(x402).not.toContain("isFreeTier: true");
+  });
+
   it("the solution executor assesses the enriched output, not the raw result", () => {
     // The customer receives the enriched output and the solution's aggregate
     // billing verdict is computed from it. Assessing the raw executor result
@@ -309,7 +337,7 @@ describe("no serving path may skip the fact", () => {
 
 describe("retention and the database guard must not contradict each other", () => {
   it("prunes facts well outside the window the database refuses to delete in", () => {
-    // Block 0100 refuses to DELETE a fact inside the floor's reading window, so
+    // Block 0101 refuses to DELETE a fact inside the floor's reading window, so
     // a retention window shorter than that guard would make the nightly purge
     // throw on every run -- inside a bulk job, which is exactly where this
     // platform has previously let failures go unnoticed for days at a time.
@@ -343,9 +371,18 @@ describe("retention and the database guard must not contradict each other", () =
     // has five other batched purges in it.
     const at = body.indexOf("DELETE FROM capability_invocations");
     expect(at, "the invocation-fact purge must exist").toBeGreaterThan(-1);
+    // Sliced FROM the DELETE, so asserting the DELETE is in the slice can never
+    // fail — that assertion was tautological and is gone. What is checked below
+    // is what surrounds it.
     const source = body.slice(at, at + 400);
     expect(source).toContain("LIMIT ${BATCH_SIZE}");
-    expect(source).toContain("DELETE FROM capability_invocations");
+    // The direction of the cutoff. Inverted, the purge deletes the NEWEST facts
+    // -- which are exactly the ones inside the 35-day window the trigger
+    // refuses -- so the last step of the retention sweep would raise every
+    // night and take `retention-cleanup-done` down with it for every rule that
+    // had already succeeded. Nothing in this repo asserted cutoff direction on
+    // any purge before this line.
+    expect(source).toContain("WHERE created_at < ${cutoff.toISOString()}");
     // And it must not name the table before checking the table is there. Block
     // 0101 is defer-not-throw, so it genuinely may be absent -- and this purge
     // is the LAST step of the retention sweep, so throwing here loses the

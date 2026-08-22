@@ -1190,10 +1190,21 @@ export const capabilityInvocations = pgTable(
     // anonymous free-tier callers. Recorded so the floor can apply the SAME
     // internal-account exclusion it already applies to transactions, from the
     // same canonical email-pattern list, rather than this table inventing a
-    // second notion of "internal". Roughly 98% of platform traffic is the
-    // internal test harness calling /v1/do over HTTP, and without this the
-    // floor would read harness results as customer experience — which the
-    // platform already knows is wrong in both directions.
+    // second notion of "internal".
+    //
+    // Precisely what the harness does, because two comments in this PR
+    // previously contradicted each other about it and review was right to call
+    // that out. `lib/test-runner.ts` invokes executors IN-PROCESS via
+    // getExecutor and then INSERTs its own transaction row directly
+    // (test-runner.ts:1875), carrying a capability_id and the system account.
+    // It never calls /v1/do and never calls recordInvocation. So it accounts
+    // for ~98% of `transactions` — about 10k rows a day — and for zero facts.
+    //
+    // The consequence for this column: it is not what keeps harness traffic out
+    // of the floor today, because none of it arrives here. It is what keeps the
+    // NEXT non-customer writer out, and it is what makes the fact-versus-billing
+    // volume cross-check compare like with like, since the transaction side has
+    // to exclude those 10k rows explicitly.
     userId: uuid("user_id"),
     // Whether this call was served under the free tier. Anonymous zero-cost
     // traffic is the cheapest way to fabricate failures against a capability,
