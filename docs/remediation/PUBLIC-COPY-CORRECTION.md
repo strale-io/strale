@@ -108,6 +108,56 @@ remaining word describes a mechanism, not a guarantee.
 `immutable` was never true independently of this incident — records are redacted
 at 90 days by design.
 
+## Surfaces I missed, added after review
+
+The first version edited seven frontend locations and left the identical claim
+standing on every **machine-readable** surface — the ones agents and crawlers
+actually read. Applying the standard to the human page and not the API is
+inconsistent, so these are in scope:
+
+### API and discovery surfaces (deploy, not release)
+
+| Location | Claim |
+|---|---|
+| `apps/api/src/openapi.ts:29` | "Every call returns an audit record with **cryptographic chain hashing**." — live at `/openapi.json` |
+| `apps/api/src/routes/a2a.ts:329` | same sentence — live at `/.well-known/agent-card.json` |
+| `apps/api/src/routes/mcp-server-card.ts:89` | "Every call returns a **cryptographically chain-hashed** audit record." — live at `/.well-known/mcp.json` |
+| `apps/api/src/routes/llms-txt.ts:34` | same sentence |
+| `apps/api/src/routes/llms-txt.ts:110` | "…produces a chain-hashed audit record retrievable at `/v1/audit/{id}` **for downstream regulatory verification**" |
+
+The last is the strongest claim anywhere on the platform: it asserts *fitness for
+regulatory verification*, not merely a mechanism. It goes first.
+
+Proposed everywhere: drop the cryptographic adjective and the regulatory-fitness
+assertion — "Every call returns an audit record, retrievable at
+`/v1/audit/{transactionId}`."
+
+### Published package (requires a release, not a deploy)
+
+`packages/mcp-server/src/tools.ts:943` — "Every call returns a chain-hashed audit
+record." Shipped in `strale-mcp` on npm. Correcting it needs a version bump, so
+it lands after the deploy rather than with it. Flagged rather than folded in.
+
+### Frontend locations the first pass missed
+
+| Location | Why it matters |
+|---|---|
+| `Methodology.tsx:112` | The page's **lead paragraph**: "hash-chained audit record **you can verify independently**". Without this edit the page contradicts itself — :239 would say "an audit record" while :112 still claims independent verification. This is the sentence a compliance reviewer would cite. |
+| `Methodology.tsx:97`, `Security.tsx:120` | SEO **meta descriptions**, both "hash-chained audit trail(s) on every call" — what search engines and LLM crawlers index |
+| `Privacy.tsx:414` | "part of a hashed integrity chain" |
+| `ScoringArchitectureDiagram.tsx:19` | "hash chain" in the diagram label |
+
+## The largest remaining overstatement is not in the copy
+
+Worth stating plainly rather than leaving implicit: after every edit above,
+`/v1/verify` still returns **`verified: true`** for records whose ordering and
+completeness cannot be evidenced. The plan's own test — a claim returns only when
+production behaviour supports every word — applies with full force to the word
+`verified` that the API itself emits.
+
+That is an API correction, not a copy one, and it is not in this plan. It
+belongs with the checkpoint work in WP14.
+
 ## What is deliberately NOT proposed
 
 **No replacement cryptographic claim.** Not "hash-linked", not "integrity-

@@ -39,29 +39,41 @@ account is internal, so the refund is bookkeeping accuracy rather than customer
 restitution, but leaving a debit against undelivered work misstates the ledger
 either way.
 
-## The one genuine complication
+## The "complication" I reported was false — corrected
 
-**Row 10 (`4994f0b2`, 2026-04-18) is in the audit chain** — `integrity_hash` set,
-`compliance_hash_state = 'complete'`. Its hash was computed over its fields,
-**including `status = 'executing'`**.
+I previously wrote that row 10 (`4994f0b2`, 2026-04-18) is in the audit chain,
+that closing it would break its integrity hash, and that this needed a decision
+between three options.
 
-Flipping its status to `failed` breaks its recorded hash. It would then look
-exactly like tampering to anyone verifying that record.
+**All of that was wrong.** Verified against production:
 
-This is the WP7 defect in miniature: non-terminal rows were admitted to the
-chain, so the value that needs correcting is baked into evidence. WP7 stopped
-new rows entering that way; it did not resolve the ones already there.
+- The row was **redacted on 2026-08-16** by the 90-day retention purge
+  (`deletion_reason = content_retention_purge`), six days before this plan.
+- Its hash **already mismatches**, and has since that purge. The reconciliation
+  does not cause it.
+- `/v1/verify` short-circuits on `redactedAt` **before** comparing hashes, so it
+  already returns `hash_valid: null` with an accurate retention explanation:
+  *"This is routine and not tampering."*
 
-Three options for row 10, and I recommend the third:
+The status flip is **invisible to verification**. There is nothing to decide.
 
-1. **Leave it `executing` forever.** Honest, and permanently wrong in the status
-   column.
-2. **Flip it and accept the broken hash.** Correct data, one record that fails
-   verification with no explanation.
-3. **Flip it and record the reason in `chain_integrity_windows.ts`**, alongside
-   the 2026-05-04 ordering window. The hash mismatch becomes a disclosed,
-   dated, explained fact rather than an anomaly. Consistent with the decision
-   not to rewrite chain history.
+Worse, my recommended option 3 would have published a **false attribution** —
+announcing a hash break caused by this reconciliation when the break was caused
+by routine retention and is already correctly disclosed. The mechanism could not
+have expressed it anyway: `windowsCovering()` keys on a record's creation
+instant, so an entry would have declared integrity lost for *every* record
+created on 2026-04-18.
+
+**Correct action: nothing special.** Close the row with the other nine.
+
+One thing worth knowing before touching it at all, which the review surfaced:
+`4994f0b2` is the **third-largest fork point in the chain** — 2,192 direct
+children, and 92.5% of all transactions have it as an ancestor within the
+default depth-20 walk. Its mismatch is invisible *only* because the redaction
+short-circuit fires first. If `redacted_at` were ever cleared, `/v1/verify`
+would return `verified: false` for most of the platform. That is true today,
+this change does not affect it, and it strengthens the case for leaving the row
+otherwise alone.
 
 ## Proposed remediation — one idempotent statement
 
@@ -197,29 +209,21 @@ have been there.
 not defensible for ordering or deletion across that window — and those are what
 most readers of "hash chain" assume.
 
-## Proposed replacement copy
+## Proposed replacement copy — SUPERSEDED
 
-Deliberately narrow to what is provable, and it survives the incident rather
-than needing revision if another is found.
+This section previously proposed a hedged replacement paragraph. **It is
+withdrawn**, for two reasons:
 
-**Methodology / Security (the two strong claims):**
+1. It ended *"…the affected period is disclosed in every verification
+   response."* **That sentence is false.** `orderingDisclosureText()` is
+   unwired — no production consumer — and live responses carry no such
+   disclosure. It would have replaced one overstatement with a fabricated one.
+2. It proposed a replacement cryptographic claim, which the founder instruction
+   forbids unless every word is supported by production behaviour.
 
-> Every successful transaction produces a hash-chained audit record, retrievable
-> independently of the original call. Each record's content hash covers its own
-> data and its recorded predecessor, so alteration of an individual record is
-> detectable. Records created between 2026-05-04 and 2026-08-21 carry a known
-> limitation: a defect in chain-head selection meant records in that period do
-> not evidence their ordering relative to one another. The defect was corrected
-> on 2026-08-21 and the affected period is disclosed in every verification
-> response.
-
-**Privacy / QualityScoringSection (the passing references):**
-Replace "tamper-evident audit chains" with "**hash-chained audit records**".
-Accurate without asserting the property that fails.
-
-**learnGuides:** replace "immutable transaction record" with "**durable
-transaction record**". Records are redacted at 90 days by design, so "immutable"
-was never true.
+**The operative plan is `docs/remediation/PUBLIC-COPY-CORRECTION.md`**, which is
+pure subtraction with no replacement claim. Where the two documents differ, that
+one governs.
 
 ## Recommendation
 

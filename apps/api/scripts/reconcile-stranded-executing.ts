@@ -1,7 +1,8 @@
 /**
  * Reconcile the 11 pre-reservation transactions stuck in `status='executing'`.
  *
- * NOT RUN AGAINST PRODUCTION. This script exists to be reviewed, then executed
+ * NOT YET APPLIED. Dry-run has been exercised read-only against production; the
+ * --apply path has not run. This script exists to be reviewed, then executed
  * once under an explicit founder approval, and it prints a full before/after
  * economic statement so the approval is given against numbers rather than prose.
  *
@@ -30,11 +31,18 @@
  *
  * ── Usage ───────────────────────────────────────────────────────────────────
  *
- *   npx tsx scripts/reconcile-stranded-executing.ts            # dry run (default)
- *   npx tsx scripts/reconcile-stranded-executing.ts --apply    # requires approval
+ * Run from the REPO ROOT so the root .env is on the path, and pass the public
+ * connection string explicitly — there is no apps/api/.env, the script does not
+ * import dotenv, and the root .env carries two DATABASE_URL lines of which the
+ * first points at postgres.railway.internal and is unreachable from outside
+ * Railway. For a once-only approved production mutation the target is asserted,
+ * not assumed:
+ *
+ *   DATABASE_URL="<public url>" npx tsx apps/api/scripts/reconcile-stranded-executing.ts
+ *   DATABASE_URL="<public url>" npx tsx apps/api/scripts/reconcile-stranded-executing.ts --apply
  */
 
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { getDb } from "../src/db/index.js";
 import { transactions, wallets, walletTransactions } from "../src/db/schema.js";
@@ -157,15 +165,53 @@ async function main(): Promise<void> {
     });
   }
 
+  // PINNED TO THE SNAPSHOT IDS. The first version ran
+  // `WHERE status='executing' AND output IS NULL`, which is not a description
+  // of these eleven rows — it is a description of every call currently IN
+  // FLIGHT. `executing` is the live transient state written by /v1/do and
+  // /v1/solutions/:slug/execute, and an in-flight row has no output by
+  // definition. Production runs ~433 transactions per hour.
+  //
+  // A concurrent paid call would have been marked `failed` with an error string
+  // asserting it "was abandoned before WP3 reservations existed", while its
+  // wallet debit — committed before the row was even inserted — stood. That is
+  // the founder policy exactly inverted: a charge preserved against work the
+  // platform had just declared undelivered. Worse for x402, where 2,592 paid
+  // rows in 30 days carry a NULL user_id and would have been reported to the
+  // operator as "no charge exists".
+  const targetIds = before.map((r) => r.id);
   const closed = await db
     .update(transactions)
     .set({
       status: "failed",
-      error: CLOSURE_NOTE,
-      completedAt: sql`COALESCE(${transactions.completedAt}, now())`,
+      // Only where there is no redaction marker: writing a fresh 200-character
+      // note into the `error` column of a row marked content-redacted would
+      // have /v1/verify describe it as "payload removed" while it carries newly
+      // written content.
+      error: sql`CASE WHEN ${transactions.redactedAt} IS NULL THEN ${CLOSURE_NOTE} ELSE ${transactions.error} END`,
+      // completed_at is deliberately NOT set. These executions never completed;
+      // stamping today's date would assert an instant we know to be wrong, in a
+      // field that is part of the integrity-hash preimage and the hashing
+      // worker's ordering key. Asserting an unevidenced completion time sits
+      // badly beside a policy about not asserting what cannot be evidenced.
     })
-    .where(and(eq(transactions.status, "executing"), isNull(transactions.output)))
+    .where(
+      and(
+        eq(transactions.status, "executing"),
+        inArray(transactions.id, targetIds),
+      ),
+    )
     .returning({ id: transactions.id });
+
+  if (closed.length !== before.length) {
+    console.error(
+      `
+ABORTING VERIFICATION: expected to close ${before.length} rows, closed ` +
+        `${closed.length}. Some row changed state between the snapshot and the ` +
+        "write. Inspect before re-running.",
+    );
+    process.exit(1);
+  }
 
   // ── AFTER ─────────────────────────────────────────────────────────────────
   console.log(`\nAFTER — closed ${closed.length} row(s)`);
