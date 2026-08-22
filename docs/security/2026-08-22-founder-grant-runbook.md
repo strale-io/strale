@@ -141,7 +141,43 @@ rather than failing a later string compare. The signed payload is pipe-joined
 while the token is dot-joined, so a signature cannot be re-segmented into a
 different `(id, purpose, expiry)` triple.
 
-## 5. What this does not cover
+## 5. STILL OPEN — stale superuser credentials in sibling worktrees
+
+**This is why the closing review question currently answers FAIL, and it is the
+last thing standing between the current state and a real boundary.**
+
+`.env` was cleaned in the main checkout and in `strale-wt-authz`. Two other
+worktrees still hold the **superuser** URL:
+
+```
+C:/Users/pette/Projects/strale-wt-checkin   docs/checkin-2026-08-22   .env: SUPERUSER
+C:/Users/pette/Projects/strale-wt-ops       ops/daily-run-and-ceo-brief  .env: SUPERUSER
+```
+
+Any session on this machine can read either file and connect as `postgres`,
+which bypasses `strale_ro`, `strale_rw`, the authority module and every guard in
+one step. A boundary with a copy of the master key lying beside it is not a
+boundary.
+
+I did not edit them. They belong to other live sessions, and rewriting another
+session's environment mid-run is the shared-checkout failure class that caused
+the 2026-08-22 incident in the first place. Two ways to close it:
+
+1. **Per-worktree (safe, no coordination):** replace the `DATABASE_URL` line in
+   each with the `strale_ro` URL from the main checkout's `.env`. Do this when
+   those sessions are idle. `docs/checkin-*` is a documentation branch and
+   almost certainly needs no write access; `ops/daily-run-*` should be checked
+   with whoever is running it.
+2. **Rotate (closes every copy at once, including ones nobody remembers):**
+   `ALTER ROLE postgres PASSWORD '<new>'` and update Railway's `DATABASE_URL`
+   variable. This touches Railway's application credential, which the
+   provisioning instruction explicitly ruled out, so it needs Petter's decision
+   rather than an autonomous one.
+
+Until one of these is done, treat the credential boundary as *designed and
+provisioned but not yet effective*.
+
+## 6. What this does not cover
 
 The Railway runtime still connects as `postgres`, deliberately — the application
 must keep its write capability. The boundary protects **operator and session
