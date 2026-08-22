@@ -276,6 +276,16 @@ describe("retention and the database guard must not contradict each other", () =
     const source = body.slice(at, at + 400);
     expect(source).toContain("LIMIT ${BATCH_SIZE}");
     expect(source).toContain("DELETE FROM capability_invocations");
+    // And it must not name the table before checking the table is there. Block
+    // 0101 is defer-not-throw, so it genuinely may be absent -- and this purge
+    // is the LAST step of the retention sweep, so throwing here loses the
+    // retention-cleanup-done summary for every rule that already succeeded.
+    const purge = body.slice(
+      body.indexOf("async function purgeCapabilityInvocations"),
+      at,
+    );
+    expect(purge).toContain("to_regclass('public.capability_invocations')");
+    expect(purge).toContain("?.ready) return 0;");
   });
 });
 
