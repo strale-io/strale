@@ -1,0 +1,77 @@
+package: WP9
+title: Capability Invocation Facts
+status: IN_PROGRESS
+depends_on: [WP4, WP8]
+risks: [CR-06]
+
+objective: >
+  Record what a capability invocation actually did, once, as a fact — so the
+  quality floor and the breaker reason from evidence rather than from whichever
+  table happens to have a row.
+
+# Measured against PRODUCTION, not read off the audit.
+production_evidence:
+  the_floor_joins_on_capability_id: >
+    jobs/quality-floor.ts:172 — `JOIN transactions t ON t.capability_id = c.id`.
+    That is the entire basis on which a capability is quarantined or proposed
+    for deactivation.
+  solution_steps_produce_no_such_row: >
+    A solution execution writes ONE transaction with `capability_id = NULL` and
+    `solution_slug` set. The individual step results live inside that row's
+    `output.steps` JSONB. 694 such rows exist, all with a null capability_id.
+    So a capability invoked as a solution step produces ZERO rows carrying its
+    id, and the floor's join cannot see it at all.
+  hidden_volume: >
+    126 sub-calls in the last 30 days are buried in `output.steps` and invisible
+    to the floor, against 178,277 direct capability rows (overwhelmingly the
+    internal harness). The absolute number is small today; the structural gap is
+    not, and it grows with every bundle sold.
+  what_this_means_concretely: >
+    A capability that fails ONLY inside bundles is invisible to the quality
+    floor. It cannot be quarantined, because as far as the floor's query is
+    concerned it has no traffic. Conversely a capability quarantined on direct
+    traffic keeps being invoked as a step until WP8 gated that — and WP8's gate
+    is the only thing standing between the two views today.
+
+defects:
+  no_invocation_record: >
+    There is no row that says "capability X was invoked at time T and this is
+    what happened". There is a transaction row, which conflates the CALL
+    (billing, rail, customer) with the INVOCATION (did this capability work).
+    For a direct call the two coincide; for a solution step they do not, and the
+    step's outcome is stored as JSON inside someone else's row.
+  the_floor_reads_billing_rows_for_a_quality_question: >
+    `transactions` is a billing artefact. Using it as the quality signal is why
+    the floor needs `is_free_tier = false`, an internal-email exclusion list, a
+    deleted_at filter and a status whitelist — four filters that exist to undo
+    the fact that it is reading the wrong table.
+  wp4_outcome_is_computed_then_discarded: >
+    lib/execution-outcome.ts already produces exactly the fact this package
+    needs — success, failure_class, billable, fault, counts_against_capability,
+    output_assessment. It is used for the billing decision and then thrown away.
+    The invocation fact should be that outcome, persisted.
+
+design:
+  one_row_per_invocation: >
+    Written wherever a capability executor is invoked — the /v1/do rails, the
+    x402 capability rail, and each solution STEP. Carries the capability slug,
+    the canonical ExecutionOutcome fields, latency, and the parent transaction
+    if there is one.
+  the_floor_consumes_facts: >
+    Replacing a join on billing rows with a read of invocation facts removes the
+    four compensating filters and makes solution steps count. That is the exit
+    condition, and the acceptance signal is that a capability failing only
+    inside bundles becomes quarantinable.
+  not_a_second_audit_trail: >
+    Deliberately distinct from the transaction audit record and from
+    health_monitor_events. This answers "did this capability work", nothing
+    else. It carries no customer content, so it is not subject to the 90-day
+    content redaction and can be retained on its own schedule.
+
+exit_conditions:
+  - one immutable invocation fact per capability execution, including solution sub-calls
+  - the quality floor consumes facts rather than joining billing rows
+  - a capability failing only inside bundles is quarantinable, proved by test
+  - the fact carries the WP4 canonical outcome rather than re-deriving one
+  - a guard prevents a new invocation path skipping the fact
+  - independent adversarial review passes
