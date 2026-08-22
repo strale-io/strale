@@ -397,6 +397,25 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     expect(src).toContain("await detectFactVolumeShortfall(");
     // And it must actually gate the action, not merely be computed.
     expect(src).toContain("holes > 0 || shortfall !== null");
+    // And the wiring, which was unpinned: emptying the set or dropping the
+    // third argument both typecheck (the parameter defaults to an empty set)
+    // and restore the pre-round-12 defect where three holed capabilities hold
+    // the entire three-slot quarantine budget for the thirty days the marker
+    // window looks back, while clean broken capabilities are told "budget
+    // exhausted, next tick" every tick.
+    expect(src).toContain(
+      "const incomplete = new Set<string>([...holedEvidence.keys(), ...volumeShortfall.keys()]);",
+    );
+    expect(src).toContain("evaluateFloor(stats, DEFAULT_FLOOR_CONFIG, incomplete)");
+    // Suppression must remain its OWN outcome. Round 12's reordering made the
+    // event unemittable: every suppressed slug arrived as action "none" and was
+    // logged `flagged_only` at tier 1 -- the vocabulary for "we looked and it
+    // is fine" -- so an operator querying for suppression found nothing, ever,
+    // and the one string naming the shortfall never reached a human.
+    expect(src).toContain("d.suppressedForIncompleteEvidence === true");
+    expect(src).toContain("actionTaken: evidenceIncomplete");
+    expect(src).toContain('? "suppressed_incomplete_evidence"');
+    expect(src).toContain('tier: d.action === "quarantine" || evidenceIncomplete ? 2 : 1,');
     expect(src).toContain("mode === \"enforce\" && !evidenceIncomplete");
   });
 

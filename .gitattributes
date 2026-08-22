@@ -5,3 +5,5 @@
 # regen --check round-trip stays clean on Windows. See
 # apps/api/scripts/regenerate-coverage-matrix-summary.mjs.
 apps/api/coverage-matrix/COVERAGE.md text eol=lf
+apps/api/src/jobs/*.ts text eol=lf
+apps/api/src/jobs/__fixtures__/*.sql text eol=lf

@@ -81,6 +81,18 @@ export interface FloorDecision {
   action: "quarantine" | "none";
   /** Set when 30d completion < deactivateBelow — surfaced to the doctor report; never auto-applied. */
   deactivateProposal: boolean;
+  /**
+   * True when the action was withheld because this capability's invocation
+   * evidence is incomplete, rather than because the floor judged it healthy.
+   *
+   * The two are opposite operator situations and the event vocabulary has to
+   * tell them apart: "we looked and it is fine" versus "we could not look".
+   * Round 12 moved suppression into this core and, in doing so, made the job's
+   * `suppressed_incomplete_evidence` event unreachable -- every suppressed slug
+   * arrived as `action: "none"` and was logged `flagged_only` at tier 1, so an
+   * operator querying for suppression found nothing, ever.
+   */
+  suppressedForIncompleteEvidence?: boolean;
   /** Deactivation of a revenue earner is a Petter-only decision (escalation contract). */
   requiresHuman: boolean;
   completion: number;
@@ -136,6 +148,7 @@ export function evaluateFloor(
         requiresHuman,
         completion: r.completion,
         eligibleCalls: r.eligibleCalls,
+        suppressedForIncompleteEvidence: true,
         reason: `completion ${(r.completion * 100).toFixed(0)}% on ${r.eligibleCalls} eligible calls/30d, but this capability's invocation evidence is incomplete for the window — deferred without spending quarantine budget`,
       });
       continue;

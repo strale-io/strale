@@ -577,7 +577,11 @@ export async function runQualityFloorOnce(): Promise<{
         // outages that would produce failures in the first place.
         const holes = holedEvidence.get(d.slug) ?? 0;
         const shortfall = volumeShortfall.get(d.slug) ?? null;
-        const evidenceIncomplete = holes > 0 || shortfall !== null;
+        // The core already withheld the action for these; this is the same
+        // condition, kept so the gate below cannot depend solely on the core
+        // having done it.
+        const evidenceIncomplete =
+          d.suppressedForIncompleteEvidence === true || holes > 0 || shortfall !== null;
         const willQuarantine =
           d.action === "quarantine" && mode === "enforce" && !evidenceIncomplete;
         const details = {
@@ -621,12 +625,16 @@ export async function runQualityFloorOnce(): Promise<{
           await db.insert(healthMonitorEvents).values({
             eventType: "quality_floor",
             capabilitySlug: d.slug,
-            tier: d.action === "quarantine" ? 2 : 1,
-            actionTaken:
-              d.action === "quarantine"
-                ? evidenceIncomplete
-                  ? "suppressed_incomplete_evidence"
-                  : "dry_run_would_quarantine"
+            tier: d.action === "quarantine" || evidenceIncomplete ? 2 : 1,
+            // Suppression is its own outcome, not a flag. An operator asking
+            // "what did the floor decline to act on, and why" must be able to
+            // find it -- and until this branch read the core's own marker,
+            // every suppressed slug logged as `flagged_only` at tier 1, which
+            // is the vocabulary for "we looked and it is fine".
+            actionTaken: evidenceIncomplete
+              ? "suppressed_incomplete_evidence"
+              : d.action === "quarantine"
+                ? "dry_run_would_quarantine"
                 : "flagged_only",
             details,
           });
