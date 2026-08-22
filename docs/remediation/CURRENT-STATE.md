@@ -2,13 +2,35 @@
 
 _Last updated: 2026-08-21 (session 1)_
 
-- **Current package:** WP6 — ACCEPTED, merged as `4302547` (PR #354), verified live.
-- **Next package:** WP8
+- **Current package:** WP8 — ACCEPTED (merged `6cda5f7`, PR #355) plus its follow-up ACCEPTED (merged `88c09dc`, PR #357). Both verified live.
+- **Next package:** WP9, per the approved graph
 - **WP3:** ACCEPTED, merged as `ee7f737` (PR #350), verified live in production — table, all three indexes, and the CHECK constraint reached `validated=true`.
 - **Latest accepted SHA:** `ee7f737` on `main`
 - **Unresolved blockers:** none
 - **Human approvals granted:** program-level autonomy (run continuously; escalate only per CHECK-IN A/B/C)
 - **Awaiting founder:** nothing. One item is logged for *visibility only*, not decision — see "Codex disposition" below.
+
+## WP8 and its follow-up — accepted
+
+WP8 (PR #355, `6cda5f7`) converged eligibility onto one authority and gated
+solution steps on it. Its follow-up (PR #357, `88c09dc`) made the invalid state
+unreachable rather than merely detectable.
+
+Production reconciliation, 2026-08-21:
+
+- `capabilities_no_half_quarantine` present and **validated**, definition
+  `CHECK ((NOT (is_active AND (NOT visible) AND x402_enabled)))`
+- violation census: **0**
+- both incident capabilities correctly withdrawn (`visible=false, x402=false`)
+- **the constraint was proved to bite in production** — a half-quarantine write
+  inside a rolled-back transaction was refused by Postgres. Existence is not
+  enforcement; this is the check that distinguishes them.
+
+Also landed: `scripts/mutation-test.mjs`, which encodes green → red → green with
+a clean tree at both ends. It exists because `git checkout --` destroyed
+uncommitted remediation work four times in one session, and because the first
+version of the guard itself let a red baseline read as a caught mutation — a
+false result it had already produced here before review caught it.
 
 ## The `danish-company-data` chronology — recorded so it cannot be re-litigated
 

@@ -1,6 +1,10 @@
 package: WP8
 title: Policy convergence — one eligibility authority
-status: REMEDIATED
+status: ACCEPTED
+merged_sha: 6cda5f7
+merged_pr: 355
+followup_sha: 88c09dc
+followup_pr: 357
 depends_on: [WP4]
 risks: [CR-05, N5, N6]
 
