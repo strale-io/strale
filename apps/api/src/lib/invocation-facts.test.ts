@@ -314,7 +314,10 @@ describe("no serving path may skip the fact", () => {
     expect(doRoute).toContain('const servedFree = !c.get("x402_paid" as any);');
     expect(doRoute).toContain("isFreeTier: servedFree,");
     expect(doRoute).toContain("{ userId: null, servedFree }");
-    expect(doRoute).toContain("servedFree: actor.servedFree,");
+    // BOTH record sites, counted. `toContain` passed while one of the two was
+    // forged, because the other still carried the string -- the same
+    // half-a-rail shape that got through in round 4.
+    expect((doRoute.match(/servedFree: actor\.servedFree,/g) ?? []).length).toBe(2);
     expect(doRoute).toContain("void trackBackgroundTask(");
 
     expect(
