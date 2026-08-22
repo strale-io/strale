@@ -1,6 +1,6 @@
 package: WP9
 title: Capability Invocation Facts
-status: IMPLEMENTED_AWAITING_REVIEW
+status: REVIEW_PASSED_AWAITING_FOUNDER_APPROVAL
 depends_on: [WP4, WP8]
 risks: [CR-06]
 
@@ -218,7 +218,7 @@ exit_condition_status:
   guard_prevents_a_new_path_skipping_the_fact: MET  # found a real hole in guardedExecute
   rail_completeness_invariant: MET                  # added after a mutation survived
   migration_and_retention_recorded: MET
-  independent_adversarial_review: PENDING
+  independent_adversarial_review: PASS  # round 15, zero blocking findings
 
 # Not part of this package. Recorded so the boundary is explicit rather than
 # assumed: the public-copy correction, the production-authorization controls
@@ -555,3 +555,42 @@ review_rounds_5_to_14:
     - "transaction_id is null for 100% of writes -- no rail supplies one. The column and index are kept; both claims now say so."
     - "A bundle-only capability that is quarantined has no automatic route back: promotion reads test_results, and paid capabilities are not proactively tested."
     - "No Postgres-backed harness exists for jobs/quality-floor.ts. The snapshot suite says the SQL is what was reviewed; it cannot say the SQL is correct."
+
+# ── Review round 15: PASS ─────────────────────────────────────────────────────
+review_round_15:
+  verdict: PASS
+  blocking: 0
+  blocking_by_round: "5, 4, 3, 4, 2, 3, 2, 1, 1, 1, 5, 1, 3, 1, 0"
+  reviewer_judgement: >
+    "WP9 does what it claims, and it is safe to merge and deploy, with the
+    caveats below." The reviewer verified the end-to-end consequence
+    behaviourally, confirmed money behaviour is unchanged in every branch,
+    confirmed the degradation story in every direction (no table, unprotected
+    table, empty table all fall back to the pre-WP9 transactions query), and
+    could not find a twentieth hollow assertion.
+  caveat_fixed_before_merge: >
+    The solution executor's try spans OUR input mapping and OUR output
+    enrichment as well as the executor call. Before WP9 that did not matter --
+    a step failure produced no per-capability row at all. WP9 makes those rows
+    real, so a bug in our own plumbing would have arrived as fault "provider"
+    and counted toward delisting a capability that did nothing wrong. Fixed:
+    the loop tracks which phase threw, and outcomeFromPlatformFault carries
+    fault "strale" and does not count.
+  hygiene_fixed:
+    - "The producer side of suppressedForIncompleteEvidence was unasserted -- inert today because the job ORs it with its own maps, but the field exists so that redundancy is real rather than assumed."
+    - "The record-call block window was a fixed 400 characters with 14 characters of slack in do.ts; bounded at the call's own closing brace now."
+  reviewer_observations_not_fixed:
+    - "The snapshot comparison is positionally blind: two statements swapped between fixtures survive. Not reachable by the one-token class this series found fourteen times -- it costs cutting and pasting two ~30-line SQL blocks past each other, the most visible diff a reviewer can get."
+    - "The drizzle write that actually delists (visible/x402_enabled flags) is unasserted. PRE-EXISTING and outside this diff -- the identical line is on origin/main -- but it is the one write in the job with irreversible customer-facing effect and deserves its own ticket."
+    - "transactions.is_free_tier for anonymous x402 /v1/do calls changed from true-then-UPDATEd-false to false at insert. No-op on the success path (5 of 5 production rows were already false); the delta is failed x402 calls, which no longer consume an IP's free-tier daily quota and are now visible to the floor's pre-epoch branch. Both directions look correct; single-digit volume."
+  the_honest_ceiling: >
+    Nobody has executed the floor's SQL against a real Postgres. There is no
+    DB-backed harness for jobs/quality-floor.ts, and production mutation is
+    frozen. The snapshot suite can say the SQL is what fifteen rounds of review
+    looked at; it can never say the SQL is correct. That is the ceiling on this
+    entire review, the reviewers' included.
+
+final_mutation_set:
+  head: 62c9f5d3adaed22ab93d4d6c8a1d4ae2755780b8
+  count: 20
+  result: "all green -> red -> green, clean tree at both ends"
