@@ -141,41 +141,59 @@ rather than failing a later string compare. The signed payload is pipe-joined
 while the token is dot-joined, so a signature cannot be re-segmented into a
 different `(id, purpose, expiry)` triple.
 
-## 5. STILL OPEN — stale superuser credentials in sibling worktrees
+## 5. CLOSED — superuser credential rotated 2026-08-22
 
-**This is why the closing review question currently answers FAIL, and it is the
-last thing standing between the current state and a real boundary.**
+The boundary was designed-but-not-effective for a few hours, because copies of
+the superuser credential were lying around where any session could read them.
+Both halves are now closed.
 
-`.env` was cleaned in the main checkout and in `strale-wt-authz`. Two other
-worktrees still hold the **superuser** URL:
+**Cleanup.** The credential was found in **21 places**, not two: both sibling
+worktree `.env` files, `~/.claude/settings.json` (**32** pre-approved Bash rules
+with the URL inlined, one of them a `psql` command), its `.doctor-backup`, the
+project `.claude/settings.json`, thirteen session transcripts and task outputs,
+and two plain credential dumps in another session's temp scratch. Config entries
+were removed, transcripts had the literal secret replaced with a placeholder,
+dumps were deleted.
+
+**Rotation.** Cleanup alone only makes a credential *unfindable*, never
+*unusable*, and no sweep can promise it found every copy. So the password was
+rotated under founder authorization:
+
+- All five Railway variables (`strale.DATABASE_URL`, and the Postgres service's
+  `DATABASE_URL`, `DATABASE_PUBLIC_URL`, `PGPASSWORD`, `POSTGRES_PASSWORD`)
+  written **first** with `--skip-deploys`, so the running app was untouched and
+  the database was never restarted.
+- Then `ALTER ROLE postgres PASSWORD`. Postgres does not drop existing sessions
+  on a password change, so the live pool kept serving.
+- Then a single `strale` redeploy.
+- The new password was generated in-process and handed to Railway over
+  **stdin** — never on a command line, never in a file, never in a transcript.
+  Automatic rollback was armed for every step after the `ALTER`; unused.
+
+**Evidence it was non-disruptive:** `/health` returned `ok` on all 16 polls
+across the cutover. Ten transactions and eleven `test_results` were written in
+the four minutes spanning it. Because the old password no longer authenticates,
+continued writes are themselves proof that the serving deployment is the new one.
+
+**Evidence the old credential is dead:**
 
 ```
-C:/Users/pette/Projects/strale-wt-checkin   docs/checkin-2026-08-22   .env: SUPERUSER
-C:/Users/pette/Projects/strale-wt-ops       ops/daily-run-and-ceo-brief  .env: SUPERUSER
+postgresql://postgres:<old>@metro.proxy.rlwy.net:51617/railway
+  -> 28P01  password authentication failed for user "postgres"
 ```
 
-Any session on this machine can read either file and connect as `postgres`,
-which bypasses `strale_ro`, `strale_rw`, the authority module and every guard in
-one step. A boundary with a copy of the master key lying beside it is not a
-boundary.
+Authentication attempt only; no write was attempted with it.
 
-I did not edit them. They belong to other live sessions, and rewriting another
-session's environment mid-run is the shared-checkout failure class that caused
-the 2026-08-22 incident in the first place. Two ways to close it:
+**Reachability after rotation:** zero files across `Projects`, `~/.claude`,
+`Temp/claude` and `C:/tmp` contain the new password. All four worktree `.env`
+files carry `strale_ro` only. No `DATABASE_URL`, `DATABASE_URL_WRITE`,
+`PGPASSWORD`, `POSTGRES_PASSWORD` or `STRALE_FOUNDER_GRANT` in User or Machine
+environment. A write attempted with the credentials a session actually holds
+fails `25006`.
 
-1. **Per-worktree (safe, no coordination):** replace the `DATABASE_URL` line in
-   each with the `strale_ro` URL from the main checkout's `.env`. Do this when
-   those sessions are idle. `docs/checkin-*` is a documentation branch and
-   almost certainly needs no write access; `ops/daily-run-*` should be checked
-   with whoever is running it.
-2. **Rotate (closes every copy at once, including ones nobody remembers):**
-   `ALTER ROLE postgres PASSWORD '<new>'` and update Railway's `DATABASE_URL`
-   variable. This touches Railway's application credential, which the
-   provisioning instruction explicitly ruled out, so it needs Petter's decision
-   rather than an autonomous one.
-
-Until one of these is done, treat the credential boundary as *designed and
-provisioned but not yet effective*.
+**Retrieving superuser access from now on:** Railway dashboard → Postgres
+service → Variables. Those variables were updated as part of the cutover, so
+what the dashboard shows is what works.
 
 ## 6. What this does not cover
 
