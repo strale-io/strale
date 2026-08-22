@@ -594,3 +594,45 @@ final_mutation_set:
   head: 62c9f5d3adaed22ab93d4d6c8a1d4ae2755780b8
   count: 20
   result: "all green -> red -> green, clean tree at both ends"
+
+# ── Landing: the real-Postgres proof ─────────────────────────────────────────
+real_postgres_proof:
+  file: apps/api/src/jobs/quality-floor.integration.test.ts
+  lane: "integration-db (CI service container, postgres:16)"
+  method: >
+    Runs the ACTUAL production paths -- runMigration0101_capabilityInvocations
+    and runQualityFloorOnce -- against an ephemeral Postgres built by the same
+    drizzle-kit push + startup-migrations sequence production boots with.
+    Nothing is re-implemented or pasted: a test containing a copy of the query
+    would prove only that the copy parses. Dry run, so the same per-decision
+    events with the same arithmetic are written without flipping any flag.
+  cases_9_of_9_pass:
+    - "block 0101 creates the table, indexes and trigger; the trigger actually refuses an UPDATE and an in-window DELETE"
+    - "main's 0100_relistUrlToMarkdown ledger row does not suppress 0101"
+    - "the floor executes and reaches a verdict -- the SQL parses and runs"
+    - "6 pre-epoch transactions + 6 post-epoch facts = 12 eligible: not 6 (lost branch), not 18 (double count)"
+    - "a transaction postdating the epoch is not counted a second time"
+    - "a counted post-epoch failure reduces completion to 5/15 and reaches dry_run_would_quarantine"
+    - "40 refusals do not reduce it -- 12 eligible at 7/12, where counting them would give 7/52"
+    - "a solution-step fact reaches a verdict with ZERO direct capability transactions"
+    - "holed evidence suppresses rather than quarantines, and still surfaces the proposal"
+  what_the_database_corrected: >
+    Two design assumptions. The floor writes a per-decision event only for a
+    capability BELOW the threshold, so the first three fixtures were healthy and
+    asserted against events that by design never existed. And cleanup must use
+    TRUNCATE: the append-only trigger refuses to delete anything inside the
+    35-day window, and a row-level BEFORE DELETE trigger does not fire on
+    TRUNCATE.
+  mutations: "8 run, 7 caught. The survivor -- disabling the pure core's suppression gate -- is genuine defence-in-depth: the job's own check still fires, and disabling THAT layer reddens. The core is mutation-proven separately at unit level."
+  scope_of_the_claim: >
+    This proves the SQL executes and partitions evidence as claimed on a schema
+    built by the same migrations production runs. It proves NOTHING about the
+    production floor, which has not seen this code. The post-deploy
+    reconciliation in the PR body remains required, and ephemeral-DB
+    correctness must not be reported as production correctness.
+
+landing:
+  merged_forward_onto: "origin/main after #361 and #364"
+  conflicts: none
+  wp9_owned_code_after_merge: byte-identical
+  production_authorization_incident: "closed -- controls accepted on main in #364"
