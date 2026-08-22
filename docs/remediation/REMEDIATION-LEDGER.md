@@ -266,3 +266,79 @@ the fix.
   design, so the boundary protects operator and session access, not the
   application itself. Old-credential strings remain inert in historical
   transcripts.
+
+---
+
+## Daily-run reform (2026-08-22)
+
+- **Status:** ACCEPTED
+- **Started / completed:** 2026-08-22 / 2026-08-22
+- **Merged as:** `3f7f650` (PR #362, squash, approved head `b3b722b`)
+- **Decision:** DEC-20260822-A, recorded in CLAUDE.md
+- **Records:** `docs/company/DAILY-RUN.md`, `docs/company/LESSONS.md`,
+  amended `docs/company/CHARTER.md` / `MEASUREMENT.md` / `WORKFORCE.md`,
+  `docs/company/briefs/2026-08-22.md`
+
+### What it changes
+
+Founder review of a week of daily runs. Four parts, all in the governing
+machinery rather than in one morning's output.
+
+- **Two artifacts per run.** An internal operating record carrying the full
+  technical evidence, and a CEO morning brief written only after the work is
+  done — ~300–600 words, five fixed sections, no filenames, ids, queries,
+  branches or jargon. The brief is a synthesis, never a work log.
+- **Wider autonomy, unchanged risk ceiling.** Reversible evidence-backed fixes,
+  false monitoring signals, narrowing inaccurate public copy, and
+  policy-determined housekeeping proceed without asking. Every escalation must
+  first fail the test *"could inspection, measurement, experimentation or an
+  existing decision resolve this?"* and must carry five fields.
+- **The boundary on that autonomy.** Being right about an action is not
+  authority to take it. An approval-gated item leaves the founder's queue only
+  when he moves it; a permission not held is a stop, not an obstacle. Three
+  statuses — `SYSTEM_ACTING`, `FOUNDER_DECISION`, `AUTHORIZATION_UNAVAILABLE` —
+  are names for shapes `lib/production-authority.ts` produces, bound by symbol
+  and enforced by `charter-authorization-binding.test.ts`.
+- **Failure families and the three-strike rule.** Ten families; a third
+  materially similar incident becomes a root-cause investigation. F1 (quality
+  attribution), F5 (hollow gates) and F10 (approval boundary) are open.
+
+### Controls accepted
+
+| Control | Where | Enforced by |
+|---|---|---|
+| The brief cannot regress into an engineering log | `lib/ceo-brief-lint.ts` + `scripts/check-ceo-brief.ts` | CI, over every brief |
+| Settled matters cannot be re-escalated | `SETTLED_MATTERS` | 24/24 evasions caught, 0/17 false positives |
+| The charter cannot name an authorization symbol the code lacks | `charter-authorization-binding.test.ts` | static import + export check |
+| Commercial numbers carry their own caveats | `lib/metrics/commercial.ts` | refuses partial-week and cross-coverage comparisons |
+
+### Two defects closed in the authorization model
+
+Reclassified from a founder decision to technical defects, on founder
+instruction, and fixed autonomously: a structurally forgeable `Authority` (a
+hand-written literal passed the write gate — the module now records what its two
+constructors issue, freezes them, and refuses anything else), and two comments
+claiming mutation authority is recorded when nothing records it. No permission
+was added, removed or widened; `AUTONOMOUS_PURPOSES` is unchanged.
+
+### Corrections this work forced
+
+- "Four consecutive rising weeks" is **two**; the fourth rise was the week still
+  in progress.
+- The 94.7% → 99.3% concentration movement is not sound — the level stands, the
+  movement was instrument coverage.
+- The first published F5 gate measurement (13 gates, "8 print a count") was
+  wrong; re-derivation gives 17 and roughly 3.
+
+- **Tests:** `apps/api/src/lib` — 104 files / 1557 passed / 0 failed; typecheck
+  clean on `src` and `scripts`; console, bare-catch, mjs-syntax, PII, dispatcher
+  and production-write-access gates clean.
+- **Independent review:** PASS, on the seventh round. Rounds 1–6 returned FAIL
+  with 8, 4, 2, 1, 1 and 1 blocking findings; every one was a real defect,
+  including two hollow guards shipped inside the hollow-guard remediation and a
+  founder decision recorded as Claude's.
+- **Residual risks:** `SETTLED_MATTERS` is a known-list, not a general detector
+  of re-opened decisions — an unlisted matter, or a phrasing nobody thought of,
+  is unguarded. `describeAuthority()` still has no caller, so who authorised a
+  production mutation is enforced at the gate and not yet answerable from the
+  data; wiring it is open work.
