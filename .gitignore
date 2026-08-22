@@ -37,3 +37,7 @@ apps/spike/
 # Raw sweep evidence (may embed production output values) stays local
 audit-output/*.jsonl
 docs/company/ceo-dashboard.html
+
+# Guarded production write credential - never committed, never auto-loaded.
+# The .template beside it is committed; the real file is not.
+.env.operator-write
