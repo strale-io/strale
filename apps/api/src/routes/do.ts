@@ -8,8 +8,11 @@ import {
 import * as settlementIntent from "../lib/x402-settlement-intent.js";
 import {
   assertBillableOutput,
+  outcomeFromError,
+  outcomeFromOutput,
   shouldCountAgainstCapability,
 } from "../lib/execution-outcome.js";
+import { recordInvocation } from "../lib/invocation-facts.js";
 import {
   wallets,
   walletTransactions,
@@ -329,20 +332,73 @@ export async function spendCapWouldExceed(
   return null;
 }
 
-/** Execute with retry for non-deterministic capabilities. */
-function executeWithRetry(
+/**
+ * Who the invocation fact should be attributed to.
+ *
+ * Threaded as an explicit parameter rather than read from a context, so adding
+ * a fifth execution path to this route is a COMPILE error until it says whose
+ * call it is. WP4 was accepted with one of five rails silently unwired; a
+ * required parameter is the cheapest way to make that particular mistake
+ * unavailable.
+ */
+interface InvocationActor {
+  userId: string | null;
+  isFreeTier: boolean;
+}
+
+/**
+ * Execute with retry for non-deterministic capabilities.
+ *
+ * WP9: this is also where the `/v1/do` rail records its invocation fact. The
+ * route has FOUR call sites (sync, async, reserved-wallet and dry-run paths)
+ * and WP4 was accepted with one of five rails silently unwired — recording at
+ * the wrapper instead of at each caller makes that failure unavailable. A new
+ * execution path added to this route inherits the fact by construction, because
+ * there is no way to run an executor here without going through this function.
+ *
+ * One fact per LOGICAL invocation, not per retry attempt: a call that succeeds
+ * on its second try is a success, and counting the attempt separately would
+ * both understate quality and break the floor's fact-vs-transaction
+ * completeness cross-check.
+ */
+async function executeWithRetry(
   executor: (input: Record<string, unknown>) => Promise<any>,
   input: Record<string, unknown>,
   capability: CapabilityInfo,
+  actor: InvocationActor,
 ): Promise<any> {
-  if (capability.capabilityType === "deterministic") {
-    return executor(input);
+  const startedAt = Date.now();
+  try {
+    const result =
+      capability.capabilityType === "deterministic"
+        ? await executor(input)
+        : await withRetry(() => executor(input), {
+            maxRetries: 1,
+            baseDelayMs: 1000,
+            slug: capability.slug,
+          });
+    await recordInvocation({
+      capabilitySlug: capability.slug,
+      rail: "v1_do",
+      contextKind: "customer_paid",
+      userId: actor.userId,
+      isFreeTier: actor.isFreeTier,
+      latencyMs: Date.now() - startedAt,
+      outcome: outcomeFromOutput(capability.slug, result?.output),
+    });
+    return result;
+  } catch (err) {
+    await recordInvocation({
+      capabilitySlug: capability.slug,
+      rail: "v1_do",
+      contextKind: "customer_paid",
+      userId: actor.userId,
+      isFreeTier: actor.isFreeTier,
+      latencyMs: Date.now() - startedAt,
+      outcome: outcomeFromError(err),
+    });
+    throw err;
   }
-  return withRetry(() => executor(input), {
-    maxRetries: 1,
-    baseDelayMs: 1000,
-    slug: capability.slug,
-  });
 }
 
 // ─── MCP client detection from User-Agent ────────────────────────────────────
@@ -1354,7 +1410,7 @@ async function executeFreeTier(
     .returning({ id: transactions.id });
 
   try {
-    const capResult = await executeWithRetry(executor, executionInput, capability);
+    const capResult = await executeWithRetry(executor, executionInput, capability, { userId: null, isFreeTier: true });
     assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
@@ -1613,7 +1669,7 @@ async function executeFreeTierAuthenticated(
     .returning({ id: transactions.id });
 
   try {
-    const capResult = await executeWithRetry(executor, executionInput, capability);
+    const capResult = await executeWithRetry(executor, executionInput, capability, { userId: user.id, isFreeTier: false });
     assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
@@ -1904,7 +1960,7 @@ async function executeSync(
 
     // Execute the capability
     try {
-      const capResult = await executeWithRetry(executor, executionInput, capability);
+      const capResult = await executeWithRetry(executor, executionInput, capability, { userId: user.id, isFreeTier: false });
       assertBillableOutput(capability.slug, capResult.output);
       const latencyMs = Date.now() - startTime;
 
@@ -2348,6 +2404,7 @@ async function executeAsync(
     `async-exec:${capability.slug}:${transactionId}`,
     executeInBackground(
       db,
+      { userId: user.id, isFreeTier: false },
       executor,
       executionInput,
       transactionId,
@@ -2404,6 +2461,7 @@ async function executeAsync(
 
 async function executeInBackground(
   db: ReturnType<typeof getDb>,
+  actor: InvocationActor,
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
   transactionId: string,
@@ -2433,7 +2491,7 @@ async function executeInBackground(
     // the optimistic debit. The race forces the catch block to run when
     // the wall-clock budget is up.
     const capResult = await executeWithHardTimeout(
-      executeWithRetry(executor, executionInput, capability),
+      executeWithRetry(executor, executionInput, capability, actor),
       EXEC_HARD_TIMEOUT_MS,
     );
     assertBillableOutput(capability.slug, capResult.output);

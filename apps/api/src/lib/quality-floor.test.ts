@@ -144,9 +144,11 @@ describe("foldTrafficRows (the SQL→stats fold — review test-gap #1)", () => 
       lifecycle_state: "active",
       visible: true,
       x402_enabled: true,
+      source: "transaction",
       status: "completed",
       error: null,
-      price_cents: 5,
+      success: null,
+      counts: null,
       day: "2026-08-01",
       recent: false,
       n: 1,
@@ -160,7 +162,7 @@ describe("foldTrafficRows (the SQL→stats fold — review test-gap #1)", () => 
       row({ status: "failed", error: "Missing required input fields: iban", n: 10, day: "2026-08-02" }),
       row({ status: "failed", error: "Zefix API error: HTTP 503", n: 2, day: "2026-08-02" }),
       row({ status: "failed", error: "upstream unavailable", n: 1, day: "2026-08-03", recent: true }),
-    ]);
+    ], new Map([["s", 20]]));
     expect(stats).toHaveLength(1);
     const s = stats[0];
     expect(s.eligibleCalls).toBe(7);        // 4 completed + 3 counted failures (10 caller-input excluded)

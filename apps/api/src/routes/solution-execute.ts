@@ -309,7 +309,14 @@ solutionExecuteRoute.post(
     // ── 5. Execute solution steps ─────────────────────────────────────
     let execResult;
     try {
-      execResult = await executeSolution(sol.id, inputs as Record<string, unknown>);
+      execResult = await executeSolution(sol.id, inputs as Record<string, unknown>, {
+        // Solutions are never served under the free tier — a bundle has a real
+        // price. So the anti-abuse exclusion that free_tier drives does not
+        // apply here, and marking these calls free-tier would hide them from
+        // the quality floor entirely.
+        userId: user?.id ?? null,
+        isFreeTier: false,
+      });
     } catch (err) {
       const latencyMs = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : String(err);

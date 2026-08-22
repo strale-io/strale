@@ -26,6 +26,8 @@ import {
   BudgetExhaustedError,
 } from "../capabilities/guarded-executor.js";
 import { sanitizeFailureReason } from "./sanitize.js";
+import { outcomeFromError, outcomeFromOutput } from "./execution-outcome.js";
+import { recordInvocation } from "./invocation-facts.js";
 import { enrichCompanyOutput } from "../capabilities/lib/enrich-company-output.js";
 import { logWarn } from "./log.js";
 
@@ -330,6 +332,14 @@ export function gateTrips(output: unknown, gate: GateCondition): boolean {
 export async function executeSolution(
   solutionId: string,
   inputs: Record<string, unknown>,
+  /**
+   * Who the per-step invocation facts belong to (WP9). Required, not optional:
+   * a defaulted actor would silently attribute every step to nobody, and "the
+   * parameter was threaded in and then never written" is a mistake this
+   * codebase has already shipped once. The x402 rail genuinely has no account,
+   * which is why `userId` is nullable rather than the parameter being absent.
+   */
+  actor: { userId: string | null; isFreeTier: boolean },
 ): Promise<SolutionExecutionResult | null> {
   const db = getDb();
   // WP8: eligibility is deliberately NOT read here. It is re-read per group at
@@ -549,12 +559,44 @@ export async function executeSolution(
           step.capabilitySlug,
           result.output as Record<string, unknown>,
         );
+        // WP9 — the defect this package exists to close. A bundle writes ONE
+        // transaction with `capability_id = NULL`, so before this line a
+        // capability invoked only inside solutions produced no per-capability
+        // record anywhere and the quality floor could not see it at all: it
+        // could fail every bundle call it served and never become
+        // quarantinable, because as far as the floor's query was concerned it
+        // had no traffic.
+        //
+        // Assessed on the ENRICHED output, which is what the customer receives
+        // and what the solution's own aggregate outcome is computed from —
+        // assessing the raw result here would let the step's quality record and
+        // its billing verdict disagree about the same call.
+        await recordInvocation({
+          capabilitySlug: step.capabilitySlug,
+          rail: "solution_step",
+          contextKind: "customer_paid",
+          solutionId,
+          userId: actor.userId,
+          isFreeTier: actor.isFreeTier,
+          latencyMs: Date.now() - stepStartMs,
+          outcome: outcomeFromOutput(step.capabilitySlug, output),
+        });
         stepResults[step.capabilitySlug] = output;
         // F-B-016: index by step position, not completion order.
         completedSteps[stepIndex.get(step)!] = output;
         stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: Date.now() - stepStartMs });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        await recordInvocation({
+          capabilitySlug: step.capabilitySlug,
+          rail: "solution_step",
+          contextKind: "customer_paid",
+          solutionId,
+          userId: actor.userId,
+          isFreeTier: actor.isFreeTier,
+          latencyMs: Date.now() - stepStartMs,
+          outcome: outcomeFromError(err),
+        });
         stepErrors.push(`${step.capabilitySlug}: ${msg.slice(0, 200)}`);
         stepResults[step.capabilitySlug] = { error: sanitizeFailureReason(msg) };
         // F-B-016: on error, still mark the slot with an error marker so
